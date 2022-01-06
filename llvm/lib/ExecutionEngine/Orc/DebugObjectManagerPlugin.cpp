@@ -67,9 +67,9 @@ private:
 template <typename ELFT>
 void ELFDebugObjectSection<ELFT>::setTargetMemoryRange(SectionRange Range) {
   // Only patch load-addresses for executable and data sections.
-  if (isTextOrDataSection()) {
-    Header->sh_addr = static_cast<typename ELFT::uint>(Range.getStart());
-  }
+  if (isTextOrDataSection())
+    Header->sh_addr =
+        static_cast<typename ELFT::uint>(Range.getStart().getValue());
 }
 
 template <typename ELFT>

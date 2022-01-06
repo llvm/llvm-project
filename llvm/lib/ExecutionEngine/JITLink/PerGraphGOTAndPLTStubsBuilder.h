@@ -47,16 +47,16 @@ public:
         if (impl().isGOTEdgeToFix(E)) {
           LLVM_DEBUG({
             dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind())
-                   << " edge at " << formatv("{0:x}", B->getFixupAddress(E))
-                   << " (" << formatv("{0:x}", B->getAddress()) << " + "
+                   << " edge at " << B->getFixupAddress(E) << " ("
+                   << B->getAddress() << " + "
                    << formatv("{0:x}", E.getOffset()) << ")\n";
           });
           impl().fixGOTEdge(E, getGOTEntry(E.getTarget()));
         } else if (impl().isExternalBranchEdge(E)) {
           LLVM_DEBUG({
             dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind())
-                   << " edge at " << formatv("{0:x}", B->getFixupAddress(E))
-                   << " (" << formatv("{0:x}", B->getAddress()) << " + "
+                   << " edge at " << B->getFixupAddress(E) << " ("
+                   << B->getAddress() << " + "
                    << formatv("{0:x}", E.getOffset()) << ")\n";
           });
           impl().fixPLTEdge(E, getPLTStub(E.getTarget()));

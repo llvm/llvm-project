@@ -76,15 +76,16 @@ TEST(LinkGraphTest, AddressAccess) {
               getGenericEdgeKindName);
 
   auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 4, "S1", 4, Linkage::Strong, Scope::Default,
                                 false, false);
   B1.addEdge(Edge::FirstRelocation, 8, S1, 0);
   auto &E1 = *B1.edges().begin();
 
-  EXPECT_EQ(B1.getAddress(), 0x1000U) << "Incorrect block address";
-  EXPECT_EQ(S1.getAddress(), 0x1004U) << "Incorrect symbol address";
-  EXPECT_EQ(B1.getFixupAddress(E1), 0x1008U) << "Incorrect fixup address";
+  EXPECT_EQ(B1.getAddress(), B1Addr) << "Incorrect block address";
+  EXPECT_EQ(S1.getAddress(), B1Addr + 4) << "Incorrect symbol address";
+  EXPECT_EQ(B1.getFixupAddress(E1), B1Addr + 8) << "Incorrect fixup address";
 }
 
 TEST(LinkGraphTest, BlockAndSymbolIteration) {
@@ -92,16 +93,20 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
   auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec1, BlockContent, 0x2000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x1000);
+  auto &B2 = G.createContentBlock(Sec1, BlockContent, B2Addr, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
                                 false, false);
   auto &S2 = G.addDefinedSymbol(B2, 4, "S2", 4, Linkage::Strong, Scope::Default,
                                 false, false);
 
   auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
-  auto &B3 = G.createContentBlock(Sec2, BlockContent, 0x3000, 8, 0);
-  auto &B4 = G.createContentBlock(Sec2, BlockContent, 0x4000, 8, 0);
+  orc::ExecutorAddr B3Addr(0x3000);
+  auto &B3 = G.createContentBlock(Sec2, BlockContent, B3Addr, 8, 0);
+  orc::ExecutorAddr B4Addr(0x4000);
+  auto &B4 = G.createContentBlock(Sec2, BlockContent, B4Addr, 8, 0);
   auto &S3 = G.addDefinedSymbol(B3, 0, "S3", 4, Linkage::Strong, Scope::Default,
                                 false, false);
   auto &S4 = G.addDefinedSymbol(B4, 4, "S4", 4, Linkage::Strong, Scope::Default,
@@ -141,7 +146,8 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
   auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+  orc::ExecutorAddr BAddr(0x1000);
+  auto &B = G.createContentBlock(Sec, BlockContent, BAddr, 8, 0);
 
   EXPECT_FALSE(B.isContentMutable()) << "Content unexpectedly mutable";
   EXPECT_EQ(B.getContent().data(), BlockContent.data())
@@ -196,7 +202,8 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
       << "Unexpected block content size";
 
   // Create an initially mutable block.
-  auto &B2 = G.createMutableContentBlock(Sec, MutableContent, 0x10000, 8, 0);
+  auto &B2 = G.createMutableContentBlock(Sec, MutableContent,
+                                         orc::ExecutorAddr(0x10000), 8, 0);
 
   EXPECT_TRUE(B2.isContentMutable()) << "Expected B2 content to be mutable";
 }
@@ -208,7 +215,8 @@ TEST(LinkGraphTest, MakeExternal) {
   auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+  auto &B1 =
+      G.createContentBlock(Sec, BlockContent, orc::ExecutorAddr(0x1000), 8, 0);
 
   // Add a symbol to the block.
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
@@ -218,7 +226,8 @@ TEST(LinkGraphTest, MakeExternal) {
   EXPECT_FALSE(S1.isExternal()) << "Symbol should not be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
   EXPECT_TRUE(&S1.getBlock()) << "Symbol should have a non-null block";
-  EXPECT_EQ(S1.getAddress(), 0x1000U) << "Unexpected symbol address";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr(0x1000))
+      << "Unexpected symbol address";
 
   EXPECT_EQ(
       std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 1U)
@@ -235,7 +244,8 @@ TEST(LinkGraphTest, MakeExternal) {
   EXPECT_FALSE(S1.isDefined()) << "Symbol should not be defined";
   EXPECT_TRUE(S1.isExternal()) << "Symbol should be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
-  EXPECT_EQ(S1.getAddress(), 0U) << "Unexpected symbol address";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr())
+      << "Unexpected symbol address";
 
   EXPECT_EQ(
       std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 0U)
@@ -253,7 +263,8 @@ TEST(LinkGraphTest, MakeDefined) {
   auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec, BlockContent, B1Addr, 8, 0);
 
   // Add an external symbol.
   auto &S1 = G.addExternalSymbol("S1", 4, Linkage::Strong);
@@ -261,7 +272,8 @@ TEST(LinkGraphTest, MakeDefined) {
   EXPECT_FALSE(S1.isDefined()) << "Symbol should not be defined";
   EXPECT_TRUE(S1.isExternal()) << "Symbol should be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
-  EXPECT_EQ(S1.getAddress(), 0U) << "Unexpected symbol address";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr())
+      << "Unexpected symbol address";
 
   EXPECT_EQ(
       std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 0U)
@@ -279,7 +291,8 @@ TEST(LinkGraphTest, MakeDefined) {
   EXPECT_FALSE(S1.isExternal()) << "Symbol should not be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
   EXPECT_TRUE(&S1.getBlock()) << "Symbol should have a non-null block";
-  EXPECT_EQ(S1.getAddress(), 0x1000U) << "Unexpected symbol address";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr(0x1000U))
+      << "Unexpected symbol address";
 
   EXPECT_EQ(
       std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 1U)
@@ -296,10 +309,13 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
               getGenericEdgeKindName);
   auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
-  // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec, BlockContent, 0x2000, 8, 0);
-  auto &B3 = G.createContentBlock(Sec, BlockContent.slice(0, 32), 0x3000, 8, 0);
+  // Create initial blocks.
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x2000);
+  auto &B2 = G.createContentBlock(Sec, BlockContent, B2Addr, 8, 0);
+  orc::ExecutorAddr B3Addr(0x3000);
+  auto &B3 = G.createContentBlock(Sec, BlockContent.slice(0, 32), B3Addr, 8, 0);
 
   // Add a symbol.
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong,
@@ -329,8 +345,10 @@ TEST(LinkGraphTest, TransferDefinedSymbolAcrossSections) {
   auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
 
   // Create blocks in each section.
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec2, BlockContent, 0x2000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x2000);
+  auto &B2 = G.createContentBlock(Sec2, BlockContent, B2Addr, 8, 0);
 
   // Add a symbol to section 1.
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong,
@@ -359,8 +377,10 @@ TEST(LinkGraphTest, TransferBlock) {
   auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec1, BlockContent, 0x2000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x2000);
+  auto &B2 = G.createContentBlock(Sec1, BlockContent, B2Addr, 8, 0);
 
   // Add some symbols on B1...
   G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong, Scope::Default,
@@ -404,9 +424,12 @@ TEST(LinkGraphTest, MergeSections) {
   auto &Sec3 = G.createSection("__data.3", MemProt::Read | MemProt::Write);
 
   // Create an initial block.
-  auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
-  auto &B2 = G.createContentBlock(Sec2, BlockContent, 0x2000, 8, 0);
-  auto &B3 = G.createContentBlock(Sec3, BlockContent, 0x3000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
+  orc::ExecutorAddr B2Addr(0x2000);
+  auto &B2 = G.createContentBlock(Sec2, BlockContent, B2Addr, 8, 0);
+  orc::ExecutorAddr B3Addr(0x3000);
+  auto &B3 = G.createContentBlock(Sec3, BlockContent, B3Addr, 8, 0);
 
   // Add a symbols for each block.
   G.addDefinedSymbol(B1, 0, "S1", B1.getSize(), Linkage::Strong, Scope::Default,
@@ -482,7 +505,8 @@ TEST(LinkGraphTest, SplitBlock) {
   auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
 
   // Create the block to split.
-  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+  orc::ExecutorAddr B1Addr(0x1000);
+  auto &B1 = G.createContentBlock(Sec, BlockContent, B1Addr, 8, 0);
 
   // Add some symbols to the block.
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
@@ -499,7 +523,8 @@ TEST(LinkGraphTest, SplitBlock) {
 
   // Add an extra block, EB, and target symbols, and use these to add edges
   // from B1 to EB.
-  auto &EB = G.createContentBlock(Sec, BlockContent, 0x2000, 8, 0);
+  orc::ExecutorAddr EBAddr(0x2000);
+  auto &EB = G.createContentBlock(Sec, BlockContent, EBAddr, 8, 0);
   auto &ES1 = G.addDefinedSymbol(EB, 0, "TS1", 4, Linkage::Strong,
                                  Scope::Default, false, false);
   auto &ES2 = G.addDefinedSymbol(EB, 4, "TS2", 4, Linkage::Strong,
@@ -519,10 +544,10 @@ TEST(LinkGraphTest, SplitBlock) {
   auto &B2 = G.splitBlock(B1, 8);
 
   // Check that the block addresses and content matches what we would expect.
-  EXPECT_EQ(B1.getAddress(), 0x1008U);
+  EXPECT_EQ(B1.getAddress(), B1Addr + 8);
   EXPECT_EQ(B1.getContent(), BlockContent.slice(8));
 
-  EXPECT_EQ(B2.getAddress(), 0x1000U);
+  EXPECT_EQ(B2.getAddress(), B1Addr);
   EXPECT_EQ(B2.getContent(), BlockContent.slice(0, 8));
 
   // Check that symbols in B1 were transferred as expected:

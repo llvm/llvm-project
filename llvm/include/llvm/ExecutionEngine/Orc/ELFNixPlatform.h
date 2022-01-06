@@ -236,7 +236,7 @@ private:
   DenseMap<JITDylib *, ELFNixJITDylibInitializers> InitSeqs;
   std::vector<ELFPerObjectSectionsToRegister> BootstrapPOSRs;
 
-  DenseMap<JITTargetAddress, JITDylib *> HandleAddrToJITDylib;
+  DenseMap<ExecutorAddr, JITDylib *> HandleAddrToJITDylib;
   DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
 };
 
