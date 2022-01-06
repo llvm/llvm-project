@@ -46,8 +46,6 @@ EXTERN int fprintf(FILE *, const char *, ...);
 EXTERN char *fprintf_allocate(uint32_t bufsz);
 EXTERN int printf(const char *, ...);
 EXTERN char *printf_allocate(uint32_t bufsz);
-EXTERN char *global_allocate(uint32_t bufsz);
-EXTERN int global_free(char *ptr);
 EXTERN int printf_execute(char *bufptr, uint32_t bufsz);
 
 EXTERN char *hostrpc_varfn_uint_allocate(uint32_t bufsz);
@@ -69,16 +67,6 @@ EXTERN void hostrpc_fptr0(void *fptr);
 EXTERN uint32_t hostrpc_varfn_uint(void *fnptr, ...);
 EXTERN uint64_t hostrpc_varfn_uint64(void *fnptr, ...);
 EXTERN double hostrpc_varfn_double(void *fnptr, ...);
-
-typedef struct hostrpc_result_s {
-  uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
-} hostrpc_result_t;
-
-EXTERN hostrpc_result_t hostrpc_invoke(uint32_t id, uint64_t arg0,
-                                       uint64_t arg1, uint64_t arg2,
-                                       uint64_t arg3, uint64_t arg4,
-                                       uint64_t arg5, uint64_t arg6,
-                                       uint64_t arg7);
 
 // Please update at least the patch level when adding a new service.
 // This will ensure that applications that use a new device stub do not

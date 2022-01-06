@@ -13,145 +13,102 @@
 
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 add_subdirectory(services)
-# find the llvm compiler
-find_package(LLVM QUIET CONFIG
-  PATHS
-  $ENV{AOMP}
-  ${CMAKE_CXX_COMPILER_DIR}
-  NO_DEFAULT_PATH
-)
-
+# find_package(LLVM is done in libomptarget/CMakeLists.txt
 if (LLVM_DIR)
-  message("   -- Building hostrpc with LLVM ${LLVM_PACKAGE_VERSION} found at ${LLVM_INSTALL_PREFIX}")
+	message("   -- Building hostrpc with LLVM ${LLVM_PACKAGE_VERSION} found with CLANG_TOOL ${CLANG_TOOL}")
 else()
   message("   ERROR: NO LLVM FOUND! Not building hostrpc .")
   return()
 endif()
 
-#optimization level
-set(optimization_level 2)
-
-set(sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/hostrpc.cpp
-)
-
-# for both in-tree and out-of-tree build
-if (NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
-  set(OUTPUTDIR ${CMAKE_CURRENT_BINARY_DIR})
+if( DEVICELIBS_ROOT )
+  set(ROCDL_INC_OCKL ${DEVICELIBS_ROOT}/ockl/inc)
+  set(ROCDL_INC_OCML ${DEVICELIBS_ROOT}/ocml/inc)
+  set(ROCDL_INC_IRIF ${DEVICELIBS_ROOT}/irif/inc)
 else()
-  set(OUTPUTDIR ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
+  message("   ERROR: DEVICELIBS_ROOT is not set.   Not building hostrpc .")
+  return()
+  #set(ROCDL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../rocm-device-libs)
 endif()
 
-macro(collect_sources dir)
-  set(openmp_sources)
-  foreach(file ${ARGN})
-    file(RELATIVE_PATH rfile ${dir} ${file})
-    get_filename_component(rdir ${rfile} DIRECTORY)
-    get_filename_component(fname ${rfile} NAME_WE)
-    get_filename_component(fext ${rfile} EXT)
-    #file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${rdir})
-    if (fext STREQUAL ".cpp")
-      set(cfile ${CMAKE_CURRENT_BINARY_DIR}/${rdir}/${fname}.cpp)
-      list(APPEND openmp_sources ${cfile})
-    endif()
-    if (fext STREQUAL ".c")
-      set(cfile ${CMAKE_CURRENT_BINARY_DIR}/${rdir}/${fname}.c)
-      list(APPEND openmp_sources ${cfile})
-    endif()
-  endforeach()
-endmacro()
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx1030 gfx1031)
+if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
+  set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
+endif()
+set(triple "amdgcn-amd-amdhsa")
+set(archname "amdgcn")
 
-macro(add_openmp_library libname archname dir)
-  if (archname  STREQUAL "amdgcn")
-    set(mcpus $ENV{GFXLIST})
-    if(mcpus)
-      separate_arguments(mcpus)
-      list(GET mcpus 0 GPU)
-    else()
-      set(GPU "gfx803")
-    endif()
-    set(triple "amdgcn-amd-amdhsa")
-  else()
-    set(GPU "sm_70")
-    set(triple "nvptx-nvidia-cuda")
+# see if this build is for LLVM_ENABLE_RUNTIMES='openmp'
+set(_xdir "")
+foreach(proj ${LLVM_ENABLE_RUNTIMES})
+  string(TOUPPER "${proj}" canon_name)
+  if ("${canon_name}" STREQUAL "OPENMP")
+     set(_xdir "/openmp")
   endif()
+endforeach()
 
-  set(openmp_cmd ${LLVM_INSTALL_PREFIX}/bin/clang++)
-  set(openmp_c_cmd ${LLVM_INSTALL_PREFIX}/bin/clang)
+set(cl_file_name ${CMAKE_CURRENT_SOURCE_DIR}/src/hostrpc_invoke.cl)
+set(cpp_file_name ${CMAKE_CURRENT_SOURCE_DIR}/src/hostrpc.cpp)
+file(GLOB h_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
+  # Eventually we should get hostrpc for other archs, for now just amdgcn
+foreach(mcpu ${amdgpu_mcpus})
+  set(bc_cl_filename "hostrpc_invoke-${archname}-${mcpu}.bc")
+  set(obj_filename "hostrpc-${archname}-${mcpu}.o")
+  set(opencl_cmd ${CLANG_TOOL}
+    -fvisibility=default
+    -S -nogpulib -emit-llvm
+    -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200
+    -Dcl_khr_fp64 -Dcl_khr_fp16
+    -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics
+    -x cl -Xclang -cl-std=CL2.0 -Xclang -finclude-default-header
+    -target amdgcn-amd-amdhsa
+    -I${ROCDL_INC_OCKL}
+    -I${ROCDL_INC_OCML}
+    -I${ROCDL_INC_IRIF}
+    -I${CMAKE_CURRENT_SOURCE_DIR}/src)
+    #-I${LLVM_COMPILER}/include
+    #-I${ROCM_DIR}/include)
+  add_custom_command(
+       OUTPUT ${bc_cl_filename}
+       COMMAND ${opencl_cmd} ${cl_file_name} -o ${bc_cl_filename}
+       DEPENDS ${cl_file_name} ${h_files})
+  # Compile hostrpc.cpp using openmp clang++ -c into heterogeneous object
   set(openmp_args -O${optimization_level}
     -fopenmp
     -fopenmp-targets=${triple}
     -Xopenmp-target=${triple}
-    -march=${GPU}
+    -march=${mcpu}
     -nogpulib
-    -nogpuinc
     -c
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
-    -I${CMAKE_CURRENT_BINARY_DIR}/../../runtime/src)
-
-  set(obj_files)
-  set(bc_files)
-  file(GLOB h_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
-  foreach(file ${ARGN})
-    file(RELATIVE_PATH rfile ${dir} ${file})
-    get_filename_component(rdir ${rfile} DIRECTORY)
-    get_filename_component(fname ${rfile} NAME_WE)
-    get_filename_component(fext ${rfile} EXT)
-
-    set(obj_filename "${fname}.o")
-    set(bc_filename "${fname}-${archname}.bc")
-
-    if (fext STREQUAL ".c")
-      add_custom_command(
-        OUTPUT ${obj_filename}
-        COMMAND ${openmp_c_cmd} ${openmp_args} ${CMAKE_CURRENT_SOURCE_DIR}/src/${fname}.c -o ${obj_filename}
-        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/${fname}.c" ${h_files} )
-    else()
-      add_custom_command(
-        OUTPUT ${obj_filename}
-        COMMAND ${openmp_cmd} ${openmp_args} -std=c++11 ${CMAKE_CURRENT_SOURCE_DIR}/src/${fname}.cpp -o ${obj_filename}
-        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/${fname}.cpp" ${h_files} )
-    endif()
-
-    # Extract the bitcode file to make aarch specific bitcode archive
-    add_custom_command(
-      OUTPUT ${bc_filename}
-      COMMAND ${LLVM_INSTALL_PREFIX}/bin/clang-offload-bundler -type=o -targets=openmp-${triple}-${GPU} -inputs=${obj_filename} -outputs=${bc_filename} -unbundle
-      DEPENDS ${obj_filename} )
-
-    list(APPEND obj_files ${obj_filename})
-    list(APPEND bc_files ${bc_filename})
-  endforeach()
-
-  set(host_ar_filename "lib${libname}.a")
-  set(bc_ar_filename "libbc-${libname}-${archname}.a")
+    -I${CMAKE_BINARY_DIR}${_xdir}/runtime/src)
+  set(bc_cpp_filename "hostrpc-${archname}-${mcpu}.bc")
   add_custom_command(
-      OUTPUT ${host_ar_filename}
-      COMMAND ${LLVM_INSTALL_PREFIX}/bin/llvm-ar rcs ${host_ar_filename} ${obj_files}
-      DEPENDS ${obj_files} )
+     OUTPUT ${obj_filename}
+     COMMAND ${CLANG_TOOL} ${openmp_args} ${cpp_file_name} -o ${obj_filename}
+     DEPENDS ${cpp_file_name} ${h_files} ${clang_driver_runtime_depends})
+  # extract device bc from the heterogeneous object file
   add_custom_command(
-      OUTPUT ${bc_ar_filename}
-      COMMAND ${LLVM_INSTALL_PREFIX}/bin/llvm-ar rcs ${bc_ar_filename} ${bc_files}
-      DEPENDS ${bc_files} )
+      OUTPUT ${bc_cpp_filename}
+      COMMAND ${CLANG_OFFLOAD_BUNDLER_TOOL} -type=o -targets=openmp-${triple}-${mcpu} -inputs=${obj_filename} -outputs=${bc_cpp_filename} -unbundle
+      DEPENDS ${obj_filename} ${clang_driver_runtime_depends})
 
-  add_custom_target(archive-deps DEPENDS ${host_ar_filename} ${bc_ar_filename})
-  add_custom_target(lib${name}-host-static-lib ALL DEPENDS archive-deps)
-  add_custom_target(lib${name}-device-static-lib ALL DEPENDS archive-deps)
-endmacro()
+  set(libhostrpc-bc ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${mcpu}.bc)
+  add_custom_command(
+    OUTPUT ${libhostrpc-bc}
+    COMMAND ${LINK_TOOL} ${bc_cpp_filename} ${bc_cl_filename} -o ${libhostrpc-bc}
+    DEPENDS ${bc_cpp_filename} ${bc_cl_filename}
+    COMMENT "Built hostrpc file ${libhostrpc-bc}")
+  add_custom_target(libhostrpc-target-${mcpu} ALL DEPENDS ${libhostrpc-bc})
+  # Add a file-level dependency to ensure that llvm-link is up-to-date
+  # By default, add_custom_command only builds the tool if the executable is missing
+  if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
+    add_custom_command(OUTPUT ${libhostrpc-bc}
+      DEPENDS llvm-link
+      APPEND)
+  endif()
+endforeach()
 
-collect_sources(${CMAKE_CURRENT_SOURCE_DIR}/src ${sources})
-
-set(libname "hostrpc")
-set(archname "amdgcn")
-add_openmp_library(${libname} ${archname} ${CMAKE_CURRENT_SOURCE_DIR} ${openmp_sources})
-
-install(FILES ${OUTPUTDIR}/hostrpc/lib${libname}.a DESTINATION "lib")
-install(FILES ${OUTPUTDIR}/hostrpc/lib${libname}.a DESTINATION "lib-debug")
-# GPU architecture-specific archives prevent need for unbundle archive
-install(FILES ${OUTPUTDIR}/hostrpc/libbc-${libname}-${archname}.a DESTINATION "lib/libdevice")
-install(FILES ${OUTPUTDIR}/hostrpc/libbc-${libname}-${archname}.a DESTINATION "lib-debug/libdevice")
+#set(triple "nvptx-nvidia-cuda")
+# Since libomptarget includes hostrpc, we only need to install hostrpc headers
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/hostrpc.h" DESTINATION include)
-
-if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-  message("------ DONE hostrpc cmake -------")
-endif()

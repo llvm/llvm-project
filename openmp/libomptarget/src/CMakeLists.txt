@@ -31,6 +31,8 @@ add_library(omptarget SHARED ${LIBOMPTARGET_SRC_FILES})
 # Don't override an externally defined RPATH
 if(NOT DEFINED CMAKE_INSTALL_RPATH)
   set_target_properties(omptarget PROPERTIES INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib" BUILD_RPATH "$ORIGIN")
+else()
+  set_target_properties(omptarget PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPATH} BUILD_RPATH ${CMAKE_INSTALL_RPATH})
 endif()
 if (OPENMP_ENABLE_LIBOMPTARGET_PROFILING)
   # Add LLVMSupport dependency if profiling is enabled.

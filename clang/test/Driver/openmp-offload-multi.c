@@ -14,14 +14,14 @@
 
 // compilation for offload target 1 : gfx906
 // CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm-bc"{{.*}}"-target-cpu" "gfx906" "-fcuda-is-device"{{.*}}"-o" "{{.*}}.bc" "-x" "c"{{.*}}.c
-// CHECK: llvm-link"{{.*}}openmp-offload-multi-{{.*}}-gfx906-select-{{.*}}.bc"{{.*}}"-o" "{{.*}}openmp-offload-multi-{{.*}}-gfx906-linked-{{.*}}.bc"
+// FIXME: llvm-link"{{.*}}openmp-offload-multi-{{.*}}-gfx906-select-{{.*}}.bc"{{.*}}"-o" "{{.*}}openmp-offload-multi-{{.*}}-gfx906-linked-{{.*}}.bc"
 // CHECK: opt"{{.*}}openmp-offload-multi-{{.*}}-gfx906-linked-{{.*}}.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-o"{{.*}}openmp-offload-multi-{{.*}}-gfx906-optimized-{{.*}}.bc"
 // CHECK: llc{{.*}}openmp-offload-multi-{{.*}}-gfx906-optimized-{{.*}}.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=obj"{{.*}}"-o"{{.*}}openmp-offload-multi-{{.*}}-gfx906-{{.*}}.o"
 // CHECK: lld{{.*}}"-flavor" "gnu" "--no-undefined" "-shared" "-o" "[[GFX906OUT:.*.out]]" "{{.*}}openmp-offload-multi-{{.*}}-gfx906-{{.*}}.o"
 
 // compilation for offload target 2 : gfx908
 // CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-emit-llvm-bc"{{.*}}"-target-cpu" "gfx908" "-fcuda-is-device"{{.*}}"-o" "{{.*}}.bc" "-x" "c"{{.*}}.c
-// CHECK: llvm-link"{{.*}}openmp-offload-multi-{{.*}}-gfx908-select-{{.*}}.bc"{{.*}}"-o" "{{.*}}openmp-offload-multi-{{.*}}-gfx908-linked-{{.*}}.bc"
+// FIXME: llvm-link"{{.*}}openmp-offload-multi-{{.*}}-gfx908-select-{{.*}}.bc"{{.*}}"-o" "{{.*}}openmp-offload-multi-{{.*}}-gfx908-linked-{{.*}}.bc"
 // CHECK: opt"{{.*}}openmp-offload-multi-{{.*}}-gfx908-linked-{{.*}}.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx908" "-o"{{.*}}openmp-offload-multi-{{.*}}-gfx908-optimized-{{.*}}.bc"
 // CHECK: llc{{.*}}openmp-offload-multi-{{.*}}-gfx908-optimized-{{.*}}.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx908" "-filetype=obj"{{.*}}"-o"{{.*}}openmp-offload-multi-{{.*}}-gfx908-{{.*}}.o"
 // CHECK: lld{{.*}}"-flavor" "gnu" "--no-undefined" "-shared" "-o" "[[GFX908OUT:.*.out]]" "{{.*}}openmp-offload-multi-{{.*}}-gfx908-{{.*}}.o"

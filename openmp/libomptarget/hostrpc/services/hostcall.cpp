@@ -109,7 +109,6 @@ struct amd_hostcall_consumer_t {
 private:
   signal_t doorbell;
   std::thread thread;
-  void *error_callback_data;
   critical_data_t critical_data;
 
   amd_hostcall_consumer_t(signal_t _doorbell) : doorbell(_doorbell) {}

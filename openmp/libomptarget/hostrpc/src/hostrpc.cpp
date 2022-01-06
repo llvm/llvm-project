@@ -3,10 +3,9 @@
 ///
 
 #include "hostrpc.h"
-#include <omp.h>
 // -----------------------------------------------------------------------------
 //
-// printf: stubs to support printf
+// hostrpc/src/hostrpc.cpp:  device stubs
 //
 // GPUs typically do not support vargs style functions.  So to implement
 // printf or any vaargs function as a hostrpc service requires the compiler
@@ -21,7 +20,41 @@
 
 #pragma omp declare target
 
+typedef struct hostrpc_result_s {
+  uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
+} hostrpc_result_t;
+// No hostrpc_invoke in header since all stubs are defined here.
+EXTERN hostrpc_result_t hostrpc_invoke(uint32_t id, uint64_t arg0,
+                                       uint64_t arg1, uint64_t arg2,
+                                       uint64_t arg3, uint64_t arg4,
+                                       uint64_t arg5, uint64_t arg6,
+                                       uint64_t arg7);
 #ifdef __AMDGCN__
+// This definition of __ockl_devmem_request needs to override the weak
+// symbol for __ockl_devmem_request in ockl.bc because by default ockl
+// uses hostcall. But OpenMP uses hostrpc.
+EXTERN uint64_t __ockl_devmem_request(uint64_t addr, uint64_t size) {
+  uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
+  if (size) { // allocation request
+    arg0 = size;
+    hostrpc_result_t result =
+        hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC), arg0, arg1, arg2,
+                       arg3, arg4, arg5, arg6, arg7);
+    return result.arg1;
+  } else { // free request
+    arg0 = addr;
+    hostrpc_result_t result =
+        hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_FREE), arg0, arg1, arg2, arg3,
+                       arg4, arg5, arg6, arg7);
+    return result.arg0;
+  }
+}
+EXTERN void f90print_(char *s) { printf("%s\n", s); }
+EXTERN void f90printi_(char *s, int *i) { printf("%s %d\n", s, *i); }
+EXTERN void f90printl_(char *s, long *i) { printf("%s %ld\n", s, *i); }
+EXTERN void f90printf_(char *s, float *f) { printf("%s %f\n", s, *f); }
+EXTERN void f90printd_(char *s, double *d) { printf("%s %g\n", s, *d); }
+
 EXTERN char *printf_allocate(uint32_t bufsz) {
   uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
   arg0 = (uint64_t)bufsz;
@@ -53,23 +86,6 @@ EXTERN char *hostrpc_varfn_double_allocate(uint32_t bufsz) {
       hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC_PRINTF), arg0, arg1, arg2,
                      arg3, arg4, arg5, arg6, arg7);
   return (char *)result.arg1;
-}
-
-EXTERN char *global_allocate(uint32_t bufsz) {
-  uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
-  arg0 = (uint64_t)bufsz;
-  hostrpc_result_t result =
-      hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_MALLOC), arg0, arg1, arg2, arg3,
-                     arg4, arg5, arg6, arg7);
-  return (char *)result.arg1;
-}
-EXTERN int global_free(char *ptr) {
-  uint64_t arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7;
-  arg0 = (uint64_t)ptr;
-  hostrpc_result_t result =
-      hostrpc_invoke(PACK_VERS(HOSTRPC_SERVICE_FREE), arg0, arg1, arg2, arg3,
-                     arg4, arg5, arg6, arg7);
-  return (int)result.arg0;
 }
 
 EXTERN void hostrpc_fptr0(void *fptr) {
@@ -200,6 +216,6 @@ EXTERN uint32_t __strlen_max(char *instr, uint32_t maxstrlen) {
 #else
 // ---------------------------------------------------
 // This stub is needed to satisfy omp pragma syntax.
-static int stub(){};
+static int stub() { return 0; };
 #endif
 #pragma omp end declare target

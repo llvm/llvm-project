@@ -25,6 +25,7 @@
 
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 
 namespace llvm {
@@ -634,6 +635,24 @@ private:
       Action::OffloadKind TargetDeviceOffloadKind) const;
 
 public:
+  ///  Add string to OffloadArchs set for each '--offload-arch=' arg
+  ///
+  /// \param C - The compilation that is being built.
+  /// \param OffloadArchs - The mutable set of strings, one per Offloading arch
+  bool
+  GetTargetInfoFromOffloadArchOpts(Compilation &C,
+                                   std::set<std::string> &OffloadArchs) const;
+
+  ///  Add string to OffloadArchs set for each offloading arch specified
+  ///  with legacy args. Unlike the newer, '--offload-arch' arg, specifying
+  ///  an offload arch with legacy args required three args:
+  ///    '-fopenmp-targets=', '-Xopenmp-target=', and '-march=' .
+  ///
+  /// \param C - The compilation that is being built.
+  /// \param OffloadArchs - The mutable set of strings, one per Offloading arch
+  bool GetTargetInfoFromMarch(Compilation &C,
+                              std::set<std::string> &OffloadArchs) const;
+
   /// GetReleaseVersion - Parse (([0-9]+)(.([0-9]+)(.([0-9]+)?))?)? and
   /// return the grouped values as integers. Numbers which are not
   /// provided are set to 0.

@@ -102,5 +102,7 @@ enum : __kmpc_impl_lanemask_t {
 // for opencl, which translates to calls that do not presently exist for openmp
 // Therefore, for now, stub out printf while building this library.
 EXTERN int printf(const char *, ...);
+EXTERN char *global_allocate(uint32_t bufsz);
+EXTERN int global_free(void *ptr);
 
 #endif

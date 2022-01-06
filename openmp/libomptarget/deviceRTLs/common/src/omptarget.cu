@@ -97,10 +97,11 @@ static void __kmpc_generic_kernel_deinit() {
 
 static void __kmpc_spmd_kernel_init(bool RequiresFullRuntime) {
   PRINT0(LD_IO, "call to __kmpc_spmd_kernel_init\n");
-
   setExecutionParameters(OMP_TGT_EXEC_MODE_SPMD,
                          RequiresFullRuntime ? OMP_TGT_RUNTIME_INITIALIZED
                                              : OMP_TGT_RUNTIME_UNINITIALIZED);
+  __kmpc_impl_syncthreads();
+  __kmpc_impl_threadfence();
   int threadId = __kmpc_get_hardware_thread_id_in_block();
   if (threadId == 0) {
     usedSlotIdx = __kmpc_impl_smid() % MAX_SM;
@@ -140,6 +141,7 @@ static void __kmpc_spmd_kernel_init(bool RequiresFullRuntime) {
 #endif /*OMPD_SUPPORT*/
   }
   __kmpc_impl_syncthreads();
+  __kmpc_impl_threadfence();
 
   omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
   omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
@@ -212,13 +214,13 @@ EXTERN
 void __kmpc_workers_start_barriers(ident_t *Ident, int TId) {
 #ifdef __AMDGCN__
   omptarget_workers_done = true;
-  __kmpc_barrier_simple_spmd(Ident, TId);
+  __kmpc_impl_syncthreads();
   while (!omptarget_master_ready)
-    __kmpc_barrier_simple_spmd(Ident, TId);
+    __kmpc_impl_syncthreads();
 
   omptarget_workers_done = false;
 #else
-  __kmpc_barrier_simple_spmd(Ident, TId);
+  __kmpc_impl_syncthreads();
 #endif
 }
 
@@ -231,7 +233,7 @@ void __kmpc_workers_done_barriers(ident_t *Ident, int TId) {
   if (TId == 0)
     omptarget_workers_done = true;
 #endif
-  __kmpc_barrier_simple_spmd(Ident, TId);
+  __kmpc_impl_syncthreads();
 }
 
 EXTERN bool __kmpc_kernel_parallel(void**WorkFn);

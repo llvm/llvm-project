@@ -221,7 +221,8 @@ void __kmp_invoke_microtask(kmp_int32 global_tid, kmp_int32 bound_tid, void *fn,
   switch (nargs) {
 #include "common/generated_microtask_cases.gen"
   default:
-    printf("Too many arguments in kmp_invoke_microtask, aborting execution.\n");
+    // printf("Too many arguments in kmp_invoke_microtask, aborting
+    // execution.\n");
     __builtin_trap();
   }
 }

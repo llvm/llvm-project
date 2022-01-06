@@ -15,6 +15,7 @@
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
@@ -31,9 +32,11 @@
 #include "llvm/Support/YAMLParser.h"
 
 #include <cassert>
+#include <set>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
+using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
@@ -52,6 +55,26 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   bool NeedRelaxedMath = false;
 
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
+  // if this host pass, we still need to know if there are device targets
+  bool HasDeviceTargets =
+      ((Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) ||
+       (Args.getAllArgValues(options::OPT_offload_arch_EQ).size() > 0));
+  std::set<std::string> OffloadArchs;
+  if (HasDeviceTargets) {
+    // re-parse legacy fopenmp_targets+march opts and --offload-arch opts using
+    // parsing tool from Driver.cpp where additional error checking was done.
+    if (Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
+      const bool status = C.getDriver().GetTargetInfoFromMarch(C, OffloadArchs);
+      if (!status)
+        return;
+    }
+    const bool status =
+        C.getDriver().GetTargetInfoFromOffloadArchOpts(C, OffloadArchs);
+    if (!status)
+      return;
+    assert(!OffloadArchs.empty() &&
+           "OpenMP offloading has to have targets specified.");
+  }
 
   // Check number of inputs for sanity. We need at least one input.
   assert(Inputs.size() >= 1 && "Must have at least one input.");
@@ -900,17 +923,19 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
   UpperCmdArgs.push_back("-output");
   UpperCmdArgs.push_back(ILMFile);
 
-if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
+  if (HasDeviceTargets) {
     SmallString<128> TargetInfo;
     Path = llvm::sys::path::parent_path(Output.getFilename());
-    Arg* Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
-    assert(Tgts && Tgts->getNumValues() &&
-           "OpenMP offloading has to have targets specified.");
-    for (unsigned i = 0; i < Tgts->getNumValues(); ++i) {
-      if (i)
+    bool is_first = true;
+    for (auto &Target : OffloadArchs) {
+      size_t find_loc = Target.find('^');
+      std::string TripleStr = Target.substr(0, find_loc);
+      // std::string OpenMPTargetArch = Target.substr(find_loc + 1);
+      if (is_first)
+        is_first = false;
+      else
         TargetInfo += ',';
-      llvm::Triple T(Tgts->getValue(i));
-      TargetInfo += T.getTriple();
+      TargetInfo += TripleStr;
     }
     UpperCmdArgs.push_back("-fopenmp-targets");
     UpperCmdArgs.push_back(Args.MakeArgString(TargetInfo.str()));
@@ -1025,23 +1050,22 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
   LowerCmdArgs.push_back("-stbfile");
   LowerCmdArgs.push_back(STBFile);
 
-
   /* OpenMP GPU Offload */
-  if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
+  if (HasDeviceTargets) {
     SmallString<128> TargetInfo;//("-fopenmp-targets ");
     SmallString<256> TargetInfoAsm;//("-fopenmp-targets-asm ");
     Path = llvm::sys::path::parent_path(Output.getFilename());
 
-    Arg* Tgts = Args.getLastArg(options::OPT_fopenmp_targets_EQ);
-    assert(Tgts && Tgts->getNumValues() &&
-           "OpenMP offloading has to have targets specified.");
-    for (unsigned i = 0; i != Tgts->getNumValues(); ++i) {
-      if (i)
+    // OffloadArchs contains TripleStr^TargetId
+    bool is_first = true;
+    for (auto &Target : OffloadArchs) {
+      size_t find_loc = Target.find('^');
+      std::string TripleStr = Target.substr(0, find_loc);
+      if (is_first)
+        is_first = false;
+      else
         TargetInfo += ',';
-      // We need to get the string from the triple because it may not be exactly
-      // the same as the one we get directly from the arguments.
-      llvm::Triple T(Tgts->getValue(i));
-      TargetInfo += T.getTriple();
+      TargetInfo += TripleStr;
       // We also need to give a output file
       if (!Path.empty()) {
         TargetInfoAsm += Path;
@@ -1049,7 +1073,7 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
       }
       TargetInfoAsm += Stem;
       TargetInfoAsm += "-";
-      TargetInfoAsm += T.getTriple();
+      TargetInfoAsm += TripleStr;
       TargetInfoAsm += ".ll";
     }
     LowerCmdArgs.push_back("-fopenmp-targets");
@@ -1061,7 +1085,7 @@ if(Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() > 0) {
       LowerCmdArgs.push_back(Args.MakeArgString(TargetInfoAsm.str()));
 
       addWaveSizeToFlangArgs(Args, LowerCmdArgs);
-      addTargetArchToFlangArgs(Args, LowerCmdArgs);
+      addTargetArchToFlangArgs(Args, OffloadArchs, LowerCmdArgs);
 
     } else {
       LowerCmdArgs.push_back("-fopenmp-targets-asm");
@@ -1091,12 +1115,14 @@ void AMDFlang::addWaveSizeToFlangArgs(const llvm::opt::ArgList &DriverArgs,
   }
 }
 
-void AMDFlang::addTargetArchToFlangArgs(const llvm::opt::ArgList &DriverArgs,
+void AMDFlang::addTargetArchToFlangArgs(
+    const llvm::opt::ArgList &DriverArgs, std::set<std::string> &OffloadArchs,
     llvm::opt::ArgStringList &FlangArgs) const {
-
-  for (auto Arg : DriverArgs.filtered(options::OPT_march_EQ) ) {
+  for (auto &Target : OffloadArchs) {
+    size_t find_loc = Target.find('^');
+    std::string OpenMPTargetArch = Target.substr(find_loc + 1);
     FlangArgs.push_back("-march");
-    FlangArgs.push_back(Arg->getValue(0));
+    FlangArgs.push_back(DriverArgs.MakeArgString(OpenMPTargetArch));
   }
 }
 

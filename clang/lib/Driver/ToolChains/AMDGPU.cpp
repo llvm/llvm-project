@@ -871,7 +871,7 @@ void ROCMToolChain::addClangTargetOptions(
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation.getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt));
+      FastRelaxedMath, CorrectSqrt, false));
 
   llvm::for_each(BCLibs, [&](StringRef BCFile) {
     CC1Args.push_back("-mlink-builtin-bitcode");
@@ -883,20 +883,24 @@ llvm::SmallVector<std::string, 12>
 RocmInstallationDetector::getCommonBitcodeLibs(
     const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile, bool Wave64,
     bool DAZ, bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath,
-    bool CorrectSqrt) const {
+    bool CorrectSqrt, bool isOpenMP = false) const {
 
   llvm::SmallVector<std::string, 12> BCLibs;
 
   auto AddBCLib = [&](StringRef BCFile) { BCLibs.push_back(BCFile.str()); };
 
   AddBCLib(getOCMLPath());
-  AddBCLib(getOCKLPath());
+  if (!isOpenMP)
+    // OpenMP has some of these libs contained in libomptarget.bc
+    AddBCLib(getOCKLPath());
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));
   AddBCLib(getCorrectlyRoundedSqrtPath(CorrectSqrt));
-  AddBCLib(getWavefrontSize64Path(Wave64));
-  AddBCLib(LibDeviceFile);
+  if (!isOpenMP) {
+    AddBCLib(getWavefrontSize64Path(Wave64));
+    AddBCLib(LibDeviceFile);
+  }
 
   return BCLibs;
 }
@@ -910,7 +914,8 @@ bool AMDGPUToolChain::shouldSkipArgument(const llvm::opt::Arg *A) const {
 
 llvm::SmallVector<std::string, 12>
 ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                                       const std::string &GPUArch) const {
+                                       const std::string &GPUArch,
+                                       bool isOpenMP) const {
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GPUArch);
   const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
 
@@ -940,5 +945,5 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
 
   return RocmInstallation.getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
-      FastRelaxedMath, CorrectSqrt);
+      FastRelaxedMath, CorrectSqrt, isOpenMP);
 }

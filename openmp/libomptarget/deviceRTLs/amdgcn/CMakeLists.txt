@@ -10,30 +10,19 @@
 #
 ##===----------------------------------------------------------------------===##
 
-find_package(LLVM QUIET CONFIG
-  PATHS
-  ${LLVM_INSTALL_PREFIX}
-  $ENV{AOMP}
-  $ENV{HOME}/rocm/aomp
-  /usr/lib/rocm/aomp
-  ${LIBOMPTARGET_NVPTX_CUDA_COMPILER_DIR}
-  ${LIBOMPTARGET_NVPTX_CUDA_LINKER_DIR}
-  ${CMAKE_CXX_COMPILER_DIR}
-  NO_DEFAULT_PATH)
-
-if (LLVM_DIR)
-  libomptarget_say("Found LLVM ${LLVM_PACKAGE_VERSION}. Configure: ${LLVM_DIR}/LLVMConfig.cmake")
-else()
-  libomptarget_say("Not building AMDGCN device RTL: AOMP not found")
+if ( WIN32 )
+  libomptarget_say("Not buildingAMDGCN deviceRTL on windows")
   return()
 endif()
-
-set(AOMP_INSTALL_PREFIX ${LLVM_INSTALL_PREFIX})
-
-if (AOMP_INSTALL_PREFIX)
-  set(AOMP_BINDIR ${AOMP_INSTALL_PREFIX}/bin)
+find_package(AMDDeviceLibs REQUIRED CONFIG PATHS
+	${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS
+	${CMAKE_INSTALL_PREFIX}
+	/opt/rocm)
+if(AMDDeviceLibs_DIR)
+  libomptarget_say("Getting ROCm device libs from ${AMDDeviceLibs_DIR}")
 else()
-  set(AOMP_BINDIR ${LLVM_BUILD_BINARY_DIR}/bin)
+  libomptarget_say("Not building AMDGCN device RTL: Could not find AMDDeviceLibs package")
+  return()
 endif()
 
 set(LIBOMPTARGET_BUILD_AMDGCN_BCLIB TRUE CACHE BOOL
@@ -49,8 +38,16 @@ if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
   return()
 endif()
 
+if (LLVM_DIR)
+  libomptarget_say("Building AMDGCN device RTLs. Using clang: ${CLANG_TOOL}")
+elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDALONE_BUILD)
+  # LLVM in-tree builds may use CMake target names to discover the tools.
+  libomptarget_say("Building AMDGCN device RTL. Using clang from in-tree build: ${CLANG_TOOL}")
+else()
+  libomptarget_say("Not building AMDGCN device RTL. No appropriate clang found")
+  return()
+endif()
 
-# Copied from nvptx CMakeLists
 if(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "x86_64")
   set(aux_triple x86_64-unknown-linux-gnu)
 elseif(CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "ppc64le")
@@ -62,52 +59,14 @@ else()
   return()
 endif()
 
-if (LLVM_DIR)
-  # Builds that use pre-installed LLVM have LLVM_DIR set.
-  find_program(CLANG_TOOL clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
-  find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR}
-    NO_DEFAULT_PATH)
-  find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
-  libomptarget_say("Building AMDGCN device RTL. Using clang: ${CLANG_TOOL}")
-elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDALONE_BUILD)
-  # LLVM in-tree builds may use CMake target names to discover the tools.
-  set(CLANG_TOOL $<TARGET_FILE:clang>)
-  set(LINK_TOOL $<TARGET_FILE:llvm-link>)
-  set(OPT_TOOL $<TARGET_FILE:opt>)
-  libomptarget_say("Building AMDGCN device RTL. Using clang from in-tree build")
-else()
-  libomptarget_say("Not building AMDGCN device RTL. No appropriate clang found")
-  return()
-endif()
-
-if("${AOMP_STANDALONE_BUILD}" STREQUAL "0")
-  message("------------- NON STANDALONE BUILD ---------------")
-  set(ROCDL_INC_OCKL ${DEVICELIBS_ROOT}/ockl/inc)
-  set(ROCDL_INC_OCML ${DEVICELIBS_ROOT}/ocml/inc)
-  set(ROCDL_INC_IRIF ${DEVICELIBS_ROOT}/irif/inc)
-  set(HIPINC ${ROCM_DIR}/hip/include)
-
-else()
-  message("------------- STANDALONE BUILD ---------------")
-  # Assome rocm-device-libs repository is next to amd-llvm-project repository
-  set(ROCDL ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../rocm-device-libs)
-  set(ROCDL_INC_OCKL ${ROCDL}/ockl/inc)
-  set(ROCDL_INC_OCML ${ROCDL}/ocml/inc)
-  set(ROCDL_INC_IRIF ${ROCDL}/irif/inc)
-  set(HIPINC ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../hip-on-vdi/include)
-endif()
-
-
-libomptarget_say("ROCDL_INC_OCKL = ${ROCDL_INC_OCKL}")
-libomptarget_say("ROCDL_INC_OCML = ${ROCDL_INC_OCML}")
-libomptarget_say("ROCDL_INC_IRIF = ${ROCDL_INC_IRIF}")
-
 project(omptarget-amdgcn)
 
 add_custom_target(omptarget-amdgcn ALL)
 
 #optimization level
 set(optimization_level 2)
+set(clang_opt_flags -O${optimization_level} -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=2048)
+set(link_opt_flags -O${optimization_level} -openmp-opt-disable)
 
 # Activate RTL message dumps if requested by the user.
 if(LIBOMPTARGET_NVPTX_DEBUG)
@@ -138,9 +97,6 @@ set(hip_sources
   ${devicertl_base_directory}/common/src/task.cu
   ${devicertl_base_directory}/common/src/ompd-specific.cu)
 
-set(ocl_sources
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/hostrpc_invoke.cl)
-  
 set(h_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/amdgcn_interface.h
   ${CMAKE_CURRENT_SOURCE_DIR}/src/target_impl.h
@@ -151,67 +107,30 @@ set(h_files
   ${devicertl_base_directory}/common/state-queuei.h
   ${devicertl_base_directory}/common/support.h)
 
-# for both in-tree and out-of-tree build
-if (NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
-  set(OUTPUTDIR ${CMAKE_CURRENT_BINARY_DIR})
-else()
-  set(OUTPUTDIR ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-endif()
-
 # create gfx bitcode libraries
-set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx1010 gfx1030 gfx1031)
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx1030 gfx1031)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
-  set(mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
+  set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
-message("======> list of AMDGCN GPUs to build for :${mcpus}")
+set(amdgpu_32bitwf gfx1030 gfx1031)
 
-macro(add_ocl_bc_library dir)
-  set(cl_cmd ${AOMP_BINDIR}/clang
-    -fvisibility=default
-    -S -nogpulib -nogpuinc -emit-llvm
-    -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200
-    -Dcl_khr_fp64 -Dcl_khr_fp16
-    -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics
-    -x cl -Xclang -cl-std=CL2.0 -Xclang -finclude-default-header
-    -target amdgcn-amd-amdhsa
-    -I${ROCDL_INC_OCKL}
-    -I${ROCDL_INC_OCML}
-    -I${ROCDL_INC_IRIF}
-    -I${CMAKE_CURRENT_SOURCE_DIR}/src
-    -I${LLVM_COMPILER}/include
-    -I${ROCM_DIR}/include)
-  set(cl_bc_files)
-  file(GLOB h_files "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h")
-
-  foreach(file ${ARGN})
-     file(RELATIVE_PATH rfile ${dir} ${file})
-     get_filename_component(fname ${rfile} NAME_WE)
-     set(bc_filename ${fname}.bc)
-     add_custom_command(
-       OUTPUT ${bc_filename}
-       COMMAND ${cl_cmd} ${CMAKE_CURRENT_SOURCE_DIR}/src/${fname}.cl -o ${bc_filename}
-       DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/${fname}.cl ${h_files}
-       )
-     list(APPEND cl_bc_files ${bc_filename})
-  endforeach()
-
-  add_custom_command(
-    OUTPUT linkout.ocl.${mcpu}.bc
-    COMMAND ${LINK_TOOL} ${cl_bc_files} -o linkout.ocl.${mcpu}.bc
-    DEPENDS ${cl_bc_files}
-    )
-  list(APPEND bc_files linkout.ocl.${mcpu}.bc)
-endmacro()
+# see if this build is for LLVM_ENABLE_RUNTIMES='openmp'
+set(_xdir "")
+foreach(proj ${LLVM_ENABLE_RUNTIMES})
+  string(TOUPPER "${proj}" canon_name)
+  if ("${canon_name}" STREQUAL "OPENMP")
+     set(_xdir "/openmp")
+  endif()
+endforeach()
 
 # Prepend -I to each list element
 set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_AMDGCN "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
 list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_AMDGCN PREPEND "-I")
 
-macro(add_cuda_bc_library)
-  set(cu_cmd ${CLANG_TOOL}
+macro(build_bc_library mcpu target_libname)
+  set(clang_cmd ${CLANG_TOOL}
     -xc++
     -c
-    -mllvm -openmp-opt-disable
     -std=c++14
     -target amdgcn-amd-amdhsa
     -ffreestanding
@@ -223,7 +142,7 @@ macro(add_cuda_bc_library)
     -fvisibility=default
     -Wno-unused-value
     -nogpulib
-    -O${optimization_level}
+    ${clang_opt_flags}
     ${CUDA_DEBUG}
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
     -I${devicertl_base_directory}/common/include
@@ -231,29 +150,95 @@ macro(add_cuda_bc_library)
     -I${devicertl_base_directory}/../include
     ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_AMDGCN})
 
-  set(bc1_files)
+  set(source_bc_files)
 
-  foreach(file ${ARGN})
+  foreach(file ${hip_sources})
     get_filename_component(fname ${file} NAME_WE)
-    set(bc1_filename ${fname}.${mcpu}.bc)
+    set(source_bc_file ${fname}.${mcpu}.bc)
 
     add_custom_command(
-      OUTPUT ${bc1_filename}
-      COMMAND ${cu_cmd} ${file} -o ${bc1_filename}
+      OUTPUT ${source_bc_file}
+      COMMAND ${clang_cmd} ${file} -o ${source_bc_file}
       DEPENDS ${file} ${h_files})
 
-    list(APPEND bc1_files ${bc1_filename})
+    list(APPEND source_bc_files ${source_bc_file})
   endforeach()
 
+  string(LENGTH "${mcpu}" gfxlen)
+  if(gfxlen EQUAL 6)
+    string(SUBSTRING ${mcpu} 3 3 gfxnum)
+  else()
+    string(SUBSTRING ${mcpu} 3 4 gfxnum)
+  endif()
+  set(libhostrpc-bc ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${mcpu}.bc)
+  set(libm-bc ${CMAKE_BINARY_DIR}/libm-amdgcn-${mcpu}.bc)
+  get_target_property(ockl_bc_file ockl LOCATION)
+  get_target_property(ocml_bc_file ocml LOCATION)
+  string(FIND "${amdgpu_32bitwf}" "${mcpu}" is_32bit)
+  if(NOT is_32bit EQUAL -1)
+    get_target_property(oclc_wf_bc_file oclc_wavefrontsize64_off LOCATION)
+  else()
+    get_target_property(oclc_wf_bc_file oclc_wavefrontsize64_on LOCATION)
+  endif()
+  get_target_property(oclc_isa_bc_file oclc_isa_version_${gfxnum} LOCATION)
+
+  # This touch file is generated when both hostrpc and libm bitcodes for mcpu
+  # are made ensuring they are built before the following llvm-link command.
+  set(touch_file "touch.${mcpu}")
+  add_custom_command( OUTPUT ${touch_file} COMMAND /usr/bin/touch ${touch_file})
+  add_custom_target(touch-${mcpu} ALL
+    DEPENDS ${touch_file}
+            ${CMAKE_BINARY_DIR}/libm-amdgcn-${mcpu}.bc
+            ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${mcpu}.bc
+  )
+  add_dependencies(touch-${mcpu} libm-target-${mcpu})
+  add_dependencies(touch-${mcpu} libhostrpc-target-${mcpu})
+
+  if (EXISTS ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS)
+    add_dependencies(touch-${mcpu}
+      ockl ocml oclc_wavefrontsize64_on oclc_wavefrontsize64_off oclc_isa_version_${gfxnum})
+  endif()
+
+  #  NOTE:  When building ROCMDEVLIBS as part of LLVM, we may have to 
+  #  add the ROCM-DEVICE_LIBS file names as dependencies to touch_file,
+  #  not just the rocm device libs target names that creates the file.
+
+  set(linkout_bc_file "linkout.${mcpu}.bc")
+  set(opt_bc_file opt-amdgcn-${mcpu}.bc)
   add_custom_command(
-    OUTPUT linkout.cuda.${mcpu}.bc
-    COMMAND ${LINK_TOOL} ${bc1_files} -o linkout.cuda.${mcpu}.bc
-    DEPENDS ${bc1_files})
+    OUTPUT ${linkout_bc_file}
+    COMMAND ${LINK_TOOL} ${source_bc_files} ${libm-bc} ${libhostrpc-bc}
+      ${ocml_bc_file} ${ockl_bc_file} ${oclc_wf_bc_file} ${oclc_isa_bc_file} -o ${linkout_bc_file}
+    DEPENDS ${source_bc_files} ${touch_file} ${toolchain_deps})
+  add_custom_command(
+    OUTPUT ${opt_bc_file}
+    COMMAND ${OPT_TOOL} ${link_opt_flags} ${linkout_bc_file} -o ${opt_bc_file}
+    DEPENDS ${linkout_bc_file} ${toolchain_deps})
+  add_custom_command(
+    OUTPUT ${target_libname}
+    COMMAND ${PREP_TOOL} ${opt_bc_file} -o ${target_libname}
+    DEPENDS ${opt_bc_file} ${toolchain_deps})
 
-  list(APPEND bc_files linkout.cuda.${mcpu}.bc)
+  # Add a file-level dependency to ensure that llvm-link and opt are up-to-date.
+  # By default, add_custom_command only builds the tool if the executable is missing
+  if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
+    add_custom_command(OUTPUT ${linkout_bc_file}
+      DEPENDS llvm-link
+      APPEND)
+  endif()
+  if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
+    add_custom_command(OUTPUT ${opt_bc_file}
+      DEPENDS opt
+      APPEND)
+  endif()
+  if("${PREP_TOOL}" STREQUAL "$<TARGET_FILE:prep-libomptarget-bc>")
+    add_custom_command(OUTPUT ${target_libname}
+      DEPENDS prep-libomptarget-bc
+      APPEND)
+  endif()
+
+  add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${target_libname})
 endmacro()
-
-set(libname "omptarget-amdgcn")
 
 set(toolchain_deps "")
 if(TARGET llvm-link)
@@ -262,21 +247,13 @@ endif()
 if(TARGET opt)
   list(APPEND toolchain_deps opt)
 endif()
+if(TARGET prep-libomptarget-bc)
+  list(APPEND toolchain_deps prep-libomptarget-bc)
+endif()
 
-foreach(mcpu ${mcpus})
-  set(bc_files)
-  add_cuda_bc_library(${hip_sources})
-  add_ocl_bc_library(${CMAKE_CURRENT_SOURCE_DIR} ${ocl_sources})
-
+set(libname "omptarget-amdgcn")
+foreach(mcpu ${amdgpu_mcpus})
   set(bc_libname lib${libname}-${mcpu}.bc)
-  add_custom_command(
-    OUTPUT ${bc_libname}
-    COMMAND ${LINK_TOOL} ${bc_files} | ${OPT_TOOL} --always-inline -o ${OUTPUTDIR}/${bc_libname}
-    DEPENDS ${bc_files} ${toolchain_deps})
-
-  add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${bc_libname})
-
-  install(FILES ${OUTPUTDIR}/${bc_libname}
-     DESTINATION "${OPENMP_INSTALL_LIBDIR}"
-  )
+  build_bc_library(${mcpu} ${bc_libname})
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bc_libname} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 endforeach()

@@ -51,11 +51,11 @@ static void _error(const char *fname) {
   printf("ERROR: Calls to function %s are for device only execution\n", fname);
 }
 EXTERN char *printf_allocate(uint32_t bufsz) {
-  _error((char *)"printf_allocate");
+  _error((const char *)"printf_allocate");
   return NULL;
 }
 EXTERN int printf_execute(char *bufptr, uint32_t bufsz) {
-  _error("printf_allocate");
+  _error("printf_execute");
   return 0;
 }
 EXTERN char *hostrpc_varfn_uint_allocate(uint32_t bufsz) {

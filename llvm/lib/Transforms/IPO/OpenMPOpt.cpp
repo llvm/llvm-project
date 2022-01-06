@@ -1889,6 +1889,10 @@ private:
                                     OMPRTL___kmpc_kernel_end_parallel);
     ExternalizationRAII BarrierSPMD(OMPInfoCache,
                                     OMPRTL___kmpc_barrier_simple_spmd);
+    ExternalizationRAII StartWorkersBarriers(
+        OMPInfoCache, OMPRTL___kmpc_workers_start_barriers);
+    ExternalizationRAII DoneWorkersBarriers(
+        OMPInfoCache, OMPRTL___kmpc_workers_done_barriers);
     ExternalizationRAII BarrierGeneric(OMPInfoCache,
                                        OMPRTL___kmpc_barrier_simple_generic);
     ExternalizationRAII ThreadId(OMPInfoCache,

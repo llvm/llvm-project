@@ -138,11 +138,10 @@ public:
 
   /// Get file paths of default bitcode libraries common to AMDGPU based
   /// toolchains.
-  llvm::SmallVector<std::string, 12>
-  getCommonBitcodeLibs(const llvm::opt::ArgList &DriverArgs,
-                       StringRef LibDeviceFile, bool Wave64, bool DAZ,
-                       bool FiniteOnly, bool UnsafeMathOpt,
-                       bool FastRelaxedMath, bool CorrectSqrt) const;
+  llvm::SmallVector<std::string, 12> getCommonBitcodeLibs(
+      const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile,
+      bool Wave64, bool DAZ, bool FiniteOnly, bool UnsafeMathOpt,
+      bool FastRelaxedMath, bool CorrectSqrt, bool isOpenMP) const;
 
   /// Check whether we detected a valid HIP runtime.
   bool hasHIPRuntime() const { return HasHIPRuntime; }

@@ -746,8 +746,8 @@ bool GetTargetInfoFromOffloadArch(Compilation &C, const char *OpenMPTarget,
   return true;
 }
 
-bool GetTargetInfoFromMArch(Compilation &C,
-                            std::set<std::string> &OffloadArchs) {
+bool Driver::GetTargetInfoFromMarch(Compilation &C,
+                                    std::set<std::string> &OffloadArchs) const {
   StringRef OpenMPTargetArch;
   for (Arg *A : C.getInputArgs()) {
     if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
@@ -786,8 +786,8 @@ bool GetTargetInfoFromMArch(Compilation &C,
   return true;
 }
 
-bool GetTargetInfoFromOffloadArchOpts(Compilation &C,
-                                      std::set<std::string> &OffloadArchs) {
+bool Driver::GetTargetInfoFromOffloadArchOpts(
+    Compilation &C, std::set<std::string> &OffloadArchs) const {
   for (Arg *A : C.getInputArgs()) {
     if (!(A->getOption().matches(options::OPT_offload_arch_EQ) ||
           A->getOption().matches(options::OPT_no_offload_arch_EQ))) {
@@ -925,11 +925,10 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       }
 
       //  process legacy option -fopenmp-targets -Xopenmp-target and -march
-      auto status = GetTargetInfoFromMArch(C, OffloadArchs);
+      auto status = GetTargetInfoFromMarch(C, OffloadArchs);
       if (!status)
         return;
     }
-
     auto status = GetTargetInfoFromOffloadArchOpts(C, OffloadArchs);
     if (!status)
       return;
@@ -5185,6 +5184,10 @@ InputInfo Driver::BuildJobsForActionNoCache(
         std::replace(BaseNm.begin(), BaseNm.end(), '.', '_');
         BaseInput = C.getArgs().MakeArgString(BaseNm + "-wrapper");
     }
+
+    std::string TargetIDStr = TC->getTargetID();
+    if (!TargetIDStr.empty() && BoundArch.empty())
+      BoundArch = StringRef(TargetIDStr);
     Result = InputInfo(A, GetNamedOutputPath(C, *JA, BaseInput, BoundArch,
                                              AtTopLevel, MultipleArchs,
                                              OffloadingPrefix),
@@ -5364,7 +5367,11 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         llvm::sys::path::append(TmpName,
                                 Split.first + "-" + BoundArch + "." + Suffix);
       } else {
-        TmpName = GetTemporaryPath(Split.first, Suffix);
+        if (BoundArch.empty())
+          TmpName = GetTemporaryPath(Split.first, Suffix);
+        else
+          TmpName = GetTemporaryPath(Split.first,
+                                     SmallString<16>(BoundArch + "." + Suffix));
       }
     }
     return C.addTempFile(C.getArgs().MakeArgString(TmpName));

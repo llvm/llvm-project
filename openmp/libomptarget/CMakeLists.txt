@@ -99,6 +99,32 @@ find_path (
 
 include_directories(${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 
+# Various LLVM_TOOLS are needed to build libomptarget
+find_package(LLVM QUIET CONFIG PATHS
+   ${LLVM_INSTALL_PREFIX}
+   ${LIBOMPTARGET_NVPTX_CUDA_COMPILER_DIR}
+   ${LIBOMPTARGET_NVPTX_CUDA_LINKER_DIR}
+   ${CMAKE_CXX_COMPILER_DIR}
+   NO_DEFAULT_PATH)
+if(LLVM_DIR)
+  message(" -- LLVM found at ${LLVM_DIR}")
+  find_program(CLANG_TOOL clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  find_program(CLANG_OFFLOAD_BUNDLER_TOOL clang-offload-bundler PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  find_program(AR_TOOL llvm-ar PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR}
+    NO_DEFAULT_PATH)
+  find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDALONE_BUILD)
+  # LLVM in-tree builds may use CMake target names to discover the tools.
+  set(CLANG_TOOL $<TARGET_FILE:clang>)
+  set(CLANG_OFFLOAD_BUNDLER_TOOL $<TARGET_FILE:clang-offload-bundler>)
+  set(AR_TOOL $<TARGET_FILE:llvm-ar>)
+  set(LINK_TOOL $<TARGET_FILE:llvm-link>)
+  set(OPT_TOOL $<TARGET_FILE:opt>)
+else()
+  message(" ====== WARNING! no LLVM found! some libomptarget components may be skipped")
+endif()
+
 # Build target agnostic offloading library.
 set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_subdirectory(${LIBOMPTARGET_SRC_DIR})
@@ -112,10 +138,19 @@ set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins)
-add_subdirectory(deviceRTLs)
+# Currently device libm functions are created by clang headers.  These do not
+# work for FORTRAN. The libm here  builds a libm device library by turning on
+# __BUILD_MATH_BUILTINS_LIB__ This converts the math functions in the clang
+# headers from static to extern to build device linkable libm for FORTRAN.
+# Eventually, we can make a linkable device libm for c and c++ and remove a
+# lot of header definitions that get compiled with every offload compilation.
+add_subdirectory(libm)
+
 add_subdirectory(hostrpc)
-add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
+set(PREP_TOOL $<TARGET_FILE:prep-libomptarget-bc>)
+add_subdirectory(deviceRTLs)
+add_subdirectory(DeviceRTL)
 
 # Add tests.
 add_subdirectory(test)

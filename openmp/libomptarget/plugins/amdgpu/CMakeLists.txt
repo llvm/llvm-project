@@ -20,7 +20,11 @@ if (NOT LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
 endif()
 
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
-find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS
+  ${CMAKE_INSTALL_PREFIX} /opt/rocm)
+if(hsa-runtime64_DIR)
+  message("FOUND hsa-runtime64 at ${hsa-runtime64_DIR}")
+endif()
 
 if(NOT LIBOMPTARGET_DEP_LIBELF_FOUND)
   libomptarget_say("Not building AMDGPU plugin: LIBELF not found")
@@ -55,6 +59,7 @@ include_directories(
 
 set(LIBOMPTARGET_DLOPEN_LIBHSA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBHSA "Build with dlopened libhsa" ${LIBOMPTARGET_DLOPEN_LIBHSA})
+
 
 if (${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   libomptarget_say("Building AMDGPU plugin linked against libhsa")
@@ -96,7 +101,12 @@ endif()
 # Don't override an externally defined RPATH
 if(NOT DEFINED CMAKE_INSTALL_RPATH)
   set_property(TARGET omptarget.rtl.amdgpu PROPERTY INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib")
+else()
+  set_target_properties(omptarget.rtl.amdgpu PROPERTIES
+    INSTALL_RPATH ${CMAKE_INSTALL_RPATH}
+    BUILD_RPATH ${CMAKE_INSTALL_RPATH})
 endif()
+
 target_link_libraries(
   omptarget.rtl.amdgpu
   PUBLIC

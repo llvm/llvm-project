@@ -174,11 +174,17 @@ EXTERN uint32_t __kmpc_amdgcn_gpu_num_threads() {
   return __kmpc_get_hardware_num_threads_in_block();
 }
 
-// global_allocate is hostrpc service to return pointer to device memory
-// In the future, we will implement a heap allocation and minimize
-// host service calls. 
-EXTERN char * global_allocate(uint32_t bufsz);
-EXTERN int global_free(void*);
+// global_allocate uses ockl_dm_alloc to manage a global memory heap
+extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
+extern "C" void  __ockl_dm_dealloc(uint64_t ptr);
+EXTERN char * global_allocate(uint32_t bufsz) {
+  uint64_t ptr = __ockl_dm_alloc((uint64_t) bufsz);
+  return (char*) ptr;
+}
+EXTERN int global_free(void * ptr) {
+   __ockl_dm_dealloc((uint64_t) ptr);
+   return 0;
+}
 
 // Memory
 EXTERN void *__kmpc_impl_malloc(size_t t) { return global_allocate(t); }

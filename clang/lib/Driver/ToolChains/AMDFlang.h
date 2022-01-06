@@ -9,12 +9,13 @@
 #ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDFLANG_H
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDFLANG_H
 
-#include "clang/Driver/Tool.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Compiler.h"
+#include <set>
 
 namespace clang {
 class ObjCRuntime;
@@ -43,7 +44,8 @@ private:
                          llvm::opt::ArgStringList &FlangArgs) const;
 
   void addTargetArchToFlangArgs(const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &FlangArgs) const;
+                                std::set<std::string> &OffloadArchs,
+                                llvm::opt::ArgStringList &FlangArgs) const;
 };
 
 } // end namespace tools

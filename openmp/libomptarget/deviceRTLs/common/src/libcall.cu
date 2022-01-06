@@ -268,6 +268,7 @@ EXTERN int omp_get_place_num_procs(int place_num) {
 
 EXTERN void omp_get_place_proc_ids(int place_num, int *ids) {
   PRINT0(LD_IO, "call to omp_get_place_proc_ids()\n");
+  ids[0] = 0;
 }
 
 EXTERN int omp_get_place_num(void) {

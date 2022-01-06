@@ -213,7 +213,9 @@ static void hostrpc_handler_SERVICE_MALLOC(uint32_t device_id,
 static void hostrpc_handler_SERVICE_FTNASSIGN(uint32_t device_id,
                                               uint64_t *payload) {
   void *ptr = NULL;
-  hsa_status_t err = ftn_assign_wrapper(payload[0], payload[1], payload[2], payload[3], payload[4]);
+  hsa_status_t err = ftn_assign_wrapper((void *)payload[0], (void *)payload[1],
+                                        (void *)payload[2], (void *)payload[3],
+                                        (void *)payload[4]);
   payload[0] = (uint64_t)err;
   payload[1] = (uint64_t)ptr;
 }

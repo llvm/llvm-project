@@ -11,3 +11,4 @@
 ##===----------------------------------------------------------------------===##
 
 add_subdirectory(deviceinfo)
+add_subdirectory(prep-libomptarget-bc)
