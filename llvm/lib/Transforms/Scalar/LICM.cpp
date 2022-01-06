@@ -1925,8 +1925,7 @@ bool isNotCapturedBeforeOrInLoop(const Value *V, const Loop *L,
 
 /// Return true iff we can prove that a caller of this function can not inspect
 /// the contents of the provided object in a well defined program.
-bool isKnownNonEscaping(Value *Object, const Loop *L,
-                        const TargetLibraryInfo *TLI, DominatorTree *DT) {
+bool isKnownNonEscaping(Value *Object, const Loop *L, DominatorTree *DT) {
   if (isa<AllocaInst>(Object))
     // Since the alloca goes out of scope, we know the caller can't retain a
     // reference to it and be well defined.  Thus, we don't need to check for
@@ -1939,11 +1938,8 @@ bool isKnownNonEscaping(Value *Object, const Loop *L,
   //   1) Object can't be escaped by this function.  This is what
   //      PointerMayBeCaptured checks.
   //   2) Object can't have been captured at definition site.  For this, we
-  //      need to know the return value is noalias.  At the moment, we use a
-  //      weaker condition and handle only AllocLikeFunctions (which are
-  //      known to be noalias).  TODO
-  return isAllocLikeFn(Object, TLI) &&
-         isNotCapturedBeforeOrInLoop(Object, L, DT);
+  //      need to know the return value is noalias.
+  return isNoAliasCall(Object) && isNotCapturedBeforeOrInLoop(Object, L, DT);
 }
 
 } // namespace
@@ -2030,7 +2026,7 @@ bool llvm::promoteLoopAccessesToScalars(
     // this by proving that the caller can't have a reference to the object
     // after return and thus can't possibly load from the object.
     Value *Object = getUnderlyingObject(SomePtr);
-    if (!isKnownNonEscaping(Object, CurLoop, TLI, DT))
+    if (!isKnownNonEscaping(Object, CurLoop, DT))
       return false;
     // Subtlety: Alloca's aren't visible to callers, but *are* potentially
     // visible to other threads if captured and used during their lifetimes.
@@ -2163,7 +2159,7 @@ bool llvm::promoteLoopAccessesToScalars(
     else {
       Value *Object = getUnderlyingObject(SomePtr);
       SafeToInsertStore =
-          (isAllocLikeFn(Object, TLI) || isa<AllocaInst>(Object)) &&
+          (isNoAliasCall(Object) || isa<AllocaInst>(Object)) &&
           isNotCapturedBeforeOrInLoop(Object, CurLoop, DT);
     }
   }
