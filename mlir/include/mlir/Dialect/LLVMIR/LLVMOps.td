@@ -1364,7 +1364,7 @@ def LLVM_UndefOp : LLVM_Op<"mlir.undef", [NoSideEffect]>,
 }
 
 def LLVM_ConstantOp
-    : LLVM_Op<"mlir.constant", [NoSideEffect]>,
+    : LLVM_Op<"mlir.constant", [NoSideEffect, ConstantLike]>,
       LLVM_Builder<[{$res = getLLVMConstant($_resultType, $value, $_location,
                                             moduleTranslation);}]>
 {
@@ -1403,6 +1403,7 @@ def LLVM_ConstantOp
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "`(` $value `)` attr-dict `:` type($res)";
   let verifier = [{ return ::verify(*this); }];
+  let hasFolder = 1;
 }
 
 // Operations that correspond to LLVM intrinsics. With MLIR operation set being

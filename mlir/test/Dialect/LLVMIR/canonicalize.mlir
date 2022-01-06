@@ -40,6 +40,7 @@ llvm.func @no_fold_extractvalue(%arr: !llvm.array<4xf32>) -> f32 {
 }
 
 // -----
+
 // CHECK-LABEL: fold_bitcast
 // CHECK-SAME: %[[a0:arg[0-9]+]]
 // CHECK-NEXT: llvm.return %[[a0]]
@@ -87,3 +88,19 @@ llvm.func @fold_gep(%x : !llvm.ptr<i8>) -> !llvm.ptr<i8> {
   llvm.return %c : !llvm.ptr<i8>
 }
 
+// -----
+
+// Check that LLVM constants participate in cross-dialect constant folding. The
+// resulting constant is created in the arith dialect because the last folded
+// operation belongs to it.
+// CHECK-LABEL: llvm_constant
+func @llvm_constant() -> i32 {
+  // CHECK-NOT: llvm.mlir.constant
+  %0 = llvm.mlir.constant(40 : i32) : i32
+  %1 = llvm.mlir.constant(42 : i32) : i32
+  // CHECK: %[[RES:.*]] = arith.constant 82 : i32
+  // CHECK-NOT: arith.addi
+  %2 = arith.addi %0, %1 : i32
+  // CHECK: return %[[RES]]
+  return %2 : i32
+}

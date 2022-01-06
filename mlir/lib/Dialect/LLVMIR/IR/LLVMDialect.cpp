@@ -2086,6 +2086,9 @@ static LogicalResult verify(LLVM::ConstantOp op) {
   return success();
 }
 
+// Constant op constant-folds to its value.
+OpFoldResult LLVM::ConstantOp::fold(ArrayRef<Attribute>) { return getValue(); }
+
 //===----------------------------------------------------------------------===//
 // Utility functions for parsing atomic ops
 //===----------------------------------------------------------------------===//
