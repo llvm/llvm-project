@@ -8,10 +8,14 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
-// This test hangs forever when built against libstdc++ and MSVC. In order to allow
-// validation of the test suite against other STLs we have to mark it
-// unsupported.
-// UNSUPPORTED: stdlib=libstdc++, stdlib=msvc
+// This test hangs forever when built against libstdc++ (Oct 2016).
+// UNSUPPORTED: stdlib=libstdc++
+
+// This test isn't quite standards-conforming: it's testing our specific
+// algorithm, where when lx.try_lock() fails we start the next attempt
+// with an unconditional lx.lock(). Thus our algorithm can handle a list
+// of mutexes where at-most-one of them is of the evil type `class L1`,
+// but will loop forever if two or more of them are `class L1`.
 
 // <mutex>
 
