@@ -363,17 +363,6 @@ protected:
     if (__begin == __end)
       __throw_format_error("End of input while parsing format-spec precision");
 
-    if (*__begin == _CharT('0')) {
-      ++__begin;
-      if (__begin != __end && *__begin >= '0' && *__begin <= '9')
-        __throw_format_error(
-            "A format-spec precision field shouldn't have a leading zero");
-
-      __precision = 0;
-      __precision_as_arg = 0;
-      return __begin;
-    }
-
     if (*__begin == _CharT('{')) {
       __format::__parse_number_result __arg_id =
           __parse_arg_id(++__begin, __end, __parse_ctx);

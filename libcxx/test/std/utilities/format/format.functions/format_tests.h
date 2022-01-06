@@ -175,11 +175,12 @@ void format_test_string(T world, T universe, TestFunction check,
   check_exception(
       "Using automatic argument numbering in manual argument numbering mode",
       STR("hello {0:{}}"), world, 1);
+  // Arg-id may not have leading zeros.
+  check_exception(
+      "A format-spec arg-id should terminate at a '}'",
+      STR("hello {0:{01}}"), world, 1);
 
   // *** precision ***
-  check_exception("A format-spec precision field shouldn't have a leading zero",
-                  STR("hello {:.01}"), world);
-
 #if _LIBCPP_VERSION
   // This limit isn't specified in the Standard.
   static_assert(std::__format::__number_max == 2'147'483'647,
@@ -194,6 +195,8 @@ void format_test_string(T world, T universe, TestFunction check,
 
   // Precision 0 allowed, but not useful for string arguments.
   check(STR("hello "), STR("hello {:.{}}"), world, 0);
+  // Precision may have leading zeros. Secondly tests the value is still base 10.
+  check(STR("hello 0123456789"), STR("hello {:.000010}"), STR("0123456789abcdef"));
   check_exception(
       "A format-spec arg-id replacement shouldn't have a negative value",
       STR("hello {:.{}}"), world, -1);
@@ -210,6 +213,10 @@ void format_test_string(T world, T universe, TestFunction check,
   check_exception(
       "Using automatic argument numbering in manual argument numbering mode",
       STR("hello {0:.{}}"), world, 1);
+  // Arg-id may not have leading zeros.
+  check_exception(
+      "A format-spec arg-id should terminate at a '}'",
+      STR("hello {0:.{01}}"), world, 1);
 
   // *** locale-specific form ***
   check_exception("The format-spec should consume the input or end with a '}'",
