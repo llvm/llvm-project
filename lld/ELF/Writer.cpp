@@ -2171,7 +2171,7 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
         if (!(isec->flags & SHF_EXECINSTR))
           error("cannot place " + toString(isec) + " into " +
                 toString(osec->name) +
-                ": -execute-only does not support intermingling data and code");
+                ": --execute-only does not support intermingling data and code");
 }
 
 // The linker is expected to define SECNAME_start and SECNAME_end
