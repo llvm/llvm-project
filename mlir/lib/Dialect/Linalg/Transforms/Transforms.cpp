@@ -489,23 +489,24 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
 mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
     MLIRContext *context, LinalgPaddingOptions options,
     LinalgTransformationFilter filter, PatternBenefit benefit)
-    : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
       filter(std::move(filter)), options(std::move(options)) {}
 
 mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
     StringRef opName, MLIRContext *context, LinalgPaddingOptions options,
     LinalgTransformationFilter filter, PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context, {}), filter(std::move(filter)),
-      options(std::move(options)) {}
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(filter)), options(std::move(options)) {
+  this->filter.addFilter([opName](Operation *op) {
+    return success(op->getName().getStringRef() == opName);
+  });
+}
 
 LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
-    return failure();
+    LinalgOp linalgOp, PatternRewriter &rewriter) const {
   if (!linalgOp.hasTensorSemantics())
     return failure();
-  if (failed(filter.checkAndNotify(rewriter, op)))
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
 
   // Pad the operation.
@@ -538,7 +539,7 @@ LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
   }
 
   // Replace the original operation to pad.
-  rewriter.replaceOp(op, newResults.getValue());
+  rewriter.replaceOp(linalgOp, newResults.getValue());
   filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
   return success();
 }
