@@ -10150,6 +10150,15 @@ TEST_F(FormatTest, FormatsCasts) {
                "    (aaaaaaaaaaaaaaaaaaaaaaaaaa *)(aaaaaaaaaaaaaaaaaaaaaa +\n"
                "                                   bbbbbbbbbbbbbbbbbbbbbb);");
 
+  verifyFormat("#define CONF_BOOL(x) (bool *)(void *)(x)");
+  verifyFormat("#define CONF_BOOL(x) (bool *)(x)");
+  verifyFormat("#define CONF_BOOL(x) (bool)(x)");
+  verifyFormat("bool *y = (bool *)(void *)(x);");
+  verifyFormat("#define CONF_BOOL(x) (bool *)(void *)(int)(x)");
+  verifyFormat("bool *y = (bool *)(void *)(int)(x);");
+  verifyFormat("#define CONF_BOOL(x) (bool *)(void *)(int)foo(x)");
+  verifyFormat("bool *y = (bool *)(void *)(int)foo(x);");
+
   // These are not casts.
   verifyFormat("void f(int *) {}");
   verifyFormat("f(foo)->b;");
@@ -14661,6 +14670,11 @@ TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
                "  break;\n"
                "}",
                Spaces);
+  verifyFormat("#define CONF_BOOL(x) ( bool * ) ( void * ) (x)", Spaces);
+  verifyFormat("#define CONF_BOOL(x) ( bool * ) (x)", Spaces);
+  verifyFormat("#define CONF_BOOL(x) ( bool ) (x)", Spaces);
+  verifyFormat("bool *y = ( bool * ) ( void * ) (x);", Spaces);
+  verifyFormat("bool *y = ( bool * ) (x);", Spaces);
 
   // Run subset of tests again with:
   Spaces.SpacesInCStyleCastParentheses = false;
@@ -14680,6 +14694,11 @@ TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
   verifyFormat("size_t idx = (a->foo)(a - 1);", Spaces);
   verifyFormat("size_t idx = (*foo)(a - 1);", Spaces);
   verifyFormat("size_t idx = (*(foo))(a - 1);", Spaces);
+  verifyFormat("#define CONF_BOOL(x) (bool *) (void *) (x)", Spaces);
+  verifyFormat("#define CONF_BOOL(x) (bool *) (void *) (int) (x)", Spaces);
+  verifyFormat("bool *y = (bool *) (void *) (x);", Spaces);
+  verifyFormat("bool *y = (bool *) (void *) (int) (x);", Spaces);
+  verifyFormat("bool *y = (bool *) (void *) (int) foo(x);", Spaces);
   Spaces.ColumnLimit = 80;
   Spaces.IndentWidth = 4;
   Spaces.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;

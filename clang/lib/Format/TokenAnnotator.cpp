@@ -1883,9 +1883,10 @@ private:
 
     FormatToken *LeftOfParens = Tok.MatchingParen->getPreviousNonComment();
     if (LeftOfParens) {
-      // If there is a closing parenthesis left of the current parentheses,
-      // look past it as these might be chained casts.
-      if (LeftOfParens->is(tok::r_paren)) {
+      // If there is a closing parenthesis left of the current
+      // parentheses, look past it as these might be chained casts.
+      if (LeftOfParens->is(tok::r_paren) &&
+          LeftOfParens->isNot(TT_CastRParen)) {
         if (!LeftOfParens->MatchingParen ||
             !LeftOfParens->MatchingParen->Previous)
           return false;
