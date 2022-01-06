@@ -44,15 +44,16 @@ public:
   bool isGOTEdgeToFix(Edge &E) const { return E.getKind() == R_RISCV_GOT_HI20; }
 
   Symbol &createGOTEntry(Symbol &Target) {
-    Block &GOTBlock = G.createContentBlock(
-        getGOTSection(), getGOTEntryBlockContent(), 0, G.getPointerSize(), 0);
+    Block &GOTBlock =
+        G.createContentBlock(getGOTSection(), getGOTEntryBlockContent(),
+                             orc::ExecutorAddr(), G.getPointerSize(), 0);
     GOTBlock.addEdge(isRV64() ? R_RISCV_64 : R_RISCV_32, 0, Target, 0);
     return G.addAnonymousSymbol(GOTBlock, 0, G.getPointerSize(), false, false);
   }
 
   Symbol &createPLTStub(Symbol &Target) {
-    Block &StubContentBlock =
-        G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 4, 0);
+    Block &StubContentBlock = G.createContentBlock(
+        getStubsSection(), getStubBlockContent(), orc::ExecutorAddr(), 4, 0);
     auto &GOTEntrySymbol = getGOTEntry(Target);
     StubContentBlock.addEdge(R_RISCV_CALL, 0, GOTEntrySymbol, 0);
     return G.addAnonymousSymbol(StubContentBlock, 0, StubEntrySize, true,
@@ -134,13 +135,13 @@ static Expected<const Edge &> getRISCVPCRelHi20(const Edge &E) {
 
   const Symbol &Sym = E.getTarget();
   const Block &B = Sym.getBlock();
-  JITTargetAddress Offset = Sym.getOffset();
+  orc::ExecutorAddrDiff Offset = Sym.getOffset();
 
   struct Comp {
-    bool operator()(const Edge &Lhs, JITTargetAddress Offset) {
+    bool operator()(const Edge &Lhs, orc::ExecutorAddrDiff Offset) {
       return Lhs.getOffset() < Offset;
     }
-    bool operator()(JITTargetAddress Offset, const Edge &Rhs) {
+    bool operator()(orc::ExecutorAddrDiff Offset, const Edge &Rhs) {
       return Offset < Rhs.getOffset();
     }
   };
@@ -176,27 +177,27 @@ private:
 
     char *BlockWorkingMem = B.getAlreadyMutableContent().data();
     char *FixupPtr = BlockWorkingMem + E.getOffset();
-    JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
+    orc::ExecutorAddr FixupAddress = B.getAddress() + E.getOffset();
     switch (E.getKind()) {
     case R_RISCV_32: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend();
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
       *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
       break;
     }
     case R_RISCV_64: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend();
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
       *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
       break;
     }
     case R_RISCV_HI20: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend();
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
       int32_t Hi = (Value + 0x800) & 0xFFFFF000;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr = (RawInstr & 0xFFF) | static_cast<uint32_t>(Hi);
       break;
     }
     case R_RISCV_LO12_I: {
-      int64_t Value = E.getTarget().getAddress() + E.getAddend();
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
       int32_t Lo = Value & 0xFFF;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr =
@@ -322,7 +323,7 @@ private:
 
     int64_t Addend = Rel.r_addend;
     Block *BlockToFix = *(GraphSection.blocks().begin());
-    JITTargetAddress FixupAddress = FixupSect.sh_addr + Rel.r_offset;
+    auto FixupAddress = orc::ExecutorAddr(FixupSect.sh_addr) + Rel.r_offset;
     Edge::OffsetT Offset = FixupAddress - BlockToFix->getAddress();
     Edge GE(*Kind, Offset, *GraphSymbol, Addend);
     LLVM_DEBUG({
