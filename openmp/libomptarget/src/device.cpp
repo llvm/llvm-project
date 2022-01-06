@@ -305,7 +305,9 @@ DeviceTy::getTargetPointer(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
     DataMapMtx.unlock();
     // If not a host pointer and no present modifier, we need to wait for the
     // event if it exists.
-    if (!IsHostPtr && !HasPresentModifier) {
+    // Note: Entry might be nullptr because of zero length array section.
+    if (Entry != HostDataToTargetListTy::iterator() && !IsHostPtr &&
+        !HasPresentModifier) {
       Entry->lock();
       void *Event = Entry->getEvent();
       if (Event) {
