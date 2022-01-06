@@ -71,13 +71,13 @@ protected:
   public:
     char SectName[17];
     char SegName[17];
-    uint64_t Address = 0;
+    orc::ExecutorAddr Address;
     uint64_t Size = 0;
     uint64_t Alignment = 0;
     uint32_t Flags = 0;
     const char *Data = nullptr;
     Section *GraphSection = nullptr;
-    std::map<JITTargetAddress, Symbol *> CanonicalSymbols;
+    std::map<orc::ExecutorAddr, Symbol *> CanonicalSymbols;
   };
 
   using SectionParserFunction = std::function<Error(NormalizedSection &S)>;
@@ -137,7 +137,7 @@ protected:
   /// Returns the symbol with the highest address not greater than the search
   /// address, or null if no such symbol exists.
   Symbol *getSymbolByAddress(NormalizedSection &NSec,
-                             JITTargetAddress Address) {
+                             orc::ExecutorAddr Address) {
     auto I = NSec.CanonicalSymbols.upper_bound(Address);
     if (I == NSec.CanonicalSymbols.begin())
       return nullptr;
@@ -147,7 +147,7 @@ protected:
   /// Returns the symbol with the highest address not greater than the search
   /// address, or an error if no such symbol exists.
   Expected<Symbol &> findSymbolByAddress(NormalizedSection &NSec,
-                                         JITTargetAddress Address) {
+                                         orc::ExecutorAddr Address) {
     auto *Sym = getSymbolByAddress(NSec, Address);
     if (Sym)
       if (Address <= Sym->getAddress() + Sym->getSize())
@@ -193,9 +193,9 @@ private:
 
   Section &getCommonSection();
   void addSectionStartSymAndBlock(unsigned SecIndex, Section &GraphSec,
-                                  uint64_t Address, const char *Data,
-                                  uint64_t Size, uint32_t Alignment,
-                                  bool IsLive);
+                                  orc::ExecutorAddr Address, const char *Data,
+                                  orc::ExecutorAddrDiff Size,
+                                  uint32_t Alignment, bool IsLive);
 
   Error createNormalizedSections();
   Error createNormalizedSymbols();

@@ -25,25 +25,24 @@ namespace jitlink {
 class EHFrameRegistrar {
 public:
   virtual ~EHFrameRegistrar();
-  virtual Error registerEHFrames(JITTargetAddress EHFrameSectionAddr,
+  virtual Error registerEHFrames(orc::ExecutorAddr EHFrameSectionAddr,
                                  size_t EHFrameSectionSize) = 0;
-  virtual Error deregisterEHFrames(JITTargetAddress EHFrameSectionAddr,
+  virtual Error deregisterEHFrames(orc::ExecutorAddr EHFrameSectionAddr,
                                    size_t EHFrameSectionSize) = 0;
 };
 
 /// Registers / Deregisters EH-frames in the current process.
 class InProcessEHFrameRegistrar final : public EHFrameRegistrar {
 public:
-  Error registerEHFrames(JITTargetAddress EHFrameSectionAddr,
+  Error registerEHFrames(orc::ExecutorAddr EHFrameSectionAddr,
                          size_t EHFrameSectionSize) override;
 
-  Error deregisterEHFrames(JITTargetAddress EHFrameSectionAddr,
+  Error deregisterEHFrames(orc::ExecutorAddr EHFrameSectionAddr,
                            size_t EHFrameSectionSize) override;
 };
 
-using StoreFrameRangeFunction =
-  std::function<void(JITTargetAddress EHFrameSectionAddr,
-                     size_t EHFrameSectionSize)>;
+using StoreFrameRangeFunction = std::function<void(
+    orc::ExecutorAddr EHFrameSectionAddr, size_t EHFrameSectionSize)>;
 
 /// Creates a pass that records the address and size of the EH frame section.
 /// If no eh-frame section is found then the address and size will both be given

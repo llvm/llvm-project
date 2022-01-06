@@ -323,9 +323,23 @@ struct TiledLoopOpInterface
                          newBlockArgs);
 
     // Replace previous terminator with a new one that does not yield anything.
-    Operation *oldTerminator = newTiledLoopOp.getBody()->getTerminator();
+    auto oldTerminator =
+        cast<linalg::YieldOp>(newTiledLoopOp.getBody()->getTerminator());
     rewriter.setInsertionPointToEnd(newTiledLoopOp.getBody());
-    rewriter.create<linalg::YieldOp>(oldTerminator->getLoc());
+    auto newTerminator =
+        rewriter.create<linalg::YieldOp>(oldTerminator->getLoc());
+
+    // Copy buffer of yielded tensor to output buffer. If everything bufferized
+    // inplace, this copy will fold away.
+    rewriter.setInsertionPoint(newTerminator);
+    for (auto it : llvm::zip(oldTerminator.values(), newOutputs)) {
+      Value output = std::get<1>(it);
+      Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
+          newTerminator.getLoc(), output.getType(), std::get<0>(it));
+      state.createMemCpy(rewriter, newTerminator.getLoc(), toMemrefOp, output);
+    }
+
+    // Erase old terminator.
     rewriter.eraseOp(oldTerminator);
 
     // Replace results and delete old op.

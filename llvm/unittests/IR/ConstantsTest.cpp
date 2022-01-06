@@ -763,5 +763,32 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
   }
 }
 
+TEST(ConstantsTest, ComdatUserTracking) {
+  LLVMContext Context;
+  Module M("MyModule", Context);
+
+  Comdat *C = M.getOrInsertComdat("comdat");
+  const SmallPtrSetImpl<GlobalObject *> &Users = C->getUsers();
+  EXPECT_TRUE(Users.size() == 0);
+
+  Type *Ty = Type::getInt8Ty(Context);
+  GlobalVariable *GV1 = cast<GlobalVariable>(M.getOrInsertGlobal("gv1", Ty));
+  GV1->setComdat(C);
+  EXPECT_TRUE(Users.size() == 1);
+  EXPECT_TRUE(Users.contains(GV1));
+
+  GlobalVariable *GV2 = cast<GlobalVariable>(M.getOrInsertGlobal("gv2", Ty));
+  GV2->setComdat(C);
+  EXPECT_TRUE(Users.size() == 2);
+  EXPECT_TRUE(Users.contains(GV2));
+
+  GV1->eraseFromParent();
+  EXPECT_TRUE(Users.size() == 1);
+  EXPECT_TRUE(Users.contains(GV2));
+
+  GV2->eraseFromParent();
+  EXPECT_TRUE(Users.size() == 0);
+}
+
 } // end anonymous namespace
 } // end namespace llvm

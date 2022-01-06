@@ -99,9 +99,6 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
   // Enable InitTensorOp elimination.
   options->addPostAnalysisStep<
       linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
-  // TODO: Find a way to enable this step automatically when bufferizing
-  // tensor dialect ops.
-  options->addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
   if (!allowReturnMemref)
     options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
