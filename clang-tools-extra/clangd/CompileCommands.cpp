@@ -290,16 +290,9 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd,
     TransferCmd.CommandLine = std::move(Cmd);
     TransferCmd = transferCompileCommand(std::move(TransferCmd), File);
     Cmd = std::move(TransferCmd.CommandLine);
-
-    // Restore the canonical "driver --opts -- filename" form we expect.
-    // FIXME: This is ugly and coupled. Make transferCompileCommand ensure it?
-    assert(!Cmd.empty() && Cmd.back() == File);
-    Cmd.pop_back();
-    if (!Cmd.empty() && Cmd.back() == "--")
-      Cmd.pop_back();
-    assert(!llvm::is_contained(Cmd, "--"));
-    Cmd.push_back("--");
-    Cmd.push_back(File.str());
+    assert(Cmd.size() >= 2 && Cmd.back() == File &&
+           Cmd[Cmd.size() - 2] == "--" &&
+           "TransferCommand should produce a command ending in -- filename");
   }
 
   for (auto &Edit : Config::current().CompileFlags.Edits)

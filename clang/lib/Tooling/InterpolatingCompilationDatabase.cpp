@@ -243,8 +243,7 @@ struct TransferableCommand {
           llvm::Twine(ClangCLMode ? "/std:" : "-std=") +
           LangStandard::getLangStandardForKind(Std).getName()).str());
     }
-    if (Filename.startswith("-") || (ClangCLMode && Filename.startswith("/")))
-      Result.CommandLine.push_back("--");
+    Result.CommandLine.push_back("--");
     Result.CommandLine.push_back(std::string(Filename));
     return Result;
   }
