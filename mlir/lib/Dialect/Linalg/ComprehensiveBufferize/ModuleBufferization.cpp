@@ -632,7 +632,7 @@ struct CallOpInterface
         callOp.getLoc(), funcOp.sym_name(), resultTypes, newOperands);
     newCallOp->setAttrs(callOp->getAttrs());
     // Get replacement values for non-tensor / non-equivalent results.
-    for (int i = 0; i < replacementValues.size(); ++i) {
+    for (unsigned i = 0; i < replacementValues.size(); ++i) {
       if (replacementValues[i])
         continue;
       replacementValues[i] = newCallOp->getResult(*retValMapping[i]);
