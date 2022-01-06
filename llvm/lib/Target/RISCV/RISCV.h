@@ -40,6 +40,9 @@ FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM);
 FunctionPass *createRISCVGatherScatterLoweringPass();
 void initializeRISCVGatherScatterLoweringPass(PassRegistry &);
 
+FunctionPass *createRISCVSExtWRemovalPass();
+void initializeRISCVSExtWRemovalPass(PassRegistry &);
+
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
 
