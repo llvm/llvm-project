@@ -452,11 +452,11 @@ public:
                                     StringRef Component,
                                     FileType Type = ToolChain::FT_Static) const;
 
-  // Returns target specific runtime path if it exists.
-  virtual std::string getRuntimePath() const;
+  // Returns target specific runtime paths.
+  path_list getRuntimePaths() const;
 
-  // Returns target specific standard library path if it exists.
-  virtual std::string getStdlibPath() const;
+  // Returns target specific standard library paths.
+  path_list getStdlibPaths() const;
 
   // Returns <ResourceDir>/lib/<OSName>/<arch>.  This is used by runtimes (such
   // as OpenMP) to find arch-specific libraries.
