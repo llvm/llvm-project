@@ -40,35 +40,32 @@ struct ToMemrefOpInterface
     : public BufferizableOpInterface::ExternalModel<ToMemrefOpInterface,
                                                     bufferization::ToMemrefOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              BufferizationState &state) const {
+                              const BufferizationState &state) const {
     // It is unknown whether the resulting MemRef will be read or not.
     return true;
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     return OpResult();
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
+                          const BufferizationState &state) const {
     auto toMemrefOp = cast<bufferization::ToMemrefOp>(op);
 
-    // Fold to_memref(to_tensor(x)) to x.
+    // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
     if (auto toTensorOp =
             toMemrefOp.tensor().getDefiningOp<bufferization::ToTensorOp>()) {
-      rewriter.replaceOp(toMemrefOp, toTensorOp.memref());
+      Value buffer = toTensorOp.memref();
+      if (toTensorOp.memref().getType() != toMemrefOp.getType())
+        buffer = rewriter.create<memref::CastOp>(toMemrefOp.getLoc(), buffer,
+                                                 toMemrefOp.getType());
+      rewriter.replaceOp(toMemrefOp, buffer);
       return success();
     }
 
-    // If a ToMemrefOp's tensor operand has not been bufferized yet, the op
-    // remains unchanged. All IR up to this ToMemrefOp has already been
-    // bufferized, unless there were unknown ops that could be bufferized.
-    assert((isFunctionArgument(toMemrefOp.tensor()) ||
-            state.getOptions().allowUnknownOps) &&
-           "expected that tensor is mapped");
-
-    return success();
+    return failure();
   }
 };
 
@@ -86,11 +83,12 @@ struct ToTensorOpInterface
     : public BufferizableOpInterface::ExternalModel<ToTensorOpInterface,
                                                     bufferization::ToTensorOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
-    return success();
+                          const BufferizationState &state) const {
+    return failure();
   }
 
-  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+  bool isWritable(Operation *op, Value value,
+                  const BufferizationState &state) const {
     // It is unknown whether the MemRef operand is writable or not.
     return false;
   }
