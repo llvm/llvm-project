@@ -300,8 +300,7 @@ static void fillL1TilingAndMatmulToVectorPatterns(
                MatmulOp::getOperationName(), ctx, LinalgVectorizationOptions(),
                LinalgTransformationFilter(StringAttr::get(ctx, "VEC"))));
   patternsVector.back().add<LinalgVectorizationPattern>(
-      ctx, LinalgTransformationFilter().addFilter(
-               [](Operation *op) { return success(isa<FillOp, CopyOp>(op)); }));
+      ctx, LinalgTransformationFilter().addOpFilter<FillOp, CopyOp>());
 }
 
 //===----------------------------------------------------------------------===//
