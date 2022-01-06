@@ -63,16 +63,8 @@ contains
 
     !$omp declare target (arr3)
 
-    !ERROR: Implicitly typed local entity 'blk2' not allowed in specification expression
-    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !$omp declare target (blk2)
-
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target (a2)
-
-    !ERROR: Implicitly typed local entity 'blk3' not allowed in specification expression
-    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !$omp declare target (blk3)
 
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target (a3)
@@ -82,16 +74,8 @@ contains
 
     !$omp declare target to (arr3_to)
 
-    !ERROR: Implicitly typed local entity 'blk2_to' not allowed in specification expression
-    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !$omp declare target to (blk2_to)
-
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target to (a2_to)
-
-    !ERROR: Implicitly typed local entity 'blk3_to' not allowed in specification expression
-    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !$omp declare target to (blk3_to)
 
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target to (a3_to)
@@ -101,16 +85,8 @@ contains
 
     !$omp declare target link (arr3_link)
 
-    !ERROR: Implicitly typed local entity 'blk2_link' not allowed in specification expression
-    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !$omp declare target link (blk2_link)
-
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target link (a2_link)
-
-    !ERROR: Implicitly typed local entity 'blk3_link' not allowed in specification expression
-    !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
-    !$omp declare target link (blk3_link)
 
     !ERROR: A variable in a DECLARE TARGET directive cannot be an element of a common block
     !$omp declare target link (a3_link)
