@@ -575,12 +575,10 @@ INTERCEPTOR(int, strncasecmp, const char *s1, const char *s2, SIZE_T size) {
 #if SANITIZER_INTERCEPT_STRSTR || SANITIZER_INTERCEPT_STRCASESTR
 static inline void StrstrCheck(void *ctx, char *r, const char *s1,
                                const char *s2) {
-  uptr len2 = internal_strlen(s2);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, s2, len2 + 1);
-  if (len2 == 0 && !common_flags()->strict_string_checks)
-    return;
-  uptr len1 = internal_strlen(s1);
-  COMMON_INTERCEPTOR_READ_STRING(ctx, s1, r ? r - s1 + len2 : len1 + 1);
+    uptr len1 = internal_strlen(s1);
+    uptr len2 = internal_strlen(s2);
+    COMMON_INTERCEPTOR_READ_STRING(ctx, s1, r ? r - s1 + len2 : len1 + 1);
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s2, len2 + 1);
 }
 #endif
 
