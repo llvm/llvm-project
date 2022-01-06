@@ -176,6 +176,10 @@ if(LLVM_CCACHE_BUILD)
   endif()
 endif()
 
+set(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS "" CACHE STRING
+  "Optional arguments for the native tool used in CMake --build invocations for external projects.")
+mark_as_advanced(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS)
+
 option(LLVM_DEPENDENCY_DEBUGGING "Dependency debugging mode to verify correctly expressed library dependencies (Darwin only)" OFF)
 
 # Some features of the LLVM build may be disallowed when dependency debugging is

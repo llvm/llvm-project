@@ -2578,17 +2578,16 @@ Value *SCEVExpander::expandWrapPredicate(const SCEVWrapPredicate *Pred,
 
 Value *SCEVExpander::expandUnionPredicate(const SCEVUnionPredicate *Union,
                                           Instruction *IP) {
-  auto *BoolType = IntegerType::get(IP->getContext(), 1);
-  Value *Check = ConstantInt::getNullValue(BoolType);
-
   // Loop over all checks in this set.
+  SmallVector<Value *> Checks;
   for (auto Pred : Union->getPredicates()) {
-    auto *NextCheck = expandCodeForPredicate(Pred, IP);
+    Checks.push_back(expandCodeForPredicate(Pred, IP));
     Builder.SetInsertPoint(IP);
-    Check = Builder.CreateOr(Check, NextCheck);
   }
 
-  return Check;
+  if (Checks.empty())
+    return ConstantInt::getFalse(IP->getContext());
+  return Builder.CreateOr(Checks);
 }
 
 Value *SCEVExpander::fixupLCSSAFormFor(Instruction *User, unsigned OpIdx) {
