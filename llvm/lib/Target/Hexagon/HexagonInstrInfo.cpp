@@ -1506,75 +1506,75 @@ HexagonInstrInfo::expandVGatherPseudo(MachineInstr &MI) const {
   switch (Opc) {
     case Hexagon::V6_vgathermh_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermh))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
-                  .add(MI.getOperand(3));
+                  .add(MI.getOperand(3))
+                  .add(MI.getOperand(4));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermw_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermw))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
-                  .add(MI.getOperand(3));
+                  .add(MI.getOperand(3))
+                  .add(MI.getOperand(4));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermhw_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhw))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
-                  .add(MI.getOperand(3));
+                  .add(MI.getOperand(3))
+                  .add(MI.getOperand(4));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermhq_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhq))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
                   .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
+                  .add(MI.getOperand(4))
+                  .add(MI.getOperand(5));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermwq_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermwq))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
                   .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
+                  .add(MI.getOperand(4))
+                  .add(MI.getOperand(5));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermhwq_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhwq))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
                   .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
+                  .add(MI.getOperand(4))
+                  .add(MI.getOperand(5));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
@@ -2767,7 +2767,13 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vL32b_nt_ai:
   case Hexagon::V6_vS32b_nt_ai:
   case Hexagon::V6_vL32Ub_ai:
-  case Hexagon::V6_vS32Ub_ai: {
+  case Hexagon::V6_vS32Ub_ai:
+  case Hexagon::V6_vgathermh_pseudo:
+  case Hexagon::V6_vgathermw_pseudo:
+  case Hexagon::V6_vgathermhw_pseudo:
+  case Hexagon::V6_vgathermhq_pseudo:
+  case Hexagon::V6_vgathermwq_pseudo:
+  case Hexagon::V6_vgathermhwq_pseudo: {
     unsigned VectorSize = TRI->getSpillSize(Hexagon::HvxVRRegClass);
     assert(isPowerOf2_32(VectorSize));
     if (Offset & (VectorSize-1))
