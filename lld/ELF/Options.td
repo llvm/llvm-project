@@ -344,10 +344,10 @@ defm print_symbol_order: Eq<"print-symbol-order",
   "Print a symbol order specified by --call-graph-ordering-file into the specified file">;
 
 def pop_state: F<"pop-state">,
-  HelpText<"Undo the effect of -push-state">;
+  HelpText<"Restore the states saved by --push-state">;
 
 def push_state: F<"push-state">,
-  HelpText<"Save the current state of -as-needed, -static and -whole-archive">;
+  HelpText<"Save the current state of --as-needed, -static and --whole-archive">;
 
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
