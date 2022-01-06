@@ -71,6 +71,7 @@ class ItaniumMangleContextImpl : public ItaniumMangleContext {
   llvm::DenseMap<DiscriminatorKeyTy, unsigned> Discriminator;
   llvm::DenseMap<const NamedDecl*, unsigned> Uniquifier;
   const DiscriminatorOverrideTy DiscriminatorOverride = nullptr;
+  NamespaceDecl *StdNamespace = nullptr;
 
   bool NeedsUniqueInternalLinkageNames = false;
 
@@ -193,6 +194,8 @@ public:
   DiscriminatorOverrideTy getDiscriminatorOverride() const override {
     return DiscriminatorOverride;
   }
+
+  NamespaceDecl *getStdNamespace();
 
   const DeclContext *getEffectiveDeclContext(const Decl *D);
   const DeclContext *getEffectiveParentContext(const DeclContext *DC) {
@@ -590,6 +593,18 @@ private:
 
 }
 
+NamespaceDecl *ItaniumMangleContextImpl::getStdNamespace() {
+  if (!StdNamespace) {
+    StdNamespace = NamespaceDecl::Create(
+        getASTContext(), getASTContext().getTranslationUnitDecl(),
+        /*Inline*/ false, SourceLocation(), SourceLocation(),
+        &getASTContext().Idents.get("std"),
+        /*PrevDecl*/ nullptr);
+    StdNamespace->setImplicit();
+  }
+  return StdNamespace;
+}
+
 /// Retrieve the declaration context that should be used when mangling the given
 /// declaration.
 const DeclContext *
@@ -612,6 +627,17 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
     if (ParmVarDecl *ContextParam =
             dyn_cast_or_null<ParmVarDecl>(BD->getBlockManglingContextDecl()))
       return ContextParam->getDeclContext();
+  }
+
+  // On ARM and AArch64, the va_list tag is always mangled as if in the std
+  // namespace. We do not represent va_list as actually being in the std
+  // namespace in C because this would result in incorrect debug info in C,
+  // among other things. It is important for both languages to have the same
+  // mangling in order for -fsanitize=cfi-icall to work.
+  if (D == getASTContext().getVaListTagDecl()) {
+    const llvm::Triple &T = getASTContext().getTargetInfo().getTriple();
+    if (T.isARM() || T.isThumb() || T.isAArch64())
+      return getStdNamespace();
   }
 
   const DeclContext *DC = D->getDeclContext();
