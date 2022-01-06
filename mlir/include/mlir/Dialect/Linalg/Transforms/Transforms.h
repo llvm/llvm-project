@@ -169,8 +169,13 @@ struct TiledLinalgOp {
   SmallVector<Operation *, 8> loops;
   SmallVector<Value, 4> tensorResults;
 };
-FailureOr<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
+FailureOr<TiledLinalgOp> tileLinalgOp(RewriterBase &b, LinalgOp op,
                                       const LinalgTilingOptions &options);
+
+/// Peel the loops of a TiledLinalgOp.
+void peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
+                       ArrayRef<int64_t> peeledLoops,
+                       LinalgTilingLoopType loopType);
 
 /// Fuse a sequence of linalg operations (`ops`) using tile-and-fuse. This
 /// proceeds as follows:
@@ -594,92 +599,41 @@ struct LinalgTilingOptions {
 RewritePatternSet getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 
-/// Base pattern that applies the tiling transformation specified by `options`.
-/// Abort and return failure in 2 cases:
-///   1. if the tiling specification is invalid and tiling fails to occur.
-///   2. if tiling occurs but `options.paddingValueComputationFunction` is set
-///      and some operand shape cannot be bounded statically.
-struct LinalgBaseTilingPattern : public RewritePattern {
-  // Entry point to match any LinalgOp OpInterface.
-  LinalgBaseTilingPattern(
+///
+/// Linalg tiling pattern.
+///
+/// Apply the `tiling` transformation as a pattern.
+/// `filter` controls LinalgTransformMarker matching and update when specified.
+/// See `tiling` for more details.
+// TODO: TiledOpInterface
+struct LinalgTilingPattern : public OpInterfaceRewritePattern<LinalgOp> {
+  /// Construct a generic pattern applied to all LinalgOp that verify `f`.
+  LinalgTilingPattern(
       MLIRContext *context, LinalgTilingOptions options,
-      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      LinalgTransformationFilter f = LinalgTransformationFilter(),
       PatternBenefit benefit = 1);
-  // Entry point to match a specific Linalg op.
-  LinalgBaseTilingPattern(
+
+  /// Construct a pattern specifically applied to `opName`.
+  LinalgTilingPattern(
       StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      LinalgTransformationFilter f = LinalgTransformationFilter(),
       PatternBenefit benefit = 1);
-  LogicalResult matchAndRewriteBase(Operation *op, PatternRewriter &rewriter,
-                                    TiledLinalgOp &result) const;
+
+  /// `matchAndRewrite` implementation that returns the significant transformed
+  /// pieces of IR.
+  FailureOr<TiledLinalgOp>
+  returningMatchAndRewrite(LinalgOp op, PatternRewriter &rewriter) const;
+
+  LogicalResult matchAndRewrite(LinalgOp op,
+                                PatternRewriter &rewriter) const override {
+    return returningMatchAndRewrite(op, rewriter);
+  }
 
 private:
   /// LinalgTransformMarker handles special attribute manipulations.
   LinalgTransformationFilter filter;
   /// Options to control tiling;
   LinalgTilingOptions options;
-};
-
-template <typename OpTy>
-struct LinalgTilingPattern : public LinalgBaseTilingPattern {
-  /// SFINAE: This constructor can only trigger for concrete ops that have a
-  /// static `getOperationName` method.
-  template <typename ConcreateOpTy = OpTy>
-  LinalgTilingPattern(
-      MLIRContext *context, LinalgTilingOptions options,
-      LinalgTransformationFilter filter = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1)
-      : LinalgBaseTilingPattern(ConcreateOpTy::getOperationName(), context,
-                                options, filter, benefit) {}
-
-  /// This constructor is available to anyone.
-  LinalgTilingPattern(
-      StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-      LinalgTransformationFilter filter = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1)
-      : LinalgBaseTilingPattern(opName, context, options, filter, benefit) {}
-
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override {
-    TiledLinalgOp tiledLinalgOp;
-    if (failed(LinalgBaseTilingPattern::matchAndRewriteBase(op, rewriter,
-                                                            tiledLinalgOp)))
-      return failure();
-    if (tiledLinalgOp.tensorResults.empty())
-      rewriter.eraseOp(op);
-    else
-      rewriter.replaceOp(op, tiledLinalgOp.tensorResults);
-    return success();
-  }
-};
-
-struct LinalgGenericTilingPattern : public LinalgBaseTilingPattern {
-  /// Entry point to match any LinalgOp OpInterface.
-  /// MatchAnyOpTag-based constructor with a mandatory `filter`.
-  LinalgGenericTilingPattern(
-      MLIRContext *context, LinalgTransformationFilter filter,
-      LinalgTilingOptions options = LinalgTilingOptions(),
-      PatternBenefit benefit = 1)
-      : LinalgBaseTilingPattern(context, options, filter, benefit) {}
-  /// Entry point to match a specific Linalg op.
-  LinalgGenericTilingPattern(
-      StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-      LinalgTransformationFilter filter = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1)
-      : LinalgBaseTilingPattern(opName, context, options, filter, benefit) {}
-
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override {
-    TiledLinalgOp tiledLinalgOp;
-    if (failed(LinalgBaseTilingPattern::matchAndRewriteBase(op, rewriter,
-                                                            tiledLinalgOp)))
-      return failure();
-    if (tiledLinalgOp.tensorResults.empty())
-      rewriter.eraseOp(op);
-    else
-      rewriter.replaceOp(op, tiledLinalgOp.tensorResults);
-    return success();
-  }
 };
 
 ///
@@ -1393,6 +1347,32 @@ struct ExtractSliceOfPadTensorSwapPattern
 
   LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const override;
+};
+
+//===----------------------------------------------------------------------===//
+// Helper classes for type list expansion.
+//===----------------------------------------------------------------------===//
+template <typename... OpTypes>
+class TilingPatterns;
+
+template <>
+class TilingPatterns<> {
+public:
+  static void insert(RewritePatternSet &patterns,
+                     const LinalgTilingOptions &options,
+                     const LinalgTransformationFilter &f) {}
+};
+
+template <typename OpTy, typename... OpTypes>
+class TilingPatterns<OpTy, OpTypes...> {
+public:
+  static void insert(RewritePatternSet &patterns,
+                     const LinalgTilingOptions &options,
+                     const LinalgTransformationFilter &f) {
+    patterns.add<LinalgTilingPattern>(OpTy::getOperationName(),
+                                      patterns.getContext(), options, f);
+    TilingPatterns<OpTypes...>::insert(patterns, options, f);
+  }
 };
 
 } // namespace linalg

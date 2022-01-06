@@ -1178,8 +1178,9 @@ static void populateVectorizationPatterns(
 
   constexpr static StringRef kTiledMarker = "TILED";
   constexpr static StringRef kPromotedMarker = "PROMOTED";
-  tilingPatterns.add<LinalgTilingPattern<ConvOp>>(
-      context, LinalgTilingOptions().setTileSizes(tileSizes),
+  tilingPatterns.add<LinalgTilingPattern>(
+      ConvOp::getOperationName(), context,
+      LinalgTilingOptions().setTileSizes(tileSizes),
       LinalgTransformationFilter(ArrayRef<StringAttr>{},
                                  StringAttr::get(kTiledMarker, context)));
 

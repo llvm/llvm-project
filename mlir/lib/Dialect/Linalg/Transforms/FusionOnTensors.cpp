@@ -283,10 +283,14 @@ LogicalResult TileLoopNest::tileRootOp(OpBuilder &b,
                           tileInterchange.begin(), tileInterchange.end()))
                       .setTileSizes(tileSizes)
                       .setLoopType(LinalgTilingLoopType::Loops);
-  Optional<TiledLinalgOp> tiledRootOp = tileLinalgOp(b, rootOp, tilingOptions);
+
+  // TODO: Propagate RewriterBase everywhere.
+  IRRewriter rewriter(b);
+  FailureOr<TiledLinalgOp> tiledRootOp =
+      tileLinalgOp(rewriter, rootOp, tilingOptions);
 
   // Exit if tiling the root operation fails.
-  if (!tiledRootOp.hasValue())
+  if (failed(tiledRootOp))
     return failure();
 
   // Replace all uses of the root operation if it has been tiled before. All
