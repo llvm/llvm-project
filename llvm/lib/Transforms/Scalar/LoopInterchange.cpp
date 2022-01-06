@@ -887,6 +887,78 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
+  // TODO: Current limitation: Since we split the inner loop latch at the point
+  // were induction variable is incremented (induction.next); We cannot have
+  // more than 1 user of induction.next since it would result in broken code
+  // after split.
+  // e.g.
+  // for(i=0;i<N;i++) {
+  //    for(j = 0;j<M;j++) {
+  //      A[j+1][i+2] = A[j][i]+k;
+  //  }
+  // }
+  Instruction *InnerIndexVarInc = nullptr;
+  if (InnerInductionVar->getIncomingBlock(0) == InnerLoopPreHeader)
+    InnerIndexVarInc =
+        dyn_cast<Instruction>(InnerInductionVar->getIncomingValue(1));
+  else
+    InnerIndexVarInc =
+        dyn_cast<Instruction>(InnerInductionVar->getIncomingValue(0));
+
+  if (!InnerIndexVarInc) {
+    LLVM_DEBUG(
+        dbgs() << "Did not find an instruction to increment the induction "
+               << "variable.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NoIncrementInInner",
+                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getHeader())
+             << "The inner loop does not increment the induction variable.";
+    });
+    return true;
+  }
+
+  // Since we split the inner loop latch on this induction variable. Make sure
+  // we do not have any instruction between the induction variable and branch
+  // instruction.
+
+  bool FoundInduction = false;
+  for (const Instruction &I :
+       llvm::reverse(InnerLoopLatch->instructionsWithoutDebug())) {
+    if (isa<BranchInst>(I) || isa<CmpInst>(I) || isa<TruncInst>(I) ||
+        isa<ZExtInst>(I))
+      continue;
+
+    // We found an instruction. If this is not induction variable then it is not
+    // safe to split this loop latch.
+    if (!I.isIdenticalTo(InnerIndexVarInc)) {
+      LLVM_DEBUG(dbgs() << "Found unsupported instructions between induction "
+                        << "variable increment and branch.\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(
+                   DEBUG_TYPE, "UnsupportedInsBetweenInduction",
+                   InnerLoop->getStartLoc(), InnerLoop->getHeader())
+               << "Found unsupported instruction between induction variable "
+                  "increment and branch.";
+      });
+      return true;
+    }
+
+    FoundInduction = true;
+    break;
+  }
+  // The loop latch ended and we didn't find the induction variable return as
+  // current limitation.
+  if (!FoundInduction) {
+    LLVM_DEBUG(dbgs() << "Did not find the induction variable.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NoIndutionVariable",
+                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getHeader())
+             << "Did not find the induction variable.";
+    });
+    return true;
+  }
   return false;
 }
 
