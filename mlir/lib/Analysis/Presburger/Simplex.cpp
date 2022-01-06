@@ -132,6 +132,7 @@ void SimplexBase::normalizeRow(unsigned row) {
 
   // Note that the gcd can never become zero since the first element of the row,
   // the denominator, is non-zero.
+  assert(gcd != 0);
   for (unsigned col = 0; col < nCol; ++col)
     tableau(row, col) /= gcd;
 }
