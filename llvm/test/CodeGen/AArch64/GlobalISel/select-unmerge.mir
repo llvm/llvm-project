@@ -22,11 +22,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
-    ; CHECK-NEXT: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[COPY]], 1
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[COPY]], 1
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.dsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[CPYi64_]], %subreg.dsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[DUPi64_]], %subreg.dsub
     ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi64lane]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
@@ -60,19 +60,19 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
-    ; CHECK-NEXT: [[CPYi32_:%[0-9]+]]:fpr32 = CPYi32 [[COPY]], 1
-    ; CHECK-NEXT: [[CPYi32_1:%[0-9]+]]:fpr32 = CPYi32 [[COPY]], 2
-    ; CHECK-NEXT: [[CPYi32_2:%[0-9]+]]:fpr32 = CPYi32 [[COPY]], 3
+    ; CHECK-NEXT: [[DUPi32_:%[0-9]+]]:fpr32 = DUPi32 [[COPY]], 1
+    ; CHECK-NEXT: [[DUPi32_1:%[0-9]+]]:fpr32 = DUPi32 [[COPY]], 2
+    ; CHECK-NEXT: [[DUPi32_2:%[0-9]+]]:fpr32 = DUPi32 [[COPY]], 3
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.ssub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[CPYi32_]], %subreg.ssub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[DUPi32_]], %subreg.ssub
     ; CHECK-NEXT: [[INSvi32lane:%[0-9]+]]:fpr128 = INSvi32lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[CPYi32_1]], %subreg.ssub
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[DUPi32_1]], %subreg.ssub
     ; CHECK-NEXT: [[INSvi32lane1:%[0-9]+]]:fpr128 = INSvi32lane [[INSvi32lane]], 2, [[INSERT_SUBREG2]], 0
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[CPYi32_2]], %subreg.ssub
+    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[DUPi32_2]], %subreg.ssub
     ; CHECK-NEXT: [[INSvi32lane2:%[0-9]+]]:fpr128 = INSvi32lane [[INSvi32lane1]], 3, [[INSERT_SUBREG3]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi32lane2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
@@ -108,11 +108,11 @@ body:             |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[INSERT_SUBREG]].hsub
-    ; CHECK-NEXT: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG]], 1
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[CPYi16_]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[DUPi16_]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[INSERT_SUBREG1]], 1, [[INSERT_SUBREG2]], 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY [[INSvi16lane]].ssub
     ; CHECK-NEXT: $s0 = COPY [[COPY2]]
@@ -157,19 +157,19 @@ body:             |
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[COPY]], %subreg.dsub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[INSERT_SUBREG]].hsub
-    ; CHECK-NEXT: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[INSERT_SUBREG]], 1
-    ; CHECK-NEXT: [[CPYi16_1:%[0-9]+]]:fpr16 = CPYi16 [[INSERT_SUBREG1]], 2
-    ; CHECK-NEXT: [[CPYi16_2:%[0-9]+]]:fpr16 = CPYi16 [[INSERT_SUBREG2]], 3
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: [[DUPi16_1:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG1]], 2
+    ; CHECK-NEXT: [[DUPi16_2:%[0-9]+]]:fpr16 = DUPi16 [[INSERT_SUBREG2]], 3
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[COPY1]], %subreg.hsub
     ; CHECK-NEXT: [[DEF4:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG4:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], [[CPYi16_]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG4:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], [[DUPi16_]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[INSERT_SUBREG3]], 1, [[INSERT_SUBREG4]], 0
     ; CHECK-NEXT: [[DEF5:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG5:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF5]], [[CPYi16_1]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG5:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF5]], [[DUPi16_1]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane1:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane]], 2, [[INSERT_SUBREG5]], 0
     ; CHECK-NEXT: [[DEF6:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG6:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF6]], [[CPYi16_2]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG6:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF6]], [[DUPi16_2]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane2:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane1]], 3, [[INSERT_SUBREG6]], 0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi16lane2]].dsub
     ; CHECK-NEXT: $d0 = COPY [[COPY2]]
@@ -210,35 +210,35 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[COPY]].hsub
-    ; CHECK-NEXT: [[CPYi16_:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 1
-    ; CHECK-NEXT: [[CPYi16_1:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 2
-    ; CHECK-NEXT: [[CPYi16_2:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 3
-    ; CHECK-NEXT: [[CPYi16_3:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 4
-    ; CHECK-NEXT: [[CPYi16_4:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 5
-    ; CHECK-NEXT: [[CPYi16_5:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 6
-    ; CHECK-NEXT: [[CPYi16_6:%[0-9]+]]:fpr16 = CPYi16 [[COPY]], 7
+    ; CHECK-NEXT: [[DUPi16_:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 1
+    ; CHECK-NEXT: [[DUPi16_1:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 2
+    ; CHECK-NEXT: [[DUPi16_2:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 3
+    ; CHECK-NEXT: [[DUPi16_3:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 4
+    ; CHECK-NEXT: [[DUPi16_4:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 5
+    ; CHECK-NEXT: [[DUPi16_5:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 6
+    ; CHECK-NEXT: [[DUPi16_6:%[0-9]+]]:fpr16 = DUPi16 [[COPY]], 7
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.hsub
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[CPYi16_]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[DUPi16_]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[CPYi16_1]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[DUPi16_1]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane1:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane]], 2, [[INSERT_SUBREG2]], 0
     ; CHECK-NEXT: [[DEF3:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[CPYi16_2]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF3]], [[DUPi16_2]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane2:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane1]], 3, [[INSERT_SUBREG3]], 0
     ; CHECK-NEXT: [[DEF4:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG4:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], [[CPYi16_3]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG4:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF4]], [[DUPi16_3]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane3:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane2]], 4, [[INSERT_SUBREG4]], 0
     ; CHECK-NEXT: [[DEF5:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG5:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF5]], [[CPYi16_4]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG5:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF5]], [[DUPi16_4]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane4:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane3]], 5, [[INSERT_SUBREG5]], 0
     ; CHECK-NEXT: [[DEF6:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG6:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF6]], [[CPYi16_5]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG6:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF6]], [[DUPi16_5]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane5:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane4]], 6, [[INSERT_SUBREG6]], 0
     ; CHECK-NEXT: [[DEF7:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG7:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF7]], [[CPYi16_6]], %subreg.hsub
+    ; CHECK-NEXT: [[INSERT_SUBREG7:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF7]], [[DUPi16_6]], %subreg.hsub
     ; CHECK-NEXT: [[INSvi16lane6:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane5]], 7, [[INSERT_SUBREG7]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi16lane6]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
@@ -279,21 +279,21 @@ body:             |
     ; CHECK-NEXT: [[DEF6:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG6:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF6]], [[COPY]], %subreg.dsub
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr8 = COPY [[INSERT_SUBREG]].bsub
-    ; CHECK-NEXT: [[CPYi8_:%[0-9]+]]:fpr8 = CPYi8 [[INSERT_SUBREG]], 1
-    ; CHECK-NEXT: [[CPYi8_1:%[0-9]+]]:fpr8 = CPYi8 [[INSERT_SUBREG1]], 2
-    ; CHECK-NEXT: [[CPYi8_2:%[0-9]+]]:fpr8 = CPYi8 [[INSERT_SUBREG2]], 3
-    ; CHECK-NEXT: [[CPYi8_3:%[0-9]+]]:fpr8 = CPYi8 [[INSERT_SUBREG3]], 4
-    ; CHECK-NEXT: [[CPYi8_4:%[0-9]+]]:fpr8 = CPYi8 [[INSERT_SUBREG4]], 5
-    ; CHECK-NEXT: [[CPYi8_5:%[0-9]+]]:fpr8 = CPYi8 [[INSERT_SUBREG5]], 6
-    ; CHECK-NEXT: [[CPYi8_6:%[0-9]+]]:fpr8 = CPYi8 [[INSERT_SUBREG6]], 7
+    ; CHECK-NEXT: [[DUPi8_:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: [[DUPi8_1:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG1]], 2
+    ; CHECK-NEXT: [[DUPi8_2:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG2]], 3
+    ; CHECK-NEXT: [[DUPi8_3:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG3]], 4
+    ; CHECK-NEXT: [[DUPi8_4:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG4]], 5
+    ; CHECK-NEXT: [[DUPi8_5:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG5]], 6
+    ; CHECK-NEXT: [[DUPi8_6:%[0-9]+]]:fpr8 = DUPi8 [[INSERT_SUBREG6]], 7
     ; CHECK-NEXT: $b0 = COPY [[COPY1]]
-    ; CHECK-NEXT: $b1 = COPY [[CPYi8_]]
-    ; CHECK-NEXT: $b2 = COPY [[CPYi8_1]]
-    ; CHECK-NEXT: $b3 = COPY [[CPYi8_2]]
-    ; CHECK-NEXT: $b4 = COPY [[CPYi8_3]]
-    ; CHECK-NEXT: $b5 = COPY [[CPYi8_4]]
-    ; CHECK-NEXT: $b6 = COPY [[CPYi8_5]]
-    ; CHECK-NEXT: $b7 = COPY [[CPYi8_6]]
+    ; CHECK-NEXT: $b1 = COPY [[DUPi8_]]
+    ; CHECK-NEXT: $b2 = COPY [[DUPi8_1]]
+    ; CHECK-NEXT: $b3 = COPY [[DUPi8_2]]
+    ; CHECK-NEXT: $b4 = COPY [[DUPi8_3]]
+    ; CHECK-NEXT: $b5 = COPY [[DUPi8_4]]
+    ; CHECK-NEXT: $b6 = COPY [[DUPi8_5]]
+    ; CHECK-NEXT: $b7 = COPY [[DUPi8_6]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<8 x s8>) = COPY $d0
     %2:fpr(s8), %3:fpr(s8), %4:fpr(s8), %5:fpr(s8), %6:fpr(s8), %7:fpr(s8), %8:fpr(s8), %9:fpr(s8) = G_UNMERGE_VALUES %0(<8 x s8>)
@@ -321,9 +321,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
-    ; CHECK-NEXT: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[COPY]], 1
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[COPY]], 1
     ; CHECK-NEXT: $d0 = COPY [[COPY1]]
-    ; CHECK-NEXT: $d1 = COPY [[CPYi64_]]
+    ; CHECK-NEXT: $d1 = COPY [[DUPi64_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:fpr(<4 x s32>) = COPY $q0
     %1:fpr(<2 x s32>), %2:fpr(<2 x s32>) = G_UNMERGE_VALUES %0(<4 x s32>)
@@ -347,9 +347,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.dsub
-    ; CHECK-NEXT: [[CPYi32_:%[0-9]+]]:fpr32 = CPYi32 [[INSERT_SUBREG]], 1
+    ; CHECK-NEXT: [[DUPi32_:%[0-9]+]]:fpr32 = DUPi32 [[INSERT_SUBREG]], 1
     ; CHECK-NEXT: $s0 = COPY [[COPY1]]
-    ; CHECK-NEXT: $s1 = COPY [[CPYi32_]]
+    ; CHECK-NEXT: $s1 = COPY [[DUPi32_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:fpr(<4 x s16>) = COPY $d0
     %1:fpr(<2 x s16>), %2:fpr(<2 x s16>) = G_UNMERGE_VALUES %0(<4 x s16>)
@@ -371,9 +371,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
-    ; CHECK-NEXT: [[CPYi64_:%[0-9]+]]:fpr64 = CPYi64 [[COPY]], 1
+    ; CHECK-NEXT: [[DUPi64_:%[0-9]+]]:fpr64 = DUPi64 [[COPY]], 1
     ; CHECK-NEXT: $d0 = COPY [[COPY1]]
-    ; CHECK-NEXT: $d1 = COPY [[CPYi64_]]
+    ; CHECK-NEXT: $d1 = COPY [[DUPi64_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
     %0:fpr(s128) = COPY $q0
     %1:fpr(s64), %2:fpr(s64) = G_UNMERGE_VALUES %0(s128)
