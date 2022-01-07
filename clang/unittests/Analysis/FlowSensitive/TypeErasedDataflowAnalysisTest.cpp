@@ -113,9 +113,8 @@ public:
 
   static NonConvergingLattice initialElement() { return {0}; }
 
-  NonConvergingLattice transfer(const Stmt *S, const NonConvergingLattice &E,
-                                Environment &Env) {
-    return {E.State + 1};
+  void transfer(const Stmt *S, NonConvergingLattice &E, Environment &Env) {
+    ++E.State;
   }
 };
 
@@ -165,15 +164,12 @@ public:
 
   static FunctionCallLattice initialElement() { return {}; }
 
-  FunctionCallLattice transfer(const Stmt *S, const FunctionCallLattice &E,
-                               Environment &Env) {
-    FunctionCallLattice R = E;
+  void transfer(const Stmt *S, FunctionCallLattice &E, Environment &Env) {
     if (auto *C = dyn_cast<CallExpr>(S)) {
       if (auto *F = dyn_cast<FunctionDecl>(C->getCalleeDecl())) {
-        R.CalledFunctions.insert(F->getNameInfo().getAsString());
+        E.CalledFunctions.insert(F->getNameInfo().getAsString());
       }
     }
-    return R;
   }
 };
 
