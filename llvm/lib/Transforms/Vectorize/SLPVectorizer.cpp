@@ -1417,7 +1417,11 @@ public:
           HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
         } else if (NumFreeOpsHash.NumOfAPOs == Min &&
                    NumFreeOpsHash.NumOpsWithSameOpcodeParent == SameOpNumber) {
-          ++HashMap[NumFreeOpsHash.Hash].first;
+          auto It = HashMap.find(NumFreeOpsHash.Hash);
+          if (It == HashMap.end())
+            HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
+          else
+            ++It->second.first;
         }
       }
       // Select the lane with the minimum counter.
