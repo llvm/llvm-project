@@ -74,24 +74,25 @@ static bool isaTensor(Type t) { return t.isa<TensorType>(); }
 //===----------------------------------------------------------------------===//
 
 /// Attribute marker to specify op results that can be bufferized inPlace.
-constexpr StringLiteral kInPlaceResultsAttrName = "__inplace_results_attr__";
+constexpr StringLiteral kInPlaceResultsAttrName = "__inplace_operands_attr__";
 
-/// Mark whether OpResult can actually be bufferized inplace.
-/// If `inPlace` is `true`, the use-def chain analysis has guaranteed that no
-/// subsequent write would occur to the bufferized tensor value (i.e. the result
-/// can be bufferized inplace).
-static void setInPlaceOpResult(OpResult opResult, bool inPlace) {
-  if (!opResult)
-    return;
-
-  Operation *op = opResult.getOwner();
+/// Mark whether OpOperand will be bufferized inplace.
+static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
+  Operation *op = opOperand.getOwner();
   auto attr =
       op->getAttr(kInPlaceResultsAttrName).dyn_cast_or_null<ArrayAttr>();
-  SmallVector<StringRef> inPlaceVector =
-      attr ? SmallVector<StringRef>(
-                 llvm::to_vector<4>(attr.getAsValueRange<StringAttr>()))
-           : SmallVector<StringRef>(op->getNumResults(), "false");
-  inPlaceVector[opResult.getResultNumber()] = inPlace ? "true" : "false";
+  SmallVector<StringRef> inPlaceVector;
+  if (attr) {
+    inPlaceVector = SmallVector<StringRef>(
+        llvm::to_vector<4>(attr.getAsValueRange<StringAttr>()));
+  } else {
+    inPlaceVector = SmallVector<StringRef>(op->getNumOperands(), "none");
+    for (OpOperand &opOperand : op->getOpOperands())
+      if (opOperand.get().getType().isa<TensorType>())
+        inPlaceVector[opOperand.getOperandNumber()] = "false";
+  }
+
+  inPlaceVector[opOperand.getOperandNumber()] = inPlace ? "true" : "false";
   op->setAttr(kInPlaceResultsAttrName,
               OpBuilder(op).getStrArrayAttr(inPlaceVector));
 }
@@ -104,21 +105,11 @@ static void setInPlaceOpResult(OpResult opResult, bool inPlace) {
 static bool isInplaceMemoryWrite(OpOperand &opOperand,
                                  const BufferizationAliasInfo &aliasInfo,
                                  BufferizationState &state) {
-  // The analysis does not know what happens to the result of a ToMemrefOp, so
-  // we assume that it is written to.
-  // TODO: This is a conservative implementation. This rule will have to be
-  // relaxed for partial bufferization.
-  if (isa<bufferization::ToMemrefOp>(opOperand.getOwner()))
-    return true;
-  // OpOperands without an aliasing OpResult do not write.
-  OpResult opResult = state.getAliasingOpResult(opOperand);
-  if (!opResult)
-    return false;
   // OpOperands that do not bufferize to a memory write do not write in-place.
   if (!state.bufferizesToMemoryWrite(opOperand))
     return false;
   // Check current bufferization decisions.
-  return aliasInfo.isInPlace(opResult);
+  return aliasInfo.isInPlace(opOperand);
 }
 
 /// Return true if, under current bufferization decisions, the buffer of `value`
@@ -128,8 +119,8 @@ static bool aliasesNonWritableBuffer(Value value,
                                      BufferizationState &state) {
   bool foundNonWritableBuffer = false;
   aliasInfo.applyOnAliases(value, [&](Value v) {
-    // Query BufferizableOpInterface to see if the OpResult is writable.
-    // TODO: Out-of-place bufferized OpResult could be considered writable.
+    // Query BufferizableOpInterface to see if the value is writable.
+    // TODO: Out-of-place bufferized value could be considered writable.
     if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(v))
       if (bufferizableOp && bufferizableOp.isWritable(v, state))
         return;
@@ -309,8 +300,8 @@ static bool hasReadAfterWriteInterference(
   return false;
 }
 
-/// Return true if bufferizing result inplace would create a conflict. A read R
-/// and a write W of the same alias set is a conflict if inplace bufferization
+/// Return true if bufferizing `operand` inplace would create a conflict. A read
+/// R and a write W of the same alias set is a conflict if inplace bufferization
 /// of W changes the value read by R to a value different from the one that
 /// would be expected by tracing back R's origin through SSA use-def chains.
 /// A conflict can only be introduced by a new alias and/or an inplace
@@ -338,21 +329,10 @@ static bool hasReadAfterWriteInterference(
 /// Note: If `checkConsistencyOnly`, this function may be called with a null
 /// OpResult. In that case, only the consistency of bufferization decisions
 /// involving aliases of the given OpOperand are checked.
-bool wouldCreateReadAfterWriteInterference(
-    OpOperand &operand, OpResult result, const DominanceInfo &domInfo,
-    BufferizationState &state, const BufferizationAliasInfo &aliasInfo,
+static bool wouldCreateReadAfterWriteInterference(
+    OpOperand &operand, const DominanceInfo &domInfo, BufferizationState &state,
+    const BufferizationAliasInfo &aliasInfo,
     bool checkConsistencyOnly = false) {
-#ifndef NDEBUG
-  if (result) {
-    SmallVector<OpOperand *> opOperands = state.getAliasingOpOperand(result);
-    assert(llvm::find(opOperands, &operand) != opOperands.end() &&
-           "operand and result do not match");
-  } else {
-    assert(checkConsistencyOnly &&
-           "result not provided, can only check consistency");
-  }
-#endif // NDEBUG
-
   // Helper function to iterate on aliases of `root` and capture the reads.
   auto getAliasingReads = [&](DenseSet<OpOperand *> &res, Value root) {
     aliasInfo.applyOnAliases(root, [&](Value alias) {
@@ -376,11 +356,11 @@ bool wouldCreateReadAfterWriteInterference(
   // Collect reads and writes of all aliases of OpOperand and OpResult.
   DenseSet<OpOperand *> usesRead, usesWrite;
   getAliasingReads(usesRead, operand.get());
-  if (result)
-    getAliasingReads(usesRead, result);
   getAliasingInplaceWrites(usesWrite, operand.get());
-  if (result)
+  if (OpResult result = state.getAliasingOpResult(operand)) {
+    getAliasingReads(usesRead, result);
     getAliasingInplaceWrites(usesWrite, result);
+  }
   if (!checkConsistencyOnly && state.bufferizesToMemoryWrite(operand))
     usesWrite.insert(&operand);
 
@@ -388,18 +368,12 @@ bool wouldCreateReadAfterWriteInterference(
                                        aliasInfo);
 }
 
-/// Return true if bufferizing `opOperand` inplace with `opResult` would create
-/// a write to a non-writable buffer.
+/// Return true if bufferizing `opOperand` inplace would create a write to a
+/// non-writable buffer.
 static bool
-wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand, OpResult opResult,
+wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand,
                                     const BufferizationAliasInfo &aliasInfo,
                                     BufferizationState &state) {
-#ifndef NDEBUG
-  SmallVector<OpOperand *> opOperands = state.getAliasingOpOperand(opResult);
-  assert(llvm::find(opOperands, &opOperand) != opOperands.end() &&
-         "operand and result do not match");
-#endif // NDEBUG
-
   // Certain buffers are not writeable:
   //   1. A function bbArg that is not inplaceable or
   //   2. A constant op.
@@ -409,9 +383,12 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand, OpResult opResult,
     return false;
 
   // This is a problem only if the buffer is written to via some alias.
-  bool hasWrite = aliasesInPlaceWrite(opResult, aliasInfo, state) ||
-                  aliasesInPlaceWrite(opOperand.get(), aliasInfo, state) ||
+  bool hasWrite = aliasesInPlaceWrite(opOperand.get(), aliasInfo, state) ||
                   state.bufferizesToMemoryWrite(opOperand);
+
+  if (OpResult opResult = state.getAliasingOpResult(opOperand))
+    hasWrite |= aliasesInPlaceWrite(opResult, aliasInfo, state);
+
   return hasWrite;
 }
 
@@ -419,30 +396,23 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand, OpResult opResult,
 // Bufferization analyses.
 //===----------------------------------------------------------------------===//
 
-/// Determine if `operand` can be bufferized in-place with `result`.
+/// Determine if `operand` can be bufferized in-place.
 static LogicalResult bufferizableInPlaceAnalysisImpl(
-    OpOperand &operand, OpResult result, BufferizationAliasInfo &aliasInfo,
+    OpOperand &operand, BufferizationAliasInfo &aliasInfo,
     BufferizationState &state, const DominanceInfo &domInfo) {
-#ifndef NDEBUG
-  SmallVector<OpOperand *> opOperands = state.getAliasingOpOperand(result);
-  assert(llvm::find(opOperands, &operand) != opOperands.end() &&
-         "operand and result do not match");
-#endif // NDEBUG
-
   bool foundInterference =
-      wouldCreateWriteToNonWritableBuffer(operand, result, aliasInfo, state) ||
-      wouldCreateReadAfterWriteInterference(operand, result, domInfo, state,
-                                            aliasInfo);
+      wouldCreateWriteToNonWritableBuffer(operand, aliasInfo, state) ||
+      wouldCreateReadAfterWriteInterference(operand, domInfo, state, aliasInfo);
 
   if (foundInterference)
-    aliasInfo.bufferizeOutOfPlace(result);
+    aliasInfo.bufferizeOutOfPlace(operand);
   else
-    aliasInfo.bufferizeInPlace(result, operand);
+    aliasInfo.bufferizeInPlace(operand, state);
 
   return success();
 }
 
-/// Analyze the `ops` to determine which OpResults are inplaceable. Walk ops in
+/// Analyze the `ops` to determine which OpOperands are inplaceable. Walk ops in
 /// reverse and bufferize ops greedily. This is a good starter heuristic.
 ///
 /// Even if an op does not read or write, it may still create an alias when
@@ -478,11 +448,9 @@ static LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
     for (OpOperand &opOperand : op->getOpOperands())
       if (opOperand.get().getType().isa<TensorType>())
         if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op))
-          if (OpResult opResult =
-                  bufferizableOp.getAliasingOpResult(opOperand, state))
-            if (failed(bufferizableInPlaceAnalysisImpl(
-                    opOperand, opResult, aliasInfo, state, domInfo)))
-              return failure();
+          if (failed(bufferizableInPlaceAnalysisImpl(opOperand, aliasInfo,
+                                                     state, domInfo)))
+            return failure();
 
   return success();
 }
@@ -520,15 +488,12 @@ static void equivalenceAnalysis(SmallVector<Operation *> &ops,
     if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op))
       for (OpResult opResult : op->getOpResults())
         if (opResult.getType().isa<TensorType>())
-          if (aliasInfo.isInPlace(opResult)) {
-            SmallVector<OpOperand *> opOperands =
-                bufferizableOp.getAliasingOpOperand(opResult, state);
-            if (!opOperands.empty())
+          for (OpOperand *opOperand :
+               bufferizableOp.getAliasingOpOperand(opResult, state))
+            if (state.isInPlace(*opOperand))
               if (bufferizableOp.bufferRelation(opResult, aliasInfo, state) ==
                   BufferRelation::Equivalent)
-                for (OpOperand *opOperand : opOperands)
-                  aliasInfo.unionEquivalenceClasses(opResult, opOperand->get());
-          }
+                aliasInfo.unionEquivalenceClasses(opResult, opOperand->get());
 }
 
 /// Analyze equivalence of tied OpResult/OpOperand pairs of all ops contained
@@ -559,15 +524,12 @@ checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
     if (auto bufferizableOp = options.dynCastBufferizableOp(op))
       for (OpOperand &opOperand : op->getOpOperands())
         if (opOperand.get().getType().isa<TensorType>()) {
-          OpResult opResult =
-              bufferizableOp.getAliasingOpResult(opOperand, state);
           if (wouldCreateReadAfterWriteInterference(
-                  opOperand, opResult, domInfo, state, aliasInfo,
+                  opOperand, domInfo, state, aliasInfo,
                   /*checkConsistencyOnly=*/true)) {
-            // This error can happen for two reasons. Either the input IR
-            // already has a read-after-write conflict. Or certain
-            // "mustBufferizeInPlace" interface methods are implemented
-            // incorrectly.
+            // This error can happen if certain "mustBufferizeInPlace" interface
+            // methods are implemented incorrectly, such that the IR already has
+            // a RaW conflict before making any bufferization decisions.
             inconsistentOp = op;
             return WalkResult::interrupt();
           }
@@ -576,10 +538,6 @@ checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
   });
 
   if (walkResult.wasInterrupted())
-    // This can currently happen in one situation: When a tensor is passed into
-    // a ToMemrefOp and read by another op consecutively. ToMemrefOps are
-    // currently handled conservatively. Once a tensor is passed into a
-    // ToMemrefOp, it may longer be read.
     return inconsistentOp->emitError("input IR has RaW conflict");
   return success();
 }
@@ -587,11 +545,13 @@ checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
 /// Annotate the IR with the result of the analysis. For testing/debugging only.
 static void
 annotateOpsWithBufferizationMarkers(Operation *op,
-                                    const BufferizationAliasInfo &aliasInfo) {
+                                    const BufferizationAliasInfo &aliasInfo,
+                                    BufferizationState &state) {
   op->walk([&](Operation *op) {
-    for (OpResult opResult : op->getResults())
-      if (opResult.getType().isa<TensorType>())
-        setInPlaceOpResult(opResult, aliasInfo.isInPlace(opResult));
+    if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op))
+      for (OpOperand &opOperand : op->getOpOperands())
+        if (opOperand.get().getType().isa<TensorType>())
+          setInPlaceOpOperand(opOperand, aliasInfo.isInPlace(opOperand));
   });
 }
 
@@ -688,7 +648,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
 
   // Annotate operations if we only want to report the analysis.
   if (options.testAnalysisOnly) {
-    annotateOpsWithBufferizationMarkers(op, aliasInfo);
+    annotateOpsWithBufferizationMarkers(op, aliasInfo, state);
     return success();
   }
 

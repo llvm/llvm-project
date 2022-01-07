@@ -129,27 +129,22 @@ void BufferizationAliasInfo::insertNewBufferEquivalence(Value newValue,
 }
 
 /// Return `true` if a value was marked as in-place bufferized.
-bool BufferizationAliasInfo::isInPlace(OpResult opResult) const {
-  return inplaceBufferized.contains(opResult);
+bool BufferizationAliasInfo::isInPlace(OpOperand &operand) const {
+  return inplaceBufferized.contains(&operand);
 }
 
 /// Set the inPlace bufferization spec to true.
-void BufferizationAliasInfo::bufferizeInPlace(OpResult result,
-                                              OpOperand &operand) {
-  LLVM_DEBUG(llvm::dbgs() << "bufferizeInPlace: ");
-  LLVM_DEBUG(result.print(llvm::dbgs()));
-
-  markInPlace(result);
-  aliasInfo.unionSets(result, operand.get());
+void BufferizationAliasInfo::bufferizeInPlace(OpOperand &operand,
+                                              BufferizationState &state) {
+  markInPlace(operand);
+  if (OpResult result = state.getAliasingOpResult(operand))
+    aliasInfo.unionSets(result, operand.get());
 }
 
 /// Set the inPlace bufferization spec to false.
-void BufferizationAliasInfo::bufferizeOutOfPlace(OpResult result) {
-  LLVM_DEBUG(llvm::dbgs() << "bufferizeOutOfPlace: ");
-  LLVM_DEBUG(result.print(llvm::dbgs()));
-
-  if (inplaceBufferized.contains(result))
-    inplaceBufferized.erase(result);
+void BufferizationAliasInfo::bufferizeOutOfPlace(OpOperand &operand) {
+  assert(!inplaceBufferized.contains(&operand) &&
+         "OpOperand was already decided to bufferize inplace");
 }
 
 /// Apply `fun` to all the members of the equivalence class of `v`.
@@ -339,16 +334,13 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::BufferizationState(
   op->walk([&](BufferizableOpInterface bufferizableOp) {
     if (!options.isOpAllowed(bufferizableOp))
       return WalkResult::skip();
-    for (OpResult opResult : bufferizableOp->getOpResults()) {
-      if (opResult.getType().isa<TensorType>())
-        if (bufferizableOp.mustBufferizeInPlace(opResult, *this)) {
-          SmallVector<OpOperand *> operands =
-              bufferizableOp.getAliasingOpOperand(opResult, *this);
-          assert(!operands.empty() &&
-                 "expected that OpResult has aliasing OpOperand");
-          for (OpOperand *operand : operands)
-            aliasInfo.unionAliasSets(operand->get(), opResult);
-          aliasInfo.markInPlace(opResult);
+    for (OpOperand &opOperand : bufferizableOp->getOpOperands()) {
+      if (opOperand.get().getType().isa<TensorType>())
+        if (bufferizableOp.mustBufferizeInPlace(opOperand, *this)) {
+          if (OpResult opResult =
+                  bufferizableOp.getAliasingOpResult(opOperand, *this))
+            aliasInfo.unionAliasSets(opOperand.get(), opResult);
+          aliasInfo.markInPlace(opOperand);
         }
     }
     return WalkResult::advance();
@@ -380,7 +372,7 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::getResultBuffer(
     return FailureOr<Value>(op->emitError("result buffer is ambiguous"));
 
   // If bufferizing out-of-place, allocate a new buffer.
-  if (!aliasInfo.isInPlace(result)) {
+  if (!aliasInfo.isInPlace(*opOperand)) {
     // Ops with multiple aliasing operands can currently not bufferize
     // out-of-place.
     assert(
@@ -624,8 +616,8 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
 }
 
 bool mlir::linalg::comprehensive_bufferize::BufferizationState::isInPlace(
-    OpResult opResult) const {
-  return aliasInfo.isInPlace(opResult);
+    OpOperand &opOperand) const {
+  return aliasInfo.isInPlace(opOperand);
 }
 
 MemRefType mlir::linalg::comprehensive_bufferize::getContiguousMemRefType(

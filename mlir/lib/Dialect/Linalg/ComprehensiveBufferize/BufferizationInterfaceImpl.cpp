@@ -48,6 +48,19 @@ struct ToMemrefOpInterface
     return true;
   }
 
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    // It is unknown whether the resulting MemRef will be written or not.
+    return true;
+  }
+
+  bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
+                            const BufferizationState &state) const {
+    // ToMemrefOps always bufferize inplace.
+    // TODO: Remove ToMemrefOps from the analysis.
+    return true;
+  }
+
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                const BufferizationState &state) const {
     return OpResult();
