@@ -281,9 +281,9 @@ Status Socket::Close() {
             static_cast<void *>(this), static_cast<uint64_t>(m_socket));
 
 #if defined(_WIN32)
-  bool success = !!closesocket(m_socket);
+  bool success = closesocket(m_socket) == 0;
 #else
-  bool success = !!::close(m_socket);
+  bool success = ::close(m_socket) == 0;
 #endif
   // A reference to a FD was passed in, set it to an invalid value
   m_socket = kInvalidSocketValue;
