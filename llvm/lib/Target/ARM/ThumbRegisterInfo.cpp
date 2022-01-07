@@ -37,7 +37,7 @@ extern cl::opt<bool> ReuseFrameIndexVals;
 
 using namespace llvm;
 
-ThumbRegisterInfo::ThumbRegisterInfo() : ARMBaseRegisterInfo() {}
+ThumbRegisterInfo::ThumbRegisterInfo() {}
 
 const TargetRegisterClass *
 ThumbRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,

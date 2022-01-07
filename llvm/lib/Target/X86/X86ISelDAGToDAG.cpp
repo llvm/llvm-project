@@ -80,9 +80,9 @@ namespace {
     bool NegateIndex = false;
 
     X86ISelAddressMode()
-        : BaseType(RegBase), Base_FrameIndex(0), Scale(1), IndexReg(), Disp(0),
-          Segment(), GV(nullptr), CP(nullptr), BlockAddr(nullptr), ES(nullptr),
-          MCSym(nullptr), JT(-1), SymbolFlags(X86II::MO_NO_FLAG) {}
+        : BaseType(RegBase), Base_FrameIndex(0), Scale(1), Disp(0), GV(nullptr),
+          CP(nullptr), BlockAddr(nullptr), ES(nullptr), MCSym(nullptr), JT(-1),
+          SymbolFlags(X86II::MO_NO_FLAG) {}
 
     bool hasSymbolicDisplacement() const {
       return GV != nullptr || CP != nullptr || ES != nullptr ||

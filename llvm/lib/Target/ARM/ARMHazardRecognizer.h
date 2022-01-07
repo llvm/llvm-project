@@ -34,7 +34,7 @@ class ARMHazardRecognizerFPMLx : public ScheduleHazardRecognizer {
   unsigned FpMLxStalls = 0;
 
 public:
-  ARMHazardRecognizerFPMLx() : ScheduleHazardRecognizer() { MaxLookAhead = 1; }
+  ARMHazardRecognizerFPMLx() { MaxLookAhead = 1; }
 
   HazardType getHazardType(SUnit *SU, int Stalls) override;
   void Reset() override;

@@ -80,8 +80,8 @@ private:
 MipsInstructionSelector::MipsInstructionSelector(
     const MipsTargetMachine &TM, const MipsSubtarget &STI,
     const MipsRegisterBankInfo &RBI)
-    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "MipsGenGlobalISel.inc"

@@ -15,9 +15,8 @@
 using namespace llvm;
 
 AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF)
-    : MachineFunctionInfo(), Mode(MF.getFunction()),
-      IsEntryFunction(
-          AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv())),
+    : Mode(MF.getFunction()), IsEntryFunction(AMDGPU::isEntryFunctionCC(
+                                  MF.getFunction().getCallingConv())),
       IsModuleEntryFunction(
           AMDGPU::isModuleEntryFunctionCC(MF.getFunction().getCallingConv())),
       NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath) {

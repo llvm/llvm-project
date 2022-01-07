@@ -42,8 +42,7 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
                                            const std::string &FS,
                                            const TargetMachine &TM)
     : WebAssemblyGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
-      TargetTriple(TT), FrameLowering(),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TSInfo(),
+      TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this) {}
 
 bool WebAssemblySubtarget::enableAtomicExpand() const {
