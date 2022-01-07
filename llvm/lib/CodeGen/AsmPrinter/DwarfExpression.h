@@ -542,7 +542,7 @@ public:
       : AP(AP), TRI(TRI), CU(CU), OutDIE(DIE) {
     buildDIExprAST(Expr);
   }
-  DIEDwarfExprAST(const DIEDwarfExprAST &) = default;
+  DIEDwarfExprAST(const DIEDwarfExprAST &) = delete;
 
   DIELoc *finalize() {
     traverseAndLower(Root.get());
