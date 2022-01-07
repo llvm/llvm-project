@@ -351,7 +351,7 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
 
     // Cast values at the call site if necessary.
     returnValues.push_back(
-        getNonCastedValue(state.lookupBuffer(rewriter, returnVal)));
+        getNonCastedValue(*state.getBuffer(rewriter, returnOperand)));
   }
 
   // 2. Rewrite the terminator without the inPlace bufferizable values.
@@ -659,7 +659,8 @@ struct CallOpInterface
         // Return operands that are equivalent to some bbArg, are not
         // returned.
         Value buffer =
-            state.lookupBuffer(rewriter, callOp->getOperand(*bbArgIdx));
+            *state.getBuffer(rewriter, callOp->getOpOperand(*bbArgIdx),
+                             /*forceInPlace=*/true);
         replacementValues[returnValIdx] = buffer;
         newOperands[*bbArgIdx] = buffer;
         continue;
@@ -690,9 +691,9 @@ struct CallOpInterface
       // Retrieve buffers for tensor operands. Tensor operand buffers, who's
       // corresponding FuncOp bbArgs are equivalent to a returned tensor, were
       // already stored in `newOperands` during Step 1.
-      Value buffer = newOperands[idx]
-                         ? newOperands[idx]
-                         : state.lookupBuffer(rewriter, tensorOperand);
+      Value buffer = newOperands[idx] ? newOperands[idx]
+                                      : *state.getBuffer(rewriter, opOperand,
+                                                         /*forceInPlace=*/true);
 
       // Caller / callee type mistmatch is handled with a CastOp.
       auto memRefType = bufferizedFuncType.getInput(idx);

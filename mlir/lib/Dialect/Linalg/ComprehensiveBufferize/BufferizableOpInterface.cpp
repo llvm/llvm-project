@@ -347,74 +347,73 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::BufferizationState(
   });
 }
 
+static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
+  assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
+
+  // Replace "%t = to_tensor %m" with %m.
+  if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
+    return toTensorOp.memref();
+
+  // Insert to_memref op.
+  OpBuilder::InsertionGuard g(rewriter);
+  setInsertionPointAfter(rewriter, tensor);
+  Type memrefType;
+  if (auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>()) {
+    memrefType = getDynamicMemRefType(rankedTensorType);
+  } else {
+    memrefType = getUnrankedMemRefType(
+        tensor.getType().cast<TensorType>().getElementType());
+  }
+  return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
+                                                    tensor);
+}
+
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
 /// a new buffer and copy over data from the existing buffer if out-of-place
 /// bufferization is necessary.
 FailureOr<Value>
-mlir::linalg::comprehensive_bufferize::BufferizationState::getResultBuffer(
-    RewriterBase &rewriter, OpResult result) const {
+mlir::linalg::comprehensive_bufferize::BufferizationState::getBuffer(
+    RewriterBase &rewriter, OpOperand &opOperand, bool forceInPlace) const {
   OpBuilder::InsertionGuard guard(rewriter);
-  Operation *op = result.getOwner();
-  SmallVector<OpOperand *> aliasingOperands = getAliasingOpOperand(result);
-  assert(!aliasingOperands.empty() && "could not get aliasing OpOperand");
-  OpOperand *opOperand = aliasingOperands.front();
-  Value operand = opOperand->get();
+  Operation *op = opOperand.getOwner();
+  Location loc = op->getLoc();
+  Value operand = opOperand.get();
   Value operandBuffer = lookupBuffer(rewriter, operand);
-  // Make sure that all OpOperands are the same buffer. If this is not the case,
-  // we would have to materialize a memref value.
-  // TODO: Should be looking for checking for "equivalent buffers" instead of
-  // operator== here, but equivalent buffers for scf.if yield values are not
-  // set up yet.
-  if (aliasingOperands.size() > 1 &&
-      !llvm::all_of(aliasingOperands, [&](OpOperand *o) {
-        return lookupBuffer(rewriter, o->get()) == operandBuffer;
-      }))
-    return FailureOr<Value>(op->emitError("result buffer is ambiguous"));
 
-  // If bufferizing out-of-place, allocate a new buffer.
-  if (!aliasInfo.isInPlace(*opOperand)) {
-    // Ops with multiple aliasing operands can currently not bufferize
-    // out-of-place.
-    assert(
-        aliasingOperands.size() == 1 &&
-        "ops with multiple aliasing OpOperands cannot bufferize out-of-place");
-    Location loc = op->getLoc();
-    // Move insertion point right after `operandBuffer`. That is where the
-    // allocation should be inserted (in the absence of allocation hoisting).
-    setInsertionPointAfter(rewriter, operandBuffer);
-    // Allocate the result buffer.
-    FailureOr<Value> resultBuffer =
-        createAlloc(rewriter, loc, operandBuffer, options.createDeallocs);
-    if (failed(resultBuffer))
-      return failure();
-    bool skipCopy = false;
-    // Do not copy if the last preceding write of `operand` is an op that does
-    // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
-    // Note: If `findLastPrecedingWrite` reaches the end of the reverse SSA
-    // use-def chain, it returns that value, regardless of whether it is a
-    // memory write or not.
-    Value lastWrite = findLastPrecedingWrite(operand);
-    if (auto bufferizableOp = options.dynCastBufferizableOp(lastWrite))
-      if (!bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(), *this))
-        skipCopy = true;
-    // Do not copy if the copied data is never read. (Neither by this op nor by
-    // any following op.)
-    if (!bufferizesToMemoryRead(*opOperand) && !isValueRead(result))
-      skipCopy = true;
-    // Do not copy if this op does not read the data, but writes it.
-    if (bufferizesToMemoryWrite(*opOperand) &&
-        !bufferizesToMemoryRead(*opOperand))
-      skipCopy = true;
-    if (!skipCopy) {
-      // The copy happens right before the op that is bufferized.
-      rewriter.setInsertionPoint(op);
-      createMemCpy(rewriter, loc, operandBuffer, *resultBuffer);
-    }
+  if (forceInPlace || aliasInfo.isInPlace(opOperand))
+    return operandBuffer;
+
+  // Bufferizing out-of-place: Allocate a new buffer.
+  // Move insertion point right after `operandBuffer`. That is where the
+  // allocation should be inserted (in the absence of allocation hoisting).
+  setInsertionPointAfter(rewriter, operandBuffer);
+  // Allocate the result buffer.
+  FailureOr<Value> resultBuffer =
+      createAlloc(rewriter, loc, operandBuffer, options.createDeallocs);
+  if (failed(resultBuffer))
+    return failure();
+  // Do not copy if the last preceding write of `operand` is an op that does
+  // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
+  // Note: If `findLastPrecedingWrite` reaches the end of the reverse SSA
+  // use-def chain, it returns that value, regardless of whether it is a
+  // memory write or not.
+  Value lastWrite = findLastPrecedingWrite(operand);
+  if (auto bufferizableOp = options.dynCastBufferizableOp(lastWrite))
+    if (!bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(), *this))
+      return resultBuffer;
+  // Do not copy if the copied data is never read.
+  OpResult aliasingOpResult = getAliasingOpResult(opOperand);
+  if (aliasingOpResult && !bufferizesToMemoryRead(opOperand) &&
+      !isValueRead(aliasingOpResult))
     return resultBuffer;
-  }
+  // Do not copy if this op does not read the data, but writes it.
+  if (bufferizesToMemoryWrite(opOperand) && !bufferizesToMemoryRead(opOperand))
+    return resultBuffer;
 
-  // Bufferizing in-place. No need to allocate a new buffer.
-  return operandBuffer;
+  // The copy happens right before the op that is bufferized.
+  rewriter.setInsertionPoint(op);
+  createMemCpy(rewriter, loc, operandBuffer, *resultBuffer);
+  return resultBuffer;
 }
 
 void mlir::linalg::comprehensive_bufferize::replaceOpWithBufferizedValues(
@@ -591,28 +590,6 @@ bool mlir::linalg::comprehensive_bufferize::isFunctionArgument(Value value) {
   if (!bbArg)
     return false;
   return isa<FuncOp>(bbArg.getOwner()->getParentOp());
-}
-
-Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
-    RewriterBase &rewriter, Value tensor) const {
-  assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
-
-  // Replace "%t = to_tensor %m" with %m.
-  if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
-    return toTensorOp.memref();
-
-  // Insert to_memref op.
-  OpBuilder::InsertionGuard g(rewriter);
-  setInsertionPointAfter(rewriter, tensor);
-  Type memrefType;
-  if (auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>()) {
-    memrefType = getDynamicMemRefType(rankedTensorType);
-  } else {
-    memrefType = getUnrankedMemRefType(
-        tensor.getType().cast<TensorType>().getElementType());
-  }
-  return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
-                                                    tensor);
 }
 
 bool mlir::linalg::comprehensive_bufferize::BufferizationState::isInPlace(
