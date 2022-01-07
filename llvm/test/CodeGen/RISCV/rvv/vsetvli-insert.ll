@@ -239,6 +239,21 @@ entry:
   ret <vscale x 1 x double> %y
 }
 
+define <vscale x 1 x double> @test13(<vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
+; CHECK-LABEL: test13:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
+    <vscale x 1 x double> %a,
+    <vscale x 1 x double> %b,
+    i64 -1)
+  ret <vscale x 1 x double> %0
+}
+
 declare <vscale x 1 x i64> @llvm.riscv.vadd.mask.nxv1i64.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>,
