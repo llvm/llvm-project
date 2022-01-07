@@ -332,9 +332,9 @@ static void MoveOrigin(const void *dst, const void *src, uptr size,
   // origins by copying origins in a reverse order; otherwise, copy origins in
   // a normal order. The orders of origin transfer are consistent with the
   // orders of how memcpy and memmove transfer user data.
-  uptr src_aligned_beg = reinterpret_cast<uptr>(src) & ~3UL;
-  uptr src_aligned_end = (reinterpret_cast<uptr>(src) + size) & ~3UL;
-  uptr dst_aligned_beg = reinterpret_cast<uptr>(dst) & ~3UL;
+  uptr src_aligned_beg = OriginAlignDown((uptr)src);
+  uptr src_aligned_end = OriginAlignDown((uptr)src + size);
+  uptr dst_aligned_beg = OriginAlignDown((uptr)dst);
   if (dst_aligned_beg < src_aligned_end && dst_aligned_beg >= src_aligned_beg)
     return ReverseCopyOrigin(dst, src, size, stack);
   return CopyOrigin(dst, src, size, stack);
@@ -401,10 +401,16 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_mem_origin_transfer(
   MoveOrigin(dst, src, len, &stack);
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_origin_transfer(const void *dst,
-                                                             const void *src,
-                                                             uptr len) {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_origin_transfer(
+    const void *dst, const void *src, uptr len) {
   __dfsan_mem_origin_transfer(dst, src, len);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_shadow_transfer(
+    void *dst, const void *src, uptr len) {
+  internal_memcpy((void *)__dfsan::shadow_for(dst),
+                  (const void *)__dfsan::shadow_for(src),
+                  len * sizeof(dfsan_label));
 }
 
 namespace __dfsan {
@@ -414,8 +420,7 @@ bool dfsan_init_is_running = false;
 
 void dfsan_copy_memory(void *dst, const void *src, uptr size) {
   internal_memcpy(dst, src, size);
-  internal_memcpy((void *)shadow_for(dst), (const void *)shadow_for(src),
-                  size * sizeof(dfsan_label));
+  dfsan_mem_shadow_transfer(dst, src, size);
   if (dfsan_get_track_origins())
     dfsan_mem_origin_transfer(dst, src, size);
 }

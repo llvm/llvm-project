@@ -1,4 +1,4 @@
-//===- DynamicPass.cpp - Implementation of a dynamic configurable pass ----===//
+//===- LinalgStrategyPasses.cpp - Implementation of Linalg passes ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -93,14 +93,13 @@ struct LinalgStrategyTilePass
     if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
       return;
 
-    RewritePatternSet tilingPattern(funcOp.getContext());
-    if (!anchorOpName.empty()) {
-      tilingPattern.add<LinalgGenericTilingPattern>(
-          anchorOpName, funcOp.getContext(), options, filter);
-    } else {
-      tilingPattern.add<LinalgGenericTilingPattern>(funcOp.getContext(), filter,
-                                                    options);
-    }
+    MLIRContext *ctx = funcOp.getContext();
+    RewritePatternSet tilingPattern(ctx);
+    if (!anchorOpName.empty())
+      tilingPattern.add<LinalgTilingPattern>(anchorOpName, ctx, options,
+                                             filter);
+    else
+      tilingPattern.add<LinalgTilingPattern>(ctx, options, filter);
     (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
   }
 

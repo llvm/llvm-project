@@ -9,7 +9,7 @@ target triple = "msp430"
 
 define void @single_m() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*m,*m"(i16* @mout0, i16* @min1) nounwind
+  call void asm "foo $1,$0", "=*m,*m"(i16* elementtype(i16) @mout0, i16* elementtype(i16) @min1) nounwind
   ret void
 }
 
@@ -167,7 +167,7 @@ entry:
 define void @multi_m() nounwind {
 entry:
   %tmp = load i16, i16* @min1, align 2
-  call void asm "foo $1,$0", "=*m|r,m|r"(i16* @mout0, i16 %tmp) nounwind
+  call void asm "foo $1,$0", "=*m|r,m|r"(i16* elementtype(i16) @mout0, i16 %tmp) nounwind
   ret void
 }
 

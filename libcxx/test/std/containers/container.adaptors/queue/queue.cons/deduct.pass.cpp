@@ -16,6 +16,7 @@
 //   queue(Container, Allocator) -> queue<typename Container::value_type, Container>;
 
 
+#include <array>
 #include <queue>
 #include <list>
 #include <iterator>
@@ -141,19 +142,34 @@ int main(int, char**)
         using Cont = std::list<int>;
         using Alloc = std::allocator<int>;
         using DiffAlloc = test_allocator<int>;
+        using Iter = int*;
 
-        struct BadAlloc {};
-        using AllocAsCont = Alloc;
+        struct NotIter{};
+        struct NotAlloc {};
 
-        // (cont, alloc)
-        //
-        // Cannot deduce from (ALLOC_as_cont, alloc)
-        static_assert(SFINAEs_away<std::queue, AllocAsCont, BadAlloc>);
-        // Cannot deduce from (cont, BAD_alloc)
-        static_assert(SFINAEs_away<std::queue, Cont, BadAlloc>);
-        // Cannot deduce from (cont, DIFFERENT_alloc)
+        static_assert(SFINAEs_away<std::queue, Alloc, NotAlloc>);
+        static_assert(SFINAEs_away<std::queue, Cont, NotAlloc>);
         static_assert(SFINAEs_away<std::queue, Cont, DiffAlloc>);
+        static_assert(SFINAEs_away<std::queue, Iter, NotIter>);
+#if TEST_STD_VER > 20
+        static_assert(SFINAEs_away<std::queue, Iter, NotIter, Alloc>);
+        static_assert(SFINAEs_away<std::queue, Iter, Iter, NotAlloc>);
+#endif
     }
-
+#if TEST_STD_VER > 20
+    {
+        typedef short T;
+        typedef test_allocator<T> Alloc;
+        std::list<T> a;
+        {
+        std::queue q(a.begin(), a.end());
+        static_assert(std::is_same_v<decltype(q), std::queue<T>>);
+        }
+        {
+        std::queue q(a.begin(), a.end(), Alloc());
+        static_assert(std::is_same_v<decltype(q), std::queue<T, std::deque<T, Alloc>>>);
+        }
+    }
+#endif
     return 0;
 }

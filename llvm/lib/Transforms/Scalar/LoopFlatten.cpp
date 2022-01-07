@@ -535,7 +535,7 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
     for (Value *U : V->users()) {
       if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
         for (Value *GEPUser : U->users()) {
-          Instruction *GEPUserInst = dyn_cast<Instruction>(GEPUser);
+          auto *GEPUserInst = cast<Instruction>(GEPUser);
           if (!isa<LoadInst>(GEPUserInst) &&
               !(isa<StoreInst>(GEPUserInst) &&
                 GEP == GEPUserInst->getOperand(1)))

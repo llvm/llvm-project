@@ -524,6 +524,7 @@ public:
   LogicalResult compute(LinalgOp linalgOp, OpOperand *fusableOpOperand,
                         ArrayRef<AffineMap> reassociationMaps,
                         ArrayRef<int64_t> expandedShape,
+                        ArrayRef<int64_t> collapsedShape,
                         PatternRewriter &rewriter);
   unsigned getOrigOpNumDims() const { return reassociation.size(); }
   unsigned getExpandedOpNumDims() const { return expandedOpNumDims; }
@@ -533,6 +534,7 @@ public:
   ArrayRef<int64_t> getExpandedShapeOfDim(unsigned i) const {
     return expandedShapeMap[i];
   }
+  ArrayRef<int64_t> getOriginalShape() const { return originalLoopExtent; }
 
 private:
   /// Reassociation from the dimensions in the original operation to the
@@ -541,6 +543,8 @@ private:
   /// Mapping from extent of loops in the original operation, to the extent of
   /// loops in the expanded operation.
   SmallVector<SmallVector<int64_t>> expandedShapeMap;
+  /// Extent of the loop in the original operation.
+  SmallVector<int64_t> originalLoopExtent;
   unsigned expandedOpNumDims;
 };
 } // namespace
@@ -549,6 +553,7 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
                                      OpOperand *fusableOpOperand,
                                      ArrayRef<AffineMap> reassociationMaps,
                                      ArrayRef<int64_t> expandedShape,
+                                     ArrayRef<int64_t> collapsedShape,
                                      PatternRewriter &rewriter) {
   if (reassociationMaps.empty())
     return failure();
@@ -558,6 +563,8 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
       linalgOp.getStaticLoopRanges();
   if (!originalLoopRange)
     return rewriter.notifyMatchFailure(linalgOp, "unable to find loop range");
+  originalLoopExtent.assign(originalLoopRange->begin(),
+                            originalLoopRange->end());
 
   reassociation.clear();
   expandedShapeMap.clear();
@@ -576,7 +583,7 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
   // The remaining dimensions remain the same.
   for (unsigned i : llvm::seq<unsigned>(0, fusedIndexMap.getNumDims()))
     if (expandedShapeMap[i].empty())
-      expandedShapeMap[i] = {(*originalLoopRange)[i]};
+      expandedShapeMap[i] = {originalLoopExtent[i]};
 
   // Compute reassociation map from the original op to the expanded op.
   unsigned sum = 0;
@@ -601,6 +608,30 @@ LogicalResult ExpansionInfo::compute(LinalgOp linalgOp,
 LogicalResult isGenericOpExpandable(GenericOp genericOp,
                                     const ExpansionInfo &expansionInfo,
                                     PatternRewriter &rewriter) {
+  // Current reshape only supports expansion of a dynamic dim when only one of
+  // the expanded dims are dynamic.
+  for (auto originalShape : llvm::enumerate(expansionInfo.getOriginalShape()))
+    if (ShapedType::isDynamic(originalShape.value())) {
+      // All but one of the expanded dims must be static.
+      bool foundDynamicExpandedDim = false;
+      for (auto expandedShape :
+           expansionInfo.getExpandedShapeOfDim(originalShape.index())) {
+        if (ShapedType::isDynamic(expandedShape)) {
+          if (foundDynamicExpandedDim) {
+            return rewriter.notifyMatchFailure(
+                genericOp,
+                "cannot expanded dynamic dims into multiple dynamic dims");
+          }
+          foundDynamicExpandedDim = true;
+        }
+      }
+      if (!foundDynamicExpandedDim) {
+        return rewriter.notifyMatchFailure(
+            genericOp, "dynamic dim expansion needs at least one dynamic dim "
+                       "in result shape");
+      }
+    }
+
   if (!genericOp.hasIndexSemantics())
     return success();
   for (unsigned i : llvm::seq<unsigned>(0, expansionInfo.getOrigOpNumDims())) {
@@ -731,13 +762,16 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
   RankedTensorType expandedType = isExpanding
                                       ? expandingReshapeOp.getResultType()
                                       : collapsingReshapeOp.getSrcType();
+  RankedTensorType collapsedType = isExpanding
+                                       ? expandingReshapeOp.getSrcType()
+                                       : collapsingReshapeOp.getResultType();
 
   ExpansionInfo expansionInfo;
   if (failed(expansionInfo.compute(
           genericOp, fusableOpOperand,
           isExpanding ? expandingReshapeOp.getReassociationMaps()
                       : collapsingReshapeOp.getReassociationMaps(),
-          expandedType.getShape(), rewriter)))
+          expandedType.getShape(), collapsedType.getShape(), rewriter)))
     return llvm::None;
 
   if (failed(isGenericOpExpandable(genericOp, expansionInfo, rewriter)))

@@ -1,112 +1,144 @@
-# RUN: gdb -q -batch -n -iex 'source %mlir_src_root/utils/gdb-scripts/prettyprinters.py' -iex 'source %llvm_src_root/utils/gdb-scripts/prettyprinters.py' -x %s %llvm_tools_dir/check-gdb-mlir-support | FileCheck %s
+# RUN: gdb -q -batch -n \
+# RUN:   -iex 'source %mlir_src_root/utils/gdb-scripts/prettyprinters.py' \
+# RUN:   -iex 'source %llvm_src_root/utils/gdb-scripts/prettyprinters.py' \
+# RUN:   -ex 'source -v %s' %llvm_tools_dir/check-gdb-mlir-support \
+# RUN: | FileCheck %s
 # REQUIRES: debug-info
 # REQUIRES: mlir
 
 break main
 run
+set print pretty on
 
+# CHECK-LABEL: +print Identifier
+print Identifier
 # CHECK: "foo"
-p Identifier
 
+# CHECK-LABEL: +print OperationName
+print OperationName
 # CHECK: "FooOp"
-p OperationName
 
-# CHECK: 0x8
-# CHECK: TrailingOpResult
-p Value
-
+# CHECK-LABEL: +print Type
+print Type
 # CHECK: impl = 0x0
-p Type
 
-# CHECK: cast<mlir::IndexType>
-p IndexType
+# CHECK-LABEL: +print IndexType
+print IndexType
+# CHECK: mlir::IndexType
 
-# CHECK: cast<mlir::IntegerType>
+# CHECK-LABEL: +print IntegerType
+print IntegerType
+# CHECK: mlir::IntegerType
 # CHECK: width = 3
 # CHECK: Unsigned
-p IntegerType
 
-# CHECK: cast<mlir::Float32Type>
-p FloatType
+# CHECK-LABEL: +print FloatType
+print FloatType
+# CHECK: mlir::Float32Type
 
-# CHECK: cast<mlir::MemRefType>
-# CHECK: shapeSize = 2
-# CHECK: shapeElements[0] = 4
-# CHECK: shapeElements[1] = 5
-p MemRefType
+# CHECK-LABEL: +print MemRefType
+print MemRefType
+# CHECK: mlir::MemRefType
+# CHECK: shape = llvm::ArrayRef of length 2 = {4, 5}
+# CHECK: elementType
+# CHECK: mlir::Float32Type
 
-# CHECK: cast<mlir::UnrankedMemRefType>
-# CHECK: memorySpace = 6
-p UnrankedMemRefType
+# CHECK-LABEL: +print UnrankedMemRefType
+print UnrankedMemRefType
+# CHECK: mlir::UnrankedMemRefType
+# CHECK: elementType
+# CHECK: mlir::IntegerType
+# CHECK: memorySpace
+# CHECK: 6
 
-# CHECK: cast<mlir::VectorType>
-# CHECK: shapeSize = 2
-# CHECK: shapeElements[0] = 1
-# CHECK: shapeElements[1] = 2
-p VectorType
+# CHECK-LABEL: +print VectorType
+print VectorType
+# CHECK: mlir::VectorType
+# CHECK: shape = llvm::ArrayRef of length 2 = {1, 2}
 
-# CHECK: cast<mlir::TupleType>
+# CHECK-LABEL: +print TupleType
+print TupleType
+# CHECK: mlir::TupleType
 # CHECK: numElements = 2
 # CHECK: elements[0]
 # CHECK: mlir::IndexType
 # CHECK: elements[1]
 # CHECK: mlir::Float32Type
-p TupleType
 
-# CHECK: cast<mlir::UnknownLoc>
-p UnknownLoc
+# CHECK-LABEL: +print Result
+print Result
+# CHECK: mlir::Float32Type
+# CHECK: outOfLineIndex = 42
 
-# CHECK: cast<mlir::FileLineColLoc>
-# CHECK: filename = "file"
+# CHECK-LABEL: +print Value
+print Value
+# CHECK: OutOfLineOpResult
+
+# CHECK-LABEL: +print UnknownLoc
+print UnknownLoc
+# CHECK: mlir::UnknownLoc
+
+# CHECK-LABEL: +print FileLineColLoc
+print FileLineColLoc
+# CHECK: mlir::FileLineColLoc
+# CHECK: "file"
 # CHECK: line = 7
 # CHECK: column = 8
-p FileLineColLoc
 
-# CHECK: cast<mlir::OpaqueLoc>
+# CHECK-LABEL: +print OpaqueLoc
+print OpaqueLoc
+# CHECK: mlir::OpaqueLoc
 # CHECK: underlyingLocation = 9
-p OpaqueLoc
 
-# CHECK: cast<mlir::NameLoc>
-# CHECK: name = "foo"
+# CHECK-LABEL: +print NameLoc
+print NameLoc
+# CHECK: mlir::NameLoc
+# CHECK: "foo"
 # CHECK: mlir::UnknownLoc
-p NameLoc
 
-# CHECK: cast<mlir::CallSiteLoc>
+# CHECK-LABEL: +print CallSiteLoc
+print CallSiteLoc
+# CHECK: mlir::CallSiteLoc
 # CHECK: callee
 # CHECK: mlir::FileLineColLoc
 # CHECK: caller
 # CHECK: mlir::OpaqueLoc
-p CallSiteLoc
 
-# CHECK: cast<mlir::FusedLoc>
-# CHECK: numLocs = 2
-# CHECK: locs[0]
+# CHECK-LABEL: +print FusedLoc
+print FusedLoc
+# CHECK: mlir::FusedLoc
+# CHECK: locations = llvm::ArrayRef of length 2
 # CHECK: mlir::FileLineColLoc
-# CHECK: locs[1]
 # CHECK: mlir::NameLoc
-p FusedLoc
 
-# CHECK: cast<mlir::UnitAttr>
-p UnitAttr
+# CHECK-LABEL: +print UnitAttr
+print UnitAttr
+# CHECK: mlir::UnitAttr
 
-# CHECK: cast<mlir::FloatAttr>
-p FloatAttr
+# CHECK-LABEL: +print FloatAttr
+print FloatAttr
+# CHECK: mlir::FloatAttr
 
-# CHECK: cast<mlir::IntegerAttr>
-p IntegerAttr
+# CHECK-LABEL: +print IntegerAttr
+print IntegerAttr
+# CHECK: mlir::IntegerAttr
 
-# CHECK: cast<mlir::TypeAttr>
+# CHECK-LABEL: +print TypeAttr
+print TypeAttr
+# CHECK: mlir::TypeAttr
 # CHECK: mlir::IndexType
-p TypeAttr
 
-# CHECK: cast<mlir::ArrayAttr>
+# CHECK-LABEL: +print ArrayAttr
+print ArrayAttr
+# CHECK: mlir::ArrayAttr
 # CHECK: llvm::ArrayRef of length 1
 # CHECK: mlir::UnitAttr
-p ArrayAttr
 
-# CHECK: cast<mlir::StringAttr>
+# CHECK-LABEL: +print StringAttr
+print StringAttr
+# CHECK: mlir::StringAttr
 # CHECK: value = "foo"
-p StringAttr
 
-# CHECK: cast<mlir::DenseIntOrFPElementsAttr>
-p ElementsAttr
+# CHECK-LABEL: +print ElementsAttr
+print ElementsAttr
+# CHECK: mlir::DenseIntOrFPElementsAttr

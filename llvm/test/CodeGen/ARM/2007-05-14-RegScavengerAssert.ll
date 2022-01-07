@@ -21,8 +21,8 @@ bb:		; preds = %bb, %entry
 bb59:		; preds = %bb
 	%tmp68 = sdiv i64 0, 0		; <i64> [#uses=1]
 	%tmp6869 = trunc i64 %tmp68 to i32		; <i32> [#uses=2]
-	%tmp81 = call i32 asm "smull $0, $1, $2, $3     \0A\09mov   $0, $0,     lsr $4\0A\09add   $1, $0, $1, lsl $5\0A\09", "=&r,=*&r,r,r,i,i"( i32* null, i32 %tmp6869, i32 13316085, i32 23, i32 9 )		; <i32> [#uses=0]
-	%tmp90 = call i32 asm "smull $0, $1, $2, $3     \0A\09mov   $0, $0,     lsr $4\0A\09add   $1, $0, $1, lsl $5\0A\09", "=&r,=*&r,r,r,i,i"( i32* null, i32 %tmp6869, i32 10568984, i32 23, i32 9 )		; <i32> [#uses=0]
+	%tmp81 = call i32 asm "smull $0, $1, $2, $3     \0A\09mov   $0, $0,     lsr $4\0A\09add   $1, $0, $1, lsl $5\0A\09", "=&r,=*&r,r,r,i,i"( i32* elementtype( i32) null, i32 %tmp6869, i32 13316085, i32 23, i32 9 )		; <i32> [#uses=0]
+	%tmp90 = call i32 asm "smull $0, $1, $2, $3     \0A\09mov   $0, $0,     lsr $4\0A\09add   $1, $0, $1, lsl $5\0A\09", "=&r,=*&r,r,r,i,i"( i32* elementtype( i32) null, i32 %tmp6869, i32 10568984, i32 23, i32 9 )		; <i32> [#uses=0]
 	unreachable
 
 cond_next789:		; preds = %entry
