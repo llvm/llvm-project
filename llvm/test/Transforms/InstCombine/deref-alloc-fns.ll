@@ -77,7 +77,7 @@ declare noalias i8* @foo(i8*, i8*, i8*)
 define noalias i8* @aligned_alloc_dynamic_args(i64 %align, i64 %size) {
 ; CHECK-LABEL: @aligned_alloc_dynamic_args(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(1024) i8* @aligned_alloc(i64 [[ALIGN:%.*]], i64 1024)
-; CHECK-NEXT:    [[CALL_1:%.*]] = tail call noalias i8* @aligned_alloc(i64 0, i64 1024)
+; CHECK-NEXT:    [[CALL_1:%.*]] = tail call noalias dereferenceable_or_null(1024) i8* @aligned_alloc(i64 0, i64 1024)
 ; CHECK-NEXT:    [[CALL_2:%.*]] = tail call noalias i8* @aligned_alloc(i64 32, i64 [[SIZE:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @foo(i8* [[CALL]], i8* [[CALL_1]], i8* [[CALL_2]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
