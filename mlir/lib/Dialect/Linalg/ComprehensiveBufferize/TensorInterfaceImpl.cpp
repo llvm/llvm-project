@@ -53,7 +53,7 @@ struct CastOpInterface
 
     // The result buffer still has the old (pre-cast) type.
     FailureOr<Value> resultBuffer =
-        state.getResultBuffer(rewriter, castOp->getResult(0));
+        state.getBuffer(rewriter, castOp->getOpOperand(0) /*source*/);
     if (failed(resultBuffer))
       return failure();
     auto sourceMemRefType = resultBuffer->getType().cast<BaseMemRefType>();
@@ -106,7 +106,7 @@ struct DimOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
     auto dimOp = cast<tensor::DimOp>(op);
-    Value v = state.lookupBuffer(rewriter, dimOp.source());
+    Value v = *state.getBuffer(rewriter, dimOp->getOpOperand(0) /*source*/);
     replaceOpWithNewBufferizedOp<memref::DimOp>(rewriter, op, v, dimOp.index());
     return success();
   }
@@ -143,7 +143,9 @@ struct ExtractSliceOpInterface
                           const BufferizationState &state) const {
     auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
     Location loc = extractSliceOp.getLoc();
-    Value srcMemref = state.lookupBuffer(rewriter, extractSliceOp.source());
+    Value srcMemref =
+        *state.getBuffer(rewriter, extractSliceOp->getOpOperand(0) /*source*/,
+                         /*forceInPlace=*/true);
     auto srcMemrefType = srcMemref.getType().cast<MemRefType>();
     auto dstTensorType =
         extractSliceOp.result().getType().cast<RankedTensorType>();
@@ -206,7 +208,8 @@ struct ExtractOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
     auto extractOp = cast<tensor::ExtractOp>(op);
-    Value srcMemref = state.lookupBuffer(rewriter, extractOp.tensor());
+    Value srcMemref =
+        *state.getBuffer(rewriter, extractOp->getOpOperand(0) /*tensor*/);
     replaceOpWithNewBufferizedOp<memref::LoadOp>(rewriter, op, srcMemref,
                                                  extractOp.indices());
     return success();
@@ -244,7 +247,7 @@ struct InsertOpInterface
                           const BufferizationState &state) const {
     auto insertOp = cast<tensor::InsertOp>(op);
     FailureOr<Value> destMemref =
-        state.getResultBuffer(rewriter, insertOp->getOpResult(0));
+        state.getBuffer(rewriter, insertOp->getOpOperand(1) /*dest*/);
     if (failed(destMemref))
       return failure();
     rewriter.create<memref::StoreOp>(insertOp.getLoc(), insertOp.scalar(),
@@ -412,7 +415,7 @@ struct InsertSliceOpInterface
 
     // When bufferizing out-of-place, `getResultBuffer` allocates.
     FailureOr<Value> dstMemref =
-        state.getResultBuffer(rewriter, insertSliceOp->getResult(0));
+        state.getBuffer(rewriter, insertSliceOp->getOpOperand(1) /*dest*/);
     if (failed(dstMemref))
       return failure();
 
@@ -430,7 +433,8 @@ struct InsertSliceOpInterface
 
     // Copy tensor. If this tensor.insert_slice has a matching
     // tensor.extract_slice, the copy operation will eventually fold away.
-    Value srcMemref = state.lookupBuffer(rewriter, insertSliceOp.source());
+    Value srcMemref =
+        *state.getBuffer(rewriter, insertSliceOp->getOpOperand(0) /*source*/);
     state.createMemCpy(rewriter, loc, srcMemref, subView);
 
     replaceOpWithBufferizedValues(rewriter, op, *dstMemref);

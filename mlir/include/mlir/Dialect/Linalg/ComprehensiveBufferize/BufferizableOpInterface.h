@@ -377,18 +377,14 @@ public:
   /// Creates a memcpy between two given buffers.
   void createMemCpy(OpBuilder &b, Location loc, Value from, Value to) const;
 
-  /// Lookup the memref buffer that is associated to the given tensor value.
-  /// Asserts if no buffer is associated.
-  Value lookupBuffer(RewriterBase &rewriter, Value tensor) const;
-
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpOperand &opOperand) const;
 
-  /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
+  /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
-  /// bufferization is necessary.
-  FailureOr<Value> getResultBuffer(RewriterBase &rewriter,
-                                   OpResult result) const;
+  /// bufferization was decided.
+  FailureOr<Value> getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
+                             bool forceInPlace = false) const;
 
   /// Return dialect-specific bufferization state.
   template <typename StateT>

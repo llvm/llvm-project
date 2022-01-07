@@ -46,15 +46,19 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    newInputBuffers.push_back(state.lookupBuffer(rewriter, opOperand->get()));
+    // Input operands are never written to.
+    newInputBuffers.push_back(
+        *state.getBuffer(rewriter, *opOperand, /*forceInPlace=*/true));
   }
 
   // New output operands for the cloned op.
   SmallVector<Value> newOutputBuffers;
-  for (OpOperand *opOperand : op.getOutputOperands()) {
-    OpResult opResult = op.getTiedOpResult(opOperand);
-    assert(opResult && "could not find correspond OpResult");
-    FailureOr<Value> resultBuffer = state.getResultBuffer(rewriter, opResult);
+  for (OpResult opResult : op->getOpResults()) {
+    SmallVector<OpOperand *> aliasingOpOperands =
+        state.getAliasingOpOperand(opResult);
+    assert(aliasingOpOperands.size() == 1 && "expected 1 OpOperand");
+    FailureOr<Value> resultBuffer =
+        state.getBuffer(rewriter, *aliasingOpOperands.front());
     if (failed(resultBuffer))
       return failure();
     newOutputBuffers.push_back(*resultBuffer);
@@ -284,24 +288,23 @@ struct TiledLoopOpInterface
 
     // Compute new inputs, outputs and results.
     SmallVector<Value> newInputs, newOutputs, newResults;
-    for (Value value : tiledLoopOp.inputs()) {
-      if (value.getType().isa<TensorType>()) {
-        newInputs.push_back(state.lookupBuffer(rewriter, value));
-      } else {
-        newInputs.push_back(value);
-      }
-    }
-    int nextResultNum = 0;
-    for (Value value : tiledLoopOp.outputs()) {
-      if (value.getType().isa<TensorType>()) {
-        FailureOr<Value> buffer = state.getResultBuffer(
-            rewriter, tiledLoopOp->getResult(nextResultNum++));
-        if (failed(buffer))
+    for (int i = tiledLoopOp.getNumControlOperands();
+         i < tiledLoopOp->getNumOperands(); ++i) {
+      OpOperand &operand = tiledLoopOp->getOpOperand(i);
+      Value rewrittenValue = operand.get();
+      if (rewrittenValue.getType().isa<TensorType>()) {
+        FailureOr<Value> bufferOrFailure = state.getBuffer(rewriter, operand);
+        if (failed(bufferOrFailure))
           return failure();
-        newOutputs.push_back(*buffer);
-        newResults.push_back(*buffer);
+        rewrittenValue = *bufferOrFailure;
+      }
+      if (i <
+          tiledLoopOp.getNumControlOperands() + tiledLoopOp.getNumInputs()) {
+        newInputs.push_back(rewrittenValue);
       } else {
-        newOutputs.push_back(value);
+        newOutputs.push_back(rewrittenValue);
+        if (operand.get().getType().isa<TensorType>())
+          newResults.push_back(rewrittenValue);
       }
     }
 
