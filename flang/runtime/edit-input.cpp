@@ -96,6 +96,7 @@ bool EditIntegerInput(
   std::optional<char32_t> next;
   bool negate{ScanNumericPrefix(io, edit, next, remaining)};
   common::UnsignedInt128 value;
+  bool any{false};
   for (; next; next = io.NextInField(remaining)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -115,12 +116,15 @@ bool EditIntegerInput(
     }
     value *= 10;
     value += digit;
+    any = true;
   }
-  if (negate) {
-    value = -value;
+  if (any) {
+    if (negate) {
+      value = -value;
+    }
+    std::memcpy(n, &value, kind);
   }
-  std::memcpy(n, &value, kind);
-  return true;
+  return any;
 }
 
 // Parses a REAL input number from the input source as a normalized

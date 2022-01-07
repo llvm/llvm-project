@@ -27,6 +27,10 @@ bool ConnectionState::IsAtEOF() const {
   return endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber;
 }
 
+bool ConnectionState::IsAfterEndfile() const {
+  return endfileRecordNumber && currentRecordNumber > *endfileRecordNumber;
+}
+
 void ConnectionState::HandleAbsolutePosition(std::int64_t n) {
   positionInRecord = std::max(n, std::int64_t{0}) + leftTabLimit.value_or(0);
 }
