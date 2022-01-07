@@ -1838,8 +1838,8 @@ public:
   virtual Function *getSSPStackGuardCheck(const Module &M) const;
 
   /// \returns true if a constant G_UBFX is legal on the target.
-  virtual bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
-                                                     LLT Ty2) const {
+  virtual bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
+                                                      LLT Ty2) const {
     return false;
   }
 
