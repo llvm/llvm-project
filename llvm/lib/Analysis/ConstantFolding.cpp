@@ -2467,36 +2467,21 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         !getConstIntOrUndef(Operands[1], C1))
       return nullptr;
 
-    unsigned BitWidth = Ty->getScalarSizeInBits();
     switch (IntrinsicID) {
     default: break;
     case Intrinsic::smax:
-      if (!C0 && !C1)
-        return UndefValue::get(Ty);
-      if (!C0 || !C1)
-        return ConstantInt::get(Ty, APInt::getSignedMaxValue(BitWidth));
-      return ConstantInt::get(Ty, C0->sgt(*C1) ? *C0 : *C1);
-
     case Intrinsic::smin:
-      if (!C0 && !C1)
-        return UndefValue::get(Ty);
-      if (!C0 || !C1)
-        return ConstantInt::get(Ty, APInt::getSignedMinValue(BitWidth));
-      return ConstantInt::get(Ty, C0->slt(*C1) ? *C0 : *C1);
-
     case Intrinsic::umax:
-      if (!C0 && !C1)
-        return UndefValue::get(Ty);
-      if (!C0 || !C1)
-        return ConstantInt::get(Ty, APInt::getMaxValue(BitWidth));
-      return ConstantInt::get(Ty, C0->ugt(*C1) ? *C0 : *C1);
-
     case Intrinsic::umin:
       if (!C0 && !C1)
         return UndefValue::get(Ty);
       if (!C0 || !C1)
-        return ConstantInt::get(Ty, APInt::getMinValue(BitWidth));
-      return ConstantInt::get(Ty, C0->ult(*C1) ? *C0 : *C1);
+        return MinMaxIntrinsic::getSaturationPoint(IntrinsicID, Ty);
+      return ConstantInt::get(
+          Ty, ICmpInst::compare(*C0, *C1,
+                                MinMaxIntrinsic::getPredicate(IntrinsicID))
+                  ? *C0
+                  : *C1);
 
     case Intrinsic::usub_with_overflow:
     case Intrinsic::ssub_with_overflow:

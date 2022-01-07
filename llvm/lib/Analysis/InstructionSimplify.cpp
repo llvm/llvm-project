@@ -5615,26 +5615,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   return nullptr;
 }
 
-static APInt getMaxMinLimit(Intrinsic::ID IID, unsigned BitWidth) {
-  switch (IID) {
-  case Intrinsic::smax: return APInt::getSignedMaxValue(BitWidth);
-  case Intrinsic::smin: return APInt::getSignedMinValue(BitWidth);
-  case Intrinsic::umax: return APInt::getMaxValue(BitWidth);
-  case Intrinsic::umin: return APInt::getMinValue(BitWidth);
-  default: llvm_unreachable("Unexpected intrinsic");
-  }
-}
-
-static ICmpInst::Predicate getMaxMinPredicate(Intrinsic::ID IID) {
-  switch (IID) {
-  case Intrinsic::smax: return ICmpInst::ICMP_SGE;
-  case Intrinsic::smin: return ICmpInst::ICMP_SLE;
-  case Intrinsic::umax: return ICmpInst::ICMP_UGE;
-  case Intrinsic::umin: return ICmpInst::ICMP_ULE;
-  default: llvm_unreachable("Unexpected intrinsic");
-  }
-}
-
 /// Given a min/max intrinsic, see if it can be removed based on having an
 /// operand that is another min/max intrinsic with shared operand(s). The caller
 /// is expected to swap the operand arguments to handle commutation.
@@ -5702,19 +5682,21 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
 
     // Assume undef is the limit value.
     if (Q.isUndefValue(Op1))
-      return ConstantInt::get(ReturnType, getMaxMinLimit(IID, BitWidth));
+      return ConstantInt::get(
+          ReturnType, MinMaxIntrinsic::getSaturationPoint(IID, BitWidth));
 
     const APInt *C;
     if (match(Op1, m_APIntAllowUndef(C))) {
       // Clamp to limit value. For example:
       // umax(i8 %x, i8 255) --> 255
-      if (*C == getMaxMinLimit(IID, BitWidth))
+      if (*C == MinMaxIntrinsic::getSaturationPoint(IID, BitWidth))
         return ConstantInt::get(ReturnType, *C);
 
       // If the constant op is the opposite of the limit value, the other must
       // be larger/smaller or equal. For example:
       // umin(i8 %x, i8 255) --> %x
-      if (*C == getMaxMinLimit(getInverseMinMaxIntrinsic(IID), BitWidth))
+      if (*C == MinMaxIntrinsic::getSaturationPoint(
+                    getInverseMinMaxIntrinsic(IID), BitWidth))
         return Op0;
 
       // Remove nested call if constant operands allow it. Example:
@@ -5725,10 +5707,9 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
         Value *M00 = MinMax0->getOperand(0), *M01 = MinMax0->getOperand(1);
         const APInt *InnerC;
         if ((match(M00, m_APInt(InnerC)) || match(M01, m_APInt(InnerC))) &&
-            ((IID == Intrinsic::smax && InnerC->sge(*C)) ||
-             (IID == Intrinsic::smin && InnerC->sle(*C)) ||
-             (IID == Intrinsic::umax && InnerC->uge(*C)) ||
-             (IID == Intrinsic::umin && InnerC->ule(*C))))
+            ICmpInst::compare(*InnerC, *C,
+                              ICmpInst::getNonStrictPredicate(
+                                  MinMaxIntrinsic::getPredicate(IID))))
           return Op0;
       }
     }
@@ -5738,7 +5719,8 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (Value *V = foldMinMaxSharedOp(IID, Op1, Op0))
       return V;
 
-    ICmpInst::Predicate Pred = getMaxMinPredicate(IID);
+    ICmpInst::Predicate Pred =
+        ICmpInst::getNonStrictPredicate(MinMaxIntrinsic::getPredicate(IID));
     if (isICmpTrue(Pred, Op0, Op1, Q.getWithoutUndef(), RecursionLimit))
       return Op0;
     if (isICmpTrue(Pred, Op1, Op0, Q.getWithoutUndef(), RecursionLimit))
