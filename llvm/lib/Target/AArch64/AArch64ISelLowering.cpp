@@ -404,6 +404,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT, MVT::f128, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f128, Custom);
   setOperationAction(ISD::FP_EXTEND, MVT::f128, Custom);
+  // FIXME: f128 FMINIMUM and FMAXIMUM (including STRICT versions) currently
+  // aren't handled.
 
   // Lowering for many of the conversions is actually specified by the non-f128
   // type. The LowerXXX function will be trivial when f128 isn't involved.
@@ -647,37 +649,35 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   // AArch64 has implementations of a lot of rounding-like FP operations.
-  for (MVT Ty : {MVT::f32, MVT::f64}) {
-    setOperationAction(ISD::FFLOOR, Ty, Legal);
-    setOperationAction(ISD::FNEARBYINT, Ty, Legal);
-    setOperationAction(ISD::FCEIL, Ty, Legal);
-    setOperationAction(ISD::FRINT, Ty, Legal);
-    setOperationAction(ISD::FTRUNC, Ty, Legal);
-    setOperationAction(ISD::FROUND, Ty, Legal);
-    setOperationAction(ISD::FROUNDEVEN, Ty, Legal);
-    setOperationAction(ISD::FMINNUM, Ty, Legal);
-    setOperationAction(ISD::FMAXNUM, Ty, Legal);
-    setOperationAction(ISD::FMINIMUM, Ty, Legal);
-    setOperationAction(ISD::FMAXIMUM, Ty, Legal);
-    setOperationAction(ISD::LROUND, Ty, Legal);
-    setOperationAction(ISD::LLROUND, Ty, Legal);
-    setOperationAction(ISD::LRINT, Ty, Legal);
-    setOperationAction(ISD::LLRINT, Ty, Legal);
+  for (auto Op :
+       {ISD::FFLOOR,          ISD::FNEARBYINT,      ISD::FCEIL,
+        ISD::FRINT,           ISD::FTRUNC,          ISD::FROUND,
+        ISD::FROUNDEVEN,      ISD::FMINNUM,         ISD::FMAXNUM,
+        ISD::FMINIMUM,        ISD::FMAXIMUM,        ISD::LROUND,
+        ISD::LLROUND,         ISD::LRINT,           ISD::LLRINT,
+        ISD::STRICT_FFLOOR,   ISD::STRICT_FCEIL,    ISD::STRICT_FNEARBYINT,
+        ISD::STRICT_FRINT,    ISD::STRICT_FTRUNC,   ISD::STRICT_FROUNDEVEN,
+        ISD::STRICT_FROUND,   ISD::STRICT_FMINNUM,  ISD::STRICT_FMAXNUM,
+        ISD::STRICT_FMINIMUM, ISD::STRICT_FMAXIMUM, ISD::STRICT_LROUND,
+        ISD::STRICT_LLROUND,  ISD::STRICT_LRINT,    ISD::STRICT_LLRINT}) {
+    for (MVT Ty : {MVT::f32, MVT::f64})
+      setOperationAction(Op, Ty, Legal);
+    if (Subtarget->hasFullFP16())
+      setOperationAction(Op, MVT::f16, Legal);
   }
 
-  if (Subtarget->hasFullFP16()) {
-    setOperationAction(ISD::FNEARBYINT, MVT::f16, Legal);
-    setOperationAction(ISD::FFLOOR,  MVT::f16, Legal);
-    setOperationAction(ISD::FCEIL,   MVT::f16, Legal);
-    setOperationAction(ISD::FRINT,   MVT::f16, Legal);
-    setOperationAction(ISD::FTRUNC,  MVT::f16, Legal);
-    setOperationAction(ISD::FROUND,  MVT::f16, Legal);
-    setOperationAction(ISD::FROUNDEVEN,  MVT::f16, Legal);
-    setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
-    setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
-    setOperationAction(ISD::FMINIMUM, MVT::f16, Legal);
-    setOperationAction(ISD::FMAXIMUM, MVT::f16, Legal);
+  // Basic strict FP operations are legal
+  for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                  ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT}) {
+    for (MVT Ty : {MVT::f32, MVT::f64})
+      setOperationAction(Op, Ty, Legal);
+    if (Subtarget->hasFullFP16())
+      setOperationAction(Op, MVT::f16, Legal);
   }
+
+  // Strict conversion to a larger type is legal
+  for (auto VT : {MVT::f32, MVT::f64})
+    setOperationAction(ISD::STRICT_FP_EXTEND, VT, Legal);
 
   setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
@@ -938,43 +938,29 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   if (Subtarget->hasNEON()) {
     // FIXME: v1f64 shouldn't be legal if we can avoid it, because it leads to
     // silliness like this:
-    setOperationAction(ISD::FABS, MVT::v1f64, Expand);
-    setOperationAction(ISD::FADD, MVT::v1f64, Expand);
-    setOperationAction(ISD::FCEIL, MVT::v1f64, Expand);
-    setOperationAction(ISD::FCOPYSIGN, MVT::v1f64, Expand);
-    setOperationAction(ISD::FCOS, MVT::v1f64, Expand);
-    setOperationAction(ISD::FDIV, MVT::v1f64, Expand);
-    setOperationAction(ISD::FFLOOR, MVT::v1f64, Expand);
-    setOperationAction(ISD::FMA, MVT::v1f64, Expand);
-    setOperationAction(ISD::FMUL, MVT::v1f64, Expand);
-    setOperationAction(ISD::FNEARBYINT, MVT::v1f64, Expand);
-    setOperationAction(ISD::FNEG, MVT::v1f64, Expand);
-    setOperationAction(ISD::FPOW, MVT::v1f64, Expand);
-    setOperationAction(ISD::FREM, MVT::v1f64, Expand);
-    setOperationAction(ISD::FROUND, MVT::v1f64, Expand);
-    setOperationAction(ISD::FROUNDEVEN, MVT::v1f64, Expand);
-    setOperationAction(ISD::FRINT, MVT::v1f64, Expand);
-    setOperationAction(ISD::FSIN, MVT::v1f64, Expand);
-    setOperationAction(ISD::FSINCOS, MVT::v1f64, Expand);
-    setOperationAction(ISD::FSQRT, MVT::v1f64, Expand);
-    setOperationAction(ISD::FSUB, MVT::v1f64, Expand);
-    setOperationAction(ISD::FTRUNC, MVT::v1f64, Expand);
-    setOperationAction(ISD::SETCC, MVT::v1f64, Expand);
-    setOperationAction(ISD::BR_CC, MVT::v1f64, Expand);
-    setOperationAction(ISD::SELECT, MVT::v1f64, Expand);
-    setOperationAction(ISD::SELECT_CC, MVT::v1f64, Expand);
-    setOperationAction(ISD::FP_EXTEND, MVT::v1f64, Expand);
+    for (auto Op :
+         {ISD::SELECT,         ISD::SELECT_CC,      ISD::SETCC,
+          ISD::BR_CC,          ISD::FADD,           ISD::FSUB,
+          ISD::FMUL,           ISD::FDIV,           ISD::FMA,
+          ISD::FNEG,           ISD::FABS,           ISD::FCEIL,
+          ISD::FSQRT,          ISD::FFLOOR,         ISD::FNEARBYINT,
+          ISD::FRINT,          ISD::FROUND,         ISD::FROUNDEVEN,
+          ISD::FTRUNC,         ISD::FMINNUM,        ISD::FMAXNUM,
+          ISD::FMINIMUM,       ISD::FMAXIMUM,       ISD::STRICT_FADD,
+          ISD::STRICT_FSUB,    ISD::STRICT_FMUL,    ISD::STRICT_FDIV,
+          ISD::STRICT_FMA,     ISD::STRICT_FCEIL,   ISD::STRICT_FFLOOR,
+          ISD::STRICT_FSQRT,   ISD::STRICT_FRINT,   ISD::STRICT_FNEARBYINT,
+          ISD::STRICT_FROUND,  ISD::STRICT_FTRUNC,  ISD::STRICT_FROUNDEVEN,
+          ISD::STRICT_FMINNUM, ISD::STRICT_FMAXNUM, ISD::STRICT_FMINIMUM,
+          ISD::STRICT_FMAXIMUM})
+      setOperationAction(Op, MVT::v1f64, Expand);
 
-    setOperationAction(ISD::FP_TO_SINT, MVT::v1i64, Expand);
-    setOperationAction(ISD::FP_TO_UINT, MVT::v1i64, Expand);
-    setOperationAction(ISD::SINT_TO_FP, MVT::v1i64, Expand);
-    setOperationAction(ISD::UINT_TO_FP, MVT::v1i64, Expand);
-    setOperationAction(ISD::FP_ROUND, MVT::v1f64, Expand);
-
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v1i64, Expand);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v1i64, Expand);
-
-    setOperationAction(ISD::MUL, MVT::v1i64, Expand);
+    for (auto Op :
+         {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::SINT_TO_FP, ISD::UINT_TO_FP,
+          ISD::FP_ROUND, ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT, ISD::MUL,
+          ISD::STRICT_FP_TO_SINT, ISD::STRICT_FP_TO_UINT,
+          ISD::STRICT_SINT_TO_FP, ISD::STRICT_UINT_TO_FP, ISD::STRICT_FP_ROUND})
+      setOperationAction(Op, MVT::v1i64, Expand);
 
     // AArch64 doesn't have a direct vector ->f32 conversion instructions for
     // elements smaller than i32, so promote the input to i32 first.
@@ -982,14 +968,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationPromotedToType(ISD::SINT_TO_FP, MVT::v4i8, MVT::v4i32);
 
     // Similarly, there is no direct i32 -> f64 vector conversion instruction.
-    setOperationAction(ISD::SINT_TO_FP, MVT::v2i32, Custom);
-    setOperationAction(ISD::UINT_TO_FP, MVT::v2i32, Custom);
-    setOperationAction(ISD::SINT_TO_FP, MVT::v2i64, Custom);
-    setOperationAction(ISD::UINT_TO_FP, MVT::v2i64, Custom);
     // Or, direct i32 -> f16 vector conversion.  Set it so custom, so the
     // conversion happens in two steps: v4i32 -> v4f32 -> v4f16
-    setOperationAction(ISD::SINT_TO_FP, MVT::v4i32, Custom);
-    setOperationAction(ISD::UINT_TO_FP, MVT::v4i32, Custom);
+    for (auto Op : {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::STRICT_SINT_TO_FP,
+                    ISD::STRICT_UINT_TO_FP})
+      for (auto VT : {MVT::v2i32, MVT::v2i64, MVT::v4i32})
+        setOperationAction(Op, VT, Custom);
 
     if (Subtarget->hasFullFP16()) {
       setOperationAction(ISD::SINT_TO_FP, MVT::v8i8, Custom);
@@ -1103,26 +1087,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // AArch64 has implementations of a lot of rounding-like FP operations.
-    for (MVT Ty : {MVT::v2f32, MVT::v4f32, MVT::v2f64}) {
-      setOperationAction(ISD::FFLOOR, Ty, Legal);
-      setOperationAction(ISD::FNEARBYINT, Ty, Legal);
-      setOperationAction(ISD::FCEIL, Ty, Legal);
-      setOperationAction(ISD::FRINT, Ty, Legal);
-      setOperationAction(ISD::FTRUNC, Ty, Legal);
-      setOperationAction(ISD::FROUND, Ty, Legal);
-      setOperationAction(ISD::FROUNDEVEN, Ty, Legal);
-    }
-
-    if (Subtarget->hasFullFP16()) {
-      for (MVT Ty : {MVT::v4f16, MVT::v8f16}) {
-        setOperationAction(ISD::FFLOOR, Ty, Legal);
-        setOperationAction(ISD::FNEARBYINT, Ty, Legal);
-        setOperationAction(ISD::FCEIL, Ty, Legal);
-        setOperationAction(ISD::FRINT, Ty, Legal);
-        setOperationAction(ISD::FTRUNC, Ty, Legal);
-        setOperationAction(ISD::FROUND, Ty, Legal);
-        setOperationAction(ISD::FROUNDEVEN, Ty, Legal);
-      }
+    for (auto Op :
+         {ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT, ISD::FTRUNC,
+          ISD::FROUND, ISD::FROUNDEVEN, ISD::STRICT_FFLOOR,
+          ISD::STRICT_FNEARBYINT, ISD::STRICT_FCEIL, ISD::STRICT_FRINT,
+          ISD::STRICT_FTRUNC, ISD::STRICT_FROUND, ISD::STRICT_FROUNDEVEN}) {
+      for (MVT Ty : {MVT::v2f32, MVT::v4f32, MVT::v2f64})
+        setOperationAction(Op, Ty, Legal);
+      if (Subtarget->hasFullFP16())
+        for (MVT Ty : {MVT::v4f16, MVT::v8f16})
+          setOperationAction(Op, Ty, Legal);
     }
 
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Custom);
@@ -1481,10 +1455,10 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::SREM, VT, Expand);
   setOperationAction(ISD::FREM, VT, Expand);
 
-  setOperationAction(ISD::FP_TO_SINT, VT, Custom);
-  setOperationAction(ISD::FP_TO_UINT, VT, Custom);
-  setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
-  setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+  for (unsigned Opcode :
+       {ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
+        ISD::FP_TO_UINT_SAT, ISD::STRICT_FP_TO_SINT, ISD::STRICT_FP_TO_UINT})
+    setOperationAction(Opcode, VT, Custom);
 
   if (!VT.isFloatingPoint())
     setOperationAction(ISD::ABS, VT, Legal);
@@ -1494,13 +1468,38 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     for (unsigned Opcode : {ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX})
       setOperationAction(Opcode, VT, Legal);
 
-  // F[MIN|MAX][NUM|NAN] are available for all FP NEON types.
+  // F[MIN|MAX][NUM|NAN] and simple strict operations are available for all FP
+  // NEON types.
   if (VT.isFloatingPoint() &&
       VT.getVectorElementType() != MVT::bf16 &&
       (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16()))
     for (unsigned Opcode :
-         {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM, ISD::FMAXNUM})
+         {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM, ISD::FMAXNUM,
+          ISD::STRICT_FMINIMUM, ISD::STRICT_FMAXIMUM, ISD::STRICT_FMINNUM,
+          ISD::STRICT_FMAXNUM, ISD::STRICT_FADD, ISD::STRICT_FSUB,
+          ISD::STRICT_FMUL, ISD::STRICT_FDIV, ISD::STRICT_FMA,
+          ISD::STRICT_FSQRT})
       setOperationAction(Opcode, VT, Legal);
+
+  // Strict fp extend and trunc are legal
+  if (VT.isFloatingPoint() && VT.getScalarSizeInBits() != 16)
+    setOperationAction(ISD::STRICT_FP_EXTEND, VT, Legal);
+  if (VT.isFloatingPoint() && VT.getScalarSizeInBits() != 64)
+    setOperationAction(ISD::STRICT_FP_ROUND, VT, Legal);
+
+  // FIXME: We could potentially make use of the vector comparison instructions
+  // for STRICT_FSETCC and STRICT_FSETCSS, but there's a number of
+  // complications:
+  //  * FCMPEQ/NE are quiet comparisons, the rest are signalling comparisons,
+  //    so we would need to expand when the condition code doesn't match the
+  //    kind of comparison.
+  //  * Some kinds of comparison require more than one FCMXY instruction so
+  //    would need to be expanded instead.
+  //  * The lowering of the non-strict versions involves target-specific ISD
+  //    nodes so we would likely need to add strict versions of all of them and
+  //    handle them appropriately.
+  setOperationAction(ISD::STRICT_FSETCC, VT, Expand);
+  setOperationAction(ISD::STRICT_FSETCCS, VT, Expand);
 
   if (Subtarget->isLittleEndian()) {
     for (unsigned im = (unsigned)ISD::PRE_INC;
