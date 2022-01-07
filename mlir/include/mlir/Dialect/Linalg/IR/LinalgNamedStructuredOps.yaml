@@ -51,19 +51,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: B
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: matmul_unsigned
@@ -115,19 +115,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast_unsigned
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
-                is_unsigned_cast: true
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast_unsigned
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: B
-                is_unsigned_cast: true
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: quantized_matmul
@@ -193,37 +193,37 @@ structured_op: !LinalgStructuredOpConfig
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: A
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: AZp
-                    is_unsigned_cast: false
             - !ScalarExpression
               scalar_apply:
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: B
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: BZp
-                    is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: mmt4d
@@ -286,19 +286,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: AccumType
                 operands:
                 - !ScalarExpression
                   scalar_arg: lhs
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: AccumType
                 operands:
                 - !ScalarExpression
                   scalar_arg: rhs
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: batch_matmul
@@ -351,19 +351,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: B
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: quantized_batch_matmul
@@ -430,37 +430,37 @@ structured_op: !LinalgStructuredOpConfig
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: A
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: AZp
-                    is_unsigned_cast: false
             - !ScalarExpression
               scalar_apply:
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: B
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: BZp
-                    is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: matvec
@@ -511,19 +511,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: y
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: vecmat
@@ -574,19 +574,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: y
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: batch_matvec
@@ -638,19 +638,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: B
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: dot
@@ -700,19 +700,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: A
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: B
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: conv_1d
@@ -763,19 +763,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: conv_2d
@@ -828,19 +828,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: conv_3d
@@ -896,19 +896,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: conv_1d_nwc_wcf
@@ -974,19 +974,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: conv_2d_nhwc_hwcf
@@ -1064,19 +1064,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: conv_2d_nhwc_hwcf_q
@@ -1171,37 +1171,37 @@ structured_op: !LinalgStructuredOpConfig
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: I
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: IZp
-                    is_unsigned_cast: false
             - !ScalarExpression
               scalar_apply:
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: K
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: KZp
-                    is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: conv_2d_nchw_fchw
@@ -1279,19 +1279,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: conv_3d_ndhwc_dhwcf
@@ -1369,19 +1369,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: depthwise_conv_1d_nwc_wc
@@ -1446,19 +1446,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: depthwise_conv_2d_nhwc_hwc
@@ -1529,19 +1529,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: depthwise_conv_2d_nhwc_hwc_q
@@ -1627,37 +1627,37 @@ structured_op: !LinalgStructuredOpConfig
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: I
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: IZp
-                    is_unsigned_cast: false
             - !ScalarExpression
               scalar_apply:
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: K
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: KZp
-                    is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: depthwise_conv_2d_nhwc_hwcm
@@ -1731,19 +1731,19 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: mul
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: I
-                is_unsigned_cast: false
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_arg: K
-                is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: depthwise_conv_2d_nhwc_hwcm_q
@@ -1833,37 +1833,37 @@ structured_op: !LinalgStructuredOpConfig
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: I
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: IZp
-                    is_unsigned_cast: false
             - !ScalarExpression
               scalar_apply:
                 fn_name: sub
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: K
-                    is_unsigned_cast: false
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: KZp
-                    is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_nhwc_sum
@@ -1929,12 +1929,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_nhwc_max
@@ -2000,12 +2000,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_nhwc_max_unsigned
@@ -2071,12 +2071,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast_unsigned
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: true
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_nchw_max
@@ -2142,12 +2142,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_nhwc_min
@@ -2213,12 +2213,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_nhwc_min_unsigned
@@ -2284,12 +2284,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast_unsigned
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: true
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_ndhwc_sum
@@ -2361,12 +2361,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_ndhwc_max
@@ -2438,12 +2438,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: pooling_ndhwc_min
@@ -2515,12 +2515,12 @@ structured_op: !LinalgStructuredOpConfig
         - !ScalarExpression
           scalar_arg: O
         - !ScalarExpression
-          symbolic_cast:
+          type_fn:
+            fn_name: cast
             type_var: U
             operands:
             - !ScalarExpression
               scalar_arg: I
-            is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: fill_rng_2d
@@ -2567,7 +2567,8 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      symbolic_cast:
+      type_fn:
+        fn_name: cast
         type_var: T
         operands:
         - !ScalarExpression
@@ -2583,14 +2584,15 @@ structured_op: !LinalgStructuredOpConfig
                     fn_name: add
                     operands:
                     - !ScalarExpression
-                      symbolic_cast:
+                      type_fn:
+                        fn_name: cast
                         type_var: F64
                         operands:
                         - !ScalarExpression
                           scalar_const: '2147483647 : i64'
-                        is_unsigned_cast: false
                     - !ScalarExpression
-                      symbolic_cast:
+                      type_fn:
+                        fn_name: cast
                         type_var: F64
                         operands:
                         - !ScalarExpression
@@ -2606,12 +2608,12 @@ structured_op: !LinalgStructuredOpConfig
                                     fn_name: add
                                     operands:
                                     - !ScalarExpression
-                                      symbolic_cast:
+                                      type_fn:
+                                        fn_name: cast
                                         type_var: I32
                                         operands:
                                         - !ScalarExpression
                                           scalar_index: 1
-                                        is_unsigned_cast: false
                                     - !ScalarExpression
                                       scalar_apply:
                                         fn_name: add
@@ -2625,43 +2627,42 @@ structured_op: !LinalgStructuredOpConfig
                                                 fn_name: add
                                                 operands:
                                                 - !ScalarExpression
-                                                  symbolic_cast:
+                                                  type_fn:
+                                                    fn_name: cast
                                                     type_var: I32
                                                     operands:
                                                     - !ScalarExpression
                                                       scalar_index: 0
-                                                    is_unsigned_cast: false
                                                 - !ScalarExpression
                                                   scalar_arg: seed
                                             - !ScalarExpression
-                                              symbolic_cast:
+                                              type_fn:
+                                                fn_name: cast
                                                 type_var: I32
                                                 operands:
                                                 - !ScalarExpression
                                                   scalar_const: '1103515245 : i64'
-                                                is_unsigned_cast: false
                                         - !ScalarExpression
-                                          symbolic_cast:
+                                          type_fn:
+                                            fn_name: cast
                                             type_var: I32
                                             operands:
                                             - !ScalarExpression
                                               scalar_const: '12345 : i64'
-                                            is_unsigned_cast: false
                                 - !ScalarExpression
-                                  symbolic_cast:
+                                  type_fn:
+                                    fn_name: cast
                                     type_var: I32
                                     operands:
                                     - !ScalarExpression
                                       scalar_const: '1103515245 : i64'
-                                    is_unsigned_cast: false
                             - !ScalarExpression
-                              symbolic_cast:
+                              type_fn:
+                                fn_name: cast
                                 type_var: I32
                                 operands:
                                 - !ScalarExpression
                                   scalar_const: '12345 : i64'
-                                is_unsigned_cast: false
-                        is_unsigned_cast: false
                 - !ScalarExpression
                   scalar_apply:
                     fn_name: mul
@@ -2675,15 +2676,14 @@ structured_op: !LinalgStructuredOpConfig
                         - !ScalarExpression
                           scalar_arg: min
                     - !ScalarExpression
-                      symbolic_cast:
+                      type_fn:
+                        fn_name: cast
                         type_var: F64
                         operands:
                         - !ScalarExpression
                           scalar_const: '2.3283063999999999E-10 : f64'
-                        is_unsigned_cast: false
             - !ScalarExpression
               scalar_arg: min
-        is_unsigned_cast: false
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: soft_plus_2d
@@ -2724,20 +2724,20 @@ structured_op: !LinalgStructuredOpConfig
             fn_name: add
             operands:
             - !ScalarExpression
-              symbolic_cast:
+              type_fn:
+                fn_name: cast
                 type_var: U
                 operands:
                 - !ScalarExpression
                   scalar_const: '1.000000e+00 : f64'
-                is_unsigned_cast: false
             - !ScalarExpression
               scalar_apply:
                 fn_name: exp
                 operands:
                 - !ScalarExpression
-                  symbolic_cast:
+                  type_fn:
+                    fn_name: cast
                     type_var: U
                     operands:
                     - !ScalarExpression
                       scalar_arg: I
-                    is_unsigned_cast: false
