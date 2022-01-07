@@ -1219,7 +1219,6 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    andl %eax, %ebx
 ; X86-NEXT:    negl %eax
-; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sbbl %ecx, %ecx
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
@@ -1243,7 +1242,6 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    andl %eax, %edi
 ; X86-NEXT:    negl %eax
-; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl %eax, %eax
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
@@ -1270,7 +1268,6 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X86-NEXT:    andl %eax, %edx
 ; X86-NEXT:    negl %eax
-; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl %eax, %eax
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
@@ -1294,7 +1291,6 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; X86-NEXT:    andl %eax, %edi
 ; X86-NEXT:    negl %eax
-; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl %eax, %eax
 ; X86-NEXT:    orl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload

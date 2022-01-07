@@ -5,7 +5,6 @@ define void @test3(i32 %c, <64 x i1>* %ptr) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    sbbl %ecx, %ecx
 ; CHECK-NEXT:    kmovd %ecx, %k0

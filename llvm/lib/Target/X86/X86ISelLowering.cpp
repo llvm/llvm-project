@@ -24552,8 +24552,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     } else if ((isAllOnesConstant(Op1) || isAllOnesConstant(Op2)) &&
         (CondCode == X86::COND_E || CondCode == X86::COND_NE)) {
       SDValue Y = isAllOnesConstant(Op2) ? Op1 : Op2;
-
-      SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
       SDVTList CmpVTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i32);
 
       // 'X - 1' sets the carry flag if X == 0.
@@ -24563,18 +24561,18 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       // select (X == 0), Y, -1 --> 0 - X; or (sbb), Y
       // select (X != 0), Y, -1 --> X - 1; or (sbb), Y
       // select (X == 0), -1, Y --> X - 1; or (sbb), Y
+      SDValue Sub;
       if (isAllOnesConstant(Op1) == (CondCode == X86::COND_NE)) {
         SDValue Zero = DAG.getConstant(0, DL, CmpOp0.getValueType());
-        Cmp = DAG.getNode(X86ISD::SUB, DL, CmpVTs, Zero, CmpOp0);
+        Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, Zero, CmpOp0);
       } else {
         SDValue One = DAG.getConstant(1, DL, CmpOp0.getValueType());
-        Cmp = DAG.getNode(X86ISD::SUB, DL, CmpVTs, CmpOp0, One);
+        Sub = DAG.getNode(X86ISD::SUB, DL, CmpVTs, CmpOp0, One);
       }
-      // TODO: We don't need "0 - 0" here. This should use X86ISD::SETCC_CARRY.
-      SDValue Zero = DAG.getConstant(0, DL, Op.getValueType());
-      SDValue Res =   // Res = 0 or -1.
-        DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, Cmp.getValue(1));
-      return DAG.getNode(ISD::OR, DL, Res.getValueType(), Res, Y);
+      SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
+                                DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
+                                Sub.getValue(1));
+      return DAG.getNode(ISD::OR, DL, VT, SBB, Y);
     } else if (!Subtarget.hasCMov() && CondCode == X86::COND_E &&
                Cmp.getOperand(0).getOpcode() == ISD::AND &&
                isOneConstant(Cmp.getOperand(0).getOperand(1))) {

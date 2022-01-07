@@ -629,13 +629,21 @@ define void @test8(i1 %c, <6 x i32>* %dst.addr, <6 x i32> %src1,<6 x i32> %src2)
 ;; Test integer select between values and constants.
 
 define i64 @test9(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test9:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq $1, %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test9:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    cmpq $1, %rdi
+; GENERIC-NEXT:    sbbq %rax, %rax
+; GENERIC-NEXT:    orq %rsi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test9:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    cmpq $1, %rdi
+; ATOM-NEXT:    sbbq %rax, %rax
+; ATOM-NEXT:    orq %rsi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test9:
 ; ATHLON:       ## %bb.0:
@@ -669,13 +677,21 @@ define i64 @test9(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 
 ;; Same as test9
 define i64 @test9a(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test9a:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq $1, %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test9a:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    cmpq $1, %rdi
+; GENERIC-NEXT:    sbbq %rax, %rax
+; GENERIC-NEXT:    orq %rsi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test9a:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    cmpq $1, %rdi
+; ATOM-NEXT:    sbbq %rax, %rax
+; ATOM-NEXT:    orq %rsi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test9a:
 ; ATHLON:       ## %bb.0:
@@ -790,13 +806,21 @@ define i64 @test10(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 }
 
 define i64 @test11(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test11:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    negq %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test11:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    negq %rdi
+; GENERIC-NEXT:    sbbq %rax, %rax
+; GENERIC-NEXT:    orq %rsi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test11:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    negq %rdi
+; ATOM-NEXT:    sbbq %rax, %rax
+; ATOM-NEXT:    orq %rsi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test11:
 ; ATHLON:       ## %bb.0:
@@ -829,13 +853,21 @@ define i64 @test11(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 }
 
 define i64 @test11a(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test11a:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    negq %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test11a:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    negq %rdi
+; GENERIC-NEXT:    sbbq %rax, %rax
+; GENERIC-NEXT:    orq %rsi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test11a:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    negq %rdi
+; ATOM-NEXT:    sbbq %rax, %rax
+; ATOM-NEXT:    orq %rsi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test11a:
 ; ATHLON:       ## %bb.0:
@@ -867,13 +899,21 @@ define i64 @test11a(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 }
 
 define i32 @eqzero_const_or_all_ones(i32 %x) {
-; CHECK-LABEL: eqzero_const_or_all_ones:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    negl %edi
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    orl $42, %eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: eqzero_const_or_all_ones:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    negl %edi
+; GENERIC-NEXT:    sbbl %eax, %eax
+; GENERIC-NEXT:    orl $42, %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: eqzero_const_or_all_ones:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    negl %edi
+; ATOM-NEXT:    sbbl %eax, %eax
+; ATOM-NEXT:    orl $42, %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: eqzero_const_or_all_ones:
 ; ATHLON:       ## %bb.0:
@@ -885,11 +925,9 @@ define i32 @eqzero_const_or_all_ones(i32 %x) {
 ;
 ; MCU-LABEL: eqzero_const_or_all_ones:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    negl %eax
-; MCU-NEXT:    sbbl %ecx, %ecx
-; MCU-NEXT:    orl $42, %ecx
-; MCU-NEXT:    movl %ecx, %eax
+; MCU-NEXT:    sbbl %eax, %eax
+; MCU-NEXT:    orl $42, %eax
 ; MCU-NEXT:    retl
   %z = icmp eq i32 %x, 0
   %r = select i1 %z, i32 42, i32 -1
@@ -897,17 +935,24 @@ define i32 @eqzero_const_or_all_ones(i32 %x) {
 }
 
 define i32 @nezero_const_or_all_ones(i32 %x) {
-; CHECK-LABEL: nezero_const_or_all_ones:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $1, %edi
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    orl $42, %eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: nezero_const_or_all_ones:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    cmpl $1, %edi
+; GENERIC-NEXT:    sbbl %eax, %eax
+; GENERIC-NEXT:    orl $42, %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: nezero_const_or_all_ones:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    cmpl $1, %edi
+; ATOM-NEXT:    sbbl %eax, %eax
+; ATOM-NEXT:    orl $42, %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: nezero_const_or_all_ones:
 ; ATHLON:       ## %bb.0:
-; ATHLON-NEXT:    xorl %eax, %eax
 ; ATHLON-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    sbbl %eax, %eax
 ; ATHLON-NEXT:    orl $42, %eax
@@ -915,11 +960,9 @@ define i32 @nezero_const_or_all_ones(i32 %x) {
 ;
 ; MCU-LABEL: nezero_const_or_all_ones:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    cmpl $1, %eax
-; MCU-NEXT:    sbbl %ecx, %ecx
-; MCU-NEXT:    orl $42, %ecx
-; MCU-NEXT:    movl %ecx, %eax
+; MCU-NEXT:    sbbl %eax, %eax
+; MCU-NEXT:    orl $42, %eax
 ; MCU-NEXT:    retl
   %z = icmp ne i32 %x, 0
   %r = select i1 %z, i32 42, i32 -1
@@ -927,13 +970,21 @@ define i32 @nezero_const_or_all_ones(i32 %x) {
 }
 
 define i64 @eqzero_all_ones_or_const(i64 %x) {
-; CHECK-LABEL: eqzero_all_ones_or_const:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq $1, %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq $42, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: eqzero_all_ones_or_const:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    cmpq $1, %rdi
+; GENERIC-NEXT:    sbbq %rax, %rax
+; GENERIC-NEXT:    orq $42, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: eqzero_all_ones_or_const:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    cmpq $1, %rdi
+; ATOM-NEXT:    sbbq %rax, %rax
+; ATOM-NEXT:    orq $42, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: eqzero_all_ones_or_const:
 ; ATHLON:       ## %bb.0:
@@ -963,14 +1014,23 @@ define i64 @eqzero_all_ones_or_const(i64 %x) {
 }
 
 define i8 @nezero_all_ones_or_const(i8 %x) {
-; CHECK-LABEL: nezero_all_ones_or_const:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    negb %dil
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    orb $42, %al
-; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: nezero_all_ones_or_const:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    negb %dil
+; GENERIC-NEXT:    sbbl %eax, %eax
+; GENERIC-NEXT:    orb $42, %al
+; GENERIC-NEXT:    ## kill: def $al killed $al killed $eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: nezero_all_ones_or_const:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    negb %dil
+; ATOM-NEXT:    sbbl %eax, %eax
+; ATOM-NEXT:    orb $42, %al
+; ATOM-NEXT:    ## kill: def $al killed $al killed $eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: nezero_all_ones_or_const:
 ; ATHLON:       ## %bb.0:
@@ -983,11 +1043,10 @@ define i8 @nezero_all_ones_or_const(i8 %x) {
 ;
 ; MCU-LABEL: nezero_all_ones_or_const:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    negb %al
-; MCU-NEXT:    sbbl %ecx, %ecx
-; MCU-NEXT:    orb $42, %cl
-; MCU-NEXT:    movl %ecx, %eax
+; MCU-NEXT:    sbbl %eax, %eax
+; MCU-NEXT:    orb $42, %al
+; MCU-NEXT:    # kill: def $al killed $al killed $eax
 ; MCU-NEXT:    retl
   %z = icmp ne i8 %x, 0
   %r = select i1 %z, i8 -1, i8 42
