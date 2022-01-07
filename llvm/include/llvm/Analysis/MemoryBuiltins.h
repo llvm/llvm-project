@@ -116,6 +116,16 @@ inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
 }
 
 //===----------------------------------------------------------------------===//
+//  Properties of allocation functions
+//
+
+/// If this allocation function initializes memory to a fixed value, return
+/// said value in the requested type.  Otherwise, return nullptr.
+Constant *getInitialValueOfAllocation(const CallBase *Alloc,
+                                      const TargetLibraryInfo *TLI,
+                                      Type *Ty);
+
+//===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
 //
 
