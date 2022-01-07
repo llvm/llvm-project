@@ -147,11 +147,13 @@ static LogicalResult foldMemRefCastInTiledLoopOp(TiledLoopOp op) {
 // Region builder helper.
 // TODO: Move this to a utility library.
 // The public methods on this class are referenced directly from generated code
-// and bind by name to math functions in the DSL as:
+// and bind by name to math and type conversion functions in the DSL as:
 //   `applyfn__{fnName}`
+//   `typefn__{fnName}`
 // Examples:
 //   `applyfn__add`
 //   `applyfn__mul`
+//   `typefn__cast`
 // The naming convention is intentional in order to match snake-cased DSL names.
 // See mlir-linalg-ods-yaml-gen.cpp for the code that mates to this class.
 //
@@ -226,6 +228,16 @@ public:
     emitWarning(operand.getLoc()) << "could not cast operand of type "
                                   << operand.getType() << " to " << toType;
     return operand;
+  }
+
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
+  Value typefn__cast(Type toType, Value operand) {
+    return cast(toType, operand, false);
+  }
+
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
+  Value typefn__cast_unsigned(Type toType, Value operand) {
+    return cast(toType, operand, true);
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.

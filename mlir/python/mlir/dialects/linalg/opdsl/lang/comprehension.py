@@ -314,6 +314,39 @@ class Comprehension:
     return f"{defs_repr} = {values_repr}"
 
 
+class TypeFnType:
+  """Type conversion function.
+
+  A type conversion function takes a target type and a tensor expression and
+  returns the casted tensor expression.
+  """
+
+  def __init__(self, fn_name: str):
+    self.fn_name = fn_name
+
+  def __call__(self, type_var: TypeVar,
+               arg: TensorExpression) -> "TensorTypeFn":
+    return TensorTypeFn(self, type_var, arg)
+
+  def __repr__(self):
+    return f"{self.fn_name}"
+
+
+class TypeFn:
+  """Type conversion function namespace.
+
+  As the integer types are signless, signedness is implement by different cast
+  functions that treat integers as signed (`cast`) or unsigned
+  (`cast_unsigned`) values.
+
+  Examples:
+  - cast(I32 -> I64) -> `arith.ExtSIOp`
+  - cast_unsigned(I32 -> I64) -> `arith.ExtUIOp`
+  """
+  cast = TypeFnType("cast")
+  cast_unsigned = TypeFnType("cast_unsigned")
+
+
 class PrimFnType:
   """Primitive operations."""
 
@@ -391,6 +424,26 @@ class PrimApply(TensorExpression):
     return f"{repr(self.prim)}({', '.join(repr(a) for a in self.args)})"
 
 
+class TensorTypeFn(TensorExpression):
+  """Application of a type conversion function."""
+
+  def __init__(self, type_fn: TypeFn, type_var: TypeVar, arg: TensorExpression):
+    self.type_fn = type_fn
+    self.type_var = type_var
+    self.arg = arg
+
+  def to_scalar_expression(self) -> ScalarExpression:
+    return ScalarTypeFn(self.type_fn.fn_name, self.type_var,
+                        self.arg.to_scalar_expression()).expr()
+
+  def visit_tensor_exprs(self, callback):
+    super().visit_tensor_exprs(callback)
+    self.arg.visit_tensor_exprs(callback)
+
+  def __repr__(self):
+    return f"{repr(self.type_fn)}({type_var}, {self.arg})"
+
+
 class const(TensorExpression):
   """Returns the given constant floating point or integer value."""
 
@@ -431,36 +484,6 @@ class index(TensorExpression):
 
   def __repr__(self):
     return f"index({repr(self.dim)})"
-
-
-class cast(TensorExpression):
-  """Casts the element type to a type (typically symbolic TypeVar)."""
-
-  def __init__(self, to_type: TypeVar, operand: TensorExpression):
-    self.to_type = to_type
-    self.operand = operand
-
-  def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarSymbolicCast(self.to_type, self.operand.to_scalar_expression(),
-                              False).expr()
-
-  def visit_tensor_exprs(self, callback):
-    super().visit_tensor_exprs(callback)
-    self.operand.visit_tensor_exprs(callback)
-
-  def __repr__(self):
-    return f"cast({self.to_type}, {repr(self.operand)})"
-
-
-class cast_unsigned(cast):
-  """Casts the element type to an unsigned type (typically symbolic TypeVar)."""
-
-  def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarSymbolicCast(self.to_type, self.operand.to_scalar_expression(),
-                              True).expr()
-
-  def __repr__(self):
-    return f"cast_unsigned({self.to_type}, {repr(self.operand)})"
 
 
 class ReduceApply(TensorExpression):

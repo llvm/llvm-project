@@ -2,7 +2,7 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Sequence, Tuple, Union
 
 from .....ir import *
 
@@ -23,6 +23,7 @@ __all__ = [
 ]
 
 ValueList = Union[Sequence[Value], OpResultList]
+
 
 def isa(cls: Type, ty: Type):
   try:
@@ -221,24 +222,38 @@ class _BodyBuilder:
           IntegerType.get_signless(64), expr.scalar_index.dim)
       return linalg.IndexOp(dim_attr).result
     elif expr.scalar_apply:
-      try:
-        fn = getattr(self, f"_eval_{expr.scalar_apply.fn_name}")
-      except AttributeError:
-        raise ValueError(
-            f"Function '{expr.scalar_apply.fn_name}' is not a known "
-            "scalar body function")
+      fn = self._get_function(f"_eval_{expr.scalar_apply.fn_name}")
       operand_values = [
           self.expression(operand) for operand in expr.scalar_apply.operands
       ]
       return fn(*operand_values)
-    elif expr.symbolic_cast:
-      operand_value = self.expression(expr.symbolic_cast.operand)
-      return self.cast(expr.symbolic_cast.to_type.name, operand_value,
-                       expr.symbolic_cast.is_unsigned_cast)
+    elif expr.type_fn:
+      fn = self._get_function(f"_typefn_{expr.type_fn.fn_name}")
+      operand = self.expression(expr.type_fn.operand)
+      return fn(expr.type_fn.type_var.name, operand)
     raise NotImplementedError(f"Unimplemented scalar body expression: {expr}")
 
-  def cast(self, type_var_name: str, operand: Value,
-           is_unsigned_cast: bool) -> Value:
+  def yield_outputs(self, *output_names: str):
+    output_values = []
+    for n in output_names:
+      try:
+        output_values.append(self.yield_mapping[n])
+      except KeyError:
+        raise ValueError(f"Body assignments do not assign all outputs: "
+                         f"missing '{n}'")
+    linalg.YieldOp(output_values)
+
+  def _get_function(self, fn_name: str) -> Callable:
+    try:
+      fn = getattr(self, f"{fn_name}")
+    except AttributeError:
+      raise ValueError(f"Function '{fn_name}' is not a known function")
+    return fn
+
+  def _cast(self,
+            type_var_name: str,
+            operand: Value,
+            is_unsigned_cast: bool = False) -> Value:
     try:
       to_type = self.type_mapping[type_var_name]
     except KeyError:
@@ -289,15 +304,11 @@ class _BodyBuilder:
     raise ValueError(f"Unable to cast body expression from {operand_type} to "
                      f"{to_type}")
 
-  def yield_outputs(self, *output_names: str):
-    output_values = []
-    for n in output_names:
-      try:
-        output_values.append(self.yield_mapping[n])
-      except KeyError:
-        raise ValueError(f"Body assignments do not assign all outputs: "
-                         f"missing '{n}'")
-    linalg.YieldOp(output_values)
+  def _typefn_cast(self, type_var_name: str, operand: Value) -> Value:
+    return self._cast(type_var_name, operand, False)
+
+  def _typefn_cast_unsigned(self, type_var_name: str, operand: Value) -> Value:
+    return self._cast(type_var_name, operand, True)
 
   def _eval_add(self, lhs: Value, rhs: Value) -> Value:
     if _is_floating_point_type(lhs.type):

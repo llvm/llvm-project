@@ -56,7 +56,7 @@ def matmul(A=TensorDef(T1, S.M, S.K),
   """
   domain(D.m, D.n, D.k)
   implements(ContractionOpInterface)
-  C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
+  C[D.m, D.n] += TypeFn.cast(U, A[D.m, D.k]) * TypeFn.cast(U, B[D.k, D.n])
 ```
 
 Here we have a simple type polymorphic contraction that takes arguments `A` and
@@ -159,8 +159,8 @@ def pooling_poly(
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
     strides=IndexAttrDef(S.SH, S.SW),
     dilations=IndexAttrDef(S.DH, S.DW)):
-  O[D.n, D.oh, D.ow, D.c] += \
-      cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
+  O[D.n, D.oh, D.ow, D.c] += TypeFn.cast(U,
+          I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
 ```
 
 The pooling operation does not access the shape-only tensor `K`. Instead, the
@@ -192,10 +192,18 @@ Reduction functions can appear as the outer-most function on the RHS:
 *   `ReduceFn.mul`
 *   `ReduceFn.max`
 
+Additionally, type conversion functions cast an operand to a target type:
+
+*   `TypeFn.cast(TypeVar, operand)`
+*   `TypeFn.cast_unsigned(TypeVar, operand)`
+
+As the integer types are signless, signedness is implement by different
+functions that treat integers as signed (`TypeFn.cast`) or unsigned
+(`TypeFn.cast_unsigned`) values.
+
 There are also special forms:
 
-*   `cast(TypeVar, operand)` casts the `operand` to the target type `TypeVar`.
-*   `const(TypeVar, value)` returns a constant value of type `TypeVar`.
+*   `const(value)` returns a constant value.
 *   `index(dim)` returns the iteration index in the given dimension `dim`.
 
 ## Types
@@ -206,18 +214,25 @@ output types of constructed ops. An exception are predefined types such as
 computations with a type that is independent of the input and output types. For
 example, parts of floating point computation may require double precision
 arithmetic despite all inputs and outputs being single precision values.
-Assignment expressions with no `cast` calls will generally require uniform types
-throughout and will fail to verify if violated. The presence of a `cast` allows
-for a limited form of numeric type conversion between element types that can be
-derived from inputs and outputs (and in the future, attributes). `cast` calls
-with a `TypeVar` first argument are emitted as `symbolic_cast` primitives in the
-YAML definition.
+Assignment expressions with no `TypeFn.cast` calls will generally require
+uniform types throughout and will fail to verify if violated. The presence of a
+`TypeFn.cast` or `TypeFn.cast_unsigned` allows for a limited form of numeric
+type conversion between element types that can be derived from inputs and
+outputs (and in the future, attributes). `TypeFn.cast` calls with a `TypeVar`
+first argument are emitted as `type_fn` primitives in the YAML definition.
 
 Casting will perform `int<->float` and `index->int` type conversions and will
-perform any necessary extension or truncation within type family. Note that
-presently, any integer type is assumed to be signed for the purpose of
-determining how to extend or truncate. Supporting unsigned integer types is left
-for future work.
+perform any necessary extension or truncation within the type family. The
+integer types themselves are signless and signedness is implemented by
+functions/operations. The `TypeFn.cast` function treats all integers as signed,
+while `TypeFn.cast_unsigned` treats them as unsigned.
+
+The following examples illustrate the lowering of signed and unsigned functions:
+
+*   cast(I32 -> I64) -> `arith.ExtSIOp`
+*   cast(F32 -> I32) -> `arith.FPToSIOp`
+*   cast_unsigned(I32 -> I64) -> `arith.ExtUIOp`
+*   cast_unsigned(F32 -> I32) -> `arith.FPToUIOp`
 
 Not all functions are applicable for all numeric types, and on mismatch, op
 verification will fail.
