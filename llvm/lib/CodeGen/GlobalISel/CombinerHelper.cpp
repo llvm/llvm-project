@@ -4127,7 +4127,7 @@ bool CombinerHelper::matchBitfieldExtractFromAnd(
   assert(MI.getOpcode() == TargetOpcode::G_AND);
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
-  if (!getTargetLowering().isConstantUnsignedBitfieldExtactLegal(
+  if (!getTargetLowering().isConstantUnsignedBitfieldExtractLegal(
           TargetOpcode::G_UBFX, Ty, Ty))
     return false;
 
@@ -4214,7 +4214,7 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
 
   const Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
-  if (!getTargetLowering().isConstantUnsignedBitfieldExtactLegal(
+  if (!getTargetLowering().isConstantUnsignedBitfieldExtractLegal(
           TargetOpcode::G_UBFX, Ty, Ty))
     return false;
 

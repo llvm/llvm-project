@@ -40,7 +40,7 @@ private:
   struct NameAndAttributes {
     StringRef name;
     uint32_t           attributes = 0;
-    bool               isFunction = 0;
+    bool               isFunction = false;
     const GlobalValue *symbol = nullptr;
   };
 

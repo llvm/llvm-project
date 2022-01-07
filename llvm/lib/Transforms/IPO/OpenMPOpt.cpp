@@ -2973,7 +2973,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         A.recordDependence(*this, *AA, DepClassTy::OPTIONAL);
       UsedAssumedInformation = !isAtFixpoint();
       auto *FalseVal =
-          ConstantInt::getBool(IRP.getAnchorValue().getContext(), 0);
+          ConstantInt::getBool(IRP.getAnchorValue().getContext(), false);
       return FalseVal;
     };
 
@@ -3370,17 +3370,17 @@ struct AAKernelInfoFunction : AAKernelInfo {
                                 OMP_TGT_EXEC_MODE_SPMD));
     A.changeUseAfterManifest(
         KernelInitCB->getArgOperandUse(InitUseStateMachineArgNo),
-        *ConstantInt::getBool(Ctx, 0));
+        *ConstantInt::getBool(Ctx, false));
     A.changeUseAfterManifest(
         KernelDeinitCB->getArgOperandUse(DeinitModeArgNo),
         *ConstantInt::getSigned(IntegerType::getInt8Ty(Ctx),
                                 OMP_TGT_EXEC_MODE_SPMD));
     A.changeUseAfterManifest(
         KernelInitCB->getArgOperandUse(InitRequiresFullRuntimeArgNo),
-        *ConstantInt::getBool(Ctx, 0));
+        *ConstantInt::getBool(Ctx, false));
     A.changeUseAfterManifest(
         KernelDeinitCB->getArgOperandUse(DeinitRequiresFullRuntimeArgNo),
-        *ConstantInt::getBool(Ctx, 0));
+        *ConstantInt::getBool(Ctx, false));
 
     ++NumOpenMPTargetRegionKernelsSPMD;
 
@@ -3421,7 +3421,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     // If not SPMD mode, indicate we use a custom state machine now.
     auto &Ctx = getAnchorValue().getContext();
-    auto *FalseVal = ConstantInt::getBool(Ctx, 0);
+    auto *FalseVal = ConstantInt::getBool(Ctx, false);
     A.changeUseAfterManifest(
         KernelInitCB->getArgOperandUse(InitUseStateMachineArgNo), *FalseVal);
 

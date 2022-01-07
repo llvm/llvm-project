@@ -1704,7 +1704,7 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
   // Peel out the prologs.
   LS.reset();
   for (int I = 0; I < Schedule.getNumStages() - 1; ++I) {
-    LS[I] = 1;
+    LS[I] = true;
     Prologs.push_back(peelKernel(LPD_Front));
     LiveStages[Prologs.back()] = LS;
     AvailableStages[Prologs.back()] = LS;
@@ -1752,7 +1752,7 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
       // Move stage one block at a time so that Phi nodes are updated correctly.
       for (size_t K = Iteration; K > I; K--)
         moveStageBetweenBlocks(Epilogs[K - 1], Epilogs[K], Stage);
-      LS[Stage] = 1;
+      LS[Stage] = true;
     }
     LiveStages[Epilogs[I]] = LS;
     AvailableStages[Epilogs[I]] = AS;

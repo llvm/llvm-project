@@ -51,6 +51,7 @@ public:
     SM.reset();
     return AsmPrinter::doInitialization(M);
   }
+  void emitFunctionEntryLabel() override;
 
 private:
   void LowerFENTRY_CALL(const MachineInstr &MI, SystemZMCInstLower &MCIL);

@@ -2750,7 +2750,7 @@ SDValue VETargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDValue Idx = Op.getOperand(1);
   SDLoc DL(Op);
   SDValue Result = Op;
-  if (0 /* Idx->isConstant() */) {
+  if (false /* Idx->isConstant() */) {
     // TODO: optimized implementation using constant values
   } else {
     SDValue Const1 = DAG.getConstant(1, DL, MVT::i64);
@@ -2808,7 +2808,7 @@ SDValue VETargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   Val = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Val);
 
   SDValue Result = Op;
-  if (0 /* Idx->isConstant()*/) {
+  if (false /* Idx->isConstant()*/) {
     // TODO: optimized implementation using constant values
   } else {
     SDValue Const1 = DAG.getConstant(1, DL, MVT::i64);

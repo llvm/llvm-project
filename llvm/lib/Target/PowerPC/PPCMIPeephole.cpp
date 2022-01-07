@@ -1178,7 +1178,7 @@ static unsigned getIncomingRegForBlock(MachineInstr *Phi,
 static unsigned getSrcVReg(unsigned Reg, MachineBasicBlock *BB1,
                            MachineBasicBlock *BB2, MachineRegisterInfo *MRI) {
   unsigned SrcReg = Reg;
-  while (1) {
+  while (true) {
     unsigned NextReg = SrcReg;
     MachineInstr *Inst = MRI->getVRegDef(SrcReg);
     if (BB1 && Inst->getOpcode() == PPC::PHI && Inst->getParent() == BB2) {
@@ -1737,4 +1737,3 @@ INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
 char PPCMIPeephole::ID = 0;
 FunctionPass*
 llvm::createPPCMIPeepholePass() { return new PPCMIPeephole(); }
-

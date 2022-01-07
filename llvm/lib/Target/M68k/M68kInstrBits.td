@@ -12,7 +12,7 @@
 ///
 ///  Machine:
 ///
-///    BCNG    [ ]   BCLR    [ ]   BSET     [ ]   BTST     [~]
+///    BCHG    [ ]   BCLR    [ ]   BSET     [ ]   BTST     [~]
 ///
 ///  Map:
 ///

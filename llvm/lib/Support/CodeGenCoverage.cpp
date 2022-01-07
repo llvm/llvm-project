@@ -27,7 +27,7 @@ CodeGenCoverage::CodeGenCoverage() {}
 
 void CodeGenCoverage::setCovered(uint64_t RuleID) {
   if (RuleCoverage.size() <= RuleID)
-    RuleCoverage.resize(RuleID + 1, 0);
+    RuleCoverage.resize(RuleID + 1, false);
   RuleCoverage[RuleID] = true;
 }
 

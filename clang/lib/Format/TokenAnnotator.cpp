@@ -1564,9 +1564,9 @@ private:
     int ParenLevel = 0;
     while (Current) {
       if (Current->is(tok::l_paren))
-        ParenLevel++;
+        ++ParenLevel;
       if (Current->is(tok::r_paren))
-        ParenLevel--;
+        --ParenLevel;
       if (ParenLevel < 1)
         break;
       Current = Current->Next;
@@ -1590,9 +1590,9 @@ private:
             break;
         }
         if (TemplateCloser->is(tok::less))
-          NestingLevel++;
+          ++NestingLevel;
         if (TemplateCloser->is(tok::greater))
-          NestingLevel--;
+          --NestingLevel;
         if (NestingLevel < 1)
           break;
         TemplateCloser = TemplateCloser->Next;
