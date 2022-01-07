@@ -864,16 +864,16 @@ bool HexagonMCInstrInfo::isVector(MCInstrInfo const &MCII, MCInst const &MCI) {
 }
 
 int64_t HexagonMCInstrInfo::minConstant(MCInst const &MCI, size_t Index) {
-  auto Sentinal = static_cast<int64_t>(std::numeric_limits<uint32_t>::max())
+  auto Sentinel = static_cast<int64_t>(std::numeric_limits<uint32_t>::max())
                   << 8;
   if (MCI.size() <= Index)
-    return Sentinal;
+    return Sentinel;
   MCOperand const &MCO = MCI.getOperand(Index);
   if (!MCO.isExpr())
-    return Sentinal;
+    return Sentinel;
   int64_t Value;
   if (!MCO.getExpr()->evaluateAsAbsolute(Value))
-    return Sentinal;
+    return Sentinel;
   return Value;
 }
 
@@ -922,10 +922,7 @@ void HexagonMCInstrInfo::padEndloop(MCInst &MCB, MCContext &Context) {
   MCInst Nop;
   Nop.setOpcode(Hexagon::A2_nop);
   assert(isBundle(MCB));
-  while ((HexagonMCInstrInfo::isInnerLoop(MCB) &&
-          (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_INNER_SIZE)) ||
-         ((HexagonMCInstrInfo::isOuterLoop(MCB) &&
-           (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_OUTER_SIZE))))
+  while (LoopNeedsPadding(MCB))
     MCB.addOperand(MCOperand::createInst(new (Context) MCInst(Nop)));
 }
 
@@ -1036,6 +1033,14 @@ unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
   if (Producer2 != Hexagon::NoRegister)
     return Consumer == Producer;
   return 0;
+}
+
+bool HexagonMCInstrInfo::LoopNeedsPadding(MCInst const &MCB) {
+  return (
+      (HexagonMCInstrInfo::isInnerLoop(MCB) &&
+       (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_INNER_SIZE)) ||
+      ((HexagonMCInstrInfo::isOuterLoop(MCB) &&
+        (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_OUTER_SIZE))));
 }
 
 bool HexagonMCInstrInfo::IsABranchingInst(MCInstrInfo const &MCII,

@@ -579,6 +579,51 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                             "std::__[[:alnum:]]+::allocator<wchar_t> >$"),
                 stl_summary_flags, true);
 
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStringViewSummaryProviderASCII,
+                "std::string_view summary provider",
+                ConstString("^std::__[[:alnum:]]+::string_view$"),
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStringViewSummaryProviderASCII,
+                "std::string_view summary provider",
+                ConstString("^std::__[[:alnum:]]+::basic_string_view<char, "
+                            "std::__[[:alnum:]]+::char_traits<char> >$"),
+                stl_summary_flags, true);
+  AddCXXSummary(
+      cpp_category_sp,
+      lldb_private::formatters::LibcxxStringViewSummaryProviderASCII,
+      "std::string_view summary provider",
+      ConstString("^std::__[[:alnum:]]+::basic_string_view<unsigned char, "
+                  "std::__[[:alnum:]]+::char_traits<unsigned char> >$"),
+      stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStringViewSummaryProviderUTF16,
+                "std::u16string_view summary provider",
+                ConstString("^std::__[[:alnum:]]+::basic_string_view<char16_t, "
+                            "std::__[[:alnum:]]+::char_traits<char16_t> >$"),
+                stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxStringViewSummaryProviderUTF32,
+                "std::u32string_view summary provider",
+                ConstString("^std::__[[:alnum:]]+::basic_string_view<char32_t, "
+                            "std::__[[:alnum:]]+::char_traits<char32_t> >$"),
+                stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxWStringViewSummaryProvider,
+                "std::wstring_view summary provider",
+                ConstString("^std::__[[:alnum:]]+::wstring_view$"),
+                stl_summary_flags, true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::LibcxxWStringViewSummaryProvider,
+                "std::wstring_view summary provider",
+                ConstString("^std::__[[:alnum:]]+::basic_string_view<wchar_t, "
+                            "std::__[[:alnum:]]+::char_traits<wchar_t> >$"),
+                stl_summary_flags, true);
+
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
       false);

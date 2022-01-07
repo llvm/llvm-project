@@ -33,7 +33,16 @@ set(MLIR_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 set(MLIR_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
 set(MLIR_TOOLS_DIR   ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+
+# Make sure that our source directory is on the current cmake module path so
+# that we can include cmake files from this directory.
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
 
 include(AddMLIR)
 

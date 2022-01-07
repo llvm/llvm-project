@@ -192,9 +192,16 @@ else()
   set(BACKEND_PACKAGE_STRING "${PACKAGE_STRING}")
 endif() # standalone
 
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+
 # Make sure that our source directory is on the current cmake module path so that
 # we can include cmake files from this directory.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
 
 if(LLVM_ENABLE_LIBXML2)
   # Don't look for libxml if we're using MSan, since uninstrumented third party
