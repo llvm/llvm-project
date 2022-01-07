@@ -11,6 +11,8 @@ program main
     integer(kind=1) :: badlab1
     real :: badlab2
     integer :: badlab3(1)
+    real, pointer :: badlab4(:) ! not contiguous
+    real, pointer, contiguous :: oklab4(:)
     assign 1 to lab ! ok
     assign 1 to implicitlab1 ! ok
     !ERROR: 'badlab1' must be a default integer scalar variable
@@ -35,12 +37,16 @@ program main
     assign 3 to lab ! ok
     write(*,fmt=lab) ! ok
     write(*,fmt=implicitlab3) ! ok
-    !ERROR: Format expression must be default character or integer
+    !ERROR: Format expression must be default character or default scalar integer
     write(*,fmt=badlab1)
-    !ERROR: Format expression must be default character or integer
+    !ERROR: Format expression must be default character or default scalar integer
+    write(*,fmt=z'feedface')
+    !Legacy extension cases
     write(*,fmt=badlab2)
-    !ERROR: Format expression must be default character or integer
-    write(*,fmt=badlab2)
+    write(*,fmt=badlab3)
+    !ERROR: Format expression must be a simply contiguous array if not scalar
+    write(*,fmt=badlab4)
+    write(*,fmt=badlab5) ! ok legacy extension
 1   continue
 3   format('yes')
   end subroutine test
