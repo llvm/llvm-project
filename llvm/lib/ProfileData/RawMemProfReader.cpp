@@ -98,17 +98,22 @@ bool RawMemProfReader::hasFormat(const MemoryBuffer &Buffer) {
   return Magic == MEMPROF_RAW_MAGIC_64;
 }
 
+void RawMemProfReader::printYAML(raw_ostream &OS) {
+  OS << "MemprofProfile:\n";
+  printSummaries(OS);
+}
+
 void RawMemProfReader::printSummaries(raw_ostream &OS) const {
-  int Count = 0;
   const char *Next = DataBuffer->getBufferStart();
   while (Next < DataBuffer->getBufferEnd()) {
     auto Summary = computeSummary(Next);
-    OS << "MemProf Profile " << ++Count << "\n";
-    OS << "  Version: " << Summary.Version << "\n";
-    OS << "  TotalSizeBytes: " << Summary.TotalSizeBytes << "\n";
-    OS << "  NumSegments: " << Summary.NumSegments << "\n";
-    OS << "  NumMIBInfo: " << Summary.NumMIBInfo << "\n";
-    OS << "  NumStackOffsets: " << Summary.NumStackOffsets << "\n";
+    OS << "  -\n";
+    OS << "  Header:\n";
+    OS << "    Version: " << Summary.Version << "\n";
+    OS << "    TotalSizeBytes: " << Summary.TotalSizeBytes << "\n";
+    OS << "    NumSegments: " << Summary.NumSegments << "\n";
+    OS << "    NumMibInfo: " << Summary.NumMIBInfo << "\n";
+    OS << "    NumStackOffsets: " << Summary.NumStackOffsets << "\n";
     // TODO: Print the build ids once we can record them using the
     // sanitizer_procmaps library for linux.
 
