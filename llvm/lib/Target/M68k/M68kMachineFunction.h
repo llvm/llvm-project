@@ -111,4 +111,4 @@ private:
 
 } // end of namespace llvm
 
-#endif // M68K_MACHINE_FUNCTION_INFO_H
+#endif // LLVM_LIB_TARGET_M68K_M68KMACHINEFUNCTION_H
