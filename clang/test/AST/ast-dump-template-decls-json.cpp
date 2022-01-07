@@ -2130,9 +2130,9 @@ void i();
 // CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 705,
-// CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "tokLen": 8
+// CHECK-NEXT:        "offset": 718,
+// CHECK-NEXT:        "col": 24,
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
