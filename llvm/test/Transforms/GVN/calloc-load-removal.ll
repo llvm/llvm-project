@@ -22,4 +22,28 @@ define i32 @test1() {
 
 }
 
+define i32 @as_invoke(i1 %c) personality i32 (...)* undef {
+bb3:
+  %mem = invoke noalias i8* @calloc(i64 1, i64 4)
+  to label %bb4 unwind label %bb1
+
+bb1:
+  %lp = landingpad { i8*, i32 } cleanup
+  ret i32 0
+
+bb4:
+  %mem.i32 = bitcast i8* %mem to i32*
+  ; This load is trivially constant zero
+  %res = load i32, i32* %mem.i32, align 4
+  ret i32 %res
+
+; CHECK-LABEL: @as_invoke(
+; CHECK-NOT: %3 = load i32, i32* %2, align 4
+; CHECK: ret i32 0
+
+; CHECK_NO_LIBCALLS-LABEL: @as_invoke(
+; CHECK_NO_LIBCALLS: load
+; CHECK_NO_LIBCALLS: ret i32 %
+}
+
 declare noalias i8* @calloc(i64, i64)
