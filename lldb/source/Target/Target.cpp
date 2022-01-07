@@ -219,13 +219,6 @@ const lldb::ProcessSP &Target::GetProcessSP() const { return m_process_sp; }
 
 lldb::REPLSP Target::GetREPL(Status &err, lldb::LanguageType language,
                              const char *repl_options, bool can_create) {
-  err.Clear();
-
-  if (!GetProcessSP()) {
-    err.SetErrorStringWithFormat("Can't run the REPL without a live process.");
-    return REPLSP();
-  }
-
   if (language == eLanguageTypeUnknown)
     language = m_debugger.GetREPLLanguage();
 
