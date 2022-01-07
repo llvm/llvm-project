@@ -192,11 +192,18 @@ A number of arithmetic functions are supported:
 As the integer types are signless, signedness is implement by different
 functions that treat integers as signed or unsigned values.
 
-Reduction functions can appear as the outer-most function on the RHS:
+A subset of the arithmetic functions are supported in reductions. These
+reduction functions can appear as the outermost function on the RHS:
 
 *   `ReduceFn.add` (also overloading the inplace `+=` on a LHS)
 *   `ReduceFn.mul`
 *   `ReduceFn.max`
+*   `ReduceFn.min`
+*   `ReduceFn.max_unsigned`
+*   `ReduceFn.min_unsigned`
+
+As the integer types are signless, signedness is implement by different
+functions that treat integers as signed or unsigned values.
 
 Additionally, type conversion functions cast an operand to a target type:
 
