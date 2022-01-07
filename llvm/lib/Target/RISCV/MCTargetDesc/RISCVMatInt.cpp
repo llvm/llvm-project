@@ -141,6 +141,24 @@ static void generateInstSeqImpl(int64_t Val,
     Res.push_back(RISCVMatInt::Inst(RISCV::ADDI, Lo12));
 }
 
+static unsigned extractRotateInfo(int64_t Val) {
+  // for case: 0b111..1..xxxxxx1..1..
+  unsigned LeadingOnes = countLeadingOnes((uint64_t)Val);
+  unsigned TrailingOnes = countTrailingOnes((uint64_t)Val);
+  if (TrailingOnes > 0 && TrailingOnes < 64 &&
+      (LeadingOnes + TrailingOnes) > (64 - 12))
+    return 64 - TrailingOnes;
+
+  // for case: 0bxxx1..1..1...xxx
+  unsigned UpperTrailingOnes = countTrailingOnes(Hi_32(Val));
+  unsigned LowerLeadingOnes = countLeadingOnes(Lo_32(Val));
+  if (UpperTrailingOnes < 32 &&
+      (UpperTrailingOnes + LowerLeadingOnes) > (64 - 12))
+    return 32 - UpperTrailingOnes;
+
+  return 0;
+}
+
 namespace llvm {
 namespace RISCVMatInt {
 InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
@@ -312,6 +330,18 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
     }
   }
 
+  // Perform optimization with rori in the Zbb extension.
+  if (Res.size() > 2 && ActiveFeatures[RISCV::FeatureStdExtZbb]) {
+    if (unsigned Rotate = extractRotateInfo(Val)) {
+      RISCVMatInt::InstSeq TmpSeq;
+      uint64_t NegImm12 =
+          ((uint64_t)Val >> (64 - Rotate)) | ((uint64_t)Val << Rotate);
+      assert(isInt<12>(NegImm12));
+      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::ADDI, NegImm12));
+      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::RORI, Rotate));
+      Res = TmpSeq;
+    }
+  }
   return Res;
 }
 
