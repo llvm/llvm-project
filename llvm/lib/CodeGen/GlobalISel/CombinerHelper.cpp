@@ -4214,8 +4214,9 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
 
   const Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
+  LLT ExtractTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
   if (!getTargetLowering().isConstantUnsignedBitfieldExtractLegal(
-          TargetOpcode::G_UBFX, Ty, Ty))
+          TargetOpcode::G_UBFX, Ty, ExtractTy))
     return false;
 
   // Try to match shr (and x, c1), c2
@@ -4249,8 +4250,8 @@ bool CombinerHelper::matchBitfieldExtractFromShrAnd(
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
-    auto WidthCst = B.buildConstant(Ty, Width);
-    auto PosCst = B.buildConstant(Ty, Pos);
+    auto WidthCst = B.buildConstant(ExtractTy, Width);
+    auto PosCst = B.buildConstant(ExtractTy, Pos);
     B.buildInstr(TargetOpcode::G_UBFX, {Dst}, {AndSrc, PosCst, WidthCst});
   };
   return true;
