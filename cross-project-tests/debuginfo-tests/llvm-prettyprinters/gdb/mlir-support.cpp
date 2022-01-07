@@ -41,4 +41,12 @@ mlir::Attribute StringAttr = mlir::StringAttr::get(&Context, "foo");
 mlir::Attribute ElementsAttr = mlir::DenseElementsAttr::get(
     VectorType.cast<mlir::ShapedType>(), llvm::ArrayRef<float>{2.0f, 3.0f});
 
-int main() { return 0; }
+int main() {
+  // Reference symbols that might otherwise be stripped.
+  std::uintptr_t result = 0;
+  auto dont_strip = [&](const auto &val) {
+    result += reinterpret_cast<std::uintptr_t>(&val);
+  };
+  dont_strip(Value);
+  return result; // Non-zero return value is OK.
+}
