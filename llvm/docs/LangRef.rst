@@ -738,8 +738,9 @@ Syntax::
                          [(unnamed_addr|local_unnamed_addr)] [AddrSpace]
                          [ExternallyInitialized]
                          <global | constant> <Type> [<InitializerConstant>]
-                         [, section "name"] [, comdat [($name)]]
-                         [, align <Alignment>] (, !name !N)*
+                         [, section "name"] [, partition "name"]
+                         [, comdat [($name)]] [, align <Alignment>]
+                         (, !name !N)*
 
 For example, the following defines a global in a numbered address space
 with an initializer, section, and alignment:
@@ -836,8 +837,9 @@ Syntax::
            [cconv] [ret attrs]
            <ResultType> @<FunctionName> ([argument list])
            [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
-           [section "name"] [comdat [($name)]] [align N] [gc] [prefix Constant]
-           [prologue Constant] [personality Constant] (!name !N)* { ... }
+           [section "name"] [partition "name"] [comdat [($name)]] [align N]
+           [gc] [prefix Constant] [prologue Constant] [personality Constant]
+           (!name !N)* { ... }
 
 The argument list is a comma separated sequence of arguments where each
 argument is of the following form:
@@ -866,6 +868,7 @@ Aliases may have an optional :ref:`linkage type <linkage>`, an optional
 Syntax::
 
     @<Name> = [Linkage] [PreemptionSpecifier] [Visibility] [DLLStorageClass] [ThreadLocal] [(unnamed_addr|local_unnamed_addr)] alias <AliaseeTy>, <AliaseeTy>* @<Aliasee>
+              [, partition "name"]
 
 The linkage must be one of ``private``, ``internal``, ``linkonce``, ``weak``,
 ``linkonce_odr``, ``weak_odr``, ``external``. Note that some system linkers
@@ -908,6 +911,7 @@ IFunc may have an optional :ref:`linkage type <linkage>` and an optional
 Syntax::
 
     @<Name> = [Linkage] [PreemptionSpecifier] [Visibility] ifunc <IFuncTy>, <ResolverTy>* @<Resolver>
+              [, partition "name"]
 
 
 .. _langref_comdats:
@@ -8421,7 +8425,7 @@ Example:
 
 .. code-block:: text
 
-      catchret from %catch label %continue
+      catchret from %catch to label %continue
 
 .. _i_cleanupret:
 
@@ -11026,8 +11030,8 @@ Example:
 .. code-block:: text
 
       %X = bitcast i8 255 to i8          ; yields i8 :-1
-      %Y = bitcast i32* %x to sint*      ; yields sint*:%x
-      %Z = bitcast <2 x int> %V to i64;  ; yields i64: %V (depends on endianess)
+      %Y = bitcast i32* %x to i16*      ; yields i16*:%x
+      %Z = bitcast <2 x i32> %V to i64;  ; yields i64: %V (depends on endianess)
       %Z = bitcast <2 x i32*> %V to <2 x i64*> ; yields <2 x i64*>
 
 .. _i_addrspacecast:
@@ -11604,7 +11608,7 @@ Example:
       call i32 (i8*, ...)* @printf(i8* %msg, i32 12, i8 42)        ; yields i32
       %X = tail call i32 @foo()                                    ; yields i32
       %Y = tail call fastcc i32 @foo()  ; yields i32
-      call void %foo(i8 97 signext)
+      call void %foo(i8 signext 97)
 
       %struct.A = type { i32, i8 }
       %r = call %struct.A @foo()                        ; yields { i32, i8 }
@@ -11752,7 +11756,7 @@ Example:
       ;; A landing pad which can catch an integer and can only throw a double.
       %res = landingpad { i8*, i32 }
                catch i8** @_ZTIi
-               filter [1 x i8**] [@_ZTId]
+               filter [1 x i8**] [i8** @_ZTId]
 
 .. _i_catchpad:
 

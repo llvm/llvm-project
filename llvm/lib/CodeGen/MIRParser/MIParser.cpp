@@ -875,11 +875,11 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
   // N.B: Multiple lists of successors and liveins are allowed and they're
   // merged into one.
   // Example:
-  //   liveins: %edi
-  //   liveins: %esi
+  //   liveins: $edi
+  //   liveins: $esi
   //
   // is equivalent to
-  //   liveins: %edi, %esi
+  //   liveins: $edi, $esi
   bool ExplicitSuccessors = false;
   while (true) {
     if (Token.is(MIToken::kw_successors)) {
