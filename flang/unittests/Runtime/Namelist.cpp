@@ -136,8 +136,8 @@ TEST(NamelistTests, Subscripts) {
   const NamelistGroup::Item items[]{{"a", *aDesc}};
   const NamelistGroup group{"justa", 1, items};
   static char t1[]{"&justa A(0,1:-1:-2)=1 2/"};
-  StaticDescriptor<1, true> statDescs[2];
-  Descriptor &internalDesc{statDescs[0].descriptor()};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
       /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
   auto inCookie{IONAME(BeginInternalArrayListInput)(
@@ -187,6 +187,63 @@ TEST(NamelistTests, ShortArrayInput) {
   EXPECT_EQ(*aDesc->ZeroBasedIndexedElement<int>(1), -1);
   EXPECT_EQ(*bDesc->ZeroBasedIndexedElement<int>(0), 2);
   EXPECT_EQ(*bDesc->ZeroBasedIndexedElement<int>(1), -2);
+}
+
+TEST(NamelistTypes, ScalarSubstring) {
+  OwningPtr<Descriptor> scDesc{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{}, std::vector<std::string>{"abcdefgh"}, 8)};
+  const NamelistGroup::Item items[]{{"a", *scDesc}};
+  const NamelistGroup group{"justa", 1, items};
+  static char t1[]{"&justa A(2:5)='BCDE'/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist scalar substring input";
+  char out[32];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetDelim)(outCookie, "apostrophe", 10));
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{"&JUSTA A= 'aBCDEfgh'/           "};
+  EXPECT_EQ(got, expect);
+}
+
+TEST(NamelistTypes, ArraySubstring) {
+  OwningPtr<Descriptor> scDesc{
+      MakeArray<TypeCategory::Character, 1>(std::vector<int>{2},
+          std::vector<std::string>{"abcdefgh", "ijklmnop"}, 8)};
+  const NamelistGroup::Item items[]{{"a", *scDesc}};
+  const NamelistGroup group{"justa", 1, items};
+  static char t1[]{"&justa A(:)(2:5)='BCDE' 'JKLM'/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist scalar substring input";
+  char out[40];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetDelim)(outCookie, "apostrophe", 10));
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{"&JUSTA A= 'aBCDEfgh' 'iJKLMnop'/        "};
+  EXPECT_EQ(got, expect);
 }
 
 // TODO: Internal NAMELIST error tests
