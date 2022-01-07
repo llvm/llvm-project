@@ -823,10 +823,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // defer deleting these to make it easier to handle the call graph updates.
   SmallVector<Function *, 4> DeadFunctions;
 
-  // Track potentially dead non-local functions with comdats to see if they can
-  // be deleted as a batch after inlining.
-  SmallVector<Function *, 4> DeadFunctionsInComdats;
-
   // Loop forward over all of the calls.
   while (!Calls->empty()) {
     // We expect the calls to typically be batched with sequences of calls that
@@ -939,33 +935,28 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // Merge the attributes based on the inlining.
       AttributeFuncs::mergeAttributesForInlining(F, Callee);
 
-      // For local functions or discardable functions without comdats, check
-      // whether this makes the callee trivially dead. In that case, we can drop
-      // the body of the function eagerly which may reduce the number of callers
-      // of other functions to one, changing inline cost thresholds. Non-local
-      // discardable functions with comdats are checked later on.
+      // For local functions, check whether this makes the callee trivially
+      // dead. In that case, we can drop the body of the function eagerly
+      // which may reduce the number of callers of other functions to one,
+      // changing inline cost thresholds.
       bool CalleeWasDeleted = false;
-      if (Callee.isDiscardableIfUnused()) {
+      if (Callee.hasLocalLinkage()) {
         // To check this we also need to nuke any dead constant uses (perhaps
         // made dead by this operation on other functions).
         Callee.removeDeadConstantUsers();
         if (Callee.use_empty() && !CG.isLibFunction(Callee)) {
-          if (Callee.hasLocalLinkage() || !Callee.hasComdat()) {
-            Calls->erase_if([&](const std::pair<CallBase *, int> &Call) {
-              return Call.first->getCaller() == &Callee;
-            });
-            // Clear the body and queue the function itself for deletion when we
-            // finish inlining and call graph updates.
-            // Note that after this point, it is an error to do anything other
-            // than use the callee's address or delete it.
-            Callee.dropAllReferences();
-            assert(!is_contained(DeadFunctions, &Callee) &&
-                   "Cannot put cause a function to become dead twice!");
-            DeadFunctions.push_back(&Callee);
-            CalleeWasDeleted = true;
-          } else {
-            DeadFunctionsInComdats.push_back(&Callee);
-          }
+          Calls->erase_if([&](const std::pair<CallBase *, int> &Call) {
+            return Call.first->getCaller() == &Callee;
+          });
+          // Clear the body and queue the function itself for deletion when we
+          // finish inlining and call graph updates.
+          // Note that after this point, it is an error to do anything other
+          // than use the callee's address or delete it.
+          Callee.dropAllReferences();
+          assert(!is_contained(DeadFunctions, &Callee) &&
+                 "Cannot put cause a function to become dead twice!");
+          DeadFunctions.push_back(&Callee);
+          CalleeWasDeleted = true;
         }
       }
       if (CalleeWasDeleted)
@@ -1026,15 +1017,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // Invalidate analyses for this function now so that we don't have to
     // invalidate analyses for all functions in this SCC later.
     FAM.invalidate(F, PreservedAnalyses::none());
-  }
-
-  // We must ensure that we only delete functions with comdats if every function
-  // in the comdat is going to be deleted.
-  if (!DeadFunctionsInComdats.empty()) {
-    filterDeadComdatFunctions(DeadFunctionsInComdats);
-    for (auto *Callee : DeadFunctionsInComdats)
-      Callee->dropAllReferences();
-    DeadFunctions.append(DeadFunctionsInComdats);
   }
 
   // Now that we've finished inlining all of the calls across this SCC, delete
