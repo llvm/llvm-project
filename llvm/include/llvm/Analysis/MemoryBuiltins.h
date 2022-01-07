@@ -147,18 +147,6 @@ Value *getMallocArraySize(CallInst *CI, const DataLayout &DL,
                           bool LookThroughSExt = false);
 
 //===----------------------------------------------------------------------===//
-//  calloc Call Utility Functions.
-//
-
-/// extractCallocCall - Returns the corresponding CallInst if the instruction
-/// is a calloc call.
-const CallInst *extractCallocCall(const Value *I, const TargetLibraryInfo *TLI);
-inline CallInst *extractCallocCall(Value *I, const TargetLibraryInfo *TLI) {
-  return const_cast<CallInst*>(extractCallocCall((const Value*)I, TLI));
-}
-
-
-//===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
 //
 
