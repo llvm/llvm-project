@@ -242,8 +242,7 @@ entry:
 define <vscale x 1 x double> @test13(<vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test13:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
