@@ -120,4 +120,24 @@ static inline void checkCallOpFromResultBox(mlir::Value result,
   checkCallOpFromResultBox(convOp.getResult(), fctName, nbArgs, addLocArgs);
 }
 
+/// Check the operations in \p block for a `fir::CallOp` operation where the
+/// function being called shares its function name with \p fctName and the
+/// number of arguments is equal to \p nbArgs. Note that this check only cares
+/// if the operation exists, and not the order in when the operation is called.
+/// This results in exiting the test as soon as the first correct instance of
+/// `fir::CallOp` is found).
+static inline void checkBlockForCallOp(
+    mlir::Block *block, llvm::StringRef fctName, unsigned nbArgs) {
+  assert(block && "mlir::Block given is a nullptr");
+  for (auto &op : block->getOperations()) {
+    if (auto callOp = mlir::dyn_cast<fir::CallOp>(op)) {
+      if (fctName == callOp.callee()->getRootReference().getValue()) {
+        EXPECT_EQ(nbArgs, callOp.args().size());
+        return;
+      }
+    }
+  }
+  FAIL() << "No calls to " << fctName << " were found!";
+}
+
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_RUNTIMECALLTESTBASE_H
