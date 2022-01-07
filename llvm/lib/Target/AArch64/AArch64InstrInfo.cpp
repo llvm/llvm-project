@@ -2574,6 +2574,7 @@ AArch64InstrInfo::getAddrModeFromMemoryOp(const MachineInstr &MemI,
   AM.BaseReg = Base->getReg();
   AM.Displacement = Offset;
   AM.ScaledReg = 0;
+  AM.Scale = 0;
   return AM;
 }
 
