@@ -74,6 +74,21 @@ mlir::linalg::comprehensive_bufferize::defaultAllocationCallbacks() {
 BufferizationOptions::BufferizationOptions()
     : allocationFns(defaultAllocationCallbacks()) {}
 
+BufferizableOpInterface mlir::linalg::comprehensive_bufferize::
+    BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
+  if (isOpAllowed(op))
+    return dyn_cast<BufferizableOpInterface>(op);
+  return nullptr;
+}
+
+BufferizableOpInterface mlir::linalg::comprehensive_bufferize::
+    BufferizationOptions::dynCastBufferizableOp(Value value) const {
+  if (auto bufferizableOp = value.getDefiningOp<BufferizableOpInterface>())
+    if (isOpAllowed(bufferizableOp.getOperation()))
+      return bufferizableOp;
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizationAliasInfo
 //===----------------------------------------------------------------------===//
@@ -178,21 +193,6 @@ static void setInsertionPointAfter(OpBuilder &b, Value value) {
   } else {
     b.setInsertionPointAfter(value.getDefiningOp());
   }
-}
-
-BufferizableOpInterface mlir::linalg::comprehensive_bufferize::
-    BufferizationOptions::dynCastBufferizableOp(Operation *op) const {
-  if (isOpAllowed(op))
-    return dyn_cast<BufferizableOpInterface>(op);
-  return nullptr;
-}
-
-BufferizableOpInterface mlir::linalg::comprehensive_bufferize::
-    BufferizationOptions::dynCastBufferizableOp(Value value) const {
-  if (auto bufferizableOp = value.getDefiningOp<BufferizableOpInterface>())
-    if (isOpAllowed(bufferizableOp.getOperation()))
-      return bufferizableOp;
-  return nullptr;
 }
 
 /// Determine which OpOperand* will alias with `result` if the op is bufferized
@@ -358,8 +358,9 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::BufferizationState(
 /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
 /// a new buffer and copy over data from the existing buffer if out-of-place
 /// bufferization is necessary.
-Value mlir::linalg::comprehensive_bufferize::BufferizationState::
-    getResultBuffer(RewriterBase &rewriter, OpResult result) const {
+FailureOr<Value>
+mlir::linalg::comprehensive_bufferize::BufferizationState::getResultBuffer(
+    RewriterBase &rewriter, OpResult result) const {
   OpBuilder::InsertionGuard guard(rewriter);
   Operation *op = result.getOwner();
   SmallVector<OpOperand *> aliasingOperands = getAliasingOpOperand(result);
@@ -375,10 +376,8 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
   if (aliasingOperands.size() > 1 &&
       !llvm::all_of(aliasingOperands, [&](OpOperand *o) {
         return lookupBuffer(rewriter, o->get()) == operandBuffer;
-      })) {
-    op->emitError("result buffer is ambiguous");
-    return Value();
-  }
+      }))
+    return FailureOr<Value>(op->emitError("result buffer is ambiguous"));
 
   // If bufferizing out-of-place, allocate a new buffer.
   if (!aliasInfo.isInPlace(result)) {
@@ -610,10 +609,13 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::lookupBuffer(
   // Insert to_memref op.
   OpBuilder::InsertionGuard g(rewriter);
   setInsertionPointAfter(rewriter, tensor);
-  Type memrefType =
-      tensor.getType().isa<RankedTensorType>()
-          ? getDynamicMemRefType(tensor.getType().cast<RankedTensorType>())
-          : getContiguousOrUnrankedMemRefType(tensor.getType());
+  Type memrefType;
+  if (auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>()) {
+    memrefType = getDynamicMemRefType(rankedTensorType);
+  } else {
+    memrefType = getUnrankedMemRefType(
+        tensor.getType().cast<TensorType>().getElementType());
+  }
   return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
                                                     tensor);
 }
@@ -630,13 +632,9 @@ MemRefType mlir::linalg::comprehensive_bufferize::getContiguousMemRefType(
                          layout, memorySpace);
 }
 
-Type mlir::linalg::comprehensive_bufferize::getContiguousOrUnrankedMemRefType(
-    Type type, MemRefLayoutAttrInterface layout, Attribute memorySpace) {
-  if (type.isa<RankedTensorType, MemRefType>())
-    return getContiguousMemRefType(type.cast<ShapedType>(), layout,
-                                   memorySpace);
-  assert(!layout && "expected empty layout with UnrankedMemRefType");
-  return UnrankedMemRefType::get(getElementTypeOrSelf(type), memorySpace);
+UnrankedMemRefType mlir::linalg::comprehensive_bufferize::getUnrankedMemRefType(
+    Type elementType, Attribute memorySpace) {
+  return UnrankedMemRefType::get(elementType, memorySpace);
 }
 
 MemRefType mlir::linalg::comprehensive_bufferize::getDynamicMemRefType(
