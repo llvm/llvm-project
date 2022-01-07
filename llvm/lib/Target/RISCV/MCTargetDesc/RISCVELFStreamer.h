@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_RISCV_RISCVELFSTREAMER_H
-#define LLVM_LIB_TARGET_RISCV_RISCVELFSTREAMER_H
+#ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVELFSTREAMER_H
+#define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVELFSTREAMER_H
 
 #include "RISCVTargetStreamer.h"
 #include "llvm/MC/MCELFStreamer.h"
