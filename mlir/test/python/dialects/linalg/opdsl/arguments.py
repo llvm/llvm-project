@@ -57,5 +57,5 @@ def fill(value=ScalarDef(T), O=TensorDef(T, S.M, S.K, output=True)):
 def strided_copy(
     I=TensorDef(T, S.IH, S.IW),
     O=TensorDef(T, S.OH, S.OW, output=True),
-    strides=AttributeDef(S.SH, S.SW)):
+    strides=IndexAttrDef(S.SH, S.SW)):
   O[D.oh, D.ow] = I[D.oh * S.SH, D.ow * S.SW]
