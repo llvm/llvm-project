@@ -7410,8 +7410,10 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   //   the member function body.
   if (!BaseType->isDependentType() &&
       !isThisOutsideMemberFunctionBody(BaseType) &&
-      RequireCompleteType(OpLoc, BaseType, diag::err_incomplete_member_access))
-    return ExprError();
+      RequireCompleteType(OpLoc, BaseType,
+                          diag::err_incomplete_member_access)) {
+    return CreateRecoveryExpr(Base->getBeginLoc(), Base->getEndLoc(), {Base});
+  }
 
   // C++ [basic.lookup.classref]p2:
   //   If the id-expression in a class member access (5.2.5) is an
