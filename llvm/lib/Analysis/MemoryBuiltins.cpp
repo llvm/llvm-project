@@ -643,14 +643,6 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
   bool Overflow;
   Size = Size.umul_ov(NumElems, Overflow);
   return Overflow ? unknown() : std::make_pair(Size, Zero);
-
-  // TODO: handle more standard functions (+ wchar cousins):
-  // - strdup / strndup
-  // - strcpy / strncpy
-  // - strcat / strncat
-  // - memcpy / memmove
-  // - strcat / strncat
-  // - memset
 }
 
 SizeOffsetType
@@ -874,7 +866,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
 
   // Handle strdup-like functions separately.
   if (FnData->AllocTy == StrDupLike) {
-    // TODO
+    // TODO: implement evaluation of strdup/strndup
     return unknown();
   }
 
@@ -887,14 +879,6 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
   SecondArg = Builder.CreateZExtOrTrunc(SecondArg, IntTy);
   Value *Size = Builder.CreateMul(FirstArg, SecondArg);
   return std::make_pair(Size, Zero);
-
-  // TODO: handle more standard functions (+ wchar cousins):
-  // - strdup / strndup
-  // - strcpy / strncpy
-  // - strcat / strncat
-  // - memcpy / memmove
-  // - strcat / strncat
-  // - memset
 }
 
 SizeOffsetEvalType
