@@ -618,13 +618,12 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
   return success();
 }
 
-LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
-    Operation *op, const BufferizationOptions &options,
-    BufferizationState &state) {
-
-  IRRewriter rewriter(op->getContext());
+LogicalResult
+mlir::linalg::comprehensive_bufferize::analyzeOp(Operation *op,
+                                                 BufferizationState &state) {
   DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
+  const BufferizationOptions &options = state.getOptions();
 
   if (failed(checkAliasInfoConsistency(op, domInfo, state, aliasInfo)))
     return failure();
@@ -647,10 +646,18 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   }
 
   // Annotate operations if we only want to report the analysis.
-  if (options.testAnalysisOnly) {
+  if (options.testAnalysisOnly)
     annotateOpsWithBufferizationMarkers(op, aliasInfo, state);
-    return success();
-  }
+
+  return success();
+}
+
+LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
+    Operation *op, const BufferizationOptions &options,
+    BufferizationState &state, bool runAnalysis) {
+  if (runAnalysis)
+    if (failed(analyzeOp(op, state)))
+      return failure();
 
   // Bufferize the op and its nested ops.
   OwningRewritePatternList patterns(op->getContext());
