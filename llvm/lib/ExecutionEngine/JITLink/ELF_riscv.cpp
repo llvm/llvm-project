@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/JITLink/riscv.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/Endian.h"
 
 #define DEBUG_TYPE "jitlink"
 using namespace llvm;
@@ -294,6 +295,70 @@ private:
       *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
       break;
     }
+    case R_RISCV_ADD64: {
+      int64_t Value = (E.getTarget().getAddress() +
+                       support::endian::read64le(reinterpret_cast<const void *>(
+                           FixupAddress.getValue())) +
+                       E.getAddend())
+                          .getValue();
+      *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
+      break;
+    }
+    case R_RISCV_ADD32: {
+      int64_t Value = (E.getTarget().getAddress() +
+                       support::endian::read32le(reinterpret_cast<const void *>(
+                           FixupAddress.getValue())) +
+                       E.getAddend())
+                          .getValue();
+      *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
+      break;
+    }
+    case R_RISCV_ADD16: {
+      int64_t Value = (E.getTarget().getAddress() +
+                       support::endian::read16le(reinterpret_cast<const void *>(
+                           FixupAddress.getValue())) +
+                       E.getAddend())
+                          .getValue();
+      *(little16_t *)FixupPtr = static_cast<uint32_t>(Value);
+      break;
+    }
+    case R_RISCV_ADD8: {
+      int64_t Value =
+          (E.getTarget().getAddress() +
+           *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) +
+           E.getAddend())
+              .getValue();
+      *FixupPtr = static_cast<uint8_t>(Value);
+      break;
+    }
+    case R_RISCV_SUB64: {
+      int64_t Value = support::endian::read64le(reinterpret_cast<const void *>(
+                          FixupAddress.getValue())) -
+                      E.getTarget().getAddress().getValue() - E.getAddend();
+      *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
+      break;
+    }
+    case R_RISCV_SUB32: {
+      int64_t Value = support::endian::read32le(reinterpret_cast<const void *>(
+                          FixupAddress.getValue())) -
+                      E.getTarget().getAddress().getValue() - E.getAddend();
+      *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
+      break;
+    }
+    case R_RISCV_SUB16: {
+      int64_t Value = support::endian::read16le(reinterpret_cast<const void *>(
+                          FixupAddress.getValue())) -
+                      E.getTarget().getAddress().getValue() - E.getAddend();
+      *(little16_t *)FixupPtr = static_cast<uint32_t>(Value);
+      break;
+    }
+    case R_RISCV_SUB8: {
+      int64_t Value =
+          *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) -
+          E.getTarget().getAddress().getValue() - E.getAddend();
+      *FixupPtr = static_cast<uint8_t>(Value);
+      break;
+    }
     }
     return Error::success();
   }
@@ -328,6 +393,22 @@ private:
       return EdgeKind_riscv::R_RISCV_GOT_HI20;
     case ELF::R_RISCV_CALL_PLT:
       return EdgeKind_riscv::R_RISCV_CALL_PLT;
+    case ELF::R_RISCV_ADD64:
+      return EdgeKind_riscv::R_RISCV_ADD64;
+    case ELF::R_RISCV_ADD32:
+      return EdgeKind_riscv::R_RISCV_ADD32;
+    case ELF::R_RISCV_ADD16:
+      return EdgeKind_riscv::R_RISCV_ADD16;
+    case ELF::R_RISCV_ADD8:
+      return EdgeKind_riscv::R_RISCV_ADD8;
+    case ELF::R_RISCV_SUB64:
+      return EdgeKind_riscv::R_RISCV_SUB64;
+    case ELF::R_RISCV_SUB32:
+      return EdgeKind_riscv::R_RISCV_SUB32;
+    case ELF::R_RISCV_SUB16:
+      return EdgeKind_riscv::R_RISCV_SUB16;
+    case ELF::R_RISCV_SUB8:
+      return EdgeKind_riscv::R_RISCV_SUB8;
     }
 
     return make_error<JITLinkError>("Unsupported riscv relocation:" +
