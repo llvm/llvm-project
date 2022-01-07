@@ -1695,9 +1695,6 @@ def err_missing_exception_specification : Error<
 def ext_missing_exception_specification : ExtWarn<
   err_missing_exception_specification.Text>,
   InGroup<DiagGroup<"missing-exception-spec">>;
-def ext_ms_missing_exception_specification : ExtWarn<
-  err_missing_exception_specification.Text>,
-  InGroup<MicrosoftExceptionSpec>;
 def err_noexcept_needs_constant_expression : Error<
   "argument to noexcept specifier must be a constant expression">;
 def err_exception_spec_not_parsed : Error<
