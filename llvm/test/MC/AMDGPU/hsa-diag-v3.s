@@ -225,6 +225,49 @@
   .amdhsa_forward_progress 5
 .end_amdhsa_kernel
 
+// GCN-LABEL: warning: test_amdhsa_shared_vgpr_count_invalid1
+// NONGFX10: error: directive requires gfx10+
+// GFX10: error: .amdhsa_next_free_vgpr directive is required
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_shared_vgpr_count_invalid1"
+.amdhsa_kernel test_amdhsa_shared_vgpr_count_invalid1
+  .amdhsa_shared_vgpr_count 8
+.end_amdhsa_kernel
+
+// GCN-LABEL: warning: test_amdhsa_shared_vgpr_count_invalid2
+// NONGFX10: error: directive requires gfx10+
+// GFX10: error: shared_vgpr_count directive not valid on wavefront size 32
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_shared_vgpr_count_invalid2"
+.amdhsa_kernel test_amdhsa_shared_vgpr_count_invalid2
+  .amdhsa_next_free_vgpr 16
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_shared_vgpr_count 8
+  .amdhsa_wavefront_size32 1
+.end_amdhsa_kernel
+
+// GCN-LABEL: warning: test_amdhsa_shared_vgpr_count_invalid3
+// NONGFX10: error: directive requires gfx10+
+// GFX10: error: value out of range
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_shared_vgpr_count_invalid3"
+.amdhsa_kernel test_amdhsa_shared_vgpr_count_invalid3
+  .amdhsa_next_free_vgpr 32
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_shared_vgpr_count 16
+.end_amdhsa_kernel
+
+// GCN-LABEL: warning: test_amdhsa_shared_vgpr_count_invalid4
+// NONGFX10: error: directive requires gfx10+
+// GFX10: error: shared_vgpr_count*2 + compute_pgm_rsrc1.GRANULATED_WORKITEM_VGPR_COUNT cannot exceed 63
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_shared_vgpr_count_invalid4"
+.amdhsa_kernel test_amdhsa_shared_vgpr_count_invalid4
+  .amdhsa_next_free_vgpr 273
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_shared_vgpr_count 15
+.end_amdhsa_kernel
+
 // GCN-LABEL: warning: test_next_free_vgpr_invalid
 // AMDHSA: error: .amdgcn.next_free_{v,s}gpr symbols must be absolute expressions
 // NONAMDHSA-NOT: error:

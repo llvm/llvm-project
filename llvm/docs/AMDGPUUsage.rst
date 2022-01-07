@@ -4451,8 +4451,10 @@ The fields used by CP for code objects before V3 also match those specified in
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
      ======= ======= =============================== ===========================================================================
-     3:0     4 bits  SHARED_VGPR_COUNT               Number of shared VGPRs for wavefront size 64. Granularity 8. Value 0-120.
-                                                     compute_pgm_rsrc1.vgprs + shared_vgpr_cnt cannot exceed 64.
+     3:0     4 bits  SHARED_VGPR_COUNT               Number of shared VGPR blocks when executing in subvector mode. For
+                                                     wavefront size 64 the value is 0-15, representing 0-120 VGPRs (granularity
+                                                     of 8), such that (compute_pgm_rsrc1.vgprs +1)*4 + shared_vgpr_count*8 does
+                                                     not exceed 256. For wavefront size 32 shared_vgpr_count must be 0.
      31:4    28                                      Reserved, must be 0.
              bits
      32      **Total size 4 bytes.**
@@ -12372,6 +12374,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
      ``.amdhsa_forward_progress``                             0                   GFX10        Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx10-table`.
+     ``.amdhsa_shared_vgpr_count``                            0                   GFX10        Controls SHARED_VGPR_COUNT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-table`.
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX10   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx10-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX10   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in

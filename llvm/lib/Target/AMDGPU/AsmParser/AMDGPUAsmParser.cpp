@@ -4645,6 +4645,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   SMRange VGPRRange;
   uint64_t NextFreeVGPR = 0;
   uint64_t AccumOffset = 0;
+  uint64_t SharedVGPRCount = 0;
   SMRange SGPRRange;
   uint64_t NextFreeSGPR = 0;
 
@@ -4872,6 +4873,13 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
         return Error(IDRange.Start, "directive requires gfx10+", IDRange);
       PARSE_BITS_ENTRY(KD.compute_pgm_rsrc1, COMPUTE_PGM_RSRC1_FWD_PROGRESS, Val,
                        ValRange);
+    } else if (ID == ".amdhsa_shared_vgpr_count") {
+      if (IVersion.Major < 10)
+        return Error(IDRange.Start, "directive requires gfx10+", IDRange);
+      SharedVGPRCount = Val;
+      PARSE_BITS_ENTRY(KD.compute_pgm_rsrc3,
+                       COMPUTE_PGM_RSRC3_GFX10_SHARED_VGPR_COUNT, Val,
+                       ValRange);
     } else if (ID == ".amdhsa_exception_fp_ieee_invalid_op") {
       PARSE_BITS_ENTRY(
           KD.compute_pgm_rsrc2,
@@ -4959,6 +4967,19 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       return TokError("accum_offset exceeds total VGPR allocation");
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc3, COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET,
                     (AccumOffset / 4 - 1));
+  }
+
+  if (IVersion.Major == 10) {
+    // SharedVGPRCount < 16 checked by PARSE_ENTRY_BITS
+    if (SharedVGPRCount && EnableWavefrontSize32) {
+      return TokError("shared_vgpr_count directive not valid on "
+                      "wavefront size 32");
+    }
+    if (SharedVGPRCount * 2 + VGPRBlocks > 63) {
+      return TokError("shared_vgpr_count*2 + "
+                      "compute_pgm_rsrc1.GRANULATED_WORKITEM_VGPR_COUNT cannot "
+                      "exceed 63\n");
+    }
   }
 
   getTargetStreamer().EmitAmdhsaKernelDescriptor(
