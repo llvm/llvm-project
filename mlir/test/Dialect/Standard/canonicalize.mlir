@@ -88,10 +88,23 @@ func @branchCondProp(%arg0: i1) {
 
 // CHECK-LABEL: @selToNot
 //       CHECK:       %[[trueval:.+]] = arith.constant true
-//       CHECK:       %{{.+}} = arith.xori %arg0, %[[trueval]] : i1
+//       CHECK:       %[[res:.+]] = arith.xori %arg0, %[[trueval]] : i1
+//       CHECK:   return %[[res]]
 func @selToNot(%arg0: i1) -> i1 {
   %true = arith.constant true
   %false = arith.constant false
   %res = select %arg0, %false, %true : i1
+  return %res : i1
+}
+
+// CHECK-LABEL: @selToArith
+//       CHECK-NEXT:       %[[trueval:.+]] = arith.constant true
+//       CHECK-NEXT:       %[[notcmp:.+]] = arith.xori %arg0, %[[trueval]] : i1
+//       CHECK-NEXT:       %[[condtrue:.+]] = arith.andi %arg0, %arg1 : i1
+//       CHECK-NEXT:       %[[condfalse:.+]] = arith.andi %[[notcmp]], %arg2 : i1
+//       CHECK-NEXT:       %[[res:.+]] = arith.ori %[[condtrue]], %[[condfalse]] : i1
+//       CHECK:   return %[[res]]
+func @selToArith(%arg0: i1, %arg1 : i1, %arg2 : i1) -> i1 {
+  %res = select %arg0, %arg1, %arg2 : i1
   return %res : i1
 }

@@ -813,29 +813,31 @@ static LogicalResult verify(ReturnOp op) {
 // SelectOp
 //===----------------------------------------------------------------------===//
 
-// Transforms a select to a not, where relevant.
+// Transforms a select of a boolean to arithmetic operations
 //
-//  select %arg, %false, %true
+//  select %arg, %x, %y : i1
 //
 //  becomes
 //
-//  xor %arg, %true
-struct SelectToNot : public OpRewritePattern<SelectOp> {
+//  and(%arg, %x) or and(!%arg, %y)
+struct SelectI1Simplify : public OpRewritePattern<SelectOp> {
   using OpRewritePattern<SelectOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(SelectOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!matchPattern(op.getTrueValue(), m_Zero()))
-      return failure();
-
-    if (!matchPattern(op.getFalseValue(), m_One()))
-      return failure();
-
     if (!op.getType().isInteger(1))
       return failure();
 
-    rewriter.replaceOpWithNewOp<arith::XOrIOp>(op, op.getCondition(),
-                                               op.getFalseValue());
+    Value falseConstant =
+        rewriter.create<arith::ConstantIntOp>(op.getLoc(), true, 1);
+    Value notCondition = rewriter.create<arith::XOrIOp>(
+        op.getLoc(), op.getCondition(), falseConstant);
+
+    Value trueVal = rewriter.create<arith::AndIOp>(
+        op.getLoc(), op.getCondition(), op.getTrueValue());
+    Value falseVal = rewriter.create<arith::AndIOp>(op.getLoc(), notCondition,
+                                                    op.getFalseValue());
+    rewriter.replaceOpWithNewOp<arith::OrIOp>(op, trueVal, falseVal);
     return success();
   }
 };
@@ -876,7 +878,7 @@ struct SelectToExtUI : public OpRewritePattern<SelectOp> {
 
 void SelectOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                            MLIRContext *context) {
-  results.insert<SelectToNot, SelectToExtUI>(context);
+  results.insert<SelectI1Simplify, SelectToExtUI>(context);
 }
 
 OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
