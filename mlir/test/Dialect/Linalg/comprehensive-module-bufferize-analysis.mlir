@@ -12,7 +12,8 @@
 // -----
 
 // CHECK-LABEL: func @extract_slice_fun
-func @extract_slice_fun(%A : tensor<?xf32>, %B : tensor<?xf32> {linalg.inplaceable = true})
+func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = false},
+                        %B : tensor<?xf32> {linalg.inplaceable = true})
   -> (tensor<4xf32>, tensor<8xf32>)
 {
   // tensor.extract_slice is not used in a write, it is not compelled to
@@ -33,10 +34,9 @@ func @extract_slice_fun(%A : tensor<?xf32>, %B : tensor<?xf32> {linalg.inplaceab
 // -----
 
 // CHECK-LABEL: func @insert_slice_fun
-func @insert_slice_fun(
-    %A : tensor<?xf32>,
-    %B : tensor<?xf32> {linalg.inplaceable = true},
-    %C : tensor<4xf32>)
+func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = false},
+                       %B : tensor<?xf32> {linalg.inplaceable = true},
+                       %C : tensor<4xf32> {linalg.inplaceable = false})
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   // must bufferize out of place.
@@ -57,9 +57,8 @@ func @insert_slice_fun(
 // -----
 
 // CHECK-LABEL: func @conflict_on_B
-func @conflict_on_B(
-    %A : tensor<4x4xf32> {linalg.inplaceable = true},
-    %B : tensor<4x4xf32> {linalg.inplaceable = true})
+func @conflict_on_B(%A : tensor<4x4xf32> {linalg.inplaceable = true},
+                    %B : tensor<4x4xf32> {linalg.inplaceable = true})
   -> (tensor<4x4xf32>, tensor<4x4xf32>, tensor<4x4xf32>)
 {
   // matmul output operand interferes with input operand.
@@ -96,7 +95,8 @@ func @conflict_on_B(
 
 // CHECK-LABEL: func @extract_slice_extract_slice
 func @extract_slice_extract_slice(
-    %A : tensor<?xf32> {linalg.inplaceable = true}, %B : tensor<?xf32>)
+    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %B : tensor<?xf32> {linalg.inplaceable = false})
   -> (tensor<2xf32>, tensor<2xf32>)
 {
   // tensor.extract_slice is not used in a write, it is not compelled to
@@ -125,7 +125,9 @@ func @insert_slice_insert_slice(
     %A : tensor<?xf32> {linalg.inplaceable = true},
     %A2 : tensor<4xf32> {linalg.inplaceable = true},
     %A3 : tensor<2xf32> {linalg.inplaceable = true},
-    %B : tensor<?xf32>, %B2 : tensor<4xf32>, %B3 : tensor<2xf32>)
+    %B : tensor<?xf32> {linalg.inplaceable = false},
+    %B2 : tensor<4xf32> {linalg.inplaceable = false},
+    %B3 : tensor<2xf32> {linalg.inplaceable = false})
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   // CHECK: {__inplace_results_attr__ = ["true"]}
@@ -150,7 +152,8 @@ func @insert_slice_insert_slice(
 // CHECK-LABEL: func @extract_slice_nonmatching_insert_slice
 func @extract_slice_nonmatching_insert_slice(
     %A : tensor<?xf32> {linalg.inplaceable = true},
-    %B : tensor<?xf32>, %idx: index)
+    %B : tensor<?xf32> {linalg.inplaceable = false},
+    %idx: index)
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   // %r1 bufferizes inplace because %A is inplaceable.
@@ -188,7 +191,7 @@ func @extract_slice_nonmatching_insert_slice(
 // CHECK-LABEL: func @extract_slice_matching_insert_slice
 func @extract_slice_matching_insert_slice(
     %A : tensor<?xf32> {linalg.inplaceable = true},
-    %B : tensor<?xf32>)
+    %B : tensor<?xf32> {linalg.inplaceable = false})
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   // %r1 bufferizes inplace because %A is inplaceable.
@@ -225,7 +228,9 @@ func @extract_slice_matching_insert_slice(
 
 // CHECK-LABEL: @read_of_matching_insert_slice_source
 func @read_of_matching_insert_slice_source(
-    %A : tensor<?xf32> {linalg.inplaceable = true}, %idx : index, %idx2 : index)
+    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %idx : index,
+    %idx2 : index)
   -> (tensor<?xf32>, vector<5xf32>)
 {
   %cst = arith.constant 0.0 : f32
@@ -254,7 +259,9 @@ func @read_of_matching_insert_slice_source(
 
 // CHECK-LABEL: @read_of_matching_insert_slice_source_interleaved
 func @read_of_matching_insert_slice_source_interleaved(
-    %A : tensor<?xf32> {linalg.inplaceable = true}, %idx : index, %idx2 : index,
+    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %idx : index,
+    %idx2 : index,
     %idx3 : index)
   -> (tensor<?xf32>, vector<5xf32>)
 {
@@ -296,8 +303,8 @@ func @read_of_matching_insert_slice_source_interleaved(
 
 // CHECK-LABEL: func @extract_slice_linalg_readonly_use
 func @extract_slice_linalg_readonly_use(
-    %A : tensor<?x?xf32>,
-    %B : tensor<4x4xf32>,
+    %A : tensor<?x?xf32> {linalg.inplaceable = false},
+    %B : tensor<4x4xf32> {linalg.inplaceable = false},
     %C : tensor<4x4xf32> {linalg.inplaceable = true})
   ->  (tensor<4x4xf32>, tensor<4x4xf32>)
 {
@@ -330,8 +337,8 @@ func @extract_slice_linalg_readonly_use(
 
 // CHECK-LABEL: func @extract_slice_to_linalg_write_use
 func @extract_slice_to_linalg_write_use(
-    %A : tensor<4x4xf32>,
-    %B : tensor<?x?xf32>,
+    %A : tensor<4x4xf32> {linalg.inplaceable = false},
+    %B : tensor<?x?xf32> {linalg.inplaceable = false},
     %C : tensor<?x?xf32> {linalg.inplaceable = true})
   ->  (tensor<4x4xf32>, tensor<4x4xf32>)
 {
@@ -370,9 +377,15 @@ func @extract_slice_to_linalg_write_use(
 
 // CHECK-LABEL: func @insert_slice_double_extract_slice
 func @insert_slice_double_extract_slice(
-    %s1: index, %s2: index, %s3: index, %s4: index, %A: tensor<8x6xf32>,
-    %B: tensor<6x6xf32>, %C: tensor<30x20xf32> {linalg.inplaceable = true})
-        -> tensor<30x20xf32> {
+    %s1: index,
+    %s2: index,
+    %s3: index,
+    %s4: index,
+    %A: tensor<8x6xf32> {linalg.inplaceable = false},
+    %B: tensor<6x6xf32> {linalg.inplaceable = false},
+    %C: tensor<30x20xf32> {linalg.inplaceable = true})
+  -> tensor<30x20xf32>
+{
   //      CHECK: tensor.extract_slice
   // CHECK-SAME: {__inplace_results_attr__ = ["true"]}
   %15 = tensor.extract_slice %C[%s3, %s4] [%s1, %s2] [1, 1] : tensor<30x20xf32> to tensor<?x?xf32>
@@ -402,8 +415,8 @@ func @insert_slice_double_extract_slice(
 
 // CHECK-LABEL: func @extract_slice_to_linalg_write_use
 func @extract_slice_to_linalg_write_use(
-    %A : tensor<4x4xf32>,
-    %B : tensor<?x?xf32>,
+    %A : tensor<4x4xf32> {linalg.inplaceable = false},
+    %B : tensor<?x?xf32> {linalg.inplaceable = false},
     %C : tensor<?x?xf32> {linalg.inplaceable = true})
   ->  (tensor<4x4xf32>, tensor<4x4xf32>)
 {
@@ -444,7 +457,7 @@ func @extract_slice_to_linalg_write_use(
 
 // CHECK-LABEL: func @nested_extract_slice_and_insert
 func @nested_extract_slice_and_insert(
-    %A : tensor<?x?xf32>,
+    %A : tensor<?x?xf32> {linalg.inplaceable = false},
     %B : tensor<?x?xf32> {linalg.inplaceable = true},
     %C : tensor<?x?xf32> {linalg.inplaceable = true},
     %idx : index,
@@ -535,9 +548,12 @@ func @nested_extract_slice_and_insert(
 // -----
 
 // CHECK-LABEL: func @scf_for_yield_only
-func @scf_for_yield_only(%A : tensor<?xf32>,
-                         %B : tensor<?xf32> {linalg.inplaceable = true},
-                         %lb : index, %ub : index, %step : index)
+func @scf_for_yield_only(
+    %A : tensor<?xf32> {linalg.inplaceable = false},
+    %B : tensor<?xf32> {linalg.inplaceable = true},
+    %lb : index,
+    %ub : index,
+    %step : index)
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   //      CHECK: scf.for
@@ -562,10 +578,13 @@ func @scf_for_yield_only(%A : tensor<?xf32>,
 // -----
 
 // CHECK-LABEL: func @scf_for_with_tensor.insert_slice
-func @scf_for_with_tensor.insert_slice(%A : tensor<?xf32>,
-              %B : tensor<?xf32> {linalg.inplaceable = true},
-              %C : tensor<4xf32>,
-              %lb : index, %ub : index, %step : index)
+func @scf_for_with_tensor.insert_slice(
+    %A : tensor<?xf32> {linalg.inplaceable = false},
+    %B : tensor<?xf32> {linalg.inplaceable = true},
+    %C : tensor<4xf32> {linalg.inplaceable = false},
+    %lb : index,
+    %ub : index,
+    %step : index)
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   //      CHECK: scf.for
@@ -597,9 +616,12 @@ func @scf_for_with_tensor.insert_slice(%A : tensor<?xf32>,
 func private @some_use(tensor<?xf32>) -> ()
 
 // CHECK-LABEL: func @scf_for_deps
-func @scf_for_deps(%A : tensor<?xf32> {linalg.inplaceable = true},
-                   %B : tensor<?xf32> {linalg.inplaceable = true},
-                   %lb : index, %ub : index, %step : index)
+func @scf_for_deps(
+    %A : tensor<?xf32> {linalg.inplaceable = true},
+    %B : tensor<?xf32> {linalg.inplaceable = true},
+    %lb : index,
+    %ub : index,
+    %step : index)
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   // %r0 must be out of place because one use of %t in the subsequent production
