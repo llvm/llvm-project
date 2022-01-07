@@ -112,8 +112,8 @@ template <size_t N> struct hash<std::bitset<N>>;
 
 */
 
-#include <__config>
 #include <__bit_reference>
+#include <__config>
 #include <__functional_base>
 #include <climits>
 #include <cstddef>

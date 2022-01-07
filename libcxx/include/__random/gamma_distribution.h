@@ -10,8 +10,8 @@
 #define _LIBCPP___RANDOM_GAMMA_DISTRIBUTION_H
 
 #include <__config>
-#include <__random/uniform_real_distribution.h>
 #include <__random/exponential_distribution.h>
+#include <__random/uniform_real_distribution.h>
 #include <cmath>
 #include <iosfwd>
 #include <limits>

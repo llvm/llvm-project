@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_SORT_H
 #define _LIBCPP___ALGORITHM_SORT_H
 
-#include <__config>
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/min_element.h>
 #include <__algorithm/partial_sort.h>
 #include <__algorithm/unwrap_iter.h>
+#include <__config>
 #include <__utility/swap.h>
 #include <memory>
 

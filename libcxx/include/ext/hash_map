@@ -203,10 +203,10 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 #include <__config>
 #include <__hash_table>
+#include <ext/__hash>
 #include <functional>
 #include <stdexcept>
 #include <type_traits>
-#include <ext/__hash>
 
 #if defined(__DEPRECATED) && __DEPRECATED
 #if defined(_LIBCPP_WARNING)

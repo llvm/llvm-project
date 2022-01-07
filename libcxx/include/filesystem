@@ -248,8 +248,8 @@ inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_direct
 #include <__filesystem/file_type.h>
 #include <__filesystem/filesystem_error.h>
 #include <__filesystem/operations.h>
-#include <__filesystem/path_iterator.h>
 #include <__filesystem/path.h>
+#include <__filesystem/path_iterator.h>
 #include <__filesystem/perm_options.h>
 #include <__filesystem/perms.h>
 #include <__filesystem/recursive_directory_iterator.h>

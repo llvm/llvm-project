@@ -12,12 +12,12 @@
 
 #include <__availability>
 #include <__config>
+#include <__debug>
 #include <__filesystem/directory_entry.h>
 #include <__filesystem/directory_options.h>
 #include <__filesystem/path.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
-#include <__debug>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <cstddef>

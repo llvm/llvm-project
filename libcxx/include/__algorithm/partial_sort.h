@@ -9,12 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_PARTIAL_SORT_H
 #define _LIBCPP___ALGORITHM_PARTIAL_SORT_H
 
-#include <__config>
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/make_heap.h>
 #include <__algorithm/sift_down.h>
 #include <__algorithm/sort_heap.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
 

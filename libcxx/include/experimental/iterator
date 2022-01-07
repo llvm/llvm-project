@@ -53,8 +53,8 @@ namespace std {
 */
 
 #include <__memory/addressof.h>
-#include <__utility/move.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <experimental/__config>
 #include <iterator>
 
