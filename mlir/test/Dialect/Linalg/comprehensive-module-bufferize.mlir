@@ -1189,3 +1189,39 @@ func @linalg_op_output_cannot_alias_with_input(
   return %r : tensor<?x?xf32>
 }
 
+// -----
+
+#accesses = [
+  affine_map<(i) -> (i)>
+]
+#trait = {
+  indexing_maps = #accesses,
+  iterator_types = ["parallel"]
+}
+
+// CHECK-LABEL: func @op_is_reading_but_following_ops_are_not
+//  CHECK-SAME:     %[[t0:.*]]: memref<?xf32
+func @op_is_reading_but_following_ops_are_not(
+    %t0 : tensor<?xf32> {linalg.inplaceable = false},
+    %cst : f32)
+  -> tensor<?xf32>
+{
+  // Make sure that a copy is inserted here.
+  // CHECK: %[[ALLOC:.*]] = memref.alloc
+  // CHECK: linalg.copy(%[[t0]], %[[ALLOC]])
+  // CHECK: linalg.generic {{.*}} outs(%[[ALLOC]] : memref
+  %r0 =linalg.generic #trait outs (%t0 : tensor<?xf32>) {
+      ^bb(%0: f32) :
+        %a = arith.addf %cst, %0 : f32
+        linalg.yield %a : f32
+    } -> (tensor<?xf32>)
+
+  // CHECK: linalg.generic {{.*}} outs(%[[ALLOC]] : memref
+  %r1 = linalg.generic #trait outs (%r0 : tensor<?xf32>) {
+      ^bb(%0: f32) :
+        linalg.yield %cst : f32
+    } -> (tensor<?xf32>)
+
+  // CHECK: return %[[ALLOC]]
+  return %r1 : tensor<?xf32>
+}
