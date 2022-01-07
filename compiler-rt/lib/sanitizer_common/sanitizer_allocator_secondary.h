@@ -267,9 +267,9 @@ class LargeMmapAllocator {
 
   // ForceLock() and ForceUnlock() are needed to implement Darwin malloc zone
   // introspection API.
-  void ForceLock() ACQUIRE(mutex_) { mutex_.Lock(); }
+  void ForceLock() SANITIZER_ACQUIRE(mutex_) { mutex_.Lock(); }
 
-  void ForceUnlock() RELEASE(mutex_) { mutex_.Unlock(); }
+  void ForceUnlock() SANITIZER_RELEASE(mutex_) { mutex_.Unlock(); }
 
   // Iterate over all existing chunks.
   // The allocator must be locked when calling this function.

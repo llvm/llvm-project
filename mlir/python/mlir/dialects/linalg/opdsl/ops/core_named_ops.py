@@ -479,7 +479,7 @@ def pooling_nhwc_max(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max(D.kh, D.kw)(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max[D.kh, D.kw](
       TypeFn.cast(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -499,7 +499,7 @@ def pooling_nhwc_max_unsigned(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max_unsigned(D.kh, D.kw)(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max_unsigned[D.kh, D.kw](
       TypeFn.cast_unsigned(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -519,7 +519,7 @@ def pooling_nchw_max(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.c, D.oh, D.ow, D.kh, D.kw)
-  O[D.n, D.c, D.oh, D.ow] = ReduceFn.max(D.kh, D.kw)(
+  O[D.n, D.c, D.oh, D.ow] = ReduceFn.max[D.kh, D.kw](
       TypeFn.cast(
           U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH,
                D.ow * S.SW + D.kw * S.DW,]))
@@ -540,7 +540,7 @@ def pooling_nhwc_min(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min(D.kh, D.kw)(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min[D.kh, D.kw](
       TypeFn.cast(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -560,7 +560,7 @@ def pooling_nhwc_min_unsigned(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min_unsigned(D.kh, D.kw)(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min_unsigned[D.kh, D.kw](
       TypeFn.cast_unsigned(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -600,7 +600,7 @@ def pooling_ndhwc_max(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.c)
-  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.max(D.kd, D.kh, D.kw)(
+  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.max[D.kd, D.kh, D.kw](
       TypeFn.cast(
           U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
                D.ow * S.SW + D.kw * S.DW, D.c]))
@@ -621,7 +621,7 @@ def pooling_ndhwc_min(
   """
   implements(ConvolutionOpInterface)
   domain(D.n, D.od, D.oh, D.ow, D.kd, D.kh, D.kw, D.c)
-  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.min(D.kd, D.kh, D.kw)(
+  O[D.n, D.od, D.oh, D.ow, D.c] = ReduceFn.min[D.kd, D.kh, D.kw](
       TypeFn.cast(
           U, I[D.n, D.od * S.SD + D.kd * S.DD, D.oh * S.SH + D.kh * S.DH,
                D.ow * S.SW + D.kw * S.DW, D.c]))

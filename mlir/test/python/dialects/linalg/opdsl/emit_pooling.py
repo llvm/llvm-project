@@ -19,7 +19,7 @@ def pooling_max_poly(
     strides=IndexAttrDef(S.SH, S.SW),
     dilations=IndexAttrDef(S.DH, S.DW)):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max(D.kh, D.kw)(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max[D.kh, D.kw](
       TypeFn.cast(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -32,7 +32,7 @@ def pooling_max_unsigned_poly(
     strides=IndexAttrDef(S.SH, S.SW),
     dilations=IndexAttrDef(S.DH, S.DW)):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max_unsigned(D.kh, D.kw)(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.max_unsigned[D.kh, D.kw](
       TypeFn.cast_unsigned(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -45,7 +45,7 @@ def pooling_min_poly(
     strides=IndexAttrDef(S.SH, S.SW),
     dilations=IndexAttrDef(S.DH, S.DW)):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min(D.kh, D.kw)(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min[D.kh, D.kw](
       TypeFn.cast(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
@@ -58,7 +58,7 @@ def pooling_min_unsigned_poly(
     strides=IndexAttrDef(S.SH, S.SW),
     dilations=IndexAttrDef(S.DH, S.DW)):
   domain(D.n, D.oh, D.ow, D.kh, D.kw, D.c)
-  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min_unsigned(D.kh, D.kw)(
+  O[D.n, D.oh, D.ow, D.c] = ReduceFn.min_unsigned[D.kh, D.kw](
       TypeFn.cast_unsigned(
           U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c]))
 
