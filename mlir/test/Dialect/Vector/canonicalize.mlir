@@ -1109,3 +1109,87 @@ func @extract_constant() -> (vector<7xf32>, i32) {
   %1 = vector.extract %cst_1[1, 4, 5] : vector<4x37x9xi32>
   return %0, %1 : vector<7xf32>, i32
 }
+
+// -----
+
+// CHECK-LABEL: extract_extract_strided
+//  CHECK-SAME: %[[A:.*]]: vector<32x16x4xf16>
+//       CHECK: %[[V:.*]] = vector.extract %[[A]][9, 7] : vector<32x16x4xf16>
+//       CHECK: return %[[V]] : vector<4xf16>
+func @extract_extract_strided(%arg0: vector<32x16x4xf16>) -> vector<4xf16> {
+ %1 = vector.extract_strided_slice %arg0
+  {offsets = [7, 3], sizes = [10, 8], strides = [1, 1]} :
+  vector<32x16x4xf16> to vector<10x8x4xf16>
+  %2 = vector.extract %1[2, 4] : vector<10x8x4xf16>
+  return %2 : vector<4xf16>
+}
+
+// -----
+
+// CHECK-LABEL: extract_insert_strided
+//  CHECK-SAME: %[[A:.*]]: vector<6x4xf32>
+//       CHECK: %[[V:.*]] = vector.extract %[[A]][0, 2] : vector<6x4xf32>
+//       CHECK: return %[[V]] : f32
+func @extract_insert_strided(%a: vector<6x4xf32>, %b: vector<8x16xf32>)
+  -> f32 {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1, 1]}
+    : vector<6x4xf32> into vector<8x16xf32>
+  %2 = vector.extract %0[2, 4] : vector<8x16xf32>
+  return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: extract_insert_rank_reduce
+//  CHECK-SAME: %[[A:.*]]: vector<4xf32>
+//       CHECK: %[[V:.*]] = vector.extract %[[A]][2] : vector<4xf32>
+//       CHECK: return %[[V]] : f32
+func @extract_insert_rank_reduce(%a: vector<4xf32>, %b: vector<8x16xf32>)
+  -> f32 {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [2, 2], strides = [1]}
+    : vector<4xf32> into vector<8x16xf32>
+  %2 = vector.extract %0[2, 4] : vector<8x16xf32>
+  return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: extract_insert_negative
+//       CHECK: vector.insert_strided_slice
+//       CHECK: vector.extract
+func @extract_insert_negative(%a: vector<2x15xf32>, %b: vector<12x8x16xf32>)
+  -> vector<16xf32> {
+  %0 = vector.insert_strided_slice %a, %b {offsets = [4, 2, 0], strides = [1, 1]}
+    : vector<2x15xf32> into vector<12x8x16xf32>
+  %2 = vector.extract %0[4, 2] : vector<12x8x16xf32>
+  return %2 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: extract_insert_chain
+//  CHECK-SAME: (%[[A:.*]]: vector<2x16xf32>, %[[B:.*]]: vector<12x8x16xf32>, %[[C:.*]]: vector<2x16xf32>)
+//       CHECK: %[[V:.*]] = vector.extract %[[C]][0] : vector<2x16xf32>
+//       CHECK: return %[[V]] : vector<16xf32>
+func @extract_insert_chain(%a: vector<2x16xf32>, %b: vector<12x8x16xf32>, %c: vector<2x16xf32>)
+  -> vector<16xf32> {
+  %0 = vector.insert_strided_slice %c, %b {offsets = [4, 2, 0], strides = [1, 1]}
+    : vector<2x16xf32> into vector<12x8x16xf32>
+  %1 = vector.insert_strided_slice %a, %0 {offsets = [0, 2, 0], strides = [1, 1]}
+    : vector<2x16xf32> into vector<12x8x16xf32>
+  %2 = vector.extract %1[4, 2] : vector<12x8x16xf32>
+  return %2 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: extract_extract_strided2
+//  CHECK-SAME: %[[A:.*]]: vector<2x4xf32>
+//       CHECK: %[[V:.*]] = vector.extract %[[A]][1] : vector<2x4xf32>
+//       CHECK: return %[[V]] : vector<4xf32>
+func @extract_extract_strided2(%A: vector<2x4xf32>)
+  -> (vector<4xf32>) {
+ %0 = vector.extract_strided_slice %A {offsets = [1, 0], sizes = [1, 4], strides = [1, 1]} : vector<2x4xf32> to vector<1x4xf32>
+ %1 = vector.extract %0[0] : vector<1x4xf32>
+ return %1 : vector<4xf32>
+}

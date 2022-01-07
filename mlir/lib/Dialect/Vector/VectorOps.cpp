@@ -1204,6 +1204,109 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   return extractOp.getResult();
 }
 
+/// Fold an ExtractOp from ExtractStridedSliceOp.
+static Value foldExtractFromExtractStrided(ExtractOp extractOp) {
+  auto extractStridedSliceOp =
+      extractOp.vector().getDefiningOp<vector::ExtractStridedSliceOp>();
+  if (!extractStridedSliceOp)
+    return Value();
+  // Return if 'extractStridedSliceOp' has non-unit strides.
+  if (extractStridedSliceOp.hasNonUnitStrides())
+    return Value();
+
+  // Trim offsets for dimensions fully extracted.
+  auto sliceOffsets = extractVector<int64_t>(extractStridedSliceOp.offsets());
+  while (!sliceOffsets.empty()) {
+    size_t lastOffset = sliceOffsets.size() - 1;
+    if (sliceOffsets.back() != 0 ||
+        extractStridedSliceOp.getType().getDimSize(lastOffset) !=
+            extractStridedSliceOp.getVectorType().getDimSize(lastOffset))
+      break;
+    sliceOffsets.pop_back();
+  }
+  unsigned destinationRank = 0;
+  if (auto vecType = extractOp.getType().dyn_cast<VectorType>())
+    destinationRank = vecType.getRank();
+  // The dimensions of the result need to be untouched by the
+  // extractStridedSlice op.
+  if (destinationRank >
+      extractStridedSliceOp.getVectorType().getRank() - sliceOffsets.size())
+    return Value();
+  auto extractedPos = extractVector<int64_t>(extractOp.position());
+  assert(extractedPos.size() >= sliceOffsets.size());
+  for (size_t i = 0, e = sliceOffsets.size(); i < e; i++)
+    extractedPos[i] = extractedPos[i] + sliceOffsets[i];
+  extractOp.vectorMutable().assign(extractStridedSliceOp.vector());
+  // OpBuilder is only used as a helper to build an I64ArrayAttr.
+  OpBuilder b(extractOp.getContext());
+  extractOp->setAttr(ExtractOp::getPositionAttrName(),
+                     b.getI64ArrayAttr(extractedPos));
+  return extractOp.getResult();
+}
+
+/// Fold extract_op fed from a chain of insertStridedSlice ops.
+static Value foldExtractStridedOpFromInsertChain(ExtractOp op) {
+  int64_t destinationRank = op.getType().isa<VectorType>()
+                                ? op.getType().cast<VectorType>().getRank()
+                                : 0;
+  auto insertOp = op.vector().getDefiningOp<InsertStridedSliceOp>();
+  while (insertOp) {
+    int64_t insertRankDiff = insertOp.getDestVectorType().getRank() -
+                             insertOp.getSourceVectorType().getRank();
+    if (destinationRank > insertOp.getSourceVectorType().getRank())
+      return Value();
+    auto insertOffsets = extractVector<int64_t>(insertOp.offsets());
+    auto extractOffsets = extractVector<int64_t>(op.position());
+
+    if (llvm::any_of(insertOp.strides(), [](Attribute attr) {
+          return attr.cast<IntegerAttr>().getInt() != 1;
+        }))
+      return Value();
+    bool disjoint = false;
+    SmallVector<int64_t, 4> offsetDiffs;
+    for (unsigned dim = 0, e = extractOffsets.size(); dim < e; ++dim) {
+      int64_t start = insertOffsets[dim];
+      int64_t size =
+          (dim < insertRankDiff)
+              ? 1
+              : insertOp.getSourceVectorType().getDimSize(dim - insertRankDiff);
+      int64_t end = start + size;
+      int64_t offset = extractOffsets[dim];
+      // Check if the start of the extract offset is in the interval inserted.
+      if (start <= offset && offset < end) {
+        if (dim >= insertRankDiff)
+          offsetDiffs.push_back(offset - start);
+        continue;
+      }
+      disjoint = true;
+      break;
+    }
+    // The extract element chunk overlap with the vector inserted.
+    if (!disjoint) {
+      // If any of the inner dimensions are only partially inserted we have a
+      // partial overlap.
+      int64_t srcRankDiff =
+          insertOp.getSourceVectorType().getRank() - destinationRank;
+      for (int64_t i = 0; i < destinationRank; i++) {
+        if (insertOp.getSourceVectorType().getDimSize(i + srcRankDiff) !=
+            insertOp.getDestVectorType().getDimSize(i + srcRankDiff +
+                                                    insertRankDiff))
+          return Value();
+      }
+      op.vectorMutable().assign(insertOp.source());
+      // OpBuilder is only used as a helper to build an I64ArrayAttr.
+      OpBuilder b(op.getContext());
+      op->setAttr(ExtractOp::getPositionAttrName(),
+                  b.getI64ArrayAttr(offsetDiffs));
+      return op.getResult();
+    }
+    // If the chunk extracted is disjoint from the chunk inserted, keep
+    // looking in the insert chain.
+    insertOp = insertOp.dest().getDefiningOp<InsertStridedSliceOp>();
+  }
+  return Value();
+}
+
 OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   if (position().empty())
     return vector();
@@ -1216,6 +1319,10 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   if (auto val = foldExtractFromBroadcast(*this))
     return val;
   if (auto val = foldExtractFromShapeCast(*this))
+    return val;
+  if (auto val = foldExtractFromExtractStrided(*this))
+    return val;
+  if (auto val = foldExtractStridedOpFromInsertChain(*this))
     return val;
   return OpFoldResult();
 }
@@ -2183,9 +2290,7 @@ public:
     if (!constantMaskOp)
       return failure();
     // Return if 'extractStridedSliceOp' has non-unit strides.
-    if (llvm::any_of(extractStridedSliceOp.strides(), [](Attribute attr) {
-          return attr.cast<IntegerAttr>().getInt() != 1;
-        }))
+    if (extractStridedSliceOp.hasNonUnitStrides())
       return failure();
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
