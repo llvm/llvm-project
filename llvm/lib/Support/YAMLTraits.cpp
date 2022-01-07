@@ -629,7 +629,7 @@ void Output::endFlowSequence() {
   outputUpToEndOfLine(" ]");
 }
 
-bool Output::preflightFlowElement(unsigned, void *&) {
+bool Output::preflightFlowElement(unsigned, void *&SaveInfo) {
   if (NeedFlowSequenceComma)
     output(", ");
   if (WrapColumn && Column > WrapColumn) {
@@ -639,6 +639,7 @@ bool Output::preflightFlowElement(unsigned, void *&) {
     Column = ColumnAtFlowStart;
     output("  ");
   }
+  SaveInfo = nullptr;
   return true;
 }
 
