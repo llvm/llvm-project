@@ -209,7 +209,6 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
     return UndefValue::get(&Ty);
   if (isAllocationFn(&Obj, TLI))
     return getInitialValueOfAllocation(&cast<CallBase>(Obj), TLI, &Ty);
-
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
   if (!GV || !GV->hasLocalLinkage())
     return nullptr;
@@ -305,8 +304,6 @@ bool AA::getPotentialCopiesOfStoredValue(
   SmallVector<const AAPointerInfo *> PIs;
   SmallVector<Value *> NewCopies;
 
-  const auto *TLI =
-      A.getInfoCache().getTargetLibraryInfoForFunction(*SI.getFunction());
   for (Value *Obj : Objects) {
     LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
     if (isa<UndefValue>(Obj))
@@ -324,7 +321,7 @@ bool AA::getPotentialCopiesOfStoredValue(
       return false;
     }
     if (!isa<AllocaInst>(Obj) && !isa<GlobalVariable>(Obj) &&
-        !isNoAliasFn(Obj, TLI)) {
+        !isNoAliasCall(Obj)) {
       LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << *Obj
                         << "\n";);
       return false;
