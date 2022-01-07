@@ -495,7 +495,8 @@ HANDLE_DW_AT(0x2133, GNU_addr_base, 0, GNU)
 HANDLE_DW_AT(0x2134, GNU_pubnames, 0, GNU)
 HANDLE_DW_AT(0x2135, GNU_pubtypes, 0, GNU)
 HANDLE_DW_AT(0x2136, GNU_discriminator, 0, GNU)
-HANDLE_DW_AT(0x2137, GNU_entry_view, 0, GNU)
+HANDLE_DW_AT(0x2137, GNU_locviews, 0, GNU)
+HANDLE_DW_AT(0x2138, GNU_entry_view, 0, GNU)
 
 HANDLE_DW_AT(0x2201, SUN_template, 0, SUN)
 // Conflicting:
