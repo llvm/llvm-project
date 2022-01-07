@@ -405,8 +405,9 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::getResultBuffer(
     if (auto bufferizableOp = options.dynCastBufferizableOp(lastWrite))
       if (!bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(), *this))
         skipCopy = true;
-    // Do not copy if the copied data is never read.
-    if (!isValueRead(result))
+    // Do not copy if the copied data is never read. (Neither by this op nor by
+    // any following op.)
+    if (!bufferizesToMemoryRead(*opOperand) && !isValueRead(result))
       skipCopy = true;
     // Do not copy if this op does not read the data, but writes it.
     if (bufferizesToMemoryWrite(*opOperand) &&
