@@ -2001,6 +2001,9 @@ public:
     return SplitVector(N, DL, LoVT, HiVT);
   }
 
+  /// Split the explicit vector length parameter of a VP operation.
+  std::pair<SDValue, SDValue> SplitEVL(SDValue N, EVT VecVT, const SDLoc &DL);
+
   /// Split the node's operand with EXTRACT_SUBVECTOR and
   /// return the low/high part.
   std::pair<SDValue, SDValue> SplitVectorOperand(const SDNode *N, unsigned OpNo)
