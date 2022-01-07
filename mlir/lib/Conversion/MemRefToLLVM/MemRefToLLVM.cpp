@@ -706,12 +706,52 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
   }
 };
 
+/// Pattern to lower a `memref.copy` to llvm.
+///
+/// For memrefs with identity layouts, the copy is lowered to the llvm
+/// `memcpy` intrinsic. For non-identity layouts, the copy is lowered to a call
+/// to the generic `MemrefCopyFn`.
 struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
   using ConvertOpToLLVMPattern<memref::CopyOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(memref::CopyOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
+  lowerToMemCopyIntrinsic(memref::CopyOp op, OpAdaptor adaptor,
+                          ConversionPatternRewriter &rewriter) const {
+    auto loc = op.getLoc();
+    auto srcType = op.source().getType().dyn_cast<MemRefType>();
+
+    MemRefDescriptor srcDesc(adaptor.source());
+
+    // Compute number of elements.
+    Value numElements;
+    for (int pos = 0; pos < srcType.getRank(); ++pos) {
+      auto size = srcDesc.size(rewriter, loc, pos);
+      numElements = numElements
+                        ? rewriter.create<LLVM::MulOp>(loc, numElements, size)
+                        : size;
+    }
+    // Get element size.
+    auto sizeInBytes = getSizeInBytes(loc, srcType.getElementType(), rewriter);
+    // Compute total.
+    Value totalSize =
+        rewriter.create<LLVM::MulOp>(loc, numElements, sizeInBytes);
+
+    Value srcBasePtr = srcDesc.alignedPtr(rewriter, loc);
+    MemRefDescriptor targetDesc(adaptor.target());
+    Value targetBasePtr = targetDesc.alignedPtr(rewriter, loc);
+    Value isVolatile = rewriter.create<LLVM::ConstantOp>(
+        loc, typeConverter->convertType(rewriter.getI1Type()),
+        rewriter.getBoolAttr(false));
+    rewriter.create<LLVM::MemcpyOp>(loc, targetBasePtr, srcBasePtr, totalSize,
+                                    isVolatile);
+    rewriter.eraseOp(op);
+
+    return success();
+  }
+
+  LogicalResult
+  lowerToMemCopyFunctionCall(memref::CopyOp op, OpAdaptor adaptor,
+                             ConversionPatternRewriter &rewriter) const {
     auto loc = op.getLoc();
     auto srcType = op.source().getType().cast<BaseMemRefType>();
     auto targetType = op.target().getType().cast<BaseMemRefType>();
@@ -764,6 +804,21 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     rewriter.eraseOp(op);
 
     return success();
+  }
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.source().getType().cast<BaseMemRefType>();
+    auto targetType = op.target().getType().cast<BaseMemRefType>();
+
+    if (srcType.hasRank() &&
+        srcType.cast<MemRefType>().getLayout().isIdentity() &&
+        targetType.hasRank() &&
+        targetType.cast<MemRefType>().getLayout().isIdentity())
+      return lowerToMemCopyIntrinsic(op, adaptor, rewriter);
+
+    return lowerToMemCopyFunctionCall(op, adaptor, rewriter);
   }
 };
 
