@@ -4083,7 +4083,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
 
     auto TC = ToolChains.begin();
     for (Action *&A : DeviceActions) {
-      A = ConstructPhaseAction(C, Args, Phase, A);
+      A = ConstructPhaseAction(C, Args, Phase, A, Action::OFK_OpenMP);
 
       if (isa<CompileJobAction>(A)) {
         HostAction->setCannotBeCollapsedWithNextDependentAction();
@@ -4199,6 +4199,12 @@ Action *Driver::ConstructPhaseAction(
   }
   case phases::Backend: {
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
+      types::ID Output =
+          Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
+      return C.MakeAction<BackendJobAction>(Input, Output);
+    }
+    if (isUsingLTO(/* IsOffload */ true) &&
+        TargetDeviceOffloadKind == Action::OFK_OpenMP) {
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);

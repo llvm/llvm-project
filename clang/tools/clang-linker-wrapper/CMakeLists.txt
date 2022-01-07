@@ -1,4 +1,15 @@
-set(LLVM_LINK_COMPONENTS BitWriter Core BinaryFormat IRReader Object Support)
+set(LLVM_LINK_COMPONENTS 
+  ${LLVM_TARGETS_TO_BUILD}
+  BitWriter
+  Core
+  BinaryFormat
+  MC
+  Passes
+  IRReader
+  Object
+  Support
+  CodeGen
+  LTO)
 
 if(NOT CLANG_BUILT_STANDALONE)
   set(tablegen_deps intrinsics_gen)

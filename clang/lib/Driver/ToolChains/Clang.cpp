@@ -4619,7 +4619,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     if (JA.getType() == types::TY_LLVM_BC)
       CmdArgs.push_back("-emit-llvm-uselists");
 
-    if (IsUsingLTO) {
+    if (IsUsingLTO && !Args.hasArg(options::OPT_fopenmp_new_driver)) {
       // Only AMDGPU supports device-side LTO.
       if (IsDeviceOffloadAction && !Triple.isAMDGPU()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -8149,6 +8149,39 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
   ArgStringList CmdArgs;
+
+  if (getToolChain().getDriver().isUsingLTO(/* IsOffload */ true)) {
+    // Pass in target features for each toolchain.
+    auto OpenMPTCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
+    for (auto TI = OpenMPTCRange.first, TE = OpenMPTCRange.second; TI != TE;
+         ++TI) {
+      const ToolChain *TC = TI->second;
+      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
+      ArgStringList FeatureArgs;
+      TC->addClangTargetOptions(TCArgs, FeatureArgs, Action::OFK_OpenMP);
+      auto FeatureIt = llvm::find(FeatureArgs, "-target-feature");
+      CmdArgs.push_back(Args.MakeArgString(
+          "-target-feature=" + TC->getTripleString() + "=" + *(FeatureIt + 1)));
+    }
+
+    // Pass in the optimization level to use for LTO.
+    if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+      StringRef OOpt;
+      if (A->getOption().matches(options::OPT_O4) ||
+          A->getOption().matches(options::OPT_Ofast))
+        OOpt = "3";
+      else if (A->getOption().matches(options::OPT_O)) {
+        OOpt = A->getValue();
+        if (OOpt == "g")
+          OOpt = "1";
+        else if (OOpt == "s" || OOpt == "z")
+          OOpt = "2";
+      } else if (A->getOption().matches(options::OPT_O0))
+        OOpt = "0";
+      if (!OOpt.empty())
+        CmdArgs.push_back(Args.MakeArgString(Twine("-opt-level=O") + OOpt));
+    }
+  }
 
   // Construct the link job so we can wrap around it.
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
