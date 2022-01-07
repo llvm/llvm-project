@@ -308,7 +308,7 @@ ExtractLoops(BugDriver &BD,
                                       std::unique_ptr<Module>),
              std::vector<Function *> &MiscompiledFunctions) {
   bool MadeChange = false;
-  while (1) {
+  while (true) {
     if (BugpointIsInterrupted)
       return MadeChange;
 
