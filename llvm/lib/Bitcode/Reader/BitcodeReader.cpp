@@ -3927,9 +3927,7 @@ void BitcodeReader::propagateAttributeTypes(CallBase *CB,
     const InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
     unsigned ArgNo = 0;
     for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
-      bool HasArg = CI.Type == InlineAsm::isInput ||
-                    (CI.Type == InlineAsm::isOutput && CI.isIndirect);
-      if (!HasArg)
+      if (!CI.hasArg())
         continue;
 
       if (CI.isIndirect && !CB->getAttributes().getParamElementType(ArgNo)) {

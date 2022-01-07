@@ -171,6 +171,11 @@ public:
     /// selectAlternative - Point this constraint to the alternative constraint
     /// indicated by the index.
     void selectAlternative(unsigned index);
+
+    /// Whether this constraint corresponds to an argument.
+    bool hasArg() const {
+      return Type == isInput || (Type == isOutput && isIndirect);
+    }
   };
 
   /// ParseConstraints - Split up the constraint string into the specific
