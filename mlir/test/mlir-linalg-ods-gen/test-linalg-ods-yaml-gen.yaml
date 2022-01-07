@@ -95,7 +95,7 @@ structured_op: !LinalgStructuredOpConfig
 # @linalg_structured_op
 # def test2(I=TensorDef(T, S.M, S.N),
 #           O=TensorDef(T, S.M, S.N, output=True),
-#           strides=AttributeDef(S.SM, S.SN)):
+#           strides=IndexAttrDef(S.SM, S.SN)):
 #   """Title.
 
 #   Detailed description.

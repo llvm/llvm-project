@@ -261,18 +261,17 @@ class ScalarDef(TensorExpression):
     return ScalarArg(self.scalar_name).expr()
 
 
-class AttributeDef:
+class IndexAttrDef:
   """Index Attribute definition.
 
   Index attributes provide a way to define and set symbols that can be used in
   indexing expressions. Every attribute specifies a tuple of symbols that at
   compile-time are replaced by integer values.
   """
-  yaml_tag = "!LinalgAttributeDef"
 
   def __init__(self, *sizes: SymbolDef):
     if any(not isinstance(size, SymbolDef) for size in sizes):
-      raise ValueError(f"AttributeDef requires sizes of type SymbolDef but got "
+      raise ValueError(f"IndexAttrDef requires sizes of type SymbolDef but got "
                        f"{sizes}")
     self.operand_def = OperandDef(OperandKind.Attribute, I64, size_exprs=sizes)
 
@@ -500,6 +499,7 @@ class OpInterfaceDef:
 
 ContractionOpInterface = OpInterfaceDef("LinalgContractionOpInterface")
 ConvolutionOpInterface = OpInterfaceDef("LinalgConvolutionOpInterface")
+
 
 class OpMetadataDef(YAMLObject):
   """Metadata about the op (generally not behavior impacting)."""

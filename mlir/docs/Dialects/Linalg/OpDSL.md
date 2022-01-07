@@ -118,13 +118,13 @@ The following example demonstrates the use of attributes:
 @linalg_structured_op
 def strided_copy(I=TensorDef(T, S.IH, S.IW),
                  O=TensorDef(T, S.OH, S.OW, output=True),
-                 strides=AttributeDef(S.SH, S.SW)):
+                 strides=IndexAttrDef(S.SH, S.SW)):
   """Copy a subset of the input tensor elements to the output tensor"""
   O[D.oh, D.ow] = I[D.oh * S.SH, D.ow * S.SW]
 ```
 
 The operation implements a strided copy from the input tensor `I` to the output
-tensor `O`. The `strides` attribute is bound to an `AttributeDef`. It defines
+tensor `O`. The `strides` attribute is bound to an `IndexAttrDef`. It defines
 the symbols `S.SH` and `S.SW`, which are used to index the input tensor `I`.
 When instantiating the operation, the attribute is set using a named argument:
 
@@ -157,8 +157,8 @@ def pooling_poly(
     I=TensorDef(T1, S.N, S.H, S.W, S.C),
     K=TensorDef(T2, S.KH, S.KW, index_dims=[D.kh, D.kw]),
     O=TensorDef(U, S.N, S.OH, S.OW, S.C, output=True),
-    strides=AttributeDef(S.SH, S.SW),
-    dilations=AttributeDef(S.DH, S.DW)):
+    strides=IndexAttrDef(S.SH, S.SW),
+    dilations=IndexAttrDef(S.DH, S.DW)):
   O[D.n, D.oh, D.ow, D.c] += \
       cast(U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.c])
 ```

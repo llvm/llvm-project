@@ -20,6 +20,7 @@ _CONTEXT = threading.local()
 StructuredOpOuts = Union[ir.Operation, ir.OpView, ir.OpResultList,
                          Sequence[Union[ir.Value, ir.Operation, ir.OpView]]]
 
+
 @contextmanager
 def bind_op_def(model: LinalgOpDef):
   if hasattr(_CONTEXT, "current_op_def"):
@@ -128,12 +129,12 @@ def linalg_structured_op(dsl_func=None,
   sig = inspect.signature(dsl_func)
   for param_name, param in sig.parameters.items():
     param_default = param.default
-    if isinstance(param_default, (TensorDef, ScalarDef, AttributeDef)):
+    if isinstance(param_default, (TensorDef, ScalarDef, IndexAttrDef)):
       tc_model.add_operand(param_name, param_default.operand_def)
     else:
       raise ValueError(
           f"@linalg_structured_op function parameters must be defaulted as "
-          f"TensorDef(...), ScalarDef(...), or AttributeDef(...): "
+          f"TensorDef(...), ScalarDef(...), or IndexAttrDef(...): "
           f"Found {param_name}: {param_default}")
     dsl_func_args.append(param_default)
 
