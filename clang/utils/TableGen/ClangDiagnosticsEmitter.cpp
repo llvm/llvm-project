@@ -1311,6 +1311,11 @@ void clang::EmitClangDiagsDefs(RecordKeeper &Records, raw_ostream &OS,
     else
       OS << ", false";
 
+    if (R.getValueAsBit("ShowInSystemMacro"))
+      OS << ", true";
+    else
+      OS << ", false";
+
     if (R.getValueAsBit("Deferrable"))
       OS << ", true";
     else

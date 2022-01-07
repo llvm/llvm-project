@@ -197,7 +197,8 @@ def ext_flexible_array_init : Extension<
 
 // C++20 designated initializers
 def ext_cxx_designated_init : Extension<
-  "designated initializers are a C++20 extension">, InGroup<CXX20Designator>;
+  "designated initializers are a C++20 extension">, InGroup<CXX20Designator>,
+  SuppressInSystemMacro;
 def warn_cxx17_compat_designated_init : Warning<
   "designated initializers are incompatible with C++ standards before C++20">,
   InGroup<CXXPre20CompatPedantic>, DefaultIgnore;
@@ -449,7 +450,7 @@ def warn_decl_shadow :
           "typedef in %2|"
           "type alias in %2|"
           "structured binding}1">,
-  InGroup<Shadow>, DefaultIgnore;
+  InGroup<Shadow>, DefaultIgnore, SuppressInSystemMacro;
 def warn_decl_shadow_uncaptured_local :
   Warning<warn_decl_shadow.Text>,
   InGroup<ShadowUncapturedLocal>, DefaultIgnore;
@@ -3941,7 +3942,8 @@ def warn_cast_align : Warning<
   "cast from %0 to %1 increases required alignment from %2 to %3">,
   InGroup<CastAlign>, DefaultIgnore;
 def warn_old_style_cast : Warning<
-  "use of old-style cast">, InGroup<OldStyleCast>, DefaultIgnore;
+  "use of old-style cast">, InGroup<OldStyleCast>, DefaultIgnore,
+  SuppressInSystemMacro;
 
 // Separate between casts to void* and non-void* pointers.
 // Some APIs use (abuse) void* for something like a user context,

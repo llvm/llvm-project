@@ -7798,8 +7798,6 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclarationName Name = R.getLookupName();
 
   // Emit warning and note.
-  if (getSourceManager().isInSystemMacro(R.getNameLoc()))
-    return;
   ShadowedDeclKind Kind = computeShadowedDeclKind(ShadowedDecl, OldDC);
   Diag(R.getNameLoc(), WarningDiag) << Name << Kind << OldDC;
   if (!CaptureLoc.isInvalid())

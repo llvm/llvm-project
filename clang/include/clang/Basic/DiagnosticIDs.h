@@ -67,7 +67,7 @@ namespace clang {
     // Get typedefs for common diagnostics.
     enum {
 #define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, CATEGORY,      \
-             NOWERROR, SHOWINSYSHEADER, DEFFERABLE)                            \
+             NOWERROR, SHOWINSYSHEADER, SHOWINSYSMACRO, DEFFERABLE)            \
   ENUM,
 #define COMMONSTART
 #include "clang/Basic/DiagnosticCommonKinds.inc"
