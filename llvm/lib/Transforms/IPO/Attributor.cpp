@@ -207,9 +207,13 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
                                     const TargetLibraryInfo *TLI) {
   if (isa<AllocaInst>(Obj))
     return UndefValue::get(&Ty);
-  if (isAllocationFn(&Obj, TLI))
-    return getInitialValueOfAllocation(&cast<CallInst>(Obj), TLI, &Ty);
-
+  if (isNoAliasFn(&Obj, TLI)) {
+    if (isMallocLikeFn(&Obj, TLI) || isAlignedAllocLikeFn(&Obj, TLI))
+      return UndefValue::get(&Ty);
+    if (isCallocLikeFn(&Obj, TLI))
+      return Constant::getNullValue(&Ty);
+    return nullptr;
+  }
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
   if (!GV || !GV->hasLocalLinkage())
     return nullptr;
