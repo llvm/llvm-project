@@ -1456,4 +1456,4 @@ namespace llvm {
 
 } // end namespace llvm
 
-#endif // LLVM_TARGET_POWERPC_PPC32ISELLOWERING_H
+#endif // LLVM_LIB_TARGET_POWERPC_PPCISELLOWERING_H

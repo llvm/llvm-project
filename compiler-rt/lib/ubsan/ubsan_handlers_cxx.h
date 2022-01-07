@@ -51,4 +51,4 @@ __ubsan_handle_function_type_mismatch_v1_abort(FunctionTypeMismatchData *Data,
                                                ValueHandle fnRTTI);
 }
 
-#endif // UBSAN_HANDLERS_H
+#endif // UBSAN_HANDLERS_CXX_H

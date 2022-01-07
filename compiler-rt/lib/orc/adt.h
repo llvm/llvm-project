@@ -110,4 +110,4 @@ inline std::string to_string(string_view SV) {
 
 } // end namespace __orc_rt
 
-#endif // ORC_RT_COMMON_H
+#endif // ORC_RT_ADT_H

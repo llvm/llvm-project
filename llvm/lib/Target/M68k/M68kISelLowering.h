@@ -276,4 +276,4 @@ private:
 };
 } // namespace llvm
 
-#endif // M68kISELLOWERING_H
+#endif // LLVM_LIB_TARGET_M68K_M68KISELLOWERING_H

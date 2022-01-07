@@ -140,4 +140,4 @@ public:
 
 } // End namespace llvm
 
-#endif // GCNSCHEDSTRATEGY_H
+#endif // LLVM_LIB_TARGET_AMDGPU_GCNSCHEDSTRATEGY_H

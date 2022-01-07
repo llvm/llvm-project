@@ -33,4 +33,4 @@ void addTo(StringMap<ExecutorAddr> &M);
 } // end namespace orc
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRTBOOTSTRAP_H
+#endif // LIB_EXECUTIONENGINE_ORC_TARGETPROCESS_ORCRTBOOTSTRAP_H
