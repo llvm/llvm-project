@@ -284,8 +284,6 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::J2_jumprf:
   case Hexagon::J2_jumprtnew:
   case Hexagon::J2_jumprfnew:
-  case Hexagon::J2_jumprtnewpt:
-  case Hexagon::J2_jumprfnewpt:
   case Hexagon::PS_jmprett:
   case Hexagon::PS_jmpretf:
   case Hexagon::PS_jmprettnew:
@@ -829,7 +827,6 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     Result.setOpcode(Hexagon::SL2_jumpr31_f);
     break; //    none  SUBInst if (!p0) jumpr r31
   case Hexagon::J2_jumprfnew:
-  case Hexagon::J2_jumprfnewpt:
   case Hexagon::PS_jmpretfnewpt:
   case Hexagon::PS_jmpretfnew:
     Result.setOpcode(Hexagon::SL2_jumpr31_fnew);
@@ -839,7 +836,6 @@ MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
     Result.setOpcode(Hexagon::SL2_jumpr31_t);
     break; //    none  SUBInst if (p0) jumpr r31
   case Hexagon::J2_jumprtnew:
-  case Hexagon::J2_jumprtnewpt:
   case Hexagon::PS_jmprettnewpt:
   case Hexagon::PS_jmprettnew:
     Result.setOpcode(Hexagon::SL2_jumpr31_tnew);
