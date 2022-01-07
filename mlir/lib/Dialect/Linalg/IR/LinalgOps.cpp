@@ -148,11 +148,11 @@ static LogicalResult foldMemRefCastInTiledLoopOp(TiledLoopOp op) {
 // TODO: Move this to a utility library.
 // The public methods on this class are referenced directly from generated code
 // and bind by name to math and type conversion functions in the DSL as:
-//   `applyfn__{fnName}`
+//   `arithfn__{fnName}`
 //   `typefn__{fnName}`
 // Examples:
-//   `applyfn__add`
-//   `applyfn__mul`
+//   `arithfn__add`
+//   `arithfn__mul`
 //   `typefn__cast`
 // The naming convention is intentional in order to match snake-cased DSL names.
 // See mlir-linalg-ods-yaml-gen.cpp for the code that mates to this class.
@@ -241,7 +241,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__add(Value lhs, Value rhs) {
+  Value arithfn__add(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::AddFOp>(lhs.getLoc(), lhs, rhs);
@@ -251,7 +251,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__exp(Value x) {
+  Value arithfn__exp(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
       return builder.create<math::ExpOp>(x.getLoc(), x);
@@ -259,7 +259,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__log(Value x) {
+  Value arithfn__log(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
       return builder.create<math::LogOp>(x.getLoc(), x);
@@ -267,7 +267,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__sub(Value lhs, Value rhs) {
+  Value arithfn__sub(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::SubFOp>(lhs.getLoc(), lhs, rhs);
@@ -277,7 +277,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__mul(Value lhs, Value rhs) {
+  Value arithfn__mul(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MulFOp>(lhs.getLoc(), lhs, rhs);
@@ -287,7 +287,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__max(Value lhs, Value rhs) {
+  Value arithfn__max(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
@@ -297,7 +297,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__max_unsigned(Value lhs, Value rhs) {
+  Value arithfn__max_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
@@ -307,7 +307,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__min(Value lhs, Value rhs) {
+  Value arithfn__min(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
@@ -317,7 +317,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__min_unsigned(Value lhs, Value rhs) {
+  Value arithfn__min_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);

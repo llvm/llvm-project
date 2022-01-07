@@ -177,14 +177,20 @@ TODO: Introduce a directive to fix the dimension bindings.
 Reduction dimensions are inferred to be any dimensions on the RHS that are not
 on the LHS.
 
-A number of arithmetic primitive functions are supported:
+A number of arithmetic functions are supported:
 
-*   `PrimFn.add(a, b)` (also via overloading the binary `+` operator)
-*   `PrimFn.exp(a)`
-*   `PrimFn.log(a)`
-*   `PrimFn.mul(a, b)` (also via overloading the binary `*` operator)
-*   `PrimFn.max(a, b)`
-*   `PrimFn.sub(a, b)` (also via overloading the binary `-` operator)
+*   `ArithFn.add(a, b)` (also via overloading the binary `+` operator)
+*   `ArithFn.exp(a)`
+*   `ArithFn.log(a)`
+*   `ArithFn.mul(a, b)` (also via overloading the binary `*` operator)
+*   `ArithFn.max(a, b)`
+*   `ArithFn.min(a, b)`
+*   `ArithFn.sub(a, b)` (also via overloading the binary `-` operator)
+*   `ArithFn.max_unsigned(a, b)`
+*   `ArithFn.min_unsigned(a, b)`
+
+As the integer types are signless, signedness is implement by different
+functions that treat integers as signed or unsigned values.
 
 Reduction functions can appear as the outer-most function on the RHS:
 
@@ -233,6 +239,8 @@ The following examples illustrate the lowering of signed and unsigned functions:
 *   cast(F32 -> I32) -> `arith.FPToSIOp`
 *   cast_unsigned(I32 -> I64) -> `arith.ExtUIOp`
 *   cast_unsigned(F32 -> I32) -> `arith.FPToUIOp`
+*   max -> `arith.MaxSIOp`
+*   max_unsinged -> `arith.MaxUIOp`
 
 Not all functions are applicable for all numeric types, and on mismatch, op
 verification will fail.
