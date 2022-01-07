@@ -343,11 +343,9 @@ void UnwrappedLineParser::parse() {
     pushToken(FormatTok);
     addUnwrappedLine();
 
-    for (SmallVectorImpl<UnwrappedLine>::iterator I = Lines.begin(),
-                                                  E = Lines.end();
-         I != E; ++I) {
-      Callback.consumeUnwrappedLine(*I);
-    }
+    for (const UnwrappedLine &Line : Lines)
+      Callback.consumeUnwrappedLine(Line);
+
     Callback.finishRun();
     Lines.clear();
     while (!PPLevelBranchIndex.empty() &&
@@ -3269,10 +3267,7 @@ continuesLineCommentSection(const FormatToken &FormatTok,
 
 void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
   bool JustComments = Line->Tokens.empty();
-  for (SmallVectorImpl<FormatToken *>::const_iterator
-           I = CommentsBeforeNextToken.begin(),
-           E = CommentsBeforeNextToken.end();
-       I != E; ++I) {
+  for (FormatToken *Tok : CommentsBeforeNextToken) {
     // Line comments that belong to the same line comment section are put on the
     // same line since later we might want to reflow content between them.
     // Additional fine-grained breaking of line comment sections is controlled
@@ -3281,11 +3276,11 @@ void UnwrappedLineParser::flushComments(bool NewlineBeforeNext) {
     //
     // FIXME: Consider putting separate line comment sections as children to the
     // unwrapped line instead.
-    (*I)->ContinuesLineCommentSection =
-        continuesLineCommentSection(**I, *Line, CommentPragmasRegex);
-    if (isOnNewLine(**I) && JustComments && !(*I)->ContinuesLineCommentSection)
+    Tok->ContinuesLineCommentSection =
+        continuesLineCommentSection(*Tok, *Line, CommentPragmasRegex);
+    if (isOnNewLine(*Tok) && JustComments && !Tok->ContinuesLineCommentSection)
       addUnwrappedLine();
-    pushToken(*I);
+    pushToken(Tok);
   }
   if (NewlineBeforeNext && JustComments)
     addUnwrappedLine();
