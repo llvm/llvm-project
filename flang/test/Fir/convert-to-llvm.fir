@@ -886,34 +886,28 @@ func @extract_addr(%arg0: !fir.box<!fir.array<*:f64>>) -> !fir.ref<f64> {
 
 // Test `fir.box_dims` conversion.
 
-//
-// DISABLED TEST:
-//
-// The produced IR is invalid: accessing a struct with 7 elements at index 7 is out-of-bounds.
-// This would trigger an assertion in either MLIR or LLVM.
-//
+func @extract_dims(%arg0: !fir.box<!fir.array<*:f64>>) -> index {
+  %c1 = arith.constant 0 : i32
+  %cast = fir.convert %arg0 : (!fir.box<!fir.array<*:f64>>) -> !fir.box<!fir.array<?xf64>> 
+  %0:3 = fir.box_dims %cast, %c1 : (!fir.box<!fir.array<?xf64>>, i32) -> (index, index, index)
+  return %0 : index
+}
 
-//func @extract_dims(%arg0: !fir.box<!fir.array<*:f64>>) -> index {
-//  %c1 = arith.constant 0 : i32
-//  %0:3 = fir.box_dims %arg0, %c1 : (!fir.box<!fir.array<*:f64>>, i32) -> (index, index, index)
-//  return %0 : index
-//}
-
-// _HECK-LABEL: llvm.func @extract_dims(
-// _HECK-SAME:                          %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> i64
-// _HECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i32) : i32
-// _HECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
-// _HECK:         %[[CDIMS:.*]] = llvm.mlir.constant(7 : i32) : i32
-// _HECK:         %[[C0_2:.*]] = llvm.mlir.constant(0 : i32) : i32
-// _HECK:         %[[GEP0:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CDIMS]], %[[C0_1]], %[[C0_2]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32, i32, i32) -> !llvm.ptr<i64>
-// _HECK:         %[[LOAD0:.*]] = llvm.load %[[GEP0]] : !llvm.ptr<i64>
-// _HECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
-// _HECK:         %[[GEP1:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CDIMS]], %[[C0_1]], %[[C1]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32, i32, i32) -> !llvm.ptr<i64>
-// _HECK:         %[[LOAD1:.*]] = llvm.load %[[GEP1]] : !llvm.ptr<i64>
-// _HECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
-// _HECK:         %[[GEP2:.*]] = llvm.getelementptr %[[ARG0]][%[[C0]], %[[CDIMS]], %[[C0_1]], %[[C2]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32, i32, i32) -> !llvm.ptr<i64>
-// _HECK:         %[[LOAD2:.*]] = llvm.load %[[GEP2]] : !llvm.ptr<i64>
-// _HECK:         llvm.return %[[LOAD0]] : i64
+// CHECK-LABEL: llvm.func @extract_dims(
+// CHECK-SAME:                          %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> i64
+// CHECK:         %[[C0_1:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:    %[[CAST:.*]] = llvm.bitcast %[[ARG0]] : !llvm.ptr<struct<(ptr<f64>, i64, i32, i8, i8, i8, i8)>> to !llvm.ptr<struct<(ptr<f64>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>>
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[C0_2:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:         %[[GEP0:.*]] = llvm.getelementptr %[[CAST]][%[[C0]], 7, %[[C0_1]], %[[C0_2]]] :  (!llvm.ptr<struct<(ptr<f64>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>>, i32, i32, i32) -> !llvm.ptr<i64>
+// CHECK:         %[[LOAD0:.*]] = llvm.load %[[GEP0]] : !llvm.ptr<i64>
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:         %[[GEP1:.*]] = llvm.getelementptr %[[CAST]][%[[C0]], 7, %[[C0_1]], %[[C1]]] : (!llvm.ptr<struct<(ptr<f64>, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>>, i32, i32, i32) -> !llvm.ptr<i64>
+// CHECK:         %[[LOAD1:.*]] = llvm.load %[[GEP1]] : !llvm.ptr<i64>
+// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : i32) : i32
+// CHECK:         %[[GEP2:.*]] = llvm.getelementptr %[[CAST]][%[[C0]], 7, %[[C0_1]], %[[C2]]] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>, i32, i32, i32) -> !llvm.ptr<i64>
+// CHECK:         %[[LOAD2:.*]] = llvm.load %[[GEP2]] : !llvm.ptr<i64>
+// CHECK:         llvm.return %[[LOAD0]] : i64
 
 // -----
 
