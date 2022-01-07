@@ -793,9 +793,8 @@ define i64 @test11(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 ; CHECK-LABEL: test11:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq $1, %rdi
+; CHECK-NEXT:    negq %rdi
 ; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    notq %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    retq
 ;
@@ -833,9 +832,8 @@ define i64 @test11a(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 ; CHECK-LABEL: test11a:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq $1, %rdi
+; CHECK-NEXT:    negq %rdi
 ; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    notq %rax
 ; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    retq
 ;
@@ -872,27 +870,24 @@ define i32 @eqzero_const_or_all_ones(i32 %x) {
 ; CHECK-LABEL: eqzero_const_or_all_ones:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    orl $42, %eax
 ; CHECK-NEXT:    retq
 ;
 ; ATHLON-LABEL: eqzero_const_or_all_ones:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    xorl %eax, %eax
-; ATHLON-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    sbbl %eax, %eax
-; ATHLON-NEXT:    notl %eax
 ; ATHLON-NEXT:    orl $42, %eax
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: eqzero_const_or_all_ones:
 ; MCU:       # %bb.0:
 ; MCU-NEXT:    xorl %ecx, %ecx
-; MCU-NEXT:    cmpl $1, %eax
+; MCU-NEXT:    negl %eax
 ; MCU-NEXT:    sbbl %ecx, %ecx
-; MCU-NEXT:    notl %ecx
 ; MCU-NEXT:    orl $42, %ecx
 ; MCU-NEXT:    movl %ecx, %eax
 ; MCU-NEXT:    retl
@@ -971,9 +966,8 @@ define i8 @nezero_all_ones_or_const(i8 %x) {
 ; CHECK-LABEL: nezero_all_ones_or_const:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpb $1, %dil
+; CHECK-NEXT:    negb %dil
 ; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    notb %al
 ; CHECK-NEXT:    orb $42, %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -981,22 +975,19 @@ define i8 @nezero_all_ones_or_const(i8 %x) {
 ; ATHLON-LABEL: nezero_all_ones_or_const:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    xorl %eax, %eax
-; ATHLON-NEXT:    cmpb $1, {{[0-9]+}}(%esp)
+; ATHLON-NEXT:    cmpb {{[0-9]+}}(%esp), %al
 ; ATHLON-NEXT:    sbbl %eax, %eax
-; ATHLON-NEXT:    notb %al
 ; ATHLON-NEXT:    orb $42, %al
 ; ATHLON-NEXT:    ## kill: def $al killed $al killed $eax
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: nezero_all_ones_or_const:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    movl %eax, %ecx
-; MCU-NEXT:    xorl %eax, %eax
-; MCU-NEXT:    cmpb $1, %cl
-; MCU-NEXT:    sbbl %eax, %eax
-; MCU-NEXT:    notb %al
-; MCU-NEXT:    orb $42, %al
-; MCU-NEXT:    # kill: def $al killed $al killed $eax
+; MCU-NEXT:    xorl %ecx, %ecx
+; MCU-NEXT:    negb %al
+; MCU-NEXT:    sbbl %ecx, %ecx
+; MCU-NEXT:    orb $42, %cl
+; MCU-NEXT:    movl %ecx, %eax
 ; MCU-NEXT:    retl
   %z = icmp ne i8 %x, 0
   %r = select i1 %z, i8 -1, i8 42
