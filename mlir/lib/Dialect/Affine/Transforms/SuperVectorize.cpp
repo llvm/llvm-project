@@ -1324,7 +1324,6 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
       /*bodyBuilder=*/[](OpBuilder &, Location, Value, ValueRange) {
         // Make sure we don't create a default terminator in the loop body as
         // the proper terminator will be added during vectorization.
-        return;
       });
 
   // Register loop-related replacements:
