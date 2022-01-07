@@ -819,12 +819,11 @@ void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
     while (const auto *UO = dyn_cast<UnaryOperator>(Ex))
       Ex = stripCasts(C, UO->getSubExpr());
 
+    // Mark the variable as potentially uninitialized for those cases where
+    // it's used on an indirect path, where it's not guaranteed to be
+    // defined.
     if (const VarDecl *VD = findVar(Ex).getDecl())
-      if (vals[VD] != Initialized)
-        // If the variable isn't initialized by the time we get here, then we
-        // mark it as potentially uninitialized for those cases where it's used
-        // on an indirect path, where it's not guaranteed to be defined.
-        vals[VD] = MayUninitialized;
+      vals[VD] = MayUninitialized;
   }
 }
 
