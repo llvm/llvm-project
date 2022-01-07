@@ -302,7 +302,7 @@ struct RISCVOperand : public MCParsedAsmOperand {
     struct VTypeOp VType;
   };
 
-  RISCVOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
+  RISCVOperand(KindTy K) : Kind(K) {}
 
 public:
   RISCVOperand(const RISCVOperand &o) : MCParsedAsmOperand() {
@@ -337,7 +337,6 @@ public:
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
-  bool isVType() const { return Kind == KindTy::VType; }
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
@@ -421,7 +420,27 @@ public:
 
   bool isCSRSystemRegister() const { return isSystemRegister(); }
 
-  bool isVTypeI() const { return isVType(); }
+  bool isVTypeImm(unsigned N) const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isUIntN(N, Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  // If the last operand of the vsetvli/vsetvli instruction is a constant
+  // expression, KindTy is Immediate.
+  bool isVTypeI10() const {
+    if (Kind == KindTy::Immediate)
+      return isVTypeImm(10);
+    return Kind == KindTy::VType;
+  }
+  bool isVTypeI11() const {
+    if (Kind == KindTy::Immediate)
+      return isVTypeImm(11);
+    return Kind == KindTy::VType;
+  }
 
   /// Return true if the operand is a valid for the fence instruction e.g.
   /// ('iorw').
@@ -898,9 +917,21 @@ public:
     Inst.addOperand(MCOperand::createImm(SysReg.Encoding));
   }
 
+  // Support non-canonical syntax:
+  // "vsetivli rd, uimm, 0xabc" or "vsetvli rd, rs1, 0xabc"
+  // "vsetivli rd, uimm, (0xc << N)" or "vsetvli rd, rs1, (0xc << N)"
   void addVTypeIOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getVType()));
+    int64_t Imm = 0;
+    if (Kind == KindTy::Immediate) {
+      RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+      bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+      (void)IsConstantImm;
+      assert(IsConstantImm && "Invalid VTypeI Operand!");
+    } else {
+      Imm = getVType();
+    }
+    Inst.addOperand(MCOperand::createImm(Imm));
   }
 
   // Returns the rounding mode represented by this RISCVOperand. Should only

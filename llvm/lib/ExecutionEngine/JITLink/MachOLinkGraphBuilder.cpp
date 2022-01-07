@@ -791,7 +791,7 @@ Error CompactUnwindSplitter::operator()(LinkGraph &G) {
                 E.getTarget().getName() + " is an external symbol");
           auto &TgtBlock = E.getTarget().getBlock();
           auto &CURecSym =
-              G.addAnonymousSymbol(CURec, 0, CURecordSize, 0, false);
+              G.addAnonymousSymbol(CURec, 0, CURecordSize, false, false);
           TgtBlock.addEdge(Edge::KeepAlive, 0, CURecSym, 0);
           AddedKeepAlive = true;
         } else if (E.getOffset() != PersonalityEdgeOffset &&

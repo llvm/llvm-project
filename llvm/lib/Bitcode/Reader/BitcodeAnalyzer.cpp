@@ -781,7 +781,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   uint64_t MetadataIndexOffset = 0;
 
   // Read all the records for this block.
-  while (1) {
+  while (true) {
     if (Stream.AtEndOfStream())
       return reportError("Premature end of bitstream");
 

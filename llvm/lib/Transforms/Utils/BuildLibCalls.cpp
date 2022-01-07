@@ -415,6 +415,8 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     return Changed;
+  case LibFunc_aligned_alloc:
+  case LibFunc_valloc:
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
     Changed |= setOnlyAccessesInaccessibleMemory(F);
@@ -499,17 +501,13 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_realloc:
   case LibFunc_vec_realloc:
+  case LibFunc_reallocf:
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setRetNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
-    Changed |= setArgNoUndef(F, 1);
-    return Changed;
-  case LibFunc_reallocf:
-    Changed |= setRetNoUndef(F);
-    Changed |= setWillReturn(F);
     Changed |= setArgNoUndef(F, 1);
     return Changed;
   case LibFunc_read:
@@ -550,13 +548,6 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
-    return Changed;
-  case LibFunc_aligned_alloc:
-    Changed |= setOnlyAccessesInaccessibleMemory(F);
-    Changed |= setRetAndArgsNoUndef(F);
-    Changed |= setDoesNotThrow(F);
-    Changed |= setRetDoesNotAlias(F);
-    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_bcopy:
     Changed |= setDoesNotThrow(F);
@@ -865,13 +856,6 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
-    return Changed;
-  case LibFunc_valloc:
-    Changed |= setOnlyAccessesInaccessibleMemory(F);
-    Changed |= setRetAndArgsNoUndef(F);
-    Changed |= setDoesNotThrow(F);
-    Changed |= setRetDoesNotAlias(F);
-    Changed |= setWillReturn(F);
     return Changed;
   case LibFunc_vprintf:
     Changed |= setRetAndArgsNoUndef(F);
