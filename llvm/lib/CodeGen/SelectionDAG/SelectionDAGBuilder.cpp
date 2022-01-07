@@ -8565,8 +8565,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     SDISelAsmOperandInfo &OpInfo = ConstraintOperands.back();
 
     // Compute the value type for each operand.
-    if (OpInfo.Type == InlineAsm::isInput ||
-        (OpInfo.Type == InlineAsm::isOutput && OpInfo.isIndirect)) {
+    if (OpInfo.hasArg()) {
       OpInfo.CallOperandVal = Call.getArgOperand(ArgNo++);
 
       // Process the call argument. BasicBlocks are labels, currently appearing
