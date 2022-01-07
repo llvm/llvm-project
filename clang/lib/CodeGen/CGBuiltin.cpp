@@ -3143,6 +3143,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_ceil:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::ceil, "elt.ceil"));
+  case Builtin::BI__builtin_elementwise_floor:
+    return RValue::get(
+        emitUnaryBuiltin(*this, E, llvm::Intrinsic::floor, "elt.floor"));
+  case Builtin::BI__builtin_elementwise_roundeven:
+    return RValue::get(emitUnaryBuiltin(*this, E, llvm::Intrinsic::roundeven,
+                                        "elt.roundeven"));
+  case Builtin::BI__builtin_elementwise_trunc:
+    return RValue::get(
+        emitUnaryBuiltin(*this, E, llvm::Intrinsic::trunc, "elt.trunc"));
 
   case Builtin::BI__builtin_elementwise_max: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

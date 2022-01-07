@@ -7,7 +7,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 
 ; CHECK-COST-LABEL: sadd
-; CHECK-COST: Found an estimated cost of 7 for VF 1 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
+; CHECK-COST: Found an estimated cost of 6 for VF 1 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
 ; CHECK-COST: Found an estimated cost of 4 for VF 2 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
 ; CHECK-COST: Found an estimated cost of 1 for VF 4 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
 ; CHECK-COST: Found an estimated cost of 1 for VF 8 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)

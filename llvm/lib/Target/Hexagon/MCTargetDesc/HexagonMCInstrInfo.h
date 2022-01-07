@@ -65,18 +65,24 @@ public:
 
 namespace HexagonMCInstrInfo {
 
-size_t const innerLoopOffset = 0;
-int64_t const innerLoopMask = 1 << innerLoopOffset;
+constexpr size_t innerLoopOffset = 0;
+constexpr int64_t innerLoopMask = 1 << innerLoopOffset;
 
-size_t const outerLoopOffset = 1;
-int64_t const outerLoopMask = 1 << outerLoopOffset;
+constexpr size_t outerLoopOffset = 1;
+constexpr int64_t outerLoopMask = 1 << outerLoopOffset;
 
 // do not reorder memory load/stores by default load/stores are re-ordered
 // and by default loads can be re-ordered
-size_t const memReorderDisabledOffset = 2;
-int64_t const memReorderDisabledMask = 1 << memReorderDisabledOffset;
+constexpr size_t memReorderDisabledOffset = 2;
+constexpr int64_t memReorderDisabledMask = 1 << memReorderDisabledOffset;
 
-size_t const bundleInstructionsOffset = 1;
+constexpr size_t splitNoMemOrderOffset = 3;
+constexpr int64_t splitNoMemorderMask = 1 << splitNoMemOrderOffset;
+
+constexpr size_t noShuffleOffset = 4;
+constexpr int64_t noShuffleMask = 1 << noShuffleOffset;
+
+constexpr size_t bundleInstructionsOffset = 1;
 
 void addConstant(MCInst &MI, uint64_t Value, MCContext &Context);
 void addConstExtender(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,
