@@ -2151,9 +2151,7 @@ void Verifier::verifyInlineAsmCall(const CallBase &Call) {
   unsigned ArgNo = 0;
   for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
     // Only deal with constraints that correspond to call arguments.
-    bool HasArg = CI.Type == InlineAsm::isInput ||
-                  (CI.Type == InlineAsm::isOutput && CI.isIndirect);
-    if (!HasArg)
+    if (!CI.hasArg())
       continue;
 
     if (CI.isIndirect) {

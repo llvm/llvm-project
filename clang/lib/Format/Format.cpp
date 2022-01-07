@@ -2214,7 +2214,7 @@ private:
       unsigned St = Idx, End = Idx;
       while ((End + 1) < Tokens.size() &&
              Tokens[End]->Next == Tokens[End + 1]) {
-        End++;
+        ++End;
       }
       auto SR = CharSourceRange::getCharRange(Tokens[St]->Tok.getLocation(),
                                               Tokens[End]->Tok.getEndLoc());
@@ -2450,7 +2450,7 @@ std::string replaceCRLF(const std::string &Code) {
   do {
     Pos = Code.find("\r\n", LastPos);
     if (Pos == LastPos) {
-      LastPos++;
+      ++LastPos;
       continue;
     }
     if (Pos == std::string::npos) {

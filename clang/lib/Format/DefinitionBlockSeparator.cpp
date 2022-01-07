@@ -102,7 +102,7 @@ void DefinitionBlockSeparator::separateBlocks(
         TargetToken = TargetToken->Next;
       if (!TargetToken) {
         while (I < Lines.size() && !Lines[I]->First->is(tok::r_brace))
-          I++;
+          ++I;
       }
     } else if (CurrentLine->First->closesScope()) {
       if (OpeningLineIndex > Lines.size())
