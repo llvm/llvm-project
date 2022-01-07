@@ -144,6 +144,7 @@
     __cpp_lib_starts_ends_with                     201711L [C++20]
     __cpp_lib_stdatomic_h                          202011L [C++2b]
     __cpp_lib_string_contains                      202011L [C++2b]
+    __cpp_lib_string_resize_and_overwrite          202110L [C++2b]
     __cpp_lib_string_udls                          201304L [C++14]
     __cpp_lib_string_view                          201606L [C++17]
                                                    201803L [C++20]
@@ -674,6 +675,10 @@
 
 # ifdef __cpp_lib_string_contains
 #   error "__cpp_lib_string_contains should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_string_udls
@@ -1307,6 +1312,10 @@
 
 # ifdef __cpp_lib_string_contains
 #   error "__cpp_lib_string_contains should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_string_udls
@@ -2126,6 +2135,10 @@
 
 # ifdef __cpp_lib_string_contains
 #   error "__cpp_lib_string_contains should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_string_udls
@@ -3272,6 +3285,10 @@
 
 # ifdef __cpp_lib_string_contains
 #   error "__cpp_lib_string_contains should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should not be defined before c++2b"
 # endif
 
 # ifndef __cpp_lib_string_udls
@@ -4562,6 +4579,13 @@
 # endif
 # if __cpp_lib_string_contains != 202011L
 #   error "__cpp_lib_string_contains should have the value 202011L in c++2b"
+# endif
+
+# ifndef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should be defined in c++2b"
+# endif
+# if __cpp_lib_string_resize_and_overwrite != 202110L
+#   error "__cpp_lib_string_resize_and_overwrite should have the value 202110L in c++2b"
 # endif
 
 # ifndef __cpp_lib_string_udls
