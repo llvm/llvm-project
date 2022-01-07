@@ -397,6 +397,14 @@ struct YieldOpInterface
     return OpResult();
   }
 
+  bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
+                            const BufferizationState &state) const {
+    // Yield operands always bufferize inplace. Otherwise, an alloc + copy
+    // may be generated inside the block. We should not return/yield allocations
+    // when possible.
+    return true;
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
     auto yieldOp = cast<linalg::YieldOp>(op);
@@ -447,22 +455,26 @@ mlir::linalg::comprehensive_bufferize::linalg_ext::InitTensorEliminationStep::
 
   WalkResult status = op->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
+      // Skip operands that do not bufferize inplace.
+      if (!aliasInfo.isInPlace(operand))
+        continue;
       // Is this a matching OpOperand?
       if (!anchorMatchFunc(operand))
         continue;
-
       SetVector<Value> maybeInitTensor =
           state.findValueInReverseUseDefChain(operand.get(), [&](Value val) {
             // Continue traversal until this function returns true.
             OpResult opResult = val.dyn_cast<OpResult>();
             if (!opResult)
               return true;
-            if (!aliasInfo.isInPlace(opResult))
-              return true;
-            // Only equivalent tensors are supported at the moment.
-            // TODO: Support cases such as extract_slice(init_tensor).
             SmallVector<OpOperand *> opOperands =
                 state.getAliasingOpOperand(opResult);
+            if (!llvm::all_of(opOperands, [&](OpOperand *operand) {
+                  return aliasInfo.isInPlace(*operand);
+                }))
+              return true;
+            // Only equivalent tensors are supported at the moment.
+            // TODO: Support cases such as extract_slice(init_tensor)
             return !llvm::all_of(opOperands, [&](OpOperand *operand) {
               return aliasInfo.areEquivalentBufferizedValues(operand->get(),
                                                              opResult);
@@ -542,7 +554,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
         if (!insertSliceOp)
           return false;
         // Only inplace bufferized InsertSliceOps are eligible.
-        if (!aliasInfo.isInPlace(insertSliceOp->getOpResult(0)))
+        if (!aliasInfo.isInPlace(insertSliceOp->getOpOperand(1) /*dest*/))
           return false;
         return &operand == &insertSliceOp->getOpOperand(0) /*source*/;
       },

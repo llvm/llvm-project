@@ -590,6 +590,11 @@ struct CallOpInterface
     return true;
   }
 
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return false;
+  }
+
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                const BufferizationState &state) const {
     // CallOpInterface is special, it needs to wait for the callee to be

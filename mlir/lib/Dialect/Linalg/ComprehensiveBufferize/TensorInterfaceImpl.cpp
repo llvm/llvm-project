@@ -149,7 +149,7 @@ struct ExtractSliceOpInterface
         extractSliceOp.result().getType().cast<RankedTensorType>();
 
     // If not inplaceable, alloc.
-    bool inplace = state.isInPlace(extractSliceOp->getResult(0));
+    bool inplace = state.isInPlace(extractSliceOp->getOpOperand(0));
     Value alloc;
     if (!inplace) {
       FailureOr<Value> allocOrFailure =

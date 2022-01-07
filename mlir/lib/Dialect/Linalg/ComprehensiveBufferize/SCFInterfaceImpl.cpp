@@ -42,14 +42,6 @@ struct ExecuteRegionOpInterface
     return {&yieldOp->getOpOperand(resultNum)};
   }
 
-  bool mustBufferizeInPlace(Operation *op, OpResult opResult,
-                            const BufferizationState &state) const {
-    // ExecuteRegionOp results always bufferize in-place. Since they have no
-    // OpOperands, they are mostly ignored by the analysis once alias sets are
-    // set up.
-    return true;
-  }
-
   // TODO: For better bufferization results, this could return `true` only if
   // there is a memory write in the region.
   bool isMemoryWrite(Operation *op, OpResult opResult,
@@ -126,13 +118,6 @@ struct IfOpInterface
     // * conflictingWrite = %1
     //
     // For more details, check the "scf.IfOp" section of the design document.
-    return true;
-  }
-
-  bool mustBufferizeInPlace(Operation *op, OpResult opResult,
-                            const BufferizationState &state) const {
-    // IfOp results always bufferize in-place. Since they have no OpOperands,
-    // they are mostly ignored by the analysis once alias sets are set up.
     return true;
   }
 
@@ -430,7 +415,19 @@ struct YieldOpInterface
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                const BufferizationState &state) const {
+    if (isa<scf::IfOp>(op->getParentOp()))
+      return op->getParentOp()->getResult(opOperand.getOperandNumber());
+    if (isa<scf::ExecuteRegionOp>(op->getParentOp()))
+      return op->getParentOp()->getResult(opOperand.getOperandNumber());
     return OpResult();
+  }
+
+  bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
+                            const BufferizationState &state) const {
+    // Yield operands always bufferize inplace. Otherwise, an alloc + copy
+    // may be generated inside the block. We should not return/yield allocations
+    // when possible.
+    return true;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
