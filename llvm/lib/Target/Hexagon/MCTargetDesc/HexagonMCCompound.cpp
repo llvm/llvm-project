@@ -365,8 +365,10 @@ static bool lookForCompound(MCInstrInfo const &MCII, MCContext &Context,
                MCI.begin() + HexagonMCInstrInfo::bundleInstructionsOffset;
            B != MCI.end(); ++B) {
         MCInst const *Inst = B->getInst();
-        if (JumpInst == Inst)
+        if (JumpInst == Inst) {
+          BExtended = false;
           continue;
+        }
         if (HexagonMCInstrInfo::isImmext(*Inst)) {
           BExtended = true;
           continue;
