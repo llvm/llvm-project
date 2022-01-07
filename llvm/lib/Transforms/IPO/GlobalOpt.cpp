@@ -1221,12 +1221,13 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
       if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, GetTLI))
         return true;
     } else if (isMallocLikeFn(StoredOnceVal, GetTLI)) {
-      auto *CI = cast<CallInst>(StoredOnceVal);
-      auto *TLI = &GetTLI(*CI->getFunction());
-      Type *MallocType = getMallocAllocatedType(CI, TLI);
-      if (MallocType && tryToOptimizeStoreOfMallocToGlobal(GV, CI, MallocType,
-                                                           Ordering, DL, TLI))
-        return true;
+      if (auto *CI = dyn_cast<CallInst>(StoredOnceVal)) {
+        auto *TLI = &GetTLI(*CI->getFunction());
+        Type *MallocType = getMallocAllocatedType(CI, TLI);
+        if (MallocType && tryToOptimizeStoreOfMallocToGlobal(GV, CI, MallocType,
+                                                             Ordering, DL, TLI))
+          return true;
+      }
     }
   }
 
