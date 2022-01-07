@@ -28,16 +28,17 @@ class MCSubtargetInfo;
 // Insn bundle shuffler.
 class HexagonMCShuffler : public HexagonShuffler {
 public:
-  HexagonMCShuffler(MCContext &Context, bool Fatal, MCInstrInfo const &MCII,
-                    MCSubtargetInfo const &STI, MCInst &MCB)
-      : HexagonShuffler(Context, Fatal, MCII, STI) {
+  HexagonMCShuffler(MCContext &Context, bool ReportErrors,
+                    MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
+                    MCInst &MCB)
+      : HexagonShuffler(Context, ReportErrors, MCII, STI) {
     init(MCB);
   }
 
-  HexagonMCShuffler(MCContext &Context, bool Fatal, MCInstrInfo const &MCII,
-                    MCSubtargetInfo const &STI, MCInst &MCB,
-                    MCInst const &AddMI, bool InsertAtFront)
-      : HexagonShuffler(Context, Fatal, MCII, STI) {
+  HexagonMCShuffler(MCContext &Context, bool ReportErrors,
+                    MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
+                    MCInst &MCB, MCInst const &AddMI, bool InsertAtFront)
+      : HexagonShuffler(Context, ReportErrors, MCII, STI) {
     init(MCB, AddMI, InsertAtFront);
   }
 
