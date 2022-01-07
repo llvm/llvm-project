@@ -657,7 +657,7 @@ static Value buildPredicateList(pdl::PatternOp pattern,
   // Traverse the selected optimal branching. For all edges in order, traverse
   // up starting from the connector, until the candidate root is reached, and
   // call getTreePredicates at every node along the way.
-  for (auto it : llvm::enumerate(bestEdges)) {
+  for (const auto &it : llvm::enumerate(bestEdges)) {
     Value target = it.value().first;
     Value source = it.value().second;
 
