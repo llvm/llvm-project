@@ -372,9 +372,6 @@ public:
 
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
 
-  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
-                                              LLT Ty2) const override;
-
   bool shouldSinkOperands(Instruction *I,
                           SmallVectorImpl<Use *> &Ops) const override;
 };
