@@ -216,7 +216,7 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
 }
 
 void llvm::filterDeadComdatFunctions(
-    Module &M, SmallVectorImpl<Function *> &DeadComdatFunctions) {
+    SmallVectorImpl<Function *> &DeadComdatFunctions) {
   SmallPtrSet<Function *, 32> MaybeDeadFunctions;
   SmallPtrSet<Comdat *, 32> MaybeDeadComdats;
   for (Function *F : DeadComdatFunctions) {
