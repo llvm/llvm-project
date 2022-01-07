@@ -15868,7 +15868,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
       // promoted type and the underlying type are the same except for
       // signedness. Ask the AST for the correctly corresponding type and see
       // if that's compatible.
-      if (!PromoteType.isNull() &&
+      if (!PromoteType.isNull() && !UnderlyingType->isBooleanType() &&
           PromoteType->isUnsignedIntegerType() !=
               UnderlyingType->isUnsignedIntegerType()) {
         UnderlyingType =
