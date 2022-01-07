@@ -127,8 +127,8 @@ std::pair<tooling::Replacements, unsigned> TokenAnalyzer::process() {
 
     LLVM_DEBUG({
       llvm::dbgs() << "Replacements for run " << Run << ":\n";
-      for (const tooling::Replacement &Replacement : RunResult.first)
-        llvm::dbgs() << Replacement.toString() << "\n";
+      for (const tooling::Replacement &Fix : RunResult.first)
+        llvm::dbgs() << Fix.toString() << "\n";
     });
     for (unsigned i = 0, e = AnnotatedLines.size(); i != e; ++i) {
       delete AnnotatedLines[i];

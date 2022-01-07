@@ -338,10 +338,12 @@ private:
     // Stitch together the module reference start...
     Buffer += getSourceText(Reference.Range.getBegin(), Reference.SymbolsStart);
     // ... then the references in order ...
-    for (auto I = Symbols.begin(), E = Symbols.end(); I != E; ++I) {
-      if (I != Symbols.begin())
+    if (!Symbols.empty()) {
+      Buffer += getSourceText(Symbols.front().Range);
+      for (const JsImportedSymbol &Symbol : llvm::drop_begin(Symbols)) {
         Buffer += ",";
-      Buffer += getSourceText(I->Range);
+        Buffer += getSourceText(Symbol.Range);
+      }
     }
     // ... followed by the module reference end.
     Buffer += getSourceText(Reference.SymbolsEnd, Reference.Range.getEnd());
@@ -410,9 +412,8 @@ private:
                      << ", cat: " << Reference.Category
                      << ", url: " << Reference.URL
                      << ", prefix: " << Reference.Prefix;
-        for (size_t I = 0; I < Reference.Symbols.size(); ++I)
-          llvm::dbgs() << ", " << Reference.Symbols[I].Symbol << " as "
-                       << Reference.Symbols[I].Alias;
+        for (const JsImportedSymbol &Symbol : Reference.Symbols)
+          llvm::dbgs() << ", " << Symbol.Symbol << " as " << Symbol.Alias;
         llvm::dbgs() << ", text: " << getSourceText(Reference.Range);
         llvm::dbgs() << "}\n";
       });

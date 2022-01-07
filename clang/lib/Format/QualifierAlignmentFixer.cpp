@@ -88,11 +88,11 @@ std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
   // Don't make replacements that replace nothing.
   tooling::Replacements NonNoOpFixes;
 
-  for (auto I = Fixes.begin(), E = Fixes.end(); I != E; ++I) {
-    StringRef OriginalCode = Code.substr(I->getOffset(), I->getLength());
+  for (const tooling::Replacement &Fix : Fixes) {
+    StringRef OriginalCode = Code.substr(Fix.getOffset(), Fix.getLength());
 
-    if (!OriginalCode.equals(I->getReplacementText())) {
-      auto Err = NonNoOpFixes.add(*I);
+    if (!OriginalCode.equals(Fix.getReplacementText())) {
+      auto Err = NonNoOpFixes.add(Fix);
       if (Err)
         llvm::errs() << "Error adding replacements : "
                      << llvm::toString(std::move(Err)) << "\n";
@@ -396,9 +396,9 @@ LeftRightQualifierAlignmentFixer::analyze(
   tok::TokenKind QualifierToken = getTokenFromQualifier(Qualifier);
   assert(QualifierToken != tok::identifier && "Unrecognised Qualifier");
 
-  for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
-    FormatToken *First = AnnotatedLines[I]->First;
-    const auto *Last = AnnotatedLines[I]->Last;
+  for (AnnotatedLine *Line : AnnotatedLines) {
+    FormatToken *First = Line->First;
+    const auto *Last = Line->Last;
 
     for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
          Tok = Tok->Next) {
