@@ -303,8 +303,6 @@ unsigned HexagonMCInstrInfo::getDuplexCandidateGroup(MCInst const &MCI) {
   case Hexagon::L4_return_f:
   case Hexagon::L4_return_tnew_pnt:
   case Hexagon::L4_return_fnew_pnt:
-  case Hexagon::L4_return_tnew_pt:
-  case Hexagon::L4_return_fnew_pt:
     // [if ([!]p0[.new])] dealloc_return
     SrcReg = MCI.getOperand(1).getReg();
     if (Hexagon::P0 == SrcReg) {
