@@ -117,7 +117,7 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   if (!InlinedFunctions.empty()) {
     // Now we just have the comdat functions. Filter out the ones whose comdats
     // are not actually dead.
-    filterDeadComdatFunctions(M, InlinedFunctions);
+    filterDeadComdatFunctions(InlinedFunctions);
     // The remaining functions are actually dead.
     for (Function *F : InlinedFunctions) {
       M.getFunctionList().erase(F);
