@@ -23,20 +23,23 @@ std::ostream &operator<<(std::ostream &Stream, const InlayHint &Hint) {
 
 namespace {
 
-using ::testing::UnorderedElementsAre;
+using ::testing::ElementsAre;
 
 std::vector<InlayHint> hintsOfKind(ParsedAST &AST, InlayHintKind Kind) {
   std::vector<InlayHint> Result;
-  for (auto &Hint : inlayHints(AST)) {
+  for (auto &Hint : inlayHints(AST, /*RestrictRange=*/llvm::None)) {
     if (Hint.kind == Kind)
       Result.push_back(Hint);
   }
   return Result;
 }
 
+enum HintSide { Left, Right };
+
 struct ExpectedHint {
   std::string Label;
   std::string RangeName;
+  HintSide Side = Left;
 
   friend std::ostream &operator<<(std::ostream &Stream,
                                   const ExpectedHint &Hint) {
@@ -46,8 +49,12 @@ struct ExpectedHint {
 
 MATCHER_P2(HintMatcher, Expected, Code, "") {
   return arg.label == Expected.Label &&
-         arg.range == Code.range(Expected.RangeName);
+         arg.range == Code.range(Expected.RangeName) &&
+         arg.position ==
+             ((Expected.Side == Left) ? arg.range.start : arg.range.end);
 }
+
+MATCHER_P(labelIs, Label, "") { return arg.label == Label; }
 
 template <typename... ExpectedHints>
 void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
@@ -58,18 +65,23 @@ void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
   auto AST = TU.build();
 
   EXPECT_THAT(hintsOfKind(AST, Kind),
-              UnorderedElementsAre(HintMatcher(Expected, Source)...));
+              ElementsAre(HintMatcher(Expected, Source)...));
 }
+
+// Hack to allow expression-statements operating on parameter packs in C++14.
+template <typename... T> void ignore(T &&...) {}
 
 template <typename... ExpectedHints>
 void assertParameterHints(llvm::StringRef AnnotatedSource,
                           ExpectedHints... Expected) {
+  ignore(Expected.Side = Left...);
   assertHints(InlayHintKind::ParameterHint, AnnotatedSource, Expected...);
 }
 
 template <typename... ExpectedHints>
 void assertTypeHints(llvm::StringRef AnnotatedSource,
                      ExpectedHints... Expected) {
+  ignore(Expected.Side = Right...);
   assertHints(InlayHintKind::TypeHint, AnnotatedSource, Expected...);
 }
 
@@ -629,6 +641,18 @@ TEST(TypeHints, Deduplication) {
     template void foo<float>();
   )cpp",
                   ExpectedHint{": int", "var"});
+}
+
+TEST(InlayHints, RestrictRange) {
+  Annotations Code(R"cpp(
+    auto a = false;
+    [[auto b = 1;
+    auto c = '2';]]
+    auto d = 3.f;
+  )cpp");
+  auto AST = TestTU::withCode(Code.code()).build();
+  EXPECT_THAT(inlayHints(AST, Code.range()),
+              ElementsAre(labelIs(": int"), labelIs(": char")));
 }
 
 // FIXME: Low-hanging fruit where we could omit a type hint:
