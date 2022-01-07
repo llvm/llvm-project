@@ -115,26 +115,6 @@ bool isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                      bool LookThroughBitCast = false);
 
 //===----------------------------------------------------------------------===//
-//  malloc Call Utility Functions.
-//
-
-/// getMallocAllocatedType - Returns the Type allocated by malloc call.
-/// The Type depends on the number of bitcast uses of the malloc call:
-///   0: PointerType is the malloc calls' return type.
-///   1: PointerType is the bitcast's result type.
-///  >1: Unique PointerType cannot be determined, return NULL.
-Type *getMallocAllocatedType(const CallInst *CI, const TargetLibraryInfo *TLI);
-
-/// getMallocArraySize - Returns the array size of a malloc call.  If the
-/// argument passed to malloc is a multiple of the size of the malloced type,
-/// then return that multiple.  For non-array mallocs, the multiple is
-/// constant 1.  Otherwise, return NULL for mallocs whose array size cannot be
-/// determined.
-Value *getMallocArraySize(CallInst *CI, const DataLayout &DL,
-                          const TargetLibraryInfo *TLI,
-                          bool LookThroughSExt = false);
-
-//===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
 //
 
