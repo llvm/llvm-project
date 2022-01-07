@@ -360,6 +360,8 @@ SwitchOp::getMutableSuccessorOperands(unsigned index) {
 // Code for LLVM::GEPOp.
 //===----------------------------------------------------------------------===//
 
+constexpr int GEPOp::kDynamicIndex;
+
 /// Populates `indices` with positions of GEP indices that would correspond to
 /// LLVMStructTypes potentially nested in the given type. The type currently
 /// visited gets `currentIndex` and LLVM container types are visited
