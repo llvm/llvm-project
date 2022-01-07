@@ -66,9 +66,14 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
 
   // Set insertion point now that potential alloc/dealloc are introduced.
   rewriter.setInsertionPoint(op);
-  // Clone the op, but use the new operands. Since the new op does not have any
-  // tensor results, it does not return anything.
-  op.clone(rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands);
+  // Clone the op, but use the new operands. Move the existing block into the
+  // new op. Since the new op does not have any tensor results, it does not
+  // return anything.
+  assert(op->getNumRegions() == 1 && "expected that op has 1 region");
+  auto newOp = cast<LinalgOp>(op.cloneWithoutRegions(
+      rewriter, op.getLoc(), /*resultTypes=*/TypeRange{}, newOperands));
+  rewriter.inlineRegionBefore(op->getRegion(0), newOp->getRegion(0),
+                              newOp->getRegion(0).begin());
 
   // Replace the results of the old op with the new output buffers.
   replaceOpWithBufferizedValues(rewriter, op, newOutputBuffers);
