@@ -331,9 +331,29 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::usub_with_overflow:
   case Intrinsic::smul_with_overflow:
   case Intrinsic::umul_with_overflow: {
     static const CostTblEntry WithOverflowCostTbl[] = {
+        {Intrinsic::sadd_with_overflow, MVT::i8, 3},
+        {Intrinsic::uadd_with_overflow, MVT::i8, 3},
+        {Intrinsic::sadd_with_overflow, MVT::i16, 3},
+        {Intrinsic::uadd_with_overflow, MVT::i16, 3},
+        {Intrinsic::sadd_with_overflow, MVT::i32, 1},
+        {Intrinsic::uadd_with_overflow, MVT::i32, 1},
+        {Intrinsic::sadd_with_overflow, MVT::i64, 1},
+        {Intrinsic::uadd_with_overflow, MVT::i64, 1},
+        {Intrinsic::ssub_with_overflow, MVT::i8, 3},
+        {Intrinsic::usub_with_overflow, MVT::i8, 3},
+        {Intrinsic::ssub_with_overflow, MVT::i16, 3},
+        {Intrinsic::usub_with_overflow, MVT::i16, 3},
+        {Intrinsic::ssub_with_overflow, MVT::i32, 1},
+        {Intrinsic::usub_with_overflow, MVT::i32, 1},
+        {Intrinsic::ssub_with_overflow, MVT::i64, 1},
+        {Intrinsic::usub_with_overflow, MVT::i64, 1},
         {Intrinsic::smul_with_overflow, MVT::i8, 5},
         {Intrinsic::umul_with_overflow, MVT::i8, 4},
         {Intrinsic::smul_with_overflow, MVT::i16, 5},
