@@ -1,4 +1,4 @@
-//===- LinalgTransforms.cpp - Linalg transformations as patterns ----------===//
+//===- Transforms.cpp - Linalg transformations as patterns ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -284,19 +284,6 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
   return paddedSubviewResults;
 }
 
-/// Linalg base tiling pattern.
-mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
-    StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context), filter(std::move(filter)),
-      options(std::move(options)) {}
-
-mlir::linalg::LinalgBaseTilingPattern::LinalgBaseTilingPattern(
-    MLIRContext *context, LinalgTilingOptions options,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
-    : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
-      filter(std::move(filter)), options(std::move(options)) {}
-
 /// Try to peel a loop `op` and return the new result.
 // TODO: Add support for scf.parallel and affine.for loops.
 static SmallVector<Value, 4> peelLoop(RewriterBase &rewriter, Operation *op) {
@@ -325,14 +312,15 @@ static SmallVector<Value, 4> peelLoop(RewriterBase &rewriter,
 }
 
 /// Peel loops after tiling.
-static void peelLoops(RewriterBase &rewriter, TiledLinalgOp &res,
-                      const LinalgTilingOptions &options) {
-  for (int64_t loop : options.peeledLoops) {
+void mlir::linalg::peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
+                                     ArrayRef<int64_t> peeledLoops,
+                                     LinalgTilingLoopType loopType) {
+  for (int64_t loop : peeledLoops) {
     assert(loop < static_cast<int64_t>(res.loops.size()) &&
            "requested peeling of non-existing loop");
     SmallVector<Value, 4> loopResults;
     Operation *loopOp = res.loops[loop];
-    if (options.loopType == LinalgTilingLoopType::TiledLoops) {
+    if (loopType == LinalgTilingLoopType::TiledLoops) {
       assert(llvm::all_of(
                  res.loops,
                  [&](Operation *op) { return op == res.loops.front(); }) &&
@@ -350,28 +338,6 @@ static void peelLoops(RewriterBase &rewriter, TiledLinalgOp &res,
                    loopOp->getResults().begin()))
       res.tensorResults = loopResults;
   }
-}
-
-LogicalResult mlir::linalg::LinalgBaseTilingPattern::matchAndRewriteBase(
-    Operation *op, PatternRewriter &rewriter, TiledLinalgOp &result) const {
-  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
-    return failure();
-  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
-    return failure();
-
-  Optional<TiledLinalgOp> res = tileLinalgOp(rewriter, linalgOp, options);
-
-  if (!res)
-    return failure();
-  // Clear filter to stop recursive pattern application.
-  filter.replaceLinalgTransformationFilter(rewriter, res->op);
-
-  // Peel loops.
-  peelLoops(rewriter, *res, options);
-
-  result = *res;
-  return success();
 }
 
 static ValueRange getTiledOpResult(TiledLinalgOp tiledOp) {
@@ -459,9 +425,9 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
       })) {
     LinalgTilingOptions unfusedTilingOptions = tilingOptions;
     unfusedTilingOptions.setTileSizes(unfusedLoopTileSizes);
-    Optional<TiledLinalgOp> unfusedTiledOp =
+    FailureOr<TiledLinalgOp> unfusedTiledOp =
         tileLinalgOp(rewriter, tiledAndFusedOps->op, unfusedTilingOptions);
-    if (!unfusedTiledOp)
+    if (failed(unfusedTiledOp))
       return failure();
     rewriter.replaceOp(tiledAndFusedOps->op,
                        getTiledOpResult(unfusedTiledOp.getValue()));
@@ -483,6 +449,48 @@ LogicalResult mlir::linalg::LinalgBaseTileAndFusePattern::matchAndRewrite(
     originalOpMarker.replaceLinalgTransformationFilter(rewriter, op);
   });
   return success();
+}
+
+/// Linalg tiling pattern.
+mlir::linalg::LinalgTilingPattern::LinalgTilingPattern(
+    MLIRContext *context, LinalgTilingOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)), options(std::move(options)) {}
+
+mlir::linalg::LinalgTilingPattern::LinalgTilingPattern(
+    StringRef opName, MLIRContext *context, LinalgTilingOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)), options(std::move(options)) {
+  this->filter.addFilter([opName](Operation *op) {
+    return success(op->getName().getStringRef() == opName);
+  });
+}
+
+FailureOr<TiledLinalgOp>
+mlir::linalg::LinalgTilingPattern::returningMatchAndRewrite(
+    LinalgOp op, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, op)))
+    return failure();
+
+  FailureOr<TiledLinalgOp> res = tileLinalgOp(rewriter, op, options);
+  if (failed(res))
+    return failure();
+
+  // Clear filter to stop recursive pattern application.
+  // This must be done here to properly propagate to peeling branches.
+  filter.replaceLinalgTransformationFilter(rewriter, res->op);
+
+  // Peel the loops of the TiledLinalgOp.
+  peelTiledLinalgOp(rewriter, *res, options.peeledLoops, options.loopType);
+
+  if (res->tensorResults.empty())
+    rewriter.eraseOp(op);
+  else
+    rewriter.replaceOp(op, res->tensorResults);
+
+  return res;
 }
 
 /// Linalg padding pattern.
