@@ -75,7 +75,7 @@ extern int PollyChunkSize;
 Value *createLoop(Value *LowerBound, Value *UpperBound, Value *Stride,
                   PollyIRBuilder &Builder, LoopInfo &LI, DominatorTree &DT,
                   BasicBlock *&ExitBlock, ICmpInst::Predicate Predicate,
-                  ScopAnnotator *Annotator = NULL, bool Parallel = false,
+                  ScopAnnotator *Annotator = nullptr, bool Parallel = false,
                   bool UseGuard = true, bool LoopVectDisabled = false);
 
 /// The ParallelLoopGenerator allows to create parallelized loops
