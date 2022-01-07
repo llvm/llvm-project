@@ -296,14 +296,11 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
 const CommaSeparatedList::ColumnFormat *
 CommaSeparatedList::getColumnFormat(unsigned RemainingCharacters) const {
   const ColumnFormat *BestFormat = nullptr;
-  for (SmallVector<ColumnFormat, 4>::const_reverse_iterator
-           I = Formats.rbegin(),
-           E = Formats.rend();
-       I != E; ++I) {
-    if (I->TotalWidth <= RemainingCharacters || I->Columns == 1) {
-      if (BestFormat && I->LineCount > BestFormat->LineCount)
+  for (const ColumnFormat &Format : llvm::reverse(Formats)) {
+    if (Format.TotalWidth <= RemainingCharacters || Format.Columns == 1) {
+      if (BestFormat && Format.LineCount > BestFormat->LineCount)
         break;
-      BestFormat = &*I;
+      BestFormat = &Format;
     }
   }
   return BestFormat;
