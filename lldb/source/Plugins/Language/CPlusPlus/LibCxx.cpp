@@ -19,6 +19,7 @@
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
@@ -26,6 +27,7 @@
 
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include <tuple>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -560,7 +562,7 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     return {};
 
   ValueObjectSP layout_decider(
-    D->GetChildAtIndexPath(llvm::ArrayRef<size_t>({0, 0})));
+      D->GetChildAtIndexPath(llvm::ArrayRef<size_t>({0, 0})));
 
   // this child should exist
   if (!layout_decider)
@@ -643,23 +645,16 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
   return std::make_pair(size, location_sp);
 }
 
-bool lldb_private::formatters::LibcxxWStringSummaryProvider(
-    ValueObject &valobj, Stream &stream,
-    const TypeSummaryOptions &summary_options) {
-  auto string_info = ExtractLibcxxStringInfo(valobj);
-  if (!string_info)
-    return false;
-  uint64_t size;
-  ValueObjectSP location_sp;
-  std::tie(size, location_sp) = *string_info;
-
+static bool
+LibcxxWStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                             const TypeSummaryOptions &summary_options,
+                             ValueObjectSP location_sp, size_t size) {
   if (size == 0) {
     stream.Printf("L\"\"");
     return true;
   }
   if (!location_sp)
     return false;
-
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
   if (summary_options.GetCapping() == TypeSummaryCapping::eTypeSummaryCapped) {
@@ -714,16 +709,26 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
   return false;
 }
 
-template <StringPrinter::StringElementType element_type>
-bool LibcxxStringSummaryProvider(ValueObject &valobj, Stream &stream,
-                                 const TypeSummaryOptions &summary_options,
-                                 std::string prefix_token) {
+bool lldb_private::formatters::LibcxxWStringSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options) {
   auto string_info = ExtractLibcxxStringInfo(valobj);
   if (!string_info)
     return false;
   uint64_t size;
   ValueObjectSP location_sp;
   std::tie(size, location_sp) = *string_info;
+
+  return ::LibcxxWStringSummaryProvider(valobj, stream, summary_options,
+                                        location_sp, size);
+}
+
+template <StringPrinter::StringElementType element_type>
+static bool
+LibcxxStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                            const TypeSummaryOptions &summary_options,
+                            std::string prefix_token, ValueObjectSP location_sp,
+                            uint64_t size) {
 
   if (size == 0) {
     stream.Printf("\"\"");
@@ -763,6 +768,21 @@ bool LibcxxStringSummaryProvider(ValueObject &valobj, Stream &stream,
 }
 
 template <StringPrinter::StringElementType element_type>
+static bool
+LibcxxStringSummaryProvider(ValueObject &valobj, Stream &stream,
+                            const TypeSummaryOptions &summary_options,
+                            std::string prefix_token) {
+  auto string_info = ExtractLibcxxStringInfo(valobj);
+  if (!string_info)
+    return false;
+  uint64_t size;
+  ValueObjectSP location_sp;
+  std::tie(size, location_sp) = *string_info;
+
+  return LibcxxStringSummaryProvider<element_type>(
+      valobj, stream, summary_options, prefix_token, location_sp, size);
+}
+template <StringPrinter::StringElementType element_type>
 static bool formatStringImpl(ValueObject &valobj, Stream &stream,
                              const TypeSummaryOptions &summary_options,
                              std::string prefix_token) {
@@ -795,4 +815,84 @@ bool lldb_private::formatters::LibcxxStringSummaryProviderUTF32(
     const TypeSummaryOptions &summary_options) {
   return formatStringImpl<StringPrinter::StringElementType::UTF32>(
       valobj, stream, summary_options, "U");
+}
+
+static std::tuple<bool, ValueObjectSP, size_t>
+LibcxxExtractStringViewData(ValueObject& valobj) {
+  ConstString g_data_name("__data");
+  ConstString g_size_name("__size");
+  auto dataobj = valobj.GetChildMemberWithName(g_data_name, true);
+  auto sizeobj = valobj.GetChildMemberWithName(g_size_name, true);
+
+  if (!dataobj || !sizeobj)
+    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
+
+  if (!dataobj->GetError().Success() || !sizeobj->GetError().Success())
+    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
+
+  bool success{false};
+  uint64_t size = sizeobj->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
+
+  return std::make_tuple(true,dataobj,size);
+}
+
+template <StringPrinter::StringElementType element_type>
+static bool formatStringViewImpl(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &summary_options,
+                                 std::string prefix_token) {
+
+  bool success;
+  ValueObjectSP dataobj;
+  size_t size;
+  std::tie(success, dataobj, size) = LibcxxExtractStringViewData(valobj);
+
+  if (!success) {
+    stream << "Summary Unavailable";
+    return true;
+  }
+
+  return LibcxxStringSummaryProvider<element_type>(
+      valobj, stream, summary_options, prefix_token, dataobj, size);
+}
+
+bool lldb_private::formatters::LibcxxStringViewSummaryProviderASCII(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options) {
+  return formatStringViewImpl<StringPrinter::StringElementType::ASCII>(
+      valobj, stream, summary_options, "");
+}
+
+bool lldb_private::formatters::LibcxxStringViewSummaryProviderUTF16(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options) {
+  return formatStringViewImpl<StringPrinter::StringElementType::UTF16>(
+      valobj, stream, summary_options, "u");
+}
+
+bool lldb_private::formatters::LibcxxStringViewSummaryProviderUTF32(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options) {
+  return formatStringViewImpl<StringPrinter::StringElementType::UTF32>(
+      valobj, stream, summary_options, "U");
+}
+
+bool lldb_private::formatters::LibcxxWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options) {
+
+  bool success;
+  ValueObjectSP dataobj;
+  size_t size;
+  std::tie( success, dataobj, size ) = LibcxxExtractStringViewData(valobj);
+
+  if (!success) {
+    stream << "Summary Unavailable";
+    return true;
+  }
+
+
+  return ::LibcxxWStringSummaryProvider(valobj, stream, summary_options,
+                                        dataobj, size);
 }
