@@ -24,8 +24,10 @@ using namespace lldb;
 using namespace lldb_private;
 
 ThreadFreeBSDKernel::ThreadFreeBSDKernel(Process &process, lldb::tid_t tid,
-                                         lldb::addr_t pcb_addr)
-    : Thread(process, tid), m_pcb_addr(pcb_addr) {}
+                                         lldb::addr_t pcb_addr,
+                                         std::string thread_name)
+    : Thread(process, tid), m_thread_name(std::move(thread_name)),
+      m_pcb_addr(pcb_addr) {}
 
 ThreadFreeBSDKernel::~ThreadFreeBSDKernel() {}
 
@@ -61,9 +63,8 @@ ThreadFreeBSDKernel::CreateRegisterContextForFrame(StackFrame *frame) {
               m_pcb_addr);
       break;
     case llvm::Triple::x86:
-      m_thread_reg_ctx_sp =
-          std::make_shared<RegisterContextFreeBSDKernel_i386>(
-              *this, new RegisterContextFreeBSD_i386(arch), m_pcb_addr);
+      m_thread_reg_ctx_sp = std::make_shared<RegisterContextFreeBSDKernel_i386>(
+          *this, new RegisterContextFreeBSD_i386(arch), m_pcb_addr);
       break;
     case llvm::Triple::x86_64:
       m_thread_reg_ctx_sp =

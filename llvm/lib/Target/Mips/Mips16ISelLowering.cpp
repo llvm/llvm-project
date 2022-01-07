@@ -451,7 +451,7 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
           // So for now we always save S2. The optimization will be done
           // in a follow-on patch.
           //
-          if (1 || (Signature->RetSig != Mips16HardFloatInfo::NoFPRet))
+          if (true || (Signature->RetSig != Mips16HardFloatInfo::NoFPRet))
             FuncInfo->setSaveS2();
         }
         // one more look at list of intrinsics

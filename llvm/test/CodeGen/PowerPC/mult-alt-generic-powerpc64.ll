@@ -9,7 +9,7 @@ target triple = "powerpc64--"
 
 define void @single_m() nounwind {
 entry:
-  call void asm "foo $1,$0", "=*m,*m"(i32* @mout0, i32* @min1) nounwind
+  call void asm "foo $1,$0", "=*m,*m"(i32* elementtype(i32) @mout0, i32* elementtype(i32) @min1) nounwind
   ret void
 }
 
@@ -166,7 +166,7 @@ entry:
 define void @multi_m() nounwind {
 entry:
   %tmp = load i32, i32* @min1, align 4
-  call void asm "foo $1,$0", "=*m|r,m|r"(i32* @mout0, i32 %tmp) nounwind
+  call void asm "foo $1,$0", "=*m|r,m|r"(i32* elementtype(i32) @mout0, i32 %tmp) nounwind
   ret void
 }
 

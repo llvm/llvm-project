@@ -660,7 +660,7 @@ bool LegacyInlinerBase::removeDeadFunctions(CallGraph &CG,
   }
   if (!DeadFunctionsInComdats.empty()) {
     // Filter out the functions whose comdats remain alive.
-    filterDeadComdatFunctions(CG.getModule(), DeadFunctionsInComdats);
+    filterDeadComdatFunctions(DeadFunctionsInComdats);
     // Remove the rest.
     for (Function *F : DeadFunctionsInComdats)
       RemoveCGN(CG[F]);

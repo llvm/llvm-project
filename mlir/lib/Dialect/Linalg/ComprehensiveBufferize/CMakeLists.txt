@@ -92,4 +92,5 @@ add_mlir_dialect_library(MLIRComprehensiveBufferize
   MLIRMemRef
   MLIRStandard
   MLIRStandardOpsTransforms
+  MLIRTransforms
 )

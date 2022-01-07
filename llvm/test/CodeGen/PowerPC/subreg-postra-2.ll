@@ -21,7 +21,7 @@ wait_on_buffer.exit1319:                          ; preds = %while.body392
   %conv.i.i1322 = and i64 %1, 1
   %lnot404 = icmp eq i64 %conv.i.i1322, 0
   %.err.4 = select i1 %lnot404, i32 -5, i32 %input1
-  %2 = call i64 asm sideeffect "1:.long 0x7c0000a8 $| ((($0) & 0x1f) << 21) $| (((0) & 0x1f) << 16) $| ((($3) & 0x1f) << 11) $| (((0) & 0x1) << 0) \0Aandc $0,$0,$2\0Astdcx. $0,0,$3\0Abne- 1b\0A", "=&r,=*m,r,r,*m,~{cc},~{memory}"(i64* %b_state.i.i1314, i64 262144, i64* %b_state.i.i1314, i64* %b_state.i.i1314) #0
+  %2 = call i64 asm sideeffect "1:.long 0x7c0000a8 $| ((($0) & 0x1f) << 21) $| (((0) & 0x1f) << 16) $| ((($3) & 0x1f) << 11) $| (((0) & 0x1) << 0) \0Aandc $0,$0,$2\0Astdcx. $0,0,$3\0Abne- 1b\0A", "=&r,=*m,r,r,*m,~{cc},~{memory}"(i64* elementtype(i64) %b_state.i.i1314, i64 262144, i64* %b_state.i.i1314, i64* elementtype(i64) %b_state.i.i1314) #0
   store i8* %0, i8** %input4, align 8
   %cmp.i1312 = icmp eq i32* %input2, %input3
   br i1 %cmp.i1312, label %while.end418, label %while.body392

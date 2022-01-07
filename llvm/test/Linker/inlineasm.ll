@@ -11,7 +11,7 @@ target triple = "i386-apple-macosx10.6.8"
 
 define void @f(%T* %x) nounwind ssp {
 entry:
-call void asm sideeffect "", "=*m"(%T* %x) nounwind
+call void asm sideeffect "", "=*m"(%T* elementtype(%T) %x) nounwind
 unreachable
 }
 

@@ -239,7 +239,7 @@ define i32 @test_memory_constraint(i32 addrspace(3)* %a) nounwind {
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY2]](s32)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY3]], implicit $vgpr0
-  %1 = tail call i32 asm "ds_read_b32 $0, $1", "=v,*m"(i32 addrspace(3)* %a)
+  %1 = tail call i32 asm "ds_read_b32 $0, $1", "=v,*m"(i32 addrspace(3)* elementtype(i32) %a)
   ret i32 %1
 }
 

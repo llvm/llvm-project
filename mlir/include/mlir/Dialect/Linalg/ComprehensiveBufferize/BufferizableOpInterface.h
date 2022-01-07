@@ -41,7 +41,7 @@ struct PostAnalysisStep;
 // TODO: Could be replaced with a "bufferization strategy" object with virtual
 // functions in the future.
 struct AllocationCallbacks {
-  using AllocationFn = std::function<Optional<Value>(
+  using AllocationFn = std::function<FailureOr<Value>(
       OpBuilder &, Location, MemRefType, ArrayRef<Value>)>;
   using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
   using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
@@ -64,14 +64,14 @@ struct AllocationCallbacks {
 std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 
 /// PostAnalysisSteps can be registered with `BufferizationOptions` and are
-/// executed after the analysis, but before bufferization. They can be used
+/// executed after the analysis, but before bufferization. They can be used to
 /// implement custom dialect-specific optimizations.
 struct PostAnalysisStep {
   virtual ~PostAnalysisStep() {}
 
   /// Run the post analysis step. This function may modify the IR, but must keep
-  /// `aliasInfo` (inside `state`) consistent. Newly created operations and
-  /// operations that should be re-analyzed must be stored in `newOps`.
+  /// `aliasInfo` consistent. Newly created operations and operations that
+  /// should be re-analyzed must be added to `newOps`.
   virtual LogicalResult run(Operation *op, BufferizationState &state,
                             BufferizationAliasInfo &aliasInfo,
                             SmallVector<Operation *> &newOps) = 0;
@@ -102,7 +102,8 @@ struct BufferizationOptions {
   }
 
   /// Allow-list the given dialects in the dialect filter. Only ops from
-  /// allow-listed dialects will be bufferized.
+  /// allow-listed dialects will be bufferized. If no dialect is added, ops from
+  /// any dialect will be bufferized.
   template <typename... DialectTs>
   void addToDialectFilter() {
     // The following expands a call to addToDialectFilterImpl for each dialect
@@ -132,6 +133,10 @@ struct BufferizationOptions {
   /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
   /// the boundaries.
   bool allowUnknownOps = false;
+
+  /// Specifies whether dealloc ops should be generated along with alloc ops. If
+  /// not, new memory allocations will leak.
+  bool createDeallocs = true;
 
   /// Seed for the analysis fuzzer. If set to `0`, the fuzzer is deactivated.
   /// Should be used only with `testAnalysisOnly = true`.
@@ -284,17 +289,7 @@ struct DialectBufferizationState {
 };
 
 /// BufferizationState provides a variety of helper functions for dealing with
-/// tensor values and memref buffers. In particular,
-/// `BufferizableOpInterface::bufferize` implementation should utilize the
-/// following helper functions.
-///
-/// * `createAlloc` / `createDealloc` / `createAllocDeallocPair` creates ops
-///   that allocate and/or deallocate memref buffers.
-/// * `lookupBuffer` returns the memref buffer of a given tensor value.
-/// * `getResultBuffer` returns the memref buffer for a given tensor OpResult.
-///   Based on inplace bufferization decisions of the analysis, it may either
-///   directly return a mapped buffer or allocate a new brand new buffer.
-/// * `replaceOp` replaces an op with new values.
+/// tensor values and memref buffers.
 class BufferizationState {
 public:
   BufferizationState(Operation *op, const BufferizationOptions &options);
@@ -304,29 +299,29 @@ public:
 
   /// Determine which OpOperand* will alias with `result` if the op is
   /// bufferized in place. Return an empty vector if the op is not bufferizable.
-  SmallVector<OpOperand *> getAliasingOpOperand(OpResult result);
+  SmallVector<OpOperand *> getAliasingOpOperand(OpResult result) const;
 
   /// Determine which OpResult will alias with `opOperand` if the op is
   /// bufferized in place. Return an empty OpResult if the op is not
   /// bufferizable.
-  OpResult getAliasingOpResult(OpOperand &opOperand);
+  OpResult getAliasingOpResult(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` bufferizes to a memory read. Return `true` if
   /// the op is not bufferizable.
-  bool bufferizesToMemoryRead(OpOperand &opOperand);
+  bool bufferizesToMemoryRead(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` bufferizes to a memory write. Return true` if
   /// the op is not bufferizable.
-  bool bufferizesToMemoryWrite(OpOperand &opOperand);
+  bool bufferizesToMemoryWrite(OpOperand &opOperand) const;
 
   /// Return true if `opOperand` does neither read nor write but bufferizes to
   /// an alias. Return false if the op is not bufferizable.
-  bool bufferizesToAliasOnly(OpOperand &opOperand);
+  bool bufferizesToAliasOnly(OpOperand &opOperand) const;
 
   /// Return true if the given value is read by an op that bufferizes to a
   /// memory read. Also takes into account ops that create an alias but do not
   /// read by themselves (e.g., ExtractSliceOp).
-  bool isValueRead(Value value);
+  bool isValueRead(Value value) const;
 
   /// Starting from `value`, follow the use-def chain in reverse, always
   /// selecting the aliasing OpOperands. Find and return Values for which
@@ -351,9 +346,8 @@ public:
   /// In the above example, Values with a star satisfy the condition. When
   /// starting the traversal from Value 1, the resulting SetVector is:
   /// { 2, 7, 8, 5 }
-  llvm::SetVector<Value>
-  findValueInReverseUseDefChain(Value value,
-                                llvm::function_ref<bool(Value)> condition);
+  llvm::SetVector<Value> findValueInReverseUseDefChain(
+      Value value, llvm::function_ref<bool(Value)> condition) const;
 
   /// Find the Value of the last preceding write of a given Value.
   ///
@@ -363,42 +357,29 @@ public:
   ///
   /// Note: When reaching an end of the reverse SSA use-def chain, that value
   /// is returned regardless of whether it is a memory write or not.
-  Value findLastPrecedingWrite(Value value);
+  Value findLastPrecedingWrite(Value value) const;
 
   /// Creates a memref allocation.
-  Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                              ArrayRef<Value> dynShape);
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                               ArrayRef<Value> dynShape) const;
 
-  /// Creates an alloc-dealloc pair. This function may perform additional
-  /// optimizations such as buffer allocation hoisting.
-  Value createAllocDeallocPair(OpBuilder &builder, Location loc,
-                               Value shapedValue);
+  /// Creates a memref allocation for the given shaped value. This function may
+  /// perform additional optimizations such as buffer allocation hoisting. If
+  /// `createDealloc`, a deallocation op is inserted at the point where the
+  /// allocation goes out of scope.
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
+                               bool deallocMemref) const;
 
   /// Creates a memref deallocation. The given memref buffer must have been
   /// allocated using `createAlloc`.
-  void createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer);
+  void createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer) const;
 
   /// Creates a memcpy between two given buffers.
-  void createMemCpy(OpBuilder &b, Location loc, Value from, Value to);
-
-  /// Replace an op with replacement values. The op is deleted. Tensor OpResults
-  /// must be replaced with memref values.
-  void replaceOp(RewriterBase &rewriter, Operation *op, ValueRange values);
-
-  /// Replace an op with a new op. Tensor OpResults must be replaced with memref
-  /// values.
-  template <typename OpTy, typename... Args>
-  OpTy replaceOpWithNewOp(RewriterBase &rewriter, Operation *op,
-                          Args &&...args) {
-    Operation *newOp =
-        rewriter.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
-    replaceOp(rewriter, op, newOp->getResults());
-    return cast<OpTy>(newOp);
-  }
+  void createMemCpy(OpBuilder &b, Location loc, Value from, Value to) const;
 
   /// Lookup the memref buffer that is associated to the given tensor value.
   /// Asserts if no buffer is associated.
-  Value lookupBuffer(RewriterBase &rewriter, Value tensor);
+  Value lookupBuffer(RewriterBase &rewriter, Value tensor) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpResult opResult) const;
@@ -406,10 +387,20 @@ public:
   /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization is necessary.
-  Value getResultBuffer(RewriterBase &rewriter, OpResult result);
+  FailureOr<Value> getResultBuffer(RewriterBase &rewriter,
+                                   OpResult result) const;
 
   /// Return dialect-specific bufferization state.
-  template <typename StateT> StateT &getDialectState(StringRef name) {
+  template <typename StateT>
+  Optional<const StateT *> getDialectState(StringRef name) const {
+    auto it = dialectState.find(name);
+    if (it == dialectState.end())
+      return None;
+    return static_cast<const StateT *>(it->getSecond().get());
+  }
+
+  /// Return dialect-specific bufferization state or create one if none exists.
+  template <typename StateT> StateT &getOrCreateDialectState(StringRef name) {
     // Create state if it does not exist yet.
     if (!dialectState.count(name))
       dialectState[name] = std::make_unique<StateT>();
@@ -419,15 +410,10 @@ public:
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
+  /// Return a reference to the BufferizationAliasInfo.
+  BufferizationAliasInfo &getAliasInfo() { return aliasInfo; }
+
 private:
-  friend LogicalResult
-  runComprehensiveBufferize(Operation *op, const BufferizationOptions &options,
-                            BufferizationState &state);
-
-  friend LogicalResult
-  runComprehensiveBufferize(ModuleOp moduleOp,
-                            std::unique_ptr<BufferizationOptions> options);
-
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
   /// functions and `runComprehensiveBufferize` may access this object.
   BufferizationAliasInfo aliasInfo;
@@ -439,19 +425,20 @@ private:
   const BufferizationOptions &options;
 };
 
-/// Bufferize all ops in the given region.
-LogicalResult bufferize(RewriterBase &rewriter, Region *region,
-                        BufferizationState &state);
+/// Replace an op with replacement values. The op is deleted. Tensor OpResults
+/// must be replaced with memref values.
+void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
+                                   ValueRange values);
 
-/// Bufferize all ops in the given block.
-LogicalResult bufferize(RewriterBase &rewriter, Block *block,
-                        BufferizationState &state);
-
-/// Bufferize the given op. If the op has no tensor OpOperands/OpResults, this
-/// function returns immediately. Otherwise, it calls the `bufferize` interface
-/// method of `BufferizableOpInterface`.
-LogicalResult bufferize(RewriterBase &rewriter, Operation *op,
-                        BufferizationState &state);
+/// Replace an op with a new op. Tensor OpResults must be replaced with memref
+/// values.
+template <typename OpTy, typename... Args>
+OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
+                                  Args &&...args) {
+  auto newOp = rewriter.create<OpTy>(op->getLoc(), std::forward<Args>(args)...);
+  replaceOpWithBufferizedValues(rewriter, op, newOp->getResults());
+  return newOp;
+}
 
 /// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
 /// with the same shape as `shapedType` and specified `layout` and
@@ -460,12 +447,9 @@ MemRefType getContiguousMemRefType(ShapedType shapedType,
                                    MemRefLayoutAttrInterface layout = {},
                                    Attribute memorySpace = {});
 
-/// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
-/// with the same shape as `shapedType` and specified `layout` and
-/// `addressSpace` or an UnrankedMemRefType otherwise.
-Type getContiguousOrUnrankedMemRefType(Type type,
-                                       MemRefLayoutAttrInterface layout = {},
-                                       Attribute memorySpace = {});
+/// Return an UnrankedMemRefType with the given element type and memory space.
+UnrankedMemRefType getUnrankedMemRefType(Type elementType,
+                                         Attribute memorySpace = {});
 
 /// Return a MemRefType to which the `tensorType` can be bufferized in a
 /// composable fashion. The layout must be the most dynamic possible and
@@ -492,49 +476,40 @@ struct AllocationHoistingBarrierOnly
     : public BufferizableOpInterface::ExternalModel<
           AllocationHoistingBarrierOnly<OpTy>, OpTy> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              BufferizationState &state) const {
+                              const BufferizationState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
-    return false;
+                               const BufferizationState &state) const {
+    return true;
   }
 
   SmallVector<OpOperand *>
   getAliasingOpOperand(Operation *op, OpResult opResult,
-                       BufferizationState &state) const {
+                       const BufferizationState &state) const {
     return {};
   }
 
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                               BufferizationState &state) const {
+                               const BufferizationState &state) const {
     return OpResult();
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
                                 const BufferizationAliasInfo &aliasInfo,
-                                BufferizationState &state) const {
+                                const BufferizationState &state) const {
     return BufferRelation::None;
   }
 
-  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+  bool isWritable(Operation *op, Value value,
+                  const BufferizationState &state) const {
     return false;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          BufferizationState &state) const {
-    auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
-    if (any_of(op->getOperandTypes(), isaTensor) ||
-        any_of(op->getResultTypes(), isaTensor))
-      if (!state.getOptions().allowUnknownOps)
-        return op->emitError() << "unsupported op with tensors";
-
-    for (Region &region : op->getRegions())
-      if (failed(comprehensive_bufferize::bufferize(rewriter, &region, state)))
-        return failure();
-
-    return success();
+                          const BufferizationState &state) const {
+    return failure();
   }
 
   bool isAllocationHoistingBarrier(Operation *op) const { return true; }

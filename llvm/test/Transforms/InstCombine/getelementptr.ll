@@ -552,7 +552,7 @@ define i32 @test27(%struct.compat_siginfo* %to, %struct.siginfo_t* %from) {
 ; CHECK-NEXT:    [[T349:%.*]] = getelementptr [[STRUCT_SIGINFO_T:%.*]], %struct.siginfo_t* [[T344]], i64 0, i32 3, i32 0, i32 3, i32 0
 ; CHECK-NEXT:    [[T349350:%.*]] = bitcast i8** [[T349]] to i32*
 ; CHECK-NEXT:    [[T351:%.*]] = load i32, i32* [[T349350]], align 8
-; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], %struct.__large_struct* null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], %struct.__large_struct* elementtype(%struct.__large_struct) null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -566,8 +566,7 @@ entry:
   %t349350 = bitcast i8** %t349 to i32*
   %t351 = load i32, i32* %t349350, align 8
   %t360 = call i32 asm sideeffect "...",
-  "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"( i32 %t351,
-  %struct.__large_struct* null, i32 -14, i32 0 )
+  "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"( i32 %t351, %struct.__large_struct* elementtype(%struct.__large_struct) null, i32 -14, i32 0 )
   unreachable
 }
 

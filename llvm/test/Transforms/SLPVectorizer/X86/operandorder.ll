@@ -421,7 +421,7 @@ define void @opcode_reorder(float* noalias nocapture %a, float* noalias nocaptur
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[D:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, <4 x float>* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <4 x float> [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[A:%.*]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], <4 x float>* [[TMP9]], align 4
 ; CHECK-NEXT:    ret void

@@ -3227,7 +3227,7 @@ bool ARMDAGToDAGISel::transformFixedFloatingPointConversion(SDNode *N,
     if (!ImmAPF.getExactInverse(&ToConvert))
       return false;
   }
-  APSInt Converted(64, 0);
+  APSInt Converted(64, false);
   bool IsExact;
   ToConvert.convertToInteger(Converted, llvm::RoundingMode::NearestTiesToEven,
                              &IsExact);

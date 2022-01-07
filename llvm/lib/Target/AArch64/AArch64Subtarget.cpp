@@ -234,8 +234,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
       IsLittle(LittleEndian),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
-      FrameLowering(),
-      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)), TSInfo(),
+      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)),
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);

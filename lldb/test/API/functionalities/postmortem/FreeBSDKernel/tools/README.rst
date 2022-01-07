@@ -12,22 +12,31 @@ How to create vmcores for tests
 2. Transfer the kernel image (``/boot/kernel/kernel``) and vmcore
    (``/var/crash/vmcore.latest``) from the VM.
 
-3. Patch libfbsdvmcore using ``libfbsdvmcore-print-offsets.patch`` and build
-   LLDB against the patched library.
+3. Patch libfbsdvmcore using ``libfbsdvmcore-hacks.patch`` and build LLDB
+   against the patched library.
 
-4. Do a test run of ``test.script`` in LLDB against the kernel + vmcore::
+4. Patch LLDB using ``lldb-minimize-processes.patch`` and build it.
+
+   WARNING: LLDB will now modify core files in order to make the resulting
+   test vmcores smaller.  Make a backup if necessary.
+
+5. Do a test run of ``test.script`` in LLDB against the kernel + vmcore::
 
     lldb -b -s test.script --core /path/to/core /path/to/kernel
 
    If everything works fine, the LLDB output should be interspersed with
-   ``%RD`` lines.
+   ``%RD`` lines.  The vmcore will also be modified to shorten the process
+   list in ``allproc``.
 
-5. Use the ``copy-sparse.py`` tool to create a sparse version of the vmcore::
+6. Open the vmcore in the patched LLDB again and choose interesting threads
+   for testing.  Update thread numbers in ``test.script`` if necessary.
+
+7. Use the ``copy-sparse.py`` tool to create a sparse version of the vmcore::
 
        lldb -b -s test.script --core /path/to/core /path/to/kernel |
            grep '^% RD' | python copy-sparse.py /path/to/core vmcore.sparse
 
-6. Compress the sparse vmcore file using ``bzip2``::
+8. Compress the sparse vmcore file using ``bzip2``::
 
        bzip2 -9 vmcore.sparse
 

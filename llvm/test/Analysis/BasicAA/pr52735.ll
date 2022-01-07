@@ -17,7 +17,7 @@ define dso_local i32 @foo() {
 entry:
   %v = alloca i32, align 4
   %0 = bitcast i32* %v to i8*
-  callbr void asm "movl $$1, $0", "=*m,X,~{dirflag},~{fpsr},~{flags}"(i32* nonnull %v, i8* blockaddress(@foo, %out))
+  callbr void asm "movl $$1, $0", "=*m,X,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) nonnull %v, i8* blockaddress(@foo, %out))
           to label %asm.fallthrough [label %out]
 
 asm.fallthrough:

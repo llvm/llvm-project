@@ -13,8 +13,37 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/MathExtras.h"
 
 using namespace mlir;
+
+/// Normalize a division's `dividend` and the `divisor` by their GCD. For
+/// example: if the dividend and divisor are [2,0,4] and 4 respectively,
+/// they get normalized to [1,0,2] and 2.
+static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
+                                   unsigned &divisor) {
+  if (divisor == 0 || dividend.empty())
+    return;
+  int64_t gcd = llvm::greatestCommonDivisor(dividend.front(), int64_t(divisor));
+
+  // The reason for ignoring the constant term is as follows.
+  // For a division:
+  //      floor((a + m.f(x))/(m.d))
+  // It can be replaced by:
+  //      floor((floor(a/m) + f(x))/d)
+  // Since `{a/m}/d` in the dividend satisfies 0 <= {a/m}/d < 1/d, it will not
+  // influence the result of the floor division and thus, can be ignored.
+  for (size_t i = 1, m = dividend.size() - 1; i < m; i++) {
+    gcd = llvm::greatestCommonDivisor(dividend[i], gcd);
+    if (gcd == 1)
+      return;
+  }
+
+  // Normalize the dividend and the denominator.
+  std::transform(dividend.begin(), dividend.end(), dividend.begin(),
+                 [gcd](int64_t &n) { return floor(n / gcd); });
+  divisor /= gcd;
+}
 
 /// Check if the pos^th identifier can be represented as a division using upper
 /// bound inequality at position `ubIneq` and lower bound inequality at position
@@ -52,7 +81,8 @@ using namespace mlir;
 ///    -divisor * id + expr - c             >= 0  <-- Upper bound for 'id'
 ///
 /// If successful, `expr` is set to dividend of the division and `divisor` is
-/// set to the denominator of the division.
+/// set to the denominator of the division. The final division expression is
+/// normalized by GCD.
 static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
                                 unsigned ubIneq, unsigned lbIneq,
                                 SmallVector<int64_t, 8> &expr,
@@ -101,6 +131,7 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
   // constant term of `expr`, minus `c`. From this,
   // constant term of `expr` = constant term of upper bound + `c`.
   expr.back() = cst.atIneq(ubIneq, cst.getNumCols() - 1) + c;
+  normalizeDivisionByGCD(expr, divisor);
 
   return success();
 }

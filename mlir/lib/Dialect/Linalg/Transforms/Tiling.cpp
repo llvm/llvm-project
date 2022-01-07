@@ -51,7 +51,7 @@ using LoopIndexToRangeIndexMap = DenseMap<int, int>;
 // a map from loop indices of the LinalgOp to the corresponding non-empty range
 // indices of newly created loops.
 static std::tuple<SmallVector<Range, 4>, LoopIndexToRangeIndexMap>
-makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
+makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
                     ValueRange allShapeSizes, ValueRange allTileSizes) {
   assert(allTileSizes.size() == map.getNumResults());
   // Apply `map` to get shape sizes in loop order.
@@ -129,7 +129,7 @@ makeTiledLoopRanges(OpBuilder &b, Location loc, AffineMap map,
 // TODO: Investigate whether mixing implicit and explicit indices
 // does not lead to losing information.
 static void
-transformIndexOps(OpBuilder &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
+transformIndexOps(RewriterBase &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
                   const LoopIndexToRangeIndexMap &loopIndexToRangeIndex) {
   SmallVector<Value> allIvs(op.getNumLoops(), nullptr);
   for (auto &en : enumerate(allIvs)) {
@@ -144,7 +144,7 @@ transformIndexOps(OpBuilder &b, LinalgOp op, SmallVectorImpl<Value> &ivs,
 // Insert a tile `source` into the destination tensor `dest`. The position at
 // which the tile is inserted (as well as size of tile) is taken from a given
 // ExtractSliceOp `sliceOp`.
-static Value insertSliceIntoTensor(OpBuilder &b, Location loc,
+static Value insertSliceIntoTensor(RewriterBase &b, Location loc,
                                    tensor::ExtractSliceOp sliceOp, Value source,
                                    Value dest) {
   return b.create<tensor::InsertSliceOp>(
@@ -155,7 +155,7 @@ static Value insertSliceIntoTensor(OpBuilder &b, Location loc,
 
 template <typename LoopTy>
 static FailureOr<TiledLinalgOp>
-tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
+tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ValueRange tileSizes,
                  const LinalgTilingOptions &options) {
   auto nLoops = op.getNumLoops();
   // Initial tile sizes may be too big, only take the first nLoops.
@@ -216,7 +216,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
   LinalgOp res = op;
   SmallVector<Value, 4> ivs, tensorResults;
   auto tiledLoopBodyBuilder =
-      [&](OpBuilder &b, Location loc, ValueRange localIvs,
+      [&](OpBuilder &builder, Location loc, ValueRange localIvs,
           ValueRange operandValuesToUse) -> scf::ValueVector {
     ivs.assign(localIvs.begin(), localIvs.end());
 
@@ -255,9 +255,12 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
       // TODO: use an interface/adaptor to avoid leaking position in
       // `tiledOperands`.
       Value outputTensor = tiledOperands[opOperand->getOperandNumber()];
+      // TODO: Propagate RewriterBase everywhere.
+      IRRewriter rewriter(b);
       if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
-        tensorResults.push_back(insertSliceIntoTensor(
-            b, loc, sliceOp, res->getResult(resultIdx), sliceOp.source()));
+        tensorResults.push_back(insertSliceIntoTensor(rewriter, loc, sliceOp,
+                                                      res->getResult(resultIdx),
+                                                      sliceOp.source()));
       } else {
         tensorResults.push_back(res->getResult(resultIdx));
       }
@@ -299,7 +302,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
 
 template <typename LoopTy>
 FailureOr<TiledLinalgOp> static tileLinalgOpImpl(
-    OpBuilder &b, LinalgOp op, const LinalgTilingOptions &options) {
+    RewriterBase &b, LinalgOp op, const LinalgTilingOptions &options) {
   OpBuilder::InsertionGuard g(b);
   b.setInsertionPoint(op);
 
@@ -321,7 +324,7 @@ FailureOr<TiledLinalgOp> static tileLinalgOpImpl(
 }
 
 FailureOr<TiledLinalgOp>
-mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op,
+mlir::linalg::tileLinalgOp(RewriterBase &b, LinalgOp op,
                            const LinalgTilingOptions &options) {
   switch (options.loopType) {
   case LinalgTilingLoopType::Loops:
@@ -338,7 +341,7 @@ mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op,
 /// Generate a loop nest around a given PadTensorOp (for tiling). `newPadOp`
 /// and `loopNest` are output parameters that return the new (tiled) PadTensorOp
 /// and the loop nest.
-static LogicalResult tilePadTensorOp(OpBuilder &builder, PadTensorOp op,
+static LogicalResult tilePadTensorOp(RewriterBase &builder, PadTensorOp op,
                                      PadTensorOp &newPadOp, LoopNest &loopNest,
                                      const LinalgTilingOptions &options) {
   Location loc = op.getLoc();
@@ -384,8 +387,10 @@ static LogicalResult tilePadTensorOp(OpBuilder &builder, PadTensorOp op,
         auto sliceOp = tiledOutput.getDefiningOp<tensor::ExtractSliceOp>();
         assert(sliceOp && "expected ExtractSliceOp");
         // Insert the tile into the output tensor.
+        // TODO: Propagate RewriterBase everywhere.
+        IRRewriter rewriter(b);
         Value yieldValue =
-            insertSliceIntoTensor(b, loc, sliceOp, sliceOp, iterArgs[0]);
+            insertSliceIntoTensor(rewriter, loc, sliceOp, sliceOp, iterArgs[0]);
         return scf::ValueVector({yieldValue});
       });
   return success();
@@ -434,31 +439,6 @@ public:
     CanonicalizationPatternList<OpTypes...>::insert(patterns);
   }
 };
-
-/// Helper classes for type list expansion.
-template <typename... OpTypes>
-class RewritePatternList;
-
-template <>
-class RewritePatternList<> {
-public:
-  static void insert(RewritePatternSet &patterns,
-                     const LinalgTilingOptions &options) {}
-};
-
-template <typename OpTy, typename... OpTypes>
-class RewritePatternList<OpTy, OpTypes...> {
-public:
-  static void insert(RewritePatternSet &patterns,
-                     const LinalgTilingOptions &options) {
-    auto *ctx = patterns.getContext();
-    patterns.add<LinalgTilingPattern<OpTy>>(
-        ctx, options,
-        LinalgTransformationFilter(ArrayRef<StringAttr>{},
-                                   StringAttr::get(ctx, "tiled")));
-    RewritePatternList<OpTypes...>::insert(patterns, options);
-  }
-};
 } // namespace
 
 RewritePatternSet
@@ -500,11 +480,14 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
 /// Populate the given list with patterns that apply Linalg tiling.
 static void insertTilingPatterns(RewritePatternSet &patterns,
                                  const LinalgTilingOptions &options) {
-  RewritePatternList<GenericOp,
+  auto *ctx = patterns.getContext();
+  LinalgTransformationFilter f(ArrayRef<StringAttr>{},
+                               StringAttr::get(ctx, "tiled"));
+  TilingPatterns<GenericOp,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-                     >::insert(patterns, options);
-  patterns.add<PadTensorOpTilingPattern>(patterns.getContext(), options);
+                 >::insert(patterns, options, f);
+  patterns.add<PadTensorOpTilingPattern>(ctx, options);
 }
 
 static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {

@@ -204,7 +204,7 @@ HexagonMCChecker::HexagonMCChecker(MCContext &Context, MCInstrInfo const &MCII,
                                    MCSubtargetInfo const &STI, MCInst &mcb,
                                    MCRegisterInfo const &ri, bool ReportErrors)
     : Context(Context), MCB(mcb), RI(ri), MCII(MCII), STI(STI),
-      ReportErrors(ReportErrors), ReversePairs() {
+      ReportErrors(ReportErrors) {
   init();
 }
 
@@ -212,8 +212,7 @@ HexagonMCChecker::HexagonMCChecker(HexagonMCChecker const &Other,
                                    MCSubtargetInfo const &STI,
                                    bool CopyReportErrors)
     : Context(Other.Context), MCB(Other.MCB), RI(Other.RI), MCII(Other.MCII),
-      STI(STI), ReportErrors(CopyReportErrors ? Other.ReportErrors : false),
-      ReversePairs() {
+      STI(STI), ReportErrors(CopyReportErrors ? Other.ReportErrors : false) {
   init();
 }
 
@@ -597,9 +596,15 @@ void HexagonMCChecker::checkRegisterCurDefs() {
   for (auto const &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
     if (HexagonMCInstrInfo::isCVINew(MCII, I) &&
         HexagonMCInstrInfo::getDesc(MCII, I).mayLoad()) {
-      unsigned Register = I.getOperand(0).getReg();
-      if (!registerUsed(Register))
-        reportWarning("Register `" + Twine(RI.getName(Register)) +
+      const unsigned RegDef = I.getOperand(0).getReg();
+
+      bool HasRegDefUse = false;
+      for (MCRegAliasIterator Alias(RegDef, &RI, true); Alias.isValid();
+           ++Alias)
+        HasRegDefUse = HasRegDefUse || registerUsed(*Alias);
+
+      if (!HasRegDefUse)
+        reportWarning("Register `" + Twine(RI.getName(RegDef)) +
                       "' used with `.cur' "
                       "but not used in the same packet");
     }

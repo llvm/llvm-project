@@ -16,6 +16,7 @@
 // Test the feature test macros defined by <version>
 
 /*  Constant                                       Value
+    __cpp_lib_adaptor_iterator_pair_constructor    202106L [C++2b]
     __cpp_lib_addressof_constexpr                  201603L [C++17]
     __cpp_lib_allocate_at_least                    202106L [C++2b]
     __cpp_lib_allocator_traits_is_always_equal     201411L [C++17]
@@ -143,6 +144,7 @@
     __cpp_lib_starts_ends_with                     201711L [C++20]
     __cpp_lib_stdatomic_h                          202011L [C++2b]
     __cpp_lib_string_contains                      202011L [C++2b]
+    __cpp_lib_string_resize_and_overwrite          202110L [C++2b]
     __cpp_lib_string_udls                          201304L [C++14]
     __cpp_lib_string_view                          201606L [C++17]
                                                    201803L [C++20]
@@ -170,6 +172,10 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
+
+# ifdef __cpp_lib_adaptor_iterator_pair_constructor
+#   error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++2b"
+# endif
 
 # ifdef __cpp_lib_addressof_constexpr
 #   error "__cpp_lib_addressof_constexpr should not be defined before c++17"
@@ -671,6 +677,10 @@
 #   error "__cpp_lib_string_contains should not be defined before c++2b"
 # endif
 
+# ifdef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_string_udls
 #   error "__cpp_lib_string_udls should not be defined before c++14"
 # endif
@@ -748,6 +758,10 @@
 # endif
 
 #elif TEST_STD_VER == 14
+
+# ifdef __cpp_lib_adaptor_iterator_pair_constructor
+#   error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++2b"
+# endif
 
 # ifdef __cpp_lib_addressof_constexpr
 #   error "__cpp_lib_addressof_constexpr should not be defined before c++17"
@@ -1300,6 +1314,10 @@
 #   error "__cpp_lib_string_contains should not be defined before c++2b"
 # endif
 
+# ifdef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_string_udls
 #   error "__cpp_lib_string_udls should be defined in c++14"
 # endif
@@ -1392,6 +1410,10 @@
 # endif
 
 #elif TEST_STD_VER == 17
+
+# ifdef __cpp_lib_adaptor_iterator_pair_constructor
+#   error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++2b"
+# endif
 
 # ifndef __cpp_lib_addressof_constexpr
 #   error "__cpp_lib_addressof_constexpr should be defined in c++17"
@@ -2115,6 +2137,10 @@
 #   error "__cpp_lib_string_contains should not be defined before c++2b"
 # endif
 
+# ifdef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_string_udls
 #   error "__cpp_lib_string_udls should be defined in c++17"
 # endif
@@ -2234,6 +2260,10 @@
 # endif
 
 #elif TEST_STD_VER == 20
+
+# ifdef __cpp_lib_adaptor_iterator_pair_constructor
+#   error "__cpp_lib_adaptor_iterator_pair_constructor should not be defined before c++2b"
+# endif
 
 # ifndef __cpp_lib_addressof_constexpr
 #   error "__cpp_lib_addressof_constexpr should be defined in c++20"
@@ -3257,6 +3287,10 @@
 #   error "__cpp_lib_string_contains should not be defined before c++2b"
 # endif
 
+# ifdef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should not be defined before c++2b"
+# endif
+
 # ifndef __cpp_lib_string_udls
 #   error "__cpp_lib_string_udls should be defined in c++20"
 # endif
@@ -3406,6 +3440,13 @@
 # endif
 
 #elif TEST_STD_VER > 20
+
+# ifndef __cpp_lib_adaptor_iterator_pair_constructor
+#   error "__cpp_lib_adaptor_iterator_pair_constructor should be defined in c++2b"
+# endif
+# if __cpp_lib_adaptor_iterator_pair_constructor != 202106L
+#   error "__cpp_lib_adaptor_iterator_pair_constructor should have the value 202106L in c++2b"
+# endif
 
 # ifndef __cpp_lib_addressof_constexpr
 #   error "__cpp_lib_addressof_constexpr should be defined in c++2b"
@@ -4538,6 +4579,13 @@
 # endif
 # if __cpp_lib_string_contains != 202011L
 #   error "__cpp_lib_string_contains should have the value 202011L in c++2b"
+# endif
+
+# ifndef __cpp_lib_string_resize_and_overwrite
+#   error "__cpp_lib_string_resize_and_overwrite should be defined in c++2b"
+# endif
+# if __cpp_lib_string_resize_and_overwrite != 202110L
+#   error "__cpp_lib_string_resize_and_overwrite should have the value 202110L in c++2b"
 # endif
 
 # ifndef __cpp_lib_string_udls

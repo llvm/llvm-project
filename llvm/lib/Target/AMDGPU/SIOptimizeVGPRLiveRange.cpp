@@ -155,6 +155,11 @@ public:
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::IsSSA);
   }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::NoPHIs);
+  }
 };
 
 } // end anonymous namespace

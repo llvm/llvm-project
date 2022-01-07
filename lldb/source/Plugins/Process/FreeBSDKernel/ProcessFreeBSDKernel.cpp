@@ -137,12 +137,115 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
       return false;
     }
 
-    const Symbol *pcb_sym =
-        GetTarget().GetExecutableModule()->FindFirstSymbolWithNameAndType(
-            ConstString("dumppcb"));
-    ThreadSP thread_sp(new ThreadFreeBSDKernel(
-        *this, 1, pcb_sym ? pcb_sym->GetFileAddress() : LLDB_INVALID_ADDRESS));
-    new_thread_list.AddThread(thread_sp);
+    Status error;
+
+    // struct field offsets are written as symbols so that we don't have
+    // to figure them out ourselves
+    int32_t offset_p_list = ReadSignedIntegerFromMemory(
+        FindSymbol("proc_off_p_list"), 4, -1, error);
+    int32_t offset_p_pid =
+        ReadSignedIntegerFromMemory(FindSymbol("proc_off_p_pid"), 4, -1, error);
+    int32_t offset_p_threads = ReadSignedIntegerFromMemory(
+        FindSymbol("proc_off_p_threads"), 4, -1, error);
+    int32_t offset_p_comm = ReadSignedIntegerFromMemory(
+        FindSymbol("proc_off_p_comm"), 4, -1, error);
+
+    int32_t offset_td_tid = ReadSignedIntegerFromMemory(
+        FindSymbol("thread_off_td_tid"), 4, -1, error);
+    int32_t offset_td_plist = ReadSignedIntegerFromMemory(
+        FindSymbol("thread_off_td_plist"), 4, -1, error);
+    int32_t offset_td_pcb = ReadSignedIntegerFromMemory(
+        FindSymbol("thread_off_td_pcb"), 4, -1, error);
+    int32_t offset_td_oncpu = ReadSignedIntegerFromMemory(
+        FindSymbol("thread_off_td_oncpu"), 4, -1, error);
+    int32_t offset_td_name = ReadSignedIntegerFromMemory(
+        FindSymbol("thread_off_td_name"), 4, -1, error);
+
+    // fail if we were not able to read any of the offsets
+    if (offset_p_list == -1 || offset_p_pid == -1 || offset_p_threads == -1 ||
+        offset_p_comm == -1 || offset_td_tid == -1 || offset_td_plist == -1 ||
+        offset_td_pcb == -1 || offset_td_oncpu == -1 || offset_td_name == -1)
+      return false;
+
+    // dumptid contains the thread-id of the crashing thread
+    // dumppcb contains its PCB
+    int32_t dumptid =
+        ReadSignedIntegerFromMemory(FindSymbol("dumptid"), 4, -1, error);
+    lldb::addr_t dumppcb = FindSymbol("dumppcb");
+
+    // stoppcbs is an array of PCBs on all CPUs
+    // each element is of size pcb_size
+    int32_t pcbsize =
+        ReadSignedIntegerFromMemory(FindSymbol("pcb_size"), 4, -1, error);
+    lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
+
+    // from FreeBSD sys/param.h
+    constexpr size_t fbsd_maxcomlen = 19;
+
+    // iterate through a linked list of all processes
+    // allproc is a pointer to the first list element, p_list field
+    // (found at offset_p_list) specifies the next element
+    for (lldb::addr_t proc =
+             ReadPointerFromMemory(FindSymbol("allproc"), error);
+         proc != 0 && proc != LLDB_INVALID_ADDRESS;
+         proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
+      int32_t pid =
+          ReadSignedIntegerFromMemory(proc + offset_p_pid, 4, -1, error);
+      // process' command-line string
+      char comm[fbsd_maxcomlen + 1];
+      ReadCStringFromMemory(proc + offset_p_comm, comm, sizeof(comm), error);
+
+      // iterate through a linked list of all process' threads
+      // the initial thread is found in process' p_threads, subsequent
+      // elements are linked via td_plist field
+      for (lldb::addr_t td =
+               ReadPointerFromMemory(proc + offset_p_threads, error);
+           td != 0; td = ReadPointerFromMemory(td + offset_td_plist, error)) {
+        int32_t tid =
+            ReadSignedIntegerFromMemory(td + offset_td_tid, 4, -1, error);
+        lldb::addr_t pcb_addr =
+            ReadPointerFromMemory(td + offset_td_pcb, error);
+        // whether process was on CPU (-1 if not, otherwise CPU number)
+        int32_t oncpu =
+            ReadSignedIntegerFromMemory(td + offset_td_oncpu, 4, -2, error);
+        // thread name
+        char thread_name[fbsd_maxcomlen + 1];
+        ReadCStringFromMemory(td + offset_td_name, thread_name,
+                              sizeof(thread_name), error);
+
+        // if we failed to read TID, ignore this thread
+        if (tid == -1)
+          continue;
+
+        std::string thread_desc = llvm::formatv("(pid {0}) {1}", pid, comm);
+        if (*thread_name && strcmp(thread_name, comm)) {
+          thread_desc += '/';
+          thread_desc += thread_name;
+        }
+
+        // roughly:
+        // 1. if the thread crashed, its PCB is going to be at "dumppcb"
+        // 2. if the thread was on CPU, its PCB is going to be on the CPU
+        // 3. otherwise, its PCB is in the thread struct
+        if (tid == dumptid) {
+          // NB: dumppcb can be LLDB_INVALID_ADDRESS if reading it failed
+          pcb_addr = dumppcb;
+          thread_desc += " (crashed)";
+        } else if (oncpu != -1) {
+          // if we managed to read stoppcbs and pcb_size, use them to find
+          // the correct PCB
+          if (stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0)
+            pcb_addr = stoppcbs + oncpu * pcbsize;
+          else
+            pcb_addr = LLDB_INVALID_ADDRESS;
+          thread_desc += llvm::formatv(" (on CPU {0})", oncpu);
+        }
+
+        ThreadSP thread_sp{
+            new ThreadFreeBSDKernel(*this, tid, pcb_addr, thread_desc)};
+        new_thread_list.AddThread(thread_sp);
+      }
+    }
   } else {
     const uint32_t num_threads = old_thread_list.GetSize(false);
     for (uint32_t i = 0; i < num_threads; ++i)
@@ -161,6 +264,12 @@ DynamicLoader *ProcessFreeBSDKernel::GetDynamicLoader() {
     m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderStatic::GetPluginNameStatic()));
   return m_dyld_up.get();
+}
+
+lldb::addr_t ProcessFreeBSDKernel::FindSymbol(const char *name) {
+  ModuleSP mod_sp = GetTarget().GetExecutableModule();
+  const Symbol *sym = mod_sp->FindFirstSymbolWithNameAndType(ConstString(name));
+  return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
 #if LLDB_ENABLE_FBSDVMCORE
