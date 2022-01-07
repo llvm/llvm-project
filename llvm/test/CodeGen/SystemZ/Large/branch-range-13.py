@@ -31,7 +31,7 @@ print('')
 print('block:')
 
 for i in range(num):
-    print('  tail call i64 asm "lang\\09$0,$2,$1\\0A", "=d,=*Q,d,*Q"(i32* undef, i32 undef, i32* undef)')
+    print('  tail call i64 asm "lang\\09$0,$2,$1\\0A", "=d,=*Q,d,*Q"(i32* elementtype(i32) undef, i32 undef, i32* elementtype(i32) undef)')
 
 print('  br label %block')
 
