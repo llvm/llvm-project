@@ -12,6 +12,9 @@ libCppLib.dylib: CppLib/CppLib.cpp
 		DYLIB_NAME=CppLib DYLIB_ONLY=YES CXXFLAGS_EXTRAS=-fPIC \
 		DYLIB_CXX_SOURCES="CppLib/CppLib.cpp CppLib/CppLibWrapper.cpp"
 	install_name_tool -id $@ $@
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -f -s - "$@"
+endif
 
 libWrapper.dylib: libCppLib.dylib
 	$(MAKE) -f $(MAKEFILE_RULES) \
