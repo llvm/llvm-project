@@ -767,19 +767,19 @@ struct FuncOpInterface
     const ModuleBufferizationState &moduleState =
         getModuleBufferizationState(state);
 
+    // "linalg.inplaceable" overrides other writability decisions. This is
+    // currently used for testing only.
+    if (BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
+            bbArg.getArgNumber(),
+            BufferizableOpInterface::kInplaceableAttrName))
+      return inplaceAttr.getValue();
+
     // In a first approximation:
     // =========================
     // If the function is called, we can allocate on the caller side which lets
     // us force inplace arguments at function boundaries.
     // TODO: do not rely on this behavior.
     if (moduleState.callerMap.find(funcOp) != moduleState.callerMap.end())
-      return true;
-
-    // Set the function arguments marked with inplaceable to be known as
-    // bufferizing to a writeable memory.
-    BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
-        bbArg.getArgNumber(), BufferizableOpInterface::kInplaceableAttrName);
-    if (inplaceAttr && inplaceAttr.getValue())
       return true;
 
     // All other function arguments are not writable.
