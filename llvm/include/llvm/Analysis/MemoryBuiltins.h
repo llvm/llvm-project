@@ -130,13 +130,6 @@ extractMallocCall(Value *I,
   return const_cast<CallInst *>(extractMallocCall((const Value *)I, GetTLI));
 }
 
-/// getMallocType - Returns the PointerType resulting from the malloc call.
-/// The PointerType depends on the number of bitcast uses of the malloc call:
-///   0: PointerType is the malloc calls' return type.
-///   1: PointerType is the bitcast's result type.
-///  >1: Unique PointerType cannot be determined, return NULL.
-PointerType *getMallocType(const CallInst *CI, const TargetLibraryInfo *TLI);
-
 /// getMallocAllocatedType - Returns the Type allocated by malloc call.
 /// The Type depends on the number of bitcast uses of the malloc call:
 ///   0: PointerType is the malloc calls' return type.
