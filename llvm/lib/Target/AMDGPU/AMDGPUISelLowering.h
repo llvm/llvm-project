@@ -335,8 +335,8 @@ public:
 
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
 
-  bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
-                                             LLT Ty2) const override;
+  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
+                                              LLT Ty2) const override;
 };
 
 namespace AMDGPUISD {

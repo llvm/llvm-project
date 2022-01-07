@@ -4904,7 +4904,7 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   }
 }
 
-bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtactLegal(
+bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtractLegal(
     unsigned Opc, LLT Ty1, LLT Ty2) const {
   return Ty1 == Ty2 && (Ty1 == LLT::scalar(32) || Ty1 == LLT::scalar(64));
 }
