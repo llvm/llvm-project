@@ -373,8 +373,8 @@ static Value *computeArraySize(const CallInst *CI, const DataLayout &DL,
 ///   0: PointerType is the calls' return type.
 ///   1: PointerType is the bitcast's result type.
 ///  >1: Unique PointerType cannot be determined, return NULL.
-PointerType *llvm::getMallocType(const CallInst *CI,
-                                 const TargetLibraryInfo *TLI) {
+static PointerType *getMallocType(const CallInst *CI,
+                                  const TargetLibraryInfo *TLI) {
   assert(isMallocLikeFn(CI, TLI) && "getMallocType and not malloc call");
 
   PointerType *MallocType = nullptr;
