@@ -647,6 +647,8 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
     uint64_t AlignOffset) const {
   assert(Offset && "null offset");
 
+  const bool NeedsDwarfCFI = needsDwarfCFI(MF);
+  const bool HasFP = hasFP(MF);
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const X86TargetLowering &TLI = *STI.getTargetLowering();
   const unsigned MovMIOpc = Is64Bit ? X86::MOV64mi32 : X86::MOV32mi;
@@ -686,17 +688,36 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   Register FinalStackProbed = Uses64BitFramePtr ? X86::R11
                               : Is64Bit         ? X86::R11D
                                                 : X86::EAX;
+
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), FinalStackProbed)
       .addReg(StackPtr)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // save loop bound
   {
-    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, Offset);
+    const unsigned BoundOffset = alignDown(Offset, StackProbeSize);
+    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, BoundOffset);
     BuildMI(MBB, MBBI, DL, TII.get(SUBOpc), FinalStackProbed)
         .addReg(FinalStackProbed)
-        .addImm(Offset / StackProbeSize * StackProbeSize)
+        .addImm(BoundOffset)
         .setMIFlag(MachineInstr::FrameSetup);
+
+    // while in the loop, use loop-invariant reg for CFI,
+    // instead of the stack pointer, which changes during the loop
+    if (!HasFP && NeedsDwarfCFI) {
+      // x32 uses the same DWARF register numbers as x86-64,
+      // so there isn't a register number for r11d, we must use r11 instead
+      const Register DwarfFinalStackProbed =
+          STI.isTarget64BitILP32()
+              ? Register(getX86SubSuperRegister(FinalStackProbed, 64))
+              : FinalStackProbed;
+
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createDefCfaRegister(
+                   nullptr, TRI->getDwarfRegNum(DwarfFinalStackProbed, true)));
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createAdjustCfaOffset(nullptr, BoundOffset));
+    }
   }
 
   // allocate a page
@@ -735,13 +756,28 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   MBB.addSuccessor(testMBB);
 
   // handle tail
-  unsigned TailOffset = Offset % StackProbeSize;
+  const unsigned TailOffset = Offset % StackProbeSize;
+  MachineBasicBlock::iterator TailMBBIter = tailMBB->begin();
   if (TailOffset) {
     const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, TailOffset);
-    BuildMI(*tailMBB, tailMBB->begin(), DL, TII.get(Opc), StackPtr)
+    BuildMI(*tailMBB, TailMBBIter, DL, TII.get(Opc), StackPtr)
         .addReg(StackPtr)
         .addImm(TailOffset)
         .setMIFlag(MachineInstr::FrameSetup);
+  }
+
+  // after the loop, switch back to stack pointer for CFI
+  if (!HasFP && NeedsDwarfCFI) {
+    // x32 uses the same DWARF register numbers as x86-64,
+    // so there isn't a register number for esp, we must use rsp instead
+    const Register DwarfStackPtr =
+        STI.isTarget64BitILP32()
+            ? Register(getX86SubSuperRegister(StackPtr, 64))
+            : Register(StackPtr);
+
+    BuildCFI(*tailMBB, TailMBBIter, DL,
+             MCCFIInstruction::createDefCfaRegister(
+                 nullptr, TRI->getDwarfRegNum(DwarfStackPtr, true)));
   }
 
   // Update Live In information
