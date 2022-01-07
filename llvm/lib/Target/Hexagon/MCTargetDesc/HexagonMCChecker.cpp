@@ -378,18 +378,8 @@ bool HexagonMCChecker::checkCOFMax1() {
 }
 
 bool HexagonMCChecker::checkSlots() {
-  unsigned slotsUsed = 0;
-  for (auto HMI : HexagonMCInstrInfo::bundleInstructions(MCB)) {
-    MCInst const &MCI = *HMI.getInst();
-    if (HexagonMCInstrInfo::isImmext(MCI))
-      continue;
-    if (HexagonMCInstrInfo::isDuplex(MCII, MCI))
-      slotsUsed += 2;
-    else
-      ++slotsUsed;
-  }
-
-  if (slotsUsed > HEXAGON_PACKET_SIZE) {
+  if (HexagonMCInstrInfo::slotsConsumed(MCII, STI, MCB) >
+      HexagonMCInstrInfo::packetSizeSlots(STI)) {
     reportError("invalid instruction packet: out of slots");
     return false;
   }
