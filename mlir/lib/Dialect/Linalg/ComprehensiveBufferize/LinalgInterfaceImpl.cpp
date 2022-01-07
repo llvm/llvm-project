@@ -199,8 +199,9 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    Value alloc = state.createAllocDeallocPair(rewriter, initTensorOp->getLoc(),
-                                               initTensorOp.result());
+    Value alloc = state.createAlloc(rewriter, initTensorOp->getLoc(),
+                                    initTensorOp.result(),
+                                    state.getOptions().createDeallocs);
     replaceOpWithBufferizedValues(rewriter, op, alloc);
     return success();
   }

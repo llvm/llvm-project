@@ -392,7 +392,8 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
     // allocation should be inserted (in the absence of allocation hoisting).
     setInsertionPointAfter(rewriter, operandBuffer);
     // Allocate the result buffer.
-    Value resultBuffer = createAllocDeallocPair(rewriter, loc, operandBuffer);
+    Value resultBuffer =
+        createAlloc(rewriter, loc, operandBuffer, options.createDeallocs);
     bool skipCopy = false;
     // Do not copy if the last preceding write of `operand` is an op that does
     // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
@@ -534,12 +535,11 @@ static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
   return allocMemRefType;
 }
 
-/// Create an Allocop/DeAllocOp pair, where the AllocOp is after
+/// Create an AllocOp/DeallocOp pair, where the AllocOp is after
 /// `shapedValue.getDefiningOp` (or at the top of the block in case of a
 /// bbArg) and the DeallocOp is at the end of the block.
-Value mlir::linalg::comprehensive_bufferize::BufferizationState::
-    createAllocDeallocPair(OpBuilder &b, Location loc,
-                           Value shapedValue) const {
+Value mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
+    OpBuilder &b, Location loc, Value shapedValue, bool deallocMemref) const {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
 
@@ -559,9 +559,12 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::
     casted = b.create<memref::CastOp>(loc, memRefType, allocated.getValue());
   }
 
-  // 2. Create memory deallocation.
-  b.setInsertionPoint(allocated.getValue().getParentBlock()->getTerminator());
-  createDealloc(b, loc, allocated.getValue());
+  if (deallocMemref) {
+    // 2. Create memory deallocation.
+    b.setInsertionPoint(allocated.getValue().getParentBlock()->getTerminator());
+    createDealloc(b, loc, allocated.getValue());
+  }
+
   return casted;
 }
 
