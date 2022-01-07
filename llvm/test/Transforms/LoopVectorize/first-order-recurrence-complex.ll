@@ -646,11 +646,8 @@ define void @sink_dominance(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 false, i1 [[TMP3]], i1 [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[UMAX1]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[UMAX1]], [[N_MOD_VF]]
@@ -734,11 +731,8 @@ define void @sink_dominance_2(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 false, i1 [[TMP3]], i1 [[TMP4]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[UMAX1]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[UMAX1]], [[N_MOD_VF]]

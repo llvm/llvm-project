@@ -52,13 +52,10 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 [[TMP10]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = add i8 [[TMP7]], [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i8 [[TMP7]], [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i8 [[TMP12]], [[TMP7]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i8 [[TMP11]], [[TMP7]]
-; CHECK-NEXT:    [[TMP15:%.*]] = select i1 true, i1 [[TMP13]], i1 [[TMP14]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ugt i8 [[TMP12]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ugt i32 [[TMP9]], 255
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP14]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP17]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

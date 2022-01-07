@@ -18,10 +18,8 @@ define void @"japi1_align!_9477"(%jl_value_t addrspace(10)** %arg) {
 ; LV-NEXT: [[OFMulResult:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul]], 0
 ; LV-NEXT: [[OFMulOverflow:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul]], 1
 ; LV: [[OFNegMulResult:%[^ ]*]] = sub i64 0, [[OFMulResult]]
-; LV-NEXT: [[PosGEP:%[^ ]*]] = getelementptr i8, i8 addrspace(13)* [[Base:%[^ ]*]], i64 [[OFMulResult]]
-; LV-NEXT: [[NegGEP:%[^ ]*]] = getelementptr i8, i8 addrspace(13)* [[Base]], i64 [[OFNegMulResult]]
+; LV-NEXT: [[NegGEP:%[^ ]*]] = getelementptr i8, i8 addrspace(13)* [[Base:%[^ ]*]], i64 [[OFNegMulResult]]
 ; LV-NEXT: icmp ugt i8 addrspace(13)* [[NegGEP]], [[Base]]
-; LV-NEXT: icmp ult i8 addrspace(13)* [[PosGEP]], [[Base]]
 ; LV-NOT: inttoptr
 ; LV-NOT: ptrtoint
 top:
