@@ -357,11 +357,11 @@ mlir::linalg::LinalgBaseTileAndFusePattern::LinalgBaseTileAndFusePattern(
     StringRef opName, MLIRContext *context,
     const LinalgDependenceGraph &dependenceGraph,
     LinalgTilingOptions tilingOptions, LinalgFusionOptions fusionOptions,
-    LinalgTransformationFilter filter, LinalgTransformationFilter fusedOpMarker,
+    LinalgTransformationFilter f, LinalgTransformationFilter fusedOpMarker,
     LinalgTransformationFilter originalOpMarker, PatternBenefit benefit)
     : RewritePattern(opName, benefit, context, {}),
       dependenceGraph(dependenceGraph), tilingOptions(std::move(tilingOptions)),
-      fusionOptions(std::move(fusionOptions)), filter(std::move(filter)),
+      fusionOptions(std::move(fusionOptions)), filter(std::move(f)),
       fusedOpMarker(std::move(fusedOpMarker)),
       originalOpMarker(std::move(originalOpMarker)) {}
 
@@ -462,11 +462,7 @@ mlir::linalg::LinalgTilingPattern::LinalgTilingPattern(
     StringRef opName, MLIRContext *context, LinalgTilingOptions options,
     LinalgTransformationFilter f, PatternBenefit benefit)
     : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(f)), options(std::move(options)) {
-  this->filter.addFilter([opName](Operation *op) {
-    return success(op->getName().getStringRef() == opName);
-  });
-}
+      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
 
 FailureOr<TiledLinalgOp>
 mlir::linalg::LinalgTilingPattern::returningMatchAndRewrite(
@@ -496,21 +492,18 @@ mlir::linalg::LinalgTilingPattern::returningMatchAndRewrite(
 /// Linalg padding pattern.
 mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
     MLIRContext *context, LinalgPaddingOptions options,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
+    LinalgTransformationFilter f, PatternBenefit benefit)
     : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(filter)), options(std::move(options)) {}
+      filter(std::move(f)), options(std::move(options)) {}
 
 mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
     StringRef opName, MLIRContext *context, LinalgPaddingOptions options,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
+    LinalgTransformationFilter f, PatternBenefit benefit)
     : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(filter)), options(std::move(options)) {
-  this->filter.addFilter([opName](Operation *op) {
-    return success(op->getName().getStringRef() == opName);
-  });
-}
+      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
 
-LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
+FailureOr<LinalgOp>
+mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
     LinalgOp linalgOp, PatternRewriter &rewriter) const {
   if (!linalgOp.hasTensorSemantics())
     return failure();
@@ -549,24 +542,24 @@ LogicalResult mlir::linalg::LinalgPaddingPattern::matchAndRewrite(
   // Replace the original operation to pad.
   rewriter.replaceOp(linalgOp, newResults.getValue());
   filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
-  return success();
+  return paddedOp;
 }
 
 /// Linalg tile and fuse tensor ops pattern.
 mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
     LinalgTileAndFuseTensorOpsPattern(MLIRContext *context,
                                       LinalgTilingAndFusionOptions options,
-                                      LinalgTransformationFilter filter,
+                                      LinalgTransformationFilter f,
                                       PatternBenefit benefit)
     : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
-      filter(std::move(filter)), options(std::move(options)) {}
+      filter(std::move(f)), options(std::move(options)) {}
 
 mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
     LinalgTileAndFuseTensorOpsPattern(StringRef opName, MLIRContext *context,
                                       LinalgTilingAndFusionOptions options,
-                                      LinalgTransformationFilter filter,
+                                      LinalgTransformationFilter f,
                                       PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context), filter(std::move(filter)),
+    : RewritePattern(opName, benefit, context), filter(std::move(f)),
       options(std::move(options)) {}
 
 LogicalResult mlir::linalg::LinalgTileAndFuseTensorOpsPattern::matchAndRewrite(
@@ -624,11 +617,12 @@ LogicalResult mlir::linalg::LinalgTileAndFuseTensorOpsPattern::matchAndRewrite(
 /// Linalg generic interchange pattern.
 mlir::linalg::GenericOpInterchangePattern::GenericOpInterchangePattern(
     MLIRContext *context, ArrayRef<unsigned> interchangeVector,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
-    : OpRewritePattern(context, benefit), filter(std::move(filter)),
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpRewritePattern(context, benefit), filter(std::move(f)),
       interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
 
-LogicalResult mlir::linalg::GenericOpInterchangePattern::matchAndRewrite(
+FailureOr<GenericOp>
+mlir::linalg::GenericOpInterchangePattern::returningMatchAndRewrite(
     GenericOp genericOp, PatternRewriter &rewriter) const {
   if (failed(filter.checkAndNotify(rewriter, genericOp)))
     return failure();
@@ -645,41 +639,38 @@ LogicalResult mlir::linalg::GenericOpInterchangePattern::matchAndRewrite(
 
 /// Linalg generalization pattern.
 mlir::linalg::LinalgGeneralizationPattern::LinalgGeneralizationPattern(
-    MLIRContext *context, LinalgTransformationFilter filter,
-    PatternBenefit benefit)
-    : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
-      filter(std::move(filter)) {}
+    MLIRContext *context, LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)) {}
 
 mlir::linalg::LinalgGeneralizationPattern::LinalgGeneralizationPattern(
-    StringRef opName, MLIRContext *context, LinalgTransformationFilter filter,
+    StringRef opName, MLIRContext *context, LinalgTransformationFilter f,
     PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context, {}), filter(std::move(filter)) {}
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(f.addOpNameFilter(opName)) {}
 
-LogicalResult mlir::linalg::LinalgGeneralizationPattern::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  // TODO: Interface pattern.
-  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
-    return failure();
-  if (failed(filter.checkAndNotify(rewriter, op)))
+FailureOr<GenericOp>
+mlir::linalg::LinalgGeneralizationPattern::returningMatchAndRewrite(
+    LinalgOp linalgOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
   FailureOr<GenericOp> genericOp = generalizeNamedOp(rewriter, linalgOp);
   if (failed(genericOp))
     return failure();
   filter.replaceLinalgTransformationFilter(rewriter, *genericOp);
-  return success();
+  return genericOp;
 }
 
 mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
-    MLIRContext *context, LinalgTransformationFilter filter,
+    MLIRContext *context, LinalgTransformationFilter f,
     LinalgPromotionOptions options, PatternBenefit benefit)
     : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
-      filter(std::move(filter)), options(std::move(options)) {}
+      filter(std::move(f)), options(std::move(options)) {}
 
 mlir::linalg::LinalgBasePromotionPattern::LinalgBasePromotionPattern(
     StringRef opName, MLIRContext *context, LinalgPromotionOptions options,
-    LinalgTransformationFilter filter, PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context, {}), filter(std::move(filter)),
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : RewritePattern(opName, benefit, context, {}), filter(std::move(f)),
       options(std::move(options)) {}
 
 LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
@@ -704,24 +695,21 @@ LogicalResult mlir::linalg::LinalgBasePromotionPattern::matchAndRewrite(
   return success();
 }
 
-mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
-    MLIRContext *context, LinalgTransformationFilter filter,
-    PatternBenefit benefit)
-    : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
-      filter(std::move(filter)) {}
+mlir::linalg::LinalgVectorizationPattern::LinalgVectorizationPattern(
+    MLIRContext *context, LinalgTransformationFilter f,
+    LinalgVectorizationOptions options, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(std::move(f)) {}
 
-mlir::linalg::LinalgBaseVectorizationPattern::LinalgBaseVectorizationPattern(
-    StringRef opName, MLIRContext *context, LinalgTransformationFilter filter,
-    PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context, {}), filter(std::move(filter)) {}
+mlir::linalg::LinalgVectorizationPattern::LinalgVectorizationPattern(
+    StringRef opName, MLIRContext *context, LinalgVectorizationOptions options,
+    LinalgTransformationFilter f, PatternBenefit benefit)
+    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
+      filter(f.addOpNameFilter(opName)) {}
 
-LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  // TODO: Interface-based rewrite.
-  LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
-  if (!linalgOp)
-    return failure();
-  if (failed(filter.checkAndNotify(rewriter, op)))
+LogicalResult mlir::linalg::LinalgVectorizationPattern::matchAndRewrite(
+    LinalgOp linalgOp, PatternRewriter &rewriter) const {
+  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
   return vectorize(rewriter, linalgOp);
 }
@@ -947,10 +935,10 @@ struct DownscaleSizeOneWindowed2DConvolution final
     : public OpRewritePattern<Conv2DNhwcHwcfOp> {
   DownscaleSizeOneWindowed2DConvolution(
       MLIRContext *context,
-      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      LinalgTransformationFilter f = LinalgTransformationFilter(),
       PatternBenefit benefit = 1)
       : OpRewritePattern<Conv2DNhwcHwcfOp>(context, benefit),
-        filter(std::move(filter)) {}
+        filter(std::move(f)) {}
 
   LogicalResult matchAndRewrite(linalg::Conv2DNhwcHwcfOp convOp,
                                 PatternRewriter &rewriter) const override {
@@ -1033,10 +1021,10 @@ struct DownscaleDepthwiseConv2DNhwcHwcOp final
     : public OpRewritePattern<DepthwiseConv2DNhwcHwcOp> {
   DownscaleDepthwiseConv2DNhwcHwcOp(
       MLIRContext *context,
-      LinalgTransformationFilter filter = LinalgTransformationFilter(),
+      LinalgTransformationFilter f = LinalgTransformationFilter(),
       PatternBenefit benefit = 1)
       : OpRewritePattern<DepthwiseConv2DNhwcHwcOp>(context, benefit),
-        filter(std::move(filter)) {}
+        filter(std::move(f)) {}
 
   LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
                                 PatternRewriter &rewriter) const override {
