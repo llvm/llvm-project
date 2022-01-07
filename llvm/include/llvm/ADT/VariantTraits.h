@@ -55,6 +55,14 @@ template <typename T> struct HasTraits {
       sizeof(get<Traits<T>>(nullptr) == sizeof(Present));
 };
 
+template <typename HeadT, typename... TailTs>
+struct AreSame : conjunction<std::is_same<HeadT, TailTs>...> {};
+
+template <typename... ThunkTs, std::enable_if_t<AreSame<ThunkTs...>{}, int> = 0>
+static constexpr auto makeThunkArray(ThunkTs &&...Thunks) {
+  return make_array(std::forward<ThunkTs>(Thunks)...);
+}
+
 template <size_t Index, typename VisitorT, typename... VariantTs>
 static constexpr decltype(auto)
 thunkForSameAlternative(VisitorT &&Visitor, VariantTs &&...Variants) {
@@ -73,9 +81,9 @@ static constexpr auto
 visitSameAlternativeImpl(size_t Index, std::index_sequence<Indexes...>,
                          VisitorT &&Visitor, HeadVariantT &&HeadVariant,
                          TailVariantTs &&...TailVariants) {
-  constexpr auto Thunks =
-      make_array(makeThunkForSameAlternative<Indexes, VisitorT, HeadVariantT,
-                                             TailVariantTs...>()...);
+  constexpr auto Thunks = makeThunkArray(
+      makeThunkForSameAlternative<Indexes, VisitorT, HeadVariantT,
+                                  TailVariantTs...>()...);
   return Thunks[Index](std::forward<VisitorT>(Visitor),
                        std::forward<HeadVariantT>(HeadVariant),
                        std::forward<TailVariantTs>(TailVariants)...);
@@ -89,11 +97,25 @@ template <size_t... Indexes> struct Thunk {
         Traits<VariantTs>::template get<Indexes>(
             std::forward<VariantTs>(Variants))...);
   }
+
+  template <typename R, typename VisitorT, typename... VariantTs>
+  inline static constexpr R thunkR(VisitorT &&Visitor,
+                                   VariantTs &&...Variants) {
+    return std::forward<VisitorT>(Visitor)(
+        Traits<VariantTs>::template get<Indexes>(
+            std::forward<VariantTs>(Variants))...);
+  }
 };
 
 template <typename VisitorT, typename... VariantTs, size_t... Indexes>
 static constexpr auto makeThunkForSequence(std::index_sequence<Indexes...>) {
   return Thunk<Indexes...>::template thunk<VisitorT, VariantTs...>;
+}
+
+template <typename R, typename VisitorT, typename... VariantTs,
+          size_t... Indexes>
+static constexpr auto makeThunkForSequenceR(std::index_sequence<Indexes...>) {
+  return Thunk<Indexes...>::template thunkR<R, VisitorT, VariantTs...>;
 }
 
 template <typename VisitorT, typename... VariantTs,
@@ -104,6 +126,14 @@ accumulateCartesianProductThunks(std::index_sequence<AccumulatedIndexes...>) {
       std::index_sequence<AccumulatedIndexes...>{});
 }
 
+template <typename R, typename VisitorT, typename... VariantTs,
+          size_t... AccumulatedIndexes>
+static constexpr auto
+accumulateCartesianProductThunksR(std::index_sequence<AccumulatedIndexes...>) {
+  return makeThunkForSequenceR<R, VisitorT, VariantTs...>(
+      std::index_sequence<AccumulatedIndexes...>{});
+}
+
 template <typename VisitorT, typename... VariantTs,
           size_t... AccumulatedIndexes, size_t... HeadIndexes,
           typename... TailSequenceTs>
@@ -111,13 +141,35 @@ static constexpr auto
 accumulateCartesianProductThunks(std::index_sequence<AccumulatedIndexes...>,
                                  std::index_sequence<HeadIndexes...>,
                                  TailSequenceTs... Tail) {
-  return make_array(accumulateCartesianProductThunks<VisitorT, VariantTs...>(
-      std::index_sequence<AccumulatedIndexes..., HeadIndexes>{}, Tail...)...);
+  return makeThunkArray(
+      accumulateCartesianProductThunks<VisitorT, VariantTs...>(
+          std::index_sequence<AccumulatedIndexes..., HeadIndexes>{},
+          Tail...)...);
+}
+
+template <typename R, typename VisitorT, typename... VariantTs,
+          size_t... AccumulatedIndexes, size_t... HeadIndexes,
+          typename... TailSequenceTs>
+static constexpr auto
+accumulateCartesianProductThunksR(std::index_sequence<AccumulatedIndexes...>,
+                                  std::index_sequence<HeadIndexes...>,
+                                  TailSequenceTs... Tail) {
+  return makeThunkArray(
+      accumulateCartesianProductThunksR<R, VisitorT, VariantTs...>(
+          std::index_sequence<AccumulatedIndexes..., HeadIndexes>{},
+          Tail...)...);
 }
 
 template <typename VisitorT, typename... VariantTs>
 static constexpr auto makeThunkMatrix() {
   return accumulateCartesianProductThunks<VisitorT, VariantTs...>(
+      std::index_sequence<>{},
+      std::make_index_sequence<Traits<VariantTs>::size()>{}...);
+}
+
+template <typename R, typename VisitorT, typename... VariantTs>
+static constexpr auto makeThunkMatrixR() {
+  return accumulateCartesianProductThunksR<R, VisitorT, VariantTs...>(
       std::index_sequence<>{},
       std::make_index_sequence<Traits<VariantTs>::size()>{}...);
 }
@@ -151,6 +203,27 @@ template <
 constexpr decltype(auto) visit(VisitorT &&Visitor, VariantTs &&...Variants) {
   constexpr auto ThunkMatrix =
       variant_traits_detail::makeThunkMatrix<VisitorT, VariantTs...>();
+  const auto &Thunk = variant_traits_detail::indexThunkMatrix(
+      ThunkMatrix, variant_traits_detail::Traits<VariantTs>::index(
+                       std::forward<VariantTs>(Variants))...);
+  return Thunk(std::forward<VisitorT>(Visitor),
+               std::forward<VariantTs>(Variants)...);
+}
+
+/// Invokes the provided Visitor using overload resolution based on the
+/// dynamic alternative type held in each Variant. See std::variant.
+///
+/// The return type is effectively
+/// decltype(Visitor(Variants.get<HeldAlternatives>()...)), implicity converted
+/// to R.
+template <
+    typename R, typename VisitorT, typename... VariantTs,
+    typename std::enable_if_t<
+        conjunction<variant_traits_detail::HasTraits<VariantTs>...>::value,
+        int> = 0>
+constexpr R visit(VisitorT &&Visitor, VariantTs &&...Variants) {
+  constexpr auto ThunkMatrix =
+      variant_traits_detail::makeThunkMatrixR<R, VisitorT, VariantTs...>();
   const auto &Thunk = variant_traits_detail::indexThunkMatrix(
       ThunkMatrix, variant_traits_detail::Traits<VariantTs>::index(
                        std::forward<VariantTs>(Variants))...);
