@@ -260,13 +260,13 @@ private:
       while (Start != References.end() && Start->FormattingOff) {
         // Skip over all imports w/ disabled formatting.
         ReferencesSorted.push_back(*Start);
-        Start++;
+        ++Start;
       }
       SmallVector<JsModuleReference, 16> SortChunk;
       while (Start != References.end() && !Start->FormattingOff) {
         // Skip over all imports w/ disabled formatting.
         SortChunk.push_back(*Start);
-        Start++;
+        ++Start;
       }
       llvm::stable_sort(SortChunk);
       mergeModuleReferences(SortChunk);

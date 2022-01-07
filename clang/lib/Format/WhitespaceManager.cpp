@@ -310,7 +310,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     unsigned PreviousNonComment = i - 1;
     while (PreviousNonComment > Start &&
            Changes[PreviousNonComment].Tok->is(tok::comment))
-      PreviousNonComment--;
+      --PreviousNonComment;
     if (i != Start && Changes[i].indentAndNestingLevel() >
                           Changes[PreviousNonComment].indentAndNestingLevel())
       ScopeStack.push_back(i);
@@ -1173,7 +1173,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
           NextNonComment = NextNonComment->getNextNonComment();
         auto j = i;
         while (Changes[j].Tok != NextNonComment && j < End)
-          j++;
+          ++j;
         if (j < End && Changes[j].NewlinesBefore == 0 &&
             Changes[j].Tok->isNot(tok::r_brace)) {
           Changes[j].NewlinesBefore = 1;

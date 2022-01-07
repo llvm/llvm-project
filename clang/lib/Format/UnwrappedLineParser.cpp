@@ -2449,7 +2449,7 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
             Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-          Line->Level++;
+          ++Line->Level;
         }
       }
       parseStructuralElement();
@@ -2608,7 +2608,7 @@ void UnwrappedLineParser::parseRequires() {
   if (FormatTok->Previous && FormatTok->Previous->is(tok::greater)) {
     addUnwrappedLine();
     if (Style.IndentRequires) {
-      Line->Level++;
+      ++Line->Level;
     }
   }
   nextToken();
