@@ -910,7 +910,6 @@ struct LinalgVectorizationPattern : public OpInterfaceRewritePattern<LinalgOp> {
 private:
   /// LinalgTransformMarker handles special attribute manipulations.
   LinalgTransformationFilter filter;
-  LinalgVectorizationOptions options;
 };
 
 //===----------------------------------------------------------------------===//
