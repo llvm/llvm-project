@@ -914,7 +914,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::VSELECT:
-  case ISD::SELECT:       SplitRes_SELECT(N, Lo, Hi); break;
+  case ISD::SELECT:
+  case ISD::VP_SELECT:    SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::BITCAST:           SplitVecRes_BITCAST(N, Lo, Hi); break;
@@ -1140,21 +1141,9 @@ void DAGTypeLegalizer::SplitVecRes_BinOp(SDNode *N, SDValue &Lo, SDValue &Hi) {
   else
     std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, SDLoc(Mask));
 
-  // Split the vector length parameter.
-  // %evl -> umin(%evl, %halfnumelts) and usubsat(%evl - %halfnumelts).
-  SDValue EVL = N->getOperand(3);
-  EVT VecVT = N->getValueType(0);
-  EVT EVLVT = EVL.getValueType();
-  assert(VecVT.getVectorElementCount().isKnownEven() &&
-         "Expecting the mask to be an evenly-sized vector");
-  unsigned HalfMinNumElts = VecVT.getVectorMinNumElements() / 2;
-  SDValue HalfNumElts =
-      VecVT.isFixedLengthVector()
-          ? DAG.getConstant(HalfMinNumElts, dl, EVLVT)
-          : DAG.getVScale(dl, EVLVT,
-                          APInt(EVLVT.getScalarSizeInBits(), HalfMinNumElts));
-  SDValue EVLLo = DAG.getNode(ISD::UMIN, dl, EVLVT, EVL, HalfNumElts);
-  SDValue EVLHi = DAG.getNode(ISD::USUBSAT, dl, EVLVT, EVL, HalfNumElts);
+  SDValue EVLLo, EVLHi;
+  std::tie(EVLLo, EVLHi) =
+      DAG.SplitEVL(N->getOperand(3), N->getValueType(0), dl);
 
   Lo = DAG.getNode(Opcode, dl, LHSLo.getValueType(),
                    {LHSLo, RHSLo, MaskLo, EVLLo}, Flags);
