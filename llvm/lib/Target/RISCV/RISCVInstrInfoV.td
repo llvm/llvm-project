@@ -19,17 +19,21 @@ include "RISCVInstrFormatsV.td"
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def VTypeIAsmOperand : AsmOperandClass {
-  let Name = "VTypeI";
+class VTypeIAsmOperand<int VTypeINum> : AsmOperandClass {
+  let Name = "VTypeI" # VTypeINum;
   let ParserMethod = "parseVTypeI";
   let DiagnosticType = "InvalidVTypeI";
+  let RenderMethod = "addVTypeIOperands";
 }
 
-def VTypeIOp : Operand<XLenVT> {
-  let ParserMatchClass = VTypeIAsmOperand;
+class VTypeIOp<int VTypeINum> : Operand<XLenVT> {
+  let ParserMatchClass = VTypeIAsmOperand<VTypeINum>;
   let PrintMethod = "printVTypeI";
-  let DecoderMethod = "decodeUImmOperand<11>";
+  let DecoderMethod = "decodeUImmOperand<"#VTypeINum#">";
 }
+
+def VTypeIOp10 : VTypeIOp<10>;
+def VTypeIOp11 : VTypeIOp<11>;
 
 def VMaskAsmOperand : AsmOperandClass {
   let Name = "RVVMaskRegOpOperand";
@@ -775,10 +779,10 @@ multiclass VWholeLoadN<bits<3> nf, string opcodestr, RegisterClass VRC> {
 
 let Predicates = [HasStdExtV] in {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
-def VSETVLI : RVInstSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp:$vtypei),
+def VSETVLI : RVInstSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp11:$vtypei),
                            "vsetvli", "$rd, $rs1, $vtypei">;
 
-def VSETIVLI : RVInstSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp:$vtypei),
+def VSETIVLI : RVInstSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp10:$vtypei),
                              "vsetivli", "$rd, $uimm, $vtypei">;
 
 def VSETVL : RVInstSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
