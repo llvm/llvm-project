@@ -41,9 +41,9 @@ using namespace linalg::comprehensive_bufferize;
 
 /// Default allocation function that is used by the comprehensive bufferization
 /// pass. The default currently creates a ranked memref using `memref.alloc`.
-static Optional<Value> defaultAllocationFn(OpBuilder &b, Location loc,
-                                           MemRefType type,
-                                           ArrayRef<Value> dynShape) {
+static FailureOr<Value> defaultAllocationFn(OpBuilder &b, Location loc,
+                                            MemRefType type,
+                                            ArrayRef<Value> dynShape) {
   Value allocated = b.create<memref::AllocOp>(
       loc, type, dynShape, b.getI64IntegerAttr(kBufferAlignments));
   return allocated;
@@ -391,8 +391,10 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::getResultBuffer(
     // allocation should be inserted (in the absence of allocation hoisting).
     setInsertionPointAfter(rewriter, operandBuffer);
     // Allocate the result buffer.
-    Value resultBuffer =
+    FailureOr<Value> resultBuffer =
         createAlloc(rewriter, loc, operandBuffer, options.createDeallocs);
+    if (failed(resultBuffer))
+      return failure();
     bool skipCopy = false;
     // Do not copy if the last preceding write of `operand` is an op that does
     // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
@@ -413,7 +415,7 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::getResultBuffer(
     if (!skipCopy) {
       // The copy happens right before the op that is bufferized.
       rewriter.setInsertionPoint(op);
-      createMemCpy(rewriter, loc, operandBuffer, resultBuffer);
+      createMemCpy(rewriter, loc, operandBuffer, *resultBuffer);
     }
     return resultBuffer;
   }
@@ -537,7 +539,8 @@ static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
 /// Create an AllocOp/DeallocOp pair, where the AllocOp is after
 /// `shapedValue.getDefiningOp` (or at the top of the block in case of a
 /// bbArg) and the DeallocOp is at the end of the block.
-Value mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
+FailureOr<Value>
+mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
     OpBuilder &b, Location loc, Value shapedValue, bool deallocMemref) const {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
@@ -549,10 +552,9 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
   // Note: getAllocationTypeAndShape also sets the insertion point.
   MemRefType allocMemRefType =
       getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
-  Optional<Value> allocated = createAlloc(b, loc, allocMemRefType, dynShape);
-  // TODO: For now just assert the value is returned. Eventually need to
-  // error-propagate.
-  assert(allocated && "allocation failed");
+  FailureOr<Value> allocated = createAlloc(b, loc, allocMemRefType, dynShape);
+  if (failed(allocated))
+    return failure();
   Value casted = allocated.getValue();
   if (memRefType && memRefType != allocMemRefType) {
     casted = b.create<memref::CastOp>(loc, memRefType, allocated.getValue());
@@ -568,7 +570,7 @@ Value mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
 }
 
 /// Create a memref allocation.
-Optional<Value>
+FailureOr<Value>
 mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
     OpBuilder &b, Location loc, MemRefType type,
     ArrayRef<Value> dynShape) const {

@@ -54,6 +54,8 @@ struct CastOpInterface
     // The result buffer still has the old (pre-cast) type.
     FailureOr<Value> resultBuffer =
         state.getResultBuffer(rewriter, castOp->getResult(0));
+    if (failed(resultBuffer))
+      return failure();
     auto sourceMemRefType = resultBuffer->getType().cast<BaseMemRefType>();
     Attribute memorySpace = sourceMemRefType.getMemorySpace();
     TensorType resultTensorType =
@@ -149,9 +151,14 @@ struct ExtractSliceOpInterface
     // If not inplaceable, alloc.
     bool inplace = state.isInPlace(extractSliceOp->getResult(0));
     Value alloc;
-    if (!inplace)
-      alloc = state.createAlloc(rewriter, loc, extractSliceOp.result(),
-                                state.getOptions().createDeallocs);
+    if (!inplace) {
+      FailureOr<Value> allocOrFailure =
+          state.createAlloc(rewriter, loc, extractSliceOp.result(),
+                            state.getOptions().createDeallocs);
+      if (failed(allocOrFailure))
+        return failure();
+      alloc = *allocOrFailure;
+    }
 
     // Bufferize to subview.
     auto subviewMemRefType =
@@ -238,6 +245,8 @@ struct InsertOpInterface
     auto insertOp = cast<tensor::InsertOp>(op);
     FailureOr<Value> destMemref =
         state.getResultBuffer(rewriter, insertOp->getOpResult(0));
+    if (failed(destMemref))
+      return failure();
     rewriter.create<memref::StoreOp>(insertOp.getLoc(), insertOp.scalar(),
                                      *destMemref, insertOp.indices());
     replaceOpWithBufferizedValues(rewriter, op, *destMemref);
@@ -404,6 +413,8 @@ struct InsertSliceOpInterface
     // When bufferizing out-of-place, `getResultBuffer` allocates.
     FailureOr<Value> dstMemref =
         state.getResultBuffer(rewriter, insertSliceOp->getResult(0));
+    if (failed(dstMemref))
+      return failure();
 
     // Take a subview of the dst.
     auto dstMemrefType = dstMemref->getType().cast<MemRefType>();

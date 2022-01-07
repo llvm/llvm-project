@@ -41,7 +41,7 @@ struct PostAnalysisStep;
 // TODO: Could be replaced with a "bufferization strategy" object with virtual
 // functions in the future.
 struct AllocationCallbacks {
-  using AllocationFn = std::function<Optional<Value>(
+  using AllocationFn = std::function<FailureOr<Value>(
       OpBuilder &, Location, MemRefType, ArrayRef<Value>)>;
   using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
   using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
@@ -360,15 +360,15 @@ public:
   Value findLastPrecedingWrite(Value value) const;
 
   /// Creates a memref allocation.
-  Optional<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                              ArrayRef<Value> dynShape) const;
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                               ArrayRef<Value> dynShape) const;
 
   /// Creates a memref allocation for the given shaped value. This function may
   /// perform additional optimizations such as buffer allocation hoisting. If
   /// `createDealloc`, a deallocation op is inserted at the point where the
   /// allocation goes out of scope.
-  Value createAlloc(OpBuilder &b, Location loc, Value shapedValue,
-                    bool deallocMemref) const;
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
+                               bool deallocMemref) const;
 
   /// Creates a memref deallocation. The given memref buffer must have been
   /// allocated using `createAlloc`.

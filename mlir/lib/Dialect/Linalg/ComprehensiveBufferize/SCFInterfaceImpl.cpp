@@ -295,10 +295,19 @@ struct ForOpInterface
     };
 
     // Construct a new scf.for op with memref instead of tensor values.
+    bool resultBufferFailure = false;
     SmallVector<Value> initArgs =
         convert(forOp.getInitArgs(), [&](Value val, int64_t index) {
-          return *state.getResultBuffer(rewriter, forOp->getOpResult(index));
+          FailureOr<Value> resultBuffer =
+              state.getResultBuffer(rewriter, forOp->getOpResult(index));
+          if (failed(resultBuffer)) {
+            resultBufferFailure = true;
+            return Value();
+          }
+          return *resultBuffer;
         });
+    if (resultBufferFailure)
+      return failure();
     auto newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), initArgs);
