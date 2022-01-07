@@ -334,15 +334,6 @@ bool llvm::isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI,
   return getAllocationData(V, StrDupLike, TLI, LookThroughBitCast).hasValue();
 }
 
-/// extractMallocCall - Returns the corresponding CallInst if the instruction
-/// is a malloc call.  Since CallInst::CreateMalloc() only creates calls, we
-/// ignore InvokeInst here.
-const CallInst *llvm::extractMallocCall(
-    const Value *I,
-    function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
-  return isMallocLikeFn(I, GetTLI) ? dyn_cast<CallInst>(I) : nullptr;
-}
-
 static Value *computeArraySize(const CallInst *CI, const DataLayout &DL,
                                const TargetLibraryInfo *TLI,
                                bool LookThroughSExt = false) {
