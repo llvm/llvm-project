@@ -1,4 +1,5 @@
 include(LLVMDistributionSupport)
+include(FindPrefixFromConfig)
 
 set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
 set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
@@ -99,16 +100,7 @@ file(COPY .
   )
 
 # Generate LLVMConfig.cmake for the install tree.
-set(LLVM_CONFIG_CODE "
-# Compute the installation prefix from this LLVMConfig.cmake file location.
-get_filename_component(LLVM_INSTALL_PREFIX \"\${CMAKE_CURRENT_LIST_FILE}\" PATH)")
-# Construct the proper number of get_filename_component(... PATH)
-# calls to compute the installation prefix.
-string(REGEX REPLACE "/" ";" _count "${LLVM_INSTALL_PACKAGE_DIR}")
-foreach(p ${_count})
-  set(LLVM_CONFIG_CODE "${LLVM_CONFIG_CODE}
-get_filename_component(LLVM_INSTALL_PREFIX \"\${LLVM_INSTALL_PREFIX}\" PATH)")
-endforeach(p)
+find_prefix_from_config(LLVM_CONFIG_CODE LLVM_INSTALL_PREFIX "${LLVM_INSTALL_PACKAGE_DIR}")
 set(LLVM_CONFIG_INCLUDE_DIRS "\${LLVM_INSTALL_PREFIX}/include")
 set(LLVM_CONFIG_INCLUDE_DIR "${LLVM_CONFIG_INCLUDE_DIRS}")
 set(LLVM_CONFIG_MAIN_INCLUDE_DIR "${LLVM_CONFIG_INCLUDE_DIRS}")
