@@ -467,11 +467,13 @@ fp16_fml_fallthrough:
                                options::OPT_munaligned_access)) {
     if (A->getOption().matches(options::OPT_mno_unaligned_access)) {
       Features.push_back("+strict-align");
-      CmdArgs.push_back("-Wunaligned-access");
+      if (!ForAS)
+        CmdArgs.push_back("-Wunaligned-access");
     }
   } else if (Triple.isOSOpenBSD()) {
     Features.push_back("+strict-align");
-    CmdArgs.push_back("-Wunaligned-access");
+    if (!ForAS)
+      CmdArgs.push_back("-Wunaligned-access");
   }
 
   if (Args.hasArg(options::OPT_ffixed_x1))

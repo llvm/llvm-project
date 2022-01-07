@@ -771,7 +771,8 @@ fp16_fml_fallthrough:
   // Kernel code has more strict alignment requirements.
   if (KernelOrKext) {
     Features.push_back("+strict-align");
-    CmdArgs.push_back("-Wunaligned-access");
+    if (!ForAS)
+      CmdArgs.push_back("-Wunaligned-access");
   } else if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                       options::OPT_munaligned_access)) {
     if (A->getOption().matches(options::OPT_munaligned_access)) {
@@ -784,7 +785,8 @@ fp16_fml_fallthrough:
         D.Diag(diag::err_target_unsupported_unaligned) << "v8m.base";
     } else {
       Features.push_back("+strict-align");
-      CmdArgs.push_back("-Wunaligned-access");
+      if (!ForAS)
+        CmdArgs.push_back("-Wunaligned-access");
     }
   } else {
     // Assume pre-ARMv6 doesn't support unaligned accesses.
@@ -806,17 +808,20 @@ fp16_fml_fallthrough:
       if (VersionNum < 6 ||
           Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m) {
         Features.push_back("+strict-align");
-        CmdArgs.push_back("-Wunaligned-access");
+        if (!ForAS)
+          CmdArgs.push_back("-Wunaligned-access");
       }
     } else if (Triple.isOSLinux() || Triple.isOSNaCl() ||
                Triple.isOSWindows()) {
       if (VersionNum < 7) {
         Features.push_back("+strict-align");
-        CmdArgs.push_back("-Wunaligned-access");
+        if (!ForAS)
+          CmdArgs.push_back("-Wunaligned-access");
       }
     } else {
       Features.push_back("+strict-align");
-      CmdArgs.push_back("-Wunaligned-access");
+      if (!ForAS)
+        CmdArgs.push_back("-Wunaligned-access");
     }
   }
 
