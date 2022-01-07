@@ -842,6 +842,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   // inplace. Therefore, we just bufferize funcOp as if none of its results were
   // inplaceable, detect which operands are cloned internally and decide what to
   // do at call sites.
+
+  // Analyze ops.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // No body => no analysis.
     if (funcOp.body().empty())
@@ -854,8 +856,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     // Gather equivalence info for CallOps.
     equivalenceAnalysis(funcOp, aliasInfo, moduleState);
 
-    // Analyze and bufferize funcOp.
-    if (failed(runComprehensiveBufferize(funcOp, *options, state)))
+    // Analyze funcOp.
+    if (failed(analyzeOp(funcOp, state)))
       return failure();
 
     // Add annotations to function arguments.
@@ -866,6 +868,18 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (options->testAnalysisOnly)
     return success();
 
+  // Bufferize function bodies.
+  for (FuncOp funcOp : moduleState.orderedFuncOps) {
+    // No body => no analysis.
+    if (funcOp.body().empty())
+      continue;
+
+    if (failed(runComprehensiveBufferize(funcOp, *options, state,
+                                         /*runAnalysis=*/false)))
+      return failure();
+  }
+
+  // Bufferize function boundaries.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.
