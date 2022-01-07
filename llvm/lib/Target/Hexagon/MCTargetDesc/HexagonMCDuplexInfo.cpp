@@ -699,6 +699,7 @@ inline static void addOps(MCInst &subInstPtr, MCInst const &Inst,
 
 MCInst HexagonMCInstrInfo::deriveSubInst(MCInst const &Inst) {
   MCInst Result;
+  Result.setLoc(Inst.getLoc());
   bool Absolute;
   int64_t Value;
   switch (Inst.getOpcode()) {
