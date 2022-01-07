@@ -53,6 +53,8 @@ void promotable(int a, ...) {
 
   // Ensure that signed vs unsigned doesn't matter either.
   (void)__builtin_va_arg(ap, unsigned int);
+
+  (void)__builtin_va_arg(ap, bool); // expected-warning {{second argument to 'va_arg' is of promotable type 'bool'; this va_arg has undefined behavior because arguments will be promoted to 'int'}}
 }
 
 #if __cplusplus >= 201103L
