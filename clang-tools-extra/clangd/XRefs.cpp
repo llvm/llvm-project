@@ -1298,7 +1298,7 @@ std::vector<LocatedSymbol> findImplementations(ParsedAST &AST, Position Pos,
   DeclRelationSet Relations =
       DeclRelation::TemplatePattern | DeclRelation::Alias;
   llvm::DenseSet<SymbolID> IDs;
-  RelationKind QueryKind;
+  RelationKind QueryKind = RelationKind::OverriddenBy;
   for (const NamedDecl *ND : getDeclAtPosition(AST, *CurLoc, Relations)) {
     if (const auto *CXXMD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
       if (CXXMD->isVirtual()) {
