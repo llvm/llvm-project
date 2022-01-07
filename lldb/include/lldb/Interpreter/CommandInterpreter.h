@@ -649,7 +649,7 @@ private:
 
   void FindCommandsForApropos(llvm::StringRef word, StringList &commands_found,
                               StringList &commands_help,
-                              const CommandObject::CommandMap &command_map);
+                              CommandObject::CommandMap &command_map);
 
   // An interruptible wrapper around the stream output
   void PrintCommandOutput(Stream &stream, llvm::StringRef str);
