@@ -22,7 +22,6 @@ namespace aarch64 {
 
 void getAArch64TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                               const llvm::opt::ArgList &Args,
-                              llvm::opt::ArgStringList &CmdArgs,
                               std::vector<llvm::StringRef> &Features,
                               bool ForAS);
 

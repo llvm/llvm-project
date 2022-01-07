@@ -769,12 +769,10 @@ fp16_fml_fallthrough:
   }
 
   // Kernel code has more strict alignment requirements.
-  if (KernelOrKext) {
+  if (KernelOrKext)
     Features.push_back("+strict-align");
-    if (!ForAS)
-      CmdArgs.push_back("-Wunaligned-access");
-  } else if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
-                                      options::OPT_munaligned_access)) {
+  else if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
+                                    options::OPT_munaligned_access)) {
     if (A->getOption().matches(options::OPT_munaligned_access)) {
       // No v6M core supports unaligned memory access (v6M ARM ARM A3.2).
       if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
@@ -783,11 +781,8 @@ fp16_fml_fallthrough:
       // access either.
       else if (Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v8m_baseline)
         D.Diag(diag::err_target_unsupported_unaligned) << "v8m.base";
-    } else {
+    } else
       Features.push_back("+strict-align");
-      if (!ForAS)
-        CmdArgs.push_back("-Wunaligned-access");
-    }
   } else {
     // Assume pre-ARMv6 doesn't support unaligned accesses.
     //
@@ -806,23 +801,14 @@ fp16_fml_fallthrough:
     int VersionNum = getARMSubArchVersionNumber(Triple);
     if (Triple.isOSDarwin() || Triple.isOSNetBSD()) {
       if (VersionNum < 6 ||
-          Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m) {
+          Triple.getSubArch() == llvm::Triple::SubArchType::ARMSubArch_v6m)
         Features.push_back("+strict-align");
-        if (!ForAS)
-          CmdArgs.push_back("-Wunaligned-access");
-      }
     } else if (Triple.isOSLinux() || Triple.isOSNaCl() ||
                Triple.isOSWindows()) {
-      if (VersionNum < 7) {
+      if (VersionNum < 7)
         Features.push_back("+strict-align");
-        if (!ForAS)
-          CmdArgs.push_back("-Wunaligned-access");
-      }
-    } else {
+    } else
       Features.push_back("+strict-align");
-      if (!ForAS)
-        CmdArgs.push_back("-Wunaligned-access");
-    }
   }
 
   // llvm does not support reserving registers in general. There is support
