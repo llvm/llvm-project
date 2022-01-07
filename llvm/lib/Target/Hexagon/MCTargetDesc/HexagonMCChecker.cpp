@@ -275,20 +275,27 @@ static bool isDuplexAGroup(unsigned Opcode) {
 }
 
 static bool isNeitherAnorX(MCInstrInfo const &MCII, MCInst const &ID) {
-  unsigned Result = 0;
+  if (HexagonMCInstrInfo::isFloat(MCII, ID))
+    return true;
   unsigned Type = HexagonMCInstrInfo::getType(MCII, ID);
-  if (Type == HexagonII::TypeDUPLEX) {
-    unsigned subInst0Opcode = ID.getOperand(0).getInst()->getOpcode();
-    unsigned subInst1Opcode = ID.getOperand(1).getInst()->getOpcode();
-    Result += !isDuplexAGroup(subInst0Opcode);
-    Result += !isDuplexAGroup(subInst1Opcode);
-  } else
-    Result +=
-        Type != HexagonII::TypeALU32_2op && Type != HexagonII::TypeALU32_3op &&
-        Type != HexagonII::TypeALU32_ADDI && Type != HexagonII::TypeS_2op &&
-        Type != HexagonII::TypeS_3op &&
-        (Type != HexagonII::TypeALU64 || HexagonMCInstrInfo::isFloat(MCII, ID));
-  return Result != 0;
+  switch (Type) {
+  case HexagonII::TypeALU32_2op:
+  case HexagonII::TypeALU32_3op:
+  case HexagonII::TypeALU32_ADDI:
+  case HexagonII::TypeS_2op:
+  case HexagonII::TypeS_3op:
+  case HexagonII::TypeEXTENDER:
+  case HexagonII::TypeM:
+  case HexagonII::TypeALU64:
+    return false;
+  case HexagonII::TypeSUBINSN: {
+    return !isDuplexAGroup(ID.getOpcode());
+  }
+  case HexagonII::TypeDUPLEX:
+    llvm_unreachable("unexpected duplex instruction");
+  default:
+    return true;
+  }
 }
 
 bool HexagonMCChecker::checkAXOK() {
