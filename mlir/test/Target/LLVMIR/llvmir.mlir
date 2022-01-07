@@ -975,6 +975,16 @@ llvm.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32) -> !llvm.struct<(
   llvm.return %10 : !llvm.struct<(f32, i32)>
 }
 
+// CHECK-LABEL: @gep
+llvm.func @gep(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, %idx: i64,
+               %ptr2: !llvm.ptr<struct<(array<10xf32>)>>) {
+  // CHECK: = getelementptr { i32, { i32, float } }, { i32, { i32, float } }* %{{.*}}, i64 %{{.*}}, i32 1, i32 0
+  llvm.getelementptr %ptr[%idx, 1, 0] : (!llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, i64) -> !llvm.ptr<i32>
+  // CHECK: = getelementptr { [10 x float] }, { [10 x float] }* %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr %ptr2[%idx, 0, %idx] : (!llvm.ptr<struct<(array<10xf32>)>>, i64, i64) -> !llvm.ptr<f32>
+  llvm.return
+}
+
 //
 // Indirect function calls
 //

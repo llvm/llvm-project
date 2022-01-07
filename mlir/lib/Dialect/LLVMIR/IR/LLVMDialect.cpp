@@ -357,6 +357,67 @@ SwitchOp::getMutableSuccessorOperands(unsigned index) {
 }
 
 //===----------------------------------------------------------------------===//
+// Code for LLVM::GEPOp.
+//===----------------------------------------------------------------------===//
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Value basePtr, ValueRange operands,
+                  ArrayRef<NamedAttribute> attributes) {
+  build(builder, result, resultType, basePtr, operands,
+        SmallVector<int32_t>(operands.size(), LLVM::GEPOp::kDynamicIndex),
+        attributes);
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Value basePtr, ValueRange indices,
+                  ArrayRef<int32_t> structIndices,
+                  ArrayRef<NamedAttribute> attributes) {
+  result.addTypes(resultType);
+  result.addAttributes(attributes);
+  result.addAttribute("structIndices", builder.getI32TensorAttr(structIndices));
+  result.addOperands(basePtr);
+  result.addOperands(indices);
+}
+
+static ParseResult
+parseGEPIndices(OpAsmParser &parser,
+                SmallVectorImpl<OpAsmParser::OperandType> &indices,
+                DenseIntElementsAttr &structIndices) {
+  SmallVector<int32_t> constantIndices;
+  do {
+    int32_t constantIndex;
+    OptionalParseResult parsedInteger =
+        parser.parseOptionalInteger(constantIndex);
+    if (parsedInteger.hasValue()) {
+      if (failed(parsedInteger.getValue()))
+        return failure();
+      constantIndices.push_back(constantIndex);
+      continue;
+    }
+
+    constantIndices.push_back(LLVM::GEPOp::kDynamicIndex);
+    if (failed(parser.parseOperand(indices.emplace_back())))
+      return failure();
+  } while (succeeded(parser.parseOptionalComma()));
+
+  structIndices = parser.getBuilder().getI32TensorAttr(constantIndices);
+  return success();
+}
+
+static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
+                            OperandRange indices,
+                            DenseIntElementsAttr structIndices) {
+  unsigned operandIdx = 0;
+  llvm::interleaveComma(structIndices.getValues<int32_t>(), printer,
+                        [&](int32_t cst) {
+                          if (cst == LLVM::GEPOp::kDynamicIndex)
+                            printer.printOperand(indices[operandIdx++]);
+                          else
+                            printer << cst;
+                        });
+}
+
+//===----------------------------------------------------------------------===//
 // Builder, printer and parser for for LLVM::LoadOp.
 //===----------------------------------------------------------------------===//
 
