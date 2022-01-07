@@ -234,9 +234,10 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkHWLoop = checkHWLoop();
   bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
+  bool ChkHVXAccum = checkHVXAccum();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
              chkAXOK && chkCofMax1 && chkHWLoop && chkValidTmpDst &&
-             chkLegalVecRegPair;
+             chkLegalVecRegPair && ChkHVXAccum;
 
   return chk;
 }
@@ -812,6 +813,25 @@ bool HexagonMCChecker::checkLegalVecRegPair() {
       reportError("register pair `" + Twine(RI.getName(R)) +
                   "' is not permitted for this architecture");
     return false;
+  }
+  return true;
+}
+
+// Vd.tmp can't be accumulated
+bool HexagonMCChecker::checkHVXAccum()
+{
+  for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    bool IsTarget =
+        HexagonMCInstrInfo::isAccumulator(MCII, I) && I.getOperand(0).isReg();
+    if (!IsTarget)
+      continue;
+    unsigned int R = I.getOperand(0).getReg();
+    TmpDefsIterator It = TmpDefs.find(R);
+    if (It != TmpDefs.end()) {
+      reportError("register `" + Twine(RI.getName(R)) + ".tmp" +
+                  "' is accumulated in this packet");
+      return false;
+    }
   }
   return true;
 }
