@@ -288,7 +288,7 @@ struct TiledLoopOpInterface
 
     // Compute new inputs, outputs and results.
     SmallVector<Value> newInputs, newOutputs, newResults;
-    for (int i = tiledLoopOp.getNumControlOperands();
+    for (unsigned i = tiledLoopOp.getNumControlOperands();
          i < tiledLoopOp->getNumOperands(); ++i) {
       OpOperand &operand = tiledLoopOp->getOpOperand(i);
       Value rewrittenValue = operand.get();
