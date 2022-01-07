@@ -77,13 +77,13 @@ class TensorExpression:
     self.visit_tensor_exprs(visit_scalar_def)
 
   def __add__(self, rhs: "TensorExpression") -> "TensorExpression":
-    return PrimFn.add(self, rhs)
+    return ArithFn.add(self, rhs)
 
   def __mul__(self, rhs) -> "TensorExpression":
-    return PrimFn.mul(self, rhs)
+    return ArithFn.mul(self, rhs)
 
   def __sub__(self, rhs) -> "TensorExpression":
-    return PrimFn.sub(self, rhs)
+    return ArithFn.sub(self, rhs)
 
   def __hash__(self):
     return hash(id(self))
@@ -347,42 +347,55 @@ class TypeFn:
   cast_unsigned = TypeFnType("cast_unsigned")
 
 
-class PrimFnType:
-  """Primitive operations."""
+class ArithFnType:
+  """Arithmetic function.
 
-  def __init__(self, prim_name: str):
-    self.prim_name = prim_name
+  An arithmetic function takes one ore more tensor expressions and returns the
+  function evaluation result.
+  """
 
-  def __call__(self, *args):
-    return PrimApply(self, args)
+  def __init__(self, fn_name: str):
+    self.fn_name = fn_name
+
+  def __call__(self, *args) -> "TensorArithFn":
+    return TensorArithFn(self, args)
 
   def reduce(self, *reduce_dims: DimDef):
-    """Shortcut to create a Reduce operation from this primitive."""
+    """Shortcut to create a Reduce operation from this function."""
     return ReduceFnType(self, *reduce_dims)
 
   def __repr__(self):
-    return f"{self.prim_name}"
+    return f"{self.fn_name}"
 
 
-class PrimFn:
-  add = PrimFnType("add")
-  exp = PrimFnType("exp")
-  log = PrimFnType("log")
-  mul = PrimFnType("mul")
-  max = PrimFnType("max")
-  min = PrimFnType("min")
-  sub = PrimFnType("sub")
-  max_unsigned = PrimFnType("max_unsigned")
-  min_unsigned = PrimFnType("min_unsigned")
+class ArithFn:
+  """Arithmetic function namespace.
+
+  As the integer types are signless, signedness is implement by different
+  functions that treat integers as signed or unsigned values.
+
+  Examples:
+  - max -> `arith.MaxSIOp`
+  - max_unsinged -> `arith.MaxUIOp`
+  """
+  add = ArithFnType("add")
+  exp = ArithFnType("exp")
+  log = ArithFnType("log")
+  mul = ArithFnType("mul")
+  max = ArithFnType("max")
+  min = ArithFnType("min")
+  sub = ArithFnType("sub")
+  max_unsigned = ArithFnType("max_unsigned")
+  min_unsigned = ArithFnType("min_unsigned")
 
 
 class ReduceFnType:
   """A reduction operator that reduces into its LHS from its RHS."""
 
-  def __init__(self, operator: PrimFnType, *reduce_dims: DimDef):
-    """Initializes the ReduceFn with a primitive function and dims."""
-    if not isinstance(operator, PrimFnType):
-      raise ValueError(f"Reduce expected a Prim operator but got {operator}")
+  def __init__(self, operator: ArithFnType, *reduce_dims: DimDef):
+    """Initializes the ReduceFn with an airthmetic function and dims."""
+    if not isinstance(operator, ArithFnType):
+      raise ValueError(f"Reduce expected a ArithFnType but got {operator}")
     self.operator = operator
     self.reduce_dims = tuple(reduce_dims)
 
@@ -390,28 +403,28 @@ class ReduceFnType:
     return ReduceApply(self, args)
 
   def __repr__(self):
-    return (f"reduce_{self.operator.prim_name}"
+    return (f"reduce_{self.operator.fn_name}"
             f"({', '.join(repr(d) for d in self.reduce_dims)})")
 
 
 class ReduceFn:
-  add = PrimFn.add.reduce
-  mul = PrimFn.mul.reduce
-  max = PrimFn.max.reduce
-  min = PrimFn.min.reduce
-  max_unsigned = PrimFn.max_unsigned.reduce
-  min_unsigned = PrimFn.min_unsigned.reduce
+  add = ArithFn.add.reduce
+  mul = ArithFn.mul.reduce
+  max = ArithFn.max.reduce
+  min = ArithFn.min.reduce
+  max_unsigned = ArithFn.max_unsigned.reduce
+  min_unsigned = ArithFn.min_unsigned.reduce
 
 
-class PrimApply(TensorExpression):
-  """Application of a primitive."""
+class TensorArithFn(TensorExpression):
+  """Application of an arithmetic function."""
 
-  def __init__(self, prim: PrimFnType, args: Sequence[TensorExpression]):
-    self.prim = prim
+  def __init__(self, arith_fn: ArithFnType, args: Sequence[TensorExpression]):
+    self.arith_fn = arith_fn
     self.args = tuple(args)
 
   def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarApplyFn(self.prim.prim_name,
+    return ScalarArithFn(self.arith_fn.fn_name,
                          *[arg.to_scalar_expression() for arg in self.args
                           ]).expr()
 
@@ -421,7 +434,7 @@ class PrimApply(TensorExpression):
       arg.visit_tensor_exprs(callback)
 
   def __repr__(self):
-    return f"{repr(self.prim)}({', '.join(repr(a) for a in self.args)})"
+    return f"{repr(self.arith_fn)}({', '.join(repr(a) for a in self.args)})"
 
 
 class TensorTypeFn(TensorExpression):
@@ -503,7 +516,7 @@ class ReduceApply(TensorExpression):
                        f"bound to its lhs: {self}")
     full_args = [self.lhs.to_scalar_expression()
                 ] + [arg.to_scalar_expression() for arg in self.args]
-    return ScalarApplyFn(self.reduce.operator.prim_name, *full_args).expr()
+    return ScalarArithFn(self.reduce.operator.fn_name, *full_args).expr()
 
   def visit_tensor_exprs(self, callback):
     for arg in self.args:

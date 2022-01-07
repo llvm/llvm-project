@@ -82,7 +82,7 @@ struct LinalgIndexingMapsConfig {
 
 struct ScalarExpression;
 
-struct ScalarApply {
+struct ScalarArithFn {
   std::string fnName;
   // NOTE: Must be pure heap allocated container (not SmallVector)
   // due to recursive data type.
@@ -101,7 +101,7 @@ struct ScalarExpression {
   Optional<std::string> arg;
   Optional<std::string> constant;
   Optional<int64_t> index;
-  Optional<ScalarApply> apply;
+  Optional<ScalarArithFn> arithFn;
   Optional<ScalarTypeFn> typeFn;
 };
 
@@ -245,9 +245,10 @@ struct MappingTraits<ScalarAssign> {
 };
 
 /// A scalar expression (RHS of an assignment). Must be one of:
-///   - `scalar_arg`: Name of an argument to the op.
-///   - `scalar_apply`: Result of evaluating a named function (see
-///      `ScalarApply`).
+///   - `scalar_arg`: An operation argument.
+///   - `scalar_const`: A constant definition.
+///   - `scalar_index`: An iteration index.
+///   - `arith_fn`: A named arithmetic function (see `ScalarArithFn`).
 ///   - `type_fn`: A named type conversion function (see `ScalarTypeFn`).
 template <>
 struct MappingTraits<ScalarExpression> {
@@ -255,7 +256,7 @@ struct MappingTraits<ScalarExpression> {
     io.mapOptional("scalar_arg", info.arg);
     io.mapOptional("scalar_const", info.constant);
     io.mapOptional("scalar_index", info.index);
-    io.mapOptional("scalar_apply", info.apply);
+    io.mapOptional("arith_fn", info.arithFn);
     io.mapOptional("type_fn", info.typeFn);
   }
 };
@@ -266,8 +267,8 @@ struct MappingTraits<ScalarExpression> {
 ///   - `add(lhs, rhs)`
 ///   - `mul(lhs, rhs)`
 template <>
-struct MappingTraits<ScalarApply> {
-  static void mapping(IO &io, ScalarApply &info) {
+struct MappingTraits<ScalarArithFn> {
+  static void mapping(IO &io, ScalarArithFn &info) {
     io.mapRequired("fn_name", info.fnName);
     io.mapRequired("operands", info.operands);
   }
@@ -944,11 +945,11 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b, Block &block) {{
                                         cppIdent, *expression.index));
           return cppIdent;
         }
-        if (expression.apply) {
+        if (expression.arithFn) {
           // Apply function.
           // Recursively generate operands.
           SmallVector<std::string> operandCppValues;
-          for (ScalarExpression &operand : expression.apply->operands) {
+          for (ScalarExpression &operand : expression.arithFn->operands) {
             auto operandCppValue = generateExpression(operand);
             if (!operandCppValue)
               return None;
@@ -956,8 +957,8 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b, Block &block) {{
           }
           std::string cppIdent = llvm::formatv("value{0}", ++localCounter);
           stmts.push_back(
-              llvm::formatv("Value {0} = helper.applyfn__{1}({2});", cppIdent,
-                            expression.apply->fnName,
+              llvm::formatv("Value {0} = helper.arithfn__{1}({2});", cppIdent,
+                            expression.arithFn->fnName,
                             interleaveToString(operandCppValues, ", ")));
           return cppIdent;
         }

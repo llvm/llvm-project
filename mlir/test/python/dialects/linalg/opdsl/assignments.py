@@ -9,10 +9,10 @@ from mlir.dialects.linalg.opdsl.lang import *
 # CHECK:  -
 # CHECK:    arg: C
 # CHECK:    value:
-# CHECK:      scalar_apply:
+# CHECK:      arith_fn:
 # CHECK:        fn_name: add
 # CHECK:        operands:
-# CHECK:          scalar_apply:
+# CHECK:          arith_fn:
 # CHECK:            fn_name: mul
 # CHECK:            operands:
 # CHECK:              type_fn:
@@ -36,10 +36,10 @@ def matmul(
 # CHECK: assignments:
 # CHECK:  -
 # CHECK:    arg: O
-# CHECK:      scalar_apply:
+# CHECK:      arith_fn:
 # CHECK:        fn_name: sub
 # CHECK:        operands:
-# CHECK:          scalar_apply:
+# CHECK:          arith_fn:
 # CHECK:            fn_name: add
 # CHECK:            operands:
 # CHECK:              type_fn:
@@ -67,7 +67,7 @@ def constants(O=TensorDef(T, S.M, S.K, output=True)):
 # CHECK: assignments:
 # CHECK:  -
 # CHECK:    arg: O
-# CHECK:      scalar_apply:
+# CHECK:      arith_fn:
 # CHECK:        fn_name: add
 # CHECK:        operands:
 # CHECK:          scalar_index: 1

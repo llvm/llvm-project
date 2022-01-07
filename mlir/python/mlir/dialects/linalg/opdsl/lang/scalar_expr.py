@@ -20,7 +20,7 @@ from .types import *
 
 __all__ = [
     "ScalarAssign",
-    "ScalarApplyFn",
+    "ScalarArithFn",
     "ScalarTypeFn",
     "ScalarArg",
     "ScalarConst",
@@ -29,18 +29,18 @@ __all__ = [
 ]
 
 
-class ScalarApplyFn:
-  """A type of ScalarExpression that applies a named function to operands."""
+class ScalarArithFn:
+  """A type of ScalarExpression that applies an arithmetic function."""
 
   def __init__(self, fn_name: str, *operands: "ScalarExpression"):
     self.fn_name = fn_name
     self.operands = operands
 
   def expr(self) -> "ScalarExpression":
-    return ScalarExpression(scalar_apply=self)
+    return ScalarExpression(arith_fn=self)
 
   def __repr__(self):
-    return f"ScalarApplyFn<{self.fn_name}>({', '.join(self.operands)})"
+    return f"ScalarArithFn<{self.fn_name}>({', '.join(self.operands)})"
 
 
 class ScalarTypeFn:
@@ -102,7 +102,7 @@ class ScalarExpression(YAMLObject):
   """An expression on scalar values.
 
   Can be one of:
-    - ScalarApplyFn
+    - ScalarArithFn
     - ScalarTypeFn
     - ScalarArg
     - ScalarConst
@@ -112,27 +112,27 @@ class ScalarExpression(YAMLObject):
   yaml_tag = "!ScalarExpression"
 
   def __init__(self,
-               scalar_apply: Optional[ScalarApplyFn] = None,
+               arith_fn: Optional[ScalarArithFn] = None,
                type_fn: Optional[ScalarTypeFn] = None,
                scalar_arg: Optional[ScalarArg] = None,
                scalar_const: Optional[ScalarConst] = None,
                scalar_index: Optional[ScalarIndex] = None):
-    if (bool(scalar_apply) + bool(type_fn) + bool(scalar_arg) +
-        bool(scalar_const) + bool(scalar_index)) != 1:
-      raise ValueError("One of 'scalar_apply', 'type_fn', 'scalar_arg', "
+    if (bool(arith_fn) + bool(type_fn) + bool(scalar_arg) + bool(scalar_const) +
+        bool(scalar_index)) != 1:
+      raise ValueError("One of 'arith_fn', 'type_fn', 'scalar_arg', "
                        "'scalar_const', 'scalar_index', must be specified")
-    self.scalar_apply = scalar_apply
+    self.arith_fn = arith_fn
     self.type_fn = type_fn
     self.scalar_arg = scalar_arg
     self.scalar_const = scalar_const
     self.scalar_index = scalar_index
 
   def to_yaml_custom_dict(self):
-    if self.scalar_apply:
+    if self.arith_fn:
       return dict(
-          scalar_apply=dict(
-              fn_name=self.scalar_apply.fn_name,
-              operands=list(self.scalar_apply.operands),
+          arith_fn=dict(
+              fn_name=self.arith_fn.fn_name,
+              operands=list(self.arith_fn.operands),
           ))
     if self.type_fn:
       # Note that even though operands must be arity 1, we write it the
