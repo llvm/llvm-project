@@ -1523,8 +1523,16 @@ void UnwrappedLineParser::parseStructuralElement(bool IsTopLevel) {
         // structural element.
         // FIXME: Figure out cases where this is not true, and add projections
         // for them (the one we know is missing are lambdas).
-        if (Style.BraceWrapping.AfterFunction)
+        if (Style.Language == FormatStyle::LK_Java &&
+            Line->Tokens.front().Tok->is(Keywords.kw_synchronized)) {
+          // If necessary, we could set the type to something different than
+          // TT_FunctionLBrace.
+          if (Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_Always)
+            addUnwrappedLine();
+        } else if (Style.BraceWrapping.AfterFunction) {
           addUnwrappedLine();
+        }
         FormatTok->setType(TT_FunctionLBrace);
         parseBlock();
         addUnwrappedLine();
