@@ -127,11 +127,11 @@ bool llvm::HexagonMCShuffle(MCContext &Context, bool Fatal,
   return MCS.reshuffleTo(MCB);
 }
 
-bool
-llvm::HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
-                       MCSubtargetInfo const &STI, MCInst &MCB,
-                       SmallVector<DuplexCandidate, 8> possibleDuplexes) {
-  if (DisableShuffle)
+bool llvm::HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
+                            MCSubtargetInfo const &STI, MCInst &MCB,
+                            SmallVector<DuplexCandidate, 8> possibleDuplexes) {
+
+  if (DisableShuffle || possibleDuplexes.size() == 0)
     return false;
 
   if (!HexagonMCInstrInfo::bundleSize(MCB)) {
@@ -172,10 +172,8 @@ llvm::HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
     HexagonMCShuffler MCS(Context, false, MCII, STI, MCB);
     doneShuffling = MCS.reshuffleTo(MCB); // shuffle
   }
-  if (!doneShuffling)
-    return true;
 
-  return false;
+  return doneShuffling;
 }
 
 bool llvm::HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,

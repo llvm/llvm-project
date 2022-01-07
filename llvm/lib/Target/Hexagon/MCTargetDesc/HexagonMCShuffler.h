@@ -52,9 +52,11 @@ private:
   void init(MCInst &MCB, MCInst const &AddMI, bool InsertAtFront);
 };
 
-// Invocation of the shuffler.
-bool HexagonMCShuffle(MCContext &Context, bool Fatal, MCInstrInfo const &MCII,
-                      MCSubtargetInfo const &STI, MCInst &MCB);
+// Invocation of the shuffler.  Returns true if the shuffle succeeded.  If
+// true, MCB will contain the newly-shuffled packet.
+bool HexagonMCShuffle(MCContext &Context, bool ReportErrors,
+                      MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
+                      MCInst &MCB);
 bool HexagonMCShuffle(MCContext &Context, MCInstrInfo const &MCII,
                       MCSubtargetInfo const &STI, MCInst &MCB,
                       MCInst const &AddMI, int fixupCount);
