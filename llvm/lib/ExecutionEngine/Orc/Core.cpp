@@ -2201,7 +2201,7 @@ void ExecutionSession::dump(raw_ostream &OS) {
 
 void ExecutionSession::dispatchOutstandingMUs() {
   LLVM_DEBUG(dbgs() << "Dispatching MaterializationUnits...\n");
-  while (1) {
+  while (true) {
     Optional<std::pair<std::unique_ptr<MaterializationUnit>,
                        std::unique_ptr<MaterializationResponsibility>>>
         JMU;

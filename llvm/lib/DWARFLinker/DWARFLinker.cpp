@@ -1935,7 +1935,7 @@ uint32_t DWARFLinker::DIECloner::hashFullyQualifiedName(DWARFDie DIE,
   CompileUnit *CU = &U;
   Optional<DWARFFormValue> Ref;
 
-  while (1) {
+  while (true) {
     if (const char *CurrentName = DIE.getName(DINameKind::ShortName))
       Name = CurrentName;
 

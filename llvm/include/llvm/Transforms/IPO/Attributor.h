@@ -2361,8 +2361,8 @@ private:
 };
 
 /// Simple wrapper for a single bit (boolean) state.
-struct BooleanState : public IntegerStateBase<bool, 1, 0> {
-  using super = IntegerStateBase<bool, 1, 0>;
+struct BooleanState : public IntegerStateBase<bool, true, false> {
+  using super = IntegerStateBase<bool, true, false>;
   using base_t = IntegerStateBase::base_t;
 
   BooleanState() : super() {}
