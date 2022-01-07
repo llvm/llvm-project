@@ -541,6 +541,10 @@ struct FragmentCompiler {
       Out.Apply.push_back([Value(**F.DeducedTypes)](const Params &, Config &C) {
         C.InlayHints.DeducedTypes = Value;
       });
+    if (F.Designators)
+      Out.Apply.push_back([Value(**F.Designators)](const Params &, Config &C) {
+        C.InlayHints.Designators = Value;
+      });
   }
 
   constexpr static llvm::SourceMgr::DiagKind Error = llvm::SourceMgr::DK_Error;

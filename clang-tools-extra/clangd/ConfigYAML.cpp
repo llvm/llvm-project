@@ -229,6 +229,10 @@ private:
       if (auto Value = boolValue(N, "DeducedTypes"))
         F.DeducedTypes = *Value;
     });
+    Dict.handle("Designators", [&](Node &N) {
+      if (auto Value = boolValue(N, "Designators"))
+        F.Designators = *Value;
+    });
     Dict.parse(N);
   }
 

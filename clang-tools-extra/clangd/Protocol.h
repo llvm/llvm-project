@@ -1538,6 +1538,12 @@ enum class InlayHintKind {
   /// which shows the deduced type of the variable.
   TypeHint,
 
+  /// A hint before an element of an aggregate braced initializer list,
+  /// indicating what it is initializing.
+  ///   Pair{^1, ^2};
+  /// Uses designator syntax, e.g. `.first:`.
+  DesignatorHint,
+
   /// Other ideas for hints that are not currently implemented:
   ///
   /// * Chaining hints, showing the types of intermediate expressions

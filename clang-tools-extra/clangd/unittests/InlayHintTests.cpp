@@ -13,21 +13,22 @@
 #include "TestWorkspace.h"
 #include "XRefs.h"
 #include "support/Context.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
 
-std::ostream &operator<<(std::ostream &Stream, const InlayHint &Hint) {
-  return Stream << Hint.label;
+llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                              const InlayHint &Hint) {
+  return Stream << Hint.label << "@" << Hint.range;
 }
 
 namespace {
 
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
-using ::testing::UnorderedElementsAre;
 
 std::vector<InlayHint> hintsOfKind(ParsedAST &AST, InlayHintKind Kind) {
   std::vector<InlayHint> Result;
@@ -45,17 +46,24 @@ struct ExpectedHint {
   std::string RangeName;
   HintSide Side = Left;
 
-  friend std::ostream &operator<<(std::ostream &Stream,
-                                  const ExpectedHint &Hint) {
-    return Stream << Hint.RangeName << ": " << Hint.Label;
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                                       const ExpectedHint &Hint) {
+    return Stream << Hint.Label << "@$" << Hint.RangeName;
   }
 };
 
-MATCHER_P2(HintMatcher, Expected, Code, "") {
-  return arg.label == Expected.Label &&
-         arg.range == Code.range(Expected.RangeName) &&
-         arg.position ==
-             ((Expected.Side == Left) ? arg.range.start : arg.range.end);
+MATCHER_P2(HintMatcher, Expected, Code, llvm::to_string(Expected)) {
+  if (arg.label != Expected.Label) {
+    *result_listener << "label is " << arg.label;
+    return false;
+  }
+  if (arg.range != Code.range(Expected.RangeName)) {
+    *result_listener << "range is " << arg.label << " but $"
+                     << Expected.RangeName << " is "
+                     << llvm::to_string(Code.range(Expected.RangeName));
+    return false;
+  }
+  return true;
 }
 
 MATCHER_P(labelIs, Label, "") { return arg.label == Label; }
@@ -64,6 +72,7 @@ Config noHintsConfig() {
   Config C;
   C.InlayHints.Parameters = false;
   C.InlayHints.DeducedTypes = false;
+  C.InlayHints.Designators = false;
   return C;
 }
 
@@ -98,6 +107,15 @@ void assertTypeHints(llvm::StringRef AnnotatedSource,
                      ExpectedHints... Expected) {
   ignore(Expected.Side = Right...);
   assertHints(InlayHintKind::TypeHint, AnnotatedSource, Expected...);
+}
+
+template <typename... ExpectedHints>
+void assertDesignatorHints(llvm::StringRef AnnotatedSource,
+                           ExpectedHints... Expected) {
+  Config Cfg;
+  Cfg.InlayHints.Designators = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  assertHints(InlayHintKind::DesignatorHint, AnnotatedSource, Expected...);
 }
 
 TEST(ParameterHints, Smoke) {
@@ -656,6 +674,71 @@ TEST(TypeHints, Deduplication) {
     template void foo<float>();
   )cpp",
                   ExpectedHint{": int", "var"});
+}
+
+TEST(DesignatorHints, Basic) {
+  assertDesignatorHints(R"cpp(
+    struct S { int x, y, z; };
+    S s {$x[[1]], $y[[2+2]]};
+
+    int x[] = {$0[[0]], $1[[1]]};
+  )cpp",
+                        ExpectedHint{".x=", "x"}, ExpectedHint{".y=", "y"},
+                        ExpectedHint{"[0]=", "0"}, ExpectedHint{"[1]=", "1"});
+}
+
+TEST(DesignatorHints, Nested) {
+  assertDesignatorHints(R"cpp(
+    struct Inner { int x, y; };
+    struct Outer { Inner a, b; };
+    Outer o{ $a[[{ $x[[1]], $y[[2]] }]], $bx[[3]] };
+  )cpp",
+                        ExpectedHint{".a=", "a"}, ExpectedHint{".x=", "x"},
+                        ExpectedHint{".y=", "y"}, ExpectedHint{".b.x=", "bx"});
+}
+
+TEST(DesignatorHints, AnonymousRecord) {
+  assertDesignatorHints(R"cpp(
+    struct S {
+      union {
+        struct {
+          struct {
+            int y;
+          };
+        } x;
+      };
+    };
+    S s{$xy[[42]]};
+  )cpp",
+                        ExpectedHint{".x.y=", "xy"});
+}
+
+TEST(DesignatorHints, Suppression) {
+  assertDesignatorHints(R"cpp(
+    struct Point { int a, b, c, d, e, f, g, h; };
+    Point p{/*a=*/1, .c=2, /* .d = */3, $e[[4]]};
+  )cpp",
+                        ExpectedHint{".e=", "e"});
+}
+
+TEST(DesignatorHints, StdArray) {
+  // Designators for std::array should be [0] rather than .__elements[0].
+  // While technically correct, the designator is useless and horrible to read.
+  assertDesignatorHints(R"cpp(
+    template <typename T, int N> struct Array { T __elements[N]; };
+    Array<int, 2> x = {$0[[0]], $1[[1]]};
+  )cpp",
+                        ExpectedHint{"[0]=", "0"}, ExpectedHint{"[1]=", "1"});
+}
+
+TEST(DesignatorHints, OnlyAggregateInit) {
+  assertDesignatorHints(R"cpp(
+    struct Copyable { int x; } c;
+    Copyable d{c};
+
+    struct Constructible { Constructible(int x); };
+    Constructible x{42};
+  )cpp" /*no designator hints expected (but param hints!)*/);
 }
 
 TEST(InlayHints, RestrictRange) {
