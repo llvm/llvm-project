@@ -401,10 +401,16 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __dfsan_mem_origin_transfer(
   MoveOrigin(dst, src, len, &stack);
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_origin_transfer(const void *dst,
-                                                             const void *src,
-                                                             uptr len) {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_origin_transfer(
+    const void *dst, const void *src, uptr len) {
   __dfsan_mem_origin_transfer(dst, src, len);
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_shadow_transfer(
+    void *dst, const void *src, uptr len) {
+  internal_memcpy((void *)__dfsan::shadow_for(dst),
+                  (const void *)__dfsan::shadow_for(src),
+                  len * sizeof(dfsan_label));
 }
 
 namespace __dfsan {
@@ -414,8 +420,7 @@ bool dfsan_init_is_running = false;
 
 void dfsan_copy_memory(void *dst, const void *src, uptr size) {
   internal_memcpy(dst, src, size);
-  internal_memcpy((void *)shadow_for(dst), (const void *)shadow_for(src),
-                  size * sizeof(dfsan_label));
+  dfsan_mem_shadow_transfer(dst, src, size);
   if (dfsan_get_track_origins())
     dfsan_mem_origin_transfer(dst, src, size);
 }
