@@ -431,6 +431,24 @@ TEST_F(FormatTestJava, SynchronizedKeyword) {
   verifyFormat("synchronized (mData) {\n"
                "  // ...\n"
                "}");
+
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Java);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  Style.BraceWrapping.AfterFunction = false;
+  verifyFormat("synchronized (mData)\n"
+               "{\n"
+               "  // ...\n"
+               "}",
+               Style);
+
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Never;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("synchronized (mData) {\n"
+               "  // ...\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTestJava, AssertKeyword) {
