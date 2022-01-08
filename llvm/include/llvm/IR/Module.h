@@ -47,9 +47,7 @@ class GVMaterializer;
 class LLVMContext;
 class MemoryBuffer;
 class ModuleSummaryIndex;
-class Pass;
 class RandomNumberGenerator;
-template <class PtrType> class SmallPtrSetImpl;
 class StructType;
 class VersionTuple;
 

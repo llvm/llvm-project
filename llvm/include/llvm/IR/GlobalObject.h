@@ -22,7 +22,6 @@
 namespace llvm {
 
 class Comdat;
-class MDNode;
 class Metadata;
 
 class GlobalObject : public GlobalValue {

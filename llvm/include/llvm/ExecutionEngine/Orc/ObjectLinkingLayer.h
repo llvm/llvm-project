@@ -38,10 +38,6 @@ class LinkGraph;
 class Symbol;
 } // namespace jitlink
 
-namespace object {
-class ObjectFile;
-} // namespace object
-
 namespace orc {
 
 class ObjectLinkingLayerJITLinkContext;
