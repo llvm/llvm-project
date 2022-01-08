@@ -51,7 +51,7 @@ define i32 @f6() {
 define i64 @f7() {
 ; CHECK-LABEL: f7:
 ; CHECK: or %r2, %r0, 0
-; CHECK: or %r3, %r0, %r2
+; CHECK: or %r3, %r0, 0
 ; CHECK: jmp %r1
   ret i64 0
 }
@@ -68,9 +68,9 @@ define i64 @f8() {
 define i64 @f9() {
 ; CHECK-LABEL: f9:
 ; 51966 = 0xcafe, 47806 = 0xbabe
-; CHECK: or.u %r2, %r0, 51966
-; CHECK: or   %r3, %r2, 47806
 ; CHECK: or   %r2, %r0, 0
+; CHECK: or.u %r3, %r0, 51966
+; CHECK: or   %r3, %r3, 47806
 ; CHECK: jmp %r1
   ret i64 3405691582 ; 0xcafebabe
 }
