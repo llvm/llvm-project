@@ -102,7 +102,7 @@ class GlobalsAAResult::FunctionInfo {
                 "Insufficient low bits to store our flag and ModRef info.");
 
 public:
-  FunctionInfo() : Info() {}
+  FunctionInfo() {}
   ~FunctionInfo() {
     delete Info.getPointer();
   }
@@ -963,7 +963,7 @@ ModRefInfo GlobalsAAResult::getModRefInfo(const CallBase *Call,
 GlobalsAAResult::GlobalsAAResult(
     const DataLayout &DL,
     std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
-    : AAResultBase(), DL(DL), GetTLI(std::move(GetTLI)) {}
+    : DL(DL), GetTLI(std::move(GetTLI)) {}
 
 GlobalsAAResult::GlobalsAAResult(GlobalsAAResult &&Arg)
     : AAResultBase(std::move(Arg)), DL(Arg.DL), GetTLI(std::move(Arg.GetTLI)),

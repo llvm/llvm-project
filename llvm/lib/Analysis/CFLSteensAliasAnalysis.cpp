@@ -63,7 +63,7 @@ using namespace llvm::cflaa;
 
 CFLSteensAAResult::CFLSteensAAResult(
     std::function<const TargetLibraryInfo &(Function &F)> GetTLI)
-    : AAResultBase(), GetTLI(std::move(GetTLI)) {}
+    : GetTLI(std::move(GetTLI)) {}
 CFLSteensAAResult::CFLSteensAAResult(CFLSteensAAResult &&Arg)
     : AAResultBase(std::move(Arg)), GetTLI(std::move(Arg.GetTLI)) {}
 CFLSteensAAResult::~CFLSteensAAResult() = default;

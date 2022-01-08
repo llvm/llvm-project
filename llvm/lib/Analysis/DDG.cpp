@@ -106,7 +106,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const DDGNode &N) {
 //===--------------------------------------------------------------------===//
 
 SimpleDDGNode::SimpleDDGNode(Instruction &I)
-  : DDGNode(NodeKind::SingleInstruction), InstList() {
+    : DDGNode(NodeKind::SingleInstruction) {
   assert(InstList.empty() && "Expected empty list.");
   InstList.push_back(&I);
 }

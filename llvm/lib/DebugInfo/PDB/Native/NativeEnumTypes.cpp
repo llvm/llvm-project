@@ -23,7 +23,7 @@ using namespace llvm::pdb;
 NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
                                  LazyRandomTypeCollection &Types,
                                  std::vector<codeview::TypeLeafKind> Kinds)
-    : Matches(), Index(0), Session(PDBSession) {
+    : Index(0), Session(PDBSession) {
   Optional<TypeIndex> TI = Types.getFirst();
   while (TI) {
     CVType CVT = Types.getType(*TI);
