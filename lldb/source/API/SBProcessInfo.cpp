@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBProcessInfo.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
@@ -192,35 +192,4 @@ const char *SBProcessInfo::GetTriple() {
     }
   }
   return triple;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBProcessInfo>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBProcessInfo, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBProcessInfo, (const lldb::SBProcessInfo &));
-  LLDB_REGISTER_METHOD(
-      lldb::SBProcessInfo &,
-      SBProcessInfo, operator=,(const lldb::SBProcessInfo &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBProcessInfo, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBProcessInfo, operator bool, ());
-  LLDB_REGISTER_METHOD(const char *, SBProcessInfo, GetName, ());
-  LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBProcessInfo, GetExecutableFile,
-                       ());
-  LLDB_REGISTER_METHOD(lldb::pid_t, SBProcessInfo, GetProcessID, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetUserID, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetGroupID, ());
-  LLDB_REGISTER_METHOD(bool, SBProcessInfo, UserIDIsValid, ());
-  LLDB_REGISTER_METHOD(bool, SBProcessInfo, GroupIDIsValid, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetEffectiveUserID, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetEffectiveGroupID, ());
-  LLDB_REGISTER_METHOD(bool, SBProcessInfo, EffectiveUserIDIsValid, ());
-  LLDB_REGISTER_METHOD(bool, SBProcessInfo, EffectiveGroupIDIsValid, ());
-  LLDB_REGISTER_METHOD(lldb::pid_t, SBProcessInfo, GetParentProcessID, ());
-  LLDB_REGISTER_METHOD(const char *, SBProcessInfo, GetTriple, ());
-}
-
-}
 }

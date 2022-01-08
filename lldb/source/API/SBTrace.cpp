@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/Target/Process.h"
 
 #include "lldb/API/SBStructuredData.h"
@@ -91,24 +91,4 @@ bool SBTrace::IsValid() {
 SBTrace::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTrace, operator bool);
   return (bool)m_opaque_sp;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBTrace>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBTrace, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBTrace, (const lldb::TraceSP &));
-  LLDB_REGISTER_METHOD(SBError, SBTrace, Start, (const SBStructuredData &));
-  LLDB_REGISTER_METHOD(SBError, SBTrace, Start,
-                       (const SBThread &, const SBStructuredData &));
-  LLDB_REGISTER_METHOD(SBError, SBTrace, Stop, (const SBThread &));
-  LLDB_REGISTER_METHOD(SBError, SBTrace, Stop, ());
-  LLDB_REGISTER_METHOD(bool, SBTrace, IsValid, ());
-  LLDB_REGISTER_METHOD(const char *, SBTrace, GetStartConfigurationHelp, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBTrace, operator bool, ());
-}
-
-}
 }

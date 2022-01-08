@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCommunication.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -183,34 +183,4 @@ const char *SBCommunication::GetBroadcasterClass() {
                                     GetBroadcasterClass);
 
   return Communication::GetStaticBroadcasterClass().AsCString();
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBCommunication>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBCommunication, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBCommunication, (const char *));
-  LLDB_REGISTER_METHOD_CONST(bool, SBCommunication, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBCommunication, operator bool, ());
-  LLDB_REGISTER_METHOD(bool, SBCommunication, GetCloseOnEOF, ());
-  LLDB_REGISTER_METHOD(void, SBCommunication, SetCloseOnEOF, (bool));
-  LLDB_REGISTER_METHOD(lldb::ConnectionStatus, SBCommunication, Connect,
-                       (const char *));
-  LLDB_REGISTER_METHOD(lldb::ConnectionStatus, SBCommunication,
-                       AdoptFileDesriptor, (int, bool));
-  LLDB_REGISTER_METHOD(lldb::ConnectionStatus, SBCommunication, Disconnect,
-                       ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBCommunication, IsConnected, ());
-  LLDB_REGISTER_METHOD(bool, SBCommunication, ReadThreadStart, ());
-  LLDB_REGISTER_METHOD(bool, SBCommunication, ReadThreadStop, ());
-  LLDB_REGISTER_METHOD(bool, SBCommunication, ReadThreadIsRunning, ());
-  LLDB_REGISTER_METHOD(lldb::SBBroadcaster, SBCommunication, GetBroadcaster,
-                       ());
-  LLDB_REGISTER_STATIC_METHOD(const char *, SBCommunication,
-                              GetBroadcasterClass, ());
-}
-
-}
 }
