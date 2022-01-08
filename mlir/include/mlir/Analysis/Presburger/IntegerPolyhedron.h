@@ -83,6 +83,13 @@ public:
                               1,
                           numDims, numSymbols, numLocals) {}
 
+  /// Return a system with no constraints, i.e., one which is satisfied by all
+  /// points.
+  static IntegerPolyhedron getUniverse(unsigned numDims = 0,
+                                       unsigned numSymbols = 0) {
+    return IntegerPolyhedron(numDims, numSymbols);
+  }
+
   virtual ~IntegerPolyhedron() = default;
 
   /// Return the kind of this IntegerPolyhedron.
