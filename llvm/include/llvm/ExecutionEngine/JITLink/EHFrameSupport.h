@@ -25,20 +25,16 @@ namespace jitlink {
 class EHFrameRegistrar {
 public:
   virtual ~EHFrameRegistrar();
-  virtual Error registerEHFrames(orc::ExecutorAddr EHFrameSectionAddr,
-                                 size_t EHFrameSectionSize) = 0;
-  virtual Error deregisterEHFrames(orc::ExecutorAddr EHFrameSectionAddr,
-                                   size_t EHFrameSectionSize) = 0;
+  virtual Error registerEHFrames(orc::ExecutorAddrRange EHFrameSection) = 0;
+  virtual Error deregisterEHFrames(orc::ExecutorAddrRange EHFrameSection) = 0;
 };
 
 /// Registers / Deregisters EH-frames in the current process.
 class InProcessEHFrameRegistrar final : public EHFrameRegistrar {
 public:
-  Error registerEHFrames(orc::ExecutorAddr EHFrameSectionAddr,
-                         size_t EHFrameSectionSize) override;
+  Error registerEHFrames(orc::ExecutorAddrRange EHFrameSection) override;
 
-  Error deregisterEHFrames(orc::ExecutorAddr EHFrameSectionAddr,
-                           size_t EHFrameSectionSize) override;
+  Error deregisterEHFrames(orc::ExecutorAddrRange EHFrameSection) override;
 };
 
 using StoreFrameRangeFunction = std::function<void(

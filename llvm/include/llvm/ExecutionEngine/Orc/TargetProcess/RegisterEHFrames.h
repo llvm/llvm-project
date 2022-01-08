@@ -33,22 +33,6 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
 } // end namespace orc
 } // end namespace llvm
 
-/// An eh-frame registration utility suitable for use as a support function
-/// call. This function expects the direct address and size of the eh-frame
-/// section to register as its arguments (it does not treat its arguments as
-/// pointers to an SPS-serialized arg buffer).
-extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerEHFrameSectionCustomDirectWrapper(
-    const char *EHFrameSectionAddr, uint64_t Size);
-
-/// An eh-frame deregistration utility suitable for use as a support function
-/// call. This function expects the direct address and size of the eh-frame
-/// section to register as its arguments (it does not treat its arguments as
-/// pointers to an SPS-serialized arg buffer).
-extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_deregisterEHFrameSectionCustomDirectWrapper(
-    const char *EHFrameSectionAddr, uint64_t Size);
-
 extern "C" llvm::orc::shared::CWrapperFunctionResult
 llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size);
 

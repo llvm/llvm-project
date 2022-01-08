@@ -33,6 +33,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_SIMPLEPACKEDSERIALIZATION_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -112,12 +113,22 @@ public:
 
   static bool serialize(SPSOutputBuffer &OB) { return true; }
   static bool deserialize(SPSInputBuffer &IB) { return true; }
+
+  static bool serializeToSmallVector(SmallVectorImpl<char> &V) { return true; }
+
+  static bool deserializeFromSmallVector(const SmallVectorImpl<char> &V) {
+    return true;
+  }
 };
 
 // Non-empty list specialization for SPSArgList.
 template <typename SPSTagT, typename... SPSTagTs>
 class SPSArgList<SPSTagT, SPSTagTs...> {
 public:
+  // FIXME: This typedef is here to enable SPS arg serialization from
+  // JITLink. It can be removed once JITLink can access SPS directly.
+  using OutputBuffer = SPSOutputBuffer;
+
   template <typename ArgT, typename... ArgTs>
   static size_t size(const ArgT &Arg, const ArgTs &...Args) {
     return SPSSerializationTraits<SPSTagT, ArgT>::size(Arg) +
@@ -283,6 +294,40 @@ public:
     return true;
   }
 };
+
+/// Trivial SmallVectorImpl<T> -> SPSSequence<char> serialization.
+template <typename SPSElementTagT, typename T>
+class TrivialSPSSequenceSerialization<SPSElementTagT, SmallVectorImpl<T>> {
+public:
+  static constexpr bool available = true;
+};
+
+/// Trivial SPSSequence<SPSElementTagT> -> SmallVectorImpl<T> deserialization.
+template <typename SPSElementTagT, typename T>
+class TrivialSPSSequenceDeserialization<SPSElementTagT, SmallVectorImpl<T>> {
+public:
+  static constexpr bool available = true;
+
+  using element_type = typename SmallVectorImpl<T>::value_type;
+
+  static void reserve(SmallVectorImpl<T> &V, uint64_t Size) { V.reserve(Size); }
+  static bool append(SmallVectorImpl<T> &V, T E) {
+    V.push_back(std::move(E));
+    return true;
+  }
+};
+
+/// Trivial SmallVectorImpl<T> -> SPSSequence<char> serialization.
+template <typename SPSElementTagT, typename T, unsigned N>
+class TrivialSPSSequenceSerialization<SPSElementTagT, SmallVector<T, N>>
+    : public TrivialSPSSequenceSerialization<SPSElementTagT,
+                                             SmallVectorImpl<T>> {};
+
+/// Trivial SPSSequence<SPSElementTagT> -> SmallVectorImpl<T> deserialization.
+template <typename SPSElementTagT, typename T, unsigned N>
+class TrivialSPSSequenceDeserialization<SPSElementTagT, SmallVector<T, N>>
+    : public TrivialSPSSequenceDeserialization<SPSElementTagT,
+                                               SmallVectorImpl<T>> {};
 
 /// Trivial ArrayRef<T> -> SPSSequence<SPSElementTagT> serialization.
 template <typename SPSElementTagT, typename T>

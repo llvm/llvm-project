@@ -15,62 +15,11 @@
 
 using namespace llvm;
 
-namespace {
-
-// FIXME: Remove this copy of CWrapperFunctionResult as soon as JITLink can
-// depend on shared utils from Orc.
-
-// Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
-union CWrapperFunctionResultDataUnion {
-  char *ValuePtr;
-  char Value[sizeof(ValuePtr)];
-};
-
-// Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
-typedef struct {
-  CWrapperFunctionResultDataUnion Data;
-  size_t Size;
-} CWrapperFunctionResult;
-
-Error toError(CWrapperFunctionResult R) {
-  bool HasError = false;
-  std::string ErrMsg;
-  if (R.Size) {
-    bool Large = R.Size > sizeof(CWrapperFunctionResultDataUnion);
-    char *Content = Large ? R.Data.ValuePtr : R.Data.Value;
-    if (Content[0]) {
-      HasError = true;
-      constexpr unsigned StrStart = 1 + sizeof(uint64_t);
-      ErrMsg.resize(R.Size - StrStart);
-      memcpy(&ErrMsg[0], Content + StrStart, R.Size - StrStart);
-    }
-    if (Large)
-      free(R.Data.ValuePtr);
-  } else if (R.Data.ValuePtr) {
-    HasError = true;
-    ErrMsg = R.Data.ValuePtr;
-    free(R.Data.ValuePtr);
-  }
-
-  if (HasError)
-    return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
-  return Error::success();
-}
-} // namespace
-
 namespace llvm {
 namespace jitlink {
 
 JITLinkMemoryManager::~JITLinkMemoryManager() = default;
 JITLinkMemoryManager::InFlightAlloc::~InFlightAlloc() = default;
-
-static Error runAllocAction(AllocActionCall &C) {
-  using WrapperFnTy = CWrapperFunctionResult (*)(const void *, size_t);
-  auto *Fn = C.FnAddr.toPtr<WrapperFnTy>();
-
-  return toError(
-      Fn(C.CtxAddr.toPtr<const void *>(), static_cast<size_t>(C.CtxSize)));
-}
 
 BasicLayout::BasicLayout(LinkGraph &G) : G(G) {
 
@@ -189,7 +138,9 @@ Error BasicLayout::apply() {
   return Error::success();
 }
 
-AllocActions &BasicLayout::graphAllocActions() { return G.allocActions(); }
+orc::shared::AllocActions &BasicLayout::graphAllocActions() {
+  return G.allocActions();
+}
 
 void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                                 const JITLinkDylib *JD, SegmentMap Segments,
@@ -297,15 +248,15 @@ public:
 
     // Run finalization actions.
     // FIXME: Roll back previous successful actions on failure.
-    std::vector<AllocActionCall> DeallocActions;
+    std::vector<orc::shared::WrapperFunctionCall> DeallocActions;
     DeallocActions.reserve(G.allocActions().size());
     for (auto &ActPair : G.allocActions()) {
-      if (ActPair.Finalize.FnAddr)
-        if (auto Err = runAllocAction(ActPair.Finalize)) {
+      if (ActPair.Finalize)
+        if (auto Err = ActPair.Finalize.runWithSPSRetErrorMerged()) {
           OnFinalized(std::move(Err));
           return;
         }
-      if (ActPair.Dealloc.FnAddr)
+      if (ActPair.Dealloc)
         DeallocActions.push_back(ActPair.Dealloc);
     }
     G.allocActions().clear();
@@ -474,7 +425,7 @@ void InProcessMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
 void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
                                         OnDeallocatedFunction OnDeallocated) {
   std::vector<sys::MemoryBlock> StandardSegmentsList;
-  std::vector<std::vector<AllocActionCall>> DeallocActionsList;
+  std::vector<std::vector<orc::shared::WrapperFunctionCall>> DeallocActionsList;
 
   {
     std::lock_guard<std::mutex> Lock(FinalizedAllocsMutex);
@@ -496,7 +447,7 @@ void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
 
     /// Run any deallocate calls.
     while (!DeallocActions.empty()) {
-      if (auto Err = runAllocAction(DeallocActions.back()))
+      if (auto Err = DeallocActions.back().runWithSPSRetErrorMerged())
         DeallocErr = joinErrors(std::move(DeallocErr), std::move(Err));
       DeallocActions.pop_back();
     }
@@ -515,7 +466,7 @@ void InProcessMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
 JITLinkMemoryManager::FinalizedAlloc
 InProcessMemoryManager::createFinalizedAlloc(
     sys::MemoryBlock StandardSegments,
-    std::vector<AllocActionCall> DeallocActions) {
+    std::vector<orc::shared::WrapperFunctionCall> DeallocActions) {
   std::lock_guard<std::mutex> Lock(FinalizedAllocsMutex);
   auto *FA = FinalizedAllocInfos.Allocate<FinalizedAllocInfo>();
   new (FA) FinalizedAllocInfo(

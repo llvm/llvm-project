@@ -398,7 +398,7 @@ class JITLinkSlabAllocator final : public JITLinkMemoryManager {
 private:
   struct FinalizedAllocInfo {
     sys::MemoryBlock Mem;
-    std::vector<AllocActionCall> DeallocActions;
+    std::vector<shared::WrapperFunctionCall> DeallocActions;
   };
 
 public:
