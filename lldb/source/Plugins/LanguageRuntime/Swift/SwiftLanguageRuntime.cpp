@@ -109,6 +109,12 @@ AppleObjCRuntimeV2 *SwiftLanguageRuntime::GetObjCRuntime() {
 
 enum class RuntimeKind { Swift, ObjC };
 
+/// Detect a statically linked Swift runtime by looking for a well-known symbol.
+static bool IsStaticSwiftRuntime(Module &image) {
+  static ConstString swift_release_dealloc_sym("_swift_release_dealloc");
+  return image.FindFirstSymbolWithNameAndType(swift_release_dealloc_sym);
+}
+
 /// \return the Swift or Objective-C runtime found in the loaded images.
 static ModuleSP findRuntime(Process &process, RuntimeKind runtime_kind) {
   AppleObjCRuntimeV2 *objc_runtime = nullptr;
@@ -132,6 +138,17 @@ static ModuleSP findRuntime(Process &process, RuntimeKind runtime_kind) {
     }
     return true;
   });
+
+  if (!runtime_image && runtime_kind == RuntimeKind::Swift) {
+    // Do a more expensive search for a statically linked Swift runtime.
+    process.GetTarget().GetImages().ForEach([&](const ModuleSP &image) {
+      if (image && IsStaticSwiftRuntime(*image)) {
+        runtime_image = image;
+        return false;
+      }
+      return true;
+    });
+  }
   return runtime_image;
 }
 
@@ -546,7 +563,8 @@ void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
 
   bool did_load_runtime = false;
   module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
-    did_load_runtime |= IsModuleSwiftRuntime(*m_process, *module_sp);
+    did_load_runtime |= IsModuleSwiftRuntime(*m_process, *module_sp) ||
+                        IsStaticSwiftRuntime(*module_sp);
     return !did_load_runtime;
   });
   if (did_load_runtime) {
