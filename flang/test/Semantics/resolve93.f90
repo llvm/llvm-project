@@ -9,8 +9,9 @@ subroutine s1()
     character(10) str3
     !ERROR: Cannot reference function 'str1' as data
     print *, str1(1:9), str1(7)
-    !ERROR: 'str2' is not an array
-    print *, str2(1:9), str2(7)
+    print *, str2(1:9) ! substring is ok
+    !ERROR: 'str2' is not a callable procedure
+    print *, str2(7)
     !ERROR: Cannot reference function 'str3' as data
     print *, str3(7), str3(1:9)
   end block
