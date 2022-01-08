@@ -2365,7 +2365,7 @@ struct BooleanState : public IntegerStateBase<bool, true, false> {
   using super = IntegerStateBase<bool, true, false>;
   using base_t = IntegerStateBase::base_t;
 
-  BooleanState() : super() {}
+  BooleanState() {}
   BooleanState(base_t Assumed) : super(Assumed) {}
 
   /// Set the assumed value to \p Value but never below the known one.
