@@ -462,9 +462,11 @@ If the source language is mapped onto the AMDGPU wavefronts in a SIMT manner,
 then the variable DWARF location expressions must compute the location for a
 single lane of the wavefront. Therefore, a DWARF operation is required to denote
 the current lane, much like ``DW_OP_push_object_address`` denotes the current
-object.
+object. See ``DW_OP_LLVM_push_lane`` in :ref:`amdgpu-dwarf-literal-operations`.
 
-See ``DW_OP_LLVM_push_lane`` in :ref:`amdgpu-dwarf-base-type-entries`.
+In addition, a way is needed for the compiler to communicate how many source
+language threads of execution are mapped to a target architecture thread's SIMT
+lanes. See ``DW_AT_LLVM_lanes`` in :ref:`amdgpu-dwarf-low-level-information`.
 
 .. _amdgpu-dwarf-support-for-divergent-control-flow-of-simt-hardware:
 
@@ -555,6 +557,76 @@ by the AMDGPU, is added.
 
 See :ref:`amdgpu-dwarf-language-names-table`.
 
+2.19 Support for Source Language Optimizations that Result in Concurrent Iteration Execution
+--------------------------------------------------------------------------------------------
+
+A compiler can perform loop optimizations that result in the generated code
+executing multiple iterations concurrently. For example, software pipelining
+schedules multiple iterations in an interleaved fashion to allow the
+instructions of one iteration to hide the latencies of the instructions of
+another iteration. Another example is vectorization that can exploit SIMD
+hardware to allow a single instruction to execute multiple iterations using
+vector registers.
+
+Note that although this is similar to SIMT execution, the way a client debugger
+uses the information is fundamentally different. In SIMT execution the debugger
+needs to present the concurrent execution as distinct source language threads
+that the user can list and switch focus between. With iteration concurrency
+optimizations, such as software pipelining and vectorized SIMD, the debugger
+must not present the concurrency as distinct source language threads. Instead,
+it must inform the user that multiple loop iterations are executing in parallel
+and allow the user to select between them.
+
+In general, SIMT execution fixes the number of concurrent executions per target
+architecture thread. However, both software pipelining and SIMD vectorization
+may vary the number of concurrent iterations for different loops executed by a
+single source language thread.
+
+It is possible for the compiler to use both SIMT concurrency and iteration
+concurrency techniques in the code of a single source language thread.
+
+Therefore, a DWARF operation is required to denote the current concurrent
+iteration instance, much like ``DW_OP_push_object_address`` denotes the current
+object. See ``DW_OP_LLVM_push_iteration`` in
+:ref:`amdgpu-dwarf-literal-operations`.
+
+In addition, a way is needed for the compiler to communicate how many source
+language loop iterations are executing concurrently. See
+``DW_AT_LLVM_iterations`` in :ref:`amdgpu-dwarf-low-level-information`.
+
+2.20 DWARF Operation to Create Runtime Overlay Composite Location Description
+-----------------------------------------------------------------------------
+
+It is common in SIMD vectorization for the compiler to generate code that
+promotes portions of an array into vector registers. For example, if the
+hardware has vector registers with 8 elements, and 8 wide SIMD instructions, the
+compiler may vectorize a loop so that is executes 8 iterations concurrently for
+each vectorized loop iteration.
+
+On the first iteration of the generated vectorized loop, iterations 0 to 7 of
+the source language loop will be executed using SIMD instructions. Then on the
+next iteration of the generated vectorized loop, iteration 8 to 15 will be
+executed, and so on.
+
+If the source language loop accesses an array element based on the loop
+iteration index, the compiler may read the element into a register for the
+duration of that iteration. Next iteration it will read the next element into
+the register, and so on. With SIMD, this generalizes to the compiler reading
+array elements 0 to 7 into a vector register on the first vectorized loop
+iteration, then array elements 8 to 15 on the next iteration, and so on.
+
+The DWARF location description for the array needs to express that all elements
+are in memory, except the slice that has been promoted to the vector register.
+The starting position of the slice is a runtime value based on the iteration
+index modulo the vectorization size. This cannot be expressed by ``DW_OP_piece``
+and ``DW_OP_bit_piece`` which only allow constant offsets to be expressed.
+
+Therefore, a new operator is defined that takes two location descriptions, an
+offset and a size, and creates a composite that effectively uses the second
+location description as an overlay of the first, positioned according to the
+offset and size. See ``DW_OP_LLVM_overlay`` and ``DW_OP_LLVM_bit_overlay`` in
+:ref:`amdgpu-dwarf-composite-location-description-operations`.
+
 .. _amdgpu-dwarf-changes-relative-to-dwarf-version-5:
 
 A. Changes Relative to DWARF Version 5
@@ -599,10 +671,11 @@ The following table provides the additional attributes.
    =========================== ====================================
    Attribute                   Usage
    =========================== ====================================
-   ``DW_AT_LLVM_active_lane``  SIMD or SIMT active lanes (see :ref:`amdgpu-dwarf-low-level-information`)
+   ``DW_AT_LLVM_active_lane``  SIMT active lanes (see :ref:`amdgpu-dwarf-low-level-information`)
    ``DW_AT_LLVM_augmentation`` Compilation unit augmentation string (see :ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`)
-   ``DW_AT_LLVM_lane_pc``      SIMD or SIMT lane program location (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_lanes``        SIMD or SIMT thread lane count (see :ref:`amdgpu-dwarf-low-level-information`)
+   ``DW_AT_LLVM_lane_pc``      SIMT lane program location (see :ref:`amdgpu-dwarf-low-level-information`)
+   ``DW_AT_LLVM_lanes``        SIMT lane count (see :ref:`amdgpu-dwarf-low-level-information`)
+   ``DW_AT_LLVM_iterations``   Concurrent iteration count (see :ref:`amdgpu-dwarf-low-level-information`)
    ``DW_AT_LLVM_vector_size``  Base type vector size (see :ref:`amdgpu-dwarf-base-type-entries`)
    =========================== ====================================
 
@@ -679,33 +752,59 @@ elements that can be specified are:
 
 *A current thread*
 
-  The target architecture thread identifier of the source program thread of
-  execution for which a user presented expression is currently being evaluated.
+  The target architecture thread identifier. For source languages that are not
+  implemented using a SIMT execution model, this corresponds to the source
+  program thread of execution for which a user presented expression is currently
+  being evaluated. For source languages that are implemented using a SIMT
+  execution model, this together with the current lane corresponds to the source
+  program thread of execution for which a user presented expression is currently
+  being evaluated.
 
   It is required for operations that are related to target architecture threads.
 
   *For example, the* ``DW_OP_regval_type`` *operation, or the*
   ``DW_OP_form_tls_address`` *and* ``DW_OP_LLVM_form_aspace_address``
-  *operations when given an address space that is thread specific.*
+  *operations when given an address space that is target architecture thread
+  specific.*
 
 *A current lane*
 
-  The target architecture lane identifier of the source program thread of
-  execution for which a user presented expression is currently being evaluated.
-  This applies to languages that are implemented using a SIMD or SIMT execution
-  model.
+  The 0 based SIMT lane identifier to be used in evaluating a user presented
+  expression. This applies to source languages that are implemented for a target
+  architecture using a SIMT execution model. These implementations map source
+  language threads of execution to lanes of the target architecture threads.
 
-  It is required for operations that are related to target architecture lanes.
+  It is required for operations that are related to SIMT lanes.
 
   *For example, the* ``DW_OP_LLVM_push_lane`` *operation and*
   ``DW_OP_LLVM_form_aspace_address`` *operation when given an address space that
-  is lane specific.*
+  is SIMT lane specific.*
 
-  If specified, it must be consistent with any specified current thread and
-  current target architecture. It is consistent with a thread if it identifies a
-  lane of the thread. It is consistent with a target architecture if it is a
-  valid lane identifier of the target architecture. Otherwise the result is
-  undefined.
+  If specified, it must be consistent with the value of the ``DW_AT_LLVM_lanes``
+  attribute of the subprogram corresponding to context's frame and program
+  location. It is consistent if the value is greater than or equal to 0 and less
+  than the, possibly default, value of the ``DW_AT_LLVM_lanes`` attribute.
+  Otherwise the result is undefined.
+
+*A current iteration*
+
+  The 0 based source language iteration instance to be used in evaluating a user
+  presented expression. This applies to target architectures that support
+  optimizations that result in executing multiple source language loop iterations
+  concurrently.
+
+  *For example, software pipelining and SIMD vectorization.*
+
+  It is required for operations that are related to source language loop
+  iterations.
+
+  *For example, the* ``DW_OP_LLVM_push_iteration`` *operation.*
+
+  If specified, it must be consistent with the value of the
+  ``DW_AT_LLVM_iterations`` attribute of the subprogram corresponding to
+  context's frame and program location. It is consistent if the value is greater
+  than or equal to 0 and less than the, possibly default, value of the
+  ``DW_AT_LLVM_iterations`` attribute. Otherwise the result is undefined.
 
 *A current call frame*
 
@@ -1520,12 +1619,30 @@ size and the low-order bits used.
 
 8.  ``DW_OP_LLVM_push_lane`` *New*
 
-    ``DW_OP_LLVM_push_lane`` pushes the target architecture lane identifier of
-    the current lane as a value with the generic type.
+    ``DW_OP_LLVM_push_lane`` pushes the current lane as a value with the generic
+    type.
 
-    *For languages that are implemented using a SIMD or SIMT execution model,
-    this is the lane number that corresponds to the source language thread of
-    execution upon which the user is focused.*
+    *For source languages that are implemented using a SIMT execution model,
+    this is the zero-based lane number that corresponds to the source language
+    thread of execution upon which the user is focused.*
+
+    The value must be greater than or equal to 0 and less than the value of the
+    ``DW_AT_LLVM_lanes`` attribute, otherwise the DWARF expression is
+    ill-formed. See :ref:`amdgpu-dwarf-low-level-information`.
+
+9.  ``DW_OP_LLVM_push_iteration`` *New*
+
+    ``DW_OP_LLVM_push_iteration`` pushes the current iteration as a value with
+    the generic type.
+
+    *For source language implementations with optimizations that cause multiple
+    loop iterations to execute concurrently, this is the zero-based iteration
+    number that corresponds to the source language concurrent loop iteration
+    upon which the user is focused.*
+
+    The value must be greater than or equal to 0 and less than the value of the
+    ``DW_AT_LLVM_iterations`` attribute, otherwise the DWARF expression is
+    ill-formed. See :ref:`amdgpu-dwarf-low-level-information`.
 
 .. _amdgpu-dwarf-arithmetic-logical-operations:
 
@@ -2090,11 +2207,11 @@ type.
 
     *For example, if AS is for per thread storage then LS is the location
     storage for the current thread. For languages that are implemented using a
-    SIMD or SIMT execution model, then if AS is for per lane storage then LS is
-    the location storage for the current lane of the current thread. Therefore,
-    if L is accessed by an operation, the location storage selected when the
-    location description was created is accessed, and not the location storage
-    associated with the current context of the access operation.*
+    SIMT execution model, then if AS is for per lane storage then LS is the
+    location storage for the current lane of the current thread. Therefore, if L
+    is accessed by an operation, the location storage selected when the location
+    description was created is accessed, and not the location storage associated
+    with the current context of the access operation.*
 
     The DWARF expression is ill-formed if AS is not one of the values defined by
     the target architecture specific ``DW_ASPACE_*`` values.
@@ -2699,6 +2816,57 @@ compatible with the definitions in DWARF Version 5.*
     The DWARF expression is ill-formed if S or C are 0, or if the bit size of M
     is less than C.
 
+6.  ``DW_OP_LLVM_overlay`` *New*
+
+    ``DW_OP_LLVM_overlay`` pops four stack entries. The first must be an
+    integral type value that represents the overlay byte size value S. The
+    second must be an integral type value that represents the overlay byte
+    offset value O. The third must be a location description that represents the
+    overlay location description OL. The fourth must be a location description
+    that represents the base location description BL.
+
+    The action is the same as for ``DW_OP_LLVM_bit_overlay``, except that the
+    overlay bit size BS and overlay bit offset BO used are S and O respectively
+    scaled by 8 (the byte size).
+
+7.  ``DW_OP_LLVM_bit_overlay`` *New*
+
+    ``DW_OP_LLVM_bit_overlay`` pops four stack entries. The first must be an
+    integral type value that represents the overlay bit size value BS. The
+    second must be an integral type value that represents the overlay bit offset
+    value BO. The third must be a location description that represents the
+    overlay location description OL. The fourth must be a location description
+    that represents the base location description BL.
+
+    The DWARF expression is ill-formed if BS or BO are negative values.
+
+    *rbss(L)* is the minimum remaining bit storage size of L which is defined as
+    follows. LS is the location storage and LO is the location bit offset
+    specified by a single location descriptions SL of L. The remaining bit
+    storage size RBSS of SL is the bit size of LS minus LO. *rbss(L)* is the
+    minimum RBSS of each single location description SL of L.
+
+    The DWARF expression is ill-formed if *rbss(BL)* is less than BO plus BS.
+
+    If BS is 0, then the operation pushes BL.
+
+    If BO is 0 and BS equals *rbss(BL)*, then the operation pushes OL.
+
+    Otherwise, the operation is equivalent to performing the following steps to
+    push a composite location description.
+
+    *The composite location description is conceptually the base location
+    description BL with the overlay location description OL positioned as an
+    overlay starting at the overlay offset BO and covering overlay bit size BS.*
+
+    1.  If BO is not 0 then push BL followed by performing the ``DW_OP_bit_piece
+        BO`` operation.
+    2.  Push OL followed by performing the ``DW_OP_bit_piece BS`` operation.
+    3.  If *rbss(BL)* is greater than BO plus BS, push BL followed by performing
+        the ``DW_OP_LLVM_bit_offset (BO + BS); DW_OP_bit_piece (rbss(BL) - BO -
+        BS)`` operations.
+    4.  Perform the ``DW_OP_LLVM_piece_end`` operation.
+
 .. _amdgpu-dwarf-location-list-expressions:
 
 A.2.5.5 DWARF Location List Expressions
@@ -3180,19 +3348,26 @@ A.3.3.5 Low-Level Information
 
       The following new attributes are added.
 
-4.  For languages that are implemented using a SIMD or SIMT execution model, a
+4.  For languages that are implemented using a SIMT execution model, a
     ``DW_TAG_subprogram``, ``DW_TAG_inlined_subroutine``, or
     ``DW_TAG_entry_point`` debugger information entry may have a
     ``DW_AT_LLVM_lanes`` attribute whose value is an integer constant that is
-    the number of lanes per thread. This is the static number of lanes per
-    thread. It is not the dynamic number of lanes with which the thread was
-    initiated, for example, due to smaller or partial work-groups.
+    the number of source language threads of execution per target architecture
+    thread.
+
+    *For example, a compiler may map source language threads of execution onto
+    lanes of a target architecture thread using a SIMT execution model.*
+
+    It is the static number of source language threads of execution per target
+    architecture thread. It is not the dynamic number of source language threads
+    of execution with which the target architecture thread was initiated, for
+    example, due to smaller or partial work-groups.
 
     If not present, the default value of 1 is used.
 
-    The DWARF is ill-formed if the value is 0.
+    The DWARF is ill-formed if the value is less than or equal to 0.
 
-5.  For languages that are implemented using a SIMD or SIMT execution model, a
+5.  For source languages that are implemented using a SIMT execution model, a
     ``DW_TAG_subprogram``, ``DW_TAG_inlined_subroutine``, or
     ``DW_TAG_entry_point`` debugging information entry may have a
     ``DW_AT_LLVM_lane_pc`` attribute whose value is a DWARF expression E.
@@ -3203,51 +3378,86 @@ A.3.3.5 Low-Level Information
     elements corresponding to the source language thread of execution upon which
     the user is focused, if any.
 
-    The resulting location description L is for a thread lane count sized vector
-    of generic type elements. The thread lane count is the value of the
+    The resulting location description L is for a lane count sized vector of
+    generic type elements. The lane count is the value of the
     ``DW_AT_LLVM_lanes`` attribute. Each element holds the conceptual program
-    location of the corresponding lane, where the least significant element
-    corresponds to the first target architecture specific lane identifier and so
-    forth. If the lane was not active when the current subprogram was called,
-    its element is an undefined location description.
+    location of the corresponding lane. If the lane was not active when the
+    current subprogram was called, its element is an undefined location
+    description.
+
+    The DWARF is ill-formed if L does not have exactly one single location
+    description.
 
     ``DW_AT_LLVM_lane_pc`` *allows the compiler to indicate conceptually where
-    each lane of a SIMT thread is positioned even when it is in divergent
-    control flow that is not active.*
+    each SIMT lane of a target architecture thread is positioned even when it is
+    in divergent control flow that is not active.*
 
     *Typically, the result is a location description with one composite location
     description with each part being a location description with either one
     undefined location description or one memory location description.*
 
-    If not present, the thread is not being used in a SIMT manner, and the
-    thread's current program location is used.
+    If not present, the target architecture thread is not being used in a SIMT
+    manner, and the thread's current program location is used.
 
-6.  For languages that are implemented using a SIMD or SIMT execution model, a
+6.  For languages that are implemented using a SIMT execution model, a
     ``DW_TAG_subprogram``, ``DW_TAG_inlined_subroutine``, or
     ``DW_TAG_entry_point`` debugger information entry may have a
     ``DW_AT_LLVM_active_lane`` attribute whose value is a DWARF expression E.
 
-    The result of the attribute is obtained by evaluating E with a context that
-    has a result kind of a value, an unspecified object, the compilation unit
-    that contains E, an empty initial stack, and other context elements
-    corresponding to the source language thread of execution upon which the user
-    is focused, if any.
+    E is evaluated with a context that has a result kind of a location
+    description, an unspecified object, the compilation unit that contains E, an
+    empty initial stack, and other context elements corresponding to the source
+    language thread of execution upon which the user is focused, if any.
 
-    The DWARF is ill-formed if the resulting value V is not an integral value.
+    The DWARF is ill-formed if L does not have exactly one single location
+    description SL.
 
-    The resulting V is a bit mask of active lanes for the current program
-    location. The N\ :sup:`th` least significant bit of the mask corresponds to
-    the N\ :sup:`th` lane. If the bit is 1 the lane is active, otherwise it is
-    inactive.
+    The active lane bit mask V for the current program location is obtained by
+    reading from SL using a target architecture specific integral base type T
+    that has a bit size equal to the value of the ``DW_AT_LLVM_lanes`` attribute
+    of the subprogram corresponding to context's frame and program location. The
+    N\ :sup:`th` least significant bit of the mask corresponds to the N\
+    :sup:`th` lane. If the bit is 1 the lane is active, otherwise it is
+    inactive. The result of the attribute is the value V.
 
     *Some targets may update the target architecture execution mask for regions
     of code that must execute with different sets of lanes than the current
     active lanes. For example, some code must execute with all lanes made
     temporarily active.* ``DW_AT_LLVM_active_lane`` *allows the compiler to
-    provide the means to determine the source language active lanes.*
+    provide the means to determine the source language active lanes at any
+    program location. Typically, this attribute will use a loclist to express
+    different locations of the active lane mask at different program locations.*
 
     If not present and ``DW_AT_LLVM_lanes`` is greater than 1, then the target
     architecture execution mask is used.
+
+7.  A ``DW_TAG_subprogram``, ``DW_TAG_inlined_subroutine``, or
+    ``DW_TAG_entry_point`` debugger information entry may have a
+    ``DW_AT_LLVM_iterations`` attribute whose value is an integer constant or a
+    DWARF expression E. Its value is the number of source language loop
+    iterations executing concurrently by the target architecture for a single
+    source language thread of execution.
+
+    *A compiler may generate code that executes more than one iteration of a
+    source language loop concurrently using optimization techniques such as
+    software pipelining or SIMD vectorization. The number of concurrent
+    iterations may vary for different loop nests in the same subprogram.
+    Typically, this attribute will use a loclist to express different values at
+    different program locations.*
+
+    If the attribute is an integer constant, then the value is the constant. The
+    DWARF is ill-formed if the constant is less than or equal to 0.
+
+    Otherwise, E is evaluated with a context that has a result kind of a
+    location description, an unspecified object, the compilation unit that
+    contains E, an empty initial stack, and other context elements corresponding
+    to the source language thread of execution upon which the user is focused,
+    if any. The DWARF is ill-formed if the result is not a location description
+    comprised of one implicit location description, that when read as the
+    generic type, results in a value V that is less than or equal to 0. The
+    result of the attribute is the value V.
+
+    If not present, the default value of 1 is used.
 
 A.3.4 Call Site Entries and Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -3985,8 +4195,9 @@ operations that can be used in E have the following restrictions:
 * ``DW_OP_push_object_address`` is not allowed because there is no object
   context to provide a value to push.
 
-* ``DW_OP_LLVM_push_lane`` is not allowed because the call frame instructions
-  describe the actions for the whole thread, not the lanes independently.
+* ``DW_OP_LLVM_push_lane`` and ``DW_OP_LLVM_push_iteration`` are not allowed
+  because the call frame instructions describe the actions for the whole target
+  architecture thread, not the lanes or iterations independently.
 
 * ``DW_OP_call_frame_cfa`` and ``DW_OP_entry_value`` are not allowed because
   their use would be circular.
@@ -4325,6 +4536,7 @@ entry attributes.
    DW_AT_LLVM_lanes                   0x3e0a constant
    DW_AT_LLVM_lane_pc                 0x3e0b exprloc, loclist
    DW_AT_LLVM_vector_size             0x3e0c constant
+   DW_AT_LLVM_iterations              0x3e0a constant, exprloc, loclist
    ================================== ====== ===================================
 
 .. _amdgpu-dwarf-classes-and-forms:
@@ -4381,6 +4593,9 @@ operations.
                                                      ULEB128 count
    DW_OP_LLVM_select_bit_piece        0xec     2     ULEB128 bit size,
                                                      ULEB128 count
+   DW_OP_LLVM_push_iteration          TBA      0
+   DW_OP_LLVM_overlay                 TBA      0
+   DW_OP_LLVM_bit_overlay             TBA      0
    ================================== ===== ======== ===============================
 
 A.7.7.3 Location List Expressions
@@ -4496,12 +4711,15 @@ debugger information entries.
    ``DW_TAG_entry_point``        * ``DW_AT_LLVM_active_lane``
                                  * ``DW_AT_LLVM_lane_pc``
                                  * ``DW_AT_LLVM_lanes``
+                                 * ``DW_AT_LLVM_iterations``
    ``DW_TAG_inlined_subroutine`` * ``DW_AT_LLVM_active_lane``
                                  * ``DW_AT_LLVM_lane_pc``
                                  * ``DW_AT_LLVM_lanes``
+                                 * ``DW_AT_LLVM_iterations``
    ``DW_TAG_subprogram``         * ``DW_AT_LLVM_active_lane``
                                  * ``DW_AT_LLVM_lane_pc``
                                  * ``DW_AT_LLVM_lanes``
+                                 * ``DW_AT_LLVM_iterations``
    ============================= =============================
 
 .. _amdgpu-dwarf-examples:
