@@ -558,18 +558,16 @@ protected:
                   }
                 }
               } else if (num_matches == 0) {
-                result.GetErrorStream().Printf("error: no variables matched "
-                                               "the regular expression '%s'.\n",
-                                               entry.c_str());
+                result.AppendErrorWithFormat(
+                    "no variables matched the regular expression '%s'.",
+                    entry.c_str());
               }
             } else {
               if (llvm::Error err = regex.GetError())
-                result.GetErrorStream().Printf(
-                    "error: %s\n", llvm::toString(std::move(err)).c_str());
+                result.AppendError(llvm::toString(std::move(err)));
               else
-                result.GetErrorStream().Printf(
-                    "error: unknown regex error when compiling '%s'\n",
-                    entry.c_str());
+                result.AppendErrorWithFormat(
+                    "unknown regex error when compiling '%s'", entry.c_str());
             }
           } else // No regex, either exact variable names or variable
                  // expressions.
@@ -605,14 +603,13 @@ protected:
                   valobj_sp->GetParent() ? entry.c_str() : nullptr);
               valobj_sp->Dump(output_stream, options);
             } else {
-              const char *error_cstr = error.AsCString(nullptr);
-              if (error_cstr)
-                result.GetErrorStream().Printf("error: %s\n", error_cstr);
+              if (auto error_cstr = error.AsCString(nullptr))
+                result.AppendError(error_cstr);
               else
-                result.GetErrorStream().Printf("error: unable to find any "
-                                               "variable expression path that "
-                                               "matches '%s'.\n",
-                                               entry.c_str());
+                result.AppendErrorWithFormat(
+                    "unable to find any variable expression path that matches "
+                    "'%s'.",
+                    entry.c_str());
             }
           }
         }
@@ -680,7 +677,8 @@ protected:
           }
         }
       }
-      result.SetStatus(eReturnStatusSuccessFinishResult);
+      if (result.GetStatus() != eReturnStatusFailed)
+        result.SetStatus(eReturnStatusSuccessFinishResult);
     }
 
     if (m_option_variable.show_recognized_args) {
