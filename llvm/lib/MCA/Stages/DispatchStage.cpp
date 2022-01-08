@@ -30,7 +30,7 @@ DispatchStage::DispatchStage(const MCSubtargetInfo &Subtarget,
                              unsigned MaxDispatchWidth, RetireControlUnit &R,
                              RegisterFile &F)
     : DispatchWidth(MaxDispatchWidth), AvailableEntries(MaxDispatchWidth),
-      CarryOver(0U), CarriedOver(), STI(Subtarget), RCU(R), PRF(F) {
+      CarryOver(0U), STI(Subtarget), RCU(R), PRF(F) {
   if (!DispatchWidth)
     DispatchWidth = Subtarget.getSchedModel().IssueWidth;
 }
