@@ -64,7 +64,7 @@ define i32 @f7(i32 %a) {
 ; CHECK-LABEL: f7:
 ; CHECK: mak %r2, %r2, 8<15>
 ; CHECK: jmp %r1
-  %and = and i32 %a, 255 
+  %and = and i32 %a, 255
   %res = shl i32 %and, 15
   ret i32 %res
 }
