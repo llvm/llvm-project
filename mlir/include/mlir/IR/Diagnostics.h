@@ -62,16 +62,18 @@ public:
   // Construct from a signed integer.
   template <typename T>
   explicit DiagnosticArgument(
-      T val, typename std::enable_if<std::is_signed<T>::value &&
-                                     std::numeric_limits<T>::is_integer &&
-                                     sizeof(T) <= sizeof(int64_t)>::type * = 0)
+      T val,
+      typename std::enable_if<std::is_signed<T>::value &&
+                              std::numeric_limits<T>::is_integer &&
+                              sizeof(T) <= sizeof(int64_t)>::type * = nullptr)
       : kind(DiagnosticArgumentKind::Integer), opaqueVal(int64_t(val)) {}
   // Construct from an unsigned integer.
   template <typename T>
   explicit DiagnosticArgument(
-      T val, typename std::enable_if<std::is_unsigned<T>::value &&
-                                     std::numeric_limits<T>::is_integer &&
-                                     sizeof(T) <= sizeof(uint64_t)>::type * = 0)
+      T val,
+      typename std::enable_if<std::is_unsigned<T>::value &&
+                              std::numeric_limits<T>::is_integer &&
+                              sizeof(T) <= sizeof(uint64_t)>::type * = nullptr)
       : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
   // Construct from a string reference.
   explicit DiagnosticArgument(StringRef val)

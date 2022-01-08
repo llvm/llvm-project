@@ -312,6 +312,22 @@ bool llvm::isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, StrDupLike, TLI).hasValue();
 }
 
+Constant *llvm::getInitialValueOfAllocation(const CallBase *Alloc,
+                                            const TargetLibraryInfo *TLI,
+                                            Type *Ty) {
+  assert(isAllocationFn(Alloc, TLI));
+
+  // malloc and aligned_alloc are uninitialized (undef)
+  if (isMallocLikeFn(Alloc, TLI) || isAlignedAllocLikeFn(Alloc, TLI))
+    return UndefValue::get(Ty);
+
+  // calloc zero initializes
+  if (isCallocLikeFn(Alloc, TLI))
+    return Constant::getNullValue(Ty);
+
+  return nullptr;
+}
+
 /// isLibFreeFunction - Returns true if the function is a builtin free()
 bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   unsigned ExpectedNumParams;
@@ -627,14 +643,6 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
   bool Overflow;
   Size = Size.umul_ov(NumElems, Overflow);
   return Overflow ? unknown() : std::make_pair(Size, Zero);
-
-  // TODO: handle more standard functions (+ wchar cousins):
-  // - strdup / strndup
-  // - strcpy / strncpy
-  // - strcat / strncat
-  // - memcpy / memmove
-  // - strcat / strncat
-  // - memset
 }
 
 SizeOffsetType
@@ -858,7 +866,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
 
   // Handle strdup-like functions separately.
   if (FnData->AllocTy == StrDupLike) {
-    // TODO
+    // TODO: implement evaluation of strdup/strndup
     return unknown();
   }
 
@@ -871,14 +879,6 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
   SecondArg = Builder.CreateZExtOrTrunc(SecondArg, IntTy);
   Value *Size = Builder.CreateMul(FirstArg, SecondArg);
   return std::make_pair(Size, Zero);
-
-  // TODO: handle more standard functions (+ wchar cousins):
-  // - strdup / strndup
-  // - strcpy / strncpy
-  // - strcat / strncat
-  // - memcpy / memmove
-  // - strcat / strncat
-  // - memset
 }
 
 SizeOffsetEvalType

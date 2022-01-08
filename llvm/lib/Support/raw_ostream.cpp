@@ -937,10 +937,6 @@ bool raw_fd_stream::classof(const raw_ostream *OS) {
 //  raw_string_ostream
 //===----------------------------------------------------------------------===//
 
-raw_string_ostream::~raw_string_ostream() {
-  flush();
-}
-
 void raw_string_ostream::write_impl(const char *Ptr, size_t Size) {
   OS.append(Ptr, Size);
 }

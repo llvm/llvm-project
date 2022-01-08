@@ -1893,6 +1893,7 @@ bool HexagonInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     case Hexagon::C4_cmplte:
     case Hexagon::C4_cmplteu:
       SrcReg2 = MI.getOperand(2).getReg();
+      Value = 0;
       return true;
 
     case Hexagon::C2_cmpeqi:

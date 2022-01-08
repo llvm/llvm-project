@@ -124,21 +124,21 @@ ScopedGlobalProcessor::~ScopedGlobalProcessor() {
   gp->mtx.Unlock();
 }
 
-void AllocatorLock() NO_THREAD_SAFETY_ANALYSIS {
+void AllocatorLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   global_proc()->internal_alloc_mtx.Lock();
   InternalAllocatorLock();
 }
 
-void AllocatorUnlock() NO_THREAD_SAFETY_ANALYSIS {
+void AllocatorUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   InternalAllocatorUnlock();
   global_proc()->internal_alloc_mtx.Unlock();
 }
 
-void GlobalProcessorLock() NO_THREAD_SAFETY_ANALYSIS {
+void GlobalProcessorLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   global_proc()->mtx.Lock();
 }
 
-void GlobalProcessorUnlock() NO_THREAD_SAFETY_ANALYSIS {
+void GlobalProcessorUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   global_proc()->mtx.Unlock();
 }
 

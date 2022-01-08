@@ -156,7 +156,7 @@ ALWAYS_INLINE void StoreShadow(RawShadow* sp, RawShadow s) {
 
 NOINLINE void DoReportRace(ThreadState* thr, RawShadow* shadow_mem, Shadow cur,
                            Shadow old,
-                           AccessType typ) NO_THREAD_SAFETY_ANALYSIS {
+                           AccessType typ) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   // For the free shadow markers the first element (that contains kFreeSid)
   // triggers the race, but the second element contains info about the freeing
   // thread, take it.

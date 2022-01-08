@@ -204,10 +204,10 @@ public:
 
   /// Set the inPlace bufferization spec to true.
   /// Merge result's and operand's aliasing sets and iterate to a fixed point.
-  void bufferizeInPlace(OpResult result, OpOperand &operand);
+  void bufferizeInPlace(OpOperand &operand, BufferizationState &state);
 
   /// Set the inPlace bufferization spec to false.
-  void bufferizeOutOfPlace(OpResult result);
+  void bufferizeOutOfPlace(OpOperand &operand);
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const {
@@ -234,10 +234,10 @@ public:
   void applyOnAliases(Value v, function_ref<void(Value)> fun) const;
 
   /// Mark a value as in-place bufferized.
-  void markInPlace(OpResult v) { inplaceBufferized.insert(v); }
+  void markInPlace(OpOperand &o) { inplaceBufferized.insert(&o); }
 
   /// Return `true` if a value was marked as in-place bufferized.
-  bool isInPlace(OpResult opResult) const;
+  bool isInPlace(OpOperand &opOperand) const;
 
 private:
   /// llvm::EquivalenceClasses wants comparable elements. This comparator uses
@@ -255,7 +255,7 @@ private:
   EquivalenceClassRangeType getAliases(Value v) const;
 
   /// Set of all OpResults that were decided to bufferize in-place.
-  llvm::DenseSet<OpResult> inplaceBufferized;
+  llvm::DenseSet<OpOperand *> inplaceBufferized;
 
   /// Auxiliary structure to store all the values a given value may alias with.
   /// Alias information is "may be" conservative: In the presence of branches, a
@@ -377,18 +377,14 @@ public:
   /// Creates a memcpy between two given buffers.
   void createMemCpy(OpBuilder &b, Location loc, Value from, Value to) const;
 
-  /// Lookup the memref buffer that is associated to the given tensor value.
-  /// Asserts if no buffer is associated.
-  Value lookupBuffer(RewriterBase &rewriter, Value tensor) const;
-
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
-  bool isInPlace(OpResult opResult) const;
+  bool isInPlace(OpOperand &opOperand) const;
 
-  /// Return the result buffer (memref) for a given OpResult (tensor). Allocate
+  /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
-  /// bufferization is necessary.
-  FailureOr<Value> getResultBuffer(RewriterBase &rewriter,
-                                   OpResult result) const;
+  /// bufferization was decided.
+  FailureOr<Value> getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
+                             bool forceInPlace = false) const;
 
   /// Return dialect-specific bufferization state.
   template <typename StateT>

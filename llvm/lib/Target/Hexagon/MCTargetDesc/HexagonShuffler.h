@@ -72,16 +72,6 @@ public:
   using UnitsAndLanes = std::pair<unsigned, unsigned>;
 
 private:
-  // Available HVX slots.
-  enum {
-    CVI_NONE = 0,
-    CVI_XLANE = 1 << 0,
-    CVI_SHIFT = 1 << 1,
-    CVI_MPY0 = 1 << 2,
-    CVI_MPY1 = 1 << 3,
-    CVI_ZW = 1 << 4
-  };
-
   // Count of adjacent slots that the insn requires to be executed.
   unsigned Lanes;
   // Flag whether the insn is a load or a store.
@@ -177,21 +167,23 @@ protected:
   bool ReportErrors;
   bool CheckFailure;
   std::vector<std::pair<SMLoc, std::string>> AppliedRestrictions;
-  bool applySlotRestrictions(HexagonPacketSummary const &Summary);
+
+  bool applySlotRestrictions(HexagonPacketSummary const &Summary,
+                             const bool DoShuffle);
   void restrictSlot1AOK(HexagonPacketSummary const &Summary);
   void restrictNoSlot1Store(HexagonPacketSummary const &Summary);
   void restrictNoSlot1();
   bool restrictStoreLoadOrder(HexagonPacketSummary const &Summary);
   void restrictBranchOrder(HexagonPacketSummary const &Summary);
-  void restrictPreferSlot3(HexagonPacketSummary const &Summary);
+  void restrictPreferSlot3(HexagonPacketSummary const &Summary,
+                           const bool DoShuffle);
   void permitNonSlot();
 
-  Optional<HexagonPacket> tryAuction(HexagonPacketSummary const &Summary) const;
+  Optional<HexagonPacket> tryAuction(HexagonPacketSummary const &Summary);
 
   HexagonPacketSummary GetPacketSummary();
   bool ValidPacketMemoryOps(HexagonPacketSummary const &Summary) const;
   bool ValidResourceUsage(HexagonPacketSummary const &Summary);
-  bool validPacketInsts() const;
 
 public:
   using iterator = HexagonPacket::iterator;
@@ -205,7 +197,7 @@ public:
   // Reset to initial state.
   void reset();
   // Check if the bundle may be validly shuffled.
-  bool check();
+  bool check(const bool RequireShuffle = true);
   // Reorder the insn handles in the bundle.
   bool shuffle();
 
@@ -242,6 +234,8 @@ public:
 
   // Return the error code for the last check or shuffling of the bundle.
   void reportError(Twine const &Msg);
+  void reportResourceError(HexagonPacketSummary const &Summary, StringRef Err);
+  void reportResourceUsage(HexagonPacketSummary const &Summary);
 };
 
 } // end namespace llvm

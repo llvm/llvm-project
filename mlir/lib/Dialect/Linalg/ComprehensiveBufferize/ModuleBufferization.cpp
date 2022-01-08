@@ -351,7 +351,7 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
 
     // Cast values at the call site if necessary.
     returnValues.push_back(
-        getNonCastedValue(state.lookupBuffer(rewriter, returnVal)));
+        getNonCastedValue(*state.getBuffer(rewriter, returnOperand)));
   }
 
   // 2. Rewrite the terminator without the inPlace bufferizable values.
@@ -590,6 +590,11 @@ struct CallOpInterface
     return true;
   }
 
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return false;
+  }
+
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                const BufferizationState &state) const {
     // CallOpInterface is special, it needs to wait for the callee to be
@@ -654,7 +659,8 @@ struct CallOpInterface
         // Return operands that are equivalent to some bbArg, are not
         // returned.
         Value buffer =
-            state.lookupBuffer(rewriter, callOp->getOperand(*bbArgIdx));
+            *state.getBuffer(rewriter, callOp->getOpOperand(*bbArgIdx),
+                             /*forceInPlace=*/true);
         replacementValues[returnValIdx] = buffer;
         newOperands[*bbArgIdx] = buffer;
         continue;
@@ -685,9 +691,9 @@ struct CallOpInterface
       // Retrieve buffers for tensor operands. Tensor operand buffers, who's
       // corresponding FuncOp bbArgs are equivalent to a returned tensor, were
       // already stored in `newOperands` during Step 1.
-      Value buffer = newOperands[idx]
-                         ? newOperands[idx]
-                         : state.lookupBuffer(rewriter, tensorOperand);
+      Value buffer = newOperands[idx] ? newOperands[idx]
+                                      : *state.getBuffer(rewriter, opOperand,
+                                                         /*forceInPlace=*/true);
 
       // Caller / callee type mistmatch is handled with a CastOp.
       auto memRefType = bufferizedFuncType.getInput(idx);
@@ -767,19 +773,19 @@ struct FuncOpInterface
     const ModuleBufferizationState &moduleState =
         getModuleBufferizationState(state);
 
+    // "linalg.inplaceable" overrides other writability decisions. This is
+    // currently used for testing only.
+    if (BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
+            bbArg.getArgNumber(),
+            BufferizableOpInterface::kInplaceableAttrName))
+      return inplaceAttr.getValue();
+
     // In a first approximation:
     // =========================
     // If the function is called, we can allocate on the caller side which lets
     // us force inplace arguments at function boundaries.
     // TODO: do not rely on this behavior.
     if (moduleState.callerMap.find(funcOp) != moduleState.callerMap.end())
-      return true;
-
-    // Set the function arguments marked with inplaceable to be known as
-    // bufferizing to a writeable memory.
-    BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
-        bbArg.getArgNumber(), BufferizableOpInterface::kInplaceableAttrName);
-    if (inplaceAttr && inplaceAttr.getValue())
       return true;
 
     // All other function arguments are not writable.
@@ -836,6 +842,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   // inplace. Therefore, we just bufferize funcOp as if none of its results were
   // inplaceable, detect which operands are cloned internally and decide what to
   // do at call sites.
+
+  // Analyze ops.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // No body => no analysis.
     if (funcOp.body().empty())
@@ -848,8 +856,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     // Gather equivalence info for CallOps.
     equivalenceAnalysis(funcOp, aliasInfo, moduleState);
 
-    // Analyze and bufferize funcOp.
-    if (failed(runComprehensiveBufferize(funcOp, *options, state)))
+    // Analyze funcOp.
+    if (failed(analyzeOp(funcOp, state)))
       return failure();
 
     // Add annotations to function arguments.
@@ -860,6 +868,18 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (options->testAnalysisOnly)
     return success();
 
+  // Bufferize function bodies.
+  for (FuncOp funcOp : moduleState.orderedFuncOps) {
+    // No body => no analysis.
+    if (funcOp.body().empty())
+      continue;
+
+    if (failed(runComprehensiveBufferize(funcOp, *options, state,
+                                         /*runAnalysis=*/false)))
+      return failure();
+  }
+
+  // Bufferize function boundaries.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.

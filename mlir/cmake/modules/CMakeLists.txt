@@ -1,4 +1,5 @@
 include(LLVMDistributionSupport)
+include(FindPrefixFromConfig)
 
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
@@ -44,16 +45,7 @@ file(COPY .
   )
 
 # Generate MLIRConfig.cmake for the install tree.
-set(MLIR_CONFIG_CODE "
-# Compute the installation prefix from this MLIRConfig.cmake file location.
-get_filename_component(MLIR_INSTALL_PREFIX \"\${CMAKE_CURRENT_LIST_FILE}\" PATH)")
-# Construct the proper number of get_filename_component(... PATH)
-# calls to compute the installation prefix.
-string(REGEX REPLACE "/" ";" _count "${MLIR_INSTALL_PACKAGE_DIR}")
-foreach(p ${_count})
-  set(MLIR_CONFIG_CODE "${MLIR_CONFIG_CODE}
-get_filename_component(MLIR_INSTALL_PREFIX \"\${MLIR_INSTALL_PREFIX}\" PATH)")
-endforeach(p)
+find_prefix_from_config(MLIR_CONFIG_CODE MLIR_INSTALL_PREFIX "${MLIR_INSTALL_PACKAGE_DIR}")
 set(MLIR_CONFIG_CMAKE_DIR "\${MLIR_INSTALL_PREFIX}/${MLIR_INSTALL_PACKAGE_DIR}")
 set(MLIR_CONFIG_LLVM_CMAKE_DIR "\${MLIR_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
 get_config_exports_includes(MLIR MLIR_CONFIG_INCLUDE_EXPORTS)

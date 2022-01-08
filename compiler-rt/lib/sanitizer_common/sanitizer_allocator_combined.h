@@ -235,7 +235,7 @@ class CombinedAllocator {
 
   // ForceLock() and ForceUnlock() are needed to implement Darwin malloc zone
   // introspection API.
-  void ForceLock() NO_THREAD_SAFETY_ANALYSIS {
+  void ForceLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
 #if SANITIZER_AMDGPU
     device_.ForceLock();
 #endif
@@ -243,7 +243,7 @@ class CombinedAllocator {
     secondary_.ForceLock();
   }
 
-  void ForceUnlock() NO_THREAD_SAFETY_ANALYSIS {
+  void ForceUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     secondary_.ForceUnlock();
     primary_.ForceUnlock();
 #if SANITIZER_AMDGPU

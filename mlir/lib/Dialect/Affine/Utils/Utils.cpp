@@ -537,7 +537,6 @@ static bool hasNoInterveningEffect(Operation *start, T memOp) {
     // Otherwise, conservatively assume generic operations have the effect
     // on the operation
     hasSideEffect = true;
-    return;
   };
 
   // Check all paths from ancestor op `parent` to the operation `to` for the
