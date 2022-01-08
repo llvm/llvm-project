@@ -2571,12 +2571,17 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
 }
 
 void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
+  // Note: We only handle cases which can't be driven from generic attributes
+  // here.  So, for example, nonnull and noalias (which are common properties
+  // of some allocation functions) are expected to be handled via annotation
+  // of the respective allocator declaration with generic attributes.
 
   uint64_t Size;
   ObjectSizeOpts Opts;
   if (getObjectSize(&Call, Size, DL, TLI, Opts) && Size > 0) {
-    // TODO: should be annotating these nonnull
-    if (isOpNewLikeFn(&Call, TLI))
+    // TODO: We really should just emit deref_or_null here and then
+    // let the generic inference code combine that with nonnull.
+    if (Call.hasRetAttr(Attribute::NonNull))
       Call.addRetAttr(Attribute::getWithDereferenceableBytes(
           Call.getContext(), Size));
     else
