@@ -18,7 +18,6 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
-class StringRef;
 
 class ARMAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {

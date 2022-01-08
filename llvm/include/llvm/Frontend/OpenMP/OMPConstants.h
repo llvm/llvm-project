@@ -20,13 +20,6 @@
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 namespace llvm {
-class Type;
-class Module;
-class ArrayType;
-class StructType;
-class PointerType;
-class FunctionType;
-
 namespace omp {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 

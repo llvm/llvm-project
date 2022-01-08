@@ -19,7 +19,6 @@
 #include "llvm/Target/TargetOptions.h"
 
 namespace llvm {
-class TargetMachine;
 
 enum class RunOutliner { TargetDefault, AlwaysOutline, NeverOutline };
 enum class RegAllocType { Default, Basic, Fast, Greedy, PBQP };

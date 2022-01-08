@@ -21,10 +21,6 @@ class StringRef;
 class Twine;
 
 namespace object {
-class ELFObjectFileBase;
-class ELFSectionRef;
-class MachOObjectFile;
-class MachOUniversalBinary;
 class RelocationRef;
 struct VersionEntry;
 } // namespace object

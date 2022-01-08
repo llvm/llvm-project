@@ -31,7 +31,6 @@
 
 namespace llvm {
 
-class ARMAttributeParser;
 class SubtargetFeatures;
 
 namespace object {

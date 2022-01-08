@@ -26,7 +26,6 @@ class LazyRandomTypeCollection;
 }
 namespace object {
 class COFFObjectFile;
-class SectionRef;
 } // namespace object
 
 namespace pdb {

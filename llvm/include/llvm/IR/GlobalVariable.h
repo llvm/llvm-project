@@ -34,7 +34,6 @@ class Constant;
 class Module;
 
 template <typename ValueSubClass> class SymbolTableListTraits;
-class DIGlobalVariable;
 class DIGlobalVariableExpression;
 
 class GlobalVariable : public GlobalObject, public ilist_node<GlobalVariable> {

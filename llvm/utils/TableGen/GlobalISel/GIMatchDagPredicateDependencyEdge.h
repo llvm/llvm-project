@@ -14,7 +14,6 @@
 namespace llvm {
 class GIMatchDag;
 class GIMatchDagInstr;
-class GIMatchDagEdge;
 class GIMatchDagPredicate;
 
 /// Represents a dependency that must be met to evaluate a predicate.

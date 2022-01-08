@@ -44,7 +44,6 @@ class IntToPtrInst;
 class LLVMContext;
 class LoadInst;
 class PHINode;
-class PointerType;
 class SelectInst;
 class Type;
 class UndefValue;

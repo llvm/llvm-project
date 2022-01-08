@@ -138,8 +138,6 @@ AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
 
 namespace {
 
-struct RewritePhi;
-
 class IndVarSimplify {
   LoopInfo *LI;
   ScalarEvolution *SE;

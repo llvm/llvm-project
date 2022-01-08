@@ -33,7 +33,6 @@
 
 namespace llvm {
 
-class DataLayout;
 class Type;
 class raw_ostream;
 

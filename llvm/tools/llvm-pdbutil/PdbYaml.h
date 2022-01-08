@@ -27,13 +27,9 @@
 #include <vector>
 
 namespace llvm {
-namespace codeview {
-class DebugStringTableSubsection;
-}
 namespace pdb {
 
 namespace yaml {
-struct SerializationContext;
 
 struct MSFHeaders {
   msf::SuperBlock SuperBlock;

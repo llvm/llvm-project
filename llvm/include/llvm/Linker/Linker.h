@@ -14,8 +14,6 @@
 
 namespace llvm {
 class Module;
-class StructType;
-class Type;
 
 /// This class provides the core functionality of linking in LLVM. It keeps a
 /// pointer to the merged module so far. It doesn't take ownership of the

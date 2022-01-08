@@ -20,7 +20,6 @@
 #include <list>
 
 namespace llvm {
-class BinaryStreamReader;
 namespace msf {
 class MSFStreamLayout;
 } // namespace msf
