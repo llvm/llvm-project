@@ -13,8 +13,11 @@
 #include "debug.h"
 
 #include <cassert>
+#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+
 
 namespace __orc_rt {
 
