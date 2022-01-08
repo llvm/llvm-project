@@ -120,8 +120,7 @@ bool AggressiveAntiDepState::IsLive(unsigned Reg) {
 AggressiveAntiDepBreaker::AggressiveAntiDepBreaker(
     MachineFunction &MFi, const RegisterClassInfo &RCI,
     TargetSubtargetInfo::RegClassVector &CriticalPathRCs)
-    : AntiDepBreaker(), MF(MFi), MRI(MF.getRegInfo()),
-      TII(MF.getSubtarget().getInstrInfo()),
+    : MF(MFi), MRI(MF.getRegInfo()), TII(MF.getSubtarget().getInstrInfo()),
       TRI(MF.getSubtarget().getRegisterInfo()), RegClassInfo(RCI) {
   /* Collect a bitset of all registers that are only broken if they
      are on the critical path. */

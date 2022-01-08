@@ -37,7 +37,7 @@ INITIALIZE_PASS_END(DominanceFrontierWrapperPass, "domfrontier",
                 "Dominance Frontier Construction", true, true)
 
 DominanceFrontierWrapperPass::DominanceFrontierWrapperPass()
-    : FunctionPass(ID), DF() {
+    : FunctionPass(ID) {
   initializeDominanceFrontierWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 

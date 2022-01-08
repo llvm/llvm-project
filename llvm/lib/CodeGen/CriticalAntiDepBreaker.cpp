@@ -40,8 +40,7 @@ using namespace llvm;
 
 CriticalAntiDepBreaker::CriticalAntiDepBreaker(MachineFunction &MFi,
                                                const RegisterClassInfo &RCI)
-    : AntiDepBreaker(), MF(MFi), MRI(MF.getRegInfo()),
-      TII(MF.getSubtarget().getInstrInfo()),
+    : MF(MFi), MRI(MF.getRegInfo()), TII(MF.getSubtarget().getInstrInfo()),
       TRI(MF.getSubtarget().getRegisterInfo()), RegClassInfo(RCI),
       Classes(TRI->getNumRegs(), nullptr), KillIndices(TRI->getNumRegs(), 0),
       DefIndices(TRI->getNumRegs(), 0), KeepRegs(TRI->getNumRegs(), false) {}

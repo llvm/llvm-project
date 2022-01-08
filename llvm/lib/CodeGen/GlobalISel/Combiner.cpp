@@ -56,8 +56,7 @@ class WorkListMaintainer : public GISelChangeObserver {
   SmallPtrSet<const MachineInstr *, 4> CreatedInstrs;
 
 public:
-  WorkListMaintainer(WorkListTy &WorkList)
-      : GISelChangeObserver(), WorkList(WorkList) {}
+  WorkListMaintainer(WorkListTy &WorkList) : WorkList(WorkList) {}
   virtual ~WorkListMaintainer() {
   }
 

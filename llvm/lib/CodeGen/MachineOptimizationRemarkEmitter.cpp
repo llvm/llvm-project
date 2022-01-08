@@ -22,8 +22,7 @@
 using namespace llvm;
 
 DiagnosticInfoMIROptimization::MachineArgument::MachineArgument(
-    StringRef MKey, const MachineInstr &MI)
-    : Argument() {
+    StringRef MKey, const MachineInstr &MI) {
   Key = std::string(MKey);
 
   raw_string_ostream OS(Val);
