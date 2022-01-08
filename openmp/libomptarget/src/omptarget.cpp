@@ -1491,9 +1491,11 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
      TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
 
+  uint64_t start_time = 0;
   OMPT_IF_ENABLED(ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0),
                                                 OMPT_GET_RETURN_ADDRESS(0));
-                  ompt_interface.target_submit_begin(TeamNum););
+                  ompt_interface.target_submit_begin(TeamNum);
+                  start_time = ompt_interface.get_ns_duration_since_epoch(););
 
   {
     TIMESCOPE_WITH_NAME_AND_IDENT(
@@ -1507,13 +1509,15 @@ int target(ident_t *loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
                              TgtArgs.size(), AsyncInfo);
   }
 
+  OMPT_IF_ENABLED(
+      ompt_interface.target_submit_trace_record_gen(start_time, TeamNum);
+      ompt_interface.target_submit_end(TeamNum);
+      ompt_interface.ompt_state_clear(););
+
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Executing target region abort target.\n");
     return OFFLOAD_FAIL;
   }
-
-  OMPT_IF_ENABLED(ompt_interface.target_submit_end(TeamNum);
-                  ompt_interface.ompt_state_clear(););
 
   if (ArgNum) {
     // Transfer data back and deallocate target memory for (first-)private

@@ -518,32 +518,40 @@ __tgt_target_table *DeviceTy::load_binary(void *Img) {
 }
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
+  uint64_t start_time = 0;
   void *codeptr = nullptr;
   OMPT_IF_ENABLED(
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
       ompt_interface.target_data_alloc_begin(RTLDeviceID, HstPtr, Size,
-                                             codeptr););
+                                             codeptr);
+      start_time = ompt_interface.get_ns_duration_since_epoch(););
 
   void *tgt_ptr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
 
-  OMPT_IF_ENABLED(
-      ompt_interface.target_data_alloc_end(RTLDeviceID, HstPtr, Size, codeptr);
-      ompt_interface.ompt_state_clear(););
+  OMPT_IF_ENABLED(ompt_interface.target_data_submit_trace_record_gen(
+      RTLDeviceID, ompt_target_data_alloc, tgt_ptr, HstPtr, Size, start_time);
+                  ompt_interface.target_data_alloc_end(RTLDeviceID, HstPtr,
+                                                       Size, codeptr);
+                  ompt_interface.ompt_state_clear(););
   return tgt_ptr;
 }
 
 int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
+  uint64_t start_time = 0;
   void *codeptr = nullptr;
   OMPT_IF_ENABLED(
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
       ompt_interface.target_data_delete_begin(RTLDeviceID, TgtPtrBegin,
-                                              codeptr););
+                                              codeptr);
+      start_time = ompt_interface.get_ns_duration_since_epoch(););
 
   int32_t status = RTL->data_delete(RTLDeviceID, TgtPtrBegin);
 
   OMPT_IF_ENABLED(
+      ompt_interface.target_data_submit_trace_record_gen(
+          DeviceID, ompt_target_data_delete, TgtPtrBegin, 0, 0, start_time);
       ompt_interface.target_data_delete_end(RTLDeviceID, TgtPtrBegin, codeptr);
       ompt_interface.ompt_state_clear(););
 
@@ -565,12 +573,14 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                                 : "unknown");
   }
 
+  uint64_t start_time = 0;
   void *codeptr = nullptr;
   OMPT_IF_ENABLED(
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
       ompt_interface.target_data_submit_begin(RTLDeviceID, TgtPtrBegin,
-                                              HstPtrBegin, Size, codeptr););
+                                              HstPtrBegin, Size, codeptr);
+      start_time = ompt_interface.get_ns_duration_since_epoch(););
 
   int32_t status;
   if (!AsyncInfo || !RTL->data_submit_async || !RTL->synchronize)
@@ -579,8 +589,11 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
     status = RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
                                     AsyncInfo);
 
-  OMPT_IF_ENABLED(ompt_interface.target_data_submit_end(
-      RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size, codeptr);
+  OMPT_IF_ENABLED(ompt_interface.target_data_submit_trace_record_gen(
+      DeviceID, ompt_target_data_transfer_to_device, HstPtrBegin, TgtPtrBegin,
+      Size, start_time);
+                  ompt_interface.target_data_submit_end(
+                      RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size, codeptr);
                   ompt_interface.ompt_state_clear(););
   return status;
 }
@@ -599,12 +612,14 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                 : "unknown");
   }
 
+  uint64_t start_time = 0;
   void *codeptr = nullptr;
   OMPT_IF_ENABLED(
       codeptr = OMPT_GET_RETURN_ADDRESS(0);
       ompt_interface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), codeptr);
       ompt_interface.target_data_retrieve_begin(RTLDeviceID, HstPtrBegin,
-                                                TgtPtrBegin, Size, codeptr););
+                                                TgtPtrBegin, Size, codeptr);
+      start_time = ompt_interface.get_ns_duration_since_epoch(););
 
   int32_t status;
   if (!RTL->data_retrieve_async || !RTL->synchronize)
@@ -613,10 +628,12 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
     status = RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin,
                                       Size, AsyncInfo);
 
-  OMPT_IF_ENABLED(ompt_interface.target_data_retrieve_end(
-      RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size, codeptr);
+  OMPT_IF_ENABLED(ompt_interface.target_data_submit_trace_record_gen(
+      DeviceID, ompt_target_data_transfer_from_device, TgtPtrBegin, HstPtrBegin,
+      Size, start_time);
+                  ompt_interface.target_data_retrieve_end(
+                      RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size, codeptr);
                   ompt_interface.ompt_state_clear(););
-
   return status;
 }
 

@@ -20,6 +20,8 @@
 //****************************************************************************
 
 #include <atomic>
+#include <cassert>
+#include <stdlib.h>
 #include <string.h>
 
 #include <omp-tools.h>
@@ -60,8 +62,7 @@ private:
 
 class ompt_device_callbacks_t {
 public:
-  void ompt_callback_device_initialize(int device_num,
-                                               const char *type) {
+  void ompt_callback_device_initialize(int device_num, const char *type) {
     if (ompt_callback_device_initialize_fn) {
       ompt_device *device = lookup_device(device_num);
       if (device->do_initialize()) {
@@ -218,14 +219,102 @@ public:
     }
   };
 
+  void ompt_callback_buffer_request(int device_num, ompt_buffer_t **buffer,
+                                    size_t *bytes) {
+    if (ompt_callback_buffer_request_fn) {
+      ompt_callback_buffer_request_fn(device_num, buffer, bytes);
+    }
+  }
+
+  void ompt_callback_buffer_complete(int device_num, ompt_buffer_t *buffer,
+                                     size_t bytes, ompt_buffer_cursor_t begin,
+                                     int buffer_owned) {
+    if (ompt_callback_buffer_complete_fn) {
+      ompt_callback_buffer_complete_fn(device_num, buffer, bytes, begin,
+                                       buffer_owned);
+    }
+  }
+
   void init() {
     enabled = false;
+    tracing_enabled = false;
+    tracing_type_enabled = 0;
+
 #define init_name(name, type, code) name##_fn = 0;
     FOREACH_OMPT_TARGET_CALLBACK(init_name)
 #undef init_name
-  };
+
+    ompt_callback_buffer_request_fn = 0;
+    ompt_callback_buffer_complete_fn = 0;
+  }
 
   bool is_enabled() { return enabled; }
+
+  bool is_tracing_enabled() { return tracing_enabled; }
+  void set_tracing_enabled(bool b) { tracing_enabled = b; }
+
+  bool is_tracing_type_enabled(unsigned int etype) {
+    assert(etype < 64);
+    if (etype < 64)
+      return (tracing_type_enabled & (1UL << etype)) != 0;
+    return false;
+  }
+
+  void set_tracing_type_enabled(unsigned int etype, bool b) {
+    assert(etype < 64);
+    if (etype < 64) {
+      if (b)
+        tracing_type_enabled |= (1UL << etype);
+      else
+        tracing_type_enabled &= ~(1UL << etype);
+    }
+  }
+
+  ompt_set_result_t set_trace_ompt(ompt_device_t *device, unsigned int enable,
+                                   unsigned int etype) {
+    // TODO handle device
+
+    DP("set_trace_ompt: %d %d\n", etype, enable);
+
+    bool is_event_enabled = enable > 0;
+    if (etype == 0) {
+      /* set/reset all supported types */
+      set_tracing_type_enabled(ompt_callbacks_t::ompt_callback_target,
+                               is_event_enabled);
+      set_tracing_type_enabled(ompt_callbacks_t::ompt_callback_target_data_op,
+                               is_event_enabled);
+      set_tracing_type_enabled(ompt_callbacks_t::ompt_callback_target_submit,
+                               is_event_enabled);
+      set_tracing_type_enabled(ompt_callbacks_t::ompt_callback_target_emi,
+                               is_event_enabled);
+      set_tracing_type_enabled(
+          ompt_callbacks_t::ompt_callback_target_data_op_emi, is_event_enabled);
+      set_tracing_type_enabled(
+          ompt_callbacks_t::ompt_callback_target_submit_emi, is_event_enabled);
+
+      if (is_event_enabled)
+        return ompt_set_sometimes; // a subset is enabled
+      else
+        return ompt_set_always; // we can disable for all
+    }
+    switch (etype) {
+    case ompt_callbacks_t::ompt_callback_target:
+    case ompt_callbacks_t::ompt_callback_target_data_op:
+    case ompt_callbacks_t::ompt_callback_target_submit:
+    case ompt_callbacks_t::ompt_callback_target_emi:
+    case ompt_callbacks_t::ompt_callback_target_data_op_emi:
+    case ompt_callbacks_t::ompt_callback_target_submit_emi: {
+      set_tracing_type_enabled(etype, is_event_enabled);
+      return ompt_set_always;
+    }
+    default: {
+      if (is_event_enabled)
+        return ompt_set_never; // unimplemented
+      else
+        return ompt_set_always; // always disabled anyways
+    }
+    }
+  }
 
   void prepare_devices(int number_of_devices) { resize(number_of_devices); };
 
@@ -251,15 +340,29 @@ public:
 
   static ompt_interface_fn_t lookup(const char *interface_function_name);
 
+  void set_buffer_request(ompt_callback_buffer_request_t callback) {
+    ompt_callback_buffer_request_fn = callback;
+  }
+
+  void set_buffer_complete(ompt_callback_buffer_complete_t callback) {
+    ompt_callback_buffer_complete_fn = callback;
+  }
+
 private:
   bool enabled;
+  std::atomic<bool> tracing_enabled;
+  std::atomic<uint64_t> tracing_type_enabled;
 
 #define declare_name(name, type, code) name##_t name##_fn;
   FOREACH_OMPT_TARGET_CALLBACK(declare_name)
 #undef declare_name
 
-  static void resize(int number_of_devices);
+  ompt_callback_buffer_request_t ompt_callback_buffer_request_fn;
+  ompt_callback_buffer_complete_t ompt_callback_buffer_complete_fn;
+
   static ompt_device *lookup_device(int device_num);
+
+  static void resize(int number_of_devices);
   static const char *documentation;
 };
 

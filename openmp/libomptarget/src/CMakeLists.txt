@@ -17,6 +17,7 @@ set(LIBOMPTARGET_SRC_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/device.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/interface.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/hostrpc.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/ompt_buffer_mgr.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ompt_callback.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/rtl.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/omptarget.cpp

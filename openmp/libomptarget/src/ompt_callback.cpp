@@ -14,6 +14,7 @@
 #include <atomic>
 #include <cstring>
 #include <dlfcn.h>
+#include <mutex>
 
 //****************************************************************************
 // local include files
@@ -25,6 +26,7 @@
 #include "private.h"
 
 #include <ompt-connector.h>
+#include <ompt_buffer_mgr.h>
 #include <ompt_device_callbacks.h>
 
 /*******************************************************************************
@@ -70,6 +72,8 @@ bool ompt_enabled = false;
 
 ompt_device_callbacks_t ompt_device_callbacks;
 
+OmptTracingBufferMgr ompt_trace_record_buffer_mgr;
+
 /*****************************************************************************
  * private data
  *****************************************************************************/
@@ -82,6 +86,13 @@ static libomptarget_rtl_finalizer_t libomptarget_rtl_finalizer;
 
 const char *ompt_device_callbacks_t::documentation = 0;
 
+static std::atomic<uint64_t> unique_id_ticket(1);
+
+// Mutexes to serialize entry points invocation
+static std::mutex set_trace_mutex;
+// Serialize start/stop/flush
+static std::mutex start_stop_flush_trace_mutex;
+
 /*****************************************************************************
  * Thread local data
  *****************************************************************************/
@@ -93,8 +104,7 @@ static thread_local ompt_data_t ompt_target_data = ompt_data_none;
 static thread_local ompt_data_t *ompt_task_data = 0;
 static thread_local ompt_data_t *ompt_target_task_data = 0;
 static thread_local ompt_id_t host_op_id = 0;
-
-static std::atomic<uint64_t> unique_id_ticket(1);
+static thread_local uint32_t ompt_num_granted_teams = 0;
 
 /*****************************************************************************
  * OMPT callbacks
@@ -260,6 +270,50 @@ void OmptInterface::target_data_retrieve_end(int64_t device_id,
   target_operation_end();
 }
 
+ompt_record_ompt_t *OmptInterface::target_data_submit_trace_record_gen(
+    int64_t device_id, ompt_target_data_op_t data_op, void *src_ptr,
+    void *dest_ptr, size_t bytes, uint64_t start_time) {
+  if (!ompt_device_callbacks.is_tracing_enabled() ||
+      (!ompt_device_callbacks.is_tracing_type_enabled(
+           ompt_callback_target_data_op) &&
+       !ompt_device_callbacks.is_tracing_type_enabled(
+           ompt_callback_target_data_op_emi)))
+    return nullptr;
+
+  ompt_record_ompt_t *data_ptr =
+      (ompt_record_ompt_t *)ompt_trace_record_buffer_mgr.assignCursor(
+          ompt_callback_target_data_op);
+
+  // Logically, this record is now private
+
+  set_trace_record_common(data_ptr, ompt_callback_target_data_op, start_time);
+
+  set_trace_record_target_data_op(&data_ptr->record.target_data_op, device_id,
+                                  data_op, src_ptr, dest_ptr, bytes);
+
+  // The trace record has been created, mark it ready for delivery to the tool
+  ompt_trace_record_buffer_mgr.setTRStatus(data_ptr,
+                                           OmptTracingBufferMgr::TR_ready);
+
+  DP("Generated target_data_submit trace record %p\n", data_ptr);
+  return data_ptr;
+}
+
+void OmptInterface::set_trace_record_target_data_op(
+    ompt_record_target_data_op_t *rec, int64_t device_id,
+    ompt_target_data_op_t data_op, void *src_ptr, void *dest_ptr,
+    size_t bytes) {
+  rec->host_op_id = ompt_target_region_opid;
+  rec->optype = data_op;
+  rec->src_addr = src_ptr;
+  rec->src_device_num = device_id;
+  rec->dest_addr = dest_ptr;
+  rec->dest_device_num = device_id;
+  rec->bytes = bytes;
+  rec->end_time = get_ns_duration_since_epoch();
+  rec->codeptr_ra = _codeptr_ra;
+}
+
 void OmptInterface::target_submit_begin(unsigned int num_teams) {
   ompt_device_callbacks.ompt_callback_target_submit_emi(
       ompt_scope_begin, &ompt_target_data, num_teams, opid_create,
@@ -270,6 +324,42 @@ void OmptInterface::target_submit_end(unsigned int num_teams) {
   ompt_device_callbacks.ompt_callback_target_submit_emi(
       ompt_scope_end, &ompt_target_data, num_teams, opid_get,
       &ompt_target_region_opid);
+}
+
+ompt_record_ompt_t *
+OmptInterface::target_submit_trace_record_gen(uint64_t start_time,
+                                              unsigned int num_teams) {
+  if (!ompt_device_callbacks.is_tracing_enabled() ||
+      (!ompt_device_callbacks.is_tracing_type_enabled(
+           ompt_callback_target_submit) &&
+       !ompt_device_callbacks.is_tracing_type_enabled(
+           ompt_callback_target_submit_emi)))
+    return nullptr;
+
+  ompt_record_ompt_t *data_ptr =
+      (ompt_record_ompt_t *)ompt_trace_record_buffer_mgr.assignCursor(
+          ompt_callback_target_submit);
+
+  // Logically, this record is now private
+
+  set_trace_record_common(data_ptr, ompt_callback_target_submit, start_time);
+
+  set_trace_record_target_kernel(&data_ptr->record.target_kernel, num_teams);
+
+  // The trace record has been created, mark it ready for delivery to the tool
+  ompt_trace_record_buffer_mgr.setTRStatus(data_ptr,
+                                           OmptTracingBufferMgr::TR_ready);
+
+  DP("Generated target_submit trace record %p\n", data_ptr);
+  return data_ptr;
+}
+
+void OmptInterface::set_trace_record_target_kernel(
+    ompt_record_target_kernel_t *rec, unsigned int num_teams) {
+  rec->host_op_id = ompt_target_region_opid;
+  rec->requested_num_teams = num_teams;
+  rec->granted_num_teams = ompt_num_granted_teams;
+  rec->end_time = get_ns_duration_since_epoch();
 }
 
 void OmptInterface::target_data_enter_begin(int64_t device_id, void *codeptr) {
@@ -329,6 +419,60 @@ void OmptInterface::target_end(int64_t device_id, void *codeptr) {
       ompt_target, ompt_scope_end, device_id, ompt_task_data,
       ompt_target_task_data, &ompt_target_data, codeptr, regionid_get);
   target_region_end();
+}
+
+ompt_record_ompt_t *
+OmptInterface::target_trace_record_gen(int64_t device_id, ompt_target_t kind,
+                                       ompt_scope_endpoint_t endpoint,
+                                       void *code) {
+  if (!ompt_device_callbacks.is_tracing_enabled() ||
+      (!ompt_device_callbacks.is_tracing_type_enabled(ompt_callback_target) &&
+       !ompt_device_callbacks.is_tracing_type_enabled(
+           ompt_callback_target_emi)))
+    return nullptr;
+
+  uint64_t start_time = ompt_interface.get_ns_duration_since_epoch();
+
+  ompt_record_ompt_t *data_ptr =
+      (ompt_record_ompt_t *)ompt_trace_record_buffer_mgr.assignCursor(
+          ompt_callback_target);
+
+  // Logically, this record is now private
+
+  set_trace_record_common(data_ptr, ompt_callback_target, start_time);
+  set_trace_record_target(&data_ptr->record.target, device_id, kind, endpoint,
+                          code);
+
+  // The trace record has been created, mark it ready for delivery to the tool
+  ompt_trace_record_buffer_mgr.setTRStatus(data_ptr,
+                                           OmptTracingBufferMgr::TR_ready);
+
+  DP("Generated target trace record %p, completing a kernel\n", data_ptr);
+
+  return data_ptr;
+}
+
+void OmptInterface::set_trace_record_target(ompt_record_target_t *rec,
+                                            int64_t device_id,
+                                            ompt_target_t kind,
+                                            ompt_scope_endpoint_t endpoint,
+                                            void *code) {
+  rec->kind = kind;
+  rec->endpoint = endpoint;
+  rec->device_num = device_id;
+  assert(ompt_task_data);
+  rec->task_id = ompt_task_data->value;
+  rec->target_id = ompt_target_data.value;
+  rec->codeptr_ra = code;
+}
+
+void OmptInterface::set_trace_record_common(ompt_record_ompt_t *data_ptr,
+                                            ompt_callbacks_t cbt,
+                                            uint64_t start_time) {
+  data_ptr->type = cbt;
+  data_ptr->time = start_time;
+  data_ptr->thread_id = 0; // TODO
+  data_ptr->target_id = ompt_target_data.value;
 }
 
 /*****************************************************************************
@@ -419,5 +563,73 @@ void libomptarget_ompt_connect(ompt_start_tool_result_t *result) {
     result->initialize(ompt_device_callbacks_t::lookup, 0, NULL);
   }
   DP("OMPT: Leave libomptarget_ompt_connect\n");
+}
+
+// Device-independent entry point for ompt_set_trace_ompt
+ompt_set_result_t libomptarget_ompt_set_trace_ompt(ompt_device_t *device,
+                                                   unsigned int enable,
+                                                   unsigned int etype) {
+  std::unique_lock<std::mutex> lck(set_trace_mutex);
+  return ompt_device_callbacks.set_trace_ompt(device, enable, etype);
+}
+
+// Device-independent entry point for ompt_start_trace
+int libomptarget_ompt_start_trace(ompt_callback_buffer_request_t request,
+                                  ompt_callback_buffer_complete_t complete) {
+  std::unique_lock<std::mutex> lck(start_stop_flush_trace_mutex);
+  ompt_device_callbacks.set_buffer_request(request);
+  ompt_device_callbacks.set_buffer_complete(complete);
+  if (request && complete) {
+    ompt_device_callbacks.set_tracing_enabled(true);
+    ompt_trace_record_buffer_mgr.startHelperThreads();
+    return 1; // success
+  }
+  return 0; // failure
+}
+
+// Device-independent entry point for ompt_flush_trace
+int libomptarget_ompt_flush_trace(ompt_device_t *device) {
+  std::unique_lock<std::mutex> lck(start_stop_flush_trace_mutex);
+  return ompt_trace_record_buffer_mgr.flushAllBuffers(device);
+}
+
+// Device independent entry point for ompt_stop_trace
+int libomptarget_ompt_stop_trace(ompt_device_t *device) {
+  std::unique_lock<std::mutex> lck(start_stop_flush_trace_mutex);
+  int status = ompt_trace_record_buffer_mgr.flushAllBuffers(device);
+  // TODO shutdown should perhaps return a status
+  ompt_trace_record_buffer_mgr.shutdownHelperThreads();
+  ompt_device_callbacks.set_tracing_enabled(false);
+  return status;
+}
+
+// Device independent entry point for ompt_advance_buffer_cursor
+// Note: The input parameter size is unused here. It refers to the
+// bytes returned in the corresponding callback.
+int libomptarget_ompt_advance_buffer_cursor(ompt_device_t *device,
+                                            ompt_buffer_t *buffer, size_t size,
+                                            ompt_buffer_cursor_t current,
+                                            ompt_buffer_cursor_t *next) {
+  char *curr_rec = (char *)current;
+  // Don't assert if current is null, just indicate end of buffer
+  if (curr_rec == nullptr ||
+      ompt_trace_record_buffer_mgr.isLastCursor(curr_rec)) {
+    *next = 0;
+    return false;
+  }
+  // TODO In debug mode, assert that the metadata points to the
+  // input parameter buffer
+
+  size_t sz = sizeof(ompt_record_ompt_t);
+  *next = (ompt_buffer_cursor_t)(curr_rec + sz);
+  DP("Advanced buffer pointer by %lu bytes to %p\n", sz, curr_rec + sz);
+  return true;
+}
+
+// This function is invoked before the kernel launch. So when the
+// trace record is populated after kernel completion,
+// ompt_num_granted_teams is already updated
+void libomptarget_ompt_set_granted_teams(uint32_t num_teams) {
+  ompt_num_granted_teams = num_teams;
 }
 }

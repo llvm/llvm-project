@@ -25,7 +25,13 @@
 
 #define OMPT_GET_RETURN_ADDRESS(level) __builtin_return_address(level)
 
+#include <chrono>
+
 #include <omp-tools.h>
+
+using HighResClk = std::chrono::high_resolution_clock;
+using HighResTp = std::chrono::time_point<HighResClk>;
+using DurationNs = std::chrono::nanoseconds;
 
 class OmptInterface {
 public:
@@ -83,6 +89,24 @@ public:
 
   void target_end(int64_t device_id, void *codeptr);
 
+  uint64_t get_ns_duration_since_epoch() {
+    const HighResTp time_point = HighResClk::now();
+    const HighResClk::duration duration_since_epoch =
+        time_point.time_since_epoch();
+    return std::chrono::duration_cast<DurationNs>(duration_since_epoch).count();
+  }
+
+  ompt_record_ompt_t *target_trace_record_gen(int64_t device_id,
+                                              ompt_target_t kind,
+                                              ompt_scope_endpoint_t endpoint,
+                                              void *code);
+  ompt_record_ompt_t *
+  target_submit_trace_record_gen(uint64_t start_time,
+                                 unsigned int num_teams = 1);
+  ompt_record_ompt_t *target_data_submit_trace_record_gen(
+      int64_t device_id, ompt_target_data_op_t data_op, void *tgt_ptr,
+      void *hst_ptr, size_t bytes, uint64_t start_time);
+
 private:
   void ompt_state_set_helper(void *enter_frame, void *codeptr_ra, int flags,
                              int state);
@@ -103,6 +127,21 @@ private:
   void *_enter_frame;
   void *_codeptr_ra;
   int _state;
+
+  // Called by all trace generation routines
+  void set_trace_record_common(ompt_record_ompt_t *data_ptr,
+                               ompt_callbacks_t cbt, uint64_t start_time);
+  // Type specific helpers
+  void set_trace_record_target_data_op(ompt_record_target_data_op_t *rec,
+                                       int64_t device_id,
+                                       ompt_target_data_op_t data_op,
+                                       void *src_ptr, void *dest_ptr,
+                                       size_t bytes);
+  void set_trace_record_target_kernel(ompt_record_target_kernel_t *rec,
+                                      unsigned int num_teams);
+  void set_trace_record_target(ompt_record_target_t *rec, int64_t device_id,
+                               ompt_target_t kind,
+                               ompt_scope_endpoint_t endpoint, void *code);
 };
 
 extern thread_local OmptInterface ompt_interface;

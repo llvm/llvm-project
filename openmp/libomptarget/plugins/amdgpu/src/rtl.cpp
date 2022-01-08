@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <dlfcn.h>
 #include <functional>
 #include <libelf.h>
 #include <list>
@@ -52,6 +53,10 @@
 #else
 #define OMPT_IF_ENABLED(stmts)
 #endif
+
+typedef void (*libomptarget_ompt_set_granted_teams_t)(uint32_t);
+libomptarget_ompt_set_granted_teams_t ompt_set_granted_teams_fn = nullptr;
+std::mutex granted_teams_mtx;
 
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
@@ -1190,6 +1195,22 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
   }
   DP("Final %d num_groups and %d threadsPerGroup\n", num_groups,
      threadsPerGroup);
+
+#ifdef OMPT_SUPPORT
+  if (ompt_device_callbacks.is_tracing_enabled()) {
+    {
+      std::unique_lock<std::mutex> granted_teams_fn_lck(granted_teams_mtx);
+      if (!ompt_set_granted_teams_fn) {
+        void *vptr = dlsym(NULL, "libomptarget_ompt_set_granted_teams");
+        assert(vptr && "OMPT set granted teams entry point not found");
+        ompt_set_granted_teams_fn =
+            reinterpret_cast<libomptarget_ompt_set_granted_teams_t>(vptr);
+      }
+    }
+    // No need to hold a lock
+    ompt_set_granted_teams_fn(num_groups);
+  }
+#endif
 }
 
 static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {

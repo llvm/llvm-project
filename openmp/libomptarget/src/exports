@@ -68,6 +68,12 @@ VERS1.0 {
     __tgt_print_device_info;
     omp_is_coarse_grain_mem_region;
     libomptarget_ompt_connect;
+    libomptarget_ompt_set_trace_ompt;
+    libomptarget_ompt_start_trace;
+    libomptarget_ompt_flush_trace;
+    libomptarget_ompt_stop_trace;
+    libomptarget_ompt_set_granted_teams;
+    libomptarget_ompt_advance_buffer_cursor;    
   local:
     *;
 };
