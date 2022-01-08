@@ -6,46 +6,45 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/PresburgerSet.h"
+#include "mlir/Analysis/Presburger/PresburgerSet.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
 
-PresburgerSet::PresburgerSet(const FlatAffineConstraints &fac)
-    : nDim(fac.getNumDimIds()), nSym(fac.getNumSymbolIds()) {
-  unionFACInPlace(fac);
+PresburgerSet::PresburgerSet(const IntegerPolyhedron &poly)
+    : nDim(poly.getNumDimIds()), nSym(poly.getNumSymbolIds()) {
+  unionPolyInPlace(poly);
 }
 
-unsigned PresburgerSet::getNumFACs() const {
-  return flatAffineConstraints.size();
+unsigned PresburgerSet::getNumPolys() const {
+  return integerPolyhedrons.size();
 }
 
 unsigned PresburgerSet::getNumDims() const { return nDim; }
 
 unsigned PresburgerSet::getNumSyms() const { return nSym; }
 
-ArrayRef<FlatAffineConstraints>
-PresburgerSet::getAllFlatAffineConstraints() const {
-  return flatAffineConstraints;
+ArrayRef<IntegerPolyhedron> PresburgerSet::getAllIntegerPolyhedron() const {
+  return integerPolyhedrons;
 }
 
-const FlatAffineConstraints &
-PresburgerSet::getFlatAffineConstraints(unsigned index) const {
-  assert(index < flatAffineConstraints.size() && "index out of bounds!");
-  return flatAffineConstraints[index];
+const IntegerPolyhedron &
+PresburgerSet::getIntegerPolyhedron(unsigned index) const {
+  assert(index < integerPolyhedrons.size() && "index out of bounds!");
+  return integerPolyhedrons[index];
 }
 
-/// Assert that the FlatAffineConstraints and PresburgerSet live in
+/// Assert that the IntegerPolyhedron and PresburgerSet live in
 /// compatible spaces.
-static void assertDimensionsCompatible(const FlatAffineConstraints &fac,
+static void assertDimensionsCompatible(const IntegerPolyhedron &poly,
                                        const PresburgerSet &set) {
-  assert(fac.getNumDimIds() == set.getNumDims() &&
-         "Number of dimensions of the FlatAffineConstraints and PresburgerSet"
+  assert(poly.getNumDimIds() == set.getNumDims() &&
+         "Number of dimensions of the IntegerPolyhedron and PresburgerSet"
          "do not match!");
-  assert(fac.getNumSymbolIds() == set.getNumSyms() &&
-         "Number of symbols of the FlatAffineConstraints and PresburgerSet"
+  assert(poly.getNumSymbolIds() == set.getNumSyms() &&
+         "Number of symbols of the IntegerPolyhedron and PresburgerSet"
          "do not match!");
 }
 
@@ -59,20 +58,20 @@ static void assertDimensionsCompatible(const PresburgerSet &setA,
 }
 
 /// Mutate this set, turning it into the union of this set and the given
-/// FlatAffineConstraints.
-void PresburgerSet::unionFACInPlace(const FlatAffineConstraints &fac) {
-  assertDimensionsCompatible(fac, *this);
-  flatAffineConstraints.push_back(fac);
+/// IntegerPolyhedron.
+void PresburgerSet::unionPolyInPlace(const IntegerPolyhedron &poly) {
+  assertDimensionsCompatible(poly, *this);
+  integerPolyhedrons.push_back(poly);
 }
 
 /// Mutate this set, turning it into the union of this set and the given set.
 ///
-/// This is accomplished by simply adding all the FACs of the given set to this
+/// This is accomplished by simply adding all the Poly of the given set to this
 /// set.
 void PresburgerSet::unionSetInPlace(const PresburgerSet &set) {
   assertDimensionsCompatible(set, *this);
-  for (const FlatAffineConstraints &fac : set.flatAffineConstraints)
-    unionFACInPlace(fac);
+  for (const IntegerPolyhedron &poly : set.integerPolyhedrons)
+    unionPolyInPlace(poly);
 }
 
 /// Return the union of this set and the given set.
@@ -85,15 +84,14 @@ PresburgerSet PresburgerSet::unionSet(const PresburgerSet &set) const {
 
 /// A point is contained in the union iff any of the parts contain the point.
 bool PresburgerSet::containsPoint(ArrayRef<int64_t> point) const {
-  return llvm::any_of(flatAffineConstraints,
-                      [&](const FlatAffineConstraints &fac) {
-                        return (fac.containsPoint(point));
-                      });
+  return llvm::any_of(integerPolyhedrons, [&](const IntegerPolyhedron &poly) {
+    return (poly.containsPoint(point));
+  });
 }
 
 PresburgerSet PresburgerSet::getUniverse(unsigned nDim, unsigned nSym) {
   PresburgerSet result(nDim, nSym);
-  result.unionFACInPlace(FlatAffineConstraints::getUniverse(nDim, nSym));
+  result.unionPolyInPlace(IntegerPolyhedron::getUniverse(nDim, nSym));
   return result;
 }
 
@@ -112,13 +110,13 @@ PresburgerSet PresburgerSet::intersect(const PresburgerSet &set) const {
   assertDimensionsCompatible(set, *this);
 
   PresburgerSet result(nDim, nSym);
-  for (const FlatAffineConstraints &csA : flatAffineConstraints) {
-    for (const FlatAffineConstraints &csB : set.flatAffineConstraints) {
-      FlatAffineConstraints csACopy = csA, csBCopy = csB;
+  for (const IntegerPolyhedron &csA : integerPolyhedrons) {
+    for (const IntegerPolyhedron &csB : set.integerPolyhedrons) {
+      IntegerPolyhedron csACopy = csA, csBCopy = csB;
       csACopy.mergeLocalIds(csBCopy);
       csACopy.append(csBCopy);
       if (!csACopy.isEmpty())
-        result.unionFACInPlace(csACopy);
+        result.unionPolyInPlace(csACopy);
     }
   }
   return result;
@@ -152,7 +150,7 @@ static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
 ///
 /// In the following, U denotes union, ^ denotes intersection, \ denotes set
 /// difference and ~ denotes complement.
-/// Let b be the FlatAffineConstraints and s = (U_i s_i) be the set. We want
+/// Let b be the IntegerPolyhedron and s = (U_i s_i) be the set. We want
 /// b \ (U_i s_i).
 ///
 /// Let s_i = ^_j s_ij, where each s_ij is a single inequality. To compute
@@ -175,20 +173,20 @@ static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
 /// division inequality is added, as these parts will become empty anyway.
 ///
 /// As a heuristic, we try adding all the constraints and check if simplex
-/// says that the intersection is empty. If it is, then subtracting this FAC is
+/// says that the intersection is empty. If it is, then subtracting this Poly is
 /// a no-op and we just skip it. Also, in the process we find out that some
 /// constraints are redundant. These redundant constraints are ignored.
 ///
 /// b and simplex are callee saved, i.e., their values on return are
 /// semantically equivalent to their values when the function is called.
-static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
+static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
                                 const PresburgerSet &s, unsigned i,
                                 PresburgerSet &result) {
-  if (i == s.getNumFACs()) {
-    result.unionFACInPlace(b);
+  if (i == s.getNumPolys()) {
+    result.unionPolyInPlace(b);
     return;
   }
-  FlatAffineConstraints sI = s.getFlatAffineConstraints(i);
+  IntegerPolyhedron sI = s.getIntegerPolyhedron(i);
 
   // Below, we append some additional constraints and ids to b. We want to
   // rollback b to its initial state before returning, which we will do by
@@ -202,7 +200,7 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
 
   // Automatically restore the original state when we return.
   auto restoreState = [&]() {
-    b.removeIdRange(FlatAffineConstraints::IdKind::Local, bInitNumLocals,
+    b.removeIdRange(IntegerPolyhedron::IdKind::Local, bInitNumLocals,
                     b.getNumLocalIds());
     b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
     b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
@@ -314,28 +312,28 @@ static void subtractRecursively(FlatAffineConstraints &b, Simplex &simplex,
   restoreState();
 }
 
-/// Return the set difference fac \ set.
+/// Return the set difference poly \ set.
 ///
-/// The FAC here is modified in subtractRecursively, so it cannot be a const
+/// The Poly here is modified in subtractRecursively, so it cannot be a const
 /// reference even though it is restored to its original state before returning
 /// from that function.
-PresburgerSet PresburgerSet::getSetDifference(FlatAffineConstraints fac,
+PresburgerSet PresburgerSet::getSetDifference(IntegerPolyhedron poly,
                                               const PresburgerSet &set) {
-  assertDimensionsCompatible(fac, set);
-  if (fac.isEmptyByGCDTest())
-    return PresburgerSet::getEmptySet(fac.getNumDimIds(),
-                                      fac.getNumSymbolIds());
+  assertDimensionsCompatible(poly, set);
+  if (poly.isEmptyByGCDTest())
+    return PresburgerSet::getEmptySet(poly.getNumDimIds(),
+                                      poly.getNumSymbolIds());
 
-  PresburgerSet result(fac.getNumDimIds(), fac.getNumSymbolIds());
-  Simplex simplex(fac);
-  subtractRecursively(fac, simplex, set, 0, result);
+  PresburgerSet result(poly.getNumDimIds(), poly.getNumSymbolIds());
+  Simplex simplex(poly);
+  subtractRecursively(poly, simplex, set, 0, result);
   return result;
 }
 
 /// Return the complement of this set.
 PresburgerSet PresburgerSet::complement() const {
   return getSetDifference(
-      FlatAffineConstraints::getUniverse(getNumDims(), getNumSyms()), *this);
+      IntegerPolyhedron::getUniverse(getNumDims(), getNumSyms()), *this);
 }
 
 /// Return the result of subtract the given set from this set, i.e.,
@@ -344,8 +342,8 @@ PresburgerSet PresburgerSet::subtract(const PresburgerSet &set) const {
   assertDimensionsCompatible(set, *this);
   PresburgerSet result(nDim, nSym);
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
-  for (const FlatAffineConstraints &fac : flatAffineConstraints)
-    result.unionSetInPlace(getSetDifference(fac, set));
+  for (const IntegerPolyhedron &poly : integerPolyhedrons)
+    result.unionSetInPlace(getSetDifference(poly, set));
   return result;
 }
 
@@ -366,8 +364,8 @@ bool PresburgerSet::isEqual(const PresburgerSet &set) const {
 /// false otherwise.
 bool PresburgerSet::isIntegerEmpty() const {
   // The set is empty iff all of the disjuncts are empty.
-  for (const FlatAffineConstraints &fac : flatAffineConstraints) {
-    if (!fac.isIntegerEmpty())
+  for (const IntegerPolyhedron &poly : integerPolyhedrons) {
+    if (!poly.isIntegerEmpty())
       return false;
   }
   return true;
@@ -375,8 +373,8 @@ bool PresburgerSet::isIntegerEmpty() const {
 
 bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
   // A sample exists iff any of the disjuncts contains a sample.
-  for (const FlatAffineConstraints &fac : flatAffineConstraints) {
-    if (Optional<SmallVector<int64_t, 8>> opt = fac.findIntegerSample()) {
+  for (const IntegerPolyhedron &poly : integerPolyhedrons) {
+    if (Optional<SmallVector<int64_t, 8>> opt = poly.findIntegerSample()) {
       sample = std::move(*opt);
       return true;
     }
@@ -386,12 +384,12 @@ bool PresburgerSet::findIntegerSample(SmallVectorImpl<int64_t> &sample) {
 
 PresburgerSet PresburgerSet::coalesce() const {
   PresburgerSet newSet = PresburgerSet::getEmptySet(getNumDims(), getNumSyms());
-  llvm::SmallBitVector isRedundant(getNumFACs());
+  llvm::SmallBitVector isRedundant(getNumPolys());
 
-  for (unsigned i = 0, e = flatAffineConstraints.size(); i < e; ++i) {
+  for (unsigned i = 0, e = integerPolyhedrons.size(); i < e; ++i) {
     if (isRedundant[i])
       continue;
-    Simplex simplex(flatAffineConstraints[i]);
+    Simplex simplex(integerPolyhedrons[i]);
 
     // Check whether the polytope of `simplex` is empty. If so, it is trivially
     // redundant.
@@ -400,30 +398,30 @@ PresburgerSet PresburgerSet::coalesce() const {
       continue;
     }
 
-    // Check whether `FlatAffineConstraints[i]` is contained in any FAC, that is
+    // Check whether `IntegerPolyhedron[i]` is contained in any Poly, that is
     // different from itself and not yet marked as redundant.
-    for (unsigned j = 0, e = flatAffineConstraints.size(); j < e; ++j) {
+    for (unsigned j = 0, e = integerPolyhedrons.size(); j < e; ++j) {
       if (j == i || isRedundant[j])
         continue;
 
-      if (simplex.isRationalSubsetOf(flatAffineConstraints[j])) {
+      if (simplex.isRationalSubsetOf(integerPolyhedrons[j])) {
         isRedundant[i] = true;
         break;
       }
     }
   }
 
-  for (unsigned i = 0, e = flatAffineConstraints.size(); i < e; ++i)
+  for (unsigned i = 0, e = integerPolyhedrons.size(); i < e; ++i)
     if (!isRedundant[i])
-      newSet.unionFACInPlace(flatAffineConstraints[i]);
+      newSet.unionPolyInPlace(integerPolyhedrons[i]);
 
   return newSet;
 }
 
 void PresburgerSet::print(raw_ostream &os) const {
-  os << getNumFACs() << " FlatAffineConstraints:\n";
-  for (const FlatAffineConstraints &fac : flatAffineConstraints) {
-    fac.print(os);
+  os << getNumPolys() << " IntegerPolyhedron:\n";
+  for (const IntegerPolyhedron &poly : integerPolyhedrons) {
+    poly.print(os);
     os << '\n';
   }
 }

@@ -14,7 +14,7 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/LoopAnalysis.h"
-#include "mlir/Analysis/PresburgerSet.h"
+#include "mlir/Analysis/Presburger/PresburgerSet.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
