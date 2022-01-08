@@ -1,3 +1,4 @@
+include(GNUInstallDirs)
 include(LLVMDistributionSupport)
 include(LLVMProcessSources)
 include(LLVM-Config)
@@ -839,7 +840,7 @@ macro(add_llvm_library name)
               ${export_to_llvmexports}
               LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
               ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
-              RUNTIME DESTINATION bin COMPONENT ${name})
+              RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name})
 
       if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
@@ -1272,7 +1273,7 @@ macro(add_llvm_example name)
   endif()
   add_llvm_executable(${name} ${ARGN})
   if( LLVM_BUILD_EXAMPLES )
-    install(TARGETS ${name} RUNTIME DESTINATION examples)
+    install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "Examples")
 endmacro(add_llvm_example name)
