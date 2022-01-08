@@ -33,10 +33,10 @@ using namespace clang;
 using namespace CodeGen;
 
 CGBlockInfo::CGBlockInfo(const BlockDecl *block, StringRef name)
-  : Name(name), CXXThisIndex(0), CanBeGlobal(false), NeedsCopyDispose(false),
-    HasCXXObject(false), UsesStret(false), HasCapturedVariableLayout(false),
-    CapturesNonExternalType(false), LocalAddress(Address::invalid()),
-    StructureType(nullptr), Block(block) {
+    : Name(name), CXXThisIndex(0), CanBeGlobal(false), NeedsCopyDispose(false),
+      NoEscape(false), HasCXXObject(false), UsesStret(false),
+      HasCapturedVariableLayout(false), CapturesNonExternalType(false),
+      LocalAddress(Address::invalid()), StructureType(nullptr), Block(block) {
 
   // Skip asm prefix, if any.  'name' is usually taken directly from
   // the mangled name of the enclosing function.
@@ -65,17 +65,6 @@ static llvm::Constant *buildDisposeHelper(CodeGenModule &CGM,
 }
 
 namespace {
-
-/// Represents a type of copy/destroy operation that should be performed for an
-/// entity that's captured by a block.
-enum class BlockCaptureEntityKind {
-  CXXRecord, // Copy or destroy
-  ARCWeak,
-  ARCStrong,
-  NonTrivialCStruct,
-  BlockObject, // Assign or release
-  None
-};
 
 /// Represents a captured entity that requires extra operations in order for
 /// this entity to be copied or destroyed correctly.
@@ -110,11 +99,7 @@ enum class CaptureStrKind {
 
 } // end anonymous namespace
 
-static void findBlockCapturedManagedEntities(
-    const CGBlockInfo &BlockInfo, const LangOptions &LangOpts,
-    SmallVectorImpl<BlockCaptureManagedEntity> &ManagedCaptures);
-
-static std::string getBlockCaptureStr(const BlockCaptureManagedEntity &E,
+static std::string getBlockCaptureStr(const CGBlockInfo::Capture &Cap,
                                       CaptureStrKind StrKind,
                                       CharUnits BlockAlignment,
                                       CodeGenModule &CGM);
@@ -124,34 +109,33 @@ static std::string getBlockDescriptorName(const CGBlockInfo &BlockInfo,
   std::string Name = "__block_descriptor_";
   Name += llvm::to_string(BlockInfo.BlockSize.getQuantity()) + "_";
 
-  if (BlockInfo.needsCopyDisposeHelpers()) {
+  if (BlockInfo.NeedsCopyDispose) {
     if (CGM.getLangOpts().Exceptions)
       Name += "e";
     if (CGM.getCodeGenOpts().ObjCAutoRefCountExceptions)
       Name += "a";
     Name += llvm::to_string(BlockInfo.BlockAlign.getQuantity()) + "_";
 
-    SmallVector<BlockCaptureManagedEntity, 4> ManagedCaptures;
-    findBlockCapturedManagedEntities(BlockInfo, CGM.getContext().getLangOpts(),
-                                     ManagedCaptures);
+    for (auto &Cap : BlockInfo.SortedCaptures) {
+      if (Cap.isConstantOrTrivial())
+        continue;
 
-    for (const BlockCaptureManagedEntity &E : ManagedCaptures) {
-      Name += llvm::to_string(E.Capture->getOffset().getQuantity());
+      Name += llvm::to_string(Cap.getOffset().getQuantity());
 
-      if (E.CopyKind == E.DisposeKind) {
+      if (Cap.CopyKind == Cap.DisposeKind) {
         // If CopyKind and DisposeKind are the same, merge the capture
         // information.
-        assert(E.CopyKind != BlockCaptureEntityKind::None &&
+        assert(Cap.CopyKind != BlockCaptureEntityKind::None &&
                "shouldn't see BlockCaptureManagedEntity that is None");
-        Name += getBlockCaptureStr(E, CaptureStrKind::Merged,
+        Name += getBlockCaptureStr(Cap, CaptureStrKind::Merged,
                                    BlockInfo.BlockAlign, CGM);
       } else {
         // If CopyKind and DisposeKind are not the same, which can happen when
         // either Kind is None or the captured object is a __strong block,
         // concatenate the copy and dispose strings.
-        Name += getBlockCaptureStr(E, CaptureStrKind::CopyHelper,
+        Name += getBlockCaptureStr(Cap, CaptureStrKind::CopyHelper,
                                    BlockInfo.BlockAlign, CGM);
-        Name += getBlockCaptureStr(E, CaptureStrKind::DisposeHelper,
+        Name += getBlockCaptureStr(Cap, CaptureStrKind::DisposeHelper,
                                    BlockInfo.BlockAlign, CGM);
       }
     }
@@ -223,7 +207,7 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
 
   // Optional copy/dispose helpers.
   bool hasInternalHelper = false;
-  if (blockInfo.needsCopyDisposeHelpers()) {
+  if (blockInfo.NeedsCopyDispose) {
     // copy_func_helper_decl
     llvm::Constant *copyHelper = buildCopyHelper(CGM, blockInfo);
     elements.add(copyHelper);
@@ -340,17 +324,21 @@ namespace {
   struct BlockLayoutChunk {
     CharUnits Alignment;
     CharUnits Size;
-    Qualifiers::ObjCLifetime Lifetime;
     const BlockDecl::Capture *Capture; // null for 'this'
     llvm::Type *Type;
     QualType FieldType;
+    BlockCaptureEntityKind CopyKind, DisposeKind;
+    BlockFieldFlags CopyFlags, DisposeFlags;
 
     BlockLayoutChunk(CharUnits align, CharUnits size,
-                     Qualifiers::ObjCLifetime lifetime,
-                     const BlockDecl::Capture *capture,
-                     llvm::Type *type, QualType fieldType)
-      : Alignment(align), Size(size), Lifetime(lifetime),
-        Capture(capture), Type(type), FieldType(fieldType) {}
+                     const BlockDecl::Capture *capture, llvm::Type *type,
+                     QualType fieldType, BlockCaptureEntityKind CopyKind,
+                     BlockFieldFlags CopyFlags,
+                     BlockCaptureEntityKind DisposeKind,
+                     BlockFieldFlags DisposeFlags)
+        : Alignment(align), Size(size), Capture(capture), Type(type),
+          FieldType(fieldType), CopyKind(CopyKind), DisposeKind(DisposeKind),
+          CopyFlags(CopyFlags), DisposeFlags(DisposeFlags) {}
 
     /// Tell the block info that this chunk has the given field index.
     void setIndex(CGBlockInfo &info, unsigned index, CharUnits offset) {
@@ -358,31 +346,92 @@ namespace {
         info.CXXThisIndex = index;
         info.CXXThisOffset = offset;
       } else {
-        auto C = CGBlockInfo::Capture::makeIndex(index, offset, FieldType);
-        info.Captures.insert({Capture->getVariable(), C});
+        info.SortedCaptures.push_back(CGBlockInfo::Capture::makeIndex(
+            index, offset, FieldType, CopyKind, CopyFlags, DisposeKind,
+            DisposeFlags, Capture));
       }
+    }
+
+    bool isTrivial() const {
+      return CopyKind == BlockCaptureEntityKind::None &&
+             DisposeKind == BlockCaptureEntityKind::None;
     }
   };
 
-  /// Order by 1) all __strong together 2) next, all byfref together 3) next,
-  /// all __weak together. Preserve descending alignment in all situations.
+  /// Order by 1) all __strong together 2) next, all block together 3) next,
+  /// all byref together 4) next, all __weak together. Preserve descending
+  /// alignment in all situations.
   bool operator<(const BlockLayoutChunk &left, const BlockLayoutChunk &right) {
     if (left.Alignment != right.Alignment)
       return left.Alignment > right.Alignment;
 
     auto getPrefOrder = [](const BlockLayoutChunk &chunk) {
-      if (chunk.Capture && chunk.Capture->isByRef())
-        return 1;
-      if (chunk.Lifetime == Qualifiers::OCL_Strong)
+      switch (chunk.CopyKind) {
+      case BlockCaptureEntityKind::ARCStrong:
         return 0;
-      if (chunk.Lifetime == Qualifiers::OCL_Weak)
-        return 2;
-      return 3;
+      case BlockCaptureEntityKind::BlockObject:
+        switch (chunk.CopyFlags.getBitMask()) {
+        case BLOCK_FIELD_IS_OBJECT:
+          return 0;
+        case BLOCK_FIELD_IS_BLOCK:
+          return 1;
+        case BLOCK_FIELD_IS_BYREF:
+          return 2;
+        default:
+          break;
+        }
+        break;
+      case BlockCaptureEntityKind::ARCWeak:
+        return 3;
+      default:
+        break;
+      }
+      return 4;
     };
 
     return getPrefOrder(left) < getPrefOrder(right);
   }
 } // end anonymous namespace
+
+static std::pair<BlockCaptureEntityKind, BlockFieldFlags>
+computeCopyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
+                               const LangOptions &LangOpts);
+
+static std::pair<BlockCaptureEntityKind, BlockFieldFlags>
+computeDestroyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
+                                  const LangOptions &LangOpts);
+
+static void addBlockLayout(CharUnits align, CharUnits size,
+                           const BlockDecl::Capture *capture, llvm::Type *type,
+                           QualType fieldType,
+                           SmallVectorImpl<BlockLayoutChunk> &Layout,
+                           CGBlockInfo &Info, CodeGenModule &CGM) {
+  if (!capture) {
+    // 'this' capture.
+    Layout.push_back(BlockLayoutChunk(
+        align, size, capture, type, fieldType, BlockCaptureEntityKind::None,
+        BlockFieldFlags(), BlockCaptureEntityKind::None, BlockFieldFlags()));
+    return;
+  }
+
+  const LangOptions &LangOpts = CGM.getLangOpts();
+  BlockCaptureEntityKind CopyKind, DisposeKind;
+  BlockFieldFlags CopyFlags, DisposeFlags;
+
+  std::tie(CopyKind, CopyFlags) =
+      computeCopyInfoForBlockCapture(*capture, fieldType, LangOpts);
+  std::tie(DisposeKind, DisposeFlags) =
+      computeDestroyInfoForBlockCapture(*capture, fieldType, LangOpts);
+  Layout.push_back(BlockLayoutChunk(align, size, capture, type, fieldType,
+                                    CopyKind, CopyFlags, DisposeKind,
+                                    DisposeFlags));
+
+  if (Info.NoEscape)
+    return;
+
+  if (!Layout.back().isTrivial())
+    Info.NeedsCopyDispose = true;
+}
 
 /// Determines if the given type is safe for constant capture in C++.
 static bool isSafeForCXXConstantCapture(QualType type) {
@@ -541,6 +590,9 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
            CGM.getLangOpts().getGC() == LangOptions::NonGC)
     info.HasCapturedVariableLayout = true;
 
+  if (block->doesNotEscape())
+    info.NoEscape = true;
+
   // Collect the layout chunks.
   SmallVector<BlockLayoutChunk, 16> layout;
   layout.reserve(block->capturesCXXThis() +
@@ -560,9 +612,8 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     auto TInfo = CGM.getContext().getTypeInfoInChars(thisType);
     maxFieldAlign = std::max(maxFieldAlign, TInfo.Align);
 
-    layout.push_back(BlockLayoutChunk(TInfo.Align, TInfo.Width,
-                                      Qualifiers::OCL_None,
-                                      nullptr, llvmType, thisType));
+    addBlockLayout(TInfo.Align, TInfo.Width, nullptr, llvmType, thisType,
+                   layout, info, CGM);
   }
 
   // Next, all the block captures.
@@ -570,9 +621,6 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     const VarDecl *variable = CI.getVariable();
 
     if (CI.isEscapingByref()) {
-      // We have to copy/dispose of the __block reference.
-      info.NeedsCopyDispose = true;
-
       // Just use void* instead of a pointer to the byref type.
       CharUnits align = CGM.getPointerAlign();
       maxFieldAlign = std::max(maxFieldAlign, align);
@@ -581,72 +629,28 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
       // the capture field type should always match.
       assert(CGF && getCaptureFieldType(*CGF, CI) == variable->getType() &&
              "capture type differs from the variable type");
-      layout.push_back(BlockLayoutChunk(align, CGM.getPointerSize(),
-                                        Qualifiers::OCL_None, &CI,
-                                        CGM.VoidPtrTy, variable->getType()));
+      addBlockLayout(align, CGM.getPointerSize(), &CI, CGM.VoidPtrTy,
+                     variable->getType(), layout, info, CGM);
       continue;
     }
 
     // Otherwise, build a layout chunk with the size and alignment of
     // the declaration.
     if (llvm::Constant *constant = tryCaptureAsConstant(CGM, CGF, variable)) {
-      info.Captures[variable] = CGBlockInfo::Capture::makeConstant(constant);
+      info.SortedCaptures.push_back(
+          CGBlockInfo::Capture::makeConstant(constant, &CI));
       continue;
     }
 
     QualType VT = getCaptureFieldType(*CGF, CI);
 
-    // If we have a lifetime qualifier, honor it for capture purposes.
-    // That includes *not* copying it if it's __unsafe_unretained.
-    Qualifiers::ObjCLifetime lifetime = VT.getObjCLifetime();
-    if (lifetime) {
-      switch (lifetime) {
-      case Qualifiers::OCL_None: llvm_unreachable("impossible");
-      case Qualifiers::OCL_ExplicitNone:
-      case Qualifiers::OCL_Autoreleasing:
-        break;
-
-      case Qualifiers::OCL_Strong:
-      case Qualifiers::OCL_Weak:
-        info.NeedsCopyDispose = true;
-      }
-
-    // Block pointers require copy/dispose.  So do Objective-C pointers.
-    } else if (VT->isObjCRetainableType()) {
-      // But honor the inert __unsafe_unretained qualifier, which doesn't
-      // actually make it into the type system.
-       if (VT->isObjCInertUnsafeUnretainedType()) {
-        lifetime = Qualifiers::OCL_ExplicitNone;
-      } else {
-        info.NeedsCopyDispose = true;
-        // used for mrr below.
-        lifetime = Qualifiers::OCL_Strong;
-      }
-
-    // So do types that require non-trivial copy construction.
-    } else if (CI.hasCopyExpr()) {
-      info.NeedsCopyDispose = true;
-      info.HasCXXObject = true;
-      if (!VT->getAsCXXRecordDecl()->isExternallyVisible())
-        info.CapturesNonExternalType = true;
-
-    // So do C structs that require non-trivial copy construction or
-    // destruction.
-    } else if (VT.isNonTrivialToPrimitiveCopy() == QualType::PCK_Struct ||
-               VT.isDestructedType() == QualType::DK_nontrivial_c_struct) {
-      info.NeedsCopyDispose = true;
-
-    // And so do types with destructors.
-    } else if (CGM.getLangOpts().CPlusPlus) {
-      if (const CXXRecordDecl *record = VT->getAsCXXRecordDecl()) {
-        if (!record->hasTrivialDestructor()) {
+    if (CGM.getLangOpts().CPlusPlus)
+      if (const CXXRecordDecl *record = VT->getAsCXXRecordDecl())
+        if (CI.hasCopyExpr() || !record->hasTrivialDestructor()) {
           info.HasCXXObject = true;
-          info.NeedsCopyDispose = true;
           if (!record->isExternallyVisible())
             info.CapturesNonExternalType = true;
         }
-      }
-    }
 
     CharUnits size = C.getTypeSizeInChars(VT);
     CharUnits align = C.getDeclAlign(variable);
@@ -656,8 +660,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     llvm::Type *llvmType =
       CGM.getTypes().ConvertTypeForMem(VT);
 
-    layout.push_back(
-        BlockLayoutChunk(align, size, lifetime, &CI, llvmType, VT));
+    addBlockLayout(align, size, &CI, llvmType, VT, layout, info, CGM);
   }
 
   // If that was everything, we're done here.
@@ -665,6 +668,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     info.StructureType =
       llvm::StructType::get(CGM.getLLVMContext(), elementTypes, true);
     info.CanBeGlobal = true;
+    info.buildCaptureMap();
     return;
   }
 
@@ -718,6 +722,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
 
         // ...until we get to the alignment of the maximum field.
         if (endAlign >= maxFieldAlign) {
+          ++li;
           break;
         }
       }
@@ -770,6 +775,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     endAlign = getLowBit(blockSize);
   }
 
+  info.buildCaptureMap();
   info.StructureType =
     llvm::StructType::get(CGM.getLLVMContext(), elementTypes, true);
 }
@@ -826,7 +832,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     // If the block is non-escaping, set field 'isa 'to NSConcreteGlobalBlock
     // and set the BLOCK_IS_GLOBAL bit of field 'flags'. Copying a non-escaping
     // block just returns the original block and releasing it is a no-op.
-    llvm::Constant *blockISA = blockInfo.getBlockDecl()->doesNotEscape()
+    llvm::Constant *blockISA = blockInfo.NoEscape
                                    ? CGM.getNSConcreteGlobalBlock()
                                    : CGM.getNSConcreteStackBlock();
     isa = llvm::ConstantExpr::getBitCast(blockISA, VoidPtrTy);
@@ -838,13 +844,13 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     flags = BLOCK_HAS_SIGNATURE;
     if (blockInfo.HasCapturedVariableLayout)
       flags |= BLOCK_HAS_EXTENDED_LAYOUT;
-    if (blockInfo.needsCopyDisposeHelpers())
+    if (blockInfo.NeedsCopyDispose)
       flags |= BLOCK_HAS_COPY_DISPOSE;
     if (blockInfo.HasCXXObject)
       flags |= BLOCK_HAS_CXX_OBJ;
     if (blockInfo.UsesStret)
       flags |= BLOCK_USE_STRET;
-    if (blockInfo.getBlockDecl()->doesNotEscape())
+    if (blockInfo.NoEscape)
       flags |= BLOCK_IS_NOESCAPE | BLOCK_IS_GLOBAL;
   }
 
@@ -1033,7 +1039,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     }
 
     // Push a cleanup for the capture if necessary.
-    if (!blockInfo.NeedsCopyDispose)
+    if (!blockInfo.NoEscape && !blockInfo.NeedsCopyDispose)
       continue;
 
     // Ignore __block captures; there's nothing special in the on-stack block
@@ -1654,6 +1660,11 @@ computeCopyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
       // For all other types, the memcpy is fine.
       return std::make_pair(BlockCaptureEntityKind::None, BlockFieldFlags());
 
+    // Honor the inert __unsafe_unretained qualifier, which doesn't actually
+    // make it into the type system.
+    if (T->isObjCInertUnsafeUnretainedType())
+      return std::make_pair(BlockCaptureEntityKind::None, BlockFieldFlags());
+
     // Special rules for ARC captures:
     Qualifiers QS = T.getQualifiers();
 
@@ -1667,34 +1678,6 @@ computeCopyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
   }
   }
   llvm_unreachable("after exhaustive PrimitiveCopyKind switch");
-}
-
-static std::pair<BlockCaptureEntityKind, BlockFieldFlags>
-computeDestroyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
-                                  const LangOptions &LangOpts);
-
-/// Find the set of block captures that need to be explicitly copied or destroy.
-static void findBlockCapturedManagedEntities(
-    const CGBlockInfo &BlockInfo, const LangOptions &LangOpts,
-    SmallVectorImpl<BlockCaptureManagedEntity> &ManagedCaptures) {
-  for (const auto &CI : BlockInfo.getBlockDecl()->captures()) {
-    const VarDecl *Variable = CI.getVariable();
-    const CGBlockInfo::Capture &Capture = BlockInfo.getCapture(Variable);
-    if (Capture.isConstant())
-      continue;
-
-    QualType VT = Capture.fieldType();
-    auto CopyInfo = computeCopyInfoForBlockCapture(CI, VT, LangOpts);
-    auto DisposeInfo = computeDestroyInfoForBlockCapture(CI, VT, LangOpts);
-    if (CopyInfo.first != BlockCaptureEntityKind::None ||
-        DisposeInfo.first != BlockCaptureEntityKind::None)
-      ManagedCaptures.emplace_back(CopyInfo.first, DisposeInfo.first,
-                                   CopyInfo.second, DisposeInfo.second, CI,
-                                   Capture);
-  }
-
-  // Sort the captures by offset.
-  llvm::sort(ManagedCaptures);
 }
 
 namespace {
@@ -1732,13 +1715,13 @@ bool CodeGenFunction::cxxDestructorCanThrow(QualType T) {
 }
 
 // Return a string that has the information about a capture.
-static std::string getBlockCaptureStr(const BlockCaptureManagedEntity &E,
+static std::string getBlockCaptureStr(const CGBlockInfo::Capture &Cap,
                                       CaptureStrKind StrKind,
                                       CharUnits BlockAlignment,
                                       CodeGenModule &CGM) {
   std::string Str;
   ASTContext &Ctx = CGM.getContext();
-  const BlockDecl::Capture &CI = *E.CI;
+  const BlockDecl::Capture &CI = *Cap.Cap;
   QualType CaptureTy = CI.getVariable()->getType();
 
   BlockCaptureEntityKind Kind;
@@ -1747,15 +1730,16 @@ static std::string getBlockCaptureStr(const BlockCaptureManagedEntity &E,
   // CaptureStrKind::Merged should be passed only when the operations and the
   // flags are the same for copy and dispose.
   assert((StrKind != CaptureStrKind::Merged ||
-          (E.CopyKind == E.DisposeKind && E.CopyFlags == E.DisposeFlags)) &&
+          (Cap.CopyKind == Cap.DisposeKind &&
+           Cap.CopyFlags == Cap.DisposeFlags)) &&
          "different operations and flags");
 
   if (StrKind == CaptureStrKind::DisposeHelper) {
-    Kind = E.DisposeKind;
-    Flags = E.DisposeFlags;
+    Kind = Cap.DisposeKind;
+    Flags = Cap.DisposeFlags;
   } else {
-    Kind = E.CopyKind;
-    Flags = E.CopyFlags;
+    Kind = Cap.CopyKind;
+    Flags = Cap.CopyFlags;
   }
 
   switch (Kind) {
@@ -1803,8 +1787,7 @@ static std::string getBlockCaptureStr(const BlockCaptureManagedEntity &E,
   }
   case BlockCaptureEntityKind::NonTrivialCStruct: {
     bool IsVolatile = CaptureTy.isVolatileQualified();
-    CharUnits Alignment =
-        BlockAlignment.alignmentAtOffset(E.Capture->getOffset());
+    CharUnits Alignment = BlockAlignment.alignmentAtOffset(Cap.getOffset());
 
     Str += "n";
     std::string FuncStr;
@@ -1829,7 +1812,7 @@ static std::string getBlockCaptureStr(const BlockCaptureManagedEntity &E,
 }
 
 static std::string getCopyDestroyHelperFuncName(
-    const SmallVectorImpl<BlockCaptureManagedEntity> &Captures,
+    const SmallVectorImpl<CGBlockInfo::Capture> &Captures,
     CharUnits BlockAlignment, CaptureStrKind StrKind, CodeGenModule &CGM) {
   assert((StrKind == CaptureStrKind::CopyHelper ||
           StrKind == CaptureStrKind::DisposeHelper) &&
@@ -1843,9 +1826,11 @@ static std::string getCopyDestroyHelperFuncName(
     Name += "a";
   Name += llvm::to_string(BlockAlignment.getQuantity()) + "_";
 
-  for (const BlockCaptureManagedEntity &E : Captures) {
-    Name += llvm::to_string(E.Capture->getOffset().getQuantity());
-    Name += getBlockCaptureStr(E, StrKind, BlockAlignment, CGM);
+  for (auto &Cap : Captures) {
+    if (Cap.isConstantOrTrivial())
+      continue;
+    Name += llvm::to_string(Cap.getOffset().getQuantity());
+    Name += getBlockCaptureStr(Cap, StrKind, BlockAlignment, CGM);
   }
 
   return Name;
@@ -1916,11 +1901,9 @@ static void setBlockHelperAttributesVisibility(bool CapturesNonExternalType,
 /// the contents of an individual __block variable to the heap.
 llvm::Constant *
 CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
-  SmallVector<BlockCaptureManagedEntity, 4> CopiedCaptures;
-  findBlockCapturedManagedEntities(blockInfo, getLangOpts(), CopiedCaptures);
-  std::string FuncName =
-      getCopyDestroyHelperFuncName(CopiedCaptures, blockInfo.BlockAlign,
-                                   CaptureStrKind::CopyHelper, CGM);
+  std::string FuncName = getCopyDestroyHelperFuncName(
+      blockInfo.SortedCaptures, blockInfo.BlockAlign,
+      CaptureStrKind::CopyHelper, CGM);
 
   if (llvm::GlobalValue *Func = CGM.getModule().getNamedValue(FuncName))
     return llvm::ConstantExpr::getBitCast(Func, VoidPtrTy);
@@ -1967,17 +1950,19 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
   dst = Address(Builder.CreateLoad(dst), blockInfo.BlockAlign);
   dst = Builder.CreateBitCast(dst, structPtrTy, "block.dest");
 
-  for (const auto &CopiedCapture : CopiedCaptures) {
-    const BlockDecl::Capture &CI = *CopiedCapture.CI;
-    const CGBlockInfo::Capture &capture = *CopiedCapture.Capture;
+  for (auto &capture : blockInfo.SortedCaptures) {
+    if (capture.isConstantOrTrivial())
+      continue;
+
+    const BlockDecl::Capture &CI = *capture.Cap;
     QualType captureType = CI.getVariable()->getType();
-    BlockFieldFlags flags = CopiedCapture.CopyFlags;
+    BlockFieldFlags flags = capture.CopyFlags;
 
     unsigned index = capture.getIndex();
     Address srcField = Builder.CreateStructGEP(src, index);
     Address dstField = Builder.CreateStructGEP(dst, index);
 
-    switch (CopiedCapture.CopyKind) {
+    switch (capture.CopyKind) {
     case BlockCaptureEntityKind::CXXRecord:
       // If there's an explicit copy expression, we do that.
       assert(CI.getCopyExpr() && "copy expression for variable is missing");
@@ -2040,7 +2025,7 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
 
     // Ensure that we destroy the copied object if an exception is thrown later
     // in the helper function.
-    pushCaptureCleanup(CopiedCapture.CopyKind, dstField, captureType, flags,
+    pushCaptureCleanup(capture.CopyKind, dstField, captureType, flags,
                        /*ForCopyHelper*/ true, CI.getVariable(), *this);
   }
 
@@ -2085,8 +2070,10 @@ computeDestroyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
                           BlockFieldFlags());
   case QualType::DK_none: {
     // Non-ARC captures are strong, and we need to use _Block_object_dispose.
+    // But honor the inert __unsafe_unretained qualifier, which doesn't actually
+    // make it into the type system.
     if (T->isObjCRetainableType() && !T.getQualifiers().hasObjCLifetime() &&
-        !LangOpts.ObjCAutoRefCount)
+        !LangOpts.ObjCAutoRefCount && !T->isObjCInertUnsafeUnretainedType())
       return std::make_pair(BlockCaptureEntityKind::BlockObject,
                             getBlockFieldFlagsForObjCObjectPointer(CI, T));
     // Otherwise, we have nothing to do.
@@ -2105,11 +2092,9 @@ computeDestroyInfoForBlockCapture(const BlockDecl::Capture &CI, QualType T,
 /// variable.
 llvm::Constant *
 CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
-  SmallVector<BlockCaptureManagedEntity, 4> DestroyedCaptures;
-  findBlockCapturedManagedEntities(blockInfo, getLangOpts(), DestroyedCaptures);
-  std::string FuncName =
-      getCopyDestroyHelperFuncName(DestroyedCaptures, blockInfo.BlockAlign,
-                                   CaptureStrKind::DisposeHelper, CGM);
+  std::string FuncName = getCopyDestroyHelperFuncName(
+      blockInfo.SortedCaptures, blockInfo.BlockAlign,
+      CaptureStrKind::DisposeHelper, CGM);
 
   if (llvm::GlobalValue *Func = CGM.getModule().getNamedValue(FuncName))
     return llvm::ConstantExpr::getBitCast(Func, VoidPtrTy);
@@ -2153,14 +2138,16 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 
   CodeGenFunction::RunCleanupsScope cleanups(*this);
 
-  for (const auto &DestroyedCapture : DestroyedCaptures) {
-    const BlockDecl::Capture &CI = *DestroyedCapture.CI;
-    const CGBlockInfo::Capture &capture = *DestroyedCapture.Capture;
-    BlockFieldFlags flags = DestroyedCapture.DisposeFlags;
+  for (auto &capture : blockInfo.SortedCaptures) {
+    if (capture.isConstantOrTrivial())
+      continue;
+
+    const BlockDecl::Capture &CI = *capture.Cap;
+    BlockFieldFlags flags = capture.DisposeFlags;
 
     Address srcField = Builder.CreateStructGEP(src, capture.getIndex());
 
-    pushCaptureCleanup(DestroyedCapture.DisposeKind, srcField,
+    pushCaptureCleanup(capture.DisposeKind, srcField,
                        CI.getVariable()->getType(), flags,
                        /*ForCopyHelper*/ false, CI.getVariable(), *this);
   }
