@@ -6,34 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A class to represent unions of FlatAffineConstraints.
+// A class to represent unions of IntegerPolyhedrons.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_ANALYSIS_PRESBURGERSET_H
 #define MLIR_ANALYSIS_PRESBURGERSET_H
 
-#include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 
 namespace mlir {
 
-/// This class can represent a union of FlatAffineConstraints, with support for
+/// This class can represent a union of IntegerPolyhedrons, with support for
 /// union, intersection, subtraction and complement operations, as well as
 /// sampling.
 ///
-/// The FlatAffineConstraints (FACs) are stored in a vector, and the set
-/// represents the union of these FACs. An empty list corresponds to the empty
+/// The IntegerPolyhedrons (Polys) are stored in a vector, and the set
+/// represents the union of these Polys. An empty list corresponds to the empty
 /// set.
 ///
-/// Note that there are no invariants guaranteed on the list of FACs other than
+/// Note that there are no invariants guaranteed on the list of Poly other than
 /// that they are all in the same space, i.e., they all have the same number of
-/// dimensions and symbols. For example, the FACs may overlap each other.
+/// dimensions and symbols. For example, the Polys may overlap each other.
 class PresburgerSet {
 public:
-  explicit PresburgerSet(const FlatAffineConstraints &fac);
+  explicit PresburgerSet(const IntegerPolyhedron &poly);
 
-  /// Return the number of FACs in the union.
-  unsigned getNumFACs() const;
+  /// Return the number of Polys in the union.
+  unsigned getNumPolys() const;
 
   /// Return the number of real dimensions.
   unsigned getNumDims() const;
@@ -41,15 +41,15 @@ public:
   /// Return the number of symbolic dimensions.
   unsigned getNumSyms() const;
 
-  /// Return a reference to the list of FlatAffineConstraints.
-  ArrayRef<FlatAffineConstraints> getAllFlatAffineConstraints() const;
+  /// Return a reference to the list of IntegerPolyhedrons.
+  ArrayRef<IntegerPolyhedron> getAllIntegerPolyhedron() const;
 
-  /// Return the FlatAffineConstraints at the specified index.
-  const FlatAffineConstraints &getFlatAffineConstraints(unsigned index) const;
+  /// Return the IntegerPolyhedron at the specified index.
+  const IntegerPolyhedron &getIntegerPolyhedron(unsigned index) const;
 
   /// Mutate this set, turning it into the union of this set and the given
-  /// FlatAffineConstraints.
-  void unionFACInPlace(const FlatAffineConstraints &fac);
+  /// IntegerPolyhedron.
+  void unionPolyInPlace(const IntegerPolyhedron &poly);
 
   /// Mutate this set, turning it into the union of this set and the given set.
   void unionSetInPlace(const PresburgerSet &set);
@@ -91,12 +91,12 @@ public:
   bool isIntegerEmpty() const;
 
   /// Find an integer sample from the given set. This should not be called if
-  /// any of the FACs in the union are unbounded.
+  /// any of the Polys in the union are unbounded.
   bool findIntegerSample(SmallVectorImpl<int64_t> &sample);
 
   /// Simplifies the representation of a PresburgerSet.
   ///
-  /// In particular, removes all FACs which are subsets of other FACs in the
+  /// In particular, removes all Polys which are subsets of other Polys in the
   /// union.
   PresburgerSet coalesce() const;
 
@@ -105,19 +105,19 @@ private:
   PresburgerSet(unsigned nDim = 0, unsigned nSym = 0)
       : nDim(nDim), nSym(nSym) {}
 
-  /// Return the set difference fac \ set.
-  static PresburgerSet getSetDifference(FlatAffineConstraints fac,
+  /// Return the set difference poly \ set.
+  static PresburgerSet getSetDifference(IntegerPolyhedron poly,
                                         const PresburgerSet &set);
 
   /// Number of identifiers corresponding to real dimensions.
   unsigned nDim;
 
   /// Number of symbolic dimensions, unknown but constant for analysis, as in
-  /// FlatAffineConstraints.
+  /// IntegerPolyhedron.
   unsigned nSym;
 
-  /// The list of flatAffineConstraints that this set is the union of.
-  SmallVector<FlatAffineConstraints, 2> flatAffineConstraints;
+  /// The list of integerPolyhedrons that this set is the union of.
+  SmallVector<IntegerPolyhedron, 2> integerPolyhedrons;
 };
 
 } // namespace mlir

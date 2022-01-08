@@ -19,9 +19,6 @@
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {
-
-class MemoryBufferRef;
-
 namespace jitlink {
 
 /// Base class for a JIT linker.

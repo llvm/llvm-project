@@ -25,7 +25,6 @@ class ARMAsmPrinter;
 class ARMBaseTargetMachine;
 class ARMRegisterBankInfo;
 class ARMSubtarget;
-struct BasicBlockInfo;
 class Function;
 class FunctionPass;
 class InstructionSelector;
