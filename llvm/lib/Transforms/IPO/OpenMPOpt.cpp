@@ -2754,7 +2754,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       if (FreeCalls.size() != 1)
         continue;
 
-      ConstantInt *AllocSize = dyn_cast<ConstantInt>(CB->getArgOperand(0));
+      auto *AllocSize = cast<ConstantInt>(CB->getArgOperand(0));
 
       LLVM_DEBUG(dbgs() << TAG << "Replace globalization call " << *CB
                         << " with " << AllocSize->getZExtValue()
