@@ -51,7 +51,7 @@ Error dumpDebugAddr(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   DWARFDebugAddrTable AddrTable;
   DWARFDataExtractor AddrData(DCtx.getDWARFObj(),
                               DCtx.getDWARFObj().getAddrSection(),
-                              DCtx.isLittleEndian(), /*AddrSize=*/0);
+                              DCtx.isLittleEndian(), /*AddressSize=*/0);
   std::vector<DWARFYAML::AddrTableEntry> AddrTables;
   uint64_t Offset = 0;
   while (AddrData.isValidOffset(Offset)) {
