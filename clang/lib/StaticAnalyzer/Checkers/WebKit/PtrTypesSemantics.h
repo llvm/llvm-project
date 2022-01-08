@@ -15,7 +15,6 @@ namespace clang {
 class CXXBaseSpecifier;
 class CXXMethodDecl;
 class CXXRecordDecl;
-class Expr;
 class FunctionDecl;
 class Type;
 
