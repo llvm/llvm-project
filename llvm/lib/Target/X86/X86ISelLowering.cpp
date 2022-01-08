@@ -29947,8 +29947,9 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // Attempt to fold as unpack(x,x) << zext(splat(y)):
   // rotl(x,y) -> (unpack(x,x) << (y & (bw-1))) >> bw.
   // rotr(x,y) -> (unpack(x,x) >> (y & (bw-1))).
-  // TODO: Handle vXi16 cases.
-  if (EltSizeInBits == 8 || EltSizeInBits == 32) {
+  // TODO: Handle vXi16 cases on all targets.
+  if (EltSizeInBits == 8 || EltSizeInBits == 32 ||
+      (IsROTL && EltSizeInBits == 16 && !Subtarget.hasAVX())) {
     if (SDValue BaseRotAmt = DAG.getSplatValue(AmtMod)) {
       unsigned ShiftX86Opc = IsROTL ? X86ISD::VSHLI : X86ISD::VSRLI;
       SDValue Lo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, R, R));
