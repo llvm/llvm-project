@@ -3051,17 +3051,15 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
   // stuck together.
   SDValue InFlag;
 
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Chain = CLI.DAG.getCopyToReg(Chain, CLI.DL, RegsToPass[i].first,
-                                 RegsToPass[i].second, InFlag);
+  for (auto &R : RegsToPass) {
+    Chain = CLI.DAG.getCopyToReg(Chain, CLI.DL, R.first, R.second, InFlag);
     InFlag = Chain.getValue(1);
   }
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(CLI.DAG.getRegister(RegsToPass[i].first,
-                                      RegsToPass[i].second.getValueType()));
+  for (auto &R : RegsToPass)
+    Ops.push_back(CLI.DAG.getRegister(R.first, R.second.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
