@@ -27,9 +27,9 @@ define i32 @f1(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
 ; Registers r2 to r9 used, 2 parameter passed on stack.
 define i32 @f2(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %a, i32 %b) {
 ; CHECK-LABEL: f2:
-; CHECK: ld %r2, %r31, 4
-; CHECK: ld %r3, %r31, 0
-; CHECK: or %r2, %r3, %r2
+; CHECK: ld %r2, %r31, 0
+; CHECK: ld %r3, %r31, 4
+; CHECK: or %r2, %r2, %r3
 ; CHECK: jmp %r1
   %sum = or i32 %a, %b
   ret i32 %sum
