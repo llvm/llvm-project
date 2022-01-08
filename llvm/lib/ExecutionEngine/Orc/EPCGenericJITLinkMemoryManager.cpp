@@ -56,17 +56,7 @@ public:
     }
 
     // Transfer allocation actions.
-    // FIXME: Merge JITLink and ORC SupportFunctionCall and Action list types,
-    //        turn this into a std::swap.
-    FR.Actions.reserve(G.allocActions().size());
-    for (auto &ActPair : G.allocActions())
-      FR.Actions.push_back({{ExecutorAddr(ActPair.Finalize.FnAddr),
-                             {ExecutorAddr(ActPair.Finalize.CtxAddr),
-                              ExecutorAddrDiff(ActPair.Finalize.CtxSize)}},
-                            {ExecutorAddr(ActPair.Dealloc.FnAddr),
-                             {ExecutorAddr(ActPair.Dealloc.CtxAddr),
-                              ExecutorAddrDiff(ActPair.Dealloc.CtxSize)}}});
-    G.allocActions().clear();
+    std::swap(FR.Actions, G.allocActions());
 
     Parent.EPC.callSPSWrapperAsync<
         rt::SPSSimpleExecutorMemoryManagerFinalizeSignature>(

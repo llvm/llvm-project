@@ -90,7 +90,6 @@ template <typename T> class ArrayRef;
 class Module;
 class StringRef;
 class Value;
-class Timer;
 class PMDataManager;
 
 // enums for debugging strings

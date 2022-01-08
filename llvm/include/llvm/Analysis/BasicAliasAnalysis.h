@@ -25,7 +25,6 @@
 
 namespace llvm {
 
-struct AAMDNodes;
 class AssumptionCache;
 class BasicBlock;
 class DataLayout;

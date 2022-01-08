@@ -26,7 +26,6 @@ class BasicBlock;
 class Function;
 class Instruction;
 class Value;
-template <typename> class SmallVectorImpl;
 template <typename, bool> class DominatorTreeBase;
 
 template <> class GenericSSAContext<Function> {

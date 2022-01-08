@@ -23,7 +23,6 @@ namespace llvm {
 class MachineFunction;
 class MachineInstr;
 struct PerFunctionMIParsingState;
-struct SlotMapping;
 
 /// MIRFormater - Interface to format MIR operand based on target
 class MIRFormatter {

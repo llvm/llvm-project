@@ -25,9 +25,7 @@ namespace llvm {
 
 class ConstantFP;
 class ConstantInt;
-class DbgVariable;
 class DwarfCompileUnit;
-class MachineOperand;
 class MCDwarfDwoLineTable;
 class MCSymbol;
 
