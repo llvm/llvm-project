@@ -111,7 +111,7 @@ class STIPredicateExpander : public PredicateExpander {
 
 public:
   STIPredicateExpander(StringRef Target)
-      : PredicateExpander(Target), ClassPrefix(), ExpandDefinition(false) {}
+      : PredicateExpander(Target), ExpandDefinition(false) {}
 
   bool shouldExpandDefinition() const { return ExpandDefinition; }
   StringRef getClassPrefix() const { return ClassPrefix; }

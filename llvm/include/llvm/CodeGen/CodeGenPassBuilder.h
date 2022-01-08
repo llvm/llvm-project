@@ -159,7 +159,7 @@ protected:
   class AddIRPass {
   public:
     AddIRPass(ModulePassManager &MPM, bool DebugPM, bool Check = true)
-        : MPM(MPM), FPM() {
+        : MPM(MPM) {
       if (Check)
         AddingFunctionPasses = false;
     }

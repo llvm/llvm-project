@@ -435,8 +435,7 @@ public:
                                      bool UseBlockFrequencyInfo = false,
                                      bool UseBranchProbabilityInfo = false,
                                      bool LoopNestMode = false)
-      : Pass(std::move(Pass)), LoopCanonicalizationFPM(),
-        UseMemorySSA(UseMemorySSA),
+      : Pass(std::move(Pass)), UseMemorySSA(UseMemorySSA),
         UseBlockFrequencyInfo(UseBlockFrequencyInfo),
         UseBranchProbabilityInfo(UseBranchProbabilityInfo),
         LoopNestMode(LoopNestMode) {
