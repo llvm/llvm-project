@@ -70,7 +70,7 @@ const ARMAttributeParser::DisplayHandler ARMAttributeParser::displayRoutines[] =
 
 Error ARMAttributeParser::stringAttribute(AttrType tag) {
   StringRef tagName =
-      ELFAttrs::attrTypeAsString(tag, tagToStringMap, /*TagPrefix=*/false);
+      ELFAttrs::attrTypeAsString(tag, tagToStringMap, /*hasTagPrefix=*/false);
   StringRef desc = de.getCStrRef(cursor);
 
   if (sw) {

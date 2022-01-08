@@ -1348,8 +1348,8 @@ void MCStreamer::emitVersionForTarget(
         DarwinTargetVariantTriple->isMacOSX()) {
       emitVersionForTarget(*DarwinTargetVariantTriple,
                            DarwinTargetVariantSDKVersion,
-                           /*TargetVariantTriple=*/nullptr,
-                           /*TargetVariantSDKVersion=*/VersionTuple());
+                           /*DarwinTargetVariantTriple=*/nullptr,
+                           /*DarwinTargetVariantSDKVersion=*/VersionTuple());
       emitDarwinTargetVariantBuildVersion(
           getMachoBuildVersionPlatformType(Target),
           LinkedTargetVersion.getMajor(),

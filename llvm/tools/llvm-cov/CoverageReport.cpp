@@ -179,7 +179,7 @@ void CoverageReport::render(const FileCoverageSummary &File,
       determineCoveragePercentageColor(File.InstantiationCoverage);
   auto LineCoverageColor = determineCoveragePercentageColor(File.LineCoverage);
   SmallString<256> FileName = File.Name;
-  sys::path::remove_dots(FileName, /*remove_dot_dots=*/true);
+  sys::path::remove_dots(FileName, /*remove_dot_dot=*/true);
   sys::path::native(FileName);
   OS << column(FileName, FileReportColumns[0], Column::NoTrim);
 

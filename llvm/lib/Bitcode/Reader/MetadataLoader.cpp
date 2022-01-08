@@ -1675,7 +1675,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       SPFlags = DISubprogram::toSPFlags(
           /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
           /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11],
-          /*DIFlagMainSubprogram=*/HasOldMainSubprogramFlag);
+          /*IsMainSubprogram=*/HasOldMainSubprogramFlag);
 
     // All definitions should be distinct.
     IsDistinct = (Record[0] & 1) || (SPFlags & DISubprogram::SPFlagDefinition);

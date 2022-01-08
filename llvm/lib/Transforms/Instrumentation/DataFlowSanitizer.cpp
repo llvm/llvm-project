@@ -1201,7 +1201,7 @@ Constant *DataFlowSanitizer::getOrBuildTrampolineFunction(FunctionType *FT,
     // F is called by a wrapped custom function with primitive shadows. So
     // its arguments and return value need conversion.
     DFSanFunction DFSF(*this, F, /*IsNativeABI=*/true,
-                       /*ForceZeroLabels=*/false);
+                       /*IsForceZeroLabels=*/false);
     Function::arg_iterator ValAI = F->arg_begin(), ShadowAI = AI;
     ++ValAI;
     for (unsigned N = FT->getNumParams(); N != 0; ++ValAI, ++ShadowAI, --N) {
