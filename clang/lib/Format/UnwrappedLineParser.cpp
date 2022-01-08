@@ -32,7 +32,7 @@ public:
   // Returns the next token in the token stream.
   virtual FormatToken *getNextToken() = 0;
 
-  // Returns the token precedint the token returned by the last call to
+  // Returns the token preceding the token returned by the last call to
   // getNextToken() in the token stream, or nullptr if no such token exists.
   virtual FormatToken *getPreviousToken() = 0;
 
@@ -246,8 +246,7 @@ public:
   }
 
   FormatToken *getPreviousToken() override {
-    assert(Position > 0);
-    return Tokens[Position - 1];
+    return Position > 0 ? Tokens[Position - 1] : nullptr;
   }
 
   FormatToken *peekNextToken() override {
