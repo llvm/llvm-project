@@ -629,7 +629,7 @@ LogicalResult ModuleTranslation::convertGlobals() {
       llvm::Function *f = lookupFunction(
           std::get<0>(symbolAndPriority).cast<FlatSymbolRefAttr>().getValue());
       appendGlobalFn(
-          *llvmModule.get(), f,
+          *llvmModule, f,
           std::get<1>(symbolAndPriority).cast<IntegerAttr>().getInt(),
           /*Data=*/nullptr);
     }
