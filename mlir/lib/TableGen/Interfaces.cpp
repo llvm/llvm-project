@@ -110,6 +110,12 @@ llvm::Optional<StringRef> Interface::getExtraTraitClassDeclaration() const {
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }
 
+// Return the shared extra class declaration code.
+llvm::Optional<StringRef> Interface::getExtraSharedClassDeclaration() const {
+  auto value = def->getValueAsString("extraSharedClassDeclaration");
+  return value.empty() ? llvm::Optional<StringRef>() : value;
+}
+
 // Return the body for this method if it has one.
 llvm::Optional<StringRef> Interface::getVerify() const {
   // Only OpInterface supports the verify method.

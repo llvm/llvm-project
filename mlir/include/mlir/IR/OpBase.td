@@ -2226,6 +2226,10 @@ class Interface<string name> {
   // An optional code block containing extra declarations to place in the
   // interface declaration.
   code extraClassDeclaration = "";
+
+  // An optional code block containing extra declarations to place in both
+  // the interface and trait declaration.
+  code extraSharedClassDeclaration = "";
 }
 
 // AttrInterface represents an interface registered to an attribute.
