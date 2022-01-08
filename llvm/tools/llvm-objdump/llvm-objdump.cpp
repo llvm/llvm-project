@@ -2715,7 +2715,7 @@ int main(int argc, char **argv) {
     return 0;
   }
   if (InputArgs.hasArg(HelpHiddenFlag)) {
-    T->printHelp(ToolName, /*show_hidden=*/true);
+    T->printHelp(ToolName, /*ShowHidden=*/true);
     return 0;
   }
 

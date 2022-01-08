@@ -243,6 +243,9 @@ Floating Point Support in Clang
   -ffp-contract=fast, whereas the (now corrected) default behavior is
   -ffp-contract=on.
   -ffp-model=precise is now exactly the default mode of the compiler.
+- -fstrict-float-cast-overflow no longer has target specific behavior. Clang
+  will saturate towards the smallest and largest representable integer values.
+  NaNs will be converted to zero.
 
 Internal API Changes
 --------------------
