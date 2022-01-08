@@ -19,8 +19,6 @@
 #include "clang/Format/Format.h"
 
 namespace clang {
-class SourceManager;
-
 namespace format {
 
 enum LineType {

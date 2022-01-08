@@ -26,14 +26,7 @@
 #include "clang/Basic/TargetInfo.h"
 
 namespace llvm {
-class Constant;
-class Function;
-class GlobalValue;
-class DataLayout;
-class FunctionType;
-class PointerType;
 class Value;
-class LLVMContext;
 }
 
 namespace clang {

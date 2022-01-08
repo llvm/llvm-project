@@ -23,7 +23,6 @@ namespace llvm {
 class BasicBlock;
 class Value;
 class ConstantInt;
-class AllocaInst;
 }
 
 namespace clang {

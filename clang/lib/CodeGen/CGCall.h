@@ -26,17 +26,13 @@
 #include "ABIInfo.h"
 
 namespace llvm {
-class AttributeList;
-class Function;
 class Type;
 class Value;
 } // namespace llvm
 
 namespace clang {
-class ASTContext;
 class Decl;
 class FunctionDecl;
-class ObjCMethodDecl;
 class VarDecl;
 
 namespace CodeGen {

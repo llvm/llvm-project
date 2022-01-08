@@ -17,10 +17,6 @@
 #include <utility>
 
 namespace clang {
-class CXXRecordDecl;
-class CXXBaseSpecifier;
-class FunctionDecl;
-class CXXMethodDecl;
 class Expr;
 
 /// This function de-facto defines a set of transformations that we consider
