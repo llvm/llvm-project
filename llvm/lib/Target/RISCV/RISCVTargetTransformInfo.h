@@ -58,20 +58,7 @@ public:
   bool supportsScalableVectors() const { return ST->hasVInstructions(); }
   Optional<unsigned> getMaxVScale() const;
 
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    switch (K) {
-    case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::getFixed(ST->getXLen());
-    case TargetTransformInfo::RGK_FixedWidthVector:
-      return TypeSize::getFixed(
-          ST->hasVInstructions() ? ST->getMinRVVVectorSizeInBits() : 0);
-    case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::getScalable(
-          ST->hasVInstructions() ? RISCV::RVVBitsPerBlock : 0);
-    }
-
-    llvm_unreachable("Unsupported register kind");
-  }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
