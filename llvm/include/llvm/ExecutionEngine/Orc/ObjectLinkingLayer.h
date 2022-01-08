@@ -216,17 +216,11 @@ public:
                                    ResourceKey SrcKey) override;
 
 private:
-
-  struct EHFrameRange {
-    orc::ExecutorAddr Addr;
-    size_t Size;
-  };
-
   std::mutex EHFramePluginMutex;
   ExecutionSession &ES;
   std::unique_ptr<jitlink::EHFrameRegistrar> Registrar;
-  DenseMap<MaterializationResponsibility *, EHFrameRange> InProcessLinks;
-  DenseMap<ResourceKey, std::vector<EHFrameRange>> EHFrameRanges;
+  DenseMap<MaterializationResponsibility *, ExecutorAddrRange> InProcessLinks;
+  DenseMap<ResourceKey, std::vector<ExecutorAddrRange>> EHFrameRanges;
 };
 
 } // end namespace orc

@@ -797,6 +797,10 @@ public:
   }
   orc::ExecutorAddrDiff getSize() const { return getEnd() - getStart(); }
 
+  orc::ExecutorAddrRange getRange() const {
+    return orc::ExecutorAddrRange(getStart(), getEnd());
+  }
+
 private:
   Block *First = nullptr;
   Block *Last = nullptr;
@@ -1388,7 +1392,7 @@ public:
   ///
   /// Accessing this object after finalization will result in undefined
   /// behavior.
-  AllocActions &allocActions() { return AAs; }
+  orc::shared::AllocActions &allocActions() { return AAs; }
 
   /// Dump the graph.
   void dump(raw_ostream &OS);
@@ -1406,7 +1410,7 @@ private:
   SectionList Sections;
   ExternalSymbolSet ExternalSymbols;
   ExternalSymbolSet AbsoluteSymbols;
-  AllocActions AAs;
+  orc::shared::AllocActions AAs;
 };
 
 inline MutableArrayRef<char> Block::getMutableContent(LinkGraph &G) {
