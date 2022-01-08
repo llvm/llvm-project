@@ -14,35 +14,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/PresburgerSet.h"
-#include "./AffineStructuresParser.h"
+#include "mlir/Analysis/Presburger/PresburgerSet.h"
+#include "../AffineStructuresParser.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace mlir {
 
-/// Parses a FlatAffineConstraints from a StringRef. It is expected that the
+/// Parses an IntegerPolyhedron from a StringRef. It is expected that the
 /// string represents a valid IntegerSet, otherwise it will violate a gtest
 /// assertion.
-static FlatAffineConstraints parseFAC(StringRef str, MLIRContext *context) {
-  FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
+static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
+  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
 
-  EXPECT_TRUE(succeeded(fac));
+  EXPECT_TRUE(succeeded(poly));
 
-  return *fac;
+  return *poly;
 }
 
-/// Parse a list of StringRefs to FlatAffineConstraints and combine them into a
+/// Parse a list of StringRefs to IntegerPolyhedron and combine them into a
 /// PresburgerSet be using the union operation. It is expected that the strings
 /// are all valid IntegerSet representation and that all of them have the same
 /// number of dimensions as is specified by the numDims argument.
-static PresburgerSet parsePresburgerSetFromFACStrings(unsigned numDims,
-                                                      ArrayRef<StringRef> strs,
-                                                      MLIRContext *context) {
+static PresburgerSet parsePresburgerSetFromPolyStrings(unsigned numDims,
+                                                       ArrayRef<StringRef> strs,
+                                                       MLIRContext *context) {
   PresburgerSet set = PresburgerSet::getEmptySet(numDims);
   for (StringRef str : strs)
-    set.unionFACInPlace(parseFAC(str, context));
+    set.unionPolyInPlace(parsePoly(str, context));
   return set;
 }
 
@@ -106,21 +106,21 @@ static void testComplementAtPoints(const PresburgerSet &s,
 }
 
 /// Construct a PresburgerSet having `numDims` dimensions and no symbols from
-/// the given list of FlatAffineConstraints. Each FAC in `facs` should also have
+/// the given list of IntegerPolyhedron. Each Poly in `polys` should also have
 /// `numDims` dimensions and no symbols, although it can have any number of
 /// local ids.
-static PresburgerSet makeSetFromFACs(unsigned numDims,
-                                     ArrayRef<FlatAffineConstraints> facs) {
+static PresburgerSet makeSetFromPoly(unsigned numDims,
+                                     ArrayRef<IntegerPolyhedron> polys) {
   PresburgerSet set = PresburgerSet::getEmptySet(numDims);
-  for (const FlatAffineConstraints &fac : facs)
-    set.unionFACInPlace(fac);
+  for (const IntegerPolyhedron &poly : polys)
+    set.unionPolyInPlace(poly);
   return set;
 }
 
 TEST(SetTest, containsPoint) {
   MLIRContext context;
 
-  PresburgerSet setA = parsePresburgerSetFromFACStrings(
+  PresburgerSet setA = parsePresburgerSetFromPolyStrings(
       1,
       {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
       &context);
@@ -133,7 +133,7 @@ TEST(SetTest, containsPoint) {
 
   // A parallelogram with vertices {(3, 1), (10, -6), (24, 8), (17, 15)} union
   // a square with opposite corners (2, 2) and (10, 10).
-  PresburgerSet setB = parsePresburgerSetFromFACStrings(
+  PresburgerSet setB = parsePresburgerSetFromPolyStrings(
       2,
       {"(x,y) : (x + y - 4 >= 0, -x - y + 32 >= 0, "
        "x - y - 2 >= 0, -x + y + 16 >= 0)",
@@ -155,7 +155,7 @@ TEST(SetTest, containsPoint) {
 TEST(SetTest, Union) {
   MLIRContext context;
 
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1,
       {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
       &context);
@@ -184,7 +184,7 @@ TEST(SetTest, Union) {
 TEST(SetTest, Intersect) {
   MLIRContext context;
 
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1,
       {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
       &context);
@@ -213,38 +213,38 @@ TEST(SetTest, Intersect) {
 TEST(SetTest, Subtract) {
   MLIRContext context;
   // The interval [2, 8] minus the interval [10, 20].
-  testSubtractAtPoints(parsePresburgerSetFromFACStrings(
+  testSubtractAtPoints(parsePresburgerSetFromPolyStrings(
                            1, {"(x) : (x - 2 >= 0, -x + 8 >= 0)"}, &context),
-                       parsePresburgerSetFromFACStrings(
+                       parsePresburgerSetFromPolyStrings(
                            1, {"(x) : (x - 10 >= 0, -x + 20 >= 0)"}, &context),
                        {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   // Universe minus [2, 8] U [10, 20]
   testSubtractAtPoints(
-      parsePresburgerSetFromFACStrings(1, {"(x) : ()"}, &context),
-      parsePresburgerSetFromFACStrings(1,
-                                       {"(x) : (x - 2 >= 0, -x + 8 >= 0)",
-                                        "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
-                                       &context),
+      parsePresburgerSetFromPolyStrings(1, {"(x) : ()"}, &context),
+      parsePresburgerSetFromPolyStrings(1,
+                                        {"(x) : (x - 2 >= 0, -x + 8 >= 0)",
+                                         "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
+                                        &context),
       {{1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   // ((-infinity, 0] U [3, 4] U [6, 7]) - ([2, 3] U [5, 6])
   testSubtractAtPoints(
-      parsePresburgerSetFromFACStrings(1,
-                                       {"(x) : (-x >= 0)",
-                                        "(x) : (x - 3 >= 0, -x + 4 >= 0)",
-                                        "(x) : (x - 6 >= 0, -x + 7 >= 0)"},
-                                       &context),
-      parsePresburgerSetFromFACStrings(1,
-                                       {"(x) : (x - 2 >= 0, -x + 3 >= 0)",
-                                        "(x) : (x - 5 >= 0, -x + 6 >= 0)"},
-                                       &context),
+      parsePresburgerSetFromPolyStrings(1,
+                                        {"(x) : (-x >= 0)",
+                                         "(x) : (x - 3 >= 0, -x + 4 >= 0)",
+                                         "(x) : (x - 6 >= 0, -x + 7 >= 0)"},
+                                        &context),
+      parsePresburgerSetFromPolyStrings(1,
+                                        {"(x) : (x - 2 >= 0, -x + 3 >= 0)",
+                                         "(x) : (x - 5 >= 0, -x + 6 >= 0)"},
+                                        &context),
       {{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}});
 
   // Expected result is {[x, y] : x > y}, i.e., {[x, y] : x >= y + 1}.
   testSubtractAtPoints(
-      parsePresburgerSetFromFACStrings(2, {"(x, y) : (x - y >= 0)"}, &context),
-      parsePresburgerSetFromFACStrings(2, {"(x, y) : (x + y >= 0)"}, &context),
+      parsePresburgerSetFromPolyStrings(2, {"(x, y) : (x - y >= 0)"}, &context),
+      parsePresburgerSetFromPolyStrings(2, {"(x, y) : (x + y >= 0)"}, &context),
       {{0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}});
 
   // A rectangle with corners at (2, 2) and (10, 10), minus
@@ -252,13 +252,13 @@ TEST(SetTest, Subtract) {
   // This splits the former rectangle into two halves, (2, 2) to (5, 10) and
   // (7, 2) to (10, 10).
   testSubtractAtPoints(
-      parsePresburgerSetFromFACStrings(
+      parsePresburgerSetFromPolyStrings(
           2,
           {
               "(x, y) : (x - 2 >= 0, y - 2 >= 0, -x + 10 >= 0, -y + 10 >= 0)",
           },
           &context),
-      parsePresburgerSetFromFACStrings(
+      parsePresburgerSetFromPolyStrings(
           2,
           {
               "(x, y) : (x - 5 >= 0, y + 10 >= 0, -x + 7 >= 0, -y + 100 >= 0)",
@@ -274,10 +274,10 @@ TEST(SetTest, Subtract) {
   // This creates a hole in the middle of the former rectangle, and the
   // resulting set can be represented as a union of four rectangles.
   testSubtractAtPoints(
-      parsePresburgerSetFromFACStrings(
+      parsePresburgerSetFromPolyStrings(
           2, {"(x, y) : (x - 2 >= 0, y -2 >= 0, -x + 10 >= 0, -y + 10 >= 0)"},
           &context),
-      parsePresburgerSetFromFACStrings(
+      parsePresburgerSetFromPolyStrings(
           2,
           {
               "(x, y) : (x - 5 >= 0, y - 4 >= 0, -x + 7 >= 0, -y + 8 >= 0)",
@@ -298,9 +298,9 @@ TEST(SetTest, Subtract) {
 
   // The second set is a superset of the first one, since on the line x + y = 0,
   // y <= 1 is equivalent to x >= -1. So the result is empty.
-  testSubtractAtPoints(parsePresburgerSetFromFACStrings(
+  testSubtractAtPoints(parsePresburgerSetFromPolyStrings(
                            2, {"(x, y) : (x >= 0, x + y == 0)"}, &context),
-                       parsePresburgerSetFromFACStrings(
+                       parsePresburgerSetFromPolyStrings(
                            2, {"(x, y) : (-y + 1 >= 0, x + y == 0)"}, &context),
                        {{0, 0},
                         {1, -1},
@@ -314,9 +314,9 @@ TEST(SetTest, Subtract) {
 
   // The result should be {0} U {2}.
   testSubtractAtPoints(
-      parsePresburgerSetFromFACStrings(1, {"(x) : (x >= 0, -x + 2 >= 0)"},
-                                       &context),
-      parsePresburgerSetFromFACStrings(1, {"(x) : (x - 1 == 0)"}, &context),
+      parsePresburgerSetFromPolyStrings(1, {"(x) : (x >= 0, -x + 2 >= 0)"},
+                                        &context),
+      parsePresburgerSetFromPolyStrings(1, {"(x) : (x - 1 == 0)"}, &context),
       {{-1}, {0}, {1}, {2}, {3}});
 
   // Sets with lots of redundant inequalities to test the redundancy heuristic.
@@ -326,14 +326,14 @@ TEST(SetTest, Subtract) {
   // A parallelogram with vertices {(3, 1), (10, -6), (24, 8), (17, 15)} minus
   // a triangle with vertices {(2, 2), (10, 2), (10, 10)}.
   testSubtractAtPoints(
-      parsePresburgerSetFromFACStrings(
+      parsePresburgerSetFromPolyStrings(
           2,
           {
               "(x, y) : (x + y - 4 >= 0, -x - y + 32 >= 0, x - y - 2 >= 0, "
               "-x + y + 16 >= 0)",
           },
           &context),
-      parsePresburgerSetFromFACStrings(
+      parsePresburgerSetFromPolyStrings(
           2,
           {"(x, y) : (x - 2 >= 0, y - 2 >= 0, -x + 10 >= 0, "
            "-y + 10 >= 0, x + y - 2 >= 0, -x - y + 30 >= 0, x - y >= 0, "
@@ -347,12 +347,12 @@ TEST(SetTest, Subtract) {
   // ((-infinity, -5] U [3, 3] U [4, 4] U [5, 5]) - ([-2, -10] U [3, 4] U [6,
   // 7])
   testSubtractAtPoints(
-      parsePresburgerSetFromFACStrings(
+      parsePresburgerSetFromPolyStrings(
           1,
           {"(x) : (-x - 5 >= 0)", "(x) : (x - 3 == 0)", "(x) : (x - 4 == 0)",
            "(x) : (x - 5 == 0)"},
           &context),
-      parsePresburgerSetFromFACStrings(
+      parsePresburgerSetFromPolyStrings(
           1,
           {"(x) : (-x - 2 >= 0, x - 10 >= 0, -x >= 0, -x + 10 >= 0, "
            "x - 100 >= 0, x - 50 >= 0)",
@@ -392,10 +392,10 @@ TEST(SetTest, Complement) {
       {{-1}, {-2}, {-8}, {1}, {2}, {8}, {9}, {10}, {20}, {21}});
 
   testComplementAtPoints(
-      parsePresburgerSetFromFACStrings(2,
-                                       {"(x,y) : (x - 2 >= 0, y - 2 >= 0, "
-                                        "-x + 10 >= 0, -y + 10 >= 0)"},
-                                       &context),
+      parsePresburgerSetFromPolyStrings(2,
+                                        {"(x,y) : (x - 2 >= 0, y - 2 >= 0, "
+                                         "-x + 10 >= 0, -y + 10 >= 0)"},
+                                        &context),
       {{1, 1},
        {2, 1},
        {1, 2},
@@ -416,7 +416,7 @@ TEST(SetTest, isEqual) {
   // set = [2, 8] U [10, 20].
   PresburgerSet universe = PresburgerSet::getUniverse(1);
   PresburgerSet emptySet = PresburgerSet::getEmptySet(1);
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1,
       {"(x) : (x - 2 >= 0, -x + 8 >= 0)", "(x) : (x - 10 >= 0, -x + 20 >= 0)"},
       &context);
@@ -455,10 +455,10 @@ TEST(SetTest, isEqual) {
   EXPECT_FALSE(set.isEqual(set.unionSet(set.complement())));
 
   // square is one unit taller than rect.
-  PresburgerSet square = parsePresburgerSetFromFACStrings(
+  PresburgerSet square = parsePresburgerSetFromPolyStrings(
       2, {"(x, y) : (x - 2 >= 0, y - 2 >= 0, -x + 9 >= 0, -y + 9 >= 0)"},
       &context);
-  PresburgerSet rect = parsePresburgerSetFromFACStrings(
+  PresburgerSet rect = parsePresburgerSetFromPolyStrings(
       2, {"(x, y) : (x - 2 >= 0, y - 2 >= 0, -x + 9 >= 0, -y + 8 >= 0)"},
       &context);
   EXPECT_FALSE(square.isEqual(rect));
@@ -481,19 +481,19 @@ TEST(SetTest, divisions) {
 
   // evens = {x : exists q, x = 2q}.
   PresburgerSet evens{
-      parseFAC("(x) : (x - 2 * (x floordiv 2) == 0)", &context)};
+      parsePoly("(x) : (x - 2 * (x floordiv 2) == 0)", &context)};
 
   //  odds = {x : exists q, x = 2q + 1}.
   PresburgerSet odds{
-      parseFAC("(x) : (x - 2 * (x floordiv 2) - 1 == 0)", &context)};
+      parsePoly("(x) : (x - 2 * (x floordiv 2) - 1 == 0)", &context)};
 
   // multiples3 = {x : exists q, x = 3q}.
   PresburgerSet multiples3{
-      parseFAC("(x) : (x - 3 * (x floordiv 3) == 0)", &context)};
+      parsePoly("(x) : (x - 3 * (x floordiv 3) == 0)", &context)};
 
   // multiples6 = {x : exists q, x = 6q}.
   PresburgerSet multiples6{
-      parseFAC("(x) : (x - 6 * (x floordiv 6) == 0)", &context)};
+      parsePoly("(x) : (x - 6 * (x floordiv 6) == 0)", &context)};
 
   // evens /\ odds = empty.
   expectEmpty(PresburgerSet(evens).intersect(PresburgerSet(odds)));
@@ -504,28 +504,28 @@ TEST(SetTest, divisions) {
   // even multiples of 3 = multiples of 6.
   expectEqual(multiples3.intersect(evens), multiples6);
 
-  PresburgerSet setA{parseFAC("(x) : (-x >= 0)", &context)};
-  PresburgerSet setB{parseFAC("(x) : (x floordiv 2 - 4 >= 0)", &context)};
+  PresburgerSet setA{parsePoly("(x) : (-x >= 0)", &context)};
+  PresburgerSet setB{parsePoly("(x) : (x floordiv 2 - 4 >= 0)", &context)};
   EXPECT_TRUE(setA.subtract(setB).isEqual(setA));
 }
 
 /// Coalesce `set` and check that the `newSet` is equal to `set and that
-/// `expectedNumFACs` matches the number of FACs in the coalesced set.
+/// `expectedNumPoly` matches the number of Poly in the coalesced set.
 /// If one of the two
-void expectCoalesce(size_t expectedNumFACs, const PresburgerSet &set) {
+void expectCoalesce(size_t expectedNumPoly, const PresburgerSet &set) {
   PresburgerSet newSet = set.coalesce();
   EXPECT_TRUE(set.isEqual(newSet));
-  EXPECT_TRUE(expectedNumFACs == newSet.getNumFACs());
+  EXPECT_TRUE(expectedNumPoly == newSet.getNumPolys());
 }
 
-TEST(SetTest, coalesceNoFAC) {
-  PresburgerSet set = makeSetFromFACs(0, {});
+TEST(SetTest, coalesceNoPoly) {
+  PresburgerSet set = makeSetFromPoly(0, {});
   expectCoalesce(0, set);
 }
 
 TEST(SetTest, coalesceContainedOneDim) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : (x >= 0, -x + 4 >= 0)", "(x) : (x - 1 >= 0, -x + 2 >= 0)"},
       &context);
   expectCoalesce(1, set);
@@ -533,7 +533,7 @@ TEST(SetTest, coalesceContainedOneDim) {
 
 TEST(SetTest, coalesceFirstEmpty) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : ( x >= 0, -x - 1 >= 0)", "(x) : ( x - 1 >= 0, -x + 2 >= 0)"},
       &context);
   expectCoalesce(1, set);
@@ -541,7 +541,7 @@ TEST(SetTest, coalesceFirstEmpty) {
 
 TEST(SetTest, coalesceSecondEmpty) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : (x - 1 >= 0, -x + 2 >= 0)", "(x) : (x >= 0, -x - 1 >= 0)"},
       &context);
   expectCoalesce(1, set);
@@ -549,7 +549,7 @@ TEST(SetTest, coalesceSecondEmpty) {
 
 TEST(SetTest, coalesceBothEmpty) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : (x - 3 >= 0, -x - 1 >= 0)", "(x) : (x >= 0, -x - 1 >= 0)"},
       &context);
   expectCoalesce(0, set);
@@ -557,14 +557,14 @@ TEST(SetTest, coalesceBothEmpty) {
 
 TEST(SetTest, coalesceFirstUniv) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : ()", "(x) : ( x >= 0, -x + 1 >= 0)"}, &context);
   expectCoalesce(1, set);
 }
 
 TEST(SetTest, coalesceSecondUniv) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : ( x >= 0, -x + 1 >= 0)", "(x) : ()"}, &context);
   expectCoalesce(1, set);
 }
@@ -572,20 +572,20 @@ TEST(SetTest, coalesceSecondUniv) {
 TEST(SetTest, coalesceBothUniv) {
   MLIRContext context;
   PresburgerSet set =
-      parsePresburgerSetFromFACStrings(1, {"(x) : ()", "(x) : ()"}, &context);
+      parsePresburgerSetFromPolyStrings(1, {"(x) : ()", "(x) : ()"}, &context);
   expectCoalesce(1, set);
 }
 
 TEST(SetTest, coalesceFirstUnivSecondEmpty) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : ()", "(x) : ( x >= 0, -x - 1 >= 0)"}, &context);
   expectCoalesce(1, set);
 }
 
 TEST(SetTest, coalesceFirstEmptySecondUniv) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : ( x >= 0, -x - 1 >= 0)", "(x) : ()"}, &context);
   expectCoalesce(1, set);
 }
@@ -593,18 +593,18 @@ TEST(SetTest, coalesceFirstEmptySecondUniv) {
 TEST(SetTest, coalesceCutOneDim) {
   MLIRContext context;
   PresburgerSet set =
-      parsePresburgerSetFromFACStrings(1,
-                                       {
-                                           "(x) : ( x >= 0, -x + 3 >= 0)",
-                                           "(x) : ( x - 2 >= 0, -x + 4 >= 0)",
-                                       },
-                                       &context);
+      parsePresburgerSetFromPolyStrings(1,
+                                        {
+                                            "(x) : ( x >= 0, -x + 3 >= 0)",
+                                            "(x) : ( x - 2 >= 0, -x + 4 >= 0)",
+                                        },
+                                        &context);
   expectCoalesce(2, set);
 }
 
 TEST(SetTest, coalesceSeparateOneDim) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       1, {"(x) : ( x >= 0, -x + 2 >= 0)", "(x) : ( x - 3 >= 0, -x + 4 >= 0)"},
       &context);
   expectCoalesce(2, set);
@@ -612,7 +612,7 @@ TEST(SetTest, coalesceSeparateOneDim) {
 
 TEST(SetTest, coalesceContainedTwoDim) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       2,
       {
           "(x,y) : (x >= 0, -x + 3 >= 0, y >= 0, -y + 3 >= 0)",
@@ -624,7 +624,7 @@ TEST(SetTest, coalesceContainedTwoDim) {
 
 TEST(SetTest, coalesceCutTwoDim) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       2,
       {
           "(x,y) : (x >= 0, -x + 3 >= 0, y >= 0, -y + 2 >= 0)",
@@ -636,7 +636,7 @@ TEST(SetTest, coalesceCutTwoDim) {
 
 TEST(SetTest, coalesceSeparateTwoDim) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       2,
       {
           "(x,y) : (x >= 0, -x + 3 >= 0, y >= 0, -y + 1 >= 0)",
@@ -648,7 +648,7 @@ TEST(SetTest, coalesceSeparateTwoDim) {
 
 TEST(SetTest, coalesceContainedEq) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       2,
       {
           "(x,y) : (x >= 0, -x + 3 >= 0, x - y == 0)",
@@ -660,7 +660,7 @@ TEST(SetTest, coalesceContainedEq) {
 
 TEST(SetTest, coalesceCuttingEq) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       2,
       {
           "(x,y) : (x - 1 >= 0, -x + 3 >= 0, x - y == 0)",
@@ -672,7 +672,7 @@ TEST(SetTest, coalesceCuttingEq) {
 
 TEST(SetTest, coalesceSeparateEq) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       2,
       {
           "(x,y) : (x - 3 >= 0, -x + 4 >= 0, x - y == 0)",
@@ -684,7 +684,7 @@ TEST(SetTest, coalesceSeparateEq) {
 
 TEST(SetTest, coalesceContainedEqAsIneq) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       2,
       {
           "(x,y) : (x >= 0, -x + 3 >= 0, x - y >= 0, -x + y >= 0)",
@@ -696,7 +696,7 @@ TEST(SetTest, coalesceContainedEqAsIneq) {
 
 TEST(SetTest, coalesceContainedEqComplex) {
   MLIRContext context;
-  PresburgerSet set = parsePresburgerSetFromFACStrings(
+  PresburgerSet set = parsePresburgerSetFromPolyStrings(
       2,
       {
           "(x,y) : (x - 2 == 0, x - y == 0)",
