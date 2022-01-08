@@ -1607,9 +1607,9 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         return true;
       } else {
         unsigned TempReg[3];
-        for (int i = 0; i < 3; i++) {
-          TempReg[i] = createResultReg(&Mips::GPR32RegClass);
-          if (TempReg[i] == 0)
+        for (unsigned &R : TempReg) {
+          R = createResultReg(&Mips::GPR32RegClass);
+          if (R == 0)
             return false;
         }
         emitInst(Mips::SLL, TempReg[0]).addReg(SrcReg).addImm(8);
@@ -1628,9 +1628,9 @@ bool MipsFastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         return true;
       } else {
         unsigned TempReg[8];
-        for (int i = 0; i < 8; i++) {
-          TempReg[i] = createResultReg(&Mips::GPR32RegClass);
-          if (TempReg[i] == 0)
+        for (unsigned &R : TempReg) {
+          R = createResultReg(&Mips::GPR32RegClass);
+          if (R == 0)
             return false;
         }
 
