@@ -121,22 +121,24 @@ define amdgpu_ps i64 @s_srl_big_mask_i64(i64 inreg %value) {
 }
 
 ; Test vector bitfield extract for 64-bits.
+; TODO: No need for a 64-bit shift instruction when the extracted value is
+; entirely contained within the upper or lower half.
 define i64 @v_mask_srl_i64(i64 %value) {
 ; GFX89-LABEL: v_mask_srl_i64:
 ; GFX89:       ; %bb.0:
 ; GFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX89-NEXT:    v_and_b32_e32 v0, 0xfe000000, v0
-; GFX89-NEXT:    v_and_b32_e32 v1, 7, v1
 ; GFX89-NEXT:    v_lshrrev_b64 v[0:1], 25, v[0:1]
+; GFX89-NEXT:    v_mov_b32_e32 v1, 0
+; GFX89-NEXT:    v_bfe_u32 v0, v0, 0, 10
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_mask_srl_i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xfe000000, v0
-; GFX10-NEXT:    v_and_b32_e32 v1, 7, v1
 ; GFX10-NEXT:    v_lshrrev_b64 v[0:1], 25, v[0:1]
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_bfe_u32 v0, v0, 0, 10
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
  %1 = and i64 %value, 34326183936 ; 1023 << 25
  %2 = lshr i64 %1, 25
@@ -147,10 +149,7 @@ define i64 @v_mask_srl_i64(i64 %value) {
 define amdgpu_ps i64 @s_mask_srl_i64(i64 inreg %value) {
 ; GCN-LABEL: s_mask_srl_i64:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_mov_b32 s2, 0xfe000000
-; GCN-NEXT:    s_mov_b32 s3, 7
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GCN-NEXT:    s_lshr_b64 s[0:1], s[0:1], 25
+; GCN-NEXT:    s_bfe_u64 s[0:1], s[0:1], 0xa0019
 ; GCN-NEXT:    ; return to shader part epilog
  %1 = and i64 %value, 34326183936 ; 1023 << 25
  %2 = lshr i64 %1, 25

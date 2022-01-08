@@ -145,11 +145,10 @@ body: |
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 261888
-    ; GCN-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GCN-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[C1]](s32)
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[LSHR]](s64)
+    ; GCN-NEXT: [[UBFX:%[0-9]+]]:_(s64) = G_UBFX [[COPY]], [[C1]](s32), [[C]]
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[UBFX]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 261888 ; 1023 << 8
     %2:_(s64) = G_AND %0, %1
