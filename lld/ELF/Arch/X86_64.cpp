@@ -417,7 +417,7 @@ void X86_64::writePlt(uint8_t *buf, const Symbol &sym,
   memcpy(buf, inst, sizeof(inst));
 
   write32le(buf + 2, sym.getGotPltVA() - pltEntryAddr - 6);
-  write32le(buf + 7, sym.pltIndex);
+  write32le(buf + 7, sym.getPltIdx());
   write32le(buf + 12, in.plt->getVA() - pltEntryAddr - 16);
 }
 
@@ -995,7 +995,7 @@ IntelIBT::IntelIBT() { pltHeaderSize = 0; }
 
 void IntelIBT::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   uint64_t va =
-      in.ibtPlt->getVA() + IBTPltHeaderSize + s.pltIndex * pltEntrySize;
+      in.ibtPlt->getVA() + IBTPltHeaderSize + s.getPltIdx() * pltEntrySize;
   write64le(buf, va);
 }
 
@@ -1107,7 +1107,7 @@ void Retpoline::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 3, sym.getGotPltVA() - pltEntryAddr - 7);
   write32le(buf + 8, -off - 12 + 32);
   write32le(buf + 13, -off - 17 + 18);
-  write32le(buf + 18, sym.pltIndex);
+  write32le(buf + 18, sym.getPltIdx());
   write32le(buf + 23, -off - 27);
 }
 

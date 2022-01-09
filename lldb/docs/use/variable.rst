@@ -487,9 +487,7 @@ themselves, but which carry a special meaning when used in this context:
 | ``%>``     | Print the expression path for this item                                  |
 +------------+--------------------------------------------------------------------------+
 
-Starting with SVN r228207, you can also specify
-``${script.var:pythonFuncName}``. Previously, back to r220821, this was
-specified with a different syntax: ``${var.script:pythonFuncName}``.
+Since lldb 3.7.0, you can also specify ``${script.var:pythonFuncName}``.
 
 It is expected that the function name you use specifies a function whose
 signature is the same as a Python summary function. The return string from the
@@ -944,25 +942,24 @@ Being more specific, in case of exceptions, LLDB might assume that the given
 object has no children or it might skip printing some children, as they are
 printed one by one.
 
-[1] This method is optional. Also, a boolean value must be returned
-(starting with SVN rev153061/LLDB-134). If ``False`` is returned, then
-whenever the process reaches a new stop, this method will be invoked again to
-generate an updated list of the children for a given variable. Otherwise, if
-``True`` is returned, then the value is cached and this method won't be called
-again, effectively freezing the state of the value in subsequent stops. Beware
-that returning ``True`` incorrectly could show misleading information to the
-user.
+[1] This method is optional. Also, a boolean value must be returned (since lldb
+3.1.0). If ``False`` is returned, then whenever the process reaches a new stop,
+this method will be invoked again to generate an updated list of the children
+for a given variable. Otherwise, if ``True`` is returned, then the value is
+cached and this method won't be called again, effectively freezing the state of
+the value in subsequent stops. Beware that returning ``True`` incorrectly could
+show misleading information to the user.
 
-[2] This method is optional (starting with SVN rev166495/LLDB-175). While
-implementing it in terms of num_children is acceptable, implementors are
-encouraged to look for optimized coding alternatives whenever reasonable.
+[2] This method is optional (since lldb 3.2.0). While implementing it in terms
+of num_children is acceptable, implementors are encouraged to look for
+optimized coding alternatives whenever reasonable.
 
-[3] This method is optional (starting with SVN revision 219330). The `SBValue`
-you return here will most likely be a numeric type (int, float, ...) as its
-value bytes will be used as-if they were the value of the root `SBValue` proper.
-As a shortcut for this, you can inherit from lldb.SBSyntheticValueProvider, and
-just define get_value as other methods are defaulted in the superclass as
-returning default no-children responses.
+[3] This method is optional (since lldb 3.5.2). The `SBValue` you return here
+will most likely be a numeric type (int, float, ...) as its value bytes will be
+used as-if they were the value of the root `SBValue` proper.  As a shortcut for
+this, you can inherit from lldb.SBSyntheticValueProvider, and just define
+get_value as other methods are defaulted in the superclass as returning default
+no-children responses.
 
 If a synthetic child provider supplies a special child named
 ``$$dereference$$`` then it will be used when evaluating ``operator *`` and
@@ -1229,11 +1226,11 @@ not-empty category.
 Finding Formatters 101
 ----------------------
 
-Searching for a formatter (including formats, starting in SVN rev r192217)
-given a variable goes through a rather intricate set of rules. Namely, what
-happens is that LLDB starts looking in each enabled category, according to the
-order in which they were enabled (latest enabled first). In each category, LLDB
-does the following:
+Searching for a formatter (including formats, since lldb 3.4.0) given a
+variable goes through a rather intricate set of rules. Namely, what happens is
+that LLDB starts looking in each enabled category, according to the order in
+which they were enabled (latest enabled first). In each category, LLDB does the
+following:
 
 - If there is a formatter for the type of the variable, use it
 - If this object is a pointer, and there is a formatter for the pointee type
