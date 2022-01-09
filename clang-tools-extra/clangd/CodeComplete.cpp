@@ -420,7 +420,7 @@ struct CodeCompletionBuilder {
         SetDoc(C.IndexResult->Documentation);
       } else if (C.SemaResult) {
         const auto DocComment = getDocComment(*ASTCtx, *C.SemaResult,
-                                              /*CommentsFromHeader=*/false);
+                                              /*CommentsFromHeaders=*/false);
         SetDoc(formatDocumentation(*SemaCCS, DocComment));
       }
     }
@@ -959,9 +959,9 @@ public:
             paramIndexForArg(Candidate, SigHelp.activeParameter);
       }
 
-      const auto *CCS =
-          Candidate.CreateSignatureString(CurrentArg, S, *Allocator, CCTUInfo,
-                                          /*IncludeBriefComment=*/true, Braced);
+      const auto *CCS = Candidate.CreateSignatureString(
+          CurrentArg, S, *Allocator, CCTUInfo,
+          /*IncludeBriefComments=*/true, Braced);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
       ScoredSignatures.push_back(processOverloadCandidate(
           Candidate, *CCS,

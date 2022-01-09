@@ -1474,7 +1474,7 @@ void WordLiteralSection::writeTo(uint8_t *buf) const {
 void macho::createSyntheticSymbols() {
   auto addHeaderSymbol = [](const char *name) {
     symtab->addSynthetic(name, in.header->isec, /*value=*/0,
-                         /*privateExtern=*/true, /*includeInSymtab=*/false,
+                         /*isPrivateExtern=*/true, /*includeInSymtab=*/false,
                          /*referencedDynamically=*/false);
   };
 
@@ -1487,11 +1487,11 @@ void macho::createSyntheticSymbols() {
     // Otherwise, it's an absolute symbol.
     if (config->isPic)
       symtab->addSynthetic("__mh_execute_header", in.header->isec, /*value=*/0,
-                           /*privateExtern=*/false, /*includeInSymtab=*/true,
+                           /*isPrivateExtern=*/false, /*includeInSymtab=*/true,
                            /*referencedDynamically=*/true);
     else
       symtab->addSynthetic("__mh_execute_header", /*isec=*/nullptr, /*value=*/0,
-                           /*privateExtern=*/false, /*includeInSymtab=*/true,
+                           /*isPrivateExtern=*/false, /*includeInSymtab=*/true,
                            /*referencedDynamically=*/true);
     break;
 
