@@ -1,3 +1,4 @@
+// UNSUPPORTED: powerpc64-ibm-aix
 // REQUIRES: shell
 
 // RUN: rm -rf %t && mkdir %t
