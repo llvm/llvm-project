@@ -7702,7 +7702,6 @@ void AAMemoryLocationImpl::categorizePtrValue(
   for (Value *Obj : Objects) {
     // TODO: recognize the TBAA used for constant accesses.
     MemoryLocationsKind MLK = NO_LOCATIONS;
-    assert(!isa<GEPOperator>(Obj) && "GEPs should have been stripped.");
     if (isa<UndefValue>(Obj))
       continue;
     if (isa<Argument>(Obj)) {
