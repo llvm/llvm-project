@@ -610,7 +610,7 @@ void CodeGenModule::Release() {
 
   if (Context.getLangOpts().SemanticInterposition)
     // Require various optimization to respect semantic interposition.
-    getModule().setSemanticInterposition(1);
+    getModule().setSemanticInterposition(true);
 
   if (CodeGenOpts.EmitCodeView) {
     // Indicate that we want CodeView in the metadata.

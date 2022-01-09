@@ -132,8 +132,7 @@ public:
         NamedConcept(NamedConcept), ArgsAsWritten(ArgsAsWritten) {}
 
   ConceptReference()
-      : TemplateKWLoc(), FoundDecl(nullptr), NamedConcept(nullptr),
-        ArgsAsWritten(nullptr) {}
+      : FoundDecl(nullptr), NamedConcept(nullptr), ArgsAsWritten(nullptr) {}
 
   const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
     return NestedNameSpec;

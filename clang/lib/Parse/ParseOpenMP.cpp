@@ -2937,7 +2937,7 @@ bool Parser::ParseOpenMPSimpleVarList(
 
     if (AllowScopeSpecifier && getLangOpts().CPlusPlus &&
         ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false, false)) {
+                                       /*ObjectHasErrors=*/false, false)) {
       IsCorrect = false;
       SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
                 StopBeforeMatch);
@@ -3818,7 +3818,7 @@ bool Parser::parseMapperModifier(OpenMPVarListDataTy &Data) {
   if (getLangOpts().CPlusPlus)
     ParseOptionalCXXScopeSpecifier(Data.ReductionOrMapperIdScopeSpec,
                                    /*ObjectType=*/nullptr,
-                                   /*ObjectHadErrors=*/false,
+                                   /*ObjectHasErrors=*/false,
                                    /*EnteringContext=*/false);
   if (Tok.isNot(tok::identifier) && Tok.isNot(tok::kw_default)) {
     Diag(Tok.getLocation(), diag::err_omp_mapper_illegal_identifier);
@@ -4051,7 +4051,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     if (getLangOpts().CPlusPlus)
       ParseOptionalCXXScopeSpecifier(Data.ReductionOrMapperIdScopeSpec,
                                      /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false);
     InvalidReductionId = ParseReductionId(
         *this, Data.ReductionOrMapperIdScopeSpec, UnqualifiedReductionId);

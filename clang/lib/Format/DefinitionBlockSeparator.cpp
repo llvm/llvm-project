@@ -86,11 +86,11 @@ void DefinitionBlockSeparator::separateBlocks(
       return false;
     };
 
-    bool IsDefBlock = 0;
+    bool IsDefBlock = false;
 
     if (HasEnumOnLine()) {
       // We have no scope opening/closing information for enum.
-      IsDefBlock = 1;
+      IsDefBlock = true;
       OpeningLineIndex = I;
       TargetLine = CurrentLine;
       TargetToken = CurrentLine->First;
@@ -112,7 +112,7 @@ void DefinitionBlockSeparator::separateBlocks(
       AnnotatedLine *OpeningLine = Lines[OpeningLineIndex];
       // Closing a function definition.
       if (LikelyDefinition(OpeningLine)) {
-        IsDefBlock = 1;
+        IsDefBlock = true;
         if (OpeningLineIndex > 0) {
           OpeningLineIndex -=
               Style.Language == FormatStyle::LK_CSharp &&

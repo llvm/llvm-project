@@ -1438,7 +1438,7 @@ bool ResultBuilder::IsOrdinaryNonTypeName(const NamedDecl *ND) const {
 
 bool ResultBuilder::IsIntegralConstantValue(const NamedDecl *ND) const {
   if (!IsOrdinaryNonTypeName(ND))
-    return 0;
+    return false;
 
   if (const auto *VD = dyn_cast<ValueDecl>(ND->getUnderlyingDecl()))
     if (VD->getType()->isIntegralOrEnumerationType())

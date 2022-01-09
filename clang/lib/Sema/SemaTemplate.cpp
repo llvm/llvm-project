@@ -3672,7 +3672,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(Template, TemplateLoc, TemplateArgs,
                                 false, Converted,
-                                /*UpdateArgsWithConversion=*/true))
+                                /*UpdateArgsWithConversions=*/true))
     return QualType();
 
   QualType CanonType;
@@ -4318,7 +4318,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(VarTemplate, TemplateNameLoc, TemplateArgs,
                                 false, Converted,
-                                /*UpdateArgsWithConversion=*/true))
+                                /*UpdateArgsWithConversions=*/true))
     return true;
 
   // Find the variable template (partial) specialization declaration that
@@ -4489,7 +4489,7 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   if (CheckTemplateArgumentList(
           Template, TemplateNameLoc,
           const_cast<TemplateArgumentListInfo &>(TemplateArgs), false,
-          Converted, /*UpdateArgsWithConversion=*/true))
+          Converted, /*UpdateArgsWithConversions=*/true))
     return true;
 
   // Produce a placeholder value if the specialization is dependent.
@@ -4677,7 +4677,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   if (CheckTemplateArgumentList(NamedConcept, ConceptNameInfo.getLoc(),
                            const_cast<TemplateArgumentListInfo&>(*TemplateArgs),
                                 /*PartialTemplateArgs=*/false, Converted,
-                                /*UpdateArgsWithConversion=*/false))
+                                /*UpdateArgsWithConversions=*/false))
     return ExprError();
 
   ConstraintSatisfaction Satisfaction;
@@ -8343,7 +8343,7 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(ClassTemplate, TemplateNameLoc,
                                 TemplateArgs, false, Converted,
-                                /*UpdateArgsWithConversion=*/true))
+                                /*UpdateArgsWithConversions=*/true))
     return true;
 
   // Find the class template (partial) specialization declaration that
@@ -9595,7 +9595,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
   SmallVector<TemplateArgument, 4> Converted;
   if (CheckTemplateArgumentList(ClassTemplate, TemplateNameLoc,
                                 TemplateArgs, false, Converted,
-                                /*UpdateArgsWithConversion=*/true))
+                                /*UpdateArgsWithConversions=*/true))
     return true;
 
   // Find the class template specialization declaration that

@@ -1414,7 +1414,7 @@ static bool compileModuleAndReadASTBehindLock(
   StringRef Dir = llvm::sys::path::parent_path(ModuleFileName);
   llvm::sys::fs::create_directories(Dir);
 
-  while (1) {
+  while (true) {
     llvm::LockFileManager Locked(ModuleFileName);
     switch (Locked) {
     case llvm::LockFileManager::LFS_Error:

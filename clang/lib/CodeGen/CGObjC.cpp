@@ -847,7 +847,7 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
 static bool hasUnalignedAtomics(llvm::Triple::ArchType arch) {
   // FIXME: Allow unaligned atomic load/store on x86.  (It is not
   // currently supported by the backend.)
-  return 0;
+  return false;
 }
 
 /// Return the maximum size that permits atomic accesses for the given
