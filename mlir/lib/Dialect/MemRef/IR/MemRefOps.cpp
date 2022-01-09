@@ -1497,9 +1497,9 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
                                 ArrayRef<int64_t> staticStrides) {
   unsigned rank = sourceMemRefType.getRank();
   (void)rank;
-  assert(staticOffsets.size() == rank && "unexpected staticOffsets overflow");
-  assert(staticSizes.size() == rank && "unexpected staticSizes overflow");
-  assert(staticStrides.size() == rank && "unexpected staticStrides overflow");
+  assert(staticOffsets.size() == rank && "staticOffsets length mismatch");
+  assert(staticSizes.size() == rank && "staticSizes length mismatch");
+  assert(staticStrides.size() == rank && "staticStrides length mismatch");
 
   // Extract source offset and strides.
   int64_t sourceOffset;
