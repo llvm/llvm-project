@@ -1199,3 +1199,26 @@ func @op_is_reading_but_following_ops_are_not(
   // CHECK: return %[[ALLOC]]
   return %r1 : tensor<?xf32>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// InitTensorOp elimination would produce SSA violations for the example below.
+//===----------------------------------------------------------------------===//
+
+func @depthwise_conv_1d_nwc_wc(%arg0: index, %arg1: index, %arg2: tensor<8x18x32xf32>) 
+    -> tensor<?x1x6x8xf32> {
+  %c0 = arith.constant 0 : index
+  %c32 = arith.constant 32 : index
+  %c8 = arith.constant 8 : index
+  %0 = linalg.init_tensor [4, 1, 6, 8] : tensor<4x1x6x8xf32>
+  %1 = tensor.cast %0 : tensor<4x1x6x8xf32> to tensor<?x1x6x8xf32>
+  %2 = linalg.init_tensor [1, 6, 8] : tensor<1x6x8xf32>
+  %3 = scf.for %arg3 = %c0 to %c32 step %c8 iter_args(%arg4 = %1) -> (tensor<?x1x6x8xf32>) {
+    %4 = affine.apply affine_map<(d0) -> (d0 ceildiv 8)>(%arg3)
+    %5 = tensor.insert_slice %2 into %arg4[%4,0, 0, 0] [1, 1, 6, 8] [1, 1, 1, 1] :
+      tensor<1x6x8xf32> into tensor<?x1x6x8xf32>
+    scf.yield %5 : tensor<?x1x6x8xf32>
+  }
+  return %3 : tensor<?x1x6x8xf32>
+}

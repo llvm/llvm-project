@@ -68,7 +68,7 @@ struct CastOpInterface
 
     // Compute the new memref type.
     Type resultMemRefType;
-    if (auto rankedTensorType = resultTensorType.isa<RankedTensorType>()) {
+    if (resultTensorType.isa<RankedTensorType>()) {
       resultMemRefType =
           getContiguousMemRefType(resultTensorType, layout, memorySpace);
     } else {
@@ -165,16 +165,27 @@ struct ExtractSliceOpInterface
       alloc = *allocOrFailure;
     }
 
+    // Expand offsets, sizes and strides to the full rank to handle the
+    // rank-reducing case.
+    SmallVector<OpFoldResult> mixedOffsets = extractSliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
+    SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
+    OffsetSizeAndStrideOpInterface::expandToRank(
+        srcMemref, mixedOffsets, mixedSizes, mixedStrides,
+        [&](Value target, int64_t dim) -> OpFoldResult {
+          auto shapedType = target.getType().cast<ShapedType>();
+          if (shapedType.isDynamicDim(dim))
+            return rewriter.create<memref::DimOp>(loc, target, dim).result();
+          return rewriter.getIndexAttr(shapedType.getDimSize(dim));
+        });
     // Bufferize to subview.
-    auto subviewMemRefType =
-        memref::SubViewOp::inferRankReducedResultType(
-            dstTensorType.getRank(), srcMemrefType,
-            extractSliceOp.getMixedOffsets(), extractSliceOp.getMixedSizes(),
-            extractSliceOp.getMixedStrides())
-            .cast<MemRefType>();
+    auto subviewMemRefType = memref::SubViewOp::inferRankReducedResultType(
+                                 dstTensorType.getRank(), srcMemrefType,
+                                 mixedOffsets, mixedSizes, mixedStrides)
+                                 .cast<MemRefType>();
     Value subView = rewriter.create<memref::SubViewOp>(
-        loc, subviewMemRefType, srcMemref, extractSliceOp.getMixedOffsets(),
-        extractSliceOp.getMixedSizes(), extractSliceOp.getMixedStrides());
+        loc, subviewMemRefType, srcMemref, mixedOffsets, mixedSizes,
+        mixedStrides);
 
     // If not inplaceable, copy.
     if (!inplace) {
@@ -422,17 +433,29 @@ struct InsertSliceOpInterface
     if (failed(dstMemref))
       return failure();
 
+    // Expand offsets, sizes and strides to the full rank to handle the
+    // rank-reducing case.
+    SmallVector<OpFoldResult> mixedOffsets = insertSliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> mixedSizes = insertSliceOp.getMixedSizes();
+    SmallVector<OpFoldResult> mixedStrides = insertSliceOp.getMixedStrides();
+    OffsetSizeAndStrideOpInterface::expandToRank(
+        *dstMemref, mixedOffsets, mixedSizes, mixedStrides,
+        [&](Value target, int64_t dim) -> OpFoldResult {
+          auto shapedType = target.getType().cast<ShapedType>();
+          if (shapedType.isDynamicDim(dim))
+            return rewriter.create<memref::DimOp>(loc, target, dim).result();
+          return rewriter.getIndexAttr(shapedType.getDimSize(dim));
+        });
     // Take a subview of the dst.
     auto dstMemrefType = dstMemref->getType().cast<MemRefType>();
     auto subviewMemRefType =
         memref::SubViewOp::inferRankReducedResultType(
             insertSliceOp.getSourceType().getRank(), dstMemrefType,
-            insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
-            insertSliceOp.getMixedStrides())
+            mixedOffsets, mixedSizes, mixedStrides)
             .cast<MemRefType>();
     Value subView = rewriter.create<memref::SubViewOp>(
-        loc, subviewMemRefType, *dstMemref, insertSliceOp.getMixedOffsets(),
-        insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
+        loc, subviewMemRefType, *dstMemref, mixedOffsets, mixedSizes,
+        mixedStrides);
 
     // Copy tensor. If this tensor.insert_slice has a matching
     // tensor.extract_slice, the copy operation will eventually fold away.
