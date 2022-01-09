@@ -2742,13 +2742,8 @@ void SCEVExpanderCleaner::cleanup() {
   // Remove sets with value handles.
   Expander.clear();
 
-  // Sort so that earlier instructions do not dominate later instructions.
-  stable_sort(InsertedInstructions, [this](Instruction *A, Instruction *B) {
-    return DT.dominates(B, A);
-  });
   // Remove all inserted instructions.
-  for (Instruction *I : InsertedInstructions) {
-
+  for (Instruction *I : reverse(InsertedInstructions)) {
 #ifndef NDEBUG
     assert(all_of(I->users(),
                   [&InsertedSet](Value *U) {
