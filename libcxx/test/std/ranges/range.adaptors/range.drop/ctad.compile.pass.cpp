@@ -11,22 +11,56 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class R>
-// drop_view(R&&, range_difference_t<R>) -> drop_view<views::all_t<R>>;
+//   drop_view(R&&, range_difference_t<R>) -> drop_view<views::all_t<R>>;
 
 #include <ranges>
+#include <cassert>
+#include <concepts>
 
-#include "test_macros.h"
-#include "types.h"
+struct View : std::ranges::view_base {
+  int *begin() const;
+  int *end() const;
+};
 
-namespace ranges = std::ranges;
+struct Range {
+  int *begin() const;
+  int *end() const;
+};
 
-static_assert(std::same_as<decltype(ranges::drop_view(MoveOnlyView(), 0)), ranges::drop_view<MoveOnlyView>>);
-static_assert(std::same_as<decltype(ranges::drop_view(CopyableView(), 0)), ranges::drop_view<CopyableView>>);
-static_assert(std::same_as<decltype(ranges::drop_view(ForwardView(), 0)), ranges::drop_view<ForwardView>>);
-static_assert(std::same_as<decltype(ranges::drop_view(InputView(), 0)), ranges::drop_view<InputView>>);
+struct BorrowedRange {
+  int *begin() const;
+  int *end() const;
+};
+template<>
+inline constexpr bool std::ranges::enable_borrowed_range<BorrowedRange> = true;
 
-static_assert(std::same_as<decltype(ranges::drop_view(std::declval<ForwardRange&>(), 0)),
-                           ranges::drop_view<ranges::ref_view<ForwardRange>>>);
+void testCTAD() {
+    View v;
+    Range r;
+    BorrowedRange br;
 
-static_assert(std::same_as<decltype(ranges::drop_view(BorrowableRange(), 0)),
-                           ranges::drop_view<ranges::subrange<int*>>>);
+    static_assert(std::same_as<
+        decltype(std::ranges::drop_view(v, 0)),
+        std::ranges::drop_view<View>
+    >);
+    static_assert(std::same_as<
+        decltype(std::ranges::drop_view(std::move(v), 0)),
+        std::ranges::drop_view<View>
+    >);
+    static_assert(std::same_as<
+        decltype(std::ranges::drop_view(r, 0)),
+        std::ranges::drop_view<std::ranges::ref_view<Range>>
+    >);
+    static_assert(std::same_as<
+        decltype(std::ranges::drop_view(std::move(r), 0)),
+        std::ranges::drop_view<std::ranges::owning_view<Range>>
+    >);
+    static_assert(std::same_as<
+        decltype(std::ranges::drop_view(br, 0)),
+        std::ranges::drop_view<std::ranges::ref_view<BorrowedRange>>
+    >);
+    static_assert(std::same_as<
+        decltype(std::ranges::drop_view(std::move(br), 0)),
+        std::ranges::drop_view<std::ranges::owning_view<BorrowedRange>>
+    >);
+}

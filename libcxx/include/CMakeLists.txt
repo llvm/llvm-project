@@ -326,6 +326,7 @@ set(files
   __ranges/iota_view.h
   __ranges/join_view.h
   __ranges/non_propagating_cache.h
+  __ranges/owning_view.h
   __ranges/range_adaptor.h
   __ranges/ref_view.h
   __ranges/reverse_view.h

@@ -135,6 +135,13 @@ namespace std::ranges {
   template<class T>
     inline constexpr bool enable_borrowed_range<ref_view<T>> = true;
 
+  template<range R>
+    requires see below
+  class owning_view;
+
+  template<class T>
+    inline constexpr bool enable_borrowed_range<owning_view<T>> = enable_borrowed_range<T>;
+
   // [range.drop], drop view
   template<view V>
     class drop_view;

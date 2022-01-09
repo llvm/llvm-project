@@ -17,29 +17,20 @@
 #include <cassert>
 #include <concepts>
 
-#include "test_iterators.h"
-
 struct View : std::ranges::view_base {
-  friend int* begin(View&);
-  friend int* begin(View const&);
-  friend sentinel_wrapper<int*> end(View&);
-  friend sentinel_wrapper<int*> end(View const&);
+  int *begin() const;
+  int *end() const;
 };
 
 struct Range {
-  friend int* begin(Range&);
-  friend int* begin(Range const&);
-  friend sentinel_wrapper<int*> end(Range&);
-  friend sentinel_wrapper<int*> end(Range const&);
+  int *begin() const;
+  int *end() const;
 };
 
 struct BorrowedRange {
-  friend int* begin(BorrowedRange&);
-  friend int* begin(BorrowedRange const&);
-  friend sentinel_wrapper<int*> end(BorrowedRange&);
-  friend sentinel_wrapper<int*> end(BorrowedRange const&);
+  int *begin() const;
+  int *end() const;
 };
-
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<BorrowedRange> = true;
 
@@ -47,22 +38,29 @@ void testCTAD() {
     View v;
     Range r;
     BorrowedRange br;
+
     static_assert(std::same_as<
         decltype(std::ranges::take_view(v, 0)),
+        std::ranges::take_view<View>
+    >);
+    static_assert(std::same_as<
+        decltype(std::ranges::take_view(std::move(v), 0)),
         std::ranges::take_view<View>
     >);
     static_assert(std::same_as<
         decltype(std::ranges::take_view(r, 0)),
         std::ranges::take_view<std::ranges::ref_view<Range>>
     >);
-    // std::ranges::take_view(std::move(r), 0) invalid. RValue range must be borrowed.
+    static_assert(std::same_as<
+        decltype(std::ranges::take_view(std::move(r), 0)),
+        std::ranges::take_view<std::ranges::owning_view<Range>>
+    >);
     static_assert(std::same_as<
         decltype(std::ranges::take_view(br, 0)),
         std::ranges::take_view<std::ranges::ref_view<BorrowedRange>>
     >);
     static_assert(std::same_as<
         decltype(std::ranges::take_view(std::move(br), 0)),
-        std::ranges::take_view<std::ranges::subrange<
-          int *, sentinel_wrapper<int *>, std::ranges::subrange_kind::unsized>>
+        std::ranges::take_view<std::ranges::owning_view<BorrowedRange>>
     >);
 }
