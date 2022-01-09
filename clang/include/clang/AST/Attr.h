@@ -35,12 +35,7 @@
 namespace clang {
 class ASTContext;
 class AttributeCommonInfo;
-class IdentifierInfo;
-class ObjCInterfaceDecl;
-class Expr;
-class QualType;
 class FunctionDecl;
-class TypeSourceInfo;
 class OMPTraitInfo;
 
 /// Attr - This represents one attribute.

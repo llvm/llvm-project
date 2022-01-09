@@ -35,7 +35,6 @@
 namespace clang {
 
 class CXXBaseSpecifier;
-class DeclaratorDecl;
 class FunctionDecl;
 class LabelDecl;
 

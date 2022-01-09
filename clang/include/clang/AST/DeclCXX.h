@@ -64,7 +64,6 @@ class CXXFinalOverriderMap;
 class CXXIndirectPrimaryBaseSet;
 class CXXMethodDecl;
 class DecompositionDecl;
-class DiagnosticBuilder;
 class FriendDecl;
 class FunctionTemplateDecl;
 class IdentifierInfo;
