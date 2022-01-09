@@ -282,12 +282,12 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   const unsigned sizeOfJmpCCInsn = 6;
   // To flip, there must be atleast one JmpCC and one direct jmp.
   if (is.getSize() < sizeOfDirectJmpInsn + sizeOfJmpCCInsn)
-    return 0;
+    return false;
 
   unsigned rbIndex =
       getRelocationWithOffset(is, (is.getSize() - sizeOfDirectJmpInsn - 4));
   if (rbIndex == is.relocations.size())
-    return 0;
+    return false;
 
   Relocation &rB = is.relocations[rbIndex];
 

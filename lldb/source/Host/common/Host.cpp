@@ -191,7 +191,7 @@ static thread_result_t MonitorChildProcessThreadFunction(void *arg) {
   ::sigaction(SIGUSR1, &sigUsr1Action, nullptr);
 #endif // __linux__
 
-  while (1) {
+  while (true) {
     log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
     LLDB_LOGF(log, "%s ::waitpid (pid = %" PRIi32 ", &status, options = %i)...",
               function, pid, options);
