@@ -2772,6 +2772,7 @@ void SITargetLowering::passSpecialInputs(
 
   SelectionDAG &DAG = CLI.DAG;
   const SDLoc &DL = CLI.DL;
+  const Function &F = DAG.getMachineFunction().getFunction();
 
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const AMDGPUFunctionArgInfo &CallerArgInfo = Info.getArgInfo();
@@ -2883,11 +2884,16 @@ void SITargetLowering::passSpecialInputs(
 
   // If incoming ids are not packed we need to pack them.
   if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo->WorkItemIDX &&
-      NeedWorkItemIDX)
-    InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgX);
+      NeedWorkItemIDX) {
+    if (Subtarget->getMaxWorkitemID(F, 0) != 0) {
+      InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgX);
+    } else {
+      InputReg = DAG.getConstant(0, DL, MVT::i32);
+    }
+  }
 
   if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY &&
-      NeedWorkItemIDY) {
+      NeedWorkItemIDY && Subtarget->getMaxWorkitemID(F, 1) != 0) {
     SDValue Y = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgY);
     Y = DAG.getNode(ISD::SHL, SL, MVT::i32, Y,
                     DAG.getShiftAmountConstant(10, MVT::i32, SL));
@@ -2896,7 +2902,7 @@ void SITargetLowering::passSpecialInputs(
   }
 
   if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ &&
-      NeedWorkItemIDZ) {
+      NeedWorkItemIDZ && Subtarget->getMaxWorkitemID(F, 2) != 0) {
     SDValue Z = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgZ);
     Z = DAG.getNode(ISD::SHL, SL, MVT::i32, Z,
                     DAG.getShiftAmountConstant(20, MVT::i32, SL));
