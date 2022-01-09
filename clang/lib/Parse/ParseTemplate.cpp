@@ -391,7 +391,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(
           SS, /*ObjectType=*/nullptr,
-          /*ObjectHadErrors=*/false, /*EnteringContext=*/false,
+          /*ObjectHasErrors=*/false, /*EnteringContext=*/false,
           /*MayBePseudoDestructor=*/nullptr,
           /*IsTypename=*/false, /*LastII=*/nullptr, /*OnlyNamespace=*/true) ||
       SS.isInvalid()) {
@@ -500,7 +500,7 @@ bool Parser::ParseTemplateParameters(
 bool
 Parser::ParseTemplateParameterList(const unsigned Depth,
                              SmallVectorImpl<NamedDecl*> &TemplateParams) {
-  while (1) {
+  while (true) {
 
     if (NamedDecl *TmpParam
           = ParseTemplateParameter(Depth, TemplateParams.size())) {
@@ -715,7 +715,7 @@ bool Parser::TryAnnotateTypeConstraint() {
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false,
                                      /*MayBePseudoDestructor=*/nullptr,
                                      // If this is not a type-constraint, then
@@ -787,7 +787,7 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   bool TypenameKeyword = false;
   SourceLocation KeyLoc;
   ParseOptionalCXXScopeSpecifier(TypeConstraintSS, /*ObjectType=*/nullptr,
-                                 /*ObjectHadErrors=*/false,
+                                 /*ObjectHasErrors=*/false,
                                  /*EnteringContext*/ false);
   if (Tok.is(tok::annot_template_id)) {
     // Consume the 'type-constraint'.
@@ -1468,7 +1468,7 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
   // '>', or (in some cases) '>>'.
   CXXScopeSpec SS; // nested-name-specifier, if present
   ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                 /*ObjectHadErrors=*/false,
+                                 /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false);
 
   ParsedTemplateArgument Result;

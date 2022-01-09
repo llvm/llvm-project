@@ -4761,11 +4761,11 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
         break;
       unsigned Count = Record[0];
       const char *Byte = Blob.data();
-      F->SearchPathUsage = llvm::BitVector(Count, 0);
+      F->SearchPathUsage = llvm::BitVector(Count, false);
       for (unsigned I = 0; I < Count; ++Byte)
         for (unsigned Bit = 0; Bit < 8 && I < Count; ++Bit, ++I)
           if (*Byte & (1 << Bit))
-            F->SearchPathUsage[I] = 1;
+            F->SearchPathUsage[I] = true;
       break;
     }
   }

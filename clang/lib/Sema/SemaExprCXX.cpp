@@ -6614,7 +6614,7 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
     const Type *ClassOrBound;
 
     Step(Kind K, const Type *ClassOrBound = nullptr)
-        : K(K), Quals(), ClassOrBound(ClassOrBound) {}
+        : K(K), ClassOrBound(ClassOrBound) {}
     QualType rebuild(ASTContext &Ctx, QualType T) const {
       T = Ctx.getQualifiedType(T, Quals);
       switch (K) {
@@ -8697,7 +8697,7 @@ Sema::ActOnTypeRequirement(SourceLocation TypenameKWLoc, CXXScopeSpec &SS,
   if (TypeName) {
     QualType T = CheckTypenameType(ETK_Typename, TypenameKWLoc,
                                    SS.getWithLocInContext(Context), *TypeName,
-                                   NameLoc, &TSI, /*DeducedTypeContext=*/false);
+                                   NameLoc, &TSI, /*DeducedTSTContext=*/false);
     if (T.isNull())
       return nullptr;
   } else {
@@ -8748,7 +8748,7 @@ Sema::ActOnCompoundRequirement(
                                               /*HasTypeConstraint=*/true);
 
   if (BuildTypeConstraint(SS, TypeConstraint, TParam,
-                          /*EllpsisLoc=*/SourceLocation(),
+                          /*EllipsisLoc=*/SourceLocation(),
                           /*AllowUnexpandedPack=*/true))
     // Just produce a requirement with no type requirements.
     return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc, {});

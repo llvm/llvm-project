@@ -1326,7 +1326,7 @@ protected:
 public:
   /// Copy constructor.  When copied, this "takes" the diagnostic info from the
   /// input and neuters it.
-  DiagnosticBuilder(const DiagnosticBuilder &D) : StreamingDiagnostic() {
+  DiagnosticBuilder(const DiagnosticBuilder &D) {
     DiagObj = D.DiagObj;
     DiagStorage = D.DiagStorage;
     IsActive = D.IsActive;

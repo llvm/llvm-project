@@ -351,10 +351,10 @@ constexpr bool test_1_3()
     // see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=57484 for context.
 
     if (!std::is_constant_evaluated()) {
-        F nq = _VSTD::copysign(std::numeric_limits<F>::quiet_NaN(), F(-1));
-        F ns = _VSTD::copysign(std::numeric_limits<F>::signaling_NaN(), F(-1));
-        F ps = _VSTD::copysign(std::numeric_limits<F>::signaling_NaN(), F(+1));
-        F pq = _VSTD::copysign(std::numeric_limits<F>::quiet_NaN(), F(+1));
+        F nq = std::copysign(std::numeric_limits<F>::quiet_NaN(), F(-1));
+        F ns = std::copysign(std::numeric_limits<F>::signaling_NaN(), F(-1));
+        F ps = std::copysign(std::numeric_limits<F>::signaling_NaN(), F(+1));
+        F pq = std::copysign(std::numeric_limits<F>::quiet_NaN(), F(+1));
 
         assert(std::strong_order(nq, nq) == std::strong_ordering::equal);
 #ifndef TEST_BUGGY_SIGNALING_NAN

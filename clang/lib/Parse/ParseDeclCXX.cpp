@@ -291,7 +291,7 @@ Decl *Parser::ParseNamespaceAlias(SourceLocation NamespaceLoc,
   CXXScopeSpec SS;
   // Parse (optional) nested-name-specifier.
   ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                 /*ObjectHadErrors=*/false,
+                                 /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false,
                                  /*MayBePseudoDestructor=*/nullptr,
                                  /*IsTypename=*/false,
@@ -529,7 +529,7 @@ Decl *Parser::ParseUsingDirective(DeclaratorContext Context,
   CXXScopeSpec SS;
   // Parse (optional) nested-name-specifier.
   ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                 /*ObjectHadErrors=*/false,
+                                 /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false,
                                  /*MayBePseudoDestructor=*/nullptr,
                                  /*IsTypename=*/false,
@@ -598,7 +598,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
   // Parse nested-name-specifier.
   IdentifierInfo *LastII = nullptr;
   if (ParseOptionalCXXScopeSpecifier(D.SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false,
                                      /*MayBePseudoDtor=*/nullptr,
                                      /*IsTypename=*/false,
@@ -1190,7 +1190,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   // Parse optional nested-name-specifier
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false))
     return true;
 
@@ -1609,7 +1609,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     CXXScopeSpec Spec;
     bool HasValidSpec = true;
     if (ParseOptionalCXXScopeSpecifier(Spec, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
+                                       /*ObjectHasErrors=*/false,
                                        EnteringContext)) {
       DS.SetTypeSpecError();
       HasValidSpec = false;
@@ -2605,7 +2605,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       // Collect the scope specifier token we annotated earlier.
       CXXScopeSpec SS;
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false);
 
       if (SS.isInvalid()) {
@@ -2905,7 +2905,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   //   member-declarator
   //   member-declarator-list ',' member-declarator
 
-  while (1) {
+  while (true) {
     InClassInitStyle HasInClassInit = ICIS_NoInit;
     bool HasStaticInitializer = false;
     if (Tok.isOneOf(tok::equal, tok::l_brace) && PureSpecLoc.isInvalid()) {
@@ -3674,7 +3674,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
   // parse '::'[opt] nested-name-specifier[opt]
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false))
     return true;
 
