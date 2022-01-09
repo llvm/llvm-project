@@ -46,7 +46,6 @@ namespace llvm {
 class BasicBlock;
 class LLVMContext;
 class MDNode;
-class Module;
 class SwitchInst;
 class Twine;
 class Value;
@@ -55,13 +54,11 @@ class CanonicalLoopInfo;
 
 namespace clang {
 class ASTContext;
-class BlockDecl;
 class CXXDestructorDecl;
 class CXXForRangeStmt;
 class CXXTryStmt;
 class Decl;
 class LabelDecl;
-class EnumConstantDecl;
 class FunctionDecl;
 class FunctionProtoType;
 class LabelStmt;
@@ -80,7 +77,6 @@ class ObjCAtSynchronizedStmt;
 class ObjCAutoreleasePoolStmt;
 class OMPUseDevicePtrClause;
 class OMPUseDeviceAddrClause;
-class ReturnsNonNullAttr;
 class SVETypeFlags;
 class OMPExecutableDirective;
 
@@ -92,12 +88,10 @@ namespace CodeGen {
 class CodeGenTypes;
 class CGCallee;
 class CGFunctionInfo;
-class CGRecordLayout;
 class CGBlockInfo;
 class CGCXXABI;
 class BlockByrefHelpers;
 class BlockByrefInfo;
-class BlockFlags;
 class BlockFieldFlags;
 class RegionCodeGenTy;
 class TargetCodeGenInfo;

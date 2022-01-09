@@ -167,8 +167,8 @@ static bool checkHVXPipes(const HVXInstsT &hvxInsts, unsigned startIdx,
 HexagonShuffler::HexagonShuffler(MCContext &Context, bool ReportErrors,
                                  MCInstrInfo const &MCII,
                                  MCSubtargetInfo const &STI)
-    : Context(Context), BundleFlags(), MCII(MCII), STI(STI), Loc(),
-      ReportErrors(ReportErrors), CheckFailure(), AppliedRestrictions() {
+    : Context(Context), BundleFlags(), MCII(MCII), STI(STI),
+      ReportErrors(ReportErrors), CheckFailure() {
   reset();
 }
 

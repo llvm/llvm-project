@@ -2268,7 +2268,7 @@ static int32_t computeHeuristicUnrollFactor(CanonicalLoopInfo *CLI) {
       gatherPeelingPreferences(L, SE, TTI,
                                /*UserAllowPeeling=*/false,
                                /*UserAllowProfileBasedPeeling=*/false,
-                               /*UserUnrollingSpecficValues=*/false);
+                               /*UnrollingSpecficValues=*/false);
 
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
