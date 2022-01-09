@@ -1170,12 +1170,12 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       User *Usr = U.getUser();
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] Analyze " << *CurPtr << " in "
                         << *Usr << "\n");
-
-      OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
+      assert(OffsetInfoMap.count(CurPtr) &&
+             "The current pointer offset should have been seeded!");
 
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
         if (CE->isCast())
-          return HandlePassthroughUser(Usr, PtrOI, Follow);
+          return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
         if (CE->isCompare())
           return true;
         if (!CE->isGEPWithNoNotionalOverIndexing()) {
@@ -1185,7 +1185,10 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
       }
       if (auto *GEP = dyn_cast<GEPOperator>(Usr)) {
+        // Note the order here, the Usr access might change the map, CurPtr is
+        // already in it though.
         OffsetInfo &UsrOI = OffsetInfoMap[Usr];
+        OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
         UsrOI = PtrOI;
 
         // TODO: Use range information.
@@ -1214,14 +1217,17 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         return true;
       }
       if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
-        return HandlePassthroughUser(Usr, PtrOI, Follow);
+        return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
 
       // For PHIs we need to take care of the recurrence explicitly as the value
       // might change while we iterate through a loop. For now, we give up if
       // the PHI is not invariant.
       if (isa<PHINode>(Usr)) {
-        // Check if the PHI is invariant (so far).
+        // Note the order here, the Usr access might change the map, CurPtr is
+        // already in it though.
         OffsetInfo &UsrOI = OffsetInfoMap[Usr];
+        OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
+        // Check if the PHI is invariant (so far).
         if (UsrOI == PtrOI)
           return true;
 
@@ -1261,8 +1267,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
       if (auto *LoadI = dyn_cast<LoadInst>(Usr))
         return handleAccess(A, *LoadI, *CurPtr, /* Content */ nullptr,
-                            AccessKind::AK_READ, PtrOI.Offset, Changed,
-                            LoadI->getType());
+                            AccessKind::AK_READ, OffsetInfoMap[CurPtr].Offset,
+                            Changed, LoadI->getType());
       if (auto *StoreI = dyn_cast<StoreInst>(Usr)) {
         if (StoreI->getValueOperand() == CurPtr) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] Escaping use in store "
@@ -1273,7 +1279,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         Optional<Value *> Content = A.getAssumedSimplified(
             *StoreI->getValueOperand(), *this, UsedAssumedInformation);
         return handleAccess(A, *StoreI, *CurPtr, Content, AccessKind::AK_WRITE,
-                            PtrOI.Offset, Changed,
+                            OffsetInfoMap[CurPtr].Offset, Changed,
                             StoreI->getValueOperand()->getType());
       }
       if (auto *CB = dyn_cast<CallBase>(Usr)) {
@@ -1286,7 +1292,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
           const auto &CSArgPI = A.getAAFor<AAPointerInfo>(
               *this, IRPosition::callsite_argument(*CB, ArgNo),
               DepClassTy::REQUIRED);
-          Changed = translateAndAddCalleeState(A, CSArgPI, PtrOI.Offset, *CB) |
+          Changed = translateAndAddCalleeState(
+                        A, CSArgPI, OffsetInfoMap[CurPtr].Offset, *CB) |
                     Changed;
           return true;
         }
