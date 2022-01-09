@@ -1281,7 +1281,7 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     StringOffset = *StartTokenByteOffset;
     ByteNo -= StringOffset;
   }
-  while (1) {
+  while (true) {
     assert(TokNo < getNumConcatenated() && "Invalid byte number!");
     SourceLocation StrTokLoc = getStrTokenLoc(TokNo);
 

@@ -498,7 +498,7 @@ private:
       TemplateSpecializationKind TSK, const TemplateArgumentList *TemplateArgs,
       const ASTTemplateArgumentListInfo *TemplateArgsAsWritten,
       SourceLocation POI, MemberSpecializationInfo *MSInfo)
-      : Function(FD, MSInfo ? 1 : 0), Template(Template, TSK - 1),
+      : Function(FD, MSInfo ? true : false), Template(Template, TSK - 1),
         TemplateArguments(TemplateArgs),
         TemplateArgumentsAsWritten(TemplateArgsAsWritten),
         PointOfInstantiation(POI) {

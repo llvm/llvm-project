@@ -3291,7 +3291,7 @@ class BaseUsingDecl : public NamedDecl {
 
 protected:
   BaseUsingDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName N)
-      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, 0) {}
+      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, false) {}
 
 private:
   void anchor() override;

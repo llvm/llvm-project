@@ -1068,7 +1068,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
     SourceLocation LabelLoc = ConsumeToken();
 
     SmallVector<Decl *, 8> DeclsInGroup;
-    while (1) {
+    while (true) {
       if (Tok.isNot(tok::identifier)) {
         Diag(Tok, diag::err_expected) << tok::identifier;
         break;

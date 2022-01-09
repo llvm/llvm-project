@@ -302,7 +302,7 @@ class ExplodedGraphViewer : public Checker< check::EndAnalysis > {
 public:
   ExplodedGraphViewer() {}
   void checkEndAnalysis(ExplodedGraph &G, BugReporter &B,ExprEngine &Eng) const {
-    Eng.ViewGraph(0);
+    Eng.ViewGraph(false);
   }
 };
 

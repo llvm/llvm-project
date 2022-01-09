@@ -432,7 +432,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         return evalCast(lhs, resultTy, QualType{});
     }
 
-  while (1) {
+  while (true) {
     switch (lhs.getSubKind()) {
     default:
       return makeSymExprValNN(op, lhs, rhs, resultTy);

@@ -44,7 +44,7 @@ static const enum raw_ostream::Colors savedColor =
 /// Add highlights to differences in template strings.
 static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
                                       bool &Normal, bool Bold) {
-  while (1) {
+  while (true) {
     size_t Pos = Str.find(ToggleHighlight);
     OS << Str.slice(0, Pos);
     if (Pos == StringRef::npos)

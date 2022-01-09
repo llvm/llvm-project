@@ -1178,7 +1178,7 @@ bool CodeGenModule::HasLTOVisibilityPublicStd(const CXXRecordDecl *RD) {
     return false;
 
   const DeclContext *DC = RD;
-  while (1) {
+  while (true) {
     auto *D = cast<Decl>(DC);
     DC = DC->getParent();
     if (isa<TranslationUnitDecl>(DC->getRedeclContext())) {

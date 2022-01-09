@@ -740,7 +740,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
 #include "clang/Basic/Sanitizers.def"
 #undef SANITIZER
-  } while (0);
+  } while (false);
 
   if (D) {
     bool NoSanitizeCoverage = false;
@@ -2694,7 +2694,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     SanitizerScope SanScope(this);
 
     if (!OffsetValue)
-      OffsetValue = Builder.getInt1(0); // no offset.
+      OffsetValue = Builder.getInt1(false); // no offset.
 
     llvm::Constant *StaticData[] = {EmitCheckSourceLocation(Loc),
                                     EmitCheckSourceLocation(SecondaryLoc),

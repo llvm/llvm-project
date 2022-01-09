@@ -3690,7 +3690,7 @@ void CGDebugInfo::CollectContainingType(const CXXRecordDecl *RD,
   const ASTRecordLayout &RL = CGM.getContext().getASTRecordLayout(RD);
   if (const CXXRecordDecl *PBase = RL.getPrimaryBase()) {
     // Seek non-virtual primary base root.
-    while (1) {
+    while (true) {
       const ASTRecordLayout &BRL = CGM.getContext().getASTRecordLayout(PBase);
       const CXXRecordDecl *PBT = BRL.getPrimaryBase();
       if (PBT && !BRL.isPrimaryBaseVirtual())
