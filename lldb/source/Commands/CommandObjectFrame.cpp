@@ -558,16 +558,18 @@ protected:
                   }
                 }
               } else if (num_matches == 0) {
-                result.AppendErrorWithFormat(
-                    "no variables matched the regular expression '%s'.",
-                    entry.c_str());
+                result.GetErrorStream().Printf("error: no variables matched "
+                                               "the regular expression '%s'.\n",
+                                               entry.c_str());
               }
             } else {
               if (llvm::Error err = regex.GetError())
-                result.AppendError(llvm::toString(std::move(err)));
+                result.GetErrorStream().Printf(
+                    "error: %s\n", llvm::toString(std::move(err)).c_str());
               else
-                result.AppendErrorWithFormat(
-                    "unknown regex error when compiling '%s'", entry.c_str());
+                result.GetErrorStream().Printf(
+                    "error: unknown regex error when compiling '%s'\n",
+                    entry.c_str());
             }
           } else // No regex, either exact variable names or variable
                  // expressions.
@@ -603,13 +605,14 @@ protected:
                   valobj_sp->GetParent() ? entry.c_str() : nullptr);
               valobj_sp->Dump(output_stream, options);
             } else {
-              if (auto error_cstr = error.AsCString(nullptr))
-                result.AppendError(error_cstr);
+              const char *error_cstr = error.AsCString(nullptr);
+              if (error_cstr)
+                result.GetErrorStream().Printf("error: %s\n", error_cstr);
               else
-                result.AppendErrorWithFormat(
-                    "unable to find any variable expression path that matches "
-                    "'%s'.",
-                    entry.c_str());
+                result.GetErrorStream().Printf("error: unable to find any "
+                                               "variable expression path that "
+                                               "matches '%s'.\n",
+                                               entry.c_str());
             }
           }
         }
@@ -677,8 +680,7 @@ protected:
           }
         }
       }
-      if (result.GetStatus() != eReturnStatusFailed)
-        result.SetStatus(eReturnStatusSuccessFinishResult);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
     }
 
     if (m_option_variable.show_recognized_args) {
