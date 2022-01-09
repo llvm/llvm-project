@@ -1489,8 +1489,7 @@ protected:
 class raw_self_contained_string_ostream : private string_holder,
                                           public raw_string_ostream {
 public:
-  raw_self_contained_string_ostream()
-      : string_holder(), raw_string_ostream(S) {}
+  raw_self_contained_string_ostream() : raw_string_ostream(S) {}
 };
 
 const char LLVMLicenseHeader[] =
