@@ -1642,7 +1642,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus &&
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      EnteringContext))
     return ANK_Error;
 
@@ -1890,7 +1890,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
     SourceLocation TypenameLoc = ConsumeToken();
     CXXScopeSpec SS;
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
+                                       /*ObjectHasErrors=*/false,
                                        /*EnteringContext=*/false, nullptr,
                                        /*IsTypename*/ true))
       return true;
@@ -1961,7 +1961,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
+                                       /*ObjectHasErrors=*/false,
                                        /*EnteringContext*/ false))
       return true;
 
@@ -2092,7 +2092,7 @@ bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
 
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      EnteringContext))
     return true;
   if (SS.isEmpty())
@@ -2203,7 +2203,7 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   // Parse nested-name-specifier.
   if (getLangOpts().CPlusPlus)
     ParseOptionalCXXScopeSpecifier(Result.SS, /*ObjectType=*/nullptr,
-                                   /*ObjectHadErrors=*/false,
+                                   /*ObjectHasErrors=*/false,
                                    /*EnteringContext=*/false);
 
   // Check nested-name specifier.
