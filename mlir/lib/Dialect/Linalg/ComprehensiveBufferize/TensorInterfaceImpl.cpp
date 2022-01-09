@@ -77,6 +77,9 @@ struct CastOpInterface
     }
 
     // Replace the op with a memref.cast.
+    assert(memref::CastOp::areCastCompatible(resultBuffer->getType(),
+                                             resultMemRefType) &&
+           "CallOp::bufferize: cast incompatible");
     replaceOpWithNewBufferizedOp<memref::CastOp>(rewriter, op, resultMemRefType,
                                                  *resultBuffer);
 
