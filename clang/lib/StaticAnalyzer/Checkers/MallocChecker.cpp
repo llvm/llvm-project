@@ -1643,7 +1643,7 @@ void MallocChecker::checkPostObjCMessage(const ObjCMethodCall &Call,
   ProgramStateRef State =
       FreeMemAux(C, Call.getArgExpr(0), Call, C.getState(),
                  /*Hold=*/true, IsKnownToBeAllocatedMemory, AF_Malloc,
-                 /*RetNullOnFailure=*/true);
+                 /*ReturnsNullOnFailure=*/true);
 
   C.addTransition(State);
 }

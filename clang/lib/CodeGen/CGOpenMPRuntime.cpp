@@ -10584,7 +10584,7 @@ void CGOpenMPRuntime::emitTargetCall(
     emitOffloadingArraysArgument(
         CGF, Info.BasePointersArray, Info.PointersArray, Info.SizesArray,
         Info.MapTypesArray, Info.MapNamesArray, Info.MappersArray, Info,
-        {/*ForEndTask=*/false});
+        {/*ForEndCall=*/false});
 
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray =
@@ -11466,7 +11466,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     emitOffloadingArraysArgument(
         CGF, Info.BasePointersArray, Info.PointersArray, Info.SizesArray,
         Info.MapTypesArray, Info.MapNamesArray, Info.MappersArray, Info,
-        {/*ForEndTask=*/false});
+        {/*ForEndCall=*/false});
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray =
         Address(Info.BasePointersArray, CGM.getPointerAlign());

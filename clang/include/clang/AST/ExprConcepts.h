@@ -413,12 +413,12 @@ public:
   friend ASTStmtWriter;
 
   NestedRequirement(SubstitutionDiagnostic *SubstDiag) :
-      Requirement(RK_Nested, /*Dependent=*/false,
+      Requirement(RK_Nested, /*IsDependent=*/false,
                   /*ContainsUnexpandedParameterPack*/false,
-                  /*Satisfied=*/false), Value(SubstDiag) {}
+                  /*IsSatisfied=*/false), Value(SubstDiag) {}
 
   NestedRequirement(Expr *Constraint) :
-      Requirement(RK_Nested, /*Dependent=*/true,
+      Requirement(RK_Nested, /*IsDependent=*/true,
                   Constraint->containsUnexpandedParameterPack()),
       Value(Constraint) {
     assert(Constraint->isInstantiationDependent() &&
