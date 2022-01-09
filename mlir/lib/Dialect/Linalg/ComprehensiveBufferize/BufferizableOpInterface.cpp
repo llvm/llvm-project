@@ -549,6 +549,9 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::createAlloc(
     return failure();
   Value casted = allocated.getValue();
   if (memRefType && memRefType != allocMemRefType) {
+    assert(memref::CastOp::areCastCompatible(allocated.getValue().getType(),
+                                             memRefType) &&
+           "createAlloc: cast incompatible");
     casted = b.create<memref::CastOp>(loc, memRefType, allocated.getValue());
   }
 

@@ -77,9 +77,13 @@ struct ToMemrefOpInterface
 
       // Insert cast in case to_memref(to_tensor(x))'s type is different from
       // x's type.
-      if (toTensorOp.memref().getType() != toMemrefOp.getType())
+      if (toTensorOp.memref().getType() != toMemrefOp.getType()) {
+        assert(memref::CastOp::areCastCompatible(buffer.getType(),
+                                                 toMemrefOp.getType()) &&
+               "ToMemrefOp::bufferize : cast incompatible");
         buffer = rewriter.create<memref::CastOp>(toMemrefOp.getLoc(), buffer,
                                                  toMemrefOp.getType());
+      }
       replaceOpWithBufferizedValues(rewriter, toMemrefOp, buffer);
       return success();
     }
