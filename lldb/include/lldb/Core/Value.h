@@ -156,7 +156,7 @@ protected:
 
 class ValueList {
 public:
-  ValueList() : m_values() {}
+  ValueList() {}
 
   ValueList(const ValueList &rhs);
 

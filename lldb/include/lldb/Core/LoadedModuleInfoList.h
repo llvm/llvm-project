@@ -101,7 +101,7 @@ public:
     lldb::addr_t m_dynamic;
   };
 
-  LoadedModuleInfoList() : m_list() {}
+  LoadedModuleInfoList() {}
 
   void add(const LoadedModuleInfo &mod) { m_list.push_back(mod); }
 

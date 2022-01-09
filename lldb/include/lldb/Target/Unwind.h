@@ -18,7 +18,7 @@ namespace lldb_private {
 class Unwind {
 protected:
   // Classes that inherit from Unwind can see and modify these
-  Unwind(Thread &thread) : m_thread(thread), m_unwind_mutex() {}
+  Unwind(Thread &thread) : m_thread(thread) {}
 
 public:
   virtual ~Unwind() = default;

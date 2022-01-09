@@ -31,16 +31,13 @@ public:
   static const char *DEV_NULL;
   static const char *PATH_CONVERSION_ERROR;
 
-  FileSystem()
-      : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr),
-        m_home_directory() {}
+  FileSystem() : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr) {}
   FileSystem(std::shared_ptr<llvm::FileCollectorBase> collector)
       : m_fs(llvm::vfs::getRealFileSystem()), m_collector(std::move(collector)),
-        m_home_directory(), m_mapped(false) {}
+        m_mapped(false) {}
   FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
              bool mapped = false)
-      : m_fs(std::move(fs)), m_collector(nullptr), m_home_directory(),
-        m_mapped(mapped) {}
+      : m_fs(std::move(fs)), m_collector(nullptr), m_mapped(mapped) {}
 
   FileSystem(const FileSystem &fs) = delete;
   FileSystem &operator=(const FileSystem &fs) = delete;

@@ -958,7 +958,7 @@ private:
 
 class PlatformList {
 public:
-  PlatformList() : m_mutex(), m_platforms(), m_selected_platform_sp() {}
+  PlatformList() {}
 
   ~PlatformList() = default;
 

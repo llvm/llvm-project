@@ -148,7 +148,7 @@ public:
 
     Entry(Type t = Type::Invalid, const char *s = nullptr,
           const char *f = nullptr)
-        : string(s ? s : ""), printf_format(f ? f : ""), children(), type(t) {}
+        : string(s ? s : ""), printf_format(f ? f : ""), type(t) {}
 
     Entry(llvm::StringRef s);
     Entry(char ch);
