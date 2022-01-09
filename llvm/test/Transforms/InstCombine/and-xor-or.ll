@@ -3638,3 +3638,155 @@ define i32 @not_or_or_and_no_and_use8(i32 %a, i32 %b, i32 %c) {
   call void @use(i32 %or2)
   ret i32 %and2
 }
+
+define i4 @and_orn_xor(i4 %a, i4 %b) {
+; CHECK-LABEL: @and_orn_xor(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i4 [[A]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[NOTA]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[OR]], [[XOR]]
+; CHECK-NEXT:    ret i4 [[R]]
+;
+  %xor = xor i4 %a, %b
+  %nota = xor i4 %a, -1
+  %or = or i4 %nota, %b
+  %r = and i4 %or, %xor
+  ret i4 %r
+}
+
+define <2 x i4> @and_orn_xor_commute1(<2 x i4> %a, <2 x i4> %b) {
+; CHECK-LABEL: @and_orn_xor_commute1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i4> [[A]], <i4 -1, i4 undef>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[NOTA]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[XOR]], [[OR]]
+; CHECK-NEXT:    ret <2 x i4> [[R]]
+;
+  %xor = xor <2 x i4> %a, %b
+  %nota = xor <2 x i4> %a, <i4 -1, i4 undef>
+  %or = or <2 x i4> %nota, %b
+  %r = and <2 x i4> %xor, %or
+  ret <2 x i4> %r
+}
+
+define i32 @and_orn_xor_commute2(i32 %a, i32 %b) {
+; CHECK-LABEL: @and_orn_xor_commute2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[XOR]])
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NOTA]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xor = xor i32 %b, %a
+  call void @use(i32 %xor)
+  %nota = xor i32 %a, -1
+  %or = or i32 %nota, %b
+  %r = and i32 %or, %xor
+  ret i32 %r
+}
+
+define i32 @and_orn_xor_commute3(i32 %a, i32 %b) {
+; CHECK-LABEL: @and_orn_xor_commute3(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    call void @use(i32 [[NOTA]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NOTA]], [[B]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xor = xor i32 %b, %a
+  %nota = xor i32 %a, -1
+  call void @use(i32 %nota)
+  %or = or i32 %nota, %b
+  %r = and i32 %xor, %or
+  ret i32 %r
+}
+
+define i32 @and_orn_xor_commute5(i32 %pa, i32 %pb) {
+; CHECK-LABEL: @and_orn_xor_commute5(
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[PA:%.*]], [[PA]]
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[PB:%.*]], [[PB]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], [[B]]
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOTA]]
+; CHECK-NEXT:    call void @use(i32 [[OR]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = mul i32 %pa, %pa
+  %b = mul i32 %pb, %pb
+  %xor = xor i32 %a, %b
+  %nota = xor i32 %a, -1
+  %or = or i32 %b, %nota
+  call void @use(i32 %or)
+  %r = and i32 %or, %xor
+  ret i32 %r
+}
+
+define i32 @and_orn_xor_commute6(i32 %pa, i32 %pb) {
+; CHECK-LABEL: @and_orn_xor_commute6(
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[PA:%.*]], [[PA]]
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[PB:%.*]], [[PB]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], [[B]]
+; CHECK-NEXT:    call void @use(i32 [[XOR]])
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    call void @use(i32 [[NOTA]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOTA]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = mul i32 %pa, %pa
+  %b = mul i32 %pb, %pb
+  %xor = xor i32 %a, %b
+  call void @use(i32 %xor)
+  %nota = xor i32 %a, -1
+  call void @use(i32 %nota)
+  %or = or i32 %b, %nota
+  %r = and i32 %xor, %or
+  ret i32 %r
+}
+
+define i32 @and_orn_xor_commute7(i32 %pa, i32 %pb) {
+; CHECK-LABEL: @and_orn_xor_commute7(
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[PA:%.*]], [[PA]]
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[PB:%.*]], [[PB]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B]], [[A]]
+; CHECK-NEXT:    call void @use(i32 [[XOR]])
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    call void @use(i32 [[NOTA]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOTA]]
+; CHECK-NEXT:    call void @use(i32 [[OR]])
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = mul i32 %pa, %pa
+  %b = mul i32 %pb, %pb
+  %xor = xor i32 %b, %a
+  call void @use(i32 %xor)
+  %nota = xor i32 %a, -1
+  call void @use(i32 %nota)
+  %or = or i32 %b, %nota
+  call void @use(i32 %or)
+  %r = and i32 %or, %xor
+  ret i32 %r
+}
+
+define i32 @and_orn_xor_commute8(i32 %pa, i32 %pb) {
+; CHECK-LABEL: @and_orn_xor_commute8(
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[PA:%.*]], [[PA]]
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[PB:%.*]], [[PB]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B]], [[A]]
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOTA]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = mul i32 %pa, %pa
+  %b = mul i32 %pb, %pb
+  %xor = xor i32 %b, %a
+  %nota = xor i32 %a, -1
+  %or = or i32 %b, %nota
+  %r = and i32 %xor, %or
+  ret i32 %r
+}
