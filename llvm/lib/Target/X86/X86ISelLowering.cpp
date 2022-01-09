@@ -43100,6 +43100,15 @@ static SDValue combineSelectOfTwoConstants(SDNode *N, SelectionDAG &DAG) {
   // multiplier, convert to 'and' + 'add'.
   const APInt &TrueVal = TrueC->getAPIntValue();
   const APInt &FalseVal = FalseC->getAPIntValue();
+
+  // We have a more efficient lowering for "(X == 0) ? Y : -1" using SBB.
+  if ((TrueVal.isAllOnes() || FalseVal.isAllOnes()) &&
+      Cond.getOpcode() == ISD::SETCC && isNullConstant(Cond.getOperand(1))) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    if (CC == ISD::SETEQ || CC == ISD::SETNE)
+      return SDValue();
+  }
+
   bool OV;
   APInt Diff = TrueVal.ssub_ov(FalseVal, OV);
   if (OV)
