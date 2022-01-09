@@ -543,9 +543,9 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-TWO-CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
 ; VF-TWO-CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP0]], [[MUL_RESULT]]
 ; VF-TWO-CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP4]], [[TMP0]]
+; VF-TWO-CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
 ; VF-TWO-CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
-; VF-TWO-CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP8]]
-; VF-TWO-CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
+; VF-TWO-CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[TMP8]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; VF-TWO-CHECK:       vector.main.loop.iter.check:
 ; VF-TWO-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
@@ -770,9 +770,9 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-FOUR-CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL]], 1
 ; VF-FOUR-CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP0]], [[MUL_RESULT]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP4]], [[TMP0]]
+; VF-FOUR-CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
 ; VF-FOUR-CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[TMP1]], 4294967295
-; VF-FOUR-CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP8]]
-; VF-FOUR-CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
+; VF-FOUR-CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[TMP8]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[TMP10]], label [[VEC_EPILOG_SCALAR_PH]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; VF-FOUR-CHECK:       vector.main.loop.iter.check:
 ; VF-FOUR-CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 32
