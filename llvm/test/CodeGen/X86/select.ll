@@ -770,13 +770,21 @@ define i64 @test9b(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 
 ;; Select between -1 and 1.
 define i64 @test10(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test10:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    leaq -1(%rax,%rax), %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test10:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    cmpq $1, %rdi
+; GENERIC-NEXT:    sbbq %rax, %rax
+; GENERIC-NEXT:    orq $1, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test10:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    cmpq $1, %rdi
+; ATOM-NEXT:    sbbq %rax, %rax
+; ATOM-NEXT:    orq $1, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test10:
 ; ATHLON:       ## %bb.0:
@@ -1054,28 +1062,35 @@ define i8 @nezero_all_ones_or_const(i8 %x) {
 }
 
 define i32 @PR53006(i32 %x) {
-; CHECK-LABEL: PR53006:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    leal -1(%rax,%rax), %eax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: PR53006:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    negl %edi
+; GENERIC-NEXT:    sbbl %eax, %eax
+; GENERIC-NEXT:    orl $1, %eax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: PR53006:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    negl %edi
+; ATOM-NEXT:    sbbl %eax, %eax
+; ATOM-NEXT:    orl $1, %eax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: PR53006:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    xorl %eax, %eax
-; ATHLON-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; ATHLON-NEXT:    sete %al
-; ATHLON-NEXT:    leal -1(%eax,%eax), %eax
+; ATHLON-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    sbbl %eax, %eax
+; ATHLON-NEXT:    orl $1, %eax
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: PR53006:
 ; MCU:       # %bb.0:
-; MCU-NEXT:    xorl %ecx, %ecx
-; MCU-NEXT:    testl %eax, %eax
-; MCU-NEXT:    sete %cl
-; MCU-NEXT:    leal -1(%ecx,%ecx), %eax
+; MCU-NEXT:    negl %eax
+; MCU-NEXT:    sbbl %eax, %eax
+; MCU-NEXT:    orl $1, %eax
 ; MCU-NEXT:    retl
   %z = icmp eq i32 %x, 0
   %r = select i1 %z, i32 1, i32 -1
