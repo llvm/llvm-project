@@ -1606,7 +1606,7 @@ static bool isSIMDVectorType(ASTContext &Context, QualType Ty) {
 static bool isRecordWithSIMDVectorType(ASTContext &Context, QualType Ty) {
   const RecordType *RT = Ty->getAs<RecordType>();
   if (!RT)
-    return 0;
+    return false;
   const RecordDecl *RD = RT->getDecl();
 
   // If this is a C++ record, check the bases first.

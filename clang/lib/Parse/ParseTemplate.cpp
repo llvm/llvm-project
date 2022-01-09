@@ -500,7 +500,7 @@ bool Parser::ParseTemplateParameters(
 bool
 Parser::ParseTemplateParameterList(const unsigned Depth,
                              SmallVectorImpl<NamedDecl*> &TemplateParams) {
-  while (1) {
+  while (true) {
 
     if (NamedDecl *TmpParam
           = ParseTemplateParameter(Depth, TemplateParams.size())) {

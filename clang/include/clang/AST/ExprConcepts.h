@@ -275,12 +275,12 @@ public:
       friend ASTStmtWriter;
 
       /// \brief No return type requirement was specified.
-      ReturnTypeRequirement() : TypeConstraintInfo(nullptr, 0) {}
+      ReturnTypeRequirement() : TypeConstraintInfo(nullptr, false) {}
 
       /// \brief A return type requirement was specified but it was a
       /// substitution failure.
       ReturnTypeRequirement(SubstitutionDiagnostic *SubstDiag) :
-          TypeConstraintInfo(SubstDiag, 0) {}
+          TypeConstraintInfo(SubstDiag, false) {}
 
       /// \brief A 'type constraint' style return type requirement.
       /// \param TPL an invented template parameter list containing a single

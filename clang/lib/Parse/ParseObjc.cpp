@@ -134,7 +134,7 @@ Parser::ParseObjCAtClassDeclaration(SourceLocation atLoc) {
   SmallVector<SourceLocation, 8> ClassLocs;
   SmallVector<ObjCTypeParamList *, 8> ClassTypeParams;
 
-  while (1) {
+  while (true) {
     MaybeSkipAttributes(tok::objc_class);
     if (expectIdentifier()) {
       SkipUntil(tok::semi);
@@ -600,7 +600,7 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
 
   SourceRange AtEnd;
 
-  while (1) {
+  while (true) {
     // If this is a method prototype, parse it.
     if (Tok.isOneOf(tok::minus, tok::plus)) {
       if (Decl *methodPrototype =
@@ -850,7 +850,7 @@ void Parser::ParseObjCPropertyAttribute(ObjCDeclSpec &DS) {
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
-  while (1) {
+  while (true) {
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
       Actions.CodeCompleteObjCPropertyFlags(getCurScope(), DS);
@@ -1151,7 +1151,7 @@ void Parser::ParseObjCTypeQualifierList(ObjCDeclSpec &DS,
   assert(Context == DeclaratorContext::ObjCParameter ||
          Context == DeclaratorContext::ObjCResult);
 
-  while (1) {
+  while (true) {
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
       Actions.CodeCompleteObjCPassingType(
@@ -1403,7 +1403,7 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
                             Scope::FunctionDeclarationScope | Scope::DeclScope);
 
   AttributePool allParamAttrs(AttrFactory);
-  while (1) {
+  while (true) {
     ParsedAttributes paramAttrs(AttrFactory);
     Sema::ObjCArgInfo ArgInfo;
 
@@ -1533,7 +1533,7 @@ ParseObjCProtocolReferences(SmallVectorImpl<Decl *> &Protocols,
 
   SmallVector<IdentifierLocPair, 8> ProtocolIdents;
 
-  while (1) {
+  while (true) {
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
       Actions.CodeCompleteObjCProtocolReferences(ProtocolIdents);
@@ -2052,7 +2052,7 @@ Parser::ParseObjCAtProtocolDeclaration(SourceLocation AtLoc,
     ProtocolRefs.push_back(std::make_pair(protocolName, nameLoc));
 
     // Parse the list of forward declarations.
-    while (1) {
+    while (true) {
       ConsumeToken(); // the ','
       if (expectIdentifier()) {
         SkipUntil(tok::semi);
@@ -3181,7 +3181,7 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
   ExprVector KeyExprs;
 
   if (Tok.is(tok::colon)) {
-    while (1) {
+    while (true) {
       // Each iteration parses a single keyword argument.
       KeyIdents.push_back(selIdent);
       KeyLocs.push_back(Loc);
@@ -3601,7 +3601,7 @@ ExprResult Parser::ParseObjCSelectorExpression(SourceLocation AtLoc) {
 
   unsigned nColons = 0;
   if (Tok.isNot(tok::r_paren)) {
-    while (1) {
+    while (true) {
       if (TryConsumeToken(tok::coloncolon)) { // Handle :: in C++.
         ++nColons;
         KeyIdents.push_back(nullptr);

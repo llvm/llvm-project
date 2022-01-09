@@ -472,7 +472,7 @@ ExprResult Parser::ParseBraceInitializer() {
     return PreferredType;
   };
 
-  while (1) {
+  while (true) {
     PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
 
     // Handle Microsoft __if_exists/if_not_exists if necessary.
