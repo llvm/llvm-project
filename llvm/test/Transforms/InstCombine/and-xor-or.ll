@@ -3641,10 +3641,8 @@ define i32 @not_or_or_and_no_and_use8(i32 %a, i32 %b, i32 %c) {
 
 define i4 @and_orn_xor(i4 %a, i4 %b) {
 ; CHECK-LABEL: @and_orn_xor(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i4 [[A]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i4 [[NOTA]], [[B]]
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[A:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i4 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %xor = xor i4 %a, %b
@@ -3656,10 +3654,8 @@ define i4 @and_orn_xor(i4 %a, i4 %b) {
 
 define <2 x i4> @and_orn_xor_commute1(<2 x i4> %a, <2 x i4> %b) {
 ; CHECK-LABEL: @and_orn_xor_commute1(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor <2 x i4> [[A]], <i4 -1, i4 undef>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i4> [[NOTA]], [[B]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[XOR]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[A:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %xor = xor <2 x i4> %a, %b
@@ -3673,9 +3669,8 @@ define i32 @and_orn_xor_commute2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_orn_xor_commute2(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[XOR]])
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NOTA]], [[B]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], [[B]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xor = xor i32 %b, %a
@@ -3688,11 +3683,10 @@ define i32 @and_orn_xor_commute2(i32 %a, i32 %b) {
 
 define i32 @and_orn_xor_commute3(i32 %a, i32 %b) {
 ; CHECK-LABEL: @and_orn_xor_commute3(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A:%.*]], -1
 ; CHECK-NEXT:    call void @use(i32 [[NOTA]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NOTA]], [[B]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xor = xor i32 %b, %a
@@ -3707,11 +3701,11 @@ define i32 @and_orn_xor_commute5(i32 %pa, i32 %pb) {
 ; CHECK-LABEL: @and_orn_xor_commute5(
 ; CHECK-NEXT:    [[A:%.*]] = mul i32 [[PA:%.*]], [[PA]]
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[PB:%.*]], [[PB]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOTA]]
 ; CHECK-NEXT:    call void @use(i32 [[OR]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = mul i32 %pa, %pa
@@ -3732,8 +3726,8 @@ define i32 @and_orn_xor_commute6(i32 %pa, i32 %pb) {
 ; CHECK-NEXT:    call void @use(i32 [[XOR]])
 ; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
 ; CHECK-NEXT:    call void @use(i32 [[NOTA]])
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOTA]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = mul i32 %pa, %pa
@@ -3757,7 +3751,8 @@ define i32 @and_orn_xor_commute7(i32 %pa, i32 %pb) {
 ; CHECK-NEXT:    call void @use(i32 [[NOTA]])
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOTA]]
 ; CHECK-NEXT:    call void @use(i32 [[OR]])
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = mul i32 %pa, %pa
@@ -3776,10 +3771,8 @@ define i32 @and_orn_xor_commute8(i32 %pa, i32 %pb) {
 ; CHECK-LABEL: @and_orn_xor_commute8(
 ; CHECK-NEXT:    [[A:%.*]] = mul i32 [[PA:%.*]], [[PA]]
 ; CHECK-NEXT:    [[B:%.*]] = mul i32 [[PB:%.*]], [[PB]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOTA]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = mul i32 %pa, %pa
