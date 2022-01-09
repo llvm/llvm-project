@@ -21,10 +21,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <memory>
 
-namespace llvm {
-class SpecialCaseList;
-}
-
 namespace clang {
 
 class ProfileSpecialCaseList;

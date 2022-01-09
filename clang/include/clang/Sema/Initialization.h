@@ -38,7 +38,6 @@
 
 namespace clang {
 
-class APValue;
 class CXXBaseSpecifier;
 class CXXConstructorDecl;
 class ObjCMethodDecl;

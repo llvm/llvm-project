@@ -54,7 +54,6 @@ class CompilerInstance;
 class CompilerInvocation;
 class DiagnosticConsumer;
 class DiagnosticsEngine;
-class SourceManager;
 
 namespace driver {
 

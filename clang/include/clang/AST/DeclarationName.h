@@ -34,11 +34,9 @@ class ASTContext;
 template <typename> class CanQual;
 class DeclarationName;
 class DeclarationNameTable;
-class MultiKeywordSelector;
 struct PrintingPolicy;
 class TemplateDecl;
 class TypeSourceInfo;
-class UsingDirectiveDecl;
 
 using CanQualType = CanQual<Type>;
 

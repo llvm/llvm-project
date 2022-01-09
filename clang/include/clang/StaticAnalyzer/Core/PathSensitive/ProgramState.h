@@ -47,8 +47,6 @@ typedef std::unique_ptr<StoreManager>(*StoreManagerCreator)(
 // ProgramStateTrait - Traits used by the Generic Data Map of a ProgramState.
 //===----------------------------------------------------------------------===//
 
-template <typename T> struct ProgramStatePartialTrait;
-
 template <typename T> struct ProgramStateTrait {
   typedef typename T::data_type data_type;
   static inline void *MakeVoidPtr(data_type D) { return (void*) D; }

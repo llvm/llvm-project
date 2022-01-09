@@ -13,7 +13,6 @@
 #include "llvm/ADT/DenseMap.h"
 
 namespace clang {
-class DiagnosticsEngine;
 
 namespace driver {
   class Action;

@@ -20,7 +20,6 @@ class AnalysisDeclContext;
 class BlockDecl;
 class CFG;
 class Decl;
-class DeclContext;
 class Expr;
 class ParmVarDecl;
 class Stmt;

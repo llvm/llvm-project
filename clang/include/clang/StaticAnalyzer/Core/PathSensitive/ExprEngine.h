@@ -77,13 +77,9 @@ namespace ento {
 
 class AnalysisManager;
 class BasicValueFactory;
-class BlockCounter;
-class BranchNodeBuilder;
 class CallEvent;
 class CheckerManager;
 class ConstraintManager;
-class CXXTempObjectRegion;
-class EndOfFunctionNodeBuilder;
 class ExplodedNodeSet;
 class ExplodedNode;
 class IndirectGotoNodeBuilder;

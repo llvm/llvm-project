@@ -48,7 +48,6 @@ namespace clang {
 class AnalyzerOptions;
 class ASTContext;
 class Decl;
-class DiagnosticsEngine;
 class LocationContext;
 class SourceManager;
 class Stmt;
@@ -61,7 +60,6 @@ class ExplodedGraph;
 class ExplodedNode;
 class ExprEngine;
 class MemRegion;
-class SValBuilder;
 
 //===----------------------------------------------------------------------===//
 // Interface for individual bug reports.

@@ -21,9 +21,7 @@ namespace clang {
 
 class BlockDecl;
 class CXXMethodDecl;
-class IdentifierInfo;
 class TagDecl;
-class Type;
 class VarDecl;
 
 /// Keeps track of the mangled names of lambda expressions and block

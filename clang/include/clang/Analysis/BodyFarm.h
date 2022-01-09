@@ -24,7 +24,6 @@ namespace clang {
 class ASTContext;
 class FunctionDecl;
 class ObjCMethodDecl;
-class ObjCPropertyDecl;
 class Stmt;
 class CodeInjector;
 
