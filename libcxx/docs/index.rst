@@ -157,7 +157,7 @@ This list contains known issues with libc++
 
 A full list of currently open libc++ bugs can be `found here`__.
 
-.. __:  https://bugs.llvm.org/buglist.cgi?component=All%20Bugs&product=libc%2B%2B&query_format=advanced&resolution=---&order=changeddate%20DESC%2Cassigned_to%20DESC%2Cbug_status%2Cpriority%2Cbug_id&list_id=74184
+.. __:  https://github.com/llvm/llvm-project/issues?q=label%3Alibc%2B%2B
 
 
 Design Documents
@@ -198,7 +198,7 @@ and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 **Bug Reports**
 
 If you think you've found a bug in libc++, please report it using
-the `LLVM Bugzilla`_. If you're not sure, you
+the `LLVM bug tracker`_. If you're not sure, you
 can post a message to the `libcxx-dev mailing list`_ or on IRC.
 
 **Patches**
