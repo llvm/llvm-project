@@ -905,7 +905,7 @@ public:
   /// correctly.
   class LookupInfo {
   public:
-    LookupInfo() : m_name(), m_lookup_name() {}
+    LookupInfo() {}
 
     LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
                lldb::LanguageType language);

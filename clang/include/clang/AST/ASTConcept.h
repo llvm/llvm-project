@@ -22,7 +22,6 @@
 
 namespace clang {
 class ConceptDecl;
-class ConceptSpecializationExpr;
 
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.

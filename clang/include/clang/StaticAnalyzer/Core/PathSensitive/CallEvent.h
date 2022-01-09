@@ -76,7 +76,6 @@ enum CallEventKind {
 };
 
 class CallEvent;
-class CallDescription;
 
 template<typename T = CallEvent>
 class CallEventRef : public IntrusiveRefCntPtr<const T> {
