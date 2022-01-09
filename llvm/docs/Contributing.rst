@@ -26,10 +26,9 @@ about it. Please let us know and follow the instructions in
 Bug Fixes
 ---------
 If you are interested in contributing code to LLVM, bugs labeled with the
-`beginner keyword`_ in the `bug tracker`_ are a good way to get familiar with
-the code base. If you are interested in fixing a bug, please create an account
-for the bug tracker and assign it to yourself, to let people know you are working on
-it.
+`beginner`_ keyword in the `bug tracker`_ are a good way to get familiar with
+the code base. If you are interested in fixing a bug please comment on it to
+let people know you are working on it.
 
 Then try to reproduce and fix the bug with upstream LLVM. Start by building
 LLVM from source as described in :doc:`GettingStarted` and
@@ -150,8 +149,8 @@ of LLVM's high-level design, as well as its internals:
 
 .. _Developer's List (llvm-dev): http://lists.llvm.org/mailman/listinfo/llvm-dev
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
-.. _beginner keyword: https://bugs.llvm.org/buglist.cgi?bug_status=NEW&bug_status=REOPENED&keywords=beginner%2C%20&keywords_type=allwords&list_id=130748&query_format=advanced&resolution=---
-.. _bug tracker: https://bugs.llvm.org
+.. _beginner: https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Abeginner
+.. _bug tracker: https://github.com/llvm/llvm-project/issues
 .. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
 .. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's Phabricator: https://reviews.llvm.org/
