@@ -33,6 +33,8 @@ public:
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
 
+  void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+
   void emitInstruction(const MachineInstr *MI) override;
 
   bool runOnMachineFunction(MachineFunction &MF) override;
