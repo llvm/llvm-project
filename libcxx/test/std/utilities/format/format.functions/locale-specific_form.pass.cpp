@@ -227,7 +227,7 @@ void test(std::basic_string<CharT> expected, std::locale loc,
   }
 }
 
-#ifndef _LIBCPP_HAS_NO_UNICODE
+#ifndef TEST_HAS_NO_UNICODE
 template <class CharT>
 struct numpunct_unicode;
 
@@ -244,7 +244,7 @@ struct numpunct_unicode<wchar_t> : std::numpunct<wchar_t> {
   string_type do_falsename() const override { return L"ungültig"; }
 };
 #endif
-#endif // _LIBCPP_HAS_NO_UNICODE
+#endif // TEST_HAS_NO_UNICODE
 
 template <class CharT>
 void test_bool() {
@@ -265,7 +265,7 @@ void test_bool() {
   test(STR("true"), std::locale(LOCALE_en_US_UTF_8), STR("{:L}"), true);
   test(STR("false"), std::locale(LOCALE_en_US_UTF_8), STR("{:L}"), false);
 
-#ifndef _LIBCPP_HAS_NO_UNICODE
+#ifndef TEST_HAS_NO_UNICODE
   std::locale loc_unicode =
       std::locale(std::locale(), new numpunct_unicode<CharT>());
 
@@ -276,7 +276,7 @@ void test_bool() {
   test(STR("gültig!!!"), loc_unicode, STR("{:!<9L}"), true);
   test(STR("_gültig__"), loc_unicode, STR("{:_^9L}"), true);
   test(STR("   gültig"), loc_unicode, STR("{:>9L}"), true);
-#endif
+#endif // TEST_HAS_NO_UNICODE
 }
 
 template <class CharT>

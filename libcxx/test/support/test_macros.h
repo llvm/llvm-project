@@ -361,6 +361,12 @@ inline void DoNotOptimize(Tp const& value) {
 #   define TEST_HAS_NO_WIDE_CHARACTERS
 #endif
 
+#if defined(_LIBCPP_HAS_NO_UNICODE)
+#   define TEST_HAS_NO_UNICODE
+#elif defined(_MSVC_EXECUTION_CHARACTER_SET) && _MSVC_EXECUTION_CHARACTER_SET != 65001
+#   define TEST_HAS_NO_UNICODE
+#endif
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif

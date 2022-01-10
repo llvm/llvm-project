@@ -11,6 +11,7 @@
 #include <format>
 
 #include "make_string.h"
+#include "test_macros.h"
 
 // In this file the following template types are used:
 // TestFunction must be callable as check(expected-result, string-to-format, args-to-format...)
@@ -227,7 +228,8 @@ void format_test_string(T world, T universe, TestFunction check,
 
 template <class CharT, class TestFunction>
 void format_test_string_unicode(TestFunction check) {
-#ifndef _LIBCPP_HAS_NO_UNICODE
+  (void)check;
+#ifndef TEST_HAS_NO_UNICODE
   // ß requires one column
   check(STR("aßc"), STR("{}"), STR("aßc"));
 
@@ -259,9 +261,7 @@ void format_test_string_unicode(TestFunction check) {
   check(STR("a\u1110c---"), STR("{:-<7}"), STR("a\u1110c"));
   check(STR("-a\u1110c--"), STR("{:-^7}"), STR("a\u1110c"));
   check(STR("---a\u1110c"), STR("{:->7}"), STR("a\u1110c"));
-#else
-  (void)check;
-#endif
+#endif // TEST_HAS_NO_UNICODE
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
