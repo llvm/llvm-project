@@ -43,8 +43,8 @@
 // linked as --whole-archive to override the weak symbols that are used to
 // implement a fallback for toolchains that do not yet have a hostrpc library.
 extern "C" {
-unsigned long hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
-                                    uint32_t device_id);
+uint64_t hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
+                               uint32_t device_id);
 hsa_status_t hostrpc_init();
 hsa_status_t hostrpc_terminate();
 
@@ -52,8 +52,8 @@ __attribute__((weak)) hsa_status_t hostrpc_init() { return HSA_STATUS_SUCCESS; }
 __attribute__((weak)) hsa_status_t hostrpc_terminate() {
   return HSA_STATUS_SUCCESS;
 }
-__attribute__((weak)) unsigned long
-hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *, uint32_t device_id) {
+__attribute__((weak)) uint64_t hostrpc_assign_buffer(hsa_agent_t, hsa_queue_t *,
+                                                     uint32_t device_id) {
   DP("Warning: Attempting to assign hostrpc to device %u, but hostrpc library "
      "missing\n",
      device_id);
@@ -1231,8 +1231,8 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
         // under a multiple reader lock, not a writer lock.
         static pthread_mutex_t hostcall_init_lock = PTHREAD_MUTEX_INITIALIZER;
         pthread_mutex_lock(&hostcall_init_lock);
-        unsigned long buffer = hostrpc_assign_buffer(
-            DeviceInfo.HSAAgents[device_id], queue, device_id);
+        uint64_t buffer = hostrpc_assign_buffer(DeviceInfo.HSAAgents[device_id],
+                                                queue, device_id);
         pthread_mutex_unlock(&hostcall_init_lock);
         if (!buffer) {
           DP("hostrpc_assign_buffer failed, gpu would dereference null and "
