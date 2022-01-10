@@ -1609,13 +1609,12 @@ void elf::postScanRelocations() {
     bool isLocalInExecutable = !sym.isPreemptible && !config->shared;
 
     if (sym.needsTlsDesc) {
-      in.got->addDynTlsEntry(sym);
+      in.got->addTlsDescEntry(sym);
       mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          target->tlsDescRel, *in.got, in.got->getGlobalDynOffset(sym), sym,
+          target->tlsDescRel, *in.got, in.got->getTlsDescOffset(sym), sym,
           target->tlsDescRel);
     }
-    if (sym.needsTlsGd && !sym.needsTlsDesc) {
-      // TODO Support mixed TLSDESC and TLS GD.
+    if (sym.needsTlsGd) {
       in.got->addDynTlsEntry(sym);
       uint64_t off = in.got->getGlobalDynOffset(sym);
       if (isLocalInExecutable)

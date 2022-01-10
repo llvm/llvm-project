@@ -823,14 +823,13 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_SIZE:
     return sym.getSize() + a;
   case R_TLSDESC:
-    return in.got->getGlobalDynAddr(sym) + a;
+    return in.got->getTlsDescAddr(sym) + a;
   case R_TLSDESC_PC:
-    return in.got->getGlobalDynAddr(sym) + a - p;
+    return in.got->getTlsDescAddr(sym) + a - p;
   case R_TLSDESC_GOTPLT:
-    return in.got->getGlobalDynAddr(sym) + a - in.gotPlt->getVA();
+    return in.got->getTlsDescAddr(sym) + a - in.gotPlt->getVA();
   case R_AARCH64_TLSDESC_PAGE:
-    return getAArch64Page(in.got->getGlobalDynAddr(sym) + a) -
-           getAArch64Page(p);
+    return getAArch64Page(in.got->getTlsDescAddr(sym) + a) - getAArch64Page(p);
   case R_TLSGD_GOT:
     return in.got->getGlobalDynOffset(sym) + a;
   case R_TLSGD_GOTPLT:

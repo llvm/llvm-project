@@ -3,9 +3,11 @@
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck %s --check-prefix=RELA
 
-## FIXME Both TLSDESC and DTPMOD64/DTPOFF64 should be present.
+## Both TLSDESC and DTPMOD64/DTPOFF64 should be present.
 # RELA:      .rela.dyn {
-# RELA-NEXT:   0x2430 R_X86_64_TLSDESC a 0x0
+# RELA-NEXT:   0x[[#%X,ADDR:]] R_X86_64_TLSDESC  a 0x0
+# RELA-NEXT:   0x[[#ADDR+16]]  R_X86_64_DTPMOD64 a 0x0
+# RELA-NEXT:   0x[[#ADDR+24]]  R_X86_64_DTPOFF64 a 0x0
 # RELA-NEXT: }
 
 leaq a@tlsdesc(%rip), %rax
