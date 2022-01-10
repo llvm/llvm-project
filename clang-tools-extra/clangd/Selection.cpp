@@ -8,7 +8,6 @@
 
 #include "Selection.h"
 #include "AST.h"
-#include "SourceCode.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -303,10 +302,21 @@ public:
   bool mayHit(SourceRange R) const {
     if (SpelledTokens.empty())
       return false;
-    auto B = offsetInSelFile(R.getBegin());
-    auto E = offsetInSelFile(R.getEnd());
-    if (B && E)
-      if (*E < SpelledTokens.front().Offset || *B > SpelledTokens.back().Offset)
+    // If the node starts after the selection ends, it is not selected.
+    // Tokens a macro location might claim are >= its expansion start.
+    // So if the expansion start > last selected token, we can prune it.
+    // (This is particularly helpful for GTest's TEST macro).
+    if (auto B = offsetInSelFile(getExpansionStart(R.getBegin())))
+      if (*B > SpelledTokens.back().Offset)
+        return false;
+    // If the node ends before the selection begins, it is not selected.
+    SourceLocation EndLoc = R.getEnd();
+    while (EndLoc.isMacroID())
+      EndLoc = SM.getImmediateExpansionRange(EndLoc).getEnd();
+    // In the rare case that the expansion range is a char range, EndLoc is
+    // ~one token too far to the right. We may fail to prune, that's OK.
+    if (auto E = offsetInSelFile(EndLoc))
+      if (*E < SpelledTokens.front().Offset)
         return false;
     return true;
   }
@@ -401,9 +411,14 @@ private:
     return NoTokens;
   }
 
+  // Decomposes Loc and returns the offset if the file ID is SelFile.
   llvm::Optional<unsigned> offsetInSelFile(SourceLocation Loc) const {
+    // Decoding Loc with SM.getDecomposedLoc is relatively expensive.
+    // But SourceLocations for a file are numerically contiguous, so we
+    // can use cheap integer operations instead.
     if (Loc < SelFileBounds.getBegin() || Loc >= SelFileBounds.getEnd())
       return llvm::None;
+    // FIXME: subtracting getRawEncoding() is dubious, move this logic into SM.
     return Loc.getRawEncoding() - SelFileBounds.getBegin().getRawEncoding();
   }
 
