@@ -118,10 +118,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workitem-id-x"))
       WorkItemIDX = true;
 
-    if (!F.hasFnAttribute("amdgpu-no-workitem-id-y"))
+    if (!F.hasFnAttribute("amdgpu-no-workitem-id-y") &&
+        ST.getMaxWorkitemID(F, 1) != 0)
       WorkItemIDY = true;
 
-    if (!F.hasFnAttribute("amdgpu-no-workitem-id-z"))
+    if (!F.hasFnAttribute("amdgpu-no-workitem-id-z") &&
+        ST.getMaxWorkitemID(F, 2) != 0)
       WorkItemIDZ = true;
 
     if (!F.hasFnAttribute("amdgpu-no-dispatch-ptr"))
