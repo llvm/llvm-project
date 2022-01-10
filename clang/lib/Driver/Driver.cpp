@@ -2219,6 +2219,11 @@ bool Driver::DiagnoseInputExistence(const DerivedArgList &Args, StringRef Value,
   if (Value == "-")
     return true;
 
+  // If it's a header to be found in the system or user search path, then defer
+  // complaints about its absence until those searches can be done.
+  if (Ty == types::TY_CXXSHeader || Ty == types::TY_CXXUHeader)
+    return true;
+
   if (getVFS().exists(Value))
     return true;
 
