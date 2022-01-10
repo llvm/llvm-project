@@ -22,8 +22,9 @@ namespace comprehensive_bufferize {
 
 struct BufferizationOptions;
 
-/// Bufferize the given module. This bufferizations performs a simple function
-/// call analysis to determine which function arguments are inplaceable.
+/// Run Module Bufferization on the given module. Performs a simple function
+/// call analysis to determine which function arguments are inplaceable. Then
+/// analyzes and bufferizes FuncOps one-by-one with Comprehensive Bufferization.
 LogicalResult
 runComprehensiveBufferize(ModuleOp moduleOp,
                           std::unique_ptr<BufferizationOptions> options);
