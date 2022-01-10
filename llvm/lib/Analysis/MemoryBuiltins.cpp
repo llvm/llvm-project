@@ -255,15 +255,6 @@ bool llvm::isAlignedAllocLikeFn(
   return getAllocationData(V, AlignedAllocLike, GetTLI)
       .hasValue();
 }
-/// Gets the alignment argument for an aligned_alloc-like function
-Value *llvm::getAllocAlignment(const CallBase *V,
-                               const TargetLibraryInfo *TLI) {
-  const Optional<AllocFnsTy> FnData = getAllocationData(V, AnyAlloc, TLI);
-  if (!FnData.hasValue() || FnData->AlignParam < 0) {
-    return nullptr;
-  }
-  return V->getOperand(FnData->AlignParam);
-}
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates zero-filled memory (such as calloc).
@@ -305,6 +296,18 @@ bool llvm::isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
 /// allocates memory (strdup, strndup).
 bool llvm::isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, StrDupLike, TLI).hasValue();
+}
+
+
+Value *llvm::getAllocAlignment(const CallBase *V,
+                               const TargetLibraryInfo *TLI) {
+  assert(isAllocationFn(V, TLI));
+
+  const Optional<AllocFnsTy> FnData = getAllocationData(V, AnyAlloc, TLI);
+  if (!FnData.hasValue() || FnData->AlignParam < 0) {
+    return nullptr;
+  }
+  return V->getOperand(FnData->AlignParam);
 }
 
 Constant *llvm::getInitialValueOfAllocation(const CallBase *Alloc,
