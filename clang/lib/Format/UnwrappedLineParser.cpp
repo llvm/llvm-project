@@ -2874,6 +2874,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         if (!tryToParseBracedList())
           break;
       }
+      if (FormatTok->is(tok::l_square) && !tryToParseLambda())
+        break;
       if (FormatTok->Tok.is(tok::semi))
         return;
       if (Style.isCSharp() && FormatTok->is(Keywords.kw_where)) {
