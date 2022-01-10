@@ -157,7 +157,7 @@ This list contains known issues with libc++
 
 A full list of currently open libc++ bugs can be `found here`__.
 
-.. __:  https://github.com/llvm/llvm-project/issues?q=label%3Alibc%2B%2B
+.. __:  https://github.com/llvm/llvm-project/labels/libc%2B%2B
 
 
 Design Documents
