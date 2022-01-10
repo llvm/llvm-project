@@ -1246,7 +1246,7 @@ void Writer::mergeSections() {
     if (p.first == toName)
       continue;
     StringSet<> names;
-    while (1) {
+    while (true) {
       if (!names.insert(toName).second)
         fatal("/merge: cycle found for section '" + p.first + "'");
       auto i = config->merge.find(toName);
