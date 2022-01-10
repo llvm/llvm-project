@@ -9,8 +9,8 @@
 #ifndef LLVM_ANALYSIS_MLINLINEADVISOR_H
 #define LLVM_ANALYSIS_MLINLINEADVISOR_H
 
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/IR/PassManager.h"
 
@@ -26,7 +26,6 @@ public:
   MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
                   std::unique_ptr<MLModelRunner> ModelRunner);
 
-  CallGraph *callGraph() const { return CG.get(); }
   virtual ~MLInlineAdvisor() = default;
 
   void onPassEntry() override;
@@ -51,17 +50,22 @@ protected:
   virtual std::unique_ptr<MLInlineAdvice>
   getAdviceFromModel(CallBase &CB, OptimizationRemarkEmitter &ORE);
 
+  // Get the initial 'level' of the function, or 0 if the function has been
+  // introduced afterwards.
+  // TODO: should we keep this updated?
+  unsigned getInitialFunctionLevel(const Function &F) const;
+
   std::unique_ptr<MLModelRunner> ModelRunner;
 
 private:
   int64_t getModuleIRSize() const;
 
   bool Invalid = true;
-  std::unique_ptr<CallGraph> CG;
+  LazyCallGraph &CG;
 
   int64_t NodeCount = 0;
   int64_t EdgeCount = 0;
-  std::map<const Function *, unsigned> FunctionLevels;
+  std::map<const LazyCallGraph::Node *, unsigned> FunctionLevels;
   const int32_t InitialIRSize = 0;
   int32_t CurrentIRSize = 0;
 
