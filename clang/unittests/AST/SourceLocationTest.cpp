@@ -242,13 +242,6 @@ TEST(TypeLoc, DecltypeTypeLocRange) {
   verify(Target2->getSourceRange(), Code.range("full2"));
 }
 
-TEST(TypeLoc, AutoTypeLocRange) {
-  RangeVerifier<TypeLoc> Verifier;
-  Verifier.expectRange(1, 1, 1, 14);
-  EXPECT_TRUE(Verifier.match("decltype(auto) a = 1;", typeLoc(loc(autoType())),
-                             Lang_CXX11));
-}
-
 TEST(TypeLoc, LongDoubleRange) {
   RangeVerifier<TypeLoc> Verifier;
   Verifier.expectRange(1, 1, 1, 6);
