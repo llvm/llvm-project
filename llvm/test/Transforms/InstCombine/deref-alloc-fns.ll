@@ -11,6 +11,8 @@ declare noalias nonnull i8* @_Znwm(i64) ; throwing version of 'new'
 declare noalias i8* @strdup(i8*)
 declare noalias i8* @aligned_alloc(i64, i64)
 declare noalias align 16 i8* @memalign(i64, i64)
+; new[](unsigned int, align_val_t)
+declare noalias i8* @_ZnajSt11align_val_t(i65 %size, i64 %align)
 
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
@@ -340,6 +342,15 @@ define noalias i8* @ossfuzz_23214() {
 bb:
   %and = and i64 -1, -9223372036854775808
   %call = tail call noalias i8* @aligned_alloc(i64 %and, i64 512)
+  ret i8* %call
+}
+
+define noalias i8* @op_new_align() {
+; CHECK-LABEL: @op_new_align(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @_ZnajSt11align_val_t(i65 32, i64 32)
+; CHECK-NEXT:    ret i8* [[CALL]]
+;
+  %call = tail call i8* @_ZnajSt11align_val_t(i65 32, i64 32)
   ret i8* %call
 }
 
