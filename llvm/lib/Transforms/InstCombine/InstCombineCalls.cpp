@@ -2594,8 +2594,7 @@ void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryI
     return;
 
   ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
-  if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment) &&
-      isKnownNonZero(Call.getOperand(1), DL, 0, &AC, &Call, &DT)) {
+  if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment)) {
     uint64_t AlignmentVal = Op0C->getZExtValue();
     if (llvm::isPowerOf2_64(AlignmentVal)) {
       Call.removeRetAttr(Attribute::Alignment);
