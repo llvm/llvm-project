@@ -2572,13 +2572,15 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         return ConstantInt::get(Ty, C0->countLeadingZeros());
 
     case Intrinsic::abs:
-      // Undef or minimum val operand with poison min --> undef
       assert(C1 && "Must be constant int");
+      assert((C1->isOne() || C1->isZero()) && "Must be 0 or 1");
+
+      // Undef or minimum val operand with poison min --> undef
       if (C1->isOne() && (!C0 || C0->isMinSignedValue()))
         return UndefValue::get(Ty);
 
       // Undef operand with no poison min --> 0 (sign bit must be clear)
-      if (C1->isZero() && !C0)
+      if (!C0)
         return Constant::getNullValue(Ty);
 
       return ConstantInt::get(Ty, C0->abs());
