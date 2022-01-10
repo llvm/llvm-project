@@ -251,7 +251,7 @@ class TestHasLocale(SetupConfigs):
             self.fail("checking for hasLocale should not explode")
 
     def test_nonexistent_locale(self):
-        self.assertFalse(dsl.hasAnyLocale(self.config, ['for_sure_this_is_not_an_existing_locale']))
+        self.assertFalse(dsl.hasAnyLocale(self.config, ['forsurethisisnotanexistinglocale']))
 
     def test_localization_program_doesnt_compile(self):
         compilerIndex = findIndex(self.config.substitutions, lambda x: x[0] == '%{cxx}')
