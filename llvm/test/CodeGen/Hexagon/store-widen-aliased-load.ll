@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -march=hexagon --combiner-store-merging=false < %s | FileCheck %s
 ; CHECK-NOT: memh
 ; Check that store widening does not merge the two stores.
 

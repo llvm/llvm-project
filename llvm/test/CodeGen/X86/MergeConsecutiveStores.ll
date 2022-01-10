@@ -920,3 +920,31 @@ define void @merge_heterogeneous(%struct.C* nocapture %p, %struct.C* nocapture %
   ret void
 }
 
+define i32 @merge_store_load_store_seq(i32* %buff) {
+entry:
+; CHECK-LABEL: merge_store_load_store_seq:
+; CHECK:      movl 4(%rdi), %eax
+; CHECK-NEXT: movq $0, (%rdi)
+; CHECK-NEXT: retq
+
+  store i32 0, i32* %buff, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %buff, i64 1
+  %0 = load i32, i32* %arrayidx1, align 4
+  store i32 0, i32* %arrayidx1, align 4
+  ret i32 %0
+}
+
+define i32 @merge_store_alias(i32* %buff, i32* %other) {
+entry:
+; CHECK-LABEL: merge_store_alias:
+; CHECK:  movl $0, (%rdi)
+; CHECK-NEXT:  movl (%rsi), %eax
+; CHECK-NEXT:  movl $0, 4(%rdi)
+; CHECK-NEXT:  retq
+
+  store i32 0, i32* %buff, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %buff, i64 1
+  %0 = load i32, i32* %other, align 4
+  store i32 0, i32* %arrayidx1, align 4
+  ret i32 %0
+}
