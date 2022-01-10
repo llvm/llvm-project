@@ -150,7 +150,7 @@ TargetPassConfig *M88kTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void M88kPassConfig::addPreEmitPass() {
-  // TODO Add pass for div-by-zero check.
+  addPass(createM88kDelaySlotFiller());
 }
 
 // Global ISEL

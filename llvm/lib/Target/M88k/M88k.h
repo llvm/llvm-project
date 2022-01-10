@@ -33,6 +33,7 @@ createM88kInstructionSelector(const M88kTargetMachine &, const M88kSubtarget &,
                               const M88kRegisterBankInfo &);
 FunctionPass *createM88kPreLegalizerCombiner();
 FunctionPass *createM88kPostLegalizerLowering();
+FunctionPass *createM88kDelaySlotFiller();
 
 } // end namespace llvm
 #endif
