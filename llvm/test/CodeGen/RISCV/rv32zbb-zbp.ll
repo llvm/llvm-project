@@ -473,20 +473,20 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 define i8 @srli_i8(i8 %a) nounwind {
 ; RV32I-LABEL: srli_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 192
-; RV32I-NEXT:    srli a0, a0, 6
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srli a0, a0, 30
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: srli_i8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a0, a0, 192
-; RV32ZBB-NEXT:    srli a0, a0, 6
+; RV32ZBB-NEXT:    slli a0, a0, 24
+; RV32ZBB-NEXT:    srli a0, a0, 30
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: srli_i8:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    andi a0, a0, 192
-; RV32ZBP-NEXT:    srli a0, a0, 6
+; RV32ZBP-NEXT:    slli a0, a0, 24
+; RV32ZBP-NEXT:    srli a0, a0, 30
 ; RV32ZBP-NEXT:    ret
   %1 = lshr i8 %a, 6
   ret i8 %1

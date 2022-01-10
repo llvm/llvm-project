@@ -363,26 +363,26 @@ define i8 @udiv8_constant(i8 %a) nounwind {
 define i8 @udiv8_pow2(i8 %a) nounwind {
 ; RV32I-LABEL: udiv8_pow2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 248
-; RV32I-NEXT:    srli a0, a0, 3
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srli a0, a0, 27
 ; RV32I-NEXT:    ret
 ;
 ; RV32IM-LABEL: udiv8_pow2:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    andi a0, a0, 248
-; RV32IM-NEXT:    srli a0, a0, 3
+; RV32IM-NEXT:    slli a0, a0, 24
+; RV32IM-NEXT:    srli a0, a0, 27
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv8_pow2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 248
-; RV64I-NEXT:    srli a0, a0, 3
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 59
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: udiv8_pow2:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    andi a0, a0, 248
-; RV64IM-NEXT:    srli a0, a0, 3
+; RV64IM-NEXT:    slli a0, a0, 56
+; RV64IM-NEXT:    srli a0, a0, 59
 ; RV64IM-NEXT:    ret
   %1 = udiv i8 %a, 8
   ret i8 %1

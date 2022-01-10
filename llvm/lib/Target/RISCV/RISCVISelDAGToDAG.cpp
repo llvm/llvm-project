@@ -542,35 +542,38 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SRL: {
-    // Optimize (srl (and X, 0xffff), C) ->
-    //          (srli (slli X, (XLen-16), (XLen-16) + C)
-    // Taking into account that the 0xffff may have had lower bits unset by
-    // SimplifyDemandedBits. This avoids materializing the 0xffff immediate.
-    // This pattern occurs when type legalizing i16 right shifts.
-    // FIXME: This could be extended to other AND masks.
+    // Optimize (srl (and X, C2), C) ->
+    //          (srli (slli X, (XLen-C3), (XLen-C3) + C)
+    // Where C2 is a mask with C3 trailing ones.
+    // Taking into account that the C2 may have had lower bits unset by
+    // SimplifyDemandedBits. This avoids materializing the C2 immediate.
+    // This pattern occurs when type legalizing right shifts for types with
+    // less than XLen bits.
     auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
-    if (N1C) {
-      uint64_t ShAmt = N1C->getZExtValue();
-      SDValue N0 = Node->getOperand(0);
-      if (ShAmt < 16 && N0.getOpcode() == ISD::AND && N0.hasOneUse() &&
-          isa<ConstantSDNode>(N0.getOperand(1))) {
-        uint64_t Mask = N0.getConstantOperandVal(1);
-        Mask |= maskTrailingOnes<uint64_t>(ShAmt);
-        if (Mask == 0xffff) {
-          unsigned LShAmt = Subtarget->getXLen() - 16;
-          SDNode *SLLI =
-              CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
-                                     CurDAG->getTargetConstant(LShAmt, DL, VT));
-          SDNode *SRLI = CurDAG->getMachineNode(
-              RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
-              CurDAG->getTargetConstant(LShAmt + ShAmt, DL, VT));
-          ReplaceNode(Node, SRLI);
-          return;
-        }
-      }
-    }
-
-    break;
+    if (!N1C)
+      break;
+    SDValue N0 = Node->getOperand(0);
+    if (N0.getOpcode() != ISD::AND || !N0.hasOneUse() ||
+        !isa<ConstantSDNode>(N0.getOperand(1)))
+      break;
+    unsigned ShAmt = N1C->getZExtValue();
+    uint64_t Mask = N0.getConstantOperandVal(1);
+    Mask |= maskTrailingOnes<uint64_t>(ShAmt);
+    if (!isMask_64(Mask))
+      break;
+    unsigned TrailingOnes = countTrailingOnes(Mask);
+    // 32 trailing ones should use srliw via tablegen pattern.
+    if (TrailingOnes == 32 || ShAmt >= TrailingOnes)
+      break;
+    unsigned LShAmt = Subtarget->getXLen() - TrailingOnes;
+    SDNode *SLLI =
+        CurDAG->getMachineNode(RISCV::SLLI, DL, VT, N0->getOperand(0),
+                               CurDAG->getTargetConstant(LShAmt, DL, VT));
+    SDNode *SRLI = CurDAG->getMachineNode(
+        RISCV::SRLI, DL, VT, SDValue(SLLI, 0),
+        CurDAG->getTargetConstant(LShAmt + ShAmt, DL, VT));
+    ReplaceNode(Node, SRLI);
+    return;
   }
   case ISD::SRA: {
     // Optimize (sra (sext_inreg X, i16), C) ->
@@ -587,7 +590,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     if (N0.getOpcode() != ISD::SIGN_EXTEND_INREG || !N0.hasOneUse())
       break;
-    uint64_t ShAmt = N1C->getZExtValue();
+    unsigned ShAmt = N1C->getZExtValue();
     unsigned ExtSize =
         cast<VTSDNode>(N0.getOperand(1))->getVT().getSizeInBits();
     // ExtSize of 32 should use sraiw via tablegen pattern.

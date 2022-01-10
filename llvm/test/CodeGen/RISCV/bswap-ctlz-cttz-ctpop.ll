@@ -212,10 +212,8 @@ define i16 @test_cttz_i16(i16 %a) nounwind {
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    slli a1, a0, 8
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    lui a1, 2
-; RV32I-NEXT:    addi a1, a1, -256
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 8
+; RV32I-NEXT:    slli a0, a0, 19
+; RV32I-NEXT:    srli a0, a0, 27
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB4_2:
 ; RV32I-NEXT:    li a0, 16
@@ -247,12 +245,10 @@ define i16 @test_cttz_i16(i16 %a) nounwind {
 ; RV64I-NEXT:    lui a1, 1
 ; RV64I-NEXT:    addiw a1, a1, -241
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 8
-; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    lui a1, 2
-; RV64I-NEXT:    addiw a1, a1, -256
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    srli a0, a0, 8
+; RV64I-NEXT:    slliw a1, a0, 8
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    slli a0, a0, 51
+; RV64I-NEXT:    srli a0, a0, 59
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB4_2:
 ; RV64I-NEXT:    li a0, 16
@@ -605,10 +601,8 @@ define i16 @test_cttz_i16_zero_undef(i16 %a) nounwind {
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    slli a1, a0, 8
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    lui a1, 2
-; RV32I-NEXT:    addi a1, a1, -256
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 8
+; RV32I-NEXT:    slli a0, a0, 19
+; RV32I-NEXT:    srli a0, a0, 27
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test_cttz_i16_zero_undef:
@@ -632,12 +626,10 @@ define i16 @test_cttz_i16_zero_undef(i16 %a) nounwind {
 ; RV64I-NEXT:    lui a1, 1
 ; RV64I-NEXT:    addiw a1, a1, -241
 ; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 8
-; RV64I-NEXT:    add a0, a1, a0
-; RV64I-NEXT:    lui a1, 2
-; RV64I-NEXT:    addiw a1, a1, -256
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    srli a0, a0, 8
+; RV64I-NEXT:    slliw a1, a0, 8
+; RV64I-NEXT:    addw a0, a1, a0
+; RV64I-NEXT:    slli a0, a0, 51
+; RV64I-NEXT:    srli a0, a0, 59
 ; RV64I-NEXT:    ret
   %tmp = call i16 @llvm.cttz.i16(i16 %a, i1 true)
   ret i16 %tmp
