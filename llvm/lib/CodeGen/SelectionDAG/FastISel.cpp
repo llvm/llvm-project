@@ -1775,12 +1775,13 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return false;
 
   case Instruction::Call:
-    // On AIX, call lowering uses the DAG-ISEL path currently so that the
+    // On AIX, normal call lowering uses the DAG-ISEL path currently so that the
     // callee of the direct function call instruction will be mapped to the
     // symbol for the function's entry point, which is distinct from the
     // function descriptor symbol. The latter is the symbol whose XCOFF symbol
     // name is the C-linkage name of the source level function.
-    if (TM.getTargetTriple().isOSAIX())
+    // But fast isel still has the ability to do selection for intrinsics.
+    if (TM.getTargetTriple().isOSAIX() && !isa<IntrinsicInst>(I))
       return false;
     return selectCall(I);
 
