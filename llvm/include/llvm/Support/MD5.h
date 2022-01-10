@@ -88,7 +88,7 @@ public:
 
   /// Translates the bytes in \p Res to a hex string that is
   /// deposited into \p Str. The result will be of length 32.
-  static void stringifyResult(MD5Result &Result, SmallString<32> &Str);
+  static void stringifyResult(MD5Result &Result, SmallVectorImpl<char> &Str);
 
   /// Computes the hash for a given bytes.
   static std::array<uint8_t, 16> hash(ArrayRef<uint8_t> Data);

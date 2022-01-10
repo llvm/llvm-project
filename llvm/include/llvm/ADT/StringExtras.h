@@ -29,7 +29,6 @@
 
 namespace llvm {
 
-template<typename T> class SmallVectorImpl;
 class raw_ostream;
 
 /// hexdigit - Return the hexadecimal character for the
@@ -166,21 +165,26 @@ inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
 
 /// Convert buffer \p Input to its hexadecimal representation.
 /// The returned string is double the size of \p Input.
-inline std::string toHex(StringRef Input, bool LowerCase = false) {
-  size_t Length = Input.size();
+inline void toHex(ArrayRef<uint8_t> Input, bool LowerCase,
+                  SmallVectorImpl<char> &Output) {
+  const size_t Length = Input.size();
+  Output.resize_for_overwrite(Length * 2);
 
-  std::string Output;
-  Output.reserve(2 * Length);
-  for (size_t i = 0; i < Length; ++i) {
-    const unsigned char c = Input[i];
-    Output.push_back(hexdigit(c >> 4, LowerCase));
-    Output.push_back(hexdigit(c & 15, LowerCase));
+  for (size_t i = 0; i < Length; i++) {
+    const uint8_t c = Input[i];
+    Output[i * 2    ] = hexdigit(c >> 4, LowerCase);
+    Output[i * 2 + 1] = hexdigit(c & 15, LowerCase);
   }
-  return Output;
 }
 
 inline std::string toHex(ArrayRef<uint8_t> Input, bool LowerCase = false) {
-  return toHex(toStringRef(Input), LowerCase);
+  SmallString<16> Output;
+  toHex(Input, LowerCase, Output);
+  return std::string(Output);
+}
+
+inline std::string toHex(StringRef Input, bool LowerCase = false) {
+  return toHex(arrayRefFromStringRef(Input), LowerCase);
 }
 
 /// Store the binary representation of the two provided values, \p MSB and
