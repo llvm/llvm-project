@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <iosfwd>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -267,6 +268,16 @@ _LIBCPP_FUNC_VIS const __libcpp_db* __get_const_db();
 
 
 #endif // _LIBCPP_DEBUG_LEVEL == 2 || defined(_LIBCPP_BUILDING_LIBRARY)
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_insert_c(_Tp* __c) {
+#if _LIBCPP_DEBUG_LEVEL == 2
+    if (!__libcpp_is_constant_evaluated())
+        __get_db()->__insert_c(__c);
+#else
+    (void)(__c);
+#endif
+}
 
 _LIBCPP_END_NAMESPACE_STD
 
