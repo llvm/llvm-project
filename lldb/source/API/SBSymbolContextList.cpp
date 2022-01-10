@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSymbolContextList.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -111,32 +111,4 @@ bool SBSymbolContextList::GetDescription(lldb::SBStream &description) {
   if (m_opaque_up)
     m_opaque_up->GetDescription(&strm, lldb::eDescriptionLevelFull, nullptr);
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBSymbolContextList>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBSymbolContextList, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBSymbolContextList,
-                            (const lldb::SBSymbolContextList &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBSymbolContextList &,
-      SBSymbolContextList, operator=,(const lldb::SBSymbolContextList &));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBSymbolContextList, GetSize, ());
-  LLDB_REGISTER_METHOD(lldb::SBSymbolContext, SBSymbolContextList,
-                       GetContextAtIndex, (uint32_t));
-  LLDB_REGISTER_METHOD(void, SBSymbolContextList, Clear, ());
-  LLDB_REGISTER_METHOD(void, SBSymbolContextList, Append,
-                       (lldb::SBSymbolContext &));
-  LLDB_REGISTER_METHOD(void, SBSymbolContextList, Append,
-                       (lldb::SBSymbolContextList &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContextList, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContextList, operator bool, ());
-  LLDB_REGISTER_METHOD(bool, SBSymbolContextList, GetDescription,
-                       (lldb::SBStream &));
-}
-
-}
 }

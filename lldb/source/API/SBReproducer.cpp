@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SBReproducerPrivate.h"
 
 #include "lldb/API/LLDB.h"
 #include "lldb/API/SBAddress.h"
@@ -24,6 +23,9 @@
 #include "lldb/API/SBReproducer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Version/Version.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
+#include "lldb/Utility/Reproducer.h"
+#include "lldb/Utility/ReproducerProvider.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -56,93 +58,11 @@ bool SBReplayOptions::GetCheckVersion() const {
   return m_opaque_up->check_version;
 }
 
-SBRegistry::SBRegistry() {
-  Registry &R = *this;
-
-  RegisterMethods<SBAddress>(R);
-  RegisterMethods<SBAttachInfo>(R);
-  RegisterMethods<SBBlock>(R);
-  RegisterMethods<SBBreakpoint>(R);
-  RegisterMethods<SBBreakpointList>(R);
-  RegisterMethods<SBBreakpointLocation>(R);
-  RegisterMethods<SBBreakpointName>(R);
-  RegisterMethods<SBBroadcaster>(R);
-  RegisterMethods<SBCommandInterpreter>(R);
-  RegisterMethods<SBCommandInterpreterRunOptions>(R);
-  RegisterMethods<SBCommandReturnObject>(R);
-  RegisterMethods<SBCommunication>(R);
-  RegisterMethods<SBCompileUnit>(R);
-  RegisterMethods<SBData>(R);
-  RegisterMethods<SBDebugger>(R);
-  RegisterMethods<SBDeclaration>(R);
-  RegisterMethods<SBEnvironment>(R);
-  RegisterMethods<SBError>(R);
-  RegisterMethods<SBEvent>(R);
-  RegisterMethods<SBExecutionContext>(R);
-  RegisterMethods<SBExpressionOptions>(R);
-  RegisterMethods<SBFile>(R);
-  RegisterMethods<SBFileSpec>(R);
-  RegisterMethods<SBFileSpecList>(R);
-  RegisterMethods<SBFrame>(R);
-  RegisterMethods<SBFunction>(R);
-  RegisterMethods<SBHostOS>(R);
-  RegisterMethods<SBInputReader>(R);
-  RegisterMethods<SBInstruction>(R);
-  RegisterMethods<SBInstructionList>(R);
-  RegisterMethods<SBLanguageRuntime>(R);
-  RegisterMethods<SBLaunchInfo>(R);
-  RegisterMethods<SBLineEntry>(R);
-  RegisterMethods<SBListener>(R);
-  RegisterMethods<SBMemoryRegionInfo>(R);
-  RegisterMethods<SBMemoryRegionInfoList>(R);
-  RegisterMethods<SBModule>(R);
-  RegisterMethods<SBModuleSpec>(R);
-  RegisterMethods<SBPlatform>(R);
-  RegisterMethods<SBPlatformConnectOptions>(R);
-  RegisterMethods<SBPlatformShellCommand>(R);
-  RegisterMethods<SBProcess>(R);
-  RegisterMethods<SBProcessInfo>(R);
-  RegisterMethods<SBQueue>(R);
-  RegisterMethods<SBQueueItem>(R);
-  RegisterMethods<SBSection>(R);
-  RegisterMethods<SBSourceManager>(R);
-  RegisterMethods<SBStream>(R);
-  RegisterMethods<SBStringList>(R);
-  RegisterMethods<SBStructuredData>(R);
-  RegisterMethods<SBSymbol>(R);
-  RegisterMethods<SBSymbolContext>(R);
-  RegisterMethods<SBSymbolContextList>(R);
-  RegisterMethods<SBTarget>(R);
-  RegisterMethods<SBThread>(R);
-  RegisterMethods<SBThreadCollection>(R);
-  RegisterMethods<SBThreadPlan>(R);
-  RegisterMethods<SBTrace>(R);
-  RegisterMethods<SBType>(R);
-  RegisterMethods<SBTypeCategory>(R);
-  RegisterMethods<SBTypeEnumMember>(R);
-  RegisterMethods<SBTypeFilter>(R);
-  RegisterMethods<SBTypeFormat>(R);
-  RegisterMethods<SBTypeNameSpecifier>(R);
-  RegisterMethods<SBTypeSummary>(R);
-  RegisterMethods<SBTypeSummaryOptions>(R);
-  RegisterMethods<SBTypeSynthetic>(R);
-  RegisterMethods<SBUnixSignals>(R);
-  RegisterMethods<SBValue>(R);
-  RegisterMethods<SBValueList>(R);
-  RegisterMethods<SBVariablesOptions>(R);
-  RegisterMethods<SBWatchpoint>(R);
-}
-
 const char *SBReproducer::Capture() {
   static std::string error;
   if (auto e = Reproducer::Initialize(ReproducerMode::Capture, llvm::None)) {
     error = llvm::toString(std::move(e));
     return error.c_str();
-  }
-
-  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
-    auto &p = g->GetOrCreate<SBProvider>();
-    InstrumentationData::Initialize(p.GetSerializer(), p.GetRegistry());
   }
 
   return nullptr;
@@ -154,11 +74,6 @@ const char *SBReproducer::Capture(const char *path) {
           Reproducer::Initialize(ReproducerMode::Capture, FileSpec(path))) {
     error = llvm::toString(std::move(e));
     return error.c_str();
-  }
-
-  if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
-    auto &p = g->GetOrCreate<SBProvider>();
-    InstrumentationData::Initialize(p.GetSerializer(), p.GetRegistry());
   }
 
   return nullptr;
@@ -232,7 +147,3 @@ void SBReproducer::SetWorkingDirectory(const char *path) {
     fp.RecordInterestingDirectory(wp.GetDirectory());
   }
 }
-
-char lldb_private::repro::SBProvider::ID = 0;
-const char *SBProvider::Info::name = "sbapi";
-const char *SBProvider::Info::file = "sbapi.bin";

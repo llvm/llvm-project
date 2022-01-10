@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBEnvironment.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Utility/ConstString.h"
@@ -130,26 +130,3 @@ void SBEnvironment::Clear() {
 }
 
 Environment &SBEnvironment::ref() const { return *m_opaque_up; }
-
-namespace lldb_private {
-namespace repro {
-template <> void RegisterMethods<SBEnvironment>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBEnvironment, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBEnvironment, (const lldb::SBEnvironment &));
-  LLDB_REGISTER_METHOD(const lldb::SBEnvironment &,
-                       SBEnvironment, operator=,(const lldb::SBEnvironment &));
-  LLDB_REGISTER_METHOD(size_t, SBEnvironment, GetNumValues, ());
-  LLDB_REGISTER_METHOD(const char *, SBEnvironment, Get, (const char *));
-  LLDB_REGISTER_METHOD(const char *, SBEnvironment, GetNameAtIndex, (size_t));
-  LLDB_REGISTER_METHOD(const char *, SBEnvironment, GetValueAtIndex, (size_t));
-  LLDB_REGISTER_METHOD(bool, SBEnvironment, Set,
-                       (const char *, const char *, bool));
-  LLDB_REGISTER_METHOD(bool, SBEnvironment, Unset, (const char *));
-  LLDB_REGISTER_METHOD(lldb::SBStringList, SBEnvironment, GetEntries, ());
-  LLDB_REGISTER_METHOD(void, SBEnvironment, PutEntry, (const char *));
-  LLDB_REGISTER_METHOD(void, SBEnvironment, SetEntries,
-                       (const lldb::SBStringList &, bool));
-  LLDB_REGISTER_METHOD(void, SBEnvironment, Clear, ());
-}
-} // namespace repro
-} // namespace lldb_private
