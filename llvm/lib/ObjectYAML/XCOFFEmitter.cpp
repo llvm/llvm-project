@@ -47,6 +47,7 @@ private:
   bool initRelocations(uint64_t &CurrentOffset);
   bool initStringTable();
   bool assignAddressesAndIndices();
+
   void writeFileHeader();
   void writeAuxFileHeader();
   void writeSectionHeader();
@@ -54,6 +55,15 @@ private:
   bool writeRelocations();
   bool writeSymbols();
   void writeStringTable();
+
+  void writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym);
+  void writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym);
+  void writeAuxSymbol(const XCOFFYAML::FunctionAuxEnt &AuxSym);
+  void writeAuxSymbol(const XCOFFYAML::ExcpetionAuxEnt &AuxSym);
+  void writeAuxSymbol(const XCOFFYAML::BlockAuxEnt &AuxSym);
+  void writeAuxSymbol(const XCOFFYAML::SectAuxEntForDWARF &AuxSym);
+  void writeAuxSymbol(const XCOFFYAML::SectAuxEntForStat &AuxSym);
+  void writeAuxSymbol(const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym);
 
   XCOFFYAML::Object &Obj;
   bool Is64Bit = false;
@@ -190,9 +200,20 @@ bool XCOFFWriter::initStringTable() {
       }
     }
   } else {
-    for (XCOFFYAML::Symbol &YamlSym : Obj.Symbols) {
+    for (const XCOFFYAML::Symbol &YamlSym : Obj.Symbols) {
       if (nameShouldBeInStringTable(YamlSym.SymbolName))
         StrTblBuilder.add(YamlSym.SymbolName);
+    }
+  }
+
+  // Check if the file name in the File Auxiliary Entry should be added to the
+  // string table.
+  for (const XCOFFYAML::Symbol &YamlSym : Obj.Symbols) {
+    for (const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym :
+         YamlSym.AuxEntries) {
+      if (auto AS = dyn_cast<XCOFFYAML::FileAuxEnt>(AuxSym.get()))
+        if (nameShouldBeInStringTable(AS->FileNameOrString.getValueOr("")))
+          StrTblBuilder.add(AS->FileNameOrString.getValueOr(""));
     }
   }
 
@@ -216,9 +237,21 @@ bool XCOFFWriter::initFileHeader(uint64_t CurrentOffset) {
   InitFileHdr.NumberOfSections = Obj.Sections.size();
   InitFileHdr.NumberOfSymTableEntries = Obj.Symbols.size();
 
-  for (const XCOFFYAML::Symbol &YamlSym : Obj.Symbols)
+  for (XCOFFYAML::Symbol &YamlSym : Obj.Symbols) {
+    uint32_t AuxCount = YamlSym.AuxEntries.size();
+    if (YamlSym.NumberOfAuxEntries && *YamlSym.NumberOfAuxEntries < AuxCount) {
+      ErrHandler("specified NumberOfAuxEntries " +
+                 Twine(static_cast<uint32_t>(*YamlSym.NumberOfAuxEntries)) +
+                 " is less than the actual number "
+                 "of auxiliary entries " +
+                 Twine(AuxCount));
+      return false;
+    }
+    YamlSym.NumberOfAuxEntries =
+        YamlSym.NumberOfAuxEntries.getValueOr(AuxCount);
     // Add the number of auxiliary symbols to the total number.
-    InitFileHdr.NumberOfSymTableEntries += YamlSym.NumberOfAuxEntries;
+    InitFileHdr.NumberOfSymTableEntries += *YamlSym.NumberOfAuxEntries;
+  }
 
   // Calculate SymbolTableOffset for the file header.
   if (InitFileHdr.NumberOfSymTableEntries) {
@@ -491,6 +524,125 @@ bool XCOFFWriter::writeRelocations() {
   return true;
 }
 
+void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::CsectAuxEnt &AuxSym) {
+  if (Is64Bit) {
+    W.write<uint32_t>(AuxSym.SectionOrLengthLo.getValueOr(0));
+    W.write<uint32_t>(AuxSym.ParameterHashIndex.getValueOr(0));
+    W.write<uint16_t>(AuxSym.TypeChkSectNum.getValueOr(0));
+    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.getValueOr(0));
+    W.write<uint8_t>(AuxSym.StorageMappingClass.getValueOr(XCOFF::XMC_PR));
+    W.write<uint32_t>(AuxSym.SectionOrLengthHi.getValueOr(0));
+    W.write<uint8_t>(0);
+    W.write<uint8_t>(XCOFF::AUX_CSECT);
+  } else {
+    W.write<uint32_t>(AuxSym.SectionOrLength.getValueOr(0));
+    W.write<uint32_t>(AuxSym.ParameterHashIndex.getValueOr(0));
+    W.write<uint16_t>(AuxSym.TypeChkSectNum.getValueOr(0));
+    W.write<uint8_t>(AuxSym.SymbolAlignmentAndType.getValueOr(0));
+    W.write<uint8_t>(AuxSym.StorageMappingClass.getValueOr(XCOFF::XMC_PR));
+    W.write<uint32_t>(AuxSym.StabInfoIndex.getValueOr(0));
+    W.write<uint16_t>(AuxSym.StabSectNum.getValueOr(0));
+  }
+}
+
+void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::ExcpetionAuxEnt &AuxSym) {
+  assert(Is64Bit && "can't write the exception auxiliary symbol for XCOFF32");
+  W.write<uint64_t>(AuxSym.OffsetToExceptionTbl.getValueOr(0));
+  W.write<uint32_t>(AuxSym.SizeOfFunction.getValueOr(0));
+  W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.getValueOr(0));
+  W.write<uint8_t>(0);
+  W.write<uint8_t>(XCOFF::AUX_EXCEPT);
+}
+
+void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FunctionAuxEnt &AuxSym) {
+  if (Is64Bit) {
+    W.write<uint64_t>(AuxSym.PtrToLineNum.getValueOr(0));
+    W.write<uint32_t>(AuxSym.SizeOfFunction.getValueOr(0));
+    W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.getValueOr(0));
+    W.write<uint8_t>(0);
+    W.write<uint8_t>(XCOFF::AUX_FCN);
+  } else {
+    W.write<uint32_t>(AuxSym.OffsetToExceptionTbl.getValueOr(0));
+    W.write<uint32_t>(AuxSym.SizeOfFunction.getValueOr(0));
+    W.write<uint32_t>(AuxSym.PtrToLineNum.getValueOr(0));
+    W.write<uint32_t>(AuxSym.SymIdxOfNextBeyond.getValueOr(0));
+    W.OS.write_zeros(2);
+  }
+}
+
+void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::FileAuxEnt &AuxSym) {
+  StringRef FileName = AuxSym.FileNameOrString.getValueOr("");
+  if (nameShouldBeInStringTable(FileName)) {
+    W.write<int32_t>(0);
+    W.write<uint32_t>(StrTblBuilder.getOffset(FileName));
+  } else {
+    writeName(FileName, W);
+  }
+  W.OS.write_zeros(XCOFF::FileNamePadSize);
+  W.write<uint8_t>(AuxSym.FileStringType.getValueOr(XCOFF::XFT_FN));
+  if (Is64Bit) {
+    W.OS.write_zeros(2);
+    W.write<uint8_t>(XCOFF::AUX_FILE);
+  } else {
+    W.OS.write_zeros(3);
+  }
+}
+
+void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::BlockAuxEnt &AuxSym) {
+  if (Is64Bit) {
+    W.write<uint32_t>(AuxSym.LineNum.getValueOr(0));
+    W.OS.write_zeros(13);
+    W.write<uint8_t>(XCOFF::AUX_SYM);
+  } else {
+    W.OS.write_zeros(2);
+    W.write<uint16_t>(AuxSym.LineNumHi.getValueOr(0));
+    W.write<uint16_t>(AuxSym.LineNumLo.getValueOr(0));
+    W.OS.write_zeros(12);
+  }
+}
+
+void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForDWARF &AuxSym) {
+  if (Is64Bit) {
+    W.write<uint64_t>(AuxSym.LengthOfSectionPortion.getValueOr(0));
+    W.write<uint64_t>(AuxSym.NumberOfRelocEnt.getValueOr(0));
+    W.write<uint8_t>(0);
+    W.write<uint8_t>(XCOFF::AUX_SECT);
+  } else {
+    W.write<uint32_t>(AuxSym.LengthOfSectionPortion.getValueOr(0));
+    W.OS.write_zeros(4);
+    W.write<uint32_t>(AuxSym.NumberOfRelocEnt.getValueOr(0));
+    W.OS.write_zeros(6);
+  }
+}
+
+void XCOFFWriter::writeAuxSymbol(const XCOFFYAML::SectAuxEntForStat &AuxSym) {
+  assert(!Is64Bit && "can't write the stat auxiliary symbol for XCOFF64");
+  W.write<uint32_t>(AuxSym.SectionLength.getValueOr(0));
+  W.write<uint16_t>(AuxSym.NumberOfRelocEnt.getValueOr(0));
+  W.write<uint16_t>(AuxSym.NumberOfLineNum.getValueOr(0));
+  W.OS.write_zeros(10);
+}
+
+void XCOFFWriter::writeAuxSymbol(
+    const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym) {
+  if (auto AS = dyn_cast<XCOFFYAML::CsectAuxEnt>(AuxSym.get()))
+    writeAuxSymbol(*AS);
+  else if (auto AS = dyn_cast<XCOFFYAML::FunctionAuxEnt>(AuxSym.get()))
+    writeAuxSymbol(*AS);
+  else if (auto AS = dyn_cast<XCOFFYAML::ExcpetionAuxEnt>(AuxSym.get()))
+    writeAuxSymbol(*AS);
+  else if (auto AS = dyn_cast<XCOFFYAML::FileAuxEnt>(AuxSym.get()))
+    writeAuxSymbol(*AS);
+  else if (auto AS = dyn_cast<XCOFFYAML::BlockAuxEnt>(AuxSym.get()))
+    writeAuxSymbol(*AS);
+  else if (auto AS = dyn_cast<XCOFFYAML::SectAuxEntForDWARF>(AuxSym.get()))
+    writeAuxSymbol(*AS);
+  else if (auto AS = dyn_cast<XCOFFYAML::SectAuxEntForStat>(AuxSym.get()))
+    writeAuxSymbol(*AS);
+  else
+    llvm_unreachable("unknown auxiliary symbol type");
+}
+
 bool XCOFFWriter::writeSymbols() {
   int64_t PaddingSize =
       (uint64_t)InitFileHdr.SymbolTableOffset - (W.OS.tell() - StartOffset);
@@ -533,16 +685,25 @@ bool XCOFFWriter::writeSymbols() {
     }
     W.write<uint16_t>(YamlSym.Type);
     W.write<uint8_t>(YamlSym.StorageClass);
-    W.write<uint8_t>(YamlSym.NumberOfAuxEntries);
 
-    // Now output the auxiliary entry.
-    for (uint8_t I = 0, E = YamlSym.NumberOfAuxEntries; I < E; ++I) {
-      // TODO: Auxiliary entry is not supported yet.
-      // The auxiliary entries for a symbol follow its symbol table entry. The
-      // length of each auxiliary entry is the same as a symbol table entry (18
-      // bytes). The format and quantity of auxiliary entries depend on the
-      // storage class (n_sclass) and type (n_type) of the symbol table entry.
-      W.OS.write_zeros(XCOFF::SymbolTableEntrySize);
+    uint8_t NumOfAuxSym = YamlSym.NumberOfAuxEntries.getValueOr(0);
+    W.write<uint8_t>(NumOfAuxSym);
+
+    if (!NumOfAuxSym && !YamlSym.AuxEntries.size())
+      continue;
+
+    // Now write auxiliary entries.
+    if (!YamlSym.AuxEntries.size()) {
+      W.OS.write_zeros(XCOFF::SymbolTableEntrySize * NumOfAuxSym);
+    } else {
+      for (const std::unique_ptr<XCOFFYAML::AuxSymbolEnt> &AuxSym :
+           YamlSym.AuxEntries) {
+        writeAuxSymbol(AuxSym);
+      }
+      // Pad with zeros.
+      if (NumOfAuxSym > YamlSym.AuxEntries.size())
+        W.OS.write_zeros(XCOFF::SymbolTableEntrySize *
+                         (NumOfAuxSym - YamlSym.AuxEntries.size()));
     }
   }
   return true;

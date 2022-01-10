@@ -132,7 +132,8 @@ Error XCOFFDumper::dumpSymbols() {
     Sym.Type = SymbolEntRef.getSymbolType();
     Sym.StorageClass = SymbolEntRef.getStorageClass();
     Sym.NumberOfAuxEntries = SymbolEntRef.getNumberOfAuxEntries();
-    Symbols.push_back(Sym);
+
+    Symbols.push_back(std::move(Sym));
   }
 
   return Error::success();
