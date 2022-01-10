@@ -9,9 +9,10 @@
 #include <__config>
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-#include <climits>
 #include <atomic>
+#include <climits>
 #include <functional>
+#include <thread>
 
 #ifdef __linux__
 

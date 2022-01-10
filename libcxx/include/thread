@@ -87,6 +87,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <__functional_base>
 #include <__mutex_base>
 #include <__thread/poll_with_backoff.h>
+#include <__thread/timed_backoff_policy.h>
 #include <__threading_support>
 #include <__utility/forward.h>
 #include <chrono>
