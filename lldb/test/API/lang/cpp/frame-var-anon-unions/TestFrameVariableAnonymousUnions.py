@@ -30,6 +30,9 @@ class FrameVariableAnonymousUnionsTestCase(TestBase):
 
         self.expect('frame variable c', substrs=["'A"])
 
-        self.expect('frame variable x', matching=False, substrs=['3'])
-        self.expect('frame variable y', matching=False, substrs=["'B'"])
-        self.expect('frame variable z', matching=False, substrs=['14'])
+        self.expect('frame variable x', error=True,
+                    substrs=["no variable named 'x' found"])
+        self.expect('frame variable y', error=True,
+                    substrs=["no variable named 'y' found"])
+        self.expect('frame variable z', error=True,
+                    substrs=["no variable named 'z' found"])
