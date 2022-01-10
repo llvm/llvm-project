@@ -21,6 +21,14 @@ if (COMPILER_RT_BUILD_CRT AND COMPILER_RT_HAS_CRT)
     string(TOUPPER ${arch} ARCH_UPPER_CASE)
     set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
 
+    if (COMPILER_RT_ENABLE_CET)
+      if (${arch} MATCHES "i386|x86_64")
+        list(APPEND CRT_TEST_TARGET_CFLAGS -fcf-protection=full)
+        string(REPLACE ";" " " CRT_TEST_TARGET_CFLAGS "${CRT_TEST_TARGET_CFLAGS}")
+      else()
+        message(FATAL_ERROR "The target arch ${arch} doesn't support CET")
+      endif()
+    endif()
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)

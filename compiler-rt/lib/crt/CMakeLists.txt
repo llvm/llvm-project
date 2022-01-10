@@ -100,6 +100,9 @@ append_list_if(COMPILER_RT_HAS_INITFINI_ARRAY -DCRT_HAS_INITFINI_ARRAY CRT_CFLAG
 append_list_if(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY -DEH_USE_FRAME_REGISTRY CRT_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC CRT_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic CRT_CFLAGS)
+if (COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+  append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full CRT_CFLAGS)
+endif()
 
 foreach(arch ${CRT_SUPPORTED_ARCH})
   add_compiler_rt_runtime(clang_rt.crtbegin
