@@ -69,6 +69,7 @@ int main(int, char**)
 {
     test();
     static_assert(test());
+    return 0;
 }
 
 #endif // defined(TU1)
