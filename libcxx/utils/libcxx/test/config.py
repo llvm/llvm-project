@@ -288,11 +288,6 @@ class Configuration(object):
 
     def configure_compile_flags_header_includes(self):
         support_path = os.path.join(self.libcxx_src_root, 'test', 'support')
-        if self.cxx_stdlib_under_test != 'libstdc++' and \
-           not self.target_info.is_windows() and \
-           not self.target_info.is_zos():
-            self.cxx.compile_flags += [
-                '-include', os.path.join(support_path, 'nasty_macros.h')]
         if self.cxx_stdlib_under_test == 'msvc':
             self.cxx.compile_flags += [
                 '-include', os.path.join(support_path,
