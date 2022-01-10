@@ -582,8 +582,8 @@ def AtomicReadOp : OpenMP_Op<"atomic.read"> {
   let description = [{
     This operation performs an atomic read.
 
-    The operand `address` is the address from where the value is atomically
-    read.
+    The operand `x` is the address from where the value is atomically read.
+    The operand `v` is the address where the value is stored after reading.
 
     `hint` is the value of hint (as specified in the hint clause). It is a
     compile time constant. As the name suggests, this is just a hint for
@@ -593,10 +593,10 @@ def AtomicReadOp : OpenMP_Op<"atomic.read"> {
     can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
   }];
 
-  let arguments = (ins OpenMP_PointerLikeType:$address,
+  let arguments = (ins OpenMP_PointerLikeType:$x,
+                       OpenMP_PointerLikeType:$v,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
                        OptionalAttr<MemoryOrderKind>:$memory_order);
-  let results = (outs AnyType);
   let parser = [{ return parseAtomicReadOp(parser, result); }];
   let printer = [{ return printAtomicReadOp(p, *this); }];
   let verifier = [{ return verifyAtomicReadOp(*this); }];
