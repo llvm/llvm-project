@@ -725,7 +725,7 @@ PyDiagnosticHandler::PyDiagnosticHandler(MlirContext context,
                                          py::object callback)
     : context(context), callback(std::move(callback)) {}
 
-PyDiagnosticHandler::~PyDiagnosticHandler() {}
+PyDiagnosticHandler::~PyDiagnosticHandler() = default;
 
 void PyDiagnosticHandler::detach() {
   if (!registeredID)

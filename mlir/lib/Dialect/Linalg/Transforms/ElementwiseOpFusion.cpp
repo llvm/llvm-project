@@ -610,7 +610,8 @@ LogicalResult isGenericOpExpandable(GenericOp genericOp,
                                     PatternRewriter &rewriter) {
   // Current reshape only supports expansion of a dynamic dim when only one of
   // the expanded dims are dynamic.
-  for (auto originalShape : llvm::enumerate(expansionInfo.getOriginalShape()))
+  for (const auto &originalShape :
+       llvm::enumerate(expansionInfo.getOriginalShape()))
     if (ShapedType::isDynamic(originalShape.value())) {
       // All but one of the expanded dims must be static.
       bool foundDynamicExpandedDim = false;

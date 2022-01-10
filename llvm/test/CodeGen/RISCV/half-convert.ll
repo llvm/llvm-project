@@ -2464,7 +2464,7 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV32IZFH-NEXT:    bnez a0, .LBB32_2
 ; RV32IZFH-NEXT:  # %bb.1: # %start
 ; RV32IZFH-NEXT:    li a0, 0
-; RV32IZFH-NEXT:    j .LBB32_3
+; RV32IZFH-NEXT:    ret
 ; RV32IZFH-NEXT:  .LBB32_2:
 ; RV32IZFH-NEXT:    lui a0, %hi(.LCPI32_0)
 ; RV32IZFH-NEXT:    flw ft1, %lo(.LCPI32_0)(a0)
@@ -2473,9 +2473,6 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV32IZFH-NEXT:    fmax.s ft0, ft0, ft1
 ; RV32IZFH-NEXT:    fmin.s ft0, ft0, ft2
 ; RV32IZFH-NEXT:    fcvt.w.s a0, ft0, rtz
-; RV32IZFH-NEXT:  .LBB32_3: # %start
-; RV32IZFH-NEXT:    slli a0, a0, 16
-; RV32IZFH-NEXT:    srai a0, a0, 16
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_w_s_sat_i16:
@@ -2485,7 +2482,7 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV64IZFH-NEXT:    bnez a0, .LBB32_2
 ; RV64IZFH-NEXT:  # %bb.1: # %start
 ; RV64IZFH-NEXT:    li a0, 0
-; RV64IZFH-NEXT:    j .LBB32_3
+; RV64IZFH-NEXT:    ret
 ; RV64IZFH-NEXT:  .LBB32_2:
 ; RV64IZFH-NEXT:    lui a0, %hi(.LCPI32_0)
 ; RV64IZFH-NEXT:    flw ft1, %lo(.LCPI32_0)(a0)
@@ -2494,9 +2491,6 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV64IZFH-NEXT:    fmax.s ft0, ft0, ft1
 ; RV64IZFH-NEXT:    fmin.s ft0, ft0, ft2
 ; RV64IZFH-NEXT:    fcvt.l.s a0, ft0, rtz
-; RV64IZFH-NEXT:  .LBB32_3: # %start
-; RV64IZFH-NEXT:    slli a0, a0, 48
-; RV64IZFH-NEXT:    srai a0, a0, 48
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_w_s_sat_i16:
@@ -2506,7 +2500,7 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV32IDZFH-NEXT:    bnez a0, .LBB32_2
 ; RV32IDZFH-NEXT:  # %bb.1: # %start
 ; RV32IDZFH-NEXT:    li a0, 0
-; RV32IDZFH-NEXT:    j .LBB32_3
+; RV32IDZFH-NEXT:    ret
 ; RV32IDZFH-NEXT:  .LBB32_2:
 ; RV32IDZFH-NEXT:    lui a0, %hi(.LCPI32_0)
 ; RV32IDZFH-NEXT:    flw ft1, %lo(.LCPI32_0)(a0)
@@ -2515,9 +2509,6 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV32IDZFH-NEXT:    fmax.s ft0, ft0, ft1
 ; RV32IDZFH-NEXT:    fmin.s ft0, ft0, ft2
 ; RV32IDZFH-NEXT:    fcvt.w.s a0, ft0, rtz
-; RV32IDZFH-NEXT:  .LBB32_3: # %start
-; RV32IDZFH-NEXT:    slli a0, a0, 16
-; RV32IDZFH-NEXT:    srai a0, a0, 16
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_w_s_sat_i16:
@@ -2527,7 +2518,7 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV64IDZFH-NEXT:    bnez a0, .LBB32_2
 ; RV64IDZFH-NEXT:  # %bb.1: # %start
 ; RV64IDZFH-NEXT:    li a0, 0
-; RV64IDZFH-NEXT:    j .LBB32_3
+; RV64IDZFH-NEXT:    ret
 ; RV64IDZFH-NEXT:  .LBB32_2:
 ; RV64IDZFH-NEXT:    lui a0, %hi(.LCPI32_0)
 ; RV64IDZFH-NEXT:    flw ft1, %lo(.LCPI32_0)(a0)
@@ -2536,9 +2527,6 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV64IDZFH-NEXT:    fmax.s ft0, ft0, ft1
 ; RV64IDZFH-NEXT:    fmin.s ft0, ft0, ft2
 ; RV64IDZFH-NEXT:    fcvt.l.s a0, ft0, rtz
-; RV64IDZFH-NEXT:  .LBB32_3: # %start
-; RV64IDZFH-NEXT:    slli a0, a0, 48
-; RV64IDZFH-NEXT:    srai a0, a0, 48
 ; RV64IDZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s_sat_i16:
@@ -2705,9 +2693,6 @@ define zeroext i16 @fcvt_wu_s_sat_i16(half %a) nounwind {
 ; RV32IZFH-NEXT:    fmax.s ft1, ft1, ft2
 ; RV32IZFH-NEXT:    fmin.s ft0, ft1, ft0
 ; RV32IZFH-NEXT:    fcvt.wu.s a0, ft0, rtz
-; RV32IZFH-NEXT:    lui a1, 16
-; RV32IZFH-NEXT:    addi a1, a1, -1
-; RV32IZFH-NEXT:    and a0, a0, a1
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_wu_s_sat_i16:
@@ -2719,9 +2704,6 @@ define zeroext i16 @fcvt_wu_s_sat_i16(half %a) nounwind {
 ; RV64IZFH-NEXT:    fmax.s ft1, ft1, ft2
 ; RV64IZFH-NEXT:    fmin.s ft0, ft1, ft0
 ; RV64IZFH-NEXT:    fcvt.lu.s a0, ft0, rtz
-; RV64IZFH-NEXT:    lui a1, 16
-; RV64IZFH-NEXT:    addiw a1, a1, -1
-; RV64IZFH-NEXT:    and a0, a0, a1
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_wu_s_sat_i16:
@@ -2733,9 +2715,6 @@ define zeroext i16 @fcvt_wu_s_sat_i16(half %a) nounwind {
 ; RV32IDZFH-NEXT:    fmax.s ft1, ft1, ft2
 ; RV32IDZFH-NEXT:    fmin.s ft0, ft1, ft0
 ; RV32IDZFH-NEXT:    fcvt.wu.s a0, ft0, rtz
-; RV32IDZFH-NEXT:    lui a1, 16
-; RV32IDZFH-NEXT:    addi a1, a1, -1
-; RV32IDZFH-NEXT:    and a0, a0, a1
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_wu_s_sat_i16:
@@ -2747,9 +2726,6 @@ define zeroext i16 @fcvt_wu_s_sat_i16(half %a) nounwind {
 ; RV64IDZFH-NEXT:    fmax.s ft1, ft1, ft2
 ; RV64IDZFH-NEXT:    fmin.s ft0, ft1, ft0
 ; RV64IDZFH-NEXT:    fcvt.lu.s a0, ft0, rtz
-; RV64IDZFH-NEXT:    lui a1, 16
-; RV64IDZFH-NEXT:    addiw a1, a1, -1
-; RV64IDZFH-NEXT:    and a0, a0, a1
 ; RV64IDZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s_sat_i16:
@@ -2896,7 +2872,7 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV32IZFH-NEXT:    bnez a0, .LBB36_2
 ; RV32IZFH-NEXT:  # %bb.1: # %start
 ; RV32IZFH-NEXT:    li a0, 0
-; RV32IZFH-NEXT:    j .LBB36_3
+; RV32IZFH-NEXT:    ret
 ; RV32IZFH-NEXT:  .LBB36_2:
 ; RV32IZFH-NEXT:    lui a0, %hi(.LCPI36_0)
 ; RV32IZFH-NEXT:    flw ft1, %lo(.LCPI36_0)(a0)
@@ -2905,9 +2881,6 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV32IZFH-NEXT:    fmax.s ft0, ft0, ft1
 ; RV32IZFH-NEXT:    fmin.s ft0, ft0, ft2
 ; RV32IZFH-NEXT:    fcvt.w.s a0, ft0, rtz
-; RV32IZFH-NEXT:  .LBB36_3: # %start
-; RV32IZFH-NEXT:    slli a0, a0, 24
-; RV32IZFH-NEXT:    srai a0, a0, 24
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_w_s_sat_i8:
@@ -2917,7 +2890,7 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV64IZFH-NEXT:    bnez a0, .LBB36_2
 ; RV64IZFH-NEXT:  # %bb.1: # %start
 ; RV64IZFH-NEXT:    li a0, 0
-; RV64IZFH-NEXT:    j .LBB36_3
+; RV64IZFH-NEXT:    ret
 ; RV64IZFH-NEXT:  .LBB36_2:
 ; RV64IZFH-NEXT:    lui a0, %hi(.LCPI36_0)
 ; RV64IZFH-NEXT:    flw ft1, %lo(.LCPI36_0)(a0)
@@ -2926,9 +2899,6 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV64IZFH-NEXT:    fmax.s ft0, ft0, ft1
 ; RV64IZFH-NEXT:    fmin.s ft0, ft0, ft2
 ; RV64IZFH-NEXT:    fcvt.l.s a0, ft0, rtz
-; RV64IZFH-NEXT:  .LBB36_3: # %start
-; RV64IZFH-NEXT:    slli a0, a0, 56
-; RV64IZFH-NEXT:    srai a0, a0, 56
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_w_s_sat_i8:
@@ -2938,7 +2908,7 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV32IDZFH-NEXT:    bnez a0, .LBB36_2
 ; RV32IDZFH-NEXT:  # %bb.1: # %start
 ; RV32IDZFH-NEXT:    li a0, 0
-; RV32IDZFH-NEXT:    j .LBB36_3
+; RV32IDZFH-NEXT:    ret
 ; RV32IDZFH-NEXT:  .LBB36_2:
 ; RV32IDZFH-NEXT:    lui a0, %hi(.LCPI36_0)
 ; RV32IDZFH-NEXT:    flw ft1, %lo(.LCPI36_0)(a0)
@@ -2947,9 +2917,6 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV32IDZFH-NEXT:    fmax.s ft0, ft0, ft1
 ; RV32IDZFH-NEXT:    fmin.s ft0, ft0, ft2
 ; RV32IDZFH-NEXT:    fcvt.w.s a0, ft0, rtz
-; RV32IDZFH-NEXT:  .LBB36_3: # %start
-; RV32IDZFH-NEXT:    slli a0, a0, 24
-; RV32IDZFH-NEXT:    srai a0, a0, 24
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_w_s_sat_i8:
@@ -2959,7 +2926,7 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV64IDZFH-NEXT:    bnez a0, .LBB36_2
 ; RV64IDZFH-NEXT:  # %bb.1: # %start
 ; RV64IDZFH-NEXT:    li a0, 0
-; RV64IDZFH-NEXT:    j .LBB36_3
+; RV64IDZFH-NEXT:    ret
 ; RV64IDZFH-NEXT:  .LBB36_2:
 ; RV64IDZFH-NEXT:    lui a0, %hi(.LCPI36_0)
 ; RV64IDZFH-NEXT:    flw ft1, %lo(.LCPI36_0)(a0)
@@ -2968,9 +2935,6 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV64IDZFH-NEXT:    fmax.s ft0, ft0, ft1
 ; RV64IDZFH-NEXT:    fmin.s ft0, ft0, ft2
 ; RV64IDZFH-NEXT:    fcvt.l.s a0, ft0, rtz
-; RV64IDZFH-NEXT:  .LBB36_3: # %start
-; RV64IDZFH-NEXT:    slli a0, a0, 56
-; RV64IDZFH-NEXT:    srai a0, a0, 56
 ; RV64IDZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_w_s_sat_i8:
@@ -3136,7 +3100,6 @@ define zeroext i8 @fcvt_wu_s_sat_i8(half %a) nounwind {
 ; RV32IZFH-NEXT:    fmax.s ft1, ft1, ft2
 ; RV32IZFH-NEXT:    fmin.s ft0, ft1, ft0
 ; RV32IZFH-NEXT:    fcvt.wu.s a0, ft0, rtz
-; RV32IZFH-NEXT:    andi a0, a0, 255
 ; RV32IZFH-NEXT:    ret
 ;
 ; RV64IZFH-LABEL: fcvt_wu_s_sat_i8:
@@ -3148,7 +3111,6 @@ define zeroext i8 @fcvt_wu_s_sat_i8(half %a) nounwind {
 ; RV64IZFH-NEXT:    fmax.s ft1, ft1, ft2
 ; RV64IZFH-NEXT:    fmin.s ft0, ft1, ft0
 ; RV64IZFH-NEXT:    fcvt.lu.s a0, ft0, rtz
-; RV64IZFH-NEXT:    andi a0, a0, 255
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV32IDZFH-LABEL: fcvt_wu_s_sat_i8:
@@ -3160,7 +3122,6 @@ define zeroext i8 @fcvt_wu_s_sat_i8(half %a) nounwind {
 ; RV32IDZFH-NEXT:    fmax.s ft1, ft1, ft2
 ; RV32IDZFH-NEXT:    fmin.s ft0, ft1, ft0
 ; RV32IDZFH-NEXT:    fcvt.wu.s a0, ft0, rtz
-; RV32IDZFH-NEXT:    andi a0, a0, 255
 ; RV32IDZFH-NEXT:    ret
 ;
 ; RV64IDZFH-LABEL: fcvt_wu_s_sat_i8:
@@ -3172,7 +3133,6 @@ define zeroext i8 @fcvt_wu_s_sat_i8(half %a) nounwind {
 ; RV64IDZFH-NEXT:    fmax.s ft1, ft1, ft2
 ; RV64IDZFH-NEXT:    fmin.s ft0, ft1, ft0
 ; RV64IDZFH-NEXT:    fcvt.lu.s a0, ft0, rtz
-; RV64IDZFH-NEXT:    andi a0, a0, 255
 ; RV64IDZFH-NEXT:    ret
 ;
 ; RV32I-LABEL: fcvt_wu_s_sat_i8:
