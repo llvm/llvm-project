@@ -114,6 +114,9 @@ inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
 //  Properties of allocation functions
 //
 
+/// Gets the alignment argument for an aligned_alloc-like function
+Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
+
 /// If this allocation function initializes memory to a fixed value, return
 /// said value in the requested type.  Otherwise, return nullptr.
 Constant *getInitialValueOfAllocation(const CallBase *Alloc,

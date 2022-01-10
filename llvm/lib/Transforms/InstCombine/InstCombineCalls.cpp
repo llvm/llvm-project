@@ -2590,12 +2590,13 @@ void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryI
   }
 
   // Add alignment attribute if alignment is a power of two constant.
-  if (!isAlignedAllocLikeFn(&Call, TLI))
+  Value *Alignment = getAllocAlignment(&Call, TLI);
+  if (!Alignment)
     return;
 
-  ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
-  if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment)) {
-    uint64_t AlignmentVal = Op0C->getZExtValue();
+  ConstantInt *AlignOpC = dyn_cast<ConstantInt>(Alignment);
+  if (AlignOpC && AlignOpC->getValue().ult(llvm::Value::MaximumAlignment)) {
+    uint64_t AlignmentVal = AlignOpC->getZExtValue();
     if (llvm::isPowerOf2_64(AlignmentVal)) {
       Call.removeRetAttr(Attribute::Alignment);
       Call.addRetAttr(Attribute::getWithAlignment(Call.getContext(),
