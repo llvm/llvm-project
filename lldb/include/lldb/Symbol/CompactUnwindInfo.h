@@ -86,7 +86,7 @@ private:
                                            // valid for (start of the function)
     uint32_t valid_range_offset_end =
         0; // the offset of the start of the next function
-    FunctionInfo() : lsda_address(), personality_ptr_address() {}
+    FunctionInfo() {}
   };
 
   struct UnwindHeader {

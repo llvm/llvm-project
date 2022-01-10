@@ -107,7 +107,7 @@ protected:
 // to that process.
 class ProcessInstanceInfo : public ProcessInfo {
 public:
-  ProcessInstanceInfo() : ProcessInfo() {}
+  ProcessInstanceInfo() {}
 
   ProcessInstanceInfo(const char *name, const ArchSpec &arch, lldb::pid_t pid)
       : ProcessInfo(name, arch, pid), m_euid(UINT32_MAX), m_egid(UINT32_MAX),
@@ -162,12 +162,11 @@ typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
 class ProcessInstanceInfoMatch {
 public:
-  ProcessInstanceInfoMatch() : m_match_info() {}
+  ProcessInstanceInfoMatch() {}
 
   ProcessInstanceInfoMatch(const char *process_name,
                            NameMatch process_name_match_type)
-      : m_match_info(), m_name_match_type(process_name_match_type),
-        m_match_all_users(false) {
+      : m_name_match_type(process_name_match_type), m_match_all_users(false) {
     m_match_info.GetExecutableFile().SetFile(process_name,
                                              FileSpec::Style::native);
   }

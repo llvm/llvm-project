@@ -47,9 +47,6 @@ class DiagnosticsEngine;
 class LangOptions;
 class CodeGenOptions;
 class MacroBuilder;
-class QualType;
-class SourceLocation;
-class SourceManager;
 
 namespace Builtin { struct Info; }
 

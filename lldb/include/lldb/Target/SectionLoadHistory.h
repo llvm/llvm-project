@@ -24,7 +24,7 @@ public:
     eStopIDNow = UINT32_MAX
   };
   // Constructors and Destructors
-  SectionLoadHistory() : m_stop_id_to_section_load_list(), m_mutex() {}
+  SectionLoadHistory() {}
 
   ~SectionLoadHistory() {
     // Call clear since this takes a lock and clears the section load list in

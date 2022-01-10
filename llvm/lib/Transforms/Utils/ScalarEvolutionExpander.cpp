@@ -2528,7 +2528,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
       // Select the answer based on the sign of Step.
       EndCheck = Builder.CreateSelect(StepCompare, EndCompareGT, EndCompareLT);
     }
-    return EndCheck;
+    return Builder.CreateOr(EndCheck, OfMul);
   };
   Value *EndCheck = ComputeEndCheck();
 
@@ -2546,7 +2546,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     EndCheck = Builder.CreateOr(EndCheck, BackedgeCheck);
   }
 
-  return Builder.CreateOr(EndCheck, OfMul);
+  return EndCheck;
 }
 
 Value *SCEVExpander::expandWrapPredicate(const SCEVWrapPredicate *Pred,
@@ -2717,13 +2717,8 @@ void SCEVExpanderCleaner::cleanup() {
   // Remove sets with value handles.
   Expander.clear();
 
-  // Sort so that earlier instructions do not dominate later instructions.
-  stable_sort(InsertedInstructions, [this](Instruction *A, Instruction *B) {
-    return DT.dominates(B, A);
-  });
   // Remove all inserted instructions.
-  for (Instruction *I : InsertedInstructions) {
-
+  for (Instruction *I : reverse(InsertedInstructions)) {
 #ifndef NDEBUG
     assert(all_of(I->users(),
                   [&InsertedSet](Value *U) {

@@ -302,8 +302,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
   sym.replace(Defined{sym.file, sym.getName(), sym.binding, sym.stOther,
                       sym.type, value, size, &sec});
 
-  sym.pltIndex = old.pltIndex;
-  sym.gotIndex = old.gotIndex;
+  sym.auxIdx = old.auxIdx;
   sym.verdefIndex = old.verdefIndex;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
@@ -1544,15 +1543,17 @@ static bool handleNonPreemptibleIfunc(Symbol &sym) {
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
   auto *directSym = makeDefined(cast<Defined>(sym));
+  directSym->allocateAux();
   addPltEntry(*in.iplt, *in.igotPlt, *in.relaIplt, target->iRelativeRel,
               *directSym);
-  sym.pltIndex = directSym->pltIndex;
+  sym.allocateAux();
+  symAux.back().pltIdx = symAux[directSym->auxIdx].pltIdx;
 
   if (sym.hasDirectReloc) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
     d.section = in.iplt.get();
-    d.value = sym.pltIndex * target->ipltEntrySize;
+    d.value = d.getPltIdx() * target->ipltEntrySize;
     d.size = 0;
     // It's important to set the symbol type here so that dynamic loaders
     // don't try to call the PLT as if it were an ifunc resolver.
@@ -1571,6 +1572,10 @@ void elf::postScanRelocations() {
   auto fn = [](Symbol &sym) {
     if (handleNonPreemptibleIfunc(sym))
       return;
+    if (!sym.needsDynReloc())
+      return;
+    sym.allocateAux();
+
     if (sym.needsGot)
       addGotEntry(sym);
     if (sym.needsPlt)
@@ -1584,9 +1589,10 @@ void elf::postScanRelocations() {
       } else {
         assert(sym.isFunc() && sym.needsPlt);
         if (!sym.isDefined()) {
-          replaceWithDefined(
-              sym, *in.plt,
-              target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
+          replaceWithDefined(sym, *in.plt,
+                             target->pltHeaderSize +
+                                 target->pltEntrySize * sym.getPltIdx(),
+                             0);
           sym.needsCopy = true;
           if (config->emachine == EM_PPC) {
             // PPC32 canonical PLT entries are at the beginning of .glink
@@ -1653,6 +1659,8 @@ void elf::postScanRelocations() {
     if (sym.needsTlsIe && !sym.needsTlsGdToIe)
       addTpOffsetGotEntry(sym);
   };
+
+  assert(symAux.empty());
   for (Symbol *sym : symtab->symbols())
     fn(*sym);
 
@@ -2173,6 +2181,7 @@ void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
           for (Relocation &rel : isec->relocations)
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
               if (needEntry) {
+                sym->allocateAux();
                 addPltEntry(*in.plt, *in.gotPlt, *in.relaPlt, target->pltRel,
                             *sym);
                 needEntry = false;

@@ -825,7 +825,7 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   const DWARFExpression &param_expr = matched_param->LocationInCaller;
   if (!param_expr.Evaluate(&parent_exe_ctx,
                            parent_frame->GetRegisterContext().get(),
-                           /*loclist_base_addr=*/LLDB_INVALID_ADDRESS,
+                           /*loclist_base_load_addr=*/LLDB_INVALID_ADDRESS,
                            /*initial_value_ptr=*/nullptr,
                            /*object_address_ptr=*/nullptr, result, error_ptr)) {
     LLDB_LOG(log,

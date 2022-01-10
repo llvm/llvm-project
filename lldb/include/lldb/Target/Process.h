@@ -112,15 +112,12 @@ protected:
 
 class ProcessAttachInfo : public ProcessInstanceInfo {
 public:
-  ProcessAttachInfo()
-      : ProcessInstanceInfo(), m_listener_sp(), m_hijack_listener_sp(),
-        m_plugin_name() {}
+  ProcessAttachInfo() {}
 
   ProcessAttachInfo(const ProcessLaunchInfo &launch_info)
-      : ProcessInstanceInfo(), m_listener_sp(), m_hijack_listener_sp(),
-        m_plugin_name(), m_resume_count(0), m_wait_for_launch(false),
-        m_ignore_existing(true), m_continue_once_attached(false),
-        m_detach_on_error(true), m_async(false) {
+      : m_resume_count(0), m_wait_for_launch(false), m_ignore_existing(true),
+        m_continue_once_attached(false), m_detach_on_error(true),
+        m_async(false) {
     ProcessInfo::operator=(launch_info);
     SetProcessPluginName(launch_info.GetProcessPluginName());
     SetResumeCount(launch_info.GetResumeCount());

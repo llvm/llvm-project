@@ -386,7 +386,10 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
     // Replace all uses of bbArg through a ToMemRefOp by a memref::CastOp.
     for (auto &use : llvm::make_early_inc_range(bbArg.getUses())) {
       if (auto toMemrefOp =
-          dyn_cast<bufferization::ToMemrefOp>(use.getOwner())) {
+              dyn_cast<bufferization::ToMemrefOp>(use.getOwner())) {
+        assert(memref::CastOp::areCastCompatible(
+                   memref.getType(), toMemrefOp.memref().getType()) &&
+               "bufferizeFuncOpBoundary: cast incompatible");
         auto castOp = b.create<memref::CastOp>(
             funcOp.getLoc(), toMemrefOp.memref().getType(), memref);
         toMemrefOp.memref().replaceAllUsesWith(castOp);
@@ -525,6 +528,8 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
         bbArg.setType(desiredMemrefType);
         OpBuilder b(bbArg.getContext());
         b.setInsertionPointToStart(bbArg.getOwner());
+        assert(memref::CastOp::areCastCompatible(bbArg.getType(), memrefType) &&
+               "layoutPostProcessing: cast incompatible");
         // Cast back to the original memrefType and let it canonicalize.
         Value cast =
             b.create<memref::CastOp>(funcOp.getLoc(), memrefType, bbArg);
@@ -537,6 +542,10 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
       // such cases.
       auto castArg = [&](Operation *caller) {
         OpBuilder b(caller);
+        assert(
+            memref::CastOp::areCastCompatible(
+                caller->getOperand(argNumber).getType(), desiredMemrefType) &&
+            "layoutPostProcessing.2: cast incompatible");
         Value newOperand = b.create<memref::CastOp>(
             funcOp.getLoc(), desiredMemrefType, caller->getOperand(argNumber));
         operandsPerCaller.find(caller)->getSecond().push_back(newOperand);
@@ -703,6 +712,9 @@ struct CallOpInterface
       // that will either canonicalize away or fail compilation until we can do
       // something better.
       if (buffer.getType() != memRefType) {
+        assert(
+            memref::CastOp::areCastCompatible(buffer.getType(), memRefType) &&
+            "CallOp::bufferize: cast incompatible");
         Value castBuffer = rewriter.create<memref::CastOp>(callOp.getLoc(),
                                                            memRefType, buffer);
         buffer = castBuffer;

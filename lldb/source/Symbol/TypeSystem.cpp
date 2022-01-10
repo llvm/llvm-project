@@ -22,7 +22,7 @@ using namespace lldb;
 static const size_t g_num_small_bitvector_bits = 64 - 8;
 static_assert(eNumLanguageTypes < g_num_small_bitvector_bits,
               "Languages bit vector is no longer small on 64 bit systems");
-LanguageSet::LanguageSet() : bitvector(eNumLanguageTypes, 0) {}
+LanguageSet::LanguageSet() : bitvector(eNumLanguageTypes, false) {}
 
 llvm::Optional<LanguageType> LanguageSet::GetSingularLanguage() {
   if (bitvector.count() == 1)

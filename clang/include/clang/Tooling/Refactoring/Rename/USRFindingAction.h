@@ -23,7 +23,6 @@
 namespace clang {
 class ASTConsumer;
 class ASTContext;
-class CompilerInstance;
 class NamedDecl;
 
 namespace tooling {

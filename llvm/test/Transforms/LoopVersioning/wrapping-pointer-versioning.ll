@@ -36,7 +36,6 @@ define void @f1(i16* noalias %a,
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; LV-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; LV-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
-; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
 ; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
@@ -44,7 +43,7 @@ define void @f1(i16* noalias %a,
 ; LV-NEXT:    [[TMP12:%.*]] = getelementptr i8, i8* [[A5]], i64 [[MUL_RESULT3]]
 ; LV-NEXT:    [[TMP15:%.*]] = icmp ult i8* [[TMP12]], [[A5]]
 ; LV-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW4]]
-; LV-NEXT:    [[TMP18:%.*]] = or i1 [[TMP9]], [[TMP17]]
+; LV-NEXT:    [[TMP18:%.*]] = or i1 [[TMP8]], [[TMP17]]
 ; LV-NEXT:    br i1 [[TMP18]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
@@ -154,9 +153,9 @@ define void @f2(i16* noalias %a,
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; LV-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP1]], [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP5:%.*]] = icmp ugt i32 [[TMP4]], [[TMP1]]
+; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP8]]
-; LV-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
+; LV-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[TMP8]]
 ; LV-NEXT:    [[TMP12:%.*]] = trunc i64 [[N]] to i31
 ; LV-NEXT:    [[TMP13:%.*]] = zext i31 [[TMP12]] to i64
 ; LV-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP13]], 1
@@ -263,9 +262,9 @@ define void @f3(i16* noalias %a,
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; LV-NEXT:    [[TMP2:%.*]] = add i32 0, [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP2]], 0
+; LV-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; LV-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
-; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
+; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[TMP7]]
 ; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
 ; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
@@ -359,9 +358,9 @@ define void @f4(i16* noalias %a,
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; LV-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP1]], [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP4]], [[TMP1]]
+; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP8]]
-; LV-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
+; LV-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[TMP8]]
 ; LV-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP1]] to i64
 ; LV-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[A:%.*]], i64 [[TMP12]]
 ; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
@@ -466,9 +465,9 @@ define void @f5(i16* noalias %a,
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; LV-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP1]], [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP4]], [[TMP1]]
+; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP8]]
-; LV-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
+; LV-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[TMP8]]
 ; LV-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP1]] to i64
 ; LV-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[A:%.*]], i64 [[TMP12]]
 ; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
