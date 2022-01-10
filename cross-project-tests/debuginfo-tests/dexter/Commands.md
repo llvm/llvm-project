@@ -12,6 +12,7 @@
 * [DexDeclareAddress](Commands.md#DexDeclareAddress)
 * [DexDeclareFile](Commands.md#DexDeclareFile)
 * [DexFinishTest](Commands.md#DexFinishTest)
+* [DexCommandLine](Commands.md#DexCommandLine)
 
 ---
 ## DexExpectProgramState
@@ -332,6 +333,25 @@ The command will trigger when the line 'on_line' is stepped on and either the
 condition '(expr) == (values[n])' is true or there are no conditions. If the
 optional argument 'hit_count' is provided, then the command will not trigger
 for the first 'hit_count' times the line and condition are hit.
+
+### Heuristic
+This command does not contribute to the heuristic score.
+
+----
+## DexCommandLine
+    DexCommandLine(command_line)
+
+    Args:
+        command_line (list): List of strings that form the command line.
+
+### Description
+Specifies the command line with which to launch the test. The arguments will
+be appended to the default command line, i.e. the path to the compiled binary,
+and will be passed to the program under test.
+
+This command does not contribute to any part of the debug experience testing or
+runtime instrumentation -- it's only for communicating arguments to the program
+under test.
 
 ### Heuristic
 This command does not contribute to the heuristic score.
