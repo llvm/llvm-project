@@ -514,6 +514,8 @@ define i8 @srai_i8(i8 %a) nounwind {
   ret i8 %1
 }
 
+; We could use zext.h+srli, but slli+srli offers more opportunities for
+; comppressed instructions.
 define i16 @srli_i16(i16 %a) nounwind {
 ; RV32I-LABEL: srli_i16:
 ; RV32I:       # %bb.0:
@@ -523,14 +525,14 @@ define i16 @srli_i16(i16 %a) nounwind {
 ;
 ; RV32ZBB-LABEL: srli_i16:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    zext.h a0, a0
-; RV32ZBB-NEXT:    srli a0, a0, 6
+; RV32ZBB-NEXT:    slli a0, a0, 16
+; RV32ZBB-NEXT:    srli a0, a0, 22
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: srli_i16:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    zext.h a0, a0
-; RV32ZBP-NEXT:    srli a0, a0, 6
+; RV32ZBP-NEXT:    slli a0, a0, 16
+; RV32ZBP-NEXT:    srli a0, a0, 22
 ; RV32ZBP-NEXT:    ret
   %1 = lshr i16 %a, 6
   ret i16 %1
