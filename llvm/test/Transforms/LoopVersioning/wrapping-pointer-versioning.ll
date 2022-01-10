@@ -31,9 +31,6 @@ define void @f1(i16* noalias %a,
 ; LV-NEXT:    [[A5:%.*]] = bitcast i16* [[A:%.*]] to i8*
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
 ; LV-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; LV-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
-; LV-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; LV-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; LV-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
@@ -78,10 +75,10 @@ define void @f1(i16* noalias %a,
 ; LV-NEXT:    [[INC]] = add nuw nsw i64 [[IND]], 1
 ; LV-NEXT:    [[INC1]] = add i32 [[IND1]], 1
 ; LV-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], [[N]]
-; LV-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT6:%.*]], label [[FOR_BODY]]
+; LV-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT3:%.*]], label [[FOR_BODY]]
 ; LV:       for.end.loopexit:
 ; LV-NEXT:    br label [[FOR_END:%.*]]
-; LV:       for.end.loopexit6:
+; LV:       for.end.loopexit3:
 ; LV-NEXT:    br label [[FOR_END]]
 ; LV:       for.end:
 ; LV-NEXT:    ret void
