@@ -1571,6 +1571,15 @@ public:
                         Cond2, Name);
   }
 
+  // NOTE: this is sequential, non-commutative, ordered reduction!
+  Value *CreateLogicalOr(ArrayRef<Value *> Ops) {
+    assert(!Ops.empty());
+    Value *Accum = Ops[0];
+    for (unsigned i = 1; i < Ops.size(); i++)
+      Accum = CreateLogicalOr(Accum, Ops[i]);
+    return Accum;
+  }
+
   CallInst *CreateConstrainedFPBinOp(
       Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource = nullptr,
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
