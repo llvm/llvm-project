@@ -2888,6 +2888,8 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
 
     Register AndMaskSrc = LiveIn;
 
+    // TODO: Avoid clearing the high bits if we know workitem id y/z are always
+    // 0.
     if (Shift != 0) {
       auto ShiftAmt = B.buildConstant(S32, Shift);
       AndMaskSrc = B.buildLShr(S32, LiveIn, ShiftAmt).getReg(0);
@@ -4966,6 +4968,12 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   return true;
 }
 
+static bool replaceWithConstant(MachineIRBuilder &B, MachineInstr &MI, int64_t C) {
+  B.buildConstant(MI.getOperand(0).getReg(), C);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -5069,12 +5077,20 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_implicitarg_ptr:
     return legalizeImplicitArgPtr(MI, MRI, B);
   case Intrinsic::amdgcn_workitem_id_x:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 0) == 0)
+      return replaceWithConstant(B, MI, 0);
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_X);
   case Intrinsic::amdgcn_workitem_id_y:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 1) == 0)
+      return replaceWithConstant(B, MI, 0);
+
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
   case Intrinsic::amdgcn_workitem_id_z:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 2) == 0)
+      return replaceWithConstant(B, MI, 0);
+
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
   case Intrinsic::amdgcn_workgroup_id_x:
