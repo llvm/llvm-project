@@ -445,7 +445,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
       if (Cfg.Diagnostics.SuppressAll ||
-          isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress))
+          isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress,
+                                        Clang->getLangOpts()))
         return DiagnosticsEngine::Ignored;
 
       auto It = OverriddenSeverity.find(Info.getID());

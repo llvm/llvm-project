@@ -277,19 +277,20 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "unreachable-code", "unused-variable",
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_unreachable,
-                                            Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unreachable, Conf.Diagnostics.Suppress, LangOptions()));
   // Subcategory not respected/suppressed.
-  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(diag::warn_unreachable_break,
-                                             Conf.Diagnostics.Suppress));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_unused_variable,
-                                            Conf.Diagnostics.Suppress));
+  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unreachable_break, Conf.Diagnostics.Suppress, LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unused_variable, Conf.Diagnostics.Suppress, LangOptions()));
   EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_typecheck_bool_condition,
-                                            Conf.Diagnostics.Suppress));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_unexpected_friend,
-                                            Conf.Diagnostics.Suppress));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_alloca,
-                                            Conf.Diagnostics.Suppress));
+                                            Conf.Diagnostics.Suppress,
+                                            LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::err_unexpected_friend, Conf.Diagnostics.Suppress, LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_alloca, Conf.Diagnostics.Suppress, LangOptions()));
 
   Frag.Diagnostics.Suppress.emplace_back("*");
   EXPECT_TRUE(compileAndApply());
