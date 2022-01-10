@@ -464,13 +464,13 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   }
 
   for (unsigned i = 0, e = indices.size(); i < e; ++i) {
-    if (llvm::find(operandsToErase, i) == operandsToErase.end())
+    if (!llvm::is_contained(operandsToErase, i))
       remainingIndices.push_back(indices[i]);
   }
 
   assert(remainingIndices.size() == static_cast<size_t>(llvm::count(
                                         updatedStructIndices, kDynamicIndex)) &&
-         "exected as many index operands as dynamic index attr elements");
+         "expected as many index operands as dynamic index attr elements");
 
   result.addTypes(resultType);
   result.addAttributes(attributes);
@@ -522,13 +522,14 @@ LogicalResult verify(LLVM::GEPOp gepOp) {
   SmallVector<unsigned> indices;
   SmallVector<unsigned> structSizes;
   findKnownStructIndices(gepOp.getBase().getType(), indices, &structSizes);
-  for (unsigned i = 0, e = indices.size(); i < e; ++i) {
+  DenseIntElementsAttr structIndices = gepOp.getStructIndices();
+  for (unsigned i : llvm::seq<unsigned>(0, indices.size())) {
     unsigned index = indices[i];
     // GEP may not be indexing as deep as some structs nested in the type.
-    if (index >= gepOp.getStructIndices().getNumElements())
+    if (index >= structIndices.getNumElements())
       continue;
 
-    int32_t staticIndex = gepOp.getStructIndices().getValues<int32_t>()[index];
+    int32_t staticIndex = structIndices.getValues<int32_t>()[index];
     if (staticIndex == LLVM::GEPOp::kDynamicIndex)
       return gepOp.emitOpError() << "expected index " << index
                                  << " indexing a struct to be constant";

@@ -2490,9 +2490,6 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   Value *StepCompare = Builder.CreateICmp(ICmpInst::ICMP_SLT, StepValue, Zero);
   Value *AbsStep = Builder.CreateSelect(StepCompare, NegStepValue, StepValue);
 
-  // Get the backedge taken count and truncate or extended to the AR type.
-  Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
-
   // Compute |Step| * Backedge
   // Compute:
   //   1. Start + |Step| * Backedge < Start
@@ -2505,6 +2502,9 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     // Checking <u 0 is always false.
     if (!Signed && Start->isZero() && SE.isKnownPositive(Step))
       return ConstantInt::getFalse(Loc->getContext());
+
+    // Get the backedge taken count and truncate or extended to the AR type.
+    Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
 
     Value *MulV, *OfMul;
     if (Step->isOne()) {
