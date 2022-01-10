@@ -50,3 +50,18 @@ body:             |
     %4:_(s64) = G_PTRTOINT %3
     $x0 = COPY %4(s64)
 ...
+---
+name:            test_combine_zero_extend
+body:             |
+  bb.1:
+  liveins: $x0
+
+    ; CHECK-LABEL: name: test_combine_zero_extend
+    ; CHECK: [[C:%[0-9]+]]:_(p0) = G_CONSTANT i64 4291891236
+    ; CHECK-NEXT: $x0 = COPY [[C]](p0)
+    %0:_(s32) = G_CONSTANT i32 -3076096
+    %1:_(p0) = G_INTTOPTR %0:_(s32)
+    %2:_(s64) = G_CONSTANT i64 36
+    %3:_(p0) = G_PTR_ADD %1:_, %2:_(s64)
+    $x0 = COPY %3
+...

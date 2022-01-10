@@ -2025,16 +2025,19 @@ void CombinerHelper::applyCombineAddP2IToPtrAdd(
 }
 
 bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
-                                                  int64_t &NewCst) {
+                                                  APInt &NewCst) {
   auto &PtrAdd = cast<GPtrAdd>(MI);
   Register LHS = PtrAdd.getBaseReg();
   Register RHS = PtrAdd.getOffsetReg();
   MachineRegisterInfo &MRI = Builder.getMF().getRegInfo();
 
-  if (auto RHSCst = getIConstantVRegSExtVal(RHS, MRI)) {
-    int64_t Cst;
+  if (auto RHSCst = getIConstantVRegVal(RHS, MRI)) {
+    APInt Cst;
     if (mi_match(LHS, MRI, m_GIntToPtr(m_ICst(Cst)))) {
-      NewCst = Cst + *RHSCst;
+      auto DstTy = MRI.getType(PtrAdd.getReg(0));
+      // G_INTTOPTR uses zero-extension
+      NewCst = Cst.zextOrTrunc(DstTy.getSizeInBits());
+      NewCst += RHSCst->sextOrTrunc(DstTy.getSizeInBits());
       return true;
     }
   }
@@ -2043,7 +2046,7 @@ bool CombinerHelper::matchCombineConstPtrAddToI2P(MachineInstr &MI,
 }
 
 void CombinerHelper::applyCombineConstPtrAddToI2P(MachineInstr &MI,
-                                                  int64_t &NewCst) {
+                                                  APInt &NewCst) {
   auto &PtrAdd = cast<GPtrAdd>(MI);
   Register Dst = PtrAdd.getReg(0);
 
