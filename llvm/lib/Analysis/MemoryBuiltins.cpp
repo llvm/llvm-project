@@ -222,11 +222,6 @@ static Optional<AllocFnsTy> getAllocationSize(const Value *V,
   return Result;
 }
 
-static bool hasNoAliasAttr(const Value *V) {
-  const auto *CB = dyn_cast<CallBase>(V);
-  return CB && CB->hasRetAttr(Attribute::NoAlias);
-}
-
 /// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
@@ -236,15 +231,6 @@ bool llvm::isAllocationFn(const Value *V, const TargetLibraryInfo *TLI) {
 bool llvm::isAllocationFn(
     const Value *V, function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
   return getAllocationData(V, AnyAlloc, GetTLI).hasValue();
-}
-
-/// Tests if a value is a call or invoke to a function that returns a
-/// NoAlias pointer (including malloc/calloc/realloc/strdup-like functions).
-bool llvm::isNoAliasFn(const Value *V, const TargetLibraryInfo *TLI) {
-  // it's safe to consider realloc as noalias since accessing the original
-  // pointer is undefined behavior
-  return isAllocationFn(V, TLI) ||
-         hasNoAliasAttr(V);
 }
 
 /// Tests if a value is a call or invoke to a library function that
@@ -310,6 +296,22 @@ bool llvm::isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
 /// allocates memory (strdup, strndup).
 bool llvm::isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, StrDupLike, TLI).hasValue();
+}
+
+Constant *llvm::getInitialValueOfAllocation(const CallBase *Alloc,
+                                            const TargetLibraryInfo *TLI,
+                                            Type *Ty) {
+  assert(isAllocationFn(Alloc, TLI));
+
+  // malloc and aligned_alloc are uninitialized (undef)
+  if (isMallocLikeFn(Alloc, TLI) || isAlignedAllocLikeFn(Alloc, TLI))
+    return UndefValue::get(Ty);
+
+  // calloc zero initializes
+  if (isCallocLikeFn(Alloc, TLI))
+    return Constant::getNullValue(Ty);
+
+  return nullptr;
 }
 
 /// isLibFreeFunction - Returns true if the function is a builtin free()
@@ -627,14 +629,6 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
   bool Overflow;
   Size = Size.umul_ov(NumElems, Overflow);
   return Overflow ? unknown() : std::make_pair(Size, Zero);
-
-  // TODO: handle more standard functions (+ wchar cousins):
-  // - strdup / strndup
-  // - strcpy / strncpy
-  // - strcat / strncat
-  // - memcpy / memmove
-  // - strcat / strncat
-  // - memset
 }
 
 SizeOffsetType
@@ -858,7 +852,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
 
   // Handle strdup-like functions separately.
   if (FnData->AllocTy == StrDupLike) {
-    // TODO
+    // TODO: implement evaluation of strdup/strndup
     return unknown();
   }
 
@@ -871,14 +865,6 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallBase(CallBase &CB) {
   SecondArg = Builder.CreateZExtOrTrunc(SecondArg, IntTy);
   Value *Size = Builder.CreateMul(FirstArg, SecondArg);
   return std::make_pair(Size, Zero);
-
-  // TODO: handle more standard functions (+ wchar cousins):
-  // - strdup / strndup
-  // - strcpy / strncpy
-  // - strcat / strncat
-  // - memcpy / memmove
-  // - strcat / strncat
-  // - memset
 }
 
 SizeOffsetEvalType

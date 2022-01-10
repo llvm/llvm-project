@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSymbol.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
@@ -32,7 +32,7 @@ const SBSymbol &SBSymbol::operator=(const SBSymbol &rhs) {
                      SBSymbol, operator=,(const lldb::SBSymbol &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBSymbol::~SBSymbol() { m_opaque_ptr = nullptr; }
@@ -112,7 +112,7 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target) {
   LLDB_RECORD_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
                      (lldb::SBTarget), target);
 
-  return LLDB_RECORD_RESULT(GetInstructions(target, nullptr));
+  return GetInstructions(target, nullptr);
 }
 
 SBInstructionList SBSymbol::GetInstructions(SBTarget target,
@@ -137,7 +137,7 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target,
       }
     }
   }
-  return LLDB_RECORD_RESULT(sb_instructions);
+  return sb_instructions;
 }
 
 lldb_private::Symbol *SBSymbol::get() { return m_opaque_ptr; }
@@ -151,7 +151,7 @@ SBAddress SBSymbol::GetStartAddress() {
   if (m_opaque_ptr && m_opaque_ptr->ValueIsAddress()) {
     addr.SetAddress(m_opaque_ptr->GetAddressRef());
   }
-  return LLDB_RECORD_RESULT(addr);
+  return addr;
 }
 
 SBAddress SBSymbol::GetEndAddress() {
@@ -165,7 +165,7 @@ SBAddress SBSymbol::GetEndAddress() {
       addr->Slide(m_opaque_ptr->GetByteSize());
     }
   }
-  return LLDB_RECORD_RESULT(addr);
+  return addr;
 }
 
 uint32_t SBSymbol::GetPrologueByteSize() {
@@ -198,38 +198,4 @@ bool SBSymbol::IsSynthetic() {
   if (m_opaque_ptr)
     return m_opaque_ptr->IsSynthetic();
   return false;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBSymbol>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBSymbol, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBSymbol, (const lldb::SBSymbol &));
-  LLDB_REGISTER_METHOD(const lldb::SBSymbol &,
-                       SBSymbol, operator=,(const lldb::SBSymbol &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBSymbol, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBSymbol, operator bool, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetName, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetDisplayName, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBSymbol, GetMangledName, ());
-  LLDB_REGISTER_METHOD_CONST(bool,
-                             SBSymbol, operator==,(const lldb::SBSymbol &));
-  LLDB_REGISTER_METHOD_CONST(bool,
-                             SBSymbol, operator!=,(const lldb::SBSymbol &));
-  LLDB_REGISTER_METHOD(bool, SBSymbol, GetDescription, (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
-                       (lldb::SBTarget, const char *));
-  LLDB_REGISTER_METHOD(lldb::SBAddress, SBSymbol, GetStartAddress, ());
-  LLDB_REGISTER_METHOD(lldb::SBAddress, SBSymbol, GetEndAddress, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBSymbol, GetPrologueByteSize, ());
-  LLDB_REGISTER_METHOD(lldb::SymbolType, SBSymbol, GetType, ());
-  LLDB_REGISTER_METHOD(bool, SBSymbol, IsExternal, ());
-  LLDB_REGISTER_METHOD(bool, SBSymbol, IsSynthetic, ());
-}
-
-}
 }

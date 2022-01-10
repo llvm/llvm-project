@@ -21,7 +21,6 @@
 namespace llvm {
 class Record;
 class RecordKeeper;
-class CodeGenTarget;
 
 struct CodeGenIntrinsic {
   Record *TheDef;             // The actual record defining this intrinsic.

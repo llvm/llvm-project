@@ -351,7 +351,7 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
 
     // Cast values at the call site if necessary.
     returnValues.push_back(
-        getNonCastedValue(state.lookupBuffer(rewriter, returnVal)));
+        getNonCastedValue(*state.getBuffer(rewriter, returnOperand)));
   }
 
   // 2. Rewrite the terminator without the inPlace bufferizable values.
@@ -386,7 +386,10 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
     // Replace all uses of bbArg through a ToMemRefOp by a memref::CastOp.
     for (auto &use : llvm::make_early_inc_range(bbArg.getUses())) {
       if (auto toMemrefOp =
-          dyn_cast<bufferization::ToMemrefOp>(use.getOwner())) {
+              dyn_cast<bufferization::ToMemrefOp>(use.getOwner())) {
+        assert(memref::CastOp::areCastCompatible(
+                   memref.getType(), toMemrefOp.memref().getType()) &&
+               "bufferizeFuncOpBoundary: cast incompatible");
         auto castOp = b.create<memref::CastOp>(
             funcOp.getLoc(), toMemrefOp.memref().getType(), memref);
         toMemrefOp.memref().replaceAllUsesWith(castOp);
@@ -525,6 +528,8 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
         bbArg.setType(desiredMemrefType);
         OpBuilder b(bbArg.getContext());
         b.setInsertionPointToStart(bbArg.getOwner());
+        assert(memref::CastOp::areCastCompatible(bbArg.getType(), memrefType) &&
+               "layoutPostProcessing: cast incompatible");
         // Cast back to the original memrefType and let it canonicalize.
         Value cast =
             b.create<memref::CastOp>(funcOp.getLoc(), memrefType, bbArg);
@@ -537,6 +542,10 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
       // such cases.
       auto castArg = [&](Operation *caller) {
         OpBuilder b(caller);
+        assert(
+            memref::CastOp::areCastCompatible(
+                caller->getOperand(argNumber).getType(), desiredMemrefType) &&
+            "layoutPostProcessing.2: cast incompatible");
         Value newOperand = b.create<memref::CastOp>(
             funcOp.getLoc(), desiredMemrefType, caller->getOperand(argNumber));
         operandsPerCaller.find(caller)->getSecond().push_back(newOperand);
@@ -590,6 +599,11 @@ struct CallOpInterface
     return true;
   }
 
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return false;
+  }
+
   OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                const BufferizationState &state) const {
     // CallOpInterface is special, it needs to wait for the callee to be
@@ -639,7 +653,7 @@ struct CallOpInterface
 
     // 1. Compute the result types of the new CallOp. Tensor results that are
     // equivalent to a FuncOp bbArg are no longer returned.
-    for (auto it : llvm::enumerate(callOp.getResultTypes())) {
+    for (const auto &it : llvm::enumerate(callOp.getResultTypes())) {
       unsigned returnValIdx = it.index();
       Type returnType = it.value();
       if (!isaTensor(returnType)) {
@@ -654,7 +668,8 @@ struct CallOpInterface
         // Return operands that are equivalent to some bbArg, are not
         // returned.
         Value buffer =
-            state.lookupBuffer(rewriter, callOp->getOperand(*bbArgIdx));
+            *state.getBuffer(rewriter, callOp->getOpOperand(*bbArgIdx),
+                             /*forceInPlace=*/true);
         replacementValues[returnValIdx] = buffer;
         newOperands[*bbArgIdx] = buffer;
         continue;
@@ -685,9 +700,9 @@ struct CallOpInterface
       // Retrieve buffers for tensor operands. Tensor operand buffers, who's
       // corresponding FuncOp bbArgs are equivalent to a returned tensor, were
       // already stored in `newOperands` during Step 1.
-      Value buffer = newOperands[idx]
-                         ? newOperands[idx]
-                         : state.lookupBuffer(rewriter, tensorOperand);
+      Value buffer = newOperands[idx] ? newOperands[idx]
+                                      : *state.getBuffer(rewriter, opOperand,
+                                                         /*forceInPlace=*/true);
 
       // Caller / callee type mistmatch is handled with a CastOp.
       auto memRefType = bufferizedFuncType.getInput(idx);
@@ -697,6 +712,9 @@ struct CallOpInterface
       // that will either canonicalize away or fail compilation until we can do
       // something better.
       if (buffer.getType() != memRefType) {
+        assert(
+            memref::CastOp::areCastCompatible(buffer.getType(), memRefType) &&
+            "CallOp::bufferize: cast incompatible");
         Value castBuffer = rewriter.create<memref::CastOp>(callOp.getLoc(),
                                                            memRefType, buffer);
         buffer = castBuffer;
@@ -767,19 +785,19 @@ struct FuncOpInterface
     const ModuleBufferizationState &moduleState =
         getModuleBufferizationState(state);
 
+    // "linalg.inplaceable" overrides other writability decisions. This is
+    // currently used for testing only.
+    if (BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
+            bbArg.getArgNumber(),
+            BufferizableOpInterface::kInplaceableAttrName))
+      return inplaceAttr.getValue();
+
     // In a first approximation:
     // =========================
     // If the function is called, we can allocate on the caller side which lets
     // us force inplace arguments at function boundaries.
     // TODO: do not rely on this behavior.
     if (moduleState.callerMap.find(funcOp) != moduleState.callerMap.end())
-      return true;
-
-    // Set the function arguments marked with inplaceable to be known as
-    // bufferizing to a writeable memory.
-    BoolAttr inplaceAttr = funcOp.getArgAttrOfType<BoolAttr>(
-        bbArg.getArgNumber(), BufferizableOpInterface::kInplaceableAttrName);
-    if (inplaceAttr && inplaceAttr.getValue())
       return true;
 
     // All other function arguments are not writable.
@@ -836,6 +854,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   // inplace. Therefore, we just bufferize funcOp as if none of its results were
   // inplaceable, detect which operands are cloned internally and decide what to
   // do at call sites.
+
+  // Analyze ops.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // No body => no analysis.
     if (funcOp.body().empty())
@@ -848,8 +868,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     // Gather equivalence info for CallOps.
     equivalenceAnalysis(funcOp, aliasInfo, moduleState);
 
-    // Analyze and bufferize funcOp.
-    if (failed(runComprehensiveBufferize(funcOp, *options, state)))
+    // Analyze funcOp.
+    if (failed(analyzeOp(funcOp, state)))
       return failure();
 
     // Add annotations to function arguments.
@@ -860,6 +880,18 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
   if (options->testAnalysisOnly)
     return success();
 
+  // Bufferize function bodies.
+  for (FuncOp funcOp : moduleState.orderedFuncOps) {
+    // No body => no analysis.
+    if (funcOp.body().empty())
+      continue;
+
+    if (failed(runComprehensiveBufferize(funcOp, *options, state,
+                                         /*runAnalysis=*/false)))
+      return failure();
+  }
+
+  // Bufferize function boundaries.
   for (FuncOp funcOp : moduleState.orderedFuncOps) {
     // Note: It would be good to apply cleanups here but we cannot as aliasInfo
     // would be invalidated.

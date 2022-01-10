@@ -28,13 +28,11 @@ namespace llvm {
 namespace orc {
 class ThreadSafeContext;
 }
-class Module;
 } // namespace llvm
 
 namespace clang {
 
 class CompilerInstance;
-class DeclGroupRef;
 class IncrementalExecutor;
 class IncrementalParser;
 

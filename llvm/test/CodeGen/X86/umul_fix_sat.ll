@@ -465,10 +465,8 @@ define i64 @func7(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    adcl $0, %ebx
 ; X86-NEXT:    addl %ebp, %edx
 ; X86-NEXT:    adcl $0, %ebx
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpl $1, %ebx
+; X86-NEXT:    negl %ebx
 ; X86-NEXT:    sbbl %ecx, %ecx
-; X86-NEXT:    notl %ecx
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    orl %ecx, %edx
 ; X86-NEXT:    popl %esi
@@ -523,13 +521,11 @@ define i64 @func8(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    shrdl $31, %edx, %eax
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    shrl $31, %esi
-; X86-NEXT:    xorl %edi, %edi
-; X86-NEXT:    cmpl $1, %esi
-; X86-NEXT:    sbbl %edi, %edi
-; X86-NEXT:    notl %edi
-; X86-NEXT:    orl %edi, %eax
+; X86-NEXT:    negl %esi
+; X86-NEXT:    sbbl %esi, %esi
+; X86-NEXT:    orl %esi, %eax
 ; X86-NEXT:    shrdl $31, %ecx, %edx
-; X86-NEXT:    orl %edi, %edx
+; X86-NEXT:    orl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

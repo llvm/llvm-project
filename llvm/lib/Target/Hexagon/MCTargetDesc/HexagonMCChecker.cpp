@@ -234,9 +234,10 @@ bool HexagonMCChecker::check(bool FullCheck) {
   bool chkHWLoop = checkHWLoop();
   bool chkValidTmpDst = FullCheck ? checkValidTmpDst() : true;
   bool chkLegalVecRegPair = checkLegalVecRegPair();
+  bool ChkHVXAccum = checkHVXAccum();
   bool chk = chkP && chkNV && chkR && chkRRO && chkS && chkSh && chkSl &&
              chkAXOK && chkCofMax1 && chkHWLoop && chkValidTmpDst &&
-             chkLegalVecRegPair;
+             chkLegalVecRegPair && ChkHVXAccum;
 
   return chk;
 }
@@ -275,20 +276,27 @@ static bool isDuplexAGroup(unsigned Opcode) {
 }
 
 static bool isNeitherAnorX(MCInstrInfo const &MCII, MCInst const &ID) {
-  unsigned Result = 0;
+  if (HexagonMCInstrInfo::isFloat(MCII, ID))
+    return true;
   unsigned Type = HexagonMCInstrInfo::getType(MCII, ID);
-  if (Type == HexagonII::TypeDUPLEX) {
-    unsigned subInst0Opcode = ID.getOperand(0).getInst()->getOpcode();
-    unsigned subInst1Opcode = ID.getOperand(1).getInst()->getOpcode();
-    Result += !isDuplexAGroup(subInst0Opcode);
-    Result += !isDuplexAGroup(subInst1Opcode);
-  } else
-    Result +=
-        Type != HexagonII::TypeALU32_2op && Type != HexagonII::TypeALU32_3op &&
-        Type != HexagonII::TypeALU32_ADDI && Type != HexagonII::TypeS_2op &&
-        Type != HexagonII::TypeS_3op &&
-        (Type != HexagonII::TypeALU64 || HexagonMCInstrInfo::isFloat(MCII, ID));
-  return Result != 0;
+  switch (Type) {
+  case HexagonII::TypeALU32_2op:
+  case HexagonII::TypeALU32_3op:
+  case HexagonII::TypeALU32_ADDI:
+  case HexagonII::TypeS_2op:
+  case HexagonII::TypeS_3op:
+  case HexagonII::TypeEXTENDER:
+  case HexagonII::TypeM:
+  case HexagonII::TypeALU64:
+    return false;
+  case HexagonII::TypeSUBINSN: {
+    return !isDuplexAGroup(ID.getOpcode());
+  }
+  case HexagonII::TypeDUPLEX:
+    llvm_unreachable("unexpected duplex instruction");
+  default:
+    return true;
+  }
 }
 
 bool HexagonMCChecker::checkAXOK() {
@@ -371,18 +379,8 @@ bool HexagonMCChecker::checkCOFMax1() {
 }
 
 bool HexagonMCChecker::checkSlots() {
-  unsigned slotsUsed = 0;
-  for (auto HMI : HexagonMCInstrInfo::bundleInstructions(MCB)) {
-    MCInst const &MCI = *HMI.getInst();
-    if (HexagonMCInstrInfo::isImmext(MCI))
-      continue;
-    if (HexagonMCInstrInfo::isDuplex(MCII, MCI))
-      slotsUsed += 2;
-    else
-      ++slotsUsed;
-  }
-
-  if (slotsUsed > HEXAGON_PACKET_SIZE) {
+  if (HexagonMCInstrInfo::slotsConsumed(MCII, STI, MCB) >
+      HexagonMCInstrInfo::packetSizeSlots(STI)) {
     reportError("invalid instruction packet: out of slots");
     return false;
   }
@@ -815,6 +813,25 @@ bool HexagonMCChecker::checkLegalVecRegPair() {
       reportError("register pair `" + Twine(RI.getName(R)) +
                   "' is not permitted for this architecture");
     return false;
+  }
+  return true;
+}
+
+// Vd.tmp can't be accumulated
+bool HexagonMCChecker::checkHVXAccum()
+{
+  for (const auto &I : HexagonMCInstrInfo::bundleInstructions(MCII, MCB)) {
+    bool IsTarget =
+        HexagonMCInstrInfo::isAccumulator(MCII, I) && I.getOperand(0).isReg();
+    if (!IsTarget)
+      continue;
+    unsigned int R = I.getOperand(0).getReg();
+    TmpDefsIterator It = TmpDefs.find(R);
+    if (It != TmpDefs.end()) {
+      reportError("register `" + Twine(RI.getName(R)) + ".tmp" +
+                  "' is accumulated in this packet");
+      return false;
+    }
   }
   return true;
 }

@@ -49,6 +49,16 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
+  if(COMPILER_RT_ENABLE_CET)
+    if(NOT arch MATCHES "i?86|x86_64|AMD64")
+      message(SEND_ERROR "${arch} does not support CET")
+    endif()
+    if(COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS -fcf-protection=full)
+      string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
+    endif()
+  endif()
+
   # Compute builtins available in library and add them as lit features.
   if(APPLE)
     # TODO: Support other Apple platforms.

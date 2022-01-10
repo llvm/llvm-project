@@ -457,7 +457,7 @@ llvm::Expected<SourceLocation> sourceLocationInMainFile(const SourceManager &SM,
                                                         Position P) {
   llvm::StringRef Code = SM.getBufferOrFake(SM.getMainFileID()).getBuffer();
   auto Offset =
-      positionToOffset(Code, P, /*AllowColumnBeyondLineLength=*/false);
+      positionToOffset(Code, P, /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset)
     return Offset.takeError();
   return SM.getLocForStartOfFile(SM.getMainFileID()).getLocWithOffset(*Offset);

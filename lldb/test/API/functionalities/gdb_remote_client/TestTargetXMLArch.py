@@ -130,6 +130,7 @@ class TestTargetXMLArch(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
+    @skipIfLLVMTargetMissing("X86")
     def test_register_augmentation(self):
         """
         Test that we correctly associate the register info with the eh_frame

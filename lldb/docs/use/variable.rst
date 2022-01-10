@@ -7,7 +7,7 @@ Variable Formatting
 LLDB has a data formatters subsystem that allows users to define custom display
 options for their variables.
 
-Usually, when you type frame variable or run some expression LLDB will
+Usually, when you type ``frame variable`` or run some expression LLDB will
 automatically choose the way to display your results on a per-type basis, as in
 the following example:
 
@@ -17,7 +17,11 @@ the following example:
    (uint8_t) x = 'a'
    (intptr_t) y = 124752287
 
-However, in certain cases, you may want to associate a different style to the display for certain datatypes. To do so, you need to give hints to the debugger
+Note: ``frame variable`` without additional arguments prints the list of
+variables of the current frame.
+
+However, in certain cases, you may want to associate a different style to the
+display for certain datatypes. To do so, you need to give hints to the debugger
 as to how variables should be displayed. The LLDB type command allows you to do
 just that.
 
@@ -28,6 +32,63 @@ Using it you can change your visualization to look like this:
    (lldb) frame variable
    (uint8_t) x = chr='a' dec=65 hex=0x41
    (intptr_t) y = 0x76f919f
+
+In addition, some data structures can encode their data in a way that is not
+easily readable to the user, in which case a data formatter can be used to
+show the data in a human readable way. For example, without a formatter,
+printing a ``std::deque<int>`` with the elements ``{2, 3, 4, 5, 6}`` would
+result in something like:
+
+::
+
+   (lldb) frame variable a_deque
+   (std::deque<Foo, std::allocator<int> >) $0 = {
+      std::_Deque_base<Foo, std::allocator<int> > = {
+         _M_impl = {
+            _M_map = 0x000000000062ceb0
+            _M_map_size = 8
+            _M_start = {
+               _M_cur = 0x000000000062cf00
+               _M_first = 0x000000000062cf00
+               _M_last = 0x000000000062d2f4
+               _M_node = 0x000000000062cec8
+            }
+            _M_finish = {
+               _M_cur = 0x000000000062d300
+               _M_first = 0x000000000062d300
+               _M_last = 0x000000000062d6f4
+               _M_node = 0x000000000062ced0
+            }
+         }
+      }
+   }
+
+which is very hard to make sense of.
+
+Note: ``frame variable <var>`` prints out the variable ``<var>`` in the current
+frame.
+
+On the other hand, a proper formatter is able to produce the following output:
+
+::
+
+   (lldb) frame variable a_deque
+   (std::deque<Foo, std::allocator<int> >) $0 = size=5 {
+      [0] = 2
+      [1] = 3
+      [2] = 4
+      [3] = 5
+      [4] = 6
+   }
+
+which is what the user would expect from a good debugger.
+
+Note: you can also use ``v <var>`` instead of ``frame variable <var>``.
+
+It's worth mentioning that the ``size=5`` string is produced by a summary
+provider and the list of children is produced by a synthetic child provider.
+More information about these providers is available later in this document.
+
 
 There are several features related to data visualization: formats, summaries,
 filters, synthetic children.
@@ -426,9 +487,7 @@ themselves, but which carry a special meaning when used in this context:
 | ``%>``     | Print the expression path for this item                                  |
 +------------+--------------------------------------------------------------------------+
 
-Starting with SVN r228207, you can also specify
-``${script.var:pythonFuncName}``. Previously, back to r220821, this was
-specified with a different syntax: ``${var.script:pythonFuncName}``.
+Since lldb 3.7.0, you can also specify ``${script.var:pythonFuncName}``.
 
 It is expected that the function name you use specifies a function whose
 signature is the same as a Python summary function. The return string from the
@@ -871,29 +930,36 @@ be implemented by the Python class):
          this call should return a new LLDB SBValue object representing the child at the index given as argument
       def update(self):
          this call should be used to update the internal state of this Python object whenever the state of the variables in LLDB changes.[1]
+         Also, this method is invoked before any other method in the interface.
       def has_children(self):
          this call should return True if this object might have children, and False if this object can be guaranteed not to have children.[2]
       def get_value(self):
          this call can return an SBValue to be presented as the value of the synthetic value under consideration.[3]
 
-[1] This method is optional. Also, it may optionally choose to return a value
-(starting with SVN rev153061/LLDB-134). If it returns a value, and that value
-is True, LLDB will be allowed to cache the children and the children count it
-previously obtained, and will not return to the provider class to ask. If
-nothing, None, or anything other than True is returned, LLDB will discard the
-cached information and ask. Regardless, whenever necessary LLDB will call
-update.
+As a warning, exceptions that are thrown by python formatters are caught
+silently by LLDB and should be handled appropriately by the formatter itself.
+Being more specific, in case of exceptions, LLDB might assume that the given
+object has no children or it might skip printing some children, as they are
+printed one by one.
 
-[2] This method is optional (starting with SVN rev166495/LLDB-175). While
-implementing it in terms of num_children is acceptable, implementors are
-encouraged to look for optimized coding alternatives whenever reasonable.
+[1] This method is optional. Also, a boolean value must be returned (since lldb
+3.1.0). If ``False`` is returned, then whenever the process reaches a new stop,
+this method will be invoked again to generate an updated list of the children
+for a given variable. Otherwise, if ``True`` is returned, then the value is
+cached and this method won't be called again, effectively freezing the state of
+the value in subsequent stops. Beware that returning ``True`` incorrectly could
+show misleading information to the user.
 
-[3] This method is optional (starting with SVN revision 219330). The `SBValue`
-you return here will most likely be a numeric type (int, float, ...) as its
-value bytes will be used as-if they were the value of the root `SBValue` proper.
-As a shortcut for this, you can inherit from lldb.SBSyntheticValueProvider, and
-just define get_value as other methods are defaulted in the superclass as
-returning default no-children responses.
+[2] This method is optional (since lldb 3.2.0). While implementing it in terms
+of num_children is acceptable, implementors are encouraged to look for
+optimized coding alternatives whenever reasonable.
+
+[3] This method is optional (since lldb 3.5.2). The `SBValue` you return here
+will most likely be a numeric type (int, float, ...) as its value bytes will be
+used as-if they were the value of the root `SBValue` proper.  As a shortcut for
+this, you can inherit from lldb.SBSyntheticValueProvider, and just define
+get_value as other methods are defaulted in the superclass as returning default
+no-children responses.
 
 If a synthetic child provider supplies a special child named
 ``$$dereference$$`` then it will be used when evaluating ``operator *`` and
@@ -971,6 +1037,24 @@ instead of the real ones. For instance,
       (int) [2] = 123
       (int) [3] = 1234
    }
+
+It's important to mention that LLDB invokes the synthetic child provider before
+invoking the summary string provider, which allows the latter to have access to
+the actual displayable children. This applies to both inlined summary strings
+and python-based summary providers.
+
+
+As a warning, when programmatically accessing the children or children count of
+a variable that has a synthetic child provider, notice that LLDB hides the
+actual raw children. For example, suppose we have a ``std::vector``, which has
+an actual in-memory property ``__begin`` marking the beginning of its data.
+After the synthetic child provider is executed, the ``std::vector`` variable
+won't show ``__begin`` as child anymore, even through the SB API. It will have
+instead the children calculated by the provider. In case the actual raw
+children are needed, a call to ``value.GetNonSyntheticValue()`` is enough to
+get a raw version of the value. It is import to remember this when implementing
+summary string providers, as they run after the synthetic child provider.
+
 
 In some cases, if LLDB is unable to use the real object to get a child
 specified in an expression path, it will automatically refer to the synthetic
@@ -1142,11 +1226,11 @@ not-empty category.
 Finding Formatters 101
 ----------------------
 
-Searching for a formatter (including formats, starting in SVN rev r192217)
-given a variable goes through a rather intricate set of rules. Namely, what
-happens is that LLDB starts looking in each enabled category, according to the
-order in which they were enabled (latest enabled first). In each category, LLDB
-does the following:
+Searching for a formatter (including formats, since lldb 3.4.0) given a
+variable goes through a rather intricate set of rules. Namely, what happens is
+that LLDB starts looking in each enabled category, according to the order in
+which they were enabled (latest enabled first). In each category, LLDB does the
+following:
 
 - If there is a formatter for the type of the variable, use it
 - If this object is a pointer, and there is a formatter for the pointee type

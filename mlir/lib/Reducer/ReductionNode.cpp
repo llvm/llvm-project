@@ -63,7 +63,7 @@ ArrayRef<ReductionNode *> ReductionNode::generateNewVariants() {
     for (const Range &range : getRanges()) {
       std::vector<Range> subRanges = getRanges();
       llvm::erase_value(subRanges, range);
-      variants.push_back(createNewNode(std::move(subRanges)));
+      variants.push_back(createNewNode(subRanges));
     }
 
     return getVariants().drop_front(oldNumVariant);
@@ -91,7 +91,7 @@ ArrayRef<ReductionNode *> ReductionNode::generateNewVariants() {
   *subRangesIter = std::make_pair(maxRange.first, half);
   variants.push_back(createNewNode(subRanges));
   *subRangesIter = std::make_pair(half, maxRange.second);
-  variants.push_back(createNewNode(std::move(subRanges)));
+  variants.push_back(createNewNode(subRanges));
 
   auto it = ranges.insert(maxElement, std::make_pair(half, maxRange.second));
   it = ranges.insert(it, std::make_pair(maxRange.first, half));

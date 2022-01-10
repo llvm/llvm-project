@@ -44,7 +44,6 @@ class IntToPtrInst;
 class LLVMContext;
 class LoadInst;
 class PHINode;
-class PointerType;
 class SelectInst;
 class Type;
 class UndefValue;
@@ -56,10 +55,6 @@ class Value;
 bool isAllocationFn(const Value *V, const TargetLibraryInfo *TLI);
 bool isAllocationFn(const Value *V,
                     function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
-
-/// Tests if a value is a call or invoke to a function that returns a
-/// NoAlias pointer (including malloc/calloc/realloc/strdup-like functions).
-bool isNoAliasFn(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates uninitialized memory (such as malloc).
@@ -114,6 +109,16 @@ const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
 inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
   return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
 }
+
+//===----------------------------------------------------------------------===//
+//  Properties of allocation functions
+//
+
+/// If this allocation function initializes memory to a fixed value, return
+/// said value in the requested type.  Otherwise, return nullptr.
+Constant *getInitialValueOfAllocation(const CallBase *Alloc,
+                                      const TargetLibraryInfo *TLI,
+                                      Type *Ty);
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.

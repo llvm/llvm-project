@@ -2487,7 +2487,7 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
       if (FQT->isUnionType())
         HasUnion = true;
 
-      BuildRCBlockVarRecordLayout(FQT->getAs<RecordType>(),
+      BuildRCBlockVarRecordLayout(FQT->castAs<RecordType>(),
                                   BytePos + FieldOffset, HasUnion);
       continue;
     }

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBAddress.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSection.h"
@@ -57,7 +57,7 @@ const SBAddress &SBAddress::operator=(const SBAddress &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool lldb::operator==(const SBAddress &lhs, const SBAddress &rhs) {
@@ -162,7 +162,7 @@ lldb::SBSection SBAddress::GetSection() {
   lldb::SBSection sb_section;
   if (m_opaque_up->IsValid())
     sb_section.SetSP(m_opaque_up->GetSection());
-  return LLDB_RECORD_RESULT(sb_section);
+  return sb_section;
 }
 
 lldb::addr_t SBAddress::GetOffset() {
@@ -214,7 +214,7 @@ SBModule SBAddress::GetModule() {
   SBModule sb_module;
   if (m_opaque_up->IsValid())
     sb_module.SetSP(m_opaque_up->GetModule());
-  return LLDB_RECORD_RESULT(sb_module);
+  return sb_module;
 }
 
 SBSymbolContext SBAddress::GetSymbolContext(uint32_t resolve_scope) {
@@ -225,7 +225,7 @@ SBSymbolContext SBAddress::GetSymbolContext(uint32_t resolve_scope) {
   SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   if (m_opaque_up->IsValid())
     m_opaque_up->CalculateSymbolContext(&sb_sc.ref(), scope);
-  return LLDB_RECORD_RESULT(sb_sc);
+  return sb_sc;
 }
 
 SBCompileUnit SBAddress::GetCompileUnit() {
@@ -234,7 +234,7 @@ SBCompileUnit SBAddress::GetCompileUnit() {
   SBCompileUnit sb_comp_unit;
   if (m_opaque_up->IsValid())
     sb_comp_unit.reset(m_opaque_up->CalculateSymbolContextCompileUnit());
-  return LLDB_RECORD_RESULT(sb_comp_unit);
+  return sb_comp_unit;
 }
 
 SBFunction SBAddress::GetFunction() {
@@ -243,7 +243,7 @@ SBFunction SBAddress::GetFunction() {
   SBFunction sb_function;
   if (m_opaque_up->IsValid())
     sb_function.reset(m_opaque_up->CalculateSymbolContextFunction());
-  return LLDB_RECORD_RESULT(sb_function);
+  return sb_function;
 }
 
 SBBlock SBAddress::GetBlock() {
@@ -252,7 +252,7 @@ SBBlock SBAddress::GetBlock() {
   SBBlock sb_block;
   if (m_opaque_up->IsValid())
     sb_block.SetPtr(m_opaque_up->CalculateSymbolContextBlock());
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 SBSymbol SBAddress::GetSymbol() {
@@ -261,7 +261,7 @@ SBSymbol SBAddress::GetSymbol() {
   SBSymbol sb_symbol;
   if (m_opaque_up->IsValid())
     sb_symbol.reset(m_opaque_up->CalculateSymbolContextSymbol());
-  return LLDB_RECORD_RESULT(sb_symbol);
+  return sb_symbol;
 }
 
 SBLineEntry SBAddress::GetLineEntry() {
@@ -273,45 +273,5 @@ SBLineEntry SBAddress::GetLineEntry() {
     if (m_opaque_up->CalculateSymbolContextLineEntry(line_entry))
       sb_line_entry.SetLineEntry(line_entry);
   }
-  return LLDB_RECORD_RESULT(sb_line_entry);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBAddress>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBAddress, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBAddress, (const lldb::SBAddress &));
-  LLDB_REGISTER_CONSTRUCTOR(SBAddress, (lldb::SBSection, lldb::addr_t));
-  LLDB_REGISTER_CONSTRUCTOR(SBAddress, (lldb::addr_t, lldb::SBTarget &));
-  LLDB_REGISTER_METHOD(const lldb::SBAddress &,
-                       SBAddress, operator=,(const lldb::SBAddress &));
-  LLDB_REGISTER_METHOD_CONST(bool,
-                             SBAddress, operator!=,(const lldb::SBAddress &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBAddress, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBAddress, operator bool, ());
-  LLDB_REGISTER_METHOD(void, SBAddress, Clear, ());
-  LLDB_REGISTER_METHOD(void, SBAddress, SetAddress,
-                       (lldb::SBSection, lldb::addr_t));
-  LLDB_REGISTER_METHOD_CONST(lldb::addr_t, SBAddress, GetFileAddress, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::addr_t, SBAddress, GetLoadAddress,
-                             (const lldb::SBTarget &));
-  LLDB_REGISTER_METHOD(void, SBAddress, SetLoadAddress,
-                       (lldb::addr_t, lldb::SBTarget &));
-  LLDB_REGISTER_METHOD(bool, SBAddress, OffsetAddress, (lldb::addr_t));
-  LLDB_REGISTER_METHOD(lldb::SBSection, SBAddress, GetSection, ());
-  LLDB_REGISTER_METHOD(lldb::addr_t, SBAddress, GetOffset, ());
-  LLDB_REGISTER_METHOD(bool, SBAddress, GetDescription, (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(lldb::SBModule, SBAddress, GetModule, ());
-  LLDB_REGISTER_METHOD(lldb::SBSymbolContext, SBAddress, GetSymbolContext,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBCompileUnit, SBAddress, GetCompileUnit, ());
-  LLDB_REGISTER_METHOD(lldb::SBFunction, SBAddress, GetFunction, ());
-  LLDB_REGISTER_METHOD(lldb::SBBlock, SBAddress, GetBlock, ());
-  LLDB_REGISTER_METHOD(lldb::SBSymbol, SBAddress, GetSymbol, ());
-  LLDB_REGISTER_METHOD(lldb::SBLineEntry, SBAddress, GetLineEntry, ());
-}
-
-}
+  return sb_line_entry;
 }

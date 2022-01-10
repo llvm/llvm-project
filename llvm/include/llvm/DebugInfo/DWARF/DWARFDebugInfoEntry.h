@@ -16,7 +16,6 @@
 
 namespace llvm {
 
-class DataExtractor;
 class DWARFUnit;
 
 /// DWARFDebugInfoEntry - A DIE with only the minimum required data.

@@ -1089,7 +1089,7 @@ void PPC64::writePltHeader(uint8_t *buf) const {
 
 void PPC64::writePlt(uint8_t *buf, const Symbol &sym,
                      uint64_t /*pltEntryAddr*/) const {
-  int32_t offset = pltHeaderSize + sym.pltIndex * pltEntrySize;
+  int32_t offset = pltHeaderSize + sym.getPltIdx() * pltEntrySize;
   // bl __glink_PLTresolve
   write32(buf, 0x48000000 | ((-offset) & 0x03FFFFFc));
 }

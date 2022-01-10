@@ -1104,20 +1104,19 @@ bool GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
   }
   assert(DepInfo.isDef() && "follows from above");
 
-  // Loading the allocation -> undef.
-  if (isa<AllocaInst>(DepInst) || isMallocLikeFn(DepInst, TLI) ||
-      isAlignedAllocLikeFn(DepInst, TLI) ||
-      // Loading immediately after lifetime begin -> undef.
-      isLifetimeStart(DepInst)) {
+  // Loading the alloca -> undef.
+  // Loading immediately after lifetime begin -> undef.
+  if (isa<AllocaInst>(DepInst) || isLifetimeStart(DepInst)) {
     Res = AvailableValue::get(UndefValue::get(Load->getType()));
     return true;
   }
 
-  // Loading from calloc (which zero initializes memory) -> zero
-  if (isCallocLikeFn(DepInst, TLI)) {
-    Res = AvailableValue::get(Constant::getNullValue(Load->getType()));
-    return true;
-  }
+  if (isAllocationFn(DepInst, TLI))
+    if (auto *InitVal = getInitialValueOfAllocation(cast<CallBase>(DepInst),
+                                                    TLI, Load->getType())) {
+      Res = AvailableValue::get(InitVal);
+      return true;
+    }
 
   if (StoreInst *S = dyn_cast<StoreInst>(DepInst)) {
     // Reject loads and stores that are to the same address but are of

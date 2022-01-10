@@ -26,7 +26,7 @@ def matmul_poly(
     B=TensorDef(T2, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True)):
   domain(D.m, D.n, D.k)
-  C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
+  C[D.m, D.n] += TypeFn.cast(U, A[D.m, D.k]) * TypeFn.cast(U, B[D.k, D.n])
 
 
 @linalg_structured_op
@@ -35,7 +35,8 @@ def matmul_unsigned_poly(
     B=TensorDef(T2, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True)):
   domain(D.m, D.n, D.k)
-  C[D.m, D.n] += cast_unsigned(U, A[D.m, D.k]) * cast_unsigned(U, B[D.k, D.n])
+  C[D.m, D.n] += TypeFn.cast_unsigned(U, A[D.m, D.k]) * TypeFn.cast_unsigned(
+      U, B[D.k, D.n])
 
 
 with Context() as ctx, Location.unknown():

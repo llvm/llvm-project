@@ -518,7 +518,7 @@ OMPSectionDirective *OMPSectionDirective::Create(const ASTContext &C,
                                                  bool HasCancel) {
   auto *Dir =
       createDirective<OMPSectionDirective>(C, llvm::None, AssociatedStmt,
-                                           /*NumChildre=*/0, StartLoc, EndLoc);
+                                           /*NumChildren=*/0, StartLoc, EndLoc);
   Dir->setHasCancel(HasCancel);
   return Dir;
 }

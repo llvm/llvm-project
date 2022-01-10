@@ -356,6 +356,15 @@ public:
   }
 };
 
+template <typename SPSRetTagT>
+class ResultSerializer<SPSRetTagT, ErrorSuccess> {
+public:
+  static WrapperFunctionResult serialize(ErrorSuccess Err) {
+    return serializeViaSPSToWrapperFunctionResult<SPSArgList<SPSRetTagT>>(
+        toSPSSerializable(std::move(Err)));
+  }
+};
+
 template <typename SPSRetTagT, typename T>
 class ResultSerializer<SPSRetTagT, Expected<T>> {
 public:
@@ -608,6 +617,117 @@ MethodWrapperHandler<RetT, ClassT, ArgTs...>
 makeMethodWrapperHandler(RetT (ClassT::*Method)(ArgTs...)) {
   return MethodWrapperHandler<RetT, ClassT, ArgTs...>(Method);
 }
+
+/// Represents a serialized wrapper function call.
+/// Serializing calls themselves allows us to batch them: We can make one
+/// "run-wrapper-functions" utility and send it a list of calls to run.
+///
+/// The motivating use-case for this API is JITLink allocation actions, where
+/// we want to run multiple functions to finalize linked memory without having
+/// to make separate IPC calls for each one.
+class WrapperFunctionCall {
+public:
+  using ArgDataBufferType = SmallVector<char, 24>;
+
+  /// Create a WrapperFunctionCall using the given SPS serializer to serialize
+  /// the arguments.
+  template <typename SPSSerializer, typename... ArgTs>
+  static Expected<WrapperFunctionCall> Create(ExecutorAddr FnAddr,
+                                              const ArgTs &...Args) {
+    ArgDataBufferType ArgData;
+    ArgData.resize(SPSSerializer::size(Args...));
+    SPSOutputBuffer OB(&ArgData[0], ArgData.size());
+    if (SPSSerializer::serialize(OB, Args...))
+      return WrapperFunctionCall(FnAddr, std::move(ArgData));
+    return make_error<StringError>("Cannot serialize arguments for "
+                                   "AllocActionCall",
+                                   inconvertibleErrorCode());
+  }
+
+  WrapperFunctionCall() = default;
+
+  /// Create a WrapperFunctionCall from a target function and arg buffer.
+  WrapperFunctionCall(ExecutorAddr FnAddr, ArgDataBufferType ArgData)
+      : FnAddr(FnAddr), ArgData(std::move(ArgData)) {}
+
+  /// Returns the address to be called.
+  const ExecutorAddr &getCallee() const { return FnAddr; }
+
+  /// Returns the argument data.
+  const ArgDataBufferType &getArgData() const { return ArgData; }
+
+  /// WrapperFunctionCalls convert to true if the callee is non-null.
+  explicit operator bool() const { return !!FnAddr; }
+
+  /// Run call returning raw WrapperFunctionResult.
+  shared::WrapperFunctionResult run() const {
+    using FnTy =
+        shared::CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
+    return shared::WrapperFunctionResult(
+        FnAddr.toPtr<FnTy *>()(ArgData.data(), ArgData.size()));
+  }
+
+  /// Run call and deserialize result using SPS.
+  template <typename SPSRetT, typename RetT>
+  std::enable_if_t<!std::is_same<SPSRetT, void>::value, Error>
+  runWithSPSRet(RetT &RetVal) const {
+    auto WFR = run();
+    if (const char *ErrMsg = WFR.getOutOfBandError())
+      return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
+    shared::SPSInputBuffer IB(WFR.data(), WFR.size());
+    if (!shared::SPSSerializationTraits<SPSRetT, RetT>::deserialize(IB, RetVal))
+      return make_error<StringError>("Could not deserialize result from "
+                                     "serialized wrapper function call",
+                                     inconvertibleErrorCode());
+    return Error::success();
+  }
+
+  /// Overload for SPS functions returning void.
+  template <typename SPSRetT>
+  std::enable_if_t<std::is_same<SPSRetT, void>::value, Error>
+  runWithSPSRet() const {
+    shared::SPSEmpty E;
+    return runWithSPSRet<shared::SPSEmpty>(E);
+  }
+
+  /// Run call and deserialize an SPSError result. SPSError returns and
+  /// deserialization failures are merged into the returned error.
+  Error runWithSPSRetErrorMerged() const {
+    detail::SPSSerializableError RetErr;
+    if (auto Err = runWithSPSRet<SPSError>(RetErr))
+      return Err;
+    return detail::fromSPSSerializable(std::move(RetErr));
+  }
+
+private:
+  orc::ExecutorAddr FnAddr;
+  ArgDataBufferType ArgData;
+};
+
+using SPSWrapperFunctionCall = SPSTuple<SPSExecutorAddr, SPSSequence<char>>;
+
+template <>
+class SPSSerializationTraits<SPSWrapperFunctionCall, WrapperFunctionCall> {
+public:
+  static size_t size(const WrapperFunctionCall &WFC) {
+    return SPSWrapperFunctionCall::AsArgList::size(WFC.getCallee(),
+                                                   WFC.getArgData());
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const WrapperFunctionCall &WFC) {
+    return SPSWrapperFunctionCall::AsArgList::serialize(OB, WFC.getCallee(),
+                                                        WFC.getArgData());
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, WrapperFunctionCall &WFC) {
+    ExecutorAddr FnAddr;
+    WrapperFunctionCall::ArgDataBufferType ArgData;
+    if (!SPSWrapperFunctionCall::AsArgList::deserialize(IB, FnAddr, ArgData))
+      return false;
+    WFC = WrapperFunctionCall(FnAddr, std::move(ArgData));
+    return true;
+  }
+};
 
 } // end namespace shared
 } // end namespace orc

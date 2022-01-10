@@ -19,8 +19,6 @@
 #include "clang/Format/Format.h"
 
 namespace clang {
-class SourceManager;
-
 namespace format {
 
 enum LineType {
@@ -53,10 +51,9 @@ public:
     // left them in a different state.
     First->Previous = nullptr;
     FormatToken *Current = First;
-    for (auto I = ++Line.Tokens.begin(), E = Line.Tokens.end(); I != E; ++I) {
-      const UnwrappedLineNode &Node = *I;
-      Current->Next = I->Tok;
-      I->Tok->Previous = Current;
+    for (const UnwrappedLineNode &Node : llvm::drop_begin(Line.Tokens)) {
+      Current->Next = Node.Tok;
+      Node.Tok->Previous = Current;
       Current = Current->Next;
       Current->Children.clear();
       for (const auto &Child : Node.Children) {

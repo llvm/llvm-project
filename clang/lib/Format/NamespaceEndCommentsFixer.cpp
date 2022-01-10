@@ -260,7 +260,7 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
           // remove end comment, it will be merged in next one
           updateEndComment(EndCommentPrevTok, std::string(), SourceMgr, &Fixes);
         }
-        CompactedNamespacesCount++;
+        ++CompactedNamespacesCount;
         AllNamespaceNames = "::" + NamespaceName + AllNamespaceNames;
         continue;
       }

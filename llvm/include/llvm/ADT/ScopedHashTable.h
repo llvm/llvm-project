@@ -197,7 +197,7 @@ public:
 
   using iterator = ScopedHashTableIterator<K, V, KInfo>;
 
-  iterator end() { return iterator(0); }
+  iterator end() { return iterator(nullptr); }
 
   iterator begin(const K &Key) {
     typename DenseMap<K, ValTy*, KInfo>::iterator I =

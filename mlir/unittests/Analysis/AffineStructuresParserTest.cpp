@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "./AffineStructuresParser.h"
-#include "mlir/Analysis/PresburgerSet.h"
+#include "mlir/Analysis/Presburger/PresburgerSet.h"
 
 #include <gtest/gtest.h>
 

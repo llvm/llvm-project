@@ -25,7 +25,6 @@
 
 namespace llvm {
 
-struct AAMDNodes;
 class AssumptionCache;
 class BasicBlock;
 class DataLayout;
@@ -58,7 +57,7 @@ public:
   BasicAAResult(const DataLayout &DL, const Function &F,
                 const TargetLibraryInfo &TLI, AssumptionCache &AC,
                 DominatorTree *DT = nullptr, PhiValues *PV = nullptr)
-      : AAResultBase(), DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), PV(PV) {}
+      : DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), PV(PV) {}
 
   BasicAAResult(const BasicAAResult &Arg)
       : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),

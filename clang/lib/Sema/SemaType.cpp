@@ -5973,6 +5973,11 @@ namespace {
       Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
       TL.setUnderlyingTInfo(TInfo);
     }
+    void VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+      assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
+      TL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+      TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+    }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       // FIXME: This holds only because we only have one unary transform.
       assert(DS.getTypeSpecType() == DeclSpec::TST_underlyingType);

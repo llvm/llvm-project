@@ -67,7 +67,7 @@ void TestAffineLoopParametricTiling::runOnFunction() {
   getTileableBands(getFunction(), &bands);
 
   // Tile each band.
-  for (SmallVectorImpl<AffineForOp> &band : bands) {
+  for (MutableArrayRef<AffineForOp> band : bands) {
     // Capture the tiling parameters from the arguments to the function
     // enclosing this loop nest.
     SmallVector<AffineForOp, 6> tiledNest;
@@ -78,9 +78,7 @@ void TestAffineLoopParametricTiling::runOnFunction() {
     // Get function arguments as tiling parameters.
     getTilingParameters(band, tilingParameters);
 
-    if (failed(
-            tilePerfectlyNestedParametric(band, tilingParameters, &tiledNest)))
-      return signalPassFailure();
+    (void)tilePerfectlyNestedParametric(band, tilingParameters, &tiledNest);
   }
 }
 

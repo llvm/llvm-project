@@ -43,8 +43,8 @@ class TensorExpression:
       if isinstance(expr, TensorUse):
         for ind in expr.indices:
           ind.visit_affine_exprs(visit_dim_def)
-      if isinstance(expr, ReduceApply):
-        for ind in expr.reduce.reduce_dims:
+      if isinstance(expr, TensorReduceFn):
+        for ind in expr.reduce_fn.reduce_dims:
           ind.visit_affine_exprs(visit_dim_def)
 
     self.visit_tensor_exprs(visit_affine_exprs)
@@ -77,13 +77,13 @@ class TensorExpression:
     self.visit_tensor_exprs(visit_scalar_def)
 
   def __add__(self, rhs: "TensorExpression") -> "TensorExpression":
-    return PrimFn.add(self, rhs)
+    return ArithFn.add(self, rhs)
 
   def __mul__(self, rhs) -> "TensorExpression":
-    return PrimFn.mul(self, rhs)
+    return ArithFn.mul(self, rhs)
 
   def __sub__(self, rhs) -> "TensorExpression":
-    return PrimFn.sub(self, rhs)
+    return ArithFn.sub(self, rhs)
 
   def __hash__(self):
     return hash(id(self))
@@ -114,8 +114,8 @@ class TensorUse(TensorExpression):
     assert name is not None, "TensorDef not attached"
     return name
 
-  def __iadd__(self, rhs: TensorExpression) -> TensorExpression:
-    return ReduceFn.add(*self._compute_reduce_dims(rhs))(rhs)
+  def __iadd__(self, rhs: TensorExpression) -> "TensorReduceFn":
+    return ReduceFnUse(ArithFn.add, *self._compute_reduce_dims(rhs))(rhs)
 
   def _compute_reduce_dims(self, rhs: TensorExpression) -> Set[DimDef]:
     """For implicit reductions, computes default reduction dims.
@@ -261,18 +261,17 @@ class ScalarDef(TensorExpression):
     return ScalarArg(self.scalar_name).expr()
 
 
-class AttributeDef:
+class IndexAttrDef:
   """Index Attribute definition.
 
   Index attributes provide a way to define and set symbols that can be used in
   indexing expressions. Every attribute specifies a tuple of symbols that at
   compile-time are replaced by integer values.
   """
-  yaml_tag = "!LinalgAttributeDef"
 
   def __init__(self, *sizes: SymbolDef):
     if any(not isinstance(size, SymbolDef) for size in sizes):
-      raise ValueError(f"AttributeDef requires sizes of type SymbolDef but got "
+      raise ValueError(f"IndexAttrDef requires sizes of type SymbolDef but got "
                        f"{sizes}")
     self.operand_def = OperandDef(OperandKind.Attribute, I64, size_exprs=sizes)
 
@@ -286,7 +285,7 @@ class Comprehension:
 
     # Find the lhs to reduction rhs.
     for assign, value in bindings:
-      if isinstance(value, ReduceApply):
+      if isinstance(value, TensorReduceFn):
         if value.lhs:
           raise ValueError(f"Reduction expression already assigns: {value}")
         value.lhs = assign
@@ -298,8 +297,8 @@ class Comprehension:
     """Gets the reduction dims for the comprehension or None."""
     result = set()
     for use in self.values:
-      if isinstance(use, ReduceApply):
-        result.add(use.reduce.reduce_dims)
+      if isinstance(use, TensorReduceFn):
+        result.add(use.reduce_use.reduce_dims)
       else:
         result.add(tuple())
     return result
@@ -315,71 +314,131 @@ class Comprehension:
     return f"{defs_repr} = {values_repr}"
 
 
-class PrimFnType:
-  """Primitive operations."""
+class TypeFnType:
+  """Type conversion function.
 
-  def __init__(self, prim_name: str):
-    self.prim_name = prim_name
+  A type conversion function takes a target type and a tensor expression and
+  returns the casted tensor expression.
+  """
 
-  def __call__(self, *args):
-    return PrimApply(self, args)
+  def __init__(self, fn_name: str):
+    self.fn_name = fn_name
 
-  def reduce(self, *reduce_dims: DimDef):
-    """Shortcut to create a Reduce operation from this primitive."""
-    return ReduceFnType(self, *reduce_dims)
+  def __call__(self, type_var: TypeVar,
+               arg: TensorExpression) -> "TensorTypeFn":
+    return TensorTypeFn(self, type_var, arg)
 
   def __repr__(self):
-    return f"{self.prim_name}"
+    return f"{self.fn_name}"
 
 
-class PrimFn:
-  add = PrimFnType("add")
-  exp = PrimFnType("exp")
-  log = PrimFnType("log")
-  mul = PrimFnType("mul")
-  max = PrimFnType("max")
-  min = PrimFnType("min")
-  sub = PrimFnType("sub")
-  max_unsigned = PrimFnType("max_unsigned")
-  min_unsigned = PrimFnType("min_unsigned")
+class TypeFn:
+  """Type conversion function namespace.
+
+  As the integer types are signless, signedness is implement by different cast
+  functions that treat integers as signed (`cast`) or unsigned
+  (`cast_unsigned`) values.
+
+  Examples:
+  - cast(I32 -> I64) -> `arith.ExtSIOp`
+  - cast_unsigned(I32 -> I64) -> `arith.ExtUIOp`
+  """
+  cast = TypeFnType("cast")
+  cast_unsigned = TypeFnType("cast_unsigned")
 
 
-class ReduceFnType:
-  """A reduction operator that reduces into its LHS from its RHS."""
+class ArithFnType:
+  """Arithmetic function.
 
-  def __init__(self, operator: PrimFnType, *reduce_dims: DimDef):
-    """Initializes the ReduceFn with a primitive function and dims."""
-    if not isinstance(operator, PrimFnType):
-      raise ValueError(f"Reduce expected a Prim operator but got {operator}")
-    self.operator = operator
-    self.reduce_dims = tuple(reduce_dims)
+  An arithmetic function takes one ore more tensor expressions and returns the
+  function evaluation result.
+  """
+
+  def __init__(self, fn_name: str):
+    self.fn_name = fn_name
+
+  def __call__(self, *args) -> "TensorArithFn":
+    return TensorArithFn(self, args)
+
+  def __repr__(self):
+    return f"{self.fn_name}"
+
+
+class ArithFn:
+  """Arithmetic function namespace.
+
+  As the integer types are signless, signedness is implement by different
+  functions that treat integers as signed or unsigned values.
+
+  Examples:
+  - max -> `arith.MaxSIOp`
+  - max_unsinged -> `arith.MaxUIOp`
+  """
+  add = ArithFnType("add")
+  exp = ArithFnType("exp")
+  log = ArithFnType("log")
+  mul = ArithFnType("mul")
+  max = ArithFnType("max")
+  min = ArithFnType("min")
+  sub = ArithFnType("sub")
+  max_unsigned = ArithFnType("max_unsigned")
+  min_unsigned = ArithFnType("min_unsigned")
+
+
+class ReduceFnUse:
+  """Reduction function use.
+
+  A reduction use specifies the reduction function and dimensions.
+  """
+
+  def __init__(self, arith_fn: ArithFnType, *reduce_dims: DimDef):
+    self.arith_fn = arith_fn
+    self.reduce_dims = reduce_dims
 
   def __call__(self, *args: TensorExpression):
-    return ReduceApply(self, args)
+    return TensorReduceFn(self, args)
 
   def __repr__(self):
-    return (f"reduce_{self.operator.prim_name}"
+    return (f"reduce_{self.arith_fn.fn_name}"
             f"({', '.join(repr(d) for d in self.reduce_dims)})")
 
 
+class ReduceFnType:
+  """Reduction function.
+
+  An arithmetic function that reduces its RHS into its LHS.
+  """
+
+  def __init__(self, arith_fn: ArithFnType):
+    if not isinstance(arith_fn, ArithFnType):
+      raise ValueError(f"Reduce expected a ArithFnType but got {arith_fn}")
+    self.arith_fn = arith_fn
+
+  def __getitem__(self, reduce_dims: Tuple[DimDef]) -> ReduceFnUse:
+    return ReduceFnUse(self.arith_fn, *reduce_dims)
+
+  def __repr__(self):
+    return (f"reduce_{self.arith_fn.fn_name}")
+
+
 class ReduceFn:
-  add = PrimFn.add.reduce
-  mul = PrimFn.mul.reduce
-  max = PrimFn.max.reduce
-  min = PrimFn.min.reduce
-  max_unsigned = PrimFn.max_unsigned.reduce
-  min_unsigned = PrimFn.min_unsigned.reduce
+  add = ReduceFnType(ArithFn.add)
+  mul = ReduceFnType(ArithFn.mul)
+  max = ReduceFnType(ArithFn.max)
+  min = ReduceFnType(ArithFn.min)
+  max_unsigned = ReduceFnType(ArithFn.max_unsigned)
+  min_unsigned = ReduceFnType(ArithFn.min_unsigned)
 
 
-class PrimApply(TensorExpression):
-  """Application of a primitive."""
+class TensorArithFn(TensorExpression):
+  """Application of an arithmetic function."""
 
-  def __init__(self, prim: PrimFnType, args: Sequence[TensorExpression]):
-    self.prim = prim
+  def __init__(self, arith_fn: ArithFnType, args: Sequence[TensorExpression]):
+    self.arith_fn = arith_fn
     self.args = tuple(args)
 
   def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarApplyFn(self.prim.prim_name,
+    return ScalarArithFn(self.arith_fn.fn_name,
                          *[arg.to_scalar_expression() for arg in self.args
                           ]).expr()
 
@@ -389,7 +448,27 @@ class PrimApply(TensorExpression):
       arg.visit_tensor_exprs(callback)
 
   def __repr__(self):
-    return f"{repr(self.prim)}({', '.join(repr(a) for a in self.args)})"
+    return f"{repr(self.arith_fn)}({', '.join(repr(a) for a in self.args)})"
+
+
+class TensorTypeFn(TensorExpression):
+  """Application of a type conversion function."""
+
+  def __init__(self, type_fn: TypeFn, type_var: TypeVar, arg: TensorExpression):
+    self.type_fn = type_fn
+    self.type_var = type_var
+    self.arg = arg
+
+  def to_scalar_expression(self) -> ScalarExpression:
+    return ScalarTypeFn(self.type_fn.fn_name, self.type_var,
+                        self.arg.to_scalar_expression()).expr()
+
+  def visit_tensor_exprs(self, callback):
+    super().visit_tensor_exprs(callback)
+    self.arg.visit_tensor_exprs(callback)
+
+  def __repr__(self):
+    return f"{repr(self.type_fn)}({type_var}, {self.arg})"
 
 
 class const(TensorExpression):
@@ -434,61 +513,31 @@ class index(TensorExpression):
     return f"index({repr(self.dim)})"
 
 
-class cast(TensorExpression):
-  """Casts the element type to a type (typically symbolic TypeVar)."""
+class TensorReduceFn(TensorExpression):
+  """Application of a reduction function.
 
-  def __init__(self, to_type: TypeVar, operand: TensorExpression):
-    self.to_type = to_type
-    self.operand = operand
-
-  def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarSymbolicCast(self.to_type, self.operand.to_scalar_expression(),
-                              False).expr()
-
-  def visit_tensor_exprs(self, callback):
-    super().visit_tensor_exprs(callback)
-    self.operand.visit_tensor_exprs(callback)
-
-  def __repr__(self):
-    return f"cast({self.to_type}, {repr(self.operand)})"
-
-
-class cast_unsigned(cast):
-  """Casts the element type to an unsigned type (typically symbolic TypeVar)."""
-
-  def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarSymbolicCast(self.to_type, self.operand.to_scalar_expression(),
-                              True).expr()
-
-  def __repr__(self):
-    return f"cast_unsigned({self.to_type}, {repr(self.operand)})"
-
-
-class ReduceApply(TensorExpression):
-  """Application of a reduction.
-
-  This captures the lhs separately (initial value) separately from the rhs.
+  This captures the lhs (initial value) separately from the rhs.
   """
 
-  def __init__(self, reduce: ReduceFnType, args: Sequence[TensorExpression]):
-    self.reduce = reduce
+  def __init__(self, reduce_use: ReduceFnUse, args: Sequence[TensorExpression]):
+    self.reduce_use = reduce_use
     self.lhs = None  # type: Optional[TensorUse]
     self.args = tuple(args)
 
   def to_scalar_expression(self) -> ScalarExpression:
     if self.lhs is None:
-      raise ValueError(f"Cannot scalarize a ReduceApply that has not been "
+      raise ValueError(f"Cannot scalarize a TensorReduceFn that has not been "
                        f"bound to its lhs: {self}")
     full_args = [self.lhs.to_scalar_expression()
                 ] + [arg.to_scalar_expression() for arg in self.args]
-    return ScalarApplyFn(self.reduce.operator.prim_name, *full_args).expr()
+    return ScalarArithFn(self.reduce_use.arith_fn.fn_name, *full_args).expr()
 
   def visit_tensor_exprs(self, callback):
     for arg in self.args:
       arg.visit_tensor_exprs(callback)
 
   def __repr__(self):
-    return f"{repr(self.reduce)}({', '.join(repr(a) for a in self.args)})"
+    return f"{repr(self.reduce_use)}({', '.join(repr(a) for a in self.args)})"
 
 
 class OpInterfaceDef:
@@ -500,6 +549,7 @@ class OpInterfaceDef:
 
 ContractionOpInterface = OpInterfaceDef("LinalgContractionOpInterface")
 ConvolutionOpInterface = OpInterfaceDef("LinalgConvolutionOpInterface")
+
 
 class OpMetadataDef(YAMLObject):
   """Metadata about the op (generally not behavior impacting)."""

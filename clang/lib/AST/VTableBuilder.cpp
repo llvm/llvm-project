@@ -2328,7 +2328,7 @@ ItaniumVTableContext::computeVTableRelatedInformation(const CXXRecordDecl *RD) {
     return;
 
   ItaniumVTableBuilder Builder(*this, RD, CharUnits::Zero(),
-                               /*MostDerivedClassIsVirtual=*/0, RD);
+                               /*MostDerivedClassIsVirtual=*/false, RD);
   Entry = CreateVTableLayout(Builder);
 
   MethodVTableIndices.insert(Builder.vtable_indices_begin(),

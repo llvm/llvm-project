@@ -36,8 +36,7 @@ class BlockPrinter : public RecordVisitor {
   State CurrentState = State::Start;
 
 public:
-  explicit BlockPrinter(raw_ostream &O, RecordPrinter &P)
-      : RecordVisitor(), OS(O), RP(P) {}
+  explicit BlockPrinter(raw_ostream &O, RecordPrinter &P) : OS(O), RP(P) {}
 
   Error visit(BufferExtents &) override;
   Error visit(WallclockRecord &) override;

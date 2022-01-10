@@ -18,7 +18,7 @@ namespace lldb_private {
 template <class T> class ThreadSafeValue {
 public:
   ThreadSafeValue() = default;
-  ThreadSafeValue(const T &value) : m_value(value), m_mutex() {}
+  ThreadSafeValue(const T &value) : m_value(value) {}
 
   ~ThreadSafeValue() = default;
 

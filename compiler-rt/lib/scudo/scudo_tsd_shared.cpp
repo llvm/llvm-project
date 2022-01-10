@@ -64,7 +64,7 @@ void initThread(bool MinimalInit) {
   setCurrentTSD(&TSDs[Index % NumberOfTSDs]);
 }
 
-ScudoTSD *getTSDAndLockSlow(ScudoTSD *TSD) NO_THREAD_SAFETY_ANALYSIS {
+ScudoTSD *getTSDAndLockSlow(ScudoTSD *TSD) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   if (NumberOfTSDs > 1) {
     // Use the Precedence of the current TSD as our random seed. Since we are in
     // the slow path, it means that tryLock failed, and as a result it's very

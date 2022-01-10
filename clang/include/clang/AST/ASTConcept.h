@@ -22,7 +22,6 @@
 
 namespace clang {
 class ConceptDecl;
-class ConceptSpecializationExpr;
 
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.
@@ -132,8 +131,7 @@ public:
         NamedConcept(NamedConcept), ArgsAsWritten(ArgsAsWritten) {}
 
   ConceptReference()
-      : TemplateKWLoc(), FoundDecl(nullptr), NamedConcept(nullptr),
-        ArgsAsWritten(nullptr) {}
+      : FoundDecl(nullptr), NamedConcept(nullptr), ArgsAsWritten(nullptr) {}
 
   const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
     return NestedNameSpec;

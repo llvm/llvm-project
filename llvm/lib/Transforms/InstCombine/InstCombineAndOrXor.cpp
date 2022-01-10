@@ -2081,21 +2081,37 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         if (Op0->hasOneUse() || isFreeToInvert(C, C->hasOneUse()))
           return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(C));
 
-    // (A | B) & ((~A) ^ B) -> (A & B)
-    // (A | B) & (B ^ (~A)) -> (A & B)
-    // (B | A) & ((~A) ^ B) -> (A & B)
-    // (B | A) & (B ^ (~A)) -> (A & B)
+    // (A | B) & (~A ^ B) -> A & B
+    // (A | B) & (B ^ ~A) -> A & B
+    // (B | A) & (~A ^ B) -> A & B
+    // (B | A) & (B ^ ~A) -> A & B
     if (match(Op1, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
         match(Op0, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
 
-    // ((~A) ^ B) & (A | B) -> (A & B)
-    // ((~A) ^ B) & (B | A) -> (A & B)
-    // (B ^ (~A)) & (A | B) -> (A & B)
-    // (B ^ (~A)) & (B | A) -> (A & B)
+    // (~A ^ B) & (A | B) -> A & B
+    // (~A ^ B) & (B | A) -> A & B
+    // (B ^ ~A) & (A | B) -> A & B
+    // (B ^ ~A) & (B | A) -> A & B
     if (match(Op0, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
         match(Op1, m_c_Or(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateAnd(A, B);
+
+    // (~A | B) & (A ^ B) -> ~A & B
+    // (~A | B) & (B ^ A) -> ~A & B
+    // (B | ~A) & (A ^ B) -> ~A & B
+    // (B | ~A) & (B ^ A) -> ~A & B
+    if (match(Op0, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
+        match(Op1, m_c_Xor(m_Specific(A), m_Specific(B))))
+      return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
+
+    // (A ^ B) & (~A | B) -> ~A & B
+    // (B ^ A) & (~A | B) -> ~A & B
+    // (A ^ B) & (B | ~A) -> ~A & B
+    // (B ^ A) & (B | ~A) -> ~A & B
+    if (match(Op1, m_c_Or(m_Not(m_Value(A)), m_Value(B))) &&
+        match(Op0, m_c_Xor(m_Specific(A), m_Specific(B))))
+      return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
   }
 
   {

@@ -13,7 +13,6 @@
 
 namespace llvm {
 namespace pdb {
-class PDBFile;
 
 class OutputStyle {
 public:

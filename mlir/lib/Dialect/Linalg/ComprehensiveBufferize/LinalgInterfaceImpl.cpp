@@ -46,15 +46,19 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
       newInputBuffers.push_back(opOperand->get());
       continue;
     }
-    newInputBuffers.push_back(state.lookupBuffer(rewriter, opOperand->get()));
+    // Input operands are never written to.
+    newInputBuffers.push_back(
+        *state.getBuffer(rewriter, *opOperand, /*forceInPlace=*/true));
   }
 
   // New output operands for the cloned op.
   SmallVector<Value> newOutputBuffers;
-  for (OpOperand *opOperand : op.getOutputOperands()) {
-    OpResult opResult = op.getTiedOpResult(opOperand);
-    assert(opResult && "could not find correspond OpResult");
-    FailureOr<Value> resultBuffer = state.getResultBuffer(rewriter, opResult);
+  for (OpResult opResult : op->getOpResults()) {
+    SmallVector<OpOperand *> aliasingOpOperands =
+        state.getAliasingOpOperand(opResult);
+    assert(aliasingOpOperands.size() == 1 && "expected 1 OpOperand");
+    FailureOr<Value> resultBuffer =
+        state.getBuffer(rewriter, *aliasingOpOperands.front());
     if (failed(resultBuffer))
       return failure();
     newOutputBuffers.push_back(*resultBuffer);
@@ -284,24 +288,23 @@ struct TiledLoopOpInterface
 
     // Compute new inputs, outputs and results.
     SmallVector<Value> newInputs, newOutputs, newResults;
-    for (Value value : tiledLoopOp.inputs()) {
-      if (value.getType().isa<TensorType>()) {
-        newInputs.push_back(state.lookupBuffer(rewriter, value));
-      } else {
-        newInputs.push_back(value);
-      }
-    }
-    int nextResultNum = 0;
-    for (Value value : tiledLoopOp.outputs()) {
-      if (value.getType().isa<TensorType>()) {
-        FailureOr<Value> buffer = state.getResultBuffer(
-            rewriter, tiledLoopOp->getResult(nextResultNum++));
-        if (failed(buffer))
+    for (unsigned i = tiledLoopOp.getNumControlOperands();
+         i < tiledLoopOp->getNumOperands(); ++i) {
+      OpOperand &operand = tiledLoopOp->getOpOperand(i);
+      Value rewrittenValue = operand.get();
+      if (rewrittenValue.getType().isa<TensorType>()) {
+        FailureOr<Value> bufferOrFailure = state.getBuffer(rewriter, operand);
+        if (failed(bufferOrFailure))
           return failure();
-        newOutputs.push_back(*buffer);
-        newResults.push_back(*buffer);
+        rewrittenValue = *bufferOrFailure;
+      }
+      if (i <
+          tiledLoopOp.getNumControlOperands() + tiledLoopOp.getNumInputs()) {
+        newInputs.push_back(rewrittenValue);
       } else {
-        newOutputs.push_back(value);
+        newOutputs.push_back(rewrittenValue);
+        if (operand.get().getType().isa<TensorType>())
+          newResults.push_back(rewrittenValue);
       }
     }
 
@@ -397,6 +400,14 @@ struct YieldOpInterface
     return OpResult();
   }
 
+  bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
+                            const BufferizationState &state) const {
+    // Yield operands always bufferize inplace. Otherwise, an alloc + copy
+    // may be generated inside the block. We should not return/yield allocations
+    // when possible.
+    return true;
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
     auto yieldOp = cast<linalg::YieldOp>(op);
@@ -447,22 +458,26 @@ mlir::linalg::comprehensive_bufferize::linalg_ext::InitTensorEliminationStep::
 
   WalkResult status = op->walk([&](Operation *op) {
     for (OpOperand &operand : op->getOpOperands()) {
+      // Skip operands that do not bufferize inplace.
+      if (!aliasInfo.isInPlace(operand))
+        continue;
       // Is this a matching OpOperand?
       if (!anchorMatchFunc(operand))
         continue;
-
       SetVector<Value> maybeInitTensor =
           state.findValueInReverseUseDefChain(operand.get(), [&](Value val) {
             // Continue traversal until this function returns true.
             OpResult opResult = val.dyn_cast<OpResult>();
             if (!opResult)
               return true;
-            if (!aliasInfo.isInPlace(opResult))
-              return true;
-            // Only equivalent tensors are supported at the moment.
-            // TODO: Support cases such as extract_slice(init_tensor).
             SmallVector<OpOperand *> opOperands =
                 state.getAliasingOpOperand(opResult);
+            if (!llvm::all_of(opOperands, [&](OpOperand *operand) {
+                  return aliasInfo.isInPlace(*operand);
+                }))
+              return true;
+            // Only equivalent tensors are supported at the moment.
+            // TODO: Support cases such as extract_slice(init_tensor)
             return !llvm::all_of(opOperands, [&](OpOperand *operand) {
               return aliasInfo.areEquivalentBufferizedValues(operand->get(),
                                                              opResult);
@@ -542,7 +557,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::linalg_ext::
         if (!insertSliceOp)
           return false;
         // Only inplace bufferized InsertSliceOps are eligible.
-        if (!aliasInfo.isInPlace(insertSliceOp->getOpResult(0)))
+        if (!aliasInfo.isInPlace(insertSliceOp->getOpOperand(1) /*dest*/))
           return false;
         return &operand == &insertSliceOp->getOpOperand(0) /*source*/;
       },

@@ -67,10 +67,12 @@ void advance(_InputIter& __i, _Distance __orig_n) {
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
-namespace ranges {
 // [range.iter.op.advance]
-// TODO(varconst): rename `__advance_fn` to `__fn`.
-struct __advance_fn final : private __function_like {
+
+namespace ranges {
+namespace __advance {
+
+struct __fn final : private __function_like {
 private:
   template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI
@@ -97,7 +99,7 @@ private:
   }
 
 public:
-  constexpr explicit __advance_fn(__tag __x) noexcept : __function_like(__x) {}
+  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
 
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
@@ -186,7 +188,11 @@ public:
   }
 };
 
-inline constexpr auto advance = __advance_fn(__function_like::__tag());
+} // namespace __advance
+
+inline namespace __cpo {
+  inline constexpr auto advance = __advance::__fn(__function_like::__tag());
+} // namespace __cpo
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

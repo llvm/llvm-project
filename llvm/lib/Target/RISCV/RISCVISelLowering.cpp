@@ -5538,6 +5538,11 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
     }
   }
 
+  if (XLenVT == MVT::i32 && IndexVT.getVectorElementType().bitsGT(XLenVT)) {
+      IndexVT = IndexVT.changeVectorElementType(XLenVT);
+      Index = DAG.getNode(ISD::TRUNCATE, DL, IndexVT, Index);
+  }
+
   if (!VL)
     VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
@@ -5637,6 +5642,11 @@ SDValue RISCVTargetLowering::lowerMaskedScatter(SDValue Op,
           MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
       Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
     }
+  }
+
+  if (XLenVT == MVT::i32 && IndexVT.getVectorElementType().bitsGT(XLenVT)) {
+      IndexVT = IndexVT.changeVectorElementType(XLenVT);
+      Index = DAG.getNode(ISD::TRUNCATE, DL, IndexVT, Index);
   }
 
   if (!VL)
@@ -8623,7 +8633,7 @@ static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
     ValVT = LocVT;
   }
   int FI = MFI.CreateFixedObject(ValVT.getStoreSize(), VA.getLocMemOffset(),
-                                 /*Immutable=*/true);
+                                 /*IsImmutable=*/true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
   SDValue Val;
 
@@ -8653,7 +8663,8 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
 
   if (VA.isMemLoc()) {
     // f64 is passed on the stack.
-    int FI = MFI.CreateFixedObject(8, VA.getLocMemOffset(), /*Immutable=*/true);
+    int FI =
+        MFI.CreateFixedObject(8, VA.getLocMemOffset(), /*IsImmutable=*/true);
     SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
     return DAG.getLoad(MVT::f64, DL, Chain, FIN,
                        MachinePointerInfo::getFixedStack(MF, FI));
@@ -8667,7 +8678,7 @@ static SDValue unpackF64OnRV32DSoftABI(SelectionDAG &DAG, SDValue Chain,
   SDValue Hi;
   if (VA.getLocReg() == RISCV::X17) {
     // Second half of f64 is passed on the stack.
-    int FI = MFI.CreateFixedObject(4, 0, /*Immutable=*/true);
+    int FI = MFI.CreateFixedObject(4, 0, /*IsImmutable=*/true);
     SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
     Hi = DAG.getLoad(MVT::i32, DL, Chain, FIN,
                      MachinePointerInfo::getFixedStack(MF, FI));

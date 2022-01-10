@@ -10312,7 +10312,7 @@ QualType ASTContext::getCorrespondingUnsignedType(QualType T) const {
 
   // For _BitInt, return an unsigned _BitInt with same width.
   if (const auto *EITy = T->getAs<BitIntType>())
-    return getBitIntType(/*IsUnsigned=*/true, EITy->getNumBits());
+    return getBitIntType(/*Unsigned=*/true, EITy->getNumBits());
 
   // For enums, get the underlying integer type of the enum, and let the general
   // integer type signchanging code handle it.
@@ -10380,7 +10380,7 @@ QualType ASTContext::getCorrespondingSignedType(QualType T) const {
 
   // For _BitInt, return a signed _BitInt with same width.
   if (const auto *EITy = T->getAs<BitIntType>())
-    return getBitIntType(/*IsUnsigned=*/false, EITy->getNumBits());
+    return getBitIntType(/*Unsigned=*/false, EITy->getNumBits());
 
   // For enums, get the underlying integer type of the enum, and let the general
   // integer type signchanging code handle it.

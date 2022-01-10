@@ -234,7 +234,9 @@ public:
   bool isLive(uint64_t off) const override {
     return live[off >> power2LiteralSize];
   }
-  void markLive(uint64_t off) override { live[off >> power2LiteralSize] = 1; }
+  void markLive(uint64_t off) override {
+    live[off >> power2LiteralSize] = true;
+  }
 
   static bool classof(const InputSection *isec) {
     return isec->kind() == WordLiteralKind;

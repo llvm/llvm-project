@@ -84,7 +84,7 @@ declare i32 @llvm.experimental.constrained.fptoui.i32.f32(float, metadata)
 
 ; Test where the fptoui has multiple uses, one of which causes a sext to be
 ; inserted on RV64.
-define i32 @fcvt_wu_s_multiple_use(float %x, i32* %y) {
+define i32 @fcvt_wu_s_multiple_use(float %x, i32* %y) nounwind {
 ; RV32IF-LABEL: fcvt_wu_s_multiple_use:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    fmv.w.x ft0, a0
@@ -110,9 +110,7 @@ define i32 @fcvt_wu_s_multiple_use(float %x, i32* %y) {
 ; RV32I-LABEL: fcvt_wu_s_multiple_use:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    .cfi_def_cfa_offset 16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    .cfi_offset ra, -4
 ; RV32I-NEXT:    call __fixunssfsi@plt
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    li a0, 1
@@ -127,9 +125,7 @@ define i32 @fcvt_wu_s_multiple_use(float %x, i32* %y) {
 ; RV64I-LABEL: fcvt_wu_s_multiple_use:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    .cfi_def_cfa_offset 16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    .cfi_offset ra, -8
 ; RV64I-NEXT:    call __fixunssfsi@plt
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    li a0, 1
@@ -589,7 +585,7 @@ define float @fcvt_s_wu_i16(i16 zeroext %a) nounwind strictfp {
 declare float @llvm.experimental.constrained.uitofp.f32.i16(i16, metadata, metadata)
 
 ; Make sure we select W version of addi on RV64.
-define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, float* %1) {
+define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, float* %1) nounwind {
 ; RV32IF-LABEL: fcvt_s_w_demanded_bits:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi a0, a0, 1
@@ -607,13 +603,9 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, float* %1) {
 ; RV32I-LABEL: fcvt_s_w_demanded_bits:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    .cfi_def_cfa_offset 16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    .cfi_offset ra, -4
-; RV32I-NEXT:    .cfi_offset s0, -8
-; RV32I-NEXT:    .cfi_offset s1, -12
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    addi s1, a0, 1
 ; RV32I-NEXT:    mv a0, s1
@@ -629,13 +621,9 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, float* %1) {
 ; RV64I-LABEL: fcvt_s_w_demanded_bits:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
-; RV64I-NEXT:    .cfi_def_cfa_offset 32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    .cfi_offset s0, -16
-; RV64I-NEXT:    .cfi_offset s1, -24
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    addiw s1, a0, 1
 ; RV64I-NEXT:    mv a0, s1
@@ -654,7 +642,7 @@ define signext i32 @fcvt_s_w_demanded_bits(i32 signext %0, float* %1) {
 }
 
 ; Make sure we select W version of addi on RV64.
-define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, float* %1) {
+define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, float* %1) nounwind {
 ; RV32IF-LABEL: fcvt_s_wu_demanded_bits:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi a0, a0, 1
@@ -672,13 +660,9 @@ define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, float* %1) {
 ; RV32I-LABEL: fcvt_s_wu_demanded_bits:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    .cfi_def_cfa_offset 16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    .cfi_offset ra, -4
-; RV32I-NEXT:    .cfi_offset s0, -8
-; RV32I-NEXT:    .cfi_offset s1, -12
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    addi s1, a0, 1
 ; RV32I-NEXT:    mv a0, s1
@@ -694,13 +678,9 @@ define signext i32 @fcvt_s_wu_demanded_bits(i32 signext %0, float* %1) {
 ; RV64I-LABEL: fcvt_s_wu_demanded_bits:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
-; RV64I-NEXT:    .cfi_def_cfa_offset 32
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    .cfi_offset ra, -8
-; RV64I-NEXT:    .cfi_offset s0, -16
-; RV64I-NEXT:    .cfi_offset s1, -24
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    addiw s1, a0, 1
 ; RV64I-NEXT:    mv a0, s1

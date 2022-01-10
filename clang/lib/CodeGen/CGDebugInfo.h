@@ -40,7 +40,6 @@ class ClassTemplateSpecializationDecl;
 class GlobalDecl;
 class ModuleMap;
 class ObjCInterfaceDecl;
-class ObjCIvarDecl;
 class UsingDecl;
 class VarDecl;
 enum class DynamicInitKind : unsigned;

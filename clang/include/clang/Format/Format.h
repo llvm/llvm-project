@@ -29,11 +29,6 @@ class FileSystem;
 } // namespace llvm
 
 namespace clang {
-
-class Lexer;
-class SourceManager;
-class DiagnosticConsumer;
-
 namespace format {
 
 enum class ParseError {

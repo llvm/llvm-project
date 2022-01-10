@@ -6037,7 +6037,7 @@ static bool EvaluateArgs(ArrayRef<const Expr *> Args, CallRef Call,
           unsigned ASTIdx = Idx.getASTIndex();
           if (ASTIdx >= Args.size())
             continue;
-          ForbiddenNullArgs[ASTIdx] = 1;
+          ForbiddenNullArgs[ASTIdx] = true;
         }
     }
   }

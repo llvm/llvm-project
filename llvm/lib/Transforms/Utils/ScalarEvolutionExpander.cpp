@@ -2494,45 +2494,69 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
 
   // Compute |Step| * Backedge
-  Value *MulV, *OfMul;
-  if (Step->isOne()) {
-    // Special-case Step of one. Potentially-costly `umul_with_overflow` isn't
-    // needed, there is never an overflow, so to avoid artificially inflating
-    // the cost of the check, directly emit the optimized IR.
-    MulV = TruncTripCount;
-    OfMul = ConstantInt::getFalse(MulV->getContext());
-  } else {
-    auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
-                                           Intrinsic::umul_with_overflow, Ty);
-    CallInst *Mul = Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
-    MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
-    OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
-  }
-
   // Compute:
-  //   Start + |Step| * Backedge < Start
-  //   Start - |Step| * Backedge > Start
-  Value *Add = nullptr, *Sub = nullptr;
-  if (PointerType *ARPtrTy = dyn_cast<PointerType>(ARTy)) {
-    StartValue = InsertNoopCastOfTo(
-        StartValue, Builder.getInt8PtrTy(ARPtrTy->getAddressSpace()));
-    Value *NegMulV = Builder.CreateNeg(MulV);
-    Add = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, MulV);
-    Sub = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, NegMulV);
-  } else {
-    Add = Builder.CreateAdd(StartValue, MulV);
-    Sub = Builder.CreateSub(StartValue, MulV);
-  }
+  //   1. Start + |Step| * Backedge < Start
+  //   2. Start - |Step| * Backedge > Start
+  //
+  // And select either 1. or 2. depending on whether step is positive or
+  // negative. If Step is known to be positive or negative, only create
+  // either 1. or 2.
+  auto ComputeEndCheck = [&]() -> Value * {
+    // Checking <u 0 is always false.
+    if (!Signed && Start->isZero() && SE.isKnownPositive(Step))
+      return ConstantInt::getFalse(Loc->getContext());
 
-  Value *EndCompareGT = Builder.CreateICmp(
-      Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, Sub, StartValue);
+    Value *MulV, *OfMul;
+    if (Step->isOne()) {
+      // Special-case Step of one. Potentially-costly `umul_with_overflow` isn't
+      // needed, there is never an overflow, so to avoid artificially inflating
+      // the cost of the check, directly emit the optimized IR.
+      MulV = TruncTripCount;
+      OfMul = ConstantInt::getFalse(MulV->getContext());
+    } else {
+      auto *MulF = Intrinsic::getDeclaration(Loc->getModule(),
+                                             Intrinsic::umul_with_overflow, Ty);
+      CallInst *Mul =
+          Builder.CreateCall(MulF, {AbsStep, TruncTripCount}, "mul");
+      MulV = Builder.CreateExtractValue(Mul, 0, "mul.result");
+      OfMul = Builder.CreateExtractValue(Mul, 1, "mul.overflow");
+    }
 
-  Value *EndCompareLT = Builder.CreateICmp(
-      Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, Add, StartValue);
+    Value *Add = nullptr, *Sub = nullptr;
+    bool NeedPosCheck = !SE.isKnownNegative(Step);
+    bool NeedNegCheck = !SE.isKnownPositive(Step);
 
-  // Select the answer based on the sign of Step.
-  Value *EndCheck =
-      Builder.CreateSelect(StepCompare, EndCompareGT, EndCompareLT);
+    if (PointerType *ARPtrTy = dyn_cast<PointerType>(ARTy)) {
+      StartValue = InsertNoopCastOfTo(
+          StartValue, Builder.getInt8PtrTy(ARPtrTy->getAddressSpace()));
+      Value *NegMulV = Builder.CreateNeg(MulV);
+      if (NeedPosCheck)
+        Add = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, MulV);
+      if (NeedNegCheck)
+        Sub = Builder.CreateGEP(Builder.getInt8Ty(), StartValue, NegMulV);
+    } else {
+      if (NeedPosCheck)
+        Add = Builder.CreateAdd(StartValue, MulV);
+      if (NeedNegCheck)
+        Sub = Builder.CreateSub(StartValue, MulV);
+    }
+
+    Value *EndCompareLT = nullptr;
+    Value *EndCompareGT = nullptr;
+    Value *EndCheck = nullptr;
+    if (NeedPosCheck)
+      EndCheck = EndCompareLT = Builder.CreateICmp(
+          Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, Add, StartValue);
+    if (NeedNegCheck)
+      EndCheck = EndCompareGT = Builder.CreateICmp(
+          Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, Sub, StartValue);
+    if (NeedPosCheck && NeedNegCheck) {
+      // Select the answer based on the sign of Step.
+      EndCheck = Builder.CreateSelect(StepCompare, EndCompareGT, EndCompareLT);
+    }
+    return Builder.CreateOr(EndCheck, OfMul);
+  };
+  Value *EndCheck = ComputeEndCheck();
 
   // If the backedge taken count type is larger than the AR type,
   // check that we don't drop any bits by truncating it. If we are
@@ -2548,7 +2572,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     EndCheck = Builder.CreateOr(EndCheck, BackedgeCheck);
   }
 
-  return Builder.CreateOr(EndCheck, OfMul);
+  return EndCheck;
 }
 
 Value *SCEVExpander::expandWrapPredicate(const SCEVWrapPredicate *Pred,
@@ -2719,13 +2743,8 @@ void SCEVExpanderCleaner::cleanup() {
   // Remove sets with value handles.
   Expander.clear();
 
-  // Sort so that earlier instructions do not dominate later instructions.
-  stable_sort(InsertedInstructions, [this](Instruction *A, Instruction *B) {
-    return DT.dominates(B, A);
-  });
   // Remove all inserted instructions.
-  for (Instruction *I : InsertedInstructions) {
-
+  for (Instruction *I : reverse(InsertedInstructions)) {
 #ifndef NDEBUG
     assert(all_of(I->users(),
                   [&InsertedSet](Value *U) {

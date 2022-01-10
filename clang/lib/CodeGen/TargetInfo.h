@@ -38,7 +38,6 @@ class ABIInfo;
 class CallArgList;
 class CodeGenFunction;
 class CGBlockInfo;
-class CGFunctionInfo;
 
 /// TargetCodeGenInfo - This class organizes various target-specific
 /// codegeneration issues, like target-specific attributes, builtins and so

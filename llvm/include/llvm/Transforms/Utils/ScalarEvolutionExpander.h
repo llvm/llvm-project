@@ -504,15 +504,13 @@ private:
 class SCEVExpanderCleaner {
   SCEVExpander &Expander;
 
-  DominatorTree &DT;
-
   /// Indicates whether the result of the expansion is used. If false, the
   /// instructions added during expansion are removed.
   bool ResultUsed;
 
 public:
-  SCEVExpanderCleaner(SCEVExpander &Expander, DominatorTree &DT)
-      : Expander(Expander), DT(DT), ResultUsed(false) {}
+  SCEVExpanderCleaner(SCEVExpander &Expander)
+      : Expander(Expander), ResultUsed(false) {}
 
   ~SCEVExpanderCleaner() { cleanup(); }
 

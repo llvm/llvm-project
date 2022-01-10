@@ -32,7 +32,7 @@ public:
   // Returns the next token in the token stream.
   virtual FormatToken *getNextToken() = 0;
 
-  // Returns the token precedint the token returned by the last call to
+  // Returns the token preceding the token returned by the last call to
   // getNextToken() in the token stream, or nullptr if no such token exists.
   virtual FormatToken *getPreviousToken() = 0;
 
@@ -246,8 +246,7 @@ public:
   }
 
   FormatToken *getPreviousToken() override {
-    assert(Position > 0);
-    return Tokens[Position - 1];
+    return Position > 0 ? Tokens[Position - 1] : nullptr;
   }
 
   FormatToken *peekNextToken() override {
@@ -2252,7 +2251,7 @@ void UnwrappedLineParser::parseTryCatch() {
     parseStructuralElement();
     --Line->Level;
   }
-  while (1) {
+  while (true) {
     if (FormatTok->is(tok::at))
       nextToken();
     if (!(FormatTok->isOneOf(tok::kw_catch, Keywords.kw___except,
@@ -2449,7 +2448,7 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
         addUnwrappedLine();
         if (!Style.IndentCaseBlocks &&
             Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-          Line->Level++;
+          ++Line->Level;
         }
       }
       parseStructuralElement();
@@ -2608,7 +2607,7 @@ void UnwrappedLineParser::parseRequires() {
   if (FormatTok->Previous && FormatTok->Previous->is(tok::greater)) {
     addUnwrappedLine();
     if (Style.IndentRequires) {
-      Line->Level++;
+      ++Line->Level;
     }
   }
   nextToken();
@@ -2875,6 +2874,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         if (!tryToParseBracedList())
           break;
       }
+      if (FormatTok->is(tok::l_square) && !tryToParseLambda())
+        break;
       if (FormatTok->Tok.is(tok::semi))
         return;
       if (Style.isCSharp() && FormatTok->is(Keywords.kw_where)) {

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBThread.h"
 
 #include "lldb/API/SBFileSpec.h"
@@ -93,7 +93,7 @@ const lldb::SBThreadPlan &SBThreadPlan::operator=(const SBThreadPlan &rhs) {
 
   if (this != &rhs)
     m_opaque_wp = rhs.m_opaque_wp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 // Destructor
 SBThreadPlan::~SBThreadPlan() = default;
@@ -138,10 +138,9 @@ SBThread SBThreadPlan::GetThread() const {
 
   ThreadPlanSP thread_plan_sp(GetSP());
   if (thread_plan_sp) {
-    return LLDB_RECORD_RESULT(
-        SBThread(thread_plan_sp->GetThread().shared_from_this()));
+    return SBThread(thread_plan_sp->GetThread().shared_from_this());
   } else
-    return LLDB_RECORD_RESULT(SBThread());
+    return SBThread();
 }
 
 bool SBThreadPlan::GetDescription(lldb::SBStream &description) const {
@@ -227,8 +226,7 @@ SBThreadPlan::QueueThreadPlanForStepOverRange(SBAddress &sb_start_address,
                      (lldb::SBAddress &, lldb::addr_t), sb_start_address, size);
 
   SBError error;
-  return LLDB_RECORD_RESULT(
-      QueueThreadPlanForStepOverRange(sb_start_address, size, error));
+  return QueueThreadPlanForStepOverRange(sb_start_address, size, error);
 }
 
 SBThreadPlan SBThreadPlan::QueueThreadPlanForStepOverRange(
@@ -242,7 +240,7 @@ SBThreadPlan SBThreadPlan::QueueThreadPlanForStepOverRange(
   if (thread_plan_sp) {
     Address *start_address = sb_start_address.get();
     if (!start_address) {
-      return LLDB_RECORD_RESULT(SBThreadPlan());
+      return SBThreadPlan();
     }
 
     AddressRange range(*start_address, size);
@@ -259,9 +257,9 @@ SBThreadPlan SBThreadPlan::QueueThreadPlanForStepOverRange(
     else
       plan.GetSP()->SetPrivate(true);
 
-    return LLDB_RECORD_RESULT(plan);
+    return plan;
   }
-  return LLDB_RECORD_RESULT(SBThreadPlan());
+  return SBThreadPlan();
 }
 
 SBThreadPlan
@@ -272,8 +270,7 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
                      (lldb::SBAddress &, lldb::addr_t), sb_start_address, size);
 
   SBError error;
-  return LLDB_RECORD_RESULT(
-      QueueThreadPlanForStepInRange(sb_start_address, size, error));
+  return QueueThreadPlanForStepInRange(sb_start_address, size, error);
 }
 
 SBThreadPlan
@@ -288,7 +285,7 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
   if (thread_plan_sp) {
     Address *start_address = sb_start_address.get();
     if (!start_address) {
-      return LLDB_RECORD_RESULT(SBThreadPlan());
+      return SBThreadPlan();
     }
 
     AddressRange range(*start_address, size);
@@ -305,9 +302,9 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
     else
       plan.GetSP()->SetPrivate(true);
 
-    return LLDB_RECORD_RESULT(plan);
+    return plan;
   }
-  return LLDB_RECORD_RESULT(SBThreadPlan());
+  return SBThreadPlan();
 }
 
 SBThreadPlan
@@ -318,8 +315,7 @@ SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
                      frame_idx_to_step_to, first_insn);
 
   SBError error;
-  return LLDB_RECORD_RESULT(
-      QueueThreadPlanForStepOut(frame_idx_to_step_to, first_insn, error));
+  return QueueThreadPlanForStepOut(frame_idx_to_step_to, first_insn, error);
 }
 
 SBThreadPlan
@@ -347,9 +343,9 @@ SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
     else
       plan.GetSP()->SetPrivate(true);
 
-    return LLDB_RECORD_RESULT(plan);
+    return plan;
   }
-  return LLDB_RECORD_RESULT(SBThreadPlan());
+  return SBThreadPlan();
 }
 
 SBThreadPlan
@@ -359,7 +355,7 @@ SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address) {
                      sb_address);
 
   SBError error;
-  return LLDB_RECORD_RESULT(QueueThreadPlanForRunToAddress(sb_address, error));
+  return QueueThreadPlanForRunToAddress(sb_address, error);
 }
 
 SBThreadPlan SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address,
@@ -372,7 +368,7 @@ SBThreadPlan SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address,
   if (thread_plan_sp) {
     Address *address = sb_address.get();
     if (!address)
-      return LLDB_RECORD_RESULT(SBThreadPlan());
+      return SBThreadPlan();
 
     Status plan_status;
     SBThreadPlan plan =
@@ -384,9 +380,9 @@ SBThreadPlan SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address,
     else
       plan.GetSP()->SetPrivate(true);
 
-    return LLDB_RECORD_RESULT(plan);
+    return plan;
   }
-  return LLDB_RECORD_RESULT(SBThreadPlan());
+  return SBThreadPlan();
 }
 
 SBThreadPlan
@@ -396,8 +392,7 @@ SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name) {
                      script_class_name);
 
   SBError error;
-  return LLDB_RECORD_RESULT(
-      QueueThreadPlanForStepScripted(script_class_name, error));
+  return QueueThreadPlanForStepScripted(script_class_name, error);
 }
 
 SBThreadPlan
@@ -420,9 +415,9 @@ SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name,
     else
       plan.GetSP()->SetPrivate(true);
 
-    return LLDB_RECORD_RESULT(plan);
+    return plan;
   }
-  return LLDB_RECORD_RESULT(SBThreadPlan());
+  return SBThreadPlan();
 }
 
 SBThreadPlan
@@ -447,73 +442,8 @@ SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name,
     else
       plan.GetSP()->SetPrivate(true);
 
-    return LLDB_RECORD_RESULT(plan);
+    return plan;
   } else {
-    return LLDB_RECORD_RESULT(SBThreadPlan());
+    return SBThreadPlan();
   }
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBThreadPlan>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadPlan, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadPlan, (const lldb::ThreadPlanSP &));
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadPlan, (const lldb::SBThreadPlan &));
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadPlan, (lldb::SBThread &, const char *));
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadPlan, (lldb::SBThread &, const char *,
-                       lldb::SBStructuredData &));
-  LLDB_REGISTER_METHOD(const lldb::SBThreadPlan &,
-                       SBThreadPlan, operator=,(const lldb::SBThreadPlan &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, operator bool, ());
-  LLDB_REGISTER_METHOD(void, SBThreadPlan, Clear, ());
-  LLDB_REGISTER_METHOD(lldb::StopReason, SBThreadPlan, GetStopReason, ());
-  LLDB_REGISTER_METHOD(size_t, SBThreadPlan, GetStopReasonDataCount, ());
-  LLDB_REGISTER_METHOD(uint64_t, SBThreadPlan, GetStopReasonDataAtIndex,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBThread, SBThreadPlan, GetThread, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBThreadPlan, GetDescription,
-                             (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(void, SBThreadPlan, SetPlanComplete, (bool));
-  LLDB_REGISTER_METHOD(bool, SBThreadPlan, IsPlanComplete, ());
-  LLDB_REGISTER_METHOD(bool, SBThreadPlan, IsPlanStale, ());
-  LLDB_REGISTER_METHOD(bool, SBThreadPlan, IsValid, ());
-  LLDB_REGISTER_METHOD(void, SBThreadPlan, SetStopOthers, (bool));
-  LLDB_REGISTER_METHOD(bool, SBThreadPlan, GetStopOthers, ());
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepOverRange,
-                       (lldb::SBAddress &, lldb::addr_t));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepOverRange,
-                       (lldb::SBAddress &, lldb::addr_t, lldb::SBError &));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepInRange,
-                       (lldb::SBAddress &, lldb::addr_t));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepInRange,
-                       (lldb::SBAddress &, lldb::addr_t, lldb::SBError &));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepOut, (uint32_t, bool));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepOut,
-                       (uint32_t, bool, lldb::SBError &));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForRunToAddress, (lldb::SBAddress));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForRunToAddress,
-                       (lldb::SBAddress, lldb::SBError &));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepScripted, (const char *));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepScripted,
-                       (const char *, lldb::SBError &));
-  LLDB_REGISTER_METHOD(lldb::SBThreadPlan, SBThreadPlan,
-                       QueueThreadPlanForStepScripted,
-                       (const char *, lldb::SBStructuredData &,
-                       lldb::SBError &));
-}
-
-}
 }

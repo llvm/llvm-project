@@ -2571,57 +2571,36 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
 }
 
 void InstCombinerImpl::annotateAnyAllocSite(CallBase &Call, const TargetLibraryInfo *TLI) {
-  unsigned NumArgs = Call.arg_size();
-  ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
-  ConstantInt *Op1C =
-      (NumArgs == 1) ? nullptr : dyn_cast<ConstantInt>(Call.getOperand(1));
-  // Bail out if the allocation size is zero (or an invalid alignment of zero
-  // with aligned_alloc).
-  if ((Op0C && Op0C->isNullValue()) || (Op1C && Op1C->isNullValue()))
-    return;
+  // Note: We only handle cases which can't be driven from generic attributes
+  // here.  So, for example, nonnull and noalias (which are common properties
+  // of some allocation functions) are expected to be handled via annotation
+  // of the respective allocator declaration with generic attributes.
 
-  if (isMallocLikeFn(&Call, TLI) && Op0C) {
-    if (isOpNewLikeFn(&Call, TLI))
+  uint64_t Size;
+  ObjectSizeOpts Opts;
+  if (getObjectSize(&Call, Size, DL, TLI, Opts) && Size > 0) {
+    // TODO: We really should just emit deref_or_null here and then
+    // let the generic inference code combine that with nonnull.
+    if (Call.hasRetAttr(Attribute::NonNull))
       Call.addRetAttr(Attribute::getWithDereferenceableBytes(
-          Call.getContext(), Op0C->getZExtValue()));
+          Call.getContext(), Size));
     else
       Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-          Call.getContext(), Op0C->getZExtValue()));
-  } else if (isAlignedAllocLikeFn(&Call, TLI)) {
-    if (Op1C)
-      Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-          Call.getContext(), Op1C->getZExtValue()));
-    // Add alignment attribute if alignment is a power of two constant.
-    if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment) &&
-        isKnownNonZero(Call.getOperand(1), DL, 0, &AC, &Call, &DT)) {
-      uint64_t AlignmentVal = Op0C->getZExtValue();
-      if (llvm::isPowerOf2_64(AlignmentVal)) {
-        Call.removeRetAttr(Attribute::Alignment);
-        Call.addRetAttr(Attribute::getWithAlignment(Call.getContext(),
-                                                    Align(AlignmentVal)));
-      }
-    }
-  } else if (isReallocLikeFn(&Call, TLI) && Op1C) {
-    Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-        Call.getContext(), Op1C->getZExtValue()));
-  } else if (isCallocLikeFn(&Call, TLI) && Op0C && Op1C) {
-    bool Overflow;
-    const APInt &N = Op0C->getValue();
-    APInt Size = N.umul_ov(Op1C->getValue(), Overflow);
-    if (!Overflow)
-      Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-          Call.getContext(), Size.getZExtValue()));
-  } else if (isStrdupLikeFn(&Call, TLI)) {
-    uint64_t Len = GetStringLength(Call.getOperand(0));
-    if (Len) {
-      // strdup
-      if (NumArgs == 1)
-        Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-            Call.getContext(), Len));
-      // strndup
-      else if (NumArgs == 2 && Op1C)
-        Call.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
-            Call.getContext(), std::min(Len, Op1C->getZExtValue() + 1)));
+          Call.getContext(), Size));
+  }
+
+  // Add alignment attribute if alignment is a power of two constant.
+  if (!isAlignedAllocLikeFn(&Call, TLI))
+    return;
+
+  ConstantInt *Op0C = dyn_cast<ConstantInt>(Call.getOperand(0));
+  if (Op0C && Op0C->getValue().ult(llvm::Value::MaximumAlignment) &&
+      isKnownNonZero(Call.getOperand(1), DL, 0, &AC, &Call, &DT)) {
+    uint64_t AlignmentVal = Op0C->getZExtValue();
+    if (llvm::isPowerOf2_64(AlignmentVal)) {
+      Call.removeRetAttr(Attribute::Alignment);
+      Call.addRetAttr(Attribute::getWithAlignment(Call.getContext(),
+                                                  Align(AlignmentVal)));
     }
   }
 }
