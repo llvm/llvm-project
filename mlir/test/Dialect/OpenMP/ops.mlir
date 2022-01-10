@@ -491,20 +491,20 @@ func @omp_ordered(%arg1 : i32, %arg2 : i32, %arg3 : i32,
 }
 
 // CHECK-LABEL: omp_atomic_read
-// CHECK-SAME: (%[[ADDR:.*]]: memref<i32>)
-func @omp_atomic_read(%addr : memref<i32>) {
-  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] : memref<i32> -> i32
-  %1 = omp.atomic.read %addr : memref<i32> -> i32
-  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] memory_order(seq_cst) : memref<i32> -> i32
-  %2 = omp.atomic.read %addr memory_order(seq_cst) : memref<i32> -> i32
-  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] memory_order(acquire) : memref<i32> -> i32
-  %5 = omp.atomic.read %addr memory_order(acquire) : memref<i32> -> i32
-  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] memory_order(relaxed) : memref<i32> -> i32
-  %6 = omp.atomic.read %addr memory_order(relaxed) : memref<i32> -> i32
-  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] hint(contended, nonspeculative) : memref<i32> -> i32
-  %7 = omp.atomic.read %addr hint(nonspeculative, contended) : memref<i32> -> i32
-  // CHECK: %{{.*}} = omp.atomic.read %[[ADDR]] memory_order(seq_cst) hint(contended, speculative) : memref<i32> -> i32
-  %8 = omp.atomic.read %addr hint(speculative, contended) memory_order(seq_cst) : memref<i32> -> i32
+// CHECK-SAME: (%[[v:.*]]: memref<i32>, %[[x:.*]]: memref<i32>)
+func @omp_atomic_read(%v: memref<i32>, %x: memref<i32>) {
+  // CHECK: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  omp.atomic.read %v = %x : memref<i32>
+  // CHECK: omp.atomic.read %[[v]] = %[[x]] memory_order(seq_cst) : memref<i32>
+  omp.atomic.read %v = %x memory_order(seq_cst) : memref<i32>
+  // CHECK: omp.atomic.read %[[v]] = %[[x]] memory_order(acquire) : memref<i32>
+  omp.atomic.read %v = %x memory_order(acquire) : memref<i32>
+  // CHECK: omp.atomic.read %[[v]] = %[[x]] memory_order(relaxed) : memref<i32>
+  omp.atomic.read %v = %x memory_order(relaxed) : memref<i32>
+  // CHECK: omp.atomic.read %[[v]] = %[[x]] hint(contended, nonspeculative) : memref<i32>
+  omp.atomic.read %v = %x hint(nonspeculative, contended) : memref<i32>
+  // CHECK: omp.atomic.read %[[v]] = %[[x]] memory_order(seq_cst) hint(contended, speculative) : memref<i32>
+  omp.atomic.read %v = %x hint(speculative, contended) memory_order(seq_cst) : memref<i32>
   return
 }
 

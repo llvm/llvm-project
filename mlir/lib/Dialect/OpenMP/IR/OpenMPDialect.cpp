@@ -1333,32 +1333,30 @@ static LogicalResult verifyOrderedRegionOp(OrderedRegionOp op) {
 /// address ::= operand `:` type
 static ParseResult parseAtomicReadOp(OpAsmParser &parser,
                                      OperationState &result) {
-  OpAsmParser::OperandType address;
+  OpAsmParser::OperandType x, v;
   Type addressType;
   SmallVector<ClauseType> clauses = {memoryOrderClause, hintClause};
   SmallVector<int> segments;
 
-  if (parser.parseOperand(address) ||
+  if (parser.parseOperand(v) || parser.parseEqual() || parser.parseOperand(x) ||
       parseClauses(parser, result, clauses, segments) ||
       parser.parseColonType(addressType) ||
-      parser.resolveOperand(address, addressType, result.operands))
+      parser.resolveOperand(x, addressType, result.operands) ||
+      parser.resolveOperand(v, addressType, result.operands))
     return failure();
 
-  SmallVector<Type> resultType;
-  if (parser.parseArrowTypeList(resultType))
-    return failure();
-  result.addTypes(resultType);
   return success();
 }
 
 /// Printer for AtomicReadOp
 static void printAtomicReadOp(OpAsmPrinter &p, AtomicReadOp op) {
-  p << " " << op.address() << " ";
+  p << " " << op.v() << " = " << op.x() << " ";
   if (op.memory_order())
     p << "memory_order(" << op.memory_order().getValue() << ") ";
   if (op.hintAttr())
     printSynchronizationHint(p << " ", op, op.hintAttr());
-  p << ": " << op.address().getType() << " -> " << op.getType();
+  p << ": " << op.x().getType();
+  return;
 }
 
 /// Verifier for AtomicReadOp
@@ -1369,6 +1367,9 @@ static LogicalResult verifyAtomicReadOp(AtomicReadOp op) {
       return op.emitError(
           "memory-order must not be acq_rel or release for atomic reads");
   }
+  if (op.x() == op.v())
+    return op.emitError(
+        "read and write must not be to the same location for atomic reads");
   return verifySynchronizationHint(op, op.hint());
 }
 
