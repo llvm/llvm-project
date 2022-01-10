@@ -810,14 +810,17 @@ struct AA::PointerInfo::OffsetAndSize : public std::pair<int64_t, int64_t> {
   int64_t getSize() const { return second; }
   static OffsetAndSize getUnknown() { return OffsetAndSize(Unknown, Unknown); }
 
+  /// Return true if offset or size are unknown.
+  bool offsetOrSizeAreUnknown() const {
+    return getOffset() == OffsetAndSize::Unknown ||
+           getSize() == OffsetAndSize::Unknown;
+  }
+
   /// Return true if this offset and size pair might describe an address that
   /// overlaps with \p OAS.
   bool mayOverlap(const OffsetAndSize &OAS) const {
     // Any unknown value and we are giving up -> overlap.
-    if (OAS.getOffset() == OffsetAndSize::Unknown ||
-        OAS.getSize() == OffsetAndSize::Unknown ||
-        getOffset() == OffsetAndSize::Unknown ||
-        getSize() == OffsetAndSize::Unknown)
+    if (offsetOrSizeAreUnknown() || OAS.offsetOrSizeAreUnknown())
       return true;
 
     // Check if one offset point is in the other interval [offset, offset+size].
@@ -1024,8 +1027,9 @@ protected:
       OffsetAndSize ItOAS = It.getFirst();
       if (!OAS.mayOverlap(ItOAS))
         continue;
+      bool IsExact = OAS == ItOAS && !OAS.offsetOrSizeAreUnknown();
       for (auto &Access : It.getSecond())
-        if (!CB(Access, OAS == ItOAS))
+        if (!CB(Access, IsExact))
           return false;
     }
     return true;
