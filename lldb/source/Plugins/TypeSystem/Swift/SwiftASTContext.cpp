@@ -4417,6 +4417,8 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
     return {};
   }
 
+  LOG_VERBOSE_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\")", mangled_cstr);
+
   swift::ASTContext *ast_ctx = GetASTContext();
   if (!ast_ctx) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- null Swift AST Context",
