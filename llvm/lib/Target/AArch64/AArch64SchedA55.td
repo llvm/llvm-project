@@ -235,10 +235,14 @@ def : ReadAdvance<ReadID, 1, [WriteImm,WriteI,
 //---
 // Miscellaneous
 //---
-def : InstRW<[CortexA55WriteVLD1SI,CortexA55WriteLDP1], (instregex "LDPS?W")>;
-def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP1], (instregex "LDPS[^W]")>;
-def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP2], (instregex "LDP(X|D)")>;
-def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP4], (instregex "LDPQ")>;
+def : InstRW<[CortexA55WriteVLD1SI,CortexA55WriteLDP1], (instregex "LDPS?Wi")>;
+def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP1], (instregex "LDPSi")>;
+def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP2], (instregex "LDP(X|D)i")>;
+def : InstRW<[CortexA55WriteVLD1,CortexA55WriteLDP4], (instregex "LDPQi")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD1SI,CortexA55WriteLDP1], (instregex "LDPS?W(pre|post)")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD1,CortexA55WriteLDP1], (instregex "LDPS(pre|post)")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD1,CortexA55WriteLDP2], (instregex "LDP(X|D)(pre|post)")>;
+def : InstRW<[WriteAdr, CortexA55WriteVLD1,CortexA55WriteLDP4], (instregex "LDPQ(pre|post)")>;
 def : InstRW<[WriteI], (instrs COPY)>;
 //---
 // Vector Loads - 64-bit per cycle
