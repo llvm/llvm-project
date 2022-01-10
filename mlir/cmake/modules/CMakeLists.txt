@@ -27,6 +27,9 @@ set(MLIR_CONFIG_INCLUDE_DIRS
   "${MLIR_SOURCE_DIR}/include"
   "${MLIR_BINARY_DIR}/include"
   )
+# Refer to the best host mlir-tbgen, which might be a host-optimized version
+set(MLIR_CONFIG_TABLEGEN_EXE "${MLIR_TABLEGEN_EXE}")
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${mlir_cmake_builddir}/MLIRConfig.cmake
@@ -52,6 +55,10 @@ get_config_exports_includes(MLIR MLIR_CONFIG_INCLUDE_EXPORTS)
 set(MLIR_CONFIG_INCLUDE_DIRS
   "\${MLIR_INSTALL_PREFIX}/include"
   )
+# Ensure that we are using the installed mlir-tblgen. This might not be MLIR_TABLEGEN_EXE
+# if we're building with a host-optimized mlir-tblgen (with LLVM_OPTIMIZED_TABLEGEN).
+set(MLIR_CONFIG_TABLEGEN_EXE mlir-tblgen)
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
