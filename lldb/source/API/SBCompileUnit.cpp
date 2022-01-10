@@ -39,7 +39,7 @@ const SBCompileUnit &SBCompileUnit::operator=(const SBCompileUnit &rhs) {
                      rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBCompileUnit::~SBCompileUnit() { m_opaque_ptr = nullptr; }
@@ -51,7 +51,7 @@ SBFileSpec SBCompileUnit::GetFileSpec() const {
   SBFileSpec file_spec;
   if (m_opaque_ptr)
     file_spec.SetFileSpec(m_opaque_ptr->GetPrimaryFile());
-  return LLDB_RECORD_RESULT(file_spec);
+  return file_spec;
 }
 
 uint32_t SBCompileUnit::GetNumLineEntries() const {
@@ -80,7 +80,7 @@ SBLineEntry SBCompileUnit::GetLineEntryAtIndex(uint32_t idx) const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_line_entry);
+  return sb_line_entry;
 }
 
 uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
@@ -133,21 +133,21 @@ lldb::SBTypeList SBCompileUnit::GetTypes(uint32_t type_mask) {
   SBTypeList sb_type_list;
 
   if (!m_opaque_ptr)
-    return LLDB_RECORD_RESULT(sb_type_list);
+    return sb_type_list;
 
   ModuleSP module_sp(m_opaque_ptr->GetModule());
   if (!module_sp)
-    return LLDB_RECORD_RESULT(sb_type_list);
+    return sb_type_list;
 
   SymbolFile *symfile = module_sp->GetSymbolFile();
   if (!symfile)
-    return LLDB_RECORD_RESULT(sb_type_list);
+    return sb_type_list;
 
   TypeClass type_class = static_cast<TypeClass>(type_mask);
   TypeList type_list;
   symfile->GetTypes(m_opaque_ptr, type_class, type_list);
   sb_type_list.m_opaque_up->Append(type_list);
-  return LLDB_RECORD_RESULT(sb_type_list);
+  return sb_type_list;
 }
 
 SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
@@ -160,8 +160,7 @@ SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
     sb_file_spec.SetFileSpec(spec);
   }
 
-
-  return LLDB_RECORD_RESULT(sb_file_spec);
+  return sb_file_spec;
 }
 
 uint32_t SBCompileUnit::FindSupportFileIndex(uint32_t start_idx,

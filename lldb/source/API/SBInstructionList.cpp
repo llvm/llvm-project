@@ -39,7 +39,7 @@ operator=(const SBInstructionList &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBInstructionList::~SBInstructionList() = default;
@@ -71,7 +71,7 @@ SBInstruction SBInstructionList::GetInstructionAtIndex(uint32_t idx) {
     inst.SetOpaque(
         m_opaque_sp,
         m_opaque_sp->GetInstructionList().GetInstructionAtIndex(idx));
-  return LLDB_RECORD_RESULT(inst);
+  return inst;
 }
 
 size_t SBInstructionList::GetInstructionsCount(const SBAddress &start,

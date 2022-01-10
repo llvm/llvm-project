@@ -175,7 +175,7 @@ SBBroadcaster SBCommunication::GetBroadcaster() {
                              GetBroadcaster);
 
   SBBroadcaster broadcaster(m_opaque, false);
-  return LLDB_RECORD_RESULT(broadcaster);
+  return broadcaster;
 }
 
 const char *SBCommunication::GetBroadcasterClass() {

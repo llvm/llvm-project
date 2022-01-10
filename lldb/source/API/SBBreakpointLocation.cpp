@@ -56,7 +56,7 @@ operator=(const SBBreakpointLocation &rhs) {
       rhs);
 
   m_opaque_wp = rhs.m_opaque_wp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBBreakpointLocation::~SBBreakpointLocation() = default;
@@ -80,10 +80,10 @@ SBAddress SBBreakpointLocation::GetAddress() {
 
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
-    return LLDB_RECORD_RESULT(SBAddress(loc_sp->GetAddress()));
+    return SBAddress(loc_sp->GetAddress());
   }
 
-  return LLDB_RECORD_RESULT(SBAddress());
+  return SBAddress();
 }
 
 addr_t SBBreakpointLocation::GetLoadAddress() {
@@ -240,7 +240,7 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
     } else
       sb_error.SetErrorString("invalid breakpoint");
 
-    return LLDB_RECORD_RESULT(sb_error);
+    return sb_error;
 }
 
 SBError
@@ -265,7 +265,7 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
   } else
     sb_error.SetErrorString("invalid breakpoint");
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 void SBBreakpointLocation::SetCommandLineCommands(SBStringList &commands) {
@@ -465,5 +465,5 @@ SBBreakpoint SBBreakpointLocation::GetBreakpoint() {
     sb_bp = loc_sp->GetBreakpoint().shared_from_this();
   }
 
-  return LLDB_RECORD_RESULT(sb_bp);
+  return sb_bp;
 }

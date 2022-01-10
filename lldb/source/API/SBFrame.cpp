@@ -78,7 +78,7 @@ const SBFrame &SBFrame::operator=(const SBFrame &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 StackFrameSP SBFrame::GetFrameSP() const {
@@ -129,7 +129,7 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_sym_ctx);
+  return sb_sym_ctx;
 }
 
 SBModule SBFrame::GetModule() const {
@@ -154,7 +154,7 @@ SBModule SBFrame::GetModule() const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_module);
+  return sb_module;
 }
 
 SBCompileUnit SBFrame::GetCompileUnit() const {
@@ -179,7 +179,7 @@ SBCompileUnit SBFrame::GetCompileUnit() const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_comp_unit);
+  return sb_comp_unit;
 }
 
 SBFunction SBFrame::GetFunction() const {
@@ -203,7 +203,7 @@ SBFunction SBFrame::GetFunction() const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_function);
+  return sb_function;
 }
 
 SBSymbol SBFrame::GetSymbol() const {
@@ -226,7 +226,7 @@ SBSymbol SBFrame::GetSymbol() const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_symbol);
+  return sb_symbol;
 }
 
 SBBlock SBFrame::GetBlock() const {
@@ -247,7 +247,7 @@ SBBlock SBFrame::GetBlock() const {
         sb_block.SetPtr(frame->GetSymbolContext(eSymbolContextBlock).block);
     }
   }
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 SBBlock SBFrame::GetFrameBlock() const {
@@ -268,7 +268,7 @@ SBBlock SBFrame::GetFrameBlock() const {
         sb_block.SetPtr(frame->GetFrameBlock());
     }
   }
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 SBLineEntry SBFrame::GetLineEntry() const {
@@ -291,7 +291,7 @@ SBLineEntry SBFrame::GetLineEntry() const {
       }
     }
   }
-  return LLDB_RECORD_RESULT(sb_line_entry);
+  return sb_line_entry;
 }
 
 uint32_t SBFrame::GetFrameID() const {
@@ -432,7 +432,7 @@ SBAddress SBFrame::GetPCAddress() const {
         sb_addr.SetAddress(frame->GetFrameCodeAddress());
     }
   }
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 void SBFrame::Clear() {
@@ -456,7 +456,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
         frame->CalculateTarget()->GetPreferDynamicValue();
     sb_value = GetValueForVariablePath(var_path, use_dynamic);
   }
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
@@ -467,7 +467,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
 
   SBValue sb_value;
   if (var_path == nullptr || var_path[0] == '\0') {
-    return LLDB_RECORD_RESULT(sb_value);
+    return sb_value;
   }
 
   std::unique_lock<std::recursive_mutex> lock;
@@ -492,7 +492,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
       }
     }
   }
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 SBValue SBFrame::FindVariable(const char *name) {
@@ -510,7 +510,7 @@ SBValue SBFrame::FindVariable(const char *name) {
         frame->CalculateTarget()->GetPreferDynamicValue();
     value = FindVariable(name, use_dynamic);
   }
-  return LLDB_RECORD_RESULT(value);
+  return value;
 }
 
 SBValue SBFrame::FindVariable(const char *name,
@@ -522,7 +522,7 @@ SBValue SBFrame::FindVariable(const char *name,
   SBValue sb_value;
 
   if (name == nullptr || name[0] == '\0') {
-    return LLDB_RECORD_RESULT(sb_value);
+    return sb_value;
   }
 
   ValueObjectSP value_sp;
@@ -545,7 +545,7 @@ SBValue SBFrame::FindVariable(const char *name,
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 SBValue SBFrame::FindValue(const char *name, ValueType value_type) {
@@ -563,7 +563,7 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type) {
         frame->CalculateTarget()->GetPreferDynamicValue();
     value = FindValue(name, value_type, use_dynamic);
   }
-  return LLDB_RECORD_RESULT(value);
+  return value;
 }
 
 SBValue SBFrame::FindValue(const char *name, ValueType value_type,
@@ -575,7 +575,7 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
   SBValue sb_value;
 
   if (name == nullptr || name[0] == '\0') {
-    return LLDB_RECORD_RESULT(sb_value);
+    return sb_value;
   }
 
   ValueObjectSP value_sp;
@@ -678,7 +678,7 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 bool SBFrame::IsEqual(const SBFrame &that) const {
@@ -713,7 +713,7 @@ SBThread SBFrame::GetThread() const {
   ThreadSP thread_sp(exe_ctx.GetThreadSP());
   SBThread sb_thread(thread_sp);
 
-  return LLDB_RECORD_RESULT(sb_thread);
+  return sb_thread;
 }
 
 const char *SBFrame::Disassemble() const {
@@ -767,7 +767,7 @@ SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
 
     value_list = GetVariables(options);
   }
-  return LLDB_RECORD_RESULT(value_list);
+  return value_list;
 }
 
 lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
@@ -790,7 +790,7 @@ lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
   options.SetInScopeOnly(in_scope_only);
   options.SetIncludeRuntimeSupportValues(include_runtime_support_values);
   options.SetUseDynamic(use_dynamic);
-  return LLDB_RECORD_RESULT(GetVariables(options));
+  return GetVariables(options);
 }
 
 SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
@@ -891,7 +891,7 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
     }
   }
 
-  return LLDB_RECORD_RESULT(value_list);
+  return value_list;
 }
 
 SBValueList SBFrame::GetRegisters() {
@@ -921,7 +921,7 @@ SBValueList SBFrame::GetRegisters() {
     }
   }
 
-  return LLDB_RECORD_RESULT(value_list);
+  return value_list;
 }
 
 SBValue SBFrame::FindRegister(const char *name) {
@@ -953,7 +953,7 @@ SBValue SBFrame::FindRegister(const char *name) {
     }
   }
 
-  return LLDB_RECORD_RESULT(result);
+  return result;
 }
 
 bool SBFrame::GetDescription(SBStream &description) {
@@ -1004,9 +1004,9 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
       options.SetLanguage(target->GetLanguage());
     else
       options.SetLanguage(frame->GetLanguage());
-    return LLDB_RECORD_RESULT(EvaluateExpression(expr, options));
+    return EvaluateExpression(expr, options);
   }
-  return LLDB_RECORD_RESULT(result);
+  return result;
 }
 
 SBValue
@@ -1029,7 +1029,7 @@ SBFrame::EvaluateExpression(const char *expr,
     options.SetLanguage(target->GetLanguage());
   else if (frame)
     options.SetLanguage(frame->GetLanguage());
-  return LLDB_RECORD_RESULT(EvaluateExpression(expr, options));
+  return EvaluateExpression(expr, options);
 }
 
 SBValue SBFrame::EvaluateExpression(const char *expr,
@@ -1052,7 +1052,7 @@ SBValue SBFrame::EvaluateExpression(const char *expr,
     options.SetLanguage(target->GetLanguage());
   else if (frame)
     options.SetLanguage(frame->GetLanguage());
-  return LLDB_RECORD_RESULT(EvaluateExpression(expr, options));
+  return EvaluateExpression(expr, options);
 }
 
 lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
@@ -1066,7 +1066,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
   SBValue expr_result;
 
   if (expr == nullptr || expr[0] == '\0') {
-    return LLDB_RECORD_RESULT(expr_result);
+    return expr_result;
   }
 
   ValueObjectSP expr_value_sp;
@@ -1106,7 +1106,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
             "%s, summary %s **",
             expr_result.GetValue(), expr_result.GetSummary());
 
-  return LLDB_RECORD_RESULT(expr_result);
+  return expr_result;
 }
 
 bool SBFrame::IsInlined() {

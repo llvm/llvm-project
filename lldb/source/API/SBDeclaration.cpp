@@ -41,7 +41,7 @@ const SBDeclaration &SBDeclaration::operator=(const SBDeclaration &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 void SBDeclaration::SetDeclaration(
@@ -70,8 +70,7 @@ SBFileSpec SBDeclaration::GetFileSpec() const {
   if (m_opaque_up.get() && m_opaque_up->GetFile())
     sb_file_spec.SetFileSpec(m_opaque_up->GetFile());
 
-
-  return LLDB_RECORD_RESULT(sb_file_spec);
+  return sb_file_spec;
 }
 
 uint32_t SBDeclaration::GetLine() const {

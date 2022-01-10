@@ -35,7 +35,7 @@ operator=(const SBExpressionOptions &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBExpressionOptions::~SBExpressionOptions() = default;

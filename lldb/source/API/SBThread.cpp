@@ -81,7 +81,7 @@ const lldb::SBThread &SBThread::operator=(const SBThread &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 // Destructor
@@ -105,7 +105,7 @@ lldb::SBQueue SBThread::GetQueue() const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_queue);
+  return sb_queue;
 }
 
 bool SBThread::IsValid() const {
@@ -313,18 +313,18 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!exe_ctx.HasThreadScope())
-    return LLDB_RECORD_RESULT(SBThreadCollection());
+    return SBThreadCollection();
 
   ProcessSP process_sp = exe_ctx.GetProcessSP();
 
   StopInfoSP stop_info = exe_ctx.GetThreadPtr()->GetStopInfo();
   StructuredData::ObjectSP info = stop_info->GetExtendedInfo();
   if (!info)
-    return LLDB_RECORD_RESULT(threads);
+    return threads;
 
   threads = process_sp->GetInstrumentationRuntime(type)
                 ->GetBacktracesFromExtendedStopInfo(info);
-  return LLDB_RECORD_RESULT(threads);
+  return threads;
 }
 
 size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
@@ -373,7 +373,7 @@ SBValue SBThread::GetStopReturnValue() {
     }
   }
 
-  return LLDB_RECORD_RESULT(SBValue(return_valobj_sp));
+  return SBValue(return_valobj_sp);
 }
 
 void SBThread::SetThread(const ThreadSP &lldb_object_sp) {
@@ -807,7 +807,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
 
     if (line == 0) {
       sb_error.SetErrorString("invalid line argument");
-      return LLDB_RECORD_RESULT(sb_error);
+      return sb_error;
     }
 
     if (!frame_sp) {
@@ -819,7 +819,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     SymbolContext frame_sc;
     if (!frame_sp) {
       sb_error.SetErrorString("no valid frames in thread to step");
-      return LLDB_RECORD_RESULT(sb_error);
+      return sb_error;
     }
 
     // If we have a frame, get its line
@@ -830,7 +830,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     if (frame_sc.comp_unit == nullptr) {
       sb_error.SetErrorStringWithFormat(
           "frame %u doesn't have debug information", frame_sp->GetFrameIndex());
-      return LLDB_RECORD_RESULT(sb_error);
+      return sb_error;
     }
 
     FileSpec step_file_spec;
@@ -842,7 +842,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
         step_file_spec = frame_sc.line_entry.file;
       else {
         sb_error.SetErrorString("invalid file argument or no file for frame");
-        return LLDB_RECORD_RESULT(sb_error);
+        return sb_error;
       }
     }
 
@@ -904,15 +904,14 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
   } else {
     sb_error.SetErrorString("this SBThread object is invalid");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name) {
   LLDB_RECORD_METHOD(lldb::SBError, SBThread, StepUsingScriptedThreadPlan,
                      (const char *), script_class_name);
 
-  return LLDB_RECORD_RESULT(
-      StepUsingScriptedThreadPlan(script_class_name, true));
+  return StepUsingScriptedThreadPlan(script_class_name, true);
 }
 
 SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
@@ -922,8 +921,8 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
                      resume_immediately);
 
   lldb::SBStructuredData no_data;
-  return LLDB_RECORD_RESULT(StepUsingScriptedThreadPlan(
-      script_class_name, no_data, resume_immediately));
+  return StepUsingScriptedThreadPlan(script_class_name, no_data,
+                                     resume_immediately);
 }
 
 SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
@@ -940,7 +939,7 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
-    return LLDB_RECORD_RESULT(error);
+    return error;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
@@ -952,18 +951,18 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
 
   if (new_plan_status.Fail()) {
     error.SetErrorString(new_plan_status.AsCString());
-    return LLDB_RECORD_RESULT(error);
+    return error;
   }
 
   if (!resume_immediately)
-    return LLDB_RECORD_RESULT(error);
+    return error;
 
   if (new_plan_status.Success())
     error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
   else
     error.SetErrorString(new_plan_status.AsCString());
 
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
@@ -977,14 +976,14 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
 
   if (!exe_ctx.HasThreadScope()) {
     sb_error.SetErrorString("this SBThread object is invalid");
-    return LLDB_RECORD_RESULT(sb_error);
+    return sb_error;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
 
   Status err = thread->JumpToLine(file_spec.ref(), line, true);
   sb_error.SetError(err);
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError SBThread::ReturnFromFrame(SBFrame &frame, SBValue &return_value) {
@@ -1002,7 +1001,7 @@ SBError SBThread::ReturnFromFrame(SBFrame &frame, SBValue &return_value) {
         thread->ReturnFromFrame(frame.GetFrameSP(), return_value.GetSP()));
   }
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError SBThread::UnwindInnermostExpression() {
@@ -1021,7 +1020,7 @@ SBError SBThread::UnwindInnermostExpression() {
       thread->SetSelectedFrameByIndex(0, false);
   }
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 bool SBThread::Suspend() {
@@ -1114,7 +1113,7 @@ SBProcess SBThread::GetProcess() {
     sb_process.SetSP(exe_ctx.GetProcessSP());
   }
 
-  return LLDB_RECORD_RESULT(sb_process);
+  return sb_process;
 }
 
 uint32_t SBThread::GetNumFrames() {
@@ -1150,7 +1149,7 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_frame);
+  return sb_frame;
 }
 
 lldb::SBFrame SBThread::GetSelectedFrame() {
@@ -1169,7 +1168,7 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_frame);
+  return sb_frame;
 }
 
 lldb::SBFrame SBThread::SetSelectedFrame(uint32_t idx) {
@@ -1193,7 +1192,7 @@ lldb::SBFrame SBThread::SetSelectedFrame(uint32_t idx) {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_frame);
+  return sb_frame;
 }
 
 bool SBThread::EventIsThreadEvent(const SBEvent &event) {
@@ -1207,16 +1206,14 @@ SBFrame SBThread::GetStackFrameFromEvent(const SBEvent &event) {
   LLDB_RECORD_STATIC_METHOD(lldb::SBFrame, SBThread, GetStackFrameFromEvent,
                             (const lldb::SBEvent &), event);
 
-  return LLDB_RECORD_RESULT(
-      Thread::ThreadEventData::GetStackFrameFromEvent(event.get()));
+  return Thread::ThreadEventData::GetStackFrameFromEvent(event.get());
 }
 
 SBThread SBThread::GetThreadFromEvent(const SBEvent &event) {
   LLDB_RECORD_STATIC_METHOD(lldb::SBThread, SBThread, GetThreadFromEvent,
                             (const lldb::SBEvent &), event);
 
-  return LLDB_RECORD_RESULT(
-      Thread::ThreadEventData::GetThreadFromEvent(event.get()));
+  return Thread::ThreadEventData::GetThreadFromEvent(event.get());
 }
 
 bool SBThread::operator==(const SBThread &rhs) const {
@@ -1312,7 +1309,7 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_origin_thread);
+  return sb_origin_thread;
 }
 
 uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
@@ -1330,9 +1327,9 @@ SBValue SBThread::GetCurrentException() {
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp)
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
 
-  return LLDB_RECORD_RESULT(SBValue(thread_sp->GetCurrentException()));
+  return SBValue(thread_sp->GetCurrentException());
 }
 
 SBThread SBThread::GetCurrentExceptionBacktrace() {
@@ -1341,10 +1338,9 @@ SBThread SBThread::GetCurrentExceptionBacktrace() {
 
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (!thread_sp)
-    return LLDB_RECORD_RESULT(SBThread());
+    return SBThread();
 
-  return LLDB_RECORD_RESULT(
-      SBThread(thread_sp->GetCurrentExceptionBacktrace()));
+  return SBThread(thread_sp->GetCurrentExceptionBacktrace());
 }
 
 bool SBThread::SafeToCallFunctions() {

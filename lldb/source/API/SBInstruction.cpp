@@ -86,7 +86,7 @@ const SBInstruction &SBInstruction::operator=(const SBInstruction &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBInstruction::~SBInstruction() = default;
@@ -108,7 +108,7 @@ SBAddress SBInstruction::GetAddress() {
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp && inst_sp->GetAddress().IsValid())
     sb_addr.SetAddress(inst_sp->GetAddress());
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 const char *SBInstruction::GetMnemonic(SBTarget target) {
@@ -192,7 +192,7 @@ SBData SBInstruction::GetData(SBTarget target) {
       sb_data.SetOpaque(data_extractor_sp);
     }
   }
-  return LLDB_RECORD_RESULT(sb_data);
+  return sb_data;
 }
 
 bool SBInstruction::DoesBranch() {

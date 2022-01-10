@@ -64,7 +64,7 @@ SBAttachInfo &SBAttachInfo::operator=(const SBAttachInfo &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 lldb::pid_t SBAttachInfo::GetProcessID() {
@@ -249,7 +249,7 @@ bool SBAttachInfo::ParentProcessIDIsValid() {
 SBListener SBAttachInfo::GetListener() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBListener, SBAttachInfo, GetListener);
 
-  return LLDB_RECORD_RESULT(SBListener(m_opaque_sp->GetListener()));
+  return SBListener(m_opaque_sp->GetListener());
 }
 
 void SBAttachInfo::SetListener(SBListener &listener) {

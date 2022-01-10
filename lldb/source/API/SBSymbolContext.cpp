@@ -44,7 +44,7 @@ const SBSymbolContext &SBSymbolContext::operator=(const SBSymbolContext &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBSymbolContext::IsValid() const {
@@ -67,15 +67,14 @@ SBModule SBSymbolContext::GetModule() {
     sb_module.SetSP(module_sp);
   }
 
-  return LLDB_RECORD_RESULT(sb_module);
+  return sb_module;
 }
 
 SBCompileUnit SBSymbolContext::GetCompileUnit() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBCompileUnit, SBSymbolContext,
                              GetCompileUnit);
 
-  return LLDB_RECORD_RESULT(
-      SBCompileUnit(m_opaque_up ? m_opaque_up->comp_unit : nullptr));
+  return SBCompileUnit(m_opaque_up ? m_opaque_up->comp_unit : nullptr);
 }
 
 SBFunction SBSymbolContext::GetFunction() {
@@ -88,14 +87,13 @@ SBFunction SBSymbolContext::GetFunction() {
 
   SBFunction sb_function(function);
 
-  return LLDB_RECORD_RESULT(sb_function);
+  return sb_function;
 }
 
 SBBlock SBSymbolContext::GetBlock() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBlock, SBSymbolContext, GetBlock);
 
-  return LLDB_RECORD_RESULT(
-      SBBlock(m_opaque_up ? m_opaque_up->block : nullptr));
+  return SBBlock(m_opaque_up ? m_opaque_up->block : nullptr);
 }
 
 SBLineEntry SBSymbolContext::GetLineEntry() {
@@ -105,7 +103,7 @@ SBLineEntry SBSymbolContext::GetLineEntry() {
   if (m_opaque_up)
     sb_line_entry.SetLineEntry(m_opaque_up->line_entry);
 
-  return LLDB_RECORD_RESULT(sb_line_entry);
+  return sb_line_entry;
 }
 
 SBSymbol SBSymbolContext::GetSymbol() {
@@ -118,7 +116,7 @@ SBSymbol SBSymbolContext::GetSymbol() {
 
   SBSymbol sb_symbol(symbol);
 
-  return LLDB_RECORD_RESULT(sb_symbol);
+  return sb_symbol;
 }
 
 void SBSymbolContext::SetModule(lldb::SBModule module) {
@@ -216,7 +214,7 @@ SBSymbolContext::GetParentOfInlinedScope(const SBAddress &curr_frame_pc,
   if (m_opaque_up.get() && curr_frame_pc.IsValid()) {
     if (m_opaque_up->GetParentOfInlinedScope(curr_frame_pc.ref(), sb_sc.ref(),
                                              parent_frame_addr.ref()))
-      return LLDB_RECORD_RESULT(sb_sc);
+      return sb_sc;
   }
-  return LLDB_RECORD_RESULT(SBSymbolContext());
+  return SBSymbolContext();
 }

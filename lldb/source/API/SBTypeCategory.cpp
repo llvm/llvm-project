@@ -146,9 +146,9 @@ SBTypeCategory::GetTypeNameSpecifierForFilterAtIndex(uint32_t index) {
                      GetTypeNameSpecifierForFilterAtIndex, (uint32_t), index);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeNameSpecifier());
-  return LLDB_RECORD_RESULT(SBTypeNameSpecifier(
-      m_opaque_sp->GetTypeNameSpecifierForFilterAtIndex(index)));
+    return SBTypeNameSpecifier();
+  return SBTypeNameSpecifier(
+      m_opaque_sp->GetTypeNameSpecifierForFilterAtIndex(index));
 }
 
 lldb::SBTypeNameSpecifier
@@ -157,9 +157,9 @@ SBTypeCategory::GetTypeNameSpecifierForFormatAtIndex(uint32_t index) {
                      GetTypeNameSpecifierForFormatAtIndex, (uint32_t), index);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeNameSpecifier());
-  return LLDB_RECORD_RESULT(SBTypeNameSpecifier(
-      m_opaque_sp->GetTypeNameSpecifierForFormatAtIndex(index)));
+    return SBTypeNameSpecifier();
+  return SBTypeNameSpecifier(
+      m_opaque_sp->GetTypeNameSpecifierForFormatAtIndex(index));
 }
 
 lldb::SBTypeNameSpecifier
@@ -168,9 +168,9 @@ SBTypeCategory::GetTypeNameSpecifierForSummaryAtIndex(uint32_t index) {
                      GetTypeNameSpecifierForSummaryAtIndex, (uint32_t), index);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeNameSpecifier());
-  return LLDB_RECORD_RESULT(SBTypeNameSpecifier(
-      m_opaque_sp->GetTypeNameSpecifierForSummaryAtIndex(index)));
+    return SBTypeNameSpecifier();
+  return SBTypeNameSpecifier(
+      m_opaque_sp->GetTypeNameSpecifierForSummaryAtIndex(index));
 }
 
 lldb::SBTypeNameSpecifier
@@ -180,9 +180,9 @@ SBTypeCategory::GetTypeNameSpecifierForSyntheticAtIndex(uint32_t index) {
                      index);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeNameSpecifier());
-  return LLDB_RECORD_RESULT(SBTypeNameSpecifier(
-      m_opaque_sp->GetTypeNameSpecifierForSyntheticAtIndex(index)));
+    return SBTypeNameSpecifier();
+  return SBTypeNameSpecifier(
+      m_opaque_sp->GetTypeNameSpecifierForSyntheticAtIndex(index));
 }
 
 SBTypeFilter SBTypeCategory::GetFilterForType(SBTypeNameSpecifier spec) {
@@ -190,10 +190,10 @@ SBTypeFilter SBTypeCategory::GetFilterForType(SBTypeNameSpecifier spec) {
                      (lldb::SBTypeNameSpecifier), spec);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeFilter());
+    return SBTypeFilter();
 
   if (!spec.IsValid())
-    return LLDB_RECORD_RESULT(SBTypeFilter());
+    return SBTypeFilter();
 
   lldb::TypeFilterImplSP children_sp;
 
@@ -205,22 +205,22 @@ SBTypeFilter SBTypeCategory::GetFilterForType(SBTypeNameSpecifier spec) {
         ConstString(spec.GetName()), children_sp);
 
   if (!children_sp)
-    return LLDB_RECORD_RESULT(lldb::SBTypeFilter());
+    return lldb::SBTypeFilter();
 
   TypeFilterImplSP filter_sp =
       std::static_pointer_cast<TypeFilterImpl>(children_sp);
 
-  return LLDB_RECORD_RESULT(lldb::SBTypeFilter(filter_sp));
+  return lldb::SBTypeFilter(filter_sp);
 }
 SBTypeFormat SBTypeCategory::GetFormatForType(SBTypeNameSpecifier spec) {
   LLDB_RECORD_METHOD(lldb::SBTypeFormat, SBTypeCategory, GetFormatForType,
                      (lldb::SBTypeNameSpecifier), spec);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeFormat());
+    return SBTypeFormat();
 
   if (!spec.IsValid())
-    return LLDB_RECORD_RESULT(SBTypeFormat());
+    return SBTypeFormat();
 
   lldb::TypeFormatImplSP format_sp;
 
@@ -232,9 +232,9 @@ SBTypeFormat SBTypeCategory::GetFormatForType(SBTypeNameSpecifier spec) {
         ConstString(spec.GetName()), format_sp);
 
   if (!format_sp)
-    return LLDB_RECORD_RESULT(lldb::SBTypeFormat());
+    return lldb::SBTypeFormat();
 
-  return LLDB_RECORD_RESULT(lldb::SBTypeFormat(format_sp));
+  return lldb::SBTypeFormat(format_sp);
 }
 
 SBTypeSummary SBTypeCategory::GetSummaryForType(SBTypeNameSpecifier spec) {
@@ -242,10 +242,10 @@ SBTypeSummary SBTypeCategory::GetSummaryForType(SBTypeNameSpecifier spec) {
                      (lldb::SBTypeNameSpecifier), spec);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeSummary());
+    return SBTypeSummary();
 
   if (!spec.IsValid())
-    return LLDB_RECORD_RESULT(SBTypeSummary());
+    return SBTypeSummary();
 
   lldb::TypeSummaryImplSP summary_sp;
 
@@ -257,9 +257,9 @@ SBTypeSummary SBTypeCategory::GetSummaryForType(SBTypeNameSpecifier spec) {
         ConstString(spec.GetName()), summary_sp);
 
   if (!summary_sp)
-    return LLDB_RECORD_RESULT(lldb::SBTypeSummary());
+    return lldb::SBTypeSummary();
 
-  return LLDB_RECORD_RESULT(lldb::SBTypeSummary(summary_sp));
+  return lldb::SBTypeSummary(summary_sp);
 }
 
 SBTypeSynthetic SBTypeCategory::GetSyntheticForType(SBTypeNameSpecifier spec) {
@@ -267,10 +267,10 @@ SBTypeSynthetic SBTypeCategory::GetSyntheticForType(SBTypeNameSpecifier spec) {
                      (lldb::SBTypeNameSpecifier), spec);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeSynthetic());
+    return SBTypeSynthetic();
 
   if (!spec.IsValid())
-    return LLDB_RECORD_RESULT(SBTypeSynthetic());
+    return SBTypeSynthetic();
 
   lldb::SyntheticChildrenSP children_sp;
 
@@ -282,12 +282,12 @@ SBTypeSynthetic SBTypeCategory::GetSyntheticForType(SBTypeNameSpecifier spec) {
         ConstString(spec.GetName()), children_sp);
 
   if (!children_sp)
-    return LLDB_RECORD_RESULT(lldb::SBTypeSynthetic());
+    return lldb::SBTypeSynthetic();
 
   ScriptedSyntheticChildrenSP synth_sp =
       std::static_pointer_cast<ScriptedSyntheticChildren>(children_sp);
 
-  return LLDB_RECORD_RESULT(lldb::SBTypeSynthetic(synth_sp));
+  return lldb::SBTypeSynthetic(synth_sp);
 }
 
 SBTypeFilter SBTypeCategory::GetFilterAtIndex(uint32_t index) {
@@ -295,17 +295,17 @@ SBTypeFilter SBTypeCategory::GetFilterAtIndex(uint32_t index) {
                      (uint32_t), index);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeFilter());
+    return SBTypeFilter();
   lldb::SyntheticChildrenSP children_sp =
       m_opaque_sp->GetSyntheticAtIndex((index));
 
   if (!children_sp.get())
-    return LLDB_RECORD_RESULT(lldb::SBTypeFilter());
+    return lldb::SBTypeFilter();
 
   TypeFilterImplSP filter_sp =
       std::static_pointer_cast<TypeFilterImpl>(children_sp);
 
-  return LLDB_RECORD_RESULT(lldb::SBTypeFilter(filter_sp));
+  return lldb::SBTypeFilter(filter_sp);
 }
 
 SBTypeFormat SBTypeCategory::GetFormatAtIndex(uint32_t index) {
@@ -313,9 +313,8 @@ SBTypeFormat SBTypeCategory::GetFormatAtIndex(uint32_t index) {
                      (uint32_t), index);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeFormat());
-  return LLDB_RECORD_RESULT(
-      SBTypeFormat(m_opaque_sp->GetFormatAtIndex((index))));
+    return SBTypeFormat();
+  return SBTypeFormat(m_opaque_sp->GetFormatAtIndex((index)));
 }
 
 SBTypeSummary SBTypeCategory::GetSummaryAtIndex(uint32_t index) {
@@ -323,9 +322,8 @@ SBTypeSummary SBTypeCategory::GetSummaryAtIndex(uint32_t index) {
                      (uint32_t), index);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeSummary());
-  return LLDB_RECORD_RESULT(
-      SBTypeSummary(m_opaque_sp->GetSummaryAtIndex((index))));
+    return SBTypeSummary();
+  return SBTypeSummary(m_opaque_sp->GetSummaryAtIndex((index)));
 }
 
 SBTypeSynthetic SBTypeCategory::GetSyntheticAtIndex(uint32_t index) {
@@ -333,17 +331,17 @@ SBTypeSynthetic SBTypeCategory::GetSyntheticAtIndex(uint32_t index) {
                      (uint32_t), index);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBTypeSynthetic());
+    return SBTypeSynthetic();
   lldb::SyntheticChildrenSP children_sp =
       m_opaque_sp->GetSyntheticAtIndex((index));
 
   if (!children_sp.get())
-    return LLDB_RECORD_RESULT(lldb::SBTypeSynthetic());
+    return lldb::SBTypeSynthetic();
 
   ScriptedSyntheticChildrenSP synth_sp =
       std::static_pointer_cast<ScriptedSyntheticChildren>(children_sp);
 
-  return LLDB_RECORD_RESULT(lldb::SBTypeSynthetic(synth_sp));
+  return lldb::SBTypeSynthetic(synth_sp);
 }
 
 bool SBTypeCategory::AddTypeFormat(SBTypeNameSpecifier type_name,
@@ -607,7 +605,7 @@ operator=(const lldb::SBTypeCategory &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeCategory::operator==(lldb::SBTypeCategory &rhs) {

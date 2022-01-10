@@ -58,7 +58,7 @@ SBLaunchInfo &SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
                      SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &), rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBLaunchInfo::~SBLaunchInfo() = default;
@@ -116,7 +116,7 @@ void SBLaunchInfo::SetGroupID(uint32_t gid) {
 SBFileSpec SBLaunchInfo::GetExecutableFile() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBLaunchInfo, GetExecutableFile);
 
-  return LLDB_RECORD_RESULT(SBFileSpec(m_opaque_sp->GetExecutableFile()));
+  return SBFileSpec(m_opaque_sp->GetExecutableFile());
 }
 
 void SBLaunchInfo::SetExecutableFile(SBFileSpec exe_file,
@@ -130,7 +130,7 @@ void SBLaunchInfo::SetExecutableFile(SBFileSpec exe_file,
 SBListener SBLaunchInfo::GetListener() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBListener, SBLaunchInfo, GetListener);
 
-  return LLDB_RECORD_RESULT(SBListener(m_opaque_sp->GetListener()));
+  return SBListener(m_opaque_sp->GetListener());
 }
 
 void SBLaunchInfo::SetListener(SBListener &listener) {
@@ -203,8 +203,7 @@ void SBLaunchInfo::SetEnvironment(const SBEnvironment &env, bool append) {
 
 SBEnvironment SBLaunchInfo::GetEnvironment() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBLaunchInfo, GetEnvironment);
-  return LLDB_RECORD_RESULT(
-      SBEnvironment(Environment(m_opaque_sp->GetEnvironment())));
+  return SBEnvironment(Environment(m_opaque_sp->GetEnvironment()));
 }
 
 void SBLaunchInfo::Clear() {
@@ -373,7 +372,7 @@ lldb::SBStructuredData SBLaunchInfo::GetScriptedProcessDictionary() const {
   SBStructuredData data;
   data.m_impl_up->SetObjectSP(dict_sp);
 
-  return LLDB_RECORD_RESULT(data);
+  return data;
 }
 
 void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {

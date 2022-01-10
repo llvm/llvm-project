@@ -45,7 +45,7 @@ SBTypeEnumMember &SBTypeEnumMember::operator=(const SBTypeEnumMember &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeEnumMember::IsValid() const {
@@ -89,7 +89,7 @@ SBType SBTypeEnumMember::GetType() {
   if (m_opaque_sp.get()) {
     sb_type.SetSP(m_opaque_sp->GetIntegerType());
   }
-  return LLDB_RECORD_RESULT(sb_type);
+  return sb_type;
 }
 
 void SBTypeEnumMember::reset(TypeEnumMemberImpl *type_member_impl) {
@@ -147,7 +147,7 @@ operator=(const SBTypeEnumMemberList &rhs) {
       Append(
           const_cast<SBTypeEnumMemberList &>(rhs).GetTypeEnumMemberAtIndex(i));
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 void SBTypeEnumMemberList::Append(SBTypeEnumMember enum_member) {
@@ -164,9 +164,8 @@ SBTypeEnumMemberList::GetTypeEnumMemberAtIndex(uint32_t index) {
                      GetTypeEnumMemberAtIndex, (uint32_t), index);
 
   if (m_opaque_up)
-    return LLDB_RECORD_RESULT(
-        SBTypeEnumMember(m_opaque_up->GetTypeEnumMemberAtIndex(index)));
-  return LLDB_RECORD_RESULT(SBTypeEnumMember());
+    return SBTypeEnumMember(m_opaque_up->GetTypeEnumMemberAtIndex(index));
+  return SBTypeEnumMember();
 }
 
 uint32_t SBTypeEnumMemberList::GetSize() {

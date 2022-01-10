@@ -71,7 +71,7 @@ operator=(const SBCommandReturnObject &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBCommandReturnObject::~SBCommandReturnObject() = default;

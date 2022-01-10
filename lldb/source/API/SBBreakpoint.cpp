@@ -64,7 +64,7 @@ const SBBreakpoint &SBBreakpoint::operator=(const SBBreakpoint &rhs) {
                      SBBreakpoint, operator=,(const lldb::SBBreakpoint &), rhs);
 
   m_opaque_wp = rhs.m_opaque_wp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBBreakpoint::operator==(const lldb::SBBreakpoint &rhs) {
@@ -86,9 +86,9 @@ SBTarget SBBreakpoint::GetTarget() const {
 
   BreakpointSP bkpt_sp = GetSP();
   if (bkpt_sp)
-    return LLDB_RECORD_RESULT(SBTarget(bkpt_sp->GetTargetSP()));
+    return SBTarget(bkpt_sp->GetTargetSP());
 
-  return LLDB_RECORD_RESULT(SBTarget());
+  return SBTarget();
 }
 
 break_id_t SBBreakpoint::GetID() const {
@@ -148,7 +148,7 @@ SBBreakpointLocation SBBreakpoint::FindLocationByAddress(addr_t vm_addr) {
       sb_bp_location.SetLocation(bkpt_sp->FindLocationByAddress(address));
     }
   }
-  return LLDB_RECORD_RESULT(sb_bp_location);
+  return sb_bp_location;
 }
 
 break_id_t SBBreakpoint::FindLocationIDByAddress(addr_t vm_addr) {
@@ -185,7 +185,7 @@ SBBreakpointLocation SBBreakpoint::FindLocationByID(break_id_t bp_loc_id) {
     sb_bp_location.SetLocation(bkpt_sp->FindLocationByID(bp_loc_id));
   }
 
-  return LLDB_RECORD_RESULT(sb_bp_location);
+  return sb_bp_location;
 }
 
 SBBreakpointLocation SBBreakpoint::GetLocationAtIndex(uint32_t index) {
@@ -201,7 +201,7 @@ SBBreakpointLocation SBBreakpoint::GetLocationAtIndex(uint32_t index) {
     sb_bp_location.SetLocation(bkpt_sp->GetLocationAtIndex(index));
   }
 
-  return LLDB_RECORD_RESULT(sb_bp_location);
+  return sb_bp_location;
 }
 
 void SBBreakpoint::SetEnabled(bool enable) {
@@ -560,17 +560,17 @@ SBError SBBreakpoint::AddLocation(SBAddress &address) {
 
   if (!address.IsValid()) {
     error.SetErrorString("Can't add an invalid address.");
-    return LLDB_RECORD_RESULT(error);
+    return error;
   }
 
   if (!bkpt_sp) {
     error.SetErrorString("No breakpoint to add a location to.");
-    return LLDB_RECORD_RESULT(error);
+    return error;
   }
 
   if (!llvm::isa<BreakpointResolverScripted>(bkpt_sp->GetResolver().get())) {
     error.SetErrorString("Only a scripted resolver can add locations.");
-    return LLDB_RECORD_RESULT(error);
+    return error;
   }
 
   if (bkpt_sp->GetSearchFilter()->AddressPasses(address.ref()))
@@ -582,7 +582,7 @@ SBError SBBreakpoint::AddLocation(SBAddress &address) {
     error.SetErrorStringWithFormat("Address: %s didn't pass the filter.",
                                    s.GetData());
   }
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBStructuredData SBBreakpoint::SerializeToStructuredData() {
@@ -593,11 +593,11 @@ SBStructuredData SBBreakpoint::SerializeToStructuredData() {
   BreakpointSP bkpt_sp = GetSP();
 
   if (!bkpt_sp)
-    return LLDB_RECORD_RESULT(data);
+    return data;
 
   StructuredData::ObjectSP bkpt_dict = bkpt_sp->SerializeToStructuredData();
   data.m_impl_up->SetObjectSP(bkpt_dict);
-  return LLDB_RECORD_RESULT(data);
+  return data;
 }
 
 void SBBreakpoint::SetCallback(SBBreakpointHitCallback callback, void *baton) {
@@ -647,8 +647,8 @@ SBError SBBreakpoint::SetScriptCallbackFunction(
     sb_error.SetError(error);
   } else
     sb_error.SetErrorString("invalid breakpoint");
-  
-  return LLDB_RECORD_RESULT(sb_error);
+
+  return sb_error;
 }
 
 SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
@@ -671,7 +671,7 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
   } else
     sb_error.SetErrorString("invalid breakpoint");
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 bool SBBreakpoint::AddName(const char *new_name) {
@@ -698,7 +698,7 @@ SBError SBBreakpoint::AddNameWithErrorHandling(const char *new_name) {
     status.SetErrorString("invalid breakpoint");
   }
 
-  return LLDB_RECORD_RESULT(status);
+  return status;
 }
 
 void SBBreakpoint::RemoveName(const char *name_to_remove) {
@@ -772,10 +772,9 @@ SBBreakpoint SBBreakpoint::GetBreakpointFromEvent(const lldb::SBEvent &event) {
                             event);
 
   if (event.IsValid())
-    return LLDB_RECORD_RESULT(
-        SBBreakpoint(Breakpoint::BreakpointEventData::GetBreakpointFromEvent(
-            event.GetSP())));
-  return LLDB_RECORD_RESULT(SBBreakpoint());
+    return SBBreakpoint(
+        Breakpoint::BreakpointEventData::GetBreakpointFromEvent(event.GetSP()));
+  return SBBreakpoint();
 }
 
 SBBreakpointLocation
@@ -790,7 +789,7 @@ SBBreakpoint::GetBreakpointLocationAtIndexFromEvent(const lldb::SBEvent &event,
     sb_breakpoint_loc.SetLocation(
         Breakpoint::BreakpointEventData::GetBreakpointLocationAtIndexFromEvent(
             event.GetSP(), loc_idx));
-  return LLDB_RECORD_RESULT(sb_breakpoint_loc);
+  return sb_breakpoint_loc;
 }
 
 uint32_t
@@ -923,10 +922,10 @@ SBBreakpoint SBBreakpointList::GetBreakpointAtIndex(size_t idx) {
                      (size_t), idx);
 
   if (!m_opaque_sp)
-    return LLDB_RECORD_RESULT(SBBreakpoint());
+    return SBBreakpoint();
 
   BreakpointSP bkpt_sp = m_opaque_sp->GetBreakpointAtIndex(idx);
-  return LLDB_RECORD_RESULT(SBBreakpoint(bkpt_sp));
+  return SBBreakpoint(bkpt_sp);
 }
 
 SBBreakpoint SBBreakpointList::FindBreakpointByID(lldb::break_id_t id) {
@@ -934,9 +933,9 @@ SBBreakpoint SBBreakpointList::FindBreakpointByID(lldb::break_id_t id) {
                      (lldb::break_id_t), id);
 
   if (!m_opaque_sp)
-    return LLDB_RECORD_RESULT(SBBreakpoint());
+    return SBBreakpoint();
   BreakpointSP bkpt_sp = m_opaque_sp->FindBreakpointByID(id);
-  return LLDB_RECORD_RESULT(SBBreakpoint(bkpt_sp));
+  return SBBreakpoint(bkpt_sp);
 }
 
 void SBBreakpointList::Append(const SBBreakpoint &sb_bkpt) {

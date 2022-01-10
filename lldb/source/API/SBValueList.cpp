@@ -109,7 +109,7 @@ const SBValueList &SBValueList::operator=(const SBValueList &rhs) {
     else
       m_opaque_up.reset();
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 ValueListImpl *SBValueList::operator->() { return m_opaque_up.get(); }
@@ -156,7 +156,7 @@ SBValue SBValueList::GetValueAtIndex(uint32_t idx) const {
   if (m_opaque_up)
     sb_value = m_opaque_up->GetValueAtIndex(idx);
 
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 uint32_t SBValueList::GetSize() const {
@@ -181,7 +181,7 @@ SBValue SBValueList::FindValueObjectByUID(lldb::user_id_t uid) {
   SBValue sb_value;
   if (m_opaque_up)
     sb_value = m_opaque_up->FindValueByUID(uid);
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 SBValue SBValueList::GetFirstValueByName(const char *name) const {
@@ -191,7 +191,7 @@ SBValue SBValueList::GetFirstValueByName(const char *name) const {
   SBValue sb_value;
   if (m_opaque_up)
     sb_value = m_opaque_up->GetFirstValueByName(name);
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 void *SBValueList::opaque_ptr() { return m_opaque_up.get(); }

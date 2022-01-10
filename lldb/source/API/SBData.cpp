@@ -38,7 +38,7 @@ const SBData &SBData::operator=(const SBData &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBData::~SBData() = default;
@@ -410,7 +410,7 @@ lldb::SBData SBData::CreateDataFromCString(lldb::ByteOrder endian,
                             addr_byte_size, data);
 
   if (!data || !data[0])
-    return LLDB_RECORD_RESULT(SBData());
+    return SBData();
 
   uint32_t data_len = strlen(data);
 
@@ -420,7 +420,7 @@ lldb::SBData SBData::CreateDataFromCString(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return LLDB_RECORD_RESULT(ret);
+  return ret;
 }
 
 lldb::SBData SBData::CreateDataFromUInt64Array(lldb::ByteOrder endian,
@@ -432,7 +432,7 @@ lldb::SBData SBData::CreateDataFromUInt64Array(lldb::ByteOrder endian,
                             endian, addr_byte_size, array, array_len);
 
   if (!array || array_len == 0)
-    return LLDB_RECORD_RESULT(SBData());
+    return SBData();
 
   size_t data_len = array_len * sizeof(uint64_t);
 
@@ -442,7 +442,7 @@ lldb::SBData SBData::CreateDataFromUInt64Array(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return LLDB_RECORD_RESULT(ret);
+  return ret;
 }
 
 lldb::SBData SBData::CreateDataFromUInt32Array(lldb::ByteOrder endian,
@@ -454,7 +454,7 @@ lldb::SBData SBData::CreateDataFromUInt32Array(lldb::ByteOrder endian,
                             endian, addr_byte_size, array, array_len);
 
   if (!array || array_len == 0)
-    return LLDB_RECORD_RESULT(SBData());
+    return SBData();
 
   size_t data_len = array_len * sizeof(uint32_t);
 
@@ -464,7 +464,7 @@ lldb::SBData SBData::CreateDataFromUInt32Array(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return LLDB_RECORD_RESULT(ret);
+  return ret;
 }
 
 lldb::SBData SBData::CreateDataFromSInt64Array(lldb::ByteOrder endian,
@@ -476,7 +476,7 @@ lldb::SBData SBData::CreateDataFromSInt64Array(lldb::ByteOrder endian,
                             endian, addr_byte_size, array, array_len);
 
   if (!array || array_len == 0)
-    return LLDB_RECORD_RESULT(SBData());
+    return SBData();
 
   size_t data_len = array_len * sizeof(int64_t);
 
@@ -486,7 +486,7 @@ lldb::SBData SBData::CreateDataFromSInt64Array(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return LLDB_RECORD_RESULT(ret);
+  return ret;
 }
 
 lldb::SBData SBData::CreateDataFromSInt32Array(lldb::ByteOrder endian,
@@ -498,7 +498,7 @@ lldb::SBData SBData::CreateDataFromSInt32Array(lldb::ByteOrder endian,
                             endian, addr_byte_size, array, array_len);
 
   if (!array || array_len == 0)
-    return LLDB_RECORD_RESULT(SBData());
+    return SBData();
 
   size_t data_len = array_len * sizeof(int32_t);
 
@@ -508,7 +508,7 @@ lldb::SBData SBData::CreateDataFromSInt32Array(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return LLDB_RECORD_RESULT(ret);
+  return ret;
 }
 
 lldb::SBData SBData::CreateDataFromDoubleArray(lldb::ByteOrder endian,
@@ -520,7 +520,7 @@ lldb::SBData SBData::CreateDataFromDoubleArray(lldb::ByteOrder endian,
                             endian, addr_byte_size, array, array_len);
 
   if (!array || array_len == 0)
-    return LLDB_RECORD_RESULT(SBData());
+    return SBData();
 
   size_t data_len = array_len * sizeof(double);
 
@@ -530,7 +530,7 @@ lldb::SBData SBData::CreateDataFromDoubleArray(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return LLDB_RECORD_RESULT(ret);
+  return ret;
 }
 
 bool SBData::SetDataFromCString(const char *data) {

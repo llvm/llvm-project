@@ -37,7 +37,7 @@ const SBFunction &SBFunction::operator=(const SBFunction &rhs) {
                      SBFunction, operator=,(const lldb::SBFunction &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBFunction::~SBFunction() { m_opaque_ptr = nullptr; }
@@ -114,7 +114,7 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target) {
   LLDB_RECORD_METHOD(lldb::SBInstructionList, SBFunction, GetInstructions,
                      (lldb::SBTarget), target);
 
-  return LLDB_RECORD_RESULT(GetInstructions(target, nullptr));
+  return GetInstructions(target, nullptr);
 }
 
 SBInstructionList SBFunction::GetInstructions(SBTarget target,
@@ -136,7 +136,7 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
           m_opaque_ptr->GetAddressRange(), force_live_memory));
     }
   }
-  return LLDB_RECORD_RESULT(sb_instructions);
+  return sb_instructions;
 }
 
 lldb_private::Function *SBFunction::get() { return m_opaque_ptr; }
@@ -151,7 +151,7 @@ SBAddress SBFunction::GetStartAddress() {
   SBAddress addr;
   if (m_opaque_ptr)
     addr.SetAddress(m_opaque_ptr->GetAddressRange().GetBaseAddress());
-  return LLDB_RECORD_RESULT(addr);
+  return addr;
 }
 
 SBAddress SBFunction::GetEndAddress() {
@@ -165,7 +165,7 @@ SBAddress SBFunction::GetEndAddress() {
       addr->Slide(byte_size);
     }
   }
-  return LLDB_RECORD_RESULT(addr);
+  return addr;
 }
 
 const char *SBFunction::GetArgumentName(uint32_t arg_idx) {
@@ -204,7 +204,7 @@ SBType SBFunction::GetType() {
     if (function_type)
       sb_type.ref().SetType(function_type->shared_from_this());
   }
-  return LLDB_RECORD_RESULT(sb_type);
+  return sb_type;
 }
 
 SBBlock SBFunction::GetBlock() {
@@ -213,7 +213,7 @@ SBBlock SBFunction::GetBlock() {
   SBBlock sb_block;
   if (m_opaque_ptr)
     sb_block.SetPtr(&m_opaque_ptr->GetBlock(true));
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 lldb::LanguageType SBFunction::GetLanguage() {

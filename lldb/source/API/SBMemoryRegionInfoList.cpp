@@ -105,7 +105,7 @@ operator=(const SBMemoryRegionInfoList &rhs) {
   if (this != &rhs) {
     *m_opaque_up = *rhs.m_opaque_up;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 uint32_t SBMemoryRegionInfoList::GetSize() const {

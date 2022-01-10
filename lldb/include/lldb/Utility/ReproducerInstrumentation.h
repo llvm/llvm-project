@@ -125,8 +125,6 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
   LLDB_RECORD_CHAR_PTR_(Result(*) Signature, (&Class::Method), StrOut,         \
                         __VA_ARGS__)
 
-#define LLDB_RECORD_RESULT(Result) Result;
-
 /// The LLDB_RECORD_DUMMY macro is special because it doesn't actually record
 /// anything. It's used to track API boundaries when we cannot record for
 /// technical reasons.

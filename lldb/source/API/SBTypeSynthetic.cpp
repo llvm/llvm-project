@@ -27,9 +27,9 @@ SBTypeSynthetic SBTypeSynthetic::CreateWithClassName(const char *data,
                             options);
 
   if (!data || data[0] == 0)
-    return LLDB_RECORD_RESULT(SBTypeSynthetic());
-  return LLDB_RECORD_RESULT(SBTypeSynthetic(ScriptedSyntheticChildrenSP(
-      new ScriptedSyntheticChildren(options, data, ""))));
+    return SBTypeSynthetic();
+  return SBTypeSynthetic(ScriptedSyntheticChildrenSP(
+      new ScriptedSyntheticChildren(options, data, "")));
 }
 
 SBTypeSynthetic SBTypeSynthetic::CreateWithScriptCode(const char *data,
@@ -39,9 +39,9 @@ SBTypeSynthetic SBTypeSynthetic::CreateWithScriptCode(const char *data,
                             data, options);
 
   if (!data || data[0] == 0)
-    return LLDB_RECORD_RESULT(SBTypeSynthetic());
-  return LLDB_RECORD_RESULT(SBTypeSynthetic(ScriptedSyntheticChildrenSP(
-      new ScriptedSyntheticChildren(options, "", data))));
+    return SBTypeSynthetic();
+  return SBTypeSynthetic(ScriptedSyntheticChildrenSP(
+      new ScriptedSyntheticChildren(options, "", data)));
 }
 
 SBTypeSynthetic::SBTypeSynthetic(const lldb::SBTypeSynthetic &rhs)
@@ -142,7 +142,7 @@ operator=(const lldb::SBTypeSynthetic &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeSynthetic::operator==(lldb::SBTypeSynthetic &rhs) {

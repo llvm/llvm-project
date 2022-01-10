@@ -69,7 +69,7 @@ const SBModule &SBModule::operator=(const SBModule &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBModule::~SBModule() = default;
@@ -98,7 +98,7 @@ SBFileSpec SBModule::GetFileSpec() const {
   if (module_sp)
     file_spec.SetFileSpec(module_sp->GetFileSpec());
 
-  return LLDB_RECORD_RESULT(file_spec);
+  return file_spec;
 }
 
 lldb::SBFileSpec SBModule::GetPlatformFileSpec() const {
@@ -110,7 +110,7 @@ lldb::SBFileSpec SBModule::GetPlatformFileSpec() const {
   if (module_sp)
     file_spec.SetFileSpec(module_sp->GetPlatformFileSpec());
 
-  return LLDB_RECORD_RESULT(file_spec);
+  return file_spec;
 }
 
 bool SBModule::SetPlatformFileSpec(const lldb::SBFileSpec &platform_file) {
@@ -136,7 +136,7 @@ lldb::SBFileSpec SBModule::GetRemoteInstallFileSpec() {
   ModuleSP module_sp(GetSP());
   if (module_sp)
     sb_file_spec.SetFileSpec(module_sp->GetRemoteInstallFileSpec());
-  return LLDB_RECORD_RESULT(sb_file_spec);
+  return sb_file_spec;
 }
 
 bool SBModule::SetRemoteInstallFileSpec(lldb::SBFileSpec &file) {
@@ -215,7 +215,7 @@ SBAddress SBModule::ResolveFileAddress(lldb::addr_t vm_addr) {
     if (module_sp->ResolveFileAddress(vm_addr, addr))
       sb_addr.ref() = addr;
   }
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 SBSymbolContext
@@ -230,7 +230,7 @@ SBModule::ResolveSymbolContextForAddress(const SBAddress &addr,
   SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   if (module_sp && addr.IsValid())
     module_sp->ResolveSymbolContextForAddress(addr.ref(), scope, *sb_sc);
-  return LLDB_RECORD_RESULT(sb_sc);
+  return sb_sc;
 }
 
 bool SBModule::GetDescription(SBStream &description) {
@@ -268,7 +268,7 @@ SBCompileUnit SBModule::GetCompileUnitAtIndex(uint32_t index) {
     CompUnitSP cu_sp = module_sp->GetCompileUnitAtIndex(index);
     sb_cu.reset(cu_sp.get());
   }
-  return LLDB_RECORD_RESULT(sb_cu);
+  return sb_cu;
 }
 
 SBSymbolContextList SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
@@ -280,7 +280,7 @@ SBSymbolContextList SBModule::FindCompileUnits(const SBFileSpec &sb_file_spec) {
   if (sb_file_spec.IsValid() && module_sp) {
     module_sp->FindCompileUnits(*sb_file_spec, *sb_sc_list);
   }
-  return LLDB_RECORD_RESULT(sb_sc_list);
+  return sb_sc_list;
 }
 
 static Symtab *GetUnifiedSymbolTable(const lldb::ModuleSP &module_sp) {
@@ -306,7 +306,7 @@ SBSymbol SBModule::GetSymbolAtIndex(size_t idx) {
   Symtab *symtab = GetUnifiedSymbolTable(module_sp);
   if (symtab)
     sb_symbol.SetSymbol(symtab->SymbolAtIndex(idx));
-  return LLDB_RECORD_RESULT(sb_symbol);
+  return sb_symbol;
 }
 
 lldb::SBSymbol SBModule::FindSymbol(const char *name,
@@ -323,7 +323,7 @@ lldb::SBSymbol SBModule::FindSymbol(const char *name,
           ConstString(name), symbol_type, Symtab::eDebugAny,
           Symtab::eVisibilityAny));
   }
-  return LLDB_RECORD_RESULT(sb_symbol);
+  return sb_symbol;
 }
 
 lldb::SBSymbolContextList SBModule::FindSymbols(const char *name,
@@ -352,7 +352,7 @@ lldb::SBSymbolContextList SBModule::FindSymbols(const char *name,
       }
     }
   }
-  return LLDB_RECORD_RESULT(sb_sc_list);
+  return sb_sc_list;
 }
 
 size_t SBModule::GetNumSections() {
@@ -383,7 +383,7 @@ SBSection SBModule::GetSectionAtIndex(size_t idx) {
     if (section_list)
       sb_section.SetSP(section_list->GetSectionAtIndex(idx));
   }
-  return LLDB_RECORD_RESULT(sb_section);
+  return sb_section;
 }
 
 lldb::SBSymbolContextList SBModule::FindFunctions(const char *name,
@@ -402,7 +402,7 @@ lldb::SBSymbolContextList SBModule::FindFunctions(const char *name,
     module_sp->FindFunctions(ConstString(name), CompilerDeclContext(), type,
                              function_options, *sb_sc_list);
   }
-  return LLDB_RECORD_RESULT(sb_sc_list);
+  return sb_sc_list;
 }
 
 SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
@@ -426,7 +426,7 @@ SBValueList SBModule::FindGlobalVariables(SBTarget &target, const char *name,
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_value_list);
+  return sb_value_list;
 }
 
 lldb::SBValue SBModule::FindFirstGlobalVariable(lldb::SBTarget &target,
@@ -436,8 +436,8 @@ lldb::SBValue SBModule::FindFirstGlobalVariable(lldb::SBTarget &target,
 
   SBValueList sb_value_list(FindGlobalVariables(target, name, 1));
   if (sb_value_list.IsValid() && sb_value_list.GetSize() > 0)
-    return LLDB_RECORD_RESULT(sb_value_list.GetValueAtIndex(0));
-  return LLDB_RECORD_RESULT(SBValue());
+    return sb_value_list.GetValueAtIndex(0);
+  return SBValue();
 }
 
 lldb::SBType SBModule::FindFirstType(const char *name_cstr) {
@@ -458,12 +458,12 @@ lldb::SBType SBModule::FindFirstType(const char *name_cstr) {
           module_sp->GetTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
         llvm::consumeError(std::move(err));
-        return LLDB_RECORD_RESULT(SBType());
+        return SBType();
       }
       sb_type = SBType(type_system_or_err->GetBuiltinTypeByName(name));
     }
   }
-  return LLDB_RECORD_RESULT(sb_type);
+  return sb_type;
 }
 
 lldb::SBType SBModule::GetBasicType(lldb::BasicType type) {
@@ -477,11 +477,10 @@ lldb::SBType SBModule::GetBasicType(lldb::BasicType type) {
     if (auto err = type_system_or_err.takeError()) {
       llvm::consumeError(std::move(err));
     } else {
-      return LLDB_RECORD_RESULT(
-          SBType(type_system_or_err->GetBasicTypeFromAST(type)));
+      return SBType(type_system_or_err->GetBasicTypeFromAST(type));
     }
   }
-  return LLDB_RECORD_RESULT(SBType());
+  return SBType();
 }
 
 lldb::SBTypeList SBModule::FindTypes(const char *type) {
@@ -518,7 +517,7 @@ lldb::SBTypeList SBModule::FindTypes(const char *type) {
       }
     }
   }
-  return LLDB_RECORD_RESULT(retval);
+  return retval;
 }
 
 lldb::SBType SBModule::GetTypeByID(lldb::user_id_t uid) {
@@ -530,10 +529,10 @@ lldb::SBType SBModule::GetTypeByID(lldb::user_id_t uid) {
     if (SymbolFile *symfile = module_sp->GetSymbolFile()) {
       Type *type_ptr = symfile->ResolveTypeUID(uid);
       if (type_ptr)
-        return LLDB_RECORD_RESULT(SBType(type_ptr->shared_from_this()));
+        return SBType(type_ptr->shared_from_this());
     }
   }
-  return LLDB_RECORD_RESULT(SBType());
+  return SBType();
 }
 
 lldb::SBTypeList SBModule::GetTypes(uint32_t type_mask) {
@@ -544,16 +543,16 @@ lldb::SBTypeList SBModule::GetTypes(uint32_t type_mask) {
 
   ModuleSP module_sp(GetSP());
   if (!module_sp)
-    return LLDB_RECORD_RESULT(sb_type_list);
+    return sb_type_list;
   SymbolFile *symfile = module_sp->GetSymbolFile();
   if (!symfile)
-    return LLDB_RECORD_RESULT(sb_type_list);
+    return sb_type_list;
 
   TypeClass type_class = static_cast<TypeClass>(type_mask);
   TypeList type_list;
   symfile->GetTypes(nullptr, type_class, type_list);
   sb_type_list.m_opaque_up->Append(type_list);
-  return LLDB_RECORD_RESULT(sb_type_list);
+  return sb_type_list;
 }
 
 SBSection SBModule::FindSection(const char *sect_name) {
@@ -575,7 +574,7 @@ SBSection SBModule::FindSection(const char *sect_name) {
       }
     }
   }
-  return LLDB_RECORD_RESULT(sb_section);
+  return sb_section;
 }
 
 lldb::ByteOrder SBModule::GetByteOrder() {
@@ -650,7 +649,7 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
     if (SymbolFile *symfile = module_sp->GetSymbolFile())
       sb_file_spec.SetFileSpec(symfile->GetObjectFile()->GetFileSpec());
   }
-  return LLDB_RECORD_RESULT(sb_file_spec);
+  return sb_file_spec;
 }
 
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
@@ -664,7 +663,7 @@ lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
     if (objfile_ptr)
       sb_addr.ref() = objfile_ptr->GetBaseAddress();
   }
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
@@ -678,7 +677,7 @@ lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
     if (objfile_ptr)
       sb_addr.ref() = objfile_ptr->GetEntryPointAddress();
   }
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 uint32_t SBModule::GetNumberAllocatedModules() {

@@ -74,7 +74,7 @@ operator=(const lldb::SBExecutionContext &rhs) {
       SBExecutionContext, operator=,(const lldb::SBExecutionContext &), rhs);
 
   m_exe_ctx_sp = rhs.m_exe_ctx_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 ExecutionContextRef *SBExecutionContext::get() const {
@@ -91,7 +91,7 @@ SBTarget SBExecutionContext::GetTarget() const {
     if (target_sp)
       sb_target.SetSP(target_sp);
   }
-  return LLDB_RECORD_RESULT(sb_target);
+  return sb_target;
 }
 
 SBProcess SBExecutionContext::GetProcess() const {
@@ -104,7 +104,7 @@ SBProcess SBExecutionContext::GetProcess() const {
     if (process_sp)
       sb_process.SetSP(process_sp);
   }
-  return LLDB_RECORD_RESULT(sb_process);
+  return sb_process;
 }
 
 SBThread SBExecutionContext::GetThread() const {
@@ -117,7 +117,7 @@ SBThread SBExecutionContext::GetThread() const {
     if (thread_sp)
       sb_thread.SetThread(thread_sp);
   }
-  return LLDB_RECORD_RESULT(sb_thread);
+  return sb_thread;
 }
 
 SBFrame SBExecutionContext::GetFrame() const {
@@ -129,5 +129,5 @@ SBFrame SBExecutionContext::GetFrame() const {
     if (frame_sp)
       sb_frame.SetFrameSP(frame_sp);
   }
-  return LLDB_RECORD_RESULT(sb_frame);
+  return sb_frame;
 }

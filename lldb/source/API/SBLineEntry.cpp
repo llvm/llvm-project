@@ -38,7 +38,7 @@ const SBLineEntry &SBLineEntry::operator=(const SBLineEntry &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 void SBLineEntry::SetLineEntry(const lldb_private::LineEntry &lldb_object_ref) {
@@ -55,7 +55,7 @@ SBAddress SBLineEntry::GetStartAddress() const {
   if (m_opaque_up)
     sb_address.SetAddress(m_opaque_up->range.GetBaseAddress());
 
-  return LLDB_RECORD_RESULT(sb_address);
+  return sb_address;
 }
 
 SBAddress SBLineEntry::GetEndAddress() const {
@@ -66,7 +66,7 @@ SBAddress SBLineEntry::GetEndAddress() const {
     sb_address.SetAddress(m_opaque_up->range.GetBaseAddress());
     sb_address.OffsetAddress(m_opaque_up->range.GetByteSize());
   }
-  return LLDB_RECORD_RESULT(sb_address);
+  return sb_address;
 }
 
 bool SBLineEntry::IsValid() const {
@@ -86,7 +86,7 @@ SBFileSpec SBLineEntry::GetFileSpec() const {
   if (m_opaque_up.get() && m_opaque_up->file)
     sb_file_spec.SetFileSpec(m_opaque_up->file);
 
-  return LLDB_RECORD_RESULT(sb_file_spec);
+  return sb_file_spec;
 }
 
 uint32_t SBLineEntry::GetLine() const {

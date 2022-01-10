@@ -118,10 +118,10 @@ SBTypeSummary SBTypeSummary::CreateWithSummaryString(const char *data,
                             data, options);
 
   if (!data || data[0] == 0)
-    return LLDB_RECORD_RESULT(SBTypeSummary());
+    return SBTypeSummary();
 
-  return LLDB_RECORD_RESULT(
-      SBTypeSummary(TypeSummaryImplSP(new StringSummaryFormat(options, data))));
+  return SBTypeSummary(
+      TypeSummaryImplSP(new StringSummaryFormat(options, data)));
 }
 
 SBTypeSummary SBTypeSummary::CreateWithFunctionName(const char *data,
@@ -131,10 +131,10 @@ SBTypeSummary SBTypeSummary::CreateWithFunctionName(const char *data,
                             data, options);
 
   if (!data || data[0] == 0)
-    return LLDB_RECORD_RESULT(SBTypeSummary());
+    return SBTypeSummary();
 
-  return LLDB_RECORD_RESULT(
-      SBTypeSummary(TypeSummaryImplSP(new ScriptSummaryFormat(options, data))));
+  return SBTypeSummary(
+      TypeSummaryImplSP(new ScriptSummaryFormat(options, data)));
 }
 
 SBTypeSummary SBTypeSummary::CreateWithScriptCode(const char *data,
@@ -144,10 +144,10 @@ SBTypeSummary SBTypeSummary::CreateWithScriptCode(const char *data,
                             data, options);
 
   if (!data || data[0] == 0)
-    return LLDB_RECORD_RESULT(SBTypeSummary());
+    return SBTypeSummary();
 
-  return LLDB_RECORD_RESULT(SBTypeSummary(
-      TypeSummaryImplSP(new ScriptSummaryFormat(options, "", data))));
+  return SBTypeSummary(
+      TypeSummaryImplSP(new ScriptSummaryFormat(options, "", data)));
 }
 
 SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
@@ -335,7 +335,7 @@ lldb::SBTypeSummary &SBTypeSummary::operator=(const lldb::SBTypeSummary &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeSummary::operator==(lldb::SBTypeSummary &rhs) {

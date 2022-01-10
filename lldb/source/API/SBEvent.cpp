@@ -53,7 +53,7 @@ const SBEvent &SBEvent::operator=(const SBEvent &rhs) {
     m_event_sp = rhs.m_event_sp;
     m_opaque_ptr = rhs.m_opaque_ptr;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBEvent::~SBEvent() = default;
@@ -91,7 +91,7 @@ SBBroadcaster SBEvent::GetBroadcaster() const {
   const Event *lldb_event = get();
   if (lldb_event)
     broadcaster.reset(lldb_event->GetBroadcaster(), false);
-  return LLDB_RECORD_RESULT(broadcaster);
+  return broadcaster;
 }
 
 const char *SBEvent::GetBroadcasterClass() const {

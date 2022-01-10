@@ -37,7 +37,7 @@ const SBEnvironment &SBEnvironment::operator=(const SBEnvironment &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 size_t SBEnvironment::GetNumValues() {
@@ -101,7 +101,7 @@ SBStringList SBEnvironment::GetEntries() {
   for (const auto &KV : *m_opaque_up) {
     entries.AppendString(Environment::compose(KV).c_str());
   }
-  return LLDB_RECORD_RESULT(entries);
+  return entries;
 }
 
 void SBEnvironment::PutEntry(const char *name_and_value) {
