@@ -1039,6 +1039,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
   Builder.defineMacro("__USER_LABEL_PREFIX__", TI.getUserLabelPrefix());
 
+  if (!LangOpts.MathErrno)
+    Builder.defineMacro("__NO_MATH_ERRNO__");
+
   if (LangOpts.FastMath || LangOpts.FiniteMathOnly)
     Builder.defineMacro("__FINITE_MATH_ONLY__", "1");
   else
