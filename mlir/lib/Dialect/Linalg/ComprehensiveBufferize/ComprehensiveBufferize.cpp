@@ -558,7 +558,7 @@ annotateOpsWithBufferizationMarkers(Operation *op,
 /// Rewrite pattern that bufferizes bufferizable ops.
 struct BufferizationPattern
     : public OpInterfaceRewritePattern<BufferizableOpInterface> {
-  BufferizationPattern(MLIRContext *context, BufferizationState &state,
+  BufferizationPattern(MLIRContext *context, const BufferizationState &state,
                        PatternBenefit benefit = 1)
       : OpInterfaceRewritePattern<BufferizableOpInterface>(context, benefit),
         state(state) {}
@@ -646,9 +646,8 @@ mlir::linalg::comprehensive_bufferize::analyzeOp(Operation *op,
   return success();
 }
 
-LogicalResult
-mlir::linalg::comprehensive_bufferize::bufferizeOp(Operation *op,
-                                                   BufferizationState &state) {
+LogicalResult mlir::linalg::comprehensive_bufferize::bufferizeOp(
+    Operation *op, const BufferizationState &state) {
   // Bufferize the op and its nested ops.
   OwningRewritePatternList patterns(op->getContext());
   patterns.add<BufferizationPattern>(op->getContext(), state);
@@ -665,7 +664,5 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     return failure();
   if (options->testAnalysisOnly)
     return success();
-  if (failed(bufferizeOp(op, state)))
-    return failure();
-  return success();
+  return bufferizeOp(op, state);
 }
