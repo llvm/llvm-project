@@ -247,19 +247,11 @@ public:
     }
 
     // Run finalization actions.
-    // FIXME: Roll back previous successful actions on failure.
-    std::vector<orc::shared::WrapperFunctionCall> DeallocActions;
-    DeallocActions.reserve(G.allocActions().size());
-    for (auto &ActPair : G.allocActions()) {
-      if (ActPair.Finalize)
-        if (auto Err = ActPair.Finalize.runWithSPSRetErrorMerged()) {
-          OnFinalized(std::move(Err));
-          return;
-        }
-      if (ActPair.Dealloc)
-        DeallocActions.push_back(ActPair.Dealloc);
+    auto DeallocActions = runFinalizeActions(G.allocActions());
+    if (!DeallocActions) {
+      OnFinalized(DeallocActions.takeError());
+      return;
     }
-    G.allocActions().clear();
 
     // Release the finalize segments slab.
     if (auto EC = sys::Memory::releaseMappedMemory(FinalizationSegments)) {
@@ -269,7 +261,7 @@ public:
 
     // Continue with finalized allocation.
     OnFinalized(MemMgr.createFinalizedAlloc(std::move(StandardSegments),
-                                            std::move(DeallocActions)));
+                                            std::move(*DeallocActions)));
   }
 
   void abandon(OnAbandonedFunction OnAbandoned) override {

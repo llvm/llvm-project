@@ -43,6 +43,33 @@ struct AllocActionCallPair {
 /// actions will be run in reverse order at deallocation time.
 using AllocActions = std::vector<AllocActionCallPair>;
 
+/// Returns the number of deallocaton actions in the given AllocActions array.
+///
+/// This can be useful if clients want to pre-allocate room for deallocation
+/// actions with the rest of their memory.
+inline size_t numDeallocActions(const AllocActions &AAs) {
+  return llvm::count_if(
+      AAs, [](const AllocActionCallPair &P) { return !!P.Dealloc; });
+}
+
+/// Run finalize actions.
+///
+/// If any finalize action fails then the corresponding dealloc actions will be
+/// run in reverse order (not including the deallocation action for the failed
+/// finalize action), and the error for the failing action will be returned.
+///
+/// If all finalize actions succeed then a vector of deallocation actions will
+/// be returned. The dealloc actions should be run by calling
+/// runDeallocationActions. If this function succeeds then the AA argument will
+/// be cleared before the function returns.
+Expected<std::vector<WrapperFunctionCall>>
+runFinalizeActions(AllocActions &AAs);
+
+/// Run deallocation actions.
+/// Dealloc actions will be run in reverse order (from last element of DAs to
+/// first).
+Error runDeallocActions(ArrayRef<WrapperFunctionCall> DAs);
+
 using SPSAllocActionCallPair =
     SPSTuple<SPSWrapperFunctionCall, SPSWrapperFunctionCall>;
 

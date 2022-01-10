@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMOrcShared
+  AllocationActions.cpp
   OrcError.cpp
   OrcRTBridge.cpp
   SimpleRemoteEPCUtils.cpp
