@@ -90,7 +90,10 @@ function(builtin_default_target compiler_rt_path)
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${BUILTINS_CMAKE_ARGS}
-                           PASSTHROUGH_PREFIXES COMPILER_RT
+                           PASSTHROUGH_PREFIXES CMAKE_OSX
+                                                COMPILER_RT
+                                                DARWIN
+                                                SANITIZER
                            USE_TOOLCHAIN
                            TARGET_TRIPLE ${TARGET_TRIPLE}
                            ${EXTRA_ARGS})
@@ -181,10 +184,10 @@ foreach(entry ${runtimes})
   if (${canon_name} STREQUAL "OPENMP")
     list(APPEND prefixes "LIBOMP" "LIBOMPTARGET")
   endif()
-  # Many compiler-rt options start with SANITIZER_ rather than COMPILER_RT_,
-  # so when compiler-rt is enabled, consider both.
+  # Many compiler-rt options start with SANITIZER_ and DARWIN_ rather than
+  # COMPILER_RT_, so when compiler-rt is enabled, consider both.
   if(canon_name STREQUAL "COMPILER_RT")
-    list(APPEND prefixes SANITIZER)
+    list(APPEND prefixes SANITIZER DARWIN)
   endif()
 
   string(FIND ${projName} "lib" LIB_IDX)
@@ -241,7 +244,8 @@ function(runtime_default_target)
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${RUNTIMES_CMAKE_ARGS}
-                           PASSTHROUGH_PREFIXES LLVM_ENABLE_RUNTIMES
+                           PASSTHROUGH_PREFIXES CMAKE_OSX
+                                                LLVM_ENABLE_RUNTIMES
                                                 LLVM_USE_LINKER
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
