@@ -1182,8 +1182,14 @@ LogicalResult mlir::loopUnrollByFactor(
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
   assert(unrollFactor > 0 && "unroll factor should be positive");
 
-  if (unrollFactor == 1)
-    return promoteIfSingleIteration(forOp);
+  Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  if (unrollFactor == 1) {
+    if (mayBeConstantTripCount.hasValue() &&
+        mayBeConstantTripCount.getValue() == 1 &&
+        failed(promoteIfSingleIteration(forOp)))
+      return failure();
+    return success();
+  }
 
   // Nothing in the loop body other than the terminator.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
@@ -1191,7 +1197,6 @@ LogicalResult mlir::loopUnrollByFactor(
 
   // If the trip count is lower than the unroll factor, no unrolled body.
   // TODO: option to specify cleanup loop unrolling.
-  Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   if (mayBeConstantTripCount.hasValue() &&
       mayBeConstantTripCount.getValue() < unrollFactor)
     return failure();
@@ -1237,8 +1242,6 @@ LogicalResult mlir::loopUnrollByFactor(
     scf::ForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
   assert(unrollFactor > 0 && "expected positive unroll factor");
-  if (unrollFactor == 1)
-    return promoteIfSingleIteration(forOp);
 
   // Return if the loop body is empty.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
@@ -1264,6 +1267,13 @@ LogicalResult mlir::loopUnrollByFactor(
     assert(lbCst >= 0 && ubCst >= 0 && stepCst >= 0 &&
            "expected positive loop bounds and step");
     int64_t tripCount = mlir::ceilDiv(ubCst - lbCst, stepCst);
+
+    if (unrollFactor == 1) {
+      if (tripCount == 1 && failed(promoteIfSingleIteration(forOp)))
+        return failure();
+      return success();
+    }
+
     int64_t tripCountEvenMultiple = tripCount - (tripCount % unrollFactor);
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     assert(upperBoundUnrolledCst <= ubCst);
@@ -1403,14 +1413,19 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
                                           uint64_t unrollJamFactor) {
   assert(unrollJamFactor > 0 && "unroll jam factor should be positive");
 
-  if (unrollJamFactor == 1)
-    return promoteIfSingleIteration(forOp);
+  Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  if (unrollJamFactor == 1) {
+    if (mayBeConstantTripCount.hasValue() &&
+        mayBeConstantTripCount.getValue() == 1 &&
+        failed(promoteIfSingleIteration(forOp)))
+      return failure();
+    return success();
+  }
 
   // Nothing in the loop body other than the terminator.
   if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
     return success();
 
-  Optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
   // If the trip count is lower than the unroll jam factor, no unroll jam.
   if (mayBeConstantTripCount.hasValue() &&
       mayBeConstantTripCount.getValue() < unrollJamFactor) {
