@@ -272,8 +272,8 @@ define i16 @udiv16_constant_add(i16 %a) nounwind {
 ; RV32IMZB-NEXT:    mul a1, a1, a2
 ; RV32IMZB-NEXT:    srli a1, a1, 16
 ; RV32IMZB-NEXT:    sub a0, a0, a1
-; RV32IMZB-NEXT:    zext.h a0, a0
-; RV32IMZB-NEXT:    srli a0, a0, 1
+; RV32IMZB-NEXT:    slli a0, a0, 16
+; RV32IMZB-NEXT:    srli a0, a0, 17
 ; RV32IMZB-NEXT:    add a0, a0, a1
 ; RV32IMZB-NEXT:    srli a0, a0, 2
 ; RV32IMZB-NEXT:    ret
@@ -299,8 +299,8 @@ define i16 @udiv16_constant_add(i16 %a) nounwind {
 ; RV64IMZB-NEXT:    mul a1, a1, a2
 ; RV64IMZB-NEXT:    srli a1, a1, 16
 ; RV64IMZB-NEXT:    subw a0, a0, a1
-; RV64IMZB-NEXT:    zext.h a0, a0
-; RV64IMZB-NEXT:    srli a0, a0, 1
+; RV64IMZB-NEXT:    slli a0, a0, 48
+; RV64IMZB-NEXT:    srli a0, a0, 49
 ; RV64IMZB-NEXT:    add a0, a0, a1
 ; RV64IMZB-NEXT:    srli a0, a0, 2
 ; RV64IMZB-NEXT:    ret
@@ -872,8 +872,8 @@ define i16 @sdiv16_constant_add_srai(i16 %a) nounwind {
 ; RV32IMZB-NEXT:    mul a1, a1, a2
 ; RV32IMZB-NEXT:    srli a1, a1, 16
 ; RV32IMZB-NEXT:    add a0, a1, a0
-; RV32IMZB-NEXT:    zext.h a1, a0
-; RV32IMZB-NEXT:    srli a1, a1, 15
+; RV32IMZB-NEXT:    slli a1, a0, 16
+; RV32IMZB-NEXT:    srli a1, a1, 31
 ; RV32IMZB-NEXT:    sext.h a0, a0
 ; RV32IMZB-NEXT:    srai a0, a0, 3
 ; RV32IMZB-NEXT:    add a0, a0, a1
@@ -902,8 +902,8 @@ define i16 @sdiv16_constant_add_srai(i16 %a) nounwind {
 ; RV64IMZB-NEXT:    mul a1, a1, a2
 ; RV64IMZB-NEXT:    srli a1, a1, 16
 ; RV64IMZB-NEXT:    addw a0, a1, a0
-; RV64IMZB-NEXT:    zext.h a1, a0
-; RV64IMZB-NEXT:    srli a1, a1, 15
+; RV64IMZB-NEXT:    slli a1, a0, 48
+; RV64IMZB-NEXT:    srli a1, a1, 63
 ; RV64IMZB-NEXT:    sext.h a0, a0
 ; RV64IMZB-NEXT:    srai a0, a0, 3
 ; RV64IMZB-NEXT:    add a0, a0, a1
@@ -938,8 +938,8 @@ define i16 @sdiv16_constant_sub_srai(i16 %a) nounwind {
 ; RV32IMZB-NEXT:    mul a1, a1, a2
 ; RV32IMZB-NEXT:    srli a1, a1, 16
 ; RV32IMZB-NEXT:    sub a0, a1, a0
-; RV32IMZB-NEXT:    zext.h a1, a0
-; RV32IMZB-NEXT:    srli a1, a1, 15
+; RV32IMZB-NEXT:    slli a1, a0, 16
+; RV32IMZB-NEXT:    srli a1, a1, 31
 ; RV32IMZB-NEXT:    sext.h a0, a0
 ; RV32IMZB-NEXT:    srai a0, a0, 3
 ; RV32IMZB-NEXT:    add a0, a0, a1
@@ -968,8 +968,8 @@ define i16 @sdiv16_constant_sub_srai(i16 %a) nounwind {
 ; RV64IMZB-NEXT:    mul a1, a1, a2
 ; RV64IMZB-NEXT:    srli a1, a1, 16
 ; RV64IMZB-NEXT:    subw a0, a1, a0
-; RV64IMZB-NEXT:    zext.h a1, a0
-; RV64IMZB-NEXT:    srli a1, a1, 15
+; RV64IMZB-NEXT:    slli a1, a0, 48
+; RV64IMZB-NEXT:    srli a1, a1, 63
 ; RV64IMZB-NEXT:    sext.h a0, a0
 ; RV64IMZB-NEXT:    srai a0, a0, 3
 ; RV64IMZB-NEXT:    add a0, a0, a1

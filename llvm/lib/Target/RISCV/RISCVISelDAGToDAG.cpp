@@ -534,9 +534,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SRL: {
-    // We don't need this transform if zext.h is supported.
-    if (Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp())
-      break;
     // Optimize (srl (and X, 0xffff), C) ->
     //          (srli (slli X, (XLen-16), (XLen-16) + C)
     // Taking into account that the 0xffff may have had lower bits unset by
