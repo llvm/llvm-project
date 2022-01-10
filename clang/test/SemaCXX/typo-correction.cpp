@@ -757,3 +757,34 @@ namespace PR46487 {
     b = g_volatile_uchar // expected-error {{did you mean 'g_volatile_char'}}
   };
 }
+
+namespace PR47272
+{
+
+namespace Views {
+int Take(); // expected-note{{'Views::Take' declared here}}
+}
+
+namespace [[deprecated("use Views instead")]] View {
+using Views::Take;
+}
+
+namespace [[deprecated]] A { // expected-note{{'A' has been explicitly marked deprecated here}}
+int pr47272;
+}
+
+namespace B {
+using A::pr47272;  // expected-note{{'B::pr47272' declared here}} expected-warning{{'A' is deprecated}}
+}
+
+namespace [[deprecated]] C {
+using A::pr47272;
+}
+
+void function() {
+  int x = ::Take(); // expected-error{{no member named 'Take' in the global namespace; did you mean 'Views::Take'?}}
+  int y = ::pr47272; // expected-error{{no member named 'pr47272' in the global namespace; did you mean 'B::pr47272'?}}
+}
+}
+
+
