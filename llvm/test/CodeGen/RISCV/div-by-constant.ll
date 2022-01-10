@@ -645,8 +645,8 @@ define i8 @sdiv8_constant_add_srai(i8 %a) nounwind {
 ; RV32IMZB-NEXT:    add a0, a1, a0
 ; RV32IMZB-NEXT:    andi a1, a0, 128
 ; RV32IMZB-NEXT:    srli a1, a1, 7
-; RV32IMZB-NEXT:    sext.b a0, a0
-; RV32IMZB-NEXT:    srai a0, a0, 2
+; RV32IMZB-NEXT:    slli a0, a0, 24
+; RV32IMZB-NEXT:    srai a0, a0, 26
 ; RV32IMZB-NEXT:    add a0, a0, a1
 ; RV32IMZB-NEXT:    ret
 ;
@@ -674,8 +674,8 @@ define i8 @sdiv8_constant_add_srai(i8 %a) nounwind {
 ; RV64IMZB-NEXT:    addw a0, a1, a0
 ; RV64IMZB-NEXT:    andi a1, a0, 128
 ; RV64IMZB-NEXT:    srli a1, a1, 7
-; RV64IMZB-NEXT:    sext.b a0, a0
-; RV64IMZB-NEXT:    srai a0, a0, 2
+; RV64IMZB-NEXT:    slli a0, a0, 56
+; RV64IMZB-NEXT:    srai a0, a0, 58
 ; RV64IMZB-NEXT:    add a0, a0, a1
 ; RV64IMZB-NEXT:    ret
   %1 = sdiv i8 %a, 7
@@ -709,8 +709,8 @@ define i8 @sdiv8_constant_sub_srai(i8 %a) nounwind {
 ; RV32IMZB-NEXT:    sub a0, a1, a0
 ; RV32IMZB-NEXT:    andi a1, a0, 128
 ; RV32IMZB-NEXT:    srli a1, a1, 7
-; RV32IMZB-NEXT:    sext.b a0, a0
-; RV32IMZB-NEXT:    srai a0, a0, 2
+; RV32IMZB-NEXT:    slli a0, a0, 24
+; RV32IMZB-NEXT:    srai a0, a0, 26
 ; RV32IMZB-NEXT:    add a0, a0, a1
 ; RV32IMZB-NEXT:    ret
 ;
@@ -738,8 +738,8 @@ define i8 @sdiv8_constant_sub_srai(i8 %a) nounwind {
 ; RV64IMZB-NEXT:    subw a0, a1, a0
 ; RV64IMZB-NEXT:    andi a1, a0, 128
 ; RV64IMZB-NEXT:    srli a1, a1, 7
-; RV64IMZB-NEXT:    sext.b a0, a0
-; RV64IMZB-NEXT:    srai a0, a0, 2
+; RV64IMZB-NEXT:    slli a0, a0, 56
+; RV64IMZB-NEXT:    srai a0, a0, 58
 ; RV64IMZB-NEXT:    add a0, a0, a1
 ; RV64IMZB-NEXT:    ret
   %1 = sdiv i8 %a, -7
@@ -846,8 +846,6 @@ define i16 @sdiv16_constant_srai(i16 %a) nounwind {
   ret i16 %1
 }
 
-; FIXME: The Zbb test code has 1 more instruction after the mul because we don't
-; share a slli.
 define i16 @sdiv16_constant_add_srai(i16 %a) nounwind {
 ; RV32IM-LABEL: sdiv16_constant_add_srai:
 ; RV32IM:       # %bb.0:
@@ -872,10 +870,9 @@ define i16 @sdiv16_constant_add_srai(i16 %a) nounwind {
 ; RV32IMZB-NEXT:    mul a1, a1, a2
 ; RV32IMZB-NEXT:    srli a1, a1, 16
 ; RV32IMZB-NEXT:    add a0, a1, a0
-; RV32IMZB-NEXT:    slli a1, a0, 16
-; RV32IMZB-NEXT:    srli a1, a1, 31
-; RV32IMZB-NEXT:    sext.h a0, a0
-; RV32IMZB-NEXT:    srai a0, a0, 3
+; RV32IMZB-NEXT:    slli a0, a0, 16
+; RV32IMZB-NEXT:    srli a1, a0, 31
+; RV32IMZB-NEXT:    srai a0, a0, 19
 ; RV32IMZB-NEXT:    add a0, a0, a1
 ; RV32IMZB-NEXT:    ret
 ;
@@ -902,18 +899,15 @@ define i16 @sdiv16_constant_add_srai(i16 %a) nounwind {
 ; RV64IMZB-NEXT:    mul a1, a1, a2
 ; RV64IMZB-NEXT:    srli a1, a1, 16
 ; RV64IMZB-NEXT:    addw a0, a1, a0
-; RV64IMZB-NEXT:    slli a1, a0, 48
-; RV64IMZB-NEXT:    srli a1, a1, 63
-; RV64IMZB-NEXT:    sext.h a0, a0
-; RV64IMZB-NEXT:    srai a0, a0, 3
+; RV64IMZB-NEXT:    slli a0, a0, 48
+; RV64IMZB-NEXT:    srli a1, a0, 63
+; RV64IMZB-NEXT:    srai a0, a0, 51
 ; RV64IMZB-NEXT:    add a0, a0, a1
 ; RV64IMZB-NEXT:    ret
   %1 = sdiv i16 %a, 15
   ret i16 %1
 }
 
-; FIXME: The Zbb test code has 1 more instruction after the mul because we don't
-; share a slli.
 define i16 @sdiv16_constant_sub_srai(i16 %a) nounwind {
 ; RV32IM-LABEL: sdiv16_constant_sub_srai:
 ; RV32IM:       # %bb.0:
@@ -938,10 +932,9 @@ define i16 @sdiv16_constant_sub_srai(i16 %a) nounwind {
 ; RV32IMZB-NEXT:    mul a1, a1, a2
 ; RV32IMZB-NEXT:    srli a1, a1, 16
 ; RV32IMZB-NEXT:    sub a0, a1, a0
-; RV32IMZB-NEXT:    slli a1, a0, 16
-; RV32IMZB-NEXT:    srli a1, a1, 31
-; RV32IMZB-NEXT:    sext.h a0, a0
-; RV32IMZB-NEXT:    srai a0, a0, 3
+; RV32IMZB-NEXT:    slli a0, a0, 16
+; RV32IMZB-NEXT:    srli a1, a0, 31
+; RV32IMZB-NEXT:    srai a0, a0, 19
 ; RV32IMZB-NEXT:    add a0, a0, a1
 ; RV32IMZB-NEXT:    ret
 ;
@@ -968,10 +961,9 @@ define i16 @sdiv16_constant_sub_srai(i16 %a) nounwind {
 ; RV64IMZB-NEXT:    mul a1, a1, a2
 ; RV64IMZB-NEXT:    srli a1, a1, 16
 ; RV64IMZB-NEXT:    subw a0, a1, a0
-; RV64IMZB-NEXT:    slli a1, a0, 48
-; RV64IMZB-NEXT:    srli a1, a1, 63
-; RV64IMZB-NEXT:    sext.h a0, a0
-; RV64IMZB-NEXT:    srai a0, a0, 3
+; RV64IMZB-NEXT:    slli a0, a0, 48
+; RV64IMZB-NEXT:    srli a1, a0, 63
+; RV64IMZB-NEXT:    srai a0, a0, 51
 ; RV64IMZB-NEXT:    add a0, a0, a1
 ; RV64IMZB-NEXT:    ret
   %1 = sdiv i16 %a, -15

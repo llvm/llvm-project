@@ -492,6 +492,8 @@ define i8 @srli_i8(i8 %a) nounwind {
   ret i8 %1
 }
 
+; We could use sext.b+srai, but slli+srai offers more opportunities for
+; comppressed instructions.
 define i8 @srai_i8(i8 %a) nounwind {
 ; RV32I-LABEL: srai_i8:
 ; RV32I:       # %bb.0:
@@ -501,8 +503,8 @@ define i8 @srai_i8(i8 %a) nounwind {
 ;
 ; RV32ZBB-LABEL: srai_i8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    sext.b a0, a0
-; RV32ZBB-NEXT:    srai a0, a0, 5
+; RV32ZBB-NEXT:    slli a0, a0, 24
+; RV32ZBB-NEXT:    srai a0, a0, 29
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: srai_i8:
@@ -538,6 +540,8 @@ define i16 @srli_i16(i16 %a) nounwind {
   ret i16 %1
 }
 
+; We could use sext.h+srai, but slli+srai offers more opportunities for
+; comppressed instructions.
 define i16 @srai_i16(i16 %a) nounwind {
 ; RV32I-LABEL: srai_i16:
 ; RV32I:       # %bb.0:
@@ -547,8 +551,8 @@ define i16 @srai_i16(i16 %a) nounwind {
 ;
 ; RV32ZBB-LABEL: srai_i16:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    sext.h a0, a0
-; RV32ZBB-NEXT:    srai a0, a0, 9
+; RV32ZBB-NEXT:    slli a0, a0, 16
+; RV32ZBB-NEXT:    srai a0, a0, 25
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV32ZBP-LABEL: srai_i16:
