@@ -18,6 +18,15 @@ def in_source_file(source_files, step_info):
     return any(os.path.samefile(step_info.current_location.path, f) \
                for f in source_files)
 
+def have_hit_line(watch, loc):
+  if hasattr(watch, '_on_line'):
+    return watch._on_line == loc.lineno
+  elif hasattr(watch, '_from_line'):
+    return watch._from_line <= loc.lineno and watch._to_line >= loc.lineno
+  elif watch.lineno == loc.lineno:
+    return True
+  return False
+
 def update_step_watches(step_info, watches, commands):
     watch_cmds = ['DexUnreachable', 'DexExpectStepOrder']
     towatch = chain.from_iterable(commands[x]
@@ -30,7 +39,7 @@ def update_step_watches(step_info, watches, commands):
             if (loc.path != None
                     and os.path.exists(loc.path)
                     and os.path.samefile(watch.path, loc.path)
-                    and watch.lineno == loc.lineno):
+                    and have_hit_line(watch, loc)):
                 result = watch.eval(step_info)
                 step_info.watches.update(result)
                 break
