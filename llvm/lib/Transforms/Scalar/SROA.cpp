@@ -1264,14 +1264,14 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
   return true;
 }
 
-static void speculatePHINodeLoads(PHINode &PN) {
+static void speculatePHINodeLoads(IRBuilderTy &IRB, PHINode &PN) {
   LLVM_DEBUG(dbgs() << "    original: " << PN << "\n");
 
   LoadInst *SomeLoad = cast<LoadInst>(PN.user_back());
   Type *LoadTy = SomeLoad->getType();
-  IRBuilderTy PHIBuilder(&PN);
-  PHINode *NewPN = PHIBuilder.CreatePHI(LoadTy, PN.getNumIncomingValues(),
-                                        PN.getName() + ".sroa.speculated");
+  IRB.SetInsertPoint(&PN);
+  PHINode *NewPN = IRB.CreatePHI(LoadTy, PN.getNumIncomingValues(),
+                                 PN.getName() + ".sroa.speculated");
 
   // Get the AA tags and alignment to use from one of the loads. It does not
   // matter which one we get and if any differ.
@@ -1301,9 +1301,9 @@ static void speculatePHINodeLoads(PHINode &PN) {
     }
 
     Instruction *TI = Pred->getTerminator();
-    IRBuilderTy PredBuilder(TI);
+    IRB.SetInsertPoint(TI);
 
-    LoadInst *Load = PredBuilder.CreateAlignedLoad(
+    LoadInst *Load = IRB.CreateAlignedLoad(
         LoadTy, InVal, Alignment,
         (PN.getName() + ".sroa.speculate.load." + Pred->getName()));
     ++NumLoadsSpeculated;
@@ -1361,10 +1361,10 @@ static bool isSafeSelectToSpeculate(SelectInst &SI) {
   return true;
 }
 
-static void speculateSelectInstLoads(SelectInst &SI) {
+static void speculateSelectInstLoads(IRBuilderTy &IRB, SelectInst &SI) {
   LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
 
-  IRBuilderTy IRB(&SI);
+  IRB.SetInsertPoint(&SI);
   Value *TV = SI.getTrueValue();
   Value *FV = SI.getFalseValue();
   // Replace the loads of the select with a select of two loads.
@@ -3223,8 +3223,11 @@ class AggLoadStoreRewriter : public InstVisitor<AggLoadStoreRewriter, bool> {
   /// Used to calculate offsets, and hence alignment, of subobjects.
   const DataLayout &DL;
 
+  IRBuilderTy &IRB;
+
 public:
-  AggLoadStoreRewriter(const DataLayout &DL) : DL(DL) {}
+  AggLoadStoreRewriter(const DataLayout &DL, IRBuilderTy &IRB)
+      : DL(DL), IRB(IRB) {}
 
   /// Rewrite loads and stores through a pointer and all pointers derived from
   /// it.
@@ -3255,7 +3258,7 @@ private:
   template <typename Derived> class OpSplitter {
   protected:
     /// The builder used to form new instructions.
-    IRBuilderTy IRB;
+    IRBuilderTy &IRB;
 
     /// The indices which to be used with insert- or extractvalue to select the
     /// appropriate value within the aggregate.
@@ -3282,9 +3285,11 @@ private:
     /// Initialize the splitter with an insertion point, Ptr and start with a
     /// single zero GEP index.
     OpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
-               Align BaseAlign, const DataLayout &DL)
-        : IRB(InsertionPoint), GEPIndices(1, IRB.getInt32(0)), Ptr(Ptr),
-          BaseTy(BaseTy), BaseAlign(BaseAlign), DL(DL) {}
+               Align BaseAlign, const DataLayout &DL, IRBuilderTy &IRB)
+        : IRB(IRB), GEPIndices(1, IRB.getInt32(0)), Ptr(Ptr), BaseTy(BaseTy),
+          BaseAlign(BaseAlign), DL(DL) {
+      IRB.SetInsertPoint(InsertionPoint);
+    }
 
   public:
     /// Generic recursive split emission routine.
@@ -3345,9 +3350,10 @@ private:
     AAMDNodes AATags;
 
     LoadOpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
-                   AAMDNodes AATags, Align BaseAlign, const DataLayout &DL)
-        : OpSplitter<LoadOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign,
-                                     DL),
+                   AAMDNodes AATags, Align BaseAlign, const DataLayout &DL,
+                   IRBuilderTy &IRB)
+        : OpSplitter<LoadOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign, DL,
+                                     IRB),
           AATags(AATags) {}
 
     /// Emit a leaf load of a single value. This is called at the leaves of the
@@ -3379,7 +3385,7 @@ private:
     // We have an aggregate being loaded, split it apart.
     LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
     LoadOpSplitter Splitter(&LI, *U, LI.getType(), LI.getAAMetadata(),
-                            getAdjustedAlignment(&LI, 0), DL);
+                            getAdjustedAlignment(&LI, 0), DL, IRB);
     Value *V = UndefValue::get(LI.getType());
     Splitter.emitSplitOps(LI.getType(), V, LI.getName() + ".fca");
     Visited.erase(&LI);
@@ -3390,9 +3396,10 @@ private:
 
   struct StoreOpSplitter : public OpSplitter<StoreOpSplitter> {
     StoreOpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
-                    AAMDNodes AATags, Align BaseAlign, const DataLayout &DL)
+                    AAMDNodes AATags, Align BaseAlign, const DataLayout &DL,
+                    IRBuilderTy &IRB)
         : OpSplitter<StoreOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign,
-                                      DL),
+                                      DL, IRB),
           AATags(AATags) {}
     AAMDNodes AATags;
     /// Emit a leaf store of a single value. This is called at the leaves of the
@@ -3430,7 +3437,7 @@ private:
     // We have an aggregate being stored, split it apart.
     LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
     StoreOpSplitter Splitter(&SI, *U, V->getType(), SI.getAAMetadata(),
-                             getAdjustedAlignment(&SI, 0), DL);
+                             getAdjustedAlignment(&SI, 0), DL, IRB);
     Splitter.emitSplitOps(V->getType(), V, V->getName() + ".fca");
     Visited.erase(&SI);
     SI.eraseFromParent();
@@ -3458,7 +3465,7 @@ private:
                       << "\n    original: " << *Sel
                       << "\n              " << GEPI);
 
-    IRBuilderTy Builder(&GEPI);
+    IRB.SetInsertPoint(&GEPI);
     SmallVector<Value *, 4> Index(GEPI.indices());
     bool IsInBounds = GEPI.isInBounds();
 
@@ -3466,21 +3473,20 @@ private:
     Value *True = Sel->getTrueValue();
     Value *NTrue =
         IsInBounds
-            ? Builder.CreateInBoundsGEP(Ty, True, Index,
-                                        True->getName() + ".sroa.gep")
-            : Builder.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep");
+            ? IRB.CreateInBoundsGEP(Ty, True, Index,
+                                    True->getName() + ".sroa.gep")
+            : IRB.CreateGEP(Ty, True, Index, True->getName() + ".sroa.gep");
 
     Value *False = Sel->getFalseValue();
 
     Value *NFalse =
         IsInBounds
-            ? Builder.CreateInBoundsGEP(Ty, False, Index,
-                                        False->getName() + ".sroa.gep")
-            : Builder.CreateGEP(Ty, False, Index,
-                                False->getName() + ".sroa.gep");
+            ? IRB.CreateInBoundsGEP(Ty, False, Index,
+                                    False->getName() + ".sroa.gep")
+            : IRB.CreateGEP(Ty, False, Index, False->getName() + ".sroa.gep");
 
-    Value *NSel = Builder.CreateSelect(Sel->getCondition(), NTrue, NFalse,
-                                       Sel->getName() + ".sroa.sel");
+    Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
+                                   Sel->getName() + ".sroa.sel");
     Visited.erase(&GEPI);
     GEPI.replaceAllUsesWith(NSel);
     GEPI.eraseFromParent();
@@ -3517,10 +3523,9 @@ private:
 
     SmallVector<Value *, 4> Index(GEPI.indices());
     bool IsInBounds = GEPI.isInBounds();
-    IRBuilderTy PHIBuilder(GEPI.getParent()->getFirstNonPHI());
-    PHINode *NewPN = PHIBuilder.CreatePHI(GEPI.getType(),
-                                          PHI->getNumIncomingValues(),
-                                          PHI->getName() + ".sroa.phi");
+    IRB.SetInsertPoint(GEPI.getParent()->getFirstNonPHI());
+    PHINode *NewPN = IRB.CreatePHI(GEPI.getType(), PHI->getNumIncomingValues(),
+                                   PHI->getName() + ".sroa.phi");
     for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
       BasicBlock *B = PHI->getIncomingBlock(I);
       Value *NewVal = nullptr;
@@ -3530,11 +3535,12 @@ private:
       } else {
         Instruction *In = cast<Instruction>(PHI->getIncomingValue(I));
 
-        IRBuilderTy B(In->getParent(), std::next(In->getIterator()));
+        IRB.SetInsertPoint(In->getParent(), std::next(In->getIterator()));
         Type *Ty = GEPI.getSourceElementType();
-        NewVal = IsInBounds
-            ? B.CreateInBoundsGEP(Ty, In, Index, In->getName() + ".sroa.gep")
-            : B.CreateGEP(Ty, In, Index, In->getName() + ".sroa.gep");
+        NewVal = IsInBounds ? IRB.CreateInBoundsGEP(Ty, In, Index,
+                                                    In->getName() + ".sroa.gep")
+                            : IRB.CreateGEP(Ty, In, Index,
+                                            In->getName() + ".sroa.gep");
       }
       NewPN->addIncoming(NewVal, B);
     }
@@ -4598,7 +4604,8 @@ bool SROAPass::runOnAlloca(AllocaInst &AI) {
 
   // First, split any FCA loads and stores touching this alloca to promote
   // better splitting and promotion opportunities.
-  AggLoadStoreRewriter AggRewriter(DL);
+  IRBuilderTy IRB(&AI);
+  AggLoadStoreRewriter AggRewriter(DL, IRB);
   Changed |= AggRewriter.rewrite(AI);
 
   // Build the slices using a recursive instruction-visiting builder.
@@ -4633,11 +4640,11 @@ bool SROAPass::runOnAlloca(AllocaInst &AI) {
 
   LLVM_DEBUG(dbgs() << "  Speculating PHIs\n");
   while (!SpeculatablePHIs.empty())
-    speculatePHINodeLoads(*SpeculatablePHIs.pop_back_val());
+    speculatePHINodeLoads(IRB, *SpeculatablePHIs.pop_back_val());
 
   LLVM_DEBUG(dbgs() << "  Speculating Selects\n");
   while (!SpeculatableSelects.empty())
-    speculateSelectInstLoads(*SpeculatableSelects.pop_back_val());
+    speculateSelectInstLoads(IRB, *SpeculatableSelects.pop_back_val());
 
   return Changed;
 }
