@@ -69,10 +69,6 @@ if(TARGET lldb-vscode)
   add_lldb_test_dependency(lldb-vscode)
 endif()
 
-if(TARGET lldb-instr)
-  add_lldb_test_dependency(lldb-instr)
-endif()
-
 if(TARGET liblldb)
   add_lldb_test_dependency(liblldb)
 endif()
