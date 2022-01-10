@@ -430,8 +430,8 @@ module std [system] {
     module __coroutine {
       module coroutine_handle           { private header "__coroutine/coroutine_handle.h" }
       module coroutine_traits           { private header "__coroutine/coroutine_traits.h" }
-      module trivial_awaitables         { private header "__coroutine/trivial_awaitables.h" }
       module noop_coroutine_handle      { private header "__coroutine/noop_coroutine_handle.h" }
+      module trivial_awaitables         { private header "__coroutine/trivial_awaitables.h" }
     }
   }
   module deque {
@@ -461,8 +461,8 @@ module std [system] {
       module file_type                    { private header "__filesystem/file_type.h" }
       module filesystem_error             { private header "__filesystem/filesystem_error.h" }
       module operations                   { private header "__filesystem/operations.h" }
-      module path_iterator                { private header "__filesystem/path_iterator.h" }
       module path                         { private header "__filesystem/path.h" }
+      module path_iterator                { private header "__filesystem/path_iterator.h" }
       module perm_options                 { private header "__filesystem/perm_options.h" }
       module perms                        { private header "__filesystem/perms.h" }
       module recursive_directory_iterator { private header "__filesystem/recursive_directory_iterator.h" }
@@ -797,8 +797,8 @@ module std [system] {
       module range_adaptor          { private header "__ranges/range_adaptor.h" }
       module ref_view               { private header "__ranges/ref_view.h" }
       module reverse_view           { private header "__ranges/reverse_view.h" }
-      module size                   { private header "__ranges/size.h" }
       module single_view            { private header "__ranges/single_view.h" }
+      module size                   { private header "__ranges/size.h" }
       module subrange               { private header "__ranges/subrange.h" }
       module take_view              { private header "__ranges/take_view.h" }
       module transform_view         {
