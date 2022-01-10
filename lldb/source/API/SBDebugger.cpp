@@ -630,9 +630,8 @@ SBSourceManager SBDebugger::GetSourceManager() {
 }
 
 bool SBDebugger::GetDefaultArchitecture(char *arch_name, size_t arch_name_len) {
-  LLDB_RECORD_CHAR_PTR_STATIC_METHOD(bool, SBDebugger, GetDefaultArchitecture,
-                                     (char *, size_t), arch_name, "",
-                                     arch_name_len);
+  LLDB_RECORD_STATIC_METHOD(bool, SBDebugger, GetDefaultArchitecture,
+                            (char *, size_t), arch_name, "", arch_name_len);
 
   if (arch_name && arch_name_len) {
     ArchSpec default_arch = Target::GetDefaultArchitecture();
