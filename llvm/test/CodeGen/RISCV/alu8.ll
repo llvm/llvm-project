@@ -135,14 +135,14 @@ define i8 @slli(i8 %a) nounwind {
 define i8 @srli(i8 %a) nounwind {
 ; RV32I-LABEL: srli:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 192
-; RV32I-NEXT:    srli a0, a0, 6
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srli a0, a0, 30
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: srli:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 192
-; RV64I-NEXT:    srli a0, a0, 6
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 62
 ; RV64I-NEXT:    ret
   %1 = lshr i8 %a, 6
   ret i8 %1

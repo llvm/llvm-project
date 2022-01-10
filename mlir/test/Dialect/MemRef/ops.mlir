@@ -27,6 +27,15 @@ func @memref_reinterpret_cast_static_to_dynamic_sizes(%in: memref<?xf32>)
   return %out : memref<10x?xf32, offset: ?, strides: [?, 1]>
 }
 
+// CHECK-LABEL: func @memref_reinterpret_cast_dynamic_offset
+func @memref_reinterpret_cast_dynamic_offset(%in: memref<?xf32>, %offset: index)
+    -> memref<10x?xf32, offset: ?, strides: [?, 1]> {
+  %out = memref.reinterpret_cast %in to
+           offset: [%offset], sizes: [10, 10], strides: [1, 1]
+           : memref<?xf32> to memref<10x?xf32, offset: ?, strides: [?, 1]>
+  return %out : memref<10x?xf32, offset: ?, strides: [?, 1]>
+}
+
 // CHECK-LABEL: func @memref_reshape(
 func @memref_reshape(%unranked: memref<*xf32>, %shape1: memref<1xi32>,
          %shape2: memref<2xi32>, %shape3: memref<?xi32>) -> memref<*xf32> {

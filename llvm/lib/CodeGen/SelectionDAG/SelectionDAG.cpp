@@ -3584,6 +3584,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = KnownBits::smin(Known, Known2);
     break;
   }
+  case ISD::FP_TO_UINT_SAT: {
+    // FP_TO_UINT_SAT produces an unsigned value that fits in the saturating VT.
+    EVT VT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+    Known.Zero |= APInt::getBitsSetFrom(BitWidth, VT.getScalarSizeInBits());
+    break;
+  }
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     if (Op.getResNo() == 1) {
       // The boolean result conforms to getBooleanContents.
@@ -3860,6 +3866,10 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
 
+  case ISD::FP_TO_SINT_SAT:
+    // FP_TO_SINT_SAT produces a signed value that fits in the saturating VT.
+    Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getScalarSizeInBits();
+    return VTBits - Tmp + 1;
   case ISD::SIGN_EXTEND:
     Tmp = VTBits - Op.getOperand(0).getScalarValueSizeInBits();
     return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1) + Tmp;

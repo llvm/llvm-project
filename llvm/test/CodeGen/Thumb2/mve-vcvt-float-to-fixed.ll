@@ -1114,7 +1114,6 @@ define arm_aapcs_vfpcc <4 x i32> @vcvt_sat_u32_7_24(<4 x float> %0) {
 ; CHECK-NEXT:    vmov.i32 q1, #0xffffff
 ; CHECK-NEXT:    vcvt.u32.f32 q0, q0, #23
 ; CHECK-NEXT:    vmin.u32 q0, q0, q1
-; CHECK-NEXT:    vbic.i32 q0, #0xff000000
 ; CHECK-NEXT:    bx lr
   %2 = fmul fast <4 x float> %0, <float 0x4160000000000000, float 0x4160000000000000, float 0x4160000000000000, float 0x4160000000000000>
   %3 = call <4 x i24> @llvm.fptoui.sat.v4i24.v4f32(<4 x float> %2)

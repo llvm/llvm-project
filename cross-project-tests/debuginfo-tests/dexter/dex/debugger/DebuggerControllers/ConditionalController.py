@@ -69,16 +69,15 @@ class BreakpointRange:
 
 class ConditionalController(DebuggerControllerBase):
     def __init__(self, context, step_collection):
-      self.context = context
-      self.step_collection = step_collection
       self._bp_ranges = None
-      self._build_bp_ranges()
       self._watches = set()
       self._step_index = 0
       self._pause_between_steps = context.options.pause_between_steps
       self._max_steps = context.options.max_steps
       # Map {id: BreakpointRange}
       self._leading_bp_handles = {}
+      super(ConditionalController, self).__init__(context, step_collection)
+      self._build_bp_ranges()
 
     def _build_bp_ranges(self):
         commands = self.step_collection.commands
@@ -126,7 +125,7 @@ class ConditionalController(DebuggerControllerBase):
                 id = self.debugger.add_breakpoint(bpr.path, bpr.range_from)
                 self._leading_bp_handles[id] = bpr
 
-    def _run_debugger_custom(self):
+    def _run_debugger_custom(self, cmdline):
         # TODO: Add conditional and unconditional breakpoint support to dbgeng.
         if self.debugger.get_name() == 'dbgeng':
             raise DebuggerException('DexLimitSteps commands are not supported by dbgeng')
@@ -137,7 +136,7 @@ class ConditionalController(DebuggerControllerBase):
         for command_obj in chain.from_iterable(self.step_collection.commands.values()):
             self._watches.update(command_obj.get_watches())
 
-        self.debugger.launch()
+        self.debugger.launch(cmdline)
         time.sleep(self._pause_between_steps)
 
         exit_desired = False

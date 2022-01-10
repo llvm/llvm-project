@@ -660,7 +660,7 @@ public:
   explicit operator bool() const { return !!FnAddr; }
 
   /// Run call returning raw WrapperFunctionResult.
-  shared::WrapperFunctionResult run() {
+  shared::WrapperFunctionResult run() const {
     using FnTy =
         shared::CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
     return shared::WrapperFunctionResult(
@@ -670,7 +670,7 @@ public:
   /// Run call and deserialize result using SPS.
   template <typename SPSRetT, typename RetT>
   std::enable_if_t<!std::is_same<SPSRetT, void>::value, Error>
-  runWithSPSRet(RetT &RetVal) {
+  runWithSPSRet(RetT &RetVal) const {
     auto WFR = run();
     if (const char *ErrMsg = WFR.getOutOfBandError())
       return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
@@ -684,14 +684,15 @@ public:
 
   /// Overload for SPS functions returning void.
   template <typename SPSRetT>
-  std::enable_if_t<std::is_same<SPSRetT, void>::value, Error> runWithSPSRet() {
+  std::enable_if_t<std::is_same<SPSRetT, void>::value, Error>
+  runWithSPSRet() const {
     shared::SPSEmpty E;
     return runWithSPSRet<shared::SPSEmpty>(E);
   }
 
   /// Run call and deserialize an SPSError result. SPSError returns and
   /// deserialization failures are merged into the returned error.
-  Error runWithSPSRetErrorMerged() {
+  Error runWithSPSRetErrorMerged() const {
     detail::SPSSerializableError RetErr;
     if (auto Err = runWithSPSRet<SPSError>(RetErr))
       return Err;

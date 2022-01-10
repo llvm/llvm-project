@@ -6628,7 +6628,8 @@ void TypeLocReader::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
 }
 
 void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  TL.setDecltypeLoc(readSourceLocation());
+  TL.setRParenLoc(readSourceLocation());
 }
 
 void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
@@ -6651,6 +6652,8 @@ void TypeLocReader::VisitAutoTypeLoc(AutoTypeLoc TL) {
       TL.setArgLocInfo(i, Reader.readTemplateArgumentLocInfo(
                               TL.getTypePtr()->getArg(i).getKind()));
   }
+  if (Reader.readBool())
+    TL.setRParenLoc(readSourceLocation());
 }
 
 void TypeLocReader::VisitDeducedTemplateSpecializationTypeLoc(

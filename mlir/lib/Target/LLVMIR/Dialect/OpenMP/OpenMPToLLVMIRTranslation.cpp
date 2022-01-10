@@ -889,23 +889,12 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
       moduleTranslation.translateLoc(opInst.getLoc(), subprogram);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder.saveIP(),
                                                     llvm::DebugLoc(diLoc));
-  llvm::AtomicOrdering ao = convertAtomicOrdering(readOp.memory_order());
-  llvm::Value *address = moduleTranslation.lookupValue(readOp.address());
-  llvm::OpenMPIRBuilder::InsertPointTy currentIP = builder.saveIP();
-
-  // Insert alloca for result.
-  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
-      findAllocaInsertPoint(builder, moduleTranslation);
-  builder.restoreIP(allocaIP);
-  llvm::Value *v = builder.CreateAlloca(
-      moduleTranslation.convertType(readOp.getResult().getType()));
-  moduleTranslation.mapValue(readOp.getResult(), v);
-
-  // Restore the IP and insert Atomic Read.
-  builder.restoreIP(currentIP);
-  llvm::OpenMPIRBuilder::AtomicOpValue atomicV = {v, false, false};
-  llvm::OpenMPIRBuilder::AtomicOpValue x = {address, false, false};
-  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, x, atomicV, ao));
+  llvm::AtomicOrdering AO = convertAtomicOrdering(readOp.memory_order());
+  llvm::Value *x = moduleTranslation.lookupValue(readOp.x());
+  llvm::Value *v = moduleTranslation.lookupValue(readOp.v());
+  llvm::OpenMPIRBuilder::AtomicOpValue V = {v, false, false};
+  llvm::OpenMPIRBuilder::AtomicOpValue X = {x, false, false};
+  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO));
   return success();
 }
 

@@ -1010,24 +1010,34 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
   const unsigned bits = config->wordsize * 8;
   const TargetInfo &target = *elf::target;
   uint64_t lastPPCRelaxedRelocOff = UINT64_C(-1);
-
-  for (const Relocation &rel : relocations) {
+  AArch64Relaxer aarch64relaxer(relocations);
+  for (size_t i = 0, size = relocations.size(); i != size; ++i) {
+    const Relocation &rel = relocations[i];
     if (rel.expr == R_NONE)
       continue;
     uint64_t offset = rel.offset;
     uint8_t *bufLoc = buf + offset;
 
-    uint64_t addrLoc = getOutputSection()->addr + offset;
+    uint64_t secAddr = getOutputSection()->addr;
     if (auto *sec = dyn_cast<InputSection>(this))
-      addrLoc += sec->outSecOff;
+      secAddr += sec->outSecOff;
+    const uint64_t addrLoc = secAddr + offset;
     const uint64_t targetVA =
         SignExtend64(getRelocTargetVA(file, rel.type, rel.addend, addrLoc,
-                                      *rel.sym, rel.expr), bits);
-
+                                      *rel.sym, rel.expr),
+                     bits);
     switch (rel.expr) {
     case R_RELAX_GOT_PC:
     case R_RELAX_GOT_PC_NOPIC:
       target.relaxGot(bufLoc, rel, targetVA);
+      break;
+    case R_AARCH64_GOT_PAGE_PC:
+      if (i + 1 < size && aarch64relaxer.tryRelaxAdrpLdr(
+                              rel, relocations[i + 1], secAddr, buf)) {
+        ++i;
+        continue;
+      }
+      target.relocate(bufLoc, rel, targetVA);
       break;
     case R_PPC64_RELAX_GOT_PC: {
       // The R_PPC64_PCREL_OPT relocation must appear immediately after

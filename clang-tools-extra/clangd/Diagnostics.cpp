@@ -363,6 +363,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D) {
       OS << Sep << Fix;
       Sep = ", ";
     }
+    OS << "}";
   }
   return OS;
 }

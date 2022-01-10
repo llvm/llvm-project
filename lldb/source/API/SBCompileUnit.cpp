@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCompileUnit.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Module.h"
@@ -39,7 +39,7 @@ const SBCompileUnit &SBCompileUnit::operator=(const SBCompileUnit &rhs) {
                      rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBCompileUnit::~SBCompileUnit() { m_opaque_ptr = nullptr; }
@@ -51,7 +51,7 @@ SBFileSpec SBCompileUnit::GetFileSpec() const {
   SBFileSpec file_spec;
   if (m_opaque_ptr)
     file_spec.SetFileSpec(m_opaque_ptr->GetPrimaryFile());
-  return LLDB_RECORD_RESULT(file_spec);
+  return file_spec;
 }
 
 uint32_t SBCompileUnit::GetNumLineEntries() const {
@@ -80,7 +80,7 @@ SBLineEntry SBCompileUnit::GetLineEntryAtIndex(uint32_t idx) const {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_line_entry);
+  return sb_line_entry;
 }
 
 uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
@@ -133,21 +133,21 @@ lldb::SBTypeList SBCompileUnit::GetTypes(uint32_t type_mask) {
   SBTypeList sb_type_list;
 
   if (!m_opaque_ptr)
-    return LLDB_RECORD_RESULT(sb_type_list);
+    return sb_type_list;
 
   ModuleSP module_sp(m_opaque_ptr->GetModule());
   if (!module_sp)
-    return LLDB_RECORD_RESULT(sb_type_list);
+    return sb_type_list;
 
   SymbolFile *symfile = module_sp->GetSymbolFile();
   if (!symfile)
-    return LLDB_RECORD_RESULT(sb_type_list);
+    return sb_type_list;
 
   TypeClass type_class = static_cast<TypeClass>(type_mask);
   TypeList type_list;
   symfile->GetTypes(m_opaque_ptr, type_class, type_list);
   sb_type_list.m_opaque_up->Append(type_list);
-  return LLDB_RECORD_RESULT(sb_type_list);
+  return sb_type_list;
 }
 
 SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
@@ -160,8 +160,7 @@ SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
     sb_file_spec.SetFileSpec(spec);
   }
 
-
-  return LLDB_RECORD_RESULT(sb_file_spec);
+  return sb_file_spec;
 }
 
 uint32_t SBCompileUnit::FindSupportFileIndex(uint32_t start_idx,
@@ -236,43 +235,4 @@ bool SBCompileUnit::GetDescription(SBStream &description) {
     strm.PutCString("No value");
 
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBCompileUnit>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBCompileUnit, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBCompileUnit, (const lldb::SBCompileUnit &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBCompileUnit &,
-      SBCompileUnit, operator=,(const lldb::SBCompileUnit &));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBCompileUnit, GetFileSpec,
-                             ());
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBCompileUnit, GetNumLineEntries, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::SBLineEntry, SBCompileUnit,
-                             GetLineEntryAtIndex, (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBCompileUnit, FindLineEntryIndex,
-                             (uint32_t, uint32_t, lldb::SBFileSpec *));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBCompileUnit, FindLineEntryIndex,
-                             (uint32_t, uint32_t, lldb::SBFileSpec *, bool));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBCompileUnit, GetNumSupportFiles, ());
-  LLDB_REGISTER_METHOD(lldb::SBTypeList, SBCompileUnit, GetTypes, (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBCompileUnit,
-                             GetSupportFileAtIndex, (uint32_t));
-  LLDB_REGISTER_METHOD(uint32_t, SBCompileUnit, FindSupportFileIndex,
-                       (uint32_t, const lldb::SBFileSpec &, bool));
-  LLDB_REGISTER_METHOD(lldb::LanguageType, SBCompileUnit, GetLanguage, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBCompileUnit, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBCompileUnit, operator bool, ());
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBCompileUnit, operator==,(const lldb::SBCompileUnit &));
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBCompileUnit, operator!=,(const lldb::SBCompileUnit &));
-  LLDB_REGISTER_METHOD(bool, SBCompileUnit, GetDescription,
-                       (lldb::SBStream &));
-}
-
-}
 }

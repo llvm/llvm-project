@@ -264,9 +264,8 @@ define i32 @ctlz_lshr_i32(i32 signext %a) {
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srli a1, a0, 8
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    lui a1, 524272
-; RV64I-NEXT:    and a1, a0, a1
-; RV64I-NEXT:    srli a1, a1, 16
+; RV64I-NEXT:    slli a1, a0, 33
+; RV64I-NEXT:    srli a1, a1, 49
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    srli a1, a0, 1

@@ -17,6 +17,7 @@ add_public_tablegen_target(CSKYCommonTableGen)
 
 add_llvm_target(CSKYCodeGen
   CSKYAsmPrinter.cpp
+  CSKYConstantPoolValue.cpp
   CSKYFrameLowering.cpp
   CSKYInstrInfo.cpp
   CSKYISelDAGToDAG.cpp

@@ -397,6 +397,9 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
 class JITLinkSlabAllocator final : public JITLinkMemoryManager {
 private:
   struct FinalizedAllocInfo {
+    FinalizedAllocInfo(sys::MemoryBlock Mem,
+                       std::vector<shared::WrapperFunctionCall> DeallocActions)
+        : Mem(Mem), DeallocActions(std::move(DeallocActions)) {}
     sys::MemoryBlock Mem;
     std::vector<shared::WrapperFunctionCall> DeallocActions;
   };
@@ -430,12 +433,20 @@ public:
           return;
         }
 
-        // FIXME: Run finalize actions.
-        assert(BL.graphAllocActions().empty() &&
-               "Support function calls not supported yet");
+        auto DeallocActions = runFinalizeActions(BL.graphAllocActions());
+        if (!DeallocActions) {
+          OnFinalized(DeallocActions.takeError());
+          return;
+        }
 
-        OnFinalized(
-            FinalizedAlloc(ExecutorAddr::fromPtr(new FinalizedAllocInfo())));
+        if (auto Err = Parent.freeBlock(FinalizeSegs)) {
+          OnFinalized(
+              joinErrors(std::move(Err), runDeallocActions(*DeallocActions)));
+          return;
+        }
+
+        OnFinalized(FinalizedAlloc(ExecutorAddr::fromPtr(
+            new FinalizedAllocInfo(StandardSegs, std::move(*DeallocActions)))));
       }
 
       void abandon(OnAbandonedFunction OnAbandoned) override {

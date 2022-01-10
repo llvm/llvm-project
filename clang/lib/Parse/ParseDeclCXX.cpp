@@ -1007,6 +1007,9 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
   if (Tok.is(tok::annot_decltype)) {
     Result = getExprAnnotation(Tok);
     EndLoc = Tok.getAnnotationEndLoc();
+    // Unfortunately, we don't know the LParen source location as the annotated
+    // token doesn't have it.
+    DS.setTypeofParensRange(SourceRange(SourceLocation(), EndLoc));
     ConsumeAnnotationToken();
     if (Result.isInvalid()) {
       DS.SetTypeSpecError();
@@ -1071,6 +1074,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
 
     // Match the ')'
     T.consumeClose();
+    DS.setTypeofParensRange(T.getRange());
     if (T.getCloseLocation().isInvalid()) {
       DS.SetTypeSpecError();
       // FIXME: this should return the location of the last token

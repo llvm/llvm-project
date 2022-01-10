@@ -121,6 +121,16 @@ void test(int x) {
   foo->func(x);
 }
 
+void AccessIncompleteClass() {
+  struct Forward;
+  Forward* ptr;
+  // CHECK:      CallExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT: `-CXXDependentScopeMemberExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT:   `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:     `-DeclRefExpr {{.*}} 'Forward *'
+  ptr->method();
+}
+
 struct Foo2 {
   double func();
   class ForwardClass;

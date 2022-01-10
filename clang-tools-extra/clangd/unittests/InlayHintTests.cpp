@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
+#include "Config.h"
 #include "InlayHints.h"
 #include "Protocol.h"
 #include "TestTU.h"
 #include "TestWorkspace.h"
 #include "XRefs.h"
+#include "support/Context.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -24,6 +26,8 @@ std::ostream &operator<<(std::ostream &Stream, const InlayHint &Hint) {
 namespace {
 
 using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+using ::testing::UnorderedElementsAre;
 
 std::vector<InlayHint> hintsOfKind(ParsedAST &AST, InlayHintKind Kind) {
   std::vector<InlayHint> Result;
@@ -56,6 +60,13 @@ MATCHER_P2(HintMatcher, Expected, Code, "") {
 
 MATCHER_P(labelIs, Label, "") { return arg.label == Label; }
 
+Config noHintsConfig() {
+  Config C;
+  C.InlayHints.Parameters = false;
+  C.InlayHints.DeducedTypes = false;
+  return C;
+}
+
 template <typename... ExpectedHints>
 void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
                  ExpectedHints... Expected) {
@@ -66,6 +77,10 @@ void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
 
   EXPECT_THAT(hintsOfKind(AST, Kind),
               ElementsAre(HintMatcher(Expected, Source)...));
+  // Sneak in a cross-cutting check that hints are disabled by config.
+  // We'll hit an assertion failure if addInlayHint still gets called.
+  WithContextValue WithCfg(Config::Key, noHintsConfig());
+  EXPECT_THAT(inlayHints(AST, llvm::None), IsEmpty());
 }
 
 // Hack to allow expression-statements operating on parameter packs in C++14.

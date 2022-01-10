@@ -505,49 +505,57 @@ func @omp_ordered5(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64, %vec1 : i
 
 // -----
 
-func @omp_atomic_read1(%addr : memref<i32>) {
+func @omp_atomic_read1(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{the hints omp_sync_hint_nonspeculative and omp_sync_hint_speculative cannot be combined.}}
-  %1 = omp.atomic.read %addr hint(speculative, nonspeculative) : memref<i32> -> i32
+  omp.atomic.read %v = %x hint(speculative, nonspeculative) : memref<i32>
   return
 }
 
 // -----
 
-func @omp_atomic_read2(%addr : memref<i32>) {
+func @omp_atomic_read2(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{attribute 'memory_order' failed to satisfy constraint: MemoryOrderKind Clause}}
-  %1 = omp.atomic.read %addr memory_order(xyz) : memref<i32> -> i32
+  omp.atomic.read %v = %x memory_order(xyz) : memref<i32>
   return
 }
 
 // -----
 
-func @omp_atomic_read3(%addr : memref<i32>) {
+func @omp_atomic_read3(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
-  %1 = omp.atomic.read %addr memory_order(acq_rel) : memref<i32> -> i32
+  omp.atomic.read %v = %x memory_order(acq_rel) : memref<i32>
   return
 }
 
 // -----
 
-func @omp_atomic_read4(%addr : memref<i32>) {
+func @omp_atomic_read4(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{memory-order must not be acq_rel or release for atomic reads}}
-  %1 = omp.atomic.read %addr memory_order(release) : memref<i32> -> i32
+  omp.atomic.read %v = %x memory_order(release) : memref<i32>
   return
 }
 
 // -----
 
-func @omp_atomic_read5(%addr : memref<i32>) {
+func @omp_atomic_read5(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{at most one memory_order clause can appear on the omp.atomic.read operation}}
-  %1 = omp.atomic.read %addr memory_order(acquire) memory_order(relaxed) : memref<i32> -> i32
+  omp.atomic.read %v = %x memory_order(acquire) memory_order(relaxed) : memref<i32>
   return
 }
 
 // -----
 
-func @omp_atomic_read6(%addr : memref<i32>) {
+func @omp_atomic_read6(%x: memref<i32>, %v: memref<i32>) {
   // expected-error @below {{at most one hint clause can appear on the omp.atomic.read operation}}
-  %1 = omp.atomic.read  %addr hint(speculative) hint(contended) : memref<i32> -> i32
+  omp.atomic.read %v =  %x hint(speculative) hint(contended) : memref<i32>
+  return
+}
+
+// -----
+
+func @omp_atomic_read6(%x: memref<i32>, %v: memref<i32>) {
+  // expected-error @below {{read and write must not be to the same location for atomic reads}}
+  omp.atomic.read %x =  %x hint(speculative) : memref<i32>
   return
 }
 

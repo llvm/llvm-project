@@ -653,7 +653,7 @@ struct CallOpInterface
 
     // 1. Compute the result types of the new CallOp. Tensor results that are
     // equivalent to a FuncOp bbArg are no longer returned.
-    for (auto it : llvm::enumerate(callOp.getResultTypes())) {
+    for (const auto &it : llvm::enumerate(callOp.getResultTypes())) {
       unsigned returnValIdx = it.index();
       Type returnType = it.value();
       if (!isaTensor(returnType)) {

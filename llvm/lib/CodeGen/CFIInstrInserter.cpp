@@ -347,7 +347,7 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
     }
 
     if (ForceFullCFA) {
-      MF.getSubtarget().getFrameLowering()->emitCalleeSavedFrameMoves(
+      MF.getSubtarget().getFrameLowering()->emitCalleeSavedFrameMovesFullCFA(
           *MBBInfo.MBB, MBBI);
       InsertedCFIInstr = true;
       PrevMBBInfo = &MBBInfo;
