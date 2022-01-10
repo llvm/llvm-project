@@ -390,7 +390,7 @@ TEST(SelectionTest, CommonAncestor) {
         decltype([[^a]] + a) b;
         )cpp",
           "DeclRefExpr"},
-      {"[[decltype]]^(1) b;", "DecltypeTypeLoc"}, // Not the VarDecl.
+      {"[[decltype^(1)]] b;", "DecltypeTypeLoc"}, // Not the VarDecl.
 
       // Objective-C nullability attributes.
       {

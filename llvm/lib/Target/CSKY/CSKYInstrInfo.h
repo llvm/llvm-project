@@ -68,6 +68,8 @@ public:
 
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
+  Register getGlobalBaseReg(MachineFunction &MF) const;
+
   // Materializes the given integer Val into DstReg.
   Register movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                   const DebugLoc &DL, int64_t Val,

@@ -221,6 +221,16 @@ void addPPC64SaveRestore();
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t expr);
 
+class AArch64Relaxer {
+  bool safeToRelaxAdrpLdr = true;
+
+public:
+  explicit AArch64Relaxer(ArrayRef<Relocation> relocs);
+
+  bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
+                       uint64_t secAddr, uint8_t *buf) const;
+};
+
 extern const TargetInfo *target;
 TargetInfo *getTarget();
 

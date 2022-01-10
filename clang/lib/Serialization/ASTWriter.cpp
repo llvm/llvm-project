@@ -427,7 +427,8 @@ void TypeLocWriter::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
-  Record.AddSourceLocation(TL.getNameLoc());
+  Record.AddSourceLocation(TL.getDecltypeLoc());
+  Record.AddSourceLocation(TL.getRParenLoc());
 }
 
 void TypeLocWriter::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {

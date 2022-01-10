@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBDeclaration.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Declaration.h"
@@ -41,7 +41,7 @@ const SBDeclaration &SBDeclaration::operator=(const SBDeclaration &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 void SBDeclaration::SetDeclaration(
@@ -70,8 +70,7 @@ SBFileSpec SBDeclaration::GetFileSpec() const {
   if (m_opaque_up.get() && m_opaque_up->GetFile())
     sb_file_spec.SetFileSpec(m_opaque_up->GetFile());
 
-
-  return LLDB_RECORD_RESULT(sb_file_spec);
+  return sb_file_spec;
 }
 
 uint32_t SBDeclaration::GetLine() const {
@@ -174,33 +173,3 @@ bool SBDeclaration::GetDescription(SBStream &description) {
 }
 
 lldb_private::Declaration *SBDeclaration::get() { return m_opaque_up.get(); }
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBDeclaration>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBDeclaration, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBDeclaration, (const lldb::SBDeclaration &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBDeclaration &,
-      SBDeclaration, operator=,(const lldb::SBDeclaration &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBDeclaration, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBDeclaration, operator bool, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBDeclaration, GetFileSpec,
-                             ());
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBDeclaration, GetLine, ());
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBDeclaration, GetColumn, ());
-  LLDB_REGISTER_METHOD(void, SBDeclaration, SetFileSpec, (lldb::SBFileSpec));
-  LLDB_REGISTER_METHOD(void, SBDeclaration, SetLine, (uint32_t));
-  LLDB_REGISTER_METHOD(void, SBDeclaration, SetColumn, (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBDeclaration, operator==,(const lldb::SBDeclaration &));
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBDeclaration, operator!=,(const lldb::SBDeclaration &));
-  LLDB_REGISTER_METHOD(bool, SBDeclaration, GetDescription,
-                       (lldb::SBStream &));
-}
-
-}
-}

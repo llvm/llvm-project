@@ -5274,9 +5274,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
           continue;
         return false;
       }
-      if (!isa<AllocaInst>(Obj) && !isa<GlobalVariable>(Obj) &&
-          !isNoAliasFn(Obj, TLI))
-        return false;
       Constant *InitialVal = AA::getInitialValueForObj(*Obj, *L.getType(), TLI);
       if (!InitialVal || !Union(*InitialVal))
         return false;

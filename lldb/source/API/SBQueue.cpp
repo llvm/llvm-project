@@ -8,7 +8,7 @@
 
 #include <cinttypes>
 
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBQueue.h"
 
 #include "lldb/API/SBProcess.h"
@@ -238,7 +238,7 @@ const lldb::SBQueue &SBQueue::operator=(const lldb::SBQueue &rhs) {
                      SBQueue, operator=,(const lldb::SBQueue &), rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBQueue::~SBQueue() = default;
@@ -293,7 +293,7 @@ SBThread SBQueue::GetThreadAtIndex(uint32_t idx) {
                      idx);
 
   SBThread th = m_opaque_sp->GetThreadAtIndex(idx);
-  return LLDB_RECORD_RESULT(th);
+  return th;
 }
 
 uint32_t SBQueue::GetNumPendingItems() {
@@ -306,7 +306,7 @@ SBQueueItem SBQueue::GetPendingItemAtIndex(uint32_t idx) {
   LLDB_RECORD_METHOD(lldb::SBQueueItem, SBQueue, GetPendingItemAtIndex,
                      (uint32_t), idx);
 
-  return LLDB_RECORD_RESULT(m_opaque_sp->GetPendingItemAtIndex(idx));
+  return m_opaque_sp->GetPendingItemAtIndex(idx);
 }
 
 uint32_t SBQueue::GetNumRunningItems() {
@@ -318,40 +318,11 @@ uint32_t SBQueue::GetNumRunningItems() {
 SBProcess SBQueue::GetProcess() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBProcess, SBQueue, GetProcess);
 
-  return LLDB_RECORD_RESULT(m_opaque_sp->GetProcess());
+  return m_opaque_sp->GetProcess();
 }
 
 lldb::QueueKind SBQueue::GetKind() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::QueueKind, SBQueue, GetKind);
 
   return m_opaque_sp->GetKind();
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBQueue>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBQueue, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBQueue, (const lldb::QueueSP &));
-  LLDB_REGISTER_CONSTRUCTOR(SBQueue, (const lldb::SBQueue &));
-  LLDB_REGISTER_METHOD(const lldb::SBQueue &,
-                       SBQueue, operator=,(const lldb::SBQueue &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBQueue, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBQueue, operator bool, ());
-  LLDB_REGISTER_METHOD(void, SBQueue, Clear, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::queue_id_t, SBQueue, GetQueueID, ());
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBQueue, GetIndexID, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBQueue, GetName, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBQueue, GetNumThreads, ());
-  LLDB_REGISTER_METHOD(lldb::SBThread, SBQueue, GetThreadAtIndex, (uint32_t));
-  LLDB_REGISTER_METHOD(uint32_t, SBQueue, GetNumPendingItems, ());
-  LLDB_REGISTER_METHOD(lldb::SBQueueItem, SBQueue, GetPendingItemAtIndex,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(uint32_t, SBQueue, GetNumRunningItems, ());
-  LLDB_REGISTER_METHOD(lldb::SBProcess, SBQueue, GetProcess, ());
-  LLDB_REGISTER_METHOD(lldb::QueueKind, SBQueue, GetKind, ());
-}
-
-}
 }

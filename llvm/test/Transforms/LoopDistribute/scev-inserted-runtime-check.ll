@@ -14,9 +14,6 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK:       for.body.lver.check:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
@@ -88,10 +85,10 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    [[ARRAYIDXC:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[MUL_EXT]]
 ; CHECK-NEXT:    store i32 [[MULC]], i32* [[ARRAYIDXC]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[ADD]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT6:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT3:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       for.end.loopexit6:
+; CHECK:       for.end.loopexit3:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -153,9 +150,6 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK:       for.body.lver.check:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
@@ -227,10 +221,10 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK-NEXT:    [[ARRAYIDXC:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 [[MUL_EXT]]
 ; CHECK-NEXT:    store i32 [[MULC]], i32* [[ARRAYIDXC]], align 4
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[ADD]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT5:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT2:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       for.end.loopexit5:
+; CHECK:       for.end.loopexit2:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
