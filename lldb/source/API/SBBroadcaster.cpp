@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/Utility/Broadcaster.h"
 
 #include "lldb/API/SBBroadcaster.h"
@@ -172,42 +172,4 @@ bool SBBroadcaster::operator<(const SBBroadcaster &rhs) const {
       bool, SBBroadcaster, operator<,(const lldb::SBBroadcaster &), rhs);
 
   return m_opaque_ptr < rhs.m_opaque_ptr;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBBroadcaster>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBBroadcaster, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBBroadcaster, (const char *));
-  LLDB_REGISTER_CONSTRUCTOR(SBBroadcaster, (const lldb::SBBroadcaster &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBBroadcaster &,
-      SBBroadcaster, operator=,(const lldb::SBBroadcaster &));
-  LLDB_REGISTER_METHOD(void, SBBroadcaster, BroadcastEventByType,
-                       (uint32_t, bool));
-  LLDB_REGISTER_METHOD(void, SBBroadcaster, BroadcastEvent,
-                       (const lldb::SBEvent &, bool));
-  LLDB_REGISTER_METHOD(void, SBBroadcaster, AddInitialEventsToListener,
-                       (const lldb::SBListener &, uint32_t));
-  LLDB_REGISTER_METHOD(uint32_t, SBBroadcaster, AddListener,
-                       (const lldb::SBListener &, uint32_t));
-  LLDB_REGISTER_METHOD_CONST(const char *, SBBroadcaster, GetName, ());
-  LLDB_REGISTER_METHOD(bool, SBBroadcaster, EventTypeHasListeners,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(bool, SBBroadcaster, RemoveListener,
-                       (const lldb::SBListener &, uint32_t));
-  LLDB_REGISTER_METHOD_CONST(bool, SBBroadcaster, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBBroadcaster, operator bool, ());
-  LLDB_REGISTER_METHOD(void, SBBroadcaster, Clear, ());
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBBroadcaster, operator==,(const lldb::SBBroadcaster &));
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBBroadcaster, operator!=,(const lldb::SBBroadcaster &));
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBBroadcaster, operator<,(const lldb::SBBroadcaster &));
-}
-
-}
 }

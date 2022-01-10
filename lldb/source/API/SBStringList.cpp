@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBStringList.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/Utility/StringList.h"
 
@@ -131,30 +131,4 @@ void SBStringList::Clear() {
   if (IsValid()) {
     m_opaque_up->Clear();
   }
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBStringList>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBStringList, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBStringList, (const lldb::SBStringList &));
-  LLDB_REGISTER_METHOD(const lldb::SBStringList &,
-                       SBStringList, operator=,(const lldb::SBStringList &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBStringList, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBStringList, operator bool, ());
-  LLDB_REGISTER_METHOD(void, SBStringList, AppendString, (const char *));
-  LLDB_REGISTER_METHOD(void, SBStringList, AppendList, (const char **, int));
-  LLDB_REGISTER_METHOD(void, SBStringList, AppendList,
-                       (const lldb::SBStringList &));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBStringList, GetSize, ());
-  LLDB_REGISTER_METHOD(const char *, SBStringList, GetStringAtIndex,
-                       (size_t));
-  LLDB_REGISTER_METHOD_CONST(const char *, SBStringList, GetStringAtIndex,
-                             (size_t));
-  LLDB_REGISTER_METHOD(void, SBStringList, Clear, ());
-}
-
-}
 }

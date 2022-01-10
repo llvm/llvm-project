@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBFileSpecList.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBStream.h"
@@ -121,31 +121,4 @@ bool SBFileSpecList::GetDescription(SBStream &description) const {
     strm.PutCString("No value");
 
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBFileSpecList>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBFileSpecList, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBFileSpecList, (const lldb::SBFileSpecList &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBFileSpecList &,
-      SBFileSpecList, operator=,(const lldb::SBFileSpecList &));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBFileSpecList, GetSize, ());
-  LLDB_REGISTER_METHOD(void, SBFileSpecList, Append,
-                       (const lldb::SBFileSpec &));
-  LLDB_REGISTER_METHOD(bool, SBFileSpecList, AppendIfUnique,
-                       (const lldb::SBFileSpec &));
-  LLDB_REGISTER_METHOD(void, SBFileSpecList, Clear, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBFileSpecList, FindFileIndex,
-                       (uint32_t, const lldb::SBFileSpec &, bool));
-  LLDB_REGISTER_METHOD_CONST(const lldb::SBFileSpec, SBFileSpecList,
-                             GetFileSpecAtIndex, (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(bool, SBFileSpecList, GetDescription,
-                             (lldb::SBStream &));
-}
-
-}
 }

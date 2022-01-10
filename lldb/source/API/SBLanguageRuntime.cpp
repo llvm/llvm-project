@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBLanguageRuntime.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/Target/Language.h"
 
 using namespace lldb;
@@ -28,18 +28,4 @@ SBLanguageRuntime::GetNameForLanguageType(lldb::LanguageType language) {
                             language);
 
   return Language::GetNameForLanguageType(language);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBLanguageRuntime>(Registry &R) {
-  LLDB_REGISTER_STATIC_METHOD(lldb::LanguageType, SBLanguageRuntime,
-                              GetLanguageTypeFromString, (const char *));
-  LLDB_REGISTER_STATIC_METHOD(const char *, SBLanguageRuntime,
-                              GetNameForLanguageType, (lldb::LanguageType));
-}
-
-}
 }
