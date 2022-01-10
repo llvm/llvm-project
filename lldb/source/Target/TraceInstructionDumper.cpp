@@ -137,7 +137,7 @@ DumpInstructionSymbolContext(Stream &s,
              insn.sc.module_sp->GetFileSpec().GetFilename().AsCString());
   else
     insn.sc.DumpStopContext(&s, insn.exe_ctx.GetTargetPtr(), insn.address,
-                            /*show_fullpath=*/false,
+                            /*show_fullpaths=*/false,
                             /*show_module=*/true, /*show_inlined_frames=*/false,
                             /*show_function_arguments=*/true,
                             /*show_function_name=*/true);
