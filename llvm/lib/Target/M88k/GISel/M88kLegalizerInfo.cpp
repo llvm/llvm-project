@@ -39,10 +39,13 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{S32, P0}})
       .minScalar(0, S32);
-  getActionDefinitionsBuilder(G_LOAD).legalFor({S32, S64});
+  getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+      .legalForTypesWithMemDesc({{S32, P0, S8, 8}, {S32, P0, S16, 16}});
+  getActionDefinitionsBuilder(G_LOAD).legalForTypesWithMemDesc(
+      {{S32, P0, S32, 32}, {S64, P0, S64, 64}});
   getActionDefinitionsBuilder(G_STORE).legalForTypesWithMemDesc(
-      {{S8, P0, S8, 8},
-       {S16, P0, S16, 16},
+      {{S8, P0, S8, 8},    // Truncating store.
+       {S16, P0, S16, 16}, // Truncating store.
        {S32, P0, S32, 32},
        {S64, P0, S64, 64}});
   getActionDefinitionsBuilder(G_PTR_ADD)
@@ -60,8 +63,7 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .clampScalar(2, S32, S32)
       .clampScalar(1, S32, S32)
       .clampScalar(0, S32, S32);
-    getActionDefinitionsBuilder(
-        {G_SHL, G_LSHR, G_ASHR})
+  getActionDefinitionsBuilder({G_SHL, G_LSHR, G_ASHR})
       .legalFor({{S32, S32}})
       .clampScalar(0, S32, S32)
       .clampScalar(1, S32, S32);

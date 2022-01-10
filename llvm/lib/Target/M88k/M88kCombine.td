@@ -11,6 +11,31 @@
 
 include "llvm/Target/GlobalISel/Combine.td"
 
+// Like all_combines, but removed vector and fma combines.
+def m88k_combines : GICombineGroup<[trivial_combines, combines_for_extload,
+    combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
+    simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands,
+    reassocs, ptr_add_immed_chain,
+    shl_ashr_to_sext_inreg, sext_inreg_of_load,
+    width_reduction_combines, select_combines,
+    known_bits_simplifications, ext_ext_fold,
+    not_cmp_fold, opt_brcond_by_inverting_cond,
+    unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
+    unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shl,
+    const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
+    shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
+    truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
+    form_bitfield_extract, constant_fold, fabs_fneg_fold,
+    intdiv_combines, mulh_combines, redundant_neg_operands,
+    and_or_disjoint_mask]>;
+
+def M88kPreLegalizerCombinerHelper: GICombinerHelper<
+  "M88kGenPreLegalizerCombinerHelper", [m88k_combines]> {
+  let DisableRuleOption = "m88kprelegalizercombiner-disable-rule";
+  let StateClass = "M88kPreLegalizerCombinerHelperState";
+  let AdditionalArguments = [];
+}
+
 // Lower
 //   G_AND $dst, (G_LSHR/G_ASHR $src, offset), (2**width - 1)
 // to

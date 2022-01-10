@@ -13,6 +13,8 @@ tablegen(LLVM M88kGenSubtargetInfo.inc -gen-subtarget)
 
 tablegen(LLVM M88kGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM M88kGenRegisterBank.inc -gen-register-bank)
+tablegen(LLVM M88kGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="M88kPreLegalizerCombinerHelper")
 tablegen(LLVM M88kGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="M88kPostLegalizerCombinerHelper")
 tablegen(LLVM M88kGenPostLegalizeGILowering.inc -gen-global-isel-combiner
@@ -27,6 +29,7 @@ add_llvm_target(M88kCodeGen
   GISel/M88kCallLowering.cpp
   GISel/M88kInstructionSelector.cpp
   GISel/M88kLegalizerInfo.cpp
+  GISel/M88kPreLegalizerCombiner.cpp
   GISel/M88kPostLegalizerLowering.cpp
   GISel/M88kRegisterBankInfo.cpp
   M88kAsmPrinter.cpp

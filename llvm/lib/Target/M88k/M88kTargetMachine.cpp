@@ -137,6 +137,7 @@ public:
 
   // GlobalISEL
   bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
   void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
@@ -156,6 +157,10 @@ void M88kPassConfig::addPreEmitPass() {
 bool M88kPassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
+}
+
+void M88kPassConfig::addPreLegalizeMachineIR() {
+  addPass(createM88kPreLegalizerCombiner());
 }
 
 bool M88kPassConfig::addLegalizeMachineIR() {
