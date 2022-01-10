@@ -105,7 +105,7 @@ SBError SBInputReader::Initialize(
                               unsigned long),
     void *a, lldb::InputReaderGranularity b, char const *c, char const *d,
     bool e) {
-  LLDB_RECORD_DUMMY(
+  LLDB_RECORD_METHOD(
       lldb::SBError, SBInputReader, Initialize,
       (lldb::SBDebugger &,
        unsigned long (*)(void *, lldb::SBInputReader *, lldb::InputReaderAction,
@@ -233,9 +233,9 @@ SBDebugger SBDebugger::Create(bool source_init_files,
                               lldb::LogOutputCallback callback, void *baton)
 
 {
-  LLDB_RECORD_DUMMY(lldb::SBDebugger, SBDebugger, Create,
-                    (bool, lldb::LogOutputCallback, void *), source_init_files,
-                    callback, baton);
+  LLDB_RECORD_STATIC_METHOD(lldb::SBDebugger, SBDebugger, Create,
+                            (bool, lldb::LogOutputCallback, void *),
+                            source_init_files, callback, baton);
 
   SBDebugger debugger;
 
@@ -481,14 +481,14 @@ SBFile SBDebugger::GetErrorFile() {
 }
 
 void SBDebugger::SaveInputTerminalState() {
-  LLDB_RECORD_DUMMY_NO_ARGS(void, SBDebugger, SaveInputTerminalState);
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBDebugger, SaveInputTerminalState);
 
   if (m_opaque_sp)
     m_opaque_sp->SaveInputTerminalState();
 }
 
 void SBDebugger::RestoreInputTerminalState() {
-  LLDB_RECORD_DUMMY_NO_ARGS(void, SBDebugger, RestoreInputTerminalState);
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBDebugger, RestoreInputTerminalState);
 
   if (m_opaque_sp)
     m_opaque_sp->RestoreInputTerminalState();
@@ -1169,15 +1169,15 @@ SBStructuredData SBDebugger::GetAvailablePlatformInfoAtIndex(uint32_t idx) {
 }
 
 void SBDebugger::DispatchInput(void *baton, const void *data, size_t data_len) {
-  LLDB_RECORD_DUMMY(void, SBDebugger, DispatchInput,
-                    (void *, const void *, size_t), baton, data, data_len);
+  LLDB_RECORD_METHOD(void, SBDebugger, DispatchInput,
+                     (void *, const void *, size_t), baton, data, data_len);
 
   DispatchInput(data, data_len);
 }
 
 void SBDebugger::DispatchInput(const void *data, size_t data_len) {
-  LLDB_RECORD_DUMMY(void, SBDebugger, DispatchInput, (const void *, size_t),
-                    data, data_len);
+  LLDB_RECORD_METHOD(void, SBDebugger, DispatchInput, (const void *, size_t),
+                     data, data_len);
 
   //    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
   //
@@ -1194,7 +1194,7 @@ void SBDebugger::DispatchInput(const void *data, size_t data_len) {
 }
 
 void SBDebugger::DispatchInputInterrupt() {
-  LLDB_RECORD_DUMMY_NO_ARGS(void, SBDebugger, DispatchInputInterrupt);
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBDebugger, DispatchInputInterrupt);
 
   if (m_opaque_sp)
     m_opaque_sp->DispatchInputInterrupt();
@@ -1373,7 +1373,8 @@ uint32_t SBDebugger::GetTerminalWidth() const {
 }
 
 void SBDebugger::SetTerminalWidth(uint32_t term_width) {
-  LLDB_RECORD_DUMMY(void, SBDebugger, SetTerminalWidth, (uint32_t), term_width);
+  LLDB_RECORD_METHOD(void, SBDebugger, SetTerminalWidth, (uint32_t),
+                     term_width);
 
   if (m_opaque_sp)
     m_opaque_sp->SetTerminalWidth(term_width);
@@ -1702,8 +1703,8 @@ bool SBDebugger::EnableLog(const char *channel, const char **categories) {
 
 void SBDebugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
                                     void *baton) {
-  LLDB_RECORD_DUMMY(void, SBDebugger, SetLoggingCallback,
-                    (lldb::LogOutputCallback, void *), log_callback, baton);
+  LLDB_RECORD_METHOD(void, SBDebugger, SetLoggingCallback,
+                     (lldb::LogOutputCallback, void *), log_callback, baton);
 
   if (m_opaque_sp) {
     return m_opaque_sp->SetLoggingCallback(log_callback, baton);
