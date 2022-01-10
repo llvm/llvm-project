@@ -41,4 +41,151 @@ def MemRefElementTypeInterface : TypeInterface<"MemRefElementTypeInterface"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ShapedType
+//===----------------------------------------------------------------------===//
+
+def ShapedTypeInterface : TypeInterface<"ShapedType"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    This interface provides a common API for interacting with multi-dimensional
+    container types. These types contain a shape and an element type.
+
+    A shape is a list of sizes corresponding to the dimensions of the container.
+    If the number of dimensions in the shape is unknown, the shape is "unranked".
+    If the number of dimensions is known, the shape "ranked". The sizes of the
+    dimensions of the shape must be positive, or kDynamicSize (in which case the
+    size of the dimension is dynamic, or not statically known).
+  }];
+  let methods = [
+    InterfaceMethod<[{
+      Returns a clone of this type with the given shape and element
+      type. If a shape is not provided, the current shape of the type is used.
+    }],
+    "::mlir::ShapedType", "cloneWith", (ins
+      "::llvm::Optional<::llvm::ArrayRef<int64_t>>":$shape,
+      "::mlir::Type":$elementType
+    )>,
+
+    InterfaceMethod<[{
+      Returns the element type of this shaped type.
+    }],
+    "::mlir::Type", "getElementType">,
+
+    InterfaceMethod<[{
+      Returns if this type is ranked, i.e. it has a known number of dimensions.
+    }],
+    "bool", "hasRank">,
+
+    InterfaceMethod<[{
+      Returns the shape of this type if it is ranked, otherwise asserts.
+    }],
+    "::llvm::ArrayRef<int64_t>", "getShape">,
+  ];
+
+  let extraClassDeclaration = [{
+    // TODO: merge these two special values in a single one used everywhere.
+    // Unfortunately, uses of `-1` have crept deep into the codebase now and are
+    // hard to track.
+    static constexpr int64_t kDynamicSize = -1;
+    static constexpr int64_t kDynamicStrideOrOffset =
+        std::numeric_limits<int64_t>::min();
+
+    /// Whether the given dimension size indicates a dynamic dimension.
+    static constexpr bool isDynamic(int64_t dSize) {
+      return dSize == kDynamicSize;
+    }
+    static constexpr bool isDynamicStrideOrOffset(int64_t dStrideOrOffset) {
+      return dStrideOrOffset == kDynamicStrideOrOffset;
+    }
+
+    /// Return the number of elements present in the given shape.
+    static int64_t getNumElements(ArrayRef<int64_t> shape);
+
+    /// Returns the total amount of bits occupied by a value of this type. This
+    /// does not take into account any memory layout or widening constraints,
+    /// e.g. a vector<3xi57> may report to occupy 3x57=171 bit, even though in
+    /// practice it will likely be stored as in a 4xi64 vector register. Fails
+    /// with an assertion if the size cannot be computed statically, e.g. if the
+    /// type has a dynamic shape or if its elemental type does not have a known
+    /// bit width.
+    int64_t getSizeInBits() const;
+  }];
+
+  let extraSharedClassDeclaration = [{
+    /// Return a clone of this type with the given new shape and element type.
+    auto clone(::llvm::ArrayRef<int64_t> shape, Type elementType) {
+      return $_type.cloneWith(shape, elementType);
+    }
+    /// Return a clone of this type with the given new shape.
+    auto clone(::llvm::ArrayRef<int64_t> shape) {
+      return $_type.cloneWith(shape, $_type.getElementType());
+    }
+    /// Return a clone of this type with the given new element type.
+    auto clone(::mlir::Type elementType) {
+      return $_type.cloneWith(/*shape=*/llvm::None, elementType);
+    }
+
+    /// If an element type is an integer or a float, return its width. Otherwise,
+    /// abort.
+    unsigned getElementTypeBitWidth() const {
+      return $_type.getElementType().getIntOrFloatBitWidth();
+    }
+
+    /// If this is a ranked type, return the rank. Otherwise, abort.
+    int64_t getRank() const {
+      assert($_type.hasRank() && "cannot query rank of unranked shaped type");
+      return $_type.getShape().size();
+    }
+
+    /// If it has static shape, return the number of elements. Otherwise, abort.
+    int64_t getNumElements() const {
+      assert(hasStaticShape() && "cannot get element count of dynamic shaped type");
+      return ::mlir::ShapedType::getNumElements($_type.getShape());
+    }
+
+    /// Returns true if this dimension has a dynamic size (for ranked types);
+    /// aborts for unranked types.
+    bool isDynamicDim(unsigned idx) const {
+      assert(idx < getRank() && "invalid index for shaped type");
+      return ::mlir::ShapedType::isDynamic($_type.getShape()[idx]);
+    }
+
+    /// Returns if this type has a static shape, i.e. if the type is ranked and
+    /// all dimensions have known size (>= 0).
+    bool hasStaticShape() const {
+      return $_type.hasRank() &&
+             llvm::none_of($_type.getShape(), ::mlir::ShapedType::isDynamic);
+    }
+
+    /// Returns if this type has a static shape and the shape is equal to
+    /// `shape` return true.
+    bool hasStaticShape(::llvm::ArrayRef<int64_t> shape) const {
+      return hasStaticShape() && $_type.getShape() == shape;
+    }
+
+    /// If this is a ranked type, return the number of dimensions with dynamic
+    /// size. Otherwise, abort.
+    int64_t getNumDynamicDims() const {
+      return llvm::count_if($_type.getShape(), ::mlir::ShapedType::isDynamic);
+    }
+
+    /// If this is ranked type, return the size of the specified dimension.
+    /// Otherwise, abort.
+    int64_t getDimSize(unsigned idx) const {
+      assert(idx < getRank() && "invalid index for shaped type");
+      return $_type.getShape()[idx];
+    }
+
+    /// Returns the position of the dynamic dimension relative to just the dynamic
+    /// dimensions, given its `index` within the shape.
+    unsigned getDynamicDimIndex(unsigned index) const {
+      assert(index < getRank() && "invalid index");
+      assert(::mlir::ShapedType::isDynamic(getDimSize(index)) && "invalid index");
+      return llvm::count_if($_type.getShape().take_front(index),
+                            ::mlir::ShapedType::isDynamic);
+    }
+  }];
+}
+
 #endif // MLIR_IR_BUILTINTYPEINTERFACES_TD_

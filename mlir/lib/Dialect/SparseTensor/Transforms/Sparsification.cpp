@@ -518,7 +518,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
       // Find upper bound in current dimension.
       unsigned p = perm(enc, d);
       Value up = linalg::createOrFoldDimOp(rewriter, loc, t->get(), p);
-      if (shape[p] == MemRefType::kDynamicSize)
+      if (ShapedType::isDynamic(shape[p]))
         args.push_back(up);
       assert(codegen.highs[tensor][idx] == nullptr);
       codegen.sizes[idx] = codegen.highs[tensor][idx] = up;

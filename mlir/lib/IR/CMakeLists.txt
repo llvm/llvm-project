@@ -9,6 +9,7 @@ add_mlir_library(MLIRIR
   BuiltinAttributes.cpp
   BuiltinDialect.cpp
   BuiltinTypes.cpp
+  BuiltinTypeInterfaces.cpp
   Diagnostics.cpp
   Dialect.cpp
   Dominance.cpp
