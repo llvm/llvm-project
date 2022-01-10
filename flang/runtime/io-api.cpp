@@ -519,7 +519,7 @@ bool IONAME(SetPos)(Cookie cookie, std::int64_t pos) {
   ConnectionState &connection{io.GetConnectionState()};
   if (connection.access != Access::Stream) {
     io.GetIoErrorHandler().SignalError(
-        "REC= may not appear unless ACCESS='STREAM'");
+        "POS= may not appear unless ACCESS='STREAM'");
     return false;
   }
   if (pos < 1) {

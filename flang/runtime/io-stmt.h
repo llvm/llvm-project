@@ -577,7 +577,7 @@ public:
 private:
   bool wasExtant_;
   std::optional<OpenStatus> status_;
-  Position position_{Position::AsIs};
+  std::optional<Position> position_;
   std::optional<Action> action_;
   Convert convert_{Convert::Native};
   OwningPtr<char> path_;
