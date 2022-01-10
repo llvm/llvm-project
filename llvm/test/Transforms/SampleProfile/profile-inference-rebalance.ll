@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-use-profi -sample-profile-file=%S/Inputs/profile-inference-rebalance.prof | opt -analyze -branch-prob -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-use-profi -sample-profile-file=%S/Inputs/profile-inference-rebalance.prof | opt -analyze -block-freq  -enable-new-pm=0 | FileCheck %s --check-prefix=CHECK2
 
-; The test contains a "dimanond" and a "triangle" that needs to be rebalanced
+; The test contains a "diamond" and a "triangle" that needs to be rebalanced
 ; after basic profile inference.
 ;
 ;                  +----------------+
