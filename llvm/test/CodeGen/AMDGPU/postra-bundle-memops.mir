@@ -125,7 +125,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   DBG_VALUE internal $vgpr0, 0, 0
+    ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
     ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     ; GCN-NEXT: }
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
@@ -144,9 +144,9 @@ body:             |
     ; GCN-LABEL: name: bundle_dbg_value_1
     ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr1, implicit $vgpr5_vgpr6 {
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   DBG_VALUE internal $vgpr0, 0, 0
+    ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
     ; GCN-NEXT:   DBG_VALUE $vgpr1, 0, 0
     ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     ; GCN-NEXT: }
@@ -171,7 +171,7 @@ body:             |
     ; GCN-NEXT: DBG_VALUE $vgpr1, 0, 0
     ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
     ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   DBG_VALUE internal $vgpr0, 0, 0
+    ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
     ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: DBG_VALUE $vgpr2, 0, 0
