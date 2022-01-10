@@ -13,6 +13,7 @@
 #include <__config>
 #include <__threading_support>
 #include <chrono>
+#include <ratio>
 #include <system_error>
 #include <time.h>
 

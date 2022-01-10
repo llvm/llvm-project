@@ -17,6 +17,7 @@
 #include "cstdlib"
 #include "ctime"
 #include "filesystem"
+#include "ratio"
 #include "system_error"
 
 #if !defined(_LIBCPP_WIN32API)

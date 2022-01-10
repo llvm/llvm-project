@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___THREAD_POLL_WITH_BACKOFF_H
 #define _LIBCPP___THREAD_POLL_WITH_BACKOFF_H
 
+#include <__availability>
 #include <__config>
 #include <chrono>
 

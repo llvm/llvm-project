@@ -104,6 +104,13 @@ set(files
   __charconv/chars_format.h
   __charconv/from_chars_result.h
   __charconv/to_chars_result.h
+  __chrono/calendar.h
+  __chrono/duration.h
+  __chrono/file_clock.h
+  __chrono/high_resolution_clock.h
+  __chrono/steady_clock.h
+  __chrono/system_clock.h
+  __chrono/time_point.h
   __compare/common_comparison_category.h
   __compare/compare_three_way.h
   __compare/compare_three_way_result.h

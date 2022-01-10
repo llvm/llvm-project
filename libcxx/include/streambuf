@@ -108,6 +108,7 @@ protected:
 */
 
 #include <__config>
+#include <cstdint>
 #include <ios>
 #include <iosfwd>
 #include <version>
