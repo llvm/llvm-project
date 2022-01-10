@@ -19,7 +19,6 @@ define void @load_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
@@ -104,7 +103,6 @@ define void @store_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
@@ -268,7 +266,6 @@ define void @clamped_index_equal_dependence(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[TMP0]] to i2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
