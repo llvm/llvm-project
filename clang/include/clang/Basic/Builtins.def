@@ -26,6 +26,7 @@
 //  i -> int
 //  h -> half (__fp16, OpenCL)
 //  x -> half (_Float16)
+//  y -> half (__bf16)
 //  f -> float
 //  d -> double
 //  z -> size_t
