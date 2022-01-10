@@ -13,6 +13,37 @@
 
 namespace Fortran::semantics {
 
+static void GetEntryStmts(
+    ProgramTree &node, const parser::SpecificationPart &spec) {
+  const auto &implicitPart{std::get<parser::ImplicitPart>(spec.t)};
+  for (const parser::ImplicitPartStmt &stmt : implicitPart.v) {
+    if (const auto *entryStmt{std::get_if<
+            parser::Statement<common::Indirection<parser::EntryStmt>>>(
+            &stmt.u)}) {
+      node.AddEntry(entryStmt->statement.value());
+    }
+  }
+  for (const auto &decl :
+      std::get<std::list<parser::DeclarationConstruct>>(spec.t)) {
+    if (const auto *entryStmt{std::get_if<
+            parser::Statement<common::Indirection<parser::EntryStmt>>>(
+            &decl.u)}) {
+      node.AddEntry(entryStmt->statement.value());
+    }
+  }
+}
+
+static void GetEntryStmts(
+    ProgramTree &node, const parser::ExecutionPart &exec) {
+  for (const auto &epConstruct : exec.v) {
+    if (const auto *entryStmt{std::get_if<
+            parser::Statement<common::Indirection<parser::EntryStmt>>>(
+            &epConstruct.u)}) {
+      node.AddEntry(entryStmt->statement.value());
+    }
+  }
+}
+
 template <typename T>
 static ProgramTree BuildSubprogramTree(const parser::Name &name, const T &x) {
   const auto &spec{std::get<parser::SpecificationPart>(x.t)};
@@ -20,6 +51,8 @@ static ProgramTree BuildSubprogramTree(const parser::Name &name, const T &x) {
   const auto &subps{
       std::get<std::optional<parser::InternalSubprogramPart>>(x.t)};
   ProgramTree node{name, spec, &exec};
+  GetEntryStmts(node, spec);
+  GetEntryStmts(node, exec);
   if (subps) {
     for (const auto &subp :
         std::get<std::list<parser::InternalSubprogram>>(subps->t)) {
@@ -34,7 +67,7 @@ static ProgramTree BuildSubprogramTree(const parser::Name &name, const T &x) {
 static ProgramTree BuildSubprogramTree(
     const parser::Name &name, const parser::BlockData &x) {
   const auto &spec{std::get<parser::SpecificationPart>(x.t)};
-  return ProgramTree{name, spec, nullptr};
+  return ProgramTree{name, spec};
 }
 
 template <typename T>
@@ -191,6 +224,10 @@ void ProgramTree::set_scope(Scope &scope) {
 
 void ProgramTree::AddChild(ProgramTree &&child) {
   children_.emplace_back(std::move(child));
+}
+
+void ProgramTree::AddEntry(const parser::EntryStmt &entryStmt) {
+  entryStmts_.emplace_back(entryStmt);
 }
 
 } // namespace Fortran::semantics
