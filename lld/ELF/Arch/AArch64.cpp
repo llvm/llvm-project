@@ -568,6 +568,98 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
+AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
+  if (!config->relax || config->emachine != EM_AARCH64) {
+    safeToRelaxAdrpLdr = false;
+    return;
+  }
+  // Check if R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
+  // always appear in pairs.
+  size_t i = 0;
+  const size_t size = relocs.size();
+  for (; i != size; ++i) {
+    if (relocs[i].type == R_AARCH64_ADR_GOT_PAGE) {
+      if (i + 1 < size && relocs[i + 1].type == R_AARCH64_LD64_GOT_LO12_NC) {
+        ++i;
+        continue;
+      }
+      break;
+    } else if (relocs[i].type == R_AARCH64_LD64_GOT_LO12_NC) {
+      break;
+    }
+  }
+  safeToRelaxAdrpLdr = i == size;
+}
+
+bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
+                                     const Relocation &ldrRel, uint64_t secAddr,
+                                     uint8_t *buf) const {
+  if (!safeToRelaxAdrpLdr)
+    return false;
+
+  // When the definition of sym is not preemptible then we may
+  // be able to relax
+  // ADRP xn, :got: sym
+  // LDR xn, [ xn :got_lo12: sym]
+  // to
+  // ADRP xn, sym
+  // ADD xn, xn, :lo_12: sym
+
+  if (adrpRel.type != R_AARCH64_ADR_GOT_PAGE ||
+      ldrRel.type != R_AARCH64_LD64_GOT_LO12_NC)
+    return false;
+  // Check if the relocations apply to consecutive instructions.
+  if (adrpRel.offset + 4 != ldrRel.offset)
+    return false;
+  // Check if the relocations reference the same symbol and
+  // skip undefined, preemptible and STT_GNU_IFUNC symbols.
+  if (!adrpRel.sym || adrpRel.sym != ldrRel.sym || !adrpRel.sym->isDefined() ||
+      adrpRel.sym->isPreemptible || adrpRel.sym->isGnuIFunc())
+    return false;
+  // Check if the addends of the both instructions are zero.
+  if (adrpRel.addend != 0 || ldrRel.addend != 0)
+    return false;
+  uint32_t adrpInstr = read32le(buf + adrpRel.offset);
+  uint32_t ldrInstr = read32le(buf + ldrRel.offset);
+  // Check if the first instruction is ADRP and the second instruction is LDR.
+  if ((adrpInstr & 0x9f000000) != 0x90000000 ||
+      (ldrInstr & 0x3b000000) != 0x39000000)
+    return false;
+  // Check the value of the sf bit.
+  if (!(ldrInstr >> 31))
+    return false;
+  uint32_t adrpDestReg = adrpInstr & 0x1f;
+  uint32_t ldrDestReg = ldrInstr & 0x1f;
+  uint32_t ldrSrcReg = (ldrInstr >> 5) & 0x1f;
+  // Check if ADPR and LDR use the same register.
+  if (adrpDestReg != ldrDestReg || adrpDestReg != ldrSrcReg)
+    return false;
+
+  Symbol &sym = *adrpRel.sym;
+  // Check if the address difference is within 4GB range.
+  int64_t val =
+      getAArch64Page(sym.getVA()) - getAArch64Page(secAddr + adrpRel.offset);
+  if (val != llvm::SignExtend64(val, 33))
+    return false;
+
+  Relocation adrpSymRel = {R_AARCH64_PAGE_PC, R_AARCH64_ADR_PREL_PG_HI21,
+                           adrpRel.offset, /*addend=*/0, &sym};
+  Relocation addRel = {R_ABS, R_AARCH64_ADD_ABS_LO12_NC, ldrRel.offset,
+                       /*addend=*/0, &sym};
+
+  // adrp x_<dest_reg>
+  write32le(buf + adrpSymRel.offset, 0x90000000 | adrpDestReg);
+  // add x_<dest reg>, x_<dest reg>
+  write32le(buf + addRel.offset, 0x91000000 | adrpDestReg | (adrpDestReg << 5));
+
+  target->relocate(buf + adrpSymRel.offset, adrpSymRel,
+                   SignExtend64(getAArch64Page(sym.getVA()) -
+                                    getAArch64Page(secAddr + adrpSymRel.offset),
+                                64));
+  target->relocate(buf + addRel.offset, addRel, SignExtend64(sym.getVA(), 64));
+  return true;
+}
+
 // AArch64 may use security features in variant PLT sequences. These are:
 // Pointer Authentication (PAC), introduced in armv8.3-a and Branch Target
 // Indicator (BTI) introduced in armv8.5-a. The additional instructions used
