@@ -649,6 +649,9 @@ struct FormParams {
   uint16_t Version;
   uint8_t AddrSize;
   DwarfFormat Format;
+  /// True if DWARF v2 output generally uses relocations for references
+  /// to other .debug_* sections.
+  bool DwarfUsesRelocationsAcrossSections = false;
 
   /// The definition of the size of form DW_FORM_ref_addr depends on the
   /// version. In DWARF v2 it's the size of an address; after that, it's the
