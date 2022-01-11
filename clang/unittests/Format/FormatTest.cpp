@@ -23212,6 +23212,15 @@ TEST_F(FormatTest, EmptyShortBlock) {
                Style);
 }
 
+TEST_F(FormatTest, ShortTemplatedArgumentLists) {
+  auto Style = getLLVMStyle();
+
+  verifyFormat("struct Y : X<[] { return 0; }> {};", Style);
+  verifyFormat("struct Y<[] { return 0; }> {};", Style);
+
+  verifyFormat("struct Z : X<decltype([] { return 0; }){}> {};", Style);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
