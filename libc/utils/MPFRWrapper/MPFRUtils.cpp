@@ -16,6 +16,7 @@
 #include <cmath>
 #include <fenv.h>
 #include <memory>
+#include <sstream>
 #include <stdint.h>
 #include <string>
 
@@ -571,6 +572,10 @@ ternary_operation_one_output(Operation op, InputType x, InputType y,
   }
 }
 
+// Remark: For all the explain_*_error functions, we will use std::stringstream
+// to build the complete error messages before sending it to the outstream `OS`
+// once at the end.  This will stop the error messages from interleaving when
+// the tests are running concurrently.
 template <typename T>
 void explain_unary_operation_single_output_error(Operation op, T input,
                                                  T matchValue,
@@ -582,18 +587,20 @@ void explain_unary_operation_single_output_error(Operation op, T input,
   MPFRNumber mpfr_result;
   mpfr_result = unary_operation(op, input, precision, rounding);
   MPFRNumber mpfrMatchValue(matchValue);
-  OS << "Match value not within tolerance value of MPFR result:\n"
+  std::stringstream ss;
+  ss << "Match value not within tolerance value of MPFR result:\n"
      << "  Input decimal: " << mpfrInput.str() << '\n';
-  __llvm_libc::fputil::testing::describeValue("     Input bits: ", input, OS);
-  OS << '\n' << "  Match decimal: " << mpfrMatchValue.str() << '\n';
+  __llvm_libc::fputil::testing::describeValue("     Input bits: ", input, ss);
+  ss << '\n' << "  Match decimal: " << mpfrMatchValue.str() << '\n';
   __llvm_libc::fputil::testing::describeValue("     Match bits: ", matchValue,
-                                              OS);
-  OS << '\n' << "    MPFR result: " << mpfr_result.str() << '\n';
+                                              ss);
+  ss << '\n' << "    MPFR result: " << mpfr_result.str() << '\n';
   __llvm_libc::fputil::testing::describeValue(
-      "   MPFR rounded: ", mpfr_result.as<T>(), OS);
-  OS << '\n';
-  OS << "      ULP error: " << std::to_string(mpfr_result.ulp(matchValue))
+      "   MPFR rounded: ", mpfr_result.as<T>(), ss);
+  ss << '\n';
+  ss << "      ULP error: " << std::to_string(mpfr_result.ulp(matchValue))
      << '\n';
+  OS << ss.str();
 }
 
 template void
@@ -616,31 +623,33 @@ void explain_unary_operation_two_outputs_error(
   int mpfrIntResult;
   MPFRNumber mpfr_result = unary_operation_two_outputs(op, input, mpfrIntResult,
                                                        precision, rounding);
+  std::stringstream ss;
 
   if (mpfrIntResult != libc_result.i) {
-    OS << "MPFR integral result: " << mpfrIntResult << '\n'
+    ss << "MPFR integral result: " << mpfrIntResult << '\n'
        << "Libc integral result: " << libc_result.i << '\n';
   } else {
-    OS << "Integral result from libc matches integral result from MPFR.\n";
+    ss << "Integral result from libc matches integral result from MPFR.\n";
   }
 
   MPFRNumber mpfrMatchValue(libc_result.f);
-  OS << "Libc floating point result is not within tolerance value of the MPFR "
+  ss << "Libc floating point result is not within tolerance value of the MPFR "
      << "result.\n\n";
 
-  OS << "            Input decimal: " << mpfrInput.str() << "\n\n";
+  ss << "            Input decimal: " << mpfrInput.str() << "\n\n";
 
-  OS << "Libc floating point value: " << mpfrMatchValue.str() << '\n';
+  ss << "Libc floating point value: " << mpfrMatchValue.str() << '\n';
   __llvm_libc::fputil::testing::describeValue(
-      " Libc floating point bits: ", libc_result.f, OS);
-  OS << "\n\n";
+      " Libc floating point bits: ", libc_result.f, ss);
+  ss << "\n\n";
 
-  OS << "              MPFR result: " << mpfr_result.str() << '\n';
+  ss << "              MPFR result: " << mpfr_result.str() << '\n';
   __llvm_libc::fputil::testing::describeValue(
-      "             MPFR rounded: ", mpfr_result.as<T>(), OS);
-  OS << '\n'
+      "             MPFR rounded: ", mpfr_result.as<T>(), ss);
+  ss << '\n'
      << "                ULP error: "
      << std::to_string(mpfr_result.ulp(libc_result.f)) << '\n';
+  OS << ss.str();
 }
 
 template void explain_unary_operation_two_outputs_error<float>(
@@ -665,17 +674,19 @@ void explain_binary_operation_two_outputs_error(
   MPFRNumber mpfr_result = binary_operation_two_outputs(
       op, input.x, input.y, mpfrIntResult, precision, rounding);
   MPFRNumber mpfrMatchValue(libc_result.f);
+  std::stringstream ss;
 
-  OS << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str() << '\n'
+  ss << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str() << '\n'
      << "MPFR integral result: " << mpfrIntResult << '\n'
      << "Libc integral result: " << libc_result.i << '\n'
      << "Libc floating point result: " << mpfrMatchValue.str() << '\n'
      << "               MPFR result: " << mpfr_result.str() << '\n';
   __llvm_libc::fputil::testing::describeValue(
-      "Libc floating point result bits: ", libc_result.f, OS);
+      "Libc floating point result bits: ", libc_result.f, ss);
   __llvm_libc::fputil::testing::describeValue(
-      "              MPFR rounded bits: ", mpfr_result.as<T>(), OS);
-  OS << "ULP error: " << std::to_string(mpfr_result.ulp(libc_result.f)) << '\n';
+      "              MPFR rounded bits: ", mpfr_result.as<T>(), ss);
+  ss << "ULP error: " << std::to_string(mpfr_result.ulp(libc_result.f)) << '\n';
+  OS << ss.str();
 }
 
 template void explain_binary_operation_two_outputs_error<float>(
@@ -701,20 +712,22 @@ void explain_binary_operation_one_output_error(
   MPFRNumber mpfr_result =
       binary_operation_one_output(op, input.x, input.y, precision, rounding);
   MPFRNumber mpfrMatchValue(libc_result);
+  std::stringstream ss;
 
-  OS << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str() << '\n';
+  ss << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str() << '\n';
   __llvm_libc::fputil::testing::describeValue("First input bits: ", input.x,
-                                              OS);
+                                              ss);
   __llvm_libc::fputil::testing::describeValue("Second input bits: ", input.y,
-                                              OS);
+                                              ss);
 
-  OS << "Libc result: " << mpfrMatchValue.str() << '\n'
+  ss << "Libc result: " << mpfrMatchValue.str() << '\n'
      << "MPFR result: " << mpfr_result.str() << '\n';
   __llvm_libc::fputil::testing::describeValue(
-      "Libc floating point result bits: ", libc_result, OS);
+      "Libc floating point result bits: ", libc_result, ss);
   __llvm_libc::fputil::testing::describeValue(
-      "              MPFR rounded bits: ", mpfr_result.as<T>(), OS);
-  OS << "ULP error: " << std::to_string(mpfr_result.ulp(libc_result)) << '\n';
+      "              MPFR rounded bits: ", mpfr_result.as<T>(), ss);
+  ss << "ULP error: " << std::to_string(mpfr_result.ulp(libc_result)) << '\n';
+  OS << ss.str();
 }
 
 template void explain_binary_operation_one_output_error<float>(
@@ -741,23 +754,25 @@ void explain_ternary_operation_one_output_error(
   MPFRNumber mpfr_result = ternary_operation_one_output(
       op, input.x, input.y, input.z, precision, rounding);
   MPFRNumber mpfrMatchValue(libc_result);
+  std::stringstream ss;
 
-  OS << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str()
+  ss << "Input decimal: x: " << mpfrX.str() << " y: " << mpfrY.str()
      << " z: " << mpfrZ.str() << '\n';
   __llvm_libc::fputil::testing::describeValue("First input bits: ", input.x,
-                                              OS);
+                                              ss);
   __llvm_libc::fputil::testing::describeValue("Second input bits: ", input.y,
-                                              OS);
+                                              ss);
   __llvm_libc::fputil::testing::describeValue("Third input bits: ", input.z,
-                                              OS);
+                                              ss);
 
-  OS << "Libc result: " << mpfrMatchValue.str() << '\n'
+  ss << "Libc result: " << mpfrMatchValue.str() << '\n'
      << "MPFR result: " << mpfr_result.str() << '\n';
   __llvm_libc::fputil::testing::describeValue(
-      "Libc floating point result bits: ", libc_result, OS);
+      "Libc floating point result bits: ", libc_result, ss);
   __llvm_libc::fputil::testing::describeValue(
-      "              MPFR rounded bits: ", mpfr_result.as<T>(), OS);
-  OS << "ULP error: " << std::to_string(mpfr_result.ulp(libc_result)) << '\n';
+      "              MPFR rounded bits: ", mpfr_result.as<T>(), ss);
+  ss << "ULP error: " << std::to_string(mpfr_result.ulp(libc_result)) << '\n';
+  OS << ss.str();
 }
 
 template void explain_ternary_operation_one_output_error<float>(
