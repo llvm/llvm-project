@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/JSON.h"
@@ -22,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "google/protobuf/struct.pb.h"
 #include "google/protobuf/text_format.h"
 #include "tensorflow/c/c_api.h"
 #include "tensorflow/c/c_api_experimental.h"
@@ -71,6 +73,14 @@ TFStatusPtr createTFStatus() {
 
 TFSessionOptionsPtr createTFSessionOptions() {
   return TFSessionOptionsPtr(TF_NewSessionOptions(), &TF_DeleteSessionOptions);
+}
+
+void serialize(const Message &SE, std::string *OutStr) {
+  if (ProtobufTextMode) {
+    TextFormat::PrintToString(SE, OutStr);
+  } else {
+    *OutStr = SE.SerializeAsString();
+  }
 }
 } // namespace
 
@@ -307,19 +317,13 @@ public:
         IncludeReward(IncludeReward), FeatureLists(LoggedFeatureSpecs.size()) {}
 
   // flush the logged info to a stream and clear the log contents.
-  void flush(raw_ostream &OS) {
+  void flush(std::string *Str) {
     size_t NrRecords = getNrRecords();
     (void)NrRecords;
     tensorflow::SequenceExample SE;
     transferLog(SE);
     assert(isSelfConsistent(SE, NrRecords));
-    std::string OutStr;
-    if (ProtobufTextMode)
-      google::protobuf::TextFormat::PrintToString(SE, &OutStr);
-    else
-      OutStr = SE.SerializeAsString();
-
-    OS << OutStr;
+    serialize(SE, Str);
   }
 
   char *addNewTensor(size_t FeatureID) {
@@ -567,5 +571,31 @@ char *Logger::addEntryAndGetFloatOrInt64Buffer(size_t FeatureID) {
   return reinterpret_cast<char *>(LoggerData->addNewTensor(FeatureID));
 }
 
-void Logger::flush(raw_ostream &OS) { LoggerData->flush(OS); }
+void Logger::flush(std::string *Str) { LoggerData->flush(Str); }
+
+void Logger::flush(raw_ostream &OS) {
+  std::string Buff;
+  LoggerData->flush(&Buff);
+  OS << Buff;
+}
+
+void Logger::flushLogs(raw_ostream &OS,
+                       const StringMap<std::unique_ptr<Logger>> &Loggers) {
+  google::protobuf::Struct Msg;
+  for (const auto &NamedLogger : Loggers) {
+    tensorflow::SequenceExample SE;
+    const auto &Logger = NamedLogger.second;
+    std::string Unencoded;
+    if (Logger->LoggerData->getNrRecords() > 0)
+      Logger->flush(&Unencoded);
+
+    (*Msg.mutable_fields())[NamedLogger.first().str()]
+        .mutable_string_value()
+        ->append(ProtobufTextMode ? Unencoded : encodeBase64(Unencoded));
+  }
+
+  std::string OutStr;
+  serialize(Msg, &OutStr);
+  OS << OutStr;
+}
 #endif // defined(LLVM_HAVE_TF_API)

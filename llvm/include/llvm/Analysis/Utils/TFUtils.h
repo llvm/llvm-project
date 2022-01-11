@@ -178,7 +178,13 @@ public:
 
   // Flush the content of the log to the stream, clearing the stored data in the
   // process.
+  void flush(std::string *Str);
   void flush(raw_ostream &OS);
+
+  // Flush a set of logs that are produced from the same module, e.g.
+  // per-function regalloc traces, as a google::protobuf::Struct message.
+  static void flushLogs(raw_ostream &OS,
+                        const StringMap<std::unique_ptr<Logger>> &Loggers);
 
 private:
   std::vector<LoggedFeatureSpec> FeatureSpecs;
