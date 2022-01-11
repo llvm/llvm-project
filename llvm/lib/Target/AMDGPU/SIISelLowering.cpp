@@ -5501,6 +5501,22 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                          MachineMemOperand::MOInvariant);
 }
 
+/// Return true if the value is a known valid address, such that a null check is
+/// not necessary.
+static bool isKnownNonNull(SDValue Val, SelectionDAG &DAG,
+                           const AMDGPUTargetMachine &TM, unsigned AddrSpace) {
+  if (isa<FrameIndexSDNode>(Val) || isa<GlobalAddressSDNode>(Val) ||
+      isa<BasicBlockSDNode>(Val))
+    return true;
+
+  if (auto *ConstVal = dyn_cast<ConstantSDNode>(Val))
+    return ConstVal->getSExtValue() != TM.getNullPointerValue(AddrSpace);
+
+  // TODO: Search through arithmetic, handle arguments and loads
+  // marked nonnull.
+  return false;
+}
+
 SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc SL(Op);
@@ -5508,44 +5524,51 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   SDValue Src = ASC->getOperand(0);
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
+  unsigned SrcAS = ASC->getSrcAddressSpace();
 
   const AMDGPUTargetMachine &TM =
     static_cast<const AMDGPUTargetMachine &>(getTargetMachine());
 
   // flat -> local/private
-  if (ASC->getSrcAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     unsigned DestAS = ASC->getDestAddressSpace();
 
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
         DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
+      SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
+
+      if (isKnownNonNull(Src, DAG, TM, SrcAS))
+        return Ptr;
+
       unsigned NullVal = TM.getNullPointerValue(DestAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
       SDValue NonNull = DAG.getSetCC(SL, MVT::i1, Src, FlatNullPtr, ISD::SETNE);
-      SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
-      return DAG.getNode(ISD::SELECT, SL, MVT::i32,
-                         NonNull, Ptr, SegmentNullPtr);
+      return DAG.getNode(ISD::SELECT, SL, MVT::i32, NonNull, Ptr,
+                         SegmentNullPtr);
     }
   }
 
   // local/private -> flat
   if (ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
-    unsigned SrcAS = ASC->getSrcAddressSpace();
-
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
         SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
+
+      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), SL, DAG);
+      SDValue CvtPtr =
+          DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
+      CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
+
+      if (isKnownNonNull(Src, DAG, TM, SrcAS))
+        return CvtPtr;
+
       unsigned NullVal = TM.getNullPointerValue(SrcAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
 
       SDValue NonNull
         = DAG.getSetCC(SL, MVT::i1, Src, SegmentNullPtr, ISD::SETNE);
 
-      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), SL, DAG);
-      SDValue CvtPtr
-        = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
-
-      return DAG.getNode(ISD::SELECT, SL, MVT::i64, NonNull,
-                         DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr),
+      return DAG.getNode(ISD::SELECT, SL, MVT::i64, NonNull, CvtPtr,
                          FlatNullPtr);
     }
   }

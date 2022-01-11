@@ -1812,6 +1812,27 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
 }
 
+/// Return true if the value is a known valid address, such that a null check is
+/// not necessary.
+static bool isKnownNonNull(Register Val, MachineRegisterInfo &MRI,
+                           const AMDGPUTargetMachine &TM, unsigned AddrSpace) {
+  MachineInstr *Def = MRI.getVRegDef(Val);
+  switch (Def->getOpcode()) {
+  case AMDGPU::G_FRAME_INDEX:
+  case AMDGPU::G_GLOBAL_VALUE:
+  case AMDGPU::G_BLOCK_ADDR:
+    return true;
+  case AMDGPU::G_CONSTANT: {
+    const ConstantInt *CI = Def->getOperand(1).getCImm();
+    return CI->getSExtValue() != TM.getNullPointerValue(AddrSpace);
+  }
+  default:
+    return false;
+  }
+
+  return false;
+}
+
 bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineIRBuilder &B) const {
@@ -1862,6 +1883,14 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     assert(DestAS == AMDGPUAS::LOCAL_ADDRESS ||
            DestAS == AMDGPUAS::PRIVATE_ADDRESS);
+
+    if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+      // Extract low 32-bits of the pointer.
+      B.buildExtract(Dst, Src, 0);
+      MI.eraseFromParent();
+      return true;
+    }
+
     unsigned NullVal = TM.getNullPointerValue(DestAS);
 
     auto SegmentNull = B.buildConstant(DstTy, NullVal);
@@ -1884,17 +1913,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (!ST.hasFlatAddressSpace())
     return false;
 
-  auto SegmentNull =
-      B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
-  auto FlatNull =
-      B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
-
   Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
   if (!ApertureReg.isValid())
     return false;
-
-  auto CmpRes =
-      B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, SegmentNull.getReg(0));
 
   // Coerce the type of the low half of the result so we can use merge_values.
   Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
@@ -1902,6 +1923,19 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   // TODO: Should we allow mismatched types but matching sizes in merges to
   // avoid the ptrtoint?
   auto BuildPtr = B.buildMerge(DstTy, {SrcAsInt, ApertureReg});
+
+  if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    B.buildCopy(Dst, BuildPtr);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  auto SegmentNull = B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
+  auto FlatNull = B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
+
+  auto CmpRes =
+      B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, SegmentNull.getReg(0));
+
   B.buildSelect(Dst, CmpRes, BuildPtr, FlatNull);
 
   MI.eraseFromParent();
