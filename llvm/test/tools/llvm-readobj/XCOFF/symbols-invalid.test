@@ -1,0 +1,33 @@
+## This file tests the raw data output ability when a file auxiliary entry does
+## not have the matching auxiliary type.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --syms %t | FileCheck %s
+
+# CHECK:      Symbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Index: 0
+# CHECK-NEXT:     Name: .fun
+# CHECK-NEXT:     Value (SymbolTableIndex): 0x0
+# CHECK-NEXT:     Section: N_UNDEF
+# CHECK-NEXT:     Source Language ID: TB_C (0x0)
+# CHECK-NEXT:     CPU Version ID: 0x0
+# CHECK-NEXT:     StorageClass: C_FILE (0x67)
+# CHECK-NEXT:     NumberOfAuxEntries: 1
+# CHECK-NEXT:     !Unexpected raw auxiliary entry data:
+# CHECK-NEXT:     00000000 00000001 00020300 00000000 00fb
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1F7
+Symbols:
+  - Name:         .fun
+    StorageClass: C_FILE
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        ParameterHashIndex:     1
+        TypeChkSectNum:         2
+        SymbolAlignmentAndType: 3
+        StorageMappingClass:    XMC_PR
