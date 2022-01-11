@@ -236,11 +236,11 @@
 #define LIBCPP_ASSERT_NOT_NOEXCEPT(...) ASSERT_NOT_NOEXCEPT(__VA_ARGS__)
 #define LIBCPP_ONLY(...) __VA_ARGS__
 #else
-#define LIBCPP_ASSERT(...) ((void)0)
-#define LIBCPP_STATIC_ASSERT(...) ((void)0)
-#define LIBCPP_ASSERT_NOEXCEPT(...) ((void)0)
-#define LIBCPP_ASSERT_NOT_NOEXCEPT(...) ((void)0)
-#define LIBCPP_ONLY(...) ((void)0)
+#define LIBCPP_ASSERT(...) static_assert(true, "")
+#define LIBCPP_STATIC_ASSERT(...) static_assert(true, "")
+#define LIBCPP_ASSERT_NOEXCEPT(...) static_assert(true, "")
+#define LIBCPP_ASSERT_NOT_NOEXCEPT(...) static_assert(true, "")
+#define LIBCPP_ONLY(...) static_assert(true, "")
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
