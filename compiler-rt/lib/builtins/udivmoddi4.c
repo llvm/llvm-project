@@ -21,7 +21,7 @@
 // MSVC throws a warning about mod 0 here, disable it for builds that
 // warn-as-error
 #pragma warning(push)
-#pragma warning(disable : 4724)
+#pragma warning(disable : 4723 4724)
 #endif
 
 COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem) {

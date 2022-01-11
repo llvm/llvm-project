@@ -34,6 +34,7 @@ Security Group Members
 The members of the group represent a wide cross-section of the community, and meet the criteria for inclusion below. The list is in the format `* ${full_name} (${affiliation}) [${phabricator_username}]`. If a phabricator username for an individual isn't available, the brackets will be empty.
 
 * Ahmed Bougacha (Apple) [ab]
+* Andy Kaylor (Intel) [andykaylor]
 * Artur Pilipenko (Azul Systems Inc) [apilipenko]
 * Dimitry Andric (individual; FreeBSD) [dim]
 * Ed Maste (individual; FreeBSD) [emaste]
@@ -47,6 +48,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Peter Smith (ARM) [peter.smith]
 * Pietro Albini (individual; Rust) [pietroalbini]
 * Serge Guelton (RedHat) [serge-sans-paille]
+* Sergey Maslov (Intel) [smaslov-intel]
 * Shayne Hiet-Block (Microsoft) [Shayne]
 * Steve Klabnik (Oxide Computer Company; Rust) [steveklabnik]
 * Tim Penge (Sony) [tpenge]

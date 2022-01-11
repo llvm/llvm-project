@@ -80,7 +80,7 @@ set(PROFILE_HEADERS
 if(WIN32)
   list(APPEND PROFILE_SOURCES
     WindowsMMap.c
-    )
+  )
 endif()
 
 include_directories(..)
@@ -119,6 +119,9 @@ string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}
 # initializers. All other compilers accept this, though.
 # nonstandard extension used : 'identifier' : cannot be initialized using address of automatic variable
 append_list_if(COMPILER_RT_HAS_WD4221_FLAG /wd4221 EXTRA_FLAGS)
+
+# Disable 'nonstandard extension used: translation unit is empty'.
+append_list_if(COMPILER_RT_HAS_WD4206_FLAG /wd4206 EXTRA_FLAGS)
 
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.profile
