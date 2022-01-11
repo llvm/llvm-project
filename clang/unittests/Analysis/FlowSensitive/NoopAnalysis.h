@@ -44,9 +44,7 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  NoopLattice transfer(const Stmt *S, const NoopLattice &E, Environment &Env) {
-    return {};
-  }
+  void transfer(const Stmt *S, NoopLattice &E, Environment &Env) {}
 };
 
 } // namespace dataflow

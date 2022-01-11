@@ -835,7 +835,7 @@ Value *CoroCloner::deriveNewFramePointer() {
 static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
                                  unsigned ParamIndex,
                                  uint64_t Size, Align Alignment) {
-  AttrBuilder ParamAttrs;
+  AttrBuilder ParamAttrs(Context);
   ParamAttrs.addAttribute(Attribute::NonNull);
   ParamAttrs.addAttribute(Attribute::NoAlias);
   ParamAttrs.addAlignmentAttr(Alignment);
@@ -845,14 +845,14 @@ static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
 
 static void addAsyncContextAttrs(AttributeList &Attrs, LLVMContext &Context,
                                  unsigned ParamIndex) {
-  AttrBuilder ParamAttrs;
+  AttrBuilder ParamAttrs(Context);
   ParamAttrs.addAttribute(Attribute::SwiftAsync);
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
 }
 
 static void addSwiftSelfAttrs(AttributeList &Attrs, LLVMContext &Context,
                               unsigned ParamIndex) {
-  AttrBuilder ParamAttrs;
+  AttrBuilder ParamAttrs(Context);
   ParamAttrs.addAttribute(Attribute::SwiftSelf);
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
 }
@@ -929,7 +929,7 @@ void CoroCloner::create() {
   case coro::ABI::Switch:
     // Bootstrap attributes by copying function attributes from the
     // original function.  This should include optimization settings and so on.
-    NewAttrs = NewAttrs.addFnAttributes(Context, OrigAttrs.getFnAttrs());
+    NewAttrs = NewAttrs.addFnAttributes(Context, AttrBuilder(Context, OrigAttrs.getFnAttrs()));
 
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
@@ -952,7 +952,7 @@ void CoroCloner::create() {
 
     // Transfer the original function's attributes.
     auto FnAttrs = OrigF.getAttributes().getFnAttrs();
-    NewAttrs = NewAttrs.addFnAttributes(Context, FnAttrs);
+    NewAttrs = NewAttrs.addFnAttributes(Context, AttrBuilder(Context, FnAttrs));
     break;
   }
   case coro::ABI::Retcon:

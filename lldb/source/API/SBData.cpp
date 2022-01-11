@@ -342,9 +342,9 @@ bool SBData::GetDescription(lldb::SBStream &description,
 
 size_t SBData::ReadRawData(lldb::SBError &error, lldb::offset_t offset,
                            void *buf, size_t size) {
-  LLDB_RECORD_DUMMY(size_t, SBData, ReadRawData,
-                    (lldb::SBError &, lldb::offset_t, void *, size_t), error,
-                    offset, buf, size);
+  LLDB_RECORD_METHOD(size_t, SBData, ReadRawData,
+                     (lldb::SBError &, lldb::offset_t, void *, size_t), error,
+                     offset, buf, size);
 
   void *ok = nullptr;
   if (!m_opaque_sp.get()) {
@@ -360,7 +360,7 @@ size_t SBData::ReadRawData(lldb::SBError &error, lldb::offset_t offset,
 
 void SBData::SetData(lldb::SBError &error, const void *buf, size_t size,
                      lldb::ByteOrder endian, uint8_t addr_size) {
-  LLDB_RECORD_DUMMY(
+  LLDB_RECORD_METHOD(
       void, SBData, SetData,
       (lldb::SBError &, const void *, size_t, lldb::ByteOrder, uint8_t), error,
       buf, size, endian, addr_size);
@@ -377,10 +377,10 @@ void SBData::SetData(lldb::SBError &error, const void *buf, size_t size,
 void SBData::SetDataWithOwnership(lldb::SBError &error, const void *buf,
                                   size_t size, lldb::ByteOrder endian,
                                   uint8_t addr_size) {
-  LLDB_RECORD_DUMMY(
+  LLDB_RECORD_METHOD(
       void, SBData, SetData,
       (lldb::SBError &, const void *, size_t, lldb::ByteOrder, uint8_t, bool),
-      error, buf, size, endian, addr_size, copy);
+      error, buf, size, endian, addr_size);
 
   lldb::DataBufferSP buffer_sp = std::make_shared<DataBufferHeap>(buf, size);
 

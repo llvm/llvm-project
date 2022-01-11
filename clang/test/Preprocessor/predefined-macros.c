@@ -60,6 +60,15 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FAST-MATH
 // CHECK-FAST-MATH: #define __FAST_MATH__ 1
 // CHECK-FAST-MATH: #define __FINITE_MATH_ONLY__ 1
+// CHECK-FAST-MATH: #define __NO_MATH_ERRNO__ 1
+//
+// RUN: %clang_cc1 %s -E -dM -fmath-errno -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-MATH-ERRNO
+// CHECK-MATH-ERRNO-NOT: __NO_MATH_ERRNO__
+//
+// RUN: %clang %s -E -dM -fno-math-errno -o - \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-NO-MATH-ERRNO
+// CHECK-NO-MATH-ERRNO: #define __NO_MATH_ERRNO__ 1
 //
 // RUN: %clang_cc1 %s -E -dM -ffinite-math-only -o - \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FINITE-MATH-ONLY

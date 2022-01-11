@@ -104,4 +104,8 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
     __pragma(warning(pop))
 #endif // __clang__
 
+#if defined(_MSVC_EXECUTION_CHARACTER_SET) && _MSVC_EXECUTION_CHARACTER_SET != 65001
+#define _LIBCPP_HAS_NO_UNICODE 1
+#endif
+
 #endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_H

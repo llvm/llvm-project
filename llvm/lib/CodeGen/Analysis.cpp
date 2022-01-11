@@ -577,8 +577,8 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   bool &ADS = AllowDifferingSizes ? *AllowDifferingSizes : DummyADS;
   ADS = true;
 
-  AttrBuilder CallerAttrs(F->getAttributes(), AttributeList::ReturnIndex);
-  AttrBuilder CalleeAttrs(cast<CallInst>(I)->getAttributes(),
+  AttrBuilder CallerAttrs(F->getContext(), F->getAttributes(), AttributeList::ReturnIndex);
+  AttrBuilder CalleeAttrs(F->getContext(), cast<CallInst>(I)->getAttributes(),
                           AttributeList::ReturnIndex);
 
   // Following attributes are completely benign as far as calling convention

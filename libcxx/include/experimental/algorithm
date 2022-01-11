@@ -31,11 +31,10 @@ ForwardIterator search(ForwardIterator first, ForwardIterator last,
 
 */
 
-#include <experimental/__config>
-#include <algorithm>
-#include <type_traits>
-
 #include <__debug>
+#include <algorithm>
+#include <experimental/__config>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

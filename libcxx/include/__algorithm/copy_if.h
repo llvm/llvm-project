@@ -10,10 +10,6 @@
 #define _LIBCPP___ALGORITHM_COPY_IF_H
 
 #include <__config>
-#include <__algorithm/unwrap_iter.h>
-#include <__iterator/iterator_traits.h>
-#include <cstring>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

@@ -24,8 +24,17 @@
 // because they only show up under the module A building context.
 // RUN: FileCheck --input-file=%t/stderr %s
 // CHECK: double-quoted include "A0.h" in framework header, expected angle-bracketed instead
+// CHECK: #include "A0.h"
+// CHECK:          ^~~~~~
+// CHECK: <A/A0.h>
 // CHECK: double-quoted include "B.h" in framework header, expected angle-bracketed instead
+// CHECK: #include "B.h"
+// CHECK:          ^~~~~
+// CHECK: <B.h>
 // CHECK: double-quoted include "B.h" in framework header, expected angle-bracketed instead
+// CHECK: #import "B.h" // Included from Z.h & A.h
+// CHECK:         ^~~~~
+// CHECK: <B.h>
 
 #import "A.h"
 #import <Z/Z.h>
