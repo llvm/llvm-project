@@ -2064,11 +2064,9 @@ entry:
 define <vscale x 2 x i1> @intrinsic_vmsgeu_mask_vi_nxv2i16_i16(<vscale x 2 x i1> %0, <vscale x 2 x i16> %1, <vscale x 2 x i1> %2, i64 %3) nounwind {
 ; CHECK-LABEL: intrinsic_vmsgeu_mask_vi_nxv2i16_i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmseq.vv v10, v8, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vmset.m v8
+; CHECK-NEXT:    vmand.mm v0, v9, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i1> @llvm.riscv.vmsgeu.mask.nxv2i16.i16(
@@ -2085,7 +2083,7 @@ define <vscale x 4 x i1> @intrinsic_vmsgeu_vi_nxv4i16_i16(<vscale x 4 x i16> %0,
 ; CHECK-LABEL: intrinsic_vmsgeu_vi_nxv4i16_i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
-; CHECK-NEXT:    vmseq.vv v0, v8, v8
+; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vmsgeu.nxv4i16.i16(
