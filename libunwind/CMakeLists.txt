@@ -137,6 +137,11 @@ set(CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
     ${CMAKE_MODULE_PATH})
 
+set(LIBUNWIND_INSTALL_INCLUDE_DIR include CACHE PATH
+    "Path where built libunwind headers should be installed.")
+set(LIBUNWIND_INSTALL_RUNTIME_DIR bin CACHE PATH
+    "Path where built libunwind runtime libraries should be installed.")
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
@@ -154,11 +159,6 @@ else()
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LIBUNWIND_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libunwind libraries should be installed.")
 endif()
-
-set(LIBUNWIND_INSTALL_INCLUDE_DIR include CACHE PATH
-    "Path where built libunwind headers should be installed.")
-set(LIBUNWIND_INSTALL_RUNTIME_DIR bin CACHE PATH
-    "Path where built libunwind runtime libraries should be installed.")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBUNWIND_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBUNWIND_LIBRARY_DIR})
