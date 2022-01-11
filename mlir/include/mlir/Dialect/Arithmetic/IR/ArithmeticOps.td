@@ -634,7 +634,7 @@ def Arith_SubFOp : Arith_FloatBinaryOp<"subf"> {
 // MaxFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf"> {
+def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf", [Commutative]> {
   let summary = "floating-point maximum operation";
   let description = [{
     Syntax:
@@ -677,7 +677,7 @@ def Arith_MaxUIOp : Arith_IntBinaryOp<"maxui"> {
 // MinFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinFOp : Arith_FloatBinaryOp<"minf"> {
+def Arith_MinFOp : Arith_FloatBinaryOp<"minf", [Commutative]> {
   let summary = "floating-point minimum operation";
   let description = [{
     Syntax:
