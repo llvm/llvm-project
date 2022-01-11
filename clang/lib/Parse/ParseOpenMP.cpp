@@ -2214,7 +2214,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
                                                           StringRef ISATrait) {
       // TODO Track the selector locations in a way that is accessible here to
       // improve the diagnostic location.
-      Diag(Loc, diag::warn_unknown_begin_declare_variant_isa_trait) << ISATrait;
+      Diag(Loc, diag::warn_unknown_declare_variant_isa_trait) << ISATrait;
     };
     TargetOMPContext OMPCtx(
         ASTCtx, std::move(DiagUnknownTrait),
@@ -2551,7 +2551,13 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
     TPA.Revert();
     // End of the first iteration. Parser is reset to the start of metadirective
 
-    TargetOMPContext OMPCtx(ASTContext, /* DiagUnknownTrait */ nullptr,
+    std::function<void(StringRef)> DiagUnknownTrait = [this, Loc](
+                                                          StringRef ISATrait) {
+      // TODO Track the selector locations in a way that is accessible here to
+      // improve the diagnostic location.
+      Diag(Loc, diag::warn_unknown_declare_variant_isa_trait) << ISATrait;
+    };
+    TargetOMPContext OMPCtx(ASTContext, std::move(DiagUnknownTrait),
                             /* CurrentFunctionDecl */ nullptr,
                             ArrayRef<llvm::omp::TraitProperty>());
 

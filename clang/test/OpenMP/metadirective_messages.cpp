@@ -17,4 +17,6 @@ void foo() {
   ;
 #pragma omp metadirective when(device = {arch(nvptx)} : parallel default() // expected-error {{expected ',' or ')' in 'when' clause}} expected-error {{expected expression}}
   ;
+#pragma omp metadirective when(device = {isa("some-unsupported-feature")} : parallel) default(single) // expected-warning {{isa trait 'some-unsupported-feature' is not known to the current target; verify the spelling or consider restricting the context selector with the 'arch' selector further}}
+  ;
 }

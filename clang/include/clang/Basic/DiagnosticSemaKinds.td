@@ -10810,11 +10810,6 @@ def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause">;
 def err_omp_var_expected : Error<
   "expected variable of the '%0' type%select{|, not %2}1">;
-def warn_unknown_declare_variant_isa_trait
-    : Warning<"isa trait '%0' is not known to the current target; verify the "
-              "spelling or consider restricting the context selector with the "
-              "'arch' selector further">,
-      InGroup<SourceUsesOpenMP>;
 def err_omp_non_pointer_type_array_shaping_base : Error<
   "expected expression with a pointer to a complete type as a base of an array "
   "shaping operation">;
