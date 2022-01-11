@@ -256,6 +256,7 @@ bool mlir::linalg::comprehensive_bufferize::BufferizationState::
 /// themselves (e.g., ExtractSliceOp).
 bool mlir::linalg::comprehensive_bufferize::BufferizationState::isValueRead(
     Value value) const {
+  assert(value.getType().isa<TensorType>() && "expected TensorType");
   SmallVector<OpOperand *> workingSet;
   for (OpOperand &use : value.getUses())
     workingSet.push_back(&use);

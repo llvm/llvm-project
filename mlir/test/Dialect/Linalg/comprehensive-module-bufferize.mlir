@@ -410,7 +410,9 @@ func @main() {
 //      CHECK:   %[[A:.*]] = memref.get_global @__constant_4xi32 : memref<4xi32>
   %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
 
-//      CHECK:   %[[B:.*]] = memref.cast %[[A]] : memref<4xi32> to memref<4xi32, #[[$DYN_1D_MAP]]>
+//      CHECK:   %[[alloc:.*]] = memref.alloc
+//      CHECK:   %[[B:.*]] = memref.cast %[[alloc]] : memref<4xi32> to memref<4xi32, #[[$DYN_1D_MAP]]>
+//      CHECK:   linalg.copy(%[[A]], %[[alloc]])
 //      CHECK:   call @some_external_func(%[[B]]) : (memref<4xi32, #[[$DYN_1D_MAP]]>) -> ()
   call @some_external_func(%A) : (tensor<4xi32>) -> ()
 
@@ -430,7 +432,9 @@ func @main() {
 //      CHECK:   %[[A:.*]] = memref.get_global @__constant_4xi32 : memref<4xi32>
   %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
 
-//      CHECK:   %[[B:.*]] = memref.cast %[[A]] : memref<4xi32> to memref<4xi32, #[[$DYN_1D_MAP]]>
+//      CHECK:   %[[alloc:.*]] = memref.alloc
+//      CHECK:   %[[B:.*]] = memref.cast %[[alloc]] : memref<4xi32> to memref<4xi32, #[[$DYN_1D_MAP]]>
+//      CHECK:   linalg.copy(%[[A]], %[[alloc]])
 //      CHECK:   call @some_external_func_within_scf_execute(%[[B]]) : (memref<4xi32, #[[$DYN_1D_MAP]]>) -> ()
   scf.execute_region {
     call @some_external_func_within_scf_execute(%A) : (tensor<4xi32>) -> ()
@@ -488,16 +492,19 @@ func @bar(
     %lb : index, %ub : index, %step : index)
   -> (tensor<?xf32>, tensor<?xf32>)
 {
-// CHECK-NEXT:   call @scf_for_with_tensor_insert_slice(%[[A]], %[[B]], %[[C]]
+//      CHECK:   call @scf_for_with_tensor_insert_slice(%[[A]], %[[B]], %[[C]]
   %r0:2 = call @scf_for_with_tensor_insert_slice(%A, %B, %C, %lb, %ub, %step) :
       (tensor<?xf32>, tensor<?xf32>, tensor<4xf32>, index, index, index)
         -> (tensor<?xf32>, tensor<?xf32>)
 
-  // %r0#0 is actually %B after inplaceable results are swapped in the callee.
-// CHECK-NEXT:   call @some_external_func(%[[B]]) : (memref<?xf32, #[[$DYN_1D_MAP]]>) -> ()
+  // %r0#0 requires a copy because we have no idea what the function is doing.
+//      CHECK:   %[[alloc:.*]] = memref.alloc
+//      CHECK:   %[[casted:.*]] = memref.cast %[[alloc]]
+//      CHECK:   linalg.copy(%[[B]], %[[alloc]])
+// CHECK-NEXT:   call @some_external_func(%[[casted]]) : (memref<?xf32, #[[$DYN_1D_MAP]]>) -> ()
   call @some_external_func(%r0#0) : (tensor<?xf32>) -> ()
 
-// CHECK-NEXT:   return
+//      CHECK:   return
   return %r0#0, %r0#1: tensor<?xf32>, tensor<?xf32>
 }
 
@@ -745,8 +752,21 @@ func @callee(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -
 func @entry(%A : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -> (i)>, linalg.inplaceable = false},
             %B : tensor<?xf32> {linalg.buffer_layout = affine_map<(i)[s0, s1] -> (i)>, linalg.inplaceable = false},
             %C : tensor<?xf32> {linalg.inplaceable = false}) {
-// CHECK-NEXT: %[[CASTED_B:.*]] = memref.cast %[[B]] : memref<?xf32> to memref<?xf32, #[[$DYNAMIC]]>
-// CHECK-NEXT: call @callee(%[[A]], %[[CASTED_B]], %[[C]])
+// Note: `callee` does not write to its bbArg directly, but `external_func`
+// does. Inside `callee`, the writes via `external_func` do not cause a
+// conflict. However, inside `entry`, the writes do cause a conflict because
+// %A, %B and %C are not inplaceable. This test case shows that this kind of
+// conflict detection has a "transitive" nature.
+//      CHECK: %[[ALLOC_C:.*]] = memref.alloc
+//      CHECK: %[[CASTED_C:.*]] = memref.cast %[[ALLOC_C]]
+//      CHECK: %[[ALLOC_B:.*]] = memref.alloc
+//      CHECK: %[[CASTED_B:.*]] = memref.cast %[[ALLOC_B]]
+//      CHECK: %[[ALLOC_A:.*]] = memref.alloc
+//      CHECK: linalg.copy(%[[A]], %[[ALLOC_A]])
+//      CHECK: linalg.copy(%[[B]], %[[ALLOC_B]])
+//      CHECK: linalg.copy(%[[C]], %[[ALLOC_C]])
+//      CHECK: %[[CASTED_A:.*]] = memref.cast %[[ALLOC_A]]
+// CHECK-NEXT: call @callee(%[[CASTED_A]], %[[CASTED_B]], %[[CASTED_C]])
   call @callee(%A, %B, %C) : (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) -> ()
   return
 }
@@ -992,9 +1012,10 @@ func @inner_func_2(%t: tensor<?xf32>) -> tensor<?xf32> {
 func @equivalent_func_arg_2(%t0: tensor<?xf32> {linalg.inplaceable = true},
                             %c0: index, %c10: index, %c1: index) -> tensor<?xf32> {
   %1 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t1 = %t0) -> (tensor<?xf32>) {
-    // TODO: There should be a memory copy here. This is a bug in CallOp
-    // bufferization.
-    // CHECK: call @inner_func_2(%[[arg0]])
+    // CHECK: %[[alloc:.*]] = memref.alloc
+    // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
+    // CHECK: linalg.copy(%[[arg0]], %[[alloc]])
+    // CHECK: call @inner_func_2(%[[casted]])
     %3 = call @inner_func_2(%t1) : (tensor<?xf32>) -> tensor<?xf32>
     scf.yield %t1 : tensor<?xf32>
   }
