@@ -13,6 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __has_attribute
+#define __has_attribute(attr) 0
+#endif
+
 #if defined(HAVE_INIT_PRIORITY)
 #define CONSTRUCTOR_ATTRIBUTE __attribute__((__constructor__ 101))
 #elif __has_attribute(__constructor__)
@@ -35,10 +39,6 @@
 
 #ifdef _MSC_VER
 #include <intrin.h>
-#endif
-
-#ifndef __has_attribute
-#define __has_attribute(attr) 0
 #endif
 
 enum VendorSignatures {
