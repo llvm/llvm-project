@@ -280,9 +280,12 @@ public:
     SelectionTree::Selection Result = NoTokens;
     while (!ExpandedTokens.empty()) {
       // Take consecutive tokens from the same context together for efficiency.
-      FileID FID = SM.getFileID(ExpandedTokens.front().location());
+      SourceLocation Start = ExpandedTokens.front().location();
+      FileID FID = SM.getFileID(Start);
+      // Comparing SourceLocations against bounds is cheaper than getFileID().
+      SourceLocation Limit = SM.getComposedLoc(FID, SM.getFileIDSize(FID));
       auto Batch = ExpandedTokens.take_while([&](const syntax::Token &T) {
-        return SM.getFileID(T.location()) == FID;
+        return T.location() >= Start && T.location() < Limit;
       });
       assert(!Batch.empty());
       ExpandedTokens = ExpandedTokens.drop_front(Batch.size());
