@@ -474,6 +474,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":basic",
+        ":config",
         "//llvm:Support",
     ],
 )
