@@ -68,6 +68,8 @@ public:
 
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
   Register getGlobalBaseReg(MachineFunction &MF) const;
 
   // Materializes the given integer Val into DstReg.
