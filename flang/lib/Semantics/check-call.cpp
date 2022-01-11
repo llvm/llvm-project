@@ -635,6 +635,19 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
   }
 }
 
+// Allow BOZ literal actual arguments when they can be converted to a known
+// dummy argument type
+static void ConvertBOZLiteralArg(
+    evaluate::ActualArgument &arg, const evaluate::DynamicType &type) {
+  if (auto *expr{arg.UnwrapExpr()}) {
+    if (IsBOZLiteral(*expr)) {
+      if (auto converted{evaluate::ConvertToType(type, SomeExpr{*expr})}) {
+        arg = std::move(*converted);
+      }
+    }
+  }
+}
+
 static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
     const characteristics::DummyArgument &dummy,
     const characteristics::Procedure &proc, evaluate::FoldingContext &context,
@@ -648,6 +661,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
   std::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &object) {
+            ConvertBOZLiteralArg(arg, object.type.type());
             if (auto *expr{arg.UnwrapExpr()}) {
               if (auto type{characteristics::TypeAndShape::Characterize(
                       *expr, context)}) {
@@ -843,24 +857,35 @@ void CheckArguments(const characteristics::Procedure &proc,
     const Scope &scope, bool treatingExternalAsImplicit,
     const evaluate::SpecificIntrinsic *intrinsic) {
   bool explicitInterface{proc.HasExplicitInterface()};
+  parser::ContextualMessages &messages{context.messages()};
+  if (!explicitInterface || treatingExternalAsImplicit) {
+    parser::Messages buffer;
+    {
+      auto restorer{messages.SetMessages(buffer)};
+      for (auto &actual : actuals) {
+        if (actual) {
+          CheckImplicitInterfaceArg(*actual, messages);
+        }
+      }
+    }
+    if (!buffer.empty()) {
+      if (auto *msgs{messages.messages()}) {
+        msgs->Annex(std::move(buffer));
+      }
+      return; // don't pile on
+    }
+  }
   if (explicitInterface) {
     auto buffer{
         CheckExplicitInterface(proc, actuals, context, scope, intrinsic)};
     if (treatingExternalAsImplicit && !buffer.empty()) {
-      if (auto *msg{context.messages().Say(
+      if (auto *msg{messages.Say(
               "Warning: if the procedure's interface were explicit, this reference would be in error:"_en_US)}) {
         buffer.AttachTo(*msg);
       }
     }
-    if (auto *msgs{context.messages().messages()}) {
-      msgs->Merge(std::move(buffer));
-    }
-  }
-  if (!explicitInterface || treatingExternalAsImplicit) {
-    for (auto &actual : actuals) {
-      if (actual) {
-        CheckImplicitInterfaceArg(*actual, context.messages());
-      }
+    if (auto *msgs{messages.messages()}) {
+      msgs->Annex(std::move(buffer));
     }
   }
 }
