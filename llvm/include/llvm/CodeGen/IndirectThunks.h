@@ -59,7 +59,7 @@ void ThunkInserter<Derived>::createThunkFunction(MachineModuleInfo &MMI,
 
   // Add Attributes so that we don't create a frame, unwind information, or
   // inline.
-  AttrBuilder B;
+  AttrBuilder B(Ctx);
   B.addAttribute(llvm::Attribute::NoUnwind);
   B.addAttribute(llvm::Attribute::Naked);
   F->addFnAttrs(B);
