@@ -2247,6 +2247,7 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   LLT VecTy = MRI.getType(Vec);
   LLT EltTy = VecTy.getElementType();
   assert(EltTy == MRI.getType(Ins));
+  (void)Ins;
 
   unsigned NumElts = VecTy.getNumElements();
   if (IdxVal < NumElts) {
