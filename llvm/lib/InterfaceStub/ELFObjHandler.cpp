@@ -226,6 +226,7 @@ public:
     // Poplulate dynamic table.
     size_t DynSymIndex = DynTab.Content.addAddr(DT_SYMTAB, 0);
     size_t DynStrIndex = DynTab.Content.addAddr(DT_STRTAB, 0);
+    DynTab.Content.addValue(DT_STRSZ, DynSym.Size);
     for (const std::string &Lib : Stub.NeededLibs)
       DynTab.Content.addValue(DT_NEEDED, DynStr.Content.getOffset(Lib));
     if (Stub.SoName)
