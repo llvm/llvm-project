@@ -119,6 +119,17 @@ protected:
 
   Register canReassign(LiveInterval &VirtReg, Register PrevReg) const;
 
+  // Get the upper limit of elements in the given Order we need to analize.
+  // TODO: is this heuristic,  we could consider learning it.
+  Optional<unsigned> getOrderLimit(const LiveInterval &VirtReg,
+                                   const AllocationOrder &Order,
+                                   unsigned CostPerUseLimit) const;
+
+  // Determine if it's worth trying to allocate this reg, given the
+  // CostPerUseLimit
+  // TODO: this is a heuristic component we could consider learning, too.
+  bool canAllocatePhysReg(unsigned CostPerUseLimit, MCRegister PhysReg) const;
+
   const MachineFunction &MF;
   const RAGreedy &RA;
   LiveRegMatrix *const Matrix;
