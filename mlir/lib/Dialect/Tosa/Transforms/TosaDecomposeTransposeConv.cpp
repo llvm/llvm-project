@@ -7,17 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Insert reshape to binary op's input if needed to match rank
+// Decompose TOSA TransposeConv operation to a series of TOSA Ops specifically
+// (1) Convert a Dilated TransposeConv2D to Conv2D including reversing/reshaping
+// etc.. of the weights (2) Convert a Strided TransposeConv2D to Conv2D
+// including transposing/reversing/reshaping etc..
+//     of the weights and input/output tenors and reversing/reshaping etc .. of
+//     the weights
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Tosa/IR//TosaOps.h"
-#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -369,22 +371,10 @@ public:
   }
 };
 
-/// Pass that enables broadcast by making all input arrays have the same
-/// number of dimensions. Insert RESHAPE operations to lower rank operand
-struct TosaDecomposeTransposeConv
-    : public TosaDecomposeTransposeConvBase<TosaDecomposeTransposeConv> {
-public:
-  void runOnFunction() override {
-    auto func = getFunction();
-    RewritePatternSet patterns(func.getContext());
-    patterns
-        .insert<TransposeConvDilatedConverter, TransposeConvStridedConverter>(
-            func.getContext());
-    (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
-  }
-};
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaDecomposeTransposeConvPass() {
-  return std::make_unique<TosaDecomposeTransposeConv>();
+void mlir::tosa::populateTosaDecomposeTransposeConv(
+    MLIRContext *ctx, RewritePatternSet &patterns) {
+  patterns.insert<TransposeConvDilatedConverter>(ctx);
+  patterns.insert<TransposeConvStridedConverter>(ctx);
 }
