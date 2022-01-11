@@ -116,10 +116,6 @@ def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
   InGroup<OptionIgnored>;
 
-def warn_drv_spirv_linking_multiple_inputs_unsupported: Warning<
-  "Linking multiple input files is not supported for SPIR-V yet">,
-  InGroup<OptionIgnored>;
-
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
