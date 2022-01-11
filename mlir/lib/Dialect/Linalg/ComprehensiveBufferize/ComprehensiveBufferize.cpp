@@ -555,12 +555,6 @@ annotateOpsWithBufferizationMarkers(Operation *op,
   });
 }
 
-LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
-    Operation *op, std::unique_ptr<BufferizationOptions> options) {
-  BufferizationState state(op, *options);
-  return runComprehensiveBufferize(op, *options, state);
-}
-
 /// Rewrite pattern that bufferizes bufferizable ops.
 struct BufferizationPattern
     : public OpInterfaceRewritePattern<BufferizableOpInterface> {
@@ -652,18 +646,26 @@ mlir::linalg::comprehensive_bufferize::analyzeOp(Operation *op,
   return success();
 }
 
-LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
-    Operation *op, const BufferizationOptions &options,
-    BufferizationState &state, bool runAnalysis) {
-  if (runAnalysis)
-    if (failed(analyzeOp(op, state)))
-      return failure();
-
+LogicalResult
+mlir::linalg::comprehensive_bufferize::bufferizeOp(Operation *op,
+                                                   BufferizationState &state) {
   // Bufferize the op and its nested ops.
   OwningRewritePatternList patterns(op->getContext());
   patterns.add<BufferizationPattern>(op->getContext(), state);
   if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
     return failure();
 
-  return checkBufferizationResult(op, options);
+  return checkBufferizationResult(op, state.getOptions());
+}
+
+LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
+    Operation *op, std::unique_ptr<BufferizationOptions> options) {
+  BufferizationState state(op, *options);
+  if (failed(analyzeOp(op, state)))
+    return failure();
+  if (options->testAnalysisOnly)
+    return success();
+  if (failed(bufferizeOp(op, state)))
+    return failure();
+  return success();
 }
