@@ -286,12 +286,6 @@ bool llvm::isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI) {
   return getAllocationDataForFunction(F, ReallocLike, TLI).hasValue();
 }
 
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory and throws if an allocation failed (e.g., new).
-bool llvm::isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, OpNewLike, TLI).hasValue();
-}
-
 bool llvm::isAllocRemovable(const CallBase *CB, const TargetLibraryInfo *TLI) {
   assert(isAllocationFn(CB, TLI));
 
