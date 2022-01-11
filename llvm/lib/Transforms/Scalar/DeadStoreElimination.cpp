@@ -959,10 +959,8 @@ struct DSEState {
     if (I.second) {
       if (!isInvisibleToCallerBeforeRet(V)) {
         I.first->second = false;
-      } else {
-        auto *Inst = dyn_cast<Instruction>(V);
-        if (Inst && isNoAliasCall(Inst))
-          I.first->second = !PointerMayBeCaptured(V, true, false);
+      } else if (isNoAliasCall(V)) {
+        I.first->second = !PointerMayBeCaptured(V, true, false);
       }
     }
     return I.first->second;
@@ -972,15 +970,12 @@ struct DSEState {
     if (isa<AllocaInst>(V))
       return true;
     auto I = InvisibleToCallerBeforeRet.insert({V, false});
-    if (I.second) {
-      auto *Inst = dyn_cast<Instruction>(V);
-      if (Inst && isNoAliasCall(Inst))
-        // NOTE: This could be made more precise by PointerMayBeCapturedBefore
-        // with the killing MemoryDef. But we refrain from doing so for now to
-        // limit compile-time and this does not cause any changes to the number
-        // of stores removed on a large test set in practice.
-        I.first->second = !PointerMayBeCaptured(V, false, true);
-    }
+    if (I.second && isNoAliasCall(V))
+      // NOTE: This could be made more precise by PointerMayBeCapturedBefore
+      // with the killing MemoryDef. But we refrain from doing so for now to
+      // limit compile-time and this does not cause any changes to the number
+      // of stores removed on a large test set in practice.
+      I.first->second = !PointerMayBeCaptured(V, false, true);
     return I.first->second;
   }
 
