@@ -135,6 +135,10 @@ public:
 
   bool SupportHardwareSingleStepping() const;
 
+  /// Writes a siginfo_t structure corresponding to the given thread ID to the
+  /// memory region pointed to by \p siginfo.
+  Status GetSignalInfo(lldb::tid_t tid, void *siginfo) const;
+
 protected:
   llvm::Expected<llvm::ArrayRef<uint8_t>>
   GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;
@@ -204,10 +208,6 @@ private:
   /// Trace mechanisms should modify this method to provide automatic trace
   /// stopping for threads being destroyed.
   Status NotifyTracersOfThreadDestroyed(lldb::tid_t tid);
-
-  /// Writes a siginfo_t structure corresponding to the given thread ID to the
-  /// memory region pointed to by \p siginfo.
-  Status GetSignalInfo(lldb::tid_t tid, void *siginfo);
 
   /// Writes the raw event message code (vis-a-vis PTRACE_GETEVENTMSG)
   /// corresponding to the given thread ID to the memory pointed to by @p

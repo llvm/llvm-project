@@ -292,7 +292,8 @@ NativeProcessLinux::Extension
 NativeProcessLinux::Factory::GetSupportedExtensions() const {
   NativeProcessLinux::Extension supported =
       Extension::multiprocess | Extension::fork | Extension::vfork |
-      Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
+      Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
+      Extension::siginfo_read;
 
 #ifdef __aarch64__
   // At this point we do not have a process so read auxv directly.
@@ -1622,7 +1623,7 @@ Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
   return error;
 }
 
-Status NativeProcessLinux::GetSignalInfo(lldb::tid_t tid, void *siginfo) {
+Status NativeProcessLinux::GetSignalInfo(lldb::tid_t tid, void *siginfo) const {
   return PtraceWrapper(PTRACE_GETSIGINFO, tid, nullptr, siginfo);
 }
 

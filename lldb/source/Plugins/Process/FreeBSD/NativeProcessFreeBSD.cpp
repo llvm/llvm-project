@@ -135,7 +135,8 @@ NativeProcessFreeBSD::Factory::GetSupportedExtensions() const {
       Extension::savecore |
 #endif
       Extension::multiprocess | Extension::fork | Extension::vfork |
-      Extension::pass_signals | Extension::auxv | Extension::libraries_svr4;
+      Extension::pass_signals | Extension::auxv | Extension::libraries_svr4 |
+      Extension::siginfo_read;
 }
 
 // Public Instance Methods
