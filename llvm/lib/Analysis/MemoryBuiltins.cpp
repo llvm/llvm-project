@@ -292,12 +292,6 @@ bool llvm::isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, OpNewLike, TLI).hasValue();
 }
 
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory (strdup, strndup).
-bool llvm::isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, StrDupLike, TLI).hasValue();
-}
-
 bool llvm::isAllocRemovable(const CallBase *CB, const TargetLibraryInfo *TLI) {
   assert(isAllocationFn(CB, TLI));
 

@@ -92,10 +92,6 @@ bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
 /// allocates memory and throws if an allocation failed (e.g., new).
 bool isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory (strdup, strndup).
-bool isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-
 //===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
 //
