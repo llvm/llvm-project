@@ -10,11 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Config/config.h" // C_INCLUDE_DIRS
-#include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderMap.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"

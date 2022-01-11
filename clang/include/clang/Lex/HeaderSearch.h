@@ -34,6 +34,12 @@
 #include <utility>
 #include <vector>
 
+namespace llvm {
+
+class Triple;
+
+} // namespace llvm
+
 namespace clang {
 
 class DiagnosticsEngine;
@@ -852,6 +858,12 @@ private:
   LoadModuleMapResult loadModuleMapFile(const DirectoryEntry *Dir,
                                         bool IsSystem, bool IsFramework);
 };
+
+/// Apply the header search options to get given HeaderSearch object.
+void ApplyHeaderSearchOptions(HeaderSearch &HS,
+                              const HeaderSearchOptions &HSOpts,
+                              const LangOptions &Lang,
+                              const llvm::Triple &triple);
 
 } // namespace clang
 
