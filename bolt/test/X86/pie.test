@@ -1,0 +1,6 @@
+# Check that we do not reject position-independent executables (PIEs).
+
+RUN: %clang -fPIC -pie %p/Inputs/jump_table_icp.cpp -o %t
+RUN: llvm-bolt %t -o /dev/null 2>&1 | FileCheck %s
+
+CHECK: BOLT-INFO: shared object or position-independent executable detected

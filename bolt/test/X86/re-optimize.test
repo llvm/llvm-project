@@ -1,0 +1,7 @@
+# Check that we detect re-optimization attempt.
+
+RUN: %clang %S/Inputs/icf-jump-tables.c -o %t.exe
+RUN: llvm-bolt %t.exe -o %t 2>&1 > /dev/null
+RUN: not llvm-bolt %t -o %t.bolt 2>&1 | FileCheck %s
+
+CHECK: BOLT-ERROR: input file was processed by BOLT. Cannot re-optimize.

@@ -1,0 +1,25 @@
+# Check that fallthrough blocks are handled properly.
+
+RUN: %clang %cflags %S/Inputs/sctc_bug4.s -o %t
+RUN: llvm-bolt %t -o /dev/null \
+RUN:   -funcs=test_func -print-sctc -sequential-disassembly 2>&1 | FileCheck %s
+
+CHECK:      .Ltmp2 (3 instructions, align : 1)
+CHECK-NEXT:   CFI State : 0
+CHECK-NEXT:   Predecessors: .LFT1
+CHECK-NEXT:     00000024: 	cmpq	$0x20, %rsi
+CHECK-NEXT:     00000028: 	ja	dummy # TAILCALL {{.*}}# CTCTakenCount: 0
+CHECK-NEXT:     0000002a: 	jmp .Ltmp4
+CHECK-NEXT:   Successors: .Ltmp4
+CHECK-NEXT:   CFI State: 0
+
+CHECK:      .Ltmp1 (2 instructions, align : 1)
+CHECK-NEXT:   CFI State : 0
+CHECK-NEXT:   Predecessors: .LFT0
+CHECK-NEXT:     0000002c: 	xorq	%r11, %rax
+CHECK-NEXT:     0000002f: 	retq
+CHECK-NEXT:   CFI State: 0
+
+CHECK:      .Ltmp4 (4 instructions, align : 1)
+CHECK-NEXT:  CFI State : 0
+CHECK-NEXT:  Predecessors: .Ltmp2

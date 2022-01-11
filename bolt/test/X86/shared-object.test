@@ -1,0 +1,5 @@
+# Test that llvm-bolt processes *.so without a failure
+RUN: %clang %S/Inputs/icf-jump-tables.c -o %t.so -shared -fPIC -Wl,--build-id
+RUN: llvm-bolt %t.so -o %t | FileCheck %s
+
+CHECK: patched build-id
