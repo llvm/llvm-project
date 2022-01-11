@@ -1314,7 +1314,7 @@ Status TypeSystemSwiftTypeRef::IsCompatible() {
 
 void TypeSystemSwiftTypeRef::DiagnoseWarnings(Process &process,
                                               Module &module) const {
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContextOrNull())
     swift_ast_context->DiagnoseWarnings(process, module);
 }
 
