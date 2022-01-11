@@ -319,4 +319,4 @@ void lld::macho::treatUndefinedSymbol(const Undefined &sym, StringRef source) {
   }
 }
 
-SymbolTable *macho::symtab;
+std::unique_ptr<SymbolTable> macho::symtab;

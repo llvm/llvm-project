@@ -70,7 +70,7 @@ private:
 
 void treatUndefinedSymbol(const Undefined &, StringRef source = "");
 
-extern SymbolTable *symtab;
+extern std::unique_ptr<SymbolTable> symtab;
 
 } // namespace macho
 } // namespace lld
