@@ -1341,6 +1341,7 @@ define <8 x float> @shuffle_v8f32_01452367(<8 x float> %a) {
   ret <8 x float> %shuffle
 }
 
+; PR53124
 define <8 x float> @shuffle_v8f32_089abcde(<8 x float> %a, <8 x float> %b) {
 ; AVX1-LABEL: shuffle_v8f32_089abcde:
 ; AVX1:       # %bb.0:
