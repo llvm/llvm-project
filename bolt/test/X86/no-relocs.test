@@ -1,0 +1,6 @@
+# Verifies that input without relocations is rejected in relocs mode.
+
+RUN: %clang %S/Inputs/icf-jump-tables.c -o %t
+RUN: not llvm-bolt %t -o /dev/null -relocs 2>&1 | FileCheck %s
+
+CHECK: BOLT-ERROR: relocations against code are missing from the input file.

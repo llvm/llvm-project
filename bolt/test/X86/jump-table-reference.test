@@ -1,0 +1,6 @@
+# Verifies that BOLT detects fixed destination of indirect jump
+
+RUN: %clang %cflags %S/Inputs/jump_table_reference.s -Wl,-q -o %t
+RUN: llvm-bolt %t -relocs -o /dev/null 2>&1 | FileCheck %s
+
+CHECK: BOLT-INFO: fixed indirect branch detected in main
