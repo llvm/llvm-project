@@ -1671,7 +1671,7 @@ Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {
   return Builder.CreateSExt(V, Ty);
 }
 
-Value *SCEVExpander::visitSMaxExpr(const SCEVSMaxExpr *S) {
+Value *SCEVExpander::expandSMaxExpr(const SCEVNAryExpr *S) {
   Value *LHS = expand(S->getOperand(S->getNumOperands()-1));
   Type *Ty = LHS->getType();
   for (int i = S->getNumOperands()-2; i >= 0; --i) {
@@ -1700,7 +1700,7 @@ Value *SCEVExpander::visitSMaxExpr(const SCEVSMaxExpr *S) {
   return LHS;
 }
 
-Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
+Value *SCEVExpander::expandUMaxExpr(const SCEVNAryExpr *S) {
   Value *LHS = expand(S->getOperand(S->getNumOperands()-1));
   Type *Ty = LHS->getType();
   for (int i = S->getNumOperands()-2; i >= 0; --i) {
@@ -1729,7 +1729,7 @@ Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
   return LHS;
 }
 
-Value *SCEVExpander::visitSMinExpr(const SCEVSMinExpr *S) {
+Value *SCEVExpander::expandSMinExpr(const SCEVNAryExpr *S) {
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
@@ -1758,7 +1758,7 @@ Value *SCEVExpander::visitSMinExpr(const SCEVSMinExpr *S) {
   return LHS;
 }
 
-Value *SCEVExpander::visitUMinExpr(const SCEVUMinExpr *S) {
+Value *SCEVExpander::expandUMinExpr(const SCEVNAryExpr *S) {
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
@@ -1785,6 +1785,40 @@ Value *SCEVExpander::visitUMinExpr(const SCEVUMinExpr *S) {
   if (LHS->getType() != S->getType())
     LHS = InsertNoopCastOfTo(LHS, S->getType());
   return LHS;
+}
+
+Value *SCEVExpander::visitSMaxExpr(const SCEVSMaxExpr *S) {
+  return expandSMaxExpr(S);
+}
+
+Value *SCEVExpander::visitUMaxExpr(const SCEVUMaxExpr *S) {
+  return expandUMaxExpr(S);
+}
+
+Value *SCEVExpander::visitSMinExpr(const SCEVSMinExpr *S) {
+  return expandSMinExpr(S);
+}
+
+Value *SCEVExpander::visitUMinExpr(const SCEVUMinExpr *S) {
+  return expandUMinExpr(S);
+}
+
+Value *SCEVExpander::visitSequentialUMinExpr(const SCEVSequentialUMinExpr *S) {
+  SmallVector<Value *> Ops;
+  for (const SCEV *Op : S->operands())
+    Ops.emplace_back(expand(Op));
+
+  Value *SaturationPoint =
+      MinMaxIntrinsic::getSaturationPoint(Intrinsic::umin, S->getType());
+
+  SmallVector<Value *> OpIsZero;
+  for (Value *Op : ArrayRef<Value *>(Ops).drop_back())
+    OpIsZero.emplace_back(Builder.CreateICmpEQ(Op, SaturationPoint));
+
+  Value *AnyOpIsZero = Builder.CreateLogicalOr(OpIsZero);
+
+  Value *NaiveUMin = expandUMinExpr(S);
+  return Builder.CreateSelect(AnyOpIsZero, SaturationPoint, NaiveUMin);
 }
 
 Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty,
@@ -2271,10 +2305,27 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scSMaxExpr:
   case scUMaxExpr:
   case scSMinExpr:
-  case scUMinExpr: {
+  case scUMinExpr:
+  case scSequentialUMinExpr: {
     // FIXME: should this ask the cost for Intrinsic's?
+    // The reduction tree.
     Cost += CmpSelCost(Instruction::ICmp, S->getNumOperands() - 1, 0, 1);
     Cost += CmpSelCost(Instruction::Select, S->getNumOperands() - 1, 0, 2);
+    switch (S->getSCEVType()) {
+    case scSequentialUMinExpr: {
+      // The safety net against poison.
+      // FIXME: this is broken.
+      Cost += CmpSelCost(Instruction::ICmp, S->getNumOperands() - 1, 0, 0);
+      Cost += ArithCost(Instruction::Or,
+                        S->getNumOperands() > 2 ? S->getNumOperands() - 2 : 0);
+      Cost += CmpSelCost(Instruction::Select, 1, 0, 1);
+      break;
+    }
+    default:
+      assert(!isa<SCEVSequentialMinMaxExpr>(S) &&
+             "Unhandled SCEV expression type?");
+      break;
+    }
     break;
   }
   case scAddRecExpr: {
@@ -2399,7 +2450,8 @@ bool SCEVExpander::isHighCostExpansionHelper(
   case scUMaxExpr:
   case scSMaxExpr:
   case scUMinExpr:
-  case scSMinExpr: {
+  case scSMinExpr:
+  case scSequentialUMinExpr: {
     assert(cast<SCEVNAryExpr>(S)->getNumOperands() > 1 &&
            "Nary expr should have more than 1 operand.");
     // The simple nary expr will require one less op (or pair of ops)

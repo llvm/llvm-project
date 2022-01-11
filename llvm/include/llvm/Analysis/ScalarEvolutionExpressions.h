@@ -51,6 +51,7 @@ enum SCEVTypes : unsigned short {
   scUMinExpr,
   scSMinExpr,
   scPtrToInt,
+  scSequentialUMinExpr,
   scUnknown,
   scCouldNotCompute
 };
@@ -228,6 +229,7 @@ public:
     return S->getSCEVType() == scAddExpr || S->getSCEVType() == scMulExpr ||
            S->getSCEVType() == scSMaxExpr || S->getSCEVType() == scUMaxExpr ||
            S->getSCEVType() == scSMinExpr || S->getSCEVType() == scUMinExpr ||
+           S->getSCEVType() == scSequentialUMinExpr ||
            S->getSCEVType() == scAddRecExpr;
   }
 };
@@ -501,6 +503,54 @@ public:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scUMinExpr; }
 };
 
+/// This node is the base class for sequential/in-order min/max selections.
+/// Note that their fundamental difference from SCEVMinMaxExpr's is that they
+/// are early-returning upon reaching saturation point.
+/// I.e. given `0 umin_seq poison`, the result will be `0`,
+/// while the result of `0 umin poison` is `poison`.
+class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
+  friend class ScalarEvolution;
+
+  static bool isSequentialMinMaxType(enum SCEVTypes T) {
+    return T == scSequentialUMinExpr;
+  }
+
+  /// Set flags for a non-recurrence without clearing previously set flags.
+  void setNoWrapFlags(NoWrapFlags Flags) { SubclassData |= Flags; }
+
+protected:
+  /// Note: Constructing subclasses via this constructor is allowed
+  SCEVSequentialMinMaxExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
+                           const SCEV *const *O, size_t N)
+      : SCEVNAryExpr(ID, T, O, N) {
+    assert(isSequentialMinMaxType(T));
+    // Min and max never overflow
+    setNoWrapFlags((NoWrapFlags)(FlagNUW | FlagNSW));
+  }
+
+public:
+  Type *getType() const { return getOperand(0)->getType(); }
+
+  static bool classof(const SCEV *S) {
+    return isSequentialMinMaxType(S->getSCEVType());
+  }
+};
+
+/// This class represents a sequential/in-order unsigned minimum selection.
+class SCEVSequentialUMinExpr : public SCEVSequentialMinMaxExpr {
+  friend class ScalarEvolution;
+
+  SCEVSequentialUMinExpr(const FoldingSetNodeIDRef ID, const SCEV *const *O,
+                         size_t N)
+      : SCEVSequentialMinMaxExpr(ID, scSequentialUMinExpr, O, N) {}
+
+public:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const SCEV *S) {
+    return S->getSCEVType() == scSequentialUMinExpr;
+  }
+};
+
 /// This means that we are dealing with an entirely unknown SCEV
 /// value, and only represent it as its LLVM Value.  This is the
 /// "bottom" value for the analysis.
@@ -576,6 +626,9 @@ template <typename SC, typename RetVal = void> struct SCEVVisitor {
       return ((SC *)this)->visitSMinExpr((const SCEVSMinExpr *)S);
     case scUMinExpr:
       return ((SC *)this)->visitUMinExpr((const SCEVUMinExpr *)S);
+    case scSequentialUMinExpr:
+      return ((SC *)this)
+          ->visitSequentialUMinExpr((const SCEVSequentialUMinExpr *)S);
     case scUnknown:
       return ((SC *)this)->visitUnknown((const SCEVUnknown *)S);
     case scCouldNotCompute:
@@ -630,6 +683,7 @@ public:
       case scUMaxExpr:
       case scSMinExpr:
       case scUMinExpr:
+      case scSequentialUMinExpr:
       case scAddRecExpr:
         for (const auto *Op : cast<SCEVNAryExpr>(S)->operands())
           push(Op);
@@ -813,6 +867,16 @@ public:
       Changed |= Op != Operands.back();
     }
     return !Changed ? Expr : SE.getUMinExpr(Operands);
+  }
+
+  const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
+    SmallVector<const SCEV *, 2> Operands;
+    bool Changed = false;
+    for (auto *Op : Expr->operands()) {
+      Operands.push_back(((SC *)this)->visit(Op));
+      Changed |= Op != Operands.back();
+    }
+    return !Changed ? Expr : SE.getUMinExpr(Operands, /*Sequential=*/true);
   }
 
   const SCEV *visitUnknown(const SCEVUnknown *Expr) { return Expr; }
