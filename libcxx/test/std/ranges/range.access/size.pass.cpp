@@ -318,6 +318,7 @@ constexpr bool testRanges() {
 struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*>);
+static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*&>);
 
 int main(int, char**) {
   testArrayType();
