@@ -80,7 +80,6 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
   const ToolChain &ToolChain = getToolChain();
-  const Driver &D = ToolChain.getDriver();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
