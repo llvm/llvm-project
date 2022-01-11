@@ -835,18 +835,15 @@ static void ConstantPropUsersOf(Value *V, const DataLayout &DL,
 /// to actually DO the malloc.  Instead, turn the malloc into a global, and any
 /// loads of GV as uses of the new global.
 static GlobalVariable *
-OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI, Type *AllocTy,
-                              ConstantInt *NElements, const DataLayout &DL,
+OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI,
+                              uint64_t AllocSize, const DataLayout &DL,
                               TargetLibraryInfo *TLI) {
   LLVM_DEBUG(errs() << "PROMOTING GLOBAL: " << *GV << "  CALL = " << *CI
                     << '\n');
 
-  Type *GlobalType;
-  if (NElements->getZExtValue() == 1)
-    GlobalType = AllocTy;
-  else
-    // If we have an array allocation, the global variable is of an array.
-    GlobalType = ArrayType::get(AllocTy, NElements->getZExtValue());
+  // Create global of type [AllocSize x i8].
+  Type *GlobalType = ArrayType::get(Type::getInt8Ty(GV->getContext()),
+                                    AllocSize);
 
   // Create the new global variable.  The contents of the malloc'd memory is
   // undefined, so initialize with an undef value.
@@ -1006,95 +1003,26 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
   return true;
 }
 
-/// getMallocType - Returns the PointerType resulting from the malloc call.
-/// The PointerType depends on the number of bitcast uses of the malloc call:
-///   0: PointerType is the calls' return type.
-///   1: PointerType is the bitcast's result type.
-///  >1: Unique PointerType cannot be determined, return NULL.
-static PointerType *getMallocType(const CallInst *CI,
-                                  const TargetLibraryInfo *TLI) {
-  assert(isMallocLikeFn(CI, TLI) && "getMallocType and not malloc call");
-
-  PointerType *MallocType = nullptr;
-  unsigned NumOfBitCastUses = 0;
-
-  // Determine if CallInst has a bitcast use.
-  for (const User *U : CI->users())
-    if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
-      MallocType = cast<PointerType>(BCI->getDestTy());
-      NumOfBitCastUses++;
-    }
-
-  // Malloc call has 1 bitcast use, so type is the bitcast's destination type.
-  if (NumOfBitCastUses == 1)
-    return MallocType;
-
-  // Malloc call was not bitcast, so type is the malloc function's return type.
-  if (NumOfBitCastUses == 0)
-    return cast<PointerType>(CI->getType());
-
-  // Type could not be determined.
-  return nullptr;
-}
-
-/// getMallocAllocatedType - Returns the Type allocated by malloc call.
-/// The Type depends on the number of bitcast uses of the malloc call:
-///   0: PointerType is the malloc calls' return type.
-///   1: PointerType is the bitcast's result type.
-///  >1: Unique PointerType cannot be determined, return NULL.
-static Type *getMallocAllocatedType(const CallInst *CI,
-                                    const TargetLibraryInfo *TLI) {
-  PointerType *PT = getMallocType(CI, TLI);
-  return PT ? PT->getElementType() : nullptr;
-}
-
-static Value *computeArraySize(const CallInst *CI, const DataLayout &DL,
-                               const TargetLibraryInfo *TLI,
-                               bool LookThroughSExt = false) {
-  if (!CI)
-    return nullptr;
-
-  // The size of the malloc's result type must be known to determine array size.
-  Type *T = getMallocAllocatedType(CI, TLI);
-  if (!T || !T->isSized())
-    return nullptr;
-
-  unsigned ElementSize = DL.getTypeAllocSize(T);
-  if (StructType *ST = dyn_cast<StructType>(T))
-    ElementSize = DL.getStructLayout(ST)->getSizeInBytes();
-
-  // If malloc call's arg can be determined to be a multiple of ElementSize,
-  // return the multiple.  Otherwise, return NULL.
-  Value *MallocArg = CI->getArgOperand(0);
-  Value *Multiple = nullptr;
-  if (ComputeMultiple(MallocArg, ElementSize, Multiple, LookThroughSExt))
-    return Multiple;
-
-  return nullptr;
-}
-
-/// getMallocArraySize - Returns the array size of a malloc call.  If the
-/// argument passed to malloc is a multiple of the size of the malloced type,
-/// then return that multiple.  For non-array mallocs, the multiple is
-/// constant 1.  Otherwise, return NULL for mallocs whose array size cannot be
-/// determined.
-static Value *getMallocArraySize(CallInst *CI, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI,
-                                 bool LookThroughSExt) {
-  assert(isMallocLikeFn(CI, TLI) && "getMallocArraySize and not malloc call");
-  return computeArraySize(CI, DL, TLI, LookThroughSExt);
-}
-
-
-/// This function is called when we see a pointer global variable with a single
-/// value stored it that is a malloc or cast of malloc.
+/// If we have a global that is only initialized with a fixed size malloc,
+/// transform the program to use global memory instead of malloc'd memory.
+/// This eliminates dynamic allocation, avoids an indirection accessing the
+/// data, and exposes the resultant global to further GlobalOpt.
 static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
-                                               Type *AllocTy,
                                                AtomicOrdering Ordering,
                                                const DataLayout &DL,
                                                TargetLibraryInfo *TLI) {
-  // If this is a malloc of an abstract type, don't touch it.
-  if (!AllocTy->isSized())
+  // TODO: This can be generalized to calloc-like functions by using
+  // getInitialValueOfAllocation() for the global initialization.
+  assert(isMallocLikeFn(CI, TLI) && "Must be malloc-like call");
+
+  uint64_t AllocSize;
+  if (!getObjectSize(CI, AllocSize, DL, TLI, ObjectSizeOpts()) && AllocSize > 0)
+    return false;
+
+  // Restrict this transformation to only working on small allocations
+  // (2048 bytes currently), as we don't want to introduce a 16M global or
+  // something.
+  if (AllocSize >= 2048)
     return false;
 
   // We can't optimize this global unless all uses of it are *known* to be
@@ -1113,25 +1041,8 @@ static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
   if (!valueIsOnlyUsedLocallyOrStoredToOneGlobal(CI, GV))
     return false;
 
-  // If we have a global that is only initialized with a fixed size malloc,
-  // transform the program to use global memory instead of malloc'd memory.
-  // This eliminates dynamic allocation, avoids an indirection accessing the
-  // data, and exposes the resultant global to further GlobalOpt.
-  // We cannot optimize the malloc if we cannot determine malloc array size.
-  Value *NElems = getMallocArraySize(CI, DL, TLI, true);
-  if (!NElems)
-    return false;
-
-  if (ConstantInt *NElements = dyn_cast<ConstantInt>(NElems))
-    // Restrict this transformation to only working on small allocations
-    // (2048 bytes currently), as we don't want to introduce a 16M global or
-    // something.
-    if (NElements->getZExtValue() * DL.getTypeAllocSize(AllocTy) < 2048) {
-      OptimizeGlobalAddressOfMalloc(GV, CI, AllocTy, NElements, DL, TLI);
-      return true;
-    }
-
-  return false;
+  OptimizeGlobalAddressOfMalloc(GV, CI, AllocSize, DL, TLI);
+  return true;
 }
 
 // Try to optimize globals based on the knowledge that only one value (besides
@@ -1163,9 +1074,7 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
     } else if (isMallocLikeFn(StoredOnceVal, GetTLI)) {
       if (auto *CI = dyn_cast<CallInst>(StoredOnceVal)) {
         auto *TLI = &GetTLI(*CI->getFunction());
-        Type *MallocType = getMallocAllocatedType(CI, TLI);
-        if (MallocType && tryToOptimizeStoreOfMallocToGlobal(GV, CI, MallocType,
-                                                             Ordering, DL, TLI))
+        if (tryToOptimizeStoreOfMallocToGlobal(GV, CI, Ordering, DL, TLI))
           return true;
       }
     }
