@@ -20,7 +20,6 @@
 // These tests are currently crashing on ppc64:
 // https://reviews.llvm.org/D110546#3025422
 // due to the way we create thread contexts
-// (but they crashed on Mac with normal pthread_create as well).
 // There must be some difference in thread initialization
 // between normal execution and unit tests.
 #  define TRACE_TEST(SUITE, NAME) TEST(SUITE, DISABLED_##NAME)
