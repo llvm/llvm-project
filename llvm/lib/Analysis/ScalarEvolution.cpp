@@ -8254,7 +8254,7 @@ ScalarEvolution::computeExitLimitFromCondFromBinOp(
     if (EL0.ExactNotTaken != getCouldNotCompute() &&
         EL1.ExactNotTaken != getCouldNotCompute()) {
       BECount = getUMinFromMismatchedTypes(EL0.ExactNotTaken, EL1.ExactNotTaken,
-                                           /*Sequential=*/!PoisonSafe);
+                                           /*Sequential=*/false);
 
       // If EL0.ExactNotTaken was zero and ExitCond was a short-circuit form,
       // it should have been simplified to zero (see the condition (3) above)
