@@ -124,7 +124,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
         LocalizedInstrs.insert(LocalizedMI);
         MachineInstr &UseMI = *MOUse.getParent();
         if (MRI->hasOneUse(Reg) && !UseMI.isPHI())
-          InsertMBB->insert(InsertMBB->SkipPHIsAndLabels(UseMI), LocalizedMI);
+          InsertMBB->insert(UseMI, LocalizedMI);
         else
           InsertMBB->insert(InsertMBB->SkipPHIsAndLabels(InsertMBB->begin()),
                             LocalizedMI);
@@ -173,9 +173,10 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
     while (II != MBB.end() && !Users.count(&*II))
       ++II;
 
-    LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *&*II
-                      << "\n");
     assert(II != MBB.end() && "Didn't find the user in the MBB");
+    LLVM_DEBUG(dbgs() << "Intra-block: moving " << *MI << " before " << *II
+                      << '\n');
+
     MI->removeFromParent();
     MBB.insert(II, MI);
     Changed = true;
