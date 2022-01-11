@@ -588,16 +588,14 @@ define float @fabs_f32(float %a) nounwind {
 ;
 ; RV32I-LABEL: fabs_f32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs_f32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    ret
   %1 = call float @llvm.fabs.f32(float %a)
   ret float %1
@@ -705,8 +703,8 @@ define float @copysign_f32(float %a, float %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 524288
 ; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -714,8 +712,8 @@ define float @copysign_f32(float %a, float %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 524288
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = call float @llvm.copysign.f32(float %a, float %b)

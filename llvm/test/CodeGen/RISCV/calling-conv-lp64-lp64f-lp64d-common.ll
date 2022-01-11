@@ -50,11 +50,10 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i128 %d, i32 %e, i32 %f, 
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lw t0, 8(sp)
 ; RV64I-NEXT:    ld t1, 0(sp)
-; RV64I-NEXT:    andi t2, a0, 255
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw a0, a0, -1
-; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    addw a0, t2, a0
+; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    slli a1, a1, 48
+; RV64I-NEXT:    srli a1, a1, 48
+; RV64I-NEXT:    addw a0, a0, a1
 ; RV64I-NEXT:    addw a0, a0, a2
 ; RV64I-NEXT:    xor a1, a4, t1
 ; RV64I-NEXT:    xor a2, a3, a7
