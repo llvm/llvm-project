@@ -4,7 +4,7 @@
 #include "a.h"
 
 // CHECK-LABEL: define {{.*}} @foo(
-// CHECK: callbr {{.*}} "=r,X{{.*}} blockaddress(@foo, %indirect))
+// CHECK: callbr {{.*}} "=r,i{{.*}} blockaddress(@foo, %indirect))
 // CHECK-NEXT: to label %asm.fallthrough [label %indirect]
 
 int bar(void) {

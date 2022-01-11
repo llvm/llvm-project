@@ -2559,7 +2559,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         ArgElemTypes.push_back(nullptr);
         if (!Constraints.empty())
           Constraints += ',';
-        Constraints += 'X';
+        Constraints += 'i';
       }
       Fallthrough = createBasicBlock("asm.fallthrough");
     }
