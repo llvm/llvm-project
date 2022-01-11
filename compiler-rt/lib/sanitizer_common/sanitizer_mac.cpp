@@ -1050,13 +1050,13 @@ void MaybeReexec() {
     RAW_CHECK("execv failed" && 0);
   }
 
-  // Verify that interceptors really work.  We'll use dlsym to locate
-  // "pthread_create", if interceptors are working, it should really point to
-  // "wrap_pthread_create" within our own dylib.
-  Dl_info info_pthread_create;
-  void *dlopen_addr = dlsym(RTLD_DEFAULT, "pthread_create");
-  RAW_CHECK(dladdr(dlopen_addr, &info_pthread_create));
-  if (internal_strcmp(info.dli_fname, info_pthread_create.dli_fname) != 0) {
+  // Verify that interceptors really work. We'll use dlsym to locate
+  // "strcmp", if interceptors are working, it should really point to
+  // "wrap_strcmp" within our own dylib.
+  Dl_info info_strcmp;
+  void *dlopen_addr = dlsym(RTLD_DEFAULT, "strcmp");
+  RAW_CHECK(dladdr(dlopen_addr, &info_strcmp));
+  if (internal_strcmp(info.dli_fname, info_strcmp.dli_fname) != 0) {
     Report(
         "ERROR: Interceptors are not working. This may be because %s is "
         "loaded too late (e.g. via dlopen). Please launch the executable "
