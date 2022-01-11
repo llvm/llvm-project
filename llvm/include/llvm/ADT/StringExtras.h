@@ -35,8 +35,10 @@ class raw_ostream;
 /// hexdigit - Return the hexadecimal character for the
 /// given number \p X (which should be less than 16).
 inline char hexdigit(unsigned X, bool LowerCase = false) {
-  const char HexChar = LowerCase ? 'a' : 'A';
-  return X < 10 ? '0' + X : HexChar + X - 10;
+  assert(X < 16);
+  static const char LUT[] = "0123456789ABCDEF";
+  const uint8_t Offset = LowerCase ? 32 : 0;
+  return LUT[X] | Offset;
 }
 
 /// Given an array of c-style strings terminated by a null pointer, construct
@@ -165,16 +167,14 @@ inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
 /// Convert buffer \p Input to its hexadecimal representation.
 /// The returned string is double the size of \p Input.
 inline std::string toHex(StringRef Input, bool LowerCase = false) {
-  static const char *const LUT = "0123456789ABCDEF";
-  const uint8_t Offset = LowerCase ? 32 : 0;
   size_t Length = Input.size();
 
   std::string Output;
   Output.reserve(2 * Length);
   for (size_t i = 0; i < Length; ++i) {
     const unsigned char c = Input[i];
-    Output.push_back(LUT[c >> 4] | Offset);
-    Output.push_back(LUT[c & 15] | Offset);
+    Output.push_back(hexdigit(c >> 4, LowerCase));
+    Output.push_back(hexdigit(c & 15, LowerCase));
   }
   return Output;
 }
