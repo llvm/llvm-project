@@ -593,7 +593,8 @@ bool IONAME(SetRound)(Cookie cookie, const char *keyword, std::size_t length) {
 bool IONAME(SetSign)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
   ConnectionState &connection{io.GetConnectionState()};
-  static const char *keywords[]{"PLUS", "YES", "PROCESSOR_DEFINED", nullptr};
+  static const char *keywords[]{
+      "PLUS", "SUPPRESS", "PROCESSOR_DEFINED", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
     connection.modes.editingFlags |= signPlus;
