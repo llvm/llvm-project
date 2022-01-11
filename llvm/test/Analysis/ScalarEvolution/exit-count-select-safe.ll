@@ -124,3 +124,73 @@ loop:
 exit:
   ret i32 %i
 }
+
+define i32 @computeSCEVAtScope(i32 %d.0) {
+; CHECK-LABEL: 'computeSCEVAtScope'
+; CHECK-NEXT:  Classifying expressions for: @computeSCEVAtScope
+; CHECK-NEXT:    %d.1 = phi i32 [ %inc, %for.body ], [ %d.0, %for.cond.preheader ]
+; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    %e.1 = phi i32 [ %inc3, %for.body ], [ %d.0, %for.cond.preheader ]
+; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    %0 = select i1 %tobool1, i1 %tobool2, i1 false
+; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: false LoopDispositions: { %for.cond: Variant, %while.cond: Variant }
+; CHECK-NEXT:    %inc = add nsw i32 %d.1, 1
+; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    %inc3 = add nsw i32 %e.1, 1
+; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    %f.1 = phi i32 [ %inc8, %for.body5 ], [ 0, %for.cond4.preheader ]
+; CHECK-NEXT:    --> {0,+,1}<%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    %inc8 = add i32 %f.1, 1
+; CHECK-NEXT:    --> {1,+,1}<%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @computeSCEVAtScope
+; CHECK-NEXT:  Loop %for.cond: backedge-taken count is (-1 * %d.0)
+; CHECK-NEXT:  Loop %for.cond: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %for.cond: Predicated backedge-taken count is (-1 * %d.0)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.cond: Trip multiple is 1
+; CHECK-NEXT:  Loop %for.cond4: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.cond4: max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.cond4: Predicated backedge-taken count is 0
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %for.cond4: Trip multiple is 1
+; CHECK-NEXT:  Loop %while.cond: <multiple exits> Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %while.cond: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %while.cond: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %while.cond
+
+while.cond.loopexit:                              ; preds = %for.cond4
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.cond.loopexit, %entry
+  br label %for.cond.preheader
+
+for.cond.preheader:                               ; preds = %while.cond
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.body, %for.cond.preheader
+  %d.1 = phi i32 [ %inc, %for.body ], [ %d.0, %for.cond.preheader ]
+  %e.1 = phi i32 [ %inc3, %for.body ], [ %d.0, %for.cond.preheader ]
+  %tobool1 = icmp ne i32 %e.1, 0
+  %tobool2 = icmp ne i32 %d.1, 0
+  %0 = select i1 %tobool1, i1 %tobool2, i1 false
+  br i1 %0, label %for.body, label %for.cond4.preheader
+
+for.cond4.preheader:                              ; preds = %for.cond
+  br label %for.cond4
+
+for.body:                                         ; preds = %for.cond
+  %inc = add nsw i32 %d.1, 1
+  %inc3 = add nsw i32 %e.1, 1
+  br label %for.cond
+
+for.cond4:                                        ; preds = %for.body5, %for.cond4.preheader
+  %f.1 = phi i32 [ %inc8, %for.body5 ], [ 0, %for.cond4.preheader ]
+  %exitcond.not = icmp eq i32 %f.1, %e.1
+  br i1 %exitcond.not, label %while.cond.loopexit, label %for.body5
+
+for.body5:                                        ; preds = %for.cond4
+  %inc8 = add i32 %f.1, 1
+  br label %for.cond4
+}
