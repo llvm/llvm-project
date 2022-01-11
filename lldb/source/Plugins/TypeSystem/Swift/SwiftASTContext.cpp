@@ -4433,8 +4433,9 @@ swift::TypeBase *SwiftASTContext::ReconstructType(ConstString mangled_typename,
   llvm::PrettyStackTraceFormat PST("error finding type for %s", mangled_cstr);
   swift::TypeBase *found_type = m_mangled_name_to_type_map.lookup(mangled_cstr);
   if (found_type) {
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- found in the positive cache",
-               mangled_cstr);
+    LOG_VERBOSE_PRINTF(LIBLLDB_LOG_TYPES,
+                       "(\"%s\") -- found in the positive cache",
+                       mangled_cstr);
     assert(&found_type->getASTContext() == ast_ctx);
     return found_type;
   }
