@@ -20762,8 +20762,7 @@ Sema::ActOnOpenMPEndDeclareTargetDirective() {
 void Sema::ActOnFinishedOpenMPDeclareTargetContext(
     DeclareTargetContextInfo &DTCI) {
   for (auto &It : DTCI.ExplicitlyMapped)
-    ActOnOpenMPDeclareTargetName(It.first, It.second.Loc, It.second.MT,
-                                 DTCI.DT);
+    ActOnOpenMPDeclareTargetName(It.first, It.second.Loc, It.second.MT, DTCI);
 }
 
 NamedDecl *Sema::lookupOpenMPDeclareTargetName(Scope *CurScope,
@@ -20800,9 +20799,9 @@ NamedDecl *Sema::lookupOpenMPDeclareTargetName(Scope *CurScope,
   return ND;
 }
 
-void Sema::ActOnOpenMPDeclareTargetName(
-    NamedDecl *ND, SourceLocation Loc, OMPDeclareTargetDeclAttr::MapTypeTy MT,
-    OMPDeclareTargetDeclAttr::DevTypeTy DT) {
+void Sema::ActOnOpenMPDeclareTargetName(NamedDecl *ND, SourceLocation Loc,
+                                        OMPDeclareTargetDeclAttr::MapTypeTy MT,
+                                        DeclareTargetContextInfo &DTCI) {
   assert((isa<VarDecl>(ND) || isa<FunctionDecl>(ND) ||
           isa<FunctionTemplateDecl>(ND)) &&
          "Expected variable, function or function template.");
@@ -20819,10 +20818,10 @@ void Sema::ActOnOpenMPDeclareTargetName(
   auto *VD = cast<ValueDecl>(ND);
   llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr =
       OMPDeclareTargetDeclAttr::getActiveAttr(VD);
-  if (ActiveAttr.hasValue() && ActiveAttr.getValue()->getDevType() != DT &&
+  if (ActiveAttr.hasValue() && ActiveAttr.getValue()->getDevType() != DTCI.DT &&
       ActiveAttr.getValue()->getLevel() == Level) {
     Diag(Loc, diag::err_omp_device_type_mismatch)
-        << OMPDeclareTargetDeclAttr::ConvertDevTypeTyToStr(DT)
+        << OMPDeclareTargetDeclAttr::ConvertDevTypeTyToStr(DTCI.DT)
         << OMPDeclareTargetDeclAttr::ConvertDevTypeTyToStr(
                ActiveAttr.getValue()->getDevType());
     return;
@@ -20836,8 +20835,16 @@ void Sema::ActOnOpenMPDeclareTargetName(
   if (ActiveAttr.hasValue() && ActiveAttr.getValue()->getLevel() == Level)
     return;
 
-  auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(Context, MT, DT, Level,
-                                                     SourceRange(Loc, Loc));
+  Expr *IndirectE = nullptr;
+  bool IsIndirect = false;
+  if (DTCI.Indirect.hasValue()) {
+    IndirectE = DTCI.Indirect.getValue();
+    if (!IndirectE)
+      IsIndirect = true;
+  }
+  auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
+      Context, MT, DTCI.DT, IndirectE, IsIndirect, Level,
+      SourceRange(Loc, Loc));
   ND->addAttr(A);
   if (ASTMutationListener *ML = Context.getASTMutationListener())
     ML->DeclarationMarkedOpenMPDeclareTarget(ND, A);
@@ -20928,9 +20935,16 @@ void Sema::checkDeclIsAllowedInOpenMPTarget(Expr *E, Decl *D,
         if (ActiveAttr.hasValue() && ActiveAttr.getValue()->getLevel() >= Level)
           return;
         DeclareTargetContextInfo &DTCI = DeclareTargetNesting.back();
+        Expr *IndirectE = nullptr;
+        bool IsIndirect = false;
+        if (DTCI.Indirect.hasValue()) {
+          IndirectE = DTCI.Indirect.getValue();
+          if (!IndirectE)
+            IsIndirect = true;
+        }
         auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-            Context, OMPDeclareTargetDeclAttr::MT_To, DTCI.DT, Level,
-            SourceRange(DTCI.Loc, DTCI.Loc));
+            Context, OMPDeclareTargetDeclAttr::MT_To, DTCI.DT, IndirectE,
+            IsIndirect, Level, SourceRange(DTCI.Loc, DTCI.Loc));
         D->addAttr(A);
         if (ASTMutationListener *ML = Context.getASTMutationListener())
           ML->DeclarationMarkedOpenMPDeclareTarget(D, A);

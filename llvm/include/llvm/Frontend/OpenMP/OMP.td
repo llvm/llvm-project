@@ -358,6 +358,7 @@ def OMPC_Unknown : Clause<"unknown"> {
 def OMPC_Link : Clause<"link"> {
   let flangClass = "OmpObjectList";
 }
+def OMPC_Indirect : Clause<"indirect"> {}
 def OMPC_Inbranch : Clause<"inbranch"> {}
 def OMPC_Notinbranch : Clause<"notinbranch"> {}
 def OMPC_Filter : Clause<"filter"> {
@@ -973,12 +974,14 @@ def OMP_BeginDeclareTarget : Directive<"begin declare target"> {
     VersionedClause<OMPC_To>,
     VersionedClause<OMPC_Link>,
     VersionedClause<OMPC_DeviceType>,
+    VersionedClause<OMPC_Indirect>
   ];
 }
 def OMP_DeclareTarget : Directive<"declare target"> {
   let allowedClauses = [
     VersionedClause<OMPC_To>,
-    VersionedClause<OMPC_Link>
+    VersionedClause<OMPC_Link>,
+    VersionedClause<OMPC_Indirect>
   ];
 }
 def OMP_EndDeclareTarget : Directive<"end declare target"> {}
