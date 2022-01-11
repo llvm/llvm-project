@@ -718,8 +718,11 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   const TargetRegisterClass *WaveRC = TRI->getWaveMaskRegClass();
   const unsigned WaveAndOpc = Subtarget.isWave32() ?
     AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
-  const unsigned MovTermOpc = Subtarget.isWave32() ?
-    AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term;
+  const unsigned MovExecOpc =
+      Subtarget.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+  const unsigned MovExecTermOpc =
+      Subtarget.isWave32() ? AMDGPU::S_MOV_B32_term : AMDGPU::S_MOV_B64_term;
+
   const unsigned XorTermOpc = Subtarget.isWave32() ?
     AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
   const unsigned AndSaveExecOpc =  Subtarget.isWave32() ?
@@ -996,12 +999,12 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
   B.buildInstr(AMDGPU::SI_WATERFALL_LOOP).addMBB(LoopBB);
 
   // Save the EXEC mask before the loop.
-  BuildMI(MBB, MBB.end(), DL, TII->get(MovTermOpc), SaveExecReg)
+  BuildMI(MBB, MBB.end(), DL, TII->get(MovExecOpc), SaveExecReg)
     .addReg(ExecReg);
 
   // Restore the EXEC mask after the loop.
   B.setMBB(*RestoreExecBB);
-  B.buildInstr(MovTermOpc)
+  B.buildInstr(MovExecTermOpc)
     .addDef(ExecReg)
     .addReg(SaveExecReg);
 

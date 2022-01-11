@@ -158,7 +158,7 @@ define amdgpu_ps half @raw_tbuffer_load_f16__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; UNPACKED-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; UNPACKED-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; UNPACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.2:
   ; UNPACKED-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -184,7 +184,7 @@ define amdgpu_ps half @raw_tbuffer_load_f16__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; UNPACKED-NEXT: bb.3:
   ; UNPACKED-NEXT:   successors: %bb.4(0x80000000)
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; UNPACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.4:
   ; UNPACKED-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_gfx80_OFFEN]]
@@ -204,7 +204,7 @@ define amdgpu_ps half @raw_tbuffer_load_f16__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY4]]
   ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; PACKED-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; PACKED-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; PACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.2:
   ; PACKED-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -230,7 +230,7 @@ define amdgpu_ps half @raw_tbuffer_load_f16__vgpr_rsrc__sgpr_voffset__vgpr_soffs
   ; PACKED-NEXT: bb.3:
   ; PACKED-NEXT:   successors: %bb.4(0x80000000)
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; PACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.4:
   ; PACKED-NEXT:   $vgpr0 = COPY [[TBUFFER_LOAD_FORMAT_D16_X_OFFEN]]

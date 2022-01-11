@@ -25,7 +25,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY %zero(s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY %agpr(s32)
-    ; CHECK-NEXT: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
     ; CHECK-NEXT: successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -41,7 +41,7 @@ body:             |
     ; CHECK-NEXT: .2:
     ; CHECK-NEXT: successors: %bb.3(0x80000000)
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+    ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_]]
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .3:
     ; CHECK-NEXT: S_ENDPGM 0
@@ -72,7 +72,7 @@ body:             |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<8 x s32>) = COPY [[COPY]](<8 x s32>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vreg_64(s64), [[UV1:%[0-9]+]]:vreg_64(s64), [[UV2:%[0-9]+]]:vreg_64(s64), [[UV3:%[0-9]+]]:vreg_64(s64) = G_UNMERGE_VALUES [[COPY2]](<8 x s32>)
-    ; CHECK-NEXT: [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
     ; CHECK-NEXT: successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -106,7 +106,7 @@ body:             |
     ; CHECK-NEXT: .2:
     ; CHECK-NEXT: successors: %bb.3(0x80000000)
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+    ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_]]
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .3:
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)

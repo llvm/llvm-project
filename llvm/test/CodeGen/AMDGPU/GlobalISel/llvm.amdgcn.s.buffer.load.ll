@@ -2698,7 +2698,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX6-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -2719,7 +2719,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -2738,7 +2738,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX7-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -2759,7 +2759,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -2778,7 +2778,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -2799,7 +2799,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -2822,7 +2822,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX6-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX6-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -2843,7 +2843,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
@@ -2860,7 +2860,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -2881,7 +2881,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
@@ -2898,7 +2898,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX8-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -2919,7 +2919,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
@@ -2947,7 +2947,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX6-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -2968,7 +2968,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -2989,7 +2989,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX7-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -3010,7 +3010,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -3031,7 +3031,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX8-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -3052,7 +3052,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -3076,7 +3076,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX6-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX6-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -3097,7 +3097,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
@@ -3114,7 +3114,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX7-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -3135,7 +3135,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
@@ -3152,7 +3152,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX8-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -3173,7 +3173,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
@@ -3198,7 +3198,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX6-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX6-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -3219,7 +3219,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -3238,7 +3238,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX7-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -3259,7 +3259,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -3276,7 +3276,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; GFX8-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -3297,7 +3297,7 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
@@ -3321,7 +3321,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX6-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX6-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -3343,7 +3343,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFSET]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFSET1]], %subreg.sub4_sub5_sub6_sub7
@@ -3376,7 +3376,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -3398,7 +3398,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFSET]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFSET1]], %subreg.sub4_sub5_sub6_sub7
@@ -3431,7 +3431,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX8-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -3453,7 +3453,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFSET]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFSET1]], %subreg.sub4_sub5_sub6_sub7
@@ -3498,7 +3498,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX6-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -3520,7 +3520,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -3557,7 +3557,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX7-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -3579,7 +3579,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -3616,7 +3616,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX8-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -3638,7 +3638,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -3681,7 +3681,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX6-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -3703,7 +3703,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -3740,7 +3740,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX7-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -3762,7 +3762,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -3799,7 +3799,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX8-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -3821,7 +3821,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -3861,7 +3861,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX6-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5000
   ; GFX6-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -3883,7 +3883,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -3917,7 +3917,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX7-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5000
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -3939,7 +3939,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -3973,7 +3973,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4064
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -3995,7 +3995,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -4035,7 +4035,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX6-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4076
   ; GFX6-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -4057,7 +4057,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -4091,7 +4091,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX7-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4076
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -4113,7 +4113,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -4147,7 +4147,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 12
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -4169,7 +4169,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -4209,7 +4209,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX6-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4080
   ; GFX6-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -4231,7 +4231,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -4265,7 +4265,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX7-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4080
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -4287,7 +4287,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -4321,7 +4321,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY6:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -4343,7 +4343,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFEN]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFEN1]], %subreg.sub4_sub5_sub6_sub7
@@ -4382,7 +4382,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX6-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX6-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX6-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX6-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX6-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.2:
   ; GFX6-NEXT:   successors: %bb.3, %bb.2
@@ -4404,7 +4404,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX6-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.3:
-  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX6-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX6-NEXT: {{  $}}
   ; GFX6-NEXT: bb.4:
   ; GFX6-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFSET]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFSET1]], %subreg.sub4_sub5_sub6_sub7
@@ -4437,7 +4437,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX7-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX7-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX7-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.2:
   ; GFX7-NEXT:   successors: %bb.3, %bb.2
@@ -4459,7 +4459,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX7-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
-  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX7-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.4:
   ; GFX7-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFSET]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFSET1]], %subreg.sub4_sub5_sub6_sub7
@@ -4492,7 +4492,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX8-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX8-NEXT:   [[COPY4:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX8-NEXT:   [[COPY5:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX8-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX8-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.2:
   ; GFX8-NEXT:   successors: %bb.3, %bb.2
@@ -4514,7 +4514,7 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX8-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.3:
-  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX8-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX8-NEXT: {{  $}}
   ; GFX8-NEXT: bb.4:
   ; GFX8-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[BUFFER_LOAD_DWORDX4_OFFSET]], %subreg.sub0_sub1_sub2_sub3, [[BUFFER_LOAD_DWORDX4_OFFSET1]], %subreg.sub4_sub5_sub6_sub7
