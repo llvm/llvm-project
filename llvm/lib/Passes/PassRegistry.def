@@ -413,7 +413,7 @@ FUNCTION_PASS_WITH_PARAMS("msan",
                              return MemorySanitizerPass(Opts);
                            },
                           parseMSanPassOptions,
-                          "recover;kernel;track-origins=N")
+                          "recover;kernel;eager-checks;track-origins=N")
 FUNCTION_PASS_WITH_PARAMS("simplifycfg",
                           "SimplifyCFGPass",
                            [](SimplifyCFGOptions Opts) {

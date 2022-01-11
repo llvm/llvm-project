@@ -657,6 +657,8 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
                     ParamName)
                 .str(),
             inconvertibleErrorCode());
+    } else if (ParamName == "eager-checks") {
+      Result.EagerChecks = true;
     } else {
       return make_error<StringError>(
           formatv("invalid MemorySanitizer pass parameter '{0}' ", ParamName)
