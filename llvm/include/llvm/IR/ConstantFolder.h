@@ -32,6 +32,20 @@ public:
   explicit ConstantFolder() = default;
 
   //===--------------------------------------------------------------------===//
+  // Value-based folders.
+  //
+  // Return an existing value or a constant if the operation can be simplified.
+  // Otherwise return nullptr.
+  //===--------------------------------------------------------------------===//
+  Value *FoldOr(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getOr(LC, RC);
+    return nullptr;
+  }
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
@@ -107,7 +121,7 @@ public:
     return ConstantExpr::getAnd(LHS, RHS);
   }
 
-  Constant *CreateOr(Constant *LHS, Constant *RHS) const override {
+  Constant *CreateOr(Constant *LHS, Constant *RHS) const {
     return ConstantExpr::getOr(LHS, RHS);
   }
 

@@ -925,7 +925,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP7:%.*]] = bitcast %struct.S* [[ARRAYIDX6]] to i8*
 // CHECK1-NEXT:    [[TMP8:%.*]] = bitcast %struct.S* [[VAR3]] to i8*
 // CHECK1-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP7]], i8* align 4 [[TMP8]], i64 4, i1 false)
-// CHECK1-NEXT:    br label [[WHILE_COND]], !llvm.loop [[LOOP4:![0-9]+]]
+// CHECK1-NEXT:    br label [[WHILE_COND]], !llvm.loop [[LOOP5:![0-9]+]]
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined..4
@@ -1111,7 +1111,8 @@ int main() {
 // CHECK1-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK1-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK1-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK1-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK1-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK1-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[TMP0]], i32** [[C]], align 8
@@ -1129,8 +1130,8 @@ int main() {
 // CHECK1-NEXT:    [[BF_LOAD8:%.*]] = load i8, i8* [[B7]], align 4
 // CHECK1-NEXT:    [[BF_VALUE:%.*]] = and i8 [[TMP5]], 15
 // CHECK1-NEXT:    [[BF_CLEAR9:%.*]] = and i8 [[BF_LOAD8]], -16
-// CHECK1-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR9]], [[BF_VALUE]]
-// CHECK1-NEXT:    store i8 [[BF_SET]], i8* [[B7]], align 4
+// CHECK1-NEXT:    [[BF_SET10:%.*]] = or i8 [[BF_CLEAR9]], [[BF_VALUE]]
+// CHECK1-NEXT:    store i8 [[BF_SET10]], i8* [[B7]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -2324,7 +2325,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP7:%.*]] = bitcast %struct.S* [[ARRAYIDX6]] to i8*
 // CHECK2-NEXT:    [[TMP8:%.*]] = bitcast %struct.S* [[VAR3]] to i8*
 // CHECK2-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[TMP7]], i8* align 4 [[TMP8]], i64 4, i1 false)
-// CHECK2-NEXT:    br label [[WHILE_COND]], !llvm.loop [[LOOP4:![0-9]+]]
+// CHECK2-NEXT:    br label [[WHILE_COND]], !llvm.loop [[LOOP5:![0-9]+]]
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@.omp_outlined..4
@@ -2510,7 +2511,8 @@ int main() {
 // CHECK2-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK2-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK2-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK2-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK2-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK2-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK2-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 8
 // CHECK2-NEXT:    store i32* [[TMP0]], i32** [[C]], align 8
@@ -2528,8 +2530,8 @@ int main() {
 // CHECK2-NEXT:    [[BF_LOAD8:%.*]] = load i8, i8* [[B7]], align 4
 // CHECK2-NEXT:    [[BF_VALUE:%.*]] = and i8 [[TMP5]], 15
 // CHECK2-NEXT:    [[BF_CLEAR9:%.*]] = and i8 [[BF_LOAD8]], -16
-// CHECK2-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR9]], [[BF_VALUE]]
-// CHECK2-NEXT:    store i8 [[BF_SET]], i8* [[B7]], align 4
+// CHECK2-NEXT:    [[BF_SET10:%.*]] = or i8 [[BF_CLEAR9]], [[BF_VALUE]]
+// CHECK2-NEXT:    store i8 [[BF_SET10]], i8* [[B7]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -3338,7 +3340,8 @@ int main() {
 // CHECK3-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK3-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK3-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK3-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK3-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK3-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 8
 // CHECK3-NEXT:    store i32* [[TMP0]], i32** [[C]], align 8
@@ -3356,8 +3359,8 @@ int main() {
 // CHECK3-NEXT:    [[BF_LOAD8:%.*]] = load i8, i8* [[B7]], align 4
 // CHECK3-NEXT:    [[BF_VALUE:%.*]] = and i8 [[TMP5]], 15
 // CHECK3-NEXT:    [[BF_CLEAR9:%.*]] = and i8 [[BF_LOAD8]], -16
-// CHECK3-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR9]], [[BF_VALUE]]
-// CHECK3-NEXT:    store i8 [[BF_SET]], i8* [[B7]], align 4
+// CHECK3-NEXT:    [[BF_SET10:%.*]] = or i8 [[BF_CLEAR9]], [[BF_VALUE]]
+// CHECK3-NEXT:    store i8 [[BF_SET10]], i8* [[B7]], align 4
 // CHECK3-NEXT:    ret void
 //
 //
@@ -4056,7 +4059,8 @@ int main() {
 // CHECK4-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK4-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK4-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK4-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK4-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK4-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK4-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 8
 // CHECK4-NEXT:    store i32* [[TMP0]], i32** [[C]], align 8
@@ -4074,8 +4078,8 @@ int main() {
 // CHECK4-NEXT:    [[BF_LOAD8:%.*]] = load i8, i8* [[B7]], align 4
 // CHECK4-NEXT:    [[BF_VALUE:%.*]] = and i8 [[TMP5]], 15
 // CHECK4-NEXT:    [[BF_CLEAR9:%.*]] = and i8 [[BF_LOAD8]], -16
-// CHECK4-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR9]], [[BF_VALUE]]
-// CHECK4-NEXT:    store i8 [[BF_SET]], i8* [[B7]], align 4
+// CHECK4-NEXT:    [[BF_SET10:%.*]] = or i8 [[BF_CLEAR9]], [[BF_VALUE]]
+// CHECK4-NEXT:    store i8 [[BF_SET10]], i8* [[B7]], align 4
 // CHECK4-NEXT:    ret void
 //
 //
@@ -4398,5 +4402,4 @@ int main() {
 // CHECK4-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP28]], [[TMP29]]
 // CHECK4-NEXT:    store i32 [[ADD3]], i32* [[TMP23]], align 4
 // CHECK4-NEXT:    ret void
-//
 //

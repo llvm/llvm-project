@@ -26,6 +26,14 @@ public:
   virtual ~IRBuilderFolder();
 
   //===--------------------------------------------------------------------===//
+  // Value-based folders.
+  //
+  // Return an existing value or a constant if the operation can be simplified.
+  // Otherwise return nullptr.
+  //===--------------------------------------------------------------------===//
+  virtual Value *FoldOr(Value *LHS, Value *RHS) const = 0;
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
@@ -53,7 +61,6 @@ public:
   virtual Value *CreateAShr(Constant *LHS, Constant *RHS,
                             bool isExact = false) const = 0;
   virtual Value *CreateAnd(Constant *LHS, Constant *RHS) const = 0;
-  virtual Value *CreateOr(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateXor(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateBinOp(Instruction::BinaryOps Opc,
                              Constant *LHS, Constant *RHS) const = 0;

@@ -239,7 +239,6 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 
 #endif
 
-
 // CHECK1-LABEL: define {{[^@]+}}@main
 // CHECK1-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
@@ -523,7 +522,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK1-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK1-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK1-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK1-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK1-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK1-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK1-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 4
 // CHECK1-NEXT:    store i32* [[TMP0]], i32** [[C]], align 4
@@ -1208,7 +1208,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK2-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK2-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK2-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK2-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK2-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK2-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK2-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 4
 // CHECK2-NEXT:    store i32* [[TMP0]], i32** [[C]], align 4
@@ -1657,7 +1658,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK3-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK3-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK3-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK3-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK3-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK3-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK3-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 4
 // CHECK3-NEXT:    store i32* [[TMP0]], i32** [[C]], align 4
@@ -1981,7 +1983,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK4-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK4-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK4-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK4-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK4-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK4-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK4-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 4
 // CHECK4-NEXT:    store i32* [[TMP0]], i32** [[C]], align 4
@@ -2446,7 +2449,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK9-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK9-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK9-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK9-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK9-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK9-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK9-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 8
 // CHECK9-NEXT:    store i32* [[TMP0]], i32** [[C]], align 8
@@ -3145,7 +3149,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK10-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK10-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK10-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK10-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK10-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK10-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK10-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK10-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 8
 // CHECK10-NEXT:    store i32* [[TMP0]], i32** [[C]], align 8
@@ -3602,7 +3607,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK11-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK11-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK11-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK11-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK11-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK11-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK11-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 8
 // CHECK11-NEXT:    store i32* [[TMP0]], i32** [[C]], align 8
@@ -3941,7 +3947,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK12-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 1
 // CHECK12-NEXT:    [[BF_LOAD:%.*]] = load i8, i8* [[B]], align 4
 // CHECK12-NEXT:    [[BF_CLEAR:%.*]] = and i8 [[BF_LOAD]], -16
-// CHECK12-NEXT:    store i8 [[BF_CLEAR]], i8* [[B]], align 4
+// CHECK12-NEXT:    [[BF_SET:%.*]] = or i8 [[BF_CLEAR]], 0
+// CHECK12-NEXT:    store i8 [[BF_SET]], i8* [[B]], align 4
 // CHECK12-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[THIS1]], i32 0, i32 2
 // CHECK12-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[D_ADDR]], align 8
 // CHECK12-NEXT:    store i32* [[TMP0]], i32** [[C]], align 8
