@@ -1155,40 +1155,44 @@ static LogicalResult verify(ReinterpretCastOp op) {
                                  extractFromI64ArrayAttr(op.static_sizes())))) {
     int64_t resultSize = std::get<0>(en.value());
     int64_t expectedSize = std::get<1>(en.value());
-    if (!ShapedType::isDynamic(resultSize) && resultSize != expectedSize)
+    if (!ShapedType::isDynamic(resultSize) &&
+        !ShapedType::isDynamic(expectedSize) && resultSize != expectedSize)
       return op.emitError("expected result type with size = ")
              << expectedSize << " instead of " << resultSize
              << " in dim = " << en.index();
   }
 
-  // Match offset and strides in static_offset and static_strides attributes if
-  // result memref type has an affine map specified.
-  if (!resultType.getLayout().isIdentity()) {
-    int64_t resultOffset;
-    SmallVector<int64_t, 4> resultStrides;
-    if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
-      return failure();
+  // Match offset and strides in static_offset and static_strides attributes. If
+  // result memref type has no affine map specified, this will assume an
+  // identity layout.
+  int64_t resultOffset;
+  SmallVector<int64_t, 4> resultStrides;
+  if (failed(getStridesAndOffset(resultType, resultStrides, resultOffset)))
+    return op.emitError(
+               "expected result type to have strided layout but found ")
+           << resultType;
 
-    // Match offset in result memref type and in static_offsets attribute.
-    int64_t expectedOffset =
-        extractFromI64ArrayAttr(op.static_offsets()).front();
-    if (!ShapedType::isDynamicStrideOrOffset(resultOffset) &&
-        resultOffset != expectedOffset)
-      return op.emitError("expected result type with offset = ")
-             << resultOffset << " instead of " << expectedOffset;
+  // Match offset in result memref type and in static_offsets attribute.
+  int64_t expectedOffset = extractFromI64ArrayAttr(op.static_offsets()).front();
+  if (!ShapedType::isDynamicStrideOrOffset(resultOffset) &&
+      !ShapedType::isDynamicStrideOrOffset(expectedOffset) &&
+      resultOffset != expectedOffset)
+    return op.emitError("expected result type with offset = ")
+           << resultOffset << " instead of " << expectedOffset;
 
-    // Match strides in result memref type and in static_strides attribute.
-    for (auto &en : llvm::enumerate(llvm::zip(
-             resultStrides, extractFromI64ArrayAttr(op.static_strides())))) {
-      int64_t resultStride = std::get<0>(en.value());
-      int64_t expectedStride = std::get<1>(en.value());
-      if (!ShapedType::isDynamicStrideOrOffset(resultStride) &&
-          resultStride != expectedStride)
-        return op.emitError("expected result type with stride = ")
-               << expectedStride << " instead of " << resultStride
-               << " in dim = " << en.index();
-    }
+  // Match strides in result memref type and in static_strides attribute.
+  for (auto &en : llvm::enumerate(llvm::zip(
+           resultStrides, extractFromI64ArrayAttr(op.static_strides())))) {
+    int64_t resultStride = std::get<0>(en.value());
+    int64_t expectedStride = std::get<1>(en.value());
+    if (!ShapedType::isDynamicStrideOrOffset(resultStride) &&
+        !ShapedType::isDynamicStrideOrOffset(expectedStride) &&
+        resultStride != expectedStride)
+      return op.emitError("expected result type with stride = ")
+             << expectedStride << " instead of " << resultStride
+             << " in dim = " << en.index();
   }
+
   return success();
 }
 
