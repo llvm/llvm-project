@@ -3035,9 +3035,26 @@ def G_AMDGPU_INTRIN_IMAGE_LOAD : AMDGPUGenericInstruction {
   let mayStore = 1;
 }
 
+def G_AMDGPU_INTRIN_IMAGE_LOAD_D16 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+
+  // FIXME: Use separate opcode for atomics.
+  let mayStore = 1;
+}
+
 // This is equivalent to the G_INTRINSIC*, but the operands may have
 // been legalized depending on the subtarget requirements.
 def G_AMDGPU_INTRIN_IMAGE_STORE : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$intrin, variable_ops);
+  let hasSideEffects = 0;
+  let mayStore = 1;
+}
+
+def G_AMDGPU_INTRIN_IMAGE_STORE_D16 : AMDGPUGenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$intrin, variable_ops);
   let hasSideEffects = 0;

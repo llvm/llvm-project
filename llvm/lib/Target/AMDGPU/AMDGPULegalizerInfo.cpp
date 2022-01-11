@@ -4365,6 +4365,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   const LLT V2S16 = LLT::fixed_vector(2, 16);
 
   unsigned DMask = 0;
+  Register VData = MI.getOperand(NumDefs == 0 ? 1 : 0).getReg();
+  LLT Ty = MRI->getType(VData);
 
   // Check for 16 bit addresses and pack if true.
   LLT GradTy =
@@ -4373,6 +4375,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       MRI->getType(MI.getOperand(ArgOffset + Intr->CoordStart).getReg());
   const bool IsG16 = GradTy == S16;
   const bool IsA16 = AddrTy == S16;
+  const bool IsD16 = Ty.getScalarType() == S16;
 
   int DMaskLanes = 0;
   if (!BaseOpcode->Atomic) {
@@ -4392,8 +4395,11 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   Observer.changingInstr(MI);
   auto ChangedInstr = make_scope_exit([&] { Observer.changedInstr(MI); });
 
-  unsigned NewOpcode = NumDefs == 0 ?
-    AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE : AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD;
+  const unsigned StoreOpcode = IsD16 ? AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16
+                                     : AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE;
+  const unsigned LoadOpcode = IsD16 ? AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16
+                                    : AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD;
+  unsigned NewOpcode = NumDefs == 0 ? StoreOpcode : LoadOpcode;
 
   // Track that we legalized this
   MI.setDesc(B.getTII().get(NewOpcode));
@@ -4442,8 +4448,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
         // The starting indexes should remain in the same place.
         --CorrectedNumVAddrs;
 
-        MI.getOperand(MI.getNumExplicitDefs())
-            .setIntrinsicID(static_cast<Intrinsic::ID>(NewImageDimIntr->Intr));
+        MI.getOperand(NumDefs).setIntrinsicID(
+            static_cast<Intrinsic::ID>(NewImageDimIntr->Intr));
         MI.RemoveOperand(ArgOffset + Intr->LodIndex);
         Intr = NewImageDimIntr;
       }
@@ -4539,9 +4545,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   if (BaseOpcode->Store) { // No TFE for stores?
     // TODO: Handle dmask trim
-    Register VData = MI.getOperand(1).getReg();
-    LLT Ty = MRI->getType(VData);
-    if (!Ty.isVector() || Ty.getElementType() != S16)
+    if (!Ty.isVector() || !IsD16)
       return true;
 
     Register RepackedReg = handleD16VData(B, *MRI, VData, true);
@@ -4553,9 +4557,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   }
 
   Register DstReg = MI.getOperand(0).getReg();
-  LLT Ty = MRI->getType(DstReg);
   const LLT EltTy = Ty.getScalarType();
-  const bool IsD16 = Ty.getScalarType() == S16;
   const int NumElts = Ty.isVector() ? Ty.getNumElements() : 1;
 
   // Confirm that the return type is large enough for the dmask specified
