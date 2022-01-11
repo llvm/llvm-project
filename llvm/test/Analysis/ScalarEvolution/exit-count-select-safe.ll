@@ -125,6 +125,43 @@ exit:
   ret i32 %i
 }
 
+define i32 @logical_or_3ops_duplicate(i32 %n, i32 %m, i32 %k) {
+; CHECK-LABEL: 'logical_or_3ops_duplicate'
+; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_duplicate
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %n umin_seq %k) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %n umin_seq %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond_p4 = select i1 %cond_p0, i1 true, i1 %cond_p1
+; CHECK-NEXT:    --> %cond_p4 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %cond_p5 = select i1 %cond_p4, i1 true, i1 %cond_p2
+; CHECK-NEXT:    --> %cond_p5 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %cond = select i1 %cond_p5, i1 true, i1 %cond_p3
+; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_duplicate
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m umin_seq %n umin_seq %k)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m umin_seq %n umin_seq %k)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %cond_p0 = icmp uge i32 %i, %n
+  %cond_p1 = icmp uge i32 %i, %m
+  %cond_p2 = icmp uge i32 %i, %n
+  %cond_p3 = icmp uge i32 %i, %k
+  %cond_p4 = select i1 %cond_p0, i1 true, i1 %cond_p1
+  %cond_p5 = select i1 %cond_p4, i1 true, i1 %cond_p2
+  %cond = select i1 %cond_p5, i1 true, i1 %cond_p3
+  br i1 %cond, label %exit, label %loop
+exit:
+  ret i32 %i
+}
+
 define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-LABEL: 'computeSCEVAtScope'
 ; CHECK-NEXT:  Classifying expressions for: @computeSCEVAtScope
