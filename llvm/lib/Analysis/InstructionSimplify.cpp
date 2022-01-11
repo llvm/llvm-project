@@ -2696,7 +2696,9 @@ computePointerICmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
 
     // Fold comparisons for non-escaping pointer even if the allocation call
     // cannot be elided. We cannot fold malloc comparison to null. Also, the
-    // dynamic allocation call could be either of the operands.
+    // dynamic allocation call could be either of the operands.  Note that
+    // the other operand can not be based on the alloc - if it were, then
+    // the cmp itself would be a capture.
     Value *MI = nullptr;
     if (isAllocLikeFn(LHS, TLI) &&
         llvm::isKnownNonZero(RHS, DL, 0, nullptr, CxtI, DT))

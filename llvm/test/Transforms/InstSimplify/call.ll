@@ -1546,4 +1546,20 @@ define <3 x i33> @ctlz_ashr_sign_bit_vec(<3 x i33> %x) {
   ret <3 x i33> %r
 }
 
+declare i8* @llvm.ptrmask.p0i8.i64(i8* , i64)
+
+define i1 @capture_vs_recurse(i64 %mask) {
+; CHECK-LABEL: @capture_vs_recurse(
+; CHECK-NEXT:    [[A:%.*]] = call noalias i8* @malloc(i64 8)
+; CHECK-NEXT:    [[B:%.*]] = call nonnull i8* @llvm.ptrmask.p0i8.i64(i8* [[A]], i64 [[MASK:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a = call noalias i8* @malloc(i64 8)
+  %b = call nonnull i8* @llvm.ptrmask.p0i8.i64(i8* %a, i64 %mask)
+  %cmp = icmp eq i8* %a, %b
+  ret i1 %cmp
+}
+
+
 attributes #0 = { nobuiltin readnone }
