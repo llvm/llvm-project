@@ -56,7 +56,7 @@ bool isTopLevelValue(Value value);
 //
 //   %num_elements = arith.constant 256
 //   %idx = arith.constant 0 : index
-//   %tag = alloc() : memref<1xi32, 4>
+//   %tag = memref.alloc() : memref<1xi32, 4>
 //   affine.dma_start %src[%i + 3, %j], %dst[%k + 7, %l], %tag[%idx],
 //     %num_elements :
 //       memref<40x128xf32, 0>, memref<2x1024xf32, 1>, memref<1xi32, 2>

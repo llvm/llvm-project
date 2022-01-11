@@ -388,9 +388,9 @@ using namespace vector;
 /// produces this standard innermost-loop vectorized code:
 /// ```mlir
 /// func @vector_add_2d(%arg0 : index, %arg1 : index) -> f32 {
-///   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
 ///   %cst = arith.constant 1.0 : f32
 ///   %cst_0 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %arg0 {
@@ -442,9 +442,9 @@ using namespace vector;
 /// produces this more interesting mixed outer-innermost-loop vectorized code:
 /// ```mlir
 /// func @vector_add_2d(%arg0 : index, %arg1 : index) -> f32 {
-///   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
 ///   %cst = arith.constant 1.0 : f32
 ///   %cst_0 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %arg0 step 32 {
