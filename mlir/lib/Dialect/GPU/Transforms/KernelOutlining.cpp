@@ -322,7 +322,7 @@ private:
     // If a valid data layout spec was provided, attach it to the kernel module.
     // Otherwise, the default data layout will be used.
     if (dataLayoutSpec)
-      kernelModule->setAttr("dlspec", dataLayoutSpec);
+      kernelModule->setAttr(DLTIDialect::kDataLayoutAttrName, dataLayoutSpec);
 
     SymbolTable symbolTable(kernelModule);
     symbolTable.insert(kernelFunc);
