@@ -96,9 +96,6 @@ struct TestComprehensiveFunctionBufferize
 void TestComprehensiveFunctionBufferize::runOnFunction() {
   auto options = std::make_unique<BufferizationOptions>();
 
-  // Enable InitTensorOp elimination.
-  options->addPostAnalysisStep<
-      linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
   if (!allowReturnMemref)
     options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 

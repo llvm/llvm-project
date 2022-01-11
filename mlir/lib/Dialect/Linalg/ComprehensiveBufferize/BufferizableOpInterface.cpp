@@ -347,6 +347,14 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::BufferizationState(
   });
 }
 
+// bufferization.to_memref is not allowed to change the rank.
+static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
+  auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>();
+  assert((!rankedTensorType || memrefType.cast<MemRefType>().getRank() ==
+                                   rankedTensorType.getRank()) &&
+         "to_memref would be invalid: mismatching ranks");
+}
+
 static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
   assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
 
@@ -364,6 +372,7 @@ static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
     memrefType = getUnrankedMemRefType(
         tensor.getType().cast<TensorType>().getElementType());
   }
+  ensureToMemrefOpIsValid(tensor, memrefType);
   return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
                                                     tensor);
 }
