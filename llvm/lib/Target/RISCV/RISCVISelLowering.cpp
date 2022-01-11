@@ -1041,7 +1041,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::XOR);
   setTargetDAGCombine(ISD::ANY_EXTEND);
-  setTargetDAGCombine(ISD::ZERO_EXTEND);
+  if (Subtarget.hasStdExtF()) {
+    setTargetDAGCombine(ISD::ZERO_EXTEND);
+    setTargetDAGCombine(ISD::FP_TO_SINT);
+    setTargetDAGCombine(ISD::FP_TO_UINT);
+  }
   if (Subtarget.hasVInstructions()) {
     setTargetDAGCombine(ISD::FCOPYSIGN);
     setTargetDAGCombine(ISD::MGATHER);
@@ -7052,6 +7056,61 @@ static SDValue combineMUL_VLToVWMUL(SDNode *N, SDValue Op0, SDValue Op1,
   return DAG.getNode(WMulOpc, DL, VT, Op0, Op1, Mask, VL);
 }
 
+// Fold
+//   (fp_to_int (froundeven X)) -> fcvt X, rne
+//   (fp_to_int (ftrunc X))     -> fcvt X, rtz
+//   (fp_to_int (ffloor X))     -> fcvt X, rdn
+//   (fp_to_int (fceil X))      -> fcvt X, rup
+//   (fp_to_int (fround X))     -> fcvt X, rmm
+// FIXME: We should also do this for fp_to_int_sat.
+static SDValue performFP_TO_INTCombine(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // Only handle XLen or i32 types. Other types narrower than XLen will
+  // eventually be legalized to XLenVT.
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != XLenVT)
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+
+  // Ensure the FP type is also legal.
+  if (!TLI.isTypeLegal(Src.getValueType()))
+    return SDValue();
+
+  // Don't do this for f16 with Zfhmin and not Zfh.
+  if (Src.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfh())
+    return SDValue();
+
+  RISCVFPRndMode::RoundingMode FRM;
+  switch (Src->getOpcode()) {
+  default:
+    return SDValue();
+  case ISD::FROUNDEVEN: FRM = RISCVFPRndMode::RNE; break;
+  case ISD::FTRUNC:     FRM = RISCVFPRndMode::RTZ; break;
+  case ISD::FFLOOR:     FRM = RISCVFPRndMode::RDN; break;
+  case ISD::FCEIL:      FRM = RISCVFPRndMode::RUP; break;
+  case ISD::FROUND:     FRM = RISCVFPRndMode::RMM; break;
+  }
+
+  bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT;
+
+  unsigned Opc;
+  if (VT == XLenVT)
+    Opc = IsSigned ? RISCVISD::FCVT_X : RISCVISD::FCVT_XU;
+  else
+    Opc = IsSigned ? RISCVISD::FCVT_W_RV64 : RISCVISD::FCVT_WU_RV64;
+
+  SDLoc DL(N);
+  SDValue FpToInt = DAG.getNode(Opc, DL, XLenVT, Src.getOperand(0),
+                                DAG.getTargetConstant(FRM, DL, XLenVT));
+  return DAG.getNode(ISD::TRUNCATE, DL, VT, FpToInt);
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -7381,6 +7440,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return performFP_TO_INTCombine(N, DCI, Subtarget);
   case ISD::FCOPYSIGN: {
     EVT VT = N->getValueType(0);
     if (!VT.isVector())
