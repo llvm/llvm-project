@@ -411,7 +411,7 @@ def IfOp : SCF_Op<"if",
     void getNumRegionInvocations(ArrayRef<Attribute> operands,
                                  SmallVectorImpl<int64_t> &countPerRegion);
   }];
-
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
