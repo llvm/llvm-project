@@ -24,7 +24,7 @@ bb0:
   %0 = add i32 %a, 4
   %1 = add i32 %b, 1
   %2 = add i32 %b, 1
-  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@function1, %fail1)) to label %normal [label %fail1]
+  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@function1, %fail1)) to label %normal [label %fail1]
 normal:
   %3 = add i32 %b, 1
   %4 = add i32 %b, 1
@@ -54,7 +54,7 @@ bb0:
   %0 = add i32 %a, 4
   %1 = add i32 %b, 1
   %2 = add i32 %b, 1
-  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@function2, %fail1)) to label %normal [label %fail1]
+  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@function2, %fail1)) to label %normal [label %fail1]
 normal:
   %3 = add i32 %b, 1
   %4 = add i32 %b, 1

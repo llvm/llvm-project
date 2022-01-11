@@ -9,7 +9,7 @@
 define void @widget(%struct.pluto** %tmp1) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    callbr void asm sideeffect "", "X,X"(i8* blockaddress(@widget, [[BB5:%.*]]), i8* blockaddress(@widget, [[BB8:%.*]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "i,i"(i8* blockaddress(@widget, [[BB5:%.*]]), i8* blockaddress(@widget, [[BB8:%.*]]))
 ; CHECK-NEXT:    to label [[BB4:%.*]] [label [[BB5]], label %bb8]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br label [[BB5]]
@@ -26,7 +26,7 @@ define void @widget(%struct.pluto** %tmp1) {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  callbr void asm sideeffect "", "X,X"(i8* blockaddress(@widget, %bb5), i8* blockaddress(@widget, %bb8))
+  callbr void asm sideeffect "", "i,i"(i8* blockaddress(@widget, %bb5), i8* blockaddress(@widget, %bb8))
   to label %bb4 [label %bb5, label %bb8]
 
 bb4:                                              ; preds = %bb

@@ -4,18 +4,18 @@
 ; It's ok to modify this test in the future should we allow the loop containing
 ; callbr to be unswitched and are able to do so correctly.
 
-; CHECK: callbr void asm sideeffect "# ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10))
+; CHECK: callbr void asm sideeffect "# ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10))
 ; CHECK: to label %7 [label %10]
-; CHECK: callbr void asm sideeffect "# ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10))
+; CHECK: callbr void asm sideeffect "# ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10))
 ; CHECK: to label %9 [label %10]
 
-; CHECK-NOT: callbr void asm sideeffect "# ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10))
+; CHECK-NOT: callbr void asm sideeffect "# ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10))
 ; CHECK-NOT: to label %7 [label %10]
-; CHECK-NOT: callbr void asm sideeffect "# ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10))
+; CHECK-NOT: callbr void asm sideeffect "# ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10))
 ; CHECK-NOT: to label %9 [label %10]
-; CHECK-NOT: callbr void asm sideeffect "# ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %19))
+; CHECK-NOT: callbr void asm sideeffect "# ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %19))
 ; CHECK-NOT: to label %16 [label %19]
-; CHECK-NOT: callbr void asm sideeffect "# ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %19))
+; CHECK-NOT: callbr void asm sideeffect "# ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %19))
 ; CHECK-NOT: to label %18 [label %19]
 
 ; This test is essentially:
@@ -43,14 +43,14 @@ define dso_local void @foo(i32) #0 {
   br i1 %5, label %8, label %6
 
 6:                                                ; preds = %4
-  callbr void asm sideeffect "# ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10)) #0
+  callbr void asm sideeffect "# ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10)) #0
     to label %7 [label %10]
 
 7:                                                ; preds = %6
   br label %10
 
 8:                                                ; preds = %4
-  callbr void asm sideeffect "# ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10)) #0
+  callbr void asm sideeffect "# ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %10)) #0
     to label %9 [label %10]
 
 9:                                                ; preds = %8

@@ -31,7 +31,7 @@ define i32 @o() #0 {
 ; CHECK:       .lr.ph:
 ; CHECK-NEXT:    br label [[TMP13:%.*]]
 ; CHECK:         [[DOT11:%.*]] = phi i32 [ undef, [[DOTLR_PH]] ], [ [[TMP14:%.*]], [[J_EXIT_I:%.*]] ]
-; CHECK-NEXT:    callbr void asm sideeffect "", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@o, [[M_EXIT]])) #1
+; CHECK-NEXT:    callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@o, [[M_EXIT]])) #1
 ; CHECK-NEXT:    to label [[J_EXIT_I]] [label %m.exit]
 ; CHECK:       j.exit.i:
 ; CHECK-NEXT:    [[TMP14]] = tail call i32 asm "", "={ax},~{dirflag},~{fpsr},~{flags}"() #2
@@ -79,7 +79,7 @@ thread-pre-split:                                 ; preds = %6
   br i1 %13, label %m.exit, label %14
 
 ; <label>:14:                                     ; preds = %12
-  callbr void asm sideeffect "", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@o, %m.exit)) #1
+  callbr void asm sideeffect "", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@o, %m.exit)) #1
   to label %j.exit.i [label %m.exit]
 
 j.exit.i:                                         ; preds = %14
