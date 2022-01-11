@@ -4629,14 +4629,14 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
       if (ConstraintLetter != 'n') {
         if (const auto *GA = dyn_cast<GlobalAddressSDNode>(Op)) {
           Ops.push_back(DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(Op),
-                GA->getValueType(0),
-                Offset + GA->getOffset()));
+                                                   GA->getValueType(0),
+                                                   Offset + GA->getOffset()));
           return;
         }
         if (const auto *BA = dyn_cast<BlockAddressSDNode>(Op)) {
           Ops.push_back(DAG.getTargetBlockAddress(
-                BA->getBlockAddress(), BA->getValueType(0),
-                Offset + BA->getOffset(), BA->getTargetFlags()));
+              BA->getBlockAddress(), BA->getValueType(0),
+              Offset + BA->getOffset(), BA->getTargetFlags()));
           return;
         }
       }
