@@ -68,4 +68,4 @@
 // SPLINK: clang{{.*}} "-cc1" "-triple" "spirv64"
 // SPLINK-SAME: "-o" [[BC:".*bc"]]
 // SPLINK: {{llvm-spirv.*"}} [[BC]] "-o" [[SPV2:".*o"]]
-// SPLINK: {{"spirv-link.*"}} [[SPV1]] [[SPV2]] "-o" "a.out"
+// SPLINK: {{spirv-link.*"}} [[SPV1]] [[SPV2]] "-o" "a.out"
