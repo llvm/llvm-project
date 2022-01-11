@@ -153,7 +153,7 @@ SBTypeSummary SBTypeSummary::CreateWithScriptCode(const char *data,
 SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
                                                 uint32_t options,
                                                 const char *description) {
-  LLDB_RECORD_DUMMY(
+  LLDB_RECORD_STATIC_METHOD(
       lldb::SBTypeSummary, SBTypeSummary, CreateWithCallback,
       (lldb::SBTypeSummary::FormatCallback, uint32_t, const char *), cb,
       options, description);
