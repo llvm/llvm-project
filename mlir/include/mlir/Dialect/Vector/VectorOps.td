@@ -2083,7 +2083,7 @@ def Vector_TypeCastOp :
     Example:
 
     ```mlir
-    %A  = alloc() : memref<5x4x3xf32>
+    %A  = memref.alloc() : memref<5x4x3xf32>
     %VA = vector.type_cast %A : memref<5x4x3xf32> to memref<vector<5x4x3xf32>>
     ```
   }];
