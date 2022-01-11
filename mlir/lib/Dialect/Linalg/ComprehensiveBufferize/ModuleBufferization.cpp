@@ -886,8 +886,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
     if (funcOp.body().empty())
       continue;
 
-    if (failed(runComprehensiveBufferize(funcOp, *options, state,
-                                         /*runAnalysis=*/false)))
+    if (failed(bufferizeOp(funcOp, state)))
       return failure();
   }
 

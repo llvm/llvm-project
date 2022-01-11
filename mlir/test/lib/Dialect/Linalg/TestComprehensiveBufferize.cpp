@@ -117,6 +117,9 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
   if (failed(runComprehensiveBufferize(op, std::move(options))))
     return;
 
+  if (testAnalysisOnly)
+    return;
+
   OpPassManager cleanupPipeline("builtin.func");
   cleanupPipeline.addPass(createCanonicalizerPass());
   cleanupPipeline.addPass(createCSEPass());

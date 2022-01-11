@@ -30,7 +30,6 @@ define void @f1(i16* noalias %a,
 ; LV-NEXT:  for.body.lver.check:
 ; LV-NEXT:    [[A5:%.*]] = bitcast i16* [[A:%.*]] to i8*
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
-; LV-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; LV-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; LV-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])

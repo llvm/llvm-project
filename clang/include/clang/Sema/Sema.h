@@ -12080,9 +12080,12 @@ public:
     ConstexprIf, ///< A constant boolean condition from 'if constexpr'.
     Switch       ///< An integral condition for a 'switch' statement.
   };
+  QualType PreferredConditionType(ConditionKind K) const {
+    return K == ConditionKind::Switch ? Context.IntTy : Context.BoolTy;
+  }
 
-  ConditionResult ActOnCondition(Scope *S, SourceLocation Loc,
-                                 Expr *SubExpr, ConditionKind CK);
+  ConditionResult ActOnCondition(Scope *S, SourceLocation Loc, Expr *SubExpr,
+                                 ConditionKind CK, bool MissingOK = false);
 
   ConditionResult ActOnConditionVariable(Decl *ConditionVar,
                                          SourceLocation StmtLoc,

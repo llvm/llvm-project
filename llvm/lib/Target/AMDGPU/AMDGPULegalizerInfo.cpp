@@ -2213,10 +2213,12 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
   LLT EltTy = VecTy.getElementType();
   assert(EltTy == MRI.getType(Dst));
 
-  if (IdxVal < VecTy.getNumElements())
-    B.buildExtract(Dst, Vec, IdxVal * EltTy.getSizeInBits());
-  else
+  if (IdxVal < VecTy.getNumElements()) {
+    auto Unmerge = B.buildUnmerge(EltTy, Vec);
+    B.buildCopy(Dst, Unmerge.getReg(IdxVal));
+  } else {
     B.buildUndef(Dst);
+  }
 
   MI.eraseFromParent();
   return true;
@@ -2246,10 +2248,18 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   LLT EltTy = VecTy.getElementType();
   assert(EltTy == MRI.getType(Ins));
 
-  if (IdxVal < VecTy.getNumElements())
-    B.buildInsert(Dst, Vec, Ins, IdxVal * EltTy.getSizeInBits());
-  else
+  unsigned NumElts = VecTy.getNumElements();
+  if (IdxVal < NumElts) {
+    SmallVector<Register, 8> SrcRegs;
+    for (unsigned i = 0; i < NumElts; ++i)
+      SrcRegs.push_back(MRI.createGenericVirtualRegister(EltTy));
+    B.buildUnmerge(SrcRegs, Vec);
+
+    SrcRegs[IdxVal] = MI.getOperand(2).getReg();
+    B.buildMerge(Dst, SrcRegs);
+  } else {
     B.buildUndef(Dst);
+  }
 
   MI.eraseFromParent();
   return true;

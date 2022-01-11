@@ -391,6 +391,8 @@ TEST(SelectionTest, CommonAncestor) {
         )cpp",
           "DeclRefExpr"},
       {"[[decltype^(1)]] b;", "DecltypeTypeLoc"}, // Not the VarDecl.
+      // decltype(auto) is an AutoTypeLoc!
+      {"[[de^cltype(a^uto)]] a = 1;", "AutoTypeLoc"},
 
       // Objective-C nullability attributes.
       {

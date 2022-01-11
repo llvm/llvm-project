@@ -151,7 +151,7 @@ func @multiple_reducing_dims_all_dynamic(%arg0 : memref<?x?x?xf32, offset: ?, st
 //       CHECK:   return %[[SIZE]] : index
 func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
   %c0 = arith.constant 0 : index
-  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [0] : memref<?xi8> to memref<?xi8>
+  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [1] : memref<?xi8> to memref<?xi8>
   %1 = memref.dim %0, %c0 : memref<?xi8>
   return %1 : index
 }

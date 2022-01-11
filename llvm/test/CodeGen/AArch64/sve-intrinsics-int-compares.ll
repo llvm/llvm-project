@@ -963,6 +963,39 @@ define <vscale x 4 x i1> @cmpls_wide_splat_s(<vscale x 4 x i1> %pg, <vscale x 4 
   ret <vscale x 4 x i1> %out
 }
 
+; Verify general predicate is folded into the compare
+define <vscale x 4 x i1> @predicated_icmp(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: predicated_icmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    cmpgt p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    cmpge p0.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    ret
+  %icmp1 = icmp sgt <vscale x 4 x i32> %a, %b
+  %icmp2 = icmp sle <vscale x 4 x i32> %b, %c
+  %and = and <vscale x 4 x i1> %icmp1, %icmp2
+  ret <vscale x 4 x i1> %and
+}
+
+define <vscale x 4 x i1> @predicated_icmp_unknown_lhs(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: predicated_icmp_unknown_lhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmpge p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    ret
+  %icmp = icmp sle <vscale x 4 x i32> %b, %c
+  %and = and <vscale x 4 x i1> %a, %icmp
+  ret <vscale x 4 x i1> %and
+}
+
+define <vscale x 4 x i1> @predicated_icmp_unknown_rhs(<vscale x 4 x i1> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c) {
+; CHECK-LABEL: predicated_icmp_unknown_rhs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmpge p0.s, p0/z, z1.s, z0.s
+; CHECK-NEXT:    ret
+  %icmp = icmp sle <vscale x 4 x i32> %b, %c
+  %and = and <vscale x 4 x i1> %icmp, %a
+  ret <vscale x 4 x i1> %and
+}
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, <vscale x 16 x i8>)
 declare <vscale x 8 x i1> @llvm.aarch64.sve.cmpeq.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, <vscale x 8 x i16>)

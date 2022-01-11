@@ -13,7 +13,6 @@ define void @f(i32* noalias %a, i32* noalias %b, i32* noalias %c, i32* noalias %
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_CHECK:%.*]]
 ; CHECK:       for.body.lver.check:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
@@ -149,7 +148,6 @@ define void @f_with_offset(i32* noalias %b, i32* noalias %c, i32* noalias %d, i3
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_CHECK:%.*]]
 ; CHECK:       for.body.lver.check:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 false, [[TMP7]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 8, i64 [[TMP0]])
