@@ -686,6 +686,8 @@ def WhileOp : SCF_Op<"while",
   let extraClassDeclaration = [{
     OperandRange getSuccessorEntryOperands(unsigned index);
     ConditionOp getConditionOp();
+    YieldOp getYieldOp();
+    Block::BlockArgListType getBeforeArguments();
     Block::BlockArgListType getAfterArguments();
   }];
 

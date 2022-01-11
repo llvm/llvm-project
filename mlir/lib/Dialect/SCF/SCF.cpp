@@ -2171,6 +2171,14 @@ ConditionOp WhileOp::getConditionOp() {
   return cast<ConditionOp>(getBefore().front().getTerminator());
 }
 
+YieldOp WhileOp::getYieldOp() {
+  return cast<YieldOp>(getAfter().front().getTerminator());
+}
+
+Block::BlockArgListType WhileOp::getBeforeArguments() {
+  return getBefore().front().getArguments();
+}
+
 Block::BlockArgListType WhileOp::getAfterArguments() {
   return getAfter().front().getArguments();
 }
@@ -2508,11 +2516,60 @@ struct WhileCmpCond : public OpRewritePattern<scf::WhileOp> {
     return success(changed);
   }
 };
+
+struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+
+    if (!llvm::any_of(op.getBeforeArguments(),
+                      [](Value arg) { return arg.use_empty(); }))
+      return failure();
+
+    YieldOp yield = op.getYieldOp();
+
+    // Collect results mapping, new terminator args and new result types.
+    SmallVector<Value> newYields;
+    SmallVector<Value> newInits;
+    SmallVector<unsigned> argsToErase;
+    for (const auto &it : llvm::enumerate(llvm::zip(
+             op.getBeforeArguments(), yield.getOperands(), op.getInits()))) {
+      Value beforeArg = std::get<0>(it.value());
+      Value yieldValue = std::get<1>(it.value());
+      Value initValue = std::get<2>(it.value());
+      if (beforeArg.use_empty()) {
+        argsToErase.push_back(it.index());
+      } else {
+        newYields.emplace_back(yieldValue);
+        newInits.emplace_back(initValue);
+      }
+    }
+
+    if (argsToErase.size() == 0)
+      return failure();
+
+    rewriter.startRootUpdate(op);
+    op.getBefore().front().eraseArguments(argsToErase);
+    rewriter.finalizeRootUpdate(op);
+
+    WhileOp replacement =
+        rewriter.create<WhileOp>(op.getLoc(), op.getResultTypes(), newInits);
+    replacement.getBefore().takeBody(op.getBefore());
+    replacement.getAfter().takeBody(op.getAfter());
+    rewriter.replaceOp(op, replacement.getResults());
+
+    rewriter.setInsertionPoint(yield);
+    rewriter.replaceOpWithNewOp<YieldOp>(yield, newYields);
+    return success();
+  }
+};
 } // namespace
 
 void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                           MLIRContext *context) {
-  results.insert<WhileConditionTruth, WhileUnusedResult, WhileCmpCond>(context);
+  results.insert<WhileConditionTruth, WhileUnusedResult, WhileCmpCond,
+                 WhileUnusedArg>(context);
 }
 
 //===----------------------------------------------------------------------===//
