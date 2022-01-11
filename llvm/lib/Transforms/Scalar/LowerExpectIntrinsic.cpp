@@ -64,7 +64,7 @@ getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
     // __builtin_expect_with_probability
     assert(CI->getNumOperands() >= 3 &&
            "expect with probability must have 3 arguments");
-    ConstantFP *Confidence = dyn_cast<ConstantFP>(CI->getArgOperand(2));
+    auto *Confidence = cast<ConstantFP>(CI->getArgOperand(2));
     double TrueProb = Confidence->getValueAPF().convertToDouble();
     assert((TrueProb >= 0.0 && TrueProb <= 1.0) &&
            "probability value must be in the range [0.0, 1.0]");

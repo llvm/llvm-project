@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___ALGORITHM_NEXT_PERMUTATION_H
 #define _LIBCPP___ALGORITHM_NEXT_PERMUTATION_H
 
-#include <__config>
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/reverse.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__utility/swap.h>
 

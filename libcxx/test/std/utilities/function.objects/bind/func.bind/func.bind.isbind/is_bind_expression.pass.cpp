@@ -20,8 +20,15 @@ void
 test(const T&)
 {
     static_assert(std::is_bind_expression<T>::value == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_bind_expression<T&>::value == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_bind_expression<const T>::value == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_bind_expression<const T&>::value == Expected, "");
+
 #if TEST_STD_VER > 14
     static_assert(std::is_bind_expression_v<T> == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_bind_expression_v<T&> == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_bind_expression_v<const T> == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_bind_expression_v<const T&> == Expected, "");
 #endif
 }
 

@@ -96,9 +96,6 @@ struct TestComprehensiveFunctionBufferize
 void TestComprehensiveFunctionBufferize::runOnFunction() {
   auto options = std::make_unique<BufferizationOptions>();
 
-  // Enable InitTensorOp elimination.
-  options->addPostAnalysisStep<
-      linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
   if (!allowReturnMemref)
     options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
@@ -115,6 +112,9 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
 
   Operation *op = getFunction().getOperation();
   if (failed(runComprehensiveBufferize(op, std::move(options))))
+    return;
+
+  if (testAnalysisOnly)
     return;
 
   OpPassManager cleanupPipeline("builtin.func");

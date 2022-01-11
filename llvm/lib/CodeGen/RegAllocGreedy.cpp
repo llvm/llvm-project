@@ -258,7 +258,7 @@ void RAGreedy::LRE_DidCloneVirtReg(Register New, Register Old) {
   ExtraInfo->LRE_DidCloneVirtReg(New, Old);
 }
 
-void ExtraRegInfo::LRE_DidCloneVirtReg(Register New, Register Old) {
+void RAGreedy::ExtraRegInfo::LRE_DidCloneVirtReg(Register New, Register Old) {
   // Cloning a register we haven't even heard about yet?  Just ignore it.
   if (!Info.inBounds(Old))
     return;
@@ -456,7 +456,7 @@ Register RegAllocEvictionAdvisor::canReassign(LiveInterval &VirtReg,
 bool DefaultEvictionAdvisor::shouldEvict(LiveInterval &A, bool IsHint,
                                          LiveInterval &B,
                                          bool BreaksHint) const {
-  bool CanSplit = ExtraInfo->getStage(B) < RS_Spill;
+  bool CanSplit = RA.getExtraInfo().getStage(B) < RS_Spill;
 
   // Be fairly aggressive about following hints as long as the evictee can be
   // split.
@@ -506,7 +506,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   //
   // This works out so a register without a cascade number is allowed to evict
   // anything, and it can be evicted by anything.
-  unsigned Cascade = ExtraInfo->getCascadeOrCurrentNext(VirtReg.reg());
+  unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
   EvictionCost Cost;
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
@@ -528,7 +528,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
         return false;
 
       // Never evict spill products. They cannot split or spill.
-      if (ExtraInfo->getStage(*Intf) == RS_Done)
+      if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
       // Once a live range becomes small enough, it is urgent that we find a
       // register for it. This is indicated by an infinite spill weight. These
@@ -543,7 +543,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())));
       // Only evict older cascades or live ranges without a cascade.
-      unsigned IntfCascade = ExtraInfo->getCascade(Intf->reg());
+      unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       if (Cascade <= IntfCascade) {
         if (!Urgent)
           return false;
@@ -714,28 +714,20 @@ bool RegAllocEvictionAdvisor::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
   return !Matrix->isPhysRegUsed(PhysReg);
 }
 
-MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
-    LiveInterval &VirtReg, const AllocationOrder &Order,
-    uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
-  // Keep track of the cheapest interference seen so far.
-  EvictionCost BestCost;
-  BestCost.setMax();
-  MCRegister BestPhys;
+Optional<unsigned>
+RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
+                                       const AllocationOrder &Order,
+                                       unsigned CostPerUseLimit) const {
   unsigned OrderLimit = Order.getOrder().size();
 
-  // When we are just looking for a reduced cost per use, don't break any
-  // hints, and only evict smaller spill weights.
   if (CostPerUseLimit < uint8_t(~0u)) {
-    BestCost.BrokenHints = 0;
-    BestCost.MaxWeight = VirtReg.weight();
-
     // Check of any registers in RC are below CostPerUseLimit.
     const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
     uint8_t MinCost = RegClassInfo.getMinCost(RC);
     if (MinCost >= CostPerUseLimit) {
       LLVM_DEBUG(dbgs() << TRI->getRegClassName(RC) << " minimum cost = "
                         << MinCost << ", no cheaper registers to be found.\n");
-      return 0;
+      return None;
     }
 
     // It is normal for register classes to have a long tail of registers with
@@ -746,24 +738,50 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
                         << " regs.\n");
     }
   }
+  return OrderLimit;
+}
+
+bool RegAllocEvictionAdvisor::canAllocatePhysReg(unsigned CostPerUseLimit,
+                                                 MCRegister PhysReg) const {
+  if (RegCosts[PhysReg] >= CostPerUseLimit)
+    return false;
+  // The first use of a callee-saved register in a function has cost 1.
+  // Don't start using a CSR when the CostPerUseLimit is low.
+  if (CostPerUseLimit == 1 && isUnusedCalleeSavedReg(PhysReg)) {
+    LLVM_DEBUG(
+        dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
+               << printReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
+               << '\n');
+    return false;
+  }
+  return true;
+}
+
+MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
+    LiveInterval &VirtReg, const AllocationOrder &Order,
+    uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
+  // Keep track of the cheapest interference seen so far.
+  EvictionCost BestCost;
+  BestCost.setMax();
+  MCRegister BestPhys;
+  auto MaybeOrderLimit = getOrderLimit(VirtReg, Order, CostPerUseLimit);
+  if (!MaybeOrderLimit)
+    return MCRegister::NoRegister;
+  unsigned OrderLimit = *MaybeOrderLimit;
+
+  // When we are just looking for a reduced cost per use, don't break any
+  // hints, and only evict smaller spill weights.
+  if (CostPerUseLimit < uint8_t(~0u)) {
+    BestCost.BrokenHints = 0;
+    BestCost.MaxWeight = VirtReg.weight();
+  }
 
   for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
        ++I) {
     MCRegister PhysReg = *I;
     assert(PhysReg);
-    if (RegCosts[PhysReg] >= CostPerUseLimit)
-      continue;
-    // The first use of a callee-saved register in a function has cost 1.
-    // Don't start using a CSR when the CostPerUseLimit is low.
-    if (CostPerUseLimit == 1 && isUnusedCalleeSavedReg(PhysReg)) {
-      LLVM_DEBUG(
-          dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
-                 << printReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
-                 << '\n');
-      continue;
-    }
-
-    if (!canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
+    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg) ||
+        !canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
                                          FixedRegisters))
       continue;
 
@@ -2914,8 +2932,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
   SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI, *VRAI));
   ExtraInfo.emplace();
-  EvictAdvisor = getAnalysis<RegAllocEvictionAdvisorAnalysis>().getAdvisor(
-      *MF, Matrix, LIS, VRM, RegClassInfo, &*ExtraInfo);
+  EvictAdvisor =
+      getAnalysis<RegAllocEvictionAdvisorAnalysis>().getAdvisor(*MF, *this);
   IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();

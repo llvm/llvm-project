@@ -4,17 +4,15 @@
 define i32 @logical_and_2ops(i32 %n, i32 %m) {
 ; CHECK-LABEL: @logical_and_2ops(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[M:%.*]], [[N:%.*]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP0]], i32 [[M]], i32 [[N]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[COND_P0:%.*]] = icmp ult i32 [[I]], [[N:%.*]]
-; CHECK-NEXT:    [[COND_P1:%.*]] = icmp ult i32 [[I]], [[M:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[COND_P0]], i1 [[COND_P1]], i1 false
-; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[I_LCSSA]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[UMIN]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   br label %loop
@@ -32,17 +30,15 @@ exit:
 define i32 @logical_or_2ops(i32 %n, i32 %m) {
 ; CHECK-LABEL: @logical_or_2ops(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[M:%.*]], [[N:%.*]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP0]], i32 [[M]], i32 [[N]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[COND_P0:%.*]] = icmp uge i32 [[I]], [[N:%.*]]
-; CHECK-NEXT:    [[COND_P1:%.*]] = icmp uge i32 [[I]], [[M:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[COND_P0]], i1 true, i1 [[COND_P1]]
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[I_LCSSA]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[UMIN]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
   br label %loop
@@ -60,19 +56,19 @@ exit:
 define i32 @logical_and_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: @logical_and_3ops(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[M:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[K:%.*]], [[M]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[K]], i32 [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[UMIN]], [[N:%.*]]
+; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[TMP2]], i32 [[UMIN]], i32 [[N]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[COND_P0:%.*]] = icmp ult i32 [[I]], [[N:%.*]]
-; CHECK-NEXT:    [[COND_P1:%.*]] = icmp ult i32 [[I]], [[M:%.*]]
-; CHECK-NEXT:    [[COND_P2:%.*]] = icmp ult i32 [[I]], [[K:%.*]]
-; CHECK-NEXT:    [[COND_P3:%.*]] = select i1 [[COND_P0]], i1 [[COND_P1]], i1 false
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[COND_P3]], i1 [[COND_P2]], i1 false
-; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[I_LCSSA]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i1 true, i1 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 0, i32 [[UMIN1]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   br label %loop
@@ -92,19 +88,19 @@ exit:
 define i32 @logical_or_3ops(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: @logical_or_3ops(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[M:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[K:%.*]], [[M]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP1]], i32 [[K]], i32 [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[UMIN]], [[N:%.*]]
+; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[TMP2]], i32 [[UMIN]], i32 [[N]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[COND_P0:%.*]] = icmp uge i32 [[I]], [[N:%.*]]
-; CHECK-NEXT:    [[COND_P1:%.*]] = icmp uge i32 [[I]], [[M:%.*]]
-; CHECK-NEXT:    [[COND_P2:%.*]] = icmp uge i32 [[I]], [[K:%.*]]
-; CHECK-NEXT:    [[COND_P3:%.*]] = select i1 [[COND_P0]], i1 true, i1 [[COND_P1]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[COND_P3]], i1 true, i1 [[COND_P2]]
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[I_LCSSA]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[N]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i1 true, i1 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 0, i32 [[UMIN1]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   br label %loop

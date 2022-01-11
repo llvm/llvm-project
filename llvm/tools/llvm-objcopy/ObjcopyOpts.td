@@ -105,6 +105,11 @@ defm strip_unneeded_symbols
          "if they are not needed by relocations">,
       MetaVarName<"filename">;
 
+defm subsystem
+    : Eq<"subsystem",
+         "Set PE subsystem and version">,
+      MetaVarName<"name[:version]">;
+
 def extract_dwo
     : Flag<["--"], "extract-dwo">,
       HelpText<

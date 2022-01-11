@@ -426,8 +426,8 @@ private:
 void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
                                    ValueRange values);
 
-/// Replace an op with a new op. Tensor OpResults must be replaced with memref
-/// values.
+/// Replace an op with a new op. The new op must have the same number of
+/// results as the replaced op. The new op may not return any tensor values.
 template <typename OpTy, typename... Args>
 OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
                                   Args &&...args) {

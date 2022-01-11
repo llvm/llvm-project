@@ -19,6 +19,16 @@ namespace linalg {
 namespace comprehensive_bufferize {
 namespace scf_ext {
 
+// bufferization.to_memref is not allowed to change the rank.
+static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
+#ifndef NDEBUG
+  auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>();
+  assert((!rankedTensorType || (memrefType.cast<MemRefType>().getRank() ==
+                                rankedTensorType.getRank())) &&
+         "to_memref would be invalid: mismatching ranks");
+#endif
+}
+
 /// Bufferization of scf.execute_region. Can be analyzed, but bufferization not
 /// fully implemented at the moment.
 struct ExecuteRegionOpInterface
@@ -159,6 +169,8 @@ struct IfOpInterface
     SmallVector<Value> thenYieldValues;
     for (OpOperand &operand : thenYieldOp->getOpOperands()) {
       if (operand.get().getType().isa<TensorType>()) {
+        ensureToMemrefOpIsValid(operand.get(),
+                                newTypes[operand.getOperandNumber()]);
         Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
             operand.get().getLoc(), newTypes[operand.getOperandNumber()],
             operand.get());
@@ -172,6 +184,8 @@ struct IfOpInterface
     SmallVector<Value> elseYieldValues;
     for (OpOperand &operand : elseYieldOp->getOpOperands()) {
       if (operand.get().getType().isa<TensorType>()) {
+        ensureToMemrefOpIsValid(operand.get(),
+                                newTypes[operand.getOperandNumber()]);
         Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
             operand.get().getLoc(), newTypes[operand.getOperandNumber()],
             operand.get());
@@ -317,6 +331,7 @@ struct ForOpInterface
     rewriter.setInsertionPoint(yieldOp);
     SmallVector<Value> yieldValues =
         convert(yieldOp.getResults(), [&](Value val, int64_t index) {
+          ensureToMemrefOpIsValid(val, initArgs[index].getType());
           return rewriter.create<bufferization::ToMemrefOp>(
               val.getLoc(), initArgs[index].getType(), val);
         });

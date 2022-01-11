@@ -601,7 +601,7 @@ define i32 @test11() {
 ; CHECK:       good:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       bad:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
 
 entry:
@@ -1106,7 +1106,7 @@ define i32 @test22(i32 %x) {
 ; CHECK-NEXT:    [[WRAP1:%.*]] = insertvalue [1 x { i32 }] undef, i32 [[X:%.*]], 0, 0
 ; CHECK-NEXT:    [[WRAP1_FCA_0_0_EXTRACT:%.*]] = extractvalue [1 x { i32 }] [[WRAP1]], 0, 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32 [[WRAP1_FCA_0_0_EXTRACT]] to float
-; CHECK-NEXT:    [[LOAD1_FCA_0_0_0_INSERT:%.*]] = insertvalue { [1 x { float }] } undef, float [[TMP0]], 0, 0, 0
+; CHECK-NEXT:    [[LOAD1_FCA_0_0_0_INSERT:%.*]] = insertvalue { [1 x { float }] } poison, float [[TMP0]], 0, 0, 0
 ; CHECK-NEXT:    [[UNWRAP1:%.*]] = extractvalue { [1 x { float }] } [[LOAD1_FCA_0_0_0_INSERT]], 0, 0
 ; CHECK-NEXT:    [[WRAP2:%.*]] = insertvalue { {}, { float }, [0 x i8] } undef, { float } [[UNWRAP1]], 1
 ; CHECK-NEXT:    [[WRAP2_FCA_1_0_EXTRACT:%.*]] = extractvalue { {}, { float }, [0 x i8] } [[WRAP2]], 1, 0
@@ -1117,7 +1117,7 @@ define i32 @test22(i32 %x) {
 ; CHECK-NEXT:    [[WRAP4_FCA_0_0_0_EXTRACT:%.*]] = extractvalue { [1 x [1 x i32]], {} } [[WRAP4]], 0, 0, 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[WRAP4_FCA_0_0_0_EXTRACT]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i8> [[TMP2]] to float
-; CHECK-NEXT:    [[LOAD4_FCA_1_INSERT:%.*]] = insertvalue { {}, float, {} } undef, float [[TMP3]], 1
+; CHECK-NEXT:    [[LOAD4_FCA_1_INSERT:%.*]] = insertvalue { {}, float, {} } poison, float [[TMP3]], 1
 ; CHECK-NEXT:    [[UNWRAP2:%.*]] = extractvalue { {}, float, {} } [[LOAD4_FCA_1_INSERT]], 1
 ; CHECK-NEXT:    [[VALCAST2:%.*]] = bitcast float [[UNWRAP2]] to i32
 ; CHECK-NEXT:    ret i32 [[VALCAST2]]

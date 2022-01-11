@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ALGORITHM_MINMAX_ELEMENT_H
 #define _LIBCPP___ALGORITHM_MINMAX_ELEMENT_H
 
-#include <__config>
 #include <__algorithm/comp.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <utility>
 
