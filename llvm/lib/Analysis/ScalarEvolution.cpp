@@ -3897,17 +3897,44 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
   {
     SmallPtrSet<const SCEV *, 16> SeenOps;
     unsigned Idx = 0;
-    bool DeletedAny = false;
+    bool Changed = false;
     while (Idx < Ops.size()) {
-      if (SeenOps.insert(Ops[Idx]).second) {
-        ++Idx;
-        continue;
+      // Has the whole operand been seen already?
+      if (!SeenOps.insert(Ops[Idx]).second) {
+        Ops.erase(Ops.begin() + Idx);
+        Changed = true;
+        continue; // Look at operand under this index again.
       }
-      Ops.erase(Ops.begin() + Idx);
-      DeletedAny = true;
+
+      // Look into non-sequential same-typed min/max expressions,
+      // drop any of it's operands that we have already seen.
+      // FIXME: once there are other sequential min/max types, generalize.
+      if (const auto *CommUMinExpr = dyn_cast<SCEVUMinExpr>(Ops[Idx])) {
+        SmallVector<const SCEV *> InnerOps;
+        InnerOps.reserve(CommUMinExpr->getNumOperands());
+        for (const SCEV *InnerOp : CommUMinExpr->operands()) {
+          if (SeenOps.insert(InnerOp).second) // Operand not seen before?
+            InnerOps.emplace_back(InnerOp);   // Keep this inner operand.
+        }
+        // Were any operands of this 'umin' themselves redundant?
+        if (InnerOps.size() != CommUMinExpr->getNumOperands()) {
+          Changed = true;
+          // Was the whole operand effectively redundant? Note that it can
+          // happen even when the operand itself wasn't redundant as a whole.
+          if (InnerOps.empty()) {
+            Ops.erase(Ops.begin() + Idx);
+            continue; // Look at operand under this index again.
+          }
+          // Recreate our operand.
+          Ops[Idx] = getMinMaxExpr(Ops[Idx]->getSCEVType(), InnerOps);
+        }
+      }
+
+      // Ok, can't do anything else about this operand, move onto the next one.
+      ++Idx;
     }
 
-    if (DeletedAny)
+    if (Changed)
       return getSequentialMinMaxExpr(Kind, Ops);
   }
 

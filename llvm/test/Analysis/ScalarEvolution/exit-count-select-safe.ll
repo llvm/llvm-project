@@ -166,9 +166,9 @@ define i32 @logical_or_3ops_redundant_uminseq_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops_redundant_uminseq_operand'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_redundant_uminseq_operand
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %n umin_seq %k) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %n umin_seq %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
@@ -176,9 +176,9 @@ define i32 @logical_or_3ops_redundant_uminseq_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    %cond = select i1 %cond_p3, i1 true, i1 %cond_p2
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_redundant_uminseq_operand
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %n umin_seq %k)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %n umin_seq %k)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %k)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -202,9 +202,9 @@ define i32 @logical_or_3ops_redundant_umin_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops_redundant_umin_operand'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_redundant_umin_operand
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %k umin_seq (%n umin %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %k umin_seq %m) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %k umin_seq (%n umin %m))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %k umin_seq %m)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
@@ -212,9 +212,9 @@ define i32 @logical_or_3ops_redundant_umin_operand(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    %cond = select i1 %cond_p3, i1 true, i1 %cond_p2
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_redundant_umin_operand
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %k umin_seq (%n umin %m))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %k umin_seq %m)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %k umin_seq (%n umin %m))
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %k umin_seq %m)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -238,9 +238,9 @@ define i32 @logical_or_4ops_redundant_operand_across_umins(i32 %n, i32 %m, i32 %
 ; CHECK-LABEL: 'logical_or_4ops_redundant_operand_across_umins'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_4ops_redundant_operand_across_umins
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k umin_seq (%n umin %q)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k umin_seq %q) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k umin_seq (%n umin %q))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k umin_seq %q)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %umin2 = call i32 @llvm.umin.i32(i32 %n, i32 %q)
@@ -250,9 +250,9 @@ define i32 @logical_or_4ops_redundant_operand_across_umins(i32 %n, i32 %m, i32 %
 ; CHECK-NEXT:    %cond = select i1 %cond_p3, i1 true, i1 %cond_p2
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_4ops_redundant_operand_across_umins
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k umin_seq (%n umin %q))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k umin_seq %q)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %k umin_seq (%n umin %q))
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %k umin_seq %q)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -277,9 +277,9 @@ define i32 @logical_or_3ops_operand_wise_redundant_umin(i32 %n, i32 %m, i32 %k) 
 ; CHECK-LABEL: 'logical_or_3ops_operand_wise_redundant_umin'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_operand_wise_redundant_umin
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k umin_seq (%n umin %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: ((%n umin %m) umin_seq %k) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k umin_seq (%n umin %k))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + ((%n umin %m) umin_seq %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %umin2 = call i32 @llvm.umin.i32(i32 %n, i32 %k)
@@ -289,9 +289,9 @@ define i32 @logical_or_3ops_operand_wise_redundant_umin(i32 %n, i32 %m, i32 %k) 
 ; CHECK-NEXT:    %cond = select i1 %cond_p3, i1 true, i1 %cond_p2
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_operand_wise_redundant_umin
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k umin_seq (%n umin %k))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((%n umin %m) umin_seq %k)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %k umin_seq (%n umin %k))
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((%n umin %m) umin_seq %k)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -316,9 +316,9 @@ define i32 @logical_or_3ops_partially_redundant_umin(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops_partially_redundant_umin'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_partially_redundant_umin
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq (%n umin %m umin %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq (%m umin %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq (%n umin %m umin %k))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq (%m umin %k))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 %m)
 ; CHECK-NEXT:    --> (%n umin %m) U: full-set S: full-set Exits: (%n umin %m) LoopDispositions: { %loop: Invariant }
 ; CHECK-NEXT:    %umin2 = call i32 @llvm.umin.i32(i32 %umin, i32 %k)
@@ -326,9 +326,9 @@ define i32 @logical_or_3ops_partially_redundant_umin(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 true, i1 %cond_p1
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_partially_redundant_umin
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq (%n umin %m umin %k))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq (%m umin %k))
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq (%n umin %m umin %k))
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq (%m umin %k))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
