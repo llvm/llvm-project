@@ -2877,8 +2877,8 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
   assert(Register::isPhysicalRegister(SrcReg) && "Physical register expected");
   assert(DstReg.isVirtual() && "Virtual register expected");
 
-  Register LiveIn = getFunctionLiveInPhysReg(B.getMF(), B.getTII(), SrcReg, *ArgRC,
-                                             ArgTy);
+  Register LiveIn = getFunctionLiveInPhysReg(B.getMF(), B.getTII(), SrcReg,
+                                             *ArgRC, B.getDebugLoc(), ArgTy);
   if (Arg->isMasked()) {
     // TODO: Should we try to emit this once in the entry block?
     const LLT S32 = LLT::scalar(32);

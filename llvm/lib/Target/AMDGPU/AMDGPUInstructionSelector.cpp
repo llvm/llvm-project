@@ -1233,7 +1233,7 @@ bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
   // Get the return address reg and mark it as an implicit live-in
   Register ReturnAddrReg = TRI.getReturnAddressReg(MF);
   Register LiveIn = getFunctionLiveInPhysReg(MF, TII, ReturnAddrReg,
-                                             AMDGPU::SReg_64RegClass);
+                                             AMDGPU::SReg_64RegClass, DL);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
     .addReg(LiveIn);
   I.eraseFromParent();
