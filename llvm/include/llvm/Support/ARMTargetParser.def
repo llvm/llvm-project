@@ -213,6 +213,7 @@ ARM_ARCH_EXT_NAME("cdecp5",   ARM::AEK_CDECP5,   "+cdecp5",  "-cdecp5")
 ARM_ARCH_EXT_NAME("cdecp6",   ARM::AEK_CDECP6,   "+cdecp6",  "-cdecp6")
 ARM_ARCH_EXT_NAME("cdecp7",   ARM::AEK_CDECP7,   "+cdecp7",  "-cdecp7")
 ARM_ARCH_EXT_NAME("pacbti",   ARM::AEK_PACBTI,   "+pacbti",  "-pacbti")
+ARM_ARCH_EXT_NAME("pmuv3p4",  ARM::AEK_PERFMON,  "+perfmon", "-perfmon")
 #undef ARM_ARCH_EXT_NAME
 
 #ifndef ARM_HW_DIV_NAME
