@@ -122,6 +122,15 @@ struct Config {
     /// Whether hover show a.k.a type.
     bool ShowAKA = false;
   } Hover;
+
+  struct {
+    /// If false, inlay hints are completely disabled.
+    bool Enabled = true;
+
+    // Whether specific categories of hints are enabled.
+    bool Parameters = true;
+    bool DeducedTypes = true;
+  } InlayHints;
 };
 
 } // namespace clangd
