@@ -1471,6 +1471,33 @@ Using outputs on an indirect branch may result in undefined behavior. For
 example, in the function above, use of the value assigned to `y` in the `err`
 block is undefined behavior.
 
+When using tied-outputs (i.e. outputs that are inputs and outputs, not just
+outputs) with the `+r` constraint, there is a hidden input that's created
+before the label, so numeric references to operands must account for that.
+
+.. code-block:: c++
+
+  int foo(int x) {
+      // %0 and %1 both refer to x
+      // %l2 refers to err
+      asm goto("# %0 %1 %l2" : "+r"(x) : : : err);
+      return x;
+    err:
+      return -1;
+  }
+
+This was changed to match GCC in clang-13; for better portability, symbolic
+references can be used instead of numeric references.
+
+.. code-block:: c++
+
+  int foo(int x) {
+      asm goto("# %[x] %l[err]" : [x]"+r"(x) : : : err);
+      return x;
+    err:
+      return -1;
+  }
+
 Query for this feature with ``__has_extension(gnu_asm_goto_with_outputs)``.
 
 Objective-C Features
