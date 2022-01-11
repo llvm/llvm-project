@@ -48,7 +48,7 @@ static_assert(!std::is_invocable_v<RangeBeginT, BeginMember const&&>);
 static_assert( std::is_invocable_v<RangeCBeginT, BeginMember &>);
 static_assert(!std::is_invocable_v<RangeCBeginT, BeginMember &&>);
 static_assert( std::is_invocable_v<RangeCBeginT, BeginMember const&>);
-static_assert( std::is_invocable_v<RangeCBeginT, BeginMember const&&>);
+static_assert(!std::is_invocable_v<RangeCBeginT, BeginMember const&&>);
 
 constexpr bool testReturnTypes() {
   {
