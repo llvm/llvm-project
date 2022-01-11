@@ -390,6 +390,7 @@ ompt_device_callbacks_t::lookup(const char *interface_function_name) {
   return ompt_device_callbacks.lookup_callback(interface_function_name);
 }
 
+#ifdef OMPT_SUPPORT
 /*****************************************************************************
  * constructor
  *****************************************************************************/
@@ -407,6 +408,7 @@ __attribute__((constructor(102))) static void ompt_init(void) {
   libomp_connector.connect(&ompt_result);
   DP("OMPT: Exit ompt_init\n");
 }
+#endif
 
 extern "C" {
 

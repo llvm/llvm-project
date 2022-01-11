@@ -111,6 +111,7 @@ static void ompt_device_fini(ompt_data_t *tool_data) {
   DP("OMPT: executing amdgpu_ompt_device_fini\n");
 }
 
+#ifdef OMPT_SUPPORT
 //****************************************************************************
 // constructor
 //****************************************************************************
@@ -130,3 +131,4 @@ __attribute__((constructor)) static void ompt_init(void) {
   libomptarget_connector.connect(&ompt_result);
   DP("OMPT: Exiting ompt_init\n");
 }
+#endif
