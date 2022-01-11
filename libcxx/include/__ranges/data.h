@@ -71,6 +71,34 @@ inline namespace __cpo {
 } // namespace __cpo
 } // namespace ranges
 
+// [range.prim.cdata]
+
+namespace ranges {
+namespace __cdata {
+  struct __fn {
+    template <class _Tp>
+      requires is_lvalue_reference_v<_Tp&&>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+    constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t))))
+      -> decltype(      ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t)))
+      { return          ranges::data(static_cast<const remove_reference_t<_Tp>&>(__t)); }
+
+    template <class _Tp>
+      requires is_rvalue_reference_v<_Tp&&>
+    [[nodiscard]] _LIBCPP_HIDE_FROM_ABI
+    constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::data(static_cast<const _Tp&&>(__t))))
+      -> decltype(      ranges::data(static_cast<const _Tp&&>(__t)))
+      { return          ranges::data(static_cast<const _Tp&&>(__t)); }
+  };
+}
+
+inline namespace __cpo {
+  inline constexpr auto cdata = __cdata::__fn{};
+} // namespace __cpo
+} // namespace ranges
+
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
 
 _LIBCPP_END_NAMESPACE_STD
