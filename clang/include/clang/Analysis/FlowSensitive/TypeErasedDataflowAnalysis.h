@@ -64,9 +64,8 @@ public:
 
   /// Applies the analysis transfer function for a given statement and
   /// type-erased lattice element.
-  virtual TypeErasedLattice transferTypeErased(const Stmt *,
-                                               const TypeErasedLattice &,
-                                               Environment &) = 0;
+  virtual void transferTypeErased(const Stmt *, TypeErasedLattice &,
+                                  Environment &) = 0;
 };
 
 /// Type-erased model of the program at a given program point.
