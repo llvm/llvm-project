@@ -76,12 +76,18 @@ static cl::opt<std::string>
                    cl::desc("Path for the target bitcode library"),
                    cl::cat(ClangLinkerWrapperCategory));
 
+static cl::opt<bool> EmbedBC(
+    "target-embed-bc", cl::ZeroOrMore,
+    cl::desc("Embed linked bitcode instead of an executable device image."),
+    cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+
 // Do not parse linker options.
 static cl::list<std::string>
-    HostLinkerArgs(cl::Sink, cl::desc("<options to be passed to linker>..."));
+    HostLinkerArgs(cl::Positional,
+                   cl::desc("<options to be passed to linker>..."));
 
 /// Path of the current binary.
-static std::string LinkerExecutable;
+static const char *LinkerExecutable;
 
 /// Temporary files created by the linker wrapper.
 static SmallVector<std::string, 16> TempFiles;
@@ -411,8 +417,8 @@ extractFromArchive(const Archive &Library,
 
   std::unique_ptr<MemoryBuffer> Buffer =
       MemoryBuffer::getMemBuffer(Library.getMemoryBufferRef(), false);
-  if (Error Err = writeArchive(TempFile, Members, true, Library.kind(),
-                                    true, Library.isThin(), std::move(Buffer)))
+  if (Error Err = writeArchive(TempFile, Members, true, Library.kind(), true,
+                               Library.isThin(), std::move(Buffer)))
     return std::move(Err);
 
   return static_cast<std::string>(TempFile);
@@ -489,7 +495,7 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
   return static_cast<std::string>(TempFile);
 }
 
-Expected<std::string> link(ArrayRef<StringRef> InputFiles,
+Expected<std::string> link(ArrayRef<std::string> InputFiles,
                            ArrayRef<std::string> LinkerArgs, Triple TheTriple,
                            StringRef Arch) {
   // NVPTX uses the nvlink binary to link device object files.
@@ -520,7 +526,7 @@ Expected<std::string> link(ArrayRef<StringRef> InputFiles,
       CmdArgs.push_back(Arg);
 
   // Add extracted input files.
-  for (auto Input : InputFiles)
+  for (StringRef Input : InputFiles)
     CmdArgs.push_back(Input);
 
   if (sys::ExecuteAndWait(*NvlinkPath, CmdArgs))
@@ -530,7 +536,7 @@ Expected<std::string> link(ArrayRef<StringRef> InputFiles,
 }
 } // namespace nvptx
 
-Expected<std::string> linkDevice(ArrayRef<StringRef> InputFiles,
+Expected<std::string> linkDevice(ArrayRef<std::string> InputFiles,
                                  ArrayRef<std::string> LinkerArgs,
                                  Triple TheTriple, StringRef Arch) {
   switch (TheTriple.getArch()) {
@@ -597,8 +603,10 @@ CodeGenOpt::Level getCGOptLevel(unsigned OptLevel) {
   llvm_unreachable("Invalid optimization level");
 }
 
-std::unique_ptr<lto::LTO> createLTO(const Triple &TheTriple, StringRef Arch,
-                                    bool WholeProgram) {
+template <typename ModuleHook = function_ref<bool(size_t, const Module &)>>
+std::unique_ptr<lto::LTO> createLTO(
+    const Triple &TheTriple, StringRef Arch, bool WholeProgram,
+    ModuleHook Hook = [](size_t, const Module &) { return true; }) {
   lto::Config Conf;
   lto::ThinBackend Backend;
   // TODO: Handle index-only thin-LTO
@@ -617,7 +625,7 @@ std::unique_ptr<lto::LTO> createLTO(const Triple &TheTriple, StringRef Arch,
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
-  // TODO: Handle outputting bitcode using a module hook.
+  Conf.PostInternalizeModuleHook = Hook;
   if (TheTriple.isNVPTX())
     Conf.CGFileType = CGFT_AssemblyFile;
   else
@@ -637,11 +645,11 @@ bool isValidCIdentifier(StringRef S) {
                      [](char C) { return C == '_' || isAlnum(C); });
 }
 
-Expected<Optional<std::string>> linkBitcodeFiles(ArrayRef<StringRef> InputFiles,
-                                                 const Triple &TheTriple,
-                                                 StringRef Arch) {
+Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
+                       const Triple &TheTriple, StringRef Arch) {
   SmallVector<std::unique_ptr<MemoryBuffer>, 4> SavedBuffers;
   SmallVector<std::unique_ptr<lto::InputFile>, 4> BitcodeFiles;
+  SmallVector<std::string, 4> NewInputFiles;
   StringMap<bool> UsedInRegularObj;
 
   // Search for bitcode files in the input and create an LTO input file. If it
@@ -660,6 +668,7 @@ Expected<Optional<std::string>> linkBitcodeFiles(ArrayRef<StringRef> InputFiles,
       if (!ObjFile)
         return ObjFile.takeError();
 
+      NewInputFiles.push_back(File.str());
       for (auto &Sym : (*ObjFile)->symbols()) {
         Expected<StringRef> Name = Sym.getName();
         if (!Name)
@@ -679,12 +688,36 @@ Expected<Optional<std::string>> linkBitcodeFiles(ArrayRef<StringRef> InputFiles,
   }
 
   if (BitcodeFiles.empty())
-    return None;
+    return Error::success();
+
+  auto HandleError = [&](std::error_code EC) {
+    logAllUnhandledErrors(errorCodeToError(EC),
+                          WithColor::error(errs(), LinkerExecutable));
+    exit(1);
+  };
+
+  // LTO Module hook to output bitcode without running the backend.
+  auto LinkOnly = [&](size_t Task, const Module &M) {
+    SmallString<128> TempFile;
+    if (std::error_code EC = sys::fs::createTemporaryFile(
+            "jit-" + TheTriple.getTriple(), "bc", TempFile))
+      HandleError(EC);
+    std::error_code EC;
+    raw_fd_ostream LinkedBitcode(TempFile, EC, sys::fs::OF_None);
+    if (EC)
+      HandleError(EC);
+    WriteBitcodeToFile(M, LinkedBitcode);
+    TempFiles.push_back(static_cast<std::string>(TempFile));
+    NewInputFiles.push_back(static_cast<std::string>(TempFile));
+    return false;
+  };
 
   // We have visibility of the whole program if every input is bitcode, all
   // inputs are statically linked so there should be no external references.
   bool WholeProgram = BitcodeFiles.size() == InputFiles.size();
-  StringMap<bool> PrevailingSymbols;
+  auto LTOBackend = (EmbedBC)
+                        ? createLTO(TheTriple, Arch, WholeProgram, LinkOnly)
+                        : createLTO(TheTriple, Arch, WholeProgram);
 
   // TODO: Run more tests to verify that this is correct.
   // Create the LTO instance with the necessary config and add the bitcode files
@@ -694,7 +727,7 @@ Expected<Optional<std::string>> linkBitcodeFiles(ArrayRef<StringRef> InputFiles,
   // 2. We do not support relocatable object files.
   // 3. All inputs are relocatable object files extracted from host binaries, so
   //    there is no resolution to a dynamic library.
-  auto LTOBackend = createLTO(TheTriple, Arch, WholeProgram);
+  StringMap<bool> PrevailingSymbols;
   for (auto &BitcodeFile : BitcodeFiles) {
     const auto Symbols = BitcodeFile->symbols();
     SmallVector<lto::SymbolResolution, 16> Resolutions(Symbols.size());
@@ -743,16 +776,18 @@ Expected<Optional<std::string>> linkBitcodeFiles(ArrayRef<StringRef> InputFiles,
     StringRef Extension = (TheTriple.isNVPTX()) ? "s" : "o";
     if (std::error_code EC = sys::fs::createTemporaryFile(
             "lto-" + TheTriple.getTriple(), Extension, FD, TempFile))
-      return nullptr;
+      HandleError(EC);
     TempFiles.push_back(static_cast<std::string>(TempFile));
     return std::make_unique<CachedFileStream>(
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
+
   if (Error Err = LTOBackend->run(AddStream))
     return std::move(Err);
 
+  // Is we are compiling for NVPTX we need to run the assembler first.
   for (auto &File : Files) {
-    if (!TheTriple.isNVPTX())
+    if (!TheTriple.isNVPTX() || EmbedBC)
       continue;
 
     auto FileOrErr = nvptx::assemble(File, TheTriple, Arch);
@@ -761,7 +796,12 @@ Expected<Optional<std::string>> linkBitcodeFiles(ArrayRef<StringRef> InputFiles,
     File = *FileOrErr;
   }
 
-  return static_cast<std::string>(Files.front());
+  // Append the new inputs to the device linker input.
+  for (auto &File : Files)
+    NewInputFiles.push_back(static_cast<std::string>(File));
+  InputFiles = NewInputFiles;
+
+  return Error::success();
 }
 
 /// Runs the appropriate linking action on all the device files specified in \p
@@ -770,7 +810,7 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
                       ArrayRef<std::string> LinkerArgs,
                       SmallVectorImpl<std::string> &LinkedImages) {
   // Get the list of inputs for a specific device.
-  StringMap<SmallVector<StringRef, 4>> LinkerInputMap;
+  StringMap<SmallVector<std::string, 4>> LinkerInputMap;
   for (auto &File : DeviceFiles)
     LinkerInputMap[StringRef(File)].push_back(File.Filename);
 
@@ -780,13 +820,16 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
     Triple TheTriple(TargetFeatures.first);
     StringRef Arch(TargetFeatures.second);
 
-    // TODO: Run LTO or bitcode linking before the final link job.
-    auto ObjectOrErr =
-        linkBitcodeFiles(LinkerInput.getValue(), TheTriple, Arch);
-    if (!ObjectOrErr)
-      return ObjectOrErr.takeError();
-    if ((*ObjectOrErr).hasValue())
-      LinkerInput.getValue() = {**ObjectOrErr};
+    // Run LTO on any bitcode files and replace the input with the result.
+    if (Error Err = linkBitcodeFiles(LinkerInput.getValue(), TheTriple, Arch))
+      return std::move(Err);
+
+    // If we are embedding bitcode for JIT, skip the final device linking.
+    if (EmbedBC) {
+      assert(!LinkerInput.getValue().empty() && "No bitcode image to embed");
+      LinkedImages.push_back(LinkerInput.getValue().front());
+      continue;
+    }
 
     auto ImageOrErr =
         linkDevice(LinkerInput.getValue(), LinkerArgs, TheTriple, Arch);

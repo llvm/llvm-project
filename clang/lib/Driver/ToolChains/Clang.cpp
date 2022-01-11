@@ -8217,6 +8217,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-linker-path");
   CmdArgs.push_back(LinkCommand->getExecutable());
+  CmdArgs.push_back("--");
   for (const char *LinkArg : LinkCommand->getArguments())
     CmdArgs.push_back(LinkArg);
 
