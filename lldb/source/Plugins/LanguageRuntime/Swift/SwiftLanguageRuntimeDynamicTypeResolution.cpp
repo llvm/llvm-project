@@ -554,7 +554,7 @@ public:
                   std::string &dest) override {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-    LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0x}",
+    LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0:x}",
               address.getAddressData());
 
     Target &target(m_process.GetTarget());
