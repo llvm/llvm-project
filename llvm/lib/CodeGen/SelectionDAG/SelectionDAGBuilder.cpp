@@ -11245,12 +11245,6 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
 
   unsigned NumElts = VT.getVectorNumElements();
 
-  if ((-Imm > NumElts) || (Imm >= NumElts)) {
-    // Result is undefined if immediate is out-of-bounds.
-    setValue(&I, DAG.getUNDEF(VT));
-    return;
-  }
-
   uint64_t Idx = (NumElts + Imm) % NumElts;
 
   // Use VECTOR_SHUFFLE to maintain original behaviour for fixed-length vectors.

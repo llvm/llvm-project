@@ -12,13 +12,18 @@ define i32 @f(i32 %x) #0 {
 ; CHECK-NEXT:    ldr32.w a0, (a1, a0 << 2)
 ; CHECK-NEXT:    jmp32 a0
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB0_2: # %return
+; CHECK-NEXT:  .LBB0_1: # %return
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-NEXT:  .Ltmp1: # Block address taken
-; CHECK-NEXT:  .LBB0_1: # %l2
+; CHECK-NEXT:  .LBB0_2: # %l2
 ; CHECK-NEXT:    movi16 a0, 2
 ; CHECK-NEXT:    rts16
+; CHECK-NEXT:    .p2align 1
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  .LCPI0_0:
+; CHECK-NEXT:    .long .Lf.a
 ;
 ; CHECK-PIC-SMALL-LABEL: f:
 ; CHECK-PIC-SMALL:       # %bb.0: # %entry
@@ -33,16 +38,23 @@ define i32 @f(i32 %x) #0 {
 ; CHECK-PIC-SMALL-NEXT:    ldr32.w a0, (a1, a0 << 2)
 ; CHECK-PIC-SMALL-NEXT:    jmp32 a0
 ; CHECK-PIC-SMALL-NEXT:  .Ltmp0: # Block address taken
-; CHECK-PIC-SMALL-NEXT:  .LBB0_2: # %return
+; CHECK-PIC-SMALL-NEXT:  .LBB0_1: # %return
 ; CHECK-PIC-SMALL-NEXT:    movi16 a0, 1
 ; CHECK-PIC-SMALL-NEXT:    br32 .LBB0_3
 ; CHECK-PIC-SMALL-NEXT:  .Ltmp1: # Block address taken
-; CHECK-PIC-SMALL-NEXT:  .LBB0_1: # %l2
+; CHECK-PIC-SMALL-NEXT:  .LBB0_2: # %l2
 ; CHECK-PIC-SMALL-NEXT:    movi16 a0, 2
 ; CHECK-PIC-SMALL-NEXT:  .LBB0_3: # %.split
 ; CHECK-PIC-SMALL-NEXT:    ld32.w rgb, (sp, 0) # 4-byte Folded Reload
 ; CHECK-PIC-SMALL-NEXT:    addi16 sp, sp, 4
 ; CHECK-PIC-SMALL-NEXT:    rts16
+; CHECK-PIC-SMALL-NEXT:    .p2align 1
+; CHECK-PIC-SMALL-NEXT:  # %bb.4:
+; CHECK-PIC-SMALL-NEXT:    .p2align 2
+; CHECK-PIC-SMALL-NEXT:  .LCPI0_0:
+; CHECK-PIC-SMALL-NEXT:    .long _GLOBAL_OFFSET_TABLE_
+; CHECK-PIC-SMALL-NEXT:  .LCPI0_1:
+; CHECK-PIC-SMALL-NEXT:    .long .Lf.a@GOTOFF
 ;
 ; CHECK-PIC-LARGE-LABEL: f:
 ; CHECK-PIC-LARGE:       # %bb.0: # %entry
@@ -57,16 +69,23 @@ define i32 @f(i32 %x) #0 {
 ; CHECK-PIC-LARGE-NEXT:    ldr32.w a0, (a1, a0 << 2)
 ; CHECK-PIC-LARGE-NEXT:    jmp32 a0
 ; CHECK-PIC-LARGE-NEXT:  .Ltmp0: # Block address taken
-; CHECK-PIC-LARGE-NEXT:  .LBB0_2: # %return
+; CHECK-PIC-LARGE-NEXT:  .LBB0_1: # %return
 ; CHECK-PIC-LARGE-NEXT:    movi16 a0, 1
 ; CHECK-PIC-LARGE-NEXT:    br32 .LBB0_3
 ; CHECK-PIC-LARGE-NEXT:  .Ltmp1: # Block address taken
-; CHECK-PIC-LARGE-NEXT:  .LBB0_1: # %l2
+; CHECK-PIC-LARGE-NEXT:  .LBB0_2: # %l2
 ; CHECK-PIC-LARGE-NEXT:    movi16 a0, 2
 ; CHECK-PIC-LARGE-NEXT:  .LBB0_3: # %.split
 ; CHECK-PIC-LARGE-NEXT:    ld32.w rgb, (sp, 0) # 4-byte Folded Reload
 ; CHECK-PIC-LARGE-NEXT:    addi16 sp, sp, 4
 ; CHECK-PIC-LARGE-NEXT:    rts16
+; CHECK-PIC-LARGE-NEXT:    .p2align 1
+; CHECK-PIC-LARGE-NEXT:  # %bb.4:
+; CHECK-PIC-LARGE-NEXT:    .p2align 2
+; CHECK-PIC-LARGE-NEXT:  .LCPI0_0:
+; CHECK-PIC-LARGE-NEXT:    .long _GLOBAL_OFFSET_TABLE_
+; CHECK-PIC-LARGE-NEXT:  .LCPI0_1:
+; CHECK-PIC-LARGE-NEXT:    .long .Lf.a@GOTOFF
 entry:
   %idxprom = sext i32 %x to i64
   %arrayidx = getelementptr inbounds [2 x i8*], [2 x i8*]* @f.a, i64 0, i64 %idxprom

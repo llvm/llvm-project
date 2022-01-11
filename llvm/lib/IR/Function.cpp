@@ -340,7 +340,7 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                                           unsigned AddrSpace, const Twine &N,
                                           Module *M) {
   auto *F = new Function(Ty, Linkage, AddrSpace, N, M);
-  AttrBuilder B;
+  AttrBuilder B(F->getContext());
   if (M->getUwtable())
     B.addAttribute(Attribute::UWTable);
   switch (M->getFramePointer()) {

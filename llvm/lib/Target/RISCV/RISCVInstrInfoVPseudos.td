@@ -3722,26 +3722,6 @@ multiclass VPatCompare_VI<string intrinsic, string inst,
   }
 }
 
-multiclass VPatCompareUnsignedZero<string intrinsic, string inst> {
-  foreach vti = AllIntegerVectors in {
-    defvar Intr = !cast<Intrinsic>(intrinsic);
-    defvar Pseudo = !cast<Instruction>(inst#"_VV_"#vti.LMul.MX);
-    def : Pat<(vti.Mask (Intr (vti.Vector vti.RegClass:$rs1),
-                              (vti.Scalar 0), VLOpFrag)),
-              (Pseudo vti.RegClass:$rs1, vti.RegClass:$rs1,
-                      GPR:$vl, vti.Log2SEW)>;
-    defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
-    defvar PseudoMask = !cast<Instruction>(inst#"_VV_"#vti.LMul.MX#"_MASK");
-    def : Pat<(vti.Mask (IntrMask (vti.Mask VR:$merge),
-                                  (vti.Vector vti.RegClass:$rs1),
-                                  (vti.Scalar 0),
-                                  (vti.Mask V0),
-                                  VLOpFrag)),
-              (PseudoMask VR:$merge, vti.RegClass:$rs1, vti.RegClass:$rs1,
-                          (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
@@ -4526,9 +4506,6 @@ defm : VPatCompare_VI<"int_riscv_vmsltu", "PseudoVMSLEU", simm5_plus1_nonzero>;
 
 defm : VPatCompare_VI<"int_riscv_vmsge", "PseudoVMSGT">;
 defm : VPatCompare_VI<"int_riscv_vmsgeu", "PseudoVMSGTU", simm5_plus1_nonzero>;
-// Special cases for vmsgeu.vi 0 (always true). Instead match to vmsne.vv.
-// FIXME: We could match this to vmset.m or vmset.m+vmand.mm.
-defm : VPatCompareUnsignedZero<"int_riscv_vmsgeu", "PseudoVMSEQ">;
 
 //===----------------------------------------------------------------------===//
 // 12.9. Vector Integer Min/Max Instructions

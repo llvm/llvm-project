@@ -40,8 +40,8 @@ struct suspend_always;
 
 #include <__config>
 #include <__coroutine/coroutine_handle.h>
-#include <__coroutine/noop_coroutine_handle.h>
 #include <__coroutine/coroutine_traits.h>
+#include <__coroutine/noop_coroutine_handle.h>
 #include <__coroutine/trivial_awaitables.h>
 #include <version>
 

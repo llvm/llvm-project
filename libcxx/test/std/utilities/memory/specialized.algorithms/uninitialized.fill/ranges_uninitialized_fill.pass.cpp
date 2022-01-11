@@ -31,6 +31,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
+// TODO(varconst): consolidate the ADL checks into a single file.
 // Because this is a variable and not a function, it's guaranteed that ADL won't be used. However,
 // implementations are allowed to use a different mechanism to achieve this effect, so this check is
 // libc++-specific.
@@ -187,8 +188,7 @@ int main(int, char**) {
 
     Counted::throw_on = N; // When constructing the fourth object.
     try {
-      auto range = std::ranges::subrange(buf.begin(), buf.end());
-      std::ranges::uninitialized_fill(range, x);
+      std::ranges::uninitialized_fill(buf, x);
     } catch (...) {
     }
     assert(Counted::current_objects == 0);

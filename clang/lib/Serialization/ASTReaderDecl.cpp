@@ -4781,10 +4781,12 @@ void ASTDeclReader::UpdateDecl(Decl *D,
     case UPD_DECL_MARKED_OPENMP_DECLARETARGET: {
       auto MapType = Record.readEnum<OMPDeclareTargetDeclAttr::MapTypeTy>();
       auto DevType = Record.readEnum<OMPDeclareTargetDeclAttr::DevTypeTy>();
+      Expr *IndirectE = Record.readExpr();
+      bool Indirect = Record.readBool();
       unsigned Level = Record.readInt();
       D->addAttr(OMPDeclareTargetDeclAttr::CreateImplicit(
-          Reader.getContext(), MapType, DevType, Level, readSourceRange(),
-          AttributeCommonInfo::AS_Pragma));
+          Reader.getContext(), MapType, DevType, IndirectE, Indirect, Level,
+          readSourceRange(), AttributeCommonInfo::AS_Pragma));
       break;
     }
 

@@ -332,6 +332,24 @@ public:
     return ValidatorResult(SCEVType::PARAM, Expr);
   }
 
+  class ValidatorResult
+  visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
+    // We do not support unsigned min operations. If 'Expr' is constant during
+    // Scop execution we treat this as a parameter, otherwise we bail out.
+    for (int i = 0, e = Expr->getNumOperands(); i < e; ++i) {
+      ValidatorResult Op = visit(Expr->getOperand(i));
+
+      if (!Op.isConstant()) {
+        LLVM_DEBUG(
+            dbgs()
+            << "INVALID: SCEVSequentialUMinExpr has a non-constant operand");
+        return ValidatorResult(SCEVType::INVALID);
+      }
+    }
+
+    return ValidatorResult(SCEVType::PARAM, Expr);
+  }
+
   ValidatorResult visitGenericInst(Instruction *I, const SCEV *S) {
     if (R->contains(I)) {
       LLVM_DEBUG(dbgs() << "INVALID: UnknownExpr references an instruction "

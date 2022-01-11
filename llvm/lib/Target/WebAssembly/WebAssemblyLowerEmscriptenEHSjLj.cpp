@@ -455,12 +455,12 @@ static Function *getEmscriptenFunction(FunctionType *Ty, const Twine &Name,
   // Tell the linker that this function is expected to be imported from the
   // 'env' module.
   if (!F->hasFnAttribute("wasm-import-module")) {
-    llvm::AttrBuilder B;
+    llvm::AttrBuilder B(M->getContext());
     B.addAttribute("wasm-import-module", "env");
     F->addFnAttrs(B);
   }
   if (!F->hasFnAttribute("wasm-import-name")) {
-    llvm::AttrBuilder B;
+    llvm::AttrBuilder B(M->getContext());
     B.addAttribute("wasm-import-name", F->getName());
     F->addFnAttrs(B);
   }
@@ -548,7 +548,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
   for (unsigned I = 0, E = CI->arg_size(); I < E; ++I)
     ArgAttributes.push_back(InvokeAL.getParamAttrs(I));
 
-  AttrBuilder FnAttrs(InvokeAL.getFnAttrs());
+  AttrBuilder FnAttrs(CI->getContext(), InvokeAL.getFnAttrs());
   if (FnAttrs.contains(Attribute::AllocSize)) {
     // The allocsize attribute (if any) referes to parameters by index and needs
     // to be adjusted.

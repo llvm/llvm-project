@@ -2235,8 +2235,13 @@ static SDValue splatSplitI64WithVL(const SDLoc &DL, MVT VT, SDValue Scalar,
 static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
                                 SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
-  if (VT.isFloatingPoint())
+  if (VT.isFloatingPoint()) {
+    // If VL is 1, we could use vfmv.s.f.
+    if (isOneConstant(VL))
+      return DAG.getNode(RISCVISD::VFMV_S_F_VL, DL, VT, DAG.getUNDEF(VT),
+                         Scalar, VL);
     return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, VT, Scalar, VL);
+  }
 
   MVT XLenVT = Subtarget.getXLenVT();
 
@@ -2249,11 +2254,22 @@ static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
     unsigned ExtOpc =
         isa<ConstantSDNode>(Scalar) ? ISD::SIGN_EXTEND : ISD::ANY_EXTEND;
     Scalar = DAG.getNode(ExtOpc, DL, XLenVT, Scalar);
+    ConstantSDNode *Const = dyn_cast<ConstantSDNode>(Scalar);
+    // If VL is 1 and the scalar value won't benefit from immediate, we could
+    // use vmv.s.x.
+    if (isOneConstant(VL) &&
+        (!Const || isNullConstant(Scalar) || !isInt<5>(Const->getSExtValue())))
+      return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, DAG.getUNDEF(VT), Scalar,
+                         VL);
     return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Scalar, VL);
   }
 
   assert(XLenVT == MVT::i32 && Scalar.getValueType() == MVT::i64 &&
          "Unexpected scalar for splat lowering!");
+
+  if (isOneConstant(VL) && isNullConstant(Scalar))
+    return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, VT, DAG.getUNDEF(VT),
+                       DAG.getConstant(0, DL, XLenVT), VL);
 
   // Otherwise use the more complicated splatting algorithm.
   return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
@@ -10332,6 +10348,60 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     }
   }
   return SDValue();
+}
+
+SDValue
+RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
+                                   SelectionDAG &DAG,
+                                   SmallVectorImpl<SDNode *> &Created) const {
+  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
+  if (isIntDivCheap(N->getValueType(0), Attr))
+    return SDValue(N, 0); // Lower SDIV as SDIV
+
+  assert((Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()) &&
+         "Unexpected divisor!");
+
+  // Conditional move is needed, so do the transformation iff Zbt is enabled.
+  if (!Subtarget.hasStdExtZbt())
+    return SDValue();
+
+  // When |Divisor| >= 2 ^ 12, it isn't profitable to do such transformation.
+  // Besides, more critical path instructions will be generated when dividing
+  // by 2. So we keep using the original DAGs for these cases.
+  unsigned Lg2 = Divisor.countTrailingZeros();
+  if (Lg2 == 1 || Lg2 >= 12)
+    return SDValue();
+
+  // fold (sdiv X, pow2)
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && !(Subtarget.is64Bit() && VT == MVT::i64))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue Pow2MinusOne = DAG.getConstant((1ULL << Lg2) - 1, DL, VT);
+
+  // Add (N0 < 0) ? Pow2 - 1 : 0;
+  SDValue Cmp = DAG.getSetCC(DL, VT, N0, Zero, ISD::SETLT);
+  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
+  SDValue Sel = DAG.getNode(ISD::SELECT, DL, VT, Cmp, Add, N0);
+
+  Created.push_back(Cmp.getNode());
+  Created.push_back(Add.getNode());
+  Created.push_back(Sel.getNode());
+
+  // Divide by pow2.
+  SDValue SRA =
+      DAG.getNode(ISD::SRA, DL, VT, Sel, DAG.getConstant(Lg2, DL, VT));
+
+  // If we're dividing by a positive value, we're done.  Otherwise, we must
+  // negate the result.
+  if (Divisor.isNonNegative())
+    return SRA;
+
+  Created.push_back(SRA.getNode());
+  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), SRA);
 }
 
 #define GET_REGISTER_MATCHER

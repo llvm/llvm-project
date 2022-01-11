@@ -1812,6 +1812,27 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
   return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
 }
 
+/// Return true if the value is a known valid address, such that a null check is
+/// not necessary.
+static bool isKnownNonNull(Register Val, MachineRegisterInfo &MRI,
+                           const AMDGPUTargetMachine &TM, unsigned AddrSpace) {
+  MachineInstr *Def = MRI.getVRegDef(Val);
+  switch (Def->getOpcode()) {
+  case AMDGPU::G_FRAME_INDEX:
+  case AMDGPU::G_GLOBAL_VALUE:
+  case AMDGPU::G_BLOCK_ADDR:
+    return true;
+  case AMDGPU::G_CONSTANT: {
+    const ConstantInt *CI = Def->getOperand(1).getCImm();
+    return CI->getSExtValue() != TM.getNullPointerValue(AddrSpace);
+  }
+  default:
+    return false;
+  }
+
+  return false;
+}
+
 bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineIRBuilder &B) const {
@@ -1862,6 +1883,14 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     assert(DestAS == AMDGPUAS::LOCAL_ADDRESS ||
            DestAS == AMDGPUAS::PRIVATE_ADDRESS);
+
+    if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+      // Extract low 32-bits of the pointer.
+      B.buildExtract(Dst, Src, 0);
+      MI.eraseFromParent();
+      return true;
+    }
+
     unsigned NullVal = TM.getNullPointerValue(DestAS);
 
     auto SegmentNull = B.buildConstant(DstTy, NullVal);
@@ -1884,17 +1913,9 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (!ST.hasFlatAddressSpace())
     return false;
 
-  auto SegmentNull =
-      B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
-  auto FlatNull =
-      B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
-
   Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
   if (!ApertureReg.isValid())
     return false;
-
-  auto CmpRes =
-      B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, SegmentNull.getReg(0));
 
   // Coerce the type of the low half of the result so we can use merge_values.
   Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
@@ -1902,6 +1923,19 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   // TODO: Should we allow mismatched types but matching sizes in merges to
   // avoid the ptrtoint?
   auto BuildPtr = B.buildMerge(DstTy, {SrcAsInt, ApertureReg});
+
+  if (isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    B.buildCopy(Dst, BuildPtr);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  auto SegmentNull = B.buildConstant(SrcTy, TM.getNullPointerValue(SrcAS));
+  auto FlatNull = B.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
+
+  auto CmpRes =
+      B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, SegmentNull.getReg(0));
+
   B.buildSelect(Dst, CmpRes, BuildPtr, FlatNull);
 
   MI.eraseFromParent();
@@ -2247,6 +2281,7 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   LLT VecTy = MRI.getType(Vec);
   LLT EltTy = VecTy.getElementType();
   assert(EltTy == MRI.getType(Ins));
+  (void)Ins;
 
   unsigned NumElts = VecTy.getNumElements();
   if (IdxVal < NumElts) {
@@ -2842,8 +2877,8 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
   assert(Register::isPhysicalRegister(SrcReg) && "Physical register expected");
   assert(DstReg.isVirtual() && "Virtual register expected");
 
-  Register LiveIn = getFunctionLiveInPhysReg(B.getMF(), B.getTII(), SrcReg, *ArgRC,
-                                             ArgTy);
+  Register LiveIn = getFunctionLiveInPhysReg(B.getMF(), B.getTII(), SrcReg,
+                                             *ArgRC, B.getDebugLoc(), ArgTy);
   if (Arg->isMasked()) {
     // TODO: Should we try to emit this once in the entry block?
     const LLT S32 = LLT::scalar(32);
@@ -4330,6 +4365,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   const LLT V2S16 = LLT::fixed_vector(2, 16);
 
   unsigned DMask = 0;
+  Register VData = MI.getOperand(NumDefs == 0 ? 1 : 0).getReg();
+  LLT Ty = MRI->getType(VData);
 
   // Check for 16 bit addresses and pack if true.
   LLT GradTy =
@@ -4338,6 +4375,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
       MRI->getType(MI.getOperand(ArgOffset + Intr->CoordStart).getReg());
   const bool IsG16 = GradTy == S16;
   const bool IsA16 = AddrTy == S16;
+  const bool IsD16 = Ty.getScalarType() == S16;
 
   int DMaskLanes = 0;
   if (!BaseOpcode->Atomic) {
@@ -4357,8 +4395,11 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   Observer.changingInstr(MI);
   auto ChangedInstr = make_scope_exit([&] { Observer.changedInstr(MI); });
 
-  unsigned NewOpcode = NumDefs == 0 ?
-    AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE : AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD;
+  const unsigned StoreOpcode = IsD16 ? AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16
+                                     : AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE;
+  const unsigned LoadOpcode = IsD16 ? AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16
+                                    : AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD;
+  unsigned NewOpcode = NumDefs == 0 ? StoreOpcode : LoadOpcode;
 
   // Track that we legalized this
   MI.setDesc(B.getTII().get(NewOpcode));
@@ -4407,8 +4448,8 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
         // The starting indexes should remain in the same place.
         --CorrectedNumVAddrs;
 
-        MI.getOperand(MI.getNumExplicitDefs())
-            .setIntrinsicID(static_cast<Intrinsic::ID>(NewImageDimIntr->Intr));
+        MI.getOperand(NumDefs).setIntrinsicID(
+            static_cast<Intrinsic::ID>(NewImageDimIntr->Intr));
         MI.RemoveOperand(ArgOffset + Intr->LodIndex);
         Intr = NewImageDimIntr;
       }
@@ -4504,9 +4545,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   if (BaseOpcode->Store) { // No TFE for stores?
     // TODO: Handle dmask trim
-    Register VData = MI.getOperand(1).getReg();
-    LLT Ty = MRI->getType(VData);
-    if (!Ty.isVector() || Ty.getElementType() != S16)
+    if (!Ty.isVector() || !IsD16)
       return true;
 
     Register RepackedReg = handleD16VData(B, *MRI, VData, true);
@@ -4518,9 +4557,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   }
 
   Register DstReg = MI.getOperand(0).getReg();
-  LLT Ty = MRI->getType(DstReg);
   const LLT EltTy = Ty.getScalarType();
-  const bool IsD16 = Ty.getScalarType() == S16;
   const int NumElts = Ty.isVector() ? Ty.getNumElements() : 1;
 
   // Confirm that the return type is large enough for the dmask specified
