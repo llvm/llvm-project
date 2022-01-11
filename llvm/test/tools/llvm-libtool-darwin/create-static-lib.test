@@ -50,21 +50,19 @@
 # OVERWRITE-SYMBOLS-EMPTY:
 
 ## Duplicate a binary:
-## cctools' libtool raises a warning in this case.
-## The warning is not yet implemented for llvm-libtool-darwin.
 # RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o %t-input2.o %t-input1.o 2>&1 | \
-# RUN:   FileCheck %s --allow-empty --implicit-check-not={{.}}
-# RUN: llvm-ar t %t.lib | \
-# RUN:   FileCheck %s --check-prefix=DUPLICATE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
-# RUN: llvm-nm --print-armap %t.lib | \
-# RUN:   FileCheck %s --check-prefix=DUPLICATE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-INPUT -DFILE=%basename_t.tmp-input1.o \
+# RUN:     -DINPUTA=%t-input1.o -DINPUTB=%t-input1.o
 
-# DUPLICATE-NAMES:      [[PREFIX]]-input1.o
-# DUPLICATE-NAMES-NEXT: [[PREFIX]]-input2.o
-# DUPLICATE-NAMES-NEXT: [[PREFIX]]-input1.o
+# DUPLICATE-INPUT:     warning: file '[[FILE]]' was specified multiple times.
+# DUPLICATE-INPUT-DAG: [[INPUTA]]
+# DUPLICATE-INPUT-DAG: [[INPUTB]]
 
-# DUPLICATE-SYMBOLS:      Archive map
-# DUPLICATE-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
-# DUPLICATE-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
-# DUPLICATE-SYMBOLS-NEXT: _symbol1 in [[PREFIX]]-input1.o
-# DUPLICATE-SYMBOLS-EMPTY:
+## Make sure we can combine object files with the same name if
+## they are for different architectures.
+# RUN: mkdir -p %t/arm64 %t/armv7
+# RUN: llvm-as %S/Inputs/arm64-ios.ll -o %t/arm64/out.bc
+# RUN: llvm-as %S/Inputs/armv7-ios.ll -o %t/armv7/out.bc
+## Command output should be empty.
+# RUN: llvm-libtool-darwin -static %t/arm64/out.bc %t/armv7/out.bc -o %t.lib 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not=warning: --allow-empty
