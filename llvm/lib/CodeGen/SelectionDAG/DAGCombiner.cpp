@@ -17492,6 +17492,10 @@ void DAGCombiner::getStoreMergeCandidates(
         for (auto I2 = (*I)->use_begin(), E2 = (*I)->use_end(); I2 != E2; ++I2)
           TryToAddCandidate(I2);
       }
+      // Check stores that depend on the root (e.g. Store 3 in the chart above).
+      if (I.getOperandNo() == 0 && isa<StoreSDNode>(*I)) {
+        TryToAddCandidate(I);
+      }
     }
   } else {
     for (auto I = RootNode->use_begin(), E = RootNode->use_end();
