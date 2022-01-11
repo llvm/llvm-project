@@ -21,10 +21,12 @@ namespace scf_ext {
 
 // bufferization.to_memref is not allowed to change the rank.
 static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
+#ifndef NDEBUG
   auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>();
   assert((!rankedTensorType || (memrefType.cast<MemRefType>().getRank() ==
                                 rankedTensorType.getRank())) &&
          "to_memref would be invalid: mismatching ranks");
+#endif
 }
 
 /// Bufferization of scf.execute_region. Can be analyzed, but bufferization not
