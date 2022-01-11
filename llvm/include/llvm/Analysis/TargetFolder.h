@@ -43,6 +43,20 @@ public:
   explicit TargetFolder(const DataLayout &DL) : DL(DL) {}
 
   //===--------------------------------------------------------------------===//
+  // Value-based folders.
+  //
+  // Return an existing value or a constant if the operation can be simplified.
+  // Otherwise return nullptr.
+  //===--------------------------------------------------------------------===//
+  Value *FoldOr(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return Fold(ConstantExpr::getOr(LC, RC));
+    return nullptr;
+  }
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
@@ -101,9 +115,6 @@ public:
   }
   Constant *CreateAnd(Constant *LHS, Constant *RHS) const override {
     return Fold(ConstantExpr::getAnd(LHS, RHS));
-  }
-  Constant *CreateOr(Constant *LHS, Constant *RHS) const override {
-    return Fold(ConstantExpr::getOr(LHS, RHS));
   }
   Constant *CreateXor(Constant *LHS, Constant *RHS) const override {
     return Fold(ConstantExpr::getXor(LHS, RHS));

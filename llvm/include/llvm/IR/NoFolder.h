@@ -38,6 +38,14 @@ public:
   explicit NoFolder() = default;
 
   //===--------------------------------------------------------------------===//
+  // Value-based folders.
+  //
+  // Return an existing value or a constant if the operation can be simplified.
+  // Otherwise return nullptr.
+  //===--------------------------------------------------------------------===//
+  Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
@@ -134,10 +142,6 @@ public:
 
   Instruction *CreateAnd(Constant *LHS, Constant *RHS) const override {
     return BinaryOperator::CreateAnd(LHS, RHS);
-  }
-
-  Instruction *CreateOr(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateOr(LHS, RHS);
   }
 
   Instruction *CreateXor(Constant *LHS, Constant *RHS) const override {
