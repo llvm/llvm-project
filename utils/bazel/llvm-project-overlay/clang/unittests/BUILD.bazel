@@ -223,6 +223,7 @@ cc_test(
     deps = [
         "//clang:ast",
         "//clang:basic",
+        "//clang:frontend",
         "//clang:lex",
         "//clang:parse",
         "//clang:sema",
