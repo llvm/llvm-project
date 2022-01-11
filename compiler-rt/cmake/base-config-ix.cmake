@@ -108,13 +108,13 @@ else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
     "Path where built compiler-rt libraries should be installed.")
 endif()
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" bin)
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_BINDIR}")
 set(COMPILER_RT_INSTALL_BINARY_DIR "${default_install_path}" CACHE PATH
   "Path where built compiler-rt executables should be installed.")
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" include)
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_INCLUDEDIR}")
 set(COMPILER_RT_INSTALL_INCLUDE_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt headers should be installed.")
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" share)
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_DATADIR}")
 set(COMPILER_RT_INSTALL_DATA_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt data files should be installed.")
 
