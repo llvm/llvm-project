@@ -47,6 +47,14 @@ public:
 
   Environment GetEnvironment() override;
 
+  MmapArgList GetMmapArgumentList(const ArchSpec &arch, lldb::addr_t addr,
+                                  lldb::addr_t length, unsigned prot,
+                                  unsigned flags, lldb::addr_t fd,
+                                  lldb::addr_t offset) override {
+    return Platform::GetHostPlatform()->GetMmapArgumentList(
+        arch, addr, length, prot, flags, fd, offset);
+  }
+
 private:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
   static void DebuggerInitialize(Debugger &debugger);

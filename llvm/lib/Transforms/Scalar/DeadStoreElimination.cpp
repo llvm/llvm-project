@@ -961,7 +961,7 @@ struct DSEState {
         I.first->second = false;
       } else {
         auto *Inst = dyn_cast<Instruction>(V);
-        if (Inst && isAllocLikeFn(Inst, &TLI))
+        if (Inst && isNoAliasCall(Inst))
           I.first->second = !PointerMayBeCaptured(V, true, false);
       }
     }
@@ -974,7 +974,7 @@ struct DSEState {
     auto I = InvisibleToCallerBeforeRet.insert({V, false});
     if (I.second) {
       auto *Inst = dyn_cast<Instruction>(V);
-      if (Inst && isAllocLikeFn(Inst, &TLI))
+      if (Inst && isNoAliasCall(Inst))
         // NOTE: This could be made more precise by PointerMayBeCapturedBefore
         // with the killing MemoryDef. But we refrain from doing so for now to
         // limit compile-time and this does not cause any changes to the number

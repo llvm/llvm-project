@@ -23,6 +23,7 @@
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -590,9 +591,16 @@ protected:
       return false;
     }
 
+    ABISP abi = m_exe_ctx.GetProcessPtr()->GetABI();
+    if (abi)
+      addr = abi->FixDataAddress(addr);
+
     if (argc == 2) {
       lldb::addr_t end_addr = OptionArgParser::ToAddress(
           &m_exe_ctx, command[1].ref(), LLDB_INVALID_ADDRESS, nullptr);
+      if (end_addr != LLDB_INVALID_ADDRESS && abi)
+        end_addr = abi->FixDataAddress(end_addr);
+
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendError("invalid end address expression.");
         result.AppendError(error.AsCString());

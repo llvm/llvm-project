@@ -186,9 +186,8 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 define i16 @test_cttz_i16(i16 %a) nounwind {
 ; RV32I-LABEL: test_cttz_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a1, a0, a1
+; RV32I-NEXT:    slli a1, a0, 16
+; RV32I-NEXT:    srli a1, a1, 16
 ; RV32I-NEXT:    beqz a1, .LBB4_2
 ; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    addi a1, a0, -1
@@ -221,9 +220,8 @@ define i16 @test_cttz_i16(i16 %a) nounwind {
 ;
 ; RV64I-LABEL: test_cttz_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a1, a0, a1
+; RV64I-NEXT:    slli a1, a0, 48
+; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    beqz a1, .LBB4_2
 ; RV64I-NEXT:  # %bb.1: # %cond.false
 ; RV64I-NEXT:    addi a1, a0, -1

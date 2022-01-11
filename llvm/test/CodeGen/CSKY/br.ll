@@ -45,11 +45,11 @@ label2:
 define i32 @brR0_eq(i32 %x) {
 ; CHECK-LABEL: brR0_eq:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bez32 a0, .LBB2_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bez32 a0, .LBB2_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB2_1: # %label1
+; CHECK-NEXT:  .LBB2_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 entry:
@@ -531,11 +531,11 @@ define i32 @brR0_slt(i32 %x) {
 ; CHECK-NEXT:    movih32 a1, 65535
 ; CHECK-NEXT:    ori32 a1, a1, 65535
 ; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB24_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bf32 .LBB24_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB24_1: # %label1
+; CHECK-NEXT:  .LBB24_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-UGTXT:    icmpu32 a0, a1, a0
@@ -689,12 +689,12 @@ define i64 @brRI_i64_eq(i64 %x) {
 ; CHECK-LABEL: brRI_i64_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or16 a0, a1
-; CHECK-NEXT:    bez32 a0, .LBB31_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bez32 a0, .LBB31_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB31_1: # %label1
+; CHECK-NEXT:  .LBB31_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    rts16
@@ -803,13 +803,13 @@ define i64 @brRR_i64_ugt(i64 %x, i64 %y) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB35_3
+; CHECK-NEXT:    bt32 .LBB35_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB35_2
-; CHECK-NEXT:  .LBB35_3: # %label2
+; CHECK-NEXT:    br32 .LBB35_3
+; CHECK-NEXT:  .LBB35_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB35_2: # %label1
+; CHECK-NEXT:  .LBB35_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 16
 ; CHECK-NEXT:    rts16
@@ -840,13 +840,13 @@ define i64 @brRI_i64_ugt(i64 %x) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB36_3
+; CHECK-NEXT:    bt32 .LBB36_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB36_2
-; CHECK-NEXT:  .LBB36_3: # %label2
+; CHECK-NEXT:    br32 .LBB36_3
+; CHECK-NEXT:  .LBB36_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB36_2: # %label1
+; CHECK-NEXT:  .LBB36_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 8
 ; CHECK-NEXT:    rts16
@@ -903,13 +903,13 @@ define i64 @brRR_i64_uge(i64 %x, i64 %y) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB38_3
+; CHECK-NEXT:    bt32 .LBB38_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB38_2
-; CHECK-NEXT:  .LBB38_3: # %label2
+; CHECK-NEXT:    br32 .LBB38_3
+; CHECK-NEXT:  .LBB38_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB38_2: # %label1
+; CHECK-NEXT:  .LBB38_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 8
 ; CHECK-NEXT:    rts16
@@ -940,13 +940,13 @@ define i64 @brRI_i64_uge(i64 %x) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB39_3
+; CHECK-NEXT:    bt32 .LBB39_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB39_2
-; CHECK-NEXT:  .LBB39_3: # %label2
+; CHECK-NEXT:    br32 .LBB39_3
+; CHECK-NEXT:  .LBB39_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB39_2: # %label1
+; CHECK-NEXT:  .LBB39_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 8
 ; CHECK-NEXT:    rts16
@@ -987,13 +987,13 @@ define i64 @brRR_i64_ult(i64 %x, i64 %y) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB40_3
+; CHECK-NEXT:    bt32 .LBB40_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB40_2
-; CHECK-NEXT:  .LBB40_3: # %label2
+; CHECK-NEXT:    br32 .LBB40_3
+; CHECK-NEXT:  .LBB40_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB40_2: # %label1
+; CHECK-NEXT:  .LBB40_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 16
 ; CHECK-NEXT:    rts16
@@ -1057,13 +1057,13 @@ define i64 @brRR_i64_ule(i64 %x, i64 %y) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB42_3
+; CHECK-NEXT:    bt32 .LBB42_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB42_2
-; CHECK-NEXT:  .LBB42_3: # %label2
+; CHECK-NEXT:    br32 .LBB42_3
+; CHECK-NEXT:  .LBB42_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB42_2: # %label1
+; CHECK-NEXT:  .LBB42_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 8
 ; CHECK-NEXT:    rts16
@@ -1154,13 +1154,13 @@ define i64 @brRR_i64_sgt(i64 %x, i64 %y) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    btsti32 a0, 0
-; CHECK-NEXT:    bt32 .LBB45_3
+; CHECK-NEXT:    bt32 .LBB45_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB45_2
-; CHECK-NEXT:  .LBB45_3: # %label2
+; CHECK-NEXT:    br32 .LBB45_3
+; CHECK-NEXT:  .LBB45_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB45_2: # %label1
+; CHECK-NEXT:  .LBB45_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1197,13 +1197,13 @@ define i64 @brRI_i64_sgt(i64 %x) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB46_3
+; CHECK-NEXT:    bt32 .LBB46_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB46_2
-; CHECK-NEXT:  .LBB46_3: # %label2
+; CHECK-NEXT:    br32 .LBB46_3
+; CHECK-NEXT:  .LBB46_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB46_2: # %label1
+; CHECK-NEXT:  .LBB46_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1240,13 +1240,13 @@ define i64 @brR0_i64_sgt(i64 %x) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB47_3
+; CHECK-NEXT:    bt32 .LBB47_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB47_2
-; CHECK-NEXT:  .LBB47_3: # %label2
+; CHECK-NEXT:    br32 .LBB47_3
+; CHECK-NEXT:  .LBB47_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB47_2: # %label1
+; CHECK-NEXT:  .LBB47_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1283,13 +1283,13 @@ define i64 @brRR_i64_sge(i64 %x, i64 %y) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB48_3
+; CHECK-NEXT:    bt32 .LBB48_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB48_2
-; CHECK-NEXT:  .LBB48_3: # %label2
+; CHECK-NEXT:    br32 .LBB48_3
+; CHECK-NEXT:  .LBB48_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB48_2: # %label1
+; CHECK-NEXT:  .LBB48_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1326,13 +1326,13 @@ define i64 @brRI_i64_sge(i64 %x) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB49_3
+; CHECK-NEXT:    bt32 .LBB49_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB49_2
-; CHECK-NEXT:  .LBB49_3: # %label2
+; CHECK-NEXT:    br32 .LBB49_3
+; CHECK-NEXT:  .LBB49_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB49_2: # %label1
+; CHECK-NEXT:  .LBB49_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1392,13 +1392,13 @@ define i64 @brRR_i64_slt(i64 %x, i64 %y) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a0, a1
 ; CHECK-NEXT:    btsti32 a0, 0
-; CHECK-NEXT:    bt32 .LBB51_3
+; CHECK-NEXT:    bt32 .LBB51_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB51_2
-; CHECK-NEXT:  .LBB51_3: # %label2
+; CHECK-NEXT:    br32 .LBB51_3
+; CHECK-NEXT:  .LBB51_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB51_2: # %label1
+; CHECK-NEXT:  .LBB51_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1436,13 +1436,13 @@ define i64 @brRI_i64_slt(i64 %x) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB52_3
+; CHECK-NEXT:    bt32 .LBB52_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB52_2
-; CHECK-NEXT:  .LBB52_3: # %label2
+; CHECK-NEXT:    br32 .LBB52_3
+; CHECK-NEXT:  .LBB52_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB52_2: # %label1
+; CHECK-NEXT:  .LBB52_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1463,12 +1463,12 @@ define i64 @brR0_i64_slt(i64 %x) {
 ; CHECK-NEXT:    movih32 a0, 65535
 ; CHECK-NEXT:    ori32 a0, a0, 65535
 ; CHECK-NEXT:    cmplt16 a0, a1
-; CHECK-NEXT:    bf32 .LBB53_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bf32 .LBB53_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB53_1: # %label1
+; CHECK-NEXT:  .LBB53_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    rts16
@@ -1505,13 +1505,13 @@ define i64 @brRR_i64_sle(i64 %x, i64 %y) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB54_3
+; CHECK-NEXT:    bt32 .LBB54_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB54_2
-; CHECK-NEXT:  .LBB54_3: # %label2
+; CHECK-NEXT:    br32 .LBB54_3
+; CHECK-NEXT:  .LBB54_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB54_2: # %label1
+; CHECK-NEXT:  .LBB54_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1549,13 +1549,13 @@ define i64 @brRI_i64_sle(i64 %x) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB55_3
+; CHECK-NEXT:    bt32 .LBB55_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB55_2
-; CHECK-NEXT:  .LBB55_3: # %label2
+; CHECK-NEXT:    br32 .LBB55_3
+; CHECK-NEXT:  .LBB55_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB55_2: # %label1
+; CHECK-NEXT:  .LBB55_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 12
 ; CHECK-NEXT:    rts16
@@ -1596,13 +1596,13 @@ define i64 @brR0_i64_sle(i64 %x) {
 ; CHECK-NEXT:    btsti32 a2, 0
 ; CHECK-NEXT:    movf32 a1, a0
 ; CHECK-NEXT:    btsti32 a1, 0
-; CHECK-NEXT:    bt32 .LBB56_3
+; CHECK-NEXT:    bt32 .LBB56_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
-; CHECK-NEXT:    br32 .LBB56_2
-; CHECK-NEXT:  .LBB56_3: # %label2
+; CHECK-NEXT:    br32 .LBB56_3
+; CHECK-NEXT:  .LBB56_2: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
-; CHECK-NEXT:  .LBB56_2: # %label1
+; CHECK-NEXT:  .LBB56_3: # %label1
 ; CHECK-NEXT:    movi16 a1, 0
 ; CHECK-NEXT:    addi16 sp, sp, 16
 ; CHECK-NEXT:    rts16
@@ -1688,11 +1688,11 @@ define i16 @brR0_i16_eq(i16 %x) {
 ; CHECK-LABEL: brR0_i16_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    zexth16 a0, a0
-; CHECK-NEXT:    bez32 a0, .LBB60_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bez32 a0, .LBB60_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB60_1: # %label1
+; CHECK-NEXT:  .LBB60_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 entry:
@@ -2204,11 +2204,11 @@ define i16 @brR0_i16_slt(i16 %x) {
 ; CHECK-NEXT:    movih32 a1, 65535
 ; CHECK-NEXT:    ori32 a1, a1, 65535
 ; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB82_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bf32 .LBB82_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB82_1: # %label1
+; CHECK-NEXT:  .LBB82_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-UGTXT:    icmpu32 a0, a1, a0
@@ -2362,11 +2362,11 @@ define i8 @brR0_i8_eq(i8 %x) {
 ; CHECK-LABEL: brR0_i8_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    zextb16 a0, a0
-; CHECK-NEXT:    bez32 a0, .LBB89_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bez32 a0, .LBB89_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB89_1: # %label1
+; CHECK-NEXT:  .LBB89_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 entry:
@@ -2878,11 +2878,11 @@ define i8 @brR0_i8_slt(i8 %x) {
 ; CHECK-NEXT:    movih32 a1, 65535
 ; CHECK-NEXT:    ori32 a1, a1, 65535
 ; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB111_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bf32 .LBB111_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB111_1: # %label1
+; CHECK-NEXT:  .LBB111_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-UGTXT:    icmpu32 a0, a1, a0
@@ -3015,11 +3015,11 @@ define i1 @brRI_i1_eq(i1 %x) {
 ; CHECK-LABEL: brRI_i1_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bez32 a0, .LBB117_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bez32 a0, .LBB117_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB117_1: # %label1
+; CHECK-NEXT:  .LBB117_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 entry:
@@ -3035,11 +3035,11 @@ define i1 @brR0_i1_eq(i1 %x) {
 ; CHECK-LABEL: brR0_i1_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bez32 a0, .LBB118_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bez32 a0, .LBB118_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB118_1: # %label1
+; CHECK-NEXT:  .LBB118_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 entry:
@@ -3518,11 +3518,11 @@ define i1 @brRI_i1_slt(i1 %x) {
 ; CHECK-LABEL: brRI_i1_slt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bnez32 a0, .LBB139_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bnez32 a0, .LBB139_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB139_1: # %label1
+; CHECK-NEXT:  .LBB139_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-UGTXT:    icmpu32 a0, a1, a0
@@ -3540,11 +3540,11 @@ define i1 @brR0_i1_slt(i1 %x) {
 ; CHECK-LABEL: brR0_i1_slt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bnez32 a0, .LBB140_1
-; CHECK-NEXT:  # %bb.2: # %label2
+; CHECK-NEXT:    bnez32 a0, .LBB140_2
+; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB140_1: # %label1
+; CHECK-NEXT:  .LBB140_2: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
 ; CHECK-UGTXT:    icmpu32 a0, a1, a0

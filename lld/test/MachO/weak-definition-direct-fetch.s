@@ -101,6 +101,8 @@
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-weak-ref-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 # RUN: %lld -dylib -lSystem -o %t/weak-ref-weak-dylib-weak-ar -L%t -lweakfoo %t/weakfoo.a %t/weak-refs-foo.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ref-weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
+# RUN: %lld -dylib -lSystem -o %t/weak-ref-weak-dylib-weak-ar -L%t -lweakfoo %t/weak-refs-foo.o %t/weakfoo.a
+# RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ref-weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
 #--- foo.s
 .globl _foo

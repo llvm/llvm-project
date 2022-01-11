@@ -403,6 +403,52 @@ static void addCopyRelSymbol(SharedSymbol &ss) {
   }
 }
 
+// .eh_frame sections are mergeable input sections, so their input
+// offsets are not linearly mapped to output section. For each input
+// offset, we need to find a section piece containing the offset and
+// add the piece's base address to the input offset to compute the
+// output offset. That isn't cheap.
+//
+// This class is to speed up the offset computation. When we process
+// relocations, we access offsets in the monotonically increasing
+// order. So we can optimize for that access pattern.
+//
+// For sections other than .eh_frame, this class doesn't do anything.
+namespace {
+class OffsetGetter {
+public:
+  explicit OffsetGetter(InputSectionBase &sec) {
+    if (auto *eh = dyn_cast<EhInputSection>(&sec))
+      pieces = eh->pieces;
+  }
+
+  // Translates offsets in input sections to offsets in output sections.
+  // Given offset must increase monotonically. We assume that Piece is
+  // sorted by inputOff.
+  uint64_t get(uint64_t off) {
+    if (pieces.empty())
+      return off;
+
+    while (i != pieces.size() && pieces[i].inputOff + pieces[i].size <= off)
+      ++i;
+    if (i == pieces.size())
+      fatal(".eh_frame: relocation is not in any piece");
+
+    // Pieces must be contiguous, so there must be no holes in between.
+    assert(pieces[i].inputOff <= off && "Relocation not in any piece");
+
+    // Offset -1 means that the piece is dead (i.e. garbage collected).
+    if (pieces[i].outputOff == -1)
+      return -1;
+    return pieces[i].outputOff + off - pieces[i].inputOff;
+  }
+
+private:
+  ArrayRef<EhSectionPiece> pieces;
+  size_t i = 0;
+};
+} // namespace
+
 // MIPS has an odd notion of "paired" relocations to calculate addends.
 // For example, if a relocation is of R_MIPS_HI16, there must be a
 // R_MIPS_LO16 relocation after that, and an addend is calculated using
@@ -785,52 +831,6 @@ template <class RelTy> static RelType getMipsN32RelType(RelTy *&rel, RelTy *end)
     type |= (rel++)->getType(config->isMips64EL) << (8 * n++);
   return type;
 }
-
-// .eh_frame sections are mergeable input sections, so their input
-// offsets are not linearly mapped to output section. For each input
-// offset, we need to find a section piece containing the offset and
-// add the piece's base address to the input offset to compute the
-// output offset. That isn't cheap.
-//
-// This class is to speed up the offset computation. When we process
-// relocations, we access offsets in the monotonically increasing
-// order. So we can optimize for that access pattern.
-//
-// For sections other than .eh_frame, this class doesn't do anything.
-namespace {
-class OffsetGetter {
-public:
-  explicit OffsetGetter(InputSectionBase &sec) {
-    if (auto *eh = dyn_cast<EhInputSection>(&sec))
-      pieces = eh->pieces;
-  }
-
-  // Translates offsets in input sections to offsets in output sections.
-  // Given offset must increase monotonically. We assume that Piece is
-  // sorted by inputOff.
-  uint64_t get(uint64_t off) {
-    if (pieces.empty())
-      return off;
-
-    while (i != pieces.size() && pieces[i].inputOff + pieces[i].size <= off)
-      ++i;
-    if (i == pieces.size())
-      fatal(".eh_frame: relocation is not in any piece");
-
-    // Pieces must be contiguous, so there must be no holes in between.
-    assert(pieces[i].inputOff <= off && "Relocation not in any piece");
-
-    // Offset -1 means that the piece is dead (i.e. garbage collected).
-    if (pieces[i].outputOff == -1)
-      return -1;
-    return pieces[i].outputOff + off - pieces[i].inputOff;
-  }
-
-private:
-  ArrayRef<EhSectionPiece> pieces;
-  size_t i = 0;
-};
-} // namespace
 
 static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
                              Symbol &sym, int64_t addend, RelExpr expr,

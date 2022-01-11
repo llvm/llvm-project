@@ -14,7 +14,7 @@ define arm_aapcscc i32* @test_call_simple_reg_params(i32 *%a, i32 %b) {
 ; ARM: BL @simple_reg_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @simple_reg_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(p0) = COPY $r0
-; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[RVREG]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
@@ -45,7 +45,7 @@ define arm_aapcscc i32* @test_call_simple_stack_params(i32 *%a, i32 %b) {
 ; ARM: BL @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @simple_stack_params_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0
 ; CHECK: [[RVREG:%[0-9]+]]:_(p0) = COPY $r0
-; CHECK: ADJCALLSTACKUP 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 8, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[RVREG]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $r0
@@ -103,7 +103,7 @@ define arm_aapcscc signext i16 @test_call_ext_params(i8 %a, i16 %b, i1 %c) {
 ; CHECK: [[R0VREG:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[R0VREG_ASSERT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[R0VREG]], 16
 ; CHECK: [[RVREG:%[0-9]+]]:_(s16) = G_TRUNC [[R0VREG_ASSERT]]
-; CHECK: ADJCALLSTACKUP 20, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 20, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: [[RExtVREG:%[0-9]+]]:_(s32) = G_SEXT [[RVREG]]
 ; CHECK: $r0 = COPY [[RExtVREG]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0
@@ -125,7 +125,7 @@ define arm_aapcs_vfpcc double @test_call_vfpcc_fp_params(double %a, float %b) {
 ; ARM: BL @vfpcc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $d1, implicit-def $d0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @vfpcc_fp_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $s0, implicit $d1, implicit-def $d0
 ; CHECK: [[RVREG:%[0-9]+]]:_(s64) = COPY $d0
-; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $d0 = COPY [[RVREG]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $d0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $d0
@@ -164,7 +164,7 @@ define arm_aapcscc double @test_call_aapcs_fp_params(double %a, float %b) {
 ; CHECK-DAG: [[R2:%[0-9]+]]:_(s32) = COPY $r1
 ; LITTLE: [[RVREG:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[R1]](s32), [[R2]](s32)
 ; BIG: [[RVREG:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[R2]](s32), [[R1]](s32)
-; CHECK: ADJCALLSTACKUP 16, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 16, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: [[R1:%[0-9]+]]:_(s32), [[R2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[RVREG]](s64)
 ; LITTLE-DAG: $r0 = COPY [[R1]]
 ; LITTLE-DAG: $r1 = COPY [[R2]]
@@ -187,7 +187,7 @@ define arm_aapcs_vfpcc float @test_call_different_call_conv(float %x) {
 ; ARM: BL @different_call_conv_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
 ; THUMB: tBL 14 /* CC::al */, $noreg, @different_call_conv_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit-def $r0
 ; CHECK: [[R:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $s0 = COPY [[R]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $s0
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg, implicit $s0
@@ -211,7 +211,7 @@ define arm_aapcscc [3 x i32] @test_tiny_int_arrays([2 x i32] %arr) {
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
 ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY $r2
-; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; FIXME: This doesn't seem correct with regard to the AAPCS docs (which say
 ; that composite types larger than 4 bytes should be passed through memory),
 ; but it's what DAGISel does. We should fix it in the common code for both.
@@ -241,7 +241,7 @@ define arm_aapcscc void @test_multiple_int_arrays([2 x i32] %arr0, [2 x i32] %ar
 ; CHECK: $r3 = COPY [[R3]]
 ; ARM: BL @multiple_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
 ; THUMB: tBL 14 /* CC::al */, $noreg, @multiple_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
-; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; ARM: BX_RET 14 /* CC::al */, $noreg
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg
 entry:
@@ -284,7 +284,7 @@ define arm_aapcscc void @test_large_int_arrays([20 x i32] %arr) {
 ; CHECK: $r3 = COPY [[R3]]
 ; ARM: BL @large_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
 ; THUMB: tBL 14 /* CC::al */, $noreg, @large_int_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
-; CHECK: ADJCALLSTACKUP 64, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 64, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; ARM: BX_RET 14 /* CC::al */, $noreg
 ; THUMB: tBX_RET 14 /* CC::al */, $noreg
 entry:
@@ -328,7 +328,7 @@ define arm_aapcscc [2 x float] @test_fp_arrays_aapcs([3 x double] %arr) {
 ; THUMB: tBL 14 /* CC::al */, $noreg, @fp_arrays_aapcs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
-; CHECK: ADJCALLSTACKUP 8, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 8, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
@@ -391,7 +391,7 @@ define arm_aapcs_vfpcc [4 x float] @test_fp_arrays_aapcs_vfp([3 x double] %x, [3
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $s1
 ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY $s2
 ; CHECK: [[R3:%[0-9]+]]:_(s32) = COPY $s3
-; CHECK: ADJCALLSTACKUP 32, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 32, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $s0 = COPY [[R0]]
 ; CHECK: $s1 = COPY [[R1]]
 ; CHECK: $s2 = COPY [[R2]]
@@ -440,7 +440,7 @@ define arm_aapcscc [2 x i32*] @test_tough_arrays([6 x [4 x i32]] %arr) {
 ; THUMB: tBL 14 /* CC::al */, $noreg, @tough_arrays_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3, implicit-def $r0, implicit-def $r1
 ; CHECK: [[R0:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(p0) = COPY $r1
-; CHECK: ADJCALLSTACKUP 80, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 80, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]]
 ; CHECK: $r1 = COPY [[R1]]
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
@@ -464,7 +464,7 @@ define arm_aapcscc {i32, i32} @test_structs({i32, i32} %x) {
 ; THUMB: tBL 14 /* CC::al */, $noreg, @structs_target, csr_aapcs, implicit-def $lr, implicit $sp, implicit $r0, implicit $r1, implicit-def $r0, implicit-def $r1
 ; CHECK: [[R0:%[0-9]+]]:_(s32) = COPY $r0
 ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
-; CHECK: ADJCALLSTACKUP 0, 0, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
+; CHECK: ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def $sp, implicit $sp
 ; CHECK: $r0 = COPY [[R0]](s32)
 ; CHECK: $r1 = COPY [[R1]](s32)
 ; ARM: BX_RET 14 /* CC::al */, $noreg, implicit $r0, implicit $r1
