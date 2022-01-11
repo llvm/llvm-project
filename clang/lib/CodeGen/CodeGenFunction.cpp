@@ -2120,6 +2120,7 @@ llvm::Value *CodeGenFunction::emitArrayLength(const ArrayType *origArrayType,
     // Create the actual GEP.
     addr = Address(Builder.CreateInBoundsGEP(
         addr.getElementType(), addr.getPointer(), gepIndices, "array.begin"),
+        ConvertTypeForMem(eltType),
         addr.getAlignment());
   }
 
