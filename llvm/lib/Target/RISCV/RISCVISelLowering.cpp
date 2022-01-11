@@ -10350,6 +10350,60 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
   return SDValue();
 }
 
+SDValue
+RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
+                                   SelectionDAG &DAG,
+                                   SmallVectorImpl<SDNode *> &Created) const {
+  AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
+  if (isIntDivCheap(N->getValueType(0), Attr))
+    return SDValue(N, 0); // Lower SDIV as SDIV
+
+  assert((Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()) &&
+         "Unexpected divisor!");
+
+  // Conditional move is needed, so do the transformation iff Zbt is enabled.
+  if (!Subtarget.hasStdExtZbt())
+    return SDValue();
+
+  // When |Divisor| >= 2 ^ 12, it isn't profitable to do such transformation.
+  // Besides, more critical path instructions will be generated when dividing
+  // by 2. So we keep using the original DAGs for these cases.
+  unsigned Lg2 = Divisor.countTrailingZeros();
+  if (Lg2 == 1 || Lg2 >= 12)
+    return SDValue();
+
+  // fold (sdiv X, pow2)
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && !(Subtarget.is64Bit() && VT == MVT::i64))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue Pow2MinusOne = DAG.getConstant((1ULL << Lg2) - 1, DL, VT);
+
+  // Add (N0 < 0) ? Pow2 - 1 : 0;
+  SDValue Cmp = DAG.getSetCC(DL, VT, N0, Zero, ISD::SETLT);
+  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, Pow2MinusOne);
+  SDValue Sel = DAG.getNode(ISD::SELECT, DL, VT, Cmp, Add, N0);
+
+  Created.push_back(Cmp.getNode());
+  Created.push_back(Add.getNode());
+  Created.push_back(Sel.getNode());
+
+  // Divide by pow2.
+  SDValue SRA =
+      DAG.getNode(ISD::SRA, DL, VT, Sel, DAG.getConstant(Lg2, DL, VT));
+
+  // If we're dividing by a positive value, we're done.  Otherwise, we must
+  // negate the result.
+  if (Divisor.isNonNegative())
+    return SRA;
+
+  Created.push_back(SRA.getNode());
+  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), SRA);
+}
+
 #define GET_REGISTER_MATCHER
 #include "RISCVGenAsmMatcher.inc"
 
