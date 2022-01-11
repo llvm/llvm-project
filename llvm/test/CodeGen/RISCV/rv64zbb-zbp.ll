@@ -544,20 +544,20 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 define i8 @srli_i8(i8 %a) nounwind {
 ; RV64I-LABEL: srli_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 192
-; RV64I-NEXT:    srli a0, a0, 6
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 62
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: srli_i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a0, a0, 192
-; RV64ZBB-NEXT:    srli a0, a0, 6
+; RV64ZBB-NEXT:    slli a0, a0, 56
+; RV64ZBB-NEXT:    srli a0, a0, 62
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBP-LABEL: srli_i8:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    andi a0, a0, 192
-; RV64ZBP-NEXT:    srli a0, a0, 6
+; RV64ZBP-NEXT:    slli a0, a0, 56
+; RV64ZBP-NEXT:    srli a0, a0, 62
 ; RV64ZBP-NEXT:    ret
   %1 = lshr i8 %a, 6
   ret i8 %1

@@ -380,14 +380,13 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ;
 ; RV64-LABEL: test_srem_vec:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -64
-; RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s3, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s4, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s5, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    lb a0, 12(a0)
 ; RV64-NEXT:    lwu a1, 8(s0)
@@ -407,7 +406,6 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64-NEXT:    slli a1, a1, 31
 ; RV64-NEXT:    srai s2, a1, 31
 ; RV64-NEXT:    li a1, 7
-; RV64-NEXT:    li s5, 7
 ; RV64-NEXT:    call __moddi3@plt
 ; RV64-NEXT:    mv s3, a0
 ; RV64-NEXT:    li a1, -5
@@ -432,9 +430,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64-NEXT:    neg a0, a0
 ; RV64-NEXT:    neg a2, a2
 ; RV64-NEXT:    neg a3, a1
-; RV64-NEXT:    slli a4, s5, 32
-; RV64-NEXT:    and a3, a3, a4
-; RV64-NEXT:    srli a3, a3, 32
+; RV64-NEXT:    slli a3, a3, 29
+; RV64-NEXT:    srli a3, a3, 61
 ; RV64-NEXT:    sb a3, 12(s0)
 ; RV64-NEXT:    slliw a1, a1, 2
 ; RV64-NEXT:    srli a3, s4, 31
@@ -446,14 +443,13 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64-NEXT:    slli a1, a2, 33
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    sd a0, 0(s0)
-; RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s3, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s4, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s5, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 64
+; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 48
 ; RV64-NEXT:    ret
 ;
 ; RV32M-LABEL: test_srem_vec:
@@ -592,10 +588,8 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64M-NEXT:    neg a1, a1
 ; RV64M-NEXT:    neg a4, a2
 ; RV64M-NEXT:    neg a3, a3
-; RV64M-NEXT:    li a5, 7
-; RV64M-NEXT:    slli a5, a5, 32
-; RV64M-NEXT:    and a4, a4, a5
-; RV64M-NEXT:    srli a4, a4, 32
+; RV64M-NEXT:    slli a4, a4, 29
+; RV64M-NEXT:    srli a4, a4, 61
 ; RV64M-NEXT:    sb a4, 12(a0)
 ; RV64M-NEXT:    slliw a2, a2, 2
 ; RV64M-NEXT:    srli a4, a6, 31
