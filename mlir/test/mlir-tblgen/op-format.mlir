@@ -301,6 +301,24 @@ module attributes {test.someAttr = #test.cmpnd_nested_outer<i <42 <1, !test.smpl
 // CHECK: test.format_cpmd_nested_attr nested <i <42 <1, !test.smpla, [5, 6]>>>
 test.format_cpmd_nested_attr nested <i <42 <1, !test.smpla, [5, 6]>>>
 
+//-----
+
+// CHECK: test.format_qual_cpmd_nested_attr nested #test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
+test.format_qual_cpmd_nested_attr nested #test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
+
+//-----
+
+// Check the `qualified` directive in the declarative assembly format.
+// CHECK: @qualifiedCompoundNestedExplicit(%arg0: !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>)
+func @qualifiedCompoundNestedExplicit(%arg0: !test.cmpnd_nested_outer<i !test.cmpnd_inner<42 <1, !test.smpla, [5, 6]>>>) -> () {
+  // Verify that the type prefix is not elided
+  // CHECK: format_qual_cpmd_nested_type %arg0 nested !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
+  test.format_qual_cpmd_nested_type %arg0 nested !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
+  return
+}
+
+//-----
+
 //===----------------------------------------------------------------------===//
 // Format custom directives
 //===----------------------------------------------------------------------===//

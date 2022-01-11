@@ -172,6 +172,7 @@ FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
           .Case("struct", FormatToken::kw_struct)
           .Case("successors", FormatToken::kw_successors)
           .Case("type", FormatToken::kw_type)
+          .Case("qualified", FormatToken::kw_qualified)
           .Default(FormatToken::identifier);
   return FormatToken(kind, str);
 }

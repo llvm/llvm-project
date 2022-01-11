@@ -59,6 +59,7 @@ public:
     kw_functional_type,
     kw_operands,
     kw_params,
+    kw_qualified,
     kw_ref,
     kw_regions,
     kw_results,
