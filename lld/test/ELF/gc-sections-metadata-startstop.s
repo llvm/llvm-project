@@ -1,4 +1,5 @@
 # REQUIRES: x86
+# UNSUPPORTED: default-nostart-stop-gc
 # LINK_ORDER cnamed sections are not kept alive by the __start_* reference.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o

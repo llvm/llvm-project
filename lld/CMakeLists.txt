@@ -176,6 +176,15 @@ if (LLD_DEFAULT_LD_LLD_IS_MINGW)
   add_definitions("-DLLD_DEFAULT_LD_LLD_IS_MINGW=1")
 endif()
 
+option(LLD_DEFAULT_NOSTART_STOP_GC
+  "Default ld.lld to -z nostart-stop-gc. If ON, C identifier name sections are
+  forced retained by __start_/__stop_ references. This may increase output size
+  for many instrumentations, but is compatible with GNU ld newer than 2015-10"
+  ON)
+if (LLD_DEFAULT_NOSTART_STOP_GC)
+  add_definitions("-DLLD_DEFAULT_NOSTART_STOP_GC=1")
+endif()
+
 if (MSVC)
   add_definitions(-wd4530) # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
   add_definitions(-wd4062) # Suppress 'warning C4062: enumerator X in switch of enum Y is not handled' from system header.

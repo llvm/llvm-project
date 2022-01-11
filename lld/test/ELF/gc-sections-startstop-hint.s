@@ -1,4 +1,5 @@
 # REQUIRES: x86
+# UNSUPPORTED: default-nostart-stop-gc
 ## Some projects may not work with GNU ld<2015-10 (ld.lld 13.0.0) --gc-sections behavior.
 ## Give a hint.
 
