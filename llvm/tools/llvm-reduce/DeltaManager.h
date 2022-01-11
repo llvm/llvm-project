@@ -19,7 +19,7 @@ class raw_ostream;
 class TestRunner;
 
 void printDeltaPasses(raw_ostream &OS);
-void runDeltaPasses(TestRunner &Tester);
+void runDeltaPasses(TestRunner &Tester, int MaxPassIterations);
 } // namespace llvm
 
 #endif
