@@ -1793,7 +1793,8 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
 // allows us to choose betwen VSETIVLI or VSETVLI later.
 bool RISCVDAGToDAGISel::selectVLOp(SDValue N, SDValue &VL) {
   auto *C = dyn_cast<ConstantSDNode>(N);
-  if (C && isUInt<5>(C->getZExtValue()))
+  if (C && (isUInt<5>(C->getZExtValue()) ||
+            C->getSExtValue() == RISCV::VLMaxSentinel))
     VL = CurDAG->getTargetConstant(C->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
   else
