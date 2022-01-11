@@ -1722,69 +1722,64 @@ struct DSEState {
       }
     }
 
-    if (StoredConstant && StoredConstant->isNullValue()) {
-      auto *DefUOInst = dyn_cast<Instruction>(DefUO);
-      if (DefUOInst) {
-        if (MemSet) {
-          if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
-              F.hasFnAttribute(Attribute::SanitizeAddress) ||
-              F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
-              F.getName() == "calloc")
-            return false;
-          auto *Malloc = const_cast<CallInst *>(dyn_cast<CallInst>(DefUOInst));
-          if (!Malloc)
-            return false;
-          auto *InnerCallee = Malloc->getCalledFunction();
-          if (!InnerCallee)
-            return false;
-          LibFunc Func;
-          if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
-              Func != LibFunc_malloc)
-            return false;
+    if (StoredConstant && StoredConstant->isNullValue() && MemSet) {
+      if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
+          F.hasFnAttribute(Attribute::SanitizeAddress) ||
+          F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+          F.getName() == "calloc")
+        return false;
+      auto *Malloc = const_cast<CallInst *>(dyn_cast<CallInst>(DefUO));
+      if (!Malloc)
+        return false;
+      auto *InnerCallee = Malloc->getCalledFunction();
+      if (!InnerCallee)
+        return false;
+      LibFunc Func;
+      if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
+          Func != LibFunc_malloc)
+        return false;
 
-          auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
-            // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
-            // of malloc block
-            auto *MallocBB = Malloc->getParent(),
-                 *MemsetBB = Memset->getParent();
-            if (MallocBB == MemsetBB)
-              return true;
-            auto *Ptr = Memset->getArgOperand(0);
-            auto *TI = MallocBB->getTerminator();
-            ICmpInst::Predicate Pred;
-            BasicBlock *TrueBB, *FalseBB;
-            if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Ptr), m_Zero()), TrueBB,
-                                FalseBB)))
-              return false;
-            if (Pred != ICmpInst::ICMP_EQ || MemsetBB != FalseBB)
-              return false;
+      auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
+        // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
+        // of malloc block
+        auto *MallocBB = Malloc->getParent(),
+          *MemsetBB = Memset->getParent();
+        if (MallocBB == MemsetBB)
+          return true;
+        auto *Ptr = Memset->getArgOperand(0);
+        auto *TI = MallocBB->getTerminator();
+        ICmpInst::Predicate Pred;
+        BasicBlock *TrueBB, *FalseBB;
+        if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Ptr), m_Zero()), TrueBB,
+                            FalseBB)))
+          return false;
+        if (Pred != ICmpInst::ICMP_EQ || MemsetBB != FalseBB)
+          return false;
+        return true;
+      };
+
+      if (Malloc->getOperand(0) == MemSet->getLength()) {
+        if (shouldCreateCalloc(Malloc, MemSet) &&
+            DT.dominates(Malloc, MemSet) &&
+            memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT)) {
+          IRBuilder<> IRB(Malloc);
+          const auto &DL = Malloc->getModule()->getDataLayout();
+          if (auto *Calloc =
+              emitCalloc(ConstantInt::get(IRB.getIntPtrTy(DL), 1),
+                         Malloc->getArgOperand(0), IRB, TLI)) {
+            MemorySSAUpdater Updater(&MSSA);
+            auto *LastDef = cast<MemoryDef>(
+                                            Updater.getMemorySSA()->getMemoryAccess(Malloc));
+            auto *NewAccess = Updater.createMemoryAccessAfter(
+                                                              cast<Instruction>(Calloc), LastDef, LastDef);
+            auto *NewAccessMD = cast<MemoryDef>(NewAccess);
+            Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
+            Updater.removeMemoryAccess(Malloc);
+            Malloc->replaceAllUsesWith(Calloc);
+            Malloc->eraseFromParent();
             return true;
-          };
-
-          if (Malloc->getOperand(0) == MemSet->getLength()) {
-            if (shouldCreateCalloc(Malloc, MemSet) &&
-                DT.dominates(Malloc, MemSet) &&
-                memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT)) {
-              IRBuilder<> IRB(Malloc);
-              const auto &DL = Malloc->getModule()->getDataLayout();
-              if (auto *Calloc =
-                      emitCalloc(ConstantInt::get(IRB.getIntPtrTy(DL), 1),
-                                 Malloc->getArgOperand(0), IRB, TLI)) {
-                MemorySSAUpdater Updater(&MSSA);
-                auto *LastDef = cast<MemoryDef>(
-                    Updater.getMemorySSA()->getMemoryAccess(Malloc));
-                auto *NewAccess = Updater.createMemoryAccessAfter(
-                    cast<Instruction>(Calloc), LastDef, LastDef);
-                auto *NewAccessMD = cast<MemoryDef>(NewAccess);
-                Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
-                Updater.removeMemoryAccess(Malloc);
-                Malloc->replaceAllUsesWith(Calloc);
-                Malloc->eraseFromParent();
-                return true;
-              }
-              return false;
-            }
           }
+          return false;
         }
       }
     }
