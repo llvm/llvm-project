@@ -296,3 +296,18 @@ void fooDependent(T t) {
 }
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:295:17 %s -o - | FileCheck -check-prefix=CHECK-OVERLOAD %s
 // CHECK-OVERLOAD: [#int#]member
+
+struct Base4 {
+  Base4 base4();
+};
+
+template <typename T>
+struct Derived2 : Base4 {};
+
+template <typename T>
+void testMembersFromBasesInDependentContext() {
+  Derived2<T> X;
+  (void)X.base4().base4();
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:310:19 %s -o - | FileCheck -check-prefix=CHECK-MEMBERS-FROM-BASE-DEPENDENT %s
+  // CHECK-MEMBERS-FROM-BASE-DEPENDENT: [#Base4#]base4
+}
