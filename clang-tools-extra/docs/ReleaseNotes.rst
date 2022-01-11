@@ -67,6 +67,10 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Make the `cppcoreguidelines-pro-bounds-array-to-pointer-decay` check accept
+  string literal to pointer decay in conditional operator even if operands are
+  of the same length.
+
 - Ignore warnings from macros defined in system headers, if not using the
   `-system-headers` flag.
 
