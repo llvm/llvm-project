@@ -130,8 +130,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
                             LocalizedMI);
 
         // Set a new register for the definition.
-        Register NewReg = MRI->createGenericVirtualRegister(MRI->getType(Reg));
-        MRI->setRegClassOrRegBank(NewReg, MRI->getRegClassOrRegBank(Reg));
+        Register NewReg = MRI->cloneVirtualRegister(Reg);
         LocalizedMI->getOperand(0).setReg(NewReg);
         NewVRegIt =
             MBBWithLocalDef.insert(std::make_pair(MBBAndReg, NewReg)).first;
