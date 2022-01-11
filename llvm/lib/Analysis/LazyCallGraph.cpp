@@ -1522,13 +1522,6 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
   // Remove this from the entry edges if present.
   EntryEdges.removeEdgeInternal(N);
 
-  if (SCCMap.empty()) {
-    // No SCCs have been formed, so removing this is fine and there is nothing
-    // else necessary at this point but clearing out the node.
-    N.clear();
-    return;
-  }
-
   // Cannot remove a function which has yet to be visited in the DFS walk, so
   // if we have a node at all then we must have an SCC and RefSCC.
   auto CI = SCCMap.find(&N);
