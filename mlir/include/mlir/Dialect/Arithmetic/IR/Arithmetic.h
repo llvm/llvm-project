@@ -121,6 +121,8 @@ Value getIdentityValue(AtomicRMWKind op, Type resultType, OpBuilder &builder,
 /// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
 Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
                      Value lhs, Value rhs);
+
+arith::CmpIPredicate invertPredicate(arith::CmpIPredicate pred);
 } // namespace arith
 } // namespace mlir
 

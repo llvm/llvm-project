@@ -2443,11 +2443,76 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
     return success();
   }
 };
+
+/// Replace operations equivalent to the condition in the do block with true,
+/// since otherwise the block would not be evaluated.
+///
+/// scf.while (..) : (i32, ...) -> ... {
+///  %z = ... : i32
+///  %condition = cmpi pred %z, %a
+///  scf.condition(%condition) %z : i32, ...
+/// } do {
+/// ^bb0(%arg0: i32, ...):
+///    %condition2 = cmpi pred %arg0, %a
+///    use(%condition2)
+///    ...
+///
+/// becomes
+/// scf.while (..) : (i32, ...) -> ... {
+///  %z = ... : i32
+///  %condition = cmpi pred %z, %a
+///  scf.condition(%condition) %z : i32, ...
+/// } do {
+/// ^bb0(%arg0: i32, ...):
+///    use(%true)
+///    ...
+struct WhileCmpCond : public OpRewritePattern<scf::WhileOp> {
+  using OpRewritePattern<scf::WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(scf::WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    using namespace scf;
+    auto cond = op.getConditionOp();
+    auto cmp = cond.getCondition().getDefiningOp<arith::CmpIOp>();
+    if (!cmp)
+      return failure();
+    bool changed = false;
+    for (auto tup :
+         llvm::zip(cond.getArgs(), op.getAfter().front().getArguments())) {
+      for (size_t opIdx = 0; opIdx < 2; opIdx++) {
+        if (std::get<0>(tup) != cmp.getOperand(opIdx))
+          continue;
+        for (OpOperand &u :
+             llvm::make_early_inc_range(std::get<1>(tup).getUses())) {
+          auto cmp2 = dyn_cast<arith::CmpIOp>(u.getOwner());
+          if (!cmp2)
+            continue;
+          // For a binary operator 1-opIdx gets the other side.
+          if (cmp2.getOperand(1 - opIdx) != cmp.getOperand(1 - opIdx))
+            continue;
+          bool samePredicate;
+          if (cmp2.getPredicate() == cmp.getPredicate())
+            samePredicate = true;
+          else if (cmp2.getPredicate() ==
+                   arith::invertPredicate(cmp.getPredicate()))
+            samePredicate = false;
+          else
+            continue;
+
+          rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(cmp2, samePredicate,
+                                                            1);
+          changed = true;
+        }
+      }
+    }
+    return success(changed);
+  }
+};
 } // namespace
 
 void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                           MLIRContext *context) {
-  results.insert<WhileConditionTruth, WhileUnusedResult>(context);
+  results.insert<WhileConditionTruth, WhileUnusedResult, WhileCmpCond>(context);
 }
 
 //===----------------------------------------------------------------------===//
