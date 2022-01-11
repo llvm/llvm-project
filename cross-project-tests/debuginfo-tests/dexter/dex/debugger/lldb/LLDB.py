@@ -169,8 +169,8 @@ class LLDB(DebuggerBase):
             pass
         self._target.BreakpointDelete(id)
 
-    def launch(self):
-        self._process = self._target.LaunchSimple(None, None, os.getcwd())
+    def launch(self, cmdline):
+        self._process = self._target.LaunchSimple(cmdline, None, os.getcwd())
         if not self._process or self._process.GetNumThreads() == 0:
             raise DebuggerException('could not launch process')
         if self._process.GetNumThreads() != 1:
