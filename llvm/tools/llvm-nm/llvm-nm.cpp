@@ -1687,6 +1687,11 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       S.Address = 0;
       if (isa<ELFObjectFileBase>(&Obj))
         S.Size = ELFSymbolRef(Sym).getSize();
+
+      if (const XCOFFObjectFile *XCOFFObj =
+              dyn_cast<const XCOFFObjectFile>(&Obj))
+        S.Size = XCOFFObj->getSymbolSize(Sym.getRawDataRefImpl());
+
       if (PrintAddress && isa<ObjectFile>(Obj)) {
         SymbolRef SymRef(Sym);
         Expected<uint64_t> AddressOrErr = SymRef.getAddress();
