@@ -62,15 +62,6 @@ define <16 x float> @splice_v16f32_idx(<16 x float> %a, <16 x float> %b) #0 {
   ret <16 x float> %res
 }
 
-; Verify out-of-bounds index results in undef vector.
-define <2 x double> @splice_v2f64_idx_out_of_bounds(<2 x double> %a, <2 x double> %b) #0 {
-; CHECK-LABEL: splice_v2f64_idx_out_of_bounds:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ret
-  %res = call <2 x double> @llvm.experimental.vector.splice.v2f64(<2 x double> %a, <2 x double> %b, i32 2)
-  ret <2 x double> %res
-}
-
 ;
 ; VECTOR_SPLICE (trailing elements)
 ;
@@ -128,15 +119,6 @@ define <16 x float> @splice_v16f32(<16 x float> %a, <16 x float> %b) #0 {
 ; CHECK-NEXT:    ret
   %res = call <16 x float> @llvm.experimental.vector.splice.v16f32(<16 x float> %a, <16 x float> %b, i32 -9)
   ret <16 x float> %res
-}
-
-; Verify out-of-bounds trailing element count results in undef vector.
-define <2 x double> @splice_v2f64_out_of_bounds(<2 x double> %a, <2 x double> %b) #0 {
-; CHECK-LABEL: splice_v2f64_out_of_bounds:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ret
-  %res = call <2 x double> @llvm.experimental.vector.splice.v2f64(<2 x double> %a, <2 x double> %b, i32 -3)
-  ret <2 x double> %res
 }
 
 declare <2 x i8> @llvm.experimental.vector.splice.v2i8(<2 x i8>, <2 x i8>, i32)
