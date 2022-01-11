@@ -18,8 +18,15 @@ void
 test(const T&)
 {
     static_assert(std::is_placeholder<T>::value == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_placeholder<T&>::value == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_placeholder<const T>::value == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_placeholder<const T&>::value == Expected, "");
+
 #if TEST_STD_VER > 14
     static_assert(std::is_placeholder_v<T> == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_placeholder_v<T&> == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_placeholder_v<const T> == Expected, "");
+    LIBCPP_STATIC_ASSERT(std::is_placeholder_v<const T&> == Expected, "");
 #endif
 }
 
