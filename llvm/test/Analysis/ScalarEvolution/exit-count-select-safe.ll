@@ -129,9 +129,9 @@ define i32 @logical_or_3ops_duplicate(i32 %n, i32 %m, i32 %k) {
 ; CHECK-LABEL: 'logical_or_3ops_duplicate'
 ; CHECK-NEXT:  Classifying expressions for: @logical_or_3ops_duplicate
 ; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %n umin_seq %k) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m umin_seq %k) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add i32 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %n umin_seq %k)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m umin_seq %k)) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %cond_p4 = select i1 %cond_p0, i1 true, i1 %cond_p1
 ; CHECK-NEXT:    --> %cond_p4 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond_p5 = select i1 %cond_p4, i1 true, i1 %cond_p2
@@ -139,9 +139,9 @@ define i32 @logical_or_3ops_duplicate(i32 %n, i32 %m, i32 %k) {
 ; CHECK-NEXT:    %cond = select i1 %cond_p5, i1 true, i1 %cond_p3
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @logical_or_3ops_duplicate
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m umin_seq %n umin_seq %k)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m umin_seq %k)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m umin_seq %n umin_seq %k)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m umin_seq %k)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
 ;
@@ -166,28 +166,28 @@ define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-LABEL: 'computeSCEVAtScope'
 ; CHECK-NEXT:  Classifying expressions for: @computeSCEVAtScope
 ; CHECK-NEXT:    %d.1 = phi i32 [ %inc, %for.body ], [ %d.0, %for.cond.preheader ]
-; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: (((-1 * %d.0) umin_seq (-1 * %d.0)) + %d.0) LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %e.1 = phi i32 [ %inc3, %for.body ], [ %d.0, %for.cond.preheader ]
-; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: (((-1 * %d.0) umin_seq (-1 * %d.0)) + %d.0) LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %0 = select i1 %tobool1, i1 %tobool2, i1 false
-; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant, %while.cond: Variant }
+; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: false LoopDispositions: { %for.cond: Variant, %while.cond: Variant }
 ; CHECK-NEXT:    %inc = add nsw i32 %d.1, 1
-; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: (1 + ((-1 * %d.0) umin_seq (-1 * %d.0)) + %d.0) LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %inc3 = add nsw i32 %e.1, 1
-; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: (1 + ((-1 * %d.0) umin_seq (-1 * %d.0)) + %d.0) LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %f.1 = phi i32 [ %inc8, %for.body5 ], [ 0, %for.cond4.preheader ]
-; CHECK-NEXT:    --> {0,+,1}<%for.cond4> U: full-set S: full-set Exits: (((-1 * %d.0) umin_seq (-1 * %d.0)) + %d.0) LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {0,+,1}<%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
 ; CHECK-NEXT:    %inc8 = add i32 %f.1, 1
-; CHECK-NEXT:    --> {1,+,1}<%for.cond4> U: full-set S: full-set Exits: (1 + ((-1 * %d.0) umin_seq (-1 * %d.0)) + %d.0) LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {1,+,1}<%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @computeSCEVAtScope
-; CHECK-NEXT:  Loop %for.cond: backedge-taken count is ((-1 * %d.0) umin_seq (-1 * %d.0))
+; CHECK-NEXT:  Loop %for.cond: backedge-taken count is (-1 * %d.0)
 ; CHECK-NEXT:  Loop %for.cond: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %for.cond: Predicated backedge-taken count is ((-1 * %d.0) umin_seq (-1 * %d.0))
+; CHECK-NEXT:  Loop %for.cond: Predicated backedge-taken count is (-1 * %d.0)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.cond: Trip multiple is 1
-; CHECK-NEXT:  Loop %for.cond4: backedge-taken count is (((-1 * %d.0) umin_seq (-1 * %d.0)) + %d.0)
-; CHECK-NEXT:  Loop %for.cond4: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %for.cond4: Predicated backedge-taken count is (((-1 * %d.0) umin_seq (-1 * %d.0)) + %d.0)
+; CHECK-NEXT:  Loop %for.cond4: backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.cond4: max backedge-taken count is 0
+; CHECK-NEXT:  Loop %for.cond4: Predicated backedge-taken count is 0
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.cond4: Trip multiple is 1
 ; CHECK-NEXT:  Loop %while.cond: <multiple exits> Unpredictable backedge-taken count.

@@ -3893,6 +3893,24 @@ ScalarEvolution::getSequentialMinMaxExpr(SCEVTypes Kind,
 
   // FIXME: there are *some* simplifications that we can do here.
 
+  // Keep only the first instance of an operand.
+  {
+    SmallPtrSet<const SCEV *, 16> SeenOps;
+    unsigned Idx = 0;
+    bool DeletedAny = false;
+    while (Idx < Ops.size()) {
+      if (SeenOps.insert(Ops[Idx]).second) {
+        ++Idx;
+        continue;
+      }
+      Ops.erase(Ops.begin() + Idx);
+      DeletedAny = true;
+    }
+
+    if (DeletedAny)
+      return getSequentialMinMaxExpr(Kind, Ops);
+  }
+
   // Check to see if one of the operands is of the same kind. If so, expand its
   // operands onto our operand list, and recurse to simplify.
   {
