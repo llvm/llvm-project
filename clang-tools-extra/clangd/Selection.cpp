@@ -234,7 +234,9 @@ public:
   // The selection is offsets [SelBegin, SelEnd) in SelFile.
   SelectionTester(const syntax::TokenBuffer &Buf, FileID SelFile,
                   unsigned SelBegin, unsigned SelEnd, const SourceManager &SM)
-      : SelFile(SelFile), SM(SM) {
+      : SelFile(SelFile), SelFileBounds(SM.getLocForStartOfFile(SelFile),
+                                        SM.getLocForEndOfFile(SelFile)),
+        SM(SM) {
     // Find all tokens (partially) selected in the file.
     auto AllSpelledTokens = Buf.spelledTokens(SelFile);
     const syntax::Token *SelFirst =
@@ -301,11 +303,10 @@ public:
   bool mayHit(SourceRange R) const {
     if (SpelledTokens.empty())
       return false;
-    auto B = SM.getDecomposedLoc(R.getBegin());
-    auto E = SM.getDecomposedLoc(R.getEnd());
-    if (B.first == SelFile && E.first == SelFile)
-      if (E.second < SpelledTokens.front().Offset ||
-          B.second > SpelledTokens.back().Offset)
+    auto B = offsetInSelFile(R.getBegin());
+    auto E = offsetInSelFile(R.getEnd());
+    if (B && E)
+      if (*E < SpelledTokens.front().Offset || *B > SpelledTokens.back().Offset)
         return false;
     return true;
   }
@@ -325,8 +326,8 @@ private:
 
     // Handle tokens written directly in the main file.
     if (FID == SelFile) {
-      return testTokenRange(SM.getFileOffset(Batch.front().location()),
-                            SM.getFileOffset(Batch.back().location()));
+      return testTokenRange(*offsetInSelFile(Batch.front().location()),
+                            *offsetInSelFile(Batch.back().location()));
     }
 
     // Handle tokens in another file #included into the main file.
@@ -334,9 +335,9 @@ private:
     if (StartLoc.isFileID()) {
       for (SourceLocation Loc = Batch.front().location(); Loc.isValid();
            Loc = SM.getIncludeLoc(SM.getFileID(Loc))) {
-        if (SM.getFileID(Loc) == SelFile)
+        if (auto Offset = offsetInSelFile(Loc))
           // FIXME: use whole #include directive, not just the filename string.
-          return testToken(SM.getFileOffset(Loc));
+          return testToken(*Offset);
       }
       return NoTokens;
     }
@@ -344,12 +345,11 @@ private:
     assert(StartLoc.isMacroID());
     // Handle tokens that were passed as a macro argument.
     SourceLocation ArgStart = SM.getTopMacroCallerLoc(StartLoc);
-    if (SM.getFileID(ArgStart) == SelFile) {
+    if (auto ArgOffset = offsetInSelFile(ArgStart)) {
       if (isFirstExpansion(FID, ArgStart, SM)) {
         SourceLocation ArgEnd =
             SM.getTopMacroCallerLoc(Batch.back().location());
-        return testTokenRange(SM.getFileOffset(ArgStart),
-                              SM.getFileOffset(ArgEnd));
+        return testTokenRange(*ArgOffset, *offsetInSelFile(ArgEnd));
       } else { // NOLINT(llvm-else-after-return)
         /* fall through and treat as part of the macro body */
       }
@@ -357,10 +357,9 @@ private:
 
     // Handle tokens produced by non-argument macro expansion.
     // Check if the macro name is selected, don't claim it exclusively.
-    auto Expansion = SM.getDecomposedExpansionLoc(StartLoc);
-    if (Expansion.first == SelFile)
+    if (auto ExpansionOffset = offsetInSelFile(getExpansionStart(StartLoc)))
       // FIXME: also check ( and ) for function-like macros?
-      return testToken(Expansion.second);
+      return testToken(*ExpansionOffset);
     return NoTokens;
   }
 
@@ -402,12 +401,25 @@ private:
     return NoTokens;
   }
 
+  llvm::Optional<unsigned> offsetInSelFile(SourceLocation Loc) const {
+    if (Loc < SelFileBounds.getBegin() || Loc >= SelFileBounds.getEnd())
+      return llvm::None;
+    return Loc.getRawEncoding() - SelFileBounds.getBegin().getRawEncoding();
+  }
+
+  SourceLocation getExpansionStart(SourceLocation Loc) const {
+    while (Loc.isMacroID())
+      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
+    return Loc;
+  }
+
   struct Tok {
     unsigned Offset;
     SelectionTree::Selection Selected;
   };
   std::vector<Tok> SpelledTokens;
   FileID SelFile;
+  SourceRange SelFileBounds;
   const SourceManager &SM;
 };
 
