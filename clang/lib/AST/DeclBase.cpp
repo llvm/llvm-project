@@ -1644,9 +1644,9 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
 
 DeclContext::lookup_result
 DeclContext::lookup(DeclarationName Name) const {
-  assert(getDeclKind() != Decl::LinkageSpec &&
-         getDeclKind() != Decl::Export &&
-         "should not perform lookups into transparent contexts");
+  // For transparent DeclContext, we should lookup in their enclosing context.
+  if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
+    return getParent()->lookup(Name);
 
   const DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)
