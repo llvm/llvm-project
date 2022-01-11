@@ -34,7 +34,7 @@ class Region;
 namespace mlir {
 namespace scf {
 class ParallelOp;
-}
+} // namespace scf
 
 namespace gpu {
 
