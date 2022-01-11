@@ -77,3 +77,25 @@ constexpr void test11() {
 
 constexpr int test12() { return "wrong"; } // expected-error {{cannot initialize return object of type 'int'}}
 constexpr int force12 = test12();          // expected-error {{must be initialized by a constant}}
+
+#define TEST_EVALUATE(Name, X)         \
+  constexpr int testEvaluate##Name() { \
+    X return 0;                        \
+  }                                    \
+  constexpr int forceEvaluate##Name = testEvaluate##Name()
+// Check that a variety of broken loops don't crash constant evaluation.
+// We're not checking specific recovery here so don't assert diagnostics.
+TEST_EVALUATE(Switch, switch (!!){});              // expected-error + {{}}
+TEST_EVALUATE(SwitchInit, switch (auto x = !!){}); // expected-error + {{}}
+TEST_EVALUATE(For, for (!!){}); // expected-error + {{}}
+                                // FIXME: should bail out instead of looping.
+                                // expected-note@-2 + {{infinite loop}}
+                                // expected-note@-3 {{in call}}
+TEST_EVALUATE(ForRange, for (auto x : !!){}); // expected-error + {{}}
+TEST_EVALUATE(While, while (!!){});           // expected-error + {{}}
+TEST_EVALUATE(DoWhile, do {} while (!!););    // expected-error + {{}}
+TEST_EVALUATE(If, if (!!){};);                // expected-error + {{}}
+TEST_EVALUATE(IfInit, if (auto x = !!; 1){};);// expected-error + {{}}
+TEST_EVALUATE(ForInit, if (!!;;){};);         // expected-error + {{}}
+TEST_EVALUATE(ForCond, if (; !!;){};);        // expected-error + {{}}
+TEST_EVALUATE(ForInc, if (;; !!){};);         // expected-error + {{}}
