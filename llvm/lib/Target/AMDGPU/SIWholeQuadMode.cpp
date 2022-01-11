@@ -1588,11 +1588,11 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   // Physical registers like SCC aren't tracked by default anyway, so just
   // removing the ranges we computed is the simplest option for maintaining
   // the analysis results.
-  LIS->removeRegUnit(*MCRegUnitIterator(MCRegister::from(AMDGPU::SCC), TRI));
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::SCC);
 
   // If we performed any kills then recompute EXEC
   if (!KillInstrs.empty())
-    LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));
+    LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
 
   return true;
 }
