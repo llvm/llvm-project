@@ -592,17 +592,16 @@ Optional<APFloat> llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
   return None;
 }
 
-Optional<MachineInstr *>
-llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
-                              const Register Op2,
-                              const MachineRegisterInfo &MRI,
-                              MachineIRBuilder &MIB) {
+Register llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
+                                       const Register Op2,
+                                       const MachineRegisterInfo &MRI,
+                                       MachineIRBuilder &MIB) {
   auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
   if (!SrcVec1)
-    return None;
+    return Register();
   auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
   if (!SrcVec2)
-    return None;
+    return Register();
 
   const LLT EltTy = MRI.getType(SrcVec1->getSourceReg(0));
 
@@ -611,14 +610,14 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
     auto MaybeCst = ConstantFoldBinOp(Opcode, SrcVec1->getSourceReg(Idx),
                                       SrcVec2->getSourceReg(Idx), MRI);
     if (!MaybeCst)
-      return None;
+      return Register();
     auto FoldedCstReg = MIB.buildConstant(EltTy, *MaybeCst).getReg(0);
     FoldedElements.emplace_back(FoldedCstReg);
   }
   // Create the new vector constant.
   auto CstVec =
       MIB.buildBuildVector(MRI.getType(SrcVec1->getReg(0)), FoldedElements);
-  return &*CstVec;
+  return CstVec.getReg(0);
 }
 
 bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,

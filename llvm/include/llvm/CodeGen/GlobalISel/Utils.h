@@ -270,9 +270,10 @@ Optional<APFloat> ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
 /// If successful, returns the G_BUILD_VECTOR representing the folded vector
 /// constant. \p MIB should have an insertion point already set to create new
 /// G_CONSTANT instructions as needed.
-Optional<MachineInstr *>
-ConstantFoldVectorBinop(unsigned Opcode, const Register Op1, const Register Op2,
-                        const MachineRegisterInfo &MRI, MachineIRBuilder &MIB);
+Register ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
+                                 const Register Op2,
+                                 const MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &MIB);
 
 Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                   uint64_t Imm, const MachineRegisterInfo &MRI);
