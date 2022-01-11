@@ -1907,18 +1907,18 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1 * s2 + d3 * s4, d2 * s6 + d4 * s8, d5)>
+      -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d3, d4)>
+      -> (d4, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1, d2, d5)>
+      -> (d0, d1, d2, d3)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -1978,18 +1978,18 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1 * s2 + d3 * s4, d2 * s6 + d4 * s8, d5)>
+      -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d3, d4)>
+      -> (d4, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1, d2, d5)>
+      -> (d0, d1, d2, d3)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -2049,18 +2049,18 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1 * s2 + d3 * s4, d2 * s6 + d4 * s8, d5)>
+      -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d3, d4)>
+      -> (d4, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1, d2, d5)>
+      -> (d0, d1, d2, d3)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -2191,18 +2191,18 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1 * s2 + d3 * s4, d2 * s6 + d4 * s8, d5)>
+      -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d3, d4)>
+      -> (d4, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1, d2, d5)>
+      -> (d0, d1, d2, d3)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -2262,18 +2262,18 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1 * s2 + d3 * s4, d2 * s6 + d4 * s8, d5)>
+      -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d3)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d3, d4)>
+      -> (d4, d5)>
     - affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6, s7, s8, s9]
-      -> (d0, d1, d2, d5)>
+      -> (d0, d1, d2, d3)>
   iterator_types:
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -2336,21 +2336,21 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d3
-      * s10 + d6 * s12, d7)>
+      s8, s9, s10, s11, s12, s13] -> (d0, d1 * s2 + d5 * s4, d2 * s6 + d6 * s8, d3
+      * s10 + d7 * s12, d4)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d4, d5, d6)>
+      s8, s9, s10, s11, s12, s13] -> (d5, d6, d7)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d0, d1, d2, d3, d7)>
+      s8, s9, s10, s11, s12, s13] -> (d0, d1, d2, d3, d4)>
   iterator_types:
   - parallel
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -2413,21 +2413,21 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d3
-      * s10 + d6 * s12, d7)>
+      s8, s9, s10, s11, s12, s13] -> (d0, d1 * s2 + d5 * s4, d2 * s6 + d6 * s8, d3
+      * s10 + d7 * s12, d4)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d4, d5, d6)>
+      s8, s9, s10, s11, s12, s13] -> (d5, d6, d7)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d0, d1, d2, d3, d7)>
+      s8, s9, s10, s11, s12, s13] -> (d0, d1, d2, d3, d4)>
   iterator_types:
   - parallel
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
@@ -2490,21 +2490,21 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d0, d1 * s2 + d4 * s4, d2 * s6 + d5 * s8, d3
-      * s10 + d6 * s12, d7)>
+      s8, s9, s10, s11, s12, s13] -> (d0, d1 * s2 + d5 * s4, d2 * s6 + d6 * s8, d3
+      * s10 + d7 * s12, d4)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d4, d5, d6)>
+      s8, s9, s10, s11, s12, s13] -> (d5, d6, d7)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7)[s0, s1, s2, s3, s4, s5, s6, s7,
-      s8, s9, s10, s11, s12, s13] -> (d0, d1, d2, d3, d7)>
+      s8, s9, s10, s11, s12, s13] -> (d0, d1, d2, d3, d4)>
   iterator_types:
   - parallel
   - parallel
   - parallel
   - parallel
-  - reduction
-  - reduction
-  - reduction
   - parallel
+  - reduction
+  - reduction
+  - reduction
   assignments:
   - !ScalarAssign
     arg: O
