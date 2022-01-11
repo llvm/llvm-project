@@ -492,7 +492,7 @@ class MemorySanitizer {
 public:
   MemorySanitizer(Module &M, MemorySanitizerOptions Options)
       : CompileKernel(Options.Kernel), TrackOrigins(Options.TrackOrigins),
-        Recover(Options.Recover) {
+        Recover(Options.Recover), EagerChecks(Options.EagerChecks) {
     initializeModule(M);
   }
 
@@ -522,6 +522,7 @@ private:
   /// Track origins (allocation points) of uninitialized values.
   int TrackOrigins;
   bool Recover;
+  bool EagerChecks;
 
   LLVMContext *C;
   Type *IntptrTy;
@@ -665,10 +666,12 @@ template <class T> T getOptOrDefault(const cl::opt<T> &Opt, T Default) {
 
 } // end anonymous namespace
 
-MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K)
+MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
+                                               bool EagerChecks)
     : Kernel(getOptOrDefault(ClEnableKmsan, K)),
       TrackOrigins(getOptOrDefault(ClTrackOrigins, Kernel ? 2 : TO)),
-      Recover(getOptOrDefault(ClKeepGoing, Kernel || R)) {}
+      Recover(getOptOrDefault(ClKeepGoing, Kernel || R)),
+      EagerChecks(getOptOrDefault(ClEagerChecks, EagerChecks)) {}
 
 PreservedAnalyses MemorySanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
@@ -695,6 +698,8 @@ void MemorySanitizerPass::printPipeline(
     OS << "recover;";
   if (Options.Kernel)
     OS << "kernel;";
+  if (Options.EagerChecks)
+    OS << "eager-checks;";
   OS << "track-origins=" << Options.TrackOrigins;
   OS << ">";
 }
@@ -1703,7 +1708,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
         bool FArgByVal = FArg.hasByValAttr();
         bool FArgNoUndef = FArg.hasAttribute(Attribute::NoUndef);
-        bool FArgEagerCheck = ClEagerChecks && !FArgByVal && FArgNoUndef;
+        bool FArgEagerCheck = MS.EagerChecks && !FArgByVal && FArgNoUndef;
         unsigned Size =
             FArg.hasByValAttr()
                 ? DL.getTypeAllocSize(FArg.getParamByValType())
@@ -3679,7 +3684,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       maybeMarkSanitizerLibraryCallNoBuiltin(Call, TLI);
     }
     IRBuilder<> IRB(&CB);
-    bool MayCheckCall = ClEagerChecks;
+    bool MayCheckCall = MS.EagerChecks;
     if (Function *Func = CB.getCalledFunction()) {
       // __sanitizer_unaligned_{load,store} functions may be called by users
       // and always expects shadows in the TLS. So don't check them.
@@ -3832,10 +3837,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *ShadowPtr = getShadowPtrForRetval(RetVal, IRB);
     bool HasNoUndef =
         F.hasRetAttribute(Attribute::NoUndef);
-    bool StoreShadow = !(ClEagerChecks && HasNoUndef);
+    bool StoreShadow = !(MS.EagerChecks && HasNoUndef);
     // FIXME: Consider using SpecialCaseList to specify a list of functions that
     // must always return fully initialized values. For now, we hardcode "main".
-    bool EagerCheck = (ClEagerChecks && HasNoUndef) || (F.getName() == "main");
+    bool EagerCheck = (MS.EagerChecks && HasNoUndef) || (F.getName() == "main");
 
     Value *Shadow = getShadow(RetVal);
     bool StoreOrigin = true;
