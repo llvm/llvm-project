@@ -486,9 +486,8 @@ define i32 @bclri_i32_30(i32 %a) nounwind {
 define i32 @bclri_i32_31(i32 %a) nounwind {
 ; RV32I-LABEL: bclri_i32_31:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 524288
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 1
+; RV32I-NEXT:    srli a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV32ZBS-LABEL: bclri_i32_31:
