@@ -1708,19 +1708,23 @@ struct DSEState {
     if (!isRemovable(DefI))
       return false;
 
+    if (StoredConstant && isAllocationFn(DefUO, &TLI)) {
+      auto *CB = cast<CallBase>(DefUO);
+      auto *InitC = getInitialValueOfAllocation(CB, &TLI,
+                                                StoredConstant->getType());
+      if (InitC && InitC == StoredConstant) {
+        auto *UnderlyingDef = cast<MemoryDef>(MSSA.getMemoryAccess(CB));
+        // If UnderlyingDef is the clobbering access of Def, no instructions
+        // between them can modify the memory location.
+        auto *ClobberDef =
+          MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def);
+        return UnderlyingDef == ClobberDef;
+      }
+    }
+
     if (StoredConstant && StoredConstant->isNullValue()) {
       auto *DefUOInst = dyn_cast<Instruction>(DefUO);
       if (DefUOInst) {
-        if (isCallocLikeFn(DefUOInst, &TLI)) {
-          auto *UnderlyingDef =
-              cast<MemoryDef>(MSSA.getMemoryAccess(DefUOInst));
-          // If UnderlyingDef is the clobbering access of Def, no instructions
-          // between them can modify the memory location.
-          auto *ClobberDef =
-              MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def);
-          return UnderlyingDef == ClobberDef;
-        }
-
         if (MemSet) {
           if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
               F.hasFnAttribute(Attribute::SanitizeAddress) ||
