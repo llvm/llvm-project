@@ -519,7 +519,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     ```mlir
     %num_elements = arith.constant 256
     %idx = arith.constant 0 : index
-    %tag = alloc() : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
+    %tag = memref.alloc() : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
     dma_start %src[%i, %j], %dst[%k, %l], %num_elements, %tag[%idx] :
       memref<40 x 128 x f32>, affine_map<(d0) -> (d0)>, 0>,
       memref<2 x 1024 x f32>, affine_map<(d0) -> (d0)>, 1>,
@@ -1561,7 +1561,7 @@ def TensorStoreOp : MemRef_Op<"tensor_store",
 
     ```mlir
     %9 = dim %8, 1 : tensor<4x?xf32>
-    %10 = alloc(%9) : memref<4x?xf32, #layout, memspace0>
+    %10 = memref.alloc(%9) : memref<4x?xf32, #layout, memspace0>
     memref.tensor_store %8, %10 : memref<4x?xf32, #layout, memspace0>
     ```
   }];

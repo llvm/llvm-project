@@ -40,4 +40,14 @@
 // RUN:   --start-no-unused-arguments -fsyntax-only --end-no-unused-arguments \
 // RUN:   -lfoo -Werror %s 2>&1 | FileCheck %s
 
+// Test clang-cl warning about unused linker options.
+// RUN: not %clang_cl -fsyntax-only /WX \
+// RUN:   -LD -- %s 2>&1 | FileCheck %s --check-prefix=CL-WARNING
+
+// Test clang-cl ignoring the warning with --start-no-unused-arguments.
+// RUN: %clang_cl -fsyntax-only /WX \
+// RUN:   --start-no-unused-arguments /LD --end-no-unused-arguments -- %s 2>&1 | count 0
+
 // CHECK: -lfoo: 'linker' input unused
+
+// CL-WARNING: argument unused during compilation: '-LD'
