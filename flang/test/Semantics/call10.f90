@@ -85,9 +85,9 @@ module m
   pure subroutine s05 ! C1589
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
     real, save :: v1
-    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
+    !ERROR: A pure subprogram may not initialize a variable
     real :: v2 = 0.
-    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
+    !ERROR: A pure subprogram may not initialize a variable
     real :: v3
     data v3/0./
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
@@ -97,7 +97,7 @@ module m
     block
     !ERROR: A pure subprogram may not have a variable with the SAVE attribute
       real, save :: v5
-    !ERROR: A pure subprogram may not have a variable with the SAVE attribute
+    !ERROR: A pure subprogram may not initialize a variable
       real :: v6 = 0.
     end block
   end subroutine
