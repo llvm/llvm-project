@@ -148,9 +148,8 @@ static void DumpInstructionDisassembly(Stream &s, InstructionSymbolInfo &insn) {
   if (!insn.instruction)
     return;
   s.Printf("    ");
-  insn.instruction->Dump(&s, /*show_address=*/false, /*show_bytes=*/false,
-                         /*max_opcode_byte_size=*/false, &insn.exe_ctx,
-                         &insn.sc,
+  insn.instruction->Dump(&s, /*max_opcode_byte_size=*/0, /*show_address=*/false,
+                         /*show_bytes=*/false, &insn.exe_ctx, &insn.sc,
                          /*prev_sym_ctx=*/nullptr,
                          /*disassembly_addr_format=*/nullptr,
                          /*max_address_text_size=*/0);
