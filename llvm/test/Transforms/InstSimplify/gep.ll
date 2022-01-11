@@ -160,7 +160,7 @@ define i8* @test7(i8* %b, i8** %e) {
 
 define i64* @undef_inbounds_var_idx(i64 %idx) {
 ; CHECK-LABEL: @undef_inbounds_var_idx(
-; CHECK-NEXT:    ret i64* undef
+; CHECK-NEXT:    ret i64* poison
 ;
   %el = getelementptr inbounds i64, i64* undef, i64 %idx
   ret i64* %el
@@ -176,7 +176,7 @@ define i64* @undef_no_inbounds_var_idx(i64 %idx) {
 
 define <8 x i64*> @undef_vec1() {
 ; CHECK-LABEL: @undef_vec1(
-; CHECK-NEXT:    ret <8 x i64*> undef
+; CHECK-NEXT:    ret <8 x i64*> poison
 ;
   %el = getelementptr inbounds i64, i64* undef, <8 x i64> undef
   ret <8 x i64*> %el
