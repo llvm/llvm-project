@@ -92,8 +92,10 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   options->printConflicts = printConflicts;
 
   // Enable InitTensorOp elimination.
-  options->addPostAnalysisStep<
-      linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
+  if (initTensorElimination) {
+    options->addPostAnalysisStep<
+        linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
+  }
   if (!allowReturnMemref)
     options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
