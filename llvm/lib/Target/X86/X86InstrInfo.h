@@ -643,7 +643,8 @@ private:
   ///   CMP %1, %2   and  %3 = SUB %2, %1  ; IsSwapped=true
   bool isRedundantFlagInstr(const MachineInstr &FlagI, Register SrcReg,
                             Register SrcReg2, int64_t ImmMask, int64_t ImmValue,
-                            const MachineInstr &OI, bool *IsSwapped) const;
+                            const MachineInstr &OI, bool *IsSwapped,
+                            int64_t *ImmDelta) const;
 };
 
 } // namespace llvm
