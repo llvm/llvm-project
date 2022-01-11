@@ -237,8 +237,8 @@ declare void @f(i32*, i32*)
 define i32 @test6(i32* %b) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 false, i32* undef, i32* [[B:%.*]]
-; CHECK-NEXT:    [[SELECT3:%.*]] = select i1 false, i32* undef, i32* [[B]]
+; CHECK-NEXT:    [[SELECT2:%.*]] = select i1 false, i32* poison, i32* [[B:%.*]]
+; CHECK-NEXT:    [[SELECT3:%.*]] = select i1 false, i32* poison, i32* [[B]]
 ; CHECK-NEXT:    call void @f(i32* [[SELECT2]], i32* [[SELECT3]])
 ; CHECK-NEXT:    ret i32 1
 ;
@@ -272,7 +272,7 @@ define i32 @test7() {
 ; CHECK:       good:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       bad:
-; CHECK-NEXT:    [[P_SROA_SPECULATE_LOAD_BAD:%.*]] = load i32, i32* undef, align 4
+; CHECK-NEXT:    [[P_SROA_SPECULATE_LOAD_BAD:%.*]] = load i32, i32* poison, align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[P_SROA_SPECULATED:%.*]] = phi i32 [ 0, [[GOOD]] ], [ [[P_SROA_SPECULATE_LOAD_BAD]], [[BAD]] ]
@@ -525,7 +525,7 @@ define i32 @PR13905() {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    br i1 undef, label [[LOOP1]], label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32* [ undef, [[LOOP2]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32* [ poison, [[LOOP2]] ], [ null, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 undef
 ;
 
