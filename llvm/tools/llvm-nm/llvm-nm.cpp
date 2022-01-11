@@ -31,6 +31,7 @@
 #include "llvm/Object/TapiFile.h"
 #include "llvm/Object/TapiUniversal.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -126,6 +127,20 @@ static bool MultipleFiles = false;
 static bool HadError = false;
 
 static StringRef ToolName;
+
+static void warn(Error Err, Twine FileName, Twine Context = Twine()) {
+  assert(Err);
+
+  // Flush the standard output so that the warning isn't interleaved with other
+  // output if stdout and stderr are writing to the same place.
+  outs().flush();
+
+  handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
+    WithColor::warning(errs(), ToolName)
+        << FileName << ": " << (Context.str().empty() ? "" : Context + ": ")
+        << EI.message() << "\n";
+  });
+}
 
 static void error(Twine Message, Twine Path = Twine()) {
   HadError = true;
@@ -246,6 +261,9 @@ static char isSymbolList64Bit(SymbolicFile &Obj) {
     return Triple(IRObj->getTargetTriple()).isArch64Bit();
   if (isa<COFFObjectFile>(Obj) || isa<COFFImportFile>(Obj))
     return false;
+  if (XCOFFObjectFile *XCOFFObj = dyn_cast<XCOFFObjectFile>(&Obj))
+    return XCOFFObj->is64Bit();
+
   if (isa<WasmObjectFile>(Obj))
     return false;
   if (TapiFile *Tapi = dyn_cast<TapiFile>(&Obj))
@@ -897,6 +915,42 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
   return '?';
 }
 
+static char getSymbolNMTypeChar(XCOFFObjectFile &Obj, symbol_iterator I) {
+  Expected<uint32_t> TypeOrErr = I->getType();
+  if (!TypeOrErr) {
+    warn(TypeOrErr.takeError(), Obj.getFileName(),
+         "for symbol with index " +
+             Twine(Obj.getSymbolIndex(I->getRawDataRefImpl().p)));
+    return '?';
+  }
+
+  uint32_t SymType = *TypeOrErr;
+
+  if (SymType == SymbolRef::ST_File)
+    return 'f';
+
+  // If the I->getSection() call would return an error, the earlier I->getType()
+  // call will already have returned the same error first.
+  section_iterator SecIter = cantFail(I->getSection());
+
+  if (SecIter == Obj.section_end())
+    return '?';
+
+  if (Obj.isDebugSection(SecIter->getRawDataRefImpl()))
+    return 'N';
+
+  if (SecIter->isText())
+    return 't';
+
+  if (SecIter->isData())
+    return 'd';
+
+  if (SecIter->isBSS())
+    return 'b';
+
+  return '?';
+}
+
 static char getSymbolNMTypeChar(COFFImportFile &Obj) {
   switch (Obj.getCOFFImportHeader()->getType()) {
   case COFF::IMPORT_CODE:
@@ -1045,6 +1099,8 @@ static char getNMSectionTagAndName(SymbolicFile &Obj, basic_symbol_iterator I,
     Ret = getSymbolNMTypeChar(*IR, I);
   else if (COFFObjectFile *COFF = dyn_cast<COFFObjectFile>(&Obj))
     Ret = getSymbolNMTypeChar(*COFF, I);
+  else if (XCOFFObjectFile *XCOFF = dyn_cast<XCOFFObjectFile>(&Obj))
+    Ret = getSymbolNMTypeChar(*XCOFF, I);
   else if (COFFImportFile *COFFImport = dyn_cast<COFFImportFile>(&Obj))
     Ret = getSymbolNMTypeChar(*COFFImport);
   else if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj))
