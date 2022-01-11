@@ -630,7 +630,7 @@ func @scf_for_deps(
   // of %r1 is read.
   //      CHECK: scf.for
   // CHECK-NEXT: call
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
+  // CHECK-SAME: {__inplace_operands_attr__ = ["false"]}
   // CHECK-NEXT: scf.yield
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   //      CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "false"]}
@@ -642,7 +642,7 @@ func @scf_for_deps(
   // %r1 bufferizes inplace fine.
   //      CHECK: scf.for
   // CHECK-NEXT: call
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
+  // CHECK-SAME: {__inplace_operands_attr__ = ["false"]}
   // CHECK-NEXT: scf.yield
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   //      CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "true"]}
@@ -655,7 +655,7 @@ func @scf_for_deps(
   // of %r3 is read.
   //      CHECK: linalg.tiled_loop
   // CHECK-NEXT: call
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
+  // CHECK-SAME: {__inplace_operands_attr__ = ["false"]}
   // CHECK-NEXT: linalg.yield
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   //      CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "false"]}
@@ -669,7 +669,7 @@ func @scf_for_deps(
   // %r3 bufferizes inplace fine.
   //      CHECK: linalg.tiled_loop
   // CHECK-NEXT: call
-  // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
+  // CHECK-SAME: {__inplace_operands_attr__ = ["false"]}
   // CHECK-NEXT: linalg.yield
   // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
   //      CHECK: } {__inplace_operands_attr__ = ["none", "none", "none", "true"]}
