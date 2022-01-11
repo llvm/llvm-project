@@ -96,7 +96,8 @@
 /// Gets a void* from a wrapped struct. Needed because const cast is different
 /// between C/C++.
 #ifdef __cplusplus
-#define MLIR_PYTHON_GET_WRAPPED_POINTER(object) const_cast<void *>(object.ptr)
+#define MLIR_PYTHON_GET_WRAPPED_POINTER(object)                                \
+  (const_cast<void *>((object).ptr))
 #else
 #define MLIR_PYTHON_GET_WRAPPED_POINTER(object) (void *)(object.ptr)
 #endif
