@@ -6,10 +6,10 @@
 
 define i32 @test_asm_goto(i32 %x){
 entry:
-; CHECK-TYPED:      callbr void asm "", "r,X"(i32 %x, i8* blockaddress(@test_asm_goto, %fail))
-; CHECK-OPAQUE:     callbr void asm "", "r,X"(i32 %x, ptr blockaddress(@test_asm_goto, %fail))
+; CHECK-TYPED:      callbr void asm "", "r,i"(i32 %x, i8* blockaddress(@test_asm_goto, %fail))
+; CHECK-OPAQUE:     callbr void asm "", "r,i"(i32 %x, ptr blockaddress(@test_asm_goto, %fail))
 ; CHECK-NEXT: to label %normal [label %fail]
-  callbr void asm "", "r,X"(i32 %x, i8* blockaddress(@test_asm_goto, %fail)) to label %normal [label %fail]
+  callbr void asm "", "r,i"(i32 %x, i8* blockaddress(@test_asm_goto, %fail)) to label %normal [label %fail]
 normal:
   ret i32 1
 fail:
