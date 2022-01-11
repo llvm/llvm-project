@@ -59,8 +59,8 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-Configuration *macho::config;
-DependencyTracker *macho::depTracker;
+std::unique_ptr<Configuration> macho::config;
+std::unique_ptr<DependencyTracker> macho::depTracker;
 
 static HeaderFileType getOutputType(const InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
@@ -1136,11 +1136,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     return true;
   }
 
-  config = make<Configuration>();
-  symtab = make<SymbolTable>();
+  config = std::make_unique<Configuration>();
+  symtab = std::make_unique<SymbolTable>();
   target = createTargetInfo(args);
-  depTracker =
-      make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info));
+  depTracker = std::make_unique<DependencyTracker>(
+      args.getLastArgValue(OPT_dependency_info));
   if (errorCount())
     return false;
 
