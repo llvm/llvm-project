@@ -8164,6 +8164,34 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           "-target-feature=" + TC->getTripleString() + "=" + *(FeatureIt + 1)));
     }
 
+    // Pass in the bitcode library to be linked during LTO.
+    for (auto TI = OpenMPTCRange.first, TE = OpenMPTCRange.second; TI != TE;
+         ++TI) {
+      const ToolChain *TC = TI->second;
+      const Driver &D = TC->getDriver();
+      const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
+      StringRef Arch = TCArgs.getLastArgValue(options::OPT_march_EQ);
+
+      std::string BitcodeSuffix;
+      if (TCArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
+                         options::OPT_fno_openmp_target_new_runtime, true))
+        BitcodeSuffix += "new-";
+      if (TC->getTriple().isNVPTX())
+        BitcodeSuffix += "nvptx-";
+      else if (TC->getTriple().isAMDGPU())
+        BitcodeSuffix += "amdgpu-";
+      BitcodeSuffix += Arch;
+
+      ArgStringList BitcodeLibrary;
+      addOpenMPDeviceRTL(D, TCArgs, BitcodeLibrary, BitcodeSuffix,
+                         TC->getTriple());
+
+      if (!BitcodeLibrary.empty())
+        CmdArgs.push_back(
+            Args.MakeArgString("-target-library=" + TC->getTripleString() +
+                               "-" + Arch + "=" + BitcodeLibrary.back()));
+    }
+
     // Pass in the optimization level to use for LTO.
     if (const Arg *A = Args.getLastArg(options::OPT_O_Group)) {
       StringRef OOpt;
