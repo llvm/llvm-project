@@ -35,14 +35,14 @@ SBFileSpec SBHostOS::GetProgramFileSpec() {
 
   SBFileSpec sb_filespec;
   sb_filespec.SetFileSpec(HostInfo::GetProgramFileSpec());
-  return LLDB_RECORD_RESULT(sb_filespec);
+  return sb_filespec;
 }
 
 SBFileSpec SBHostOS::GetLLDBPythonPath() {
   LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBFileSpec, SBHostOS,
                                     GetLLDBPythonPath);
 
-  return LLDB_RECORD_RESULT(GetLLDBPath(ePathTypePythonDir));
+  return GetLLDBPath(ePathTypePythonDir);
 }
 
 SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
@@ -89,7 +89,7 @@ SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
 
   SBFileSpec sb_fspec;
   sb_fspec.SetFileSpec(fspec);
-  return LLDB_RECORD_RESULT(sb_fspec);
+  return sb_fspec;
 }
 
 SBFileSpec SBHostOS::GetUserHomeDirectory() {
@@ -103,7 +103,7 @@ SBFileSpec SBHostOS::GetUserHomeDirectory() {
   SBFileSpec sb_fspec;
   sb_fspec.SetFileSpec(homedir);
 
-  return LLDB_RECORD_RESULT(sb_fspec);
+  return sb_fspec;
 }
 
 lldb::thread_t SBHostOS::ThreadCreate(const char *name,

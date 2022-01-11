@@ -169,12 +169,12 @@ operator=(const SBBreakpointName &rhs) {
 
   if (!rhs.m_impl_up) {
     m_impl_up.reset();
-    return LLDB_RECORD_RESULT(*this);
+    return *this;
   }
 
   m_impl_up = std::make_unique<SBBreakpointNameImpl>(rhs.m_impl_up->GetTarget(),
                                                      rhs.m_impl_up->GetName());
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBBreakpointName::operator==(const lldb::SBBreakpointName &rhs) {
@@ -585,7 +585,7 @@ SBError SBBreakpointName::SetScriptCallbackFunction(
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name) {
     sb_error.SetErrorString("unrecognized breakpoint name");
-    return LLDB_RECORD_RESULT(sb_error);
+    return sb_error;
   }
 
   std::lock_guard<std::recursive_mutex> guard(
@@ -601,7 +601,7 @@ SBError SBBreakpointName::SetScriptCallbackFunction(
                   extra_args.m_impl_up->GetObjectSP());
   sb_error.SetError(error);
   UpdateName(*bp_name);
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError
@@ -612,7 +612,7 @@ SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text) {
   SBError sb_error;
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
-    return LLDB_RECORD_RESULT(sb_error);
+    return sb_error;
 
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
@@ -627,7 +627,7 @@ SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text) {
   if (!sb_error.Fail())
     UpdateName(*bp_name);
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 bool SBBreakpointName::GetAllowList() const {

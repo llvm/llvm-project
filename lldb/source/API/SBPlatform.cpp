@@ -98,7 +98,7 @@ SBPlatformConnectOptions::operator=(const SBPlatformConnectOptions &rhs) {
       rhs);
 
   *m_opaque_ptr = *rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 const char *SBPlatformConnectOptions::GetURL() {
@@ -201,7 +201,7 @@ SBPlatformShellCommand::operator=(const SBPlatformShellCommand &rhs) {
       rhs);
 
   *m_opaque_ptr = *rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBPlatformShellCommand::~SBPlatformShellCommand() { delete m_opaque_ptr; }
@@ -330,7 +330,7 @@ SBPlatform &SBPlatform::operator=(const SBPlatform &rhs) {
                      SBPlatform, operator=,(const lldb::SBPlatform &), rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBPlatform::~SBPlatform() = default;
@@ -341,7 +341,7 @@ SBPlatform SBPlatform::GetHostPlatform() {
 
   SBPlatform host_platform;
   host_platform.m_opaque_sp = Platform::GetHostPlatform();
-  return LLDB_RECORD_RESULT(host_platform);
+  return host_platform;
 }
 
 bool SBPlatform::IsValid() const {
@@ -412,7 +412,7 @@ SBError SBPlatform::ConnectRemote(SBPlatformConnectOptions &connect_options) {
   } else {
     sb_error.SetErrorString("invalid platform");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 void SBPlatform::DisconnectRemote() {
@@ -524,54 +524,51 @@ SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {
   } else {
     sb_error.SetErrorString("invalid platform");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError SBPlatform::Put(SBFileSpec &src, SBFileSpec &dst) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Put,
                      (lldb::SBFileSpec &, lldb::SBFileSpec &), src, dst);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-        if (src.Exists()) {
-          uint32_t permissions =
-              FileSystem::Instance().GetPermissions(src.ref());
-          if (permissions == 0) {
-            if (FileSystem::Instance().IsDirectory(src.ref()))
-              permissions = eFilePermissionsDirectoryDefault;
-            else
-              permissions = eFilePermissionsFileDefault;
-          }
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    if (src.Exists()) {
+      uint32_t permissions = FileSystem::Instance().GetPermissions(src.ref());
+      if (permissions == 0) {
+        if (FileSystem::Instance().IsDirectory(src.ref()))
+          permissions = eFilePermissionsDirectoryDefault;
+        else
+          permissions = eFilePermissionsFileDefault;
+      }
 
-          return platform_sp->PutFile(src.ref(), dst.ref(), permissions);
-        }
+      return platform_sp->PutFile(src.ref(), dst.ref(), permissions);
+    }
 
-        Status error;
-        error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
-                                       src.ref().GetPath().c_str());
-        return error;
-      }));
+    Status error;
+    error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
+                                   src.ref().GetPath().c_str());
+    return error;
+  });
 }
 
 SBError SBPlatform::Install(SBFileSpec &src, SBFileSpec &dst) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Install,
                      (lldb::SBFileSpec &, lldb::SBFileSpec &), src, dst);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-        if (src.Exists())
-          return platform_sp->Install(src.ref(), dst.ref());
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    if (src.Exists())
+      return platform_sp->Install(src.ref(), dst.ref());
 
-        Status error;
-        error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
-                                       src.ref().GetPath().c_str());
-        return error;
-      }));
+    Status error;
+    error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
+                                   src.ref().GetPath().c_str());
+    return error;
+  });
 }
 
 SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Run,
                      (lldb::SBPlatformShellCommand &), shell_command);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+  return ExecuteConnected(
+      [&](const lldb::PlatformSP &platform_sp) {
         const char *command = shell_command.GetCommand();
         if (!command)
           return Status("invalid shell command (empty)");
@@ -588,27 +585,25 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
             &shell_command.m_opaque_ptr->m_signo,
             &shell_command.m_opaque_ptr->m_output,
             shell_command.m_opaque_ptr->m_timeout);
-      }));
+      });
 }
 
 SBError SBPlatform::Launch(SBLaunchInfo &launch_info) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Launch, (lldb::SBLaunchInfo &),
                      launch_info);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-        ProcessLaunchInfo info = launch_info.ref();
-        Status error = platform_sp->LaunchProcess(info);
-        launch_info.set_ref(info);
-        return error;
-      }));
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    ProcessLaunchInfo info = launch_info.ref();
+    Status error = platform_sp->LaunchProcess(info);
+    launch_info.set_ref(info);
+    return error;
+  });
 }
 
 SBError SBPlatform::Kill(const lldb::pid_t pid) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Kill, (const lldb::pid_t), pid);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-        return platform_sp->KillProcess(pid);
-      }));
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    return platform_sp->KillProcess(pid);
+  });
 }
 
 SBError SBPlatform::ExecuteConnected(
@@ -638,7 +633,7 @@ SBError SBPlatform::MakeDirectory(const char *path, uint32_t file_permissions) {
   } else {
     sb_error.SetErrorString("invalid platform");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 uint32_t SBPlatform::GetFilePermissions(const char *path) {
@@ -667,7 +662,7 @@ SBError SBPlatform::SetFilePermissions(const char *path,
   } else {
     sb_error.SetErrorString("invalid platform");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBUnixSignals SBPlatform::GetUnixSignals() const {
@@ -675,9 +670,9 @@ SBUnixSignals SBPlatform::GetUnixSignals() const {
                                    GetUnixSignals);
 
   if (auto platform_sp = GetSP())
-    return LLDB_RECORD_RESULT(SBUnixSignals{platform_sp});
+    return SBUnixSignals{platform_sp};
 
-  return LLDB_RECORD_RESULT(SBUnixSignals());
+  return SBUnixSignals();
 }
 
 SBEnvironment SBPlatform::GetEnvironment() {
@@ -685,8 +680,8 @@ SBEnvironment SBPlatform::GetEnvironment() {
   PlatformSP platform_sp(GetSP());
 
   if (platform_sp) {
-    return LLDB_RECORD_RESULT(SBEnvironment(platform_sp->GetEnvironment()));
+    return SBEnvironment(platform_sp->GetEnvironment());
   }
 
-  return LLDB_RECORD_RESULT(SBEnvironment());
+  return SBEnvironment();
 }

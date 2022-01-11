@@ -32,7 +32,7 @@ operator=(const SBThreadCollection &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBThreadCollection::SBThreadCollection(const ThreadCollectionSP &threads)
@@ -85,5 +85,5 @@ SBThread SBThreadCollection::GetThreadAtIndex(size_t idx) {
   SBThread thread;
   if (m_opaque_sp && idx < m_opaque_sp->GetSize())
     thread = m_opaque_sp->GetThreadAtIndex(idx);
-  return LLDB_RECORD_RESULT(thread);
+  return thread;
 }

@@ -123,7 +123,7 @@ lldb::SBTypeFilter &SBTypeFilter::operator=(const lldb::SBTypeFilter &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeFilter::operator==(lldb::SBTypeFilter &rhs) {

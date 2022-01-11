@@ -236,7 +236,7 @@ SBValue &SBValue::operator=(const SBValue &rhs) {
   if (this != &rhs) {
     SetSP(rhs.m_opaque_sp);
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBValue::~SBValue() = default;
@@ -274,7 +274,7 @@ SBError SBValue::GetError() {
     sb_error.SetErrorStringWithFormat("error: %s",
                                       locker.GetError().AsCString());
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 user_id_t SBValue::GetID() {
@@ -403,7 +403,7 @@ SBType SBValue::GetType() {
     sb_type.SetSP(type_sp);
   }
 
-  return LLDB_RECORD_RESULT(sb_type);
+  return sb_type;
 }
 
 bool SBValue::GetValueDidChange() {
@@ -500,7 +500,7 @@ lldb::SBTypeFormat SBValue::GetTypeFormat() {
         format.SetSP(format_sp);
     }
   }
-  return LLDB_RECORD_RESULT(format);
+  return format;
 }
 
 lldb::SBTypeSummary SBValue::GetTypeSummary() {
@@ -516,7 +516,7 @@ lldb::SBTypeSummary SBValue::GetTypeSummary() {
         summary.SetSP(summary_sp);
     }
   }
-  return LLDB_RECORD_RESULT(summary);
+  return summary;
 }
 
 lldb::SBTypeFilter SBValue::GetTypeFilter() {
@@ -536,7 +536,7 @@ lldb::SBTypeFilter SBValue::GetTypeFilter() {
       }
     }
   }
-  return LLDB_RECORD_RESULT(filter);
+  return filter;
 }
 
 lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
@@ -556,7 +556,7 @@ lldb::SBTypeSynthetic SBValue::GetTypeSynthetic() {
       }
     }
   }
-  return LLDB_RECORD_RESULT(synthetic);
+  return synthetic;
 }
 
 lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
@@ -577,7 +577,7 @@ lldb::SBValue SBValue::CreateChildAtOffset(const char *name, uint32_t offset,
                      GetPreferDynamicValue(), GetPreferSyntheticValue(), name);
     }
   }
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 lldb::SBValue SBValue::Cast(SBType type) {
@@ -590,7 +590,7 @@ lldb::SBValue SBValue::Cast(SBType type) {
   if (value_sp && type_sp)
     sb_value.SetSP(value_sp->Cast(type_sp->GetCompilerType(false)),
                    GetPreferDynamicValue(), GetPreferSyntheticValue());
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
@@ -600,8 +600,7 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
 
   SBExpressionOptions options;
   options.ref().SetKeepInMemory(true);
-  return LLDB_RECORD_RESULT(
-      CreateValueFromExpression(name, expression, options));
+  return CreateValueFromExpression(name, expression, options);
 }
 
 lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
@@ -623,7 +622,7 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
       new_value_sp->SetName(ConstString(name));
   }
   sb_value.SetSP(new_value_sp);
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 lldb::SBValue SBValue::CreateValueFromAddress(const char *name,
@@ -645,7 +644,7 @@ lldb::SBValue SBValue::CreateValueFromAddress(const char *name,
                                                              exe_ctx, ast_type);
   }
   sb_value.SetSP(new_value_sp);
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 lldb::SBValue SBValue::CreateValueFromData(const char *name, SBData data,
@@ -666,7 +665,7 @@ lldb::SBValue SBValue::CreateValueFromData(const char *name, SBData data,
     new_value_sp->SetAddressTypeOfChildren(eAddressTypeLoad);
   }
   sb_value.SetSP(new_value_sp);
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 SBValue SBValue::GetChildAtIndex(uint32_t idx) {
@@ -681,8 +680,7 @@ SBValue SBValue::GetChildAtIndex(uint32_t idx) {
   if (target_sp)
     use_dynamic = target_sp->GetPreferDynamicValue();
 
-  return LLDB_RECORD_RESULT(
-      GetChildAtIndex(idx, use_dynamic, can_create_synthetic));
+  return GetChildAtIndex(idx, use_dynamic, can_create_synthetic);
 }
 
 SBValue SBValue::GetChildAtIndex(uint32_t idx,
@@ -707,7 +705,7 @@ SBValue SBValue::GetChildAtIndex(uint32_t idx,
   SBValue sb_value;
   sb_value.SetSP(child_sp, use_dynamic, GetPreferSyntheticValue());
 
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 uint32_t SBValue::GetIndexOfChildWithName(const char *name) {
@@ -734,7 +732,7 @@ SBValue SBValue::GetChildMemberWithName(const char *name) {
 
   if (target_sp)
     use_dynamic_value = target_sp->GetPreferDynamicValue();
-  return LLDB_RECORD_RESULT(GetChildMemberWithName(name, use_dynamic_value));
+  return GetChildMemberWithName(name, use_dynamic_value);
 }
 
 SBValue
@@ -756,7 +754,7 @@ SBValue::GetChildMemberWithName(const char *name,
   SBValue sb_value;
   sb_value.SetSP(child_sp, use_dynamic_value, GetPreferSyntheticValue());
 
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 lldb::SBValue SBValue::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
@@ -769,7 +767,7 @@ lldb::SBValue SBValue::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
                                        m_opaque_sp->GetUseSynthetic()));
     value_sb.SetSP(proxy_sp);
   }
-  return LLDB_RECORD_RESULT(value_sb);
+  return value_sb;
 }
 
 lldb::SBValue SBValue::GetStaticValue() {
@@ -782,7 +780,7 @@ lldb::SBValue SBValue::GetStaticValue() {
                                        m_opaque_sp->GetUseSynthetic()));
     value_sb.SetSP(proxy_sp);
   }
-  return LLDB_RECORD_RESULT(value_sb);
+  return value_sb;
 }
 
 lldb::SBValue SBValue::GetNonSyntheticValue() {
@@ -794,7 +792,7 @@ lldb::SBValue SBValue::GetNonSyntheticValue() {
                                        m_opaque_sp->GetUseDynamic(), false));
     value_sb.SetSP(proxy_sp);
   }
-  return LLDB_RECORD_RESULT(value_sb);
+  return value_sb;
 }
 
 lldb::DynamicValueType SBValue::GetPreferDynamicValue() {
@@ -884,7 +882,7 @@ lldb::SBValue SBValue::GetValueForExpressionPath(const char *expr_path) {
   SBValue sb_value;
   sb_value.SetSP(child_sp, GetPreferDynamicValue(), GetPreferSyntheticValue());
 
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 int64_t SBValue::GetValueAsSigned(SBError &error, int64_t fail_value) {
@@ -1006,7 +1004,7 @@ SBValue SBValue::Dereference() {
     sb_value = value_sp->Dereference(error);
   }
 
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 // Deprecated - please use GetType().IsPointerType() instead.
@@ -1036,7 +1034,7 @@ lldb::SBTarget SBValue::GetTarget() {
     sb_target.SetSP(target_sp);
   }
 
-  return LLDB_RECORD_RESULT(sb_target);
+  return sb_target;
 }
 
 lldb::SBProcess SBValue::GetProcess() {
@@ -1049,7 +1047,7 @@ lldb::SBProcess SBValue::GetProcess() {
     sb_process.SetSP(process_sp);
   }
 
-  return LLDB_RECORD_RESULT(sb_process);
+  return sb_process;
 }
 
 lldb::SBThread SBValue::GetThread() {
@@ -1062,7 +1060,7 @@ lldb::SBThread SBValue::GetThread() {
     sb_thread.SetThread(thread_sp);
   }
 
-  return LLDB_RECORD_RESULT(sb_thread);
+  return sb_thread;
 }
 
 lldb::SBFrame SBValue::GetFrame() {
@@ -1075,7 +1073,7 @@ lldb::SBFrame SBValue::GetFrame() {
     sb_frame.SetFrameSP(frame_sp);
   }
 
-  return LLDB_RECORD_RESULT(sb_frame);
+  return sb_frame;
 }
 
 lldb::ValueObjectSP SBValue::GetSP(ValueLocker &locker) const {
@@ -1090,7 +1088,7 @@ lldb::ValueObjectSP SBValue::GetSP() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::ValueObjectSP, SBValue, GetSP);
 
   ValueLocker locker;
-  return LLDB_RECORD_RESULT(GetSP(locker));
+  return GetSP(locker);
 }
 
 void SBValue::SetSP(ValueImplSP impl_sp) { m_opaque_sp = impl_sp; }
@@ -1181,18 +1179,18 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr) const {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp)
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
 
   lldb::TargetSP target_sp = value_sp->GetTargetSP();
   if (!target_sp)
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
 
   lldb::SBExpressionOptions options;
   options.SetFetchDynamicValue(target_sp->GetPreferDynamicValue());
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
 
-  return LLDB_RECORD_RESULT(EvaluateExpression(expr, options, nullptr));
+  return EvaluateExpression(expr, options, nullptr);
 }
 
 lldb::SBValue
@@ -1202,7 +1200,7 @@ SBValue::EvaluateExpression(const char *expr,
                            (const char *, const lldb::SBExpressionOptions &),
                            expr, options);
 
-  return LLDB_RECORD_RESULT(EvaluateExpression(expr, options, nullptr));
+  return EvaluateExpression(expr, options, nullptr);
 }
 
 lldb::SBValue SBValue::EvaluateExpression(const char *expr,
@@ -1215,19 +1213,19 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
 
 
   if (!expr || expr[0] == '\0') {
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
   }
 
 
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (!value_sp) {
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
   }
 
   lldb::TargetSP target_sp = value_sp->GetTargetSP();
   if (!target_sp) {
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
   }
 
   std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
@@ -1235,7 +1233,7 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
 
   StackFrame *frame = exe_ctx.GetFramePtr();
   if (!frame) {
-    return LLDB_RECORD_RESULT(SBValue());
+    return SBValue();
   }
 
   ValueObjectSP res_val_sp;
@@ -1247,7 +1245,7 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
 
   SBValue result;
   result.SetSP(res_val_sp, options.GetFetchDynamicValue());
-  return LLDB_RECORD_RESULT(result);
+  return result;
 }
 
 bool SBValue::GetDescription(SBStream &description) {
@@ -1297,7 +1295,7 @@ lldb::SBValue SBValue::AddressOf() {
                    GetPreferSyntheticValue());
   }
 
-  return LLDB_RECORD_RESULT(sb_value);
+  return sb_value;
 }
 
 lldb::addr_t SBValue::GetLoadAddress() {
@@ -1356,7 +1354,7 @@ lldb::SBAddress SBValue::GetAddress() {
     }
   }
 
-  return LLDB_RECORD_RESULT(SBAddress(addr));
+  return SBAddress(addr);
 }
 
 lldb::SBData SBValue::GetPointeeData(uint32_t item_idx, uint32_t item_count) {
@@ -1376,7 +1374,7 @@ lldb::SBData SBValue::GetPointeeData(uint32_t item_idx, uint32_t item_count) {
     }
   }
 
-  return LLDB_RECORD_RESULT(sb_data);
+  return sb_data;
 }
 
 lldb::SBData SBValue::GetData() {
@@ -1393,7 +1391,7 @@ lldb::SBData SBValue::GetData() {
       *sb_data = data_sp;
   }
 
-  return LLDB_RECORD_RESULT(sb_data);
+  return sb_data;
 }
 
 bool SBValue::SetData(lldb::SBData &data, SBError &error) {
@@ -1454,7 +1452,7 @@ lldb::SBDeclaration SBValue::GetDeclaration() {
     if (value_sp->GetDeclaration(decl))
       decl_sb.SetDeclaration(decl);
   }
-  return LLDB_RECORD_RESULT(decl_sb);
+  return decl_sb;
 }
 
 lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
@@ -1472,18 +1470,18 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
   if (value_sp && target_sp) {
     // Read and Write cannot both be false.
     if (!read && !write)
-      return LLDB_RECORD_RESULT(sb_watchpoint);
+      return sb_watchpoint;
 
     // If the value is not in scope, don't try and watch and invalid value
     if (!IsInScope())
-      return LLDB_RECORD_RESULT(sb_watchpoint);
+      return sb_watchpoint;
 
     addr_t addr = GetLoadAddress();
     if (addr == LLDB_INVALID_ADDRESS)
-      return LLDB_RECORD_RESULT(sb_watchpoint);
+      return sb_watchpoint;
     size_t byte_size = GetByteSize();
     if (byte_size == 0)
-      return LLDB_RECORD_RESULT(sb_watchpoint);
+      return sb_watchpoint;
 
     uint32_t watch_type = 0;
     if (read)
@@ -1516,7 +1514,7 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
     error.SetErrorString("could not set watchpoint, a target is required");
   }
 
-  return LLDB_RECORD_RESULT(sb_watchpoint);
+  return sb_watchpoint;
 }
 
 // FIXME: Remove this method impl (as well as the decl in .h) once it is no
@@ -1528,7 +1526,7 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read,
                      resolve_location, read, write);
 
   SBError error;
-  return LLDB_RECORD_RESULT(Watch(resolve_location, read, write, error));
+  return Watch(resolve_location, read, write, error);
 }
 
 lldb::SBWatchpoint SBValue::WatchPointee(bool resolve_location, bool read,
@@ -1540,7 +1538,7 @@ lldb::SBWatchpoint SBValue::WatchPointee(bool resolve_location, bool read,
   SBWatchpoint sb_watchpoint;
   if (IsInScope() && GetType().IsPointerType())
     sb_watchpoint = Dereference().Watch(resolve_location, read, write, error);
-  return LLDB_RECORD_RESULT(sb_watchpoint);
+  return sb_watchpoint;
 }
 
 lldb::SBValue SBValue::Persist() {
@@ -1552,5 +1550,5 @@ lldb::SBValue SBValue::Persist() {
   if (value_sp) {
     persisted_sb.SetSP(value_sp->Persist());
   }
-  return LLDB_RECORD_RESULT(persisted_sb);
+  return persisted_sb;
 }

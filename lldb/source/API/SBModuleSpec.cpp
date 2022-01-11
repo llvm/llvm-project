@@ -35,7 +35,7 @@ const SBModuleSpec &SBModuleSpec::operator=(const SBModuleSpec &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBModuleSpec::~SBModuleSpec() = default;
@@ -60,7 +60,7 @@ SBFileSpec SBModuleSpec::GetFileSpec() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBModuleSpec, GetFileSpec);
 
   SBFileSpec sb_spec(m_opaque_up->GetFileSpec());
-  return LLDB_RECORD_RESULT(sb_spec);
+  return sb_spec;
 }
 
 void SBModuleSpec::SetFileSpec(const lldb::SBFileSpec &sb_spec) {
@@ -74,7 +74,7 @@ lldb::SBFileSpec SBModuleSpec::GetPlatformFileSpec() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBModuleSpec,
                              GetPlatformFileSpec);
 
-  return LLDB_RECORD_RESULT(SBFileSpec(m_opaque_up->GetPlatformFileSpec()));
+  return SBFileSpec(m_opaque_up->GetPlatformFileSpec());
 }
 
 void SBModuleSpec::SetPlatformFileSpec(const lldb::SBFileSpec &sb_spec) {
@@ -87,7 +87,7 @@ void SBModuleSpec::SetPlatformFileSpec(const lldb::SBFileSpec &sb_spec) {
 lldb::SBFileSpec SBModuleSpec::GetSymbolFileSpec() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBModuleSpec, GetSymbolFileSpec);
 
-  return LLDB_RECORD_RESULT(SBFileSpec(m_opaque_up->GetSymbolFileSpec()));
+  return SBFileSpec(m_opaque_up->GetSymbolFileSpec());
 }
 
 void SBModuleSpec::SetSymbolFileSpec(const lldb::SBFileSpec &sb_spec) {
@@ -166,7 +166,7 @@ SBModuleSpecList &SBModuleSpecList::operator=(const SBModuleSpecList &rhs) {
 
   if (this != &rhs)
     *m_opaque_up = *rhs.m_opaque_up;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBModuleSpecList::~SBModuleSpecList() = default;
@@ -180,7 +180,7 @@ SBModuleSpecList SBModuleSpecList::GetModuleSpecifications(const char *path) {
   FileSystem::Instance().Resolve(file_spec);
   Host::ResolveExecutableInBundle(file_spec);
   ObjectFile::GetModuleSpecifications(file_spec, 0, 0, *specs.m_opaque_up);
-  return LLDB_RECORD_RESULT(specs);
+  return specs;
 }
 
 void SBModuleSpecList::Append(const SBModuleSpec &spec) {
@@ -209,7 +209,7 @@ SBModuleSpec SBModuleSpecList::GetSpecAtIndex(size_t i) {
 
   SBModuleSpec sb_module_spec;
   m_opaque_up->GetModuleSpecAtIndex(i, *sb_module_spec.m_opaque_up);
-  return LLDB_RECORD_RESULT(sb_module_spec);
+  return sb_module_spec;
 }
 
 SBModuleSpec
@@ -221,7 +221,7 @@ SBModuleSpecList::FindFirstMatchingSpec(const SBModuleSpec &match_spec) {
   SBModuleSpec sb_module_spec;
   m_opaque_up->FindMatchingModuleSpec(*match_spec.m_opaque_up,
                                       *sb_module_spec.m_opaque_up);
-  return LLDB_RECORD_RESULT(sb_module_spec);
+  return sb_module_spec;
 }
 
 SBModuleSpecList
@@ -233,7 +233,7 @@ SBModuleSpecList::FindMatchingSpecs(const SBModuleSpec &match_spec) {
   SBModuleSpecList specs;
   m_opaque_up->FindMatchingModuleSpecs(*match_spec.m_opaque_up,
                                        *specs.m_opaque_up);
-  return LLDB_RECORD_RESULT(specs);
+  return specs;
 }
 
 bool SBModuleSpecList::GetDescription(lldb::SBStream &description) {

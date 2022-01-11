@@ -34,7 +34,7 @@ SBProcessInfo &SBProcessInfo::operator=(const SBProcessInfo &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 ProcessInstanceInfo &SBProcessInfo::ref() {
@@ -76,7 +76,7 @@ SBFileSpec SBProcessInfo::GetExecutableFile() {
   if (m_opaque_up) {
     file_spec.SetFileSpec(m_opaque_up->GetExecutableFile());
   }
-  return LLDB_RECORD_RESULT(file_spec);
+  return file_spec;
 }
 
 lldb::pid_t SBProcessInfo::GetProcessID() {

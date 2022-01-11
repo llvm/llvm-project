@@ -28,8 +28,7 @@ SBTrace::SBTrace(const lldb::TraceSP &trace_sp) : m_opaque_sp(trace_sp) {
 
 const char *SBTrace::GetStartConfigurationHelp() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTrace, GetStartConfigurationHelp);
-  return LLDB_RECORD_RESULT(
-      m_opaque_sp ? m_opaque_sp->GetStartConfigurationHelp() : nullptr);
+  return m_opaque_sp ? m_opaque_sp->GetStartConfigurationHelp() : nullptr;
 }
 
 SBError SBTrace::Start(const SBStructuredData &configuration) {
@@ -41,7 +40,7 @@ SBError SBTrace::Start(const SBStructuredData &configuration) {
   else if (llvm::Error err =
                m_opaque_sp->Start(configuration.m_impl_up->GetObjectSP()))
     error.SetErrorString(llvm::toString(std::move(err)).c_str());
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBError SBTrace::Start(const SBThread &thread,
@@ -60,7 +59,7 @@ SBError SBTrace::Start(const SBThread &thread,
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
   }
 
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBError SBTrace::Stop() {
@@ -70,7 +69,7 @@ SBError SBTrace::Stop() {
     error.SetErrorString("error: invalid trace");
   else if (llvm::Error err = m_opaque_sp->Stop())
     error.SetErrorString(llvm::toString(std::move(err)).c_str());
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBError SBTrace::Stop(const SBThread &thread) {
@@ -80,7 +79,7 @@ SBError SBTrace::Stop(const SBThread &thread) {
     error.SetErrorString("error: invalid trace");
   else if (llvm::Error err = m_opaque_sp->Stop({thread.GetThreadID()}))
     error.SetErrorString(llvm::toString(std::move(err)).c_str());
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 bool SBTrace::IsValid() {

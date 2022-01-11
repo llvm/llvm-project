@@ -100,7 +100,7 @@ operator=(const lldb::SBSourceManager &rhs) {
                      rhs);
 
   m_opaque_up = std::make_unique<SourceManagerImpl>(*(rhs.m_opaque_up.get()));
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBSourceManager::~SBSourceManager() = default;

@@ -39,7 +39,7 @@ const SBUnixSignals &SBUnixSignals::operator=(const SBUnixSignals &rhs) {
 
   if (this != &rhs)
     m_opaque_wp = rhs.m_opaque_wp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBUnixSignals::~SBUnixSignals() = default;

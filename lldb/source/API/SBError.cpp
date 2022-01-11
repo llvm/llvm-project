@@ -33,7 +33,7 @@ const SBError &SBError::operator=(const SBError &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 const char *SBError::GetCString() const {

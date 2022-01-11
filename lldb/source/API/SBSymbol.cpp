@@ -32,7 +32,7 @@ const SBSymbol &SBSymbol::operator=(const SBSymbol &rhs) {
                      SBSymbol, operator=,(const lldb::SBSymbol &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBSymbol::~SBSymbol() { m_opaque_ptr = nullptr; }
@@ -112,7 +112,7 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target) {
   LLDB_RECORD_METHOD(lldb::SBInstructionList, SBSymbol, GetInstructions,
                      (lldb::SBTarget), target);
 
-  return LLDB_RECORD_RESULT(GetInstructions(target, nullptr));
+  return GetInstructions(target, nullptr);
 }
 
 SBInstructionList SBSymbol::GetInstructions(SBTarget target,
@@ -137,7 +137,7 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target,
       }
     }
   }
-  return LLDB_RECORD_RESULT(sb_instructions);
+  return sb_instructions;
 }
 
 lldb_private::Symbol *SBSymbol::get() { return m_opaque_ptr; }
@@ -151,7 +151,7 @@ SBAddress SBSymbol::GetStartAddress() {
   if (m_opaque_ptr && m_opaque_ptr->ValueIsAddress()) {
     addr.SetAddress(m_opaque_ptr->GetAddressRef());
   }
-  return LLDB_RECORD_RESULT(addr);
+  return addr;
 }
 
 SBAddress SBSymbol::GetEndAddress() {
@@ -165,7 +165,7 @@ SBAddress SBSymbol::GetEndAddress() {
       addr->Slide(m_opaque_ptr->GetByteSize());
     }
   }
-  return LLDB_RECORD_RESULT(addr);
+  return addr;
 }
 
 uint32_t SBSymbol::GetPrologueByteSize() {

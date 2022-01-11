@@ -69,11 +69,11 @@ SBType SBTypeNameSpecifier::GetType() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBTypeNameSpecifier, GetType);
 
   if (!IsValid())
-    return LLDB_RECORD_RESULT(SBType());
+    return SBType();
   lldb_private::CompilerType c_type = m_opaque_sp->GetCompilerType();
   if (c_type.IsValid())
-    return LLDB_RECORD_RESULT(SBType(c_type));
-  return LLDB_RECORD_RESULT(SBType());
+    return SBType(c_type);
+  return SBType();
 }
 
 bool SBTypeNameSpecifier::IsRegex() {
@@ -107,7 +107,7 @@ operator=(const lldb::SBTypeNameSpecifier &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeNameSpecifier::operator==(lldb::SBTypeNameSpecifier &rhs) {
