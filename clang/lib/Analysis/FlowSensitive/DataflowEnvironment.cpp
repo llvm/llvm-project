@@ -14,6 +14,7 @@
 
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
@@ -38,6 +39,31 @@ llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
       Result.insert({Entry.first, Entry.second});
   }
   return Result;
+}
+
+Environment::Environment(DataflowAnalysisContext &DACtx,
+                         const DeclContext &DeclCtx)
+    : Environment(DACtx) {
+  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
+    for (const auto *ParamDecl : FuncDecl->parameters()) {
+      assert(ParamDecl != nullptr);
+      auto &ParamLoc = createStorageLocation(*ParamDecl);
+      setStorageLocation(*ParamDecl, ParamLoc);
+      initValueInStorageLocation(ParamLoc, ParamDecl->getType());
+    }
+  }
+
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
+    if (!MethodDecl->isStatic()) {
+      QualType ThisPointeeType = MethodDecl->getThisObjectType();
+      // FIXME: Add support for union types.
+      if (!ThisPointeeType->isUnionType()) {
+        auto &ThisPointeeLoc = createStorageLocation(ThisPointeeType);
+        DACtx.setThisPointeeStorageLocation(ThisPointeeLoc);
+        initValueInStorageLocation(ThisPointeeLoc, ThisPointeeType);
+      }
+    }
+  }
 }
 
 bool Environment::operator==(const Environment &Other) const {
@@ -124,6 +150,10 @@ StorageLocation *Environment::getStorageLocation(const Expr &E,
   return It == ExprToLoc.end() ? nullptr : &skip(*It->second, SP);
 }
 
+StorageLocation *Environment::getThisPointeeStorageLocation() const {
+  return DACtx->getThisPointeeStorageLocation();
+}
+
 void Environment::setValue(const StorageLocation &Loc, Value &Value) {
   LocToVal[&Loc] = &Value;
 }
@@ -199,6 +229,8 @@ Value *Environment::initValueInStorageLocationUnlessSelfReferential(
   if (Type->isStructureOrClassType()) {
     auto *AggregateLoc = cast<AggregateStorageLocation>(&Loc);
 
+    // FIXME: Initialize only fields that are accessed in the context that is
+    // being analyzed.
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
     for (const FieldDecl *Field : Type->getAsRecordDecl()->fields()) {
       assert(Field != nullptr);
@@ -242,6 +274,11 @@ StorageLocation &Environment::skip(StorageLocation &Loc, SkipPast SP) const {
     if (auto *Val = dyn_cast_or_null<ReferenceValue>(getValue(Loc)))
       return Val->getPointeeLoc();
     return Loc;
+  case SkipPast::ReferenceThenPointer:
+    StorageLocation &LocPastRef = skip(Loc, SkipPast::Reference);
+    if (auto *Val = dyn_cast_or_null<PointerValue>(getValue(LocPastRef)))
+      return Val->getPointeeLoc();
+    return LocPastRef;
   }
   llvm_unreachable("bad SkipPast kind");
 }

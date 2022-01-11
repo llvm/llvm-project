@@ -16,6 +16,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DATAFLOWENVIRONMENT_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
@@ -39,16 +40,34 @@ enum class SkipPast {
   None,
   /// An optional reference should be skipped past.
   Reference,
+  /// An optional reference should be skipped past, then an optional pointer
+  /// should be skipped past.
+  ReferenceThenPointer,
 };
 
 /// Holds the state of the program (store and heap) at a given program point.
 class Environment {
 public:
-  Environment(DataflowAnalysisContext &DACtx) : DACtx(&DACtx) {}
+  /// Creates an environment that uses `DACtx` to store objects that encompass
+  /// the state of a program.
+  explicit Environment(DataflowAnalysisContext &DACtx) : DACtx(&DACtx) {}
+
+  /// Creates an environment that uses `DACtx` to store objects that encompass
+  /// the state of a program.
+  ///
+  /// If `DeclCtx` is a function, initializes the environment with symbolic
+  /// representations of the function parameters.
+  ///
+  /// If `DeclCtx` is a non-static member function, initializes the environment
+  /// with a symbolic representation of the `this` pointee.
+  Environment(DataflowAnalysisContext &DACtx, const DeclContext &DeclCtx);
 
   bool operator==(const Environment &) const;
 
   LatticeJoinEffect join(const Environment &);
+
+  // FIXME: Rename `createOrGetStorageLocation` to `getOrCreateStorageLocation`,
+  // `getStableStorageLocation`, or something more appropriate.
 
   /// Creates a storage location appropriate for `Type`. Does not assign a value
   /// to the returned storage location in the environment.
@@ -91,6 +110,11 @@ public:
   /// the `SP` policy for skipping past indirections, or null if `E` isn't
   /// assigned a storage location in the environment.
   StorageLocation *getStorageLocation(const Expr &E, SkipPast SP) const;
+
+  /// Returns the storage location assigned to the `this` pointee in the
+  /// environment or null if the `this` pointee has no assigned storage location
+  /// in the environment.
+  StorageLocation *getThisPointeeStorageLocation() const;
 
   /// Creates a value appropriate for `Type`, assigns it to `Loc`, and returns
   /// it, if `Type` is supported, otherwise return null. If `Type` is a pointer
