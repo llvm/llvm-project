@@ -12,33 +12,34 @@
  * Data
  */
 
+hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
+                             hsa_signal_value_t success) {
+  hsa_signal_value_t got = init;
+  while (got == init)
+    got = hsa_signal_wait_scacquire(signal, HSA_SIGNAL_CONDITION_NE, init,
+                                    UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+  if (got != success)
+    return HSA_STATUS_ERROR;
+
+  return HSA_STATUS_SUCCESS;
+}
+
 // host pointer (either src or dest) must be locked via hsa_amd_memory_lock
 static hsa_status_t invoke_hsa_copy(hsa_signal_t signal, void *dest,
                                     hsa_agent_t agent, const void *src,
                                     size_t size) {
   const hsa_signal_value_t init = 1;
-  const hsa_signal_value_t success = 0;
   hsa_signal_store_screlease(signal, init);
 
   hsa_status_t err = hsa_amd_memory_async_copy(dest, agent, src, agent, size, 0,
                                                nullptr, signal);
-  if (err != HSA_STATUS_SUCCESS)
-    return err;
-
-  // async_copy reports success by decrementing and failure by setting to < 0
-  hsa_signal_value_t got = init;
-  while (got == init)
-    got = hsa_signal_wait_scacquire(signal, HSA_SIGNAL_CONDITION_NE, init,
-                                    UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
-
-  if (got != success)
-    return HSA_STATUS_ERROR;
 
   return err;
 }
 
-struct implFreePtrDeletor {
+struct implUnlockAndFreePtrDeletor {
   void operator()(void *p) {
+    hsa_amd_memory_unlock(p);
     core::Runtime::Memfree(p); // ignore failure to free
   }
 };
@@ -73,10 +74,6 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
     return err;
   }
 
-  err = hsa_amd_memory_unlock(lockingPtr);
-  if (err != HSA_STATUS_SUCCESS)
-    return err;
-
   return HSA_STATUS_SUCCESS;
 }
 
@@ -101,11 +98,19 @@ hsa_status_t impl_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
     DP("HostMalloc: Unable to alloc %zu bytes for temp scratch\n", size);
     return ret;
   }
-  std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
+  std::unique_ptr<void, implUnlockAndFreePtrDeletor> del(tempHostPtr);
   memcpy(tempHostPtr, hostSrc, size);
 
-  return locking_async_memcpy(CopyDirection::H2D, signal, deviceDest,
-                              device_agent, tempHostPtr, tempHostPtr, size);
+  err = locking_async_memcpy(CopyDirection::H2D, signal, deviceDest,
+                             device_agent, tempHostPtr, tempHostPtr, size);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  // free of host malloc (performed at the end of this block)
+  // requires h2d memcopy to be completed.
+  hsa_signal_value_t init = 1;
+  hsa_signal_value_t success = 0;
+  return wait_for_signal(signal, init, success);
 }
 
 hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *hostDest,
@@ -130,12 +135,19 @@ hsa_status_t impl_memcpy_d2h(hsa_signal_t signal, void *hostDest,
     DP("HostMalloc: Unable to alloc %zu bytes for temp scratch\n", size);
     return ret;
   }
-  std::unique_ptr<void, implFreePtrDeletor> del(tempHostPtr);
+  std::unique_ptr<void, implUnlockAndFreePtrDeletor> del(tempHostPtr);
 
   err = locking_async_memcpy(CopyDirection::D2H, signal, tempHostPtr,
                              deviceAgent, deviceSrc, tempHostPtr, size);
   if (err != HSA_STATUS_SUCCESS)
     return HSA_STATUS_ERROR;
+
+  // host-to-host memcopy requires completion of device-to-host memcopy
+  hsa_signal_value_t init = 1;
+  hsa_signal_value_t success = 0;
+  err = wait_for_signal(signal, init, success);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
 
   memcpy(hostDest, tempHostPtr, size);
   return HSA_STATUS_SUCCESS;

@@ -543,26 +543,30 @@ public:
   using MemcpyFunc = hsa_status_t (*)(hsa_signal_t, void *, void *, size_t size,
                                       hsa_agent_t, hsa_amd_memory_pool_t);
   hsa_status_t freesignalpool_memcpy(void *dest, void *src, size_t size,
-                                     MemcpyFunc Func, int32_t deviceId) {
+                                     MemcpyFunc Func, int32_t deviceId,
+                                     hsa_signal_t &signal) {
     hsa_agent_t device_agent = HSAAgents[deviceId];
-    hsa_signal_t s = FreeSignalPool.pop();
-    if (s.handle == 0) {
+    signal = FreeSignalPool.pop();
+    if (signal.handle == 0) {
       return HSA_STATUS_ERROR;
     }
     hsa_status_t r =
-        Func(s, dest, src, size, device_agent, HostFineGrainedMemoryPool);
-    FreeSignalPool.push(s);
+        Func(signal, dest, src, size, device_agent, HostFineGrainedMemoryPool);
     return r;
   }
 
   hsa_status_t freesignalpool_memcpy_d2h(void *dest, void *src, size_t size,
-                                         int32_t deviceId) {
-    return freesignalpool_memcpy(dest, src, size, impl_memcpy_d2h, deviceId);
+                                         int32_t deviceId,
+                                         hsa_signal_t &signal) {
+    return freesignalpool_memcpy(dest, src, size, impl_memcpy_d2h, deviceId,
+                                 signal);
   }
 
   hsa_status_t freesignalpool_memcpy_h2d(void *dest, void *src, size_t size,
-                                         int32_t deviceId) {
-    return freesignalpool_memcpy(dest, src, size, impl_memcpy_h2d, deviceId);
+                                         int32_t deviceId,
+                                         hsa_signal_t &signal) {
+    return freesignalpool_memcpy(dest, src, size, impl_memcpy_h2d, deviceId,
+                                 signal);
   }
 
   // Record entry point associated with device
@@ -954,6 +958,31 @@ static RTLDeviceInfoTy DeviceInfo;
 
 namespace {
 
+// Enable delaying of memory copy completion check
+// and unlocking of host pointers used in the transfer
+class AMDGPUAsyncInfoDataTy {
+public:
+  AMDGPUAsyncInfoDataTy(hsa_signal_t signal, void *hostPtr)
+      : signal(signal), hostPtr(hostPtr) {}
+
+  AMDGPUAsyncInfoDataTy(AMDGPUAsyncInfoDataTy &) = delete;
+  AMDGPUAsyncInfoDataTy(AMDGPUAsyncInfoDataTy &&) = default; // assume noexcept
+
+  hsa_status_t waitToComplete() {
+    hsa_signal_value_t init = 1;
+    hsa_signal_value_t success = 0;
+    hsa_status_t err = wait_for_signal(signal, init, success);
+
+    DeviceInfo.FreeSignalPool.push(signal);
+    hsa_amd_memory_unlock(hostPtr);
+    return err;
+  }
+
+private:
+  hsa_signal_t signal;
+  void *hostPtr; // for delayed unlocking
+};
+
 int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
                      __tgt_async_info *AsyncInfo) {
   assert(AsyncInfo && "AsynrcInfo is nullptr");
@@ -966,8 +995,9 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
      (long long unsigned)(Elf64_Addr)HstPtr);
 
+  hsa_signal_t signal;
   err = DeviceInfo.freesignalpool_memcpy_d2h(HstPtr, TgtPtr, (size_t)Size,
-                                             DeviceId);
+                                             DeviceId, signal);
 
   if (err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from device to host. Pointers: "
@@ -975,10 +1005,14 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
        (Elf64_Addr)HstPtr, (Elf64_Addr)TgtPtr, (unsigned long long)Size);
     return OFFLOAD_FAIL;
   }
+
+  AMDGPUAsyncInfoDataTy AsyncCopyInfo(signal, HstPtr);
+  err = AsyncCopyInfo.waitToComplete();
+
   DP("DONE Retrieve data %ld bytes, (tgt:%016llx) -> (hst:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
      (long long unsigned)(Elf64_Addr)HstPtr);
-  return OFFLOAD_SUCCESS;
+  return err;
 }
 
 int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
@@ -993,15 +1027,20 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   DP("Submit data %ld bytes, (hst:%016llx) -> (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
+  hsa_signal_t signal;
   err = DeviceInfo.freesignalpool_memcpy_h2d(TgtPtr, HstPtr, (size_t)Size,
-                                             DeviceId);
+                                             DeviceId, signal);
   if (err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
        (Elf64_Addr)HstPtr, (Elf64_Addr)TgtPtr, (unsigned long long)Size);
     return OFFLOAD_FAIL;
   }
-  return OFFLOAD_SUCCESS;
+
+  AMDGPUAsyncInfoDataTy AsyncCopyInfo(signal, HstPtr);
+  err = AsyncCopyInfo.waitToComplete();
+
+  return err;
 }
 
 // Async.
@@ -1726,8 +1765,14 @@ struct device_environment {
           return HSA_STATUS_ERROR;
         }
 
-        return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
-                                                    state_ptr_size, device_id);
+        hsa_signal_t signal;
+        err = DeviceInfo.freesignalpool_memcpy_h2d(
+            state_ptr, &host_device_env, state_ptr_size, device_id, signal);
+        if (err == HSA_STATUS_ERROR)
+          return err;
+        AMDGPUAsyncInfoDataTy AsyncInfo(signal, &host_device_env);
+        err = AsyncInfo.waitToComplete();
+        return err;
       }
     }
     return HSA_STATUS_SUCCESS;
@@ -2111,12 +2156,17 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         }
 
         // write ptr to device memory so it can be used by later kernels
-        err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr,
-                                                   sizeof(void *), device_id);
+        hsa_signal_t signal;
+        err = DeviceInfo.freesignalpool_memcpy_h2d(
+            state_ptr, &ptr, sizeof(void *), device_id, signal);
         if (err != HSA_STATUS_SUCCESS) {
           DP("memcpy install of state_ptr failed\n");
           return NULL;
         }
+        AMDGPUAsyncInfoDataTy AsyncInfo(signal, &ptr);
+        err = AsyncInfo.waitToComplete();
+        if (err != HSA_STATUS_SUCCESS)
+          return NULL;
       }
     }
   }
@@ -2175,10 +2225,15 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         // If unified memory is present any target link variables
         // can access host addresses directly. There is no longer a
         // need for device copies.
-        err = DeviceInfo.freesignalpool_memcpy_h2d(varptr, e->addr,
-                                                   sizeof(void *), device_id);
+        hsa_signal_t signal;
+        err = DeviceInfo.freesignalpool_memcpy_h2d(
+            varptr, e->addr, sizeof(void *), device_id, signal);
         if (err != HSA_STATUS_SUCCESS)
           DP("Error when copying USM\n");
+
+        AMDGPUAsyncInfoDataTy AsyncInfo(signal, e->addr);
+        AsyncInfo.waitToComplete();
+
         DP("Copy linked variable host address (" DPxMOD ")"
            "to device address (" DPxMOD ")\n",
            DPxPTR(*((void **)e->addr)), DPxPTR(varptr));

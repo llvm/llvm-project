@@ -14,6 +14,10 @@
 extern "C" {
 #endif
 
+// wait for signal to turn to success
+hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
+                             hsa_signal_value_t success);
+
 hsa_status_t impl_module_register_from_memory_to_place(
     void *module_bytes, size_t module_size, int DeviceId,
     hsa_status_t (*on_deserialized_data)(void *data, size_t size,
