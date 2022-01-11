@@ -169,15 +169,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
-)
 
-if(LLVM_LIBC_FULL_BUILD)
-  list(APPEND TARGET_LIBC_ENTRYPOINTS
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
-  )
-endif()
+)
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
