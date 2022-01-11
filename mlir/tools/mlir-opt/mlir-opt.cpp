@@ -103,6 +103,7 @@ void registerTestMemRefStrideCalculation();
 void registerTestNumberOfBlockExecutionsPass();
 void registerTestNumberOfOperationExecutionsPass();
 void registerTestOpaqueLoc();
+void registerTestPadFusion();
 void registerTestPDLByteCodePass();
 void registerTestPreparationPassWithAllowedMemrefResults();
 void registerTestRecursiveTypesPass();
@@ -195,6 +196,7 @@ void registerTestPasses() {
   mlir::test::registerTestNumberOfBlockExecutionsPass();
   mlir::test::registerTestNumberOfOperationExecutionsPass();
   mlir::test::registerTestOpaqueLoc();
+  mlir::test::registerTestPadFusion();
   mlir::test::registerTestPDLByteCodePass();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUtilsPass();

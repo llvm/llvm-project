@@ -8,6 +8,7 @@ add_mlir_library(MLIRLinalgTestPasses
   TestLinalgFusionTransforms.cpp
   TestLinalgHoisting.cpp
   TestLinalgTransforms.cpp
+  TestPadFusion.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
