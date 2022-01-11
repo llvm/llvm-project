@@ -8,13 +8,8 @@
 
 @0 = internal global %T* null
 
-;.
-; CHECK: @[[_BODY:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global [[T:%.*]] undef
-;.
 define void @a() {
 ; CHECK-LABEL: @a(
-; CHECK-NEXT:    store i32* null, i32** getelementptr inbounds ([[T:%.*]], %T* @.body, i64 0, i32 0), align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i64, i64* bitcast (%T* @.body to i64*) acquire, align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = tail call i8* @_Znwm(i64 8)

@@ -1672,11 +1672,25 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // This is restricted to address spaces that allow globals to have
     // initializers. NVPTX, for example, does not support initializers for
     // shared memory (AS 3).
-    if (SOVConstant && SOVConstant->getType() == GV->getValueType() &&
-        isa<UndefValue>(GV->getInitializer()) &&
+    if (SOVConstant && isa<UndefValue>(GV->getInitializer()) &&
+        DL.getTypeAllocSize(SOVConstant->getType()) ==
+            DL.getTypeAllocSize(GV->getValueType()) &&
         CanHaveNonUndefGlobalInitializer) {
-      // Change the initial value here.
-      GV->setInitializer(SOVConstant);
+      if (SOVConstant->getType() == GV->getValueType()) {
+        // Change the initializer in place.
+        GV->setInitializer(SOVConstant);
+      } else {
+        // Create a new global with adjusted type.
+        auto *NGV = new GlobalVariable(
+            *GV->getParent(), SOVConstant->getType(), GV->isConstant(),
+            GV->getLinkage(), SOVConstant, "", GV, GV->getThreadLocalMode(),
+            GV->getAddressSpace());
+        NGV->takeName(GV);
+        NGV->copyAttributesFrom(GV);
+        GV->replaceAllUsesWith(ConstantExpr::getBitCast(NGV, GV->getType()));
+        GV->eraseFromParent();
+        GV = NGV;
+      }
 
       // Clean up any obviously simplifiable users now.
       CleanupConstantGlobalUsers(GV, DL);
