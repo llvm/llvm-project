@@ -502,7 +502,6 @@ public: // FIXME
   Register SGPRForBPSaveRestoreCopy;
   Optional<int> BasePointerSaveIndex;
 
-  Register VGPRReservedForSGPRSpill;
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
 
 public:
@@ -528,7 +527,6 @@ public:
   void setSGPRSpillVGPRs(Register NewVGPR, Optional<int> newFI, int Index) {
     SpillVGPRs[Index].VGPR = NewVGPR;
     SpillVGPRs[Index].FI = newFI;
-    VGPRReservedForSGPRSpill = NewVGPR;
   }
 
   bool removeVGPRForSGPRSpill(Register ReservedVGPR, MachineFunction &MF);
@@ -556,7 +554,6 @@ public:
   bool haveFreeLanesForSGPRSpill(const MachineFunction &MF,
                                  unsigned NumLane) const;
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
-  bool reserveVGPRforSGPRSpills(MachineFunction &MF);
   bool allocateVGPRSpillToAGPR(MachineFunction &MF, int FI, bool isAGPRtoVGPR);
   void removeDeadFrameIndices(MachineFrameInfo &MFI);
 
