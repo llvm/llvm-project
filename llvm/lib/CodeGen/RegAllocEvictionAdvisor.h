@@ -176,13 +176,14 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA) = 0;
   AdvisorMode getAdvisorMode() const { return Mode; }
 
-private:
+protected:
   // This analysis preserves everything, and subclasses may have additional
   // requirements.
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
 
+private:
   StringRef getPassName() const override;
   const AdvisorMode Mode;
 };

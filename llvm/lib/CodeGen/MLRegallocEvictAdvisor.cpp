@@ -10,10 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h"
-
-#if defined(LLVM_HAVE_TF_AOT) || defined(LLVM_HAVE_TF_API)
-
 #include "RegAllocEvictionAdvisor.h"
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
@@ -25,6 +21,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/Config/config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -38,6 +35,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ml-regalloc"
 
+#if defined(LLVM_HAVE_TF_AOT) || defined(LLVM_HAVE_TF_API)
 namespace {
 // This is the maximum number of interfererring ranges. That's the number of
 // distinct AllocationOrder values, which comes from MCRegisterClass::RegsSize.
@@ -164,9 +162,7 @@ static const std::vector<TensorSpec> InputFeatures{
 #undef _DECL_FEATURES
 static const TensorSpec Output =
     TensorSpec::createSpec<int64_t>(DecisionName, {1});
-const char *const RewardName = "reward";
-static const TensorSpec Reward =
-    TensorSpec::createSpec<int64_t>(RewardName, {1});
+static const TensorSpec Reward = TensorSpec::createSpec<int64_t>("reward", {1});
 
 #endif //#ifdef LLVM_HAVE_TF_API
 } // namespace
