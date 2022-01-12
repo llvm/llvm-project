@@ -4609,8 +4609,7 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP2]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -4746,8 +4745,7 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NO-IC:       vector.scevcheck:
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = add i32 0, [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP2]], 0
+; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP1]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
@@ -6517,9 +6515,8 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt i8 [[TMP7]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
@@ -6748,9 +6745,8 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NO-IC-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; UNROLL-NO-IC-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; UNROLL-NO-IC-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = add i8 0, [[MUL_RESULT]]
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[TMP6]], 0
+; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = icmp sgt i8 [[TMP7]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 [[TMP8]]
 ; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
