@@ -149,11 +149,10 @@ define float @test_add_mul_multiple_defs_z(float %x, float %y, <2 x float> addrs
 ; GFX9-DENORM-LABEL: test_add_mul_multiple_defs_z:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DENORM-NEXT:    v_mov_b32_e32 v4, v0
-; GFX9-DENORM-NEXT:    v_mov_b32_e32 v5, v1
-; GFX9-DENORM-NEXT:    global_load_dwordx2 v[0:1], v[2:3], off
+; GFX9-DENORM-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v0, v4, v5
+; GFX9-DENORM-NEXT:    v_mac_f32_e32 v3, v0, v1
+; GFX9-DENORM-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-UNSAFE-LABEL: test_add_mul_multiple_defs_z:
@@ -188,11 +187,10 @@ define float @test_add_mul_multiple_defs_z(float %x, float %y, <2 x float> addrs
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-DENORM-NEXT:    v_mov_b32_e32 v4, v0
-; GFX10-DENORM-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-DENORM-NEXT:    global_load_dwordx2 v[0:1], v[2:3], off
+; GFX10-DENORM-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-NEXT:    v_mac_f32_e32 v0, v4, v5
+; GFX10-DENORM-NEXT:    v_mac_f32_e32 v3, v0, v1
+; GFX10-DENORM-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-UNSAFE-LABEL: test_add_mul_multiple_defs_z:
@@ -233,11 +231,10 @@ define float @test_add_mul_rhs_multiple_defs_z(float %x, float %y, <2 x float> a
 ; GFX9-DENORM-LABEL: test_add_mul_rhs_multiple_defs_z:
 ; GFX9-DENORM:       ; %bb.0: ; %.entry
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DENORM-NEXT:    v_mov_b32_e32 v4, v0
-; GFX9-DENORM-NEXT:    v_mov_b32_e32 v5, v1
-; GFX9-DENORM-NEXT:    global_load_dwordx2 v[0:1], v[2:3], off
+; GFX9-DENORM-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off
 ; GFX9-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DENORM-NEXT:    v_mac_f32_e32 v0, v4, v5
+; GFX9-DENORM-NEXT:    v_mac_f32_e32 v3, v0, v1
+; GFX9-DENORM-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX9-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-UNSAFE-LABEL: test_add_mul_rhs_multiple_defs_z:
@@ -272,11 +269,10 @@ define float @test_add_mul_rhs_multiple_defs_z(float %x, float %y, <2 x float> a
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-DENORM-NEXT:    v_mov_b32_e32 v4, v0
-; GFX10-DENORM-NEXT:    v_mov_b32_e32 v5, v1
-; GFX10-DENORM-NEXT:    global_load_dwordx2 v[0:1], v[2:3], off
+; GFX10-DENORM-NEXT:    global_load_dwordx2 v[2:3], v[2:3], off
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DENORM-NEXT:    v_mac_f32_e32 v0, v4, v5
+; GFX10-DENORM-NEXT:    v_mac_f32_e32 v3, v0, v1
+; GFX10-DENORM-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-UNSAFE-LABEL: test_add_mul_rhs_multiple_defs_z:
