@@ -115,6 +115,16 @@ private:
   /// \see https://dlang.org/spec/abi.html#QualifiedName .
   const char *parseQualified(OutputBuffer *Demangled, const char *Mangled);
 
+  /// Extract and demangle a type from a given mangled symbol append it to
+  /// the output string.
+  ///
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \return the remaining string on success or nullptr on failure.
+  ///
+  /// \see https://dlang.org/spec/abi.html#Type .
+  const char *parseType(const char *Mangled);
+
   /// The string we are demangling.
   const char *Str;
 };
@@ -174,8 +184,7 @@ const char *Demangler::parseMangle(OutputBuffer *Demangled,
     if (*Mangled == 'Z')
       ++Mangled;
     else {
-      // TODO: Implement symbols with types.
-      return nullptr;
+      Mangled = parseType(Mangled);
     }
   }
 
@@ -260,6 +269,31 @@ const char *Demangler::parseIdentifier(OutputBuffer *Demangled,
   }
 
   return parseLName(Demangled, Mangled, Len);
+}
+
+const char *Demangler::parseType(const char *Mangled) {
+  if (*Mangled == '\0')
+    return nullptr;
+
+  switch (*Mangled) {
+  // TODO: Parse type qualifiers.
+  // TODO: Parse function types.
+  // TODO: Parse compound types.
+  // TODO: Parse delegate types.
+  // TODO: Parse tuple types.
+
+  // Basic types.
+  case 'i':
+    ++Mangled;
+    // TODO: Add type name dumping
+    return Mangled;
+
+    // TODO: Add support for the rest of the basic types.
+    // TODO: Parse back referenced types.
+
+  default: // unhandled.
+    return nullptr;
+  }
 }
 
 const char *Demangler::parseLName(OutputBuffer *Demangled, const char *Mangled,
