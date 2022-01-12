@@ -60,8 +60,8 @@ using namespace llvm::sys;
 namespace lld {
 namespace coff {
 
-Configuration *config;
-LinkerDriver *driver;
+std::unique_ptr<Configuration> config;
+std::unique_ptr<LinkerDriver> driver;
 
 bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
           raw_ostream &stderrOS) {
@@ -80,8 +80,8 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   stderrOS.enable_colors(stderrOS.has_colors());
 
   COFFLinkerContext ctx;
-  config = make<Configuration>();
-  driver = make<LinkerDriver>(ctx);
+  config = std::make_unique<Configuration>();
+  driver = std::make_unique<LinkerDriver>(ctx);
 
   driver->linkerMain(args);
 
