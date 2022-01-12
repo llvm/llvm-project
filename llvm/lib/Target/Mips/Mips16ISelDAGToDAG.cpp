@@ -121,7 +121,7 @@ bool Mips16DAGToDAGISel::selectAddr(bool SPAllowed, SDValue Addr, SDValue &Base,
   }
   // Addresses of the form FI+const or FI|const
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
-    ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
+    auto *CN = cast<ConstantSDNode>(Addr.getOperand(1));
     if (isInt<16>(CN->getSExtValue())) {
       // If the first operand is a FI, get the TargetFI Node
       if (SPAllowed) {
