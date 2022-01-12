@@ -11,15 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <memory>
 #include <utility>
 #include <vector>
 
+#include "clang/AST/DeclCXX.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
+#include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
@@ -103,6 +106,60 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
   return *MaybeState;
 }
 
+/// Transfers `State` by evaluating `CfgStmt` in the context of `Analysis`.
+/// `HandleTransferredStmt` (if provided) will be applied to `CfgStmt`, after it
+/// is evaluated.
+static void
+transferCFGStmt(const CFGStmt &CfgStmt, TypeErasedDataflowAnalysis &Analysis,
+                TypeErasedDataflowAnalysisState &State,
+                std::function<void(const CFGStmt &,
+                                   const TypeErasedDataflowAnalysisState &)>
+                    HandleTransferredStmt) {
+  const Stmt *S = CfgStmt.getStmt();
+  assert(S != nullptr);
+
+  transfer(*S, State.Env);
+  Analysis.transferTypeErased(S, State.Lattice, State.Env);
+
+  if (HandleTransferredStmt != nullptr)
+    HandleTransferredStmt(CfgStmt, State);
+}
+
+/// Transfers `State` by evaluating `CfgInit`.
+static void transferCFGInitializer(const CFGInitializer &CfgInit,
+                                   TypeErasedDataflowAnalysisState &State) {
+  const auto &ThisLoc = *cast<AggregateStorageLocation>(
+      State.Env.getThisPointeeStorageLocation());
+
+  const CXXCtorInitializer *Initializer = CfgInit.getInitializer();
+  assert(Initializer != nullptr);
+
+  auto *InitStmt = Initializer->getInit();
+  assert(InitStmt != nullptr);
+
+  auto *InitStmtLoc =
+      State.Env.getStorageLocation(*InitStmt, SkipPast::Reference);
+  if (InitStmtLoc == nullptr)
+    return;
+
+  auto *InitStmtVal = State.Env.getValue(*InitStmtLoc);
+  if (InitStmtVal == nullptr)
+    return;
+
+  const FieldDecl *Member = Initializer->getMember();
+  assert(Member != nullptr);
+
+  if (Member->getType()->isReferenceType()) {
+    auto &MemberLoc = ThisLoc.getChild(*Member);
+    State.Env.setValue(MemberLoc,
+                       State.Env.takeOwnership(
+                           std::make_unique<ReferenceValue>(*InitStmtLoc)));
+  } else {
+    auto &MemberLoc = ThisLoc.getChild(*Member);
+    State.Env.setValue(MemberLoc, *InitStmtVal);
+  }
+}
+
 TypeErasedDataflowAnalysisState transferBlock(
     const ControlFlowContext &CFCtx,
     std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
@@ -114,19 +171,18 @@ TypeErasedDataflowAnalysisState transferBlock(
   TypeErasedDataflowAnalysisState State =
       computeBlockInputState(CFCtx, BlockStates, Block, InitEnv, Analysis);
   for (const CFGElement &Element : Block) {
-    // FIXME: Evaluate other kinds of `CFGElement`.
-    const llvm::Optional<CFGStmt> CfgStmt = Element.getAs<CFGStmt>();
-    if (!CfgStmt.hasValue())
-      continue;
-
-    const Stmt *S = CfgStmt.getValue().getStmt();
-    assert(S != nullptr);
-
-    transfer(*S, State.Env);
-    Analysis.transferTypeErased(S, State.Lattice, State.Env);
-
-    if (HandleTransferredStmt != nullptr)
-      HandleTransferredStmt(CfgStmt.getValue(), State);
+    switch (Element.getKind()) {
+    case CFGElement::Statement:
+      transferCFGStmt(*Element.getAs<CFGStmt>(), Analysis, State,
+                      HandleTransferredStmt);
+      break;
+    case CFGElement::Initializer:
+      transferCFGInitializer(*Element.getAs<CFGInitializer>(), State);
+      break;
+    default:
+      // FIXME: Evaluate other kinds of `CFGElement`.
+      break;
+    }
   }
   return State;
 }
