@@ -564,14 +564,6 @@ void LinkerScript::discard(InputSectionBase &s) {
   if (&s == in.shStrTab.get())
     error("discarding " + s.name + " section is not allowed");
 
-  // You can discard .hash and .gnu.hash sections by linker scripts.
-  // Since they are synthesized sections, we need to handle them differently
-  // than other regular sections.
-  if (&s == mainPart->gnuHashTab)
-    mainPart->gnuHashTab = nullptr;
-  else if (&s == mainPart->hashTab)
-    mainPart->hashTab = nullptr;
-
   s.markDead();
   s.parent = nullptr;
   for (InputSection *sec : s.dependentSections)
