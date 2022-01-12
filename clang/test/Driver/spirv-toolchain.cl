@@ -62,10 +62,10 @@
 // Check linking when multiple input files are passed.
 // RUN: %clang -### -target spirv64 %s %s 2>&1 | FileCheck --check-prefix=SPLINK %s
 
-// SPLINK: clang{{.*}} "-cc1" "-triple" "spirv64"
+// SPLINK: "-cc1" "-triple" "spirv64"
 // SPLINK-SAME: "-o" [[BC:".*bc"]]
 // SPLINK: {{llvm-spirv.*"}} [[BC]] "-o" [[SPV1:".*o"]]
-// SPLINK: clang{{.*}} "-cc1" "-triple" "spirv64"
+// SPLINK: "-cc1" "-triple" "spirv64"
 // SPLINK-SAME: "-o" [[BC:".*bc"]]
 // SPLINK: {{llvm-spirv.*"}} [[BC]] "-o" [[SPV2:".*o"]]
 // SPLINK: {{spirv-link.*"}} [[SPV1]] [[SPV2]] "-o" "a.out"
