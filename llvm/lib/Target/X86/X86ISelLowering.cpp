@@ -40083,7 +40083,10 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     break;
   }
   case X86ISD::VPSHA:
-  case X86ISD::VPSHL: {
+  case X86ISD::VPSHL:
+  case X86ISD::VSHLV:
+  case X86ISD::VSRLV:
+  case X86ISD::VSRAV: {
     APInt LHSUndef, LHSZero;
     APInt RHSUndef, RHSZero;
     SDValue LHS = Op.getOperand(0);
