@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -34,6 +35,7 @@ public:
   void printRelocations() override;
   void printUnwindInfo() override;
   void printStackMap() const override;
+  void printCGProfile() override;
 
   void printNeededLibraries() override;
 
@@ -48,6 +50,8 @@ public:
 private:
   template<class MachHeader>
   void printFileHeaders(const MachHeader &Header);
+
+  StringRef getSymbolName(const SymbolRef &Symbol);
 
   void printSymbols() override;
   void printDynamicSymbols() override;
@@ -551,10 +555,7 @@ void MachODumper::printRelocation(const MachOObjectFile *Obj,
   if (IsExtern) {
     symbol_iterator Symbol = Reloc.getSymbol();
     if (Symbol != Obj->symbol_end()) {
-      Expected<StringRef> TargetNameOrErr = Symbol->getName();
-      if (!TargetNameOrErr)
-        reportError(TargetNameOrErr.takeError(), Obj->getFileName());
-      TargetName = *TargetNameOrErr;
+      TargetName = getSymbolName(*Symbol);
     }
   } else if (!IsScattered) {
     section_iterator SecI = Obj->getRelocationSection(DR);
@@ -601,6 +602,14 @@ void MachODumper::printRelocation(const MachOObjectFile *Obj,
   }
 }
 
+StringRef MachODumper::getSymbolName(const SymbolRef &Symbol) {
+  Expected<StringRef> SymbolNameOrErr = Symbol.getName();
+  if (!SymbolNameOrErr) {
+    reportError(SymbolNameOrErr.takeError(), Obj->getFileName());
+  }
+  return *SymbolNameOrErr;
+}
+
 void MachODumper::printSymbols() {
   ListScope Group(W, "Symbols");
 
@@ -614,13 +623,7 @@ void MachODumper::printDynamicSymbols() {
 }
 
 void MachODumper::printSymbol(const SymbolRef &Symbol) {
-  StringRef SymbolName;
-  Expected<StringRef> SymbolNameOrErr = Symbol.getName();
-  if (!SymbolNameOrErr) {
-    // TODO: Actually report errors helpfully.
-    consumeError(SymbolNameOrErr.takeError());
-  } else
-    SymbolName = *SymbolNameOrErr;
+  StringRef SymbolName = getSymbolName(Symbol);
 
   MachOSymbol MOSymbol;
   getSymbol(Obj, Symbol.getRawDataRefImpl(), MOSymbol);
@@ -694,6 +697,48 @@ void MachODumper::printStackMap() const {
   else
     prettyPrintStackMap(
         W, StackMapParser<support::big>(StackMapContentsArray));
+}
+
+void MachODumper::printCGProfile() {
+  object::SectionRef CGProfileSection;
+  for (auto Sec : Obj->sections()) {
+    StringRef Name;
+    if (Expected<StringRef> NameOrErr = Sec.getName())
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
+    if (Name == "__cg_profile") {
+      CGProfileSection = Sec;
+      break;
+    }
+  }
+  if (CGProfileSection == object::SectionRef())
+    return;
+
+  StringRef CGProfileContents =
+      unwrapOrError(Obj->getFileName(), CGProfileSection.getContents());
+  BinaryStreamReader Reader(CGProfileContents, Obj->isLittleEndian()
+                                                   ? llvm::support::little
+                                                   : llvm::support::big);
+
+  ListScope L(W, "CGProfile");
+  while (!Reader.empty()) {
+    uint32_t FromIndex, ToIndex;
+    uint64_t Count;
+    if (Error Err = Reader.readInteger(FromIndex))
+      reportError(std::move(Err), Obj->getFileName());
+    if (Error Err = Reader.readInteger(ToIndex))
+      reportError(std::move(Err), Obj->getFileName());
+    if (Error Err = Reader.readInteger(Count))
+      reportError(std::move(Err), Obj->getFileName());
+    DictScope D(W, "CGProfileEntry");
+    W.printNumber("From", getSymbolName(*Obj->getSymbolByIndex(FromIndex)),
+                  FromIndex);
+    W.printNumber("To", getSymbolName(*Obj->getSymbolByIndex(ToIndex)),
+                  ToIndex);
+    W.printNumber("Weight", Count);
+  }
 }
 
 void MachODumper::printNeededLibraries() {
