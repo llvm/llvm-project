@@ -422,6 +422,8 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
   default:
     report_fatal_error("Relocation type not implemented yet!");
     break;
+  case ELF::R_AARCH64_NONE:
+    break;
   case ELF::R_AARCH64_ABS16: {
     uint64_t Result = Value + Addend;
     assert(static_cast<int64_t>(Result) >= INT16_MIN && Result < UINT16_MAX);
