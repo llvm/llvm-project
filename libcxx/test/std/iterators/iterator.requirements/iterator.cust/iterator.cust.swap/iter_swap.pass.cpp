@@ -17,7 +17,7 @@
 #include <array>
 #include <cassert>
 
-#include "./unqualified_lookup_wrapper.h"
+#include "../unqualified_lookup_wrapper.h"
 #include "test_iterators.h"
 
 using IterSwapT = decltype(std::ranges::iter_swap);
