@@ -37,14 +37,13 @@ If you are interested in writing new documentation, follow
 [markdown style guide from LLVM](https://github.com/llvm/llvm-project/blob/main/llvm/docs/MarkdownQuickstartTemplate.md).
 
 ## Building flang
-There are two ways to build flang.  The first method is to build it at the same
-time that you build all of the projects on which it depends.  This is called
-building in tree.  The second method is to first do an in tree build to create
-all of the projects on which flang depends, then build an install area for
-these projects, and then only build the flang code itself.  This is called
-building standalone.  Building standalone has the advantage of being smaller
-and faster.  Once you create the base build and base install areas, you can
-create multiple standalone builds using them.  
+There are two ways to build flang. The first method is to build it at the same
+time that you build all of the projects on which it depends. This is called
+building in tree. The second method is to first do an in tree build to create
+all of the projects on which flang depends, and then only build the flang code
+itself. This is called building standalone. Building standalone has the
+advantage of being smaller and faster. Once you create the base build and base
+install areas, you can create multiple standalone builds using them.
 
 Note that instructions for building LLVM can be found at
 https://llvm.org/docs/GettingStarted.html.
@@ -65,10 +64,8 @@ git clone https://github.com/llvm/llvm-project.git my-project
 Once the clone is complete, execute the following commands:
 ```bash
 cd my-project
-INSTALLDIR=`pwd`/install
 
 rm -rf build
-rm -rf install
 mkdir -p build
 
 cd build
@@ -91,12 +88,6 @@ To run the flang tests on this build, execute the command in the "build"
 directory:
 ```bash
 ninja check-flang
-```
-
-If you're happy with the results, the next step is to create the install area.
-While in the `build` directory, run the command:
-```bash
-ninja install
 ```
 
 Note that these instructions specify flang as one of the projects to build in
@@ -129,18 +120,12 @@ cmake \
   -DLLVM_BUILD_MAIN_SRC_DIR=$base/build/lib/cmake/llvm \
   -DLLVM_LIT_ARGS=-v \
   -DLLVM_DIR=$base/build/lib/cmake/llvm \
-  -DCLANG_DIR=$base/install/lib/cmake/clang \
-  -DMLIR_DIR=$base/install/lib/cmake/mlir \
+  -DCLANG_DIR=$base/build/lib/cmake/clang \
+  -DMLIR_DIR=$base/build/lib/cmake/mlir \
   ..
 
 ninja
 ```
-Note that for Clang and MLIR you use the installation directory ($base/install)
-and for LLVM you use the build directory (`$base/build`).   This is not a typo
-in the script.  Rather, it is because running the tests requires the GTest
-infrastructure which is only available in the LLVM build area.  The build also
-requires the `AddClang.cmake` script from Clang, which is only available in the
-install area.
 
 To run the flang tests on this build, execute the command in the "flang/build"
 directory:
