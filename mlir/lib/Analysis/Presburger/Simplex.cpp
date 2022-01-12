@@ -745,8 +745,9 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   return result;
 }
 
-SmallVector<Fraction, 8> SimplexBase::getRationalSample() const {
-  assert(!empty && "This should not be called when Simplex is empty.");
+Optional<SmallVector<Fraction, 8>> SimplexBase::getRationalSample() const {
+  if (empty)
+    return {};
 
   SmallVector<Fraction, 8> sample;
   sample.reserve(var.size());
@@ -770,7 +771,9 @@ SimplexBase::getSamplePointIfIntegral() const {
   // If the tableau is empty, no sample point exists.
   if (empty)
     return {};
-  SmallVector<Fraction, 8> rationalSample = getRationalSample();
+
+  // The value will always exist since the Simplex is non-empty.
+  SmallVector<Fraction, 8> rationalSample = *getRationalSample();
   SmallVector<int64_t, 8> integerSample;
   integerSample.reserve(var.size());
   for (const Fraction &coord : rationalSample) {

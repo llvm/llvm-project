@@ -759,8 +759,10 @@ Optional<SmallVector<int64_t, 8>> IntegerPolyhedron::findIntegerSample() const {
   // full-dimensional cone and is hence non-empty.
   Simplex shrunkenConeSimplex(cone);
   assert(!shrunkenConeSimplex.isEmpty() && "Shrunken cone cannot be empty!");
+
+  // The sample will always exist since the shrunken cone is non-empty.
   SmallVector<Fraction, 8> shrunkenConeSample =
-      shrunkenConeSimplex.getRationalSample();
+      *shrunkenConeSimplex.getRationalSample();
 
   SmallVector<int64_t, 8> coneSample(llvm::map_range(shrunkenConeSample, ceil));
 
