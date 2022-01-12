@@ -72,6 +72,71 @@ Symbols:
         StorageMappingClass:    XMC_PR
         SectionOrLengthLo:      2
         SectionOrLengthHi:      3
+## The C_WEAKEXT symbol with a Function auxiliary entry and a CSECT auxiliary entry.
+  - Name:               .fun3
+    Value:              0x0
+    Section:            N_DEBUG
+    Type:               0x20
+    StorageClass:       C_WEAKEXT
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type:                 AUX_FCN
+        SizeOfFunction:       3
+        SymIdxOfNextBeyond:   4
+        PtrToLineNum:         5
+      - Type:                   AUX_CSECT
+        ParameterHashIndex:     2
+        TypeChkSectNum:         3
+        SymbolAlignmentAndType: 1
+        StorageMappingClass:    XMC_PR
+        SectionOrLengthLo:      4
+        SectionOrLengthHi:      5
+## The C_EXT symbol with a Function auxiliary entry, a CSECT auxiliary entry, and an Exception auxiliary entry.
+  - Name:               .fun4
+    Value:              0x0
+    Section:            .text
+    Type:               0x20
+    StorageClass:       C_EXT
+    NumberOfAuxEntries: 3
+    AuxEntries:
+      - Type:                 AUX_FCN
+        SizeOfFunction:       3
+        SymIdxOfNextBeyond:   4
+        PtrToLineNum:         5
+      - Type:                 AUX_EXCEPT
+        OffsetToExceptionTbl: 2
+        SizeOfFunction:       3
+        SymIdxOfNextBeyond:   4
+      - Type:                   AUX_CSECT
+        ParameterHashIndex:     2
+        TypeChkSectNum:         3
+        SymbolAlignmentAndType: 1
+        StorageMappingClass:    XMC_PR
+        SectionOrLengthLo:      4
+        SectionOrLengthHi:      5
+## The C_DWARF symbol with a SECT auxiliary entry.
+  - Name:               .fun5
+    Section:            N_DEBUG
+    StorageClass:       C_DWARF
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                   AUX_SECT
+        LengthOfSectionPortion: 2
+        NumberOfRelocEnt:       3
+## The C_BLOCK symbol with a Block auxiliary entry.
+  - Name:               .fun6
+    StorageClass:       C_BLOCK
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:    AUX_SYM
+        LineNum: 3
+## The C_FCN symbol with a Block auxiliary entry.
+  - Name:               .fun7
+    StorageClass:       C_FCN
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:    AUX_SYM
+        LineNum: 3
 
 # SYMBOL64:      Symbols [
 # SYMBOL64-NEXT:   Symbol {
@@ -157,6 +222,108 @@ Symbols:
 # SYMBOL64-NEXT:       SymbolType: XTY_SD (0x1)
 # SYMBOL64-NEXT:       StorageMappingClass: XMC_PR (0x0)
 # SYMBOL64-NEXT:       Auxiliary Type: AUX_CSECT (0xFB)
+# SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 10
+# SYMBOL64-NEXT:     Name: .fun3
+# SYMBOL64-NEXT:     Value (RelocatableAddress): 0x0
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x20
+# SYMBOL64-NEXT:     StorageClass: C_WEAKEXT (0x6F)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 2
+# SYMBOL64-NEXT:     Function Auxiliary Entry {
+# SYMBOL64-NEXT:       Index: 11
+# SYMBOL64-NEXT:       SizeOfFunction: 0x3
+# SYMBOL64-NEXT:       PointerToLineNum: 0x5
+# SYMBOL64-NEXT:       SymbolIndexOfNextBeyond: 4
+# SYMBOL64-NEXT:       Auxiliary Type: AUX_FCN (0xFE)
+# SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:     CSECT Auxiliary Entry {
+# SYMBOL64-NEXT:       Index: 12
+# SYMBOL64-NEXT:       SectionLen: 21474836484
+# SYMBOL64-NEXT:       ParameterHashIndex: 0x2
+# SYMBOL64-NEXT:       TypeChkSectNum: 0x3
+# SYMBOL64-NEXT:       SymbolAlignmentLog2: 0
+# SYMBOL64-NEXT:       SymbolType: XTY_SD (0x1)
+# SYMBOL64-NEXT:       StorageMappingClass: XMC_PR (0x0)
+# SYMBOL64-NEXT:       Auxiliary Type: AUX_CSECT (0xFB)
+# SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 13
+# SYMBOL64-NEXT:     Name: .fun4
+# SYMBOL64-NEXT:     Value (RelocatableAddress): 0x0
+# SYMBOL64-NEXT:     Section: .text
+# SYMBOL64-NEXT:     Type: 0x20
+# SYMBOL64-NEXT:     StorageClass: C_EXT (0x2)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 3
+# SYMBOL64-NEXT:     Function Auxiliary Entry {
+# SYMBOL64-NEXT:       Index: 14
+# SYMBOL64-NEXT:       SizeOfFunction: 0x3
+# SYMBOL64-NEXT:       PointerToLineNum: 0x5
+# SYMBOL64-NEXT:       SymbolIndexOfNextBeyond: 4
+# SYMBOL64-NEXT:       Auxiliary Type: AUX_FCN (0xFE)
+# SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:     Exception Auxiliary Entry {
+# SYMBOL64-NEXT:       Index: 15
+# SYMBOL64-NEXT:       OffsetToExceptionTable: 0x2
+# SYMBOL64-NEXT:       SizeOfFunction: 0x3
+# SYMBOL64-NEXT:       SymbolIndexOfNextBeyond: 4
+# SYMBOL64-NEXT:       Auxiliary Type: AUX_EXCEPT (0xFF)
+# SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:     CSECT Auxiliary Entry {
+# SYMBOL64-NEXT:       Index: 16
+# SYMBOL64-NEXT:       SectionLen: 21474836484
+# SYMBOL64-NEXT:       ParameterHashIndex: 0x2
+# SYMBOL64-NEXT:       TypeChkSectNum: 0x3
+# SYMBOL64-NEXT:       SymbolAlignmentLog2: 0
+# SYMBOL64-NEXT:       SymbolType: XTY_SD (0x1)
+# SYMBOL64-NEXT:       StorageMappingClass: XMC_PR (0x0)
+# SYMBOL64-NEXT:       Auxiliary Type: AUX_CSECT (0xFB)
+# SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 17
+# SYMBOL64-NEXT:     Name: .fun5
+# SYMBOL64-NEXT:     Value (OffsetInDWARF): 0x0
+# SYMBOL64-NEXT:     Section: N_DEBUG
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_DWARF (0x70)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 1
+# SYMBOL64-NEXT:     Sect Auxiliary Entry For DWARF {
+# SYMBOL64-NEXT:       Index: 18
+# SYMBOL64-NEXT:       LengthOfSectionPortion: 0x2
+# SYMBOL64-NEXT:       NumberOfRelocEntries: 3
+# SYMBOL64-NEXT:       Auxiliary Type: AUX_SECT (0xFA)
+# SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 19
+# SYMBOL64-NEXT:     Name: .fun6
+# SYMBOL64-NEXT:     Value (RelocatableAddress): 0x0
+# SYMBOL64-NEXT:     Section: N_UNDEF
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_BLOCK (0x64)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 1
+# SYMBOL64-NEXT:     Block Auxiliary Entry {
+# SYMBOL64-NEXT:       Index: 20
+# SYMBOL64-NEXT:       LineNumber: 0x3
+# SYMBOL64-NEXT:       Auxiliary Type: AUX_SYM (0xFD)
+# SYMBOL64-NEXT:     }
+# SYMBOL64-NEXT:   }
+# SYMBOL64-NEXT:   Symbol {
+# SYMBOL64-NEXT:     Index: 21
+# SYMBOL64-NEXT:     Name: .fun7
+# SYMBOL64-NEXT:     Value (RelocatableAddress): 0x0
+# SYMBOL64-NEXT:     Section: N_UNDEF
+# SYMBOL64-NEXT:     Type: 0x0
+# SYMBOL64-NEXT:     StorageClass: C_FCN (0x65)
+# SYMBOL64-NEXT:     NumberOfAuxEntries: 1
+# SYMBOL64-NEXT:     Block Auxiliary Entry {
+# SYMBOL64-NEXT:       Index: 22
+# SYMBOL64-NEXT:       LineNumber: 0x3
+# SYMBOL64-NEXT:       Auxiliary Type: AUX_SYM (0xFD)
 # SYMBOL64-NEXT:     }
 # SYMBOL64-NEXT:   }
 # SYMBOL64-NEXT: ]
