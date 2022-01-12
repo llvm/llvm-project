@@ -15,6 +15,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
@@ -123,6 +124,46 @@ public:
     // FIXME: Add support for UO_AddrOf, UO_LNot.
   }
 
+  void VisitCXXThisExpr(const CXXThisExpr *S) {
+    auto *ThisPointeeLoc = Env.getThisPointeeStorageLocation();
+    assert(ThisPointeeLoc != nullptr);
+
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+    Env.setValue(Loc, Env.takeOwnership(
+                          std::make_unique<PointerValue>(*ThisPointeeLoc)));
+  }
+
+  void VisitMemberExpr(const MemberExpr *S) {
+    ValueDecl *Member = S->getMemberDecl();
+    assert(Member != nullptr);
+
+    // FIXME: Consider assigning pointer values to function member expressions.
+    if (Member->isFunctionOrFunctionTemplate())
+      return;
+
+    // The receiver can be either a value or a pointer to a value. Skip past the
+    // indirection to handle both cases.
+    auto *BaseLoc = cast_or_null<AggregateStorageLocation>(
+        Env.getStorageLocation(*S->getBase(), SkipPast::ReferenceThenPointer));
+    if (BaseLoc == nullptr)
+      return;
+
+    // FIXME: Add support for union types.
+    if (BaseLoc->getType()->isUnionType())
+      return;
+
+    auto &MemberLoc = BaseLoc->getChild(*Member);
+    if (MemberLoc.getType()->isReferenceType()) {
+      Env.setStorageLocation(*S, MemberLoc);
+    } else {
+      auto &Loc = Env.createStorageLocation(*S);
+      Env.setStorageLocation(*S, Loc);
+      Env.setValue(
+          Loc, Env.takeOwnership(std::make_unique<ReferenceValue>(MemberLoc)));
+    }
+  }
+
   // FIXME: Add support for:
   // - CallExpr
   // - CXXBindTemporaryExpr
@@ -131,9 +172,7 @@ public:
   // - CXXFunctionalCastExpr
   // - CXXOperatorCallExpr
   // - CXXStaticCastExpr
-  // - CXXThisExpr
   // - MaterializeTemporaryExpr
-  // - MemberExpr
 
 private:
   void visitVarDecl(const VarDecl &D) {
