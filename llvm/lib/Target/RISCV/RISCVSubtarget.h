@@ -33,7 +33,17 @@ namespace llvm {
 class StringRef;
 
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
+public:
+  enum RISCVProcFamilyEnum : uint8_t {
+    Others,
+    SiFive7,
+  };
+
+private:
   virtual void anchor();
+
+  RISCVProcFamilyEnum RISCVProcFamily = Others;
+
   bool HasStdExtM = false;
   bool HasStdExtA = false;
   bool HasStdExtF = false;
@@ -100,6 +110,13 @@ public:
     return &TSInfo;
   }
   bool enableMachineScheduler() const override { return true; }
+
+  /// Returns RISCV processor family.
+  /// Avoid this function! CPU specifics should be kept local to this class
+  /// and preferably modeled with SubtargetFeatures or properties in
+  /// initializeProperties().
+  RISCVProcFamilyEnum getProcFamily() const { return RISCVProcFamily; }
+
   bool hasStdExtM() const { return HasStdExtM; }
   bool hasStdExtA() const { return HasStdExtA; }
   bool hasStdExtF() const { return HasStdExtF; }
