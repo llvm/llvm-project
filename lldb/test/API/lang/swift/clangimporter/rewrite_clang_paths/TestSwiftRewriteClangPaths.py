@@ -125,12 +125,12 @@ class TestSwiftRewriteClangPaths(TestBase):
         if remap:
             self.assertEqual(errs, 0, "expected no module import error")
             # Counting occurences in the scratch context.
-            self.assertEqual(found_iquote, 1)
-            self.assertEqual(found_i1, 1)
-            self.assertEqual(found_i2, 1)
-            self.assertEqual(found_f, 1)
+            self.assertEqual(found_iquote, 3)
+            self.assertEqual(found_i1, 3)
+            self.assertEqual(found_i2, 3)
+            self.assertEqual(found_f, 3)
             self.assertEqual(found_rel, 0)
             self.assertEqual(found_abs, 1)
-            self.assertEqual(found_ovl, 1)
+            self.assertEqual(found_ovl, 3)
         else:
             self.assertGreater(errs, 0, "expected module import error")
