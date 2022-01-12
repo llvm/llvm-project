@@ -983,6 +983,33 @@ private:
   void *hostPtr; // for delayed unlocking
 };
 
+// Enable delaying of kernel launch completion check
+class AMDGPUAsyncInfoComputeTy {
+public:
+  AMDGPUAsyncInfoComputeTy(hsa_signal_t signal, KernelArgPool *ArgPool,
+                           void *kernarg)
+      : signal(signal), ArgPool(ArgPool), kernarg(kernarg) {}
+
+  AMDGPUAsyncInfoComputeTy(AMDGPUAsyncInfoComputeTy &) = delete;
+  AMDGPUAsyncInfoComputeTy(AMDGPUAsyncInfoComputeTy &&) =
+      default; // assume noexcept
+
+  hsa_status_t waitToComplete() {
+    hsa_signal_value_t init = 1;
+    hsa_signal_value_t success = 0;
+    hsa_status_t err = wait_for_signal(signal, init, success);
+    DeviceInfo.FreeSignalPool.push(signal);
+    assert(ArgPool);
+    ArgPool->deallocate(kernarg);
+    return err;
+  }
+
+private:
+  hsa_signal_t signal;
+  KernelArgPool *ArgPool; // needed for deallocation of kernarg
+  void *kernarg;          // kernarg ptr used by kernel launch
+};
+
 int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
                      __tgt_async_info *AsyncInfo) {
   assert(AsyncInfo && "AsynrcInfo is nullptr");
@@ -1451,13 +1478,9 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     // accessed any more
     hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
-    while (hsa_signal_wait_scacquire(s, HSA_SIGNAL_CONDITION_EQ, 0, UINT64_MAX,
-                                     HSA_WAIT_STATE_BLOCKED) != 0)
-      ;
-
-    assert(ArgPool);
-    ArgPool->deallocate(kernarg);
-    DeviceInfo.FreeSignalPool.push(s);
+    // wait for completion, then free signal and kernarg
+    AMDGPUAsyncInfoComputeTy AMDGPUAsyncInfo(s, ArgPool, kernarg);
+    AMDGPUAsyncInfo.waitToComplete();
   }
 
   DP("Kernel completed\n");
