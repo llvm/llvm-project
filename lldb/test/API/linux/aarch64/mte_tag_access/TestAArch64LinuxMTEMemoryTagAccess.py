@@ -122,10 +122,11 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
                           "\[0x[0-9A-Fa-f]+f0, 0x[0-9A-Fa-f]+00\): 0xf \(mismatch\)\n"
                           "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0 \(mismatch\)$"])
 
-        # Tags in start/end are ignored when creating the range.
-        # So this is not an error despite start/end having different tags
-        self.expect("memory tag read mte_buf mte_buf_alt_tag+16",
-                patterns=["Logical tag: 0x9\n"
+        # Top byte is ignored when creating the range, not just the 4 tag bits.
+        # So even though these two pointers have different top bytes
+        # and the start's is > the end's, this is not an error.
+        self.expect("memory tag read mte_buf_alt_tag mte_buf+16",
+                patterns=["Logical tag: 0xa\n"
                           "Allocation tags:\n"
                           "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x0 \(mismatch\)$"])
 
