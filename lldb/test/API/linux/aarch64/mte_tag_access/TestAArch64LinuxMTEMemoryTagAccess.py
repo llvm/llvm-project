@@ -20,6 +20,11 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         if not self.isAArch64MTE():
             self.skipTest('Target must support MTE.')
 
+        # Required to check that commands remove non-address bits
+        # other than the memory tags.
+        if not self.isAArch64PAuth():
+            self.skipTest('Target must support pointer authentication')
+
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
