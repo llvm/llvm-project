@@ -655,6 +655,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       Summary->setPartialProfile(true);
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
       FunctionSamples::ProfileIsCSFlat = ProfileIsCSFlat = true;
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsCSNested))
+      FunctionSamples::ProfileIsCSNested = ProfileIsCSNested;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
     break;
@@ -688,9 +690,6 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     ProfileIsProbeBased =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased);
     FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
-    ProfileIsCSNested =
-        hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsCSNested);
-    FunctionSamples::ProfileIsCSNested = ProfileIsCSNested;
     bool HasAttribute =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute);
     if (std::error_code EC = readFuncMetadata(HasAttribute))
@@ -1276,6 +1275,8 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("partial,");
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
       Flags.append("context,");
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagIsCSNested))
+      Flags.append("context-nested,");
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       Flags.append("fs-discriminator,");
     break;
@@ -1288,8 +1289,6 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("probe,");
     if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute))
       Flags.append("attr,");
-    if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsCSNested))
-      Flags.append("preinlined,");
     break;
   default:
     break;

@@ -323,13 +323,13 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     setToCompressSection(SecProfileSymbolList);
   if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
-  if (Type == SecFuncMetadata && FunctionSamples::ProfileIsCSNested)
-    addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsCSNested);
   if (Type == SecFuncMetadata &&
       (FunctionSamples::ProfileIsCSFlat || FunctionSamples::ProfileIsCSNested))
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagHasAttribute);
   if (Type == SecProfSummary && FunctionSamples::ProfileIsCSFlat)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFullContext);
+  if (Type == SecProfSummary && FunctionSamples::ProfileIsCSNested)
+    addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagIsCSNested);
   if (Type == SecProfSummary && FunctionSamples::ProfileIsFS)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFSDiscriminator);
 
