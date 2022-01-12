@@ -4,7 +4,6 @@
 define <16 x i8> @demandedelts_vpshab(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: demandedelts_vpshab:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; CHECK-NEXT:    vpshab %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
@@ -18,7 +17,6 @@ define <16 x i8> @demandedelts_vpshab(<16 x i8> %a0, <16 x i8> %a1) {
 define <4 x i32> @demandedelts_vpshld(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: demandedelts_vpshld:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; CHECK-NEXT:    vpshld %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    retq
