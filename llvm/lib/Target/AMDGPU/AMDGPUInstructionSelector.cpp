@@ -3113,6 +3113,33 @@ bool AMDGPUInstructionSelector::selectBVHIntrinsic(MachineInstr &MI) const{
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const bool IsVALU = DstRB->getID() == AMDGPU::VGPRRegBankID;
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  if (IsVALU) {
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHRREV_B32_e64), DstReg)
+      .addImm(Subtarget->getWavefrontSizeLog2())
+      .addReg(SrcReg);
+  } else {
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), DstReg)
+      .addReg(SrcReg)
+      .addImm(Subtarget->getWavefrontSizeLog2());
+  }
+
+  const TargetRegisterClass &RC =
+      IsVALU ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
+  if (!RBI.constrainGenericRegister(DstReg, RC, *MRI))
+    return false;
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   if (I.isPHI())
     return selectPHI(I);
@@ -3244,6 +3271,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case AMDGPU::G_SI_CALL:
     I.setDesc(TII.get(AMDGPU::SI_CALL));
     return true;
+  case AMDGPU::G_AMDGPU_WAVE_ADDRESS:
+    return selectWaveAddress(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }

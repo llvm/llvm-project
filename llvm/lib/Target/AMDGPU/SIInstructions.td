@@ -2833,6 +2833,15 @@ class AMDGPUGenericInstruction : GenericInstruction {
   let Namespace = "AMDGPU";
 }
 
+// Convert a wave address to a swizzled vector address (i.e. this is
+// for copying the stack pointer to a vector address appropriate to
+// use in the offset field of mubuf instructions).
+def G_AMDGPU_WAVE_ADDRESS : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 // Returns -1 if the input is zero.
 def G_AMDGPU_FFBH_U32 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
