@@ -295,7 +295,7 @@ class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
 def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
   let arguments = (ins AnyInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment);
-  let results = (outs LLVM_AnyPointer:$res);
+  let results = (outs Res<LLVM_AnyPointer, "", [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
   string llvmBuilder = [{
     auto *inst = builder.CreateAlloca(
       $_resultType->getPointerElementType(), $arraySize);
