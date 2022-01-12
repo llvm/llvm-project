@@ -197,10 +197,7 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Support explicit targets enabled for SiFive with the unrolling preferences
   // below
   bool UseDefaultPreferences = true;
-  if (ST->getTuneCPU().contains("sifive-e76") ||
-      ST->getTuneCPU().contains("sifive-s76") ||
-      ST->getTuneCPU().contains("sifive-u74") ||
-      ST->getTuneCPU().contains("sifive-7"))
+  if (ST->getProcFamily() == RISCVSubtarget::SiFive7)
     UseDefaultPreferences = false;
 
   if (UseDefaultPreferences)
