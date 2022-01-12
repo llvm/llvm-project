@@ -68,9 +68,16 @@ void ExpandPostRA::TransferImplicitOperands(MachineInstr *MI) {
   MachineBasicBlock::iterator CopyMI = MI;
   --CopyMI;
 
-  for (const MachineOperand &MO : MI->implicit_operands())
-    if (MO.isReg())
-      CopyMI->addOperand(MO);
+  Register DstReg = MI->getOperand(0).getReg();
+  for (const MachineOperand &MO : MI->implicit_operands()) {
+    CopyMI->addOperand(MO);
+
+    // Be conservative about preserving kills when subregister defs are
+    // involved. If there was implicit kill of a super-register overlapping the
+    // copy result, we would kill the subregisters previous copies defined.
+    if (MO.isKill() && TRI->regsOverlap(DstReg, MO.getReg()))
+      CopyMI->getOperand(CopyMI->getNumOperands() - 1).setIsKill(false);
+  }
 }
 
 bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
