@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=armv7-none-linux-gnueabi < %s | FileCheck %s
 ; RUN: llc -mtriple=thumbv7-none-linux-gnueabi < %s | FileCheck %s
 ; RUN: llc -mtriple=armv7-none-linux-gnueabi -mattr=-perfmon < %s | FileCheck %s --check-prefix=CHECK-NO-PERFMON
+; RUN: llc -mtriple=armv7m-none-linux-gnueabi < %s | FileCheck %s --check-prefix=CHECK-NO-PERFMON
 ; RUN: llc -mtriple=armv6-none-linux-gnueabi < %s | FileCheck %s --check-prefix=CHECK-NO-PERFMON
 
 ; The performance monitor we're looking for is an ARMv7 extension. It should be
