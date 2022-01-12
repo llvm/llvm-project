@@ -5,6 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a.s -o %t/a.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/a_b.s -o %t/a_b.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %t/b.s -o %t/b.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %t/err.s -o %t/err.o
 # RUN: llvm-ar rc %t/a.a %t/a.o
 # RUN: llvm-ar rc %t/a_b.a %t/a_b.o
 # RUN: llvm-ar rc %t/b.a %t/b.o
@@ -19,6 +20,10 @@
 
 ## Some archive members are extracted.
 # RUN: ld.lld main.o a_b.a b.a -o /dev/null --why-extract=why2.txt
+# RUN: FileCheck %s --input-file=why2.txt --check-prefix=CHECK2 --match-full-lines --strict-whitespace
+
+## A relocation error does not suppress the output.
+# RUN: rm -f why2.txt && not ld.lld main.o a_b.a b.a err.o -o /dev/null --why-extract=why2.txt
 # RUN: FileCheck %s --input-file=why2.txt --check-prefix=CHECK2 --match-full-lines --strict-whitespace
 
 #      CHECK2:reference	extracted	symbol
@@ -84,3 +89,6 @@ _Z1bv:
 
 #--- a.lds
 a = _Z1bv;
+
+#--- err.s
+.reloc ., R_X86_64_RELATIVE, 0
