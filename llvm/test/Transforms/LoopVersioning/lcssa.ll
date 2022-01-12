@@ -58,12 +58,8 @@ define void @fill_no_null_opt(i8** %ls1.20, i8** %ls2.21, i8* %cse3.22) #0 {
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, i8* [[LS1_20_PROMOTED]], i64 -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* [[SCEVGEP3]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8* [[TMP0]], [[SCEVGEP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, i8* [[LS1_20_PROMOTED]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i8* [[TMP2]], [[LS1_20_PROMOTED]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[LVER_SAFE:%.*]] = or i1 [[FOUND_CONFLICT]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[LVER_SAFE]], label %bb1.ph.lver.orig, label %bb1.ph
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %bb1.ph.lver.orig, label %bb1.ph
 ; CHECK:       bb1.ph.lver.orig:
 ;
 bb1.ph:

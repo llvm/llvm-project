@@ -2219,9 +2219,8 @@ public:
 
   Value *CreateICmp(CmpInst::Predicate P, Value *LHS, Value *RHS,
                     const Twine &Name = "") {
-    if (auto *LC = dyn_cast<Constant>(LHS))
-      if (auto *RC = dyn_cast<Constant>(RHS))
-        return Insert(Folder.CreateICmp(P, LC, RC), Name);
+    if (auto *V = Folder.FoldICmp(P, LHS, RHS))
+      return V;
     return Insert(new ICmpInst(P, LHS, RHS), Name);
   }
 
