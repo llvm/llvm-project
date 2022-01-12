@@ -452,9 +452,6 @@ void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
       Record.AddTemplateArgumentLocInfo(TL.getTypePtr()->getArg(I).getKind(),
                                         TL.getArgLocInfo(I));
   }
-  Record.push_back(TL.isDecltypeAuto());
-  if (TL.isDecltypeAuto())
-    Record.AddSourceLocation(TL.getRParenLoc());
 }
 
 void TypeLocWriter::VisitDeducedTemplateSpecializationTypeLoc(

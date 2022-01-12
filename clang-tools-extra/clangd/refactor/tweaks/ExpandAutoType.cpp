@@ -96,7 +96,9 @@ bool ExpandAutoType::prepare(const Selection& Inputs) {
   if (auto *Node = Inputs.ASTSelection.commonAncestor()) {
     if (auto *TypeNode = Node->ASTNode.get<TypeLoc>()) {
       if (const AutoTypeLoc Result = TypeNode->getAs<AutoTypeLoc>()) {
-        if (!isStructuredBindingType(Node) &&
+        // Code in apply() does handle 'decltype(auto)' yet.
+        if (!Result.getTypePtr()->isDecltypeAuto() &&
+            !isStructuredBindingType(Node) &&
             !isDeducedAsLambda(Node, Result.getBeginLoc()) &&
             !isTemplateParam(Node))
           CachedLocation = Result;
