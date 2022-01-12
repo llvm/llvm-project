@@ -3593,9 +3593,16 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (Legalized) {
       // If we expanded the SETCC by swapping LHS and RHS, or by inverting the
       // condition code, create a new SETCC node.
-      if (Tmp3.getNode())
-        Tmp1 = DAG.getNode(ISD::SETCC, dl, Node->getValueType(0),
-                           Tmp1, Tmp2, Tmp3, Node->getFlags());
+      if (Tmp3.getNode()) {
+        if (IsStrict) {
+          Tmp1 = DAG.getNode(Node->getOpcode(), dl, Node->getVTList(),
+                             {Chain, Tmp1, Tmp2, Tmp3}, Node->getFlags());
+          Chain = Tmp1.getValue(1);
+        } else {
+          Tmp1 = DAG.getNode(Node->getOpcode(), dl, Node->getValueType(0), Tmp1,
+                             Tmp2, Tmp3, Node->getFlags());
+        }
+      }
 
       // If we expanded the SETCC by inverting the condition code, then wrap
       // the existing SETCC in a NOT to restore the intended condition.

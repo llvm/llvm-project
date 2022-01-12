@@ -343,6 +343,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
@@ -393,6 +395,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FMUL, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -426,6 +430,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
@@ -8070,6 +8076,42 @@ static bool isSelectPseudo(MachineInstr &MI) {
   }
 }
 
+static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
+                                        unsigned RelOpcode, unsigned EqOpcode,
+                                        const RISCVSubtarget &Subtarget) {
+  DebugLoc DL = MI.getDebugLoc();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Src1Reg = MI.getOperand(1).getReg();
+  Register Src2Reg = MI.getOperand(2).getReg();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  Register SavedFFlags = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+
+  // Save the current FFLAGS.
+  BuildMI(*BB, MI, DL, TII.get(RISCV::ReadFFLAGS), SavedFFlags);
+
+  auto MIB = BuildMI(*BB, MI, DL, TII.get(RelOpcode), DstReg)
+                 .addReg(Src1Reg)
+                 .addReg(Src2Reg);
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
+  // Restore the FFLAGS.
+  BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
+      .addReg(SavedFFlags, RegState::Kill);
+
+  // Issue a dummy FEQ opcode to raise exception for signaling NaNs.
+  auto MIB2 = BuildMI(*BB, MI, DL, TII.get(EqOpcode), RISCV::X0)
+                  .addReg(Src1Reg, getKillRegState(MI.getOperand(1).isKill()))
+                  .addReg(Src2Reg, getKillRegState(MI.getOperand(2).isKill()));
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    MIB2->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
+  // Erase the pseudoinstruction.
+  MI.eraseFromParent();
+  return BB;
+}
+
 static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
                                            MachineBasicBlock *BB,
                                            const RISCVSubtarget &Subtarget) {
@@ -8211,6 +8253,18 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitBuildPairF64Pseudo(MI, BB);
   case RISCV::SplitF64Pseudo:
     return emitSplitF64Pseudo(MI, BB);
+  case RISCV::PseudoQuietFLE_H:
+    return emitQuietFCMP(MI, BB, RISCV::FLE_H, RISCV::FEQ_H, Subtarget);
+  case RISCV::PseudoQuietFLT_H:
+    return emitQuietFCMP(MI, BB, RISCV::FLT_H, RISCV::FEQ_H, Subtarget);
+  case RISCV::PseudoQuietFLE_S:
+    return emitQuietFCMP(MI, BB, RISCV::FLE_S, RISCV::FEQ_S, Subtarget);
+  case RISCV::PseudoQuietFLT_S:
+    return emitQuietFCMP(MI, BB, RISCV::FLT_S, RISCV::FEQ_S, Subtarget);
+  case RISCV::PseudoQuietFLE_D:
+    return emitQuietFCMP(MI, BB, RISCV::FLE_D, RISCV::FEQ_D, Subtarget);
+  case RISCV::PseudoQuietFLT_D:
+    return emitQuietFCMP(MI, BB, RISCV::FLT_D, RISCV::FEQ_D, Subtarget);
   }
 }
 
