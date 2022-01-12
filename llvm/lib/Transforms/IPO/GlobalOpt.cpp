@@ -513,7 +513,6 @@ static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
         ElTy, false, GlobalVariable::InternalLinkage, In,
         GV->getName() + "." + Twine(ElementIdx), GV->getThreadLocalMode(),
         GV->getType()->getAddressSpace());
-    NGV->setExternallyInitialized(GV->isExternallyInitialized());
     NGV->copyAttributesFrom(GV);
     NewGlobals.insert(std::make_pair(ElementIdx, NGV));
 
