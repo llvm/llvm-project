@@ -195,6 +195,7 @@ def Math_CeilOp : Math_FloatUnaryOp<"ceil"> {
     %x = math.ceil %y : tensor<4x?xf8>
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -649,6 +650,7 @@ def Math_Log2Op : Math_FloatUnaryOp<"log2"> {
     %y = math.log2 %x : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
