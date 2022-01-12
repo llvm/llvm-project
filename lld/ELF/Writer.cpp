@@ -385,12 +385,12 @@ template <class ELFT> void elf::createSyntheticSections() {
       add(*part.verNeed);
 
       if (config->gnuHash) {
-        part.gnuHashTab = make<GnuHashTableSection>();
+        part.gnuHashTab = std::make_unique<GnuHashTableSection>();
         add(*part.gnuHashTab);
       }
 
       if (config->sysvHash) {
-        part.hashTab = make<HashTableSection>();
+        part.hashTab = std::make_unique<HashTableSection>();
         add(*part.hashTab);
       }
 
@@ -2091,8 +2091,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : partitions) {
       finalizeSynthetic(part.dynSymTab.get());
-      finalizeSynthetic(part.gnuHashTab);
-      finalizeSynthetic(part.hashTab);
+      finalizeSynthetic(part.gnuHashTab.get());
+      finalizeSynthetic(part.hashTab.get());
       finalizeSynthetic(part.verDef.get());
       finalizeSynthetic(part.relaDyn.get());
       finalizeSynthetic(part.relrDyn.get());
