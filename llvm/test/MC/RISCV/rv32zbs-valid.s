@@ -1,13 +1,13 @@
 # With Bitmanip single bit extension:
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zbs -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zbs -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zbs -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zbs -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zbs < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zbs -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zbs < %s \
+# RUN:     | llvm-objdump --mattr=+zbs -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zbs < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zbs -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zbs < %s \
+# RUN:     | llvm-objdump --mattr=+zbs -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: bclr t0, t1, t2

@@ -47,7 +47,7 @@ define i32 @test5(i32 %a) nounwind {
 }
 
 ; Check that we don't hoist zext.h with 65535 with Zbb.
-define i32 @test6(i32 %a) nounwind "target-features"="+experimental-zbb" {
+define i32 @test6(i32 %a) nounwind "target-features"="+zbb" {
 ; CHECK-LABEL: test6
 ; CHECK: and i32 %a, 65535
   %1 = and i32 %a, 65535
@@ -65,7 +65,7 @@ define i64 @test7(i64 %a) nounwind {
 }
 
 ; Check that we don't hoist zext.w with Zba.
-define i64 @test8(i64 %a) nounwind "target-features"="+experimental-zbb" {
+define i64 @test8(i64 %a) nounwind "target-features"="+zbb" {
 ; CHECK-LABEL: test8
 ; CHECK: and i64 %a, 4294967295
   %1 = and i64 %a, 4294967295

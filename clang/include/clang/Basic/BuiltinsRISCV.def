@@ -16,13 +16,13 @@
 #endif
 
 // Zbb extension
-TARGET_BUILTIN(__builtin_riscv_orc_b_32, "ZiZi", "nc", "experimental-zbb")
-TARGET_BUILTIN(__builtin_riscv_orc_b_64, "WiWi", "nc", "experimental-zbb,64bit")
+TARGET_BUILTIN(__builtin_riscv_orc_b_32, "ZiZi", "nc", "zbb")
+TARGET_BUILTIN(__builtin_riscv_orc_b_64, "WiWi", "nc", "zbb,64bit")
 
 // Zbc extension
-TARGET_BUILTIN(__builtin_riscv_clmul, "LiLiLi", "nc", "experimental-zbc")
-TARGET_BUILTIN(__builtin_riscv_clmulh, "LiLiLi", "nc", "experimental-zbc")
-TARGET_BUILTIN(__builtin_riscv_clmulr, "LiLiLi", "nc", "experimental-zbc")
+TARGET_BUILTIN(__builtin_riscv_clmul, "LiLiLi", "nc", "zbc")
+TARGET_BUILTIN(__builtin_riscv_clmulh, "LiLiLi", "nc", "zbc")
+TARGET_BUILTIN(__builtin_riscv_clmulr, "LiLiLi", "nc", "zbc")
 
 // Zbe extension
 TARGET_BUILTIN(__builtin_riscv_bcompress_32, "ZiZiZi", "nc", "experimental-zbe")

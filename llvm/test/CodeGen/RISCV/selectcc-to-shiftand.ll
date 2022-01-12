@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32,RV32I
 ; RUN: llc < %s -mtriple=riscv64 \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,RV64I
-; RUN: llc < %s -mtriple=riscv32 -mattr=+experimental-zbb \
+; RUN: llc < %s -mtriple=riscv32 -mattr=+zbb \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32,RV32ZBB
-; RUN: llc < %s -mtriple=riscv64 -mattr=+experimental-zbb \
+; RUN: llc < %s -mtriple=riscv64 -mattr=+zbb \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64,RV64ZBB
 
 ; Compare if negative and select of constants where one constant is zero.

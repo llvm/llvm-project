@@ -1,12 +1,12 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zbs -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zbs -riscv-no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zbs \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zbs \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zbs < %s \
-# RUN:     | llvm-objdump -d -r -M no-aliases --mattr=+experimental-zbs - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zbs < %s \
+# RUN:     | llvm-objdump -d -r -M no-aliases --mattr=+zbs - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-zbs < %s \
-# RUN:     | llvm-objdump -d -r --mattr=+experimental-zbs - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+zbs < %s \
+# RUN:     | llvm-objdump -d -r --mattr=+zbs - \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
 
 # The following check prefixes are used in this test:

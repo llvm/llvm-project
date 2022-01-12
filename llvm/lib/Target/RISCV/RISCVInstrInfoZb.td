@@ -18,8 +18,10 @@
 //   Zbp - 0.93
 //   Zbr - 0.93
 //   Zbt - 0.93
-// This version is still experimental as the Bitmanip extensions haven't been
-// ratified yet.
+//
+// Zba, Zbb, Zbc, and Zbs have been ratified and are considered stable. The
+// other extensions are experimental as they have not yet been ratiied and are
+// subject to change.
 //
 //===----------------------------------------------------------------------===//
 
