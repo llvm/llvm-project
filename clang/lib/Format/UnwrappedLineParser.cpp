@@ -58,7 +58,7 @@ namespace {
 
 class ScopedDeclarationState {
 public:
-  ScopedDeclarationState(UnwrappedLine &Line, std::vector<bool> &Stack,
+  ScopedDeclarationState(UnwrappedLine &Line, llvm::BitVector &Stack,
                          bool MustBeDeclaration)
       : Line(Line), Stack(Stack) {
     Line.MustBeDeclaration = MustBeDeclaration;
@@ -74,7 +74,7 @@ public:
 
 private:
   UnwrappedLine &Line;
-  std::vector<bool> &Stack;
+  llvm::BitVector &Stack;
 };
 
 static bool isLineComment(const FormatToken &FormatTok) {

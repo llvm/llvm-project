@@ -462,6 +462,12 @@ public:
     return getPointer()->operator[](Idx);
   }
 
+  /// Return the last element in the vector.
+  bool back() const {
+    assert(!empty() && "Getting last element of empty vector.");
+    return (*this)[size() - 1];
+  }
+
   bool test(unsigned Idx) const {
     return (*this)[Idx];
   }
@@ -469,6 +475,12 @@ public:
   // Push single bit to end of vector.
   void push_back(bool Val) {
     resize(size() + 1, Val);
+  }
+
+  /// Pop one bit from the end of the vector.
+  void pop_back() {
+    assert(!empty() && "Empty vector has no element to pop.");
+    resize(size() - 1);
   }
 
   /// Test if any common bits are set.

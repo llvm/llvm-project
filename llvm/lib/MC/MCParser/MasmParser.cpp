@@ -13,6 +13,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -379,7 +380,7 @@ private:
   /// time of assembly
   struct tm TM;
 
-  std::vector<bool> EndStatementAtEOFStack;
+  BitVector EndStatementAtEOFStack;
 
   AsmCond TheCondState;
   std::vector<AsmCond> TheCondStack;

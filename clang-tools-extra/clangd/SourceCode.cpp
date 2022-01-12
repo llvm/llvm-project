@@ -27,6 +27,7 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -663,7 +664,7 @@ void parseNamespaceEvents(llvm::StringRef Code, const LangOptions &LangOpts,
   // Stack of enclosing namespaces, e.g. {"clang", "clangd"}
   std::vector<std::string> Enclosing; // Contains e.g. "clang", "clangd"
   // Stack counts open braces. true if the brace opened a namespace.
-  std::vector<bool> BraceStack;
+  llvm::BitVector BraceStack;
 
   enum {
     Default,
