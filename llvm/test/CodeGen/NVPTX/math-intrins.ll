@@ -1,4 +1,6 @@
-; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOF16
+; RUN: llc < %s -mcpu=sm_80 | FileCheck %s --check-prefixes=CHECK,CHECK-F16
+; RUN: llc < %s -mcpu=sm_80 --nvptx-no-f16-math | FileCheck %s --check-prefixes=CHECK,CHECK-NOF16
 target triple = "nvptx64-nvidia-cuda"
 
 ; Checks that llvm intrinsics for math functions are correctly lowered to PTX.
@@ -17,10 +19,14 @@ declare float @llvm.trunc.f32(float) #0
 declare double @llvm.trunc.f64(double) #0
 declare float @llvm.fabs.f32(float) #0
 declare double @llvm.fabs.f64(double) #0
+declare half @llvm.minnum.f16(half, half) #0
 declare float @llvm.minnum.f32(float, float) #0
 declare double @llvm.minnum.f64(double, double) #0
+declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #0
+declare half @llvm.maxnum.f16(half, half) #0
 declare float @llvm.maxnum.f32(float, float) #0
 declare double @llvm.maxnum.f64(double, double) #0
+declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #0
 declare float @llvm.fma.f32(float, float, float) #0
 declare double @llvm.fma.f64(double, double, double) #0
 
@@ -193,6 +199,14 @@ define double @abs_double(double %a) {
 
 ; ---- min ----
 
+; CHECK-LABEL: min_half
+define half @min_half(half %a, half %b) {
+  ; CHECK-NOF16: min.f32
+  ; CHECK-F16: min.f16
+  %x = call half @llvm.minnum.f16(half %a, half %b)
+  ret half %x
+}
+
 ; CHECK-LABEL: min_float
 define float @min_float(float %a, float %b) {
   ; CHECK: min.f32
@@ -228,7 +242,24 @@ define double @min_double(double %a, double %b) {
   ret double %x
 }
 
+; CHECK-LABEL: min_v2half
+define <2 x half> @min_v2half(<2 x half> %a, <2 x half> %b) {
+  ; CHECK-NOF16: min.f32
+  ; CHECK-NOF16: min.f32
+  ; CHECK-F16: min.f16x2
+  %x = call <2 x half> @llvm.minnum.v2f16(<2 x half> %a, <2 x half> %b)
+  ret <2 x half> %x
+}
+
 ; ---- max ----
+
+; CHECK-LABEL: max_half
+define half @max_half(half %a, half %b) {
+  ; CHECK-NOF16: max.f32
+  ; CHECK-F16: max.f16
+  %x = call half @llvm.maxnum.f16(half %a, half %b)
+  ret half %x
+}
 
 ; CHECK-LABEL: max_imm1
 define float @max_imm1(float %a) {
@@ -263,6 +294,15 @@ define double @max_double(double %a, double %b) {
   ; CHECK: max.f64
   %x = call double @llvm.maxnum.f64(double %a, double %b)
   ret double %x
+}
+
+; CHECK-LABEL: max_v2half
+define <2 x half> @max_v2half(<2 x half> %a, <2 x half> %b) {
+  ; CHECK-NOF16: max.f32
+  ; CHECK-NOF16: max.f32
+  ; CHECK-F16: max.f16x2
+  %x = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
+  ret <2 x half> %x
 }
 
 ; ---- fma ----
