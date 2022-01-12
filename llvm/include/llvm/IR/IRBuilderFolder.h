@@ -35,6 +35,9 @@ public:
                          bool HasNSW = false) const = 0;
   virtual Value *FoldOr(Value *LHS, Value *RHS) const = 0;
 
+  virtual Value *FoldICmp(CmpInst::Predicate P, Value *LHS,
+                          Value *RHS) const = 0;
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -121,8 +124,6 @@ public:
   // Compare Instructions
   //===--------------------------------------------------------------------===//
 
-  virtual Value *CreateICmp(CmpInst::Predicate P, Constant *LHS,
-                            Constant *RHS) const = 0;
   virtual Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                             Constant *RHS) const = 0;
 

@@ -9,6 +9,8 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_1
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -62,7 +64,8 @@ define void @sink_replicate_region_1(i32 %x, i8* %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1.split:
 ; CHECK-NEXT:   WIDEN ir<%add> = add ir<%conv>, vp<[[PRED2]]>
-; CHECK-NEXT:   EMIT vp<{{.+}}> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
@@ -90,6 +93,8 @@ exit:
 define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_2
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -128,7 +133,8 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-NEXT: Successor(s): loop.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.1:
-; CHECK-NEXT:   EMIT vp<{{.+}}> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
@@ -156,6 +162,8 @@ exit:
 define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, i32* %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_3_reduction
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -191,8 +199,9 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, i32* %ptr) optsize 
 ; CHECK-NEXT: loop.0.split:
 ; CHECK-NEXT:   WIDEN ir<%add> = add vp<[[PRED]]>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN ir<%and.red.next> = and ir<%and.red>, ir<%add>
-; CHECK-NEXT:   EMIT vp<{{.+}}> = VF * UF + vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[SEL:%.+]]> = select vp<[[MASK]]> ir<%and.red.next> ir<%and.red>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
@@ -223,6 +232,8 @@ exit:
 define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* %ptr) optsize {
 ; CHECK-LABEL: sink_replicate_region_4_requires_split_at_end_of_block
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -282,7 +293,8 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT:   WIDEN ir<%add.1> = add ir<%conv>, vp<[[PRED1]]>
 ; CHECK-NEXT:   WIDEN ir<%conv.lv.2> = sext vp<[[PRED2]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
-; CHECK-NEXT:   EMIT vp<{{.+}}> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
@@ -314,6 +326,8 @@ exit:
 define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 %y) optsize {
 ; CHECK-LABEL: sink_replicate_region_after_replicate_region
 ; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
+; CHECK-EMPTY:
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -370,7 +384,8 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 
 ; CHECK-NEXT: Successor(s): loop.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT: loop.2:
-; CHECK-NEXT:   EMIT vp<{{.+}}> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + vp<[[CAN_IV]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: No successors
