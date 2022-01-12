@@ -53,6 +53,7 @@ public:
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
   virtual InputSection *canonical() { return this; }
+  virtual const InputSection *canonical() const { return this; }
 
   OutputSection *parent = nullptr;
 
@@ -122,6 +123,9 @@ public:
 
   void foldIdentical(ConcatInputSection *redundant);
   ConcatInputSection *canonical() override {
+    return replacement ? replacement : this;
+  }
+  const InputSection *canonical() const override {
     return replacement ? replacement : this;
   }
 

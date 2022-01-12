@@ -65,6 +65,16 @@ struct Section {
   Section(uint64_t addr) : address(addr){};
 };
 
+// Represents a call graph profile edge.
+struct CallGraphEntry {
+  // The index of the caller in the symbol table.
+  uint32_t fromIndex;
+  // The index of the callee in the symbol table.
+  uint32_t toIndex;
+  // Number of calls from callee to caller in the profile.
+  uint64_t count;
+};
+
 class InputFile {
 public:
   enum Kind {
@@ -115,6 +125,7 @@ public:
   llvm::DWARFUnit *compileUnit = nullptr;
   const uint32_t modTime;
   std::vector<ConcatInputSection *> debugSections;
+  std::vector<CallGraphEntry> callGraph;
 
 private:
   Section *compactUnwindSection = nullptr;
