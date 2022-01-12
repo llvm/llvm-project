@@ -65,7 +65,7 @@ def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
                            "'C' (Compressed Instructions)">;
 
 def FeatureStdExtZba
-    : SubtargetFeature<"experimental-zba", "HasStdExtZba", "true",
+    : SubtargetFeature<"zba", "HasStdExtZba", "true",
                        "'Zba' (Address calculation 'B' Instructions)">;
 def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
                              AssemblerPredicate<(all_of FeatureStdExtZba),
@@ -73,14 +73,14 @@ def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
 def NotHasStdExtZba : Predicate<"!Subtarget->hasStdExtZba()">;
 
 def FeatureStdExtZbb
-    : SubtargetFeature<"experimental-zbb", "HasStdExtZbb", "true",
+    : SubtargetFeature<"zbb", "HasStdExtZbb", "true",
                        "'Zbb' (Base 'B' Instructions)">;
 def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbb),
                              "'Zbb' (Base 'B' Instructions)">;
 
 def FeatureStdExtZbc
-    : SubtargetFeature<"experimental-zbc", "HasStdExtZbc", "true",
+    : SubtargetFeature<"zbc", "HasStdExtZbc", "true",
                        "'Zbc' (Carry-Less 'B' Instructions)">;
 def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbc),
@@ -122,7 +122,7 @@ def HasStdExtZbr : Predicate<"Subtarget->hasStdExtZbr()">,
                              "'Zbr' (Polynomial Reduction 'B' Instructions)">;
 
 def FeatureStdExtZbs
-    : SubtargetFeature<"experimental-zbs", "HasStdExtZbs", "true",
+    : SubtargetFeature<"zbs", "HasStdExtZbs", "true",
                        "'Zbs' (Single-Bit 'B' Instructions)">;
 def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbs),
