@@ -1464,9 +1464,9 @@ DynamicSection<ELFT>::computeContents() {
   addInt(DT_STRSZ, part.dynStrTab->getSize());
   if (!config->zText)
     addInt(DT_TEXTREL, 0);
-  if (part.gnuHashTab)
+  if (part.gnuHashTab && part.gnuHashTab->getParent())
     addInSec(DT_GNU_HASH, *part.gnuHashTab);
-  if (part.hashTab)
+  if (part.hashTab && part.hashTab->getParent())
     addInSec(DT_HASH, *part.hashTab);
 
   if (isMain) {
