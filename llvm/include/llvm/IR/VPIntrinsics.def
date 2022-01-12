@@ -349,6 +349,10 @@ BEGIN_REGISTER_VP(vp_select, 0, 3, VP_SELECT, -1)
 VP_PROPERTY_FUNCTIONAL_OPC(Select)
 END_REGISTER_VP(vp_select, VP_SELECT)
 
+// llvm.vp.merge(mask,on_true,on_false,pivot)
+BEGIN_REGISTER_VP(vp_merge, 0, 3, VP_MERGE, -1)
+END_REGISTER_VP(vp_merge, VP_MERGE)
+
 BEGIN_REGISTER_VP(experimental_vp_splice, 3, 5, EXPERIMENTAL_VP_SPLICE, -1)
 END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)
 
