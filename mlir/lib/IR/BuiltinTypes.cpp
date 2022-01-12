@@ -33,12 +33,6 @@ using namespace mlir::detail;
 #include "mlir/IR/BuiltinTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-/// Tablegen Interface Definitions
-//===----------------------------------------------------------------------===//
-
-#include "mlir/IR/BuiltinTypeInterfaces.cpp.inc"
-
-//===----------------------------------------------------------------------===//
 // BuiltinDialect
 //===----------------------------------------------------------------------===//
 
@@ -272,171 +266,6 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
-// ShapedType
-//===----------------------------------------------------------------------===//
-constexpr int64_t ShapedType::kDynamicSize;
-constexpr int64_t ShapedType::kDynamicStrideOrOffset;
-
-ShapedType ShapedType::clone(ArrayRef<int64_t> shape, Type elementType) {
-  if (auto other = dyn_cast<MemRefType>()) {
-    MemRefType::Builder b(other);
-    b.setShape(shape);
-    b.setElementType(elementType);
-    return b;
-  }
-
-  if (auto other = dyn_cast<UnrankedMemRefType>()) {
-    MemRefType::Builder b(shape, elementType);
-    b.setMemorySpace(other.getMemorySpace());
-    return b;
-  }
-
-  if (isa<TensorType>())
-    return RankedTensorType::get(shape, elementType);
-
-  if (auto vecTy = dyn_cast<VectorType>())
-    return VectorType::get(shape, elementType, vecTy.getNumScalableDims());
-
-  llvm_unreachable("Unhandled ShapedType clone case");
-}
-
-ShapedType ShapedType::clone(ArrayRef<int64_t> shape) {
-  if (auto other = dyn_cast<MemRefType>()) {
-    MemRefType::Builder b(other);
-    b.setShape(shape);
-    return b;
-  }
-
-  if (auto other = dyn_cast<UnrankedMemRefType>()) {
-    MemRefType::Builder b(shape, other.getElementType());
-    b.setShape(shape);
-    b.setMemorySpace(other.getMemorySpace());
-    return b;
-  }
-
-  if (isa<TensorType>())
-    return RankedTensorType::get(shape, getElementType());
-
-  if (auto vecTy = dyn_cast<VectorType>())
-    return VectorType::get(shape, getElementType(), vecTy.getNumScalableDims());
-
-  llvm_unreachable("Unhandled ShapedType clone case");
-}
-
-ShapedType ShapedType::clone(Type elementType) {
-  if (auto other = dyn_cast<MemRefType>()) {
-    MemRefType::Builder b(other);
-    b.setElementType(elementType);
-    return b;
-  }
-
-  if (auto other = dyn_cast<UnrankedMemRefType>()) {
-    return UnrankedMemRefType::get(elementType, other.getMemorySpace());
-  }
-
-  if (isa<TensorType>()) {
-    if (hasRank())
-      return RankedTensorType::get(getShape(), elementType);
-    return UnrankedTensorType::get(elementType);
-  }
-
-  if (auto vecTy = dyn_cast<VectorType>())
-    return VectorType::get(getShape(), elementType, vecTy.getNumScalableDims());
-
-  llvm_unreachable("Unhandled ShapedType clone hit");
-}
-
-Type ShapedType::getElementType() const {
-  return TypeSwitch<Type, Type>(*this)
-      .Case<VectorType, RankedTensorType, UnrankedTensorType, MemRefType,
-            UnrankedMemRefType>([](auto ty) { return ty.getElementType(); });
-}
-
-unsigned ShapedType::getElementTypeBitWidth() const {
-  return getElementType().getIntOrFloatBitWidth();
-}
-
-int64_t ShapedType::getNumElements() const {
-  assert(hasStaticShape() && "cannot get element count of dynamic shaped type");
-  auto shape = getShape();
-  int64_t num = 1;
-  for (auto dim : shape) {
-    num *= dim;
-    assert(num >= 0 && "integer overflow in element count computation");
-  }
-  return num;
-}
-
-int64_t ShapedType::getRank() const {
-  assert(hasRank() && "cannot query rank of unranked shaped type");
-  return getShape().size();
-}
-
-bool ShapedType::hasRank() const {
-  return !isa<UnrankedMemRefType, UnrankedTensorType>();
-}
-
-int64_t ShapedType::getDimSize(unsigned idx) const {
-  assert(idx < getRank() && "invalid index for shaped type");
-  return getShape()[idx];
-}
-
-bool ShapedType::isDynamicDim(unsigned idx) const {
-  assert(idx < getRank() && "invalid index for shaped type");
-  return isDynamic(getShape()[idx]);
-}
-
-unsigned ShapedType::getDynamicDimIndex(unsigned index) const {
-  assert(index < getRank() && "invalid index");
-  assert(ShapedType::isDynamic(getDimSize(index)) && "invalid index");
-  return llvm::count_if(getShape().take_front(index), ShapedType::isDynamic);
-}
-
-/// Get the number of bits require to store a value of the given shaped type.
-/// Compute the value recursively since tensors are allowed to have vectors as
-/// elements.
-int64_t ShapedType::getSizeInBits() const {
-  assert(hasStaticShape() &&
-         "cannot get the bit size of an aggregate with a dynamic shape");
-
-  auto elementType = getElementType();
-  if (elementType.isIntOrFloat())
-    return elementType.getIntOrFloatBitWidth() * getNumElements();
-
-  if (auto complexType = elementType.dyn_cast<ComplexType>()) {
-    elementType = complexType.getElementType();
-    return elementType.getIntOrFloatBitWidth() * getNumElements() * 2;
-  }
-
-  // Tensors can have vectors and other tensors as elements, other shaped types
-  // cannot.
-  assert(isa<TensorType>() && "unsupported element type");
-  assert((elementType.isa<VectorType, TensorType>()) &&
-         "unsupported tensor element type");
-  return getNumElements() * elementType.cast<ShapedType>().getSizeInBits();
-}
-
-ArrayRef<int64_t> ShapedType::getShape() const {
-  if (auto vectorType = dyn_cast<VectorType>())
-    return vectorType.getShape();
-  if (auto tensorType = dyn_cast<RankedTensorType>())
-    return tensorType.getShape();
-  return cast<MemRefType>().getShape();
-}
-
-int64_t ShapedType::getNumDynamicDims() const {
-  return llvm::count_if(getShape(), isDynamic);
-}
-
-bool ShapedType::hasStaticShape() const {
-  return hasRank() && llvm::none_of(getShape(), isDynamic);
-}
-
-bool ShapedType::hasStaticShape(ArrayRef<int64_t> shape) const {
-  return hasStaticShape() && getShape() == shape;
-}
-
-//===----------------------------------------------------------------------===//
 // VectorType
 //===----------------------------------------------------------------------===//
 
@@ -474,9 +303,43 @@ void VectorType::walkImmediateSubElements(
   walkTypesFn(getElementType());
 }
 
+VectorType VectorType::cloneWith(Optional<ArrayRef<int64_t>> shape,
+                                 Type elementType) {
+  return VectorType::get(shape.getValueOr(getShape()), elementType,
+                         getNumScalableDims());
+}
+
 //===----------------------------------------------------------------------===//
 // TensorType
 //===----------------------------------------------------------------------===//
+
+Type TensorType::getElementType() const {
+  return llvm::TypeSwitch<TensorType, Type>(*this)
+      .Case<RankedTensorType, UnrankedTensorType>(
+          [](auto type) { return type.getElementType(); });
+}
+
+bool TensorType::hasRank() const { return !isa<UnrankedTensorType>(); }
+
+ArrayRef<int64_t> TensorType::getShape() const {
+  return cast<RankedTensorType>().getShape();
+}
+
+TensorType TensorType::cloneWith(Optional<ArrayRef<int64_t>> shape,
+                                 Type elementType) const {
+  if (auto unrankedTy = dyn_cast<UnrankedTensorType>()) {
+    if (shape)
+      return RankedTensorType::get(*shape, elementType);
+    return UnrankedTensorType::get(elementType);
+  }
+
+  auto rankedTy = cast<RankedTensorType>();
+  if (!shape)
+    return RankedTensorType::get(rankedTy.getShape(), elementType,
+                                 rankedTy.getEncoding());
+  return RankedTensorType::get(shape.getValueOr(rankedTy.getShape()),
+                               elementType, rankedTy.getEncoding());
+}
 
 // Check if "elementType" can be an element type of a tensor.
 static LogicalResult
@@ -541,6 +404,35 @@ void UnrankedTensorType::walkImmediateSubElements(
 //===----------------------------------------------------------------------===//
 // BaseMemRefType
 //===----------------------------------------------------------------------===//
+
+Type BaseMemRefType::getElementType() const {
+  return llvm::TypeSwitch<BaseMemRefType, Type>(*this)
+      .Case<MemRefType, UnrankedMemRefType>(
+          [](auto type) { return type.getElementType(); });
+}
+
+bool BaseMemRefType::hasRank() const { return !isa<UnrankedMemRefType>(); }
+
+ArrayRef<int64_t> BaseMemRefType::getShape() const {
+  return cast<MemRefType>().getShape();
+}
+
+BaseMemRefType BaseMemRefType::cloneWith(Optional<ArrayRef<int64_t>> shape,
+                                         Type elementType) const {
+  if (auto unrankedTy = dyn_cast<UnrankedMemRefType>()) {
+    if (!shape)
+      return UnrankedMemRefType::get(elementType, getMemorySpace());
+    MemRefType::Builder builder(*shape, elementType);
+    builder.setMemorySpace(getMemorySpace());
+    return builder;
+  }
+
+  MemRefType::Builder builder(cast<MemRefType>());
+  if (shape)
+    builder.setShape(*shape);
+  builder.setElementType(elementType);
+  return builder;
+}
 
 Attribute BaseMemRefType::getMemorySpace() const {
   if (auto rankedMemRefTy = dyn_cast<MemRefType>())

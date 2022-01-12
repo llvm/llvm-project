@@ -342,22 +342,22 @@ bool CastOp::canFoldIntoConsumerOp(CastOp castOp) {
   for (auto it : llvm::zip(sourceType.getShape(), resultType.getShape())) {
     auto ss = std::get<0>(it), st = std::get<1>(it);
     if (ss != st)
-      if (MemRefType::isDynamic(ss) && !MemRefType::isDynamic(st))
+      if (ShapedType::isDynamic(ss) && !ShapedType::isDynamic(st))
         return false;
   }
 
   // If cast is towards more static offset along any dimension, don't fold.
   if (sourceOffset != resultOffset)
-    if (MemRefType::isDynamicStrideOrOffset(sourceOffset) &&
-        !MemRefType::isDynamicStrideOrOffset(resultOffset))
+    if (ShapedType::isDynamicStrideOrOffset(sourceOffset) &&
+        !ShapedType::isDynamicStrideOrOffset(resultOffset))
       return false;
 
   // If cast is towards more static strides along any dimension, don't fold.
   for (auto it : llvm::zip(sourceStrides, resultStrides)) {
     auto ss = std::get<0>(it), st = std::get<1>(it);
     if (ss != st)
-      if (MemRefType::isDynamicStrideOrOffset(ss) &&
-          !MemRefType::isDynamicStrideOrOffset(st))
+      if (ShapedType::isDynamicStrideOrOffset(ss) &&
+          !ShapedType::isDynamicStrideOrOffset(st))
         return false;
   }
 
