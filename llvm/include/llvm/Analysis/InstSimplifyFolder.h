@@ -33,13 +33,13 @@ namespace llvm {
 /// values. Also applies target-specific constant folding when not using
 /// InstructionSimplify.
 class InstSimplifyFolder final : public IRBuilderFolder {
-  const DataLayout &DL;
   TargetFolder ConstFolder;
+  SimplifyQuery SQ;
 
   virtual void anchor();
 
 public:
-  InstSimplifyFolder(const DataLayout &DL) : DL(DL), ConstFolder(DL) {}
+  InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
 
   //===--------------------------------------------------------------------===//
   // Value-based folders.
@@ -47,18 +47,19 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
+  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
+                 bool HasNSW = false) const override {
+    return SimplifyAddInst(LHS, RHS, HasNUW, HasNSW, SQ);
+  }
+
   Value *FoldOr(Value *LHS, Value *RHS) const override {
-    return SimplifyOrInst(LHS, RHS, SimplifyQuery(DL));
+    return SimplifyOrInst(LHS, RHS, SQ);
   }
 
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
-  Value *CreateAdd(Constant *LHS, Constant *RHS, bool HasNUW = false,
-                   bool HasNSW = false) const override {
-    return ConstFolder.CreateAdd(LHS, RHS, HasNUW, HasNSW);
-  }
   Value *CreateFAdd(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateFAdd(LHS, RHS);
   }

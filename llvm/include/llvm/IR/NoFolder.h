@@ -43,20 +43,16 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
+  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
+                 bool HasNSW = false) const override {
+    return nullptr;
+  }
+
   Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
 
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
-
-  Instruction *CreateAdd(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateAdd(LHS, RHS);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
 
   Instruction *CreateFAdd(Constant *LHS, Constant *RHS) const override {
     return BinaryOperator::CreateFAdd(LHS, RHS);

@@ -37,6 +37,15 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
+  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
+                 bool HasNSW = false) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getAdd(LC, RC, HasNUW, HasNSW);
+    return nullptr;
+  }
+
   Value *FoldOr(Value *LHS, Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
@@ -48,11 +57,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
-
-  Constant *CreateAdd(Constant *LHS, Constant *RHS,
-                      bool HasNUW = false, bool HasNSW = false) const override {
-    return ConstantExpr::getAdd(LHS, RHS, HasNUW, HasNSW);
-  }
 
   Constant *CreateFAdd(Constant *LHS, Constant *RHS) const override {
     return ConstantExpr::getFAdd(LHS, RHS);
