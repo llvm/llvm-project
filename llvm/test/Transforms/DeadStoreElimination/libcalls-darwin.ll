@@ -10,9 +10,7 @@ declare void @memset_pattern16(i8*, i8*, i64)
 define void @test_memset_pattern4_const_size(i8* noalias %a, i8* noalias %pattern) {
 ; CHECK-LABEL: @test_memset_pattern4_const_size(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_GEP_1:%.*]] = getelementptr i8, i8* [[A:%.*]], i32 1
-; CHECK-NEXT:    store i8 0, i8* [[A_GEP_1]], align 1
-; CHECK-NEXT:    [[A_GEP_17:%.*]] = getelementptr i8, i8* [[A]], i32 17
+; CHECK-NEXT:    [[A_GEP_17:%.*]] = getelementptr i8, i8* [[A:%.*]], i32 17
 ; CHECK-NEXT:    store i8 1, i8* [[A_GEP_17]], align 1
 ; CHECK-NEXT:    call void @memset_pattern4(i8* [[A]], i8* [[PATTERN:%.*]], i64 17)
 ; CHECK-NEXT:    ret void
@@ -48,9 +46,7 @@ entry:
 define void @test_memset_pattern8_const_size(i8* noalias %a, i8* noalias %pattern) {
 ; CHECK-LABEL: @test_memset_pattern8_const_size(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_GEP_1:%.*]] = getelementptr i8, i8* [[A:%.*]], i32 1
-; CHECK-NEXT:    store i8 0, i8* [[A_GEP_1]], align 1
-; CHECK-NEXT:    [[A_GEP_17:%.*]] = getelementptr i8, i8* [[A]], i32 17
+; CHECK-NEXT:    [[A_GEP_17:%.*]] = getelementptr i8, i8* [[A:%.*]], i32 17
 ; CHECK-NEXT:    store i8 1, i8* [[A_GEP_17]], align 1
 ; CHECK-NEXT:    call void @memset_pattern8(i8* [[A]], i8* [[PATTERN:%.*]], i64 17)
 ; CHECK-NEXT:    ret void
@@ -86,9 +82,7 @@ entry:
 define void @test_memset_pattern16_const_size(i8* noalias %a, i8* noalias %pattern) {
 ; CHECK-LABEL: @test_memset_pattern16_const_size(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_GEP_1:%.*]] = getelementptr i8, i8* [[A:%.*]], i32 1
-; CHECK-NEXT:    store i8 0, i8* [[A_GEP_1]], align 1
-; CHECK-NEXT:    [[A_GEP_17:%.*]] = getelementptr i8, i8* [[A]], i32 17
+; CHECK-NEXT:    [[A_GEP_17:%.*]] = getelementptr i8, i8* [[A:%.*]], i32 17
 ; CHECK-NEXT:    store i8 1, i8* [[A_GEP_17]], align 1
 ; CHECK-NEXT:    call void @memset_pattern16(i8* [[A]], i8* [[PATTERN:%.*]], i64 17)
 ; CHECK-NEXT:    ret void

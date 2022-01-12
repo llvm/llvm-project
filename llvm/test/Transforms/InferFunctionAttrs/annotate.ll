@@ -1055,11 +1055,11 @@ declare i64 @write(i32, i8*, i64)
 
 
 ; memset_pattern{4,8,16} aren't available everywhere.
-; CHECK-DARWIN: declare void @memset_pattern4(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE:#[0-9]+]]
+; CHECK-DARWIN: declare void @memset_pattern4(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare void @memset_pattern4(i8*, i8*, i64)
-; CHECK-DARWIN: declare void @memset_pattern8(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE]]
+; CHECK-DARWIN: declare void @memset_pattern8(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare void @memset_pattern8(i8*, i8*, i64)
-; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE]]
+; CHECK-DARWIN: declare void @memset_pattern16(i8* nocapture writeonly, i8* nocapture readonly, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare void @memset_pattern16(i8*, i8*, i64)
 
 
@@ -1077,5 +1077,4 @@ declare void @memset_pattern16(i8*, i8*, i64)
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN]]  = { inaccessiblemem_or_argmemonly mustprogress nofree nounwind willreturn }
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { argmemonly nofree nounwind }
 
-; CHECK-DARWIN-DAG: attributes [[ARGMEMONLY_NOFREE]] = { argmemonly nofree }
 ; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind readnone }
