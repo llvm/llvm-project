@@ -99,7 +99,7 @@ static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
   std::optional<SubscriptValue> value;
   std::optional<char32_t> ch{io.GetCurrentChar()};
   bool negate{ch && *ch == '-'};
-  if (negate) {
+  if ((ch && *ch == '+') || negate) {
     io.HandleRelativePosition(1);
     ch = io.GetCurrentChar();
   }
