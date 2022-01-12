@@ -162,7 +162,7 @@ static const std::vector<TensorSpec> InputFeatures{
 #undef _DECL_FEATURES
 static const TensorSpec Output =
     TensorSpec::createSpec<int64_t>(DecisionName, {1});
-static const TensorSpec Reward = TensorSpec::createSpec<int64_t>("reward", {1});
+static const TensorSpec Reward = TensorSpec::createSpec<float>("reward", {1});
 
 #endif //#ifdef LLVM_HAVE_TF_API
 } // namespace
