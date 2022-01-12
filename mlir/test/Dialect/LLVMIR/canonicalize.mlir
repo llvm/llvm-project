@@ -122,3 +122,11 @@ llvm.func @addr_dce(%x : !llvm.ptr<i8>) {
   %0 = llvm.mlir.addressof @fp : !llvm.ptr<ptr<i8>>
   llvm.return 
 }
+
+// CHECK-LABEL: alloca_dce
+// CHECK-NEXT: llvm.return
+llvm.func @alloca_dce() {
+  %c1_i64 = arith.constant 1 : i64
+  %0 = llvm.alloca %c1_i64 x i32 : (i64) -> !llvm.ptr<i32>
+  llvm.return 
+}
