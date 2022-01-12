@@ -51,4 +51,4 @@ _main:
 # CHECK-NEXT: 0x[[#MAIN]]      [  1]  _main
 # CHECK-NEXT: 0x[[#FOO]]       [  2]  _foo
 
-# MAPFILE: "name":"Write map file"
+# MAPFILE: "name":"Total Write map file"
