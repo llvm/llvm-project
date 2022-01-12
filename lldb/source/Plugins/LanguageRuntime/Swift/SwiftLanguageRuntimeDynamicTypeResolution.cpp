@@ -279,8 +279,6 @@ public:
       return false;
 
     // Class object.
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "found RecordTypeInfo for instance");
     while (md_ptr && *md_ptr) {
       // Reading metadata is potentially expensive since (in a remote
       // debugging scenario it may even incur network traffic) so we
@@ -1000,8 +998,6 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
   if (auto *ti = llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(
           GetSwiftRuntimeTypeInfo(instance_type, frame))) {
     auto fields = ti->getFields();
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "using record type info");
 
     // Handle tuples.
     if (ti->getRecordKind() == swift::reflection::RecordKind::Tuple) {
@@ -1022,7 +1018,6 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
   }
 
   // Try the instance type metadata.
-  bool did_log = false;
   llvm::Optional<uint64_t> result;
   if (!instance)
     return result;
@@ -1030,12 +1025,6 @@ llvm::Optional<uint64_t> SwiftLanguageRuntimeImpl::GetMemberVariableOffsetRemote
     auto *ti = super_class.get_record_type_info();
     if (!ti)
       return false;
-
-    if (!did_log) {
-      did_log = true;
-      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-                "using instance type info");
-    }
 
     for (auto &field : ti->getFields())
       if (StringRef(field.Name) == member_name) {
@@ -1490,8 +1479,6 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   if (auto *rti =
           llvm::dyn_cast_or_null<swift::reflection::RecordTypeInfo>(ti)) {
     auto fields = rti->getFields();
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "using record type info");
 
     // Handle tuples.
     if (idx > rti->getNumFields())
@@ -1597,9 +1584,6 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
                 type.GetTypeName().AsCString());
       return {};
     }
-
-    LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-              "using instance type info");
 
     switch (rti->getReferenceKind()) {
     case swift::reflection::ReferenceKind::Weak:
