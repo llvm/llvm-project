@@ -820,8 +820,8 @@ MlirLogicalResult mlirSymbolTableReplaceAllSymbolUses(MlirStringRef oldSymbol,
                                                       MlirOperation from) {
   auto *cppFrom = unwrap(from);
   auto *context = cppFrom->getContext();
-  auto oldSymbolAttr = StringAttr::get(unwrap(oldSymbol), context);
-  auto newSymbolAttr = StringAttr::get(unwrap(newSymbol), context);
+  auto oldSymbolAttr = StringAttr::get(context, unwrap(oldSymbol));
+  auto newSymbolAttr = StringAttr::get(context, unwrap(newSymbol));
   return wrap(SymbolTable::replaceAllSymbolUses(oldSymbolAttr, newSymbolAttr,
                                                 unwrap(from)));
 }

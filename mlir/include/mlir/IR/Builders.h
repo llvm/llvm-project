@@ -53,8 +53,6 @@ public:
 
   MLIRContext *getContext() const { return context; }
 
-  StringAttr getIdentifier(const Twine &str);
-
   // Locations.
   Location getUnknownLoc();
   Location getFusedLoc(ArrayRef<Location> locs,

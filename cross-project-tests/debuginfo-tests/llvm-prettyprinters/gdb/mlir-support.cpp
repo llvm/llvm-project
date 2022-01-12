@@ -1,13 +1,12 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Identifier.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OperationSupport.h"
 
 mlir::MLIRContext Context;
 
-auto Identifier = mlir::Identifier::get("foo", &Context);
+auto Identifier = mlir::StringAttr::get(&Context, "foo");
 mlir::OperationName OperationName("FooOp", &Context);
 
 mlir::Type Type(nullptr);
