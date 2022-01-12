@@ -34,7 +34,7 @@ class InquireUnconnectedFileState;
 class InquireIOLengthState;
 class ExternalMiscIoStatementState;
 class CloseStatementState;
-class NoopCloseStatementState;
+class NoopStatementState; // CLOSE or FLUSH on unknown unit
 
 template <Direction, typename CHAR = char>
 class InternalFormattedIoStatementState;
@@ -238,7 +238,7 @@ public:
 private:
   std::variant<std::reference_wrapper<OpenStatementState>,
       std::reference_wrapper<CloseStatementState>,
-      std::reference_wrapper<NoopCloseStatementState>,
+      std::reference_wrapper<NoopStatementState>,
       std::reference_wrapper<
           InternalFormattedIoStatementState<Direction::Output>>,
       std::reference_wrapper<
@@ -616,9 +616,9 @@ private:
   ConnectionState connection_;
 };
 
-class NoopCloseStatementState : public NoUnitIoStatementState {
+class NoopStatementState : public NoUnitIoStatementState {
 public:
-  NoopCloseStatementState(const char *sourceFile, int sourceLine)
+  NoopStatementState(const char *sourceFile, int sourceLine)
       : NoUnitIoStatementState{sourceFile, sourceLine, *this} {}
   void set_status(CloseStatus) {} // discards
 };
