@@ -89,7 +89,6 @@ define <8 x i32> @test3_x86_avx2_pblendd_256(<8 x i32> %a0, <8 x i32> %a1) {
 define <2 x i64> @demandedelts_vpsllvd(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: demandedelts_vpsllvd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; CHECK-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpbroadcastq %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -102,7 +101,6 @@ define <2 x i64> @demandedelts_vpsllvd(<2 x i64> %a0, <2 x i64> %a1) {
 define <4 x i32> @demandedelts_vpsravd(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: demandedelts_vpsravd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,1,1]
 ; CHECK-NEXT:    vpsravd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpbroadcastd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -115,7 +113,6 @@ define <4 x i32> @demandedelts_vpsravd(<4 x i32> %a0, <4 x i32> %a1) {
 define <4 x i64> @demandedelts_vpsrlvq(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: demandedelts_vpsrlvq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq %xmm1, %ymm1
 ; CHECK-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; CHECK-NEXT:    retq
