@@ -76,6 +76,8 @@
 #include <utility>
 #include <vector>
 
+#include "LiveDebugValues/LiveDebugValues.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "codegen"
@@ -1238,7 +1240,7 @@ bool MachineFunction::useDebugInstrRef() const {
   if (F.hasFnAttribute(Attribute::OptimizeNone))
     return false;
 
-  if (getTarget().Options.ValueTrackingVariableLocations)
+  if (llvm::debuginfoShouldUseDebugInstrRef(getTarget().getTargetTriple()))
     return true;
 
   return false;
