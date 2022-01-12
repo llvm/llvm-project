@@ -24,17 +24,17 @@ namespace MachO {
 class Target {
 public:
   Target() = default;
-  Target(Architecture Arch, PlatformKind Platform)
+  Target(Architecture Arch, PlatformType Platform)
       : Arch(Arch), Platform(Platform) {}
   explicit Target(const llvm::Triple &Triple)
-      : Arch(mapToArchitecture(Triple)), Platform(mapToPlatformKind(Triple)) {}
+      : Arch(mapToArchitecture(Triple)), Platform(mapToPlatformType(Triple)) {}
 
   static llvm::Expected<Target> create(StringRef Target);
 
   operator std::string() const;
 
   Architecture Arch;
-  PlatformKind Platform;
+  PlatformType Platform;
 };
 
 inline bool operator==(const Target &LHS, const Target &RHS) {

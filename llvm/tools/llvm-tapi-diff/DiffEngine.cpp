@@ -94,8 +94,7 @@ std::string SymScalar::stringifySymbolFlag(MachO::SymbolFlags Flag) {
 
 void SymScalar::print(raw_ostream &OS, std::string Indent, MachO::Target Targ) {
   if (Val->getKind() == MachO::SymbolKind::ObjectiveCClass) {
-    if (Targ.Arch == MachO::AK_i386 &&
-        Targ.Platform == MachO::PlatformKind::macOS) {
+    if (Targ.Arch == MachO::AK_i386 && Targ.Platform == MachO::PLATFORM_MACOS) {
       OS << Indent << "\t\t" << ((Order == lhs) ? "< " : "> ")
          << ObjC1ClassNamePrefix << Val->getName()
          << getFlagString(Val->getFlags()) << "\n";

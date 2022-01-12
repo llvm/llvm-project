@@ -18,29 +18,14 @@
 namespace llvm {
 namespace MachO {
 
-/// Defines the list of MachO platforms.
-enum class PlatformKind : unsigned {
-  unknown,
-  macOS = MachO::PLATFORM_MACOS,
-  iOS = MachO::PLATFORM_IOS,
-  tvOS = MachO::PLATFORM_TVOS,
-  watchOS = MachO::PLATFORM_WATCHOS,
-  bridgeOS = MachO::PLATFORM_BRIDGEOS,
-  macCatalyst = MachO::PLATFORM_MACCATALYST,
-  iOSSimulator = MachO::PLATFORM_IOSSIMULATOR,
-  tvOSSimulator = MachO::PLATFORM_TVOSSIMULATOR,
-  watchOSSimulator = MachO::PLATFORM_WATCHOSSIMULATOR,
-  driverKit = MachO::PLATFORM_DRIVERKIT,
-};
+using PlatformSet = SmallSet<PlatformType, 3>;
 
-using PlatformSet = SmallSet<PlatformKind, 3>;
-
-PlatformKind mapToPlatformKind(PlatformKind Platform, bool WantSim);
-PlatformKind mapToPlatformKind(const Triple &Target);
+PlatformType mapToPlatformType(PlatformType Platform, bool WantSim);
+PlatformType mapToPlatformType(const Triple &Target);
 PlatformSet mapToPlatformSet(ArrayRef<Triple> Targets);
-StringRef getPlatformName(PlatformKind Platform);
-PlatformKind getPlatformFromName(StringRef Name);
-std::string getOSAndEnvironmentName(PlatformKind Platform,
+StringRef getPlatformName(PlatformType Platform);
+PlatformType getPlatformFromName(StringRef Name);
+std::string getOSAndEnvironmentName(PlatformType Platform,
                                     std::string Version = "");
 
 } // end namespace MachO.

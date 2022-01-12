@@ -116,7 +116,7 @@ static std::vector<PlatformInfo> getPlatformInfos(const InputFile *input) {
   std::vector<PlatformInfo> platformInfos;
   for (auto *cmd : findCommands<build_version_command>(hdr, LC_BUILD_VERSION)) {
     PlatformInfo info;
-    info.target.Platform = static_cast<PlatformKind>(cmd->platform);
+    info.target.Platform = static_cast<PlatformType>(cmd->platform);
     info.minimum = decodeVersion(cmd->minos);
     platformInfos.emplace_back(std::move(info));
   }
@@ -126,16 +126,16 @@ static std::vector<PlatformInfo> getPlatformInfos(const InputFile *input) {
     PlatformInfo info;
     switch (cmd->cmd) {
     case LC_VERSION_MIN_MACOSX:
-      info.target.Platform = PlatformKind::macOS;
+      info.target.Platform = PLATFORM_MACOS;
       break;
     case LC_VERSION_MIN_IPHONEOS:
-      info.target.Platform = PlatformKind::iOS;
+      info.target.Platform = PLATFORM_IOS;
       break;
     case LC_VERSION_MIN_TVOS:
-      info.target.Platform = PlatformKind::tvOS;
+      info.target.Platform = PLATFORM_TVOS;
       break;
     case LC_VERSION_MIN_WATCHOS:
-      info.target.Platform = PlatformKind::watchOS;
+      info.target.Platform = PLATFORM_WATCHOS;
       break;
     }
     info.minimum = decodeVersion(cmd->version);

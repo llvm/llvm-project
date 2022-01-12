@@ -86,9 +86,9 @@ TEST(TBDv4, ReadFile) {
   Platforms.insert(getPlatformFromName("ios"));
   auto Archs = AK_i386 | AK_x86_64;
   TargetList Targets = {
-      Target(AK_i386, PlatformKind::macOS),
-      Target(AK_x86_64, PlatformKind::macOS),
-      Target(AK_x86_64, PlatformKind::iOS),
+      Target(AK_i386, PLATFORM_MACOS),
+      Target(AK_x86_64, PLATFORM_MACOS),
+      Target(AK_x86_64, PLATFORM_IOS),
   };
   UUIDs uuids = {{Targets[0], "00000000-0000-0000-0000-000000000000"},
                  {Targets[1], "11111111-1111-1111-1111-111111111111"},
@@ -221,8 +221,8 @@ TEST(TBDv4, ReadMultipleDocuments) {
       "...\n";
 
   PlatformSet Platforms;
-  Platforms.insert(PlatformKind::macOS);
-  Platforms.insert(PlatformKind::macCatalyst);
+  Platforms.insert(PLATFORM_MACOS);
+  Platforms.insert(PLATFORM_MACCATALYST);
   ArchitectureSet Archs = AK_i386 | AK_x86_64;
   TargetList Targets;
   for (auto &&Arch : Archs)
@@ -260,7 +260,7 @@ TEST(TBDv4, ReadMultipleDocuments) {
   // Check Inlined Document
   Targets.clear();
   Uuids.clear();
-  PlatformKind Platform = PlatformKind::macOS;
+  PlatformType Platform = PLATFORM_MACOS;
   for (auto &&Arch : Archs)
     Targets.emplace_back(Target(Arch, Platform));
   Uuids = {
@@ -359,8 +359,8 @@ TEST(TBDv4, WriteFile) {
 
   InterfaceFile File;
   TargetList Targets = {
-      Target(AK_i386, PlatformKind::macOS),
-      Target(AK_x86_64, PlatformKind::iOSSimulator),
+      Target(AK_i386, PLATFORM_MACOS),
+      Target(AK_x86_64, PLATFORM_IOSSIMULATOR),
   };
   UUIDs uuids = {{Targets[0], "00000000-0000-0000-0000-000000000000"},
                  {Targets[1], "11111111-1111-1111-1111-111111111111"}};
@@ -425,7 +425,7 @@ TEST(TBDv4, WriteMultipleDocuments) {
       "...\n";
 
   InterfaceFile File;
-  PlatformKind Platform = PlatformKind::macCatalyst;
+  PlatformType Platform = PLATFORM_MACCATALYST;
   TargetList Targets = {
       Target(AK_i386, Platform),
       Target(AK_x86_64, Platform),
@@ -485,9 +485,9 @@ TEST(TBDv4, MultipleTargets) {
       TextAPIReader::get(MemoryBufferRef(TBDv4MultipleTargets, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   PlatformSet Platforms;
-  Platforms.insert(PlatformKind::macCatalyst);
-  Platforms.insert(PlatformKind::tvOS);
-  Platforms.insert(PlatformKind::iOS);
+  Platforms.insert(PLATFORM_MACCATALYST);
+  Platforms.insert(PLATFORM_TVOS);
+  Platforms.insert(PLATFORM_IOS);
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(AK_x86_64 | AK_arm64 | AK_i386, File->getArchitectures());
@@ -515,8 +515,8 @@ TEST(TBDv4, MultipleTargetsSameArch) {
       TextAPIReader::get(MemoryBufferRef(TBDv4TargetsSameArch, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   PlatformSet Platforms;
-  Platforms.insert(PlatformKind::tvOS);
-  Platforms.insert(PlatformKind::macCatalyst);
+  Platforms.insert(PLATFORM_TVOS);
+  Platforms.insert(PLATFORM_MACCATALYST);
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
@@ -547,7 +547,7 @@ TEST(TBDv4, MultipleTargetsSamePlatform) {
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(AK_arm64 | AK_armv7k, File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::iOS, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_IOS, *File->getPlatforms().begin());
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -572,7 +572,7 @@ TEST(TBDv4, Target_maccatalyst) {
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::macCatalyst, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_MACCATALYST, *File->getPlatforms().begin());
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -596,7 +596,7 @@ TEST(TBDv4, Target_x86_ios) {
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::iOS, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_IOS, *File->getPlatforms().begin());
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -619,7 +619,7 @@ TEST(TBDv4, Target_arm_bridgeOS) {
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::bridgeOS, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_BRIDGEOS, *File->getPlatforms().begin());
   EXPECT_EQ(ArchitectureSet(AK_armv7k), File->getArchitectures());
 
   SmallString<4096> Buffer;
@@ -643,7 +643,7 @@ TEST(TBDv4, Target_arm_iOS) {
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::iOS, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_IOS, *File->getPlatforms().begin());
   EXPECT_EQ(ArchitectureSet(AK_arm64e), File->getArchitectures());
 
   SmallString<4096> Buffer;
@@ -667,7 +667,7 @@ TEST(TBDv4, Target_x86_macos) {
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::macOS, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_MACOS, *File->getPlatforms().begin());
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -692,7 +692,7 @@ TEST(TBDv4, Target_x86_ios_simulator) {
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::iOSSimulator, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_IOSSIMULATOR, *File->getPlatforms().begin());
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -716,7 +716,7 @@ TEST(TBDv4, Target_x86_tvos_simulator) {
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(ArchitectureSet(AK_x86_64), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::tvOSSimulator, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_TVOSSIMULATOR, *File->getPlatforms().begin());
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -740,7 +740,7 @@ TEST(TBDv4, Target_i386_watchos_simulator) {
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(ArchitectureSet(AK_i386), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::watchOSSimulator, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_WATCHOSSIMULATOR, *File->getPlatforms().begin());
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -764,7 +764,7 @@ TEST(TBDv4, Target_i386_driverkit) {
   EXPECT_EQ(FileType::TBD_V4, File->getFileType());
   EXPECT_EQ(ArchitectureSet(AK_i386), File->getArchitectures());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
-  EXPECT_EQ(PlatformKind::driverKit, *File->getPlatforms().begin());
+  EXPECT_EQ(PLATFORM_DRIVERKIT, *File->getPlatforms().begin());
 
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
@@ -1134,7 +1134,7 @@ TEST(TBDv4, InterfaceInequality) {
   InterfaceFile FileB = std::move(*ResultB.get());
 
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addTarget(Target(AK_x86_64, PlatformKind::iOS));
+    File->addTarget(Target(AK_x86_64, PLATFORM_IOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     File->setCurrentVersion(PackedVersion(1, 2, 3));
@@ -1151,22 +1151,23 @@ TEST(TBDv4, InterfaceInequality) {
     File->setApplicationExtensionSafe(false);
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addParentUmbrella(Target(AK_x86_64, PlatformKind::macOS), "System.dylib");
+    File->addParentUmbrella(Target(AK_x86_64, PLATFORM_MACOS), "System.dylib");
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addAllowableClient("ClientA", Target(AK_i386, PlatformKind::macOS));
+    File->addAllowableClient("ClientA", Target(AK_i386, PLATFORM_MACOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     File->addReexportedLibrary("/System/Library/Frameworks/A.framework/A",
-                               Target(AK_i386, PlatformKind::macOS));
+                               Target(AK_i386, PLATFORM_MACOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addSymbol(SymbolKind::GlobalSymbol, "_symA", {Target(AK_x86_64, PlatformKind::macOS)});
+    File->addSymbol(SymbolKind::GlobalSymbol, "_symA",
+                    {Target(AK_x86_64, PLATFORM_MACOS)});
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     InterfaceFile Document;
-    Document.addTargets(TargetList {Target(AK_i386, PlatformKind::macOS),
-                      Target(AK_x86_64, PlatformKind::macOS)});
+    Document.addTargets(TargetList{Target(AK_i386, PLATFORM_MACOS),
+                                   Target(AK_x86_64, PLATFORM_MACOS)});
     Document.setInstallName("/System/Library/Frameworks/A.framework/A");
     File->addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
   }));

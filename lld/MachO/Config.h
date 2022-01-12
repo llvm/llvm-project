@@ -189,7 +189,7 @@ struct Configuration {
 
   llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
 
-  llvm::MachO::PlatformKind platform() const {
+  llvm::MachO::PlatformType platform() const {
     return platformInfo.target.Platform;
   }
 };

@@ -629,11 +629,11 @@ static std::string lowerDash(StringRef s) {
 }
 
 // Has the side-effect of setting Config::platformInfo.
-static PlatformKind parsePlatformVersion(const ArgList &args) {
+static PlatformType parsePlatformVersion(const ArgList &args) {
   const Arg *arg = args.getLastArg(OPT_platform_version);
   if (!arg) {
     error("must specify -platform_version");
-    return PlatformKind::unknown;
+    return PLATFORM_UNKNOWN;
   }
 
   StringRef platformStr = arg->getValue(0);
@@ -641,20 +641,20 @@ static PlatformKind parsePlatformVersion(const ArgList &args) {
   StringRef sdkVersionStr = arg->getValue(2);
 
   // TODO(compnerd) see if we can generate this case list via XMACROS
-  PlatformKind platform =
-      StringSwitch<PlatformKind>(lowerDash(platformStr))
-          .Cases("macos", "1", PlatformKind::macOS)
-          .Cases("ios", "2", PlatformKind::iOS)
-          .Cases("tvos", "3", PlatformKind::tvOS)
-          .Cases("watchos", "4", PlatformKind::watchOS)
-          .Cases("bridgeos", "5", PlatformKind::bridgeOS)
-          .Cases("mac-catalyst", "6", PlatformKind::macCatalyst)
-          .Cases("ios-simulator", "7", PlatformKind::iOSSimulator)
-          .Cases("tvos-simulator", "8", PlatformKind::tvOSSimulator)
-          .Cases("watchos-simulator", "9", PlatformKind::watchOSSimulator)
-          .Cases("driverkit", "10", PlatformKind::driverKit)
-          .Default(PlatformKind::unknown);
-  if (platform == PlatformKind::unknown)
+  PlatformType platform =
+      StringSwitch<PlatformType>(lowerDash(platformStr))
+          .Cases("macos", "1", PLATFORM_MACOS)
+          .Cases("ios", "2", PLATFORM_IOS)
+          .Cases("tvos", "3", PLATFORM_TVOS)
+          .Cases("watchos", "4", PLATFORM_WATCHOS)
+          .Cases("bridgeos", "5", PLATFORM_BRIDGEOS)
+          .Cases("mac-catalyst", "6", PLATFORM_MACCATALYST)
+          .Cases("ios-simulator", "7", PLATFORM_IOSSIMULATOR)
+          .Cases("tvos-simulator", "8", PLATFORM_TVOSSIMULATOR)
+          .Cases("watchos-simulator", "9", PLATFORM_WATCHOSSIMULATOR)
+          .Cases("driverkit", "10", PLATFORM_DRIVERKIT)
+          .Default(PLATFORM_UNKNOWN);
+  if (platform == PLATFORM_UNKNOWN)
     error(Twine("malformed platform: ") + platformStr);
   // TODO: check validity of version strings, which varies by platform
   // NOTE: ld64 accepts version strings with 5 components
@@ -675,7 +675,7 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
     return nullptr;
   }
 
-  PlatformKind platform = parsePlatformVersion(args);
+  PlatformType platform = parsePlatformVersion(args);
   config->platformInfo.target =
       MachO::Target(getArchitectureFromName(archName), platform);
 
@@ -861,27 +861,27 @@ static std::vector<SectionAlign> parseSectAlign(const opt::InputArgList &args) {
   return sectAligns;
 }
 
-PlatformKind macho::removeSimulator(PlatformKind platform) {
+PlatformType macho::removeSimulator(PlatformType platform) {
   switch (platform) {
-  case PlatformKind::iOSSimulator:
-    return PlatformKind::iOS;
-  case PlatformKind::tvOSSimulator:
-    return PlatformKind::tvOS;
-  case PlatformKind::watchOSSimulator:
-    return PlatformKind::watchOS;
+  case PLATFORM_IOSSIMULATOR:
+    return PLATFORM_IOS;
+  case PLATFORM_TVOSSIMULATOR:
+    return PLATFORM_TVOS;
+  case PLATFORM_WATCHOSSIMULATOR:
+    return PLATFORM_WATCHOS;
   default:
     return platform;
   }
 }
 
 static bool dataConstDefault(const InputArgList &args) {
-  static const std::vector<std::pair<PlatformKind, VersionTuple>> minVersion = {
-      {PlatformKind::macOS, VersionTuple(10, 15)},
-      {PlatformKind::iOS, VersionTuple(13, 0)},
-      {PlatformKind::tvOS, VersionTuple(13, 0)},
-      {PlatformKind::watchOS, VersionTuple(6, 0)},
-      {PlatformKind::bridgeOS, VersionTuple(4, 0)}};
-  PlatformKind platform = removeSimulator(config->platformInfo.target.Platform);
+  static const std::vector<std::pair<PlatformType, VersionTuple>> minVersion = {
+      {PLATFORM_MACOS, VersionTuple(10, 15)},
+      {PLATFORM_IOS, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(13, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+      {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}};
+  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
   auto it = llvm::find_if(minVersion,
                           [&](const auto &p) { return p.first == platform; });
   if (it != minVersion.end())
@@ -1292,8 +1292,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
 
-  std::array<PlatformKind, 3> encryptablePlatforms{
-      PlatformKind::iOS, PlatformKind::watchOS, PlatformKind::tvOS};
+  std::array<PlatformType, 3> encryptablePlatforms{
+      PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS};
   config->emitEncryptionInfo =
       args.hasFlag(OPT_encryptable, OPT_no_encryption,
                    is_contained(encryptablePlatforms, config->platform()));
@@ -1408,7 +1408,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->adhocCodesign = args.hasFlag(
       OPT_adhoc_codesign, OPT_no_adhoc_codesign,
       (config->arch() == AK_arm64 || config->arch() == AK_arm64e) &&
-          config->platform() == PlatformKind::macOS);
+          config->platform() == PLATFORM_MACOS);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion(), lld::errs());
