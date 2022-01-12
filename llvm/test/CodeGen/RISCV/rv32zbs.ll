@@ -132,8 +132,8 @@ define signext i32 @bset_i32_zero(i32 signext %a) nounwind {
 
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 define i64 @bset_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: bset_i64:
@@ -211,8 +211,8 @@ define i32 @binv_i32(i32 %a, i32 %b) nounwind {
 
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 define i64 @binv_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: binv_i64:
@@ -274,8 +274,8 @@ define i32 @bext_i32_no_mask(i32 %a, i32 %b) nounwind {
 
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 define i64 @bext_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: bext_i64:

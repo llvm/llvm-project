@@ -502,8 +502,8 @@ define i32 @min_i32(i32 %a, i32 %b) nounwind {
 
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 define i64 @min_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: min_i64:
@@ -563,8 +563,8 @@ define i32 @max_i32(i32 %a, i32 %b) nounwind {
 
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 define i64 @max_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: max_i64:
@@ -624,8 +624,8 @@ define i32 @minu_i32(i32 %a, i32 %b) nounwind {
 
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 define i64 @minu_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: minu_i64:
@@ -685,8 +685,8 @@ define i32 @maxu_i32(i32 %a, i32 %b) nounwind {
 
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet any matching bit manipulation instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 define i64 @maxu_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: maxu_i64:

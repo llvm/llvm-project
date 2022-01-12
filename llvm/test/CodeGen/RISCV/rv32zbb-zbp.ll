@@ -168,8 +168,8 @@ define i32 @rol_i32(i32 %a, i32 %b) nounwind {
   ret i32 %or
 }
 
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 declare i64 @llvm.fshl.i64(i64, i64, i64)
 
@@ -276,8 +276,8 @@ define i32 @ror_i32(i32 %a, i32 %b) nounwind {
   ret i32 %or
 }
 
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions suitable for this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions suitable for this pattern.
 
 declare i64 @llvm.fshr.i64(i64, i64, i64)
 
