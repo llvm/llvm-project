@@ -218,9 +218,8 @@ body: |
     ; GFX9-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX9-CONTRACT-NEXT: [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; GFX9-CONTRACT-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[MV]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX9-CONTRACT-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[LOAD]](<2 x s32>)
-    ; GFX9-CONTRACT-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; GFX9-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[TRUNC]]
+    ; GFX9-CONTRACT-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; GFX9-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX9-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX9-DENORM-LABEL: name: test_add_mul_multiple_defs_z
     ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -240,9 +239,8 @@ body: |
     ; GFX9-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX9-UNSAFE-NEXT: [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; GFX9-UNSAFE-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[MV]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX9-UNSAFE-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[LOAD]](<2 x s32>)
-    ; GFX9-UNSAFE-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; GFX9-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[TRUNC]]
+    ; GFX9-UNSAFE-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; GFX9-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-LABEL: name: test_add_mul_multiple_defs_z
     ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -262,9 +260,8 @@ body: |
     ; GFX10-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX10-CONTRACT-NEXT: [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; GFX10-CONTRACT-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[MV]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX10-CONTRACT-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[LOAD]](<2 x s32>)
-    ; GFX10-CONTRACT-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; GFX10-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[TRUNC]]
+    ; GFX10-CONTRACT-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; GFX10-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX10-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-DENORM-LABEL: name: test_add_mul_multiple_defs_z
     ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -284,9 +281,8 @@ body: |
     ; GFX10-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX10-UNSAFE-NEXT: [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; GFX10-UNSAFE-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[MV]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX10-UNSAFE-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[LOAD]](<2 x s32>)
-    ; GFX10-UNSAFE-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; GFX10-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[TRUNC]]
+    ; GFX10-UNSAFE-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; GFX10-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX10-UNSAFE-NEXT: $vgpr0 = COPY [[FMA]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
@@ -325,9 +321,8 @@ body: |
     ; GFX9-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX9-CONTRACT-NEXT: [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; GFX9-CONTRACT-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[MV]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX9-CONTRACT-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[LOAD]](<2 x s32>)
-    ; GFX9-CONTRACT-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; GFX9-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[TRUNC]]
+    ; GFX9-CONTRACT-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; GFX9-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX9-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX9-DENORM-LABEL: name: test_add_mul_rhs_multiple_defs_z
     ; GFX9-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -347,9 +342,8 @@ body: |
     ; GFX9-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX9-UNSAFE-NEXT: [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; GFX9-UNSAFE-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[MV]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX9-UNSAFE-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[LOAD]](<2 x s32>)
-    ; GFX9-UNSAFE-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; GFX9-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[TRUNC]]
+    ; GFX9-UNSAFE-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; GFX9-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX9-UNSAFE-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-LABEL: name: test_add_mul_rhs_multiple_defs_z
     ; GFX10: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -369,9 +363,8 @@ body: |
     ; GFX10-CONTRACT-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX10-CONTRACT-NEXT: [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; GFX10-CONTRACT-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[MV]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX10-CONTRACT-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[LOAD]](<2 x s32>)
-    ; GFX10-CONTRACT-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; GFX10-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[TRUNC]]
+    ; GFX10-CONTRACT-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; GFX10-CONTRACT-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX10-CONTRACT-NEXT: $vgpr0 = COPY [[FMA]](s32)
     ; GFX10-DENORM-LABEL: name: test_add_mul_rhs_multiple_defs_z
     ; GFX10-DENORM: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -391,9 +384,8 @@ body: |
     ; GFX10-UNSAFE-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; GFX10-UNSAFE-NEXT: [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; GFX10-UNSAFE-NEXT: [[LOAD:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[MV]](p1) :: (load (<2 x s32>), addrspace 1)
-    ; GFX10-UNSAFE-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[LOAD]](<2 x s32>)
-    ; GFX10-UNSAFE-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[BITCAST]](s64)
-    ; GFX10-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[TRUNC]]
+    ; GFX10-UNSAFE-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
+    ; GFX10-UNSAFE-NEXT: [[FMA:%[0-9]+]]:_(s32) = G_FMA [[COPY]], [[COPY1]], [[UV1]]
     ; GFX10-UNSAFE-NEXT: $vgpr0 = COPY [[FMA]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
