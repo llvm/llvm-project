@@ -15,9 +15,6 @@
 namespace mlir {
 class StringAttr;
 
-// TODO: Remove this when all usages have been replaced with StringAttr.
-using Identifier = StringAttr;
-
 /// Attributes are known-constant values of operations.
 ///
 /// Instances of the Attribute class are references to immortal key-value pairs

@@ -109,7 +109,7 @@ struct OpPassManagerImpl {
   /// Return the operation name of this pass manager as an identifier.
   StringAttr getOpName(MLIRContext &context) {
     if (!identifier)
-      identifier = StringAttr::get(name, &context);
+      identifier = StringAttr::get(&context, name);
     return *identifier;
   }
 
