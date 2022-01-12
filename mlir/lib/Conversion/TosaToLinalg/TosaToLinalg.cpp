@@ -18,6 +18,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Utils/CoversionUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
@@ -27,10 +28,7 @@
 #include <numeric>
 
 using namespace mlir;
-
-static SmallVector<StringRef> getNParallelLoopsAttrs(unsigned nParallelLoops) {
-  return SmallVector<StringRef>(nParallelLoops, getParallelIteratorTypeName());
-}
+using namespace mlir::tosa;
 
 template <typename T>
 static arith::ConstantOp
@@ -40,33 +38,6 @@ createConstFromIntAttribute(Operation *op, const std::string &attrName,
       op->getAttr(attrName).cast<IntegerAttr>().getValue().getSExtValue());
   return rewriter.create<arith::ConstantOp>(
       op->getLoc(), IntegerAttr::get(requiredAttrType, castedN));
-}
-
-template <typename T>
-static void getValuesFromIntArrayAttribute(ArrayAttr attr,
-                                           SmallVector<T> &arrayValues) {
-  for (Attribute val : attr.getValue()) {
-    arrayValues.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
-  }
-}
-
-template <typename T, typename P>
-static mlir::SelectOp clampHelper(Location loc, Value arg,
-                                  arith::ConstantOp min, arith::ConstantOp max,
-                                  P pred, OpBuilder &rewriter) {
-  auto smallerThanMin = rewriter.create<T>(loc, pred, arg, min);
-  auto minOrArg =
-      rewriter.create<mlir::SelectOp>(loc, smallerThanMin, min, arg);
-  auto largerThanMax = rewriter.create<T>(loc, pred, max, arg);
-  return rewriter.create<mlir::SelectOp>(loc, largerThanMax, max, minOrArg);
-}
-
-static SmallVector<Value> filterDynamicDims(const SmallVector<Value> &dynDims) {
-  SmallVector<Value> filteredDims;
-  for (auto dim : dynDims)
-    if (dim)
-      filteredDims.push_back(dim);
-  return filteredDims;
 }
 
 static Value
@@ -665,7 +636,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
     }
   }
 
-  SmallVector<Value> filteredDims = filterDynamicDims(dynDims);
+  SmallVector<Value> filteredDims = condenseValues(dynDims);
 
   for (auto result : results) {
     auto resultTy = result.getType().template cast<ShapedType>();
@@ -1184,7 +1155,7 @@ public:
       inputExprs[value] = rewriter.getAffineDimExpr(index);
     }
 
-    SmallVector<Value> filteredDims = filterDynamicDims(dynDims);
+    SmallVector<Value> filteredDims = condenseValues(dynDims);
 
     auto initTensor = rewriter.create<linalg::InitTensorOp>(
         loc, filteredDims, resultTy.getShape(), resultTy.getElementType());
@@ -1221,9 +1192,11 @@ public:
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
 
-    if (!outputTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(
-          op, "tosa to linalg conversion expects statically shaped tensors");
+    auto dynamicDimsOr =
+        checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
+    if (!dynamicDimsOr.hasValue())
+      return failure();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     // The shift and multiplier values.
     SmallVector<int32_t> multiplierValues;
@@ -1299,8 +1272,7 @@ public:
 
     // Construct the indexing maps needed for linalg.generic ops.
     Value initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, ArrayRef<Value>({}), outputTy.getShape(),
-        outputTy.getElementType());
+        loc, dynamicDims, outputTy.getShape(), outputTy.getElementType());
 
     auto linalgOp = rewriter.create<linalg::GenericOp>(
         loc, outputTy, genericInputs, ValueRange{initTensor}, indexingMaps,
@@ -1412,16 +1384,17 @@ public:
     auto imageH = inputTy.getShape()[1];
     auto imageW = inputTy.getShape()[2];
 
-    if (!resultTy.hasStaticShape())
+    auto dynamicDimsOr =
+        checkHasDynamicBatchDims(rewriter, op, {input, op.output()});
+    if (!dynamicDimsOr.hasValue())
       return failure();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
+
     if (op.mode() != "NEAREST_NEIGHBOR" && op.mode() != "BILINEAR")
       return failure();
 
-    auto initTensor =
-        rewriter
-            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>{},
-                                          resultTy.getShape(), resultElementTy)
-            .result();
+    auto initTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, dynamicDims, resultTy.getShape(), resultElementTy);
 
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
@@ -2098,13 +2071,13 @@ public:
     auto input = adaptor.getOperands()[0];
     auto indices = adaptor.getOperands()[1];
 
-    auto inputTy = input.getType().cast<ShapedType>();
-    auto indicesTy = indices.getType().cast<ShapedType>();
     auto resultTy = op.getType().cast<ShapedType>();
 
-    if (!inputTy.hasStaticShape() || !indicesTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(
-          op, "require input type to have static shape");
+    auto dynamicDimsOr =
+        checkHasDynamicBatchDims(rewriter, op, {input, indices, op.output()});
+    if (!dynamicDimsOr.hasValue())
+      return failure();
+    SmallVector<Value> dynamicDims = dynamicDimsOr.getValue();
 
     auto resultElementTy = resultTy.getElementType();
 
@@ -2112,8 +2085,8 @@ public:
 
     auto initTensor =
         rewriter
-            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>{},
-                                          resultTy.getShape(), resultElementTy)
+            .create<linalg::InitTensorOp>(loc, dynamicDims, resultTy.getShape(),
+                                          resultElementTy)
             .result();
 
     SmallVector<AffineMap, 2> affineMaps = {
