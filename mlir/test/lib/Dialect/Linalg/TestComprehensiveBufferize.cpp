@@ -92,6 +92,10 @@ struct TestComprehensiveFunctionBufferize
       *this, "dialect-filter",
       llvm::cl::desc("Bufferize only ops from the specified dialects"),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  Option<bool> createDeallocs{
+      *this, "create-deallocs",
+      llvm::cl::desc("Specify if buffers should be deallocated"),
+      llvm::cl::init(true)};
 };
 } // namespace
 
@@ -105,6 +109,7 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
   options->allowUnknownOps = allowUnknownOps;
   options->testAnalysisOnly = testAnalysisOnly;
   options->analysisFuzzerSeed = analysisFuzzerSeed;
+  options->createDeallocs = createDeallocs;
 
   if (dialectFilter.hasValue()) {
     options->dialectFilter.emplace();

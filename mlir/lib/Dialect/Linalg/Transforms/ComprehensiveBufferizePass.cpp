@@ -92,6 +92,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   options->analysisFuzzerSeed = analysisFuzzerSeed;
   options->testAnalysisOnly = testAnalysisOnly;
   options->printConflicts = printConflicts;
+  options->createDeallocs = createDeallocs;
 
   // Enable InitTensorOp elimination.
   if (initTensorElimination) {
