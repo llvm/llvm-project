@@ -1057,6 +1057,25 @@ static void gatherInputSections() {
   assert(inputOrder <= UnspecifiedInputOrder);
 }
 
+static void extractCallGraphProfile() {
+  TimeTraceScope timeScope("Extract call graph profile");
+  for (const InputFile *file : inputFiles) {
+    auto *obj = dyn_cast_or_null<ObjFile>(file);
+    if (!obj)
+      continue;
+    for (const CallGraphEntry &entry : obj->callGraph) {
+      assert(entry.fromIndex < obj->symbols.size() &&
+             entry.toIndex < obj->symbols.size());
+      auto *fromSym = dyn_cast_or_null<Defined>(obj->symbols[entry.fromIndex]);
+      auto *toSym = dyn_cast_or_null<Defined>(obj->symbols[entry.toIndex]);
+
+      if (!fromSym || !toSym)
+        continue;
+      config->callGraphProfile[{fromSym->isec, toSym->isec}] += entry.count;
+    }
+  }
+}
+
 static void foldIdenticalLiterals() {
   // We always create a cStringSection, regardless of whether dedupLiterals is
   // true. If it isn't, we simply create a non-deduplicating CStringSection.
@@ -1266,6 +1285,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                           config->icfLevel != ICFLevel::none;
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
+  config->callGraphProfileSort = args.hasFlag(
+      OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
+  config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
@@ -1458,8 +1480,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     replaceCommonSymbols();
 
     StringRef orderFile = args.getLastArgValue(OPT_order_file);
-    if (!orderFile.empty())
+    if (!orderFile.empty()) {
       parseOrderFile(orderFile);
+      config->callGraphProfileSort = false;
+    }
 
     referenceStubBinder();
 
@@ -1509,6 +1533,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     }
 
     gatherInputSections();
+    if (config->callGraphProfileSort)
+      extractCallGraphProfile();
 
     if (config->deadStrip)
       markLive();

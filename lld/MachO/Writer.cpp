@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
+#include "CallGraphSort.h"
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -865,6 +866,8 @@ static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
 // Each section gets assigned the priority of the highest-priority symbol it
 // contains.
 static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
+  if (config->callGraphProfileSort)
+    return computeCallGraphProfileOrder();
   DenseMap<const InputSection *, size_t> sectionPriorities;
 
   if (config->priorities.empty())

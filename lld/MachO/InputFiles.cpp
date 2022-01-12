@@ -63,10 +63,12 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 
@@ -325,6 +327,25 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       if (name == section_names::compactUnwind)
         compactUnwindSection = &sections.back();
     } else if (segname == segment_names::llvm) {
+      if (name == "__cg_profile" && config->callGraphProfileSort) {
+        TimeTraceScope timeScope("Parsing call graph section");
+        BinaryStreamReader reader(data, support::little);
+        while (!reader.empty()) {
+          uint32_t fromIndex, toIndex;
+          uint64_t count;
+          if (Error err = reader.readInteger(fromIndex))
+            fatal(toString(this) + ": Expected 32-bit integer");
+          if (Error err = reader.readInteger(toIndex))
+            fatal(toString(this) + ": Expected 32-bit integer");
+          if (Error err = reader.readInteger(count))
+            fatal(toString(this) + ": Expected 64-bit integer");
+          callGraph.emplace_back();
+          CallGraphEntry &entry = callGraph.back();
+          entry.fromIndex = fromIndex;
+          entry.toIndex = toIndex;
+          entry.count = count;
+        }
+      }
       // ld64 does not appear to emit contents from sections within the __LLVM
       // segment. Symbols within those sections point to bitcode metadata
       // instead of actual symbols. Global symbols within those sections could
