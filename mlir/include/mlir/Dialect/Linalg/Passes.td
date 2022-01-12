@@ -58,6 +58,9 @@ def LinalgComprehensiveModuleBufferize :
             /*default=*/"false",
            "(Experimental) Try to eliminate init_tensor operations that are "
            "anchored at an insert_slice op">,
+    Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
+           "Specify if buffers should be deallocated. For compatibility with "
+           "core bufferization passes.">,
   ];
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }
