@@ -182,7 +182,7 @@ TEST(TFUtilsTest, Logger) {
   L.flush(OS);
 
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -218,7 +218,7 @@ TEST(TFUtilsTest, LoggerInt32FeaturesAndReward) {
   L.flush(OS);
 
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -252,7 +252,7 @@ TEST(TFUtilsTest, LoggerNoReward) {
   raw_string_ostream OS(Result);
   L.flush(OS);
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -278,7 +278,7 @@ TEST(TFUtilsTest, LoggerFinalReward) {
   const float Zero[]{0.0};
   const float R[]{3.14};
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("reward", float_list, 0, Zero);
   PROTO_CHECKER("reward", float_list, 1, Zero);
   PROTO_CHECKER("reward", float_list, 2, R);
