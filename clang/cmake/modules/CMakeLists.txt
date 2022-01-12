@@ -29,6 +29,14 @@ configure_file(
 set(CLANG_CONFIG_CMAKE_DIR)
 set(CLANG_CONFIG_LLVM_CMAKE_DIR)
 
+# For compatibility with projects that include(ClangConfig)
+# via CMAKE_MODULE_PATH, place API modules next to it.
+file(COPY .
+  DESTINATION ${clang_cmake_builddir}
+  FILES_MATCHING PATTERN *.cmake
+  PATTERN CMakeFiles EXCLUDE
+  )
+
 # Generate ClangConfig.cmake for the install tree.
 find_prefix_from_config(CLANG_CONFIG_CODE CLANG_INSTALL_PREFIX "${CLANG_INSTALL_PACKAGE_DIR}")
 set(CLANG_CONFIG_CMAKE_DIR "\${CLANG_INSTALL_PREFIX}/${CLANG_INSTALL_PACKAGE_DIR}")
