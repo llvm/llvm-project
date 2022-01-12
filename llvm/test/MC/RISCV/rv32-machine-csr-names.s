@@ -5,6 +5,56 @@
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 
 ######################################
+# Machine Trap Setup
+######################################
+
+# mstatush
+# name
+# CHECK-INST: csrrs t1, mstatush, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0x31]
+# CHECK-INST-ALIAS: csrr t1, mstatush
+# uimm12
+# CHECK-INST: csrrs t2, mstatush, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0x31]
+# CHECK-INST-ALIAS: csrr t2, mstatush
+# name
+csrrs t1, mstatush, zero
+# uimm12
+csrrs t2, 0x310, zero
+
+#########################
+# Machine Configuration
+#########################
+
+# menvcfgh
+# name
+# CHECK-INST: csrrs t1, menvcfgh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x31]
+# CHECK-INST-ALIAS: csrr t1, menvcfgh
+# uimm12
+# CHECK-INST: csrrs t2, menvcfgh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x31]
+# CHECK-INST-ALIAS: csrr t2, menvcfgh
+# name
+csrrs t1, menvcfgh, zero
+# uimm12
+csrrs t2, 0x31A, zero
+
+# mseccfgh
+# name
+# CHECK-INST: csrrs t1, mseccfgh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x75]
+# CHECK-INST-ALIAS: csrr t1, mseccfgh
+# uimm12
+# CHECK-INST: csrrs t2, mseccfgh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x75]
+# CHECK-INST-ALIAS: csrr t2, mseccfgh
+# name
+csrrs t1, mseccfgh, zero
+# uimm12
+csrrs t2, 0x757, zero
+
+######################################
 # Machine Protection and Translation
 ######################################
 
@@ -35,6 +85,90 @@ csrrs t2, 0x3A1, zero
 csrrs t1, pmpcfg3, zero
 # uimm12
 csrrs t2, 0x3A3, zero
+
+# pmpcfg5
+# name
+# CHECK-INST: csrrs t1, pmpcfg5, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x50,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg5
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg5, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x50,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg5
+# name
+csrrs t1, pmpcfg5, zero
+# uimm12
+csrrs t2, 0x3A5, zero
+
+# pmpcfg7
+# name
+# CHECK-INST: csrrs t1, pmpcfg7, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg7
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg7, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg7
+# name
+csrrs t1, pmpcfg7, zero
+# uimm12
+csrrs t2, 0x3A7, zero
+
+# pmpcfg9
+# name
+# CHECK-INST: csrrs t1, pmpcfg9, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg9
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg9, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg9
+# name
+csrrs t1, pmpcfg9, zero
+# uimm12
+csrrs t2, 0x3A9, zero
+
+# pmpcfg11
+# name
+# CHECK-INST: csrrs t1, pmpcfg11, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xb0,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg11
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg11, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xb0,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg11
+# name
+csrrs t1, pmpcfg11, zero
+# uimm12
+csrrs t2, 0x3AB, zero
+
+# pmpcfg13
+# name
+# CHECK-INST: csrrs t1, pmpcfg13, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg13
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg13, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg13
+# name
+csrrs t1, pmpcfg13, zero
+# uimm12
+csrrs t2, 0x3AD, zero
+
+# pmpcfg15
+# name
+# CHECK-INST: csrrs t1, pmpcfg15, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x3a]
+# CHECK-INST-ALIAS: csrr t1, pmpcfg15
+# uimm12
+# CHECK-INST: csrrs t2, pmpcfg15, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x3a]
+# CHECK-INST-ALIAS: csrr t2, pmpcfg15
+# name
+csrrs t1, pmpcfg15, zero
+# uimm12
+csrrs t2, 0x3AF, zero
 
 ######################################
 # Machine Counter and Timers
@@ -471,4 +605,3 @@ csrrs t2, 0xB9E, zero
 csrrs t1, mhpmcounter31h, zero
 # uimm12
 csrrs t2, 0xB9F, zero
-

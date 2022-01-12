@@ -99,6 +99,24 @@ csrrs t1, scounteren, zero
 csrrs t2, 0x106, zero
 
 ##################################
+# Supervisor Configuration
+##################################
+
+# senvcfg
+# name
+# CHECK-INST: csrrs t1, senvcfg, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xa0,0x10]
+# CHECK-INST-ALIAS: csrr t1, senvcfg
+# uimm12
+# CHECK-INST: csrrs t2, senvcfg, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xa0,0x10]
+# CHECK-INST-ALIAS: csrr t2, senvcfg
+# name
+csrrs t1, senvcfg, zero
+# uimm12
+csrrs t2, 0x10A, zero
+
+##################################
 # Supervisor Trap Handling
 ##################################
 
@@ -191,3 +209,21 @@ csrrs t2, 0x144, zero
 csrrs t1, satp, zero
 # uimm12
 csrrs t2, 0x180, zero
+
+#########################################
+# Debug/Trace Registers
+#########################################
+
+# scontext
+# name
+# CHECK-INST: csrrs t1, scontext, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x5a]
+# CHECK-INST-ALIAS: csrr t1, scontext
+# uimm12
+# CHECK-INST: csrrs t2, scontext, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x5a]
+# CHECK-INST-ALIAS: csrr t2, scontext
+# name
+csrrs t1, scontext, zero
+# uimm12
+csrrs t2, 0x5A8, zero
