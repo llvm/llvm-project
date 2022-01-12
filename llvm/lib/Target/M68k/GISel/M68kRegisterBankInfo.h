@@ -42,4 +42,4 @@ public:
   getInstrMapping(const MachineInstr &MI) const override;
 };
 } // end namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_M68K_GLSEL_M68KREGISTERBANKINFO_H

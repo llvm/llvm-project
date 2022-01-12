@@ -25,4 +25,4 @@ const uint8_t *getMCInstrBeads(unsigned);
 } // namespace M68k
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_MCTARGETDESC_M68KMCCODEEMITTER_H

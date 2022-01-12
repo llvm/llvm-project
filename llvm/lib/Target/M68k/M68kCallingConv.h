@@ -74,4 +74,4 @@ inline bool CC_M68k_Any_AssignToReg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KCALLINGCONV_H
