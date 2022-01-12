@@ -1,7 +1,8 @@
 import("//llvm/lib/Target/targets.gni")
 
 targets_with_mcas = []
-if (llvm_build_AMDGPU) {
-  # AMDGPU is currently the only target with an MCA.
-  targets_with_mcas += [ "AMDGPU" ]
+foreach(target, llvm_targets_to_build) {
+  if (target == "AMDGPU" || target == "X86") {
+    targets_with_mcas += [ target ]
+  }
 }

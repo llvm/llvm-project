@@ -149,6 +149,7 @@ group("X86") {
     ":LLVMX86CodeGen",
     "AsmParser",
     "Disassembler",
+    "MCA",
     "MCTargetDesc",
     "TargetInfo",
   ]
