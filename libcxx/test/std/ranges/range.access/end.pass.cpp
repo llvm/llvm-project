@@ -37,16 +37,19 @@ static_assert(!std::is_invocable_v<RangeCEndT, Incomplete(&&)[42]>);
 
 struct EndMember {
   int x;
-  constexpr const int *begin() const { return nullptr; }
+  const int *begin() const;
   constexpr const int *end() const { return &x; }
 };
 
 // Ensure that we can't call with rvalues with borrowing disabled.
-static_assert( std::is_invocable_v<RangeEndT,  EndMember &>);
-static_assert( std::is_invocable_v<RangeEndT,  EndMember const&>);
-static_assert(!std::is_invocable_v<RangeEndT,  EndMember &&>);
+static_assert( std::is_invocable_v<RangeEndT, EndMember &>);
+static_assert(!std::is_invocable_v<RangeEndT, EndMember &&>);
+static_assert( std::is_invocable_v<RangeEndT, EndMember const&>);
+static_assert(!std::is_invocable_v<RangeEndT, EndMember const&&>);
 static_assert( std::is_invocable_v<RangeCEndT, EndMember &>);
+static_assert(!std::is_invocable_v<RangeCEndT, EndMember &&>);
 static_assert( std::is_invocable_v<RangeCEndT, EndMember const&>);
+static_assert(!std::is_invocable_v<RangeCEndT, EndMember const&&>);
 
 constexpr bool testReturnTypes() {
   {
