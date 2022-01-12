@@ -63,4 +63,13 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_pair("_D8demangle3ABCQa1ai",
                        nullptr), // invalid symbol back reference (recursive).
         std::make_pair("_D8demangleQDXXXXXXXXXXXXx",
-                       nullptr))); // overflow back reference position.
+                       nullptr), // overflow back reference position.
+        std::make_pair(
+            "_D8demangle4ABCi1aQd",
+            "demangle.ABCi.a"), // type back reference: `Qd` is a back reference
+                                // for position 4, counting from `d` char, so
+                                // decoding it points to `i`.
+        std::make_pair("_D8demangle3fooQXXXx",
+                       nullptr), // invalid type back reference position.
+        std::make_pair("_D8demangle5recurQa",
+                       nullptr))); // invalid type back reference (recursive).
