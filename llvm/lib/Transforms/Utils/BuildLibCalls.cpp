@@ -1019,12 +1019,10 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_memset_pattern4:
   case LibFunc_memset_pattern8:
   case LibFunc_memset_pattern16:
-    Changed |= setOnlyAccessesArgMemory(F);
     Changed |= setDoesNotCapture(F, 0);
-    Changed |= setOnlyWritesMemory(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
-    return Changed;
+    LLVM_FALLTHROUGH;
   case LibFunc_memset:
     Changed |= setWillReturn(F);
     LLVM_FALLTHROUGH;
