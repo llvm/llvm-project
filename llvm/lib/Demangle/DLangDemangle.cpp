@@ -70,6 +70,41 @@ private:
   /// \see https://dlang.org/spec/abi.html#Number .
   const char *decodeNumber(const char *Mangled, unsigned long *Ret);
 
+  /// Extract the back reference position from a given string.
+  ///
+  /// \param Mangled string to extract the back reference position.
+  /// \param Ret assigned result value.
+  ///
+  /// \return the remaining string on success or nullptr on failure.
+  ///
+  /// \note Ret is always >= 0 on success, and unspecified on failure
+  ///
+  /// \see https://dlang.org/spec/abi.html#back_ref .
+  /// \see https://dlang.org/spec/abi.html#NumberBackRef .
+  const char *decodeBackrefPos(const char *Mangled, long &Ret);
+
+  /// Extract the symbol pointed by the back reference form a given string.
+  ///
+  /// \param Mangled string to extract the back reference position.
+  /// \param Ret assigned result value.
+  ///
+  /// \return the remaining string on success or nullptr on failure.
+  ///
+  /// \see https://dlang.org/spec/abi.html#back_ref .
+  const char *decodeBackref(const char *Mangled, const char *&Ret);
+
+  /// Extract and demangle backreferenced symbol from a given mangled symbol
+  /// and append it to the output string.
+  ///
+  /// \param Demangled output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \return the remaining string on success or nullptr on failure.
+  ///
+  /// \see https://dlang.org/spec/abi.html#back_ref .
+  /// \see https://dlang.org/spec/abi.html#IdentifierBackRef .
+  const char *parseSymbolBackref(OutputBuffer *Demangled, const char *Mangled);
+
   /// Check whether it is the beginning of a symbol name.
   ///
   /// \param Mangled string to extract the symbol name.
@@ -156,12 +191,108 @@ const char *Demangler::decodeNumber(const char *Mangled, unsigned long *Ret) {
   return Mangled;
 }
 
+const char *Demangler::decodeBackrefPos(const char *Mangled, long &Ret) {
+  // Return nullptr if trying to extract something that isn't a digit
+  if (Mangled == nullptr || !std::isalpha(*Mangled))
+    return nullptr;
+
+  // Any identifier or non-basic type that has been emitted to the mangled
+  // symbol before will not be emitted again, but is referenced by a special
+  // sequence encoding the relative position of the original occurrence in the
+  // mangled symbol name.
+  // Numbers in back references are encoded with base 26 by upper case letters
+  // A-Z for higher digits but lower case letters a-z for the last digit.
+  //    NumberBackRef:
+  //        [a-z]
+  //        [A-Z] NumberBackRef
+  //        ^
+  unsigned long Val = 0;
+
+  while (std::isalpha(*Mangled)) {
+    // Check for overflow
+    if (Val > (std::numeric_limits<unsigned long>::max() - 25) / 26)
+      break;
+
+    Val *= 26;
+
+    if (Mangled[0] >= 'a' && Mangled[0] <= 'z') {
+      Val += Mangled[0] - 'a';
+      if ((long)Val <= 0)
+        break;
+      Ret = Val;
+      return Mangled + 1;
+    }
+
+    Val += Mangled[0] - 'A';
+    ++Mangled;
+  }
+
+  return nullptr;
+}
+
+const char *Demangler::decodeBackref(const char *Mangled, const char *&Ret) {
+  assert(Mangled != nullptr && *Mangled == 'Q' && "Invalid back reference!");
+  Ret = nullptr;
+
+  // Position of 'Q'
+  const char *Qpos = Mangled;
+  long RefPos;
+  ++Mangled;
+
+  Mangled = decodeBackrefPos(Mangled, RefPos);
+  if (Mangled == nullptr)
+    return nullptr;
+
+  if (RefPos > Qpos - Str)
+    return nullptr;
+
+  // Set the position of the back reference.
+  Ret = Qpos - RefPos;
+
+  return Mangled;
+}
+
+const char *Demangler::parseSymbolBackref(OutputBuffer *Demangled,
+                                          const char *Mangled) {
+  // An identifier back reference always points to a digit 0 to 9.
+  //    IdentifierBackRef:
+  //        Q NumberBackRef
+  //        ^
+  const char *Backref;
+  unsigned long Len;
+
+  // Get position of the back reference
+  Mangled = decodeBackref(Mangled, Backref);
+
+  // Must point to a simple identifier
+  Backref = decodeNumber(Backref, &Len);
+  if (Backref == nullptr || strlen(Backref) < Len)
+    return nullptr;
+
+  Backref = parseLName(Demangled, Backref, Len);
+  if (Backref == nullptr)
+    return nullptr;
+
+  return Mangled;
+}
+
 bool Demangler::isSymbolName(const char *Mangled) {
+  long Ret;
+  const char *Qref = Mangled;
+
   if (std::isdigit(*Mangled))
     return true;
 
-  // TODO: Handle symbol back references and template instances.
-  return false;
+  // TODO: Handle template instances.
+
+  if (*Mangled != 'Q')
+    return false;
+
+  Mangled = decodeBackrefPos(Mangled + 1, Ret);
+  if (Mangled == nullptr || Ret > Qref - Str)
+    return false;
+
+  return std::isdigit(Qref[-Ret]);
 }
 
 const char *Demangler::parseMangle(OutputBuffer *Demangled,
@@ -237,7 +368,10 @@ const char *Demangler::parseIdentifier(OutputBuffer *Demangled,
   if (Mangled == nullptr || *Mangled == '\0')
     return nullptr;
 
-  // TODO: Parse back references and lengthless template instances.
+  if (*Mangled == 'Q')
+    return parseSymbolBackref(Demangled, Mangled);
+
+  // TODO: Parse lengthless template instances.
 
   const char *Endptr = decodeNumber(Mangled, &Len);
 

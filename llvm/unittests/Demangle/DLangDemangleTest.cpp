@@ -52,4 +52,15 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_pair("_D8demangle3foo",
                        nullptr), // symbol without a type sequence.
         std::make_pair("_D8demangle3fooinvalidtypeseq",
-                       nullptr))); // invalid type sequence.
+                       nullptr), // invalid type sequence.
+        std::make_pair(
+            "_D8demangle3ABCQe1ai",
+            "demangle.ABC.ABC.a"), // symbol back reference: `Qe` is a back
+                                   // reference for position 5, counting from e
+                                   // char, so decoding it points to `3`. Since
+                                   // `3` is a number, 3 chars get read and it
+                                   // succeeded.
+        std::make_pair("_D8demangle3ABCQa1ai",
+                       nullptr), // invalid symbol back reference (recursive).
+        std::make_pair("_D8demangleQDXXXXXXXXXXXXx",
+                       nullptr))); // overflow back reference position.
