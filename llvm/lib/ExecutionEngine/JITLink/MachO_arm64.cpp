@@ -475,7 +475,7 @@ public:
 private:
   Section &getGOTSection() {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", MemProt::Read);
+      GOTSection = &G.createSection("$__GOT", MemProt::Read | MemProt::Exec);
     return *GOTSection;
   }
 
