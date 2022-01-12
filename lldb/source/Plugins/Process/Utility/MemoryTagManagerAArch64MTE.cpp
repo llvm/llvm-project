@@ -20,7 +20,7 @@ MemoryTagManagerAArch64MTE::GetLogicalTag(lldb::addr_t addr) const {
 }
 
 lldb::addr_t
-MemoryTagManagerAArch64MTE::RemoveNonAddressBits(lldb::addr_t addr) const {
+MemoryTagManagerAArch64MTE::RemoveTagBits(lldb::addr_t addr) const {
   // Here we're ignoring the whole top byte. If you've got MTE
   // you must also have TBI (top byte ignore).
   // The other 4 bits could contain other extension bits or
@@ -30,7 +30,7 @@ MemoryTagManagerAArch64MTE::RemoveNonAddressBits(lldb::addr_t addr) const {
 
 ptrdiff_t MemoryTagManagerAArch64MTE::AddressDiff(lldb::addr_t addr1,
                                                   lldb::addr_t addr2) const {
-  return RemoveNonAddressBits(addr1) - RemoveNonAddressBits(addr2);
+  return RemoveTagBits(addr1) - RemoveTagBits(addr2);
 }
 
 lldb::addr_t MemoryTagManagerAArch64MTE::GetGranuleSize() const {
@@ -84,7 +84,7 @@ MemoryTagManagerAArch64MTE::MakeTaggedRange(
 
   // Region addresses will not have memory tags. So when searching
   // we must use an untagged address.
-  MemoryRegionInfo::RangeType tag_range(RemoveNonAddressBits(addr), len);
+  MemoryRegionInfo::RangeType tag_range(RemoveTagBits(addr), len);
   tag_range = ExpandToGranule(tag_range);
 
   // Make a copy so we can use the original for errors and the final return.

@@ -1365,10 +1365,9 @@ Status NativeProcessLinux::ReadMemoryTags(int32_t type, lldb::addr_t addr,
 
   // lldb will align the range it requests but it is not required to by
   // the protocol so we'll do it again just in case.
-  // Remove non address bits too. Ptrace calls may work regardless but that
+  // Remove tag bits too. Ptrace calls may work regardless but that
   // is not a guarantee.
-  MemoryTagManager::TagRange range(details->manager->RemoveNonAddressBits(addr),
-                                   len);
+  MemoryTagManager::TagRange range(details->manager->RemoveTagBits(addr), len);
   range = details->manager->ExpandToGranule(range);
 
   // Allocate enough space for all tags to be read
@@ -1420,10 +1419,9 @@ Status NativeProcessLinux::WriteMemoryTags(int32_t type, lldb::addr_t addr,
 
   // lldb will align the range it requests but it is not required to by
   // the protocol so we'll do it again just in case.
-  // Remove non address bits too. Ptrace calls may work regardless but that
+  // Remove tag bits too. Ptrace calls may work regardless but that
   // is not a guarantee.
-  MemoryTagManager::TagRange range(details->manager->RemoveNonAddressBits(addr),
-                                   len);
+  MemoryTagManager::TagRange range(details->manager->RemoveTagBits(addr), len);
   range = details->manager->ExpandToGranule(range);
 
   // Not checking number of tags here, we may repeat them below

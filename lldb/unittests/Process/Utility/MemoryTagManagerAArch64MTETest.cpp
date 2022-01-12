@@ -247,16 +247,17 @@ TEST(MemoryTagManagerAArch64MTETest, MakeTaggedRange) {
   ASSERT_EQ(*got, expected_range);
 }
 
-TEST(MemoryTagManagerAArch64MTETest, RemoveNonAddressBits) {
+TEST(MemoryTagManagerAArch64MTETest, RemoveTagBits) {
   MemoryTagManagerAArch64MTE manager;
 
   ASSERT_EQ(0, 0);
+  // Removes the whole top byte
   ASSERT_EQ((lldb::addr_t)0x00ffeedd11223344,
-            manager.RemoveNonAddressBits(0x00ffeedd11223344));
+            manager.RemoveTagBits(0x00ffeedd11223344));
   ASSERT_EQ((lldb::addr_t)0x0000000000000000,
-            manager.RemoveNonAddressBits(0xFF00000000000000));
+            manager.RemoveTagBits(0xff00000000000000));
   ASSERT_EQ((lldb::addr_t)0x0055555566666666,
-            manager.RemoveNonAddressBits(0xee55555566666666));
+            manager.RemoveTagBits(0xee55555566666666));
 }
 
 TEST(MemoryTagManagerAArch64MTETest, AddressDiff) {

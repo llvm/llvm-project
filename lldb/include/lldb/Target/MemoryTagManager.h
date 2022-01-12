@@ -35,8 +35,8 @@ public:
   // you get will have been shifted down 56 before being returned.
   virtual lldb::addr_t GetLogicalTag(lldb::addr_t addr) const = 0;
 
-  // Remove non address bits from a pointer
-  virtual lldb::addr_t RemoveNonAddressBits(lldb::addr_t addr) const = 0;
+  // Remove tag bits from a pointer
+  virtual lldb::addr_t RemoveTagBits(lldb::addr_t addr) const = 0;
 
   // Return the difference between two addresses, ignoring any logical tags they
   // have. If your tags are just part of a larger set of ignored bits, this
