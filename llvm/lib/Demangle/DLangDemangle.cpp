@@ -105,6 +105,17 @@ private:
   /// \see https://dlang.org/spec/abi.html#IdentifierBackRef .
   const char *parseSymbolBackref(OutputBuffer *Demangled, const char *Mangled);
 
+  /// Extract and demangle backreferenced type from a given mangled symbol
+  /// and append it to the output string.
+  ///
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \return the remaining string on success or nullptr on failure.
+  ///
+  /// \see https://dlang.org/spec/abi.html#back_ref .
+  /// \see https://dlang.org/spec/abi.html#TypeBackRef .
+  const char *parseTypeBackref(const char *Mangled);
+
   /// Check whether it is the beginning of a symbol name.
   ///
   /// \param Mangled string to extract the symbol name.
@@ -162,6 +173,8 @@ private:
 
   /// The string we are demangling.
   const char *Str;
+  /// The index of the last back reference.
+  int LastBackref;
 };
 
 } // namespace
@@ -270,6 +283,39 @@ const char *Demangler::parseSymbolBackref(OutputBuffer *Demangled,
     return nullptr;
 
   Backref = parseLName(Demangled, Backref, Len);
+  if (Backref == nullptr)
+    return nullptr;
+
+  return Mangled;
+}
+
+const char *Demangler::parseTypeBackref(const char *Mangled) {
+  // A type back reference always points to a letter.
+  //    TypeBackRef:
+  //        Q NumberBackRef
+  //        ^
+  const char *Backref;
+
+  // If we appear to be moving backwards through the mangle string, then
+  // bail as this may be a recursive back reference.
+  if (Mangled - Str >= LastBackref)
+    return nullptr;
+
+  int SaveRefPos = LastBackref;
+  LastBackref = Mangled - Str;
+
+  // Get position of the back reference.
+  Mangled = decodeBackref(Mangled, Backref);
+
+  // Can't decode back reference.
+  if (Backref == nullptr)
+    return nullptr;
+
+  // TODO: Add support for function type back references.
+  Backref = parseType(Backref);
+
+  LastBackref = SaveRefPos;
+
   if (Backref == nullptr)
     return nullptr;
 
@@ -423,7 +469,10 @@ const char *Demangler::parseType(const char *Mangled) {
     return Mangled;
 
     // TODO: Add support for the rest of the basic types.
-    // TODO: Parse back referenced types.
+
+  // Back referenced type.
+  case 'Q':
+    return parseTypeBackref(Mangled);
 
   default: // unhandled.
     return nullptr;
@@ -487,7 +536,8 @@ const char *Demangler::parseLName(OutputBuffer *Demangled, const char *Mangled,
   return Mangled;
 }
 
-Demangler::Demangler(const char *Mangled) : Str(Mangled) {}
+Demangler::Demangler(const char *Mangled)
+    : Str(Mangled), LastBackref(strlen(Mangled)) {}
 
 const char *Demangler::parseMangle(OutputBuffer *Demangled) {
   return parseMangle(Demangled, this->Str);
