@@ -152,7 +152,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX908-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -178,7 +178,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.4(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX908-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.4:
   ; GFX908-NEXT:   S_ENDPGM 0
@@ -199,7 +199,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
   ; GFX90A-NEXT:   [[COPY9:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX90A-NEXT:   [[COPY10:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX90A-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2:
   ; GFX90A-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -225,7 +225,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__sgp
   ; GFX90A-NEXT: bb.3:
   ; GFX90A-NEXT:   successors: %bb.4(0x80000000)
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX90A-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.4:
   ; GFX90A-NEXT:   S_ENDPGM 0
@@ -250,7 +250,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__0_v
   ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX908-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -276,7 +276,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__0_v
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   successors: %bb.4(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX908-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.4:
   ; GFX908-NEXT:   S_ENDPGM 0
@@ -295,7 +295,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__0_v
   ; GFX90A-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
   ; GFX90A-NEXT:   [[COPY7:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; GFX90A-NEXT:   [[COPY8:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; GFX90A-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term $exec
+  ; GFX90A-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2:
   ; GFX90A-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -321,7 +321,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_f32_noret__sgpr_val__vgpr_rsrc__0_v
   ; GFX90A-NEXT: bb.3:
   ; GFX90A-NEXT:   successors: %bb.4(0x80000000)
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
+  ; GFX90A-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.4:
   ; GFX90A-NEXT:   S_ENDPGM 0
