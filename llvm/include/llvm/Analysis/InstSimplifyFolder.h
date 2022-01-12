@@ -56,6 +56,10 @@ public:
     return SimplifyOrInst(LHS, RHS, SQ);
   }
 
+  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    return SimplifyICmpInst(P, LHS, RHS, SQ);
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -239,10 +243,6 @@ public:
   // Compare Instructions
   //===--------------------------------------------------------------------===//
 
-  Value *CreateICmp(CmpInst::Predicate P, Constant *LHS,
-                    Constant *RHS) const override {
-    return ConstFolder.CreateICmp(P, LHS, RHS);
-  }
   Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                     Constant *RHS) const override {
     return ConstFolder.CreateFCmp(P, LHS, RHS);

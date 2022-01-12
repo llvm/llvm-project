@@ -50,6 +50,10 @@ public:
 
   Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
 
+  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -269,11 +273,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Compare Instructions
   //===--------------------------------------------------------------------===//
-
-  Instruction *CreateICmp(CmpInst::Predicate P,
-                          Constant *LHS, Constant *RHS) const override {
-    return new ICmpInst(P, LHS, RHS);
-  }
 
   Instruction *CreateFCmp(CmpInst::Predicate P,
                           Constant *LHS, Constant *RHS) const override {

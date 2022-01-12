@@ -177,9 +177,8 @@ define void @doit2(i32 %n, i32 %step) local_unnamed_addr  {
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i8 [[MUL_RESULT]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP7]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 false
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0

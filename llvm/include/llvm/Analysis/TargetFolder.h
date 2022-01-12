@@ -65,6 +65,14 @@ public:
     return nullptr;
   }
 
+  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getCompare(P, LC, RC);
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -247,10 +255,6 @@ public:
   // Compare Instructions
   //===--------------------------------------------------------------------===//
 
-  Constant *CreateICmp(CmpInst::Predicate P, Constant *LHS,
-                       Constant *RHS) const override {
-    return Fold(ConstantExpr::getCompare(P, LHS, RHS));
-  }
   Constant *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                        Constant *RHS) const override {
     return Fold(ConstantExpr::getCompare(P, LHS, RHS));
