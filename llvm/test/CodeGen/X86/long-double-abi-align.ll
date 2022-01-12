@@ -11,7 +11,7 @@ define void @foo(i32 %0, x86_fp80 %1, i32 %2) nounwind {
 ; MSVC-NEXT:    movl %esp, %ebp
 ; MSVC-NEXT:    andl $-16, %esp
 ; MSVC-NEXT:    subl $32, %esp
-; MSVC-NEXT:    fldt 12(%ebp)
+; MSVC-NEXT:    fldt 24(%ebp)
 ; MSVC-NEXT:    fstpt (%esp)
 ; MSVC-NEXT:    leal 8(%ebp), %eax
 ; MSVC-NEXT:    pushl %eax
@@ -21,7 +21,7 @@ define void @foo(i32 %0, x86_fp80 %1, i32 %2) nounwind {
 ; MSVC-NEXT:    pushl %eax
 ; MSVC-NEXT:    calll _escape
 ; MSVC-NEXT:    addl $4, %esp
-; MSVC-NEXT:    leal 24(%ebp), %eax
+; MSVC-NEXT:    leal 40(%ebp), %eax
 ; MSVC-NEXT:    pushl %eax
 ; MSVC-NEXT:    calll _escape
 ; MSVC-NEXT:    addl $4, %esp
