@@ -48,6 +48,12 @@ using namespace llvm::object;
 
 static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
+enum DebugKind {
+  NoDebugInfo,
+  DirectivesOnly,
+  FullDebugInfo,
+};
+
 // Mark all our options with this category, everything else (except for -help)
 // will be hidden.
 static cl::OptionCategory
@@ -58,28 +64,52 @@ static cl::opt<bool> StripSections(
     cl::desc("Strip offloading sections from the host object file."),
     cl::init(true), cl::cat(ClangLinkerWrapperCategory));
 
-static cl::opt<std::string> LinkerUserPath("linker-path",
+static cl::opt<std::string> LinkerUserPath("linker-path", cl::Required,
                                            cl::desc("Path of linker binary"),
                                            cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<std::string>
-    TargetFeatures("target-feature", cl::desc("Target features for triple"),
+    TargetFeatures("target-feature", cl::ZeroOrMore,
+                   cl::desc("Target features for triple"),
                    cl::cat(ClangLinkerWrapperCategory));
 
-static cl::opt<std::string> OptLevel("opt-level",
+static cl::opt<std::string> OptLevel("opt-level", cl::ZeroOrMore,
                                      cl::desc("Optimization level for LTO"),
                                      cl::init("O2"),
                                      cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<std::string>
-    BitcodeLibrary("target-library",
+    BitcodeLibrary("target-library", cl::ZeroOrMore,
                    cl::desc("Path for the target bitcode library"),
                    cl::cat(ClangLinkerWrapperCategory));
 
 static cl::opt<bool> EmbedBC(
     "target-embed-bc", cl::ZeroOrMore,
-    cl::desc("Embed linked bitcode instead of an executable device image."),
+    cl::desc("Embed linked bitcode instead of an executable device image"),
     cl::init(false), cl::cat(ClangLinkerWrapperCategory));
+
+static cl::opt<std::string>
+    HostTriple("host-triple", cl::ZeroOrMore,
+               cl::desc("Triple to use for the host compilation"),
+               cl::init(sys::getDefaultTargetTriple()),
+               cl::cat(ClangLinkerWrapperCategory));
+
+static cl::opt<std::string>
+    PtxasOption("ptxas-option", cl::ZeroOrMore,
+                cl::desc("Argument to pass to the ptxas invocation"),
+                cl::cat(ClangLinkerWrapperCategory));
+
+static cl::opt<bool> Verbose("v", cl::ZeroOrMore,
+                             cl::desc("Verbose output from tools"),
+                             cl::init(false),
+                             cl::cat(ClangLinkerWrapperCategory));
+
+static cl::opt<DebugKind> DebugInfo(
+    cl::desc("Choose debugging level:"), cl::init(NoDebugInfo),
+    cl::values(clEnumValN(NoDebugInfo, "g0", "No debug information"),
+               clEnumValN(DirectivesOnly, "gline-directives-only",
+                          "Direction information"),
+               clEnumValN(FullDebugInfo, "g", "Full debugging support")));
 
 // Do not parse linker options.
 static cl::list<std::string>
@@ -480,6 +510,14 @@ Expected<std::string> assemble(StringRef InputFile, Triple TheTriple,
   std::string Opt = "-" + OptLevel;
   CmdArgs.push_back(*PtxasPath);
   CmdArgs.push_back(TheTriple.isArch64Bit() ? "-m64" : "-m32");
+  if (Verbose)
+    CmdArgs.push_back("-v");
+  if (DebugInfo == DirectivesOnly && OptLevel[1] == '0')
+    CmdArgs.push_back("-lineinfo");
+  else if (DebugInfo == FullDebugInfo && OptLevel[1] == '0')
+    CmdArgs.push_back("-g");
+  if (!PtxasOption.empty())
+    CmdArgs.push_back(PtxasOption);
   CmdArgs.push_back("-o");
   CmdArgs.push_back(TempFile);
   CmdArgs.push_back(Opt);
@@ -511,10 +549,13 @@ Expected<std::string> link(ArrayRef<std::string> InputFiles,
     return createFileError(TempFile, EC);
   TempFiles.push_back(static_cast<std::string>(TempFile));
 
-  // TODO: Pass in arguments like `-g` and `-v` from the driver.
   SmallVector<StringRef, 16> CmdArgs;
   CmdArgs.push_back(*NvlinkPath);
   CmdArgs.push_back(TheTriple.isArch64Bit() ? "-m64" : "-m32");
+  if (Verbose)
+    CmdArgs.push_back("-v");
+  if (DebugInfo != NoDebugInfo)
+    CmdArgs.push_back("-g");
   CmdArgs.push_back("-o");
   CmdArgs.push_back(TempFile);
   CmdArgs.push_back("-arch");
@@ -563,16 +604,16 @@ void diagnosticHandler(const DiagnosticInfo &DI) {
 
   switch (DI.getSeverity()) {
   case DS_Error:
-    WithColor::error(errs(), LinkerExecutable) << ErrStorage;
+    WithColor::error(errs(), LinkerExecutable) << ErrStorage << "\n";
     break;
   case DS_Warning:
-    WithColor::warning(errs(), LinkerExecutable) << ErrStorage;
+    WithColor::warning(errs(), LinkerExecutable) << ErrStorage << "\n";
     break;
   case DS_Note:
-    WithColor::note(errs(), LinkerExecutable) << ErrStorage;
+    WithColor::note(errs(), LinkerExecutable) << ErrStorage << "\n";
     break;
   case DS_Remark:
-    WithColor::remark(errs(), LinkerExecutable) << ErrStorage;
+    WithColor::remark(errs(), LinkerExecutable) << ErrStorage << "\n";
     break;
   }
 }

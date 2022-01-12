@@ -8215,6 +8215,37 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();
 
+  CmdArgs.push_back("-host-triple");
+  CmdArgs.push_back(Args.MakeArgString(getToolChain().getTripleString()));
+  if (Args.hasArg(options::OPT_v))
+    CmdArgs.push_back("-v");
+
+  // Add debug information if present.
+  if (const Arg *A = Args.getLastArg(options::OPT_g_Group)) {
+    const Option &Opt = A->getOption();
+    if (Opt.matches(options::OPT_gN_Group)) {
+      if (Opt.matches(options::OPT_gline_directives_only) ||
+          Opt.matches(options::OPT_gline_tables_only))
+        CmdArgs.push_back("-gline-directives-only");
+    } else
+      CmdArgs.push_back("-g");
+  }
+
+  for (const auto &A : Args.getAllArgValues(options::OPT_Xcuda_ptxas))
+    CmdArgs.push_back(Args.MakeArgString("-ptxas-option=" + A));
+
+  // Forward remarks passes to the LLVM backend in the wrapper.
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-pass-remarks=") + A->getValue()));
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_missed_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-pass-remarks-missed=") + A->getValue()));
+  if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-pass-remarks-analysis=") + A->getValue()));
+
+  // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back("-linker-path");
   CmdArgs.push_back(LinkCommand->getExecutable());
   CmdArgs.push_back("--");
@@ -8224,7 +8255,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));
 
-  // Replace the executable and arguments associated with the link job to the
+  // Replace the executable and arguments of the link job with the
   // wrapper.
   LinkCommand->replaceExecutable(Exec);
   LinkCommand->replaceArguments(CmdArgs);
