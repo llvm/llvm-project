@@ -1201,6 +1201,22 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   assert(InitialInst->getModule());
   const DataLayout &DL = InitialInst->getModule()->getDataLayout();
 
+  auto GetFirstValidInstruction = [](Instruction *I) {
+    while (I) {
+      // BitCastInst wouldn't generate actual code so that we could skip it.
+      if (isa<BitCastInst>(I) || I->isDebugOrPseudoInst() ||
+          I->isLifetimeStartOrEnd())
+        I = I->getNextNode();
+      else if (isInstructionTriviallyDead(I))
+        // Duing we are in the middle of the transformation, we need to erase
+        // the dead instruction manually.
+        I = &*I->eraseFromParent();
+      else
+        break;
+    }
+    return I;
+  };
+
   auto TryResolveConstant = [&ResolvedValues](Value *V) {
     auto It = ResolvedValues.find(V);
     if (It != ResolvedValues.end())
@@ -1209,8 +1225,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   };
 
   Instruction *I = InitialInst;
-  while (I->isTerminator() ||
-         (isa<CmpInst>(I) && I->getNextNode()->isTerminator())) {
+  while (I->isTerminator() || isa<CmpInst>(I)) {
     if (isa<ReturnInst>(I)) {
       if (I != InitialInst) {
         // If InitialInst is an unconditional branch,
@@ -1227,7 +1242,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
         if (I == InitialInst)
           UnconditionalSucc = Succ;
         scanPHIsAndUpdateValueMap(I, Succ, ResolvedValues);
-        I = Succ->getFirstNonPHIOrDbgOrLifetime();
+        I = GetFirstValidInstruction(Succ->getFirstNonPHIOrDbgOrLifetime());
         continue;
       }
 
@@ -1247,7 +1262,8 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
     } else if (auto *CondCmp = dyn_cast<CmpInst>(I)) {
       // If the case number of suspended switch instruction is reduced to
       // 1, then it is simplified to CmpInst in llvm::ConstantFoldTerminator.
-      auto *BR = dyn_cast<BranchInst>(I->getNextNode());
+      auto *BR = dyn_cast<BranchInst>(
+          GetFirstValidInstruction(CondCmp->getNextNode()));
       if (!BR || !BR->isConditional() || CondCmp != BR->getCondition())
         return false;
 
@@ -1280,9 +1296,10 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
 
       BasicBlock *BB = SI->findCaseValue(Cond)->getCaseSuccessor();
       scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
-      I = BB->getFirstNonPHIOrDbgOrLifetime();
+      I = GetFirstValidInstruction(BB->getFirstNonPHIOrDbgOrLifetime());
       continue;
     }
+
     return false;
   }
   return false;
