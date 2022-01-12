@@ -164,6 +164,23 @@ public:
     }
   }
 
+  void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
+    const Expr *InitExpr = S->getExpr();
+    assert(InitExpr != nullptr);
+
+    Value *InitExprVal = Env.getValue(*InitExpr, SkipPast::None);
+    if (InitExprVal == nullptr)
+      return;
+
+    const FieldDecl *Field = S->getField();
+    assert(Field != nullptr);
+
+    auto &ThisLoc =
+        *cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
+    auto &FieldLoc = ThisLoc.getChild(*Field);
+    Env.setValue(FieldLoc, *InitExprVal);
+  }
+
   // FIXME: Add support for:
   // - CallExpr
   // - CXXBindTemporaryExpr

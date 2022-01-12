@@ -1171,4 +1171,114 @@ TEST_F(TransferTest, ClassThisMember) {
       });
 }
 
+TEST_F(TransferTest, ConstructorInitializer) {
+  std::string Code = R"(
+    struct target {
+      int Bar;
+
+      target(int Foo) : Bar(Foo) {
+        int Qux = Bar;
+        // [[p]]
+      }
+    };
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
+                    Env.getThisPointeeStorageLocation());
+                ASSERT_THAT(ThisLoc, NotNull());
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const auto *FooVal =
+                    cast<IntegerValue>(Env.getValue(*FooDecl, SkipPast::None));
+
+                const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+                ASSERT_THAT(QuxDecl, NotNull());
+                EXPECT_EQ(Env.getValue(*QuxDecl, SkipPast::None), FooVal);
+              });
+}
+
+TEST_F(TransferTest, DefaultInitializer) {
+  std::string Code = R"(
+    struct target {
+      int Bar;
+      int Baz = Bar;
+
+      target(int Foo) : Bar(Foo) {
+        int Qux = Baz;
+        // [[p]]
+      }
+    };
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
+                    Env.getThisPointeeStorageLocation());
+                ASSERT_THAT(ThisLoc, NotNull());
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const auto *FooVal =
+                    cast<IntegerValue>(Env.getValue(*FooDecl, SkipPast::None));
+
+                const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+                ASSERT_THAT(QuxDecl, NotNull());
+                EXPECT_EQ(Env.getValue(*QuxDecl, SkipPast::None), FooVal);
+              });
+}
+
+TEST_F(TransferTest, DefaultInitializerReference) {
+  std::string Code = R"(
+    struct target {
+      int &Bar;
+      int &Baz = Bar;
+
+      target(int &Foo) : Bar(Foo) {
+        int &Qux = Baz;
+        // [[p]]
+      }
+    };
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
+            Env.getThisPointeeStorageLocation());
+        ASSERT_THAT(ThisLoc, NotNull());
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const auto *FooVal =
+            cast<ReferenceValue>(Env.getValue(*FooDecl, SkipPast::None));
+
+        const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+        ASSERT_THAT(QuxDecl, NotNull());
+
+        const auto *QuxVal =
+            cast<ReferenceValue>(Env.getValue(*QuxDecl, SkipPast::None));
+        EXPECT_EQ(&QuxVal->getPointeeLoc(), &FooVal->getPointeeLoc());
+      });
+}
+
 } // namespace
