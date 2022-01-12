@@ -27,6 +27,8 @@
 # RUN: llvm-readobj -S %t | FileCheck /dev/null --implicit-check-not='Name: .rela.dyn'
 
 # RUN: echo "SECTIONS { /DISCARD/ : { *(.relr.dyn) } }" > %t.script
+# RUN: ld.lld -pie --pack-dyn-relocs=relr -T %t.script %t.o -o %t
+# RUN: llvm-readobj -S -r %t | FileCheck /dev/null --implicit-check-not='Name: .relr.dyn' --implicit-check-not=R_X86_64_RELATIVE
 
 .data
 .align 8
