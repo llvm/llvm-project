@@ -15593,3 +15593,40 @@ body: |
     %1:_(<8 x s4>) = G_LOAD %0 :: (load (<8 x s4>), align 4, addrspace 1)
     $vgpr0 = COPY %1
 ...
+
+# Make sure there's no crash on very high alignments
+---
+name: test_load_global_s32_align536870912
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; SI-LABEL: name: test_load_global_s32_align536870912
+    ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s16), align 536870912, addrspace 1)
+    ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; CI-HSA-LABEL: name: test_load_global_s32_align536870912
+    ; CI-HSA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CI-HSA-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s16), align 536870912, addrspace 1)
+    ; CI-HSA-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; CI-MESA-LABEL: name: test_load_global_s32_align536870912
+    ; CI-MESA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CI-MESA-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s16), align 536870912, addrspace 1)
+    ; CI-MESA-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; VI-LABEL: name: test_load_global_s32_align536870912
+    ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s16), align 536870912, addrspace 1)
+    ; VI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX9-HSA-LABEL: name: test_load_global_s32_align536870912
+    ; GFX9-HSA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; GFX9-HSA-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s16), align 536870912, addrspace 1)
+    ; GFX9-HSA-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX9-MESA-LABEL: name: test_load_global_s32_align536870912
+    ; GFX9-MESA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; GFX9-MESA-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s16), align 536870912, addrspace 1)
+    ; GFX9-MESA-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    %0:_(p1) = COPY $vgpr0_vgpr1
+    %1:_(s32) = G_LOAD %0 :: (load (s16), align 536870912, addrspace 1)
+    $vgpr0 = COPY %1
+
+...
