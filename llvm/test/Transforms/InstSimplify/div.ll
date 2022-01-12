@@ -155,16 +155,15 @@ define i32 @not_udiv_constant_dividend_known_smaller_than_divisor(i32 %x) {
 
 define i8 @udiv_dividend_known_smaller_than_constant_divisor2(i1 %b) {
 ; CHECK-LABEL: @udiv_dividend_known_smaller_than_constant_divisor2(
-; CHECK-NEXT:    [[T0:%.*]] = zext i1 [[B:%.*]] to i8
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[T0]], 12
-; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[XOR]], 14
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %t0 = zext i1 %b to i8
   %xor = xor i8 %t0, 12
   %r = udiv i8 %xor, 14
   ret i8 %r
 }
+
+; negative test - dividend can equal 13
 
 define i8 @not_udiv_dividend_known_smaller_than_constant_divisor2(i1 %b) {
 ; CHECK-LABEL: @not_udiv_dividend_known_smaller_than_constant_divisor2(
