@@ -2081,9 +2081,6 @@ struct AutoTypeLocInfo : TypeSpecLocInfo {
   NamedDecl *FoundDecl;
   SourceLocation LAngleLoc;
   SourceLocation RAngleLoc;
-
-  // For decltype(auto).
-  SourceLocation RParenLoc;
 };
 
 class AutoTypeLoc
@@ -2095,10 +2092,6 @@ public:
   AutoTypeKeyword getAutoKeyword() const {
     return getTypePtr()->getKeyword();
   }
-
-  bool isDecltypeAuto() const { return getTypePtr()->isDecltypeAuto(); }
-  SourceLocation getRParenLoc() const { return getLocalData()->RParenLoc; }
-  void setRParenLoc(SourceLocation Loc) { getLocalData()->RParenLoc = Loc; }
 
   bool isConstrained() const {
     return getTypePtr()->isConstrained();
@@ -2180,13 +2173,16 @@ public:
   }
 
   SourceRange getLocalSourceRange() const {
-    return {isConstrained()
-                ? (getNestedNameSpecifierLoc()
-                       ? getNestedNameSpecifierLoc().getBeginLoc()
-                       : (getTemplateKWLoc().isValid() ? getTemplateKWLoc()
-                                                       : getConceptNameLoc()))
-                : getNameLoc(),
-            isDecltypeAuto() ? getRParenLoc() : getNameLoc()};
+    return{
+        isConstrained()
+          ? (getNestedNameSpecifierLoc()
+               ? getNestedNameSpecifierLoc().getBeginLoc()
+               : (getTemplateKWLoc().isValid()
+                  ? getTemplateKWLoc()
+                  : getConceptNameLoc()))
+          : getNameLoc(),
+        getNameLoc()
+    };
   }
 
   void copy(AutoTypeLoc Loc) {
