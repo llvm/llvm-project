@@ -452,7 +452,7 @@ public:
     static const mask punct  = _PUNCT;
     static const mask xdigit = _HEX;
     static const mask blank  = _BLANK;
-    static const mask __regex_word = 0x80;
+    static const mask __regex_word = 0x4000; // 0x8000 and 0x0100 and 0x00ff are used
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__)
 # ifdef __APPLE__
@@ -545,6 +545,12 @@ public:
     static const mask graph  = alnum | punct;
 
     _LIBCPP_INLINE_VISIBILITY ctype_base() {}
+
+// TODO: Remove the ifndef when the assert no longer fails on AIX.
+#ifndef _AIX
+    static_assert((__regex_word & ~(space | print | cntrl | upper | lower | alpha | digit | punct | xdigit | blank)) == __regex_word,
+                  "__regex_word can't overlap other bits");
+#endif
 };
 
 template <class _CharT> class _LIBCPP_TEMPLATE_VIS ctype;
