@@ -68,7 +68,7 @@ private:
   /// \note A result larger than UINT_MAX is considered a failure.
   ///
   /// \see https://dlang.org/spec/abi.html#Number .
-  const char *decodeNumber(const char *Mangled, unsigned long *Ret);
+  const char *decodeNumber(const char *Mangled, unsigned long &Ret);
 
   /// Extract the back reference position from a given string.
   ///
@@ -179,7 +179,7 @@ private:
 
 } // namespace
 
-const char *Demangler::decodeNumber(const char *Mangled, unsigned long *Ret) {
+const char *Demangler::decodeNumber(const char *Mangled, unsigned long &Ret) {
   // Return nullptr if trying to extract something that isn't a digit.
   if (Mangled == nullptr || !std::isdigit(*Mangled))
     return nullptr;
@@ -200,7 +200,7 @@ const char *Demangler::decodeNumber(const char *Mangled, unsigned long *Ret) {
   if (*Mangled == '\0')
     return nullptr;
 
-  *Ret = Val;
+  Ret = Val;
   return Mangled;
 }
 
@@ -278,7 +278,7 @@ const char *Demangler::parseSymbolBackref(OutputBuffer *Demangled,
   Mangled = decodeBackref(Mangled, Backref);
 
   // Must point to a simple identifier
-  Backref = decodeNumber(Backref, &Len);
+  Backref = decodeNumber(Backref, Len);
   if (Backref == nullptr || strlen(Backref) < Len)
     return nullptr;
 
@@ -419,7 +419,7 @@ const char *Demangler::parseIdentifier(OutputBuffer *Demangled,
 
   // TODO: Parse lengthless template instances.
 
-  const char *Endptr = decodeNumber(Mangled, &Len);
+  const char *Endptr = decodeNumber(Mangled, Len);
 
   if (Endptr == nullptr || Len == 0)
     return nullptr;
