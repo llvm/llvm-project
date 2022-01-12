@@ -2932,6 +2932,7 @@ public:
     case swift::DiagnosticKind::Note:
       return eDiagnosticSeverityRemark;
     case swift::DiagnosticKind::Remark:
+      return eDiagnosticSeverityRemark;
       break;
     }
 
