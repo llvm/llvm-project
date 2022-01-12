@@ -46,7 +46,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Oliver Hunt (Apple) [ojhunt]
 * Paul Robinson (Sony) [probinson]
 * Peter Smith (ARM) [peter.smith]
-* Pietro Albini (individual; Rust) [pietroalbini]
+* Pietro Albini (Ferrous Systems; Rust) [pietroalbini]
 * Serge Guelton (RedHat) [serge-sans-paille]
 * Sergey Maslov (Intel) [smaslov-intel]
 * Shayne Hiet-Block (Microsoft) [Shayne]
