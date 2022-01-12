@@ -691,3 +691,17 @@ func @constant_MinMax(%arg0 : f32) -> f32 {
   %res = arith.maxf %const, %min : f32
   return %res : f32
 }
+
+// -----
+// CHECK-LABEL: @cmpf_nan(
+func @cmpf_nan(%arg0 : f32) -> (i1, i1, i1, i1) {
+//   CHECK-DAG:   %[[T:.*]] = arith.constant true
+//   CHECK-DAG:   %[[F:.*]] = arith.constant false
+//       CHECK:   return %[[F]], %[[F]], %[[T]], %[[T]]
+  %nan = arith.constant 0x7fffffff : f32
+  %0 = arith.cmpf olt, %nan, %arg0 : f32
+  %1 = arith.cmpf olt, %arg0, %nan : f32
+  %2 = arith.cmpf ugt, %nan, %arg0 : f32
+  %3 = arith.cmpf ugt, %arg0, %nan : f32
+  return %0, %1, %2, %3 : i1, i1, i1, i1
+}
