@@ -28,7 +28,7 @@ declare <16 x i8> @llvm.mips.sld.b(<16 x i8>, <16 x i8>, i32) nounwind
 ; CHECK-DAG: ld.b [[WD:\$w[0-9]+]], 0([[R1]])
 ; CHECK-DAG: ld.b [[WS:\$w[0-9]+]], 0([[R2]])
 ; CHECK-DAG: lw [[RT:\$[0-9]+]], 0([[R3]])
-; CHECK-DAG: sld.b [[WD]], [[WS]]{{\[}}[[RT]]{{\]}}
+; CHECK-DAG: sld.b [[WD]], [[WS]][[[RT]]]
 ; CHECK-DAG: st.b [[WD]]
 ; CHECK: .size llvm_mips_sld_b_test
 ;
@@ -56,7 +56,7 @@ declare <8 x i16> @llvm.mips.sld.h(<8 x i16>, <8 x i16>, i32) nounwind
 ; CHECK-DAG: ld.h [[WD:\$w[0-9]+]], 0([[R1]])
 ; CHECK-DAG: ld.h [[WS:\$w[0-9]+]], 0([[R2]])
 ; CHECK-DAG: lw [[RT:\$[0-9]+]], 0([[R3]])
-; CHECK-DAG: sld.h [[WD]], [[WS]]{{\[}}[[RT]]{{\]}}
+; CHECK-DAG: sld.h [[WD]], [[WS]][[[RT]]]
 ; CHECK-DAG: st.h [[WD]]
 ; CHECK: .size llvm_mips_sld_h_test
 ;
@@ -84,7 +84,7 @@ declare <4 x i32> @llvm.mips.sld.w(<4 x i32>, <4 x i32>, i32) nounwind
 ; CHECK-DAG: ld.w [[WD:\$w[0-9]+]], 0([[R1]])
 ; CHECK-DAG: ld.w [[WS:\$w[0-9]+]], 0([[R2]])
 ; CHECK-DAG: lw [[RT:\$[0-9]+]], 0([[R3]])
-; CHECK-DAG: sld.w [[WD]], [[WS]]{{\[}}[[RT]]{{\]}}
+; CHECK-DAG: sld.w [[WD]], [[WS]][[[RT]]]
 ; CHECK-DAG: st.w [[WD]]
 ; CHECK: .size llvm_mips_sld_w_test
 ;
@@ -112,7 +112,7 @@ declare <2 x i64> @llvm.mips.sld.d(<2 x i64>, <2 x i64>, i32) nounwind
 ; CHECK-DAG: ld.d [[WD:\$w[0-9]+]], 0([[R1]])
 ; CHECK-DAG: ld.d [[WS:\$w[0-9]+]], 0([[R2]])
 ; CHECK-DAG: lw [[RT:\$[0-9]+]], 0([[R3]])
-; CHECK-DAG: sld.d [[WD]], [[WS]]{{\[}}[[RT]]{{\]}}
+; CHECK-DAG: sld.d [[WD]], [[WS]][[[RT]]]
 ; CHECK-DAG: st.d [[WD]]
 ; CHECK: .size llvm_mips_sld_d_test
 ;

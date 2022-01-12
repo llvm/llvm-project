@@ -1007,8 +1007,9 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
     // brackets. They also accept a combined form which sets a numeric variable
     // to the evaluation of an expression. Both string and numeric variable
     // names must satisfy the regular expression "[a-zA-Z_][0-9a-zA-Z_]*" to be
-    // valid, as this helps catch some common errors.
-    if (PatternStr.startswith("[[")) {
+    // valid, as this helps catch some common errors. If there are extra '['s
+    // before the "[[", treat them literally.
+    if (PatternStr.startswith("[[") && !PatternStr.startswith("[[[")) {
       StringRef UnparsedPatternStr = PatternStr.substr(2);
       // Find the closing bracket pair ending the match.  End is going to be an
       // offset relative to the beginning of the match string.
@@ -1183,12 +1184,14 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
           Substitutions.push_back(Substitution);
         }
       }
+
+      continue;
     }
 
     // Handle fixed string matches.
     // Find the end, which is the start of the next regex.
-    size_t FixedMatchEnd = PatternStr.find("{{");
-    FixedMatchEnd = std::min(FixedMatchEnd, PatternStr.find("[["));
+    size_t FixedMatchEnd =
+        std::min(PatternStr.find("{{", 1), PatternStr.find("[[", 1));
     RegExStr += Regex::escape(PatternStr.substr(0, FixedMatchEnd));
     PatternStr = PatternStr.substr(FixedMatchEnd);
   }
