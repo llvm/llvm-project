@@ -3427,6 +3427,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BIalloca:
   case Builtin::BI_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
   case Builtin::BI__builtin_alloca: {
     Value *Size = EmitScalarExpr(E->getArg(0));
     const TargetInfo &TI = getContext().getTargetInfo();
@@ -3437,10 +3438,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
             .getAsAlign();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(SuitableAlignmentInBytes);
-    initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
+    if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
+      initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
     return RValue::get(AI);
   }
 
+  case Builtin::BI__builtin_alloca_with_align_uninitialized:
   case Builtin::BI__builtin_alloca_with_align: {
     Value *Size = EmitScalarExpr(E->getArg(0));
     Value *AlignmentInBitsValue = EmitScalarExpr(E->getArg(1));
@@ -3450,7 +3453,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         CGM.getContext().toCharUnitsFromBits(AlignmentInBits).getAsAlign();
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(AlignmentInBytes);
-    initializeAlloca(*this, AI, Size, AlignmentInBytes);
+    if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
+      initializeAlloca(*this, AI, Size, AlignmentInBytes);
     return RValue::get(AI);
   }
 
