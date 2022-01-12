@@ -36,6 +36,6 @@
 # RUN:   FileCheck -DMSG=%errc_ENOENT %s --check-prefix=WIN
 # WIN: error: blah\foo: [[MSG]]
 
-# RUN: not llvm-ar -rsp-quoting posix @%t-rsp.txt 2>&1 | \
+# RUN: not llvm-ar --rsp-quoting posix @%t-rsp.txt 2>&1 | \
 # RUN:   FileCheck -DMSG=%errc_ENOENT %s --check-prefix=POSIX
 # POSIX: error: blahfoo: [[MSG]]
