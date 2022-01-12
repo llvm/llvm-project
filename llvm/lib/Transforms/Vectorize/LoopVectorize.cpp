@@ -8927,9 +8927,9 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   }
 }
 
-// Add a VPCanonicalIVPHIRecipe starting at 0 to the header and a
-// CanonicalIVIncrement{NUW} VPInstruction to increment it by VF * UF to the
-// latch.
+// Add a VPCanonicalIVPHIRecipe starting at 0 to the header, a
+// CanonicalIVIncrement{NUW} VPInstruction to increment it by VF * UF and a
+// BranchOnCount VPInstruction to the latch.
 static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
                                   bool HasNUW, bool IsVPlanNative) {
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
@@ -8949,9 +8949,16 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, DebugLoc DL,
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   VPBasicBlock *EB = TopRegion->getExitBasicBlock();
-  if (IsVPlanNative)
+  if (IsVPlanNative) {
     EB = cast<VPBasicBlock>(EB->getSinglePredecessor());
+    EB->setCondBit(nullptr);
+  }
   EB->appendRecipe(CanonicalIVIncrement);
+
+  auto *BranchOnCount =
+      new VPInstruction(VPInstruction::BranchOnCount,
+                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
+  EB->appendRecipe(BranchOnCount);
 }
 
 VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
@@ -9411,16 +9418,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   }
 
   // If tail is folded by masking, introduce selects between the phi
-  // and the live-out instruction of each reduction, at the end of the latch.
+  // and the live-out instruction of each reduction, at the beginning of the
+  // dedicated latch block.
   if (CM.foldTailByMasking()) {
+    Builder.setInsertPoint(LatchVPBB, LatchVPBB->begin());
     for (VPRecipeBase &R : Plan->getEntry()->getEntryBasicBlock()->phis()) {
       VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
       if (!PhiR || PhiR->isInLoop())
         continue;
-      Builder.setInsertPoint(LatchVPBB);
       VPValue *Cond =
           RecipeBuilder.createBlockInMask(OrigLoop->getHeader(), Plan);
       VPValue *Red = PhiR->getBackedgeValue();
+      assert(cast<VPRecipeBase>(Red->getDef())->getParent() != LatchVPBB &&
+             "reduction recipe must be defined before latch");
       Builder.createNaryOp(Instruction::Select, {Cond, Red, PhiR});
     }
   }

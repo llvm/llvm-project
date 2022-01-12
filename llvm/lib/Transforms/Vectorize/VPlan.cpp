@@ -730,6 +730,32 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     State.set(this, Next, Part);
     break;
   }
+  case VPInstruction::BranchOnCount: {
+    if (Part != 0)
+      break;
+    // First create the compare.
+    Value *IV = State.get(getOperand(0), Part);
+    Value *TC = State.get(getOperand(1), Part);
+    Value *Cond = Builder.CreateICmpEQ(IV, TC);
+
+    // Now create the branch.
+    auto *Plan = getParent()->getPlan();
+    VPRegionBlock *TopRegion = Plan->getVectorLoopRegion();
+    VPBasicBlock *Header = TopRegion->getEntry()->getEntryBasicBlock();
+    if (Header->empty()) {
+      assert(EnableVPlanNativePath &&
+             "empty entry block only expected in VPlanNativePath");
+      Header = cast<VPBasicBlock>(Header->getSingleSuccessor());
+    }
+    // TODO: Once the exit block is modeled in VPlan, use it instead of going
+    // through State.CFG.LastBB.
+    BasicBlock *Exit =
+        cast<BranchInst>(State.CFG.LastBB->getTerminator())->getSuccessor(0);
+
+    Builder.CreateCondBr(Cond, Exit, State.CFG.VPBB2IRBB[Header]);
+    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+    break;
+  }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -782,6 +808,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::CanonicalIVIncrementNUW:
     O << "VF * UF +(nuw) ";
+    break;
+  case VPInstruction::BranchOnCount:
+    O << "branch-on-count ";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -901,13 +930,19 @@ void VPlan::execute(VPTransformState *State) {
 
   // 3. Merge the temporary latch created with the last basic-block filled.
   BasicBlock *LastBB = State->CFG.PrevBB;
+  assert(isa<BranchInst>(LastBB->getTerminator()) &&
+         "Expected VPlan CFG to terminate with branch");
+
+  // Move both the branch and check from LastBB to VectorLatchBB.
+  auto *LastBranch = cast<BranchInst>(LastBB->getTerminator());
+  LastBranch->moveBefore(VectorLatchBB->getTerminator());
+  VectorLatchBB->getTerminator()->eraseFromParent();
+  // Move condition so it is guaranteed to be next to branch. This is only done
+  // to avoid excessive test updates.
+  // TODO: Remove special handling once the increments for all inductions are
+  // modeled explicitly in VPlan.
+  cast<Instruction>(LastBranch->getCondition())->moveBefore(LastBranch);
   // Connect LastBB to VectorLatchBB to facilitate their merge.
-  assert((EnableVPlanNativePath ||
-          isa<UnreachableInst>(LastBB->getTerminator())) &&
-         "Expected InnerLoop VPlan CFG to terminate with unreachable");
-  assert((!EnableVPlanNativePath || isa<BranchInst>(LastBB->getTerminator())) &&
-         "Expected VPlan CFG to terminate with branch in NativePath");
-  LastBB->getTerminator()->eraseFromParent();
   BranchInst::Create(VectorLatchBB, LastBB);
 
   // Merge LastBB with Latch.
@@ -947,16 +982,6 @@ void VPlan::execute(VPTransformState *State) {
     }
   }
 
-  // Add the loop exit condition and branch based on the canonical induction.
-  auto *CanonicalIV = getCanonicalIV();
-  // TODO: Model compare and branch explicitly in VPlan as recipes.
-  auto *Next = State->get(CanonicalIV->getBackedgeValue(), 0);
-  auto *TermBr = cast<BranchInst>(VectorLatchBB->getTerminator());
-  State->Builder.SetInsertPoint(TermBr);
-  auto *ICmp =
-      State->Builder.CreateICmpEQ(Next, State->get(&getVectorTripCount(), 0));
-  TermBr->setCondition(ICmp);
-
   // We do not attempt to preserve DT for outer loop vectorization currently.
   if (!EnableVPlanNativePath)
     updateDominatorTree(State->DT, VectorPreHeaderBB, VectorLatchBB,
@@ -970,8 +995,12 @@ void VPlan::print(raw_ostream &O) const {
 
   O << "VPlan '" << Name << "' {";
 
-  assert(VectorTripCount.getNumUsers() == 0 &&
-         "should not be used yet in VPlan");
+  if (VectorTripCount.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    VectorTripCount.printAsOperand(O, SlotTracker);
+    O << " = vector-trip-count\n";
+  }
+
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     O << "\nLive-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
