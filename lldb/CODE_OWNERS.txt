@@ -10,7 +10,7 @@ beautification by scripts.  The fields are: name (N), email (E), web-address
 
 N: Greg Clayton
 E: clayborg@gmail.com
-D: Overall LLDB architecture, Host (common+macosx), Symbol, API, ABI, Mac-specific code, 
+D: Overall LLDB architecture, Host (common+macosx), Symbol, API, ABI, Mac-specific code,
 D: DynamicLoader, ObjectFile, IOHandler, EditLine, Core/Value*, Watchpoints, debugserver
 D: Build scripts, Test suite, Platform, gdb-remote, Anything not covered by this file
 
@@ -27,7 +27,7 @@ D: FreeBSD
 
 N: Jason Molenda
 E: jmolenda@apple.com
-D: ABI, Disassembler, Unwinding, iOS, debugserver, Platform, ObjectFile, SymbolFile, 
+D: ABI, Disassembler, Unwinding, iOS, debugserver, Platform, ObjectFile, SymbolFile,
 D: SymbolVendor, DWARF, gdb-remote
 
 N: Kamil Rytarowski
@@ -42,3 +42,8 @@ D: Test suite
 N: Pavel Labath
 E: labath@google.com
 D: Linux, Android
+
+N: Walter Erquinigo
+E: a20012251@gmail.com
+E: waltermelon@fb.com
+D: Trace, TraceCursor, TraceExport, intel-pt, lldb-vscode, Data Formatters
