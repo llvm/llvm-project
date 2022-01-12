@@ -678,3 +678,16 @@ func @constant_UItoFP() -> f32 {
   %res = arith.sitofp %c0 : i32 to f32
   return %res : f32
 }
+
+// -----
+// CHECK-LABEL: @constant_MinMax(
+func @constant_MinMax(%arg0 : f32) -> f32 {
+  // CHECK:  %[[const:.+]] = arith.constant
+  // CHECK:  %[[min:.+]] = arith.minf %arg0, %[[const]] : f32
+  // CHECK:  %[[res:.+]] = arith.maxf %[[min]], %[[const]] : f32
+  // CHECK:   return %[[res]]
+  %const = arith.constant 0.0 : f32
+  %min = arith.minf %const, %arg0 : f32
+  %res = arith.maxf %const, %min : f32
+  return %res : f32
+}

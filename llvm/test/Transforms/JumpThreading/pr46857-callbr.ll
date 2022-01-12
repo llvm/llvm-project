@@ -11,7 +11,7 @@ define i1 @func(i1 %arg, i32 %arg1, i1 %arg2) {
 ; CHECK-NEXT:    [[I:%.*]] = icmp eq i32 [[ARG1:%.*]], 0
 ; CHECK-NEXT:    br label [[BB7:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    callbr void asm sideeffect "", "X"(i8* blockaddress(@func, [[BB7]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "i"(i8* blockaddress(@func, [[BB7]]))
 ; CHECK-NEXT:    to label [[BB5:%.*]] [label %bb7]
 ; CHECK:       bb5:
 ; CHECK-NEXT:    br label [[BB7]]
@@ -30,7 +30,7 @@ bb3:
   br label %bb7
 
 bb4:
-  callbr void asm sideeffect "", "X"(i8* blockaddress(@func, %bb6))
+  callbr void asm sideeffect "", "i"(i8* blockaddress(@func, %bb6))
   to label %bb5 [label %bb6]
 
 bb5:

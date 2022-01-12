@@ -68,6 +68,7 @@ std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
 }
 
 void mlir::tosa::addTosaToLinalgPasses(OpPassManager &pm) {
+  pm.addNestedPass<FuncOp>(mlir::tosa::createTosaOptionalDecompositions());
   pm.addNestedPass<FuncOp>(createTosaMakeBroadcastablePass());
   pm.addNestedPass<FuncOp>(createTosaToLinalgNamed());
   pm.addNestedPass<FuncOp>(mlir::createCanonicalizerPass());

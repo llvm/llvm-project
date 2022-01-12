@@ -2247,32 +2247,36 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
 
       // Unknown size indication requires no size computation.
       // Otherwise, evaluate and record it.
-      if (const Expr *size = vat->getSizeExpr()) {
+      if (const Expr *sizeExpr = vat->getSizeExpr()) {
         // It's possible that we might have emitted this already,
         // e.g. with a typedef and a pointer to it.
-        llvm::Value *&entry = VLASizeMap[size];
+        llvm::Value *&entry = VLASizeMap[sizeExpr];
         if (!entry) {
-          llvm::Value *Size = EmitScalarExpr(size);
+          llvm::Value *size = EmitScalarExpr(sizeExpr);
 
           // C11 6.7.6.2p5:
           //   If the size is an expression that is not an integer constant
           //   expression [...] each time it is evaluated it shall have a value
           //   greater than zero.
-          if (SanOpts.has(SanitizerKind::VLABound) &&
-              size->getType()->isSignedIntegerType()) {
+          if (SanOpts.has(SanitizerKind::VLABound)) {
             SanitizerScope SanScope(this);
-            llvm::Value *Zero = llvm::Constant::getNullValue(Size->getType());
+            llvm::Value *Zero = llvm::Constant::getNullValue(size->getType());
+            clang::QualType SEType = sizeExpr->getType();
+            llvm::Value *CheckCondition =
+                SEType->isSignedIntegerType()
+                    ? Builder.CreateICmpSGT(size, Zero)
+                    : Builder.CreateICmpUGT(size, Zero);
             llvm::Constant *StaticArgs[] = {
-                EmitCheckSourceLocation(size->getBeginLoc()),
-                EmitCheckTypeDescriptor(size->getType())};
-            EmitCheck(std::make_pair(Builder.CreateICmpSGT(Size, Zero),
-                                     SanitizerKind::VLABound),
-                      SanitizerHandler::VLABoundNotPositive, StaticArgs, Size);
+                EmitCheckSourceLocation(sizeExpr->getBeginLoc()),
+                EmitCheckTypeDescriptor(SEType)};
+            EmitCheck(std::make_pair(CheckCondition, SanitizerKind::VLABound),
+                      SanitizerHandler::VLABoundNotPositive, StaticArgs, size);
           }
 
           // Always zexting here would be wrong if it weren't
           // undefined behavior to have a negative bound.
-          entry = Builder.CreateIntCast(Size, SizeTy, /*signed*/ false);
+          // FIXME: What about when size's type is larger than size_t?
+          entry = Builder.CreateIntCast(size, SizeTy, /*signed*/ false);
         }
       }
       type = vat->getElementType();

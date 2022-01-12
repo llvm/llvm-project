@@ -7,7 +7,7 @@
 
 @G = internal global i32* null		; <i32**> [#uses=3]
 
-declare i8* @malloc(i32)
+declare noalias i8* @malloc(i32)
 define void @malloc_init() {
 ; CHECK-LABEL: @malloc_init(
 ; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i32 4)
@@ -36,7 +36,7 @@ define i32 @malloc_test(i32* %P) {
 
 @G2 = internal global i32* null		; <i32**> [#uses=3]
 
-declare i8* @calloc(i32, i32)
+declare noalias i8* @calloc(i32, i32)
 define void @calloc_init() {
 ; CHECK-LABEL: @calloc_init(
 ; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) i8* @calloc(i32 4, i32 1)
@@ -80,12 +80,8 @@ define void @my_alloc_init() {
 
 define i32 @my_alloc_test(i32* %P) {
 ; CHECK-LABEL: @my_alloc_test(
-; CHECK-NEXT:    [[G1:%.*]] = load i32*, i32** @G3, align 8
-; CHECK-NEXT:    [[H1:%.*]] = load i32, i32* [[G1]], align 4
 ; CHECK-NEXT:    store i32 123, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    [[H2:%.*]] = load i32, i32* [[G1]], align 4
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[H1]], [[H2]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 0
 ;
   %g1 = load i32*, i32** @G3		; <i32*> [#uses=2]
   %h1 = load i32, i32* %g1		; <i32> [#uses=1]

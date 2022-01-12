@@ -1356,7 +1356,6 @@ static void printAtomicReadOp(OpAsmPrinter &p, AtomicReadOp op) {
   if (op.hintAttr())
     printSynchronizationHint(p << " ", op, op.hintAttr());
   p << ": " << op.x().getType();
-  return;
 }
 
 /// Verifier for AtomicReadOp

@@ -1,0 +1,44 @@
+# Check for the simplification of .rodata loads.
+
+RUN: %clang %p/Inputs/rodata_simpl_loads.s -o %t.exe
+RUN: llvm-bolt %t.exe -o %t -simplify-rodata-loads
+RUN: FileCheck %s --check-prefix=ORIGINAL --input-file %p/Inputs/rodata_simpl_loads.s
+RUN: llvm-objdump -d %t --print-imm-hex --disassemble-symbols=main | FileCheck %s
+
+CHECK:   Disassembly of section .text:
+CHECK:   <main>:
+# check that the following rip-relative operands have been
+# replaced with immediates
+
+ORIGINAL: movzbl  s1(%rip), %eax
+CHECK:    movl    $0x41, %eax
+
+ORIGINAL: cmpb    s2(%rip), %al
+CHECK:    cmpb    $0x41, %al
+
+ORIGINAL: movzbl  s1+1(%rip), %eax
+CHECK:    movl    $0x42, %eax
+
+ORIGINAL: cmpb    s2+1(%rip), %al
+CHECK:    cmpb    $0x42, %al
+
+ORIGINAL: movzbl  s1+2(%rip), %eax
+CHECK:    movl    $0x43, %eax
+
+ORIGINAL: cmpb    s2+2(%rip), %al
+CHECK:    cmpb    $0x43, %al
+
+ORIGINAL: movzbl  s1+3(%rip), %eax
+CHECK:    movl    $0x0, %eax
+
+ORIGINAL: cmpb    s2+3(%rip), %al
+CHECK:    cmpb    $0x0, %al
+
+ORIGINAL: movl    I1(%rip), %eax
+CHECK:    movl    $0x6, %eax
+
+ORIGINAL: addl    I2(%rip), %eax
+CHECK:    addl    $0x43, %eax
+
+ORIGINAL: movl    I2(%rip), %eax
+CHECK:    movl    $0x43, %eax

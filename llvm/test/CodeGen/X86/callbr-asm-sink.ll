@@ -21,7 +21,7 @@ define void @klist_dec_and_del(%struct1*) {
 ; CHECK-NEXT:    movq $0, -8(%rax)
 ; CHECK-NEXT:    retq
   %2 = getelementptr inbounds %struct1, %struct1* %0, i64 0, i32 1
-  callbr void asm sideeffect "# $0 $1", "*m,X,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %2, i8* blockaddress(@klist_dec_and_del, %3))
+  callbr void asm sideeffect "# $0 $1", "*m,i,~{memory},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %2, i8* blockaddress(@klist_dec_and_del, %3))
           to label %6 [label %3]
 
 3:

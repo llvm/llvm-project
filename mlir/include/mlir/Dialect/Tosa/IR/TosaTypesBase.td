@@ -154,6 +154,7 @@ class Tosa_TypeLike<list<Type> types, string description = ""> : TypeConstraint<
      TensorOf<types>.predicate]>,
      description>;
 
+def Tosa_IntLike : Tosa_TypeLike<[Tosa_Int], "signless-integer-like">;
 def Tosa_Int8Like : Tosa_TypeLike<[Tosa_Int8], "signless-integer-8-bit-like">;
 def Tosa_Int16Like : Tosa_TypeLike<[Tosa_Int16], "signless-integer-16-bit-like">;
 def Tosa_Int32Like : Tosa_TypeLike<[Tosa_Int32], "signless-integer-32-bit-like">;

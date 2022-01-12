@@ -28,7 +28,7 @@ ModelUnderTrainingRunner::ModelUnderTrainingRunner(
       ModelPath, InputSpecs, [&](size_t I) { return OutputSpecs[I].Spec; },
       OutputSpecs.size());
   if (!Evaluator || !Evaluator->isValid()) {
-    Ctx.emitError("Failed to create inliner saved model evaluator");
+    Ctx.emitError("Failed to create saved model evaluator");
     Evaluator.reset();
     return;
   }

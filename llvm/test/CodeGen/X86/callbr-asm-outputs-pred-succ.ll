@@ -32,12 +32,12 @@
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main(i32 %0, i8** nocapture readnone %1) #0 {
-  %3 = callbr i32 asm "jmp ${1:l}", "=r,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@main, %11)) #3
+  %3 = callbr i32 asm "jmp ${1:l}", "=r,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@main, %11)) #3
           to label %4 [label %11]
 
 4:                                                ; preds = %2
   %5 = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([26 x i8], [26 x i8]* @.str, i64 0, i64 0), i32 %3)
-  %6 = callbr i32 asm "jmp ${1:l}", "=r,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@main, %7)) #3
+  %6 = callbr i32 asm "jmp ${1:l}", "=r,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@main, %7)) #3
           to label %9 [label %7]
 
 7:                                                ; preds = %4

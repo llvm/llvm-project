@@ -314,7 +314,7 @@ static void insertDelayFiller(Iter Filler, const BB2BrMap &BrMap) {
       MIBundleBuilder(I.second).append(MF->CloneMachineInstr(&*Filler));
       ++UsefulSlots;
     } else {
-      I.first->insert(I.first->end(), MF->CloneMachineInstr(&*Filler));
+      I.first->push_back(MF->CloneMachineInstr(&*Filler));
     }
   }
 }

@@ -16,7 +16,7 @@ define i32 @c() {
 ; CHECK-NEXT:    [[PHITMP:%.*]] = icmp ne i32 [[CALL]], 0
 ; CHECK-NEXT:    br i1 [[PHITMP]], label [[IF_THEN2:%.*]], label [[IF_END4:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    callbr void asm sideeffect "", "X"(i8* blockaddress(@c, [[IF_THEN2]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "i"(i8* blockaddress(@c, [[IF_THEN2]]))
 ; CHECK-NEXT:    to label [[IF_END_THREAD:%.*]] [label %if.then2]
 ; CHECK:       if.end.thread:
 ; CHECK-NEXT:    br label [[IF_THEN2]]
@@ -37,7 +37,7 @@ if.then:                                          ; preds = %entry
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  callbr void asm sideeffect "", "X"(i8* blockaddress(@c, %if.end)) #2
+  callbr void asm sideeffect "", "i"(i8* blockaddress(@c, %if.end)) #2
   to label %normal [label %if.end]
 
 normal:                                           ; preds = %if.else

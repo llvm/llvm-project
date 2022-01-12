@@ -125,17 +125,11 @@ entry:
 ;  A:
 ;   return;
 ; }
-;
-; Ideally this would give the block address of bb, but it requires us to see
-; through blockaddress, which we can't do at the moment. This might break some
-; existing use cases where a user would expect to get a block label and instead
-; gets the block address in a register. However, note that according to the
-; "no constraints" definition this behaviour is correct (although not very nice).
 
 ; CHECK-LABEL: f7
-; CHECK: bl
+; CHECK: bl .Ltmp3
 define void @f7() {
-  call void asm sideeffect "br $0", "X"( i8* blockaddress(@f7, %bb) )
+  call void asm sideeffect "bl $0", "X"( i8* blockaddress(@f7, %bb) )
   br label %bb
 bb:
   ret void

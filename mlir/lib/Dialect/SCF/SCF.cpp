@@ -13,10 +13,10 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
-
 using namespace mlir;
 using namespace mlir::scf;
 
@@ -1197,6 +1197,30 @@ void IfOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
     // Non-constant condition: unknown invocations for both successors.
     countPerRegion.assign(2, kUnknownNumRegionInvocations);
   }
+}
+
+LogicalResult IfOp::fold(ArrayRef<Attribute> operands,
+                         SmallVectorImpl<OpFoldResult> &results) {
+  // if (!c) then A() else B() -> if c then B() else A()
+  if (getElseRegion().empty())
+    return failure();
+
+  arith::XOrIOp xorStmt = getCondition().getDefiningOp<arith::XOrIOp>();
+  if (!xorStmt)
+    return failure();
+
+  if (!matchPattern(xorStmt.getRhs(), m_One()))
+    return failure();
+
+  getConditionMutable().assign(xorStmt.getLhs());
+  Block *thenBlock = &getThenRegion().front();
+  // It would be nicer to use iplist::swap, but that has no implemented
+  // callbacks See: https://llvm.org/doxygen/ilist_8h_source.html#l00224
+  getThenRegion().getBlocks().splice(getThenRegion().getBlocks().begin(),
+                                     getElseRegion().getBlocks());
+  getElseRegion().getBlocks().splice(getElseRegion().getBlocks().begin(),
+                                     getThenRegion().getBlocks(), thenBlock);
+  return success();
 }
 
 namespace {
@@ -2419,11 +2443,76 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
     return success();
   }
 };
+
+/// Replace operations equivalent to the condition in the do block with true,
+/// since otherwise the block would not be evaluated.
+///
+/// scf.while (..) : (i32, ...) -> ... {
+///  %z = ... : i32
+///  %condition = cmpi pred %z, %a
+///  scf.condition(%condition) %z : i32, ...
+/// } do {
+/// ^bb0(%arg0: i32, ...):
+///    %condition2 = cmpi pred %arg0, %a
+///    use(%condition2)
+///    ...
+///
+/// becomes
+/// scf.while (..) : (i32, ...) -> ... {
+///  %z = ... : i32
+///  %condition = cmpi pred %z, %a
+///  scf.condition(%condition) %z : i32, ...
+/// } do {
+/// ^bb0(%arg0: i32, ...):
+///    use(%true)
+///    ...
+struct WhileCmpCond : public OpRewritePattern<scf::WhileOp> {
+  using OpRewritePattern<scf::WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(scf::WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    using namespace scf;
+    auto cond = op.getConditionOp();
+    auto cmp = cond.getCondition().getDefiningOp<arith::CmpIOp>();
+    if (!cmp)
+      return failure();
+    bool changed = false;
+    for (auto tup :
+         llvm::zip(cond.getArgs(), op.getAfter().front().getArguments())) {
+      for (size_t opIdx = 0; opIdx < 2; opIdx++) {
+        if (std::get<0>(tup) != cmp.getOperand(opIdx))
+          continue;
+        for (OpOperand &u :
+             llvm::make_early_inc_range(std::get<1>(tup).getUses())) {
+          auto cmp2 = dyn_cast<arith::CmpIOp>(u.getOwner());
+          if (!cmp2)
+            continue;
+          // For a binary operator 1-opIdx gets the other side.
+          if (cmp2.getOperand(1 - opIdx) != cmp.getOperand(1 - opIdx))
+            continue;
+          bool samePredicate;
+          if (cmp2.getPredicate() == cmp.getPredicate())
+            samePredicate = true;
+          else if (cmp2.getPredicate() ==
+                   arith::invertPredicate(cmp.getPredicate()))
+            samePredicate = false;
+          else
+            continue;
+
+          rewriter.replaceOpWithNewOp<arith::ConstantIntOp>(cmp2, samePredicate,
+                                                            1);
+          changed = true;
+        }
+      }
+    }
+    return success(changed);
+  }
+};
 } // namespace
 
 void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                           MLIRContext *context) {
-  results.insert<WhileConditionTruth, WhileUnusedResult>(context);
+  results.insert<WhileConditionTruth, WhileUnusedResult, WhileCmpCond>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -379,3 +379,361 @@ body: |
     CMP64ri32 %0, 24, implicit-def $eflags
     $cl = SETCCr 3, implicit $eflags
 ...
+---
+name: opt_redundant_flags_adjusted_imm_0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_0
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CMP64ri8 [[COPY]], 1, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 15, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 14, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 6, implicit $eflags
+    %0:gr64 = COPY $rsi
+    ; CMP+SETCC   %0 == 1
+    CMP64ri8 %0, 1, implicit-def $eflags
+    $cl = SETCCr 4, implicit $eflags
+    ; CMP+SETCC   %0 >= 2; CMP can be removed.
+    CMP64ri8 %0, 2, implicit-def $eflags
+    ; %0 >=s 2  -->  %0 >s 1
+    $bl = SETCCr 13, implicit $eflags
+    ; %0 >=u 2  -->  %0 >u 1
+    $bl = SETCCr 3, implicit $eflags
+    ; %0 <s 2  -->  %0 <=s 1
+    $bl = SETCCr 12, implicit $eflags
+    ; %0 <u 2  -->  %0 <=u 1
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_1
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CMP64ri8 [[COPY]], 42, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 5, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 13, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 3, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 12, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr64 = COPY $rsi
+    ; CMP+SETCC   %0 != 42
+    CMP64ri8 %0, 42, implicit-def $eflags
+    $cl = SETCCr 5, implicit $eflags
+    ; CMP+SETCC   %0 >= 2; CMP can be removed.
+    CMP64ri8 %0, 41, implicit-def $eflags
+    ; %0 >s 41  -->  %0 >=s 42
+    $bl = SETCCr 15, implicit $eflags
+    ; %0 >u 41  -->  %0 >=u 42
+    $bl = SETCCr 7, implicit $eflags
+    ; %0 <=s 41  -->  %0 <s 42
+    $bl = SETCCr 14, implicit $eflags
+    ; %0 <=u 41  -->  %0 <u 42
+    $bl = SETCCr 6, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_test_cmp
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_test_cmp
+    ; CHECK: [[COPY:%[0-9]+]]:gr8 = COPY $bl
+    ; CHECK-NEXT: TEST8rr [[COPY]], [[COPY]], implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 14, implicit $eflags
+    ; CHECK-NEXT: $cl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $cl = SETCCr 12, implicit $eflags
+    %0:gr8 = COPY $bl
+    TEST8rr %0, %0, implicit-def $eflags
+    ; SET %0 <=s 0
+    $cl = SETCCr 14, implicit $eflags
+    ; CMP should be removed (%0 >=u 1)
+    CMP8ri %0, 1, implicit-def $eflags
+    $cl = SETCCr 3, implicit $eflags
+
+    ; CMP should be removed (%0 <=s -1)
+    CMP8ri %0, -1, implicit-def $eflags
+    $cl = SETCCr 14, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_cmp_test
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_cmp_test
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CMP64ri32 [[COPY]], 1, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 13, implicit $eflags
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $edi
+    ; CHECK-NEXT: CMP64ri32 [[COPY1]], -1, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 14, implicit $eflags
+    %0:gr64 = COPY $rsi
+    CMP64ri32 %0, 1, implicit-def $eflags
+    ; TEST should be removed
+    TEST64rr %0, %0, implicit-def $eflags
+    $cl = SETCCr 15, implicit $eflags
+
+    %1:gr64 = COPY $edi
+    CMP64ri32 %1, -1, implicit-def $eflags
+    ; TEST should be removed
+    TEST64rr %1, %1, implicit-def $eflags
+    $cl = SETCCr 12, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_noopt_0
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_0
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CMP64ri8 [[COPY]], 42, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: CMP64ri8 [[COPY]], 41, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 4, implicit $eflags
+    %0:gr64 = COPY $rsi
+    ; CMP+SETCC   %0 <s 1
+    CMP64ri8 %0, 42, implicit-def $eflags
+    $cl = SETCCr 4, implicit $eflags
+    ; CMP should not be removed.
+    CMP64ri8 %0, 41, implicit-def $eflags
+    ; %0 == 41
+    $bl = SETCCr 4, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_noopt_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_1
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: CMP32ri [[COPY]], 2147483647, implicit-def $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], -2147483648, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 12, implicit $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], 4294967295, implicit-def $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], -2147483648, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 12, implicit $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], 2147483647, implicit-def $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], -2147483648, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 13, implicit $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], 4294967295, implicit-def $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], 0, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], 4294967295, implicit-def $eflags
+    ; CHECK-NEXT: CMP32ri [[COPY]], 0, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 3, implicit $eflags
+    %0:gr32 = COPY $esi
+    ; CMP+SETCC   %0 == INT32_MAX
+    CMP32ri %0, 2147483647, implicit-def $eflags
+    ; CMP should not be removed.
+    CMP32ri %0, -2147483648, implicit-def $eflags
+    ; %0 <s INT32_MIN
+    $bl = SETCCr 12, implicit $eflags
+
+    CMP32ri %0, 4294967295, implicit-def $eflags
+    ; CMP should not be removed.
+    CMP32ri %0, -2147483648, implicit-def $eflags
+    $bl = SETCCr 12, implicit $eflags
+
+    CMP32ri %0, 2147483647, implicit-def $eflags
+    ; CMP should not be removed.
+    CMP32ri %0, -2147483648, implicit-def $eflags
+    $bl = SETCCr 13, implicit $eflags
+
+    CMP32ri %0, 4294967295, implicit-def $eflags
+    ; should not be removed
+    CMP32ri %0, 0, implicit-def $eflags
+    $bl = SETCCr 2, implicit $eflags
+
+    CMP32ri %0, 4294967295, implicit-def $eflags
+    ; should not be removed
+    CMP32ri %0, 0, implicit-def $eflags
+    $bl = SETCCr 3, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_noopt_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_2
+    ; CHECK: [[COPY:%[0-9]+]]:gr16 = COPY $cx
+    ; CHECK-NEXT: CMP16ri [[COPY]], -32768, implicit-def $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], 32767, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 15, implicit $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], 65535, implicit-def $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], 32767, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 15, implicit $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], -32768, implicit-def $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], 32767, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 14, implicit $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], 0, implicit-def $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], 65535, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], 0, implicit-def $eflags
+    ; CHECK-NEXT: CMP16ri [[COPY]], 65535, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 6, implicit $eflags
+    %0:gr16 = COPY $cx
+    ; CMP+SETCC   %0 == INT16_MIN
+    CMP16ri %0, -32768, implicit-def $eflags
+    ; CMP should not be removed.
+    CMP16ri %0, 32767, implicit-def $eflags
+    ; %0 >s INT16_MAX
+    $bl = SETCCr 15, implicit $eflags
+
+    CMP16ri %0, 65535, implicit-def $eflags
+    ; CMP should not be removed.
+    CMP16ri %0, 32767, implicit-def $eflags
+    $bl = SETCCr 15, implicit $eflags
+
+    CMP16ri %0, -32768, implicit-def $eflags
+    ; CMP should not be removed.
+    CMP16ri %0, 32767, implicit-def $eflags
+    $bl = SETCCr 14, implicit $eflags
+
+    CMP16ri %0, 0, implicit-def $eflags
+    ; should not be removed
+    CMP16ri %0, 65535, implicit-def $eflags
+    $bl = SETCCr 4, implicit $eflags
+
+    CMP16ri %0, 0, implicit-def $eflags
+    ; should not be removed
+    CMP16ri %0, 65535, implicit-def $eflags
+    $bl = SETCCr 6, implicit $eflags
+...
+---
+name: opt_adjusted_imm_multiple_blocks
+body: |
+  ; CHECK-LABEL: name: opt_adjusted_imm_multiple_blocks
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $eax
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 20, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JCC_1 %bb.2, 15, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   RET 0
+  bb.0:
+    %0:gr32 = COPY $eax
+    CMP32ri %0, 20, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.1:
+    ; CMP can be removed when adjusting the JCC.
+    CMP32ri %0, 21, implicit-def $eflags
+    JCC_1 %bb.2, 13, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.2:
+    JMP_1 %bb.3
+
+  bb.3:
+    RET 0
+...
+---
+name: opt_adjusted_imm_multiple_blocks_noopt
+body: |
+  ; CHECK-LABEL: name: opt_adjusted_imm_multiple_blocks_noopt
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $eax
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 20, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP32ri [[COPY]], 21, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.2, 13, implicit $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $al = SETCCr 4, implicit $eflags
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   RET 0
+  bb.0:
+    %0:gr32 = COPY $eax
+    CMP32ri %0, 20, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.1:
+    ; The following CMP should not be optimized because $eflags is live-out
+    CMP32ri %0, 21, implicit-def $eflags
+    JCC_1 %bb.2, 13, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.2:
+    liveins: $eflags
+    $al = SETCCr 4, implicit $eflags
+
+  bb.3:
+    RET 0
+...
+---
+name: opt_shift_cmp_zero
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_shift_cmp_zero
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 7, implicit-def $eflags
+    ; CHECK-NEXT: $al = SETCCr 4, implicit $eflags
+    %0:gr64 = COPY $rsi
+    %1:gr64 = SHL64ri %0, 7, implicit-def dead $eflags
+    ; TEST should be removed.
+    TEST64rr %1, %1, implicit-def $eflags
+    $al = SETCCr 4, implicit $eflags
+...
+---
+name: noopt_shift_cmp_zero
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: noopt_shift_cmp_zero
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 9, implicit-def dead $eflags
+    ; CHECK-NEXT: TEST64rr [[SHL64ri]], [[SHL64ri]], implicit-def $eflags
+    ; CHECK-NEXT: $al = SETCCr 14, implicit $eflags
+    %0:gr64 = COPY $rsi
+    %1:gr64 = SHL64ri %0, 9, implicit-def dead $eflags
+    ; TEST cannot be removed if a user relies on the OF flag.
+    TEST64rr %1, %1, implicit-def $eflags
+    $al = SETCCr 14, implicit $eflags
+...
+---
+name: noopt_shift_cmp_zero_multiblock
+body: |
+  ; CHECK-LABEL: name: noopt_shift_cmp_zero_multiblock
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+  ; CHECK-NEXT:   [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 9, implicit-def dead $eflags
+  ; CHECK-NEXT:   TEST64rr [[SHL64ri]], [[SHL64ri]], implicit-def $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $al = SETCCr 14, implicit $eflags
+  bb.0:
+    %0:gr64 = COPY $rsi
+    %1:gr64 = SHL64ri %0, 9, implicit-def dead $eflags
+    ; TEST cannot be removed if a user relies on the OF flag.
+    TEST64rr %1, %1, implicit-def $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    liveins: $eflags
+    $al = SETCCr 14, implicit $eflags
+...

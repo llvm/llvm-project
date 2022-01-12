@@ -50,7 +50,7 @@ bb106:                                            ; preds = %bb
 
 bb110:                                            ; preds = %bb106, %bb100
   %i10.1 = phi i8* [ %arg2, %bb106 ], [ %i28.i, %bb100 ]
-  callbr void asm sideeffect "#$0 $1 $2", "i,i,X,~{dirflag},~{fpsr},~{flags}"(i32 42, i1 false, i8* blockaddress(@test1, %bb17.i.i.i))
+  callbr void asm sideeffect "#$0 $1 $2", "i,i,i,~{dirflag},~{fpsr},~{flags}"(i32 42, i1 false, i8* blockaddress(@test1, %bb17.i.i.i))
           to label %kmem_cache_has_cpu_partial.exit [label %bb17.i.i.i]
 
 bb17.i.i.i:                                       ; preds = %bb110
