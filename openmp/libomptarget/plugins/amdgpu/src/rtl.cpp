@@ -2321,7 +2321,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
       DP("After loading global for %s ExecMode = %d\n", ExecModeName,
          ExecModeVal);
 
-      if (ExecModeVal < 0 ||
+      if (ExecModeVal < llvm::omp::OMP_TGT_EXEC_MODE_GENERIC ||
           ExecModeVal > llvm::omp::OMP_TGT_EXEC_MODE_GENERIC_SPMD) {
         DP("Error wrong exec_mode value specified in HSA code object file: "
            "%d\n",
