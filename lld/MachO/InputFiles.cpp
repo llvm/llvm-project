@@ -1426,7 +1426,7 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
 
 void ArchiveFile::addLazySymbols() {
   for (const object::Archive::Symbol &sym : file->symbols())
-    symtab->addLazy(sym.getName(), this, sym);
+    symtab->addLazyArchive(sym.getName(), this, sym);
 }
 
 static Expected<InputFile *> loadArchiveMember(MemoryBufferRef mb,
