@@ -113,7 +113,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
 
   if (wasInserted)
     replaceSymbol<Undefined>(s, name, file, refState);
-  else if (auto *lazy = dyn_cast<LazySymbol>(s))
+  else if (auto *lazy = dyn_cast<LazyArchive>(s))
     lazy->fetchArchiveMember();
   else if (auto *dynsym = dyn_cast<DylibSymbol>(s))
     dynsym->reference(refState);
@@ -178,14 +178,14 @@ Symbol *SymbolTable::addDynamicLookup(StringRef name) {
   return addDylib(name, /*file=*/nullptr, /*isWeakDef=*/false, /*isTlv=*/false);
 }
 
-Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
-                             const object::Archive::Symbol &sym) {
+Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
+                                    const object::Archive::Symbol &sym) {
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, file);
 
   if (wasInserted) {
-    replaceSymbol<LazySymbol>(s, file, sym);
+    replaceSymbol<LazyArchive>(s, file, sym);
   } else if (isa<Undefined>(s)) {
     file->fetch(sym);
   } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -193,7 +193,7 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
       if (dysym->getRefState() != RefState::Unreferenced)
         file->fetch(sym);
       else
-        replaceSymbol<LazySymbol>(s, file, sym);
+        replaceSymbol<LazyArchive>(s, file, sym);
     }
   }
   return s;
