@@ -510,7 +510,7 @@ struct GlobalStatic {
 template <class T>
 _LIBCPP_SAFE_STATIC T GlobalStatic<T>::instance = {};
 
-enum class Implementation { NoThreads, GlobalLock, Futex };
+enum class Implementation { NoThreads, GlobalMutex, Futex };
 
 template <Implementation Impl>
 struct SelectImplementation;
@@ -521,7 +521,7 @@ struct SelectImplementation<Implementation::NoThreads> {
 };
 
 template <>
-struct SelectImplementation<Implementation::GlobalLock> {
+struct SelectImplementation<Implementation::GlobalMutex> {
   using type = InitByteGlobalMutex<LibcppMutex, LibcppCondVar, GlobalStatic<LibcppMutex>::instance,
                                    GlobalStatic<LibcppCondVar>::instance, PlatformThreadID>;
 };
@@ -539,7 +539,7 @@ constexpr Implementation CurrentImplementation =
 #elif defined(_LIBCXXABI_USE_FUTEX)
     Implementation::Futex;
 #else
-    Implementation::GlobalLock;
+    Implementation::GlobalMutex;
 #endif
 
 static_assert(CurrentImplementation != Implementation::Futex || PlatformSupportsFutex(),
