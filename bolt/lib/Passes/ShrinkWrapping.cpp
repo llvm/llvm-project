@@ -1951,7 +1951,7 @@ void ShrinkWrapping::rebuildCFI() {
 }
 
 bool ShrinkWrapping::perform() {
-  HasDeletedOffsetCFIs = std::vector<bool>(BC.MRI->getNumRegs(), false);
+  HasDeletedOffsetCFIs = BitVector(BC.MRI->getNumRegs(), false);
   PushOffsetByReg = std::vector<int64_t>(BC.MRI->getNumRegs(), 0LL);
   PopOffsetByReg = std::vector<int64_t>(BC.MRI->getNumRegs(), 0LL);
   DomOrder = std::vector<MCPhysReg>(BC.MRI->getNumRegs(), 0);

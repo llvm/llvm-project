@@ -295,7 +295,7 @@ class ShrinkWrapping {
   /// of moving this Callee-Saved Reg
   DenseMap<unsigned, std::vector<uint32_t>> DeletedPushCFIs;
   DenseMap<unsigned, std::vector<uint32_t>> DeletedPopCFIs;
-  std::vector<bool> HasDeletedOffsetCFIs;
+  BitVector HasDeletedOffsetCFIs;
   SmallPtrSet<const MCCFIInstruction *, 16> UpdatedCFIs;
   std::vector<BitVector> UsesByReg;
   std::vector<int64_t> PushOffsetByReg;
