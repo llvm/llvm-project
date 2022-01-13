@@ -14,8 +14,8 @@
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/IR/PassManager.h"
 
+#include <deque>
 #include <memory>
-#include <unordered_map>
 
 namespace llvm {
 class Module;
@@ -29,6 +29,7 @@ public:
   virtual ~MLInlineAdvisor() = default;
 
   void onPassEntry() override;
+  void onPassExit(LazyCallGraph::SCC *SCC) override;
 
   int64_t getIRSize(const Function &F) const { return F.getInstructionCount(); }
   void onSuccessfulInlining(const MLInlineAdvice &Advice,
@@ -37,7 +38,6 @@ public:
   bool isForcedToStop() const { return ForceStop; }
   int64_t getLocalCalls(Function &F);
   const MLModelRunner &getModelRunner() const { return *ModelRunner.get(); }
-  void onModuleInvalidated() override { Invalid = true; }
 
 protected:
   std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
@@ -60,15 +60,22 @@ protected:
 private:
   int64_t getModuleIRSize() const;
 
-  bool Invalid = true;
+  void print(raw_ostream &OS) const override {
+    OS << "[MLInlineAdvisor] Nodes: " << NodeCount << " Edges: " << EdgeCount
+       << "\n";
+  }
+
   LazyCallGraph &CG;
 
   int64_t NodeCount = 0;
   int64_t EdgeCount = 0;
+  int64_t EdgesOfLastSeenNodes = 0;
+
   std::map<const LazyCallGraph::Node *, unsigned> FunctionLevels;
   const int32_t InitialIRSize = 0;
   int32_t CurrentIRSize = 0;
-
+  std::deque<const LazyCallGraph::Node *> NodesInLastSCC;
+  DenseSet<const LazyCallGraph::Node *> AllNodes;
   bool ForceStop = false;
 };
 
