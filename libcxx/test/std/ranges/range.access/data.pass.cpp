@@ -210,12 +210,14 @@ constexpr bool testViaRangesBegin() {
 struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(!std::is_invocable_v<RangeDataT, Holder<Incomplete>*>);
+static_assert(!std::is_invocable_v<RangeDataT, Holder<Incomplete>*&>);
 
 struct RandomButNotContiguous {
   random_access_iterator<int*> begin() const;
   random_access_iterator<int*> end() const;
 };
 static_assert(!std::is_invocable_v<RangeDataT, RandomButNotContiguous>);
+static_assert(!std::is_invocable_v<RangeDataT, RandomButNotContiguous&>);
 
 int main(int, char**) {
   static_assert(testReturnTypes());

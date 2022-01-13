@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___RANGES_DATA_H
 #define _LIBCPP___RANGES_DATA_H
 
+#include <__concepts/class_or_enum.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
@@ -35,6 +36,7 @@ namespace __data {
   template <class _Tp>
   concept __member_data =
     __can_borrow<_Tp> &&
+    __workaround_52970<_Tp> &&
     requires(_Tp&& __t) {
       { _LIBCPP_AUTO_CAST(__t.data()) } -> __ptr_to_object;
     };

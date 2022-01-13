@@ -357,7 +357,9 @@ static_assert(noexcept(std::ranges::cend(erar)));
 struct Incomplete;
 template<class T> struct Holder { T t; };
 static_assert(!std::is_invocable_v<RangeEndT, Holder<Incomplete>*>);
+static_assert(!std::is_invocable_v<RangeEndT, Holder<Incomplete>*&>);
 static_assert(!std::is_invocable_v<RangeCEndT, Holder<Incomplete>*>);
+static_assert(!std::is_invocable_v<RangeCEndT, Holder<Incomplete>*&>);
 
 int main(int, char**) {
   static_assert(testReturnTypes());
