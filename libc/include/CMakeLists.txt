@@ -1,20 +1,9 @@
+add_subdirectory(llvm-libc-types)
 
 add_header(
   llvm_libc_common_h
   HDR
     __llvm-libc-common.h
-)
-
-add_header(
-  libc_posix_types
-  HDR
-    __posix-types.h
-)
-
-add_header(
-  stdc_types
-  HDR
-    __llvm-libc-stdc-types.h
 )
 
 add_gen_header(
@@ -47,7 +36,8 @@ add_gen_header(
   GEN_HDR math.h
   DEPENDS
     .llvm_libc_common_h
-    .stdc_types
+    .llvm-libc-types.double_t
+    .llvm-libc-types.float_t
 )
 
 add_gen_header(
@@ -127,8 +117,9 @@ add_gen_header(
   DEF_FILE unistd.h.def
   GEN_HDR unistd.h
   DEPENDS
-    .libc_posix_types
     .llvm_libc_common_h
+    .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -141,8 +132,9 @@ add_gen_header(
   DEF_FILE sys/mman.h.def
   GEN_HDR sys/mman.h
   DEPENDS
-    .libc_posix_types
     .llvm_libc_common_h
+    .llvm-libc-types.off_t
+    .llvm-libc-types.ssize_t
 )
 
 add_gen_header(

@@ -6,17 +6,19 @@ include "spec/llvm_libc_ext.td"
 include "spec/posix.td"
 include "spec/stdc.td"
 
+// TODO: Eliminate all TypeDecl specializations. Since we define all public
+// types in their own self contained header files, the header generator can
+// produce the boiler plate which pulls in the type definitions.
+
 def SizeT : TypeDecl<"size_t"> {
   let Decl = [{
-    #define __need_size_t
-    #include <stddef.h>
+    #include <llvm-libc-types/size_t.h>
   }];
 }
 
 def SSizeT : TypeDecl<"ssize_t"> {
   let Decl = [{
-    #define __need_ssize_t
-    #include <__posix-types.h>
+    #include <llvm-libc-types/ssize_t.h>
   }];
 }
 
@@ -44,8 +46,7 @@ def TimeT: TypeDecl<"time_t"> {
 
 def OffT : TypeDecl<"off_t"> {
   let Decl = [{
-    #define __need_off_t
-    #include <__posix-types.h>
+    #include <llvm-libc-types/off_t.h>
   }];
 }
 
@@ -160,15 +161,13 @@ def IsNanMacro : MacroDef<"isnan"> {
 
 def FloatT : TypeDecl<"float_t"> {
   let Decl = [{
-    #define __need_float_t
-    #include <__llvm-libc-stdc-types.h>
+    #include <llvm-libc-types/float_t.h>
   }];
 }
 
 def DoubleT : TypeDecl<"double_t"> {
   let Decl = [{
-    #define __need_double_t
-    #include <__llvm-libc-stdc-types.h>
+    #include <llvm-libc-types/double_t.h>
   }];
 }
 
