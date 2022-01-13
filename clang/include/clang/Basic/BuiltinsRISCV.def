@@ -33,6 +33,10 @@ TARGET_BUILTIN(__builtin_riscv_bdecompress_32, "ZiZiZi", "nc",
 TARGET_BUILTIN(__builtin_riscv_bdecompress_64, "WiWiWi", "nc",
                "experimental-zbe,64bit")
 
+// Zbf extension
+TARGET_BUILTIN(__builtin_riscv_bfp_32, "ZiZiZi", "nc", "experimental-zbf")
+TARGET_BUILTIN(__builtin_riscv_bfp_64, "WiWiWi", "nc", "experimental-zbf,64bit")
+
 // Zbp extension
 TARGET_BUILTIN(__builtin_riscv_grev_32, "ZiZiZi", "nc", "experimental-zbp")
 TARGET_BUILTIN(__builtin_riscv_grev_64, "WiWiWi", "nc", "experimental-zbp,64bit")
