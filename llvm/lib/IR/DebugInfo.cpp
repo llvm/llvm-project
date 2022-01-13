@@ -1436,14 +1436,14 @@ LLVMDIBuilderCreateSubroutineType(LLVMDIBuilderRef Builder,
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateExpression(LLVMDIBuilderRef Builder,
-                                              int64_t *Addr, size_t Length) {
-  return wrap(unwrap(Builder)->createExpression(ArrayRef<int64_t>(Addr,
-                                                                  Length)));
+                                              uint64_t *Addr, size_t Length) {
+  return wrap(
+      unwrap(Builder)->createExpression(ArrayRef<uint64_t>(Addr, Length)));
 }
 
 LLVMMetadataRef
 LLVMDIBuilderCreateConstantValueExpression(LLVMDIBuilderRef Builder,
-                                           int64_t Value) {
+                                           uint64_t Value) {
   return wrap(unwrap(Builder)->createConstantValueExpression(Value));
 }
 

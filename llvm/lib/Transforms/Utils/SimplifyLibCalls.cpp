@@ -602,7 +602,7 @@ Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
     Align MemSetAlign =
         CI->getAttributes().getParamAttrs(0).getAlignment().valueOrOne();
     CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, MemSetAlign);
-    AttrBuilder ArgAttrs(CI->getAttributes().getParamAttrs(0));
+    AttrBuilder ArgAttrs(CI->getContext(), CI->getAttributes().getParamAttrs(0));
     NewCI->setAttributes(NewCI->getAttributes().addParamAttributes(
         CI->getContext(), 0, ArgAttrs));
     copyFlags(*CI, NewCI);

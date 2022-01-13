@@ -908,13 +908,28 @@ static void sortSegmentsAndSections() {
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
     seg->sortOutputSections();
+    // References from thread-local variable sections are treated as offsets
+    // relative to the start of the thread-local data memory area, which
+    // is initialized via copying all the TLV data sections (which are all
+    // contiguous). If later data sections require a greater alignment than
+    // earlier ones, the offsets of data within those sections won't be
+    // guaranteed to aligned unless we normalize alignments. We therefore use
+    // the largest alignment for all TLV data sections.
+    uint32_t tlvAlign = 0;
+    for (const OutputSection *osec : seg->getSections())
+      if (isThreadLocalData(osec->flags) && osec->align > tlvAlign)
+        tlvAlign = osec->align;
+
     for (OutputSection *osec : seg->getSections()) {
       // Now that the output sections are sorted, assign the final
       // output section indices.
       if (!osec->isHidden())
         osec->index = ++sectionIndex;
-      if (!firstTLVDataSection && isThreadLocalData(osec->flags))
-        firstTLVDataSection = osec;
+      if (isThreadLocalData(osec->flags)) {
+        if (!firstTLVDataSection)
+          firstTLVDataSection = osec;
+        osec->align = tlvAlign;
+      }
 
       if (!isecPriorities.empty()) {
         if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
@@ -1108,7 +1123,7 @@ void Writer::writeUuid() {
   threadFutures.reserve(chunks.size());
   for (size_t i = 0; i < chunks.size(); ++i)
     threadFutures.emplace_back(threadPool.async(
-        [&](size_t i) { hashes[i] = xxHash64(chunks[i]); }, i));
+        [&](size_t j) { hashes[j] = xxHash64(chunks[j]); }, i));
   for (std::shared_future<void> &future : threadFutures)
     future.wait();
 

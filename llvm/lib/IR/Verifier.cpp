@@ -551,11 +551,12 @@ private:
   void checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
                                     const Value *V);
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
-                           const Value *V, bool IsIntrinsic);
+                           const Value *V, bool IsIntrinsic, bool IsInlineAsm);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
 
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
+  void verifyInlineAsmCall(const CallBase &Call);
   void verifyStatepoint(const CallBase &Call);
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
@@ -1058,6 +1059,7 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
                N.getTag() == dwarf::DW_TAG_reference_type ||
                N.getTag() == dwarf::DW_TAG_rvalue_reference_type ||
                N.getTag() == dwarf::DW_TAG_const_type ||
+               N.getTag() == dwarf::DW_TAG_immutable_type ||
                N.getTag() == dwarf::DW_TAG_volatile_type ||
                N.getTag() == dwarf::DW_TAG_restrict_type ||
                N.getTag() == dwarf::DW_TAG_atomic_type ||
@@ -1792,7 +1794,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
          "'noinline and alwaysinline' are incompatible!",
          V);
 
-  AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
+  AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
   for (Attribute Attr : Attrs) {
     if (!Attr.isStringAttribute() &&
         IncompatibleAttrs.contains(Attr.getKindAsEnum())) {
@@ -1870,7 +1872,8 @@ void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
 // Check parameter attributes against a function type.
 // The value V is printed in error messages.
 void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
-                                   const Value *V, bool IsIntrinsic) {
+                                   const Value *V, bool IsIntrinsic,
+                                   bool IsInlineAsm) {
   if (Attrs.isEmpty())
     return;
 
@@ -1913,8 +1916,10 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (!IsIntrinsic) {
       Assert(!ArgAttrs.hasAttribute(Attribute::ImmArg),
              "immarg attribute only applies to intrinsics",V);
-      Assert(!ArgAttrs.hasAttribute(Attribute::ElementType),
-             "Attribute 'elementtype' can only be applied to intrinsics.", V);
+      if (!IsInlineAsm)
+        Assert(!ArgAttrs.hasAttribute(Attribute::ElementType),
+               "Attribute 'elementtype' can only be applied to intrinsics"
+               " and inline asm.", V);
     }
 
     verifyParameterAttrs(ArgAttrs, Ty, V);
@@ -2141,6 +2146,33 @@ bool Verifier::verifyAttributeCount(AttributeList Attrs, unsigned Params) {
   return Attrs.getNumAttrSets() <= Params + 2;
 }
 
+void Verifier::verifyInlineAsmCall(const CallBase &Call) {
+  const InlineAsm *IA = cast<InlineAsm>(Call.getCalledOperand());
+  unsigned ArgNo = 0;
+  for (const InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
+    // Only deal with constraints that correspond to call arguments.
+    if (!CI.hasArg())
+      continue;
+
+    if (CI.isIndirect) {
+      const Value *Arg = Call.getArgOperand(ArgNo);
+      Assert(Arg->getType()->isPointerTy(),
+             "Operand for indirect constraint must have pointer type",
+             &Call);
+
+      Assert(Call.getAttributes().getParamElementType(ArgNo),
+             "Operand for indirect constraint must have elementtype attribute",
+             &Call);
+    } else {
+      Assert(!Call.paramHasAttr(ArgNo, Attribute::ElementType),
+             "Elementtype attribute can only be applied for indirect "
+             "constraints", &Call);
+    }
+
+    ArgNo++;
+  }
+}
+
 /// Verify that statepoint intrinsic is well formed.
 void Verifier::verifyStatepoint(const CallBase &Call) {
   assert(Call.getCalledFunction() &&
@@ -2364,7 +2396,7 @@ void Verifier::visitFunction(const Function &F) {
   bool IsIntrinsic = F.isIntrinsic();
 
   // Check function attributes.
-  verifyFunctionAttrs(FT, Attrs, &F, IsIntrinsic);
+  verifyFunctionAttrs(FT, Attrs, &F, IsIntrinsic, /* IsInlineAsm */ false);
 
   // On function declarations/definitions, we do not support the builtin
   // attribute. We do not check this in VerifyFunctionAttrs since that is
@@ -2779,6 +2811,7 @@ void Verifier::visitCallBrInst(CallBrInst &CBI) {
       Assert(ArgBBs.count(BB), "Indirect label missing from arglist.", &CBI);
   }
 
+  verifyInlineAsmCall(CBI);
   visitTerminator(CBI);
 }
 
@@ -3123,7 +3156,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   // Verify call attributes.
-  verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic);
+  verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
   // Conservatively check the inalloca argument.
   // We have a bug if we can find that there is an underlying alloca without
@@ -3316,6 +3349,9 @@ void Verifier::visitCallBase(CallBase &Call) {
              "debug info must have a !dbg location",
              Call);
 
+  if (Call.isInlineAsm())
+    verifyInlineAsmCall(Call);
+
   visitInstruction(Call);
 }
 
@@ -3345,13 +3381,13 @@ static bool isTypeCongruent(Type *L, Type *R) {
   return PL->getAddressSpace() == PR->getAddressSpace();
 }
 
-static AttrBuilder getParameterABIAttributes(unsigned I, AttributeList Attrs) {
+static AttrBuilder getParameterABIAttributes(LLVMContext& C, unsigned I, AttributeList Attrs) {
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet,  Attribute::ByVal,          Attribute::InAlloca,
       Attribute::InReg,      Attribute::StackAlignment, Attribute::SwiftSelf,
       Attribute::SwiftAsync, Attribute::SwiftError,     Attribute::Preallocated,
       Attribute::ByRef};
-  AttrBuilder Copy;
+  AttrBuilder Copy(C);
   for (auto AK : ABIAttrs) {
     Attribute Attr = Attrs.getParamAttrs(I).getAttribute(AK);
     if (Attr.isValid())
@@ -3414,12 +3450,12 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
     // - Only sret, byval, swiftself, and swiftasync ABI-impacting attributes
     //   are allowed in swifttailcc call
     for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-      AttrBuilder ABIAttrs = getParameterABIAttributes(I, CallerAttrs);
+      AttrBuilder ABIAttrs = getParameterABIAttributes(F->getContext(), I, CallerAttrs);
       SmallString<32> Context{CCName, StringRef(" musttail caller")};
       verifyTailCCMustTailAttrs(ABIAttrs, Context);
     }
     for (unsigned I = 0, E = CalleeTy->getNumParams(); I != E; ++I) {
-      AttrBuilder ABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
+      AttrBuilder ABIAttrs = getParameterABIAttributes(F->getContext(), I, CalleeAttrs);
       SmallString<32> Context{CCName, StringRef(" musttail callee")};
       verifyTailCCMustTailAttrs(ABIAttrs, Context);
     }
@@ -3446,8 +3482,8 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   // - All ABI-impacting function attributes, such as sret, byval, inreg,
   //   returned, preallocated, and inalloca, must match.
   for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
-    AttrBuilder CallerABIAttrs = getParameterABIAttributes(I, CallerAttrs);
-    AttrBuilder CalleeABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
+    AttrBuilder CallerABIAttrs = getParameterABIAttributes(F->getContext(), I, CallerAttrs);
+    AttrBuilder CalleeABIAttrs = getParameterABIAttributes(F->getContext(), I, CalleeAttrs);
     Assert(CallerABIAttrs == CalleeABIAttrs,
            "cannot guarantee tail call due to mismatched ABI impacting "
            "function attributes",
@@ -5314,6 +5350,24 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       Assert(Stride->getZExtValue() >= NumRows->getZExtValue(),
              "Stride must be greater or equal than the number of rows!", IF);
 
+    break;
+  }
+  case Intrinsic::experimental_vector_splice: {
+    VectorType *VecTy = cast<VectorType>(Call.getType());
+    int64_t Idx = cast<ConstantInt>(Call.getArgOperand(2))->getSExtValue();
+    int64_t KnownMinNumElements = VecTy->getElementCount().getKnownMinValue();
+    if (Call.getParent() && Call.getParent()->getParent()) {
+      AttributeList Attrs = Call.getParent()->getParent()->getAttributes();
+      if (Attrs.hasFnAttr(Attribute::VScaleRange))
+        KnownMinNumElements *= Attrs.getFnAttrs().getVScaleRangeMin();
+    }
+    Assert((Idx < 0 && std::abs(Idx) <= KnownMinNumElements) ||
+               (Idx >= 0 && Idx < KnownMinNumElements),
+           "The splice index exceeds the range [-VL, VL-1] where VL is the "
+           "known minimum number of elements in the vector. For scalable "
+           "vectors the minimum number of elements is determined from "
+           "vscale_range.",
+           &Call);
     break;
   }
   case Intrinsic::experimental_stepvector: {

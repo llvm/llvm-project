@@ -20,14 +20,6 @@
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 namespace llvm {
-class Type;
-class Module;
-class ArrayType;
-class StructType;
-class PointerType;
-class StringRef;
-class FunctionType;
-
 namespace omp {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
@@ -80,33 +72,6 @@ enum class IdentFlag {
 #define OMP_IDENT_FLAG(Enum, ...) constexpr auto Enum = omp::IdentFlag::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
-/// Helper to describe assume clauses.
-struct AssumptionClauseMappingInfo {
-  /// The identifier describing the (beginning of the) clause.
-  llvm::StringLiteral Identifier;
-  /// Flag to determine if the identifier is a full name or the start of a name.
-  bool StartsWith;
-  /// Flag to determine if a directive lists follows.
-  bool HasDirectiveList;
-  /// Flag to determine if an expression follows.
-  bool HasExpression;
-};
-
-/// All known assume clauses.
-static constexpr AssumptionClauseMappingInfo AssumptionClauseMappings[] = {
-#define OMP_ASSUME_CLAUSE(Identifier, StartsWith, HasDirectiveList,            \
-                          HasExpression)                                       \
-  {Identifier, StartsWith, HasDirectiveList, HasExpression},
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
-};
-
-inline std::string getAllAssumeClauseOptions() {
-  std::string S;
-  for (const AssumptionClauseMappingInfo &ACMI : AssumptionClauseMappings)
-    S += (S.empty() ? "'" : "', '") + ACMI.Identifier.str();
-  return S + "'";
-}
-
 /// \note This needs to be kept in sync with kmp.h enum sched_type.
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
 ///       To complete this, more enum values will need to be moved here.
@@ -138,6 +103,14 @@ enum OMPTgtExecModeFlags : int8_t {
   OMP_TGT_EXEC_MODE_GENERIC_SPMD =
       OMP_TGT_EXEC_MODE_GENERIC | OMP_TGT_EXEC_MODE_SPMD,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ OMP_TGT_EXEC_MODE_GENERIC_SPMD)
+};
+
+enum class AddressSpace : unsigned {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Constant = 4,
+  Local = 5,
 };
 
 } // end namespace omp

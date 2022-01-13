@@ -821,12 +821,6 @@ DIExpression *DIBuilder::createExpression(ArrayRef<uint64_t> Addr) {
   return DIExpression::get(VMContext, Addr);
 }
 
-DIExpression *DIBuilder::createExpression(ArrayRef<int64_t> Signed) {
-  // TODO: Remove the callers of this signed version and delete.
-  SmallVector<uint64_t, 8> Addr(Signed.begin(), Signed.end());
-  return createExpression(Addr);
-}
-
 template <class... Ts>
 static DISubprogram *getSubprogram(bool IsDistinct, Ts &&...Args) {
   if (IsDistinct)

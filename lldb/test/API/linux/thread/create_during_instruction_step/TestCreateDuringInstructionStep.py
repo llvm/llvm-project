@@ -19,7 +19,7 @@ class CreateDuringInstructionStepTestCase(TestBase):
     @expectedFailureAndroid('llvm.org/pr24737', archs=['arm'])
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr24737")
     def test_step_inst(self):
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target and target.IsValid(), "Target is valid")

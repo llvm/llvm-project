@@ -917,10 +917,10 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           else {
             SymbolRef Symbol = *O->getSymbolByIndex(r_symbolnum);
             Expected<StringRef> SymNameNext = Symbol.getName();
-            const char *name = NULL;
+            const char *name = nullptr;
             if (SymNameNext)
               name = SymNameNext->data();
-            if (name == NULL)
+            if (name == nullptr)
               outs() << format("?(%d)\n", r_symbolnum);
             else
               outs() << name << "\n";

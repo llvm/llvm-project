@@ -130,7 +130,7 @@ bool DivergenceAnalysisImpl::inRegion(const Instruction &I) const {
 }
 
 bool DivergenceAnalysisImpl::inRegion(const BasicBlock &BB) const {
-  return (!RegionLoop && BB.getParent() == &F) || RegionLoop->contains(&BB);
+  return RegionLoop ? RegionLoop->contains(&BB) : (BB.getParent() == &F);
 }
 
 void DivergenceAnalysisImpl::pushUsers(const Value &V) {

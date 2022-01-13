@@ -18,7 +18,7 @@ class TestCase(TestBase):
                 lldb.SBFileSpec("main.c"))
 
         self.expect_var_path("c->flexible", type="char[]", summary='"contents"')
-        self.expect_var_path("sc->flexible", type="signed char[]", summary='"contents"')
+        # self.expect_var_path("sc->flexible", type="signed char[]", summary='"contents"')
         self.expect_var_path("uc->flexible", type="unsigned char[]", summary='"contents"')
         # TODO: Make this work
         self.expect("expr c->flexible", error=True,

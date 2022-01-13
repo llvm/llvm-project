@@ -391,7 +391,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(
           SS, /*ObjectType=*/nullptr,
-          /*ObjectHadErrors=*/false, /*EnteringContext=*/false,
+          /*ObjectHasErrors=*/false, /*EnteringContext=*/false,
           /*MayBePseudoDestructor=*/nullptr,
           /*IsTypename=*/false, /*LastII=*/nullptr, /*OnlyNamespace=*/true) ||
       SS.isInvalid()) {
@@ -500,7 +500,7 @@ bool Parser::ParseTemplateParameters(
 bool
 Parser::ParseTemplateParameterList(const unsigned Depth,
                              SmallVectorImpl<NamedDecl*> &TemplateParams) {
-  while (1) {
+  while (true) {
 
     if (NamedDecl *TmpParam
           = ParseTemplateParameter(Depth, TemplateParams.size())) {
@@ -715,7 +715,7 @@ bool Parser::TryAnnotateTypeConstraint() {
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false,
                                      /*MayBePseudoDestructor=*/nullptr,
                                      // If this is not a type-constraint, then
@@ -787,7 +787,7 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   bool TypenameKeyword = false;
   SourceLocation KeyLoc;
   ParseOptionalCXXScopeSpecifier(TypeConstraintSS, /*ObjectType=*/nullptr,
-                                 /*ObjectHadErrors=*/false,
+                                 /*ObjectHasErrors=*/false,
                                  /*EnteringContext*/ false);
   if (Tok.is(tok::annot_template_id)) {
     // Consume the 'type-constraint'.
@@ -1222,7 +1222,6 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
   return false;
 }
 
-
 /// Parses a template-id that after the template name has
 /// already been parsed.
 ///
@@ -1234,11 +1233,13 @@ bool Parser::ParseGreaterThanInTemplateList(SourceLocation LAngleLoc,
 /// token that forms the template-id. Otherwise, we will leave the
 /// last token in the stream (e.g., so that it can be replaced with an
 /// annotation token).
-bool
-Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
-                                         SourceLocation &LAngleLoc,
-                                         TemplateArgList &TemplateArgs,
-                                         SourceLocation &RAngleLoc) {
+///
+/// \param NameHint is not required, and merely affects code completion.
+bool Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
+                                              SourceLocation &LAngleLoc,
+                                              TemplateArgList &TemplateArgs,
+                                              SourceLocation &RAngleLoc,
+                                              TemplateTy Template) {
   assert(Tok.is(tok::less) && "Must have already parsed the template-name");
 
   // Consume the '<'.
@@ -1251,7 +1252,7 @@ Parser::ParseTemplateIdAfterTemplateName(bool ConsumeLastToken,
     if (!Tok.isOneOf(tok::greater, tok::greatergreater,
                      tok::greatergreatergreater, tok::greaterequal,
                      tok::greatergreaterequal))
-      Invalid = ParseTemplateArgumentList(TemplateArgs);
+      Invalid = ParseTemplateArgumentList(TemplateArgs, Template, LAngleLoc);
 
     if (Invalid) {
       // Try to find the closing '>'.
@@ -1332,8 +1333,8 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
   TemplateArgList TemplateArgs;
   bool ArgsInvalid = false;
   if (!TypeConstraint || Tok.is(tok::less)) {
-    ArgsInvalid = ParseTemplateIdAfterTemplateName(false, LAngleLoc,
-                                                   TemplateArgs, RAngleLoc);
+    ArgsInvalid = ParseTemplateIdAfterTemplateName(
+        false, LAngleLoc, TemplateArgs, RAngleLoc, Template);
     // If we couldn't recover from invalid arguments, don't form an annotation
     // token -- we don't know how much to annotate.
     // FIXME: This can lead to duplicate diagnostics if we retry parsing this
@@ -1467,7 +1468,7 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
   // '>', or (in some cases) '>>'.
   CXXScopeSpec SS; // nested-name-specifier, if present
   ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                 /*ObjectHadErrors=*/false,
+                                 /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false);
 
   ParsedTemplateArgument Result;
@@ -1585,19 +1586,34 @@ ParsedTemplateArgument Parser::ParseTemplateArgument() {
 ///       template-argument-list: [C++ 14.2]
 ///         template-argument
 ///         template-argument-list ',' template-argument
-bool
-Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs) {
+///
+/// \param Template is only used for code completion, and may be null.
+bool Parser::ParseTemplateArgumentList(TemplateArgList &TemplateArgs,
+                                       TemplateTy Template,
+                                       SourceLocation OpenLoc) {
 
   ColonProtectionRAIIObject ColonProtection(*this, false);
 
+  auto RunSignatureHelp = [&] {
+    if (!Template)
+      return QualType();
+    CalledSignatureHelp = true;
+    return Actions.ProduceTemplateArgumentSignatureHelp(Template, TemplateArgs,
+                                                        OpenLoc);
+  };
+
   do {
+    PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
     ParsedTemplateArgument Arg = ParseTemplateArgument();
     SourceLocation EllipsisLoc;
     if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
       Arg = Actions.ActOnPackExpansion(Arg, EllipsisLoc);
 
-    if (Arg.isInvalid())
+    if (Arg.isInvalid()) {
+      if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+        RunSignatureHelp();
       return true;
+    }
 
     // Save this template argument.
     TemplateArgs.push_back(Arg);

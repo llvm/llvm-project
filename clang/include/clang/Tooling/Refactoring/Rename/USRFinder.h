@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDER_H
-#define LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDER_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRFINDER_H
+#define LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRFINDER_H
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTContext.h"
@@ -46,4 +46,4 @@ std::string getUSRForDecl(const Decl *Decl);
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_RENAME_USR_FINDER_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_RENAME_USRFINDER_H

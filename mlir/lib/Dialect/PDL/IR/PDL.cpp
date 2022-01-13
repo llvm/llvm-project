@@ -198,7 +198,7 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     return success();
 
   // Otherwise, make sure each of the types can be inferred.
-  for (auto it : llvm::enumerate(resultTypes)) {
+  for (const auto &it : llvm::enumerate(resultTypes)) {
     Operation *resultTypeOp = it.value().getDefiningOp();
     assert(resultTypeOp && "expected valid result type operation");
 
@@ -207,16 +207,17 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     if (isa<ApplyNativeRewriteOp>(resultTypeOp))
       continue;
 
-    // If the type operation was defined in the matcher and constrains the
-    // result of an input operation, it can be used.
-    auto constrainsInputOp = [rewriterBlock](Operation *user) {
-      return user->getBlock() != rewriterBlock && isa<OperationOp>(user);
+    // If the type operation was defined in the matcher and constrains an
+    // operand or the result of an input operation, it can be used.
+    auto constrainsInput = [rewriterBlock](Operation *user) {
+      return user->getBlock() != rewriterBlock &&
+             isa<OperandOp, OperandsOp, OperationOp>(user);
     };
     if (TypeOp typeOp = dyn_cast<TypeOp>(resultTypeOp)) {
-      if (typeOp.type() || llvm::any_of(typeOp->getUsers(), constrainsInputOp))
+      if (typeOp.type() || llvm::any_of(typeOp->getUsers(), constrainsInput))
         continue;
     } else if (TypesOp typeOp = dyn_cast<TypesOp>(resultTypeOp)) {
-      if (typeOp.types() || llvm::any_of(typeOp->getUsers(), constrainsInputOp))
+      if (typeOp.types() || llvm::any_of(typeOp->getUsers(), constrainsInput))
         continue;
     }
 

@@ -27,7 +27,7 @@ entry:
 
 ; ALL: #NO_APP
 
-  %1 = call { i32, i32 } asm sideeffect ".set push\0A.set noreorder\0A1:\0All $0, $2\0Aaddu $1, $0, $3\0Asc $1, $2\0Abeqz $1, 1b\0Aaddu $1, $0, $3\0A.set pop\0A", "=&r,=&r,=*^ZC,Ir,*^ZC,~{memory},~{$1}"(i32* %count, i32 10, i32* %count)
+  %1 = call { i32, i32 } asm sideeffect ".set push\0A.set noreorder\0A1:\0All $0, $2\0Aaddu $1, $0, $3\0Asc $1, $2\0Abeqz $1, 1b\0Aaddu $1, $0, $3\0A.set pop\0A", "=&r,=&r,=*^ZC,Ir,*^ZC,~{memory},~{$1}"(i32* elementtype(i32) %count, i32 10, i32* elementtype(i32) %count)
   %asmresult1.i = extractvalue { i32, i32 } %1, 1
   %cmp = icmp ne i32 %asmresult1.i, 10
   %conv = zext i1 %cmp to i32

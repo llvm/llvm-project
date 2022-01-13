@@ -106,7 +106,6 @@ define i32 @foo7(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    csel w0, w10, w9, ge
 ; CHECK-NEXT:    ret
 entry:
-; FIXME: Misspelled CHECK-NEXT
   %sub = sub nsw i32 %a, %b
   %cmp = icmp sgt i32 %sub, -1
   %sub3 = sub nsw i32 0, %sub

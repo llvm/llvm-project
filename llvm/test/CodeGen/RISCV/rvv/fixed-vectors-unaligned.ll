@@ -256,9 +256,8 @@ define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> 
 ; RV64-NEXT:    lwu a0, 0(a0)
 ; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    or a0, a1, a0
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.s.x v8, a0
-; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, mu
 ; RV64-NEXT:    vslideup.vi v9, v8, 1
 ; RV64-NEXT:  .LBB5_4: # %else2
 ; RV64-NEXT:    vmv1r.v v8, v9

@@ -58,6 +58,7 @@ void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
     SelectionUsedRecovery.record(0, LanguageLabel); // unused.
 }
 
+// Return the range covering a node and all its children.
 SourceRange getSourceRange(const DynTypedNode &N) {
   // MemberExprs to implicitly access anonymous fields should not claim any
   // tokens for themselves. Given:
@@ -233,7 +234,9 @@ public:
   // The selection is offsets [SelBegin, SelEnd) in SelFile.
   SelectionTester(const syntax::TokenBuffer &Buf, FileID SelFile,
                   unsigned SelBegin, unsigned SelEnd, const SourceManager &SM)
-      : SelFile(SelFile), SM(SM) {
+      : SelFile(SelFile), SelFileBounds(SM.getLocForStartOfFile(SelFile),
+                                        SM.getLocForEndOfFile(SelFile)),
+        SM(SM) {
     // Find all tokens (partially) selected in the file.
     auto AllSpelledTokens = Buf.spelledTokens(SelFile);
     const syntax::Token *SelFirst =
@@ -279,9 +282,12 @@ public:
     SelectionTree::Selection Result = NoTokens;
     while (!ExpandedTokens.empty()) {
       // Take consecutive tokens from the same context together for efficiency.
-      FileID FID = SM.getFileID(ExpandedTokens.front().location());
+      SourceLocation Start = ExpandedTokens.front().location();
+      FileID FID = SM.getFileID(Start);
+      // Comparing SourceLocations against bounds is cheaper than getFileID().
+      SourceLocation Limit = SM.getComposedLoc(FID, SM.getFileIDSize(FID));
       auto Batch = ExpandedTokens.take_while([&](const syntax::Token &T) {
-        return SM.getFileID(T.location()) == FID;
+        return T.location() >= Start && T.location() < Limit;
       });
       assert(!Batch.empty());
       ExpandedTokens = ExpandedTokens.drop_front(Batch.size());
@@ -297,11 +303,10 @@ public:
   bool mayHit(SourceRange R) const {
     if (SpelledTokens.empty())
       return false;
-    auto B = SM.getDecomposedLoc(R.getBegin());
-    auto E = SM.getDecomposedLoc(R.getEnd());
-    if (B.first == SelFile && E.first == SelFile)
-      if (E.second < SpelledTokens.front().Offset ||
-          B.second > SpelledTokens.back().Offset)
+    auto B = offsetInSelFile(R.getBegin());
+    auto E = offsetInSelFile(R.getEnd());
+    if (B && E)
+      if (*E < SpelledTokens.front().Offset || *B > SpelledTokens.back().Offset)
         return false;
     return true;
   }
@@ -321,8 +326,8 @@ private:
 
     // Handle tokens written directly in the main file.
     if (FID == SelFile) {
-      return testTokenRange(SM.getFileOffset(Batch.front().location()),
-                            SM.getFileOffset(Batch.back().location()));
+      return testTokenRange(*offsetInSelFile(Batch.front().location()),
+                            *offsetInSelFile(Batch.back().location()));
     }
 
     // Handle tokens in another file #included into the main file.
@@ -330,9 +335,9 @@ private:
     if (StartLoc.isFileID()) {
       for (SourceLocation Loc = Batch.front().location(); Loc.isValid();
            Loc = SM.getIncludeLoc(SM.getFileID(Loc))) {
-        if (SM.getFileID(Loc) == SelFile)
+        if (auto Offset = offsetInSelFile(Loc))
           // FIXME: use whole #include directive, not just the filename string.
-          return testToken(SM.getFileOffset(Loc));
+          return testToken(*Offset);
       }
       return NoTokens;
     }
@@ -340,12 +345,11 @@ private:
     assert(StartLoc.isMacroID());
     // Handle tokens that were passed as a macro argument.
     SourceLocation ArgStart = SM.getTopMacroCallerLoc(StartLoc);
-    if (SM.getFileID(ArgStart) == SelFile) {
+    if (auto ArgOffset = offsetInSelFile(ArgStart)) {
       if (isFirstExpansion(FID, ArgStart, SM)) {
         SourceLocation ArgEnd =
             SM.getTopMacroCallerLoc(Batch.back().location());
-        return testTokenRange(SM.getFileOffset(ArgStart),
-                              SM.getFileOffset(ArgEnd));
+        return testTokenRange(*ArgOffset, *offsetInSelFile(ArgEnd));
       } else { // NOLINT(llvm-else-after-return)
         /* fall through and treat as part of the macro body */
       }
@@ -353,10 +357,9 @@ private:
 
     // Handle tokens produced by non-argument macro expansion.
     // Check if the macro name is selected, don't claim it exclusively.
-    auto Expansion = SM.getDecomposedExpansionLoc(StartLoc);
-    if (Expansion.first == SelFile)
+    if (auto ExpansionOffset = offsetInSelFile(getExpansionStart(StartLoc)))
       // FIXME: also check ( and ) for function-like macros?
-      return testToken(Expansion.second);
+      return testToken(*ExpansionOffset);
     return NoTokens;
   }
 
@@ -398,12 +401,25 @@ private:
     return NoTokens;
   }
 
+  llvm::Optional<unsigned> offsetInSelFile(SourceLocation Loc) const {
+    if (Loc < SelFileBounds.getBegin() || Loc >= SelFileBounds.getEnd())
+      return llvm::None;
+    return Loc.getRawEncoding() - SelFileBounds.getBegin().getRawEncoding();
+  }
+
+  SourceLocation getExpansionStart(SourceLocation Loc) const {
+    while (Loc.isMacroID())
+      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
+    return Loc;
+  }
+
   struct Tok {
     unsigned Offset;
     SelectionTree::Selection Selected;
   };
   std::vector<Tok> SpelledTokens;
   FileID SelFile;
+  SourceRange SelFileBounds;
   const SourceManager &SM;
 };
 
@@ -623,11 +639,10 @@ private:
   // Nodes *usually* nest nicely: a child's getSourceRange() lies within the
   // parent's, and a node (transitively) owns all tokens in its range.
   //
-  // Exception 1: child range claims tokens that should be owned by the parent.
-  //              e.g. in `void foo(int);`, the FunctionTypeLoc should own
-  //              `void (int)` but the parent FunctionDecl should own `foo`.
-  // To handle this case, certain nodes claim small token ranges *before*
-  // their children are traversed. (see earlySourceRange).
+  // Exception 1: when declarators nest, *inner* declarator is the *outer* type.
+  //              e.g. void foo[5](int) is an array of functions.
+  // To handle this case, declarators are careful to only claim the tokens they
+  // own, rather than claim a range and rely on claim ordering.
   //
   // Exception 2: siblings both claim the same node.
   //              e.g. `int x, y;` produces two sibling VarDecls.
@@ -646,17 +661,6 @@ private:
       // heuristics. We should consider only pruning critical TypeLoc nodes, to
       // be more robust.
 
-      // DeclTypeTypeLoc::getSourceRange() is incomplete, which would lead to
-      // failing
-      // to descend into the child expression.
-      // decltype(2+2);
-      // ~~~~~~~~~~~~~ <-- correct range
-      // ~~~~~~~~      <-- range reported by getSourceRange()
-      // ~~~~~~~~~~~~  <-- range with this hack(i.e, missing closing paren)
-      // FIXME: Alter DecltypeTypeLoc to contain parentheses locations and get
-      // rid of this patch.
-      if (auto DT = TL->getAs<DecltypeTypeLoc>())
-        S.setEnd(DT.getUnderlyingExpr()->getEndLoc());
       // AttributedTypeLoc may point to the attribute's range, NOT the modified
       // type's range.
       if (auto AT = TL->getAs<AttributedTypeLoc>())
@@ -685,16 +689,13 @@ private:
   }
 
   // Pushes a node onto the ancestor stack. Pairs with pop().
-  // Performs early hit detection for some nodes (on the earlySourceRange).
   void push(DynTypedNode Node) {
-    SourceRange Early = earlySourceRange(Node);
     dlog("{1}push: {0}", printNodeToString(Node, PrintPolicy), indent());
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
     Nodes.back().Selected = NoTokens;
     Stack.push(&Nodes.back());
-    claimRange(Early, Nodes.back().Selected);
   }
 
   // Pops a node off the ancestor stack, and finalizes it. Pairs with push().
@@ -702,7 +703,7 @@ private:
   void pop() {
     Node &N = *Stack.top();
     dlog("{1}pop: {0}", printNodeToString(N.ASTNode, PrintPolicy), indent(-1));
-    claimRange(getSourceRange(N.ASTNode), N.Selected);
+    claimTokensFor(N.ASTNode, N.Selected);
     if (N.Selected == NoTokens)
       N.Selected = SelectionTree::Unselected;
     if (N.Selected || !N.Children.empty()) {
@@ -716,38 +717,73 @@ private:
     Stack.pop();
   }
 
-  // Returns the range of tokens that this node will claim directly, and
-  // is not available to the node's children.
-  // Usually empty, but sometimes children cover tokens but shouldn't own them.
-  SourceRange earlySourceRange(const DynTypedNode &N) {
-    if (const Decl *D = N.get<Decl>()) {
-      // We want constructor name to be claimed by TypeLoc not the constructor
-      // itself. Similar for deduction guides, we rather want to select the
-      // underlying TypeLoc.
-      // FIXME: Unfortunately this doesn't work, even though RecursiveASTVisitor
-      // traverses the underlying TypeLoc inside DeclarationName, it is null for
-      // constructors.
-      if (isa<CXXConstructorDecl>(D) || isa<CXXDeductionGuideDecl>(D))
-        return SourceRange();
-      // This will capture Field, Function, MSProperty, NonTypeTemplateParm and
-      // VarDecls. We want the name in the declarator to be claimed by the decl
-      // and not by any children. For example:
-      // void [[foo]]();
-      // int (*[[s]])();
-      // struct X { int [[hash]] [32]; [[operator]] int();}
-      if (const auto *DD = llvm::dyn_cast<DeclaratorDecl>(D))
-        return DD->getLocation();
-    } else if (const auto *CCI = N.get<CXXCtorInitializer>()) {
-      // : [[b_]](42)
-      return CCI->getMemberLocation();
+  // Claim tokens for N, after processing its children.
+  // By default this claims all unclaimed tokens in getSourceRange().
+  // We override this if we want to claim fewer tokens (e.g. there are gaps).
+  void claimTokensFor(const DynTypedNode &N, SelectionTree::Selection &Result) {
+    // CXXConstructExpr often shows implicit construction, like `string s;`.
+    // Don't associate any tokens with it unless there's some syntax like {}.
+    // This prevents it from claiming 's', its primary location.
+    if (const auto *CCE = N.get<CXXConstructExpr>()) {
+      claimRange(CCE->getParenOrBraceRange(), Result);
+      return;
     }
-    return SourceRange();
+    // ExprWithCleanups is always implicit. It often wraps CXXConstructExpr.
+    // Prevent it claiming 's' in the case above.
+    if (N.get<ExprWithCleanups>())
+      return;
+
+    // Declarators nest "inside out", with parent types inside child ones.
+    // Instead of claiming the whole range (clobbering parent tokens), carefully
+    // claim the tokens owned by this node and non-declarator children.
+    // (We could manipulate traversal order instead, but this is easier).
+    //
+    // Non-declarator types nest normally, and are handled like other nodes.
+    //
+    // Example:
+    //   Vec<R<int>(*[2])(A<char>)> is a Vec of arrays of pointers to functions,
+    //                              which accept A<char> and return R<int>.
+    // The TypeLoc hierarchy:
+    //   Vec<R<int>(*[2])(A<char>)> m;
+    //   Vec<#####################>      TemplateSpecialization Vec
+    //       --------[2]----------       `-Array
+    //       -------*-------------         `-Pointer
+    //       ------(----)---------           `-Paren
+    //       ------------(#######)             `-Function
+    //       R<###>                              |-TemplateSpecialization R
+    //         int                               | `-Builtin int
+    //                    A<####>                `-TemplateSpecialization A
+    //                      char                   `-Builtin char
+    //
+    // In each row
+    //   --- represents unclaimed parts of the SourceRange.
+    //   ### represents parts that children already claimed.
+    if (const auto *TL = N.get<TypeLoc>()) {
+      if (auto PTL = TL->getAs<ParenTypeLoc>()) {
+        claimRange(PTL.getLParenLoc(), Result);
+        claimRange(PTL.getRParenLoc(), Result);
+        return;
+      }
+      if (auto ATL = TL->getAs<ArrayTypeLoc>()) {
+        claimRange(ATL.getBracketsRange(), Result);
+        return;
+      }
+      if (auto PTL = TL->getAs<PointerTypeLoc>()) {
+        claimRange(PTL.getStarLoc(), Result);
+        return;
+      }
+      if (auto FTL = TL->getAs<FunctionTypeLoc>()) {
+        claimRange(SourceRange(FTL.getLParenLoc(), FTL.getEndLoc()), Result);
+        return;
+      }
+    }
+    claimRange(getSourceRange(N), Result);
   }
 
   // Perform hit-testing of a complete Node against the selection.
   // This runs for every node in the AST, and must be fast in common cases.
   // This is usually called from pop(), so we can take children into account.
-  // The existing state of Result is relevant (early/late claims can interact).
+  // The existing state of Result is relevant.
   void claimRange(SourceRange S, SelectionTree::Selection &Result) {
     for (const auto &ClaimedRange :
          UnclaimedExpandedTokens.erase(TokenBuf.expandedTokens(S)))

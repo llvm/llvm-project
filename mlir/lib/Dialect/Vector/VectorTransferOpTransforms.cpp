@@ -212,10 +212,11 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
 }
 
 /// Drops unit dimensions from the input MemRefType.
-static MemRefType dropUnitDims(MemRefType inputType) {
-  ArrayRef<int64_t> none{};
+static MemRefType dropUnitDims(MemRefType inputType, ArrayRef<int64_t> offsets,
+                               ArrayRef<int64_t> sizes,
+                               ArrayRef<int64_t> strides) {
   Type rankReducedType = memref::SubViewOp::inferRankReducedResultType(
-      0, inputType, none, none, none);
+      0, inputType, offsets, sizes, strides);
   return canonicalizeStridedLayout(rankReducedType.cast<MemRefType>());
 }
 
@@ -226,15 +227,16 @@ static Value rankReducingSubviewDroppingUnitDims(PatternRewriter &rewriter,
                                                  Value input) {
   MemRefType inputType = input.getType().cast<MemRefType>();
   assert(inputType.hasStaticShape());
-  MemRefType resultType = dropUnitDims(inputType);
+  SmallVector<int64_t> subViewOffsets(inputType.getRank(), 0);
+  SmallVector<int64_t> subViewStrides(inputType.getRank(), 1);
+  ArrayRef<int64_t> subViewSizes = inputType.getShape();
+  MemRefType resultType =
+      dropUnitDims(inputType, subViewOffsets, subViewSizes, subViewStrides);
   if (canonicalizeStridedLayout(resultType) ==
       canonicalizeStridedLayout(inputType))
     return input;
-  SmallVector<int64_t> subviewOffsets(inputType.getRank(), 0);
-  SmallVector<int64_t> subviewStrides(inputType.getRank(), 1);
   return rewriter.create<memref::SubViewOp>(
-      loc, resultType, input, subviewOffsets, inputType.getShape(),
-      subviewStrides);
+      loc, resultType, input, subViewOffsets, subViewSizes, subViewStrides);
 }
 
 /// Returns the number of dims that aren't unit dims.

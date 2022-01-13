@@ -4868,6 +4868,36 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr &MI,
       return false;
     }
   }
+
+  // Check the address model by taking the first Imm operand and checking it is
+  // legal for that addressing mode.
+  ARMII::AddrMode AddrMode =
+      (ARMII::AddrMode)(MI.getDesc().TSFlags & ARMII::AddrModeMask);
+  switch (AddrMode) {
+  default:
+    break;
+  case ARMII::AddrModeT2_i7:
+  case ARMII::AddrModeT2_i7s2:
+  case ARMII::AddrModeT2_i7s4:
+  case ARMII::AddrModeT2_i8:
+  case ARMII::AddrModeT2_i8pos:
+  case ARMII::AddrModeT2_i8neg:
+  case ARMII::AddrModeT2_i8s4:
+  case ARMII::AddrModeT2_i12: {
+    uint32_t Imm = 0;
+    for (auto Op : MI.operands()) {
+      if (Op.isImm()) {
+        Imm = Op.getImm();
+        break;
+      }
+    }
+    if (!isLegalAddressImm(MI.getOpcode(), Imm, this)) {
+      ErrInfo = "Incorrect AddrMode Imm for instruction";
+      return false;
+    }
+    break;
+  }
+  }
   return true;
 }
 

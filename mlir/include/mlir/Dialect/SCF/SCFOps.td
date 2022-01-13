@@ -21,7 +21,7 @@ def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
   let dependentDialects = ["arith::ArithmeticDialect"];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 // Base class for SCF dialect ops.
@@ -411,7 +411,7 @@ def IfOp : SCF_Op<"if",
     void getNumRegionInvocations(ArrayRef<Attribute> operands,
                                  SmallVectorImpl<int64_t> &countPerRegion);
   }];
-
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 

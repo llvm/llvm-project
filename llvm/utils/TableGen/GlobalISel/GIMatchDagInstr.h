@@ -61,7 +61,7 @@ protected:
   /// For debugging purposes, it's helpful to have access to a description of
   /// the Opcode. However, this object shouldn't use it for more than debugging
   /// output since predicates are expected to be handled outside the DAG.
-  CodeGenInstruction *OpcodeAnnotation = 0;
+  CodeGenInstruction *OpcodeAnnotation = nullptr;
 
   /// When true, this instruction will be a starting point for a match attempt.
   bool IsMatchRoot = false;

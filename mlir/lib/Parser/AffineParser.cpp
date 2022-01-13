@@ -17,9 +17,7 @@
 
 using namespace mlir;
 using namespace mlir::detail;
-using llvm::MemoryBuffer;
 using llvm::SMLoc;
-using llvm::SourceMgr;
 
 namespace {
 

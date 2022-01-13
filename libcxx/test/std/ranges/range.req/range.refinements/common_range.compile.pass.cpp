@@ -16,41 +16,51 @@
 #include <ranges>
 
 #include "test_iterators.h"
-#include "test_range.h"
 
+template<class It>             struct Common { It begin() const; It end() const; };
+template<class It>             struct NonCommon { It begin() const; sentinel_wrapper<It> end() const; };
+template<class It, class Sent> struct Range { It begin() const; Sent end() const; };
 
+static_assert(!std::ranges::common_range<Common<cpp17_input_iterator<int*>>>); // not a sentinel for itself
+static_assert(!std::ranges::common_range<Common<cpp20_input_iterator<int*>>>); // not a sentinel for itself
+static_assert( std::ranges::common_range<Common<forward_iterator<int*>>>);
+static_assert( std::ranges::common_range<Common<bidirectional_iterator<int*>>>);
+static_assert( std::ranges::common_range<Common<random_access_iterator<int*>>>);
+static_assert( std::ranges::common_range<Common<contiguous_iterator<int*>>>);
+static_assert( std::ranges::common_range<Common<int*>>);
 
-static_assert(!std::ranges::common_range<test_range<cpp17_input_iterator> >);
-static_assert(!std::ranges::common_range<test_range<cpp17_input_iterator> const>);
+static_assert(!std::ranges::common_range<NonCommon<cpp17_input_iterator<int*>>>);
+static_assert(!std::ranges::common_range<NonCommon<cpp20_input_iterator<int*>>>);
+static_assert(!std::ranges::common_range<NonCommon<forward_iterator<int*>>>);
+static_assert(!std::ranges::common_range<NonCommon<bidirectional_iterator<int*>>>);
+static_assert(!std::ranges::common_range<NonCommon<random_access_iterator<int*>>>);
+static_assert(!std::ranges::common_range<NonCommon<contiguous_iterator<int*>>>);
+static_assert(!std::ranges::common_range<NonCommon<int*>>);
 
-static_assert(!std::ranges::common_range<test_non_const_range<cpp17_input_iterator> >);
-static_assert(!std::ranges::common_range<test_non_const_range<cpp17_input_iterator> const>);
+// Test when begin() and end() only differ by their constness.
+static_assert(!std::ranges::common_range<Range<int*, int const*>>);
 
-static_assert(std::ranges::common_range<test_common_range<cpp17_input_iterator> >);
-static_assert(std::ranges::common_range<test_common_range<cpp17_input_iterator> const>);
+// Simple test with a sized_sentinel.
+static_assert(!std::ranges::common_range<Range<int*, sized_sentinel<int*>>>);
 
-static_assert(std::ranges::common_range<test_non_const_common_range<cpp17_input_iterator> >);
-static_assert(!std::ranges::common_range<test_non_const_common_range<cpp17_input_iterator> const>);
+// Make sure cv-qualification doesn't impact the concept when begin() and end() have matching qualifiers.
+static_assert( std::ranges::common_range<Common<forward_iterator<int*>> const>);
+static_assert(!std::ranges::common_range<NonCommon<forward_iterator<int*>> const>);
 
-struct subtly_not_common {
-  int* begin() const;
-  int const* end() const;
-};
-static_assert(std::ranges::range<subtly_not_common> && !std::ranges::common_range<subtly_not_common>);
-static_assert(std::ranges::range<subtly_not_common const> && !std::ranges::common_range<subtly_not_common const>);
-
-struct common_range_non_const_only {
-  int* begin() const;
-  int* end();
-  int const* end() const;
-};
-static_assert(std::ranges::range<common_range_non_const_only>&& std::ranges::common_range<common_range_non_const_only>);
-static_assert(std::ranges::range<common_range_non_const_only const> && !std::ranges::common_range<common_range_non_const_only const>);
-
-struct common_range_const_only {
+// Test with a range that's a common_range only when const-qualified.
+struct Range1 {
   int* begin();
   int const* begin() const;
   int const* end() const;
 };
-static_assert(std::ranges::range<common_range_const_only> && !std::ranges::common_range<common_range_const_only>);
-static_assert(std::ranges::range<common_range_const_only const>&& std::ranges::common_range<common_range_const_only const>);
+static_assert(!std::ranges::common_range<Range1>);
+static_assert( std::ranges::common_range<Range1 const>);
+
+// Test with a range that's a common_range only when not const-qualified.
+struct Range2 {
+  int* begin() const;
+  int* end();
+  int const* end() const;
+};
+static_assert( std::ranges::common_range<Range2>);
+static_assert(!std::ranges::common_range<Range2 const>);

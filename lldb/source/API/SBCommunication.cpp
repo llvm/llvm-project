@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCommunication.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -107,9 +107,9 @@ bool SBCommunication::IsConnected() const {
 
 size_t SBCommunication::Read(void *dst, size_t dst_len, uint32_t timeout_usec,
                              ConnectionStatus &status) {
-  LLDB_RECORD_DUMMY(size_t, SBCommunication, Read,
-                    (void *, size_t, uint32_t, lldb::ConnectionStatus &), dst,
-                    dst_len, timeout_usec, status);
+  LLDB_RECORD_METHOD(size_t, SBCommunication, Read,
+                     (void *, size_t, uint32_t, lldb::ConnectionStatus &), dst,
+                     dst_len, timeout_usec, status);
 
   size_t bytes_read = 0;
   Timeout<std::micro> timeout = timeout_usec == UINT32_MAX
@@ -125,9 +125,9 @@ size_t SBCommunication::Read(void *dst, size_t dst_len, uint32_t timeout_usec,
 
 size_t SBCommunication::Write(const void *src, size_t src_len,
                               ConnectionStatus &status) {
-  LLDB_RECORD_DUMMY(size_t, SBCommunication, Write,
-                    (const void *, size_t, lldb::ConnectionStatus &), src,
-                    src_len, status);
+  LLDB_RECORD_METHOD(size_t, SBCommunication, Write,
+                     (const void *, size_t, lldb::ConnectionStatus &), src,
+                     src_len, status);
 
   size_t bytes_written = 0;
   if (m_opaque)
@@ -158,9 +158,9 @@ bool SBCommunication::ReadThreadIsRunning() {
 
 bool SBCommunication::SetReadThreadBytesReceivedCallback(
     ReadThreadBytesReceived callback, void *callback_baton) {
-  LLDB_RECORD_DUMMY(bool, SBCommunication, SetReadThreadBytesReceivedCallback,
-                    (lldb::SBCommunication::ReadThreadBytesReceived, void *),
-                    callback, callback_baton);
+  LLDB_RECORD_METHOD(bool, SBCommunication, SetReadThreadBytesReceivedCallback,
+                     (lldb::SBCommunication::ReadThreadBytesReceived, void *),
+                     callback, callback_baton);
 
   bool result = false;
   if (m_opaque) {
@@ -175,7 +175,7 @@ SBBroadcaster SBCommunication::GetBroadcaster() {
                              GetBroadcaster);
 
   SBBroadcaster broadcaster(m_opaque, false);
-  return LLDB_RECORD_RESULT(broadcaster);
+  return broadcaster;
 }
 
 const char *SBCommunication::GetBroadcasterClass() {
@@ -183,34 +183,4 @@ const char *SBCommunication::GetBroadcasterClass() {
                                     GetBroadcasterClass);
 
   return Communication::GetStaticBroadcasterClass().AsCString();
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBCommunication>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBCommunication, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBCommunication, (const char *));
-  LLDB_REGISTER_METHOD_CONST(bool, SBCommunication, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBCommunication, operator bool, ());
-  LLDB_REGISTER_METHOD(bool, SBCommunication, GetCloseOnEOF, ());
-  LLDB_REGISTER_METHOD(void, SBCommunication, SetCloseOnEOF, (bool));
-  LLDB_REGISTER_METHOD(lldb::ConnectionStatus, SBCommunication, Connect,
-                       (const char *));
-  LLDB_REGISTER_METHOD(lldb::ConnectionStatus, SBCommunication,
-                       AdoptFileDesriptor, (int, bool));
-  LLDB_REGISTER_METHOD(lldb::ConnectionStatus, SBCommunication, Disconnect,
-                       ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBCommunication, IsConnected, ());
-  LLDB_REGISTER_METHOD(bool, SBCommunication, ReadThreadStart, ());
-  LLDB_REGISTER_METHOD(bool, SBCommunication, ReadThreadStop, ());
-  LLDB_REGISTER_METHOD(bool, SBCommunication, ReadThreadIsRunning, ());
-  LLDB_REGISTER_METHOD(lldb::SBBroadcaster, SBCommunication, GetBroadcaster,
-                       ());
-  LLDB_REGISTER_STATIC_METHOD(const char *, SBCommunication,
-                              GetBroadcasterClass, ());
-}
-
-}
 }

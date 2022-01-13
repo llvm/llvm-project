@@ -36,8 +36,6 @@ static_assert(std::ranges::size(std::move(array_of_incomplete)) == 42);
 static_assert(std::ranges::size(std::as_const(array_of_incomplete)) == 42);
 static_assert(std::ranges::size(static_cast<const Incomplete(&&)[42]>(array_of_incomplete)) == 42);
 
-static_assert(std::semiregular<std::remove_cv_t<RangeSizeT>>);
-
 struct SizeMember {
   constexpr size_t size() { return 42; }
 };
@@ -315,6 +313,11 @@ constexpr bool testRanges() {
 
   return true;
 }
+
+// Test ADL-proofing.
+struct Incomplete;
+template<class T> struct Holder { T t; };
+static_assert(!std::is_invocable_v<RangeSizeT, Holder<Incomplete>*>);
 
 int main(int, char**) {
   testArrayType();

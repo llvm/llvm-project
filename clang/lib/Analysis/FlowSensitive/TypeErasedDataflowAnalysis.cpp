@@ -18,6 +18,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -35,15 +36,44 @@ namespace dataflow {
 ///   already been transferred. States in `BlockStates` that are set to
 ///   `llvm::None` represent basic blocks that are not evaluated yet.
 static TypeErasedDataflowAnalysisState computeBlockInputState(
+    const ControlFlowContext &CFCtx,
     std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis) {
-  // FIXME: Consider passing `Block` to `Analysis.typeErasedInitialElement()`
-  // to enable building analyses like computation of dominators that initialize
-  // the state of each basic block differently.
-  TypeErasedDataflowAnalysisState State = {Analysis.typeErasedInitialElement(),
-                                           InitEnv};
-  for (const CFGBlock *Pred : Block.preds()) {
+  llvm::DenseSet<const CFGBlock *> Preds;
+  Preds.insert(Block.pred_begin(), Block.pred_end());
+  if (Block.getTerminator().isTemporaryDtorsBranch()) {
+    // This handles a special case where the code that produced the CFG includes
+    // a conditional operator with a branch that constructs a temporary and
+    // calls a destructor annotated as noreturn. The CFG models this as follows:
+    //
+    // B1 (contains the condition of the conditional operator) - succs: B2, B3
+    // B2 (contains code that does not call a noreturn destructor) - succs: B4
+    // B3 (contains code that calls a noreturn destructor) - succs: B4
+    // B4 (has temporary destructor terminator) - succs: B5, B6
+    // B5 (noreturn block that is associated with the noreturn destructor call)
+    // B6 (contains code that follows the conditional operator statement)
+    //
+    // The first successor (B5 above) of a basic block with a temporary
+    // destructor terminator (B4 above) is the block that evaluates the
+    // destructor. If that block has a noreturn element then the predecessor
+    // block that constructed the temporary object (B3 above) is effectively a
+    // noreturn block and its state should not be used as input for the state
+    // of the block that has a temporary destructor terminator (B4 above). This
+    // holds regardless of which branch of the ternary operator calls the
+    // noreturn destructor. However, it doesn't cases where a nested ternary
+    // operator includes a branch that contains a noreturn destructor call.
+    //
+    // See `NoreturnDestructorTest` for concrete examples.
+    if (Block.succ_begin()->getReachableBlock()->hasNoReturnElement()) {
+      auto StmtBlock = CFCtx.getStmtToBlock().find(Block.getTerminatorStmt());
+      assert(StmtBlock != CFCtx.getStmtToBlock().end());
+      Preds.erase(StmtBlock->getSecond());
+    }
+  }
+
+  llvm::Optional<TypeErasedDataflowAnalysisState> MaybeState;
+  for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
       continue;
@@ -57,13 +87,24 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
 
     const TypeErasedDataflowAnalysisState &PredState =
         MaybePredState.getValue();
-    Analysis.joinTypeErased(State.Lattice, PredState.Lattice);
-    State.Env.join(PredState.Env);
+    if (MaybeState.hasValue()) {
+      Analysis.joinTypeErased(MaybeState->Lattice, PredState.Lattice);
+      MaybeState->Env.join(PredState.Env);
+    } else {
+      MaybeState = PredState;
+    }
   }
-  return State;
+  if (!MaybeState.hasValue()) {
+    // FIXME: Consider passing `Block` to `Analysis.typeErasedInitialElement()`
+    // to enable building analyses like computation of dominators that
+    // initialize the state of each basic block differently.
+    MaybeState.emplace(Analysis.typeErasedInitialElement(), InitEnv);
+  }
+  return *MaybeState;
 }
 
 TypeErasedDataflowAnalysisState transferBlock(
+    const ControlFlowContext &CFCtx,
     std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis,
@@ -71,39 +112,41 @@ TypeErasedDataflowAnalysisState transferBlock(
                        const TypeErasedDataflowAnalysisState &)>
         HandleTransferredStmt) {
   TypeErasedDataflowAnalysisState State =
-      computeBlockInputState(BlockStates, Block, InitEnv, Analysis);
+      computeBlockInputState(CFCtx, BlockStates, Block, InitEnv, Analysis);
   for (const CFGElement &Element : Block) {
     // FIXME: Evaluate other kinds of `CFGElement`.
-    const llvm::Optional<CFGStmt> Stmt = Element.getAs<CFGStmt>();
-    if (!Stmt.hasValue())
+    const llvm::Optional<CFGStmt> CfgStmt = Element.getAs<CFGStmt>();
+    if (!CfgStmt.hasValue())
       continue;
 
-    // FIXME: Evaluate the statement contained in `Stmt`.
+    const Stmt *S = CfgStmt.getValue().getStmt();
+    assert(S != nullptr);
 
-    State.Lattice = Analysis.transferTypeErased(Stmt.getValue().getStmt(),
-                                                State.Lattice, State.Env);
+    transfer(*S, State.Env);
+    Analysis.transferTypeErased(S, State.Lattice, State.Env);
+
     if (HandleTransferredStmt != nullptr)
-      HandleTransferredStmt(Stmt.getValue(), State);
+      HandleTransferredStmt(CfgStmt.getValue(), State);
   }
   return State;
 }
 
 std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>
-runTypeErasedDataflowAnalysis(const CFG &Cfg,
+runTypeErasedDataflowAnalysis(const ControlFlowContext &CFCtx,
                               TypeErasedDataflowAnalysis &Analysis,
                               const Environment &InitEnv) {
   // FIXME: Consider enforcing that `Cfg` meets the requirements that
   // are specified in the header. This could be done by remembering
   // what options were used to build `Cfg` and asserting on them here.
 
-  PostOrderCFGView POV(&Cfg);
-  ForwardDataflowWorklist Worklist(Cfg, &POV);
+  PostOrderCFGView POV(&CFCtx.getCFG());
+  ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
   std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates;
-  BlockStates.resize(Cfg.size(), llvm::None);
+  BlockStates.resize(CFCtx.getCFG().size(), llvm::None);
 
   // The entry basic block doesn't contain statements so it can be skipped.
-  const CFGBlock &Entry = Cfg.getEntry();
+  const CFGBlock &Entry = CFCtx.getCFG().getEntry();
   BlockStates[Entry.getBlockID()] = {Analysis.typeErasedInitialElement(),
                                      InitEnv};
   Worklist.enqueueSuccessors(&Entry);
@@ -125,7 +168,7 @@ runTypeErasedDataflowAnalysis(const CFG &Cfg,
     const llvm::Optional<TypeErasedDataflowAnalysisState> &OldBlockState =
         BlockStates[Block->getBlockID()];
     TypeErasedDataflowAnalysisState NewBlockState =
-        transferBlock(BlockStates, *Block, InitEnv, Analysis);
+        transferBlock(CFCtx, BlockStates, *Block, InitEnv, Analysis);
 
     if (OldBlockState.hasValue() &&
         Analysis.isEqualTypeErased(OldBlockState.getValue().Lattice,

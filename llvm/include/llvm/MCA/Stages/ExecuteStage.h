@@ -49,7 +49,7 @@ class ExecuteStage final : public Stage {
 public:
   ExecuteStage(Scheduler &S) : ExecuteStage(S, false) {}
   ExecuteStage(Scheduler &S, bool ShouldPerformBottleneckAnalysis)
-      : Stage(), HWS(S), NumDispatchedOpcodes(0), NumIssuedOpcodes(0),
+      : HWS(S), NumDispatchedOpcodes(0), NumIssuedOpcodes(0),
         EnablePressureEvents(ShouldPerformBottleneckAnalysis) {}
 
   // This stage works under the assumption that the Pipeline will eventually

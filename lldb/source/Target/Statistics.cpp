@@ -52,9 +52,15 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("identifier", identifier);
   module.try_emplace("symbolTableParseTime", symtab_parse_time);
   module.try_emplace("symbolTableIndexTime", symtab_index_time);
+  module.try_emplace("symbolTableLoadedFromCache", symtab_loaded_from_cache);
+  module.try_emplace("symbolTableSavedToCache", symtab_saved_to_cache);
   module.try_emplace("debugInfoParseTime", debug_parse_time);
   module.try_emplace("debugInfoIndexTime", debug_index_time);
   module.try_emplace("debugInfoByteSize", (int64_t)debug_info_size);
+  module.try_emplace("debugInfoIndexLoadedFromCache",
+                     debug_info_index_loaded_from_cache);
+  module.try_emplace("debugInfoIndexSavedToCache",
+                     debug_info_index_saved_to_cache);
   return module;
 }
 
@@ -144,6 +150,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
   double symtab_index_time = 0.0;
   double debug_parse_time = 0.0;
   double debug_index_time = 0.0;
+  uint32_t symtabs_loaded = 0;
+  uint32_t symtabs_saved = 0;
+  uint32_t debug_index_loaded = 0;
+  uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
   if (target) {
     json_targets.emplace_back(target->ReportStatistics());
@@ -169,11 +179,28 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
     module_stat.triple = module->GetArchitecture().GetTriple().str();
     module_stat.symtab_parse_time = module->GetSymtabParseTime().count();
     module_stat.symtab_index_time = module->GetSymtabIndexTime().count();
+    Symtab *symtab = module->GetSymtab();
+    if (symtab) {
+      module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
+      if (module_stat.symtab_loaded_from_cache)
+        ++symtabs_loaded;
+      module_stat.symtab_saved_to_cache = symtab->GetWasSavedToCache();
+      if (module_stat.symtab_saved_to_cache)
+        ++symtabs_saved;
+    }
     SymbolFile *sym_file = module->GetSymbolFile();
     if (sym_file) {
       module_stat.debug_index_time = sym_file->GetDebugInfoIndexTime().count();
       module_stat.debug_parse_time = sym_file->GetDebugInfoParseTime().count();
       module_stat.debug_info_size = sym_file->GetDebugInfoSize();
+      module_stat.debug_info_index_loaded_from_cache =
+          sym_file->GetDebugInfoIndexWasLoadedFromCache();
+      if (module_stat.debug_info_index_loaded_from_cache)
+        ++debug_index_loaded;
+      module_stat.debug_info_index_saved_to_cache =
+          sym_file->GetDebugInfoIndexWasSavedToCache();
+      if (module_stat.debug_info_index_saved_to_cache)
+        ++debug_index_saved;
     }
     symtab_parse_time += module_stat.symtab_parse_time;
     symtab_index_time += module_stat.symtab_index_time;
@@ -188,8 +215,12 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
       {"modules", std::move(json_modules)},
       {"totalSymbolTableParseTime", symtab_parse_time},
       {"totalSymbolTableIndexTime", symtab_index_time},
+      {"totalSymbolTablesLoadedFromCache", symtabs_loaded},
+      {"totalSymbolTablesSavedToCache", symtabs_saved},
       {"totalDebugInfoParseTime", debug_parse_time},
       {"totalDebugInfoIndexTime", debug_index_time},
+      {"totalDebugInfoIndexLoadedFromCache", debug_index_loaded},
+      {"totalDebugInfoIndexSavedToCache", debug_index_saved},
       {"totalDebugInfoByteSize", debug_info_size},
   };
   return std::move(global_stats);

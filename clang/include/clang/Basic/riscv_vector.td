@@ -216,7 +216,7 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   string HeaderCode = "";
 
   // Sub extension of vector spec. Currently only support Zvlsseg.
-  string RequiredExtension = "";
+  list<string> RequiredExtensions = [];
 
   // Number of fields for Zvlsseg.
   int NF = 1;
@@ -707,7 +707,7 @@ multiclass RVVIndexedLoad<string op> {
         Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
       }] in {
       foreach type = TypeList in {
-        foreach eew_list = EEWList in {
+        foreach eew_list = EEWList[0-2] in {
           defvar eew = eew_list[0];
           defvar eew_type = eew_list[1];
           let Name = op # eew # "_v", IRName = op, IRNameMask = op # "_mask" in {
@@ -717,6 +717,15 @@ multiclass RVVIndexedLoad<string op> {
               }
           }
         }
+        defvar eew64 = "64";
+        defvar eew64_type = "(Log2EEW:6)";
+        let Name = op # eew64 # "_v", IRName = op, IRNameMask = op # "_mask",
+            RequiredExtensions = ["RV64"] in {
+            def: RVVBuiltin<"v", "vPCe" # eew64_type # "Uv", type>;
+              if !not(IsFloat<type>.val) then {
+                def: RVVBuiltin<"Uv", "UvPCUe" # eew64_type # "Uv", type>;
+              }
+          }
       }
   }
 }
@@ -797,7 +806,7 @@ multiclass RVVIndexedStore<string op> {
         IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType(), Ops[4]->getType()};
       }] in {
       foreach type = TypeList in {
-        foreach eew_list = EEWList in {
+        foreach eew_list = EEWList[0-2] in {
           defvar eew = eew_list[0];
           defvar eew_type = eew_list[1];
           let Name = op # eew  # "_v", IRName = op, IRNameMask = op # "_mask" in  {
@@ -805,6 +814,15 @@ multiclass RVVIndexedStore<string op> {
             if !not(IsFloat<type>.val) then {
               def : RVVBuiltin<"Uv", "0PUe" # eew_type # "UvUv", type>;
             }
+          }
+        }
+        defvar eew64 = "64";
+        defvar eew64_type = "(Log2EEW:6)";
+        let Name = op # eew64  # "_v", IRName = op, IRNameMask = op # "_mask",
+            RequiredExtensions = ["RV64"]  in  {
+          def : RVVBuiltin<"v", "0Pe" # eew64_type # "Uvv", type>;
+          if !not(IsFloat<type>.val) then {
+            def : RVVBuiltin<"Uv", "0PUe" # eew64_type # "UvUv", type>;
           }
         }
       }
@@ -1549,7 +1567,7 @@ defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
 defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
 
 // 7.8 Vector Load/Store Segment Instructions
-let RequiredExtension = "Zvlsseg" in {
+let RequiredExtensions = ["Zvlsseg"] in {
 defm : RVVUnitStridedSegLoad<"vlseg">;
 defm : RVVUnitStridedSegLoadFF<"vlseg">;
 defm : RVVStridedSegLoad<"vlsseg">;

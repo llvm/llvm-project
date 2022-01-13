@@ -908,7 +908,7 @@ def : InstRW<[FalkorWr_ADDSUBsx],     (instregex "^SUB(S)?(W|X)r(s|x|x64)$")>;
 // -----------------------------------------------------------------------------
 def : InstRW<[FalkorWr_1GTOV_1cyc],   (instregex "^DUP(v8i8|v4i16|v2i32)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^DUP(v16i8|v8i16)(gpr|lane)$")>;
-def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^CPY(i8|i16|i32|i64)$")>;
+def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[FalkorWr_1GTOV_1cyc],   (instregex "^INSv(i8|i16)(gpr|lane)$")>;
 def : InstRW<[FalkorWr_1VTOG_1cyc],   (instregex "^(S|U)MOVv.*$")>;
 def : InstRW<[FalkorWr_1VXVY_1cyc],   (instregex "^(BIF|BIT|BSL|BSP)v8i8$")>;

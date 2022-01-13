@@ -251,6 +251,7 @@ module LLVM_intrinsic_gen {
   module IR_Function { header "IR/Function.h" export * }
   module IR_InstrTypes { header "IR/InstrTypes.h" export * }
   module IR_Instructions { header "IR/Instructions.h" export * }
+  module IR_TypeFinder { header "IR/TypeFinder.h" export * }
 
 
   // Intrinsics.h

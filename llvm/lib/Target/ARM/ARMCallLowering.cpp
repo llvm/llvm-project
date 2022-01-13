@@ -534,7 +534,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &
 
   MIRBuilder.buildInstr(ARM::ADJCALLSTACKUP)
       .addImm(ArgAssigner.StackOffset)
-      .addImm(0)
+      .addImm(-1ULL)
       .add(predOps(ARMCC::AL));
 
   return true;

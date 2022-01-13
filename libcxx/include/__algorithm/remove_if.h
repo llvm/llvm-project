@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ALGORITHM_REMOVE_IF_H
 #define _LIBCPP___ALGORITHM_REMOVE_IF_H
 
-#include <__config>
 #include <__algorithm/find_if.h>
+#include <__config>
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

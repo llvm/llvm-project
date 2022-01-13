@@ -9,17 +9,26 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(CompilerRTBuiltins C ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
   set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
+
+  set(COMPILER_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../..")
+
+  set(LLVM_COMMON_CMAKE_UTILS "${COMPILER_RT_SOURCE_DIR}/../cmake")
+
+  # Add path for custom modules
   list(INSERT CMAKE_MODULE_PATH 0
-    "${CMAKE_SOURCE_DIR}/../../cmake"
-    "${CMAKE_SOURCE_DIR}/../../cmake/Modules"
-    "${CMAKE_SOURCE_DIR}/../../../cmake"
-    "${CMAKE_SOURCE_DIR}/../../../cmake/Modules")
+    "${COMPILER_RT_SOURCE_DIR}/cmake"
+    "${COMPILER_RT_SOURCE_DIR}/cmake/Modules"
+    "${LLVM_COMMON_CMAKE_UTILS}"
+    "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+    )
+
   include(base-config-ix)
   include(CompilerRTUtils)
 
   load_llvm_config()
   construct_compiler_rt_default_triple()
 
+  include(SetPlatformToolchainTools)
   if(APPLE)
     include(CompilerRTDarwinUtils)
   endif()
@@ -27,15 +36,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     include(UseLibtool)
   endif()
   include(AddCompilerRT)
-
-  if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-    set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> -X32_64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
-    set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> -X32_64 qc <TARGET> <LINK_FLAGS> <OBJECTS>")
-    set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> -X32_64 q <TARGET> <LINK_FLAGS> <OBJECTS>")
-    set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> -X32_64 q <TARGET> <LINK_FLAGS> <OBJECTS>")
-    set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -X32_64 <TARGET>")
-    set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -X32_64 <TARGET>")
-  endif()
 endif()
 
 if (COMPILER_RT_STANDALONE_BUILD)
@@ -677,6 +677,10 @@ if (APPLE)
   darwin_add_builtin_libraries(${BUILTIN_SUPPORTED_OS})
 else ()
   set(BUILTIN_CFLAGS "")
+
+  if (COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
+    append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full BUILTIN_CFLAGS)
+  endif()
 
   append_list_if(COMPILER_RT_HAS_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS)
 

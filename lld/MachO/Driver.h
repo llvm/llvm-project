@@ -115,7 +115,7 @@ private:
   std::set<std::string> notFounds;
 };
 
-extern DependencyTracker *depTracker;
+extern std::unique_ptr<DependencyTracker> depTracker;
 
 } // namespace macho
 } // namespace lld

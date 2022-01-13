@@ -20,27 +20,43 @@ from .types import *
 
 __all__ = [
     "ScalarAssign",
-    "ScalarApplyFn",
+    "ScalarArithFn",
+    "ScalarTypeFn",
     "ScalarArg",
     "ScalarConst",
     "ScalarIndex",
     "ScalarExpression",
-    "ScalarSymbolicCast",
 ]
 
 
-class ScalarApplyFn:
-  """A type of ScalarExpression that applies a named function to operands."""
+class ScalarArithFn:
+  """A type of ScalarExpression that applies an arithmetic function."""
 
   def __init__(self, fn_name: str, *operands: "ScalarExpression"):
     self.fn_name = fn_name
     self.operands = operands
 
   def expr(self) -> "ScalarExpression":
-    return ScalarExpression(scalar_apply=self)
+    return ScalarExpression(arith_fn=self)
 
   def __repr__(self):
-    return f"ScalarApplyFn<{self.fn_name}>({', '.join(self.operands)})"
+    return f"ScalarArithFn<{self.fn_name}>({', '.join(self.operands)})"
+
+
+class ScalarTypeFn:
+  """A type of ScalarExpression that applies a type conversion function."""
+
+  def __init__(self, fn_name: str, type_var: TypeVar,
+               operand: "ScalarExpression"):
+    self.fn_name = fn_name
+    self.type_var = type_var
+    self.operand = operand
+
+  def expr(self) -> "ScalarExpression":
+    return ScalarExpression(type_fn=self)
+
+  def __repr__(self):
+    return f"ScalarTypeFn<{self.fn_name}>({self.type_var}, {self.operand})"
 
 
 class ScalarArg:
@@ -82,27 +98,12 @@ class ScalarIndex:
     return f"(ScalarIndex({self.dim})"
 
 
-class ScalarSymbolicCast:
-  """A type of ScalarExpression that symbolically casts an operand to a TypeVar."""
-
-  def __init__(self, to_type: TypeVar, operand: "ScalarExpression",
-               is_unsigned_cast: bool):
-    self.to_type = to_type
-    self.operand = operand
-    self.is_unsigned_cast = is_unsigned_cast
-
-  def expr(self) -> "ScalarExpression":
-    return ScalarExpression(symbolic_cast=self)
-
-  def __repr__(self):
-    return f"ScalarSymbolicCast({self.to_type}, {self.operand}, {self.is_unsigned_cast})"
-
-
 class ScalarExpression(YAMLObject):
   """An expression on scalar values.
 
   Can be one of:
-    - ScalarApplyFn
+    - ScalarArithFn
+    - ScalarTypeFn
     - ScalarArg
     - ScalarConst
     - ScalarIndex
@@ -111,27 +112,37 @@ class ScalarExpression(YAMLObject):
   yaml_tag = "!ScalarExpression"
 
   def __init__(self,
-               scalar_apply: Optional[ScalarApplyFn] = None,
+               arith_fn: Optional[ScalarArithFn] = None,
+               type_fn: Optional[ScalarTypeFn] = None,
                scalar_arg: Optional[ScalarArg] = None,
                scalar_const: Optional[ScalarConst] = None,
-               scalar_index: Optional[ScalarIndex] = None,
-               symbolic_cast: Optional[ScalarSymbolicCast] = None):
-    if (bool(scalar_apply) + bool(scalar_arg) + bool(scalar_const) +
-        bool(scalar_index) + bool(symbolic_cast)) != 1:
-      raise ValueError("One of 'scalar_apply', 'scalar_arg', 'scalar_const', "
-                       "'scalar_index', 'symbolic_cast' must be specified")
-    self.scalar_apply = scalar_apply
+               scalar_index: Optional[ScalarIndex] = None):
+    if (bool(arith_fn) + bool(type_fn) + bool(scalar_arg) + bool(scalar_const) +
+        bool(scalar_index)) != 1:
+      raise ValueError("One of 'arith_fn', 'type_fn', 'scalar_arg', "
+                       "'scalar_const', 'scalar_index', must be specified")
+    self.arith_fn = arith_fn
+    self.type_fn = type_fn
     self.scalar_arg = scalar_arg
     self.scalar_const = scalar_const
     self.scalar_index = scalar_index
-    self.symbolic_cast = symbolic_cast
 
   def to_yaml_custom_dict(self):
-    if self.scalar_apply:
+    if self.arith_fn:
       return dict(
-          scalar_apply=dict(
-              fn_name=self.scalar_apply.fn_name,
-              operands=list(self.scalar_apply.operands),
+          arith_fn=dict(
+              fn_name=self.arith_fn.fn_name,
+              operands=list(self.arith_fn.operands),
+          ))
+    if self.type_fn:
+      # Note that even though operands must be arity 1, we write it the
+      # same way as for apply because it allows handling code to be more
+      # generic vs having a special form.
+      return dict(
+          type_fn=dict(
+              fn_name=self.type_fn.fn_name,
+              type_var=self.type_fn.type_var.name,
+              operands=[self.type_fn.operand],
           ))
     elif self.scalar_arg:
       return dict(scalar_arg=self.scalar_arg.arg)
@@ -139,15 +150,6 @@ class ScalarExpression(YAMLObject):
       return dict(scalar_const=self.scalar_const.value)
     elif self.scalar_index:
       return dict(scalar_index=self.scalar_index.dim)
-    elif self.symbolic_cast:
-      # Note that even though operands must be arity 1, we write it the
-      # same way as for apply because it allows handling code to be more
-      # generic vs having a special form.
-      return dict(
-          symbolic_cast=dict(
-              type_var=self.symbolic_cast.to_type.name,
-              operands=[self.symbolic_cast.operand],
-              is_unsigned_cast=self.symbolic_cast.is_unsigned_cast))
     else:
       raise ValueError(f"Unexpected ScalarExpression type: {self}")
 

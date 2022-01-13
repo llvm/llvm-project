@@ -127,7 +127,7 @@ public:
     JITTargetAddress getTargetAddress() const { return TargetAddress; }
 
   private:
-    const char *ContentPtr = 0;
+    const char *ContentPtr = nullptr;
     uint64_t Size = 0;
     JITTargetAddress TargetAddress = 0;
   };

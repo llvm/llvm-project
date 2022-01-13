@@ -135,31 +135,7 @@ std::vector<MemoryBufferRef> lld::coff::getArchiveMembers(Archive *file) {
   return v;
 }
 
-void LazyObjFile::fetch() {
-  if (mb.getBuffer().empty())
-    return;
-
-  InputFile *file;
-  if (isBitcode(mb))
-    file = make<BitcodeFile>(ctx, mb, "", 0, std::move(symbols));
-  else
-    file = make<ObjFile>(ctx, mb, std::move(symbols));
-  mb = {};
-  ctx.symtab.addFile(file);
-}
-
-void LazyObjFile::parse() {
-  if (isBitcode(this->mb)) {
-    // Bitcode file.
-    std::unique_ptr<lto::InputFile> obj =
-        CHECK(lto::InputFile::create(this->mb), this);
-    for (const lto::InputFile::Symbol &sym : obj->symbols()) {
-      if (!sym.isUndefined())
-        ctx.symtab.addLazyObject(this, sym.getName());
-    }
-    return;
-  }
-
+void ObjFile::parseLazy() {
   // Native object file.
   std::unique_ptr<Binary> coffObjPtr = CHECK(createBinary(mb), this);
   COFFObjectFile *coffObj = cast<COFFObjectFile>(coffObjPtr.get());
@@ -1006,13 +982,9 @@ void ImportFile::parse() {
 }
 
 BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
-                         StringRef archiveName, uint64_t offsetInArchive)
-    : BitcodeFile(ctx, mb, archiveName, offsetInArchive, {}) {}
-
-BitcodeFile::BitcodeFile(COFFLinkerContext &ctx, MemoryBufferRef mb,
                          StringRef archiveName, uint64_t offsetInArchive,
-                         std::vector<Symbol *> &&symbols)
-    : InputFile(ctx, BitcodeKind, mb), symbols(std::move(symbols)) {
+                         bool lazy)
+    : InputFile(ctx, BitcodeKind, mb, lazy) {
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier());
@@ -1105,6 +1077,12 @@ void BitcodeFile::parse() {
       config->gcroot.push_back(sym);
   }
   directives = obj->getCOFFLinkerOpts();
+}
+
+void BitcodeFile::parseLazy() {
+  for (const lto::InputFile::Symbol &sym : obj->symbols())
+    if (!sym.isUndefined())
+      ctx.symtab.addLazyObject(this, sym.getName());
 }
 
 MachineTypes BitcodeFile::getMachineType() {

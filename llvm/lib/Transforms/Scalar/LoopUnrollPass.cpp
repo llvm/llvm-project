@@ -1142,7 +1142,7 @@ static LoopUnrollResult tryToUnrollLoop(
   // automatic unrolling from interfering with the user requested
   // transformation.
   Loop *ParentL = L->getParentLoop();
-  if (ParentL != NULL &&
+  if (ParentL != nullptr &&
       hasUnrollAndJamTransformation(ParentL) == TM_ForcedByUser &&
       hasUnrollTransformation(L) != TM_ForcedByUser) {
     LLVM_DEBUG(dbgs() << "Not unrolling loop since parent loop has"

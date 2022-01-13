@@ -206,7 +206,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
   // LowerABIAttributesPass.
   TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
   {
-    for (auto argType : enumerate(funcOp.getType().getInputs())) {
+    for (const auto &argType : enumerate(funcOp.getType().getInputs())) {
       auto convertedType = typeConverter.convertType(argType.value());
       signatureConverter.addInputs(argType.index(), convertedType);
     }

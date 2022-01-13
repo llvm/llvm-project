@@ -71,11 +71,10 @@ void addTo(StringMap<ExecutorAddr> &M) {
                          shared::SPSMemoryAccessUInt64Write>);
   M[rt::MemoryWriteBuffersWrapperName] =
       ExecutorAddr::fromPtr(&writeBuffersWrapper);
-  M[rt::RegisterEHFrameSectionCustomDirectWrapperName] = ExecutorAddr::fromPtr(
-      &llvm_orc_registerEHFrameSectionCustomDirectWrapper);
-  M[rt::DeregisterEHFrameSectionCustomDirectWrapperName] =
-      ExecutorAddr::fromPtr(
-          &llvm_orc_deregisterEHFrameSectionCustomDirectWrapper);
+  M[rt::RegisterEHFrameSectionWrapperName] =
+      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
+  M[rt::DeregisterEHFrameSectionWrapperName] =
+      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
   M[rt::RunAsMainWrapperName] = ExecutorAddr::fromPtr(&runAsMainWrapper);
 }
 

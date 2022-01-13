@@ -46,8 +46,7 @@ static cl::opt<bool> AllowRiskySelect(
 AMDGPUInstructionSelector::AMDGPUInstructionSelector(
     const GCNSubtarget &STI, const AMDGPURegisterBankInfo &RBI,
     const AMDGPUTargetMachine &TM)
-    : InstructionSelector(), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI), TM(TM),
+    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), RBI(RBI), TM(TM),
       STI(STI),
       EnableLateStructurizeCFG(AMDGPUTargetMachine::EnableLateStructurizeCFG),
 #define GET_GLOBALISEL_PREDICATES_INIT
@@ -1242,7 +1241,7 @@ bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
   // Get the return address reg and mark it as an implicit live-in
   Register ReturnAddrReg = TRI.getReturnAddressReg(MF);
   Register LiveIn = getFunctionLiveInPhysReg(MF, TII, ReturnAddrReg,
-                                             AMDGPU::SReg_64RegClass);
+                                             AMDGPU::SReg_64RegClass, DL);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
     .addReg(LiveIn);
   I.eraseFromParent();
@@ -1504,9 +1503,9 @@ static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
   if (TexFailCtrl)
     IsTexFail = true;
 
-  TFE = (TexFailCtrl & 0x1) ? 1 : 0;
+  TFE = (TexFailCtrl & 0x1) ? true : false;
   TexFailCtrl &= ~(uint64_t)0x1;
-  LWE = (TexFailCtrl & 0x2) ? 1 : 0;
+  LWE = (TexFailCtrl & 0x2) ? true : false;
   TexFailCtrl &= ~(uint64_t)0x2;
 
   return TexFailCtrl == 0;
@@ -1534,7 +1533,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   Register VDataIn, VDataOut;
   LLT VDataTy;
   int NumVDataDwords = -1;
-  bool IsD16 = false;
+  bool IsD16 = MI.getOpcode() == AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16 ||
+               MI.getOpcode() == AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16;
 
   bool Unorm;
   if (!BaseOpcode->Sampler)
@@ -1582,16 +1582,6 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   } else {
     DMask = MI.getOperand(ArgOffset + Intr->DMaskIndex).getImm();
     DMaskLanes = BaseOpcode->Gather4 ? 4 : countPopulation(DMask);
-
-    // One memoperand is mandatory, except for getresinfo.
-    // FIXME: Check this in verifier.
-    if (!MI.memoperands_empty()) {
-      const MachineMemOperand *MMO = *MI.memoperands_begin();
-
-      // Infer d16 from the memory size, as the register type will be mangled by
-      // unpacked subtargets, or by TFE.
-      IsD16 = ((8 * MMO->getSize()) / DMaskLanes) < 32;
-    }
 
     if (BaseOpcode->Store) {
       VDataIn = MI.getOperand(1).getReg();
@@ -3317,7 +3307,9 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return selectG_SHUFFLE_VECTOR(I);
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD:
-  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE: {
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE:
+  case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16: {
     const AMDGPU::ImageDimIntrinsicInfo *Intr
       = AMDGPU::getImageDimIntrinsicInfo(I.getIntrinsicID());
     assert(Intr && "not an image intrinsic with image pseudo");

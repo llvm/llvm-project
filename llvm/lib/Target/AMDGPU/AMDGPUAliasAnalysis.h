@@ -26,7 +26,7 @@ class AMDGPUAAResult : public AAResultBase<AMDGPUAAResult> {
   const DataLayout &DL;
 
 public:
-  explicit AMDGPUAAResult(const DataLayout &DL) : AAResultBase(), DL(DL) {}
+  explicit AMDGPUAAResult(const DataLayout &DL) : DL(DL) {}
   AMDGPUAAResult(AMDGPUAAResult &&Arg)
       : AAResultBase(std::move(Arg)), DL(Arg.DL) {}
 

@@ -23,8 +23,6 @@ using namespace clang::driver;
 using namespace clang;
 using namespace llvm::opt;
 
-using clang::driver::tools::AddLinkerInputs;
-
 void tools::PS4cpu::addProfileRTArgs(const ToolChain &TC, const ArgList &Args,
                                      ArgStringList &CmdArgs) {
   if ((Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,

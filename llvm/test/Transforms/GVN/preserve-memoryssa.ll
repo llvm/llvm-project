@@ -97,7 +97,7 @@ for.body.i22:
 define void @test_assume_false_to_store_undef_1(i32* %ptr) {
 ; CHECK-LABEL: @test_assume_false_to_store_undef_1(
 ; CHECK-NEXT:    store i32 10, i32* [[PTR:%.*]], align 4
-; CHECK-NEXT:    store i8 undef, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, i8* null, align 1
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    ret void
 ;
@@ -113,7 +113,7 @@ define i32 @test_assume_false_to_store_undef_2(i32* %ptr, i32* %ptr.2) {
 ; CHECK-LABEL: @test_assume_false_to_store_undef_2(
 ; CHECK-NEXT:    store i32 10, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR_2:%.*]], align 4
-; CHECK-NEXT:    store i8 undef, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, i8* null, align 1
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    ret i32 [[LV]]
 ;
@@ -130,7 +130,7 @@ define i32 @test_assume_false_to_store_undef_3(i32* %ptr, i32* %ptr.2) {
 ; CHECK-LABEL: @test_assume_false_to_store_undef_3(
 ; CHECK-NEXT:    store i32 10, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR_2:%.*]], align 4
-; CHECK-NEXT:    store i8 undef, i8* null, align 1
+; CHECK-NEXT:    store i8 poison, i8* null, align 1
 ; CHECK-NEXT:    ret i32 [[LV]]
 ;
   store i32 10, i32* %ptr

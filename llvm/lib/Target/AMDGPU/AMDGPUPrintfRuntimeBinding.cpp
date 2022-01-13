@@ -463,7 +463,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
             WhatToStore.push_back(Arg);
           }
         } else if (isa<FixedVectorType>(ArgType)) {
-          Type *IType = NULL;
+          Type *IType = nullptr;
           uint32_t EleCount = cast<FixedVectorType>(ArgType)->getNumElements();
           uint32_t EleSize = ArgType->getScalarSizeInBits();
           uint32_t TotalSize = EleCount * EleSize;

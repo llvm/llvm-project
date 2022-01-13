@@ -3203,7 +3203,8 @@ bool TGParser::ParseIf(MultiClass *CurMultiClass) {
   // iteration variable being assigned.
 
   ListInit *EmptyList = ListInit::get({}, BitRecTy::get());
-  ListInit *SingletonList = ListInit::get({BitInit::get(1)}, BitRecTy::get());
+  ListInit *SingletonList =
+      ListInit::get({BitInit::get(true)}, BitRecTy::get());
   RecTy *BitListTy = ListRecTy::get(BitRecTy::get());
 
   // The foreach containing the then-clause selects SingletonList if

@@ -1123,9 +1123,8 @@ uint32_t ARMAsmBackendDarwin::generateCompactUnwindEncoding(
   DenseMap<unsigned, int> RegOffsets;
   int FloatRegCount = 0;
   // Process each .cfi directive and build up compact unwind info.
-  for (size_t i = 0, e = Instrs.size(); i != e; ++i) {
+  for (const MCCFIInstruction &Inst : Instrs) {
     unsigned Reg;
-    const MCCFIInstruction &Inst = Instrs[i];
     switch (Inst.getOperation()) {
     case MCCFIInstruction::OpDefCfa: // DW_CFA_def_cfa
       CFARegisterOffset = Inst.getOffset();

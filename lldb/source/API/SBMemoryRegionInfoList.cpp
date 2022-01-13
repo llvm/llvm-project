@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBMemoryRegionInfoList.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -105,7 +105,7 @@ operator=(const SBMemoryRegionInfoList &rhs) {
   if (this != &rhs) {
     *m_opaque_up = *rhs.m_opaque_up;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 uint32_t SBMemoryRegionInfoList::GetSize() const {
@@ -158,32 +158,4 @@ const MemoryRegionInfoListImpl *SBMemoryRegionInfoList::operator->() const {
 const MemoryRegionInfoListImpl &SBMemoryRegionInfoList::operator*() const {
   assert(m_opaque_up.get());
   return *m_opaque_up;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBMemoryRegionInfoList>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfoList, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBMemoryRegionInfoList,
-                            (const lldb::SBMemoryRegionInfoList &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBMemoryRegionInfoList &,
-      SBMemoryRegionInfoList, operator=,(
-                                  const lldb::SBMemoryRegionInfoList &));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBMemoryRegionInfoList, GetSize, ());
-  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfoList,
-                       GetMemoryRegionContainingAddress,
-                       (lldb::addr_t, lldb::SBMemoryRegionInfo &));
-  LLDB_REGISTER_METHOD(bool, SBMemoryRegionInfoList, GetMemoryRegionAtIndex,
-                       (uint32_t, lldb::SBMemoryRegionInfo &));
-  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Clear, ());
-  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Append,
-                       (lldb::SBMemoryRegionInfo &));
-  LLDB_REGISTER_METHOD(void, SBMemoryRegionInfoList, Append,
-                       (lldb::SBMemoryRegionInfoList &));
-}
-
-}
 }

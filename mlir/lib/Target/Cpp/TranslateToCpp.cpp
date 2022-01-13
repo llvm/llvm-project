@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -689,7 +691,7 @@ bool CppEmitter::hasBlockLabel(Block &block) {
 }
 
 LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
-  auto printInt = [&](APInt val, bool isUnsigned) {
+  auto printInt = [&](const APInt &val, bool isUnsigned) {
     if (val.getBitWidth() == 1) {
       if (val.getBoolValue())
         os << "true";
@@ -702,7 +704,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
     }
   };
 
-  auto printFloat = [&](APFloat val) {
+  auto printFloat = [&](const APFloat &val) {
     if (val.isFinite()) {
       SmallString<128> strValue;
       // Use default values of toString except don't truncate zeros.
@@ -734,7 +736,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
   }
   if (auto dense = attr.dyn_cast<DenseFPElementsAttr>()) {
     os << '{';
-    interleaveComma(dense, os, [&](APFloat val) { printFloat(val); });
+    interleaveComma(dense, os, [&](const APFloat &val) { printFloat(val); });
     os << '}';
     return success();
   }
@@ -756,7 +758,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
                          .getElementType()
                          .dyn_cast<IntegerType>()) {
       os << '{';
-      interleaveComma(dense, os, [&](APInt val) {
+      interleaveComma(dense, os, [&](const APInt &val) {
         printInt(val, shouldMapToUnsigned(iType.getSignedness()));
       });
       os << '}';
@@ -767,7 +769,8 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
                          .getElementType()
                          .dyn_cast<IndexType>()) {
       os << '{';
-      interleaveComma(dense, os, [&](APInt val) { printInt(val, false); });
+      interleaveComma(dense, os,
+                      [&](const APInt &val) { printInt(val, false); });
       os << '}';
       return success();
     }

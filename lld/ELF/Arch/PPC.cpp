@@ -192,7 +192,7 @@ void PPC::writeGotHeader(uint8_t *buf) const {
 
 void PPC::writeGotPlt(uint8_t *buf, const Symbol &s) const {
   // Address of the symbol resolver stub in .glink .
-  write32(buf, in.plt->getVA() + in.plt->headerSize + 4 * s.pltIndex);
+  write32(buf, in.plt->getVA() + in.plt->headerSize + 4 * s.getPltIdx());
 }
 
 bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,

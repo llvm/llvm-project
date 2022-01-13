@@ -86,14 +86,16 @@ enum NodeType : unsigned {
   FMV_X_ANYEXTW_RV64,
   // FP to XLen int conversions. Corresponds to fcvt.l(u).s/d/h on RV64 and
   // fcvt.w(u).s/d/h on RV32. Unlike FP_TO_S/UINT these saturate out of
-  // range inputs. These are used for FP_TO_S/UINT_SAT lowering.
-  FCVT_X_RTZ,
-  FCVT_XU_RTZ,
+  // range inputs. These are used for FP_TO_S/UINT_SAT lowering. Rounding mode
+  // is passed as a TargetConstant operand using the RISCVFPRndMode enum.
+  FCVT_X,
+  FCVT_XU,
   // FP to 32 bit int conversions for RV64. These are used to keep track of the
   // result being sign extended to 64 bit. These saturate out of range inputs.
-  // Used for FP_TO_S/UINT and FP_TO_S/UINT_SAT lowering.
-  FCVT_W_RTZ_RV64,
-  FCVT_WU_RTZ_RV64,
+  // Used for FP_TO_S/UINT and FP_TO_S/UINT_SAT lowering. Rounding mode
+  // is passed as a TargetConstant operand using the RISCVFPRndMode enum.
+  FCVT_W_RV64,
+  FCVT_WU_RV64,
   // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
   // (returns (Lo, Hi)). It takes a chain operand.
   READ_CYCLE_WIDE,
@@ -284,8 +286,8 @@ enum NodeType : unsigned {
 
   // FP to 32 bit int conversions for RV64. These are used to keep track of the
   // result being sign extended to 64 bit. These saturate out of range inputs.
-  STRICT_FCVT_W_RTZ_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
-  STRICT_FCVT_WU_RTZ_RV64,
+  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCVT_WU_RV64,
 
   // Memory opcodes start here.
   VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -462,6 +464,8 @@ public:
                       SelectionDAG &DAG) const override;
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+  template <class NodeTy>
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                          Type *Ty) const override {
@@ -524,6 +528,16 @@ public:
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
 
+  SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                        SmallVectorImpl<SDNode *> &Created) const override;
+
+  unsigned getJumpTableEncoding() const override;
+
+  const MCExpr *LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
+                                          const MachineBasicBlock *MBB,
+                                          unsigned uid,
+                                          MCContext &Ctx) const override;
+
 private:
   /// RISCVCCAssignFn - This target-specific function extends the default
   /// CCValAssign with additional information used to lower RISC-V calling
@@ -543,9 +557,6 @@ private:
                          const SmallVectorImpl<ISD::OutputArg> &Outs,
                          bool IsRet, CallLoweringInfo *CLI,
                          RISCVCCAssignFn Fn) const;
-
-  template <class NodeTy>
-  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
 
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                            bool UseGOT) const;

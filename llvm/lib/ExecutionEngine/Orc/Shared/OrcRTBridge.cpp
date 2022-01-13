@@ -36,10 +36,10 @@ const char *MemoryWriteUInt64sWrapperName =
     "__llvm_orc_bootstrap_mem_write_uint64s_wrapper";
 const char *MemoryWriteBuffersWrapperName =
     "__llvm_orc_bootstrap_mem_write_buffers_wrapper";
-const char *RegisterEHFrameSectionCustomDirectWrapperName =
-    "__llvm_orc_bootstrap_register_ehframe_section_custom_direct_wrapper";
-const char *DeregisterEHFrameSectionCustomDirectWrapperName =
-    "__llvm_orc_bootstrap_deregister_ehframe_section_custom_direct_wrapper";
+const char *RegisterEHFrameSectionWrapperName =
+    "__llvm_orc_bootstrap_register_ehframe_section_wrapper";
+const char *DeregisterEHFrameSectionWrapperName =
+    "__llvm_orc_bootstrap_deregister_ehframe_section_wrapper";
 const char *RunAsMainWrapperName = "__llvm_orc_bootstrap_run_as_main_wrapper";
 
 } // end namespace rt

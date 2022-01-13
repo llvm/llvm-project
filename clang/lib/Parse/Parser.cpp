@@ -279,7 +279,7 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
   // We always want this function to skip at least one token if the first token
   // isn't T and if not at EOF.
   bool isFirstTokenSkipped = true;
-  while (1) {
+  while (true) {
     // If we found one of the tokens, stop and return true.
     for (unsigned i = 0, NumToks = Toks.size(); i != NumToks; ++i) {
       if (Tok.is(Toks[i])) {
@@ -1448,7 +1448,7 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
     ParseDeclarator(ParmDeclarator);
 
     // Handle the full declarator list.
-    while (1) {
+    while (true) {
       // If attributes are present, parse them.
       MaybeParseGNUAttributes(ParmDeclarator);
 
@@ -1634,7 +1634,7 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC) {
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus &&
       ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      EnteringContext))
     return ANK_Error;
 
@@ -1882,7 +1882,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
     SourceLocation TypenameLoc = ConsumeToken();
     CXXScopeSpec SS;
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
+                                       /*ObjectHasErrors=*/false,
                                        /*EnteringContext=*/false, nullptr,
                                        /*IsTypename*/ true))
       return true;
@@ -1953,7 +1953,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
     if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHadErrors=*/false,
+                                       /*ObjectHasErrors=*/false,
                                        /*EnteringContext*/ false))
       return true;
 
@@ -2084,7 +2084,7 @@ bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
 
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHadErrors=*/false,
+                                     /*ObjectHasErrors=*/false,
                                      EnteringContext))
     return true;
   if (SS.isEmpty())
@@ -2195,7 +2195,7 @@ bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   // Parse nested-name-specifier.
   if (getLangOpts().CPlusPlus)
     ParseOptionalCXXScopeSpecifier(Result.SS, /*ObjectType=*/nullptr,
-                                   /*ObjectHadErrors=*/false,
+                                   /*ObjectHasErrors=*/false,
                                    /*EnteringContext=*/false);
 
   // Check nested-name specifier.

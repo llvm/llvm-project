@@ -28,6 +28,11 @@
 
 #pragma once
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
+
 // Constants
 //
 #ifndef E_NOTFOUND
@@ -511,4 +516,8 @@ STDMETHODIMP GetSetupConfiguration(_Out_ ISetupConfiguration **ppConfiguration,
 
 #ifdef __cplusplus
 }
+#endif
+
+#ifdef __clang__
+#pragma clang diagnostic pop
 #endif

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SEMA_CLEANUP_INFO_H
-#define LLVM_CLANG_SEMA_CLEANUP_INFO_H
+#ifndef LLVM_CLANG_SEMA_CLEANUPINFO_H
+#define LLVM_CLANG_SEMA_CLEANUPINFO_H
 
 namespace clang {
 

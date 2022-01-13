@@ -113,6 +113,7 @@ add_llvm_component_library(LLVMCodeGen
   MIRFSDiscriminator.cpp
   MIRSampleProfile.cpp
   MIRYamlMapping.cpp
+  MLRegallocEvictAdvisor.cpp
   ModuloSchedule.cpp
   MultiHazardRecognizer.cpp
   PatchableFunction.cpp

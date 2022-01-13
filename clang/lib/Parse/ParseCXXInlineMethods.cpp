@@ -803,7 +803,7 @@ bool Parser::ConsumeAndStoreUntil(tok::TokenKind T1, tok::TokenKind T2,
   // We always want this function to consume at least one token if the first
   // token isn't T and if not at EOF.
   bool isFirstTokenConsumed = true;
-  while (1) {
+  while (true) {
     // If we found one of the tokens, stop and return true.
     if (Tok.is(T1) || Tok.is(T2)) {
       if (ConsumeFinalToken) {
@@ -1159,7 +1159,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
   unsigned AngleCount = 0;
   unsigned KnownTemplateCount = 0;
 
-  while (1) {
+  while (true) {
     switch (Tok.getKind()) {
     case tok::comma:
       // If we might be in a template, perform a tentative parse to check.

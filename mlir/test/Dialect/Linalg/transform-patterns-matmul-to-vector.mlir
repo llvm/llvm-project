@@ -17,17 +17,17 @@ func @matmul(%A: memref<1584x1584xf32, offset: 0, strides: [1584, 1]>,
 //      CHECK-1D: vector.transfer_write {{.*}} : vector<8x12xf32>, memref<8x12xf32>
 //
 //      CHECK-1D: vector.transfer_read {{.*}} : memref<8x16xf32, #{{.*}}>, vector<8x16xf32>
-//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x16xf32>, memref<8x16xf32, #{{.*}}>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x16xf32>, memref<8x16xf32>
 //      CHECK-1D: vector.transfer_read {{.*}} : memref<16x12xf32, #{{.*}}>, vector<16x12xf32>
-//      CHECK-1D: vector.transfer_write {{.*}} : vector<16x12xf32>, memref<16x12xf32, #{{.*}}>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<16x12xf32>, memref<16x12xf32>
 //      CHECK-1D: vector.transfer_read {{.*}} : memref<8x12xf32, #{{.*}}>, vector<8x12xf32>
-//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x12xf32>, memref<8x12xf32, #{{.*}}>
+//      CHECK-1D: vector.transfer_write {{.*}} : vector<8x12xf32>, memref<8x12xf32>
 //
 //      CHECK-1D: vector.contract
 // CHECK-1D-SAME:   iterator_types = ["parallel", "parallel", "reduction"]
 // CHECK-1D-SAME:   : vector<8x16xf32>, vector<16x12xf32> into vector<8x12xf32>
 //
-//      CHECK-1D: vector.transfer_read {{.*}} : memref<8x12xf32, #{{.*}}>, vector<8x12xf32>
+//      CHECK-1D: vector.transfer_read {{.*}} : memref<8x12xf32>, vector<8x12xf32>
 //      CHECK-1D: vector.transfer_write {{.*}} : vector<8x12xf32>, memref<8x12xf32, #{{.*}}>
 
 // CHECK-2D-LABEL:func @matmul

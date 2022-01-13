@@ -279,6 +279,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 
@@ -454,12 +455,12 @@ static Function *getEmscriptenFunction(FunctionType *Ty, const Twine &Name,
   // Tell the linker that this function is expected to be imported from the
   // 'env' module.
   if (!F->hasFnAttribute("wasm-import-module")) {
-    llvm::AttrBuilder B;
+    llvm::AttrBuilder B(M->getContext());
     B.addAttribute("wasm-import-module", "env");
     F->addFnAttrs(B);
   }
   if (!F->hasFnAttribute("wasm-import-name")) {
-    llvm::AttrBuilder B;
+    llvm::AttrBuilder B(M->getContext());
     B.addAttribute("wasm-import-name", F->getName());
     F->addFnAttrs(B);
   }
@@ -547,7 +548,7 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
   for (unsigned I = 0, E = CI->arg_size(); I < E; ++I)
     ArgAttributes.push_back(InvokeAL.getParamAttrs(I));
 
-  AttrBuilder FnAttrs(InvokeAL.getFnAttrs());
+  AttrBuilder FnAttrs(CI->getContext(), InvokeAL.getFnAttrs());
   if (FnAttrs.contains(Attribute::AllocSize)) {
     // The allocsize attribute (if any) referes to parameters by index and needs
     // to be adjusted.
@@ -817,6 +818,32 @@ static bool containsLongjmpableCalls(const Function *F) {
   return false;
 }
 
+// When a function contains a setjmp call but not other calls that can longjmp,
+// we don't do setjmp transformation for that setjmp. But we need to convert the
+// setjmp calls into "i32 0" so they don't cause link time errors. setjmp always
+// returns 0 when called directly.
+static void nullifySetjmp(Function *F) {
+  Module &M = *F->getParent();
+  IRBuilder<> IRB(M.getContext());
+  Function *SetjmpF = M.getFunction("setjmp");
+  SmallVector<Instruction *, 1> ToErase;
+
+  for (User *U : SetjmpF->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    // FIXME 'invoke' to setjmp can happen when we use Wasm EH + Wasm SjLj, but
+    // we don't support two being used together yet.
+    if (!CI)
+      report_fatal_error("Wasm EH + Wasm SjLj is not fully supported yet");
+    BasicBlock *BB = CI->getParent();
+    if (BB->getParent() != F) // in other function
+      continue;
+    ToErase.push_back(CI);
+    CI->replaceAllUsesWith(IRB.getInt32(0));
+  }
+  for (auto *I : ToErase)
+    I->eraseFromParent();
+}
+
 bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
 
@@ -886,6 +913,10 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     EHTypeIDF = getEmscriptenFunction(EHTypeIDTy, "llvm_eh_typeid_for", &M);
   }
 
+  // Functions that contains calls to setjmp but don't have other longjmpable
+  // calls within them.
+  SmallPtrSet<Function *, 4> SetjmpUsersToNullify;
+
   if ((EnableEmSjLj || EnableWasmSjLj) && SetjmpF) {
     // Precompute setjmp users
     for (User *U : SetjmpF->users()) {
@@ -896,6 +927,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
         // so can ignore it
         if (containsLongjmpableCalls(UserF))
           SetjmpUsers.insert(UserF);
+        else
+          SetjmpUsersToNullify.insert(UserF);
       } else {
         std::string S;
         raw_string_ostream SS(S);
@@ -973,6 +1006,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     if (SetjmpF)
       for (Function *F : SetjmpUsers)
         runSjLjOnFunction(*F);
+  }
+
+  // Replace unnecessary setjmp calls with 0
+  if ((EnableEmSjLj || EnableWasmSjLj) && !SetjmpUsersToNullify.empty()) {
+    Changed = true;
+    assert(SetjmpF);
+    for (Function *F : SetjmpUsersToNullify)
+      nullifySetjmp(F);
   }
 
   if (!Changed) {
@@ -1078,20 +1119,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
     } else {
       // This can't throw, and we don't need this invoke, just replace it with a
       // call+branch
-      SmallVector<Value *, 16> Args(II->args());
-      CallInst *NewCall =
-          IRB.CreateCall(II->getFunctionType(), II->getCalledOperand(), Args);
-      NewCall->takeName(II);
-      NewCall->setCallingConv(II->getCallingConv());
-      NewCall->setDebugLoc(II->getDebugLoc());
-      NewCall->setAttributes(II->getAttributes());
-      II->replaceAllUsesWith(NewCall);
-      ToErase.push_back(II);
-
-      IRB.CreateBr(II->getNormalDest());
-
-      // Remove any PHI node entries from the exception destination
-      II->getUnwindDest()->removePredecessor(&BB);
+      changeToCall(II);
     }
   }
 
@@ -1619,18 +1647,18 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
       BasicBlock::Create(C, "setjmp.dispatch", &F, OrigEntry);
   cast<BranchInst>(Entry->getTerminator())->setSuccessor(0, SetjmpDispatchBB);
 
-  // Create catch.dispatch.longjmp BB a catchswitch instruction
-  BasicBlock *CatchSwitchBB =
+  // Create catch.dispatch.longjmp BB and a catchswitch instruction
+  BasicBlock *CatchDispatchLongjmpBB =
       BasicBlock::Create(C, "catch.dispatch.longjmp", &F);
-  IRB.SetInsertPoint(CatchSwitchBB);
-  CatchSwitchInst *CatchSwitch =
+  IRB.SetInsertPoint(CatchDispatchLongjmpBB);
+  CatchSwitchInst *CatchSwitchLongjmp =
       IRB.CreateCatchSwitch(ConstantTokenNone::get(C), nullptr, 1);
 
   // Create catch.longjmp BB and a catchpad instruction
   BasicBlock *CatchLongjmpBB = BasicBlock::Create(C, "catch.longjmp", &F);
-  CatchSwitch->addHandler(CatchLongjmpBB);
+  CatchSwitchLongjmp->addHandler(CatchLongjmpBB);
   IRB.SetInsertPoint(CatchLongjmpBB);
-  CatchPadInst *CatchPad = IRB.CreateCatchPad(CatchSwitch, {});
+  CatchPadInst *CatchPad = IRB.CreateCatchPad(CatchSwitchLongjmp, {});
 
   // Wasm throw and catch instructions can throw and catch multiple values, but
   // that requires multivalue support in the toolchain, which is currently not
@@ -1696,9 +1724,9 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
 
   // Convert all longjmpable call instructions to invokes that unwind to the
   // newly created catch.dispatch.longjmp BB.
-  SmallVector<Instruction *, 64> ToErase;
+  SmallVector<CallInst *, 64> LongjmpableCalls;
   for (auto *BB = &*F.begin(); BB; BB = BB->getNextNode()) {
-    for (Instruction &I : *BB) {
+    for (auto &I : *BB) {
       auto *CI = dyn_cast<CallInst>(&I);
       if (!CI)
         continue;
@@ -1716,32 +1744,18 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
       // setjmps in this function. We should not convert this call to an invoke.
       if (CI == WasmLongjmpCI)
         continue;
-      ToErase.push_back(CI);
-
-      // Even if the callee function has attribute 'nounwind', which is true for
-      // all C functions, it can longjmp, which means it can throw a Wasm
-      // exception now.
-      CI->removeFnAttr(Attribute::NoUnwind);
-      if (Function *CalleeF = CI->getCalledFunction()) {
-        CalleeF->removeFnAttr(Attribute::NoUnwind);
-      }
-
-      IRB.SetInsertPoint(CI);
-      BasicBlock *Tail = SplitBlock(BB, CI->getNextNode());
-      // We will add a new invoke. So remove the branch created when we split
-      // the BB
-      ToErase.push_back(BB->getTerminator());
-      SmallVector<Value *, 8> Args(CI->args());
-      InvokeInst *II =
-          IRB.CreateInvoke(CI->getFunctionType(), CI->getCalledOperand(), Tail,
-                           CatchSwitchBB, Args);
-      II->takeName(CI);
-      II->setDebugLoc(CI->getDebugLoc());
-      II->setAttributes(CI->getAttributes());
-      CI->replaceAllUsesWith(II);
+      LongjmpableCalls.push_back(CI);
     }
   }
-
-  for (Instruction *I : ToErase)
-    I->eraseFromParent();
+  for (auto *CI : LongjmpableCalls) {
+    // Even if the callee function has attribute 'nounwind', which is true for
+    // all C functions, it can longjmp, which means it can throw a Wasm
+    // exception now.
+    CI->removeFnAttr(Attribute::NoUnwind);
+    if (Function *CalleeF = CI->getCalledFunction())
+      CalleeF->removeFnAttr(Attribute::NoUnwind);
+    // Change it to an invoke and make it unwind to the catch.dispatch.longjmp
+    // BB.
+    changeToInvokeAndSplitBasicBlock(CI, CatchDispatchLongjmpBB);
+  }
 }

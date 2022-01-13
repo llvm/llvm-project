@@ -133,7 +133,6 @@ struct InformationCache;
 struct AAIsDead;
 struct AttributorCallGraph;
 
-class AAManager;
 class AAResults;
 class Function;
 
@@ -173,7 +172,8 @@ combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
                                      const Optional<Value *> &B, Type *Ty);
 
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
-Constant *getInitialValueForObj(Value &Obj, Type &Ty);
+Constant *getInitialValueForObj(Value &Obj, Type &Ty,
+                                const TargetLibraryInfo *TLI);
 
 /// Collect all potential underlying objects of \p Ptr at position \p CtxI in
 /// \p Objects. Assumed information is used and dependences onto \p QueryingAA
@@ -1623,10 +1623,17 @@ public:
   ///
   /// This method will evaluate \p Pred on all (transitive) uses of the
   /// associated value and return true if \p Pred holds every time.
+  /// If uses are skipped in favor of equivalent ones, e.g., if we look through
+  /// memory, the \p EquivalentUseCB will be used to give the caller an idea
+  /// what original used was replaced by a new one (or new ones). The visit is
+  /// cut short if \p EquivalentUseCB returns false and the function will return
+  /// false as well.
   bool checkForAllUses(function_ref<bool(const Use &, bool &)> Pred,
                        const AbstractAttribute &QueryingAA, const Value &V,
                        bool CheckBBLivenessOnly = false,
-                       DepClassTy LivenessDepClass = DepClassTy::OPTIONAL);
+                       DepClassTy LivenessDepClass = DepClassTy::OPTIONAL,
+                       function_ref<bool(const Use &OldU, const Use &NewU)>
+                           EquivalentUseCB = nullptr);
 
   /// Emit a remark generically.
   ///
@@ -2354,11 +2361,11 @@ private:
 };
 
 /// Simple wrapper for a single bit (boolean) state.
-struct BooleanState : public IntegerStateBase<bool, 1, 0> {
-  using super = IntegerStateBase<bool, 1, 0>;
+struct BooleanState : public IntegerStateBase<bool, true, false> {
+  using super = IntegerStateBase<bool, true, false>;
   using base_t = IntegerStateBase::base_t;
 
-  BooleanState() : super() {}
+  BooleanState() {}
   BooleanState(base_t Assumed) : super(Assumed) {}
 
   /// Set the assumed value to \p Value but never below the known one.

@@ -959,6 +959,8 @@ void mapped_file_region::unmapImpl() {
   }
 }
 
+void mapped_file_region::dontNeedImpl() {}
+
 int mapped_file_region::alignment() {
   SYSTEM_INFO SysInfo;
   ::GetSystemInfo(&SysInfo);

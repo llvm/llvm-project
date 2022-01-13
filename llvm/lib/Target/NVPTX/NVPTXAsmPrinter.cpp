@@ -1214,9 +1214,9 @@ void NVPTXAsmPrinter::emitDemotedVars(const Function *f, raw_ostream &O) {
 
   std::vector<const GlobalVariable *> &gvars = localDecls[f];
 
-  for (unsigned i = 0, e = gvars.size(); i != e; ++i) {
+  for (const GlobalVariable *GV : gvars) {
     O << "\t// demoted variable\n\t";
-    printModuleLevelGV(gvars[i], O, true);
+    printModuleLevelGV(GV, O, true);
   }
 }
 

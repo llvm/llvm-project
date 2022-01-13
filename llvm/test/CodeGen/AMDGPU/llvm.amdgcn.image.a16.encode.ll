@@ -19,7 +19,7 @@ define amdgpu_ps <4 x float> @load_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords) 
 ; GFX11-LABEL: load_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm a16 ; encoding: [0x80,0x0f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -43,7 +43,7 @@ define amdgpu_ps <4 x float> @load_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords) 
 ; GFX11-LABEL: load_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm a16 ; encoding: [0x84,0x0f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -68,7 +68,7 @@ define amdgpu_ps <4 x float> @load_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ; GFX11-LABEL: load_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16 ; encoding: [0x88,0x0f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -94,7 +94,7 @@ define amdgpu_ps <4 x float> @load_cube(<8 x i32> inreg %rsrc, <2 x i16> %coords
 ; GFX11-LABEL: load_cube:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm a16 ; encoding: [0x8c,0x0f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -120,7 +120,7 @@ define amdgpu_ps <4 x float> @load_1darray(<8 x i32> inreg %rsrc, <2 x i16> %coo
 ; GFX11-LABEL: load_1darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm a16 ; encoding: [0x90,0x0f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -145,7 +145,7 @@ define amdgpu_ps <4 x float> @load_2darray(<8 x i32> inreg %rsrc, <2 x i16> %coo
 ; GFX11-LABEL: load_2darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm a16 ; encoding: [0x94,0x0f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -171,7 +171,7 @@ define amdgpu_ps <4 x float> @load_2dmsaa(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ; GFX11-LABEL: load_2dmsaa:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA unorm a16 ; encoding: [0x98,0x0f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -197,7 +197,7 @@ define amdgpu_ps <4 x float> @load_2darraymsaa(<8 x i32> inreg %rsrc, <2 x i16> 
 ; GFX11-LABEL: load_2darraymsaa:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16 ; encoding: [0x9c,0x0f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -224,7 +224,7 @@ define amdgpu_ps <4 x float> @load_mip_1d(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ; GFX11-LABEL: load_mip_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load_mip v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm a16 ; encoding: [0x80,0x0f,0x05,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -249,7 +249,7 @@ define amdgpu_ps <4 x float> @load_mip_2d(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ; GFX11-LABEL: load_mip_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm a16 ; encoding: [0x84,0x0f,0x05,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -275,7 +275,7 @@ define amdgpu_ps <4 x float> @load_mip_3d(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ; GFX11-LABEL: load_mip_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16 ; encoding: [0x88,0x0f,0x05,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -302,7 +302,7 @@ define amdgpu_ps <4 x float> @load_mip_cube(<8 x i32> inreg %rsrc, <2 x i16> %co
 ; GFX11-LABEL: load_mip_cube:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm a16 ; encoding: [0x8c,0x0f,0x05,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -329,7 +329,7 @@ define amdgpu_ps <4 x float> @load_mip_1darray(<8 x i32> inreg %rsrc, <2 x i16> 
 ; GFX11-LABEL: load_mip_1darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm a16 ; encoding: [0x90,0x0f,0x05,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -355,7 +355,7 @@ define amdgpu_ps <4 x float> @load_mip_2darray(<8 x i32> inreg %rsrc, <2 x i16> 
 ; GFX11-LABEL: load_mip_2darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load_mip v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm a16 ; encoding: [0x94,0x0f,0x05,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords_lo, i32 0
@@ -703,7 +703,7 @@ define amdgpu_ps <4 x float> @getresinfo_1d(<8 x i32> inreg %rsrc, <2 x i16> %co
 ; GFX11-LABEL: getresinfo_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm a16 ; encoding: [0x80,0x0f,0x5d,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0
@@ -727,7 +727,7 @@ define amdgpu_ps <4 x float> @getresinfo_2d(<8 x i32> inreg %rsrc, <2 x i16> %co
 ; GFX11-LABEL: getresinfo_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm a16 ; encoding: [0x84,0x0f,0x5d,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0
@@ -751,7 +751,7 @@ define amdgpu_ps <4 x float> @getresinfo_3d(<8 x i32> inreg %rsrc, <2 x i16> %co
 ; GFX11-LABEL: getresinfo_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16 ; encoding: [0x88,0x0f,0x5d,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0
@@ -775,7 +775,7 @@ define amdgpu_ps <4 x float> @getresinfo_cube(<8 x i32> inreg %rsrc, <2 x i16> %
 ; GFX11-LABEL: getresinfo_cube:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm a16 ; encoding: [0x8c,0x0f,0x5d,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0
@@ -799,7 +799,7 @@ define amdgpu_ps <4 x float> @getresinfo_1darray(<8 x i32> inreg %rsrc, <2 x i16
 ; GFX11-LABEL: getresinfo_1darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm a16 ; encoding: [0x90,0x0f,0x5d,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0
@@ -823,7 +823,7 @@ define amdgpu_ps <4 x float> @getresinfo_2darray(<8 x i32> inreg %rsrc, <2 x i16
 ; GFX11-LABEL: getresinfo_2darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm a16 ; encoding: [0x94,0x0f,0x5d,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0
@@ -847,7 +847,7 @@ define amdgpu_ps <4 x float> @getresinfo_2dmsaa(<8 x i32> inreg %rsrc, <2 x i16>
 ; GFX11-LABEL: getresinfo_2dmsaa:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA unorm a16 ; encoding: [0x98,0x0f,0x5d,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0
@@ -871,7 +871,7 @@ define amdgpu_ps <4 x float> @getresinfo_2darraymsaa(<8 x i32> inreg %rsrc, <2 x
 ; GFX11-LABEL: getresinfo_2darraymsaa:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm a16 ; encoding: [0x9c,0x0f,0x5d,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %mip = extractelement <2 x i16> %coords, i32 0
@@ -895,7 +895,7 @@ define amdgpu_ps float @load_1d_V1(<8 x i32> inreg %rsrc, <2 x i16> %coords) {
 ; GFX11-LABEL: load_1d_V1:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_1D unorm a16 ; encoding: [0x80,0x08,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -919,7 +919,7 @@ define amdgpu_ps <2 x float> @load_1d_V2(<8 x i32> inreg %rsrc, <2 x i16> %coord
 ; GFX11-LABEL: load_1d_V2:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 dim:SQ_RSRC_IMG_1D unorm a16 ; encoding: [0x80,0x09,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -985,7 +985,7 @@ define amdgpu_ps <4 x float> @load_1d_glc(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ; GFX11-LABEL: load_1d_glc:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc a16 ; encoding: [0x80,0x4f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -1009,7 +1009,7 @@ define amdgpu_ps <4 x float> @load_1d_slc(<8 x i32> inreg %rsrc, <2 x i16> %coor
 ; GFX11-LABEL: load_1d_slc:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm slc a16 ; encoding: [0x80,0x1f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0
@@ -1033,7 +1033,7 @@ define amdgpu_ps <4 x float> @load_1d_glc_slc(<8 x i32> inreg %rsrc, <2 x i16> %
 ; GFX11-LABEL: load_1d_glc_slc:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc slc a16 ; encoding: [0x80,0x5f,0x01,0xf0,0x00,0x00,0x00,0x00]
-; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
+; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xff,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0

@@ -180,7 +180,7 @@ struct scoped_test_env
     // 2GB.
     std::string create_file(fs::path filename_path, uintmax_t size = 0) {
         std::string filename = filename_path.string();
-#if defined(__LP64__) || defined(_WIN32)
+#if defined(__LP64__) || defined(_WIN32) || defined(__MVS__)
         auto large_file_fopen = fopen;
         auto large_file_ftruncate = utils::ftruncate;
         using large_file_offset_t = off_t;

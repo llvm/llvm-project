@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-#ifndef LLVM_CLANG_ANALYSIS_ANY_CALL_H
-#define LLVM_CLANG_ANALYSIS_ANY_CALL_H
+#ifndef LLVM_CLANG_ANALYSIS_ANYCALL_H
+#define LLVM_CLANG_ANALYSIS_ANYCALL_H
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/ExprCXX.h"
@@ -215,4 +215,4 @@ public:
 
 }
 
-#endif // LLVM_CLANG_ANALYSIS_ANY_CALL_H
+#endif // LLVM_CLANG_ANALYSIS_ANYCALL_H

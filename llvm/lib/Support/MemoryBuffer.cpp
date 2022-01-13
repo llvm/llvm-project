@@ -220,6 +220,8 @@ public:
   MemoryBuffer::BufferKind getBufferKind() const override {
     return MemoryBuffer::MemoryBuffer_MMap;
   }
+
+  void dontNeedIfMmap() override { MFR.dontNeed(); }
 };
 } // namespace
 

@@ -435,7 +435,7 @@ struct InstructionsState {
   }
 
   /// Some of the instructions in the list have alternate opcodes.
-  bool isAltShuffle() const { return getOpcode() != getAltOpcode(); }
+  bool isAltShuffle() const { return AltOp != MainOp; }
 
   bool isOpcodeOrAlt(Instruction *I) const {
     unsigned CheckedOpcode = I->getOpcode();
@@ -1417,7 +1417,11 @@ public:
           HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
         } else if (NumFreeOpsHash.NumOfAPOs == Min &&
                    NumFreeOpsHash.NumOpsWithSameOpcodeParent == SameOpNumber) {
-          ++HashMap[NumFreeOpsHash.Hash].first;
+          auto It = HashMap.find(NumFreeOpsHash.Hash);
+          if (It == HashMap.end())
+            HashMap[NumFreeOpsHash.Hash] = std::make_pair(1, Lane);
+          else
+            ++It->second.first;
         }
       }
       // Select the lane with the minimum counter.
@@ -2019,9 +2023,7 @@ private:
     }
 
     /// Some of the instructions in the list have alternate opcodes.
-    bool isAltShuffle() const {
-      return getOpcode() != getAltOpcode();
-    }
+    bool isAltShuffle() const { return MainOp != AltOp; }
 
     bool isOpcodeOrAlt(Instruction *I) const {
       unsigned CheckedOpcode = I->getOpcode();
@@ -3040,7 +3042,7 @@ Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
 
 void BoUpSLP::reorderTopToBottom() {
   // Maps VF to the graph nodes.
-  DenseMap<unsigned, SmallPtrSet<TreeEntry *, 4>> VFToOrderedEntries;
+  DenseMap<unsigned, SetVector<TreeEntry *>> VFToOrderedEntries;
   // ExtractElement gather nodes which can be vectorized and need to handle
   // their ordering.
   DenseMap<const TreeEntry *, OrdersType> GathersToOrders;
@@ -3051,6 +3053,29 @@ void BoUpSLP::reorderTopToBottom() {
                                  const std::unique_ptr<TreeEntry> &TE) {
     if (Optional<OrdersType> CurrentOrder =
             getReorderingData(*TE.get(), /*TopToBottom=*/true)) {
+      // Do not include ordering for nodes used in the alt opcode vectorization,
+      // better to reorder them during bottom-to-top stage. If follow the order
+      // here, it causes reordering of the whole graph though actually it is
+      // profitable just to reorder the subgraph that starts from the alternate
+      // opcode vectorization node. Such nodes already end-up with the shuffle
+      // instruction and it is just enough to change this shuffle rather than
+      // rotate the scalars for the whole graph.
+      unsigned Cnt = 0;
+      const TreeEntry *UserTE = TE.get();
+      while (UserTE && Cnt < RecursionMaxDepth) {
+        if (UserTE->UserTreeIndices.size() != 1)
+          break;
+        if (all_of(UserTE->UserTreeIndices, [](const EdgeInfo &EI) {
+              return EI.UserTE->State == TreeEntry::Vectorize &&
+                     EI.UserTE->isAltShuffle() && EI.UserTE->Idx != 0;
+            }))
+          return;
+        if (UserTE->UserTreeIndices.empty())
+          UserTE = nullptr;
+        else
+          UserTE = UserTE->UserTreeIndices.back().UserTE;
+        ++Cnt;
+      }
       VFToOrderedEntries[TE->Scalars.size()].insert(TE.get());
       if (TE->State != TreeEntry::Vectorize)
         GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
@@ -3066,7 +3091,7 @@ void BoUpSLP::reorderTopToBottom() {
     // Try to find the most profitable order. We just are looking for the most
     // used order and reorder scalar elements in the nodes according to this
     // mostly used order.
-    const SmallPtrSetImpl<TreeEntry *> &OrderedEntries = It->getSecond();
+    ArrayRef<TreeEntry *> OrderedEntries = It->second.getArrayRef();
     // All operands are reordered and used only in this node - propagate the
     // most used order to the user node.
     MapVector<OrdersType, unsigned,
@@ -4459,6 +4484,8 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
     CurrentOrder.clear();
     return false;
   }
+  if (ShouldKeepOrder)
+    CurrentOrder.clear();
 
   return ShouldKeepOrder;
 }
@@ -9206,7 +9233,7 @@ private:
       auto *SclCondTy = CmpInst::makeCmpResultType(ScalarTy);
       auto *VecCondTy = cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
       VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
-                                               /*unsigned=*/false, CostKind);
+                                               /*IsUnsigned=*/false, CostKind);
       CmpInst::Predicate RdxPred = getMinMaxReductionPredicate(RdxKind);
       ScalarCost = TTI->getCmpSelInstrCost(Instruction::FCmp, ScalarTy,
                                            SclCondTy, RdxPred, CostKind) +
@@ -9571,8 +9598,7 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
-  // Aggregate value is unlikely to be processed in vector register, we need to
-  // extract scalars into scalar registers, so NeedExtraction is set true.
+  // Aggregate value is unlikely to be processed in vector register.
   return tryToVectorizeList(BuildVectorOpds, R);
 }
 

@@ -13,7 +13,6 @@
 #ifndef STANDARD_OPS
 #define STANDARD_OPS
 
-include "mlir/Dialect/StandardOps/IR/StandardOpsBase.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -177,52 +176,6 @@ def AssertOp : Std_Op<"assert"> {
   let verifier = ?;
 
   let hasCanonicalizeMethod = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// AtomicRMWOp
-//===----------------------------------------------------------------------===//
-
-def AtomicRMWOp : Std_Op<"atomic_rmw", [
-      AllTypesMatch<["value", "result"]>,
-      TypesMatchWith<"value type matches element type of memref",
-                     "memref", "value",
-                     "$_self.cast<MemRefType>().getElementType()">
-    ]> {
-  let summary = "atomic read-modify-write operation";
-  let description = [{
-    The `atomic_rmw` operation provides a way to perform a read-modify-write
-    sequence that is free from data races. The kind enumeration specifies the
-    modification to perform. The value operand represents the new value to be
-    applied during the modification. The memref operand represents the buffer
-    that the read and write will be performed against, as accessed by the
-    specified indices. The arity of the indices is the rank of the memref. The
-    result represents the latest value that was stored.
-
-    Example:
-
-    ```mlir
-    %x = atomic_rmw "addf" %value, %I[%i] : (f32, memref<10xf32>) -> f32
-    ```
-  }];
-
-  let arguments = (ins
-      AtomicRMWKindAttr:$kind,
-      AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$value,
-      MemRefOf<[AnySignlessInteger, AnyFloat]>:$memref,
-      Variadic<Index>:$indices);
-  let results = (outs AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$result);
-
-  let assemblyFormat = [{
-    $kind $value `,` $memref `[` $indices `]` attr-dict `:` `(` type($value) `,`
-    type($memref) `)` `->` type($result)
-  }];
-
-  let extraClassDeclaration = [{
-    MemRefType getMemRefType() {
-      return getMemref().getType().cast<MemRefType>();
-    }
-  }];
 }
 
 def GenericAtomicRMWOp : Std_Op<"generic_atomic_rmw", [

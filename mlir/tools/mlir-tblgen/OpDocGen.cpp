@@ -88,7 +88,7 @@ static void emitAssemblyFormat(StringRef opName, StringRef format,
   os << "```\n\n";
 }
 
-static void emitOpTraitsDoc(Operator op, raw_ostream &os) {
+static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
   // TODO: We should link to the trait/documentation of it. That also means we
   // should add descriptions to traits that can be queried.
   // Collect using set to sort effects, interfaces & traits.
@@ -235,7 +235,7 @@ static void emitAttrOrTypeDefAssemblyFormat(const AttrOrTypeDef &def,
 
   os << "\nSyntax:\n\n```\n!" << def.getDialect().getName() << "."
      << def.getMnemonic() << "<\n";
-  for (auto it : llvm::enumerate(parameters)) {
+  for (const auto &it : llvm::enumerate(parameters)) {
     const AttrOrTypeParameter &param = it.value();
     os << "  " << param.getSyntax();
     if (it.index() < (parameters.size() - 1))

@@ -109,6 +109,18 @@ bool applyCmpPredicate(arith::CmpIPredicate predicate, const APInt &lhs,
 bool applyCmpPredicate(arith::CmpFPredicate predicate, const APFloat &lhs,
                        const APFloat &rhs);
 
+/// Returns the identity value attribute associated with an AtomicRMWKind op.
+Attribute getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
+                               OpBuilder &builder, Location loc);
+
+/// Returns the identity value associated with an AtomicRMWKind op.
+Value getIdentityValue(AtomicRMWKind op, Type resultType, OpBuilder &builder,
+                       Location loc);
+
+/// Returns the value obtained by applying the reduction operation kind
+/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
+Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
+                     Value lhs, Value rhs);
 } // namespace arith
 } // namespace mlir
 

@@ -631,7 +631,6 @@ define <4 x i32> @test_extrasat(<4 x float> %f) {
 ; CHECK-NEXT:    movi v1.2d, #0xffffff00ffffff
 ; CHECK-NEXT:    fcvtzu v0.4s, v0.4s, #3
 ; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    bic v0.4s, #255, lsl #24
 ; CHECK-NEXT:    ret
   %mul.i = fmul <4 x float> %f, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
   %vcvt.i = call <4 x i24> @llvm.fptoui.sat.v4i24.v4f32(<4 x float> %mul.i)

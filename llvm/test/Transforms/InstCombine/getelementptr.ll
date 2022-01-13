@@ -151,8 +151,22 @@ define i1 @test10({ i32, i32 }* %x, { i32, i32 }* %y) {
 ;
   %t1 = getelementptr { i32, i32 }, { i32, i32 }* %x, i32 0, i32 1
   %t3 = getelementptr { i32, i32 }, { i32, i32 }* %y, i32 0, i32 1
-  ;; seteq x, y
   %t4 = icmp eq i32* %t1, %t3
+  ret i1 %t4
+}
+
+define i1 @test10_addrspacecast({ i32, i32 }* %x, { i32, i32 } addrspace(3)* %y) {
+; CHECK-LABEL: @test10_addrspacecast(
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[X:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr { i32, i32 }, { i32, i32 } addrspace(3)* [[Y:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[T3_C:%.*]] = addrspacecast i32 addrspace(3)* [[T3]] to i32*
+; CHECK-NEXT:    [[T4:%.*]] = icmp eq i32* [[T1]], [[T3_C]]
+; CHECK-NEXT:    ret i1 [[T4]]
+;
+  %t1 = getelementptr { i32, i32 }, { i32, i32 }* %x, i32 0, i32 1
+  %t3 = getelementptr { i32, i32 }, { i32, i32 } addrspace(3)* %y, i32 0, i32 1
+  %t3.c = addrspacecast i32 addrspace(3)* %t3 to i32*
+  %t4 = icmp eq i32* %t1, %t3.c
   ret i1 %t4
 }
 
@@ -538,7 +552,7 @@ define i32 @test27(%struct.compat_siginfo* %to, %struct.siginfo_t* %from) {
 ; CHECK-NEXT:    [[T349:%.*]] = getelementptr [[STRUCT_SIGINFO_T:%.*]], %struct.siginfo_t* [[T344]], i64 0, i32 3, i32 0, i32 3, i32 0
 ; CHECK-NEXT:    [[T349350:%.*]] = bitcast i8** [[T349]] to i32*
 ; CHECK-NEXT:    [[T351:%.*]] = load i32, i32* [[T349350]], align 8
-; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], %struct.__large_struct* null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[T360:%.*]] = call i32 asm sideeffect "...", "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"(i32 [[T351]], %struct.__large_struct* elementtype(%struct.__large_struct) null, i32 -14, i32 0) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -552,8 +566,7 @@ entry:
   %t349350 = bitcast i8** %t349 to i32*
   %t351 = load i32, i32* %t349350, align 8
   %t360 = call i32 asm sideeffect "...",
-  "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"( i32 %t351,
-  %struct.__large_struct* null, i32 -14, i32 0 )
+  "=r,ir,*m,i,0,~{dirflag},~{fpsr},~{flags}"( i32 %t351, %struct.__large_struct* elementtype(%struct.__large_struct) null, i32 -14, i32 0 )
   unreachable
 }
 

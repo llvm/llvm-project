@@ -38,7 +38,6 @@ class LegalizerHelper;
 class MachineInstr;
 class MachineRegisterInfo;
 class MCInstrInfo;
-class GISelChangeObserver;
 
 namespace LegalizeActions {
 enum LegalizeAction : std::uint8_t {
@@ -557,7 +556,7 @@ class LegalizeRuleSet {
   }
 
 public:
-  LegalizeRuleSet() : AliasOf(0), IsAliasedByAnother(false), Rules() {}
+  LegalizeRuleSet() : AliasOf(0), IsAliasedByAnother(false) {}
 
   bool isAliasedByAnother() { return IsAliasedByAnother; }
   void setIsAliasedByAnother() { IsAliasedByAnother = true; }

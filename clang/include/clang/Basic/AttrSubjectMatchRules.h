@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_ATTR_SUBJECT_MATCH_RULES_H
-#define LLVM_CLANG_BASIC_ATTR_SUBJECT_MATCH_RULES_H
+#ifndef LLVM_CLANG_BASIC_ATTRSUBJECTMATCHRULES_H
+#define LLVM_CLANG_BASIC_ATTRSUBJECTMATCHRULES_H
 
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"

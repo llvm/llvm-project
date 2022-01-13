@@ -205,8 +205,7 @@ public:
 
     /// Provide classof to allow casting between handler types.
     static bool classof(const DebugActionManager::HandlerBase *handler) {
-      return handler->getHandlerID() ==
-             TypeID::get<DebugAction<ParameterTs...>::Handler>();
+      return handler->getHandlerID() == TypeID::get<Handler>();
     }
   };
 

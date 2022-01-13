@@ -13,10 +13,11 @@ from lldbsuite.test import lldbutil
 class DefaultCacheLineSizeTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessTargetAndroid
     def test_cache_line_size(self):
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         target = self.createTestTarget()
         self.assertTrue(target and target.IsValid(), "Target is valid")
 

@@ -17,7 +17,7 @@ class ConcurrentBreakpointsDelayedBreakpointOneWatchpoint(
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test a breakpoint, a delayed breakpoint, and one watchpoint thread. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_breakpoint_threads=1,
                                num_delay_breakpoint_threads=1,
                                num_watchpoint_threads=1)

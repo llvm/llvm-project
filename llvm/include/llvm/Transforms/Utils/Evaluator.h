@@ -36,6 +36,49 @@ class TargetLibraryInfo;
 /// be iterated over after the evaluation is complete.  Once an evaluation call
 /// fails, the evaluation object should not be reused.
 class Evaluator {
+  struct MutableAggregate;
+
+  /// The evaluator represents values either as a Constant*, or as a
+  /// MutableAggregate, which allows changing individual aggregate elements
+  /// without creating a new interned Constant.
+  class MutableValue {
+    PointerUnion<Constant *, MutableAggregate *> Val;
+    void clear();
+    bool makeMutable();
+
+  public:
+    MutableValue(Constant *C) { Val = C; }
+    MutableValue(const MutableValue &) = delete;
+    MutableValue(MutableValue &&Other) {
+      Val = Other.Val;
+      Other.Val = nullptr;
+    }
+    ~MutableValue() { clear(); }
+
+    Type *getType() const {
+      if (auto *C = Val.dyn_cast<Constant *>())
+        return C->getType();
+      return Val.get<MutableAggregate *>()->Ty;
+    }
+
+    Constant *toConstant() const {
+      if (auto *C = Val.dyn_cast<Constant *>())
+        return C;
+      return Val.get<MutableAggregate *>()->toConstant();
+    }
+
+    Constant *read(Type *Ty, APInt Offset, const DataLayout &DL) const;
+    bool write(Constant *V, APInt Offset, const DataLayout &DL);
+  };
+
+  struct MutableAggregate {
+    Type *Ty;
+    SmallVector<MutableValue> Elements;
+
+    MutableAggregate(Type *Ty) : Ty(Ty) {}
+    Constant *toConstant() const;
+  };
+
 public:
   Evaluator(const DataLayout &DL, const TargetLibraryInfo *TLI)
       : DL(DL), TLI(TLI) {
@@ -57,8 +100,11 @@ public:
   bool EvaluateFunction(Function *F, Constant *&RetVal,
                         const SmallVectorImpl<Constant*> &ActualArgs);
 
-  const DenseMap<Constant *, Constant *> &getMutatedMemory() const {
-    return MutatedMemory;
+  DenseMap<GlobalVariable *, Constant *> getMutatedInitializers() const {
+    DenseMap<GlobalVariable *, Constant *> Result;
+    for (auto &Pair : MutatedMemory)
+      Result[Pair.first] = Pair.second.toConstant();
+    return Result;
   }
 
   const SmallPtrSetImpl<GlobalVariable *> &getInvariants() const {
@@ -106,7 +152,7 @@ private:
   /// For each store we execute, we update this map.  Loads check this to get
   /// the most up-to-date value.  If evaluation is successful, this state is
   /// committed to the process.
-  DenseMap<Constant*, Constant*> MutatedMemory;
+  DenseMap<GlobalVariable *, MutableValue> MutatedMemory;
 
   /// To 'execute' an alloca, we create a temporary global variable to represent
   /// its body.  This vector is needed so we can delete the temporary globals

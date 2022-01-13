@@ -346,7 +346,7 @@ StringRef GCOVFunction::getName(bool demangle) const {
         }
       }
       demangled = Name;
-    } while (0);
+    } while (false);
   }
   return demangled;
 }

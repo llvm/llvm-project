@@ -11,13 +11,13 @@
 int a;
 
 // CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
-// CHECK-DAG: [[DISTR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 3, i32 0, i8* getelementptr inbounds
-// CHECK-DAG: [[FOR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 3, i32 0, i8* getelementptr inbounds
-// CHECK-DAG: [[LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 3, i32 0, i8* getelementptr inbounds
-// CHECK-DAG: [[DISTR_FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 1, i32 0, i8* getelementptr inbounds
-// CHECK-DAG: [[FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 1, i32 0, i8* getelementptr inbounds
-// CHECK-DAG: [[BAR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 3, i32 0, i8* getelementptr inbounds
-// CHECK-DAG: [[BAR_FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 1, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: [[DISTR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 3, i32 {{[0-9]+}}, i8* getelementptr inbounds
+// CHECK-DAG: [[FOR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 3, i32 {{[0-9]+}}, i8* getelementptr inbounds
+// CHECK-DAG: [[LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 3, i32 {{[0-9]+}}, i8* getelementptr inbounds
+// CHECK-DAG: [[DISTR_FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 1, i32 {{[0-9]+}}, i8* getelementptr inbounds
+// CHECK-DAG: [[FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 1, i32 {{[0-9]+}}, i8* getelementptr inbounds
+// CHECK-DAG: [[BAR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 3, i32 {{[0-9]+}}, i8* getelementptr inbounds
+// CHECK-DAG: [[BAR_FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 1, i32 {{[0-9]+}}, i8* getelementptr inbounds
 // CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
 
 void foo() {

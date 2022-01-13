@@ -140,7 +140,7 @@ public:
 
   MlirStringCallback getCallback() {
     return [](MlirStringRef part, void *userData) {
-      pybind11::gil_scoped_acquire();
+      pybind11::gil_scoped_acquire acquire;
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
       if (accum->binary) {
         // Note: Still has to copy and not avoidable with this API.

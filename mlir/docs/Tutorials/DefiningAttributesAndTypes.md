@@ -489,9 +489,11 @@ for these parameters are expected to return `FailureOr<$cppStorageType>`.
 
 Attribute and type assembly formats have the following directives:
 
-* `params`: capture all parameters of an attribute or type.
-* `struct`: generate a "struct-like" parser and printer for a list of key-value
-  pairs.
+*   `params`: capture all parameters of an attribute or type.
+*   `qualified`: mark a parameter to be printed with its leading dialect and
+    mnemonic.
+*   `struct`: generate a "struct-like" parser and printer for a list of
+    key-value pairs.
 
 #### `params` Directive
 
@@ -516,6 +518,34 @@ In the IR, this type will appear as:
 The `params` directive can also be passed to other directives, such as `struct`,
 as an argument that refers to all parameters in place of explicitly listing all
 parameters as variables.
+
+#### `qualified` Directive
+
+This directive can be used to wrap attribute or type parameters such that they
+are printed in a fully qualified form, i.e., they include the dialect name and
+mnemonic prefix.
+
+For example:
+
+```tablegen
+def OuterType : TypeDef<My_Dialect, "MyOuterType"> {
+  let parameters = (ins MyPairType:$inner);
+  let mnemonic = "outer";
+  let assemblyFormat = "`<` pair `:` $inner `>`";
+}
+def OuterQualifiedType : TypeDef<My_Dialect, "MyOuterQualifiedType"> {
+  let parameters = (ins MyPairType:$inner);
+  let mnemonic = "outer_qual";
+  let assemblyFormat = "`<` pair `:` qualified($inner) `>`";
+}
+```
+
+In the IR, the types will appear as:
+
+```mlir
+!my_dialect.outer<pair : <42, 24>>
+!my_dialect.outer_qual<pair : !mydialect.pair<42, 24>>
+```
 
 #### `struct` Directive
 

@@ -134,6 +134,16 @@ struct Fragment {
   ///
   /// This section modifies how the compile command is constructed.
   struct CompileFlagsBlock {
+    /// Override the compiler executable name to simulate.
+    ///
+    /// The name can affect how flags are parsed (clang++ vs clang).
+    /// If the executable name is in the --query-driver allowlist, then it will
+    /// be invoked to extract include paths.
+    ///
+    /// (That this simply replaces argv[0], and may mangle commands that use
+    /// more complicated drivers like ccache).
+    llvm::Optional<Located<std::string>> Compiler;
+
     /// List of flags to append to the compile command.
     std::vector<Located<std::string>> Add;
     /// List of flags to remove from the compile command.
@@ -273,6 +283,18 @@ struct Fragment {
     llvm::Optional<Located<bool>> ShowAKA;
   };
   HoverBlock Hover;
+
+  /// Configures labels shown inline with the code.
+  struct InlayHintsBlock {
+    /// Enables/disables the inlay-hints feature.
+    llvm::Optional<Located<bool>> Enabled;
+
+    /// Show parameter names before function arguments.
+    llvm::Optional<Located<bool>> ParameterNames;
+    /// Show deduced types for `auto`.
+    llvm::Optional<Located<bool>> DeducedTypes;
+  };
+  InlayHintsBlock InlayHints;
 };
 
 } // namespace config

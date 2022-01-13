@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_VECTOR_VECTOROPS_H
 #define MLIR_DIALECT_VECTOR_VECTOROPS_H
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
@@ -145,8 +146,8 @@ ArrayAttr getVectorSubscriptAttr(Builder &b, ArrayRef<int64_t> values);
 
 /// Returns the value obtained by reducing the vector into a scalar using the
 /// operation kind associated with a binary AtomicRMWKind op.
-Value getVectorReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
-                           Value vector);
+Value getVectorReductionOp(arith::AtomicRMWKind op, OpBuilder &builder,
+                           Location loc, Value vector);
 
 /// Return true if the last dimension of the MemRefType has unit stride. Also
 /// return true for memrefs with no strides.

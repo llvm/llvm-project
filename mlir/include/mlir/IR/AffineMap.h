@@ -182,7 +182,7 @@ public:
 
   /// Walk all of the AffineExpr's in this mapping. Each node in an expression
   /// tree is visited in postorder.
-  void walkExprs(std::function<void(AffineExpr)> callback) const;
+  void walkExprs(llvm::function_ref<void(AffineExpr)> callback) const;
 
   /// This method substitutes any uses of dimensions and symbols (e.g.
   /// dim#0 with dimReplacements[0]) in subexpressions and returns the modified
@@ -353,11 +353,11 @@ public:
 private:
   // Same meaning as AffineMap's fields.
   SmallVector<AffineExpr, 8> results;
-  unsigned numDims;
-  unsigned numSymbols;
+  unsigned numDims = 0;
+  unsigned numSymbols = 0;
   /// A pointer to the IR's context to store all newly created
   /// AffineExprStorage's.
-  MLIRContext *context;
+  MLIRContext *context = nullptr;
 };
 
 /// Simplifies an affine map by simplifying its underlying AffineExpr results.

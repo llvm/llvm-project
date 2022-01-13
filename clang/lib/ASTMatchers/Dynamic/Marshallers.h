@@ -1166,4 +1166,4 @@ std::unique_ptr<MatcherDescriptor> makeMatcherAutoMarshall(
 } // namespace ast_matchers
 } // namespace clang
 
-#endif // LLVM_CLANG_AST_MATCHERS_DYNAMIC_MARSHALLERS_H
+#endif // LLVM_CLANG_LIB_ASTMATCHERS_DYNAMIC_MARSHALLERS_H

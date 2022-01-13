@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CODEGEN_OBJECT_FILE_PCH_CONTAINER_OPERATIONS_H
-#define LLVM_CLANG_CODEGEN_OBJECT_FILE_PCH_CONTAINER_OPERATIONS_H
+#ifndef LLVM_CLANG_CODEGEN_OBJECTFILEPCHCONTAINEROPERATIONS_H
+#define LLVM_CLANG_CODEGEN_OBJECTFILEPCHCONTAINEROPERATIONS_H
 
 #include "clang/Frontend/PCHContainerOperations.h"
 

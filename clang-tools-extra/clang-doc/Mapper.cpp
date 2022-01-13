@@ -14,8 +14,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 
-using clang::comments::FullComment;
-
 namespace clang {
 namespace doc {
 

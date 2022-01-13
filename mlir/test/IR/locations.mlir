@@ -21,6 +21,10 @@ func @inline_notation() -> i32 {
   affine.if #set0(%2) {
   } loc(fused<"myPass">["foo", "foo2"])
 
+  // CHECK: } loc(fused<"myPass">["foo"])
+  affine.if #set0(%2) {
+  } loc(fused<"myPass">["foo"])
+
   // CHECK: return %0 : i32 loc(unknown)
   return %1 : i32 loc(unknown)
 }

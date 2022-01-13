@@ -112,14 +112,15 @@ template <size_t N> struct hash<std::bitset<N>>;
 
 */
 
-#include <__config>
 #include <__bit_reference>
+#include <__config>
 #include <__functional_base>
 #include <climits>
 #include <cstddef>
 #include <iosfwd>
 #include <stdexcept>
 #include <string>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

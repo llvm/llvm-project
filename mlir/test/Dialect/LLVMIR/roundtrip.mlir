@@ -146,6 +146,9 @@ func @ops(%arg0: i32, %arg1: f32,
 // CHECK: "llvm.intr.pow"(%[[FLOAT]], %[[FLOAT]]) : (f32, f32) -> f32
   %31 = "llvm.intr.pow"(%arg1, %arg1) : (f32, f32) -> f32
 
+// CHECK: "llvm.intr.powi"(%[[FLOAT]], %[[I32]]) : (f32, i32) -> f32
+  %a31 = "llvm.intr.powi"(%arg1, %arg0) : (f32, i32) -> f32
+
 // CHECK: "llvm.intr.bitreverse"(%{{.*}}) : (i32) -> i32
   %32 = "llvm.intr.bitreverse"(%arg0) : (i32) -> i32
 
@@ -164,6 +167,16 @@ func @ops(%arg0: i32, %arg1: f32,
   "llvm.intr.memcpy.inline"(%arg2, %arg3, %sz, %arg4) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i64, i1) -> ()
 
 // CHECK:  llvm.return
+  llvm.return
+}
+
+// CHECK-LABEL: @gep
+llvm.func @gep(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, %idx: i64,
+               %ptr2: !llvm.ptr<struct<(array<10xf32>)>>) {
+  // CHECK: llvm.getelementptr %{{.*}}[%{{.*}}, 1, 0] : (!llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, i64) -> !llvm.ptr<i32>
+  llvm.getelementptr %ptr[%idx, 1, 0] : (!llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, i64) -> !llvm.ptr<i32>
+  // CHECK: llvm.getelementptr %{{.*}}[%{{.*}}, 0, %{{.*}}] : (!llvm.ptr<struct<(array<10 x f32>)>>, i64, i64) -> !llvm.ptr<f32>
+  llvm.getelementptr %ptr2[%idx, 0, %idx] : (!llvm.ptr<struct<(array<10 x f32>)>>, i64, i64) -> !llvm.ptr<f32>
   llvm.return
 }
 
@@ -329,9 +342,11 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
 
 // CHECK: ^[[BB1]]:
 // CHECK:   %[[lp:.*]] = llvm.landingpad cleanup (catch %[[a3]] : !llvm.ptr<ptr<i8>>) (catch %[[a6]] : !llvm.ptr<i8>) (filter %[[a2]] : !llvm.array<1 x i8>) : !llvm.struct<(ptr<i8>, i32)>
+// CHECK:   %{{.*}} = llvm.intr.eh.typeid.for %6 : i32
 // CHECK:   llvm.resume %[[lp]] : !llvm.struct<(ptr<i8>, i32)>
 ^bb1:
   %10 = llvm.landingpad cleanup (catch %3 : !llvm.ptr<ptr<i8>>) (catch %6 : !llvm.ptr<i8>) (filter %2 : !llvm.array<1 x i8>) : !llvm.struct<(ptr<i8>, i32)>
+  %11 = llvm.intr.eh.typeid.for %6 : i32
   llvm.resume %10 : !llvm.struct<(ptr<i8>, i32)>
 
 // CHECK: ^[[BB2]]:

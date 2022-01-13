@@ -1402,12 +1402,12 @@ bool MSP430TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
 
 bool MSP430TargetLowering::isZExtFree(Type *Ty1, Type *Ty2) const {
   // MSP430 implicitly zero-extends 8-bit results in 16-bit registers.
-  return 0 && Ty1->isIntegerTy(8) && Ty2->isIntegerTy(16);
+  return false && Ty1->isIntegerTy(8) && Ty2->isIntegerTy(16);
 }
 
 bool MSP430TargetLowering::isZExtFree(EVT VT1, EVT VT2) const {
   // MSP430 implicitly zero-extends 8-bit results in 16-bit registers.
-  return 0 && VT1 == MVT::i8 && VT2 == MVT::i16;
+  return false && VT1 == MVT::i8 && VT2 == MVT::i16;
 }
 
 bool MSP430TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {

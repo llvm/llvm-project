@@ -128,23 +128,28 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   bool CheckOk = Check ? Check->check(false) : true;
   if (!CheckOk)
     return false;
+
+  MCInst OrigMCB = MCB;
+
   // Examine the packet and convert pairs of instructions to compound
   // instructions when possible.
   if (!HexagonDisableCompound)
     HexagonMCInstrInfo::tryCompound(MCII, STI, Context, MCB);
   HexagonMCShuffle(Context, false, MCII, STI, MCB);
 
+  const SmallVector<DuplexCandidate, 8> possibleDuplexes =
+      (STI.getFeatureBits()[Hexagon::FeatureDuplex])
+          ? HexagonMCInstrInfo::getDuplexPossibilties(MCII, STI, MCB)
+          : SmallVector<DuplexCandidate, 8>();
+
   // Examine the packet and convert pairs of instructions to duplex
   // instructions when possible.
-  if (STI.getFeatureBits() [Hexagon::FeatureDuplex]) {
-    SmallVector<DuplexCandidate, 8> possibleDuplexes;
-    possibleDuplexes =
-        HexagonMCInstrInfo::getDuplexPossibilties(MCII, STI, MCB);
-    HexagonMCShuffle(Context, MCII, STI, MCB, possibleDuplexes);
-  }
+  HexagonMCShuffle(Context, MCII, STI, MCB, possibleDuplexes);
+
   // Examines packet and pad the packet, if needed, when an
   // end-loop is in the bundle.
   HexagonMCInstrInfo::padEndloop(MCB, Context);
+
   // If compounding and duplexing didn't reduce the size below
   // 4 or less we have a packet that is too big.
   if (HexagonMCInstrInfo::bundleSize(MCB) > HEXAGON_PACKET_SIZE) {
@@ -156,7 +161,9 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   CheckOk = Check ? Check->check(true) : true;
   if (!CheckOk)
     return false;
+
   HexagonMCShuffle(Context, true, MCII, STI, MCB);
+
   return true;
 }
 } // namespace
@@ -857,16 +864,16 @@ bool HexagonMCInstrInfo::isVector(MCInstrInfo const &MCII, MCInst const &MCI) {
 }
 
 int64_t HexagonMCInstrInfo::minConstant(MCInst const &MCI, size_t Index) {
-  auto Sentinal = static_cast<int64_t>(std::numeric_limits<uint32_t>::max())
+  auto Sentinel = static_cast<int64_t>(std::numeric_limits<uint32_t>::max())
                   << 8;
   if (MCI.size() <= Index)
-    return Sentinal;
+    return Sentinel;
   MCOperand const &MCO = MCI.getOperand(Index);
   if (!MCO.isExpr())
-    return Sentinal;
+    return Sentinel;
   int64_t Value;
   if (!MCO.getExpr()->evaluateAsAbsolute(Value))
-    return Sentinal;
+    return Sentinel;
   return Value;
 }
 
@@ -915,10 +922,7 @@ void HexagonMCInstrInfo::padEndloop(MCInst &MCB, MCContext &Context) {
   MCInst Nop;
   Nop.setOpcode(Hexagon::A2_nop);
   assert(isBundle(MCB));
-  while ((HexagonMCInstrInfo::isInnerLoop(MCB) &&
-          (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_INNER_SIZE)) ||
-         ((HexagonMCInstrInfo::isOuterLoop(MCB) &&
-           (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_OUTER_SIZE))))
+  while (LoopNeedsPadding(MCB))
     MCB.addOperand(MCOperand::createInst(new (Context) MCInst(Nop)));
 }
 
@@ -1029,4 +1033,20 @@ unsigned HexagonMCInstrInfo::SubregisterBit(unsigned Consumer,
   if (Producer2 != Hexagon::NoRegister)
     return Consumer == Producer;
   return 0;
+}
+
+bool HexagonMCInstrInfo::LoopNeedsPadding(MCInst const &MCB) {
+  return (
+      (HexagonMCInstrInfo::isInnerLoop(MCB) &&
+       (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_INNER_SIZE)) ||
+      ((HexagonMCInstrInfo::isOuterLoop(MCB) &&
+        (HexagonMCInstrInfo::bundleSize(MCB) < HEXAGON_PACKET_OUTER_SIZE))));
+}
+
+bool HexagonMCInstrInfo::IsABranchingInst(MCInstrInfo const &MCII,
+                                          MCSubtargetInfo const &STI,
+                                          MCInst const &I) {
+  assert(!HexagonMCInstrInfo::isBundle(I));
+  MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, I);
+  return (Desc.isBranch() || Desc.isCall() || Desc.isReturn());
 }

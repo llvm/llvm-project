@@ -26,7 +26,9 @@ using namespace _OMP;
 ///{
 
 /// Add worst-case padding so that future allocations are properly aligned.
-constexpr const uint32_t Alignment = 8;
+/// FIXME: The stack shouldn't require worst-case padding. Alignment needs to be
+/// passed in as an argument and the stack rewritten to support it.
+constexpr const uint32_t Alignment = 16;
 
 /// External symbol to access dynamic shared memory.
 extern unsigned char DynamicSharedBuffer[] __attribute__((aligned(Alignment)));

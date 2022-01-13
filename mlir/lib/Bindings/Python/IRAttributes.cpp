@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "IRModule.h"
 
 #include "PybindUtils.h"
@@ -116,7 +118,7 @@ public:
 
   class PyArrayAttributeIterator {
   public:
-    PyArrayAttributeIterator(PyAttribute attr) : attr(attr) {}
+    PyArrayAttributeIterator(PyAttribute attr) : attr(std::move(attr)) {}
 
     PyArrayAttributeIterator &dunderIter() { return *this; }
 
@@ -459,7 +461,7 @@ public:
         arrayInfo.format);
   }
 
-  static PyDenseElementsAttribute getSplat(PyType shapedType,
+  static PyDenseElementsAttribute getSplat(const PyType &shapedType,
                                            PyAttribute &elementAttr) {
     auto contextWrapper =
         PyMlirContext::forContext(mlirTypeGetContext(shapedType));

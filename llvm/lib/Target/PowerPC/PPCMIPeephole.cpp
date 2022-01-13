@@ -107,10 +107,10 @@ private:
   void initialize(MachineFunction &MFParm);
 
   // Perform peepholes.
-  bool simplifyCode(void);
+  bool simplifyCode();
 
   // Perform peepholes.
-  bool eliminateRedundantCompare(void);
+  bool eliminateRedundantCompare();
   bool eliminateRedundantTOCSaves(std::map<MachineInstr *, bool> &TOCSaves);
   bool combineSEXTAndSHL(MachineInstr &MI, MachineInstr *&ToErase);
   bool emitRLDICWhenLoweringJumpTables(MachineInstr &MI);
@@ -381,7 +381,7 @@ static void convertUnprimedAccPHIs(const PPCInstrInfo *TII,
 }
 
 // Perform peephole optimizations.
-bool PPCMIPeephole::simplifyCode(void) {
+bool PPCMIPeephole::simplifyCode() {
   bool Simplified = false;
   bool TrapOpt = false;
   MachineInstr* ToErase = nullptr;
@@ -1178,7 +1178,7 @@ static unsigned getIncomingRegForBlock(MachineInstr *Phi,
 static unsigned getSrcVReg(unsigned Reg, MachineBasicBlock *BB1,
                            MachineBasicBlock *BB2, MachineRegisterInfo *MRI) {
   unsigned SrcReg = Reg;
-  while (1) {
+  while (true) {
     unsigned NextReg = SrcReg;
     MachineInstr *Inst = MRI->getVRegDef(SrcReg);
     if (BB1 && Inst->getOpcode() == PPC::PHI && Inst->getParent() == BB2) {
@@ -1334,7 +1334,7 @@ bool PPCMIPeephole::eliminateRedundantTOCSaves(
 //   cmpwi  r3, 0       ; greather than -1 means greater or equal to 0
 //   bge    0, .LBB0_4
 
-bool PPCMIPeephole::eliminateRedundantCompare(void) {
+bool PPCMIPeephole::eliminateRedundantCompare() {
   bool Simplified = false;
 
   for (MachineBasicBlock &MBB2 : *MF) {
@@ -1737,4 +1737,3 @@ INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
 char PPCMIPeephole::ID = 0;
 FunctionPass*
 llvm::createPPCMIPeepholePass() { return new PPCMIPeephole(); }
-

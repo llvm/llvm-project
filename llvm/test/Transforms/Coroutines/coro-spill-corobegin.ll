@@ -7,6 +7,8 @@
 
 declare void @g.dummy(%g.Frame*)
 
+declare i8* @g()
+
 define i8* @f() "coroutine.presplit"="1" {
 entry:
   %id = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* null)
@@ -14,7 +16,7 @@ entry:
   %alloc = call i8* @malloc(i32 %size)
   %hdl = call i8* @llvm.coro.begin(token %id, i8* %alloc)
 
-  %innerid = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* bitcast ([3 x void (%g.Frame*)*]* @g.resumers to i8*))
+  %innerid = call token @llvm.coro.id(i32 0, i8* null, i8* bitcast (i8* ()* @g to i8*), i8* bitcast ([3 x void (%g.Frame*)*]* @g.resumers to i8*))
   %innerhdl = call noalias nonnull i8* @llvm.coro.begin(token %innerid, i8* null)
   %gframe = bitcast i8* %innerhdl to %g.Frame*
 
@@ -41,7 +43,7 @@ suspend:
 
 ; See if the g's coro.begin was spilled into the frame
 ; CHECK-LABEL: @f(
-; CHECK: %innerid = call token @llvm.coro.id(i32 0, i8* null, i8* null, i8* bitcast ([3 x void (%g.Frame*)*]* @g.resumers to i8*))
+; CHECK: %innerid = call token @llvm.coro.id(i32 0, i8* null, i8* bitcast (i8* ()* @g to i8*), i8* bitcast ([3 x void (%g.Frame*)*]* @g.resumers to i8*))
 ; CHECK: %innerhdl = call noalias nonnull i8* @llvm.coro.begin(token %innerid, i8* null)
 ; CHECK: %[[spilladdr:.+]] = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32 0, i32 2
 ; CHECK: store i8* %innerhdl, i8** %[[spilladdr]]

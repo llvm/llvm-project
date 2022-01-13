@@ -51,7 +51,6 @@ public:
   };
 
   Type(Storage *impl = nullptr) : impl(impl) {}
-  Type(const Type &other) = default;
 
   bool operator==(const Type &other) const { return impl == other.impl; }
   bool operator!=(const Type &other) const { return !(*this == other); }

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_REFACTOR_ATOMICCHANGE_H
-#define LLVM_CLANG_TOOLING_REFACTOR_ATOMICCHANGE_H
+#ifndef LLVM_CLANG_TOOLING_REFACTORING_ATOMICCHANGE_H
+#define LLVM_CLANG_TOOLING_REFACTORING_ATOMICCHANGE_H
 
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -187,4 +187,4 @@ applyAtomicChanges(llvm::StringRef FilePath, llvm::StringRef Code,
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_REFACTOR_ATOMICCHANGE_H
+#endif // LLVM_CLANG_TOOLING_REFACTORING_ATOMICCHANGE_H

@@ -17,5 +17,5 @@ class ConcurrentTwoBreakpointThreads(ConcurrentEventsBase):
                         bugnumber="llvm.org/pr49433")
     def test(self):
         """Test two threads that trigger a breakpoint. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_breakpoint_threads=2)

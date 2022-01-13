@@ -50,8 +50,8 @@ static inline const Function *parentFunctionOfValue(const Value *Val) {
   if (auto *Arg = dyn_cast<Argument>(Val))
     return Arg->getParent();
   return nullptr;
+}
 } // namespace cflaa
 } // namespace llvm
-}
 
 #endif // LLVM_ANALYSIS_CFLALIASANALYSISUTILS_H

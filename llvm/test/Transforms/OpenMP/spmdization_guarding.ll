@@ -47,6 +47,7 @@ target triple = "nvptx64"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
 ; CHECK: @[[__OMP_OFFLOADING_2A_FBFA7A_SEQUENTIAL_LOOP_L6_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x i8*] [i8* @__omp_offloading_2a_fbfa7a_sequential_loop_l6_exec_mode], section "llvm.metadata"
+; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
 ;.
 ; CHECK-DISABLED: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK-DISABLED: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @[[GLOB0]], i32 0, i32 0) }, align 8
@@ -81,7 +82,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK:       region.guarded.end:
 ; CHECK-NEXT:    br label [[REGION_BARRIER]]
 ; CHECK:       region.barrier:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB2]], i32 [[TMP2]])
 ; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
 ; CHECK:       region.exit:
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
@@ -105,7 +106,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK:       region.guarded.end1:
 ; CHECK-NEXT:    br label [[REGION_BARRIER2]]
 ; CHECK:       region.barrier2:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP4]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB2]], i32 [[TMP4]])
 ; CHECK-NEXT:    br label [[REGION_EXIT3]]
 ; CHECK:       region.exit3:
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
@@ -126,7 +127,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK:       region.guarded.end6:
 ; CHECK-NEXT:    br label [[REGION_BARRIER7]]
 ; CHECK:       region.barrier7:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP6]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB2]], i32 [[TMP6]])
 ; CHECK-NEXT:    br label [[REGION_EXIT8:%.*]]
 ; CHECK:       region.exit8:
 ; CHECK-NEXT:    [[CALL8_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR7]], !noalias !8
@@ -143,7 +144,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK:       region.guarded.end11:
 ; CHECK-NEXT:    br label [[REGION_BARRIER12]]
 ; CHECK:       region.barrier12:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP8]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB2]], i32 [[TMP8]])
 ; CHECK-NEXT:    br label [[REGION_EXIT13:%.*]]
 ; CHECK:       region.exit13:
 ; CHECK-NEXT:    [[CALL11_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR7]], !noalias !8
@@ -160,7 +161,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(i32* %x, i64 %N)
 ; CHECK:       region.guarded.end16:
 ; CHECK-NEXT:    br label [[REGION_BARRIER17]]
 ; CHECK:       region.barrier17:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB1]], i32 [[TMP10]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(%struct.ident_t* @[[GLOB2]], i32 [[TMP10]])
 ; CHECK-NEXT:    br label [[REGION_EXIT18:%.*]]
 ; CHECK:       region.exit18:
 ; CHECK-NEXT:    [[CALL14_I:%.*]] = call i32 @no_openmp(i32* nonnull [[X]]) #[[ATTR7]], !noalias !8

@@ -50,7 +50,7 @@ template <typename NamedStructuredOpType>
 static void fillStructuredOpRegion(
     OpBuilder &opBuilder, Region &region, TypeRange inputTypes,
     TypeRange outputTypes,
-    std::function<void(unsigned, unsigned)> errorHandler = nullptr);
+    llvm::function_ref<void(unsigned, unsigned)> errorHandler = nullptr);
 
 /// Generic entry point to create both the region and the block of a LinalgOp.
 template <typename NamedStructuredOpType>
@@ -147,11 +147,13 @@ static LogicalResult foldMemRefCastInTiledLoopOp(TiledLoopOp op) {
 // Region builder helper.
 // TODO: Move this to a utility library.
 // The public methods on this class are referenced directly from generated code
-// and bind by name to math functions in the DSL as:
-//   `applyfn__{fnName}`
+// and bind by name to math and type conversion functions in the DSL as:
+//   `arithfn__{fnName}`
+//   `typefn__{fnName}`
 // Examples:
-//   `applyfn__add`
-//   `applyfn__mul`
+//   `arithfn__add`
+//   `arithfn__mul`
+//   `typefn__cast`
 // The naming convention is intentional in order to match snake-cased DSL names.
 // See mlir-linalg-ods-yaml-gen.cpp for the code that mates to this class.
 //
@@ -229,7 +231,17 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__add(Value lhs, Value rhs) {
+  Value typefn__cast(Type toType, Value operand) {
+    return cast(toType, operand, false);
+  }
+
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
+  Value typefn__cast_unsigned(Type toType, Value operand) {
+    return cast(toType, operand, true);
+  }
+
+  // NOLINTNEXTLINE(*-identifier-naming): externally called.
+  Value arithfn__add(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::AddFOp>(lhs.getLoc(), lhs, rhs);
@@ -239,7 +251,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__exp(Value x) {
+  Value arithfn__exp(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
       return builder.create<math::ExpOp>(x.getLoc(), x);
@@ -247,7 +259,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__log(Value x) {
+  Value arithfn__log(Value x) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(x))
       return builder.create<math::LogOp>(x.getLoc(), x);
@@ -255,7 +267,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__sub(Value lhs, Value rhs) {
+  Value arithfn__sub(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::SubFOp>(lhs.getLoc(), lhs, rhs);
@@ -265,7 +277,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__mul(Value lhs, Value rhs) {
+  Value arithfn__mul(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MulFOp>(lhs.getLoc(), lhs, rhs);
@@ -275,7 +287,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__max(Value lhs, Value rhs) {
+  Value arithfn__max(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
@@ -285,7 +297,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__max_unsigned(Value lhs, Value rhs) {
+  Value arithfn__max_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MaxFOp>(lhs.getLoc(), lhs, rhs);
@@ -295,7 +307,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__min(Value lhs, Value rhs) {
+  Value arithfn__min(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
@@ -305,7 +317,7 @@ public:
   }
 
   // NOLINTNEXTLINE(*-identifier-naming): externally called.
-  Value applyfn__min_unsigned(Value lhs, Value rhs) {
+  Value arithfn__min_unsigned(Value lhs, Value rhs) {
     OpBuilder builder = getBuilder();
     if (isFloatingPoint(lhs))
       return builder.create<arith::MinFOp>(lhs.getLoc(), lhs, rhs);
@@ -323,7 +335,7 @@ public:
     builder.create<YieldOp>(first.getLoc(), values);
   }
 
-  Value constant(std::string value) {
+  Value constant(const std::string &value) {
     OpBuilder builder = getBuilder();
     Location loc = builder.getUnknownLoc();
     Attribute valueAttr = parseAttribute(value, builder.getContext());
@@ -997,7 +1009,7 @@ struct FoldInitTensorWithTensorReshapeOp
     Location loc = reshapeOp.getLoc();
     ReifiedRankedShapedTypeDims resultShapes;
     ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        dyn_cast<ReifyRankedShapedTypeOpInterface>(reshapeOp.getOperation());
+        cast<ReifyRankedShapedTypeOpInterface>(reshapeOp.getOperation());
     if (failed(reifyShapedTypeInterface.reifyResultShapes(rewriter,
                                                           resultShapes)) ||
         !llvm::hasSingleElement(resultShapes))
@@ -1093,7 +1105,7 @@ static LogicalResult verify(PadTensorOp op) {
     return op.emitError("expected the block to have ") << rank << " arguments";
 
   // Note: the number and type of yield values are checked in the YieldOp.
-  for (auto en : llvm::enumerate(block.getArgumentTypes())) {
+  for (const auto &en : llvm::enumerate(block.getArgumentTypes())) {
     if (!en.value().isIndex())
       return op.emitOpError("expected block argument ")
              << (en.index() + 1) << " to be an index";
@@ -1204,7 +1216,7 @@ PadTensorOp PadTensorOp::createPadHighOp(Type type, Value source, Value pad,
   SmallVector<OpFoldResult, 4> low, high;
   auto rankedTensorType = type.cast<RankedTensorType>();
   assert(rankedTensorType.hasStaticShape());
-  for (auto en : enumerate(rankedTensorType.getShape())) {
+  for (const auto &en : enumerate(rankedTensorType.getShape())) {
     AffineExpr d0;
     bindDims(b.getContext(), d0);
     auto dimOp = b.createOrFold<tensor::DimOp>(loc, source, en.index());
@@ -1275,7 +1287,7 @@ SmallVector<Range> PadTensorOp::getIterationDomain(OpBuilder &b) {
   // Initialize all the ranges to {zero, one, one}. All the `ub`s are
   // overwritten.
   SmallVector<Range> loopRanges(reifiedShapes[0].size(), {zero, one, one});
-  for (auto ub : enumerate(reifiedShapes[0]))
+  for (const auto &ub : enumerate(reifiedShapes[0]))
     loopRanges[ub.index()].size = ub.value();
   return loopRanges;
 }
@@ -2001,7 +2013,7 @@ struct TiledLoopInputsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
     // Store ids of the corresponding old and new input operands.
     SmallVector<int64_t, 2> oldInputIdToNew(tiledLoop.inputs().size(),
                                             kNoMatch);
-    for (auto en : llvm::enumerate(
+    for (const auto &en : llvm::enumerate(
              llvm::zip(tiledLoop.inputs(), tiledLoop.getRegionInputArgs()))) {
       Value in, bbArg;
       size_t index = en.index();
@@ -2215,7 +2227,7 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
     SmallVector<int64_t, 2> oldResultIdToNew(tiledLoop.getNumResults(),
                                              kNoMatch);
     SmallVector<Value, 2> resultReplacement(tiledLoop.getNumResults());
-    for (auto en : llvm::enumerate(
+    for (const auto &en : llvm::enumerate(
              llvm::zip(tiledLoop.outputs(), tiledLoop.getRegionOutputArgs()))) {
       size_t index = en.index();
       Value out = std::get<0>(en.value());
@@ -2318,16 +2330,15 @@ static LogicalResult verify(IndexOp op) {
 /// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
 /// Assumes `op` is a LinalgOp.
 void mlir::linalg::getDimsOfType(Operation *op, StringRef iteratorTypeName,
-                                 SmallVectorImpl<AffineExpr> &res) {
+                                 SmallVectorImpl<unsigned> &res) {
   if (!cast<LinalgOp>(op).iterator_types())
     return;
 
   unsigned dim = 0;
-  MLIRContext *ctx = op->getContext();
   for (auto tn :
        cast<LinalgOp>(op).iterator_types().getAsValueRange<StringAttr>()) {
     if (tn == iteratorTypeName)
-      res.push_back(getAffineDimExpr(dim, ctx));
+      res.push_back(dim);
     ++dim;
   }
 }
@@ -2407,10 +2418,10 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
 /// to the elemental types of `inputTypes` and `outputTypes`, which are asserted
 /// to be ShapedType.
 template <typename NamedStructuredOpType>
-static void
-fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
-                       TypeRange inputTypes, TypeRange outputTypes,
-                       std::function<void(unsigned, unsigned)> errorHandler) {
+static void fillStructuredOpRegion(
+    OpBuilder &opBuilder, Region &region, TypeRange inputTypes,
+    TypeRange outputTypes,
+    llvm::function_ref<void(unsigned, unsigned)> errorHandler) {
   assert(llvm::all_of(outputTypes, [](Type t) { return t.isa<ShapedType>(); }));
 
   // TODO: atm all operands go through getElementTypeOrSelf,

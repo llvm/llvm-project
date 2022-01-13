@@ -187,12 +187,12 @@ public:
   virtual void getValues(std::vector<int8_t> **) { fatal("vali8"); }
 
   /// Element-wise insertion in lexicographic index order.
-  virtual void lexInsert(uint64_t *, double) { fatal("insf64"); }
-  virtual void lexInsert(uint64_t *, float) { fatal("insf32"); }
-  virtual void lexInsert(uint64_t *, int64_t) { fatal("insi64"); }
-  virtual void lexInsert(uint64_t *, int32_t) { fatal("insi32"); }
-  virtual void lexInsert(uint64_t *, int16_t) { fatal("ins16"); }
-  virtual void lexInsert(uint64_t *, int8_t) { fatal("insi8"); }
+  virtual void lexInsert(const uint64_t *, double) { fatal("insf64"); }
+  virtual void lexInsert(const uint64_t *, float) { fatal("insf32"); }
+  virtual void lexInsert(const uint64_t *, int64_t) { fatal("insi64"); }
+  virtual void lexInsert(const uint64_t *, int32_t) { fatal("insi32"); }
+  virtual void lexInsert(const uint64_t *, int16_t) { fatal("ins16"); }
+  virtual void lexInsert(const uint64_t *, int8_t) { fatal("insi8"); }
 
   /// Expanded insertion.
   virtual void expInsert(uint64_t *, double *, bool *, uint64_t *, uint64_t) {
@@ -269,15 +269,16 @@ public:
         pointers[r].push_back(0);
     // Then assign contents from coordinate scheme tensor if provided.
     if (tensor) {
-      uint64_t nnz = tensor->getElements().size();
+      const std::vector<Element<V>> &elements = tensor->getElements();
+      uint64_t nnz = elements.size();
       values.reserve(nnz);
-      fromCOO(tensor, 0, nnz, 0);
+      fromCOO(elements, 0, nnz, 0);
     } else if (allDense) {
       values.resize(sz, 0);
     }
   }
 
-  virtual ~SparseTensorStorage() = default;
+  ~SparseTensorStorage() override = default;
 
   /// Get the rank of the tensor.
   uint64_t getRank() const { return sizes.size(); }
@@ -300,7 +301,7 @@ public:
   void getValues(std::vector<V> **out) override { *out = &values; }
 
   /// Partially specialize lexicographical insertions based on template types.
-  void lexInsert(uint64_t *cursor, V val) override {
+  void lexInsert(const uint64_t *cursor, V val) override {
     // First, wrap up pending insertion path.
     uint64_t diff = 0;
     uint64_t top = 0;
@@ -367,7 +368,7 @@ public:
     std::vector<uint64_t> reord(rank);
     for (uint64_t r = 0; r < rank; r++)
       reord[r] = perm[rev[r]];
-    toCOO(tensor, reord, 0, 0);
+    toCOO(*tensor, reord, 0, 0);
     assert(tensor->getElements().size() == values.size());
     return tensor;
   }
@@ -402,9 +403,8 @@ private:
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
   /// tensor in coordinate scheme. This method prepares the pointers and
   /// indices arrays under the given per-dimension dense/sparse annotations.
-  void fromCOO(SparseTensorCOO<V> *tensor, uint64_t lo, uint64_t hi,
-               uint64_t d) {
-    const std::vector<Element<V>> &elements = tensor->getElements();
+  void fromCOO(const std::vector<Element<V>> &elements, uint64_t lo,
+               uint64_t hi, uint64_t d) {
     // Once dimensions are exhausted, insert the numerical values.
     assert(d <= getRank());
     if (d == getRank()) {
@@ -432,7 +432,7 @@ private:
           endDim(d + 1);
         full++;
       }
-      fromCOO(tensor, lo, seg, d + 1);
+      fromCOO(elements, lo, seg, d + 1);
       // And move on to next segment in interval.
       lo = seg;
     }
@@ -449,12 +449,12 @@ private:
 
   /// Stores the sparse tensor storage scheme into a memory-resident sparse
   /// tensor in coordinate scheme.
-  void toCOO(SparseTensorCOO<V> *tensor, std::vector<uint64_t> &reord,
+  void toCOO(SparseTensorCOO<V> &tensor, std::vector<uint64_t> &reord,
              uint64_t pos, uint64_t d) {
     assert(d <= getRank());
     if (d == getRank()) {
       assert(pos < values.size());
-      tensor->add(idx, values[pos]);
+      tensor.add(idx, values[pos]);
     } else if (isCompressedDim(d)) {
       // Sparse dimension.
       for (uint64_t ii = pointers[d][pos]; ii < pointers[d][pos + 1]; ii++) {
@@ -499,7 +499,7 @@ private:
   }
 
   /// Continues a single insertion path, outer to inner.
-  void insPath(uint64_t *cursor, uint64_t diff, uint64_t top, V val) {
+  void insPath(const uint64_t *cursor, uint64_t diff, uint64_t top, V val) {
     uint64_t rank = getRank();
     assert(diff < rank);
     for (uint64_t d = diff; d < rank; d++) {
@@ -517,7 +517,7 @@ private:
   }
 
   /// Finds the lexicographic differing dimension.
-  uint64_t lexDiff(uint64_t *cursor) {
+  uint64_t lexDiff(const uint64_t *cursor) {
     for (uint64_t r = 0, rank = getRank(); r < rank; r++)
       if (cursor[r] > idx[r])
         return r;
@@ -686,13 +686,6 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
 
 extern "C" {
 
-/// This type is used in the public API at all places where MLIR expects
-/// values with the built-in type "index". For now, we simply assume that
-/// type is 64-bit, but targets with different "index" bit widths should link
-/// with an alternatively built runtime support library.
-// TODO: support such targets?
-typedef uint64_t index_t;
-
 //===----------------------------------------------------------------------===//
 //
 // Public API with methods that operate on MLIR buffers (memrefs) to interact
@@ -821,6 +814,12 @@ typedef uint64_t index_t;
         cursor, values, filled, added, count);                                 \
   }
 
+// Assume index_t is in fact uint64_t, so that _mlir_ciface_newSparseTensor
+// can safely rewrite kIndex to kU64.  We make this assertion to guarantee
+// that this file cannot get out of sync with its header.
+static_assert(std::is_same<index_t, uint64_t>::value,
+              "Expected index_t == uint64_t");
+
 /// Constructs a new sparse tensor. This is the "swiss army knife"
 /// method for materializing sparse tensors into the computation.
 ///
@@ -845,6 +844,13 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
   const index_t *sizes = sref->data + sref->offset;
   const index_t *perm = pref->data + pref->offset;
   uint64_t rank = aref->sizes[0];
+
+  // Rewrite kIndex to kU64, to avoid introducing a bunch of new cases.
+  // This is safe because of the static_assert above.
+  if (ptrTp == OverheadType::kIndex)
+    ptrTp = OverheadType::kU64;
+  if (indTp == OverheadType::kIndex)
+    indTp = OverheadType::kU64;
 
   // Double matrices with all combinations of overhead storage.
   CASE(OverheadType::kU64, OverheadType::kU64, PrimaryType::kF64, uint64_t,

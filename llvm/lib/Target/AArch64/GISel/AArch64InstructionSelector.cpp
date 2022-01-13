@@ -472,8 +472,8 @@ private:
 AArch64InstructionSelector::AArch64InstructionSelector(
     const AArch64TargetMachine &TM, const AArch64Subtarget &STI,
     const AArch64RegisterBankInfo &RBI)
-    : InstructionSelector(), TM(TM), STI(STI), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), RBI(RBI),
+    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
+      RBI(RBI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "AArch64GenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -3937,19 +3937,19 @@ static bool getLaneCopyOpcode(unsigned &CopyOpc, unsigned &ExtractSubReg,
   // vector's elements.
   switch (EltSize) {
   case 8:
-    CopyOpc = AArch64::CPYi8;
+    CopyOpc = AArch64::DUPi8;
     ExtractSubReg = AArch64::bsub;
     break;
   case 16:
-    CopyOpc = AArch64::CPYi16;
+    CopyOpc = AArch64::DUPi16;
     ExtractSubReg = AArch64::hsub;
     break;
   case 32:
-    CopyOpc = AArch64::CPYi32;
+    CopyOpc = AArch64::DUPi32;
     ExtractSubReg = AArch64::ssub;
     break;
   case 64:
-    CopyOpc = AArch64::CPYi64;
+    CopyOpc = AArch64::DUPi64;
     ExtractSubReg = AArch64::dsub;
     break;
   default:
@@ -5469,8 +5469,8 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
         // Insert the copy from LR/X30 into the entry block, before it can be
         // clobbered by anything.
         MFI.setReturnAddressIsTaken(true);
-        MFReturnAddr = getFunctionLiveInPhysReg(MF, TII, AArch64::LR,
-                                                AArch64::GPR64RegClass);
+        MFReturnAddr = getFunctionLiveInPhysReg(
+            MF, TII, AArch64::LR, AArch64::GPR64RegClass, I.getDebugLoc());
       }
 
       if (STI.hasPAuth()) {

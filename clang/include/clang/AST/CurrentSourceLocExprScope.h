@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_AST_CURRENT_SOURCE_LOC_EXPR_SCOPE_H
-#define LLVM_CLANG_AST_CURRENT_SOURCE_LOC_EXPR_SCOPE_H
+#ifndef LLVM_CLANG_AST_CURRENTSOURCELOCEXPRSCOPE_H
+#define LLVM_CLANG_AST_CURRENTSOURCELOCEXPRSCOPE_H
 
 #include <cassert>
 
@@ -71,4 +71,4 @@ private:
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_AST_CURRENT_SOURCE_LOC_EXPR_SCOPE_H
+#endif // LLVM_CLANG_AST_CURRENTSOURCELOCEXPRSCOPE_H

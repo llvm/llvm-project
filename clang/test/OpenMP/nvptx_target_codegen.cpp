@@ -418,7 +418,7 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 8
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
-// CHECK1-NEXT:    [[F:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
+// CHECK1-NEXT:    [[F:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 4)
 // CHECK1-NEXT:    [[F_ON_STACK:%.*]] = bitcast i8* [[F]] to i32*
 // CHECK1-NEXT:    store i32 [[F1]], i32* [[F_ON_STACK]], align 4
 // CHECK1-NEXT:    store double* [[A]], double** [[A_ADDR]], align 8
@@ -802,7 +802,7 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 4
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
-// CHECK2-NEXT:    [[F:%.*]] = call i8* @__kmpc_alloc_shared(i32 4)
+// CHECK2-NEXT:    [[F:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 4)
 // CHECK2-NEXT:    [[F_ON_STACK:%.*]] = bitcast i8* [[F]] to i32*
 // CHECK2-NEXT:    store i32 [[F1]], i32* [[F_ON_STACK]], align 4
 // CHECK2-NEXT:    store double* [[A]], double** [[A_ADDR]], align 4
@@ -1185,7 +1185,7 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 4
 // CHECK3-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
-// CHECK3-NEXT:    [[F:%.*]] = call i8* @__kmpc_alloc_shared(i32 4)
+// CHECK3-NEXT:    [[F:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i32 4)
 // CHECK3-NEXT:    [[F_ON_STACK:%.*]] = bitcast i8* [[F]] to i32*
 // CHECK3-NEXT:    store i32 [[F1]], i32* [[F_ON_STACK]], align 4
 // CHECK3-NEXT:    store double* [[A]], double** [[A_ADDR]], align 4

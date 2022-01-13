@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SEMA_ATTRIBUTELIST_H
-#define LLVM_CLANG_SEMA_ATTRIBUTELIST_H
+#ifndef LLVM_CLANG_SEMA_PARSEDATTR_H
+#define LLVM_CLANG_SEMA_PARSEDATTR_H
 
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/AttributeCommonInfo.h"
@@ -1159,4 +1159,4 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 
 } // namespace clang
 
-#endif // LLVM_CLANG_SEMA_ATTRIBUTELIST_H
+#endif // LLVM_CLANG_SEMA_PARSEDATTR_H

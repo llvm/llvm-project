@@ -30,7 +30,7 @@ def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
       ^bb1:
         br ^bb3(%arg1 : memref<2xf32>)
       ^bb2:
-        %0 = alloc() : memref<2xf32>
+        %0 = memref.alloc() : memref<2xf32>
         linalg.generic {
           args_in = 1 : i64,
           args_out = 1 : i64,
@@ -57,11 +57,11 @@ def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
       func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
         cond_br %arg0, ^bb1, ^bb2
       ^bb1:  // pred: ^bb0
-        %0 = alloc() : memref<2xf32>
+        %0 = memref.alloc() : memref<2xf32>
         linalg.copy(%arg1, %0) : memref<2xf32>, memref<2xf32>
         br ^bb3(%0 : memref<2xf32>)
       ^bb2:  // pred: ^bb0
-        %1 = alloc() : memref<2xf32>
+        %1 = memref.alloc() : memref<2xf32>
         linalg.generic {
           args_in = 1 : i64,
           args_out = 1 : i64,
@@ -71,7 +71,7 @@ def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
           %4 = exp %arg3 : f32
           linalg.yield %4 : f32
         }: memref<2xf32>, memref<2xf32>
-        %2 = alloc() : memref<2xf32>
+        %2 = memref.alloc() : memref<2xf32>
         linalg.copy(%1, %2) : memref<2xf32>, memref<2xf32>
         dealloc %1 : memref<2xf32>
         br ^bb3(%2 : memref<2xf32>)

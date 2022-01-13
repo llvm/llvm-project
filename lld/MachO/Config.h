@@ -207,7 +207,7 @@ enum class ForceLoad {
   No,      // Never load the archive, regardless of other flags
 };
 
-extern Configuration *config;
+extern std::unique_ptr<Configuration> config;
 
 } // namespace macho
 } // namespace lld

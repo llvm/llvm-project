@@ -2,13 +2,13 @@
 
 // CHECK-LABEL: func @subview_of_size_memcast
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: memref<4x6x16x32xi8>
-//       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 1, 0] [1, 1, 16] [1, 1, 1] : memref<4x6x16x32xi8> to memref<16x32xi8, #{{.*}}>
+//       CHECK:   %[[S:.+]] = memref.subview %[[ARG0]][0, 1, 0, 0] [1, 1, 16, 32] [1, 1, 1, 1] : memref<4x6x16x32xi8> to memref<16x32xi8, #{{.*}}>
 //       CHECK:   %[[M:.+]] = memref.cast %[[S]] : memref<16x32xi8, #{{.*}}> to memref<16x32xi8, #{{.*}}>
 //       CHECK:   return %[[M]] : memref<16x32xi8, #{{.*}}>
 func @subview_of_size_memcast(%arg : memref<4x6x16x32xi8>) ->
   memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>{
   %0 = memref.cast %arg : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
-  %1 = memref.subview %0[0, 1, 0] [1, 1, 16] [1, 1, 1] :
+  %1 = memref.subview %0[0, 1, 0, 0] [1, 1, 16, 32] [1, 1, 1, 1] :
     memref<?x?x16x32xi8> to
     memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>
   return %1 : memref<16x32xi8, affine_map<(d0, d1)[s0] -> (d0 * 32 + d1 + s0)>>
@@ -151,7 +151,7 @@ func @multiple_reducing_dims_all_dynamic(%arg0 : memref<?x?x?xf32, offset: ?, st
 //       CHECK:   return %[[SIZE]] : index
 func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
   %c0 = arith.constant 0 : index
-  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [0] : memref<?xi8> to memref<?xi8>
+  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [1] : memref<?xi8> to memref<?xi8>
   %1 = memref.dim %0, %c0 : memref<?xi8>
   return %1 : index
 }
@@ -450,3 +450,63 @@ func @fold_rank_memref(%arg0 : memref<?x?xf32>) -> (index) {
   // CHECK-NEXT: return [[C2]]
   return %rank_0 : index
 }
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0 * 42 + d1)>
+func @fold_no_op_subview(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, #map> {
+  %0 = memref.subview %arg0[0, 0] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, #map>
+  return %0 : memref<20x42xf32, #map>
+}
+// CHECK-LABEL: func @fold_no_op_subview(
+//       CHECK:   %[[ARG0:.+]]: memref<20x42xf32>)
+//       CHECK:   %[[CAST:.+]] = memref.cast %[[ARG0]]
+//       CHECK:   return %[[CAST]]
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0 * 42 + d1 + 1)>
+func @no_fold_subview_with_non_zero_offset(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, #map> {
+  %0 = memref.subview %arg0[0, 1] [20, 42] [1, 1] : memref<20x42xf32> to memref<20x42xf32, #map>
+  return %0 : memref<20x42xf32, #map>
+}
+// CHECK-LABEL: func @no_fold_subview_with_non_zero_offset(
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview
+//       CHECK:    return %[[SUBVIEW]]
+
+// -----
+
+#map = affine_map<(d0, d1) -> (d0 * 42 + d1 * 2)>
+func @no_fold_subview_with_non_unit_stride(%arg0 : memref<20x42xf32>) -> memref<20x42xf32, #map> {
+  %0 = memref.subview %arg0[0, 0] [20, 42] [1, 2] : memref<20x42xf32> to memref<20x42xf32, #map>
+  return %0 : memref<20x42xf32, #map>
+}
+// CHECK-LABEL: func @no_fold_subview_with_non_unit_stride(
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview
+//       CHECK:    return %[[SUBVIEW]]
+
+// -----
+
+#map = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + d1 + s0)>
+func @no_fold_dynamic_no_op_subview(%arg0 : memref<?x?xf32>) -> memref<?x?xf32, #map> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
+  %1 = memref.dim %arg0, %c1 : memref<?x?xf32>
+  %2 = memref.subview %arg0[0, 0] [%0, %1] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #map>
+  return %2 : memref<?x?xf32, #map>
+}
+// CHECK-LABEL: func @no_fold_dynamic_no_op_subview(
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview
+//       CHECK:    return %[[SUBVIEW]]
+
+// -----
+
+func @atomicrmw_cast_fold(%arg0 : f32, %arg1 : memref<4xf32>, %c : index) {
+  %v = memref.cast %arg1 : memref<4xf32> to memref<?xf32>
+  %a = memref.atomic_rmw addf %arg0, %v[%c] : (f32, memref<?xf32>) -> f32
+  return
+}
+
+// CHECK-LABEL: func @atomicrmw_cast_fold
+// CHECK-NEXT: memref.atomic_rmw addf %arg0, %arg1[%arg2] : (f32, memref<4xf32>) -> f32

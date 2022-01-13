@@ -15,7 +15,7 @@ define dso_local i64 @test_ldarx(i64* readnone %a) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    blr
 entry:
-  %0 = call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(i64* %a)
+  %0 = call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(i64* elementtype(i64) %a)
   ret i64 %0
 }
 

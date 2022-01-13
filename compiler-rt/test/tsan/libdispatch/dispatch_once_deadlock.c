@@ -1,4 +1,4 @@
-// Check that calling dispatch_once from a report callback works.
+// Check that dispatch_once() is always intercepted.
 
 // RUN: %clang_tsan %s -o %t
 // RUN: not %env_tsan_opts=ignore_noninstrumented_modules=0 %run %t 2>&1 | FileCheck %s
@@ -7,6 +7,8 @@
 
 #include <pthread.h>
 #include <stdio.h>
+
+#include "../test.h"
 
 long g = 0;
 long h = 0;
@@ -23,7 +25,14 @@ void f() {
 __attribute__((disable_sanitizer_instrumentation))
 void __tsan_on_report() {
   fprintf(stderr, "Report.\n");
+
+  // Without these annotations this test deadlocks for COMPILER_RT_DEBUG=ON
+  // builds.  Conceptually, the TSan runtime does not support reentrancy from
+  // runtime callbacks, but the main goal here is just to check that
+  // dispatch_once() is always intercepted.
+  AnnotateIgnoreSyncBegin(__FILE__, __LINE__);
   f();
+  AnnotateIgnoreSyncEnd(__FILE__, __LINE__);
 }
 
 int main() {

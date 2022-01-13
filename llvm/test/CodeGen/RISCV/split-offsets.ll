@@ -83,8 +83,7 @@ define void @test2([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV64I-NEXT:    add a0, a1, a5
 ; RV64I-NEXT:    add a1, a4, a5
 ; RV64I-NEXT:    sext.w a2, a2
-; RV64I-NEXT:    sext.w a4, a3
-; RV64I-NEXT:    bge a4, a2, .LBB1_2
+; RV64I-NEXT:    bge a3, a2, .LBB1_2
 ; RV64I-NEXT:  .LBB1_1: # %while_body
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    addiw a4, a3, 1
@@ -93,8 +92,7 @@ define void @test2([65536 x i32]** %sp, [65536 x i32]* %t, i32 %n) {
 ; RV64I-NEXT:    sw a4, 0(a0)
 ; RV64I-NEXT:    sw a3, 4(a0)
 ; RV64I-NEXT:    mv a3, a4
-; RV64I-NEXT:    sext.w a4, a3
-; RV64I-NEXT:    blt a4, a2, .LBB1_1
+; RV64I-NEXT:    blt a3, a2, .LBB1_1
 ; RV64I-NEXT:  .LBB1_2: # %while_end
 ; RV64I-NEXT:    ret
 entry:

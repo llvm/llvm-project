@@ -8409,8 +8409,8 @@ Expected<TypeSourceInfo *> ASTImporter::Import(TypeSourceInfo *FromTSI) {
 // and destructed after it is created. The construction already performs the
 // import of the data.
 template <typename T> struct AttrArgImporter {
-  AttrArgImporter<T>(const AttrArgImporter<T> &) = delete;
-  AttrArgImporter<T>(AttrArgImporter<T> &&) = default;
+  AttrArgImporter(const AttrArgImporter<T> &) = delete;
+  AttrArgImporter(AttrArgImporter<T> &&) = default;
   AttrArgImporter<T> &operator=(const AttrArgImporter<T> &) = delete;
   AttrArgImporter<T> &operator=(AttrArgImporter<T> &&) = default;
 
@@ -8429,8 +8429,8 @@ private:
 // is used by the attribute classes. This object should be created once for the
 // array data to be imported (the array size is not imported, just copied).
 template <typename T> struct AttrArgArrayImporter {
-  AttrArgArrayImporter<T>(const AttrArgArrayImporter<T> &) = delete;
-  AttrArgArrayImporter<T>(AttrArgArrayImporter<T> &&) = default;
+  AttrArgArrayImporter(const AttrArgArrayImporter<T> &) = delete;
+  AttrArgArrayImporter(AttrArgArrayImporter<T> &&) = default;
   AttrArgArrayImporter<T> &operator=(const AttrArgArrayImporter<T> &) = delete;
   AttrArgArrayImporter<T> &operator=(AttrArgArrayImporter<T> &&) = default;
 

@@ -126,16 +126,16 @@ def CC_Hexagon_HVX: CallingConv<[
 
   // HVX 128-byte mode
   CCIfHvx128<
-    CCIfType<[v32i32,v64i16,v128i8],
+    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16],
       CCAssignToReg<[V0,V1,V2,V3,V4,V5,V6,V7,V8,V9,V10,V11,V12,V13,V14,V15]>>>,
   CCIfHvx128<
-    CCIfType<[v64i32,v128i16,v256i8],
+    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16],
       CCAssignToReg<[W0,W1,W2,W3,W4,W5,W6,W7]>>>,
   CCIfHvx128<
-    CCIfType<[v32i32,v64i16,v128i8],
+    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16],
       CCAssignToStack<128,128>>>,
   CCIfHvx128<
-    CCIfType<[v64i32,v128i16,v256i8],
+    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16],
       CCAssignToStack<256,128>>>,
 
   CCDelegateTo<CC_Hexagon>
@@ -152,10 +152,10 @@ def RetCC_Hexagon_HVX: CallingConv<[
 
   // HVX 128-byte mode
   CCIfHvx128<
-    CCIfType<[v32i32,v64i16,v128i8],
+    CCIfType<[v32i32,v64i16,v128i8,v32f32,v64f16],
       CCAssignToReg<[V0]>>>,
   CCIfHvx128<
-    CCIfType<[v64i32,v128i16,v256i8],
+    CCIfType<[v64i32,v128i16,v256i8,v64f32,v128f16],
       CCAssignToReg<[W0]>>>,
 
   CCDelegateTo<RetCC_Hexagon>

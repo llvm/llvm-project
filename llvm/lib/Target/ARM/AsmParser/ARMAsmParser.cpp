@@ -921,7 +921,7 @@ class ARMOperand : public MCParsedAsmOperand {
   };
 
 public:
-  ARMOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
+  ARMOperand(KindTy K) : Kind(K) {}
 
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -1870,7 +1870,7 @@ public:
   }
 
   template <int shift> bool isMemRegRQOffset() const {
-    if (!isMVEMem() || Memory.OffsetImm != 0 || Memory.Alignment != 0)
+    if (!isMVEMem() || Memory.OffsetImm != nullptr || Memory.Alignment != 0)
       return false;
 
     if (!ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(

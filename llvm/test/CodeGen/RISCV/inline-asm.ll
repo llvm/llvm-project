@@ -19,7 +19,7 @@ define i32 @constraint_r(i32 %a) nounwind {
 ; RV64I-LABEL: constraint_r:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, %hi(gi)
-; RV64I-NEXT:    lwu a1, %lo(gi)(a1)
+; RV64I-NEXT:    lw a1, %lo(gi)(a1)
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    #NO_APP
@@ -60,7 +60,7 @@ define void @constraint_m(i32* %a) nounwind {
 ; RV64I-NEXT:    #APP
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
-  call void asm sideeffect "", "=*m"(i32* %a)
+  call void asm sideeffect "", "=*m"(i32* elementtype(i32) %a)
   ret void
 }
 
@@ -78,7 +78,7 @@ define i32 @constraint_m2(i32* %a) nounwind {
 ; RV64I-NEXT:    lw a0, 0(a0)
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
-  %1 = tail call i32 asm "lw $0, $1", "=r,*m"(i32* %a)
+  %1 = tail call i32 asm "lw $0, $1", "=r,*m"(i32* elementtype(i32) %a)
   ret i32 %1
 }
 
@@ -170,8 +170,8 @@ define void @constraint_A(i8* %a) nounwind {
 ; RV64I-NEXT:    lb s1, 0(a0)
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
-  tail call void asm sideeffect "sb s0, $0", "*A"(i8* %a)
-  tail call void asm sideeffect "lb s1, $0", "*A"(i8* %a)
+  tail call void asm sideeffect "sb s0, $0", "*A"(i8* elementtype(i8) %a)
+  tail call void asm sideeffect "lb s1, $0", "*A"(i8* elementtype(i8) %a)
   ret void
 }
 

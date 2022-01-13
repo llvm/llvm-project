@@ -10,6 +10,7 @@ define void @sink_with_sideeffects(i1 %c, i8* %ptr) {
 ; CHECK:      VPlan 'Initial VPlan for VF={1},UF>=1' {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: for.body:
+; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %tmp0 = phi %tmp6, 0
 ; CHECK-NEXT:   WIDEN-INDUCTION %tmp1 = phi %tmp7, 0
 ; CHECK-NEXT:   CLONE ir<%tmp2> = getelementptr ir<%ptr>, ir<%tmp0>
@@ -40,6 +41,7 @@ define void @sink_with_sideeffects(i1 %c, i8* %ptr) {
 ; CHECK-NEXT: Successor(s): for.inc
 
 ; CHECK:      for.inc:
+; CHECK-NEXT:  EMIT vp<{{.+}}> = VF * UF +(nuw) vp<[[CAN_IV]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: No successors

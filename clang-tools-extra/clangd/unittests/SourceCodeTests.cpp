@@ -315,6 +315,16 @@ TEST(SourceCodeTests, SourceLocationInMainFile) {
   }
 }
 
+TEST(SourceCodeTests, isReservedName) {
+  EXPECT_FALSE(isReservedName(""));
+  EXPECT_FALSE(isReservedName("_"));
+  EXPECT_FALSE(isReservedName("foo"));
+  EXPECT_FALSE(isReservedName("_foo"));
+  EXPECT_TRUE(isReservedName("__foo"));
+  EXPECT_TRUE(isReservedName("_Foo"));
+  EXPECT_FALSE(isReservedName("foo__bar")) << "FIXME";
+}
+
 TEST(SourceCodeTests, CollectIdentifiers) {
   auto Style = format::getLLVMStyle();
   auto IDs = collectIdentifiers(R"cpp(

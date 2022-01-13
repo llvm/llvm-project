@@ -402,5 +402,5 @@ the crash log.
    -i, --interactive     parse all crash logs and enter interactive mode
 
 
-The source for the "symbolication" and "crashlog" modules are available in SVN.
+The source for the "symbolication" and "crashlog" modules are available in git.
 

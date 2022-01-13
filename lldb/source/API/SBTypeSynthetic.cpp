@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeSynthetic.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 
 #include "lldb/API/SBStream.h"
 
@@ -16,7 +16,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeSynthetic::SBTypeSynthetic() : m_opaque_sp() {
+SBTypeSynthetic::SBTypeSynthetic() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeSynthetic);
 }
 
@@ -27,9 +27,9 @@ SBTypeSynthetic SBTypeSynthetic::CreateWithClassName(const char *data,
                             options);
 
   if (!data || data[0] == 0)
-    return LLDB_RECORD_RESULT(SBTypeSynthetic());
-  return LLDB_RECORD_RESULT(SBTypeSynthetic(ScriptedSyntheticChildrenSP(
-      new ScriptedSyntheticChildren(options, data, ""))));
+    return SBTypeSynthetic();
+  return SBTypeSynthetic(ScriptedSyntheticChildrenSP(
+      new ScriptedSyntheticChildren(options, data, "")));
 }
 
 SBTypeSynthetic SBTypeSynthetic::CreateWithScriptCode(const char *data,
@@ -39,9 +39,9 @@ SBTypeSynthetic SBTypeSynthetic::CreateWithScriptCode(const char *data,
                             data, options);
 
   if (!data || data[0] == 0)
-    return LLDB_RECORD_RESULT(SBTypeSynthetic());
-  return LLDB_RECORD_RESULT(SBTypeSynthetic(ScriptedSyntheticChildrenSP(
-      new ScriptedSyntheticChildren(options, "", data))));
+    return SBTypeSynthetic();
+  return SBTypeSynthetic(ScriptedSyntheticChildrenSP(
+      new ScriptedSyntheticChildren(options, "", data)));
 }
 
 SBTypeSynthetic::SBTypeSynthetic(const lldb::SBTypeSynthetic &rhs)
@@ -142,7 +142,7 @@ operator=(const lldb::SBTypeSynthetic &rhs) {
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeSynthetic::operator==(lldb::SBTypeSynthetic &rhs) {
@@ -208,40 +208,4 @@ bool SBTypeSynthetic::CopyOnWrite_Impl() {
   SetSP(new_sp);
 
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBTypeSynthetic>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeSynthetic, ());
-  LLDB_REGISTER_STATIC_METHOD(lldb::SBTypeSynthetic, SBTypeSynthetic,
-                              CreateWithClassName, (const char *, uint32_t));
-  LLDB_REGISTER_STATIC_METHOD(lldb::SBTypeSynthetic, SBTypeSynthetic,
-                              CreateWithScriptCode, (const char *, uint32_t));
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeSynthetic, (const lldb::SBTypeSynthetic &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBTypeSynthetic, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBTypeSynthetic, operator bool, ());
-  LLDB_REGISTER_METHOD(bool, SBTypeSynthetic, IsClassCode, ());
-  LLDB_REGISTER_METHOD(bool, SBTypeSynthetic, IsClassName, ());
-  LLDB_REGISTER_METHOD(const char *, SBTypeSynthetic, GetData, ());
-  LLDB_REGISTER_METHOD(void, SBTypeSynthetic, SetClassName, (const char *));
-  LLDB_REGISTER_METHOD(void, SBTypeSynthetic, SetClassCode, (const char *));
-  LLDB_REGISTER_METHOD(uint32_t, SBTypeSynthetic, GetOptions, ());
-  LLDB_REGISTER_METHOD(void, SBTypeSynthetic, SetOptions, (uint32_t));
-  LLDB_REGISTER_METHOD(bool, SBTypeSynthetic, GetDescription,
-                       (lldb::SBStream &, lldb::DescriptionLevel));
-  LLDB_REGISTER_METHOD(
-      lldb::SBTypeSynthetic &,
-      SBTypeSynthetic, operator=,(const lldb::SBTypeSynthetic &));
-  LLDB_REGISTER_METHOD(bool,
-                       SBTypeSynthetic, operator==,(lldb::SBTypeSynthetic &));
-  LLDB_REGISTER_METHOD(bool, SBTypeSynthetic, IsEqualTo,
-                       (lldb::SBTypeSynthetic &));
-  LLDB_REGISTER_METHOD(bool,
-                       SBTypeSynthetic, operator!=,(lldb::SBTypeSynthetic &));
-}
-
-}
 }

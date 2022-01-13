@@ -2,6 +2,7 @@
 # RUN: not llvm-dwarfdump -debug-info -verify %t.o | FileCheck %s
 
 #      CHECK: Verifying non-dwo Units...
+# CHECK-NEXT: Verifying unit: 1 / 1, "/tmp/main.c" 
 # CHECK-NEXT: error: DW_AT_ranges offset is beyond .debug_ranges bounds: 0x00001000
 
 --- !ELF

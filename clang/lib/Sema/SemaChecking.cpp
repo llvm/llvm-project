@@ -2189,9 +2189,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  // __builtin_elementwise_ceil restricts the element type to floating point
+  // These builtins restrict the element type to floating point
   // types only.
-  case Builtin::BI__builtin_elementwise_ceil: {
+  case Builtin::BI__builtin_elementwise_ceil:
+  case Builtin::BI__builtin_elementwise_floor:
+  case Builtin::BI__builtin_elementwise_roundeven:
+  case Builtin::BI__builtin_elementwise_trunc: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return ExprError();
 
@@ -14021,7 +14024,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     const Expr *UsageExpr;
     SequenceTree::Seq Seq;
 
-    Usage() : UsageExpr(nullptr), Seq() {}
+    Usage() : UsageExpr(nullptr) {}
   };
 
   struct UsageInfo {
@@ -14030,7 +14033,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     /// Have we issued a diagnostic for this object already?
     bool Diagnosed;
 
-    UsageInfo() : Uses(), Diagnosed(false) {}
+    UsageInfo() : Diagnosed(false) {}
   };
   using UsageInfoMap = llvm::SmallDenseMap<Object, UsageInfo, 16>;
 

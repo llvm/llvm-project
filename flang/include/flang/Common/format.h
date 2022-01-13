@@ -606,8 +606,8 @@ template <typename CHAR> bool FormatValidator<CHAR>::Check() {
             check_e();
           }
         } else if (token_.kind() == TokenKind::Point && check_d() &&
-            token_.kind() == TokenKind::E) {
-          ReportError("Unexpected 'e' in 'G0' edit descriptor"); // C1308
+            token_.kind() == TokenKind::E) { // C1308
+          ReportError("A 'G0' edit descriptor must not have an 'e' value");
           NextToken();
           if (token_.kind() == TokenKind::UnsignedInteger) {
             NextToken();

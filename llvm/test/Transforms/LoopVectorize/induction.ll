@@ -3557,22 +3557,15 @@ define void @wrappingindvars1(i8 %t, i32 %len, i32 *%A) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i8 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[TMP3]], [[T]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP2]], [[T]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[LEN]], 255
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[LEN]] to i8
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i8 [[T]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i8 [[T]], [[TMP10]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp sgt i8 [[TMP12]], [[T]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i8 [[TMP11]], [[T]]
-; CHECK-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ugt i32 [[LEN]], 255
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP9]], [[TMP17]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP14]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP8]], [[TMP17]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
@@ -3785,22 +3778,15 @@ define void @wrappingindvars1(i8 %t, i32 %len, i32 *%A) {
 ; UNROLL-NO-IC:       vector.scevcheck:
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = sub i8 [[T]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[TMP3]], [[T]]
 ; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP2]], [[T]]
-; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[LEN]], 255
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
+; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = trunc i32 [[LEN]] to i8
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = add i8 [[T]], [[TMP10]]
-; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = sub i8 [[T]], [[TMP10]]
-; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = icmp sgt i8 [[TMP12]], [[T]]
 ; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = icmp slt i8 [[TMP11]], [[T]]
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = icmp ugt i32 [[LEN]], 255
-; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
-; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = or i1 [[TMP9]], [[TMP17]]
+; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = or i1 [[TMP14]], [[TMP16]]
+; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = or i1 [[TMP8]], [[TMP17]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4
@@ -3986,22 +3972,15 @@ define void @wrappingindvars2(i8 %t, i32 %len, i32 *%A) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i8 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[TMP3]], [[T]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP2]], [[T]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[LEN]], 255
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[LEN]] to i8
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i8 [[T]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i8 [[T]], [[TMP10]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp sgt i8 [[TMP12]], [[T]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt i8 [[TMP11]], [[T]]
-; CHECK-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ugt i32 [[LEN]], 255
-; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP9]], [[TMP17]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i1 [[TMP14]], [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP8]], [[TMP17]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
@@ -4224,22 +4203,15 @@ define void @wrappingindvars2(i8 %t, i32 %len, i32 *%A) {
 ; UNROLL-NO-IC:       vector.scevcheck:
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = sub i8 [[T]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = icmp ugt i8 [[TMP3]], [[T]]
 ; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP2]], [[T]]
-; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[LEN]], 255
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
+; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = trunc i32 [[LEN]] to i8
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = add i8 [[T]], [[TMP10]]
-; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = sub i8 [[T]], [[TMP10]]
-; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = icmp sgt i8 [[TMP12]], [[T]]
 ; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = icmp slt i8 [[TMP11]], [[T]]
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = select i1 false, i1 [[TMP13]], i1 [[TMP14]]
 ; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = icmp ugt i32 [[LEN]], 255
-; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = or i1 [[TMP15]], [[TMP16]]
-; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = or i1 [[TMP9]], [[TMP17]]
+; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = or i1 [[TMP14]], [[TMP16]]
+; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = or i1 [[TMP8]], [[TMP17]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4
@@ -4638,14 +4610,10 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[K]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[K]], [[N_MOD_VF]]
@@ -4688,9 +4656,9 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; IND-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 2
 ; IND-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; IND:       vector.scevcheck:
-; IND-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -2147483649
-; IND-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], -2147483648
-; IND-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; IND-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
+; IND-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 2147483648
+; IND-NEXT:    br i1 [[TMP1]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; IND:       vector.ph:
 ; IND-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -2
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -4730,9 +4698,9 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 4
 ; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; UNROLL:       vector.scevcheck:
-; UNROLL-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -2147483649
-; UNROLL-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], -2147483648
-; UNROLL-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; UNROLL-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
+; UNROLL-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 2147483648
+; UNROLL-NEXT:    br i1 [[TMP1]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -4
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -4779,14 +4747,10 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = add i32 0, [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = sub i32 0, [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP2]], 0
-; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = select i1 false, i1 [[TMP4]], i1 [[TMP5]]
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = or i1 false, [[TMP8]]
-; UNROLL-NO-IC-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[TMP7]]
+; UNROLL-NO-IC-NEXT:    br i1 [[TMP8]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[K]], 4
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[K]], [[N_MOD_VF]]
@@ -4837,9 +4801,9 @@ define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[K:%.*]], 8
 ; INTERLEAVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; INTERLEAVE:       vector.scevcheck:
-; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -2147483649
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], -2147483648
-; INTERLEAVE-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; INTERLEAVE-NEXT:    [[TMP0:%.*]] = add i64 [[K]], -1
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 2147483648
+; INTERLEAVE-NEXT:    br i1 [[TMP1]], label [[VECTOR_PH:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = and i64 [[K]], -8
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -6555,18 +6519,17 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP7]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i8 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP8]], i1 [[TMP9]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt i8 [[TMP7]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 false, [[TMP15]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = sext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[IDENT_CHECK]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP15]], [[IDENT_CHECK]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
@@ -6634,14 +6597,14 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; IND-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; IND-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; IND-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; IND-NEXT:    [[TMP6:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
-; IND-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; IND-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP6]], i1 [[TMP7]]
+; IND-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; IND-NEXT:    [[TMP7:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
+; IND-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP7]], i1 [[TMP6]]
+; IND-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; IND-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; IND-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
 ; IND-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
-; IND-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
-; IND-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW]]
+; IND-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[TMP11]]
 ; IND-NEXT:    [[TMP14:%.*]] = add i32 [[STEP]], -128
 ; IND-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], -256
 ; IND-NEXT:    [[TMP16:%.*]] = or i1 [[TMP13]], [[TMP15]]
@@ -6707,14 +6670,14 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; UNROLL-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; UNROLL-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; UNROLL-NEXT:    [[TMP6:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
-; UNROLL-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; UNROLL-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP6]], i1 [[TMP7]]
+; UNROLL-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; UNROLL-NEXT:    [[TMP7:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
+; UNROLL-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP7]], i1 [[TMP6]]
+; UNROLL-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; UNROLL-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; UNROLL-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
 ; UNROLL-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
-; UNROLL-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
-; UNROLL-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW]]
+; UNROLL-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[TMP11]]
 ; UNROLL-NEXT:    [[TMP14:%.*]] = add i32 [[STEP]], -128
 ; UNROLL-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], -256
 ; UNROLL-NEXT:    [[TMP16:%.*]] = or i1 [[TMP13]], [[TMP15]]
@@ -6787,18 +6750,17 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NO-IC-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = add i8 0, [[MUL_RESULT]]
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP7]], 0
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = icmp slt i8 [[TMP6]], 0
-; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP8]], i1 [[TMP9]]
+; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[TMP6]], 0
+; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = icmp sgt i8 [[TMP7]], 0
+; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 [[TMP8]]
+; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
-; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[TMP13]]
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[MUL_OVERFLOW]]
-; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = or i1 false, [[TMP15]]
+; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP13]]
 ; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = sext i8 [[TMP1]] to i32
 ; UNROLL-NO-IC-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP17]]
-; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[IDENT_CHECK]]
+; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = or i1 [[TMP15]], [[IDENT_CHECK]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
@@ -6873,14 +6835,14 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; INTERLEAVE-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; INTERLEAVE-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; INTERLEAVE-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP6]], i1 [[TMP7]]
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp ugt i8 [[MUL_RESULT]], -128
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = select i1 [[TMP3]], i1 [[TMP7]], i1 [[TMP6]]
+; INTERLEAVE-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW]]
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = icmp ne i8 [[TMP1]], 0
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = and i1 [[TMP9]], [[TMP10]]
-; INTERLEAVE-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
-; INTERLEAVE-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW]]
+; INTERLEAVE-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[TMP11]]
 ; INTERLEAVE-NEXT:    [[TMP14:%.*]] = add i32 [[STEP]], -128
 ; INTERLEAVE-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], -256
 ; INTERLEAVE-NEXT:    [[TMP16:%.*]] = or i1 [[TMP13]], [[TMP15]]

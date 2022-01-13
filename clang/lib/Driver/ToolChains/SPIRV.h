@@ -39,6 +39,17 @@ public:
                     const char *LinkingOutput) const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+public:
+  Linker(const ToolChain &TC) : Tool("SPIRV::Linker", "spirv-link", TC) {}
+  bool hasIntegratedCPP() const override { return false; }
+  bool isLinkJob() const override { return true; }
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
+
 } // namespace SPIRV
 } // namespace tools
 
@@ -68,6 +79,7 @@ public:
 
 protected:
   clang::driver::Tool *getTool(Action::ActionClass AC) const override;
+  Tool *buildLinker() const override;
 
 private:
   clang::driver::Tool *getTranslator() const;

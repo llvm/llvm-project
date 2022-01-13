@@ -1,3 +1,6 @@
+include(ExtendPath)
+include(FindPrefixFromConfig)
+
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
 # the usual CMake convention seems to be ${Project}Targets.cmake.
@@ -27,20 +30,11 @@ set(LLD_CONFIG_CMAKE_DIR)
 set(LLD_CONFIG_LLVM_CMAKE_DIR)
 
 # Generate LLDConfig.cmake for the install tree.
-set(LLD_CONFIG_CODE "
-# Compute the installation prefix from this LLVMConfig.cmake file location.
-get_filename_component(LLD_INSTALL_PREFIX \"\${CMAKE_CURRENT_LIST_FILE}\" PATH)")
-# Construct the proper number of get_filename_component(... PATH)
-# calls to compute the installation prefix.
-string(REGEX REPLACE "/" ";" _count "${LLD_INSTALL_PACKAGE_DIR}")
-foreach(p ${_count})
-  set(LLD_CONFIG_CODE "${LLD_CONFIG_CODE}
-get_filename_component(LLD_INSTALL_PREFIX \"\${LLD_INSTALL_PREFIX}\" PATH)")
-endforeach(p)
+find_prefix_from_config(LLD_CONFIG_CODE LLD_INSTALL_PREFIX "${LLD_INSTALL_PACKAGE_DIR}")
 set(LLD_CONFIG_CMAKE_DIR "\${LLD_INSTALL_PREFIX}/${LLD_INSTALL_PACKAGE_DIR}")
 set(LLD_CONFIG_LLVM_CMAKE_DIR "\${LLD_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
 get_config_exports_includes(LLD LLD_CONFIG_INCLUDE_EXPORTS)
-set(LLD_CONFIG_INCLUDE_DIRS "\${LLD_INSTALL_PREFIX}/include")
+extend_path(LLD_CONFIG_INCLUDE_DIRS "\${LLD_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/LLDConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLDConfig.cmake

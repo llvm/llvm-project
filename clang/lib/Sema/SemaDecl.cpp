@@ -9921,7 +9921,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       << NewFD;
 
     // Turn this into a variadic function with no parameters.
-    const FunctionType *FT = NewFD->getType()->getAs<FunctionType>();
+    const auto *FT = NewFD->getType()->castAs<FunctionType>();
     FunctionProtoType::ExtProtoInfo EPI(
         Context.getDefaultCallingConvention(true, false));
     EPI.Variadic = true;
@@ -15002,25 +15002,30 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
     diag_id = diag::ext_implicit_function_decl;
   else
     diag_id = diag::warn_implicit_function_decl;
+
+  TypoCorrection Corrected;
+  // Because typo correction is expensive, only do it if the implicit
+  // function declaration is going to be treated as an error.
+  //
+  // Perform the corection before issuing the main diagnostic, as some consumers
+  // use typo-correction callbacks to enhance the main diagnostic.
+  if (S && !ExternCPrev &&
+      (Diags.getDiagnosticLevel(diag_id, Loc) >= DiagnosticsEngine::Error)) {
+    DeclFilterCCC<FunctionDecl> CCC{};
+    Corrected = CorrectTypo(DeclarationNameInfo(&II, Loc), LookupOrdinaryName,
+                            S, nullptr, CCC, CTK_NonError);
+  }
+
   Diag(Loc, diag_id) << &II;
+  if (Corrected)
+    diagnoseTypo(Corrected, PDiag(diag::note_function_suggestion),
+                 /*ErrorRecovery*/ false);
 
   // If we found a prior declaration of this function, don't bother building
   // another one. We've already pushed that one into scope, so there's nothing
   // more to do.
   if (ExternCPrev)
     return ExternCPrev;
-
-  // Because typo correction is expensive, only do it if the implicit
-  // function declaration is going to be treated as an error.
-  if (Diags.getDiagnosticLevel(diag_id, Loc) >= DiagnosticsEngine::Error) {
-    TypoCorrection Corrected;
-    DeclFilterCCC<FunctionDecl> CCC{};
-    if (S && (Corrected =
-                  CorrectTypo(DeclarationNameInfo(&II, Loc), LookupOrdinaryName,
-                              S, nullptr, CCC, CTK_NonError)))
-      diagnoseTypo(Corrected, PDiag(diag::note_function_suggestion),
-                   /*ErrorRecovery*/false);
-  }
 
   // Set a Declarator for the implicit definition: int foo();
   const char *Dummy;
@@ -15191,11 +15196,11 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
         Context.BuiltinInfo.isConstWithoutErrno(BuiltinID))
       FD->addAttr(ConstAttr::CreateImplicit(Context, FD->getLocation()));
 
-    // We make "fma" on some platforms const because we know it does not set
+    // We make "fma" on GNU or Windows const because we know it does not set
     // errno in those environments even though it could set errno based on the
     // C standard.
     const llvm::Triple &Trip = Context.getTargetInfo().getTriple();
-    if ((Trip.isGNUEnvironment() || Trip.isAndroid() || Trip.isOSMSVCRT()) &&
+    if ((Trip.isGNUEnvironment() || Trip.isOSMSVCRT()) &&
         !FD->hasAttr<ConstAttr>()) {
       switch (BuiltinID) {
       case Builtin::BI__builtin_fma:
@@ -18586,7 +18591,7 @@ void Sema::ActOnPragmaRedefineExtname(IdentifierInfo* Name,
   AttributeCommonInfo Info(AliasName, SourceRange(AliasNameLoc),
                            AttributeCommonInfo::AS_Pragma);
   AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
-      Context, AliasName->getName(), /*LiteralLabel=*/true, Info);
+      Context, AliasName->getName(), /*IsLiteralLabel=*/true, Info);
 
   // If a declaration that:
   // 1) declares a function or a variable

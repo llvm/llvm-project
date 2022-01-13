@@ -105,23 +105,25 @@ static void registerJITLoaderGDBImpl(const char *ObjAddr, size_t Size) {
 extern "C" orc::shared::CWrapperFunctionResult
 llvm_orc_registerJITLoaderGDBAllocAction(const char *Data, size_t Size) {
   using namespace orc::shared;
-  return WrapperFunction<SPSError()>::handle(nullptr, 0,
-                                             [=]() -> Error {
-                                               registerJITLoaderGDBImpl(Data,
-                                                                        Size);
-                                               return Error::success();
-                                             })
+  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
+             Data, Size,
+             [](ExecutorAddrRange R) {
+               registerJITLoaderGDBImpl(R.Start.toPtr<const char *>(),
+                                        R.size());
+               return Error::success();
+             })
       .release();
 }
 
 extern "C" orc::shared::CWrapperFunctionResult
 llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  return WrapperFunction<void(SPSExecutorAddrRange)>::handle(
+  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
              Data, Size,
              [](ExecutorAddrRange R) {
-               registerJITLoaderGDBImpl(R.Start.toPtr<char *>(),
-                                        R.size().getValue());
+               registerJITLoaderGDBImpl(R.Start.toPtr<const char *>(),
+                                        R.size());
+               return Error::success();
              })
       .release();
 }

@@ -14,8 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LEX_DEPENDENCY_DIRECTIVES_SOURCE_MINIMIZER_H
-#define LLVM_CLANG_LEX_DEPENDENCY_DIRECTIVES_SOURCE_MINIMIZER_H
+#ifndef LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSOURCEMINIMIZER_H
+#define LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSOURCEMINIMIZER_H
 
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -112,4 +112,4 @@ bool minimizeSourceToDependencyDirectives(
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_LEX_DEPENDENCY_DIRECTIVES_SOURCE_MINIMIZER_H
+#endif // LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSOURCEMINIMIZER_H

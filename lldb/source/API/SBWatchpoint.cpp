@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBWatchpoint.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
@@ -43,7 +43,7 @@ const SBWatchpoint &SBWatchpoint::operator=(const SBWatchpoint &rhs) {
                      SBWatchpoint, operator=,(const lldb::SBWatchpoint &), rhs);
 
   m_opaque_wp = rhs.m_opaque_wp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBWatchpoint::~SBWatchpoint() = default;
@@ -92,7 +92,7 @@ SBError SBWatchpoint::GetError() {
   if (watchpoint_sp) {
     sb_error.SetError(watchpoint_sp->GetError());
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 int32_t SBWatchpoint::GetHardwareIndex() {
@@ -262,7 +262,7 @@ void SBWatchpoint::Clear() {
 lldb::WatchpointSP SBWatchpoint::GetSP() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::WatchpointSP, SBWatchpoint, GetSP);
 
-  return LLDB_RECORD_RESULT(m_opaque_wp.lock());
+  return m_opaque_wp.lock();
 }
 
 void SBWatchpoint::SetSP(const lldb::WatchpointSP &sp) {
@@ -301,52 +301,5 @@ SBWatchpoint SBWatchpoint::GetWatchpointFromEvent(const lldb::SBEvent &event) {
   if (event.IsValid())
     sb_watchpoint =
         Watchpoint::WatchpointEventData::GetWatchpointFromEvent(event.GetSP());
-  return LLDB_RECORD_RESULT(sb_watchpoint);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBWatchpoint>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBWatchpoint, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBWatchpoint, (const lldb::WatchpointSP &));
-  LLDB_REGISTER_CONSTRUCTOR(SBWatchpoint, (const lldb::SBWatchpoint &));
-  LLDB_REGISTER_METHOD(const lldb::SBWatchpoint &,
-                       SBWatchpoint, operator=,(const lldb::SBWatchpoint &));
-  LLDB_REGISTER_METHOD(lldb::watch_id_t, SBWatchpoint, GetID, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBWatchpoint, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBWatchpoint, operator bool, ());
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBWatchpoint, operator==,(const lldb::SBWatchpoint &));
-  LLDB_REGISTER_METHOD_CONST(
-      bool, SBWatchpoint, operator!=,(const lldb::SBWatchpoint &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBWatchpoint, GetError, ());
-  LLDB_REGISTER_METHOD(int32_t, SBWatchpoint, GetHardwareIndex, ());
-  LLDB_REGISTER_METHOD(lldb::addr_t, SBWatchpoint, GetWatchAddress, ());
-  LLDB_REGISTER_METHOD(size_t, SBWatchpoint, GetWatchSize, ());
-  LLDB_REGISTER_METHOD(void, SBWatchpoint, SetEnabled, (bool));
-  LLDB_REGISTER_METHOD(bool, SBWatchpoint, IsEnabled, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBWatchpoint, GetHitCount, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBWatchpoint, GetIgnoreCount, ());
-  LLDB_REGISTER_METHOD(void, SBWatchpoint, SetIgnoreCount, (uint32_t));
-  LLDB_REGISTER_METHOD(const char *, SBWatchpoint, GetCondition, ());
-  LLDB_REGISTER_METHOD(void, SBWatchpoint, SetCondition, (const char *));
-  LLDB_REGISTER_METHOD(bool, SBWatchpoint, GetDescription,
-                       (lldb::SBStream &, lldb::DescriptionLevel));
-  LLDB_REGISTER_METHOD(void, SBWatchpoint, Clear, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::WatchpointSP, SBWatchpoint, GetSP, ());
-  LLDB_REGISTER_METHOD(void, SBWatchpoint, SetSP,
-                       (const lldb::WatchpointSP &));
-  LLDB_REGISTER_STATIC_METHOD(bool, SBWatchpoint, EventIsWatchpointEvent,
-                              (const lldb::SBEvent &));
-  LLDB_REGISTER_STATIC_METHOD(lldb::WatchpointEventType, SBWatchpoint,
-                              GetWatchpointEventTypeFromEvent,
-                              (const lldb::SBEvent &));
-  LLDB_REGISTER_STATIC_METHOD(lldb::SBWatchpoint, SBWatchpoint,
-                              GetWatchpointFromEvent,
-                              (const lldb::SBEvent &));
-}
-
-}
+  return sb_watchpoint;
 }

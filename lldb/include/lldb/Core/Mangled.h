@@ -72,10 +72,10 @@ public:
     return !(*this == rhs);
   }
 
-  /// Convert to pointer operator.
+  /// Convert to bool operator.
   ///
-  /// This allows code to check a Mangled object to see if it contains a valid
-  /// mangled name using code such as:
+  /// This allows code to check any Mangled objects to see if they contain
+  /// anything valid using code such as:
   ///
   /// \code
   /// Mangled mangled(...);
@@ -84,25 +84,9 @@ public:
   /// \endcode
   ///
   /// \return
-  ///     A pointer to this object if either the mangled or unmangled
-  ///     name is set, NULL otherwise.
-  operator void *() const;
-
-  /// Logical NOT operator.
-  ///
-  /// This allows code to check a Mangled object to see if it contains an
-  /// empty mangled name using code such as:
-  ///
-  /// \code
-  /// Mangled mangled(...);
-  /// if (!mangled)
-  /// { ...
-  /// \endcode
-  ///
-  /// \return
-  ///     Returns \b true if the object has an empty mangled and
-  ///     unmangled name, \b false otherwise.
-  bool operator!() const;
+  ///     Returns \b true if either the mangled or unmangled name is set,
+  ///     \b false if the object has an empty mangled and unmangled name.
+  explicit operator bool() const;
 
   /// Clear the mangled and demangled values.
   void Clear();

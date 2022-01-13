@@ -80,7 +80,7 @@ class LiveVariablePrinter {
 
 public:
   LiveVariablePrinter(const MCRegisterInfo &MRI, const MCSubtargetInfo &STI)
-      : LiveVariables(), ActiveCols(Column()), MRI(MRI), STI(STI) {}
+      : ActiveCols(Column()), MRI(MRI), STI(STI) {}
 
   void dump() const;
 

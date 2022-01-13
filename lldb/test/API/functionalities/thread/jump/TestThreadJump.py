@@ -16,7 +16,7 @@ class ThreadJumpTestCase(TestBase):
 
     def test(self):
         """Test thread jump handling."""
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 

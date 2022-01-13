@@ -89,6 +89,25 @@ TEST(MangledTest, EmptyForInvalidDLangName) {
   EXPECT_STREQ("", the_demangled.GetCString());
 }
 
+TEST(MangledTest, BoolConversionOperator) {
+  {
+    ConstString MangledName("_ZN1a1b1cIiiiEEvm");
+    Mangled TheMangled(MangledName);
+    EXPECT_EQ(true, bool(TheMangled));
+    EXPECT_EQ(false, !TheMangled);
+  }
+  {
+    ConstString UnmangledName("puts");
+    Mangled TheMangled(UnmangledName);
+    EXPECT_EQ(true, bool(TheMangled));
+    EXPECT_EQ(false, !TheMangled);
+  }
+  {
+    Mangled TheMangled{};
+    EXPECT_EQ(false, bool(TheMangled));
+    EXPECT_EQ(true, !TheMangled);
+  }
+}
 
 TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>

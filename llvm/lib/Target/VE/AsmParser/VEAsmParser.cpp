@@ -210,7 +210,7 @@ private:
   };
 
 public:
-  VEOperand(KindTy K) : MCParsedAsmOperand(), Kind(K) {}
+  VEOperand(KindTy K) : Kind(K) {}
 
   bool isToken() const override { return Kind == k_Token; }
   bool isReg() const override { return Kind == k_Register; }

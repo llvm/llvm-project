@@ -115,6 +115,14 @@ declare_mlir_dialect_python_bindings(
     dialects/_memref_ops_ext.py
   DIALECT_NAME memref)
 
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.quant
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  SOURCES
+    dialects/quant.py
+    _mlir_libs/_mlir/dialects/quant.pyi)
+
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
@@ -182,8 +190,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
   ADD_TO_PARENT MLIRPythonSources.Core
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
-    DialectLinalg.cpp  # TODO: Break this out.
-    DialectSparseTensor.cpp  # TODO: Break this out.
     MainModule.cpp
     IRAffine.cpp
     IRAttributes.cpp
@@ -195,7 +201,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     Pass.cpp
 
     # Headers must be included explicitly so they are installed.
-    Dialects.h
     Globals.h
     IRModule.h
     Pass.h
@@ -209,9 +214,46 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     MLIRCAPIRegistration  # TODO: See about dis-aggregating
 
     # Dialects
-    MLIRCAPILinalg  # TODO: Remove when above is removed.
-    MLIRCAPISparseTensor  # TODO: Remove when above is removed.
     MLIRCAPIStandard
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
+  MODULE_NAME _mlirDialectsLinalg
+  ADD_TO_PARENT MLIRPythonSources.Dialects.linalg
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectLinalg.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPILinalg
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
+  MODULE_NAME _mlirDialectsQuant
+  ADD_TO_PARENT MLIRPythonSources.Dialects.quant
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectQuant.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIQuant
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
+  MODULE_NAME _mlirDialectsSparseTensor
+  ADD_TO_PARENT MLIRPythonSources.Dialects.sparse_tensor
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectSparseTensor.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPISparseTensor
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.AllPassesRegistration

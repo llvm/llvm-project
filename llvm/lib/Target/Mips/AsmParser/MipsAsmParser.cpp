@@ -827,8 +827,7 @@ private:
   } Kind;
 
 public:
-  MipsOperand(KindTy K, MipsAsmParser &Parser)
-      : MCParsedAsmOperand(), Kind(K), AsmParser(Parser) {}
+  MipsOperand(KindTy K, MipsAsmParser &Parser) : Kind(K), AsmParser(Parser) {}
 
   ~MipsOperand() override {
     switch (Kind) {

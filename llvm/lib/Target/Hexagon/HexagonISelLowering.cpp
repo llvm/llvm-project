@@ -543,9 +543,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // The Glue is necessary since all emitted instructions must be
   // stuck together.
   if (!CLI.IsTailCall) {
-    for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-      Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                               RegsToPass[i].second, Glue);
+    for (const auto &R : RegsToPass) {
+      Chain = DAG.getCopyToReg(Chain, dl, R.first, R.second, Glue);
       Glue = Chain.getValue(1);
     }
   } else {
@@ -560,9 +559,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     //
     // Do not flag preceding copytoreg stuff together with the following stuff.
     Glue = SDValue();
-    for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-      Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                               RegsToPass[i].second, Glue);
+    for (const auto &R : RegsToPass) {
+      Chain = DAG.getCopyToReg(Chain, dl, R.first, R.second, Glue);
       Glue = Chain.getValue(1);
     }
     Glue = SDValue();
@@ -589,10 +587,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
-  }
+  for (const auto &R : RegsToPass)
+    Ops.push_back(DAG.getRegister(R.first, R.second.getValueType()));
 
   const uint32_t *Mask = HRI.getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
@@ -1776,6 +1772,18 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SINT_TO_FP, MVT::i8,  Promote);
   setOperationAction(ISD::SINT_TO_FP, MVT::i16, Promote);
 
+  // Special handling for half-precision floating point conversions.
+  // Lower half float conversions into library calls.
+  setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+
+  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+
   // Handling of indexed loads/stores: default is "expand".
   //
   for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64, MVT::f32, MVT::f64,
@@ -1855,6 +1863,11 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::SQRT_F32, "__hexagon_fast2_sqrtf");
   else
     setLibcallName(RTLIB::SQRT_F32, "__hexagon_sqrtf");
+
+  // Routines to handle fp16 storage type.
+  setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
+  setLibcallName(RTLIB::FPROUND_F64_F16, "__truncdfhf2");
+  setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
 
   // These cause problems when the shift amount is non-constant.
   setLibcallName(RTLIB::SHL_I128, nullptr);
@@ -2204,8 +2217,7 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
   // Express the shuffle mask in terms of bytes.
   SmallVector<int,8> ByteMask;
   unsigned ElemBytes = VecTy.getVectorElementType().getSizeInBits() / 8;
-  for (unsigned i = 0, e = Mask.size(); i != e; ++i) {
-    int M = Mask[i];
+  for (int M : Mask) {
     if (M < 0) {
       for (unsigned j = 0; j != ElemBytes; ++j)
         ByteMask.push_back(-1);
@@ -2428,8 +2440,8 @@ HexagonTargetLowering::buildVector32(ArrayRef<SDValue> Elem, const SDLoc &dl,
     if (AllConst) {
       int32_t V = (Consts[0]->getZExtValue() & 0xFF) |
                   (Consts[1]->getZExtValue() & 0xFF) << 8 |
-                  (Consts[1]->getZExtValue() & 0xFF) << 16 |
-                  Consts[2]->getZExtValue() << 24;
+                  (Consts[2]->getZExtValue() & 0xFF) << 16 |
+                  Consts[3]->getZExtValue() << 24;
       return DAG.getBitcast(MVT::v4i8, DAG.getConstant(V, dl, MVT::i32));
     }
 
@@ -2720,7 +2732,6 @@ SDValue
 HexagonTargetLowering::getZero(const SDLoc &dl, MVT Ty, SelectionDAG &DAG)
       const {
   if (Ty.isVector()) {
-    assert(Ty.isInteger() && "Only integer vectors are supported here");
     unsigned W = Ty.getSizeInBits();
     if (W <= 64)
       return DAG.getBitcast(Ty, DAG.getConstant(0, dl, MVT::getIntegerVT(W)));

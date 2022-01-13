@@ -423,8 +423,8 @@ module @multi_root {
   // CHECK-DAG: %[[OP1:.*]] = pdl_interp.get_defining_op of %[[VAL1]]
   // CHECK-DAG: %[[OPS:.*]] = pdl_interp.get_users of %[[VAL1]] : !pdl.value
   // CHECK-DAG: pdl_interp.foreach %[[ROOT2:.*]] : !pdl.operation in %[[OPS]]
-  // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operands 0 of %[[ROOT2]]
-  // CHECK-DAG:   pdl_interp.are_equal %[[VAL1]], %[[OPERANDS]] : !pdl.value -> ^{{.*}}, ^[[CONTINUE:.*]]
+  // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operand 0 of %[[ROOT2]]
+  // CHECK-DAG:   pdl_interp.are_equal %[[OPERANDS]], %[[VAL1]] : !pdl.value -> ^{{.*}}, ^[[CONTINUE:.*]]
   // CHECK-DAG:   pdl_interp.continue
   // CHECK-DAG:   %[[VAL2:.*]] = pdl_interp.get_operand 1 of %[[ROOT2]]
   // CHECK-DAG:   %[[OP2:.*]] = pdl_interp.get_defining_op of %[[VAL2]]
@@ -433,7 +433,6 @@ module @multi_root {
   // CHECK-DAG:   pdl_interp.is_not_null %[[VAL1]] : !pdl.value
   // CHECK-DAG:   pdl_interp.is_not_null %[[VAL2]] : !pdl.value
   // CHECK-DAG:   pdl_interp.is_not_null %[[ROOT2]] : !pdl.operation
-  // CHECK-DAG:   pdl_interp.are_equal %[[ROOT2]], %[[ROOT1]] : !pdl.operation -> ^[[CONTINUE]]
 
   pdl.pattern @rewrite_multi_root : benefit(1) {
     %input1 = pdl.operand
@@ -556,7 +555,7 @@ module @variadic_results_at {
   // CHECK-DAG: %[[ROOTS2:.*]] = pdl_interp.get_users of %[[VAL0]] : !pdl.value
   // CHECK-DAG: pdl_interp.foreach %[[ROOT2:.*]] : !pdl.operation in %[[ROOTS2]] {
   // CHECK-DAG:   %[[OPERANDS:.*]] = pdl_interp.get_operands 1 of %[[ROOT2]]
-  // CHECK-DAG:   pdl_interp.are_equal %[[VALS]], %[[OPERANDS]] : !pdl.range<value> -> ^{{.*}}, ^[[CONTINUE:.*]]
+  // CHECK-DAG:   pdl_interp.are_equal %[[OPERANDS]], %[[VALS]] : !pdl.range<value> -> ^{{.*}}, ^[[CONTINUE:.*]]
   // CHECK-DAG:   pdl_interp.is_not_null %[[ROOT2]]
   // CHECK-DAG:   pdl_interp.check_operand_count of %[[ROOT2]] is at_least 1
   // CHECK-DAG:   pdl_interp.check_result_count of %[[ROOT2]] is 0
@@ -612,3 +611,83 @@ module @type_literal {
   }
 }
 
+// -----
+
+// CHECK-LABEL: module @common_connector
+module @common_connector {
+  // Check the correct lowering when multiple roots are using the same
+  // connector.
+
+  // CHECK: func @matcher(%[[ROOTC:.*]]: !pdl.operation)
+  // CHECK-DAG: %[[VAL2:.*]] = pdl_interp.get_operand 0 of %[[ROOTC]]
+  // CHECK-DAG: %[[INTER:.*]] = pdl_interp.get_defining_op of %[[VAL2]] : !pdl.value
+  // CHECK-DAG: pdl_interp.is_not_null %[[INTER]] : !pdl.operation -> ^bb2, ^bb1
+  // CHECK-DAG: %[[VAL1:.*]] = pdl_interp.get_operand 0 of %[[INTER]]
+  // CHECK-DAG: %[[OP:.*]] = pdl_interp.get_defining_op of %[[VAL1]] : !pdl.value
+  // CHECK-DAG: pdl_interp.is_not_null %[[OP]]
+  // CHECK-DAG: %[[VAL0:.*]] = pdl_interp.get_result 0 of %[[OP]]
+  // CHECK-DAG: %[[ROOTS:.*]] = pdl_interp.get_users of %[[VAL0]] : !pdl.value
+  // CHECK-DAG: pdl_interp.foreach %[[ROOTA:.*]] : !pdl.operation in %[[ROOTS]] {
+  // CHECK-DAG:   pdl_interp.is_not_null %[[ROOTA]] : !pdl.operation -> ^{{.*}}, ^[[CONTA:.*]]
+  // CHECK-DAG:   pdl_interp.continue
+  // CHECK-DAG:   pdl_interp.foreach %[[ROOTB:.*]] : !pdl.operation in %[[ROOTS]] {
+  // CHECK-DAG:     pdl_interp.is_not_null %[[ROOTB]] : !pdl.operation -> ^{{.*}}, ^[[CONTB:.*]]
+  // CHECK-DAG:     %[[ROOTA_OP:.*]] = pdl_interp.get_operand 0 of %[[ROOTA]]
+  // CHECK-DAG:     pdl_interp.are_equal %[[ROOTA_OP]], %[[VAL0]] : !pdl.value
+  // CHECK-DAG:     %[[ROOTB_OP:.*]] = pdl_interp.get_operand 0 of %[[ROOTB]]
+  // CHECK-DAG:     pdl_interp.are_equal %[[ROOTB_OP]], %[[VAL0]] : !pdl.value
+  // CHECK-DAG    } -> ^[[CONTA:.*]]
+  pdl.pattern @common_connector : benefit(1) {
+      %type = pdl.type
+      %op = pdl.operation -> (%type, %type : !pdl.type, !pdl.type)
+      %val0 = pdl.result 0 of %op
+      %val1 = pdl.result 1 of %op
+      %rootA = pdl.operation (%val0 : !pdl.value)
+      %rootB = pdl.operation (%val0 : !pdl.value)
+      %inter = pdl.operation (%val1 : !pdl.value) -> (%type : !pdl.type)
+      %val2 = pdl.result 0 of %inter
+      %rootC = pdl.operation (%val2 : !pdl.value)
+      pdl.rewrite with "rewriter"(%rootA, %rootB, %rootC : !pdl.operation, !pdl.operation, !pdl.operation)
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @common_connector_range
+module @common_connector_range {
+  // Check the correct lowering when multiple roots are using the same
+  // connector range.
+
+  // CHECK: func @matcher(%[[ROOTC:.*]]: !pdl.operation)
+  // CHECK-DAG: %[[VALS2:.*]] = pdl_interp.get_operands of %[[ROOTC]] : !pdl.range<value>
+  // CHECK-DAG: %[[INTER:.*]] = pdl_interp.get_defining_op of %[[VALS2]] : !pdl.range<value>
+  // CHECK-DAG: pdl_interp.is_not_null %[[INTER]] : !pdl.operation -> ^bb2, ^bb1
+  // CHECK-DAG: %[[VALS1:.*]] = pdl_interp.get_operands of %[[INTER]] : !pdl.range<value>
+  // CHECK-DAG: %[[OP:.*]] = pdl_interp.get_defining_op of %[[VALS1]] : !pdl.range<value>
+  // CHECK-DAG: pdl_interp.is_not_null %[[OP]]
+  // CHECK-DAG: %[[VALS0:.*]] = pdl_interp.get_results 0 of %[[OP]]
+  // CHECK-DAG: %[[VAL0:.*]] = pdl_interp.extract 0 of %[[VALS0]] : !pdl.value
+  // CHECK-DAG: %[[ROOTS:.*]] = pdl_interp.get_users of %[[VAL0]] : !pdl.value
+  // CHECK-DAG: pdl_interp.foreach %[[ROOTA:.*]] : !pdl.operation in %[[ROOTS]] {
+  // CHECK-DAG:   pdl_interp.is_not_null %[[ROOTA]] : !pdl.operation -> ^{{.*}}, ^[[CONTA:.*]]
+  // CHECK-DAG:   pdl_interp.continue
+  // CHECK-DAG:   pdl_interp.foreach %[[ROOTB:.*]] : !pdl.operation in %[[ROOTS]] {
+  // CHECK-DAG:     pdl_interp.is_not_null %[[ROOTB]] : !pdl.operation -> ^{{.*}}, ^[[CONTB:.*]]
+  // CHECK-DAG:     %[[ROOTA_OPS:.*]] = pdl_interp.get_operands of %[[ROOTA]]
+  // CHECK-DAG:     pdl_interp.are_equal %[[ROOTA_OPS]], %[[VALS0]] : !pdl.range<value>
+  // CHECK-DAG:     %[[ROOTB_OPS:.*]] = pdl_interp.get_operands of %[[ROOTB]]
+  // CHECK-DAG:     pdl_interp.are_equal %[[ROOTB_OPS]], %[[VALS0]] : !pdl.range<value>
+  // CHECK-DAG    } -> ^[[CONTA:.*]]
+  pdl.pattern @common_connector_range : benefit(1) {
+    %types = pdl.types
+    %op = pdl.operation -> (%types, %types : !pdl.range<type>, !pdl.range<type>)
+    %vals0 = pdl.results 0 of %op -> !pdl.range<value>
+    %vals1 = pdl.results 1 of %op -> !pdl.range<value>
+    %rootA = pdl.operation (%vals0 : !pdl.range<value>)
+    %rootB = pdl.operation (%vals0 : !pdl.range<value>)
+    %inter = pdl.operation (%vals1 : !pdl.range<value>) -> (%types : !pdl.range<type>)
+    %vals2 = pdl.results of %inter
+    %rootC = pdl.operation (%vals2 : !pdl.range<value>)
+    pdl.rewrite with "rewriter"(%rootA, %rootB, %rootC : !pdl.operation, !pdl.operation, !pdl.operation)
+  }
+}

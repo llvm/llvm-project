@@ -14,27 +14,29 @@ from mlir.dialects.linalg.opdsl.lang import *
 # - exponential functions
 # - custom op names.
 
+
 @linalg_structured_op
 def fill_rng_poly(
     min=ScalarDef(F64),
     max=ScalarDef(F64),
     seed=ScalarDef(I32),
     O=TensorDef(T, S.M, S.N, output=True)):
-  multiplier = cast(I32, const(1103515245))
-  increment = cast(I32, const(12345))
-  rand1 = (cast(I32, index(D.m)) + seed) * multiplier + increment
-  rand2 = (cast(I32, index(D.n)) + rand1) * multiplier + increment
-  inv_range = cast(F64, const(2.3283064e-10))
-  offset = cast(F64, const(2147483647))
+  multiplier = TypeFn.cast(I32, const(1103515245))
+  increment = TypeFn.cast(I32, const(12345))
+  rand1 = (TypeFn.cast(I32, index(D.m)) + seed) * multiplier + increment
+  rand2 = (TypeFn.cast(I32, index(D.n)) + rand1) * multiplier + increment
+  inv_range = TypeFn.cast(F64, const(2.3283064e-10))
+  offset = TypeFn.cast(F64, const(2147483647))
   scaling = (max - min) * inv_range
-  O[D.m, D.n] = cast(T, (offset + cast(F64, rand2)) * scaling + min)
+  O[D.m, D.n] = TypeFn.cast(T,
+                            (offset + TypeFn.cast(F64, rand2)) * scaling + min)
 
 
 @linalg_structured_op
 def soft_plus_poly(
     I=TensorDef(T, S.M, S.N), O=TensorDef(U, S.M, S.N, output=True)):
-  O[D.m, D.n] = \
-      PrimFn.log(cast(U, const(1.0)) + cast(U, PrimFn.exp(I[D.m, D.n])))
+  O[D.m, D.n] = ArithFn.log(
+      TypeFn.cast(U, const(1.0)) + TypeFn.cast(U, ArithFn.exp(I[D.m, D.n])))
 
 
 @linalg_structured_op(op_name="custom_op_name")

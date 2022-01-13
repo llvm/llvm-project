@@ -662,7 +662,7 @@ ENVIRONMENT
 BUGS
 ----
 
-To report bugs, please visit <https://bugs.llvm.org/>.  Most bug reports should
+To report bugs, please visit <https://github.com/llvm/llvm-project/issues/>.  Most bug reports should
 include preprocessed source files (use the :option:`-E` option) and the full
 output of the compiler, along with information to reproduce.
 

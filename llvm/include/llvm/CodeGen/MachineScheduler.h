@@ -425,10 +425,6 @@ protected:
   IntervalPressure BotPressure;
   RegPressureTracker BotRPTracker;
 
-  /// True if disconnected subregister components are already renamed.
-  /// The renaming is only done on demand if lane masks are tracked.
-  bool DisconnectedComponentsRenamed = false;
-
 public:
   ScheduleDAGMILive(MachineSchedContext *C,
                     std::unique_ptr<MachineSchedStrategy> S)

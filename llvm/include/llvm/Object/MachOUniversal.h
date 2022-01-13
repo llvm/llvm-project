@@ -22,7 +22,6 @@
 
 namespace llvm {
 class StringRef;
-class Module;
 class LLVMContext;
 
 namespace object {

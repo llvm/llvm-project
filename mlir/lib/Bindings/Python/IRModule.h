@@ -15,6 +15,7 @@
 
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "llvm/ADT/DenseMap.h"
@@ -24,6 +25,8 @@ namespace mlir {
 namespace python {
 
 class PyBlock;
+class PyDiagnostic;
+class PyDiagnosticHandler;
 class PyInsertionPoint;
 class PyLocation;
 class DefaultingPyLocation;
@@ -203,8 +206,13 @@ public:
 
   /// Enter and exit the context manager.
   pybind11::object contextEnter();
-  void contextExit(pybind11::object excType, pybind11::object excVal,
-                   pybind11::object excTb);
+  void contextExit(const pybind11::object &excType,
+                   const pybind11::object &excVal,
+                   const pybind11::object &excTb);
+
+  /// Attaches a Python callback as a diagnostic handler, returning a
+  /// registration object (internally a PyDiagnosticHandler).
+  pybind11::object attachDiagnosticHandler(pybind11::object callback);
 
 private:
   PyMlirContext(MlirContext context);
@@ -266,6 +274,75 @@ private:
   PyMlirContextRef contextRef;
 };
 
+/// Python class mirroring the C MlirDiagnostic struct. Note that these structs
+/// are only valid for the duration of a diagnostic callback and attempting
+/// to access them outside of that will raise an exception. This applies to
+/// nested diagnostics (in the notes) as well.
+class PyDiagnostic {
+public:
+  PyDiagnostic(MlirDiagnostic diagnostic) : diagnostic(diagnostic) {}
+  void invalidate();
+  bool isValid() { return valid; }
+  MlirDiagnosticSeverity getSeverity();
+  PyLocation getLocation();
+  pybind11::str getMessage();
+  pybind11::tuple getNotes();
+
+private:
+  MlirDiagnostic diagnostic;
+
+  void checkValid();
+  /// If notes have been materialized from the diagnostic, then this will
+  /// be populated with the corresponding objects (all castable to
+  /// PyDiagnostic).
+  llvm::Optional<pybind11::tuple> materializedNotes;
+  bool valid = true;
+};
+
+/// Represents a diagnostic handler attached to the context. The handler's
+/// callback will be invoked with PyDiagnostic instances until the detach()
+/// method is called or the context is destroyed. A diagnostic handler can be
+/// the subject of a `with` block, which will detach it when the block exits.
+///
+/// Since diagnostic handlers can call back into Python code which can do
+/// unsafe things (i.e. recursively emitting diagnostics, raising exceptions,
+/// etc), this is generally not deemed to be a great user-level API. Users
+/// should generally use some form of DiagnosticCollector. If the handler raises
+/// any exceptions, they will just be emitted to stderr and dropped.
+///
+/// The unique usage of this class means that its lifetime management is
+/// different from most other parts of the API. Instances are always created
+/// in an attached state and can transition to a detached state by either:
+///   a) The context being destroyed and unregistering all handlers.
+///   b) An explicit call to detach().
+/// The object may remain live from a Python perspective for an arbitrary time
+/// after detachment, but there is nothing the user can do with it (since there
+/// is no way to attach an existing handler object).
+class PyDiagnosticHandler {
+public:
+  PyDiagnosticHandler(MlirContext context, pybind11::object callback);
+  ~PyDiagnosticHandler();
+
+  bool isAttached() { return registeredID.hasValue(); }
+  bool getHadError() { return hadError; }
+
+  /// Detaches the handler. Does nothing if not attached.
+  void detach();
+
+  pybind11::object contextEnter() { return pybind11::cast(this); }
+  void contextExit(pybind11::object excType, pybind11::object excVal,
+                   pybind11::object excTb) {
+    detach();
+  }
+
+private:
+  MlirContext context;
+  pybind11::object callback;
+  llvm::Optional<MlirDiagnosticHandlerID> registeredID;
+  bool hadError = false;
+  friend class PyMlirContext;
+};
+
 /// Wrapper around an MlirDialect. This is exported as `DialectDescriptor` in
 /// order to differentiate it from the `Dialect` base class which is extended by
 /// plugins which extend dialect functionality through extension python code.
@@ -316,8 +393,9 @@ public:
 
   /// Enter and exit the context manager.
   pybind11::object contextEnter();
-  void contextExit(pybind11::object excType, pybind11::object excVal,
-                   pybind11::object excTb);
+  void contextExit(const pybind11::object &excType,
+                   const pybind11::object &excVal,
+                   const pybind11::object &excTb);
 
   /// Gets a capsule wrapping the void* within the MlirLocation.
   pybind11::object getCapsule();
@@ -482,11 +560,11 @@ public:
 
   /// Creates an operation. See corresponding python docstring.
   static pybind11::object
-  create(std::string name, llvm::Optional<std::vector<PyType *>> results,
+  create(const std::string &name, llvm::Optional<std::vector<PyType *>> results,
          llvm::Optional<std::vector<PyValue *>> operands,
          llvm::Optional<pybind11::dict> attributes,
          llvm::Optional<std::vector<PyBlock *>> successors, int regions,
-         DefaultingPyLocation location, pybind11::object ip);
+         DefaultingPyLocation location, const pybind11::object &ip);
 
   /// Creates an OpView suitable for this operation.
   pybind11::object createOpView();
@@ -524,20 +602,20 @@ private:
 /// python types.
 class PyOpView : public PyOperationBase {
 public:
-  PyOpView(pybind11::object operationObject);
+  PyOpView(const pybind11::object &operationObject);
   PyOperation &getOperation() override { return operation; }
 
-  static pybind11::object createRawSubclass(pybind11::object userClass);
+  static pybind11::object createRawSubclass(const pybind11::object &userClass);
 
   pybind11::object getOperationObject() { return operationObject; }
 
   static pybind11::object
-  buildGeneric(pybind11::object cls, pybind11::list resultTypeList,
+  buildGeneric(const pybind11::object &cls, pybind11::list resultTypeList,
                pybind11::list operandList,
                llvm::Optional<pybind11::dict> attributes,
                llvm::Optional<std::vector<PyBlock *>> successors,
                llvm::Optional<int> regions, DefaultingPyLocation location,
-               pybind11::object maybeIp);
+               const pybind11::object &maybeIp);
 
 private:
   PyOperation &operation;           // For efficient, cast-free access from C++
@@ -607,8 +685,9 @@ public:
 
   /// Enter and exit the context manager.
   pybind11::object contextEnter();
-  void contextExit(pybind11::object excType, pybind11::object excVal,
-                   pybind11::object excTb);
+  void contextExit(const pybind11::object &excType,
+                   const pybind11::object &excVal,
+                   const pybind11::object &excTb);
 
   PyBlock &getBlock() { return block; }
 

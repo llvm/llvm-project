@@ -31,7 +31,10 @@ int main(int, char**) {
   int arr[] = {1, 2, 3};
   createImplicitSpan<int, 1>(arr, 3);
 
-  std::span<const int> sp = {0, 0}; // expected-error {{no matching constructor for initialization of 'std::span<const int>'}}
+  std::span<int> sp = {0, 0}; // expected-error {{no matching constructor for initialization of 'std::span<int>'}}
+  std::span<int, 2> sp2 = {0, 0}; // expected-error {{no matching constructor for initialization of 'std::span<int, 2>'}}
+  std::span<const int> csp = {0, 0}; // expected-error {{no matching constructor for initialization of 'std::span<const int>'}}
+  std::span<const int, 2> csp2 = {0, 0}; // expected-error {{no matching constructor for initialization of 'std::span<const int, 2>'}}
 
   return 0;
 }

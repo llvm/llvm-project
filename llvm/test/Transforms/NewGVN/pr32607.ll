@@ -5,11 +5,9 @@ define hidden void @foo() {
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    br label [[IF:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ [[TMP1:%.*]], [[IF]] ], [ undef, [[TOP:%.*]] ]
-; CHECK-NEXT:    [[TMP1]] = fadd double [[TMP0]], 1.000000e+00
 ; CHECK-NEXT:    br i1 false, label [[L50:%.*]], label [[IF]]
 ; CHECK:       L50:
-; CHECK-NEXT:    store i8 undef, i8* null
+; CHECK-NEXT:    store i8 poison, i8* null
 ; CHECK-NEXT:    ret void
 ;
 top:

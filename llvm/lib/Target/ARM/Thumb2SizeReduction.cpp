@@ -1147,9 +1147,8 @@ bool Thumb2SizeReduce::runOnMachineFunction(MachineFunction &MF) {
   // predecessors.
   ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
   bool Modified = false;
-  for (ReversePostOrderTraversal<MachineFunction*>::rpo_iterator
-       I = RPOT.begin(), E = RPOT.end(); I != E; ++I)
-    Modified |= ReduceMBB(**I);
+  for (MachineBasicBlock *MBB : RPOT)
+    Modified |= ReduceMBB(*MBB);
   return Modified;
 }
 

@@ -24,6 +24,7 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -269,7 +270,7 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   result.addTypes(targetType);
 
   SmallVector<int64_t> reductionDims;
-  for (auto en : llvm::enumerate(reductionMask))
+  for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
   result.addAttribute(getReductionDimsAttrName(),
@@ -339,13 +340,13 @@ static ParseResult parseReductionOp(OpAsmParser &parser,
       parser.parseComma() || parser.parseOperandList(operandsInfo) ||
       parser.parseColonType(redType) ||
       parser.parseKeywordType("into", resType) ||
-      (operandsInfo.size() > 0 &&
+      (!operandsInfo.empty() &&
        parser.resolveOperand(operandsInfo[0], redType, result.operands)) ||
       (operandsInfo.size() > 1 &&
        parser.resolveOperand(operandsInfo[1], resType, result.operands)) ||
       parser.addTypeToList(resType, result.types))
     return failure();
-  if (operandsInfo.size() < 1 || operandsInfo.size() > 2)
+  if (operandsInfo.empty() || operandsInfo.size() > 2)
     return parser.emitError(parser.getNameLoc(),
                             "unsupported number of operands");
   return success();
@@ -358,41 +359,42 @@ static void print(OpAsmPrinter &p, ReductionOp op) {
   p << " : " << op.vector().getType() << " into " << op.dest().getType();
 }
 
-Value mlir::vector::getVectorReductionOp(AtomicRMWKind op, OpBuilder &builder,
-                                         Location loc, Value vector) {
+Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
+                                         OpBuilder &builder, Location loc,
+                                         Value vector) {
   Type scalarType = vector.getType().cast<ShapedType>().getElementType();
   switch (op) {
-  case AtomicRMWKind::addf:
-  case AtomicRMWKind::addi:
+  case arith::AtomicRMWKind::addf:
+  case arith::AtomicRMWKind::addi:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("add"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::mulf:
-  case AtomicRMWKind::muli:
+  case arith::AtomicRMWKind::mulf:
+  case arith::AtomicRMWKind::muli:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("mul"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::minf:
+  case arith::AtomicRMWKind::minf:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("minf"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::mins:
+  case arith::AtomicRMWKind::mins:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("minsi"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::minu:
+  case arith::AtomicRMWKind::minu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("minui"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::maxf:
+  case arith::AtomicRMWKind::maxf:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("maxf"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::maxs:
+  case arith::AtomicRMWKind::maxs:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("maxsi"),
                                                vector, ValueRange{});
-  case AtomicRMWKind::maxu:
+  case arith::AtomicRMWKind::maxu:
     return builder.create<vector::ReductionOp>(vector.getLoc(), scalarType,
                                                builder.getStringAttr("maxui"),
                                                vector, ValueRange{});
@@ -544,7 +546,7 @@ static LogicalResult verifyOutputShape(
   }
 
   // Verify 'expectedResultDims'.
-  if (expectedResultDims.size() == 0) {
+  if (expectedResultDims.empty()) {
     // No batch or free dimension implies a scalar result.
     if (resType.isa<VectorType>() || accType.isa<VectorType>())
       return op.emitOpError("invalid accumulator/result vector shape");
@@ -613,7 +615,7 @@ static LogicalResult verify(ContractionOp op) {
   // that the number of map outputs equals the rank of its associated
   // vector operand.
   unsigned numIterators = op.iterator_types().getValue().size();
-  for (auto it : llvm::enumerate(op.indexing_maps())) {
+  for (const auto &it : llvm::enumerate(op.indexing_maps())) {
     auto index = it.index();
     auto map = it.value().cast<AffineMapAttr>().getValue();
     if (map.getNumSymbols() != 0)
@@ -693,7 +695,7 @@ static std::vector<std::pair<int64_t, int64_t>>
 getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
           StringRef targetIteratorTypeName, MLIRContext *context) {
   std::vector<std::pair<int64_t, int64_t>> dimMap;
-  for (auto it : llvm::enumerate(iteratorTypes)) {
+  for (const auto &it : llvm::enumerate(iteratorTypes)) {
     auto iteratorTypeName = it.value().cast<StringAttr>().getValue();
     if (iteratorTypeName != targetIteratorTypeName)
       continue;
@@ -713,7 +715,7 @@ void ContractionOp::getIterationBounds(
   auto resVectorType = getResultType().dyn_cast<VectorType>();
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMaps());
   SmallVector<int64_t, 2> iterationShape;
-  for (auto it : llvm::enumerate(iterator_types())) {
+  for (const auto &it : llvm::enumerate(iterator_types())) {
     // Search lhs/rhs map results for 'targetExpr'.
     auto targetExpr = getAffineDimExpr(it.index(), getContext());
     auto iteratorTypeName = it.value().cast<StringAttr>().getValue();
@@ -736,7 +738,7 @@ void ContractionOp::getIterationIndexMap(
     std::vector<DenseMap<int64_t, int64_t>> &iterationIndexMap) {
   unsigned numMaps = indexing_maps().getValue().size();
   iterationIndexMap.resize(numMaps);
-  for (auto it : llvm::enumerate(indexing_maps())) {
+  for (const auto &it : llvm::enumerate(indexing_maps())) {
     auto index = it.index();
     auto map = it.value().cast<AffineMapAttr>().getValue();
     for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
@@ -931,7 +933,7 @@ static LogicalResult verify(vector::ExtractOp op) {
   if (positionAttr.size() > static_cast<unsigned>(op.getVectorType().getRank()))
     return op.emitOpError(
         "expected position attribute of rank smaller than vector rank");
-  for (auto en : llvm::enumerate(positionAttr)) {
+  for (const auto &en : llvm::enumerate(positionAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 ||
         attr.getInt() >= op.getVectorType().getDimSize(en.index()))
@@ -1509,7 +1511,7 @@ static LogicalResult verify(ShuffleOp op) {
     return op.emitOpError("mask length mismatch");
   // Verify all indices.
   int64_t indexSize = v1Type.getDimSize(0) + v2Type.getDimSize(0);
-  for (auto en : llvm::enumerate(maskAttr)) {
+  for (const auto &en : llvm::enumerate(maskAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 || attr.getInt() >= indexSize)
       return op.emitOpError("mask index #")
@@ -1619,7 +1621,7 @@ static LogicalResult verify(InsertOp op) {
       (positionAttr.size() != static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError(
         "expected position attribute rank to match the dest vector rank");
-  for (auto en : llvm::enumerate(positionAttr)) {
+  for (const auto &en : llvm::enumerate(positionAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 ||
         attr.getInt() >= destVectorType.getDimSize(en.index()))
@@ -2783,8 +2785,35 @@ public:
     if (!extractOp.hasUnitStride())
       return failure();
 
+    // Bail on illegal rank-reduction: we need to check that the rank-reduced
+    // dims are exactly the leading dims. I.e. the following is illegal:
+    // ```
+    //    %0 = tensor.extract_slice %t[0,0,0][2,1,4][1,1,1] :
+    //      tensor<2x1x4xf32> to tensor<2x4xf32>
+    //    %1 = vector.transfer_read %0[0,0], %cst :
+    //      tensor<2x4xf32>, vector<2x4xf32>
+    // ```
+    //
+    // Cannot fold into:
+    // ```
+    //    %0 = vector.transfer_read %t[0,0,0], %cst :
+    //      tensor<2x1x4xf32>, vector<2x4xf32>
+    // ```
+    // For this, check the trailing `vectorRank` dims of the extract_slice
+    // result tensor match the trailing dims of the inferred result tensor.
     int64_t rankReduced =
         extractOp.getSourceType().getRank() - extractOp.getType().getRank();
+    int64_t vectorRank = xferOp.getVectorType().getRank();
+    RankedTensorType inferredDestTensorType =
+        tensor::ExtractSliceOp::inferResultType(
+            extractOp.getSourceType(), extractOp.getMixedOffsets(),
+            extractOp.getMixedSizes(), extractOp.getMixedStrides());
+    auto actualDestTensorShape = extractOp.getType().getShape();
+    if (rankReduced > 0 &&
+        actualDestTensorShape.take_back(vectorRank) !=
+            inferredDestTensorType.getShape().take_back(vectorRank))
+      return failure();
+
     SmallVector<Value> newIndices;
     // In case this is a rank-reducing ExtractSliceOp, copy rank-reduced
     // indices first.
@@ -2793,7 +2822,7 @@ public:
       newIndices.push_back(getValueOrCreateConstantIndexOp(
           rewriter, extractOp.getLoc(), offset));
     }
-    for (auto it : llvm::enumerate(xferOp.indices())) {
+    for (const auto &it : llvm::enumerate(xferOp.indices())) {
       OpFoldResult offset =
           extractOp.getMixedOffsets()[it.index() + rankReduced];
       newIndices.push_back(rewriter.create<arith::AddIOp>(
@@ -3168,12 +3197,41 @@ public:
     if (xferOp.mask())
       return failure();
     // Fold only if the TransferWriteOp completely overwrites the `source` with
-    // a vector. I.e., the result of the TransferWriteOp is a new tensor who's
+    // a vector. I.e., the result of the TransferWriteOp is a new tensor whose
     // content is the data of the vector.
     if (!llvm::equal(xferOp.getVectorType().getShape(),
                      xferOp.getShapedType().getShape()))
       return failure();
     if (!xferOp.permutation_map().isIdentity())
+      return failure();
+
+    // Bail on illegal rank-reduction: we need to check that the rank-reduced
+    // dims are exactly the leading dims. I.e. the following is illegal:
+    // ```
+    //    %0 = vector.transfer_write %v, %t[0,0], %cst :
+    //      vector<2x4xf32>, tensor<2x4xf32>
+    //    %1 = tensor.insert_slice %0 into %tt[0,0,0][2,1,4][1,1,1] :
+    //      tensor<2x4xf32> into tensor<2x1x4xf32>
+    // ```
+    //
+    // Cannot fold into:
+    // ```
+    //    %0 = vector.transfer_write %v, %t[0,0,0], %cst :
+    //      vector<2x4xf32>, tensor<2x1x4xf32>
+    // ```
+    // For this, check the trailing `vectorRank` dims of the insert_slice result
+    // tensor match the trailing dims of the inferred result tensor.
+    int64_t rankReduced =
+        insertOp.getType().getRank() - insertOp.getSourceType().getRank();
+    int64_t vectorRank = xferOp.getVectorType().getRank();
+    RankedTensorType inferredSourceTensorType =
+        tensor::ExtractSliceOp::inferResultType(
+            insertOp.getType(), insertOp.getMixedOffsets(),
+            insertOp.getMixedSizes(), insertOp.getMixedStrides());
+    auto actualSourceTensorShape = insertOp.getSourceType().getShape();
+    if (rankReduced > 0 &&
+        actualSourceTensorShape.take_back(vectorRank) !=
+            inferredSourceTensorType.getShape().take_back(vectorRank))
       return failure();
 
     SmallVector<Value> indices = getValueOrCreateConstantIndexOp(
@@ -3855,7 +3913,7 @@ static LogicalResult verify(vector::TransposeOp op) {
   if (rank != size)
     return op.emitOpError("transposition length mismatch: ") << size;
   SmallVector<bool, 8> seen(rank, false);
-  for (auto ta : llvm::enumerate(transpAttr)) {
+  for (const auto &ta : llvm::enumerate(transpAttr)) {
     int64_t i = ta.value().cast<IntegerAttr>().getInt();
     if (i < 0 || i >= rank)
       return op.emitOpError("transposition index out of range: ") << i;
@@ -3946,7 +4004,7 @@ static LogicalResult verify(ConstantMaskOp &op) {
   // result dimension size.
   auto resultShape = resultType.getShape();
   SmallVector<int64_t, 4> maskDimSizes;
-  for (auto it : llvm::enumerate(op.mask_dim_sizes())) {
+  for (const auto &it : llvm::enumerate(op.mask_dim_sizes())) {
     int64_t attrValue = it.value().cast<IntegerAttr>().getInt();
     if (attrValue < 0 || attrValue > resultShape[it.index()])
       return op.emitOpError(

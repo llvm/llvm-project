@@ -772,6 +772,7 @@ defm : PdWriteRes<WriteFMaskedStore64Y,    [PdStore, PdFPU01, PdFPFMA], 6, [2, 2
 defm : PdWriteRes<WriteFMove,              [PdFPU01, PdFPFMA]>;
 defm : PdWriteRes<WriteFMoveX,             [PdFPU01, PdFPFMA], 1, [1, 2]>;
 defm : PdWriteRes<WriteFMoveY,             [PdFPU01, PdFPFMA], 2, [2, 2], 2>;
+defm : X86WriteResUnsupported<WriteFMoveZ>;
 
 defm : PdWriteRes<WriteEMMS,               [PdFPU01, PdFPFMA], 2>;
 
@@ -1107,6 +1108,7 @@ defm : X86WriteResUnsupported<WriteVecMaskedStore64Y>;
 defm : PdWriteRes<WriteVecMove,             [PdFPU01, PdFPMAL], 2>;
 defm : PdWriteRes<WriteVecMoveX,            [PdFPU01, PdFPMAL], 1, [1, 2]>;
 defm : PdWriteRes<WriteVecMoveY,            [PdFPU01, PdFPMAL], 2, [2, 2], 2>;
+defm : X86WriteResUnsupported<WriteVecMoveZ>;
 
 def PdWriteMOVDQArr : SchedWriteRes<[PdFPU01, PdFPMAL]> {
 }

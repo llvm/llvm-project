@@ -14682,7 +14682,9 @@ static SDValue PerformBFICombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-// Check that N is CMPZ(CSINC(0, 0, CC, X)), return X if valid.
+// Check that N is CMPZ(CSINC(0, 0, CC, X)),
+//              or CMPZ(CMOV(1, 0, CC, $cpsr, X))
+// return X if valid.
 static SDValue IsCMPZCSINC(SDNode *Cmp, ARMCC::CondCodes &CC) {
   if (Cmp->getOpcode() != ARMISD::CMPZ || !isNullConstant(Cmp->getOperand(1)))
     return SDValue();
@@ -14696,12 +14698,24 @@ static SDValue IsCMPZCSINC(SDNode *Cmp, ARMCC::CondCodes &CC) {
          CSInc.getConstantOperandVal(1) == 1 && CSInc->hasOneUse())
     CSInc = CSInc.getOperand(0);
 
-  if (CSInc.getOpcode() != ARMISD::CSINC ||
-      !isNullConstant(CSInc.getOperand(0)) ||
-      !isNullConstant(CSInc.getOperand(1)) || !CSInc->hasOneUse())
-    return SDValue();
-  CC = (ARMCC::CondCodes)CSInc.getConstantOperandVal(2);
-  return CSInc.getOperand(3);
+  if (CSInc.getOpcode() == ARMISD::CSINC &&
+      isNullConstant(CSInc.getOperand(0)) &&
+      isNullConstant(CSInc.getOperand(1)) && CSInc->hasOneUse()) {
+    CC = (ARMCC::CondCodes)CSInc.getConstantOperandVal(2);
+    return CSInc.getOperand(3);
+  }
+  if (CSInc.getOpcode() == ARMISD::CMOV && isOneConstant(CSInc.getOperand(0)) &&
+      isNullConstant(CSInc.getOperand(1)) && CSInc->hasOneUse()) {
+    CC = (ARMCC::CondCodes)CSInc.getConstantOperandVal(2);
+    return CSInc.getOperand(4);
+  }
+  if (CSInc.getOpcode() == ARMISD::CMOV && isOneConstant(CSInc.getOperand(1)) &&
+      isNullConstant(CSInc.getOperand(0)) && CSInc->hasOneUse()) {
+    CC = ARMCC::getOppositeCondition(
+        (ARMCC::CondCodes)CSInc.getConstantOperandVal(2));
+    return CSInc.getOperand(4);
+  }
+  return SDValue();
 }
 
 static SDValue PerformCMPZCombine(SDNode *N, SelectionDAG &DAG) {
@@ -15412,13 +15426,13 @@ static SDValue PerformShuffleVMOVNCombine(ShuffleVectorSDNode *N,
     return SDValue();
 
   SDLoc DL(Trunc);
-  if (isVMOVNTruncMask(N->getMask(), VT, 0))
+  if (isVMOVNTruncMask(N->getMask(), VT, false))
     return DAG.getNode(
         ARMISD::VMOVN, DL, VT,
         DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, Trunc.getOperand(0)),
         DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, Trunc.getOperand(1)),
         DAG.getConstant(1, DL, MVT::i32));
-  else if (isVMOVNTruncMask(N->getMask(), VT, 1))
+  else if (isVMOVNTruncMask(N->getMask(), VT, true))
     return DAG.getNode(
         ARMISD::VMOVN, DL, VT,
         DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, Trunc.getOperand(1)),
@@ -18218,13 +18232,13 @@ SDValue ARMTargetLowering::PerformMVETruncCombine(
       SmallVector<int, 8> Mask(S0->getMask().begin(), S0->getMask().end());
       Mask.append(S1->getMask().begin(), S1->getMask().end());
 
-      if (isVMOVNTruncMask(Mask, VT, 0))
+      if (isVMOVNTruncMask(Mask, VT, false))
         return DAG.getNode(
             ARMISD::VMOVN, DL, VT,
             DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, S0->getOperand(0)),
             DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, S0->getOperand(1)),
             DAG.getConstant(1, DL, MVT::i32));
-      if (isVMOVNTruncMask(Mask, VT, 1))
+      if (isVMOVNTruncMask(Mask, VT, true))
         return DAG.getNode(
             ARMISD::VMOVN, DL, VT,
             DAG.getNode(ARMISD::VECTOR_REG_CAST, DL, VT, S0->getOperand(1)),

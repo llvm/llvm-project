@@ -324,16 +324,20 @@ def update_checks_list(clang_tidy_path):
     dirname, _, check_name = check_name.partition("-")
 
     checker_code = get_actual_filename(os.path.join(clang_tidy_path, dirname),
-                                       get_camel_name(check_name) + '.cpp')
-
+                                       get_camel_check_name(check_name) + '.cpp')
     if not os.path.isfile(checker_code):
-      return ""
+      # Some older checks don't end with 'Check.cpp'
+      checker_code = get_actual_filename(os.path.join(clang_tidy_path, dirname),
+                                         get_camel_name(check_name) + '.cpp')
+      if not os.path.isfile(checker_code):
+        return ''
 
     with io.open(checker_code, encoding='utf8') as f:
       code = f.read()
-      if 'FixItHint' in code or "ReplacementText" in code or "fixit" in code:
-        # Some simple heuristics to figure out if a checker has an autofix or not.
-        return ' "Yes"'
+      for needle in ['FixItHint', 'ReplacementText', 'fixit', 'TransformerClangTidyCheck']:
+        if needle in code:
+          # Some simple heuristics to figure out if a checker has an autofix or not.
+          return ' "Yes"'
     return ""
 
   def process_doc(doc_file):
@@ -416,7 +420,11 @@ FIXME: Describe what patterns does the check detect and why. Give examples.
 
 def get_camel_name(check_name):
   return ''.join(map(lambda elem: elem.capitalize(),
-                     check_name.split('-'))) + 'Check'
+                     check_name.split('-')))
+
+
+def get_camel_check_name(check_name):
+  return get_camel_name(check_name) + 'Check'
 
 
 def main():
@@ -458,7 +466,7 @@ def main():
 
   module = args.module
   check_name = args.check
-  check_name_camel = get_camel_name(check_name)
+  check_name_camel = get_camel_check_name(check_name)
   if check_name.startswith(module):
     print('Check name "%s" must not start with the module "%s". Exiting.' % (
         check_name, module))

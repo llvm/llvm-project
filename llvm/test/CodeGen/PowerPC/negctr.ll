@@ -34,14 +34,10 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 0
   br i1 %exitcond, label %for.end, label %for.body
 
-; FIXME: This should be a hardware loop.
-; cmp is optimized to uadd intrinsic in CGP pass which can not be recognized in
-; later HardwareLoops Pass.
 ; CHECK: @main1
-; CHECK: li [[REG:[0-9]+]], 1
-; CHECK: addi [[REG2:[0-9]+]], [[REG]], 1
-; CHECK: cmpld
-; CHECK: bge
+; CHECK: li [[REG:[0-9]+]], -1
+; CHECK: mtctr [[REG]]
+; CHECK: bdnz
 
 for.end:                                          ; preds = %for.body, %entry
   ret void

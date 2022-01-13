@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - %s | FileCheck -check-prefix=GFX6 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -o - %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -global-isel -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -o - %s | FileCheck -check-prefix=GFX11 %s
 
 define amdgpu_ps void @image_store_f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, float %data) {
 ; GFX6-LABEL: image_store_f32:
@@ -43,6 +43,19 @@ define amdgpu_ps void @image_store_f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, fl
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v2, v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v2, v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.f32.i32(float %data, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -86,6 +99,19 @@ define amdgpu_ps void @image_store_v2f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:3], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v2f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:3], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v2f32.i32(<2 x float> %in, i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -129,6 +155,19 @@ define amdgpu_ps void @image_store_v3f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:4], v[0:1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v3f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:4], v[0:1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v3f32.i32(<3 x float> %in, i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -172,6 +211,19 @@ define amdgpu_ps void @image_store_v4f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v4f32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -215,6 +267,19 @@ define amdgpu_ps void @image_store_v4f32_dmask_0001(<8 x i32> inreg %rsrc, i32 %
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v4f32_dmask_0001:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -258,6 +323,19 @@ define amdgpu_ps void @image_store_v4f32_dmask_0010(<8 x i32> inreg %rsrc, i32 %
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v4f32_dmask_0010:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 2, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -301,6 +379,19 @@ define amdgpu_ps void @image_store_v4f32_dmask_0100(<8 x i32> inreg %rsrc, i32 %
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v4f32_dmask_0100:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 4, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -344,6 +435,19 @@ define amdgpu_ps void @image_store_v4f32_dmask_1000(<8 x i32> inreg %rsrc, i32 %
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v4f32_dmask_1000:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 8, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -387,6 +491,19 @@ define amdgpu_ps void @image_store_v4f32_dmask_0011(<8 x i32> inreg %rsrc, i32 %
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v4f32_dmask_0011:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
@@ -430,7 +547,83 @@ define amdgpu_ps void @image_store_v4f32_dmask_0110(<8 x i32> inreg %rsrc, i32 %
 ; GFX10-NEXT:    s_mov_b32 s7, s9
 ; GFX10-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_v4f32_dmask_0110:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 6, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
+define amdgpu_ps void @image_store_f32_dmask_1111(<8 x i32> inreg %rsrc, i32 inreg %s, i32 inreg %t, float %in) #0 {
+; GFX6-LABEL: image_store_f32_dmask_1111:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    v_mov_b32_e32 v1, s10
+; GFX6-NEXT:    s_mov_b32 s0, s2
+; GFX6-NEXT:    s_mov_b32 s1, s3
+; GFX6-NEXT:    s_mov_b32 s2, s4
+; GFX6-NEXT:    s_mov_b32 s3, s5
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s7
+; GFX6-NEXT:    s_mov_b32 s6, s8
+; GFX6-NEXT:    s_mov_b32 s7, s9
+; GFX6-NEXT:    v_mov_b32_e32 v2, s11
+; GFX6-NEXT:    image_store v0, v[1:2], s[0:7] dmask:0xf unorm
+; GFX6-NEXT:    s_endpgm
+;
+; GFX8-LABEL: image_store_f32_dmask_1111:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v1, s10
+; GFX8-NEXT:    s_mov_b32 s0, s2
+; GFX8-NEXT:    s_mov_b32 s1, s3
+; GFX8-NEXT:    s_mov_b32 s2, s4
+; GFX8-NEXT:    s_mov_b32 s3, s5
+; GFX8-NEXT:    s_mov_b32 s4, s6
+; GFX8-NEXT:    s_mov_b32 s5, s7
+; GFX8-NEXT:    s_mov_b32 s6, s8
+; GFX8-NEXT:    s_mov_b32 s7, s9
+; GFX8-NEXT:    v_mov_b32_e32 v2, s11
+; GFX8-NEXT:    image_store v0, v[1:2], s[0:7] dmask:0xf unorm
+; GFX8-NEXT:    s_endpgm
+;
+; GFX10-LABEL: image_store_f32_dmask_1111:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v1, s10
+; GFX10-NEXT:    v_mov_b32_e32 v2, s11
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    image_store v0, v[1:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: image_store_f32_dmask_1111:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_dual_mov_b32 v1, s10 :: v_dual_mov_b32 v2, s11
+; GFX11-NEXT:    s_mov_b32 s0, s2
+; GFX11-NEXT:    s_mov_b32 s1, s3
+; GFX11-NEXT:    s_mov_b32 s2, s4
+; GFX11-NEXT:    s_mov_b32 s3, s5
+; GFX11-NEXT:    s_mov_b32 s4, s6
+; GFX11-NEXT:    s_mov_b32 s5, s7
+; GFX11-NEXT:    s_mov_b32 s6, s8
+; GFX11-NEXT:    s_mov_b32 s7, s9
+; GFX11-NEXT:    image_store v0, v[1:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_endpgm
+  tail call void @llvm.amdgcn.image.store.2d.f32.i32(float %in, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
 

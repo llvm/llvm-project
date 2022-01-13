@@ -797,6 +797,10 @@ enum NodeType {
   /// The scalar width of the type given in operand 1 must be equal to, or
   /// smaller than, the scalar result type width. It may end up being smaller
   /// than the result width as a result of integer type legalization.
+  ///
+  /// After converting to the scalar integer type in operand 1, the value is
+  /// extended to the result VT. FP_TO_SINT_SAT sign extends and FP_TO_UINT_SAT
+  /// zero extends.
   FP_TO_SINT_SAT,
   FP_TO_UINT_SAT,
 

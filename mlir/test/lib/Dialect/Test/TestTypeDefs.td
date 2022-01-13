@@ -66,11 +66,19 @@ def CompoundNestedOuterType : Test_Type<"CompoundNestedOuter"> {
   let mnemonic = "cmpnd_nested_outer";
 
   // List of type parameters.
+  let parameters = (ins CompoundNestedInnerType:$inner);
+  let assemblyFormat = "`<` `i`  $inner `>`";
+}
+
+def CompoundNestedOuterTypeQual : Test_Type<"CompoundNestedOuterQual"> {
+  let mnemonic = "cmpnd_nested_outer_qual";
+
+  // List of type parameters.
   let parameters = (
     ins
     CompoundNestedInnerType:$inner
   );
-  let assemblyFormat = "`<` `i`  $inner `>`";
+  let assemblyFormat = "`<` `i`  qualified($inner) `>`";
 }
 
 // An example of how one could implement a standard integer.

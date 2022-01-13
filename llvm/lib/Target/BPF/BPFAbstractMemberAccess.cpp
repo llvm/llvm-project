@@ -1002,7 +1002,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
       VarType = Type::getInt64Ty(BB->getContext()); // 64bit ptr or enum value
 
     GV = new GlobalVariable(*M, VarType, false, GlobalVariable::ExternalLinkage,
-                            NULL, AccessKey);
+                            nullptr, AccessKey);
     GV->addAttribute(BPFCoreSharedInfo::AmaAttr);
     GV->setMetadata(LLVMContext::MD_preserve_access_index, TypeMeta);
     GEPGlobals[AccessKey] = GV;

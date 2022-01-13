@@ -793,9 +793,39 @@ To **continue** as a supported and official target:
   nuisance to other targets and be considered a candidate for deprecation and
   ultimately removed.
 
-In essences, these rules are necessary for targets to gain and retain their
+In essence, these rules are necessary for targets to gain and retain their
 status, but also markers to define bit-rot, and will be used to clean up the
 tree from unmaintained targets.
+
+Those wishing to add a new target to LLVM must follow the procedure below:
+
+1. Read this section and make sure your target follows all requirements. For
+   minor issues, your community will be responsible for making all necessary
+   adjustments soon after the initial merge.
+2. Send a request for comment (RFC) to the llvm-dev@ mailing list, describing
+   your target and how it follows all the requirements and what work has been
+   done and will need to be done to accommodate the official target requirements.
+   Make sure to expose any and all controversial issues, changes needed in the
+   base code, table gen, etc.
+3. Once the response is positive, the LLVM community can start reviewing the
+   actual patches (but they can be prepared before, to support the RFC). Create
+   a sequence of N patches, numbered '1/N' to 'N/N' (make sure N is an actual
+   number, not the letter 'N'), that completes the basic structure of the target.
+4. The initial patch should add documentation, code owners and triple support in
+   clang and LLVM. The following patches add TableGen infrastructure to describe
+   the target and lower instructions to assembly. The final patch must show that
+   the target can lower correctly with extensive LIT tests (IR to MIR, MIR to
+   ASM, etc).
+5. Some patches may be approved before others, but only after *all* patches are
+   approved that the whole set can be merged in one go. This is to guarantee
+   that all changes are good as a single block.
+6. After the initial merge, the target community can stop numbering patches and
+   start working asynchronously on the target to complete support. They should
+   still seek review from those who helped them in the initial phase, to make
+   sure the progress is still consistent.
+7. Once all official requirements have been fulfilled (as above), the code owner
+   should request the target to be enabled by default by sending another RFC to
+   the llvm-dev@ mailing list.
 
 Adding an Established Project To the LLVM Monorepo
 --------------------------------------------------

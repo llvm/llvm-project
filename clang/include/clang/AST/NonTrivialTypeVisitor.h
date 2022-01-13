@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_NON_TRIVIAL_TYPE_VISITOR_H
-#define LLVM_CLANG_NON_TRIVIAL_TYPE_VISITOR_H
+#ifndef LLVM_CLANG_AST_NONTRIVIALTYPEVISITOR_H
+#define LLVM_CLANG_AST_NONTRIVIALTYPEVISITOR_H
 
 #include "clang/AST/Type.h"
 

@@ -90,7 +90,7 @@ SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
 /// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
 /// Assumes `op` is a LinalgOp.
 void getDimsOfType(Operation *op, StringRef iteratorTypeName,
-                   SmallVectorImpl<AffineExpr> &res);
+                   SmallVectorImpl<unsigned> &res);
 
 namespace detail {
 LogicalResult verifyStructuredOpInterface(Operation *op);

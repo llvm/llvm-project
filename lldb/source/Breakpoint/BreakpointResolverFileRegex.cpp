@@ -110,7 +110,7 @@ Searcher::CallbackReturn BreakpointResolverFileRegex::SearchCallback(
     // TODO: Handle SourceLocationSpec column information
     SourceLocationSpec location_spec(cu_file_spec, line_matches[i],
                                      /*column=*/llvm::None,
-                                     /*search_inlines=*/false, m_exact_match);
+                                     /*check_inlines=*/false, m_exact_match);
     cu->ResolveSymbolContext(location_spec, eSymbolContextEverything, sc_list);
     // Find all the function names:
     if (!m_function_names.empty()) {

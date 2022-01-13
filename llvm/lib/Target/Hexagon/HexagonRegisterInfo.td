@@ -479,6 +479,10 @@ def VecI16:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v32i16, v64i16,  v32i16]>;
 def VecI32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v16i32, v32i32,  v16i32]>;
+def VecF16:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v32f16, v64f16,  v32f16]>;
+def VecF32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v16f32, v32f32,  v16f32]>;
 
 def VecPI8:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v128i8, v256i8,  v128i8]>;
@@ -486,6 +490,10 @@ def VecPI16: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v64i16, v128i16, v64i16]>;
 def VecPI32: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v32i32, v64i32,  v32i32]>;
+def VecPF16: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v64f16, v128f16, v64f16]>;
+def VecPF32: ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
+                               [v32f32, v64f32,  v32f32]>;
 
 def VecQ8:   ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
                                [v64i1,  v128i1,  v64i1]>;
@@ -496,13 +504,13 @@ def VecQ32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
 
 // HVX register classes
 
-def HvxVR : RegisterClass<"Hexagon", [VecI8, VecI16, VecI32], 512,
+def HvxVR : RegisterClass<"Hexagon", [VecI8, VecI16, VecI32, VecF16, VecF32], 512,
   (add (sequence "V%u", 0, 31), VTMP)> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
     [RegInfo<512,512,512>, RegInfo<1024,1024,1024>, RegInfo<512,512,512>]>;
 }
 
-def HvxWR : RegisterClass<"Hexagon", [VecPI8, VecPI16, VecPI32], 1024,
+def HvxWR : RegisterClass<"Hexagon", [VecPI8, VecPI16, VecPI32, VecPF16, VecPF32], 1024,
   (add (sequence "W%u", 0, 15), (sequence "WR%u", 0, 15))> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
     [RegInfo<1024,1024,1024>, RegInfo<2048,2048,2048>, RegInfo<1024,1024,1024>]>;

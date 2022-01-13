@@ -396,10 +396,10 @@ unsigned llvm::ComputeNumSignBits(const Value *V, const DataLayout &DL,
       V, Depth, Query(DL, AC, safeCxtI(V, CxtI), DT, UseInstrInfo));
 }
 
-unsigned llvm::ComputeMinSignedBits(const Value *V, const DataLayout &DL,
-                                    unsigned Depth, AssumptionCache *AC,
-                                    const Instruction *CxtI,
-                                    const DominatorTree *DT) {
+unsigned llvm::ComputeMaxSignificantBits(const Value *V, const DataLayout &DL,
+                                         unsigned Depth, AssumptionCache *AC,
+                                         const Instruction *CxtI,
+                                         const DominatorTree *DT) {
   unsigned SignBits = ComputeNumSignBits(V, DL, Depth, AC, CxtI, DT);
   return V->getType()->getScalarSizeInBits() - SignBits + 1;
 }
@@ -6756,17 +6756,27 @@ Optional<bool> llvm::isImpliedByDomCondition(CmpInst::Predicate Pred,
 }
 
 static void setLimitsForBinOp(const BinaryOperator &BO, APInt &Lower,
-                              APInt &Upper, const InstrInfoQuery &IIQ) {
+                              APInt &Upper, const InstrInfoQuery &IIQ,
+                              bool PreferSignedRange) {
   unsigned Width = Lower.getBitWidth();
   const APInt *C;
   switch (BO.getOpcode()) {
   case Instruction::Add:
     if (match(BO.getOperand(1), m_APInt(C)) && !C->isZero()) {
-      // FIXME: If we have both nuw and nsw, we should reduce the range further.
-      if (IIQ.hasNoUnsignedWrap(cast<OverflowingBinaryOperator>(&BO))) {
+      bool HasNSW = IIQ.hasNoSignedWrap(&BO);
+      bool HasNUW = IIQ.hasNoUnsignedWrap(&BO);
+
+      // If the caller expects a signed compare, then try to use a signed range.
+      // Otherwise if both no-wraps are set, use the unsigned range because it
+      // is never larger than the signed range. Example:
+      // "add nuw nsw i8 X, -2" is unsigned [254,255] vs. signed [-128, 125].
+      if (PreferSignedRange && HasNSW && HasNUW)
+        HasNUW = false;
+
+      if (HasNUW) {
         // 'add nuw x, C' produces [C, UINT_MAX].
         Lower = *C;
-      } else if (IIQ.hasNoSignedWrap(cast<OverflowingBinaryOperator>(&BO))) {
+      } else if (HasNSW) {
         if (C->isNegative()) {
           // 'add nsw x, -C' produces [SINT_MIN, SINT_MAX - C].
           Lower = APInt::getSignedMinValue(Width);
@@ -7083,8 +7093,8 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
   }
 }
 
-ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
-                                         AssumptionCache *AC,
+ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
+                                         bool UseInstrInfo, AssumptionCache *AC,
                                          const Instruction *CtxI,
                                          const DominatorTree *DT,
                                          unsigned Depth) {
@@ -7102,7 +7112,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
   APInt Lower = APInt(BitWidth, 0);
   APInt Upper = APInt(BitWidth, 0);
   if (auto *BO = dyn_cast<BinaryOperator>(V))
-    setLimitsForBinOp(*BO, Lower, Upper, IIQ);
+    setLimitsForBinOp(*BO, Lower, Upper, IIQ, ForSigned);
   else if (auto *II = dyn_cast<IntrinsicInst>(V))
     setLimitsForIntrinsic(*II, Lower, Upper);
   else if (auto *SI = dyn_cast<SelectInst>(V))
@@ -7134,8 +7144,10 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool UseInstrInfo,
       // Currently we just use information from comparisons.
       if (!Cmp || Cmp->getOperand(0) != V)
         continue;
-      ConstantRange RHS = computeConstantRange(Cmp->getOperand(1), UseInstrInfo,
-                                               AC, I, DT, Depth + 1);
+      // TODO: Set "ForSigned" parameter via Cmp->isSigned()?
+      ConstantRange RHS =
+          computeConstantRange(Cmp->getOperand(1), /* ForSigned */ false,
+                               UseInstrInfo, AC, I, DT, Depth + 1);
       CR = CR.intersectWith(
           ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));
     }

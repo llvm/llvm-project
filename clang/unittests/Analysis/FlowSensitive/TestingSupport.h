@@ -20,9 +20,12 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Serialization/PCHContainerOperations.h"
+#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -56,12 +59,6 @@ llvm::Expected<llvm::DenseMap<const Stmt *, std::string>>
 buildStatementToAnnotationMapping(const FunctionDecl *Func,
                                   llvm::Annotations AnnotatedCode);
 
-// Creates a CFG from the body of the function that matches `func_matcher`,
-// suitable to testing a dataflow analysis.
-std::pair<const FunctionDecl *, std::unique_ptr<CFG>>
-buildCFG(ASTContext &Context,
-         ast_matchers::internal::Matcher<FunctionDecl> FuncMatcher);
-
 // Runs dataflow on the body of the function that matches `func_matcher` in code
 // snippet `code`. Requires: `Analysis` contains a type `Lattice`.
 template <typename AnalysisT>
@@ -79,7 +76,10 @@ void checkDataflow(
   using StateT = DataflowAnalysisState<typename AnalysisT::Lattice>;
 
   llvm::Annotations AnnotatedCode(Code);
-  auto Unit = tooling::buildASTFromCodeWithArgs(AnnotatedCode.code(), Args);
+  auto Unit = tooling::buildASTFromCodeWithArgs(
+      AnnotatedCode.code(), Args, "input.cc", "clang-dataflow-test",
+      std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(), VirtualMappedFiles);
   auto &Context = Unit->getASTContext();
 
   if (Context.getDiagnostics().getClient()->getNumErrors() != 0) {
@@ -87,14 +87,19 @@ void checkDataflow(
               "the test log";
   }
 
-  std::pair<const FunctionDecl *, std::unique_ptr<CFG>> CFGResult =
-      buildCFG(Context, FuncMatcher);
-  const auto *F = CFGResult.first;
-  auto Cfg = std::move(CFGResult.second);
-  ASSERT_TRUE(F != nullptr) << "Could not find target function";
-  ASSERT_TRUE(Cfg != nullptr) << "Could not build control flow graph.";
+  const FunctionDecl *F = ast_matchers::selectFirst<FunctionDecl>(
+      "target",
+      ast_matchers::match(
+          ast_matchers::functionDecl(ast_matchers::isDefinition(), FuncMatcher)
+              .bind("target"),
+          Context));
+  ASSERT_TRUE(F != nullptr) << "Could not find target function.";
 
-  Environment Env;
+  auto CFCtx = ControlFlowContext::build(F, F->getBody(), &F->getASTContext());
+  ASSERT_TRUE((bool)CFCtx) << "Could not build ControlFlowContext.";
+
+  DataflowAnalysisContext DACtx;
+  Environment Env(DACtx);
   auto Analysis = MakeAnalysis(Context, Env);
 
   llvm::Expected<llvm::DenseMap<const clang::Stmt *, std::string>>
@@ -107,7 +112,7 @@ void checkDataflow(
   auto &Annotations = *StmtToAnnotations;
 
   std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates =
-      runTypeErasedDataflowAnalysis(*Cfg, Analysis, Env);
+      runTypeErasedDataflowAnalysis(*CFCtx, Analysis, Env);
 
   if (BlockStates.empty()) {
     Expectations({}, Context);
@@ -117,13 +122,13 @@ void checkDataflow(
   // Compute a map from statement annotations to the state computed for
   // the program point immediately after the annotated statement.
   std::vector<std::pair<std::string, StateT>> Results;
-  for (const CFGBlock *Block : *Cfg) {
+  for (const CFGBlock *Block : CFCtx->getCFG()) {
     // Skip blocks that were not evaluated.
     if (!BlockStates[Block->getBlockID()].hasValue())
       continue;
 
     transferBlock(
-        BlockStates, *Block, Env, Analysis,
+        *CFCtx, BlockStates, *Block, Env, Analysis,
         [&Results, &Annotations](const clang::CFGStmt &Stmt,
                                  const TypeErasedDataflowAnalysisState &State) {
           auto It = Annotations.find(Stmt.getStmt());

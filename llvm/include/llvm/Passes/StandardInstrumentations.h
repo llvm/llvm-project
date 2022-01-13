@@ -432,7 +432,7 @@ public:
   }
 
   // Return the label of the basic block reached on a transition on \p S.
-  const StringRef getSuccessorLabel(StringRef S) const {
+  StringRef getSuccessorLabel(StringRef S) const {
     assert(Successors.count(S) == 1 && "Expected to find successor.");
     return Successors.find(S)->getValue();
   }

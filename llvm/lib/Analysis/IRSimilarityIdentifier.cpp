@@ -23,11 +23,13 @@
 using namespace llvm;
 using namespace IRSimilarity;
 
+namespace llvm {
 cl::opt<bool>
     DisableBranches("no-ir-sim-branch-matching", cl::init(false),
                     cl::ReallyHidden,
                     cl::desc("disable similarity matching, and outlining, "
                              "across branches for debugging purposes."));
+} // namespace llvm
 
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
                                      IRInstructionDataList &IDList)

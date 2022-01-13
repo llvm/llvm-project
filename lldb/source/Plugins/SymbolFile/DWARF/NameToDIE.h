@@ -48,6 +48,44 @@ public:
                              const DIERef &die_ref)> const
               &callback) const;
 
+  /// Decode a serialized version of this object from data.
+  ///
+  /// \param data
+  ///   The decoder object that references the serialized data.
+  ///
+  /// \param offset_ptr
+  ///   A pointer that contains the offset from which the data will be decoded
+  ///   from that gets updated as data gets decoded.
+  ///
+  /// \param strtab
+  ///   All strings in cache files are put into string tables for efficiency
+  ///   and cache file size reduction. Strings are stored as uint32_t string
+  ///   table offsets in the cache data.
+  bool Decode(const lldb_private::DataExtractor &data,
+              lldb::offset_t *offset_ptr,
+              const lldb_private::StringTableReader &strtab);
+
+  /// Encode this object into a data encoder object.
+  ///
+  /// This allows this object to be serialized to disk.
+  ///
+  /// \param encoder
+  ///   A data encoder object that serialized bytes will be encoded into.
+  ///
+  /// \param strtab
+  ///   All strings in cache files are put into string tables for efficiency
+  ///   and cache file size reduction. Strings are stored as uint32_t string
+  ///   table offsets in the cache data.
+  void Encode(lldb_private::DataEncoder &encoder,
+              lldb_private::ConstStringTable &strtab) const;
+
+  /// Used for unit testing the encoding and decoding.
+  bool operator==(const NameToDIE &rhs) const;
+
+  bool IsEmpty() const { return m_map.IsEmpty(); }
+
+  void Clear() { m_map.Clear(); }
+
 protected:
   lldb_private::UniqueCStringMap<DIERef> m_map;
 };

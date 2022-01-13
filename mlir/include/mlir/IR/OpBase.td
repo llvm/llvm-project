@@ -2445,6 +2445,11 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // Additional code that will be added to the public part of the generated
   // C++ code of the op declaration.
   code extraClassDeclaration = ?;
+
+  // Additional code that will be added to the generated source file. The
+  // generated code is placed inside the op's C++ namespace. `$cppClass` is
+  // replaced by the op's C++ class name.
+  code extraClassDefinition = ?;
 }
 
 // Base class for ops with static/dynamic offset, sizes and strides
@@ -2465,13 +2470,14 @@ class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
 
   code extraBaseClassDeclaration = [{
     /// Returns the dynamic sizes for this subview operation if specified.
-    operand_range getDynamicSizes() { return sizes(); }
+    ::mlir::Operation::operand_range getDynamicSizes() { return sizes(); }
 
     /// Return the list of Range (i.e. offset, size, stride). Each
     /// Range entry contains either the dynamic value or a ConstantIndexOp
     /// constructed with `b` at location `loc`.
-    SmallVector<Range, 8> getOrCreateRanges(OpBuilder &b, Location loc) {
-      return mlir::getOrCreateRanges(*this, b, loc);
+    ::mlir::SmallVector<::mlir::Range, 8> getOrCreateRanges(
+        ::mlir::OpBuilder &b, ::mlir::Location loc) {
+      return ::mlir::getOrCreateRanges(*this, b, loc);
     }
   }];
 }

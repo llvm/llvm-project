@@ -20,6 +20,14 @@ class LLVM_LIBRARY_VISIBILITY CSKYAsmPrinter : public AsmPrinter {
 
   const CSKYSubtarget *Subtarget;
 
+  bool InConstantPool = false;
+
+  /// Keep a pointer to constantpool entries of the current
+  /// MachineFunction.
+  MachineConstantPool *MCP;
+
+  void emitCustomConstantPool(const MachineInstr *MI);
+
 public:
   explicit CSKYAsmPrinter(TargetMachine &TM,
                           std::unique_ptr<MCStreamer> Streamer);
@@ -33,9 +41,16 @@ public:
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,
                                    const MachineInstr *MI);
 
+  void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+
+  void emitFunctionBodyEnd() override;
+
   void emitInstruction(const MachineInstr *MI) override;
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  // we emit constant pools customly!
+  void emitConstantPool() override{};
 };
 } // end namespace llvm
 

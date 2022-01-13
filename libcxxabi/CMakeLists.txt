@@ -10,13 +10,14 @@ endif()
 
 cmake_minimum_required(VERSION 3.13.4)
 
+set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+
 # Add path for custom modules
-set(CMAKE_MODULE_PATH
+list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules"
-  ${CMAKE_MODULE_PATH}
+  "${LLVM_COMMON_CMAKE_UTILS}"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
 set(CMAKE_FOLDER "libc++")
@@ -209,31 +210,28 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
+set(LIBCXXABI_INSTALL_RUNTIME_DIR bin CACHE PATH
+    "Path where built libc++abi runtime libraries should be installed.")
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
       "Path where built libc++abi libraries should be installed.")
-  set(LIBCXXABI_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++abi runtime libraries should be installed.")
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXXABI_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
     string(APPEND LIBCXXABI_INSTALL_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
   endif()
-elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
-  set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-  set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE PATH
-      "Path where built libc++abi libraries should be installed.")
-  set(LIBCXXABI_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++abi runtime libraries should be installed.")
 else()
-  set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
-  set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
+  if(LLVM_LIBRARY_OUTPUT_INTDIR)
+    set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
+    set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  else()
+    set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
+    set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
+  endif()
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libc++abi libraries should be installed.")
-  set(LIBCXXABI_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++abi runtime libraries should be installed.")
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})

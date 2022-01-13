@@ -31,7 +31,7 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
 
   for (NamedMDNode *NN : NamedNodesToDelete) {
     for (auto I : seq<unsigned>(0, NN->getNumOperands()))
-      NN->setOperand(I, NULL);
+      NN->setOperand(I, nullptr);
     NN->eraseFromParent();
   }
 
@@ -41,7 +41,7 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
     GV.getAllMetadata(MDs);
     for (std::pair<unsigned, MDNode *> &MD : MDs)
       if (!O.shouldKeep())
-        GV.setMetadata(MD.first, NULL);
+        GV.setMetadata(MD.first, nullptr);
   }
 
   for (Function &F : Program) {
@@ -51,7 +51,7 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
       F.getAllMetadata(MDs);
       for (std::pair<unsigned, MDNode *> &MD : MDs)
         if (!O.shouldKeep())
-          F.setMetadata(MD.first, NULL);
+          F.setMetadata(MD.first, nullptr);
     }
 
     // Delete out-of-chunk metadata attached to instructions.
@@ -60,7 +60,7 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
       I.getAllMetadata(MDs);
       for (std::pair<unsigned, MDNode *> &MD : MDs)
         if (!O.shouldKeep())
-          I.setMetadata(MD.first, NULL);
+          I.setMetadata(MD.first, nullptr);
     }
   }
 }

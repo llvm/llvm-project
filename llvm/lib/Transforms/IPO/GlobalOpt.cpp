@@ -303,11 +303,11 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
     else if (auto *GEP = dyn_cast<GEPOperator>(U))
       append_range(WorkList, GEP->users());
     else if (auto *LI = dyn_cast<LoadInst>(U)) {
-      // A load from zeroinitializer is always zeroinitializer, regardless of
-      // any applied offset.
+      // A load from a uniform value is always the same, regardless of any
+      // applied offset.
       Type *Ty = LI->getType();
-      if (Init->isNullValue() && !Ty->isX86_MMXTy() && !Ty->isX86_AMXTy()) {
-        LI->replaceAllUsesWith(Constant::getNullValue(Ty));
+      if (Constant *Res = ConstantFoldLoadFromUniformValue(Init, Ty)) {
+        LI->replaceAllUsesWith(Res);
         EraseFromParent(LI);
         continue;
       }
@@ -1066,6 +1066,86 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
   return true;
 }
 
+/// getMallocType - Returns the PointerType resulting from the malloc call.
+/// The PointerType depends on the number of bitcast uses of the malloc call:
+///   0: PointerType is the calls' return type.
+///   1: PointerType is the bitcast's result type.
+///  >1: Unique PointerType cannot be determined, return NULL.
+static PointerType *getMallocType(const CallInst *CI,
+                                  const TargetLibraryInfo *TLI) {
+  assert(isMallocLikeFn(CI, TLI) && "getMallocType and not malloc call");
+
+  PointerType *MallocType = nullptr;
+  unsigned NumOfBitCastUses = 0;
+
+  // Determine if CallInst has a bitcast use.
+  for (const User *U : CI->users())
+    if (const BitCastInst *BCI = dyn_cast<BitCastInst>(U)) {
+      MallocType = cast<PointerType>(BCI->getDestTy());
+      NumOfBitCastUses++;
+    }
+
+  // Malloc call has 1 bitcast use, so type is the bitcast's destination type.
+  if (NumOfBitCastUses == 1)
+    return MallocType;
+
+  // Malloc call was not bitcast, so type is the malloc function's return type.
+  if (NumOfBitCastUses == 0)
+    return cast<PointerType>(CI->getType());
+
+  // Type could not be determined.
+  return nullptr;
+}
+
+/// getMallocAllocatedType - Returns the Type allocated by malloc call.
+/// The Type depends on the number of bitcast uses of the malloc call:
+///   0: PointerType is the malloc calls' return type.
+///   1: PointerType is the bitcast's result type.
+///  >1: Unique PointerType cannot be determined, return NULL.
+static Type *getMallocAllocatedType(const CallInst *CI,
+                                    const TargetLibraryInfo *TLI) {
+  PointerType *PT = getMallocType(CI, TLI);
+  return PT ? PT->getElementType() : nullptr;
+}
+
+static Value *computeArraySize(const CallInst *CI, const DataLayout &DL,
+                               const TargetLibraryInfo *TLI,
+                               bool LookThroughSExt = false) {
+  if (!CI)
+    return nullptr;
+
+  // The size of the malloc's result type must be known to determine array size.
+  Type *T = getMallocAllocatedType(CI, TLI);
+  if (!T || !T->isSized())
+    return nullptr;
+
+  unsigned ElementSize = DL.getTypeAllocSize(T);
+  if (StructType *ST = dyn_cast<StructType>(T))
+    ElementSize = DL.getStructLayout(ST)->getSizeInBytes();
+
+  // If malloc call's arg can be determined to be a multiple of ElementSize,
+  // return the multiple.  Otherwise, return NULL.
+  Value *MallocArg = CI->getArgOperand(0);
+  Value *Multiple = nullptr;
+  if (ComputeMultiple(MallocArg, ElementSize, Multiple, LookThroughSExt))
+    return Multiple;
+
+  return nullptr;
+}
+
+/// getMallocArraySize - Returns the array size of a malloc call.  If the
+/// argument passed to malloc is a multiple of the size of the malloced type,
+/// then return that multiple.  For non-array mallocs, the multiple is
+/// constant 1.  Otherwise, return NULL for mallocs whose array size cannot be
+/// determined.
+static Value *getMallocArraySize(CallInst *CI, const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI,
+                                 bool LookThroughSExt) {
+  assert(isMallocLikeFn(CI, TLI) && "getMallocArraySize and not malloc call");
+  return computeArraySize(CI, DL, TLI, LookThroughSExt);
+}
+
+
 /// This function is called when we see a pointer global variable with a single
 /// value stored it that is a malloc or cast of malloc.
 static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
@@ -1140,12 +1220,14 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
       // Optimize away any trapping uses of the loaded value.
       if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, GetTLI))
         return true;
-    } else if (CallInst *CI = extractMallocCall(StoredOnceVal, GetTLI)) {
-      auto *TLI = &GetTLI(*CI->getFunction());
-      Type *MallocType = getMallocAllocatedType(CI, TLI);
-      if (MallocType && tryToOptimizeStoreOfMallocToGlobal(GV, CI, MallocType,
-                                                           Ordering, DL, TLI))
-        return true;
+    } else if (isMallocLikeFn(StoredOnceVal, GetTLI)) {
+      if (auto *CI = dyn_cast<CallInst>(StoredOnceVal)) {
+        auto *TLI = &GetTLI(*CI->getFunction());
+        Type *MallocType = getMallocAllocatedType(CI, TLI);
+        if (MallocType && tryToOptimizeStoreOfMallocToGlobal(GV, CI, MallocType,
+                                                             Ordering, DL, TLI))
+          return true;
+      }
     }
   }
 
@@ -2066,194 +2148,6 @@ OptimizeGlobalVars(Module &M,
   return Changed;
 }
 
-/// Evaluate a piece of a constantexpr store into a global initializer.  This
-/// returns 'Init' modified to reflect 'Val' stored into it.  At this point, the
-/// GEP operands of Addr [0, OpNo) have been stepped into.
-static Constant *EvaluateStoreInto(Constant *Init, Constant *Val,
-                                   ConstantExpr *Addr, unsigned OpNo) {
-  // Base case of the recursion.
-  if (OpNo == Addr->getNumOperands()) {
-    assert(Val->getType() == Init->getType() && "Type mismatch!");
-    return Val;
-  }
-
-  SmallVector<Constant*, 32> Elts;
-  if (StructType *STy = dyn_cast<StructType>(Init->getType())) {
-    // Break up the constant into its elements.
-    for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
-      Elts.push_back(Init->getAggregateElement(i));
-
-    // Replace the element that we are supposed to.
-    ConstantInt *CU = cast<ConstantInt>(Addr->getOperand(OpNo));
-    unsigned Idx = CU->getZExtValue();
-    assert(Idx < STy->getNumElements() && "Struct index out of range!");
-    Elts[Idx] = EvaluateStoreInto(Elts[Idx], Val, Addr, OpNo+1);
-
-    // Return the modified struct.
-    return ConstantStruct::get(STy, Elts);
-  }
-
-  ConstantInt *CI = cast<ConstantInt>(Addr->getOperand(OpNo));
-  uint64_t NumElts;
-  if (ArrayType *ATy = dyn_cast<ArrayType>(Init->getType()))
-    NumElts = ATy->getNumElements();
-  else
-    NumElts = cast<FixedVectorType>(Init->getType())->getNumElements();
-
-  // Break up the array into elements.
-  for (uint64_t i = 0, e = NumElts; i != e; ++i)
-    Elts.push_back(Init->getAggregateElement(i));
-
-  assert(CI->getZExtValue() < NumElts);
-  Elts[CI->getZExtValue()] =
-    EvaluateStoreInto(Elts[CI->getZExtValue()], Val, Addr, OpNo+1);
-
-  if (Init->getType()->isArrayTy())
-    return ConstantArray::get(cast<ArrayType>(Init->getType()), Elts);
-  return ConstantVector::get(Elts);
-}
-
-/// We have decided that Addr (which satisfies the predicate
-/// isSimpleEnoughPointerToCommit) should get Val as its value.  Make it happen.
-static void CommitValueTo(Constant *Val, Constant *Addr) {
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Addr)) {
-    assert(GV->hasInitializer());
-    GV->setInitializer(Val);
-    return;
-  }
-
-  ConstantExpr *CE = cast<ConstantExpr>(Addr);
-  GlobalVariable *GV = cast<GlobalVariable>(CE->getOperand(0));
-  GV->setInitializer(EvaluateStoreInto(GV->getInitializer(), Val, CE, 2));
-}
-
-/// Given a map of address -> value, where addresses are expected to be some form
-/// of either a global or a constant GEP, set the initializer for the address to
-/// be the value. This performs mostly the same function as CommitValueTo()
-/// and EvaluateStoreInto() but is optimized to be more efficient for the common
-/// case where the set of addresses are GEPs sharing the same underlying global,
-/// processing the GEPs in batches rather than individually.
-///
-/// To give an example, consider the following C++ code adapted from the clang
-/// regression tests:
-/// struct S {
-///  int n = 10;
-///  int m = 2 * n;
-///  S(int a) : n(a) {}
-/// };
-///
-/// template<typename T>
-/// struct U {
-///  T *r = &q;
-///  T q = 42;
-///  U *p = this;
-/// };
-///
-/// U<S> e;
-///
-/// The global static constructor for 'e' will need to initialize 'r' and 'p' of
-/// the outer struct, while also initializing the inner 'q' structs 'n' and 'm'
-/// members. This batch algorithm will simply use general CommitValueTo() method
-/// to handle the complex nested S struct initialization of 'q', before
-/// processing the outermost members in a single batch. Using CommitValueTo() to
-/// handle member in the outer struct is inefficient when the struct/array is
-/// very large as we end up creating and destroy constant arrays for each
-/// initialization.
-/// For the above case, we expect the following IR to be generated:
-///
-/// %struct.U = type { %struct.S*, %struct.S, %struct.U* }
-/// %struct.S = type { i32, i32 }
-/// @e = global %struct.U { %struct.S* gep inbounds (%struct.U, %struct.U* @e,
-///                                                  i64 0, i32 1),
-///                         %struct.S { i32 42, i32 84 }, %struct.U* @e }
-/// The %struct.S { i32 42, i32 84 } inner initializer is treated as a complex
-/// constant expression, while the other two elements of @e are "simple".
-static void BatchCommitValueTo(const DenseMap<Constant*, Constant*> &Mem) {
-  SmallVector<std::pair<GlobalVariable*, Constant*>, 32> GVs;
-  SmallVector<std::pair<ConstantExpr*, Constant*>, 32> ComplexCEs;
-  SmallVector<std::pair<ConstantExpr*, Constant*>, 32> SimpleCEs;
-  SimpleCEs.reserve(Mem.size());
-
-  for (const auto &I : Mem) {
-    if (auto *GV = dyn_cast<GlobalVariable>(I.first)) {
-      GVs.push_back(std::make_pair(GV, I.second));
-    } else {
-      ConstantExpr *GEP = cast<ConstantExpr>(I.first);
-      // We don't handle the deeply recursive case using the batch method.
-      if (GEP->getNumOperands() > 3)
-        ComplexCEs.push_back(std::make_pair(GEP, I.second));
-      else
-        SimpleCEs.push_back(std::make_pair(GEP, I.second));
-    }
-  }
-
-  // The algorithm below doesn't handle cases like nested structs, so use the
-  // slower fully general method if we have to.
-  for (auto ComplexCE : ComplexCEs)
-    CommitValueTo(ComplexCE.second, ComplexCE.first);
-
-  for (auto GVPair : GVs) {
-    assert(GVPair.first->hasInitializer());
-    GVPair.first->setInitializer(GVPair.second);
-  }
-
-  if (SimpleCEs.empty())
-    return;
-
-  // We cache a single global's initializer elements in the case where the
-  // subsequent address/val pair uses the same one. This avoids throwing away and
-  // rebuilding the constant struct/vector/array just because one element is
-  // modified at a time.
-  SmallVector<Constant *, 32> Elts;
-  Elts.reserve(SimpleCEs.size());
-  GlobalVariable *CurrentGV = nullptr;
-
-  auto commitAndSetupCache = [&](GlobalVariable *GV, bool Update) {
-    Constant *Init = GV->getInitializer();
-    Type *Ty = Init->getType();
-    if (Update) {
-      if (CurrentGV) {
-        assert(CurrentGV && "Expected a GV to commit to!");
-        Type *CurrentInitTy = CurrentGV->getInitializer()->getType();
-        // We have a valid cache that needs to be committed.
-        if (StructType *STy = dyn_cast<StructType>(CurrentInitTy))
-          CurrentGV->setInitializer(ConstantStruct::get(STy, Elts));
-        else if (ArrayType *ArrTy = dyn_cast<ArrayType>(CurrentInitTy))
-          CurrentGV->setInitializer(ConstantArray::get(ArrTy, Elts));
-        else
-          CurrentGV->setInitializer(ConstantVector::get(Elts));
-      }
-      if (CurrentGV == GV)
-        return;
-      // Need to clear and set up cache for new initializer.
-      CurrentGV = GV;
-      Elts.clear();
-      unsigned NumElts;
-      if (auto *STy = dyn_cast<StructType>(Ty))
-        NumElts = STy->getNumElements();
-      else if (auto *ATy = dyn_cast<ArrayType>(Ty))
-        NumElts = ATy->getNumElements();
-      else
-        NumElts = cast<FixedVectorType>(Ty)->getNumElements();
-      for (unsigned i = 0, e = NumElts; i != e; ++i)
-        Elts.push_back(Init->getAggregateElement(i));
-    }
-  };
-
-  for (auto CEPair : SimpleCEs) {
-    ConstantExpr *GEP = CEPair.first;
-    Constant *Val = CEPair.second;
-
-    GlobalVariable *GV = cast<GlobalVariable>(GEP->getOperand(0));
-    commitAndSetupCache(GV, GV != CurrentGV);
-    ConstantInt *CI = cast<ConstantInt>(GEP->getOperand(2));
-    Elts[CI->getZExtValue()] = Val;
-  }
-  // The last initializer in the list needs to be committed, others
-  // will be committed on a new initializer being processed.
-  commitAndSetupCache(CurrentGV, true);
-}
-
 /// Evaluate static constructors in the function, if we can.  Return true if we
 /// can, false otherwise.
 static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
@@ -2268,10 +2162,12 @@ static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
     ++NumCtorsEvaluated;
 
     // We succeeded at evaluation: commit the result.
+    auto NewInitializers = Eval.getMutatedInitializers();
     LLVM_DEBUG(dbgs() << "FULLY EVALUATED GLOBAL CTOR FUNCTION '"
-                      << F->getName() << "' to "
-                      << Eval.getMutatedMemory().size() << " stores.\n");
-    BatchCommitValueTo(Eval.getMutatedMemory());
+                      << F->getName() << "' to " << NewInitializers.size()
+                      << " stores.\n");
+    for (const auto &Pair : NewInitializers)
+      Pair.first->setInitializer(Pair.second);
     for (GlobalVariable *GV : Eval.getInvariants())
       GV->setConstant(true);
   }

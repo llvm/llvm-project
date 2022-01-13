@@ -4452,7 +4452,7 @@ namespace {
 
   public:
     SubstituteDeducedTypeTransform(Sema &SemaRef, DependentAuto DA)
-        : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef), Replacement(),
+        : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef),
           ReplacementIsPack(DA.IsPack), UseTypeSugar(true) {}
 
     SubstituteDeducedTypeTransform(Sema &SemaRef, QualType Replacement,

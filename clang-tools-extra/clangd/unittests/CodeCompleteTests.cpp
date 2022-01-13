@@ -1212,6 +1212,10 @@ struct ExpectedParameter {
   std::string Text;
   std::pair<unsigned, unsigned> Offsets;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const ExpectedParameter &P) {
+  return OS << P.Text;
+}
 MATCHER_P(ParamsAre, P, "") {
   if (P.size() != arg.parameters.size())
     return false;
@@ -1258,6 +1262,55 @@ TEST(SignatureHelpTest, Overloads) {
   // We always prefer the first signature.
   EXPECT_EQ(0, Results.activeSignature);
   EXPECT_EQ(0, Results.activeParameter);
+}
+
+TEST(SignatureHelpTest, Constructors) {
+  std::string Top = R"cpp(
+    struct S {
+      S(int);
+      S(const S &) = delete;
+    };
+  )cpp";
+
+  auto CheckParenInit = [&](std::string Init) {
+    EXPECT_THAT(signatures(Top + Init).signatures,
+                UnorderedElementsAre(Sig("S([[int]])")))
+        << Init;
+  };
+  CheckParenInit("S s(^);");
+  CheckParenInit("auto s = S(^);");
+  CheckParenInit("auto s = new S(^);");
+
+  auto CheckBracedInit = [&](std::string Init) {
+    EXPECT_THAT(signatures(Top + Init).signatures,
+                UnorderedElementsAre(Sig("S{[[int]]}")))
+        << Init;
+  };
+  CheckBracedInit("S s{^};");
+  CheckBracedInit("S s = {^};");
+  CheckBracedInit("auto s = S{^};");
+  // FIXME: doesn't work: no ExpectedType set in ParseCXXNewExpression.
+  // CheckBracedInit("auto s = new S{^};");
+  CheckBracedInit("int x(S); int i = x({^});");
+}
+
+TEST(SignatureHelpTest, Aggregates) {
+  std::string Top = R"cpp(
+    struct S {
+      int a, b, c, d;
+    };
+  )cpp";
+  auto AggregateSig = Sig("S{[[int a]], [[int b]], [[int c]], [[int d]]}");
+  EXPECT_THAT(signatures(Top + "S s{^}").signatures,
+              UnorderedElementsAre(AggregateSig, Sig("S{}"),
+                                   Sig("S{[[const S &]]}"),
+                                   Sig("S{[[S &&]]}")));
+  EXPECT_THAT(signatures(Top + "S s{1,^}").signatures,
+              ElementsAre(AggregateSig));
+  EXPECT_EQ(signatures(Top + "S s{1,^}").activeParameter, 1);
+  EXPECT_THAT(signatures(Top + "S s{.c=3,^}").signatures,
+              ElementsAre(AggregateSig));
+  EXPECT_EQ(signatures(Top + "S s{.c=3,^}").activeParameter, 3);
 }
 
 TEST(SignatureHelpTest, OverloadInitListRegression) {
@@ -3451,6 +3504,25 @@ TEST(SignatureHelp, DocFormat) {
     ASSERT_EQ(Sigs.signatures.size(), 1U);
     EXPECT_EQ(Sigs.signatures[0].documentation.kind, DocumentationFormat);
   }
+}
+
+TEST(SignatureHelp, TemplateArguments) {
+  std::string Top = R"cpp(
+    template <typename T, int> bool foo(char);
+    template <int I, int> bool foo(float);
+  )cpp";
+
+  auto First = signatures(Top + "bool x = foo<^");
+  EXPECT_THAT(
+      First.signatures,
+      UnorderedElementsAre(Sig("foo<[[typename T]], [[int]]>() -> bool"),
+                           Sig("foo<[[int I]], [[int]]>() -> bool")));
+  EXPECT_EQ(First.activeParameter, 0);
+
+  auto Second = signatures(Top + "bool x = foo<1, ^");
+  EXPECT_THAT(Second.signatures,
+              ElementsAre(Sig("foo<[[int I]], [[int]]>() -> bool")));
+  EXPECT_EQ(Second.activeParameter, 1);
 }
 
 } // namespace

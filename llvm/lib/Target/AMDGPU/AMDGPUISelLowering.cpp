@@ -51,7 +51,7 @@ unsigned AMDGPUTargetLowering::numBitsUnsigned(SDValue Op, SelectionDAG &DAG) {
 unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
   // In order for this to be a signed 24-bit value, bit 23, must
   // be a sign bit.
-  return DAG.ComputeMinSignedBits(Op);
+  return DAG.ComputeMaxSignificantBits(Op);
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
@@ -4920,7 +4920,8 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   }
 }
 
-bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtactLegal(
+bool AMDGPUTargetLowering::isConstantUnsignedBitfieldExtractLegal(
     unsigned Opc, LLT Ty1, LLT Ty2) const {
-  return Ty1 == Ty2 && (Ty1 == LLT::scalar(32) || Ty1 == LLT::scalar(64));
+  return (Ty1 == LLT::scalar(32) || Ty1 == LLT::scalar(64)) &&
+         Ty2 == LLT::scalar(32);
 }

@@ -235,7 +235,7 @@ protected:
 
 public:
   DiagLoader(enum CXLoadDiag_Error *e, CXString *es)
-      : SerializedDiagnosticReader(), error(e), errorString(es) {
+      : error(e), errorString(es) {
     if (error)
       *error = CXLoadDiag_None;
     if (errorString)

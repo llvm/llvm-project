@@ -25,7 +25,7 @@ namespace lldb_private {
 
 class StructuredDataImpl {
 public:
-  StructuredDataImpl() : m_plugin_wp(), m_data_sp() {}
+  StructuredDataImpl() {}
 
   StructuredDataImpl(const StructuredDataImpl &rhs) = default;
 

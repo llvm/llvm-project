@@ -66,7 +66,6 @@ public:
   enum Kind : uint8_t {
     ObjKind,
     SharedKind,
-    LazyObjKind,
     ArchiveKind,
     BitcodeKind,
     BinaryKind,
@@ -408,6 +407,7 @@ inline bool isBitcode(MemoryBufferRef mb) {
 
 std::string replaceThinLTOSuffix(StringRef path);
 
+extern SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
 extern SmallVector<ArchiveFile *, 0> archiveFiles;
 extern SmallVector<BinaryFile *, 0> binaryFiles;
 extern SmallVector<BitcodeFile *, 0> bitcodeFiles;

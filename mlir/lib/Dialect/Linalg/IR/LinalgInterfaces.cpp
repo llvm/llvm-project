@@ -612,7 +612,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
              << indexingMap.getNumResults() << ")";
   }
 
-  SmallVector<AffineExpr> redDims;
+  SmallVector<unsigned> redDims;
   linalgOp.getReductionDims(redDims);
 
   // Simplifying assumption: either full tensor or full buffer mode.
@@ -638,9 +638,8 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   // Output tensor indexing map may not depend on reduction indices.
   for (OpOperand *opOperand : linalgOp.getOutputOperands()) {
     AffineMap indexingMap = linalgOp.getTiedIndexingMap(opOperand);
-    for (auto expr : indexingMap.getResults()) {
-      for (auto dim : redDims) {
-        unsigned pos = dim.cast<AffineDimExpr>().getPosition();
+    for (AffineExpr expr : indexingMap.getResults()) {
+      for (unsigned pos : redDims) {
         if (expr.isFunctionOfDim(pos)) {
           std::string exprStr;
           {

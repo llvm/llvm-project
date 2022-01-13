@@ -105,7 +105,7 @@ private:
   /// The current module being created.
   ModuleOp module;
   /// The entry block of the current function being processed.
-  Block *currentEntryBlock;
+  Block *currentEntryBlock = nullptr;
 
   /// Globals are inserted before the first function, if any.
   Block::iterator getGlobalInsertPt() {
@@ -760,7 +760,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Type type = processType(inst->getType());
     if (!type)
       return failure();
-    v = b.create<GEPOp>(loc, type, ops);
+    v = b.create<GEPOp>(loc, type, ops[0],
+                        llvm::makeArrayRef(ops).drop_front());
     return success();
   }
   }
@@ -821,7 +822,7 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
   currentEntryBlock = blockList[0];
 
   // Add function arguments to the entry block.
-  for (auto kv : llvm::enumerate(f->args()))
+  for (const auto &kv : llvm::enumerate(f->args()))
     instMap[&kv.value()] =
         blockList[0]->addArgument(functionType.getParamType(kv.index()));
 

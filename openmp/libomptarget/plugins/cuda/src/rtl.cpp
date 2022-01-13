@@ -114,21 +114,6 @@ int memcpyDtoD(const void *SrcPtr, void *DstPtr, int64_t Size,
   return OFFLOAD_SUCCESS;
 }
 
-int createEvent(void **P) {
-  CUevent Event = nullptr;
-
-  CUresult Err = cuEventCreate(&Event, CU_EVENT_DEFAULT);
-  if (Err != CUDA_SUCCESS) {
-    DP("Error when creating event event = " DPxMOD "\n", DPxPTR(Event));
-    CUDA_ERR_STRING(Err);
-    return OFFLOAD_FAIL;
-  }
-
-  *P = Event;
-
-  return OFFLOAD_SUCCESS;
-}
-
 int recordEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
   CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo->Queue);
   CUevent Event = reinterpret_cast<CUevent>(EventPtr);
@@ -157,19 +142,6 @@ int syncEvent(void *EventPtr) {
   return OFFLOAD_SUCCESS;
 }
 
-int destroyEvent(void *EventPtr) {
-  CUevent Event = reinterpret_cast<CUevent>(EventPtr);
-
-  CUresult Err = cuEventDestroy(Event);
-  if (Err != CUDA_SUCCESS) {
-    DP("Error when destroying event = " DPxMOD "\n", DPxPTR(Event));
-    CUDA_ERR_STRING(Err);
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 // Structure contains per-device data
 struct DeviceDataTy {
   /// List that contains all the kernels.
@@ -187,137 +159,158 @@ struct DeviceDataTy {
   int NumThreads = 0;
 };
 
-class StreamManagerTy {
-  int NumberOfDevices;
-  // The initial size of stream pool
-  int EnvNumInitialStreams;
-  // Per-device stream mutex
-  std::vector<std::unique_ptr<std::mutex>> StreamMtx;
-  // Per-device stream Id indicates the next available stream in the pool
-  std::vector<int> NextStreamId;
-  // Per-device stream pool
-  std::vector<std::vector<CUstream>> StreamPool;
-  // Reference to per-device data
-  std::vector<DeviceDataTy> &DeviceData;
+/// Resource allocator where \p T is the resource type.
+/// Functions \p create and \p destroy return OFFLOAD_SUCCESS and OFFLOAD_FAIL
+/// accordingly. The implementation should not raise any exception.
+template <typename T> class AllocatorTy {
+public:
+  /// Create a resource and assign to R.
+  int create(T &R) noexcept;
+  /// Destroy the resource.
+  int destroy(T) noexcept;
+};
 
-  // If there is no CUstream left in the pool, we will resize the pool to
-  // allocate more CUstream. This function should be called with device mutex,
-  // and we do not resize to smaller one.
-  void resizeStreamPool(const int DeviceId, const size_t NewSize) {
-    std::vector<CUstream> &Pool = StreamPool[DeviceId];
-    const size_t CurrentSize = Pool.size();
-    assert(NewSize > CurrentSize && "new size is not larger than current size");
+/// Allocator for CUstream.
+template <> class AllocatorTy<CUstream> {
+  CUcontext Context;
 
-    CUresult Err = cuCtxSetCurrent(DeviceData[DeviceId].Context);
-    if (!checkResult(Err, "Error returned from cuCtxSetCurrent\n")) {
-      // We will return if cannot switch to the right context in case of
-      // creating bunch of streams that are not corresponding to the right
-      // device. The offloading will fail later because selected CUstream is
-      // nullptr.
-      return;
+public:
+  AllocatorTy(CUcontext C) noexcept : Context(C) {}
+
+  /// See AllocatorTy<T>::create.
+  int create(CUstream &Stream) noexcept {
+    if (!checkResult(cuCtxSetCurrent(Context),
+                     "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+
+    if (!checkResult(cuStreamCreate(&Stream, CU_STREAM_NON_BLOCKING),
+                     "Error returned from cuStreamCreate\n"))
+      return OFFLOAD_FAIL;
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  /// See AllocatorTy<T>::destroy.
+  int destroy(CUstream Stream) noexcept {
+    if (!checkResult(cuCtxSetCurrent(Context),
+                     "Error returned from cuCtxSetCurrent\n"))
+      return OFFLOAD_FAIL;
+    if (!checkResult(cuStreamDestroy(Stream),
+                     "Error returned from cuStreamDestroy\n"))
+      return OFFLOAD_FAIL;
+
+    return OFFLOAD_SUCCESS;
+  }
+};
+
+/// Allocator for CUevent.
+template <> class AllocatorTy<CUevent> {
+public:
+  /// See AllocatorTy<T>::create.
+  int create(CUevent &Event) noexcept {
+    if (!checkResult(cuEventCreate(&Event, CU_EVENT_DEFAULT),
+                     "Error returned from cuEventCreate\n"))
+      return OFFLOAD_FAIL;
+
+    return OFFLOAD_SUCCESS;
+  }
+
+  /// See AllocatorTy<T>::destroy.
+  int destroy(CUevent Event) noexcept {
+    if (!checkResult(cuEventDestroy(Event),
+                     "Error returned from cuEventDestroy\n"))
+      return OFFLOAD_FAIL;
+
+    return OFFLOAD_SUCCESS;
+  }
+};
+
+/// A generic pool of resources where \p T is the resource type.
+/// \p T should be copyable as the object is stored in \p std::vector .
+template <typename T> class ResourcePoolTy {
+  /// Index of the next available resource.
+  size_t Next = 0;
+  /// Mutex to guard the pool.
+  std::mutex Mutex;
+  /// Pool of resources.
+  std::vector<T> Resources;
+  /// A reference to the corresponding allocator.
+  AllocatorTy<T> Allocator;
+
+  /// If `Resources` is used up, we will fill in more resources. It assumes that
+  /// the new size `Size` should be always larger than the current size.
+  bool resize(size_t Size) {
+    auto CurSize = Resources.size();
+    assert(Size > CurSize && "Unexpected smaller size");
+    Resources.reserve(Size);
+    for (auto I = CurSize; I < Size; ++I) {
+      T NewItem;
+      int Ret = Allocator.create(NewItem);
+      if (Ret != OFFLOAD_SUCCESS)
+        return false;
+      Resources.push_back(NewItem);
     }
-
-    Pool.resize(NewSize, nullptr);
-
-    for (size_t I = CurrentSize; I < NewSize; ++I) {
-      checkResult(cuStreamCreate(&Pool[I], CU_STREAM_NON_BLOCKING),
-                  "Error returned from cuStreamCreate\n");
-    }
+    return true;
   }
 
 public:
-  StreamManagerTy(const int NumberOfDevices,
-                  std::vector<DeviceDataTy> &DeviceData)
-      : NumberOfDevices(NumberOfDevices), EnvNumInitialStreams(32),
-        DeviceData(DeviceData) {
-    StreamPool.resize(NumberOfDevices);
-    NextStreamId.resize(NumberOfDevices);
-    StreamMtx.resize(NumberOfDevices);
-
-    if (const char *EnvStr = getenv("LIBOMPTARGET_NUM_INITIAL_STREAMS"))
-      EnvNumInitialStreams = std::stoi(EnvStr);
-
-    // Initialize the next stream id
-    std::fill(NextStreamId.begin(), NextStreamId.end(), 0);
-
-    // Initialize stream mutex
-    for (std::unique_ptr<std::mutex> &Ptr : StreamMtx)
-      Ptr = std::make_unique<std::mutex>();
+  ResourcePoolTy(AllocatorTy<T> &&A, size_t Size = 0) noexcept
+      : Allocator(std::move(A)) {
+    if (Size)
+      (void)resize(Size);
   }
 
-  ~StreamManagerTy() {
-    // Destroy streams
-    for (int I = 0; I < NumberOfDevices; ++I) {
-      checkResult(cuCtxSetCurrent(DeviceData[I].Context),
-                  "Error returned from cuCtxSetCurrent\n");
+  ~ResourcePoolTy() noexcept { clear(); }
 
-      for (CUstream &S : StreamPool[I]) {
-        if (S)
-          checkResult(cuStreamDestroy(S),
-                      "Error returned from cuStreamDestroy\n");
-      }
+  /// Get a resource from pool. `Next` always points to the next available
+  /// resource. That means, `[0, next-1]` have been assigned, and `[id,]` are
+  /// still available. If there is no resource left, we will ask for more. Each
+  /// time a resource is assigned, the id will increase one.
+  /// xxxxxs+++++++++
+  ///      ^
+  ///      Next
+  /// After assignment, the pool becomes the following and s is assigned.
+  /// xxxxxs+++++++++
+  ///       ^
+  ///       Next
+  int acquire(T &R) noexcept {
+    std::lock_guard<std::mutex> LG(Mutex);
+    if (Next == Resources.size()) {
+      auto NewSize = Resources.size() ? Resources.size() * 2 : 1;
+      if (!resize(NewSize))
+        return OFFLOAD_FAIL;
     }
+
+    assert(Next < Resources.size());
+
+    R = Resources[Next++];
+
+    return OFFLOAD_SUCCESS;
   }
 
-  // Get a CUstream from pool. Per-device next stream id always points to the
-  // next available CUstream. That means, CUstreams [0, id-1] have been
-  // assigned, and [id,] are still available. If there is no CUstream left, we
-  // will ask more CUstreams from CUDA RT. Each time a CUstream is assigned,
-  // the id will increase one.
-  // xxxxxs+++++++++
-  //      ^
-  //      id
-  // After assignment, the pool becomes the following and s is assigned.
-  // xxxxxs+++++++++
-  //       ^
-  //       id
-  CUstream getStream(const int DeviceId) {
-    const std::lock_guard<std::mutex> Lock(*StreamMtx[DeviceId]);
-    int &Id = NextStreamId[DeviceId];
-    // No CUstream left in the pool, we need to request from CUDA RT
-    if (Id == static_cast<int>(StreamPool[DeviceId].size())) {
-      // By default we double the stream pool every time
-      resizeStreamPool(DeviceId, Id * 2);
-    }
-    return StreamPool[DeviceId][Id++];
+  /// Return the resource back to the pool. When we return a resource, we need
+  /// to first decrease `Next`, and then copy the resource back. It is worth
+  /// noting that, the order of resources return might be different from that
+  /// they're assigned, that saying, at some point, there might be two identical
+  /// resources.
+  /// xxax+a+++++
+  ///     ^
+  ///     Next
+  /// However, it doesn't matter, because they're always on the two sides of
+  /// `Next`. The left one will in the end be overwritten by another resource.
+  /// Therefore, after several execution, the order of pool might be different
+  /// from its initial state.
+  void release(T R) noexcept {
+    std::lock_guard<std::mutex> LG(Mutex);
+    Resources[--Next] = R;
   }
 
-  // Return a CUstream back to pool. As mentioned above, per-device next
-  // stream is always points to the next available CUstream, so when we return
-  // a CUstream, we need to first decrease the id, and then copy the CUstream
-  // back.
-  // It is worth noting that, the order of streams return might be different
-  // from that they're assigned, that saying, at some point, there might be
-  // two identical CUstreams.
-  // xxax+a+++++
-  //     ^
-  //     id
-  // However, it doesn't matter, because they're always on the two sides of
-  // id. The left one will in the end be overwritten by another CUstream.
-  // Therefore, after several execution, the order of pool might be different
-  // from its initial state.
-  void returnStream(const int DeviceId, CUstream Stream) {
-    const std::lock_guard<std::mutex> Lock(*StreamMtx[DeviceId]);
-    int &Id = NextStreamId[DeviceId];
-    assert(Id > 0 && "Wrong stream ID");
-    StreamPool[DeviceId][--Id] = Stream;
-  }
-
-  bool initializeDeviceStreamPool(const int DeviceId) {
-    assert(StreamPool[DeviceId].empty() && "stream pool has been initialized");
-
-    resizeStreamPool(DeviceId, EnvNumInitialStreams);
-
-    // Check the size of stream pool
-    if (static_cast<int>(StreamPool[DeviceId].size()) != EnvNumInitialStreams)
-      return false;
-
-    // Check whether each stream is valid
-    for (CUstream &S : StreamPool[DeviceId])
-      if (!S)
-        return false;
-
-    return true;
+  /// Released all stored resources and clear the pool.
+  /// Note: This function is not thread safe. Be sure to guard it if necessary.
+  void clear() noexcept {
+    for (auto &R : Resources)
+      (void)Allocator.destroy(R);
+    Resources.clear();
   }
 };
 
@@ -331,13 +324,19 @@ class DeviceRTLTy {
   int64_t RequiresFlags;
   // Amount of dynamic shared memory to use at launch.
   uint64_t DynamicMemorySize;
+  // Number of initial streams for each device.
+  int NumInitialStreams = 32;
 
   static constexpr const int HardTeamLimit = 1U << 16U; // 64k
   static constexpr const int HardThreadLimit = 1024;
   static constexpr const int DefaultNumTeams = 128;
   static constexpr const int DefaultNumThreads = 128;
 
-  std::unique_ptr<StreamManagerTy> StreamManager;
+  using StreamPoolTy = ResourcePoolTy<CUstream>;
+  std::vector<std::unique_ptr<StreamPoolTy>> StreamPool;
+
+  ResourcePoolTy<CUevent> EventPool;
+
   std::vector<DeviceDataTy> DeviceData;
   std::vector<CUmodule> Modules;
 
@@ -471,8 +470,13 @@ class DeviceRTLTy {
   CUstream getStream(const int DeviceId, __tgt_async_info *AsyncInfo) const {
     assert(AsyncInfo && "AsyncInfo is nullptr");
 
-    if (!AsyncInfo->Queue)
-      AsyncInfo->Queue = StreamManager->getStream(DeviceId);
+    if (!AsyncInfo->Queue) {
+      CUstream S;
+      if (StreamPool[DeviceId]->acquire(S) != OFFLOAD_SUCCESS)
+        return nullptr;
+
+      AsyncInfo->Queue = S;
+    }
 
     return reinterpret_cast<CUstream>(AsyncInfo->Queue);
   }
@@ -485,7 +489,7 @@ public:
   DeviceRTLTy()
       : NumberOfDevices(0), EnvNumTeams(-1), EnvTeamLimit(-1),
         EnvTeamThreadLimit(-1), RequiresFlags(OMP_REQ_UNDEFINED),
-        DynamicMemorySize(0) {
+        DynamicMemorySize(0), EventPool(AllocatorTy<CUevent>()) {
 
     DP("Start initializing CUDA\n");
 
@@ -509,6 +513,7 @@ public:
     }
 
     DeviceData.resize(NumberOfDevices);
+    StreamPool.resize(NumberOfDevices);
 
     // Get environment variables regarding teams
     if (const char *EnvStr = getenv("OMP_TEAM_LIMIT")) {
@@ -532,9 +537,11 @@ public:
       DP("Parsed LIBOMPTARGET_SHARED_MEMORY_SIZE = %" PRIu64 "\n",
          DynamicMemorySize);
     }
-
-    StreamManager =
-        std::make_unique<StreamManagerTy>(NumberOfDevices, DeviceData);
+    if (const char *EnvStr = getenv("LIBOMPTARGET_NUM_INITIAL_STREAMS")) {
+      // LIBOMPTARGET_NUM_INITIAL_STREAMS has been set
+      NumInitialStreams = std::stoi(EnvStr);
+      DP("Parsed LIBOMPTARGET_NUM_INITIAL_STREAMS=%d\n", NumInitialStreams);
+    }
 
     for (int I = 0; I < NumberOfDevices; ++I)
       DeviceAllocators.emplace_back(I, DeviceData);
@@ -556,12 +563,15 @@ public:
     for (auto &M : MemoryManagers)
       M.release();
 
-    StreamManager = nullptr;
-
     for (CUmodule &M : Modules)
       // Close module
       if (M)
         checkResult(cuModuleUnload(M), "Error returned from cuModuleUnload\n");
+
+    for (auto &S : StreamPool)
+      S.reset();
+
+    EventPool.clear();
 
     for (DeviceDataTy &D : DeviceData) {
       // Destroy context
@@ -627,8 +637,10 @@ public:
       return OFFLOAD_FAIL;
 
     // Initialize stream pool
-    if (!StreamManager->initializeDeviceStreamPool(DeviceId))
-      return OFFLOAD_FAIL;
+    if (!StreamPool[DeviceId])
+      StreamPool[DeviceId] = std::make_unique<StreamPoolTy>(
+          AllocatorTy<CUstream>(DeviceData[DeviceId].Context),
+          NumInitialStreams);
 
     // Query attributes to determine number of threads/block and blocks/grid.
     int MaxGridDimX;
@@ -1195,8 +1207,7 @@ public:
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    StreamManager->returnStream(DeviceId,
-                                reinterpret_cast<CUstream>(AsyncInfo->Queue));
+    StreamPool[DeviceId]->release(reinterpret_cast<CUstream>(AsyncInfo->Queue));
     AsyncInfo->Queue = nullptr;
 
     if (Err != CUDA_SUCCESS) {
@@ -1380,6 +1391,19 @@ public:
             &TmpInt2, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, Device),
         "Error returned from cuDeviceGetAttribute\n");
     printf("    Compute Capabilities: \t\t%d%d \n", TmpInt, TmpInt2);
+  }
+
+  int createEvent(void **P) {
+    CUevent Event = nullptr;
+    if (EventPool.acquire(Event) != OFFLOAD_SUCCESS)
+      return OFFLOAD_FAIL;
+    *P = Event;
+    return OFFLOAD_SUCCESS;
+  }
+
+  int destroyEvent(void *EventPtr) {
+    EventPool.release(reinterpret_cast<CUevent>(EventPtr));
+    return OFFLOAD_SUCCESS;
   }
 
   int waitEvent(const int DeviceId, __tgt_async_info *AsyncInfo,
@@ -1607,7 +1631,7 @@ void __tgt_rtl_print_device_info(int32_t device_id) {
 
 int32_t __tgt_rtl_create_event(int32_t device_id, void **event) {
   assert(event && "event is nullptr");
-  return createEvent(event);
+  return DeviceRTL.createEvent(event);
 }
 
 int32_t __tgt_rtl_record_event(int32_t device_id, void *event_ptr,
@@ -1637,7 +1661,7 @@ int32_t __tgt_rtl_sync_event(int32_t device_id, void *event_ptr) {
 int32_t __tgt_rtl_destroy_event(int32_t device_id, void *event_ptr) {
   assert(event_ptr && "event is nullptr");
 
-  return destroyEvent(event_ptr);
+  return DeviceRTL.destroyEvent(event_ptr);
 }
 
 #ifdef __cplusplus

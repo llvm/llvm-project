@@ -600,6 +600,8 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     return SourceLanguage::D;
   case dwarf::DW_LANG_Swift:
     return SourceLanguage::Swift;
+  case dwarf::DW_LANG_Rust:
+    return SourceLanguage::Rust;
   default:
     // There's no CodeView representation for this language, and CV doesn't
     // have an "unknown" option for the language field, so we'll use MASM,
@@ -857,8 +859,10 @@ void CodeViewDebug::emitCompilerInformation() {
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
-  for (int N : FrontVer.Part)
+  for (int N : FrontVer.Part) {
+    N = std::min<int>(N, std::numeric_limits<uint16_t>::max());
     OS.emitInt16(N);
+  }
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that

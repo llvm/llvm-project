@@ -6,12 +6,10 @@ set(LLVM_OPTIONAL_SOURCES
   CallGraph.cpp
   DataFlowAnalysis.cpp
   DataLayoutAnalysis.cpp
-  LinearTransform.cpp
   Liveness.cpp
   LoopAnalysis.cpp
   NestedMatcher.cpp
   NumberOfExecutions.cpp
-  PresburgerSet.cpp
   SliceAnalysis.cpp
   Utils.cpp
 
@@ -48,10 +46,8 @@ add_mlir_library(MLIRAnalysis
 add_mlir_library(MLIRLoopAnalysis
   AffineAnalysis.cpp
   AffineStructures.cpp
-  LinearTransform.cpp
   LoopAnalysis.cpp
   NestedMatcher.cpp
-  PresburgerSet.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS

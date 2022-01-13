@@ -1,6 +1,8 @@
 # Test to verify LLDB searches for dwos with relative paths relative to the
 # binary location, not relative to LLDB's launch location.
 
+# REQUIRES: x86-registered-target
+
 # RUN: llvm-mc --filetype=obj --triple x86_64-pc-linux %s -o %t.o
 # RUN: llvm-objcopy --split-dwo=%T/dwo-relative-path.dwo %t.o
 

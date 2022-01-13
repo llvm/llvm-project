@@ -728,7 +728,7 @@ void Writer::createCommandExportWrappers() {
 
   // If there are no ctors and there's no libc `__wasm_call_dtors` to
   // call, don't wrap the exports.
-  if (initFunctions.empty() && WasmSym::callDtors == NULL)
+  if (initFunctions.empty() && WasmSym::callDtors == nullptr)
     return;
 
   std::vector<DefinedFunction *> toWrap;

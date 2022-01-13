@@ -124,6 +124,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_interface_type:
   case dwarf::DW_TAG_unspecified_type:
   case dwarf::DW_TAG_shared_type:
+  case dwarf::DW_TAG_immutable_type:
     return true;
   default:
     break;
@@ -1934,7 +1935,7 @@ uint32_t DWARFLinker::DIECloner::hashFullyQualifiedName(DWARFDie DIE,
   CompileUnit *CU = &U;
   Optional<DWARFFormValue> Ref;
 
-  while (1) {
+  while (true) {
     if (const char *CurrentName = DIE.getName(DINameKind::ShortName))
       Name = CurrentName;
 
@@ -2107,7 +2108,6 @@ Error DWARFLinker::loadClangModule(
       // Add this module.
       Unit = std::make_unique<CompileUnit>(*CU, UnitID++, !Options.NoODR,
                                            ModuleName);
-      Unit->setHasInterestingContent();
       analyzeContextInfo(CUDie, 0, *Unit, &ODRContexts.getRoot(), ODRContexts,
                          ModulesEndOffset, Options.ParseableSwiftInterfaces,
                          [&](const Twine &Warning, const DWARFDie &DIE) {

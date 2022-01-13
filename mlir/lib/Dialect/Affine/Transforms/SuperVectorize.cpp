@@ -388,9 +388,9 @@ using namespace vector;
 /// produces this standard innermost-loop vectorized code:
 /// ```mlir
 /// func @vector_add_2d(%arg0 : index, %arg1 : index) -> f32 {
-///   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
 ///   %cst = arith.constant 1.0 : f32
 ///   %cst_0 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %arg0 {
@@ -442,9 +442,9 @@ using namespace vector;
 /// produces this more interesting mixed outer-innermost-loop vectorized code:
 /// ```mlir
 /// func @vector_add_2d(%arg0 : index, %arg1 : index) -> f32 {
-///   %0 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %1 = alloc(%arg0, %arg1) : memref<?x?xf32>
-///   %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %0 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+///   %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
 ///   %cst = arith.constant 1.0 : f32
 ///   %cst_0 = arith.constant 2.0 : f32
 ///   affine.for %i0 = 0 to %arg0 step 32 {
@@ -755,7 +755,7 @@ struct VectorizationState {
   DenseMap<Operation *, Value> vecLoopToMask;
 
   // The strategy drives which loop to vectorize by which amount.
-  const VectorizationStrategy *strategy;
+  const VectorizationStrategy *strategy = nullptr;
 
 private:
   /// Internal implementation to map input scalar values to new vector or scalar
@@ -971,7 +971,7 @@ static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
 /// Creates a constant vector filled with the neutral elements of the given
 /// reduction. The scalar type of vector elements will be taken from
 /// `oldOperand`.
-static arith::ConstantOp createInitialVector(AtomicRMWKind reductionKind,
+static arith::ConstantOp createInitialVector(arith::AtomicRMWKind reductionKind,
                                              Value oldOperand,
                                              VectorizationState &state) {
   Type scalarTy = oldOperand.getType();
@@ -1245,8 +1245,8 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
 
 /// Returns true if `value` is a constant equal to the neutral element of the
 /// given vectorizable reduction.
-static bool isNeutralElementConst(AtomicRMWKind reductionKind, Value value,
-                                  VectorizationState &state) {
+static bool isNeutralElementConst(arith::AtomicRMWKind reductionKind,
+                                  Value value, VectorizationState &state) {
   Type scalarTy = value.getType();
   if (!VectorType::isValidElementType(scalarTy))
     return false;
@@ -1324,7 +1324,6 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
       /*bodyBuilder=*/[](OpBuilder &, Location, Value, ValueRange) {
         // Make sure we don't create a default terminator in the loop body as
         // the proper terminator will be added during vectorization.
-        return;
       });
 
   // Register loop-related replacements:
@@ -1361,7 +1360,8 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
       Value origInit = forOp.getOperand(forOp.getNumControlOperands() + i);
       Value finalRes = reducedRes;
       if (!isNeutralElementConst(reductions[i].kind, origInit, state))
-        finalRes = getReductionOp(reductions[i].kind, state.builder,
+        finalRes =
+            arith::getReductionOp(reductions[i].kind, state.builder,
                                   reducedRes.getLoc(), reducedRes, origInit);
       state.registerLoopResultScalarReplacement(forOp.getResult(i), finalRes);
     }

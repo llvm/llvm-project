@@ -486,27 +486,6 @@ func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
 
 // -----
 
-// CHECK-LABEL: func @atomic_rmw
-func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fval : f32, %i : index) {
-  atomic_rmw assign %fval, %F[%i] : (f32, memref<10xf32>) -> f32
-  // CHECK: llvm.atomicrmw xchg %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw addi %ival, %I[%i] : (i32, memref<10xi32>) -> i32
-  // CHECK: llvm.atomicrmw add %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw maxs %ival, %I[%i] : (i32, memref<10xi32>) -> i32
-  // CHECK: llvm.atomicrmw max %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw mins %ival, %I[%i] : (i32, memref<10xi32>) -> i32
-  // CHECK: llvm.atomicrmw min %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw maxu %ival, %I[%i] : (i32, memref<10xi32>) -> i32
-  // CHECK: llvm.atomicrmw umax %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw minu %ival, %I[%i] : (i32, memref<10xi32>) -> i32
-  // CHECK: llvm.atomicrmw umin %{{.*}}, %{{.*}} acq_rel
-  atomic_rmw addf %fval, %F[%i] : (f32, memref<10xf32>) -> f32
-  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} acq_rel
-  return
-}
-
-// -----
-
 // CHECK-LABEL: func @generic_atomic_rmw
 func @generic_atomic_rmw(%I : memref<10xi32>, %i : index) -> i32 {
   %x = generic_atomic_rmw %I[%i] : memref<10xi32> {

@@ -209,7 +209,7 @@ void CodeCoverageTool::addCollectedPath(const std::string &Path) {
     error(EC.message(), Path);
     return;
   }
-  sys::path::remove_dots(EffectivePath, /*remove_dot_dots=*/true);
+  sys::path::remove_dots(EffectivePath, /*remove_dot_dot=*/true);
   if (!IgnoreFilenameFilters.matchesFilename(EffectivePath))
     SourceFiles.emplace_back(EffectivePath.str());
   HadSourceFiles = !SourceFiles.empty();

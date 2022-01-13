@@ -113,7 +113,7 @@ static TracePart* TracePartAlloc(ThreadState* thr) {
   return part;
 }
 
-static void TracePartFree(TracePart* part) REQUIRES(ctx->slot_mtx) {
+static void TracePartFree(TracePart* part) SANITIZER_REQUIRES(ctx->slot_mtx) {
   DCHECK(part->trace);
   part->trace = nullptr;
   ctx->trace_part_recycle.PushFront(part);
@@ -208,7 +208,7 @@ static void DoResetImpl(uptr epoch) {
 
 // Clang does not understand locking all slots in the loop:
 // error: expecting mutex 'slot.mtx' to be held at start of each loop
-void DoReset(ThreadState* thr, uptr epoch) NO_THREAD_SAFETY_ANALYSIS {
+void DoReset(ThreadState* thr, uptr epoch) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   {
     for (auto& slot : ctx->slots) {
       slot.mtx.Lock();
@@ -230,7 +230,7 @@ void DoReset(ThreadState* thr, uptr epoch) NO_THREAD_SAFETY_ANALYSIS {
 void FlushShadowMemory() { DoReset(nullptr, 0); }
 
 static TidSlot* FindSlotAndLock(ThreadState* thr)
-    ACQUIRE(thr->slot->mtx) NO_THREAD_SAFETY_ANALYSIS {
+    SANITIZER_ACQUIRE(thr->slot->mtx) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   CHECK(!thr->slot);
   TidSlot* slot = nullptr;
   for (;;) {
@@ -334,7 +334,7 @@ void SlotDetach(ThreadState* thr) {
   SlotDetachImpl(thr, true);
 }
 
-void SlotLock(ThreadState* thr) NO_THREAD_SAFETY_ANALYSIS {
+void SlotLock(ThreadState* thr) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   DCHECK(!thr->slot_locked);
 #if SANITIZER_DEBUG
   // Check these mutexes are not locked.
@@ -756,7 +756,7 @@ int Finalize(ThreadState *thr) {
 }
 
 #if !SANITIZER_GO
-void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
+void ForkBefore(ThreadState* thr, uptr pc) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   GlobalProcessorLock();
   // Detaching from the slot makes OnUserFree skip writing to the shadow.
   // The slot will be locked so any attempts to use it will deadlock anyway.
@@ -783,7 +783,7 @@ void ForkBefore(ThreadState *thr, uptr pc) NO_THREAD_SAFETY_ANALYSIS {
   __tsan_test_only_on_fork();
 }
 
-static void ForkAfter(ThreadState* thr) NO_THREAD_SAFETY_ANALYSIS {
+static void ForkAfter(ThreadState* thr) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   thr->suppress_reports--;  // Enabled in ForkBefore.
   thr->ignore_interceptors--;
   thr->ignore_reads_and_writes--;

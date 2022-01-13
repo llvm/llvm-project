@@ -133,15 +133,8 @@ using namespace lldb;
 %include "python-wrapper.swig"
 
 %pythoncode%{
-_initialize = True
-try:
-   import lldbconfig
-   _initialize = lldbconfig.INITIALIZE
-except ImportError:
-   pass
 debugger_unique_id = 0
-if _initialize:
-   SBDebugger.Initialize()
+SBDebugger.Initialize()
 debugger = None
 target = None
 process = None

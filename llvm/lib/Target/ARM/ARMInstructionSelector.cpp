@@ -171,8 +171,8 @@ createARMInstructionSelector(const ARMBaseTargetMachine &TM,
 ARMInstructionSelector::ARMInstructionSelector(const ARMBaseTargetMachine &TM,
                                                const ARMSubtarget &STI,
                                                const ARMRegisterBankInfo &RBI)
-    : InstructionSelector(), TII(*STI.getInstrInfo()),
-      TRI(*STI.getRegisterInfo()), TM(TM), RBI(RBI), STI(STI), Opcodes(STI),
+    : TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()), TM(TM), RBI(RBI),
+      STI(STI), Opcodes(STI),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "ARMGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT

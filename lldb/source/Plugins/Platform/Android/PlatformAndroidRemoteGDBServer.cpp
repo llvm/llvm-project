@@ -82,9 +82,11 @@ PlatformAndroidRemoteGDBServer::~PlatformAndroidRemoteGDBServer() {
 
 bool PlatformAndroidRemoteGDBServer::LaunchGDBServer(lldb::pid_t &pid,
                                                      std::string &connect_url) {
+  assert(IsConnected());
   uint16_t remote_port = 0;
   std::string socket_name;
-  if (!m_gdb_client.LaunchGDBServer("127.0.0.1", pid, remote_port, socket_name))
+  if (!m_gdb_client_up->LaunchGDBServer("127.0.0.1", pid, remote_port,
+                                        socket_name))
     return false;
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
@@ -98,8 +100,9 @@ bool PlatformAndroidRemoteGDBServer::LaunchGDBServer(lldb::pid_t &pid,
 }
 
 bool PlatformAndroidRemoteGDBServer::KillSpawnedProcess(lldb::pid_t pid) {
+  assert(IsConnected());
   DeleteForwardPort(pid);
-  return m_gdb_client.KillSpawnedProcess(pid);
+  return m_gdb_client_up->KillSpawnedProcess(pid);
 }
 
 Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {

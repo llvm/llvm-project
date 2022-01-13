@@ -264,7 +264,8 @@ public:
                      Callback<std::vector<CallHierarchyIncomingCall>>);
 
   /// Resolve inlay hints for a given document.
-  void inlayHints(PathRef File, Callback<std::vector<InlayHint>>);
+  void inlayHints(PathRef File, llvm::Optional<Range> RestrictRange,
+                  Callback<std::vector<InlayHint>>);
 
   /// Retrieve the top symbols from the workspace matching a query.
   void workspaceSymbols(StringRef Query, int Limit,

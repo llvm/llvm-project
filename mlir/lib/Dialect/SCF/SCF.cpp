@@ -13,10 +13,10 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
-
 using namespace mlir;
 using namespace mlir::scf;
 
@@ -1199,6 +1199,30 @@ void IfOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
   }
 }
 
+LogicalResult IfOp::fold(ArrayRef<Attribute> operands,
+                         SmallVectorImpl<OpFoldResult> &results) {
+  // if (!c) then A() else B() -> if c then B() else A()
+  if (getElseRegion().empty())
+    return failure();
+
+  arith::XOrIOp xorStmt = getCondition().getDefiningOp<arith::XOrIOp>();
+  if (!xorStmt)
+    return failure();
+
+  if (!matchPattern(xorStmt.getRhs(), m_One()))
+    return failure();
+
+  getConditionMutable().assign(xorStmt.getLhs());
+  Block *thenBlock = &getThenRegion().front();
+  // It would be nicer to use iplist::swap, but that has no implemented
+  // callbacks See: https://llvm.org/doxygen/ilist_8h_source.html#l00224
+  getThenRegion().getBlocks().splice(getThenRegion().getBlocks().begin(),
+                                     getElseRegion().getBlocks());
+  getElseRegion().getBlocks().splice(getElseRegion().getBlocks().begin(),
+                                     getThenRegion().getBlocks(), thenBlock);
+  return success();
+}
+
 namespace {
 // Pattern to remove unused IfOp results.
 struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
@@ -1247,7 +1271,7 @@ struct RemoveUnusedResults : public OpRewritePattern<IfOp> {
 
     // Replace the operation by the new one.
     SmallVector<Value, 4> repResults(op.getNumResults());
-    for (auto en : llvm::enumerate(usedResults))
+    for (const auto &en : llvm::enumerate(usedResults))
       repResults[en.value().getResultNumber()] = newOp.getResult(en.index());
     rewriter.replaceOp(op, repResults);
     return success();
@@ -1296,7 +1320,8 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
     SmallVector<Value> results(op->getNumResults());
     assert(thenYieldArgs.size() == results.size());
     assert(elseYieldArgs.size() == results.size());
-    for (auto it : llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
+    for (const auto &it :
+         llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
       Value trueVal = std::get<0>(it.value());
       Value falseVal = std::get<1>(it.value());
       if (trueVal == falseVal)
@@ -1564,7 +1589,7 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
 
     SmallVector<Value> prevValues;
     SmallVector<Value> nextValues;
-    for (auto pair : llvm::enumerate(combinedIf.getResults())) {
+    for (const auto &pair : llvm::enumerate(combinedIf.getResults())) {
       if (pair.index() < prevIf.getNumResults())
         prevValues.push_back(pair.value());
       else
@@ -1631,8 +1656,8 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
       return failure();
 
     Location loc = op.getLoc();
-    Value newCondition = rewriter.create<arith::AndIOp>(loc, op.condition(),
-                                                        nestedIf.condition());
+    Value newCondition = rewriter.create<arith::AndIOp>(
+        loc, op.getCondition(), nestedIf.getCondition());
     auto newIf = rewriter.create<IfOp>(loc, newCondition);
     Block *newIfBlock = newIf.thenBlock();
     rewriter.eraseOp(newIfBlock->getTerminator());
@@ -2368,7 +2393,7 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
     SmallVector<Type> newResultTypes;
     SmallVector<Value> newTermArgs;
     bool needUpdate = false;
-    for (auto it :
+    for (const auto &it :
          llvm::enumerate(llvm::zip(op.getResults(), afterArgs, termArgs))) {
       auto i = static_cast<unsigned>(it.index());
       Value result = std::get<0>(it.value());
@@ -2403,7 +2428,7 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
     // null).
     SmallVector<Value> newResults(op.getNumResults());
     SmallVector<Value> newAfterBlockArgs(op.getNumResults());
-    for (auto it : llvm::enumerate(newResultsIndices)) {
+    for (const auto &it : llvm::enumerate(newResultsIndices)) {
       newResults[it.value()] = newWhile.getResult(it.index());
       newAfterBlockArgs[it.value()] = newAfterBlock.getArgument(it.index());
     }

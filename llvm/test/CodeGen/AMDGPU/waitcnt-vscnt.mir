@@ -4,7 +4,7 @@
 # GCN-LABEL: waitcnt-vscnt
 # GCN: GLOBAL_ATOMIC_ADD_RTN
 # GFX10-NEXT: S_WAITCNT 49279
-# GFX11-NEXT: S_WAITCNT 64519
+# GFX11-NEXT: S_WAITCNT 64527
 ---
 name: waitcnt-vscnt
 machineFunctionInfo:

@@ -1299,63 +1299,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   return nullptr;
 }
 
-/// This type is zero-sized if it's an array or structure of zero-sized types.
-/// The only leaf zero-sized type is an empty structure.
-static bool isMaybeZeroSizedType(Type *Ty) {
-  if (StructType *STy = dyn_cast<StructType>(Ty)) {
-    if (STy->isOpaque()) return true;  // Can't say.
-
-    // If all of elements have zero size, this does too.
-    for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i)
-      if (!isMaybeZeroSizedType(STy->getElementType(i))) return false;
-    return true;
-
-  } else if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
-    return isMaybeZeroSizedType(ATy->getElementType());
-  }
-  return false;
-}
-
-/// Compare the two constants as though they were getelementptr indices.
-/// This allows coercion of the types to be the same thing.
-///
-/// If the two constants are the "same" (after coercion), return 0.  If the
-/// first is less than the second, return -1, if the second is less than the
-/// first, return 1.  If the constants are not integral, return -2.
-///
-static int IdxCompare(Constant *C1, Constant *C2, Type *ElTy) {
-  if (C1 == C2) return 0;
-
-  // Ok, we found a different index.  If they are not ConstantInt, we can't do
-  // anything with them.
-  if (!isa<ConstantInt>(C1) || !isa<ConstantInt>(C2))
-    return -2; // don't know!
-
-  // We cannot compare the indices if they don't fit in an int64_t.
-  if (cast<ConstantInt>(C1)->getValue().getActiveBits() > 64 ||
-      cast<ConstantInt>(C2)->getValue().getActiveBits() > 64)
-    return -2; // don't know!
-
-  // Ok, we have two differing integer indices.  Sign extend them to be the same
-  // type.
-  int64_t C1Val = cast<ConstantInt>(C1)->getSExtValue();
-  int64_t C2Val = cast<ConstantInt>(C2)->getSExtValue();
-
-  if (C1Val == C2Val) return 0;  // They are equal
-
-  // If the type being indexed over is really just a zero sized type, there is
-  // no pointer difference being made here.
-  if (isMaybeZeroSizedType(ElTy))
-    return -2; // dunno.
-
-  // If they are really different, now that they are the same type, then we
-  // found a difference!
-  if (C1Val < C2Val)
-    return -1;
-  else
-    return 1;
-}
-
 /// This function determines if there is anything we can decide about the two
 /// constants provided. This doesn't need to handle simple things like
 /// ConstantFP comparisons, but should instead handle ConstantExprs.
@@ -1594,103 +1537,28 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
         if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0)) {
           // If its not weak linkage, the GVal must have a non-zero address
           // so the result is greater-than
-          if (!GV->hasExternalWeakLinkage())
+          if (!GV->hasExternalWeakLinkage() && CE1GEP->isInBounds())
             return ICmpInst::ICMP_UGT;
-        } else if (isa<ConstantPointerNull>(CE1Op0)) {
-          // If we are indexing from a null pointer, check to see if we have any
-          // non-zero indices.
-          for (unsigned i = 1, e = CE1->getNumOperands(); i != e; ++i)
-            if (!CE1->getOperand(i)->isNullValue())
-              // Offsetting from null, must not be equal.
-              return ICmpInst::ICMP_UGT;
-          // Only zero indexes from null, must still be zero.
-          return ICmpInst::ICMP_EQ;
         }
-        // Otherwise, we can't really say if the first operand is null or not.
       } else if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2)) {
-        if (isa<ConstantPointerNull>(CE1Op0)) {
-          // If its not weak linkage, the GVal must have a non-zero address
-          // so the result is less-than
-          if (!GV2->hasExternalWeakLinkage())
-            return ICmpInst::ICMP_ULT;
-        } else if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0)) {
-          if (GV == GV2) {
-            // If this is a getelementptr of the same global, then it must be
-            // different.  Because the types must match, the getelementptr could
-            // only have at most one index, and because we fold getelementptr's
-            // with a single zero index, it must be nonzero.
-            assert(CE1->getNumOperands() == 2 &&
-                   !CE1->getOperand(1)->isNullValue() &&
-                   "Surprising getelementptr!");
-            return ICmpInst::ICMP_UGT;
-          } else {
+        if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0)) {
+          if (GV != GV2) {
             if (CE1GEP->hasAllZeroIndices())
               return areGlobalsPotentiallyEqual(GV, GV2);
             return ICmpInst::BAD_ICMP_PREDICATE;
           }
         }
-      } else {
-        ConstantExpr *CE2 = cast<ConstantExpr>(V2);
-        Constant *CE2Op0 = CE2->getOperand(0);
-
-        // There are MANY other foldings that we could perform here.  They will
-        // probably be added on demand, as they seem needed.
-        switch (CE2->getOpcode()) {
-        default: break;
-        case Instruction::GetElementPtr:
-          // By far the most common case to handle is when the base pointers are
-          // obviously to the same global.
-          if (isa<GlobalValue>(CE1Op0) && isa<GlobalValue>(CE2Op0)) {
-            // Don't know relative ordering, but check for inequality.
-            if (CE1Op0 != CE2Op0) {
-              GEPOperator *CE2GEP = cast<GEPOperator>(CE2);
-              if (CE1GEP->hasAllZeroIndices() && CE2GEP->hasAllZeroIndices())
-                return areGlobalsPotentiallyEqual(cast<GlobalValue>(CE1Op0),
-                                                  cast<GlobalValue>(CE2Op0));
-              return ICmpInst::BAD_ICMP_PREDICATE;
-            }
-            // Ok, we know that both getelementptr instructions are based on the
-            // same global.  From this, we can precisely determine the relative
-            // ordering of the resultant pointers.
-            unsigned i = 1;
-
-            // The logic below assumes that the result of the comparison
-            // can be determined by finding the first index that differs.
-            // This doesn't work if there is over-indexing in any
-            // subsequent indices, so check for that case first.
-            if (!CE1->isGEPWithNoNotionalOverIndexing() ||
-                !CE2->isGEPWithNoNotionalOverIndexing())
-               return ICmpInst::BAD_ICMP_PREDICATE; // Might be equal.
-
-            // Compare all of the operands the GEP's have in common.
-            gep_type_iterator GTI = gep_type_begin(CE1);
-            for (;i != CE1->getNumOperands() && i != CE2->getNumOperands();
-                 ++i, ++GTI)
-              switch (IdxCompare(CE1->getOperand(i),
-                                 CE2->getOperand(i), GTI.getIndexedType())) {
-              case -1: return isSigned ? ICmpInst::ICMP_SLT:ICmpInst::ICMP_ULT;
-              case 1:  return isSigned ? ICmpInst::ICMP_SGT:ICmpInst::ICMP_UGT;
-              case -2: return ICmpInst::BAD_ICMP_PREDICATE;
-              }
-
-            // Ok, we ran out of things they have in common.  If any leftovers
-            // are non-zero then we have a difference, otherwise we are equal.
-            for (; i < CE1->getNumOperands(); ++i)
-              if (!CE1->getOperand(i)->isNullValue()) {
-                if (isa<ConstantInt>(CE1->getOperand(i)))
-                  return isSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
-                else
-                  return ICmpInst::BAD_ICMP_PREDICATE; // Might be equal.
-              }
-
-            for (; i < CE2->getNumOperands(); ++i)
-              if (!CE2->getOperand(i)->isNullValue()) {
-                if (isa<ConstantInt>(CE2->getOperand(i)))
-                  return isSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
-                else
-                  return ICmpInst::BAD_ICMP_PREDICATE; // Might be equal.
-              }
-            return ICmpInst::ICMP_EQ;
+      } else if (const auto *CE2GEP = dyn_cast<GEPOperator>(V2)) {
+        // By far the most common case to handle is when the base pointers are
+        // obviously to the same global.
+        const Constant *CE2Op0 = cast<Constant>(CE2GEP->getPointerOperand());
+        if (isa<GlobalValue>(CE1Op0) && isa<GlobalValue>(CE2Op0)) {
+          // Don't know relative ordering, but check for inequality.
+          if (CE1Op0 != CE2Op0) {
+            if (CE1GEP->hasAllZeroIndices() && CE2GEP->hasAllZeroIndices())
+              return areGlobalsPotentiallyEqual(cast<GlobalValue>(CE1Op0),
+                                                cast<GlobalValue>(CE2Op0));
+            return ICmpInst::BAD_ICMP_PREDICATE;
           }
         }
       }
@@ -1704,7 +1572,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
   return ICmpInst::BAD_ICMP_PREDICATE;
 }
 
-Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
+Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
                                                Constant *C1, Constant *C2) {
   Type *ResultTy;
   if (VectorType *VT = dyn_cast<VectorType>(C1->getType()))
@@ -1714,10 +1582,10 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
     ResultTy = Type::getInt1Ty(C1->getContext());
 
   // Fold FCMP_FALSE/FCMP_TRUE unconditionally.
-  if (pred == FCmpInst::FCMP_FALSE)
+  if (Predicate == FCmpInst::FCMP_FALSE)
     return Constant::getNullValue(ResultTy);
 
-  if (pred == FCmpInst::FCMP_TRUE)
+  if (Predicate == FCmpInst::FCMP_TRUE)
     return Constant::getAllOnesValue(ResultTy);
 
   // Handle some degenerate cases first
@@ -1725,7 +1593,6 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
     return PoisonValue::get(ResultTy);
 
   if (isa<UndefValue>(C1) || isa<UndefValue>(C2)) {
-    CmpInst::Predicate Predicate = CmpInst::Predicate(pred);
     bool isIntegerPredicate = ICmpInst::isIntPredicate(Predicate);
     // For EQ and NE, we can always pick a value for the undef to make the
     // predicate pass or fail, so we can return undef.
@@ -1750,9 +1617,9 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
       if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
           !NullPointerIsDefined(nullptr /* F */,
                                 GV->getType()->getAddressSpace())) {
-        if (pred == ICmpInst::ICMP_EQ)
+        if (Predicate == ICmpInst::ICMP_EQ)
           return ConstantInt::getFalse(C1->getContext());
-        else if (pred == ICmpInst::ICMP_NE)
+        else if (Predicate == ICmpInst::ICMP_NE)
           return ConstantInt::getTrue(C1->getContext());
       }
   // icmp eq/ne(GV,null) -> false/true
@@ -1762,9 +1629,9 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
       if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
           !NullPointerIsDefined(nullptr /* F */,
                                 GV->getType()->getAddressSpace())) {
-        if (pred == ICmpInst::ICMP_EQ)
+        if (Predicate == ICmpInst::ICMP_EQ)
           return ConstantInt::getFalse(C1->getContext());
-        else if (pred == ICmpInst::ICMP_NE)
+        else if (Predicate == ICmpInst::ICMP_NE)
           return ConstantInt::getTrue(C1->getContext());
       }
     }
@@ -1772,16 +1639,16 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
     // The caller is expected to commute the operands if the constant expression
     // is C2.
     // C1 >= 0 --> true
-    if (pred == ICmpInst::ICMP_UGE)
+    if (Predicate == ICmpInst::ICMP_UGE)
       return Constant::getAllOnesValue(ResultTy);
     // C1 < 0 --> false
-    if (pred == ICmpInst::ICMP_ULT)
+    if (Predicate == ICmpInst::ICMP_ULT)
       return Constant::getNullValue(ResultTy);
   }
 
   // If the comparison is a comparison between two i1's, simplify it.
   if (C1->getType()->isIntegerTy(1)) {
-    switch(pred) {
+    switch (Predicate) {
     case ICmpInst::ICMP_EQ:
       if (isa<ConstantInt>(C2))
         return ConstantExpr::getXor(C1, ConstantExpr::getNot(C2));
@@ -1796,12 +1663,10 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
   if (isa<ConstantInt>(C1) && isa<ConstantInt>(C2)) {
     const APInt &V1 = cast<ConstantInt>(C1)->getValue();
     const APInt &V2 = cast<ConstantInt>(C2)->getValue();
-    return ConstantInt::get(
-        ResultTy, ICmpInst::compare(V1, V2, (ICmpInst::Predicate)pred));
+    return ConstantInt::get(ResultTy, ICmpInst::compare(V1, V2, Predicate));
   } else if (isa<ConstantFP>(C1) && isa<ConstantFP>(C2)) {
     const APFloat &C1V = cast<ConstantFP>(C1)->getValueAPF();
     const APFloat &C2V = cast<ConstantFP>(C2)->getValueAPF();
-    CmpInst::Predicate Predicate = CmpInst::Predicate(pred);
     return ConstantInt::get(ResultTy, FCmpInst::compare(C1V, C2V, Predicate));
   } else if (auto *C1VTy = dyn_cast<VectorType>(C1->getType())) {
 
@@ -1810,7 +1675,7 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
       if (Constant *C2Splat = C2->getSplatValue())
         return ConstantVector::getSplat(
             C1VTy->getElementCount(),
-            ConstantExpr::getCompare(pred, C1Splat, C2Splat));
+            ConstantExpr::getCompare(Predicate, C1Splat, C2Splat));
 
     // Do not iterate on scalable vector. The number of elements is unknown at
     // compile-time.
@@ -1829,7 +1694,7 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
       Constant *C2E =
           ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, I));
 
-      ResElts.push_back(ConstantExpr::getCompare(pred, C1E, C2E));
+      ResElts.push_back(ConstantExpr::getCompare(Predicate, C1E, C2E));
     }
 
     return ConstantVector::get(ResElts);
@@ -1854,46 +1719,52 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
     case FCmpInst::BAD_FCMP_PREDICATE:
       break; // Couldn't determine anything about these constants.
     case FCmpInst::FCMP_OEQ: // We know that C1 == C2
-      Result = (pred == FCmpInst::FCMP_UEQ || pred == FCmpInst::FCMP_OEQ ||
-                pred == FCmpInst::FCMP_ULE || pred == FCmpInst::FCMP_OLE ||
-                pred == FCmpInst::FCMP_UGE || pred == FCmpInst::FCMP_OGE);
+      Result =
+          (Predicate == FCmpInst::FCMP_UEQ || Predicate == FCmpInst::FCMP_OEQ ||
+           Predicate == FCmpInst::FCMP_ULE || Predicate == FCmpInst::FCMP_OLE ||
+           Predicate == FCmpInst::FCMP_UGE || Predicate == FCmpInst::FCMP_OGE);
       break;
     case FCmpInst::FCMP_OLT: // We know that C1 < C2
-      Result = (pred == FCmpInst::FCMP_UNE || pred == FCmpInst::FCMP_ONE ||
-                pred == FCmpInst::FCMP_ULT || pred == FCmpInst::FCMP_OLT ||
-                pred == FCmpInst::FCMP_ULE || pred == FCmpInst::FCMP_OLE);
+      Result =
+          (Predicate == FCmpInst::FCMP_UNE || Predicate == FCmpInst::FCMP_ONE ||
+           Predicate == FCmpInst::FCMP_ULT || Predicate == FCmpInst::FCMP_OLT ||
+           Predicate == FCmpInst::FCMP_ULE || Predicate == FCmpInst::FCMP_OLE);
       break;
     case FCmpInst::FCMP_OGT: // We know that C1 > C2
-      Result = (pred == FCmpInst::FCMP_UNE || pred == FCmpInst::FCMP_ONE ||
-                pred == FCmpInst::FCMP_UGT || pred == FCmpInst::FCMP_OGT ||
-                pred == FCmpInst::FCMP_UGE || pred == FCmpInst::FCMP_OGE);
+      Result =
+          (Predicate == FCmpInst::FCMP_UNE || Predicate == FCmpInst::FCMP_ONE ||
+           Predicate == FCmpInst::FCMP_UGT || Predicate == FCmpInst::FCMP_OGT ||
+           Predicate == FCmpInst::FCMP_UGE || Predicate == FCmpInst::FCMP_OGE);
       break;
     case FCmpInst::FCMP_OLE: // We know that C1 <= C2
       // We can only partially decide this relation.
-      if (pred == FCmpInst::FCMP_UGT || pred == FCmpInst::FCMP_OGT)
+      if (Predicate == FCmpInst::FCMP_UGT || Predicate == FCmpInst::FCMP_OGT)
         Result = 0;
-      else if (pred == FCmpInst::FCMP_ULT || pred == FCmpInst::FCMP_OLT)
+      else if (Predicate == FCmpInst::FCMP_ULT ||
+               Predicate == FCmpInst::FCMP_OLT)
         Result = 1;
       break;
     case FCmpInst::FCMP_OGE: // We known that C1 >= C2
       // We can only partially decide this relation.
-      if (pred == FCmpInst::FCMP_ULT || pred == FCmpInst::FCMP_OLT)
+      if (Predicate == FCmpInst::FCMP_ULT || Predicate == FCmpInst::FCMP_OLT)
         Result = 0;
-      else if (pred == FCmpInst::FCMP_UGT || pred == FCmpInst::FCMP_OGT)
+      else if (Predicate == FCmpInst::FCMP_UGT ||
+               Predicate == FCmpInst::FCMP_OGT)
         Result = 1;
       break;
     case FCmpInst::FCMP_ONE: // We know that C1 != C2
       // We can only partially decide this relation.
-      if (pred == FCmpInst::FCMP_OEQ || pred == FCmpInst::FCMP_UEQ)
+      if (Predicate == FCmpInst::FCMP_OEQ || Predicate == FCmpInst::FCMP_UEQ)
         Result = 0;
-      else if (pred == FCmpInst::FCMP_ONE || pred == FCmpInst::FCMP_UNE)
+      else if (Predicate == FCmpInst::FCMP_ONE ||
+               Predicate == FCmpInst::FCMP_UNE)
         Result = 1;
       break;
     case FCmpInst::FCMP_UEQ: // We know that C1 == C2 || isUnordered(C1, C2).
       // We can only partially decide this relation.
-      if (pred == FCmpInst::FCMP_ONE)
+      if (Predicate == FCmpInst::FCMP_ONE)
         Result = 0;
-      else if (pred == FCmpInst::FCMP_UEQ)
+      else if (Predicate == FCmpInst::FCMP_UEQ)
         Result = 1;
       break;
     }
@@ -1905,67 +1776,84 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
   } else {
     // Evaluate the relation between the two constants, per the predicate.
     int Result = -1;  // -1 = unknown, 0 = known false, 1 = known true.
-    switch (evaluateICmpRelation(C1, C2,
-                                 CmpInst::isSigned((CmpInst::Predicate)pred))) {
+    switch (evaluateICmpRelation(C1, C2, CmpInst::isSigned(Predicate))) {
     default: llvm_unreachable("Unknown relational!");
     case ICmpInst::BAD_ICMP_PREDICATE:
       break;  // Couldn't determine anything about these constants.
     case ICmpInst::ICMP_EQ:   // We know the constants are equal!
       // If we know the constants are equal, we can decide the result of this
       // computation precisely.
-      Result = ICmpInst::isTrueWhenEqual((ICmpInst::Predicate)pred);
+      Result = ICmpInst::isTrueWhenEqual(Predicate);
       break;
     case ICmpInst::ICMP_ULT:
-      switch (pred) {
+      switch (Predicate) {
       case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_ULE:
         Result = 1; break;
       case ICmpInst::ICMP_UGT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_UGE:
         Result = 0; break;
+      default:
+        break;
       }
       break;
     case ICmpInst::ICMP_SLT:
-      switch (pred) {
+      switch (Predicate) {
       case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_SLE:
         Result = 1; break;
       case ICmpInst::ICMP_SGT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_SGE:
         Result = 0; break;
+      default:
+        break;
       }
       break;
     case ICmpInst::ICMP_UGT:
-      switch (pred) {
+      switch (Predicate) {
       case ICmpInst::ICMP_UGT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_UGE:
         Result = 1; break;
       case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_ULE:
         Result = 0; break;
+      default:
+        break;
       }
       break;
     case ICmpInst::ICMP_SGT:
-      switch (pred) {
+      switch (Predicate) {
       case ICmpInst::ICMP_SGT: case ICmpInst::ICMP_NE: case ICmpInst::ICMP_SGE:
         Result = 1; break;
       case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_EQ: case ICmpInst::ICMP_SLE:
         Result = 0; break;
+      default:
+        break;
       }
       break;
     case ICmpInst::ICMP_ULE:
-      if (pred == ICmpInst::ICMP_UGT) Result = 0;
-      if (pred == ICmpInst::ICMP_ULT || pred == ICmpInst::ICMP_ULE) Result = 1;
+      if (Predicate == ICmpInst::ICMP_UGT)
+        Result = 0;
+      if (Predicate == ICmpInst::ICMP_ULT || Predicate == ICmpInst::ICMP_ULE)
+        Result = 1;
       break;
     case ICmpInst::ICMP_SLE:
-      if (pred == ICmpInst::ICMP_SGT) Result = 0;
-      if (pred == ICmpInst::ICMP_SLT || pred == ICmpInst::ICMP_SLE) Result = 1;
+      if (Predicate == ICmpInst::ICMP_SGT)
+        Result = 0;
+      if (Predicate == ICmpInst::ICMP_SLT || Predicate == ICmpInst::ICMP_SLE)
+        Result = 1;
       break;
     case ICmpInst::ICMP_UGE:
-      if (pred == ICmpInst::ICMP_ULT) Result = 0;
-      if (pred == ICmpInst::ICMP_UGT || pred == ICmpInst::ICMP_UGE) Result = 1;
+      if (Predicate == ICmpInst::ICMP_ULT)
+        Result = 0;
+      if (Predicate == ICmpInst::ICMP_UGT || Predicate == ICmpInst::ICMP_UGE)
+        Result = 1;
       break;
     case ICmpInst::ICMP_SGE:
-      if (pred == ICmpInst::ICMP_SLT) Result = 0;
-      if (pred == ICmpInst::ICMP_SGT || pred == ICmpInst::ICMP_SGE) Result = 1;
+      if (Predicate == ICmpInst::ICMP_SLT)
+        Result = 0;
+      if (Predicate == ICmpInst::ICMP_SGT || Predicate == ICmpInst::ICMP_SGE)
+        Result = 1;
       break;
     case ICmpInst::ICMP_NE:
-      if (pred == ICmpInst::ICMP_EQ) Result = 0;
-      if (pred == ICmpInst::ICMP_NE) Result = 1;
+      if (Predicate == ICmpInst::ICMP_EQ)
+        Result = 0;
+      if (Predicate == ICmpInst::ICMP_NE)
+        Result = 1;
       break;
     }
 
@@ -1983,16 +1871,16 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
           CE2->getType()->isVectorTy() == CE2Op0->getType()->isVectorTy() &&
           !CE2Op0->getType()->isFPOrFPVectorTy()) {
         Constant *Inverse = ConstantExpr::getBitCast(C1, CE2Op0->getType());
-        return ConstantExpr::getICmp(pred, Inverse, CE2Op0);
+        return ConstantExpr::getICmp(Predicate, Inverse, CE2Op0);
       }
     }
 
     // If the left hand side is an extension, try eliminating it.
     if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
       if ((CE1->getOpcode() == Instruction::SExt &&
-           ICmpInst::isSigned((ICmpInst::Predicate)pred)) ||
+           ICmpInst::isSigned(Predicate)) ||
           (CE1->getOpcode() == Instruction::ZExt &&
-           !ICmpInst::isSigned((ICmpInst::Predicate)pred))){
+           !ICmpInst::isSigned(Predicate))) {
         Constant *CE1Op0 = CE1->getOperand(0);
         Constant *CE1Inverse = ConstantExpr::getTrunc(CE1, CE1Op0->getType());
         if (CE1Inverse == CE1Op0) {
@@ -2000,7 +1888,7 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
           Constant *C2Inverse = ConstantExpr::getTrunc(C2, CE1Op0->getType());
           if (ConstantExpr::getCast(CE1->getOpcode(), C2Inverse,
                                     C2->getType()) == C2)
-            return ConstantExpr::getICmp(pred, CE1Inverse, C2Inverse);
+            return ConstantExpr::getICmp(Predicate, CE1Inverse, C2Inverse);
         }
       }
     }
@@ -2010,8 +1898,8 @@ Constant *llvm::ConstantFoldCompareInstruction(unsigned short pred,
       // If C2 is a constant expr and C1 isn't, flip them around and fold the
       // other way if possible.
       // Also, if C1 is null and C2 isn't, flip them around.
-      pred = ICmpInst::getSwappedPredicate((ICmpInst::Predicate)pred);
-      return ConstantExpr::getICmp(pred, C2, C1);
+      Predicate = ICmpInst::getSwappedPredicate(Predicate);
+      return ConstantExpr::getICmp(Predicate, C2, C1);
     }
   }
   return nullptr;
@@ -2086,31 +1974,13 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
        I != E; ++I)
     LastI = I;
 
-  // We cannot combine indices if doing so would take us outside of an
-  // array or vector.  Doing otherwise could trick us if we evaluated such a
-  // GEP as part of a load.
-  //
-  // e.g. Consider if the original GEP was:
-  // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
-  //                    i32 0, i32 0, i64 0)
-  //
-  // If we then tried to offset it by '8' to get to the third element,
-  // an i8, we should *not* get:
-  // i8* getelementptr ({ [2 x i8], i32, i8, [3 x i8] }* @main.c,
-  //                    i32 0, i32 0, i64 8)
-  //
-  // This GEP tries to index array element '8  which runs out-of-bounds.
-  // Subsequent evaluation would get confused and produce erroneous results.
-  //
-  // The following prohibits such a GEP from being formed by checking to see
-  // if the index is in-range with respect to an array.
+  // We can't combine GEPs if the last index is a struct type.
   if (!LastI.isSequential())
     return nullptr;
+  // We could perform the transform with non-constant index, but prefer leaving
+  // it as GEP of GEP rather than GEP of add for now.
   ConstantInt *CI = dyn_cast<ConstantInt>(Idx0);
   if (!CI)
-    return nullptr;
-  if (LastI.isBoundedSequential() &&
-      !isIndexInRangeOfArrayType(LastI.getSequentialNumElements(), CI))
     return nullptr;
 
   // TODO: This code may be extended to handle vectors as well.

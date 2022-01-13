@@ -437,6 +437,7 @@ def Arith_AndIOp : Arith_IntBinaryOp<"andi", [Commutative, Idempotent]> {
     ```
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -465,6 +466,7 @@ def Arith_OrIOp : Arith_IntBinaryOp<"ori", [Commutative, Idempotent]> {
     ```
   }];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -632,7 +634,7 @@ def Arith_SubFOp : Arith_FloatBinaryOp<"subf"> {
 // MaxFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf"> {
+def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf", [Commutative]> {
   let summary = "floating-point maximum operation";
   let description = [{
     Syntax:
@@ -675,7 +677,7 @@ def Arith_MaxUIOp : Arith_IntBinaryOp<"maxui"> {
 // MinFOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinFOp : Arith_FloatBinaryOp<"minf"> {
+def Arith_MinFOp : Arith_FloatBinaryOp<"minf", [Commutative]> {
   let summary = "floating-point minimum operation";
   let description = [{
     Syntax:
@@ -818,6 +820,7 @@ def Arith_ExtSIOp : Arith_IToICastOp<"extsi"> {
   }];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let verifier = [{ return verifyExtOp<IntegerType>(*this); }];
 }
 
@@ -892,6 +895,7 @@ def Arith_UIToFPOp : Arith_IToFCastOp<"uitofp"> {
     rounded using the default rounding mode. When operating on vectors, casts
     elementwise.
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -906,6 +910,7 @@ def Arith_SIToFPOp : Arith_IToFCastOp<"sitofp"> {
     rounded using the default rounding mode. When operating on vectors, casts
     elementwise.
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -919,6 +924,7 @@ def Arith_FPToUIOp : Arith_FToICastOp<"fptoui"> {
     towards zero) unsigned integer value. When operating on vectors, casts
     elementwise.
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -932,6 +938,7 @@ def Arith_FPToSIOp : Arith_FToICastOp<"fptosi"> {
     towards zero) signed integer value. When operating on vectors, casts
     elementwise.
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

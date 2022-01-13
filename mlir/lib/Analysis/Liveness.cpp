@@ -27,7 +27,7 @@ struct BlockInfoBuilder {
   using ValueSetT = Liveness::ValueSetT;
 
   /// Constructs an empty block builder.
-  BlockInfoBuilder() {}
+  BlockInfoBuilder() = default;
 
   /// Fills the block builder with initial liveness information.
   BlockInfoBuilder(Block *block) : block(block) {

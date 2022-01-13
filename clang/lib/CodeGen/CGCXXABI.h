@@ -31,7 +31,6 @@ class CXXConstructorDecl;
 class CXXDestructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
-class FieldDecl;
 class MangleContext;
 
 namespace CodeGen {

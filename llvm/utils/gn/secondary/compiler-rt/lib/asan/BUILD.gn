@@ -199,7 +199,7 @@ source_set("unused") {
     "asan_win_dynamic_runtime_thunk.cpp",
 
     # FIXME: These are in clang_rt.asan_static in the CMake build.
-
+    "asan_rtl_static.cpp",
     "asan_rtl_x86_64.S",
   ]
 }

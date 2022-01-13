@@ -195,7 +195,7 @@ Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
 }
 
 Error ifs::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
-  yaml::Output YamlOut(OS, NULL, /*WrapColumn =*/0);
+  yaml::Output YamlOut(OS, nullptr, /*WrapColumn =*/0);
   std::unique_ptr<IFSStubTriple> CopyStub(new IFSStubTriple(Stub));
   if (Stub.Target.Arch) {
     CopyStub->Target.ArchString = std::string(

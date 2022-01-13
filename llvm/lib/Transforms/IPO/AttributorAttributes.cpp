@@ -810,14 +810,17 @@ struct AA::PointerInfo::OffsetAndSize : public std::pair<int64_t, int64_t> {
   int64_t getSize() const { return second; }
   static OffsetAndSize getUnknown() { return OffsetAndSize(Unknown, Unknown); }
 
+  /// Return true if offset or size are unknown.
+  bool offsetOrSizeAreUnknown() const {
+    return getOffset() == OffsetAndSize::Unknown ||
+           getSize() == OffsetAndSize::Unknown;
+  }
+
   /// Return true if this offset and size pair might describe an address that
   /// overlaps with \p OAS.
   bool mayOverlap(const OffsetAndSize &OAS) const {
     // Any unknown value and we are giving up -> overlap.
-    if (OAS.getOffset() == OffsetAndSize::Unknown ||
-        OAS.getSize() == OffsetAndSize::Unknown ||
-        getOffset() == OffsetAndSize::Unknown ||
-        getSize() == OffsetAndSize::Unknown)
+    if (offsetOrSizeAreUnknown() || OAS.offsetOrSizeAreUnknown())
       return true;
 
     // Check if one offset point is in the other interval [offset, offset+size].
@@ -1024,8 +1027,9 @@ protected:
       OffsetAndSize ItOAS = It.getFirst();
       if (!OAS.mayOverlap(ItOAS))
         continue;
+      bool IsExact = OAS == ItOAS && !OAS.offsetOrSizeAreUnknown();
       for (auto &Access : It.getSecond())
-        if (!CB(Access, OAS == ItOAS))
+        if (!CB(Access, IsExact))
           return false;
     }
     return true;
@@ -1161,17 +1165,21 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       return true;
     };
 
+    const auto *TLI = getAnchorScope()
+                          ? A.getInfoCache().getTargetLibraryInfoForFunction(
+                                *getAnchorScope())
+                          : nullptr;
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Value *CurPtr = U.get();
       User *Usr = U.getUser();
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] Analyze " << *CurPtr << " in "
                         << *Usr << "\n");
-
-      OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
+      assert(OffsetInfoMap.count(CurPtr) &&
+             "The current pointer offset should have been seeded!");
 
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Usr)) {
         if (CE->isCast())
-          return HandlePassthroughUser(Usr, PtrOI, Follow);
+          return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
         if (CE->isCompare())
           return true;
         if (!CE->isGEPWithNoNotionalOverIndexing()) {
@@ -1181,7 +1189,10 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
       }
       if (auto *GEP = dyn_cast<GEPOperator>(Usr)) {
+        // Note the order here, the Usr access might change the map, CurPtr is
+        // already in it though.
         OffsetInfo &UsrOI = OffsetInfoMap[Usr];
+        OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
         UsrOI = PtrOI;
 
         // TODO: Use range information.
@@ -1210,14 +1221,17 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         return true;
       }
       if (isa<CastInst>(Usr) || isa<SelectInst>(Usr))
-        return HandlePassthroughUser(Usr, PtrOI, Follow);
+        return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
 
       // For PHIs we need to take care of the recurrence explicitly as the value
       // might change while we iterate through a loop. For now, we give up if
       // the PHI is not invariant.
       if (isa<PHINode>(Usr)) {
-        // Check if the PHI is invariant (so far).
+        // Note the order here, the Usr access might change the map, CurPtr is
+        // already in it though.
         OffsetInfo &UsrOI = OffsetInfoMap[Usr];
+        OffsetInfo &PtrOI = OffsetInfoMap[CurPtr];
+        // Check if the PHI is invariant (so far).
         if (UsrOI == PtrOI)
           return true;
 
@@ -1257,8 +1271,8 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
       if (auto *LoadI = dyn_cast<LoadInst>(Usr))
         return handleAccess(A, *LoadI, *CurPtr, /* Content */ nullptr,
-                            AccessKind::AK_READ, PtrOI.Offset, Changed,
-                            LoadI->getType());
+                            AccessKind::AK_READ, OffsetInfoMap[CurPtr].Offset,
+                            Changed, LoadI->getType());
       if (auto *StoreI = dyn_cast<StoreInst>(Usr)) {
         if (StoreI->getValueOperand() == CurPtr) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] Escaping use in store "
@@ -1269,18 +1283,21 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         Optional<Value *> Content = A.getAssumedSimplified(
             *StoreI->getValueOperand(), *this, UsedAssumedInformation);
         return handleAccess(A, *StoreI, *CurPtr, Content, AccessKind::AK_WRITE,
-                            PtrOI.Offset, Changed,
+                            OffsetInfoMap[CurPtr].Offset, Changed,
                             StoreI->getValueOperand()->getType());
       }
       if (auto *CB = dyn_cast<CallBase>(Usr)) {
         if (CB->isLifetimeStartOrEnd())
+          return true;
+        if (TLI && isFreeCall(CB, TLI))
           return true;
         if (CB->isArgOperand(&U)) {
           unsigned ArgNo = CB->getArgOperandNo(&U);
           const auto &CSArgPI = A.getAAFor<AAPointerInfo>(
               *this, IRPosition::callsite_argument(*CB, ArgNo),
               DepClassTy::REQUIRED);
-          Changed = translateAndAddCalleeState(A, CSArgPI, PtrOI.Offset, *CB) |
+          Changed = translateAndAddCalleeState(
+                        A, CSArgPI, OffsetInfoMap[CurPtr].Offset, *CB) |
                     Changed;
           return true;
         }
@@ -1293,8 +1310,15 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
       LLVM_DEBUG(dbgs() << "[AAPointerInfo] User not handled " << *Usr << "\n");
       return false;
     };
+    auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
+      if (OffsetInfoMap.count(NewU))
+        return OffsetInfoMap[NewU] == OffsetInfoMap[OldU];
+      OffsetInfoMap[NewU] = OffsetInfoMap[OldU];
+      return true;
+    };
     if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
-                           /* CheckBBLivenessOnly */ true))
+                           /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
+                           EquivalentUseCB))
       return indicatePessimisticFixpoint();
 
     LLVM_DEBUG({
@@ -2325,6 +2349,8 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoRecurseImpl::initialize(A);
+    // TODO: We should build a call graph ourselves to enable this in the module
+    // pass as well.
     if (const Function *F = getAnchorScope())
       if (A.getInfoCache().getSccSize(*F) != 1)
         indicatePessimisticFixpoint();
@@ -5236,6 +5262,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, AA, &L))
       return false;
 
+    const auto *TLI =
+        A.getInfoCache().getTargetLibraryInfoForFunction(*L.getFunction());
     for (Value *Obj : Objects) {
       LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
       if (isa<UndefValue>(Obj))
@@ -5250,9 +5278,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
           continue;
         return false;
       }
-      if (!isa<AllocaInst>(Obj) && !isa<GlobalVariable>(Obj))
-        return false;
-      Constant *InitialVal = AA::getInitialValueForObj(*Obj, *L.getType());
+      Constant *InitialVal = AA::getInitialValueForObj(*Obj, *L.getType(), TLI);
       if (!InitialVal || !Union(*InitialVal))
         return false;
 
@@ -5929,6 +5955,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       }
 
       Align Alignment(1);
+      if (MaybeAlign RetAlign = AI.CB->getRetAlign())
+        Alignment = max(Alignment, RetAlign);
       if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
         Optional<APInt> AlignmentAPI =
             getAPInt(A, *this, *AI.CB->getArgOperand(0));
@@ -7675,7 +7703,6 @@ void AAMemoryLocationImpl::categorizePtrValue(
   for (Value *Obj : Objects) {
     // TODO: recognize the TBAA used for constant accesses.
     MemoryLocationsKind MLK = NO_LOCATIONS;
-    assert(!isa<GEPOperator>(Obj) && "GEPs should have been stripped.");
     if (isa<UndefValue>(Obj))
       continue;
     if (isa<Argument>(Obj)) {

@@ -306,8 +306,8 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 
 #include <__config>
 #include <math.h>
-#include <version>
 #include <type_traits>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -636,6 +636,23 @@ lerp(double __a, double __b, double __t)                _NOEXCEPT { return __ler
 constexpr long double
 lerp(long double __a, long double __b, long double __t) _NOEXCEPT { return __lerp(__a, __b, __t); }
 
+template <class _A1, class _A2, class _A3>
+inline _LIBCPP_HIDE_FROM_ABI
+constexpr typename enable_if_t
+<
+    is_arithmetic<_A1>::value &&
+    is_arithmetic<_A2>::value &&
+    is_arithmetic<_A3>::value,
+    __promote<_A1, _A2, _A3>
+>::type
+lerp(_A1 __a, _A2 __b, _A3 __t) noexcept
+{
+    typedef typename __promote<_A1, _A2, _A3>::type __result_type;
+    static_assert(!(_IsSame<_A1, __result_type>::value &&
+                    _IsSame<_A2, __result_type>::value &&
+                    _IsSame<_A3, __result_type>::value));
+    return __lerp((__result_type)__a, (__result_type)__b, (__result_type)__t);
+}
 #endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD

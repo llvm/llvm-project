@@ -390,7 +390,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
     llvm::PHINode *PHI = Builder.CreatePHI(BasePtrTy, 2, "cast.result");
     PHI->addIncoming(Value.getPointer(), notNullBB);
     PHI->addIncoming(llvm::Constant::getNullValue(BasePtrTy), origBB);
-    Value = Address(PHI, Value.getAlignment());
+    Value = Value.withPointer(PHI);
   }
 
   return Value;
@@ -1983,7 +1983,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
   CharUnits eltAlignment =
     arrayBase.getAlignment()
              .alignmentOfArrayElement(getContext().getTypeSizeInChars(type));
-  Address curAddr = Address(cur, eltAlignment);
+  Address curAddr = Address(cur, elementType, eltAlignment);
 
   // Zero initialize the storage, if requested.
   if (zeroInitialize)

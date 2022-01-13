@@ -83,7 +83,7 @@ static Value broadcast(ImplicitLocOpBuilder &builder, Value value,
 static Value
 handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
                               ValueRange operands, int64_t vectorWidth,
-                              std::function<Value(ValueRange)> compute) {
+                              llvm::function_ref<Value(ValueRange)> compute) {
   assert(!operands.empty() && "operands must be not empty");
   assert(vectorWidth > 0 && "vector width must be larger than 0");
 
@@ -134,7 +134,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
     auto offsets = delinearize(strides, i);
 
     SmallVector<Value> extracted(expandedOperands.size());
-    for (auto tuple : llvm::enumerate(expandedOperands))
+    for (const auto &tuple : llvm::enumerate(expandedOperands))
       extracted[tuple.index()] =
           builder.create<vector::ExtractOp>(tuple.value(), offsets);
 
@@ -421,7 +421,7 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   x = max(builder, x, cstMinNormPos);
 
   // Extract significant in the range [0.5,1) and exponent.
-  std::pair<Value, Value> pair = frexp(builder, x, /*is_positive=*/true);
+  std::pair<Value, Value> pair = frexp(builder, x, /*isPositive=*/true);
   x = pair.first;
   Value e = pair.second;
 

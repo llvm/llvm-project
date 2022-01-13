@@ -90,7 +90,6 @@ template <typename T> class ArrayRef;
 class Module;
 class StringRef;
 class Value;
-class Timer;
 class PMDataManager;
 
 // enums for debugging strings
@@ -460,8 +459,7 @@ private:
 class FPPassManager : public ModulePass, public PMDataManager {
 public:
   static char ID;
-  explicit FPPassManager()
-  : ModulePass(ID), PMDataManager() { }
+  explicit FPPassManager() : ModulePass(ID) {}
 
   /// run - Execute all of the passes scheduled for execution.  Keep track of
   /// whether any of the passes modifies the module, and if so, return true.

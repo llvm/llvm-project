@@ -1279,6 +1279,7 @@ private:
   }
 
   void unmapImpl();
+  void dontNeedImpl();
 
   std::error_code init(sys::fs::file_t FD, uint64_t Offset, mapmode Mode);
 
@@ -1308,6 +1309,7 @@ public:
     unmapImpl();
     copyFrom(mapped_file_region());
   }
+  void dontNeed() { dontNeedImpl(); }
 
   size_t size() const;
   char *data() const;

@@ -16,6 +16,6 @@ class ConcurrentWatchpointWithDelayWatchpointThreads(ConcurrentEventsBase):
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test two threads that trigger a watchpoint where one thread has a 1 second delay. """
-        self.build(dictionary=self.getBuildFlags())
+        self.build()
         self.do_thread_actions(num_watchpoint_threads=1,
                                num_delay_watchpoint_threads=1)

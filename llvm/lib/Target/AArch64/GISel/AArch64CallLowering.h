@@ -24,9 +24,7 @@ namespace llvm {
 
 class AArch64TargetLowering;
 class CCValAssign;
-class DataLayout;
 class MachineIRBuilder;
-class MachineRegisterInfo;
 class Type;
 
 class AArch64CallLowering: public CallLowering {

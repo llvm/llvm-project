@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_FILESYSTEM_H
-#define LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_FILESYSTEM_H
+#ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGFILESYSTEM_H
+#define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGFILESYSTEM_H
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
@@ -255,4 +255,4 @@ private:
 } // end namespace tooling
 } // end namespace clang
 
-#endif // LLVM_CLANG_TOOLING_DEPENDENCY_SCANNING_FILESYSTEM_H
+#endif // LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGFILESYSTEM_H

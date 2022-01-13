@@ -43,8 +43,6 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-using llvm::hash_combine;
-
 //===----------------------------------------------------------------------===//
 // MLIRContext CommandLine Options
 //===----------------------------------------------------------------------===//

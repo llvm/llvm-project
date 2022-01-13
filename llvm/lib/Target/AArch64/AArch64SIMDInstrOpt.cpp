@@ -633,7 +633,7 @@ bool AArch64SIMDInstrOpt::optimizeLdStInterleave(MachineInstr &MI) {
 /// Return true when the instruction is processed successfully.
 bool AArch64SIMDInstrOpt::processSeqRegInst(MachineInstr *DefiningMI,
      unsigned* StReg, unsigned* StRegKill, unsigned NumArg) const {
-  assert (DefiningMI != NULL);
+  assert(DefiningMI != nullptr);
   if (DefiningMI->getOpcode() != AArch64::REG_SEQUENCE)
     return false;
 

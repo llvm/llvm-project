@@ -11,6 +11,7 @@
 
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
+include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
@@ -518,7 +519,7 @@ def MemRef_DmaStartOp : MemRef_Op<"dma_start"> {
     ```mlir
     %num_elements = arith.constant 256
     %idx = arith.constant 0 : index
-    %tag = alloc() : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
+    %tag = memref.alloc() : memref<1 x i32, affine_map<(d0) -> (d0)>, 4>
     dma_start %src[%i, %j], %dst[%k, %l], %num_elements, %tag[%idx] :
       memref<40 x 128 x f32>, affine_map<(d0) -> (d0)>, 0>,
       memref<2 x 1024 x f32>, affine_map<(d0) -> (d0)>, 1>,
@@ -1560,7 +1561,7 @@ def TensorStoreOp : MemRef_Op<"tensor_store",
 
     ```mlir
     %9 = dim %8, 1 : tensor<4x?xf32>
-    %10 = alloc(%9) : memref<4x?xf32, #layout, memspace0>
+    %10 = memref.alloc(%9) : memref<4x?xf32, #layout, memspace0>
     memref.tensor_store %8, %10 : memref<4x?xf32, #layout, memspace0>
     ```
   }];
@@ -1671,6 +1672,53 @@ def MemRef_ViewOp : MemRef_Op<"view", [
   }];
 
   let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicRMWOp
+//===----------------------------------------------------------------------===//
+
+def AtomicRMWOp : MemRef_Op<"atomic_rmw", [
+      AllTypesMatch<["value", "result"]>,
+      TypesMatchWith<"value type matches element type of memref",
+                     "memref", "value",
+                     "$_self.cast<MemRefType>().getElementType()">
+    ]> {
+  let summary = "atomic read-modify-write operation";
+  let description = [{
+    The `atomic_rmw` operation provides a way to perform a read-modify-write
+    sequence that is free from data races. The kind enumeration specifies the
+    modification to perform. The value operand represents the new value to be
+    applied during the modification. The memref operand represents the buffer
+    that the read and write will be performed against, as accessed by the
+    specified indices. The arity of the indices is the rank of the memref. The
+    result represents the latest value that was stored.
+
+    Example:
+
+    ```mlir
+    %x = arith.atomic_rmw "addf" %value, %I[%i] : (f32, memref<10xf32>) -> f32
+    ```
+  }];
+
+  let arguments = (ins
+      AtomicRMWKindAttr:$kind,
+      AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$value,
+      MemRefOf<[AnySignlessInteger, AnyFloat]>:$memref,
+      Variadic<Index>:$indices);
+  let results = (outs AnyTypeOf<[AnySignlessInteger, AnyFloat]>:$result);
+
+  let assemblyFormat = [{
+    $kind $value `,` $memref `[` $indices `]` attr-dict `:` `(` type($value) `,`
+    type($memref) `)` `->` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return memref().getType().cast<MemRefType>();
+    }
+  }];
+  let hasFolder = 1;
 }
 
 #endif // MEMREF_OPS

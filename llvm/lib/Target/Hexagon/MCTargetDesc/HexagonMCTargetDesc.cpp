@@ -517,6 +517,14 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
     return nullptr;
   }
 
+  // Add qfloat subtarget feature by default to v68 and above
+  // unless explicitely disabled
+  if (checkFeature(X, Hexagon::ExtensionHVXV68) &&
+      ArchFS.find("-hvx-qfloat", 0) == std::string::npos) {
+    llvm::FeatureBitset Features = X->getFeatureBits();
+    X->setFeatureBits(Features.set(Hexagon::ExtensionHVXQFloat));
+  }
+
   if (HexagonDisableDuplex) {
     llvm::FeatureBitset Features = X->getFeatureBits();
     X->setFeatureBits(Features.reset(Hexagon::FeatureDuplex));
@@ -551,21 +559,11 @@ void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI,
 }
 
 unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
-  static std::map<StringRef,unsigned> ElfFlags = {
-    {"hexagonv5",  ELF::EF_HEXAGON_MACH_V5},
-    {"hexagonv55", ELF::EF_HEXAGON_MACH_V55},
-    {"hexagonv60", ELF::EF_HEXAGON_MACH_V60},
-    {"hexagonv62", ELF::EF_HEXAGON_MACH_V62},
-    {"hexagonv65", ELF::EF_HEXAGON_MACH_V65},
-    {"hexagonv66", ELF::EF_HEXAGON_MACH_V66},
-    {"hexagonv67", ELF::EF_HEXAGON_MACH_V67},
-    {"hexagonv67t", ELF::EF_HEXAGON_MACH_V67T},
-    {"hexagonv68", ELF::EF_HEXAGON_MACH_V68},
-    {"hexagonv69", ELF::EF_HEXAGON_MACH_V69},
-  };
+  using llvm::Hexagon::ElfFlagsByCpuStr;
 
-  auto F = ElfFlags.find(STI.getCPU());
-  assert(F != ElfFlags.end() && "Unrecognized Architecture");
+  const std::string CPU(STI.getCPU().str());
+  auto F = ElfFlagsByCpuStr.find(CPU);
+  assert(F != ElfFlagsByCpuStr.end() && "Unrecognized Architecture");
   return F->second;
 }
 

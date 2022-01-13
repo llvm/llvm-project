@@ -22,7 +22,7 @@ namespace {
 struct TestLinalgHoisting
     : public PassWrapper<TestLinalgHoisting, FunctionPass> {
   TestLinalgHoisting() = default;
-  TestLinalgHoisting(const TestLinalgHoisting &pass) {}
+  TestLinalgHoisting(const TestLinalgHoisting &pass) : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect>();
   }

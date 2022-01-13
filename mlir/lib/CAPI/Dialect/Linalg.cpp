@@ -15,20 +15,19 @@ using namespace mlir::linalg;
 
 /// Apply the special region builder for the builtin named Linalg op.
 /// Assert that `op` is a builtin named Linalg op.
-void mlirLinalgFillBuiltinNamedOpRegion(MlirDialect linalgDialect,
-                                        MlirOperation mlirOp) {
+void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
   Operation *op = unwrap(mlirOp);
-
+  auto linalgOp = cast<LinalgOp>(op);
+  auto *dialect = static_cast<LinalgDialect *>(linalgOp->getDialect());
   LinalgDialect::RegionBuilderFunType fun =
-      static_cast<LinalgDialect *>(unwrap(linalgDialect))
-          ->getRegionBuilder(op->getName().getStringRef());
+      dialect->getRegionBuilder(op->getName().getStringRef());
+
   assert(fun && "Expected a builtin named Linalg op.");
   assert(op->getNumRegions() == 1 && "Expected Linalg op with 1 region");
   assert(op->getRegion(0).getBlocks().empty() &&
          "Expected Linalg op with 0 blocks");
 
   SmallVector<Type, 8> argTypes;
-  auto linalgOp = cast<LinalgOp>(op);
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands())
     argTypes.push_back(getElementTypeOrSelf(opOperand->get().getType()));
 

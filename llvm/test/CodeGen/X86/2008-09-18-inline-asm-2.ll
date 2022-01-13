@@ -38,7 +38,7 @@ entry:
 	%3 = load i32, i32* %0, align 4		; <i32> [#uses=1]
 	%4 = load i32, i32* %1, align 4		; <i32> [#uses=1]
 	%5 = load i8, i8* %state, align 1		; <i8> [#uses=1]
-	%asmtmp = tail call { i32, i32, i32, i32 } asm sideeffect "#1st=$0 $1 2nd=$1 $2 3rd=$2 $4 5th=$4 $3=4th 1$0 1%eXx 5$4 5%eXx 6th=$5", "=&r,=r,=r,=*m,=&q,=*imr,1,2,*m,5,~{dirflag},~{fpsr},~{flags},~{cx}"(i8** %2, i8* %state, i32 %3, i32 %4, i8** %2, i8 %5) nounwind		; <{ i32, i32, i32, i32 }> [#uses=3]
+	%asmtmp = tail call { i32, i32, i32, i32 } asm sideeffect "#1st=$0 $1 2nd=$1 $2 3rd=$2 $4 5th=$4 $3=4th 1$0 1%eXx 5$4 5%eXx 6th=$5", "=&r,=r,=r,=*m,=&q,=*imr,1,2,*m,5,~{dirflag},~{fpsr},~{flags},~{cx}"(i8** elementtype(i8*) %2, i8* elementtype(i8) %state, i32 %3, i32 %4, i8** elementtype(i8*) %2, i8 %5) nounwind		; <{ i32, i32, i32, i32 }> [#uses=3]
 	%asmresult = extractvalue { i32, i32, i32, i32 } %asmtmp, 0		; <i32> [#uses=1]
 	%asmresult1 = extractvalue { i32, i32, i32, i32 } %asmtmp, 1		; <i32> [#uses=1]
 	store i32 %asmresult1, i32* %0

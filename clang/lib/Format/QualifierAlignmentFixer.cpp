@@ -88,11 +88,11 @@ std::pair<tooling::Replacements, unsigned> QualifierAlignmentFixer::analyze(
   // Don't make replacements that replace nothing.
   tooling::Replacements NonNoOpFixes;
 
-  for (auto I = Fixes.begin(), E = Fixes.end(); I != E; ++I) {
-    StringRef OriginalCode = Code.substr(I->getOffset(), I->getLength());
+  for (const tooling::Replacement &Fix : Fixes) {
+    StringRef OriginalCode = Code.substr(Fix.getOffset(), Fix.getLength());
 
-    if (!OriginalCode.equals(I->getReplacementText())) {
-      auto Err = NonNoOpFixes.add(*I);
+    if (!OriginalCode.equals(Fix.getReplacementText())) {
+      auto Err = NonNoOpFixes.add(Fix);
       if (Err)
         llvm::errs() << "Error adding replacements : "
                      << llvm::toString(std::move(Err)) << "\n";
@@ -204,9 +204,9 @@ static void rotateTokens(const SourceManager &SourceMgr,
   replaceToken(SourceMgr, Fixes, Range, NewText);
 }
 
-FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
+const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
     const SourceManager &SourceMgr, const AdditionalKeywords &Keywords,
-    tooling::Replacements &Fixes, FormatToken *Tok,
+    tooling::Replacements &Fixes, const FormatToken *Tok,
     const std::string &Qualifier, tok::TokenKind QualifierType) {
   // We only need to think about streams that begin with a qualifier.
   if (!Tok->is(QualifierType))
@@ -281,16 +281,16 @@ FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
   return Tok;
 }
 
-FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
+const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
     const SourceManager &SourceMgr, const AdditionalKeywords &Keywords,
-    tooling::Replacements &Fixes, FormatToken *Tok,
+    tooling::Replacements &Fixes, const FormatToken *Tok,
     const std::string &Qualifier, tok::TokenKind QualifierType) {
   // if Tok is an identifier and possibly a macro then don't convert.
   if (LeftRightQualifierAlignmentFixer::isPossibleMacro(Tok))
     return Tok;
 
-  FormatToken *Qual = Tok;
-  FormatToken *LastQual = Qual;
+  const FormatToken *Qual = Tok;
+  const FormatToken *LastQual = Qual;
   while (Qual && isQualifierOrType(Qual, ConfiguredQualifierTokens)) {
     LastQual = Qual;
     Qual = Qual->Next;
@@ -326,7 +326,7 @@ FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
         Tok->Previous->isOneOf(tok::star, tok::ampamp, tok::amp)) {
       return Tok;
     }
-    FormatToken *Next = Tok->Next;
+    const FormatToken *Next = Tok->Next;
     // The case  `std::Foo<T> const` -> `const std::Foo<T> &&`
     while (Next && Next->isOneOf(tok::identifier, tok::coloncolon))
       Next = Next->Next;
@@ -334,6 +334,8 @@ FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
         Next->Previous->startsSequence(tok::identifier, TT_TemplateOpener)) {
       // Read from to the end of the TemplateOpener to
       // TemplateCloser const ArrayRef<int> a; const ArrayRef<int> &a;
+      if (Next->is(tok::comment) && Next->getNextNonComment())
+        Next = Next->getNextNonComment();
       assert(Next->MatchingParen && "Missing template closer");
       Next = Next->MatchingParen->Next;
 
@@ -394,11 +396,12 @@ LeftRightQualifierAlignmentFixer::analyze(
   tok::TokenKind QualifierToken = getTokenFromQualifier(Qualifier);
   assert(QualifierToken != tok::identifier && "Unrecognised Qualifier");
 
-  for (size_t I = 0, E = AnnotatedLines.size(); I != E; ++I) {
-    FormatToken *First = AnnotatedLines[I]->First;
-    const auto *Last = AnnotatedLines[I]->Last;
+  for (AnnotatedLine *Line : AnnotatedLines) {
+    FormatToken *First = Line->First;
+    const auto *Last = Line->Last;
 
-    for (auto *Tok = First; Tok && Tok != Last && Tok->Next; Tok = Tok->Next) {
+    for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
+         Tok = Tok->Next) {
       if (Tok->is(tok::comment))
         continue;
       if (RightAlign)

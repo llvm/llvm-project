@@ -29,11 +29,6 @@ class FileSystem;
 } // namespace llvm
 
 namespace clang {
-
-class Lexer;
-class SourceManager;
-class DiagnosticConsumer;
-
 namespace format {
 
 enum class ParseError {
@@ -2887,6 +2882,10 @@ struct FormatStyle {
   /// \version 3.7
   unsigned PenaltyBreakFirstLessLess;
 
+  /// The penalty for breaking after ``(``.
+  /// \version 14
+  unsigned PenaltyBreakOpenParenthesis;
+
   /// The penalty for each line break introduced inside a string literal.
   /// \version 3.7
   unsigned PenaltyBreakString;
@@ -3049,6 +3048,64 @@ struct FormatStyle {
   /// \version 4
   bool ReflowComments;
   // clang-format on
+
+  /// \brief The style if definition blocks should be separated.
+  enum SeparateDefinitionStyle {
+    /// Leave definition blocks as they are.
+    SDS_Leave,
+    /// Insert an empty line between definition blocks.
+    SDS_Always,
+    /// Remove any empty line between definition blocks.
+    SDS_Never
+  };
+
+  /// Specifies the use of empty lines to separate definition blocks, including
+  /// classes, structs, enums, and functions.
+  /// \code
+  ///    Never                  v.s.     Always
+  ///    #include <cstring>              #include <cstring>
+  ///    struct Foo {
+  ///      int a, b, c;                  struct Foo {
+  ///    };                                int a, b, c;
+  ///    namespace Ns {                  };
+  ///    class Bar {
+  ///    public:                         namespace Ns {
+  ///      struct Foobar {               class Bar {
+  ///        int a;                      public:
+  ///        int b;                        struct Foobar {
+  ///      };                                int a;
+  ///    private:                            int b;
+  ///      int t;                          };
+  ///      int method1() {
+  ///        // ...                      private:
+  ///      }                               int t;
+  ///      enum List {
+  ///        ITEM1,                        int method1() {
+  ///        ITEM2                           // ...
+  ///      };                              }
+  ///      template<typename T>
+  ///      int method2(T x) {              enum List {
+  ///        // ...                          ITEM1,
+  ///      }                                 ITEM2
+  ///      int i, j, k;                    };
+  ///      int method3(int par) {
+  ///        // ...                        template<typename T>
+  ///      }                               int method2(T x) {
+  ///    };                                  // ...
+  ///    class C {};                       }
+  ///    }
+  ///                                      int i, j, k;
+  ///
+  ///                                      int method3(int par) {
+  ///                                        // ...
+  ///                                      }
+  ///                                    };
+  ///
+  ///                                    class C {};
+  ///                                    }
+  /// \endcode
+  /// \version 14
+  SeparateDefinitionStyle SeparateDefinitionBlocks;
 
   /// The maximal number of unwrapped lines that a short namespace spans.
   /// Defaults to 1.
@@ -3368,6 +3425,14 @@ struct FormatStyle {
     ///      <conditional-body>                     <conditional-body>
     /// \endcode
     bool AfterIfMacros;
+    /// If ``true``, put a space between operator overloading and opening
+    /// parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    void operator++ (int a);        vs.    void operator++(int a);
+    ///    object.operator++ (10);                object.operator++(10);
+    /// \endcode
+    bool AfterOverloadedOperator;
     /// If ``true``, put a space before opening parentheses only if the
     /// parentheses are not empty.
     /// \code
@@ -3381,7 +3446,7 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          BeforeNonEmptyParentheses(false) {}
+          AfterOverloadedOperator(false), BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -3390,6 +3455,7 @@ struct FormatStyle {
                  Other.AfterFunctionDeclarationName &&
              AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
              AfterIfMacros == Other.AfterIfMacros &&
+             AfterOverloadedOperator == Other.AfterOverloadedOperator &&
              BeforeNonEmptyParentheses == Other.BeforeNonEmptyParentheses;
     }
   };
@@ -3781,6 +3847,7 @@ struct FormatStyle {
                R.PenaltyBreakBeforeFirstCallParameter &&
            PenaltyBreakComment == R.PenaltyBreakComment &&
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
+           PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&
            PenaltyBreakString == R.PenaltyBreakString &&
            PenaltyExcessCharacter == R.PenaltyExcessCharacter &&
            PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&
@@ -3791,6 +3858,7 @@ struct FormatStyle {
            QualifierOrder == R.QualifierOrder &&
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
+           SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
@@ -3888,7 +3956,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language);
 FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language);
 
 /// Returns a format style complying with Mozilla's style guide:
-/// https://developer.mozilla.org/en-US/docs/Developer_Guide/Coding_Style.
+/// https://firefox-source-docs.mozilla.org/code-quality/coding-style/index.html.
 FormatStyle getMozillaStyle();
 
 /// Returns a format style complying with Webkit's style guide:
@@ -4028,6 +4096,17 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName = "<stdin>");
 
+/// Inserts or removes empty lines separating definition blocks including
+/// classes, structs, functions, namespaces, and enums in the given \p Ranges in
+/// \p Code.
+///
+/// Returns the ``Replacements`` that inserts or removes empty lines separating
+/// definition blocks in all \p Ranges in \p Code.
+tooling::Replacements separateDefinitionBlocks(const FormatStyle &Style,
+                                               StringRef Code,
+                                               ArrayRef<tooling::Range> Ranges,
+                                               StringRef FileName = "<stdin>");
+
 /// Sort consecutive using declarations in the given \p Ranges in
 /// \p Code.
 ///
@@ -4066,6 +4145,8 @@ extern const char *DefaultFallbackStyle;
 /// * "file" - Load style configuration from a file called ``.clang-format``
 /// located in one of the parent directories of ``FileName`` or the current
 /// directory if ``FileName`` is empty.
+/// * "file:<format_file_path>" to explicitly specify the configuration file to
+/// use.
 ///
 /// \param[in] StyleName Style name to interpret according to the description
 /// above.

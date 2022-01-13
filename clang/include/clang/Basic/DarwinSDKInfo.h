@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_DARWIN_SDK_INFO_H
-#define LLVM_CLANG_BASIC_DARWIN_SDK_INFO_H
+#ifndef LLVM_CLANG_BASIC_DARWINSDKINFO_H
+#define LLVM_CLANG_BASIC_DARWINSDKINFO_H
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -154,4 +154,4 @@ Expected<Optional<DarwinSDKInfo>> parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS,
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_BASIC_DARWIN_SDK_INFO_H
+#endif // LLVM_CLANG_BASIC_DARWINSDKINFO_H

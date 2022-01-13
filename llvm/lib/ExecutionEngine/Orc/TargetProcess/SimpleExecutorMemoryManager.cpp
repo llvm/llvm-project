@@ -24,7 +24,7 @@ SimpleExecutorMemoryManager::~SimpleExecutorMemoryManager() {
 Expected<ExecutorAddr> SimpleExecutorMemoryManager::allocate(uint64_t Size) {
   std::error_code EC;
   auto MB = sys::Memory::allocateMappedMemory(
-      Size, 0, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
+      Size, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
   if (EC)
     return errorCodeToError(EC);
   std::lock_guard<std::mutex> Lock(M);
@@ -35,7 +35,7 @@ Expected<ExecutorAddr> SimpleExecutorMemoryManager::allocate(uint64_t Size) {
 
 Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
   ExecutorAddr Base(~0ULL);
-  std::vector<tpctypes::WrapperFunctionCall> DeallocationActions;
+  std::vector<shared::WrapperFunctionCall> DeallocationActions;
   size_t SuccessfulFinalizationActions = 0;
 
   if (FR.Segments.empty()) {
@@ -52,8 +52,8 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
     Base = std::min(Base, Seg.Addr);
 
   for (auto &ActPair : FR.Actions)
-    if (ActPair.Deallocate.Func)
-      DeallocationActions.push_back(ActPair.Deallocate);
+    if (ActPair.Dealloc)
+      DeallocationActions.push_back(ActPair.Dealloc);
 
   // Get the Allocation for this finalization.
   size_t AllocSize = 0;
@@ -96,7 +96,7 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
     while (SuccessfulFinalizationActions)
       Err =
           joinErrors(std::move(Err), FR.Actions[--SuccessfulFinalizationActions]
-                                         .Deallocate.runWithSPSRet());
+                                         .Dealloc.runWithSPSRetErrorMerged());
 
     // Deallocate memory.
     sys::MemoryBlock MB(AllocToDestroy.first, AllocToDestroy.second.Size);
@@ -139,7 +139,7 @@ Error SimpleExecutorMemoryManager::finalize(tpctypes::FinalizeRequest &FR) {
 
   // Run finalization actions.
   for (auto &ActPair : FR.Actions) {
-    if (auto Err = ActPair.Finalize.runWithSPSRet())
+    if (auto Err = ActPair.Finalize.runWithSPSRetErrorMerged())
       return BailOut(std::move(Err));
     ++SuccessfulFinalizationActions;
   }
@@ -212,7 +212,7 @@ Error SimpleExecutorMemoryManager::deallocateImpl(void *Base, Allocation &A) {
 
   while (!A.DeallocationActions.empty()) {
     Err = joinErrors(std::move(Err),
-                     A.DeallocationActions.back().runWithSPSRet());
+                     A.DeallocationActions.back().runWithSPSRetErrorMerged());
     A.DeallocationActions.pop_back();
   }
 

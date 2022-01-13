@@ -70,23 +70,13 @@ Mangled::Mangled(llvm::StringRef name) {
     SetValue(ConstString(name));
 }
 
-// Convert to pointer operator. This allows code to check any Mangled objects
+// Convert to bool operator. This allows code to check any Mangled objects
 // to see if they contain anything valid using code such as:
 //
 //  Mangled mangled(...);
 //  if (mangled)
 //  { ...
-Mangled::operator void *() const {
-  return (m_mangled) ? const_cast<Mangled *>(this) : nullptr;
-}
-
-// Logical NOT operator. This allows code to check any Mangled objects to see
-// if they are invalid using code such as:
-//
-//  Mangled mangled(...);
-//  if (!file_spec)
-//  { ...
-bool Mangled::operator!() const { return !m_mangled; }
+Mangled::operator bool() const { return m_mangled || m_demangled; }
 
 // Clear the mangled and demangled values.
 void Mangled::Clear() {

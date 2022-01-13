@@ -42,31 +42,4 @@ class PatternRewriter;
 
 #include "mlir/Dialect/StandardOps/IR/OpsDialect.h.inc"
 
-namespace mlir {
-
-/// Compute `lhs` `pred` `rhs`, where `pred` is one of the known integer
-/// comparison predicates.
-bool applyCmpPredicate(arith::CmpIPredicate predicate, const APInt &lhs,
-                       const APInt &rhs);
-
-/// Compute `lhs` `pred` `rhs`, where `pred` is one of the known floating point
-/// comparison predicates.
-bool applyCmpPredicate(arith::CmpFPredicate predicate, const APFloat &lhs,
-                       const APFloat &rhs);
-
-/// Returns the identity value attribute associated with an AtomicRMWKind op.
-Attribute getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
-                               OpBuilder &builder, Location loc);
-
-/// Returns the identity value associated with an AtomicRMWKind op.
-Value getIdentityValue(AtomicRMWKind op, Type resultType, OpBuilder &builder,
-                       Location loc);
-
-/// Returns the value obtained by applying the reduction operation kind
-/// associated with a binary AtomicRMWKind op to `lhs` and `rhs`.
-Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
-                     Value lhs, Value rhs);
-
-} // namespace mlir
-
 #endif // MLIR_DIALECT_IR_STANDARDOPS_IR_OPS_H

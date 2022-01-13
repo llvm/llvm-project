@@ -447,6 +447,29 @@ func @merge_nested_if(%arg0: i1, %arg1: i1) {
 
 // -----
 
+// CHECK-LABEL:   func @if_condition_swap
+// CHECK-NEXT:     %{{.*}} = scf.if %arg0 -> (index) {
+// CHECK-NEXT:       %[[i1:.+]] = "test.origFalse"() : () -> index
+// CHECK-NEXT:       scf.yield %[[i1]] : index
+// CHECK-NEXT:     } else {
+// CHECK-NEXT:       %[[i2:.+]] = "test.origTrue"() : () -> index
+// CHECK-NEXT:       scf.yield %[[i2]] : index
+// CHECK-NEXT:     }
+func @if_condition_swap(%cond: i1) -> index {
+  %true = arith.constant true
+  %not = arith.xori %cond, %true : i1
+  %0 = scf.if %not -> (index) {
+    %1 = "test.origTrue"() : () -> index
+    scf.yield %1 : index
+  } else {
+    %1 = "test.origFalse"() : () -> index
+    scf.yield %1 : index
+  }
+  return %0 : index
+}
+
+// -----
+
 // CHECK-LABEL: @remove_zero_iteration_loop
 func @remove_zero_iteration_loop() {
   %c42 = arith.constant 42 : index

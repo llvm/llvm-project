@@ -56,6 +56,9 @@ SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
   CollectorOpts.CountReferences = false;
   CollectorOpts.Origin = SymbolOrigin::Dynamic;
   CollectorOpts.CollectMainFileRefs = CollectMainFileRefs;
+  // We want stdlib implementation details in the index only if we've opened the
+  // file in question. This does means xrefs won't work, though.
+  CollectorOpts.CollectReserved = IsIndexMainAST;
 
   index::IndexingOptions IndexOpts;
   // We only need declarations, because we don't count references.

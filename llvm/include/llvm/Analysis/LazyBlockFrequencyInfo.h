@@ -22,7 +22,6 @@
 
 namespace llvm {
 class AnalysisUsage;
-class BranchProbabilityInfo;
 class Function;
 class LoopInfo;
 

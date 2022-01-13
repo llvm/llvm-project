@@ -682,7 +682,7 @@ void CoroCloner::salvageDebugInfo() {
       if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
         Worklist.push_back(DVI);
   for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.ReuseFrameSlot);
+    coro::salvageDebugInfo(DbgPtrAllocaCache, DVI, Shape.OptimizeFrame);
 
   // Remove all salvaged dbg.declare intrinsics that became
   // either unreachable or stale due to the CoroSplit transformation.
@@ -835,7 +835,7 @@ Value *CoroCloner::deriveNewFramePointer() {
 static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
                                  unsigned ParamIndex,
                                  uint64_t Size, Align Alignment) {
-  AttrBuilder ParamAttrs;
+  AttrBuilder ParamAttrs(Context);
   ParamAttrs.addAttribute(Attribute::NonNull);
   ParamAttrs.addAttribute(Attribute::NoAlias);
   ParamAttrs.addAlignmentAttr(Alignment);
@@ -845,14 +845,14 @@ static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
 
 static void addAsyncContextAttrs(AttributeList &Attrs, LLVMContext &Context,
                                  unsigned ParamIndex) {
-  AttrBuilder ParamAttrs;
+  AttrBuilder ParamAttrs(Context);
   ParamAttrs.addAttribute(Attribute::SwiftAsync);
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
 }
 
 static void addSwiftSelfAttrs(AttributeList &Attrs, LLVMContext &Context,
                               unsigned ParamIndex) {
-  AttrBuilder ParamAttrs;
+  AttrBuilder ParamAttrs(Context);
   ParamAttrs.addAttribute(Attribute::SwiftSelf);
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
 }
@@ -929,7 +929,7 @@ void CoroCloner::create() {
   case coro::ABI::Switch:
     // Bootstrap attributes by copying function attributes from the
     // original function.  This should include optimization settings and so on.
-    NewAttrs = NewAttrs.addFnAttributes(Context, OrigAttrs.getFnAttrs());
+    NewAttrs = NewAttrs.addFnAttributes(Context, AttrBuilder(Context, OrigAttrs.getFnAttrs()));
 
     addFramePointerAttrs(NewAttrs, Context, 0,
                          Shape.FrameSize, Shape.FrameAlign);
@@ -952,7 +952,7 @@ void CoroCloner::create() {
 
     // Transfer the original function's attributes.
     auto FnAttrs = OrigF.getAttributes().getFnAttrs();
-    NewAttrs = NewAttrs.addFnAttributes(Context, FnAttrs);
+    NewAttrs = NewAttrs.addFnAttributes(Context, AttrBuilder(Context, FnAttrs));
     break;
   }
   case coro::ABI::Retcon:
@@ -1826,14 +1826,14 @@ namespace {
 
 static coro::Shape splitCoroutine(Function &F,
                                   SmallVectorImpl<Function *> &Clones,
-                                  bool ReuseFrameSlot) {
+                                  bool OptimizeFrame) {
   PrettyStackTraceFunction prettyStackTrace(F);
 
   // The suspend-crossing algorithm in buildCoroutineFrame get tripped
   // up by uses in unreachable blocks, so remove them as a first pass.
   removeUnreachableBlocks(F);
 
-  coro::Shape Shape(F, ReuseFrameSlot);
+  coro::Shape Shape(F, OptimizeFrame);
   if (!Shape.CoroBegin)
     return Shape;
 
@@ -2165,7 +2165,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     F.removeFnAttr(CORO_PRESPLIT_ATTR);
 
     SmallVector<Function *, 4> Clones;
-    const coro::Shape Shape = splitCoroutine(F, Clones, ReuseFrameSlot);
+    const coro::Shape Shape = splitCoroutine(F, Clones, OptimizeFrame);
     updateCallGraphAfterCoroutineSplit(*N, Shape, Clones, C, CG, AM, UR, FAM);
 
     if (!Shape.CoroSuspends.empty()) {
@@ -2198,13 +2198,13 @@ namespace {
 struct CoroSplitLegacy : public CallGraphSCCPass {
   static char ID; // Pass identification, replacement for typeid
 
-  CoroSplitLegacy(bool ReuseFrameSlot = false)
-      : CallGraphSCCPass(ID), ReuseFrameSlot(ReuseFrameSlot) {
+  CoroSplitLegacy(bool OptimizeFrame = false)
+      : CallGraphSCCPass(ID), OptimizeFrame(OptimizeFrame) {
     initializeCoroSplitLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   bool Run = false;
-  bool ReuseFrameSlot;
+  bool OptimizeFrame;
 
   // A coroutine is identified by the presence of coro.begin intrinsic, if
   // we don't have any, this pass has nothing to do.
@@ -2263,7 +2263,7 @@ struct CoroSplitLegacy : public CallGraphSCCPass {
       F->removeFnAttr(CORO_PRESPLIT_ATTR);
 
       SmallVector<Function *, 4> Clones;
-      const coro::Shape Shape = splitCoroutine(*F, Clones, ReuseFrameSlot);
+      const coro::Shape Shape = splitCoroutine(*F, Clones, OptimizeFrame);
       updateCallGraphAfterCoroutineSplit(*F, Shape, Clones, CG, SCC);
       if (Shape.ABI == coro::ABI::Async) {
         // Restart SCC passes.
@@ -2300,6 +2300,6 @@ INITIALIZE_PASS_END(
     "Split coroutine into a set of functions driving its state machine", false,
     false)
 
-Pass *llvm::createCoroSplitLegacyPass(bool ReuseFrameSlot) {
-  return new CoroSplitLegacy(ReuseFrameSlot);
+Pass *llvm::createCoroSplitLegacyPass(bool OptimizeFrame) {
+  return new CoroSplitLegacy(OptimizeFrame);
 }

@@ -200,6 +200,7 @@ def  : WriteRes<WriteFMaskedStore64Y,   [SLM_MEC_RSV]>;
 def  : WriteRes<WriteFMove,         [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteFMoveX,        [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteFMoveY,        [SLM_FPC_RSV01]>;
+defm : X86WriteResUnsupported<WriteFMoveZ>;
 defm : X86WriteRes<WriteEMMS,       [SLM_FPC_RSV01], 10, [10], 9>;
 
 defm : SLMWriteResPair<WriteFAdd,     [SLM_FPC_RSV1], 3>;
@@ -345,6 +346,7 @@ def  : WriteRes<WriteVecMaskedStore64Y,   [SLM_MEC_RSV]>;
 def  : WriteRes<WriteVecMove,         [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteVecMoveX,        [SLM_FPC_RSV01]>;
 def  : WriteRes<WriteVecMoveY,        [SLM_FPC_RSV01]>;
+defm : X86WriteResUnsupported<WriteVecMoveZ>;
 def  : WriteRes<WriteVecMoveToGpr,    [SLM_IEC_RSV01]>;
 def  : WriteRes<WriteVecMoveFromGpr,  [SLM_IEC_RSV01]>;
 

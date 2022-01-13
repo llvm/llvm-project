@@ -759,12 +759,13 @@ void ClangdServer::incomingCalls(
                      });
 }
 
-void ClangdServer::inlayHints(PathRef File,
+void ClangdServer::inlayHints(PathRef File, llvm::Optional<Range> RestrictRange,
                               Callback<std::vector<InlayHint>> CB) {
-  auto Action = [CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
+  auto Action = [RestrictRange(std::move(RestrictRange)),
+                 CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::inlayHints(InpAST->AST));
+    CB(clangd::inlayHints(InpAST->AST, std::move(RestrictRange)));
   };
   WorkScheduler->runWithAST("InlayHints", File, std::move(Action));
 }

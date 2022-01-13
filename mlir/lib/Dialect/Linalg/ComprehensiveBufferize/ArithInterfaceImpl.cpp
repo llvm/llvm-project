@@ -20,27 +20,35 @@ namespace linalg {
 namespace comprehensive_bufferize {
 namespace arith_ext {
 
+/// Bufferization of arith.constant. Replace with memref.get_global.
 struct ConstantOpInterface
     : public BufferizableOpInterface::ExternalModel<ConstantOpInterface,
                                                     arith::ConstantOp> {
-  LogicalResult bufferize(Operation *op, OpBuilder &b,
-                          BufferizationState &state) const {
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationState &state) const {
     auto constantOp = cast<arith::ConstantOp>(op);
-    assert(constantOp.getType().dyn_cast<RankedTensorType>() &&
-           "not a constant ranked tensor");
+
+    // Only ranked tensors are supported.
+    if (!constantOp.getType().isa<RankedTensorType>())
+      return failure();
+
+    // Only constants inside a module are supported.
     auto moduleOp = constantOp->getParentOfType<ModuleOp>();
     if (!moduleOp)
-      return constantOp.emitError(
-          "cannot bufferize constants not within builtin.module op");
+      return failure();
 
+    // Create global memory segment and replace tensor with memref pointing to
+    // that memory segment.
     GlobalCreator globalCreator(moduleOp);
     auto globalMemref = globalCreator.getGlobalFor(constantOp);
-    state.replaceOpWithNewOp<memref::GetGlobalOp>(b, op, globalMemref.type(),
-                                                  globalMemref.getName());
+    replaceOpWithNewBufferizedOp<memref::GetGlobalOp>(
+        rewriter, op, globalMemref.type(), globalMemref.getName());
+
     return success();
   }
 
-  bool isWritable(Operation *op, Value value, BufferizationState &state) const {
+  bool isWritable(Operation *op, Value value,
+                  const BufferizationState &state) const {
     // Memory locations returned by memref::GetGlobalOp may not be written to.
     assert(value.isa<OpResult>());
     return false;

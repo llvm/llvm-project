@@ -75,7 +75,7 @@ public:
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         Keywords(Keywords) {
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
-    resetTokenMetadata(CurrentToken);
+    resetTokenMetadata();
   }
 
 private:
@@ -1409,8 +1409,8 @@ private:
            Tok.Next->Next->Next && Tok.Next->Next->Next->is(tok::l_paren);
   }
 
-  void resetTokenMetadata(FormatToken *Token) {
-    if (!Token)
+  void resetTokenMetadata() {
+    if (!CurrentToken)
       return;
 
     // Reset token type in case we have already looked at it and then
@@ -1431,15 +1431,16 @@ private:
   }
 
   void next() {
-    if (CurrentToken) {
-      CurrentToken->NestingLevel = Contexts.size() - 1;
-      CurrentToken->BindingStrength = Contexts.back().BindingStrength;
-      modifyContext(*CurrentToken);
-      determineTokenType(*CurrentToken);
-      CurrentToken = CurrentToken->Next;
-    }
+    if (!CurrentToken)
+      return;
 
-    resetTokenMetadata(CurrentToken);
+    CurrentToken->NestingLevel = Contexts.size() - 1;
+    CurrentToken->BindingStrength = Contexts.back().BindingStrength;
+    modifyContext(*CurrentToken);
+    determineTokenType(*CurrentToken);
+    CurrentToken = CurrentToken->Next;
+
+    resetTokenMetadata();
   }
 
   /// A struct to hold information valid in a specific context, e.g.
@@ -1563,9 +1564,9 @@ private:
     int ParenLevel = 0;
     while (Current) {
       if (Current->is(tok::l_paren))
-        ParenLevel++;
+        ++ParenLevel;
       if (Current->is(tok::r_paren))
-        ParenLevel--;
+        --ParenLevel;
       if (ParenLevel < 1)
         break;
       Current = Current->Next;
@@ -1589,9 +1590,9 @@ private:
             break;
         }
         if (TemplateCloser->is(tok::less))
-          NestingLevel++;
+          ++NestingLevel;
         if (TemplateCloser->is(tok::greater))
-          NestingLevel--;
+          --NestingLevel;
         if (NestingLevel < 1)
           break;
         TemplateCloser = TemplateCloser->Next;
@@ -1882,9 +1883,10 @@ private:
 
     FormatToken *LeftOfParens = Tok.MatchingParen->getPreviousNonComment();
     if (LeftOfParens) {
-      // If there is a closing parenthesis left of the current parentheses,
-      // look past it as these might be chained casts.
-      if (LeftOfParens->is(tok::r_paren)) {
+      // If there is a closing parenthesis left of the current
+      // parentheses, look past it as these might be chained casts.
+      if (LeftOfParens->is(tok::r_paren) &&
+          LeftOfParens->isNot(TT_CastRParen)) {
         if (!LeftOfParens->MatchingParen ||
             !LeftOfParens->MatchingParen->Previous)
           return false;
@@ -2549,11 +2551,8 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
 }
 
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
-  for (SmallVectorImpl<AnnotatedLine *>::iterator I = Line.Children.begin(),
-                                                  E = Line.Children.end();
-       I != E; ++I) {
-    calculateFormattingInformation(**I);
-  }
+  for (AnnotatedLine *ChildLine : Line.Children)
+    calculateFormattingInformation(*ChildLine);
 
   Line.First->TotalLength =
       Line.First->IsMultiline ? Style.ColumnLimit
@@ -2569,9 +2568,9 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
   while (Current) {
     if (isFunctionDeclarationName(Style.isCpp(), *Current, Line))
       Current->setType(TT_FunctionDeclarationName);
+    const FormatToken *Prev = Current->Previous;
     if (Current->is(TT_LineComment)) {
-      if (Current->Previous->is(BK_BracedInit) &&
-          Current->Previous->opensScope())
+      if (Prev->is(BK_BracedInit) && Prev->opensScope())
         Current->SpacesRequiredBefore =
             (Style.Cpp11BracedListStyle && !Style.SpacesInParentheses) ? 0 : 1;
       else
@@ -2612,12 +2611,11 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
     Current->CanBreakBefore =
         Current->MustBreakBefore || canBreakBefore(Line, *Current);
     unsigned ChildSize = 0;
-    if (Current->Previous->Children.size() == 1) {
-      FormatToken &LastOfChild = *Current->Previous->Children[0]->Last;
+    if (Prev->Children.size() == 1) {
+      FormatToken &LastOfChild = *Prev->Children[0]->Last;
       ChildSize = LastOfChild.isTrailingComment() ? Style.ColumnLimit
                                                   : LastOfChild.TotalLength + 1;
     }
-    const FormatToken *Prev = Current->Previous;
     if (Current->MustBreakBefore || Prev->Children.size() > 1 ||
         (Prev->Children.size() == 1 &&
          Prev->Children[0]->First->MustBreakBefore) ||
@@ -2857,6 +2855,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       Left.Previous->isOneOf(tok::identifier, tok::greater))
     return 500;
 
+  if (Left.is(tok::l_paren) && Style.PenaltyBreakOpenParenthesis != 0)
+    return Style.PenaltyBreakOpenParenthesis;
   if (Left.is(tok::l_paren) && InFunctionDecl &&
       Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign)
     return 100;
@@ -2921,9 +2921,15 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
 }
 
 bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
-  return Style.SpaceBeforeParens == FormatStyle::SBPO_Always ||
-         (Style.SpaceBeforeParensOptions.BeforeNonEmptyParentheses &&
-          Right.ParameterCount > 0);
+  if (Style.SpaceBeforeParens == FormatStyle::SBPO_Always)
+    return true;
+  if (Right.is(TT_OverloadedOperatorLParen) &&
+      Style.SpaceBeforeParensOptions.AfterOverloadedOperator)
+    return true;
+  if (Style.SpaceBeforeParensOptions.BeforeNonEmptyParentheses &&
+      Right.ParameterCount > 0)
+    return true;
+  return false;
 }
 
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
@@ -3293,6 +3299,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   auto HasExistingWhitespace = [&Right]() {
     return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   };
+
+  // If the token is finalized don't touch it (as it could be in a
+  // clang-format-off section).
+  if (Left.Finalized)
+    return HasExistingWhitespace();
 
   if (Right.Tok.getIdentifierInfo() && Left.Tok.getIdentifierInfo())
     return true; // Never ever merge two identifiers.
@@ -3856,16 +3867,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
            (Right.NewlinesBefore > 0 && Right.HasUnescapedNewline);
   if (Left.isTrailingComment())
     return true;
-  if (Right.Previous->IsUnterminatedLiteral)
+  if (Left.IsUnterminatedLiteral)
     return true;
-  if (Right.is(tok::lessless) && Right.Next &&
-      Right.Previous->is(tok::string_literal) &&
+  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
       Right.Next->is(tok::string_literal))
     return true;
   // Can break after template<> declaration
-  if (Right.Previous->ClosesTemplateDeclaration &&
-      Right.Previous->MatchingParen &&
-      Right.Previous->MatchingParen->NestingLevel == 0) {
+  if (Left.ClosesTemplateDeclaration && Left.MatchingParen &&
+      Left.MatchingParen->NestingLevel == 0) {
     // Put concepts on the next line e.g.
     // template<typename T>
     // concept ...
@@ -3898,9 +3907,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     // has made a deliberate choice and might have aligned the contents of the
     // string literal accordingly. Thus, we try keep existing line breaks.
     return Right.IsMultiline && Right.NewlinesBefore > 0;
-  if ((Right.Previous->is(tok::l_brace) ||
-       (Right.Previous->is(tok::less) && Right.Previous->Previous &&
-        Right.Previous->Previous->is(tok::equal))) &&
+  if ((Left.is(tok::l_brace) || (Left.is(tok::less) && Left.Previous &&
+                                 Left.Previous->is(tok::equal))) &&
       Right.NestingLevel == 1 && Style.Language == FormatStyle::LK_Proto) {
     // Don't put enums or option definitions onto single lines in protocol
     // buffers.
@@ -4004,7 +4012,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       Right.is(TT_SelectorName) && !Right.is(tok::r_square) && Right.Next) {
     // Keep `@submessage` together in:
     // @submessage { key: value }
-    if (Right.Previous && Right.Previous->is(tok::at))
+    if (Left.is(tok::at))
       return false;
     // Look for the scope opener after selector in cases like:
     // selector { ...

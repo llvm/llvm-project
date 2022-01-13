@@ -43,6 +43,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
 
@@ -3429,6 +3430,20 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if (ICA.isTypeBasedOnly())
     return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
+  static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::ROTL,       MVT::v32i16,  2 },
+    { ISD::ROTL,       MVT::v16i16,  2 },
+    { ISD::ROTL,       MVT::v8i16,   2 },
+    { ISD::ROTL,       MVT::v64i8,   5 },
+    { ISD::ROTL,       MVT::v32i8,   5 },
+    { ISD::ROTL,       MVT::v16i8,   5 },
+    { ISD::ROTR,       MVT::v32i16,  2 },
+    { ISD::ROTR,       MVT::v16i16,  2 },
+    { ISD::ROTR,       MVT::v8i16,   2 },
+    { ISD::ROTR,       MVT::v64i8,   5 },
+    { ISD::ROTR,       MVT::v32i8,   5 },
+    { ISD::ROTR,       MVT::v16i8,   5 }
+  };
   static const CostTblEntry AVX512CostTbl[] = {
     { ISD::ROTL,       MVT::v8i64,   1 },
     { ISD::ROTL,       MVT::v4i64,   1 },
@@ -3506,6 +3521,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     MVT MTy = LT.second;
 
     // Attempt to lookup cost.
+    if (ST->hasBWI())
+      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
         return LT.first * Entry->Cost;
@@ -5187,9 +5206,48 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
   const FeatureBitset &CalleeBits =
       TM.getSubtargetImpl(*Callee)->getFeatureBits();
 
+  // Check whether features are the same (apart from the ignore list).
   FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
   FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
-  return (RealCallerBits & RealCalleeBits) == RealCalleeBits;
+  if (RealCallerBits == RealCalleeBits)
+    return true;
+
+  // If the features are a subset, we need to additionally check for calls
+  // that may become ABI-incompatible as a result of inlining.
+  if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
+    return false;
+
+  for (const Instruction &I : instructions(Callee)) {
+    if (const auto *CB = dyn_cast<CallBase>(&I)) {
+      SmallVector<Type *, 8> Types;
+      for (Value *Arg : CB->args())
+        Types.push_back(Arg->getType());
+      if (!CB->getType()->isVoidTy())
+        Types.push_back(CB->getType());
+
+      // Simple types are always ABI compatible.
+      auto IsSimpleTy = [](Type *Ty) {
+        return !Ty->isVectorTy() && !Ty->isAggregateType();
+      };
+      if (all_of(Types, IsSimpleTy))
+        continue;
+
+      if (Function *NestedCallee = CB->getCalledFunction()) {
+        // Assume that intrinsics are always ABI compatible.
+        if (NestedCallee->isIntrinsic())
+          continue;
+
+        // Do a precise compatibility check.
+        if (!areTypesABICompatible(Caller, NestedCallee, Types))
+          return false;
+      } else {
+        // We don't know the target features of the callee,
+        // assume it is incompatible.
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,

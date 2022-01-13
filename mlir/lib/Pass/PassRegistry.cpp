@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -88,7 +90,8 @@ size_t PassRegistryEntry::getOptionWidth() const {
 void mlir::registerPassPipeline(
     StringRef arg, StringRef description, const PassRegistryFunction &function,
     std::function<void(function_ref<void(const PassOptions &)>)> optHandler) {
-  PassPipelineInfo pipelineInfo(arg, description, function, optHandler);
+  PassPipelineInfo pipelineInfo(arg, description, function,
+                                std::move(optHandler));
   bool inserted = passPipelineRegistry->try_emplace(arg, pipelineInfo).second;
   assert(inserted && "Pass pipeline registered multiple times");
   (void)inserted;
@@ -505,7 +508,7 @@ namespace {
 /// This struct represents the possible data entries in a parsed pass pipeline
 /// list.
 struct PassArgData {
-  PassArgData() {}
+  PassArgData() = default;
   PassArgData(const PassRegistryEntry *registryEntry)
       : registryEntry(registryEntry) {}
 

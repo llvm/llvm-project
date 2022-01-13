@@ -1759,15 +1759,11 @@ define arm_aapcs_vfpcc <2 x i64> @masked_v2i64_align4_zero(<2 x i64> *%dest, <2 
 ; CHECK-LE-NEXT:    vmov r12, lr, d1
 ; CHECK-LE-NEXT:    rsbs r2, r2, #0
 ; CHECK-LE-NEXT:    sbcs.w r2, r1, r3
-; CHECK-LE-NEXT:    cset r2, lt
-; CHECK-LE-NEXT:    cmp r2, #0
-; CHECK-LE-NEXT:    csetm r2, ne
+; CHECK-LE-NEXT:    csetm r2, lt
 ; CHECK-LE-NEXT:    rsbs.w r3, r12, #0
 ; CHECK-LE-NEXT:    sbcs.w r3, r1, lr
 ; CHECK-LE-NEXT:    bfi r1, r2, #0, #1
-; CHECK-LE-NEXT:    cset r2, lt
-; CHECK-LE-NEXT:    cmp r2, #0
-; CHECK-LE-NEXT:    csetm r2, ne
+; CHECK-LE-NEXT:    csetm r2, lt
 ; CHECK-LE-NEXT:    bfi r1, r2, #1, #1
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    beq .LBB49_2
@@ -1801,15 +1797,11 @@ define arm_aapcs_vfpcc <2 x i64> @masked_v2i64_align4_zero(<2 x i64> *%dest, <2 
 ; CHECK-BE-NEXT:    vmov r12, lr, d2
 ; CHECK-BE-NEXT:    rsbs r3, r3, #0
 ; CHECK-BE-NEXT:    sbcs.w r2, r1, r2
-; CHECK-BE-NEXT:    cset r2, lt
-; CHECK-BE-NEXT:    cmp r2, #0
-; CHECK-BE-NEXT:    csetm r2, ne
+; CHECK-BE-NEXT:    csetm r2, lt
 ; CHECK-BE-NEXT:    rsbs.w r3, lr, #0
 ; CHECK-BE-NEXT:    sbcs.w r3, r1, r12
 ; CHECK-BE-NEXT:    bfi r1, r2, #0, #1
-; CHECK-BE-NEXT:    cset r2, lt
-; CHECK-BE-NEXT:    cmp r2, #0
-; CHECK-BE-NEXT:    csetm r2, ne
+; CHECK-BE-NEXT:    csetm r2, lt
 ; CHECK-BE-NEXT:    bfi r1, r2, #1, #1
 ; CHECK-BE-NEXT:    lsls r2, r1, #30
 ; CHECK-BE-NEXT:    bpl .LBB49_2
@@ -1848,15 +1840,11 @@ define arm_aapcs_vfpcc <2 x double> @masked_v2f64_align4_zero(<2 x double> *%des
 ; CHECK-LE-NEXT:    vmov r12, lr, d3
 ; CHECK-LE-NEXT:    rsbs r2, r2, #0
 ; CHECK-LE-NEXT:    sbcs.w r2, r1, r3
-; CHECK-LE-NEXT:    cset r2, lt
-; CHECK-LE-NEXT:    cmp r2, #0
-; CHECK-LE-NEXT:    csetm r2, ne
+; CHECK-LE-NEXT:    csetm r2, lt
 ; CHECK-LE-NEXT:    rsbs.w r3, r12, #0
 ; CHECK-LE-NEXT:    sbcs.w r3, r1, lr
 ; CHECK-LE-NEXT:    bfi r1, r2, #0, #1
-; CHECK-LE-NEXT:    cset r2, lt
-; CHECK-LE-NEXT:    cmp r2, #0
-; CHECK-LE-NEXT:    csetm r2, ne
+; CHECK-LE-NEXT:    csetm r2, lt
 ; CHECK-LE-NEXT:    bfi r1, r2, #1, #1
 ; CHECK-LE-NEXT:    lsls r2, r1, #31
 ; CHECK-LE-NEXT:    beq .LBB50_2
@@ -1890,15 +1878,11 @@ define arm_aapcs_vfpcc <2 x double> @masked_v2f64_align4_zero(<2 x double> *%des
 ; CHECK-BE-NEXT:    vmov r12, lr, d0
 ; CHECK-BE-NEXT:    rsbs r3, r3, #0
 ; CHECK-BE-NEXT:    sbcs.w r2, r1, r2
-; CHECK-BE-NEXT:    cset r2, lt
-; CHECK-BE-NEXT:    cmp r2, #0
-; CHECK-BE-NEXT:    csetm r2, ne
+; CHECK-BE-NEXT:    csetm r2, lt
 ; CHECK-BE-NEXT:    rsbs.w r3, lr, #0
 ; CHECK-BE-NEXT:    sbcs.w r3, r1, r12
 ; CHECK-BE-NEXT:    bfi r1, r2, #0, #1
-; CHECK-BE-NEXT:    cset r2, lt
-; CHECK-BE-NEXT:    cmp r2, #0
-; CHECK-BE-NEXT:    csetm r2, ne
+; CHECK-BE-NEXT:    csetm r2, lt
 ; CHECK-BE-NEXT:    bfi r1, r2, #1, #1
 ; CHECK-BE-NEXT:    lsls r2, r1, #30
 ; CHECK-BE-NEXT:    bpl .LBB50_2

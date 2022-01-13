@@ -74,6 +74,13 @@ public:
   /// from.
   virtual StringRef getBufferIdentifier() const { return "Unknown buffer"; }
 
+  /// For read-only MemoryBuffer_MMap, mark the buffer as unused in the near
+  /// future and the kernel can free resources associated with it. Further
+  /// access is supported but may be expensive. This calls
+  /// madvise(MADV_DONTNEED) on read-only file mappings on *NIX systems. This
+  /// function should not be called on a writable buffer.
+  virtual void dontNeedIfMmap() {}
+
   /// Open the specified file as a MemoryBuffer, returning a new MemoryBuffer
   /// if successful, otherwise returning null.
   ///

@@ -93,8 +93,8 @@ TEST(SimplexTest, addInequality_rollback) {
 }
 
 Simplex simplexFromConstraints(unsigned nDim,
-                               SmallVector<SmallVector<int64_t, 8>, 8> ineqs,
-                               SmallVector<SmallVector<int64_t, 8>, 8> eqs) {
+                               ArrayRef<SmallVector<int64_t, 8>> ineqs,
+                               ArrayRef<SmallVector<int64_t, 8>> eqs) {
   Simplex simplex(nDim);
   for (const auto &ineq : ineqs)
     simplex.addInequality(ineq);
@@ -476,24 +476,23 @@ TEST(SimplexTest, isRedundantEquality) {
   EXPECT_TRUE(simplex.isRedundantEquality({-1, 0, 2})); // x = 2.
 }
 
-static FlatAffineConstraints parseFAC(StringRef str, MLIRContext *context) {
-  FailureOr<FlatAffineConstraints> fac = parseIntegerSetToFAC(str, context);
+static IntegerPolyhedron parsePoly(StringRef str, MLIRContext *context) {
+  FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, context);
 
-  EXPECT_TRUE(succeeded(fac));
+  EXPECT_TRUE(succeeded(poly));
 
-  return *fac;
+  return *poly;
 }
 
 TEST(SimplexTest, IsRationalSubsetOf) {
 
   MLIRContext context;
 
-  FlatAffineConstraints univ = FlatAffineConstraints::getUniverse(1, 0);
-  FlatAffineConstraints empty =
-      parseFAC("(x) : (x + 0 >= 0, -x - 1 >= 0)", &context);
-  FlatAffineConstraints s1 = parseFAC("(x) : ( x >= 0, -x + 4 >= 0)", &context);
-  FlatAffineConstraints s2 =
-      parseFAC("(x) : (x - 1 >= 0, -x + 3 >= 0)", &context);
+  IntegerPolyhedron univ = parsePoly("(x) : ()", &context);
+  IntegerPolyhedron empty =
+      parsePoly("(x) : (x + 0 >= 0, -x - 1 >= 0)", &context);
+  IntegerPolyhedron s1 = parsePoly("(x) : ( x >= 0, -x + 4 >= 0)", &context);
+  IntegerPolyhedron s2 = parsePoly("(x) : (x - 1 >= 0, -x + 3 >= 0)", &context);
 
   Simplex simUniv(univ);
   Simplex simEmpty(empty);

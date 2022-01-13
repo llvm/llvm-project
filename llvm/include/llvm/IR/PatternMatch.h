@@ -589,6 +589,9 @@ struct is_lowbit_mask {
 inline cst_pred_ty<is_lowbit_mask> m_LowBitMask() {
   return cst_pred_ty<is_lowbit_mask>();
 }
+inline api_pred_ty<is_lowbit_mask> m_LowBitMask(const APInt *&V) {
+  return V;
+}
 
 struct icmp_pred_with_threshold {
   ICmpInst::Predicate Pred;

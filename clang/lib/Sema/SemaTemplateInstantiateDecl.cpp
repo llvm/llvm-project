@@ -3637,7 +3637,7 @@ TemplateDeclInstantiator::VisitClassTemplateSpecializationDecl(
                                         InstTemplateArgs,
                                         false,
                                         Converted,
-                                        /*UpdateArgsWithConversion=*/true))
+                                        /*UpdateArgsWithConversions=*/true))
     return nullptr;
 
   // Figure out where to insert this class template explicit specialization
@@ -3759,7 +3759,7 @@ Decl *TemplateDeclInstantiator::VisitVarTemplateSpecializationDecl(
   SmallVector<TemplateArgument, 4> Converted;
   if (SemaRef.CheckTemplateArgumentList(InstVarTemplate, D->getLocation(),
                                         VarTemplateArgsInfo, false, Converted,
-                                        /*UpdateArgsWithConversion=*/true))
+                                        /*UpdateArgsWithConversions=*/true))
     return nullptr;
 
   // Check whether we've already seen a declaration of this specialization.

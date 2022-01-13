@@ -85,7 +85,7 @@ private:
 
   SystemZSubtarget &initializeSubtargetDependencies(StringRef CPU,
                                                     StringRef FS);
-  SystemZCallingConventionRegisters *initializeSpecialRegisters(void);
+  SystemZCallingConventionRegisters *initializeSpecialRegisters();
 
 public:
   SystemZSubtarget(const Triple &TT, const std::string &CPU,

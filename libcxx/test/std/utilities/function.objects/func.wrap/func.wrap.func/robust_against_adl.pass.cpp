@@ -27,7 +27,13 @@
 
 struct Incomplete;
 template<class T> struct Holder { T t; };
+
 typedef Holder<Incomplete> *Ptr;
+
+template<class T>
+struct Callable {
+    void operator()() const { }
+};
 
 Ptr no_args() { return nullptr; }
 Ptr one_arg(Ptr p) { return p; }
@@ -37,11 +43,11 @@ Ptr four_args(Ptr p, Ptr, Ptr, Ptr) { return p; }
 
 void one_arg_void(Ptr) { }
 
-int main(int, char**)
-{
+int main(int, char**) {
     Ptr x = nullptr;
     std::function<Ptr()> f(no_args); f();
     std::function<Ptr(Ptr)> g(one_arg); g(x);
     std::function<void(Ptr)> h(one_arg_void); h(x);
+    std::function<void()> i(Callable<Holder<Incomplete>>{});
     return 0;
 }

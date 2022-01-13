@@ -63,12 +63,8 @@ define void @foo(i32* nocapture %a, i32* nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP8]], [[TMP0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP8]], [[TMP0]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp sgt i32 [[TMP11]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp slt i32 [[TMP10]], [[TMP8]]
-; CHECK-NEXT:    [[TMP14:%.*]] = select i1 false, i1 [[TMP12]], i1 [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 false, [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]

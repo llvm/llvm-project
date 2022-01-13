@@ -207,6 +207,7 @@ static std::string formatSourceLanguage(SourceLanguage Lang) {
     RETURN_CASE(SourceLanguage, HLSL, "hlsl");
     RETURN_CASE(SourceLanguage, D, "d");
     RETURN_CASE(SourceLanguage, Swift, "swift");
+    RETURN_CASE(SourceLanguage, Rust, "rust");
   }
   return formatUnknownEnum(Lang);
 }

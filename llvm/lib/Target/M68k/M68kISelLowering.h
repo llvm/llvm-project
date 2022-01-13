@@ -1,4 +1,4 @@
-//===-- M68kISelLowering.h - M68k DAG Lowering Interface ----*- C++ -*-===//
+//===-- M68kISelLowering.h - M68k DAG Lowering Interface --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -276,4 +276,4 @@ private:
 };
 } // namespace llvm
 
-#endif // M68kISELLOWERING_H
+#endif // LLVM_LIB_TARGET_M68K_M68KISELLOWERING_H

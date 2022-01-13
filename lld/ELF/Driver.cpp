@@ -87,6 +87,7 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
 
     inputSections.clear();
     outputSections.clear();
+    memoryBuffers.clear();
     archiveFiles.clear();
     binaryFiles.clear();
     bitcodeFiles.clear();
@@ -95,11 +96,13 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
     sharedFiles.clear();
     backwardReferences.clear();
     whyExtract.clear();
+    symAux.clear();
 
     tar = nullptr;
-    memset(&in, 0, sizeof(in));
+    in.reset();
 
-    partitions = {Partition()};
+    partitions.clear();
+    partitions.emplace_back();
 
     SharedFile::vernauxNum = 0;
   };
@@ -116,7 +119,8 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   script = std::make_unique<LinkerScript>();
   symtab = std::make_unique<SymbolTable>();
 
-  partitions = {Partition()};
+  partitions.clear();
+  partitions.emplace_back();
 
   config->progName = args[0];
 
@@ -1847,8 +1851,7 @@ static void demoteSharedSymbols() {
   llvm::TimeTraceScope timeScope("Demote shared symbols");
   for (Symbol *sym : symtab->symbols()) {
     auto *s = dyn_cast<SharedSymbol>(sym);
-    if (!((s && !s->getFile().isNeeded) ||
-          (sym->isLazy() && sym->isUsedInRegularObj)))
+    if (!(s && !s->getFile().isNeeded) && !sym->isLazy())
       continue;
 
     bool used = sym->used;
@@ -1985,6 +1988,28 @@ static Symbol *addUnusedUndefined(StringRef name,
   return symtab->addSymbol(sym);
 }
 
+static void markBuffersAsDontNeed(bool skipLinkedOutput) {
+  // With --thinlto-index-only, all buffers are nearly unused from now on
+  // (except symbol/section names used by infrequent passes). Mark input file
+  // buffers as MADV_DONTNEED so that these pages can be reused by the expensive
+  // thin link, saving memory.
+  if (skipLinkedOutput) {
+    for (MemoryBuffer &mb : llvm::make_pointee_range(memoryBuffers))
+      mb.dontNeedIfMmap();
+    return;
+  }
+
+  // Otherwise, just mark MemoryBuffers backing BitcodeFiles.
+  DenseSet<const char *> bufs;
+  for (BitcodeFile *file : bitcodeFiles)
+    bufs.insert(file->mb.getBufferStart());
+  for (BitcodeFile *file : lazyBitcodeFiles)
+    bufs.insert(file->mb.getBufferStart());
+  for (MemoryBuffer &mb : llvm::make_pointee_range(memoryBuffers))
+    if (bufs.count(mb.getBufferStart()))
+      mb.dontNeedIfMmap();
+}
+
 // This function is where all the optimizations of link-time
 // optimization takes place. When LTO is in use, some input files are
 // not in native object file format but in the LLVM bitcode format.
@@ -1992,12 +2017,16 @@ static Symbol *addUnusedUndefined(StringRef name,
 // using LLVM functions and replaces bitcode symbols with the results.
 // Because all bitcode files that the program consists of are passed to
 // the compiler at once, it can do a whole-program optimization.
-template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
+template <class ELFT>
+void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler);
   for (BitcodeFile *file : bitcodeFiles)
     lto->add(*file);
+
+  if (!bitcodeFiles.empty())
+    markBuffersAsDontNeed(skipLinkedOutput);
 
   for (InputFile *file : lto->compile()) {
     auto *obj = cast<ObjFile<ELFT>>(file);
@@ -2362,12 +2391,32 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     symtab->scanVersionScript();
   }
 
+  // Skip the normal linked output if some LTO options are specified.
+  //
+  // For --thinlto-index-only, index file creation is performed in
+  // compileBitcodeFiles, so we are done afterwards. --plugin-opt=emit-llvm and
+  // --plugin-opt=emit-asm create output files in bitcode or assembly code,
+  // respectively. When only certain thinLTO modules are specified for
+  // compilation, the intermediate object file are the expected output.
+  const bool skipLinkedOutput = config->thinLTOIndexOnly || config->emitLLVM ||
+                                config->ltoEmitAsm ||
+                                !config->thinLTOModulesToCompile.empty();
+
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
   //
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
-  compileBitcodeFiles<ELFT>();
+  compileBitcodeFiles<ELFT>(skipLinkedOutput);
+
+  // Symbol resolution finished. Report backward reference problems.
+  reportBackrefs();
+  if (errorCount())
+    return;
+
+  // Bail out if normal linked output is skipped due to LTO.
+  if (skipLinkedOutput)
+    return;
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override
@@ -2375,25 +2424,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(args);
 
-  // Symbol resolution finished. Report backward reference problems.
-  reportBackrefs();
-  if (errorCount())
-    return;
-
-  // If --thinlto-index-only is given, we should create only "index
-  // files" and not object files. Index file creation is already done
-  // in compileBitcodeFiles, so we are done if that's the case.
-  // Likewise, --plugin-opt=emit-llvm and --plugin-opt=emit-asm are the
-  // options to create output files in bitcode or assembly code
-  // respectively. No object files are generated.
-  // Also bail out here when only certain thinLTO modules are specified for
-  // compilation. The intermediate object file are the expected output.
-  if (config->thinLTOIndexOnly || config->emitLLVM || config->ltoEmitAsm ||
-      !config->thinLTOModulesToCompile.empty())
-    return;
-
   // Apply symbol renames for --wrap and combine foo@v1 and foo@@v1.
   redirectSymbols(wrapped);
+
+  // Replace common symbols with regular symbols.
+  replaceCommonSymbols();
 
   {
     llvm::TimeTraceScope timeScope("Aggregate sections");
@@ -2478,9 +2513,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // This adds a .comment section containing a version string.
   if (!config->relocatable)
     inputSections.push_back(createCommentSection());
-
-  // Replace common symbols with regular symbols.
-  replaceCommonSymbols();
 
   // Split SHF_MERGE and .eh_frame sections into pieces in preparation for garbage collection.
   splitSections<ELFT>();

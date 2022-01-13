@@ -12,7 +12,7 @@
 # can also just start the image with a shell to debug CI failures.
 #
 # To start a Buildkite Agent, run it as:
-#   $ docker run --env-file <secrets> -it $(docker build -q .)
+#   $ docker run --env-file <secrets> -it $(docker build -q libcxx/utils/ci)
 #
 # The environment variables in `<secrets>` should be the ones necessary
 # to run a BuildKite agent.
@@ -43,7 +43,6 @@ RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
 RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils git gdb
-RUN apt-get update && apt-get install -y libc6-dev-i386 # Required to cross-compile to 32 bits
 
 # Locales for gdb and localization tests
 RUN apt-get update && apt-get install -y language-pack-en language-pack-fr \

@@ -46,7 +46,7 @@ entry:
   store i64 0, i64* %nr, align 8
   store i64* %value, i64** %addr, align 8
   %0 = load i64, i64* %nr, align 8
-  call void asm "btsq $2, $1; setc $0", "=*qm,=*m,Ir,~{dirflag},~{fpsr},~{flags}"(i8* %bit, i64** %addr, i64 %0)
+  call void asm "btsq $2, $1; setc $0", "=*qm,=*m,Ir,~{dirflag},~{fpsr},~{flags}"(i8* elementtype(i8) %bit, i64** elementtype(i64*) %addr, i64 %0)
   %1 = load i8, i8* %bit, align 1
   %tobool = trunc i8 %1 to i1
   br i1 %tobool, label %if.then, label %if.else

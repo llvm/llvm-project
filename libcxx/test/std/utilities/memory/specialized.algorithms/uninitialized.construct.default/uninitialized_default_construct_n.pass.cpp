@@ -66,7 +66,7 @@ void test_ctor_throws()
         assert(false);
     } catch (...) {}
     assert(ThrowsCounted::count == 0);
-    assert(ThrowsCounted::constructed == 4); // forth construction throws
+    assert(ThrowsCounted::constructed == 4); // Fourth construction throws
 #endif
 }
 

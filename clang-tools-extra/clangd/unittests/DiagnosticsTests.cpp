@@ -517,6 +517,80 @@ TEST(DiagnosticTest, ClangTidyWarningAsError) {
           DiagSeverity(DiagnosticsEngine::Error)))));
 }
 
+TidyProvider addClangArgs(std::vector<llvm::StringRef> ExtraArgs) {
+  return [ExtraArgs = std::move(ExtraArgs)](tidy::ClangTidyOptions &Opts,
+                                            llvm::StringRef) {
+    if (!Opts.ExtraArgs)
+      Opts.ExtraArgs.emplace();
+    for (llvm::StringRef Arg : ExtraArgs)
+      Opts.ExtraArgs->emplace_back(Arg);
+  };
+}
+
+TEST(DiagnosticTest, ClangTidyEnablesClangWarning) {
+  Annotations Main(R"cpp( // error-ok
+    static void [[foo]]() {}
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  // This is always emitted as a clang warning, not a clang-tidy diagnostic.
+  auto UnusedFooWarning =
+      AllOf(Diag(Main.range(), "unused function 'foo'"),
+            DiagName("-Wunused-function"), DiagSource(Diag::Clang),
+            DiagSeverity(DiagnosticsEngine::Warning));
+
+  // Check the -Wunused warning isn't initially on.
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+
+  // We enable warnings based on clang-tidy extra args.
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"});
+  EXPECT_THAT(*TU.build().getDiagnostics(), ElementsAre(UnusedFooWarning));
+
+  // But we don't respect other args.
+  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Dfoo=bar"});
+  EXPECT_THAT(*TU.build().getDiagnostics(), ElementsAre(UnusedFooWarning))
+      << "Not unused function 'bar'!";
+
+  // -Werror doesn't apply to warnings enabled by clang-tidy extra args.
+  TU.ExtraArgs = {"-Werror"};
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"});
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ElementsAre(DiagSeverity(DiagnosticsEngine::Warning)));
+
+  // But clang-tidy extra args won't *downgrade* errors to warnings either.
+  TU.ExtraArgs = {"-Wunused", "-Werror"};
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"});
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ElementsAre(DiagSeverity(DiagnosticsEngine::Error)));
+
+  // FIXME: we're erroneously downgrading the whole group, this should be Error.
+  TU.ExtraArgs = {"-Wunused-function", "-Werror"};
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"});
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ElementsAre(DiagSeverity(DiagnosticsEngine::Warning)));
+
+  // This looks silly, but it's the typical result if a warning is enabled by a
+  // high-level .clang-tidy file and disabled by a low-level one.
+  TU.ExtraArgs = {};
+  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Wno-unused"});
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+
+  // Overriding only works in the proper order.
+  TU.ClangTidyProvider = addClangArgs({"-Wno-unused", "-Wunused"});
+  EXPECT_THAT(*TU.build().getDiagnostics(), SizeIs(1));
+
+  // More specific vs less-specific: match clang behavior
+  TU.ClangTidyProvider = addClangArgs({"-Wunused", "-Wno-unused-function"});
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+  TU.ClangTidyProvider = addClangArgs({"-Wunused-function", "-Wno-unused"});
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+
+  // We do allow clang-tidy config to disable warnings from the compile command.
+  // It's unclear this is ideal, but it's hard to avoid.
+  TU.ExtraArgs = {"-Wunused"};
+  TU.ClangTidyProvider = addClangArgs({"-Wno-unused"});
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+}
+
 TEST(DiagnosticTest, LongFixMessages) {
   // We limit the size of printed code.
   Annotations Source(R"cpp(
@@ -1209,6 +1283,31 @@ TEST(IncludeFixerTest, HeaderNamedInDiag) {
                              "with type 'int (const char *, ...)'"),
           WithFix(Fix(Test.range("insert"), "#include <stdio.h>\n",
                       "Include <stdio.h> for symbol printf")))));
+}
+
+TEST(IncludeFixerTest, CImplicitFunctionDecl) {
+  Annotations Test("void x() { [[foo]](); }");
+  auto TU = TestTU::withCode(Test.code());
+  TU.Filename = "test.c";
+
+  Symbol Sym = func("foo");
+  Sym.Flags |= Symbol::IndexedForCodeCompletion;
+  Sym.CanonicalDeclaration.FileURI = "unittest:///foo.h";
+  Sym.IncludeHeaders.emplace_back("\"foo.h\"", 1);
+
+  SymbolSlab::Builder Slab;
+  Slab.insert(Sym);
+  auto Index =
+      MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      ElementsAre(AllOf(
+          Diag(Test.range(),
+               "implicit declaration of function 'foo' is invalid in C99"),
+          WithFix(Fix(Range{}, "#include \"foo.h\"\n",
+                      "Include \"foo.h\" for symbol foo")))));
 }
 
 TEST(DiagsInHeaders, DiagInsideHeader) {

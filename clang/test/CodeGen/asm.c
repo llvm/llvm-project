@@ -246,7 +246,7 @@ void t29(void) {
                :
                : "m"(t29_var));
   // CHECK: @t29
-  // CHECK: call void asm sideeffect "movl %eax, $0", "*m,~{dirflag},~{fpsr},~{flags}"([1 x i32]* @t29_var)
+  // CHECK: call void asm sideeffect "movl %eax, $0", "*m,~{dirflag},~{fpsr},~{flags}"([1 x i32]* elementtype([1 x i32]) @t29_var)
 }
 
 void t30(int len) {

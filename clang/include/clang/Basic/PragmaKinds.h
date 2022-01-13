@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_PRAGMA_KINDS_H
-#define LLVM_CLANG_BASIC_PRAGMA_KINDS_H
+#ifndef LLVM_CLANG_BASIC_PRAGMAKINDS_H
+#define LLVM_CLANG_BASIC_PRAGMAKINDS_H
 
 namespace clang {
 

@@ -8,7 +8,7 @@ let Definition = "platformqemuuser" in {
   def EmulatorPath: Property<"emulator-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
-    Desc<"Path to the emulator binary.">;
+    Desc<"Path to the emulator binary. If the path does not contain a directory separator, the filename is looked up in the PATH environment variable. If empty, the filename is derived from the architecture setting.">;
   def EmulatorArgs: Property<"emulator-args", "Args">,
     Global,
     DefaultStringValue<"">,

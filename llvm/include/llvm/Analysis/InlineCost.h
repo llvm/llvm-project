@@ -21,7 +21,6 @@
 #include <climits>
 
 namespace llvm {
-class AssumptionCacheTracker;
 class BlockFrequencyInfo;
 class CallBase;
 class DataLayout;

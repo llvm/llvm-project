@@ -287,7 +287,8 @@ bool DeadArgumentEliminationPass::RemoveDeadArgumentsFromCallers(Function &Fn) {
   SmallVector<unsigned, 8> UnusedArgs;
   bool Changed = false;
 
-  AttrBuilder UBImplyingAttributes = AttributeFuncs::getUBImplyingAttributes();
+  AttributeMask UBImplyingAttributes =
+      AttributeFuncs::getUBImplyingAttributes();
   for (Argument &Arg : Fn.args()) {
     if (!Arg.hasSwiftErrorAttr() && Arg.use_empty() &&
         !Arg.hasPassPointeeByValueCopyAttr()) {
@@ -838,7 +839,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   assert(NRetTy && "No new return type found?");
 
   // The existing function return attributes.
-  AttrBuilder RAttrs(PAL.getRetAttrs());
+  AttrBuilder RAttrs(F->getContext(), PAL.getRetAttrs());
 
   // Remove any incompatible attributes, but only if we removed all return
   // values. Otherwise, ensure that we don't have any conflicting attributes
@@ -889,7 +890,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
 
     // Adjust the call return attributes in case the function was changed to
     // return void.
-    AttrBuilder RAttrs(CallPAL.getRetAttrs());
+    AttrBuilder RAttrs(F->getContext(), CallPAL.getRetAttrs());
     RAttrs.remove(AttributeFuncs::typeIncompatible(NRetTy));
     AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
 
@@ -912,7 +913,7 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
           // this is not an expected case anyway
           ArgAttrVec.push_back(AttributeSet::get(
               F->getContext(),
-              AttrBuilder(Attrs).removeAttribute(Attribute::Returned)));
+              AttrBuilder(F->getContext(), Attrs).removeAttribute(Attribute::Returned)));
         } else {
           // Otherwise, use the original attributes.
           ArgAttrVec.push_back(Attrs);

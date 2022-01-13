@@ -142,7 +142,6 @@ using namespace clang;
 using namespace clang::serialization;
 using namespace clang::serialization::reader;
 using llvm::BitstreamCursor;
-using llvm::RoundingMode;
 
 //===----------------------------------------------------------------------===//
 // ChainedASTReaderListener implementation
@@ -4762,11 +4761,11 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
         break;
       unsigned Count = Record[0];
       const char *Byte = Blob.data();
-      F->SearchPathUsage = llvm::BitVector(Count, 0);
+      F->SearchPathUsage = llvm::BitVector(Count, false);
       for (unsigned I = 0; I < Count; ++Byte)
         for (unsigned Bit = 0; Bit < 8 && I < Count; ++Bit, ++I)
           if (*Byte & (1 << Bit))
-            F->SearchPathUsage[I] = 1;
+            F->SearchPathUsage[I] = true;
       break;
     }
   }
@@ -6629,7 +6628,8 @@ void TypeLocReader::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
 }
 
 void TypeLocReader::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  TL.setDecltypeLoc(readSourceLocation());
+  TL.setRParenLoc(readSourceLocation());
 }
 
 void TypeLocReader::VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
@@ -6652,6 +6652,8 @@ void TypeLocReader::VisitAutoTypeLoc(AutoTypeLoc TL) {
       TL.setArgLocInfo(i, Reader.readTemplateArgumentLocInfo(
                               TL.getTypePtr()->getArg(i).getKind()));
   }
+  if (Reader.readBool())
+    TL.setRParenLoc(readSourceLocation());
 }
 
 void TypeLocReader::VisitDeducedTemplateSpecializationTypeLoc(

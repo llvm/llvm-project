@@ -25,6 +25,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _Tp>
 concept __class_or_enum = is_class_v<_Tp> || is_union_v<_Tp> || is_enum_v<_Tp>;
 
+// Work around Clang bug https://llvm.org/PR52970
+template<class _Tp>
+concept __workaround_52970 = is_class_v<__uncvref_t<_Tp>> || is_union_v<__uncvref_t<_Tp>>;
+
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD

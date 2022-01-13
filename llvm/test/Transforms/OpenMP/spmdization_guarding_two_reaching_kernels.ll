@@ -193,9 +193,6 @@ define internal void @__omp_outlined___wrapper(i16 zeroext %0, i32 %1) #2 {
 ; CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca i8**, align 8
-; CHECK-NEXT:    store i16 [[TMP0]], i16* [[DOTADDR]], align 2
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[DOTADDR1]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[DOTZERO_ADDR]], align 4
 ; CHECK-NEXT:    call void @__kmpc_get_shared_variables(i8*** [[GLOBAL_ARGS]])
 ; CHECK-NEXT:    call void @__omp_outlined__(i32* [[DOTADDR1]], i32* [[DOTZERO_ADDR]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void

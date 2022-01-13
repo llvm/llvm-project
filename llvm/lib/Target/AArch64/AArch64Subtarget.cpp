@@ -157,13 +157,19 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case NeoverseN1:
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 5;
+    MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseN2:
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 5;
+    MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
     break;
   case NeoverseV1:
     PrefFunctionLogAlignment = 4;
+    PrefLoopLogAlignment = 5;
+    MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 2;
     break;
   case Neoverse512TVB:
@@ -228,8 +234,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
       IsLittle(LittleEndian),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
-      FrameLowering(),
-      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)), TSInfo(),
+      InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)),
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);

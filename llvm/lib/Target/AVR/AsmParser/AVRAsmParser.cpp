@@ -107,13 +107,13 @@ class AVROperand : public MCParsedAsmOperand {
 
 public:
   AVROperand(StringRef Tok, SMLoc const &S)
-      : Base(), Kind(k_Token), Tok(Tok), Start(S), End(S) {}
+      : Kind(k_Token), Tok(Tok), Start(S), End(S) {}
   AVROperand(unsigned Reg, SMLoc const &S, SMLoc const &E)
-      : Base(), Kind(k_Register), RegImm({Reg, nullptr}), Start(S), End(E) {}
+      : Kind(k_Register), RegImm({Reg, nullptr}), Start(S), End(E) {}
   AVROperand(MCExpr const *Imm, SMLoc const &S, SMLoc const &E)
-      : Base(), Kind(k_Immediate), RegImm({0, Imm}), Start(S), End(E) {}
+      : Kind(k_Immediate), RegImm({0, Imm}), Start(S), End(E) {}
   AVROperand(unsigned Reg, MCExpr const *Imm, SMLoc const &S, SMLoc const &E)
-      : Base(), Kind(k_Memri), RegImm({Reg, Imm}), Start(S), End(E) {}
+      : Kind(k_Memri), RegImm({Reg, Imm}), Start(S), End(E) {}
 
   struct RegisterImmediate {
     unsigned Reg;
@@ -281,7 +281,7 @@ bool AVRAsmParser::invalidOperand(SMLoc const &Loc,
                                   OperandVector const &Operands,
                                   uint64_t const &ErrorInfo) {
   SMLoc ErrorLoc = Loc;
-  char const *Diag = 0;
+  char const *Diag = nullptr;
 
   if (ErrorInfo != ~0U) {
     if (ErrorInfo >= Operands.size()) {

@@ -31,10 +31,10 @@ define void @patatino() {
 ; CHECK-NEXT:    store i64 7, i64* [[J_3:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.cond16:
-; CHECK-NEXT:    [[J_0:%.*]] = phi i64* [ @f, [[ENTRY:%.*]] ], [ undef, [[FOR_COND20:%.*]] ], [ @e, [[FOR_COND16]] ]
+; CHECK-NEXT:    [[J_0:%.*]] = phi i64* [ @f, [[ENTRY:%.*]] ], [ poison, [[FOR_COND20:%.*]] ], [ @e, [[FOR_COND16]] ]
 ; CHECK-NEXT:    br i1 undef, label [[FOR_COND20]], label [[FOR_COND16]]
 ; CHECK:       for.cond20:
-; CHECK-NEXT:    [[J_2:%.*]] = phi i64* [ [[J_0]], [[FOR_COND16]] ], [ undef, [[IF_END24]] ]
+; CHECK-NEXT:    [[J_2:%.*]] = phi i64* [ [[J_0]], [[FOR_COND16]] ], [ poison, [[IF_END24]] ]
 ; CHECK-NEXT:    br i1 true, label [[IF_END24]], label [[FOR_COND16]]
 ; CHECK:       if.end24:
 ; CHECK-NEXT:    [[J_3]] = phi i64* [ [[J_2]], [[FOR_COND20]] ], [ undef, [[ENTRY]] ]

@@ -119,10 +119,10 @@ defm call_graph_profile_sort: BB<"call-graph-profile-sort",
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
 
-defm color_diagnostics: B<"color-diagnostics",
+defm color_diagnostics: BB<"color-diagnostics",
   "Alias for --color-diagnostics=always",
   "Alias for --color-diagnostics=never">;
-def color_diagnostics_eq: J<"color-diagnostics=">,
+def color_diagnostics_eq: JJ<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
 
@@ -344,10 +344,10 @@ defm print_symbol_order: Eq<"print-symbol-order",
   "Print a symbol order specified by --call-graph-ordering-file into the specified file">;
 
 def pop_state: F<"pop-state">,
-  HelpText<"Undo the effect of -push-state">;
+  HelpText<"Restore the states saved by --push-state">;
 
 def push_state: F<"push-state">,
-  HelpText<"Save the current state of -as-needed, -static and -whole-archive">;
+  HelpText<"Save the current state of --as-needed, -static and --whole-archive">;
 
 def print_map: F<"print-map">,
   HelpText<"Print a link map to the standard output">;
@@ -395,7 +395,7 @@ def strip_all: F<"strip-all">, HelpText<"Strip all symbols. Implies --strip-debu
 def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
 defm symbol_ordering_file:
-  Eq<"symbol-ordering-file", "Layout sections to place symbols in the order specified by symbol ordering file">;
+  EEq<"symbol-ordering-file", "Layout sections to place symbols in the order specified by symbol ordering file">;
 
 defm sysroot: Eq<"sysroot", "Set the system root">;
 
@@ -445,7 +445,7 @@ defm undefined_version: B<"undefined-version",
   "Allow unused version in version script (default)",
   "Report version scripts that refer undefined symbols">;
 
-defm rsp_quoting: Eq<"rsp-quoting", "Quoting style for response files">,
+defm rsp_quoting: EEq<"rsp-quoting", "Quoting style for response files">,
   MetaVarName<"[posix,windows]">;
 
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;

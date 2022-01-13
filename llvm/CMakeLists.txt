@@ -2,6 +2,8 @@
 
 cmake_minimum_required(VERSION 3.13.4)
 
+include(GNUInstallDirs)
+
 # CMP0116: Ninja generators transform `DEPFILE`s from `add_custom_command()`
 # New in CMake 3.20. https://cmake.org/cmake/help/latest/policy/CMP0116.html
 if(POLICY CMP0116)
@@ -70,7 +72,7 @@ set(LLVM_EXTRA_PROJECTS "flang")
 # List of all known projects in the mono repo
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
-	"Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
+    "Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
 foreach(proj ${LLVM_ENABLE_PROJECTS})
   if (NOT proj STREQUAL "all" AND NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}")
@@ -176,6 +178,10 @@ if(LLVM_CCACHE_BUILD)
   endif()
 endif()
 
+set(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS "" CACHE STRING
+  "Optional arguments for the native tool used in CMake --build invocations for external projects.")
+mark_as_advanced(LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS)
+
 option(LLVM_DEPENDENCY_DEBUGGING "Dependency debugging mode to verify correctly expressed library dependencies (Darwin only)" OFF)
 
 # Some features of the LLVM build may be disallowed when dependency debugging is
@@ -196,11 +202,13 @@ if(LLVM_ENABLE_GISEL_COV)
   set(LLVM_GISEL_COV_PREFIX "${CMAKE_BINARY_DIR}/gisel-coverage-" CACHE STRING "Provide a filename prefix to collect the GlobalISel rule coverage")
 endif()
 
+set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+
 # Add path for custom modules
-set(CMAKE_MODULE_PATH
-  ${CMAKE_MODULE_PATH}
+list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
 # Generate a CompilationDatabase (compile_commands.json file) for our build,
@@ -234,7 +242,7 @@ option(LLVM_APPEND_VC_REV
 
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-set(PACKAGE_BUGREPORT "https://bugs.llvm.org/")
+set(PACKAGE_BUGREPORT "https://github.com/llvm/llvm-project/issues/")
 
 set(BUG_REPORT_URL "${PACKAGE_BUGREPORT}" CACHE STRING
   "Default URL where bug reports are to be submitted.")
@@ -283,12 +291,17 @@ endif()
 
 set(LLVM_LIBDIR_SUFFIX "" CACHE STRING "Define suffix of library directory name (32/64)" )
 
-set(LLVM_TOOLS_INSTALL_DIR "bin" CACHE STRING "Path for binary subdirectory (defaults to 'bin')")
+set(LLVM_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
+    "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
 mark_as_advanced(LLVM_TOOLS_INSTALL_DIR)
 
 set(LLVM_UTILS_INSTALL_DIR "${LLVM_TOOLS_INSTALL_DIR}" CACHE STRING
     "Path to install LLVM utilities (enabled by LLVM_INSTALL_UTILS=ON) (defaults to LLVM_TOOLS_INSTALL_DIR)")
 mark_as_advanced(LLVM_UTILS_INSTALL_DIR)
+
+set(LLVM_EXAMPLES_INSTALL_DIR "examples" CACHE STRING
+    "Path for examples subdirectory (enabled by LLVM_BUILD_EXAMPLES=ON) (defaults to 'examples')")
+mark_as_advanced(LLVM_EXAMPLES_INSTALL_DIR)
 
 # They are used as destination of target generators.
 set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin)
@@ -343,7 +356,7 @@ set(LLVM_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 
 set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ""
-  CACHE STRING "Semicolon-separated list of experimental targets to build.")
+    CACHE STRING "Semicolon-separated list of experimental targets to build.")
 
 option(BUILD_SHARED_LIBS
   "Build all libraries as shared libraries instead of static" OFF)
@@ -592,7 +605,7 @@ endif(LLVM_BUILD_EXAMPLES)
 option(LLVM_BUILD_TESTS
   "Build LLVM unit tests. If OFF, just generate build targets." OFF)
 option(LLVM_INCLUDE_TESTS "Generate build targets for the LLVM unit tests." ON)
-option(LLVM_INCLUDE_GO_TESTS "Include the Go bindings tests in test build targets." ON)
+option(LLVM_INCLUDE_GO_TESTS "Include the Go bindings tests in test build targets." OFF)
 
 option(LLVM_BUILD_BENCHMARKS "Add LLVM benchmark targets to the list of default
 targets. If OFF, benchmarks still could be built using Benchmarks target." OFF)
@@ -605,9 +618,9 @@ option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 
-set(LLVM_INSTALL_DOXYGEN_HTML_DIR "share/doc/llvm/doxygen-html"
+set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
-set(LLVM_INSTALL_OCAMLDOC_HTML_DIR "share/doc/llvm/ocaml-html"
+set(LLVM_INSTALL_OCAMLDOC_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/ocaml-html"
     CACHE STRING "OCamldoc-generated HTML documentation install directory")
 
 option (LLVM_BUILD_EXTERNAL_COMPILER_RT
@@ -1122,7 +1135,7 @@ endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/llvm include/llvm-c
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT llvm-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -1133,7 +1146,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   install(DIRECTORY ${LLVM_INCLUDE_DIR}/llvm ${LLVM_INCLUDE_DIR}/llvm-c
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT llvm-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -1147,13 +1160,13 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   if (LLVM_INSTALL_MODULEMAPS)
     install(DIRECTORY include/llvm include/llvm-c
-            DESTINATION include
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
             COMPONENT llvm-headers
             FILES_MATCHING
             PATTERN "module.modulemap"
             )
     install(FILES include/llvm/module.install.modulemap
-            DESTINATION include/llvm
+            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm"
             COMPONENT llvm-headers
             RENAME "module.extern.modulemap"
             )

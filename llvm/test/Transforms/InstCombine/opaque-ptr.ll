@@ -161,3 +161,116 @@ define void @varargs_cast_opaque_to_typed(ptr %a) {
   call void (...) @varargs(i8* byval(i8) %b)
   ret void
 }
+
+define ptr @geps_combinable(ptr %a) {
+; CHECK-LABEL: @geps_combinable(
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, { i32, i32 } }, ptr [[A:%.*]], i64 0, i32 1, i32 1
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, { i32, i32 } }, ptr %a, i32 0, i32 1
+  %a3 = getelementptr { i32, i32 }, ptr %a2, i32 0, i32 1
+  ret ptr %a3
+}
+
+define ptr @geps_not_combinable(ptr %a) {
+; CHECK-LABEL: @geps_not_combinable(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[A3:%.*]] = getelementptr { i32, i32 }, ptr [[A2]], i64 0, i32 1
+; CHECK-NEXT:    ret ptr [[A3]]
+;
+  %a2 = getelementptr { i32, i32 }, ptr %a, i32 0, i32 1
+  %a3 = getelementptr { i32, i32 }, ptr %a2, i32 0, i32 1
+  ret ptr %a3
+}
+
+define i1 @compare_geps_same_indices(ptr %a, ptr %b, i64 %idx) {
+; CHECK-LABEL: @compare_geps_same_indices(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a2 = getelementptr i32, ptr %a, i64 %idx
+  %b2 = getelementptr i32, ptr %b, i64 %idx
+  %c = icmp eq ptr %a2, %b2
+  ret i1 %c
+}
+
+define i1 @compare_geps_same_indices_different_types(ptr %a, ptr %b, i64 %idx) {
+; CHECK-LABEL: @compare_geps_same_indices_different_types(
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[B2:%.*]] = getelementptr i64, ptr [[B:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A2]], [[B2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a2 = getelementptr i32, ptr %a, i64 %idx
+  %b2 = getelementptr i64, ptr %b, i64 %idx
+  %c = icmp eq ptr %a2, %b2
+  ret i1 %c
+}
+
+define ptr @indexed_compare(ptr %A, i64 %offset) {
+; CHECK-LABEL: @indexed_compare(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i64 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i64 [[RHS_IDX]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[RHS_IDX]], 100
+; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[RHS_IDX]]
+; CHECK-NEXT:    ret ptr [[RHS_PTR]]
+;
+entry:
+  %tmp = getelementptr inbounds i32, ptr %A, i64 %offset
+  br label %bb
+
+bb:
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr inbounds i32, ptr %A, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
+  br i1 %cond, label %bb2, label %bb
+
+bb2:
+  ret ptr %RHS
+}
+
+define ptr @indexed_compare_different_types(ptr %A, i64 %offset) {
+; CHECK-LABEL: @indexed_compare_different_types(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 100
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i32, ptr [[RHS]], i64 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
+; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret ptr [[RHS]]
+;
+entry:
+  %tmp = getelementptr inbounds i32, ptr %A, i64 %offset
+  br label %bb
+
+bb:
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr inbounds i64, ptr %A, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
+  br i1 %cond, label %bb2, label %bb
+
+bb2:
+  ret ptr %RHS
+}
+
+define ptr addrspace(1) @gep_of_addrspace_cast(ptr %ptr) {
+; CHECK-LABEL: @gep_of_addrspace_cast(
+; CHECK-NEXT:    [[CAST1:%.*]] = addrspacecast ptr [[PTR:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[CAST1]], i64 1
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
+;
+  %cast1 = addrspacecast ptr %ptr to ptr addrspace(1)
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %cast1, i64 1
+  ret ptr addrspace(1) %gep
+}

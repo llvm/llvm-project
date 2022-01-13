@@ -93,12 +93,12 @@ private:
   void readSectionAddressType(OutputSection *cmd);
   OutputSection *readOverlaySectionDescription();
   OutputSection *readOutputSectionDescription(StringRef outSec);
-  std::vector<SectionCommand *> readOverlay();
+  SmallVector<SectionCommand *, 0> readOverlay();
   SmallVector<StringRef, 0> readOutputSectionPhdrs();
   std::pair<uint64_t, uint64_t> readInputSectionFlags();
   InputSectionDescription *readInputSectionDescription(StringRef tok);
   StringMatcher readFilePatterns();
-  std::vector<SectionPattern> readInputSectionsList();
+  SmallVector<SectionPattern, 0> readInputSectionsList();
   InputSectionDescription *readInputSectionRules(StringRef filePattern,
                                                  uint64_t withFlags,
                                                  uint64_t withoutFlags);
@@ -125,11 +125,11 @@ private:
   Expr readParenExpr();
 
   // For parsing version script.
-  std::vector<SymbolVersion> readVersionExtern();
+  SmallVector<SymbolVersion, 0> readVersionExtern();
   void readAnonymousDeclaration();
   void readVersionDeclaration(StringRef verStr);
 
-  std::pair<std::vector<SymbolVersion>, std::vector<SymbolVersion>>
+  std::pair<SmallVector<SymbolVersion, 0>, SmallVector<SymbolVersion, 0>>
   readSymbols();
 
   // True if a script being read is in the --sysroot directory.
@@ -181,8 +181,8 @@ static ExprValue bitOr(ExprValue a, ExprValue b) {
 
 void ScriptParser::readDynamicList() {
   expect("{");
-  std::vector<SymbolVersion> locals;
-  std::vector<SymbolVersion> globals;
+  SmallVector<SymbolVersion, 0> locals;
+  SmallVector<SymbolVersion, 0> globals;
   std::tie(locals, globals) = readSymbols();
   expect(";");
 
@@ -519,7 +519,7 @@ void ScriptParser::readSearchDir() {
 // sections that use the same virtual memory range and normally would trigger
 // linker's sections sanity check failures.
 // https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
-std::vector<SectionCommand *> ScriptParser::readOverlay() {
+SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
   // VA and LMA expressions are optional, though for simplicity of
   // implementation we assume they are not. That is what OVERLAY was designed
   // for first of all: to allow sections with overlapping VAs at different LMAs.
@@ -529,7 +529,7 @@ std::vector<SectionCommand *> ScriptParser::readOverlay() {
   Expr lmaExpr = readParenExpr();
   expect("{");
 
-  std::vector<SectionCommand *> v;
+  SmallVector<SectionCommand *, 0> v;
   OutputSection *prev = nullptr;
   while (!errorCount() && !consume("}")) {
     // VA is the same for all sections. The LMAs are consecutive in memory
@@ -566,7 +566,7 @@ void ScriptParser::readOverwriteSections() {
 
 void ScriptParser::readSections() {
   expect("{");
-  std::vector<SectionCommand *> v;
+  SmallVector<SectionCommand *, 0> v;
   while (!errorCount() && !consume("}")) {
     StringRef tok = next();
     if (tok == "OVERLAY") {
@@ -672,8 +672,8 @@ SortSectionPolicy ScriptParser::readSortKind() {
 // is parsed as ".foo", ".bar" with "a.o", and ".baz" with "b.o".
 // The semantics of that is section .foo in any file, section .bar in
 // any file but a.o, and section .baz in any file but b.o.
-std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
-  std::vector<SectionPattern> ret;
+SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
+  SmallVector<SectionPattern, 0> ret;
   while (!errorCount() && peek() != ")") {
     StringMatcher excludeFilePat;
     if (consume("EXCLUDE_FILE")) {
@@ -718,7 +718,7 @@ ScriptParser::readInputSectionRules(StringRef filePattern, uint64_t withFlags,
   while (!errorCount() && !consume(")")) {
     SortSectionPolicy outer = readSortKind();
     SortSectionPolicy inner = SortSectionPolicy::Default;
-    std::vector<SectionPattern> v;
+    SmallVector<SectionPattern, 0> v;
     if (outer != SortSectionPolicy::Default) {
       expect("(");
       inner = readSortKind();
@@ -1494,8 +1494,8 @@ unsigned ScriptParser::readPhdrType() {
 
 // Reads an anonymous version declaration.
 void ScriptParser::readAnonymousDeclaration() {
-  std::vector<SymbolVersion> locals;
-  std::vector<SymbolVersion> globals;
+  SmallVector<SymbolVersion, 0> locals;
+  SmallVector<SymbolVersion, 0> globals;
   std::tie(locals, globals) = readSymbols();
   for (const SymbolVersion &pat : locals)
     config->versionDefinitions[VER_NDX_LOCAL].localPatterns.push_back(pat);
@@ -1509,8 +1509,8 @@ void ScriptParser::readAnonymousDeclaration() {
 // e.g. "VerStr { global: foo; bar; local: *; };".
 void ScriptParser::readVersionDeclaration(StringRef verStr) {
   // Read a symbol list.
-  std::vector<SymbolVersion> locals;
-  std::vector<SymbolVersion> globals;
+  SmallVector<SymbolVersion, 0> locals;
+  SmallVector<SymbolVersion, 0> globals;
   std::tie(locals, globals) = readSymbols();
 
   // Create a new version definition and add that to the global symbols.
@@ -1535,11 +1535,11 @@ bool elf::hasWildcard(StringRef s) {
 }
 
 // Reads a list of symbols, e.g. "{ global: foo; bar; local: *; };".
-std::pair<std::vector<SymbolVersion>, std::vector<SymbolVersion>>
+std::pair<SmallVector<SymbolVersion, 0>, SmallVector<SymbolVersion, 0>>
 ScriptParser::readSymbols() {
-  std::vector<SymbolVersion> locals;
-  std::vector<SymbolVersion> globals;
-  std::vector<SymbolVersion> *v = &globals;
+  SmallVector<SymbolVersion, 0> locals;
+  SmallVector<SymbolVersion, 0> globals;
+  SmallVector<SymbolVersion, 0> *v = &globals;
 
   while (!errorCount()) {
     if (consume("}"))
@@ -1554,7 +1554,7 @@ ScriptParser::readSymbols() {
     }
 
     if (consume("extern")) {
-      std::vector<SymbolVersion> ext = readVersionExtern();
+      SmallVector<SymbolVersion, 0> ext = readVersionExtern();
       v->insert(v->end(), ext.begin(), ext.end());
     } else {
       StringRef tok = next();
@@ -1570,14 +1570,14 @@ ScriptParser::readSymbols() {
 //
 // The last semicolon is optional. E.g. this is OK:
 // "extern "C++" { ns::*; "f(int, double)" };"
-std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
+SmallVector<SymbolVersion, 0> ScriptParser::readVersionExtern() {
   StringRef tok = next();
   bool isCXX = tok == "\"C++\"";
   if (!isCXX && tok != "\"C\"")
     setError("Unknown language");
   expect("{");
 
-  std::vector<SymbolVersion> ret;
+  SmallVector<SymbolVersion, 0> ret;
   while (!errorCount() && peek() != "}") {
     StringRef tok = next();
     ret.push_back(

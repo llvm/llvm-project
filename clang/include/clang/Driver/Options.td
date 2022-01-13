@@ -1076,6 +1076,8 @@ def emit_interface_stubs : Flag<["-"], "emit-interface-stubs">, Flags<[CC1Option
 def emit_merged_ifs : Flag<["-"], "emit-merged-ifs">,
   Flags<[CC1Option]>, Group<Action_Group>,
   HelpText<"Generate Interface Stub Files, emit merged text not binary.">;
+def end_no_unused_arguments : Flag<["--"], "end-no-unused-arguments">, Flags<[CoreOption]>,
+  HelpText<"Start emitting warnings for unused driver arguments">;
 def interface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=">, Flags<[CC1Option]>;
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
 def e : JoinedOrSeparate<["-"], "e">, Flags<[LinkerInput]>, Group<Link_Group>;
@@ -3617,6 +3619,7 @@ def mcheck_zero_division : Flag<["-"], "mcheck-zero-division">,
                            Group<m_mips_Features_Group>;
 def mno_check_zero_division : Flag<["-"], "mno-check-zero-division">,
                               Group<m_mips_Features_Group>;
+def mfix4300 : Flag<["-"], "mfix4300">, Group<m_mips_Features_Group>;
 def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">,
                            Group<m_mips_Features_Group>;
 def mbranch_likely : Flag<["-"], "mbranch-likely">, Group<m_Group>,
@@ -3912,6 +3915,8 @@ def shared : Flag<["-", "--"], "shared">, Group<Link_Group>;
 def single__module : Flag<["-"], "single_module">;
 def specs_EQ : Joined<["-", "--"], "specs=">, Group<Link_Group>;
 def specs : Separate<["-", "--"], "specs">, Flags<[Unsupported]>;
+def start_no_unused_arguments : Flag<["--"], "start-no-unused-arguments">, Flags<[CoreOption]>,
+  HelpText<"Don't emit warnings about unused arguments for the following arguments">;
 def static_libgcc : Flag<["-"], "static-libgcc">;
 def static_libstdcxx : Flag<["-"], "static-libstdc++">;
 def static : Flag<["-", "--"], "static">, Group<Link_Group>, Flags<[NoArgumentUnused]>;

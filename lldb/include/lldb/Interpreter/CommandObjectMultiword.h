@@ -51,11 +51,6 @@ public:
   CommandObject *GetSubcommandObject(llvm::StringRef sub_cmd,
                                      StringList *matches = nullptr) override;
 
-  void AproposAllSubCommands(llvm::StringRef prefix,
-                             llvm::StringRef search_word,
-                             StringList &commands_found,
-                             StringList &commands_help) override;
-
   bool WantsRawCommandString() override { return false; }
 
   void HandleCompletion(CompletionRequest &request) override;
@@ -109,11 +104,6 @@ public:
 
   CommandObject *GetSubcommandObject(llvm::StringRef sub_cmd,
                                      StringList *matches = nullptr) override;
-
-  void AproposAllSubCommands(llvm::StringRef prefix,
-                             llvm::StringRef search_word,
-                             StringList &commands_found,
-                             StringList &commands_help) override;
 
   bool LoadSubCommand(llvm::StringRef cmd_name,
                       const lldb::CommandObjectSP &command_obj) override;

@@ -154,7 +154,7 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
 // GEN: Interface definitions
 //===----------------------------------------------------------------------===//
 
-static void emitInterfaceDef(Interface interface, StringRef valueType,
+static void emitInterfaceDef(const Interface &interface, StringRef valueType,
                              raw_ostream &os) {
   StringRef interfaceName = interface.getName();
   StringRef cppNamespace = interface.getCppNamespace();

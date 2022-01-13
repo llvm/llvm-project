@@ -1345,7 +1345,30 @@ namespace {
 bool IsValueParam(const clang::TemplateArgument &argument) {
   return argument.getKind() == TemplateArgument::Integral;
 }
+
+void AddAccessSpecifierDecl(clang::CXXRecordDecl *cxx_record_decl,
+                            ASTContext &ct,
+                            clang::AccessSpecifier previous_access,
+                            clang::AccessSpecifier access_specifier) {
+  if (!cxx_record_decl->isClass() && !cxx_record_decl->isStruct())
+    return;
+  if (previous_access != access_specifier) {
+    // For struct, don't add AS_public if it's the first AccessSpecDecl.
+    // For class, don't add AS_private if it's the first AccessSpecDecl.
+    if ((cxx_record_decl->isStruct() &&
+         previous_access == clang::AccessSpecifier::AS_none &&
+         access_specifier == clang::AccessSpecifier::AS_public) ||
+        (cxx_record_decl->isClass() &&
+         previous_access == clang::AccessSpecifier::AS_none &&
+         access_specifier == clang::AccessSpecifier::AS_private)) {
+      return;
+    }
+    cxx_record_decl->addDecl(
+        AccessSpecDecl::Create(ct, access_specifier, cxx_record_decl,
+                               SourceLocation(), SourceLocation()));
+  }
 }
+} // namespace
 
 static TemplateParameterList *CreateTemplateParameterList(
     ASTContext &ast,
@@ -2550,6 +2573,22 @@ ClangASTMetadata *TypeSystemClang::GetMetadata(const clang::Type *object) {
   if (It != m_type_metadata.end())
     return &It->second;
   return nullptr;
+}
+
+void TypeSystemClang::SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
+                                             clang::AccessSpecifier access) {
+  if (access == clang::AccessSpecifier::AS_none)
+    m_cxx_record_decl_access.erase(object);
+  else
+    m_cxx_record_decl_access[object] = access;
+}
+
+clang::AccessSpecifier
+TypeSystemClang::GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object) {
+  auto It = m_cxx_record_decl_access.find(object);
+  if (It != m_cxx_record_decl_access.end())
+    return It->second;
+  return clang::AccessSpecifier::AS_none;
 }
 
 clang::DeclContext *
@@ -7276,9 +7315,17 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     }
 
     if (field) {
-      field->setAccess(
-          TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access));
+      clang::AccessSpecifier access_specifier =
+          TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access);
+      field->setAccess(access_specifier);
 
+      if (clang::CXXRecordDecl *cxx_record_decl =
+              llvm::dyn_cast<CXXRecordDecl>(record_decl)) {
+        AddAccessSpecifierDecl(cxx_record_decl, ast->getASTContext(),
+                               ast->GetCXXRecordDeclAccess(cxx_record_decl),
+                               access_specifier);
+        ast->SetCXXRecordDeclAccess(cxx_record_decl, access_specifier);
+      }
       record_decl->addDecl(field);
 
       VerifyDecl(field);
@@ -7656,6 +7703,11 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   }
 
   cxx_method_decl->setParams(llvm::ArrayRef<clang::ParmVarDecl *>(params));
+
+  AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
+                         GetCXXRecordDeclAccess(cxx_record_decl),
+                         access_specifier);
+  SetCXXRecordDeclAccess(cxx_record_decl, access_specifier);
 
   cxx_record_decl->addDecl(cxx_method_decl);
 
@@ -8190,6 +8242,11 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   if (qual_type.isNull())
     return false;
 
+  TypeSystemClang *lldb_ast =
+      llvm::dyn_cast<TypeSystemClang>(type.GetTypeSystem());
+  if (lldb_ast == nullptr)
+    return false;
+
   // Make sure we use the same methodology as
   // TypeSystemClang::StartTagDeclarationDefinition() as to how we start/end
   // the definition.
@@ -8220,6 +8277,8 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
       cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
       cxx_record_decl->setHasExternalLexicalStorage(false);
       cxx_record_decl->setHasExternalVisibleStorage(false);
+      lldb_ast->SetCXXRecordDeclAccess(cxx_record_decl,
+                                       clang::AccessSpecifier::AS_none);
       return true;
     }
   }
@@ -8233,10 +8292,6 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   if (enum_decl->isCompleteDefinition())
     return true;
 
-  TypeSystemClang *lldb_ast =
-      llvm::dyn_cast<TypeSystemClang>(type.GetTypeSystem());
-  if (lldb_ast == nullptr)
-    return false;
   clang::ASTContext &ast = lldb_ast->getASTContext();
 
   /// TODO This really needs to be fixed.

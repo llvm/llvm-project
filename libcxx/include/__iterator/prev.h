@@ -37,11 +37,14 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
+// [range.iter.op.prev]
+
 namespace ranges {
-// TODO(varconst): rename `__prev_fn` to `__fn`.
-struct __prev_fn final : private __function_like {
+namespace __prev {
+
+struct __fn final : private __function_like {
   _LIBCPP_HIDE_FROM_ABI
-  constexpr explicit __prev_fn(__tag __x) noexcept : __function_like(__x) {}
+  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
 
   template <bidirectional_iterator _Ip>
   _LIBCPP_HIDE_FROM_ABI
@@ -65,7 +68,11 @@ struct __prev_fn final : private __function_like {
   }
 };
 
-inline constexpr auto prev = __prev_fn(__function_like::__tag());
+} // namespace __prev
+
+inline namespace __cpo {
+  inline constexpr auto prev = __prev::__fn(__function_like::__tag());
+} // namespace __cpo
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

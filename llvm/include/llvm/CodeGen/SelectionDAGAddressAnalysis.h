@@ -39,7 +39,7 @@ private:
 public:
   BaseIndexOffset() = default;
   BaseIndexOffset(SDValue Base, SDValue Index, bool IsIndexSignExt)
-      : Base(Base), Index(Index), Offset(), IsIndexSignExt(IsIndexSignExt) {}
+      : Base(Base), Index(Index), IsIndexSignExt(IsIndexSignExt) {}
   BaseIndexOffset(SDValue Base, SDValue Index, int64_t Offset,
                   bool IsIndexSignExt)
       : Base(Base), Index(Index), Offset(Offset),

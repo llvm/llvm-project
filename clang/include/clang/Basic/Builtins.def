@@ -26,6 +26,7 @@
 //  i -> int
 //  h -> half (__fp16, OpenCL)
 //  x -> half (_Float16)
+//  y -> half (__bf16)
 //  f -> float
 //  d -> double
 //  z -> size_t
@@ -647,6 +648,9 @@ BUILTIN(__builtin_elementwise_abs, "v.", "nct")
 BUILTIN(__builtin_elementwise_max, "v.", "nct")
 BUILTIN(__builtin_elementwise_min, "v.", "nct")
 BUILTIN(__builtin_elementwise_ceil, "v.", "nct")
+BUILTIN(__builtin_elementwise_floor, "v.", "nct")
+BUILTIN(__builtin_elementwise_roundeven, "v.", "nct")
+BUILTIN(__builtin_elementwise_trunc, "v.", "nct")
 BUILTIN(__builtin_reduce_max, "v.", "nct")
 BUILTIN(__builtin_reduce_min, "v.", "nct")
 BUILTIN(__builtin_reduce_xor, "v.", "nct")

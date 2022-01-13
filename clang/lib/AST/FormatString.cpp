@@ -21,7 +21,6 @@ using clang::analyze_format_string::FormatStringHandler;
 using clang::analyze_format_string::FormatSpecifier;
 using clang::analyze_format_string::LengthModifier;
 using clang::analyze_format_string::OptionalAmount;
-using clang::analyze_format_string::PositionContext;
 using clang::analyze_format_string::ConversionSpecifier;
 using namespace clang;
 

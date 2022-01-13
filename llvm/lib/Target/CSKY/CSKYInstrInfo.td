@@ -15,21 +15,41 @@
 // CSKY specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
+// Target-independent type requirements, but with target-specific formats.
 def SDT_CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
                                        SDTCisVT<1, i32>]>;
 
 def SDT_CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
                                      SDTCisVT<1, i32>]>;
 
+def SDT_CSKYCall : SDTypeProfile<0, 2, [SDTCisVT<0, iPTR>, SDTCisVT<1, iPTR>]>;
+
+def SDT_CSKYCallReg : SDTypeProfile<0, 1, [SDTCisVT<0, iPTR>]>;
+
+def SDT_CSKY_LOADADDR : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
+                        SDTCisVT<1, iPTR>, SDTCisVT<2, iPTR>]>;
+
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
                            [SDNPHasChain, SDNPOutGlue]>;
-
 def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                            [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-// Target-dependent nodes.
 def CSKY_RET : SDNode<"CSKYISD::RET", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_CALL : SDNode<"CSKYISD::CALL", SDT_CSKYCall,
+  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_CALLReg : SDNode<"CSKYISD::CALLReg", SDT_CSKYCallReg,
+  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_TAIL : SDNode<"CSKYISD::TAIL", SDT_CSKYCall,
+  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_TAILReg : SDNode<"CSKYISD::TAILReg", SDT_CSKYCallReg,
+  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
+def CSKY_LOAD_ADDR : SDNode<"CSKYISD::LOAD_ADDR", SDT_CSKY_LOADADDR>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -55,6 +75,24 @@ class OImmAsmOperand<int width, string suffix = "">
 def to_tframeindex : SDNodeXForm<frameindex, [{
   auto FI = cast<FrameIndexSDNode>(N);
   return CurDAG->getTargetFrameIndex(FI->getIndex(), TLI->getPointerTy(CurDAG->getDataLayout()));
+}]>;
+
+def to_tconstpool : SDNodeXForm<constpool, [{
+  auto CP = cast<ConstantPoolSDNode>(N);
+  return CurDAG->getTargetConstantPool(CP->getConstVal(), TLI->getPointerTy(CurDAG->getDataLayout()),
+                    CP->getAlign(), CP->getOffset(), CSKYII::MO_None);
+}]>;
+
+def to_tconstpool_hi16 : SDNodeXForm<constpool, [{
+  auto CP = cast<ConstantPoolSDNode>(N);
+  return CurDAG->getTargetConstantPool(CP->getConstVal(), TLI->getPointerTy(CurDAG->getDataLayout()),
+                    CP->getAlign(), CP->getOffset(), CSKYII::MO_ADDR_HI16);
+}]>;
+
+def to_tconstpool_lo16 : SDNodeXForm<constpool, [{
+  auto CP = cast<ConstantPoolSDNode>(N);
+  return CurDAG->getTargetConstantPool(CP->getConstVal(), TLI->getPointerTy(CurDAG->getDataLayout()),
+                    CP->getAlign(), CP->getOffset(), CSKYII::MO_ADDR_LO16);
 }]>;
 
 class oimm<int num> : Operand<i32>,
@@ -1055,6 +1093,178 @@ let Predicates = [iHas2E3] in {
   def : Pat<(sext_inreg GPR:$src, i1), (SEXT32 GPR:$src, 0, 0)>;
   def : Pat<(and GPR:$src, 255), (ZEXT32 GPR:$src, 7, 0)>;
   def : Pat<(and GPR:$src, 65535), (ZEXT32 GPR:$src, 15, 0)>;
+
+   // Call Patterns
+  def : Pat<(CSKY_CALL tglobaladdr, tconstpool:$src2), (JSRI32 tconstpool:$src2)>;
+  def : Pat<(CSKY_CALL texternalsym, tconstpool:$src2), (JSRI32 tconstpool:$src2)>;
+  def : Pat<(CSKY_TAIL tglobaladdr, tconstpool:$src2), (JMPI32 tconstpool:$src2)>;
+  def : Pat<(CSKY_TAIL texternalsym, tconstpool:$src2), (JMPI32 tconstpool:$src2)>;
+
+  def : Pat<(CSKY_CALLReg GPR:$src), (JSR32 GPR:$src)>;
+  def : Pat<(CSKY_TAILReg GPR:$src), (JMP32 GPR:$src)>;
+}
+
+// Symbol address Patterns
+def : Pat<(CSKY_LOAD_ADDR tglobaladdr, tconstpool:$src2), (LRW32 tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR tblockaddress, tconstpool:$src2), (LRW32 tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR tjumptable:$src1, tconstpool:$src2), (LRW32_Gen tjumptable:$src1, tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR texternalsym, tconstpool:$src2), (LRW32 tconstpool:$src2)>;
+
+let Predicates = [iHas2E3] in
+  def : Pat<(i32 constpool:$src), (GRS32 (to_tconstpool tconstpool:$src))>;
+
+let Predicates = [iHasE2] in
+  def : Pat<(i32 constpool:$src),
+    (ORI32 (MOVIH32 (to_tconstpool_hi16 tconstpool:$src)),
+           (to_tconstpool_lo16 tconstpool:$src))>;
+
+def : Pat<(i32 (load constpool:$src)), (LRW32 (to_tconstpool tconstpool:$src))>;
+
+// Branch Patterns.
+let Predicates = [iHasE2] in {
+  def : Pat<(brcond CARRY:$ca, bb:$imm16),
+          (BT32 CARRY:$ca, bb:$imm16)>;
+
+  def : Pat<(brcond (i32 (setne GPR:$rs1, uimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (seteq GPR:$rs1, uimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setuge GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setult GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setlt GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BT32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+  def : Pat<(brcond (i32 (setge GPR:$rs1, oimm16:$rs2)), bb:$imm16),
+          (BF32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), bb:$imm16)>;
+
+}
+
+let Predicates = [iHas2E3] in {
+
+def : Pat<(brcond (i32 (setne GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPNE32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (seteq GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPNE32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setuge GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPHS32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setule GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPHS32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setult GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPHS32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setugt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPHS32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setlt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPLT32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BT32 (CMPLT32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPLT32 GPR:$rs1, GPR:$rs2), bb:$imm16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, GPR:$rs2)), bb:$imm16),
+          (BF32 (CMPLT32 GPR:$rs2, GPR:$rs1), bb:$imm16)>;
+
+def : Pat<(brcond (i32 (seteq GPR:$rs1, (i32 0))), bb:$imm16),
+          (BEZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setne GPR:$rs1, (i32 0))), bb:$imm16),
+          (BNEZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setlt GPR:$rs1, (i32 0))), bb:$imm16),
+          (BLZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, (i32 0))), bb:$imm16),
+          (BHSZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, (i32 0))), bb:$imm16),
+          (BHZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, (i32 0))), bb:$imm16),
+          (BLSZ32 GPR:$rs1, bb:$imm16)>;
+}
+
+// Compare Patterns.
+let Predicates = [iHas2E3] in {
+  def : Pat<(setne GPR:$rs1, GPR:$rs2),
+            (CMPNE32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (seteq GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPNE32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(setuge GPR:$rs1, GPR:$rs2),
+            (CMPHS32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(setule GPR:$rs1, GPR:$rs2),
+            (CMPHS32 GPR:$rs2, GPR:$rs1)>;
+  def : Pat<(i32 (setult GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPHS32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(i32 (setugt GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPHS32 GPR:$rs2, GPR:$rs1))>;
+  def : Pat<(setlt GPR:$rs1, GPR:$rs2),
+            (CMPLT32 GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(setgt GPR:$rs1, GPR:$rs2),
+            (CMPLT32 GPR:$rs2, GPR:$rs1)>;
+  def : Pat<(i32 (setge GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPLT32 GPR:$rs1, GPR:$rs2))>;
+  def : Pat<(i32 (setle GPR:$rs1, GPR:$rs2)),
+            (MVCV32 (CMPLT32 GPR:$rs2, GPR:$rs1))>;
+}
+
+let Predicates = [iHasE2] in {
+  def : Pat<(setne GPR:$rs1, uimm16:$rs2),
+            (CMPNEI32 GPR:$rs1, uimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (seteq GPR:$rs1, uimm16:$rs2)),
+            (MVCV32 (CMPNEI32 GPR:$rs1, uimm16:$rs2))>;
+  def : Pat<(setuge GPR:$rs1, oimm16:$rs2),
+            (CMPHSI32 GPR:$rs1, oimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (setult GPR:$rs1, oimm16:$rs2)),
+            (MVCV32 (CMPHSI32 GPR:$rs1, oimm16:$rs2))>;
+  def : Pat<(setlt GPR:$rs1, oimm16:$rs2),
+            (CMPLTI32 GPR:$rs1, oimm16:$rs2)>;
+  let Predicates = [iHas2E3] in
+  def : Pat<(i32 (setge GPR:$rs1, oimm16:$rs2)),
+            (MVCV32 (CMPLTI32 GPR:$rs1, oimm16:$rs2))>;
+}
+
+// Select Patterns.
+let Predicates = [iHasE2] in {
+def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
+          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
+          (MOVT32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setne GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setne GPR:$rs1, uimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (seteq GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPNE32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (seteq GPR:$rs1, uimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPNEI32 GPR:$rs1, uimm16:$rs2), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setuge GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHS32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setuge GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setule GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPHS32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setult GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHS32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setult GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHSI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setugt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPHS32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select (i32 (setlt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLT32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setlt GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setgt GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVT32 (CMPLT32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setge GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLT32 GPR:$rs1, GPR:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setge GPR:$rs1, oimm16:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLTI32 GPR:$rs1, oimm16:$rs2), GPR:$rx, GPR:$false)>;
+def : Pat<(select (i32 (setle GPR:$rs1, GPR:$rs2)), GPR:$rx, GPR:$false),
+          (MOVF32 (CMPLT32 GPR:$rs2, GPR:$rs1), GPR:$rx, GPR:$false)>;
+
+def : Pat<(select CARRY:$ca, GPR:$rx, GPR:$false),
+          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), GPR:$rx, GPR:$false),
+          (ISEL32 CARRY:$ca, GPR:$rx, GPR:$false)>;
 }
 
 // Constant materialize patterns.

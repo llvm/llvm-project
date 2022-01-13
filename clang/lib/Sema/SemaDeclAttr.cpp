@@ -2625,37 +2625,37 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       NewII = &S.Context.Idents.get("watchos_app_extension");
 
     if (NewII) {
-        auto adjustWatchOSVersion = [](VersionTuple Version) -> VersionTuple {
-          if (Version.empty())
-            return Version;
-          auto Major = Version.getMajor();
-          auto NewMajor = Major >= 9 ? Major - 7 : 0;
-          if (NewMajor >= 2) {
-            if (Version.getMinor().hasValue()) {
-              if (Version.getSubminor().hasValue())
-                return VersionTuple(NewMajor, Version.getMinor().getValue(),
-                                    Version.getSubminor().getValue());
-              else
-                return VersionTuple(NewMajor, Version.getMinor().getValue());
-            }
-            return VersionTuple(NewMajor);
+      auto adjustWatchOSVersion = [](VersionTuple Version) -> VersionTuple {
+        if (Version.empty())
+          return Version;
+        auto Major = Version.getMajor();
+        auto NewMajor = Major >= 9 ? Major - 7 : 0;
+        if (NewMajor >= 2) {
+          if (Version.getMinor().hasValue()) {
+            if (Version.getSubminor().hasValue())
+              return VersionTuple(NewMajor, Version.getMinor().getValue(),
+                                  Version.getSubminor().getValue());
+            else
+              return VersionTuple(NewMajor, Version.getMinor().getValue());
           }
+          return VersionTuple(NewMajor);
+        }
 
-          return VersionTuple(2, 0);
-        };
+        return VersionTuple(2, 0);
+      };
 
-        auto NewIntroduced = adjustWatchOSVersion(Introduced.Version);
-        auto NewDeprecated = adjustWatchOSVersion(Deprecated.Version);
-        auto NewObsoleted = adjustWatchOSVersion(Obsoleted.Version);
+      auto NewIntroduced = adjustWatchOSVersion(Introduced.Version);
+      auto NewDeprecated = adjustWatchOSVersion(Deprecated.Version);
+      auto NewObsoleted = adjustWatchOSVersion(Obsoleted.Version);
 
-        AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
-            ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
-            NewObsoleted, IsUnavailable, Str, IsStrict, Replacement,
-            Sema::AMK_None,
-            PriorityModifier + Sema::AP_InferredFromOtherPlatform);
-        if (NewAttr)
-          D->addAttr(NewAttr);
-      }
+      AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+          ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
+          NewObsoleted, IsUnavailable, Str, IsStrict, Replacement,
+          Sema::AMK_None,
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform);
+      if (NewAttr)
+        D->addAttr(NewAttr);
+    }
   } else if (S.Context.getTargetInfo().getTriple().isTvOS()) {
     // Transcribe "ios" to "tvos" (and add a new attribute) if the versioning
     // matches before the start of the tvOS platform.
@@ -2673,7 +2673,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
           PriorityModifier + Sema::AP_InferredFromOtherPlatform);
       if (NewAttr)
         D->addAttr(NewAttr);
-      }
+    }
   } else if (S.Context.getTargetInfo().getTriple().getOS() ==
                  llvm::Triple::IOS &&
              S.Context.getTargetInfo().getTriple().isMacCatalystEnvironment()) {

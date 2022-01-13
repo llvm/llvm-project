@@ -376,16 +376,10 @@ define void @buildvec_dominant0_v2i32(<2 x i64>* %x) {
 ;
 ; RV64-LABEL: buildvec_dominant0_v2i32:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, %hi(.LCPI20_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI20_0)(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.v.i v8, -1
-; RV64-NEXT:    lui a1, 3641
-; RV64-NEXT:    addiw a1, a1, -455
-; RV64-NEXT:    slli a1, a1, 12
-; RV64-NEXT:    addi a1, a1, -455
-; RV64-NEXT:    slli a1, a1, 12
-; RV64-NEXT:    addi a1, a1, -455
-; RV64-NEXT:    slli a1, a1, 13
-; RV64-NEXT:    addi a1, a1, -910
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, mu
 ; RV64-NEXT:    vmv.s.x v8, a1
 ; RV64-NEXT:    vse64.v v8, (a0)
@@ -465,12 +459,8 @@ define void @buildvec_seq_v16i8_v2i64(<16 x i8>* %x) {
 ;
 ; RV64-LABEL: buildvec_seq_v16i8_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, 32880
-; RV64-NEXT:    addiw a1, a1, 1541
-; RV64-NEXT:    slli a1, a1, 16
-; RV64-NEXT:    addi a1, a1, 1027
-; RV64-NEXT:    slli a1, a1, 16
-; RV64-NEXT:    addi a1, a1, 513
+; RV64-NEXT:    lui a1, %hi(.LCPI24_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI24_0)(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vmv.v.x v8, a1
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
@@ -513,26 +503,21 @@ define void @buildvec_seq_v9i8(<9 x i8>* %x) {
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-NEXT:    vmv.v.i v8, 2
-; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
+; RV32-NEXT:    vmv.v.i v9, 2
 ; RV32-NEXT:    li a1, 36
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
-; RV32-NEXT:    vmv.s.x v0, a1
-; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; RV32-NEXT:    vmerge.vim v8, v8, 3, v0
+; RV32-NEXT:    vmv.s.x v8, a1
+; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vmerge.vim v8, v9, 3, v0
 ; RV32-NEXT:    vse8.v v8, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: buildvec_seq_v9i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 3
-; RV64-NEXT:    sb a1, 8(a0)
-; RV64-NEXT:    lui a1, 4104
-; RV64-NEXT:    addiw a1, a1, 385
-; RV64-NEXT:    slli a1, a1, 17
-; RV64-NEXT:    addi a1, a1, 259
-; RV64-NEXT:    slli a1, a1, 16
-; RV64-NEXT:    addi a1, a1, 513
+; RV64-NEXT:    lui a1, %hi(.LCPI26_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI26_0)(a1)
+; RV64-NEXT:    li a2, 3
+; RV64-NEXT:    sb a2, 8(a0)
 ; RV64-NEXT:    sd a1, 0(a0)
 ; RV64-NEXT:    ret
   store <9 x i8> <i8 1, i8 2, i8 3, i8 1, i8 2, i8 3, i8 1, i8 2, i8 3>, <9 x i8>* %x

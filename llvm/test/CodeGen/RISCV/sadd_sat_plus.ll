@@ -259,7 +259,7 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; RV64IZbb-LABEL: func16:
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    sext.h a0, a0
-; RV64IZbb-NEXT:    mul a1, a1, a2
+; RV64IZbb-NEXT:    mulw a1, a1, a2
 ; RV64IZbb-NEXT:    sext.h a1, a1
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 8
@@ -335,7 +335,7 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; RV64IZbb-LABEL: func8:
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    sext.b a0, a0
-; RV64IZbb-NEXT:    mul a1, a1, a2
+; RV64IZbb-NEXT:    mulw a1, a1, a2
 ; RV64IZbb-NEXT:    sext.b a1, a1
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    li a1, 127

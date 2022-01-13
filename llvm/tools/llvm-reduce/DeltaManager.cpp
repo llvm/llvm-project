@@ -103,15 +103,32 @@ void llvm::printDeltaPasses(raw_ostream &OS) {
 #undef DELTA_PASS
 }
 
-void llvm::runDeltaPasses(TestRunner &Tester) {
-  if (DeltaPasses.empty()) {
-    runAllDeltaPasses(Tester);
-  } else {
-    StringRef Passes = DeltaPasses;
-    while (!Passes.empty()) {
-      auto Split = Passes.split(",");
-      runDeltaPassName(Tester, Split.first);
-      Passes = Split.second;
+// FIXME: We might want to use a different metric than "number of
+// bytes in serialized IR" to detect non-progress of the main delta
+// loop
+static int getIRSize(TestRunner &Tester) {
+  std::string Str;
+  raw_string_ostream SS(Str);
+  Tester.getProgram().print(SS, /*AnnotationWriter=*/nullptr);
+  return Str.length();
+}
+
+void llvm::runDeltaPasses(TestRunner &Tester, int MaxPassIterations) {
+  int OldSize = getIRSize(Tester);
+  for (int Iter = 0; Iter < MaxPassIterations; ++Iter) {
+    if (DeltaPasses.empty()) {
+      runAllDeltaPasses(Tester);
+    } else {
+      StringRef Passes = DeltaPasses;
+      while (!Passes.empty()) {
+        auto Split = Passes.split(",");
+        runDeltaPassName(Tester, Split.first);
+        Passes = Split.second;
+      }
     }
+    int NewSize = getIRSize(Tester);
+    if (NewSize >= OldSize)
+      break;
+    OldSize = NewSize;
   }
 }

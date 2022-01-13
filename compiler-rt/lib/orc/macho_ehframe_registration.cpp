@@ -13,6 +13,8 @@
 #include "adt.h"
 #include "c_api.h"
 #include "common.h"
+#include "executor_address.h"
+#include "wrapper_function_utils.h"
 
 using namespace __orc_rt;
 
@@ -49,20 +51,24 @@ void walkEHFrameSection(span<const char> EHFrameSection,
 
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
 __orc_rt_macho_register_ehframe_section(char *ArgData, size_t ArgSize) {
-  // NOTE: Does not use SPS to deserialize arg buffer, instead the arg buffer
-  // is taken to be the range of the eh-frame section.
-  bool HasError = false;
-  walkEHFrameSection(span<const char>(ArgData, ArgSize), __register_frame);
-  return __orc_rt_CreateCWrapperFunctionResultFromRange((char*)&HasError,
-                                                        sizeof(HasError));
+  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddrRange FrameSection) -> Error {
+               walkEHFrameSection(FrameSection.toSpan<const char>(),
+                                  __register_frame);
+               return Error::success();
+             })
+      .release();
 }
 
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
 __orc_rt_macho_deregister_ehframe_section(char *ArgData, size_t ArgSize) {
-  // NOTE: Does not use SPS to deserialize arg buffer, instead the arg buffer
-  // is taken to be the range of the eh-frame section.
-  bool HasError = false;
-  walkEHFrameSection(span<const char>(ArgData, ArgSize), __deregister_frame);
-  return __orc_rt_CreateCWrapperFunctionResultFromRange((char*)&HasError,
-                                                        sizeof(HasError));
+  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddrRange FrameSection) -> Error {
+               walkEHFrameSection(FrameSection.toSpan<const char>(),
+                                  __deregister_frame);
+               return Error::success();
+             })
+      .release();
 }

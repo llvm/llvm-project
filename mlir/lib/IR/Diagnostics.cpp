@@ -875,7 +875,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
   }
 
   /// Utility method to emit any held diagnostics.
-  void emitDiagnostics(std::function<void(Diagnostic)> emitFn) const {
+  void emitDiagnostics(llvm::function_ref<void(Diagnostic)> emitFn) const {
     // Stable sort all of the diagnostics that were emitted. This creates a
     // deterministic ordering for the diagnostics based upon which order id they
     // were emitted for.
@@ -907,7 +907,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
       return;
 
     os << "In-Flight Diagnostics:\n";
-    emitDiagnostics([&](Diagnostic diag) {
+    emitDiagnostics([&](const Diagnostic &diag) {
       os.indent(4);
 
       // Print each diagnostic with the format:

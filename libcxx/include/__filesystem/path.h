@@ -12,16 +12,16 @@
 
 #include <__availability>
 #include <__config>
-#include <string>
-#include <type_traits>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <cstddef>
+#include <string>
 #include <string_view>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-# include <locale>
 # include <iomanip> // for quoted
+# include <locale>
 #endif
 
 #ifndef _LIBCPP_CXX03_LANG

@@ -40,7 +40,7 @@ class ObjCARCAAResult : public AAResultBase<ObjCARCAAResult> {
   const DataLayout &DL;
 
 public:
-  explicit ObjCARCAAResult(const DataLayout &DL) : AAResultBase(), DL(DL) {}
+  explicit ObjCARCAAResult(const DataLayout &DL) : DL(DL) {}
   ObjCARCAAResult(ObjCARCAAResult &&Arg)
       : AAResultBase(std::move(Arg)), DL(Arg.DL) {}
 

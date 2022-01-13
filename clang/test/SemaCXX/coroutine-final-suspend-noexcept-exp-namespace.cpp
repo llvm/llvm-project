@@ -7,6 +7,7 @@ namespace std {
 namespace experimental {
 template <class Ret, typename... T>
 struct coroutine_traits { using promise_type = typename Ret::promise_type; };
+// expected-note@-1{{declared here}}
 
 template <class Promise = void>
 struct coroutine_handle {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_RISCV_MATINT_H
-#define LLVM_LIB_TARGET_RISCV_MATINT_H
+#ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_MATINT_H
+#define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_MATINT_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -15,7 +15,6 @@
 
 namespace llvm {
 class APInt;
-class MCSubtargetInfo;
 
 namespace RISCVMatInt {
 struct Inst {

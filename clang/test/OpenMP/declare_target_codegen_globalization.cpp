@@ -58,8 +58,8 @@ int maini1() {
 // CHECK1-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK1-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooRi(i32* nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR4:[0-9]+]]
-// CHECK1-NEXT:    [[CALL1:%.*]] = call i32 @_Z3barv() #[[ATTR4]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooRi(i32* nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR6:[0-9]+]]
+// CHECK1-NEXT:    [[CALL1:%.*]] = call i32 @_Z3barv() #[[ATTR6]]
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
 // CHECK1-NEXT:    store i32 [[ADD]], i32* [[TMP0]], align 4
 // CHECK1-NEXT:    ret void
@@ -78,9 +78,9 @@ int maini1() {
 // CHECK1-LABEL: define {{[^@]+}}@_Z3barv
 // CHECK1-SAME: () #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[A:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
+// CHECK1-NEXT:    [[A:%.*]] = call align 8 i8* @__kmpc_alloc_shared(i64 4)
 // CHECK1-NEXT:    [[A_ON_STACK:%.*]] = bitcast i8* [[A]] to i32*
-// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooRi(i32* nonnull align 4 dereferenceable(4) [[A_ON_STACK]]) #[[ATTR4]]
+// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooRi(i32* nonnull align 4 dereferenceable(4) [[A_ON_STACK]]) #[[ATTR6]]
 // CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[A]], i64 4)
 // CHECK1-NEXT:    ret i32 [[CALL]]
 //

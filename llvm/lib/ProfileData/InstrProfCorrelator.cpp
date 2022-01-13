@@ -129,6 +129,7 @@ Error InstrProfCorrelatorImpl<IntPtrT>::correlateProfileData() {
   correlateProfileDataImpl();
   auto Result =
       collectPGOFuncNameStrings(Names, /*doCompression=*/true, CompressedNames);
+  CounterOffsets.clear();
   Names.clear();
   return Result;
 }
@@ -139,6 +140,9 @@ void InstrProfCorrelatorImpl<IntPtrT>::addProbe(StringRef FunctionName,
                                                 IntPtrT CounterOffset,
                                                 IntPtrT FunctionPtr,
                                                 uint32_t NumCounters) {
+  // Check if a probe was already added for this counter offset.
+  if (!CounterOffsets.insert(CounterOffset).second)
+    return;
   Data.push_back({
       maybeSwap<uint64_t>(IndexedInstrProf::ComputeHash(FunctionName)),
       maybeSwap<uint64_t>(CFGHash),

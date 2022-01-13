@@ -677,7 +677,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
     // Get first lane of vector induction variable.
     Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
     // Get the original loop tripcount.
-    Value *ScalarTC = State.TripCount;
+    Value *ScalarTC = State.get(getOperand(1), Part);
 
     auto *Int1Ty = Type::getInt1Ty(Builder.getContext());
     auto *PredTy = FixedVectorType::get(Int1Ty, State.VF.getKnownMinValue());
@@ -709,6 +709,25 @@ void VPInstruction::generateInstruction(VPTransformState &State,
       Value *V2 = State.get(getOperand(1), Part);
       State.set(this, Builder.CreateVectorSplice(PartMinus1, V2, -1), Part);
     }
+    break;
+  }
+
+  case VPInstruction::CanonicalIVIncrement:
+  case VPInstruction::CanonicalIVIncrementNUW: {
+    Value *Next = nullptr;
+    if (Part == 0) {
+      bool IsNUW = getOpcode() == VPInstruction::CanonicalIVIncrementNUW;
+      auto *Phi = State.get(getOperand(0), 0);
+      // The loop step is equal to the vectorization factor (num of SIMD
+      // elements) times the unroll factor (num of SIMD instructions).
+      Value *Step =
+          createStepForVF(Builder, Phi->getType(), State.VF, State.UF);
+      Next = Builder.CreateAdd(Phi, Step, "index.next", IsNUW, false);
+    } else {
+      Next = State.get(this, 0);
+    }
+
+    State.set(this, Next, Part);
     break;
   }
   default:
@@ -758,6 +777,12 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::FirstOrderRecurrenceSplice:
     O << "first-order splice";
     break;
+  case VPInstruction::CanonicalIVIncrement:
+    O << "VF * UF + ";
+    break;
+  case VPInstruction::CanonicalIVIncrementNUW:
+    O << "VF * UF +(nuw) ";
+    break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
@@ -786,23 +811,45 @@ void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
   FMF = FMFNew;
 }
 
+void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
+                             Value *CanonicalIVStartValue,
+                             VPTransformState &State) {
+  // Check if the trip count is needed, and if so build it.
+  if (TripCount && TripCount->getNumUsers()) {
+    for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
+      State.set(TripCount, TripCountV, Part);
+  }
+
+  // Check if the backedge taken count is needed, and if so build it.
+  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
+    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+    auto *TCMO = Builder.CreateSub(TripCountV,
+                                   ConstantInt::get(TripCountV->getType(), 1),
+                                   "trip.count.minus.1");
+    auto VF = State.VF;
+    Value *VTCMO =
+        VF.isScalar() ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
+    for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
+      State.set(BackedgeTakenCount, VTCMO, Part);
+  }
+
+  for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
+    State.set(&VectorTripCount, VectorTripCountV, Part);
+
+  // When vectorizing the epilogue loop, the canonical induction start value
+  // needs to be changed from zero to the value after the main vector loop.
+  if (CanonicalIVStartValue) {
+    VPValue *VPV = new VPValue(CanonicalIVStartValue);
+    addExternalDef(VPV);
+    auto *IV = getCanonicalIV();
+    IV->setOperand(0, VPV);
+  }
+}
+
 /// Generate the code inside the body of the vectorized loop. Assumes a single
 /// LoopVectorBody basic-block was created for this. Introduce additional
 /// basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
-  // -1. Check if the backedge taken count is needed, and if so build it.
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    Value *TC = State->TripCount;
-    IRBuilder<> Builder(State->CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TC, ConstantInt::get(TC->getType(), 1),
-                                   "trip.count.minus.1");
-    auto VF = State->VF;
-    Value *VTCMO =
-        VF.isScalar() ? TCMO : Builder.CreateVectorSplat(VF, TCMO, "broadcast");
-    for (unsigned Part = 0, UF = State->UF; Part < UF; ++Part)
-      State->set(BackedgeTakenCount, VTCMO, Part);
-  }
-
   // 0. Set the reverse mapping from VPValues to Values for code generation.
   for (auto &Entry : Value2VPValue)
     State->VPValue2Value[Entry.second] = Entry.first;
@@ -833,28 +880,6 @@ void VPlan::execute(VPTransformState *State) {
 
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
-
-  // Fix the latch value of reduction and first-order recurrences phis in the
-  // vector loop.
-  VPBasicBlock *Header = Entry->getEntryBasicBlock();
-  for (VPRecipeBase &R : Header->phis()) {
-    auto *PhiR = dyn_cast<VPWidenPHIRecipe>(&R);
-    if (!PhiR || !(isa<VPFirstOrderRecurrencePHIRecipe>(&R) ||
-                   isa<VPReductionPHIRecipe>(&R)))
-      continue;
-    // For first-order recurrences and in-order reduction phis, only a single
-    // part is generated, which provides the last part from the previous
-    // iteration. Otherwise all UF parts are generated.
-    bool SinglePartNeeded = isa<VPFirstOrderRecurrencePHIRecipe>(&R) ||
-                            cast<VPReductionPHIRecipe>(&R)->isOrdered();
-    unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
-    for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
-      Value *VecPhi = State->get(PhiR, Part);
-      Value *Val = State->get(PhiR->getBackedgeValue(),
-                              SinglePartNeeded ? State->UF - 1 : Part);
-      cast<PHINode>(VecPhi)->addIncoming(Val, VectorLatchBB);
-    }
-  }
 
   // Setup branch terminator successors for VPBBs in VPBBsToFix based on
   // VPBB's successors.
@@ -891,6 +916,47 @@ void VPlan::execute(VPTransformState *State) {
   assert(Merged && "Could not merge last basic block with latch.");
   VectorLatchBB = LastBB;
 
+  // Fix the latch value of canonical, reduction and first-order recurrences
+  // phis in the vector loop.
+  VPBasicBlock *Header = Entry->getEntryBasicBlock();
+  if (Header->empty()) {
+    assert(EnableVPlanNativePath);
+    Header = cast<VPBasicBlock>(Header->getSingleSuccessor());
+  }
+  for (VPRecipeBase &R : Header->phis()) {
+    // Skip phi-like recipes that generate their backedege values themselves.
+    // TODO: Model their backedge values explicitly.
+    if (isa<VPWidenIntOrFpInductionRecipe>(&R) || isa<VPWidenPHIRecipe>(&R))
+      continue;
+
+    auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+    // For  canonical IV, first-order recurrences and in-order reduction phis,
+    // only a single part is generated, which provides the last part from the
+    // previous iteration. For non-ordered reductions all UF parts are
+    // generated.
+    bool SinglePartNeeded = isa<VPCanonicalIVPHIRecipe>(PhiR) ||
+                            isa<VPFirstOrderRecurrencePHIRecipe>(PhiR) ||
+                            cast<VPReductionPHIRecipe>(PhiR)->isOrdered();
+    unsigned LastPartForNewPhi = SinglePartNeeded ? 1 : State->UF;
+
+    for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
+      Value *Phi = State->get(PhiR, Part);
+      Value *Val = State->get(PhiR->getBackedgeValue(),
+                              SinglePartNeeded ? State->UF - 1 : Part);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+    }
+  }
+
+  // Add the loop exit condition and branch based on the canonical induction.
+  auto *CanonicalIV = getCanonicalIV();
+  // TODO: Model compare and branch explicitly in VPlan as recipes.
+  auto *Next = State->get(CanonicalIV->getBackedgeValue(), 0);
+  auto *TermBr = cast<BranchInst>(VectorLatchBB->getTerminator());
+  State->Builder.SetInsertPoint(TermBr);
+  auto *ICmp =
+      State->Builder.CreateICmpEQ(Next, State->get(&getVectorTripCount(), 0));
+  TermBr->setCondition(ICmp);
+
   // We do not attempt to preserve DT for outer loop vectorization currently.
   if (!EnableVPlanNativePath)
     updateDominatorTree(State->DT, VectorPreHeaderBB, VectorLatchBB,
@@ -904,6 +970,8 @@ void VPlan::print(raw_ostream &O) const {
 
   O << "VPlan '" << Name << "' {";
 
+  assert(VectorTripCount.getNumUsers() == 0 &&
+         "should not be used yet in VPlan");
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
     O << "\nLive-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
@@ -1264,26 +1332,39 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
+  Value *Start = getStartValue()->getLiveInIRValue();
+  PHINode *EntryPart = PHINode::Create(
+      Start->getType(), 2, "index", &*State.CFG.PrevBB->getFirstInsertionPt());
+  EntryPart->addIncoming(Start, State.CFG.VectorPreHeader);
+  EntryPart->setDebugLoc(DL);
+  for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
+    State.set(this, EntryPart, Part);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
+                                   VPSlotTracker &SlotTracker) const {
+  O << Indent << "EMIT ";
+  getVPSingleValue()->printAsOperand(O, SlotTracker);
+  O << " = CANONICAL-INDUCTION";
+}
+#endif
+
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.CanonicalIV;
+  Value *CanonicalIV = State.get(getParent()->getPlan()->getCanonicalIV(), 0);
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
-  assert(!VF.isScalable() && "the code following assumes non scalables ECs");
   Value *VStart = VF.isScalar()
                       ? CanonicalIV
-                      : Builder.CreateVectorSplat(VF.getKnownMinValue(),
-                                                  CanonicalIV, "broadcast");
+                      : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
-    SmallVector<Constant *, 8> Indices;
-    for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
-      Indices.push_back(
-          ConstantInt::get(STy, Part * VF.getKnownMinValue() + Lane));
-    // If VF == 1, there is only one iteration in the loop above, thus the
-    // element pushed back into Indices is ConstantInt::get(STy, Part)
-    Constant *VStep =
-        VF.isScalar() ? Indices.back() : ConstantVector::get(Indices);
-    // Add the consecutive indices to the vector value.
+    Value *VStep = createStepForVF(Builder, STy, VF, Part);
+    if (VF.isVector()) {
+      VStep = Builder.CreateVectorSplat(VF, VStep);
+      VStep = Builder.CreateAdd(VStep, Builder.CreateStepVector(VStep->getType()));
+    }
     Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
     State.set(this, CanonicalVectorIV, Part);
   }
@@ -1461,7 +1542,7 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
                                          InterleavedAccessInfo &IAI) {
   if (VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(Block)) {
     for (VPRecipeBase &VPI : *VPBB) {
-      if (isa<VPWidenPHIRecipe>(&VPI))
+      if (isa<VPHeaderPHIRecipe>(&VPI))
         continue;
       assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
       auto *VPInst = cast<VPInstruction>(&VPI);
@@ -1506,6 +1587,7 @@ void VPSlotTracker::assignSlots(const VPlan &Plan) {
   for (const VPValue *V : Plan.VPExternalDefs)
     assignSlot(V);
 
+  assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
 

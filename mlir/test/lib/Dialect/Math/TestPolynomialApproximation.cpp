@@ -26,7 +26,8 @@ struct TestMathPolynomialApproximationPass
     : public PassWrapper<TestMathPolynomialApproximationPass, FunctionPass> {
   TestMathPolynomialApproximationPass() = default;
   TestMathPolynomialApproximationPass(
-      const TestMathPolynomialApproximationPass &pass) {}
+      const TestMathPolynomialApproximationPass &pass)
+      : PassWrapper(pass) {}
 
   void runOnFunction() override;
   void getDependentDialects(DialectRegistry &registry) const override {

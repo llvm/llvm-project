@@ -173,11 +173,11 @@ void VirtualClassDestructorCheck::check(
          "destructor of %0 is private and prevents using the type")
         << MatchedClassOrStruct;
     diag(MatchedClassOrStruct->getLocation(),
-         /*FixDescription=*/"make it public and virtual", DiagnosticIDs::Note)
+         /*Description=*/"make it public and virtual", DiagnosticIDs::Note)
         << changePrivateDestructorVisibilityTo(
                "public", *Destructor, *Result.SourceManager, getLangOpts());
     diag(MatchedClassOrStruct->getLocation(),
-         /*FixDescription=*/"make it protected", DiagnosticIDs::Note)
+         /*Description=*/"make it protected", DiagnosticIDs::Note)
         << changePrivateDestructorVisibilityTo(
                "protected", *Destructor, *Result.SourceManager, getLangOpts());
 

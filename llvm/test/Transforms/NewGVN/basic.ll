@@ -33,3 +33,11 @@ define i64 @simplifyselect(i64 %x, i64 %y, i1 %c1, i1 %c2, i1 %zzz) {
   %r = add i64 %r1, %r2_eq2
   ret i64 %r
 }
+
+define i8 @simplify_add_poison(i8 %x) {
+; CHECK-LABEL: @simplify_add_poison(
+; CHECK-NEXT:    ret i8 poison
+;
+  %r = add i8 poison, %x
+  ret i8 %r
+}

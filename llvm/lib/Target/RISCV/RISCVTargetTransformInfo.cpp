@@ -15,6 +15,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscvtti"
 
+static cl::opt<unsigned> RVVRegisterWidthLMUL(
+    "riscv-v-register-bit-width-lmul",
+    cl::desc(
+        "The LMUL to use for getRegisterBitWidth queries. Affects LMUL used "
+        "by autovectorized code. Fractional LMULs are not supported."),
+    cl::init(1), cl::Hidden);
+
 InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                             TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy() &&
@@ -135,6 +142,24 @@ Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
   if (ST->hasVInstructions() && MaxVectorSizeInBits != 0)
     return MaxVectorSizeInBits / RISCV::RVVBitsPerBlock;
   return BaseT::getMaxVScale();
+}
+
+TypeSize
+RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  unsigned LMUL = PowerOf2Floor(
+      std::max<unsigned>(std::min<unsigned>(RVVRegisterWidthLMUL, 8), 1));
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(ST->getXLen());
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(
+        ST->hasVInstructions() ? LMUL * ST->getMinRVVVectorSizeInBits() : 0);
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(
+        ST->hasVInstructions() ? LMUL * RISCV::RVVBitsPerBlock : 0);
+  }
+
+  llvm_unreachable("Unsupported register kind");
 }
 
 InstructionCost RISCVTTIImpl::getGatherScatterOpCost(

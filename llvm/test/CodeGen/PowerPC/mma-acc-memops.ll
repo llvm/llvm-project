@@ -562,69 +562,59 @@ define dso_local void @testUnalignedLdStPair() {
 ; LE-PWR9-LABEL: testUnalignedLdStPair:
 ; LE-PWR9:       # %bb.0: # %entry
 ; LE-PWR9-NEXT:    addis r3, r2, g@toc@ha
-; LE-PWR9-NEXT:    li r6, 19
 ; LE-PWR9-NEXT:    li r4, 11
-; LE-PWR9-NEXT:    li r5, 35
-; LE-PWR9-NEXT:    li r7, 27
 ; LE-PWR9-NEXT:    addi r3, r3, g@toc@l
-; LE-PWR9-NEXT:    lxvx vs0, r3, r6
-; LE-PWR9-NEXT:    ldx r4, r3, r4
-; LE-PWR9-NEXT:    ldx r5, r3, r5
-; LE-PWR9-NEXT:    stdx r4, r3, r6
-; LE-PWR9-NEXT:    stxvx vs0, r3, r7
-; LE-PWR9-NEXT:    li r7, 43
-; LE-PWR9-NEXT:    stdx r5, r3, r7
+; LE-PWR9-NEXT:    lxvx vs0, r3, r4
+; LE-PWR9-NEXT:    li r4, 27
+; LE-PWR9-NEXT:    lxvx vs1, r3, r4
+; LE-PWR9-NEXT:    li r4, 35
+; LE-PWR9-NEXT:    stxvx vs1, r3, r4
+; LE-PWR9-NEXT:    li r4, 19
+; LE-PWR9-NEXT:    stxvx vs0, r3, r4
 ; LE-PWR9-NEXT:    blr
 ;
 ; LE-PWR8-LABEL: testUnalignedLdStPair:
 ; LE-PWR8:       # %bb.0: # %entry
 ; LE-PWR8-NEXT:    addis r3, r2, g@toc@ha
-; LE-PWR8-NEXT:    li r4, 19
+; LE-PWR8-NEXT:    li r4, 27
 ; LE-PWR8-NEXT:    li r5, 11
-; LE-PWR8-NEXT:    li r6, 35
-; LE-PWR8-NEXT:    li r7, 43
-; LE-PWR8-NEXT:    li r8, 27
+; LE-PWR8-NEXT:    li r6, 19
+; LE-PWR8-NEXT:    li r8, 35
 ; LE-PWR8-NEXT:    addi r3, r3, g@toc@l
 ; LE-PWR8-NEXT:    lxvd2x vs0, r3, r4
 ; LE-PWR8-NEXT:    ldx r5, r3, r5
-; LE-PWR8-NEXT:    ldx r6, r3, r6
-; LE-PWR8-NEXT:    stdx r6, r3, r7
-; LE-PWR8-NEXT:    stdx r5, r3, r4
+; LE-PWR8-NEXT:    ldx r7, r3, r6
+; LE-PWR8-NEXT:    stdx r7, r3, r4
+; LE-PWR8-NEXT:    stdx r5, r3, r6
 ; LE-PWR8-NEXT:    stxvd2x vs0, r3, r8
 ; LE-PWR8-NEXT:    blr
 ;
 ; BE-PWR9-LABEL: testUnalignedLdStPair:
 ; BE-PWR9:       # %bb.0: # %entry
 ; BE-PWR9-NEXT:    addis r3, r2, g@toc@ha
-; BE-PWR9-NEXT:    li r6, 19
 ; BE-PWR9-NEXT:    li r4, 11
-; BE-PWR9-NEXT:    li r5, 35
-; BE-PWR9-NEXT:    li r7, 27
 ; BE-PWR9-NEXT:    addi r3, r3, g@toc@l
-; BE-PWR9-NEXT:    lxvx vs0, r3, r6
-; BE-PWR9-NEXT:    ldx r4, r3, r4
-; BE-PWR9-NEXT:    ldx r5, r3, r5
-; BE-PWR9-NEXT:    stdx r4, r3, r6
-; BE-PWR9-NEXT:    stxvx vs0, r3, r7
-; BE-PWR9-NEXT:    li r7, 43
-; BE-PWR9-NEXT:    stdx r5, r3, r7
+; BE-PWR9-NEXT:    lxvx vs0, r3, r4
+; BE-PWR9-NEXT:    li r4, 27
+; BE-PWR9-NEXT:    lxvx vs1, r3, r4
+; BE-PWR9-NEXT:    li r4, 35
+; BE-PWR9-NEXT:    stxvx vs1, r3, r4
+; BE-PWR9-NEXT:    li r4, 19
+; BE-PWR9-NEXT:    stxvx vs0, r3, r4
 ; BE-PWR9-NEXT:    blr
 ;
 ; BE-PWR8-LABEL: testUnalignedLdStPair:
 ; BE-PWR8:       # %bb.0: # %entry
 ; BE-PWR8-NEXT:    addis r3, r2, g@toc@ha
-; BE-PWR8-NEXT:    li r4, 19
-; BE-PWR8-NEXT:    li r5, 11
-; BE-PWR8-NEXT:    li r6, 35
-; BE-PWR8-NEXT:    li r7, 27
+; BE-PWR8-NEXT:    li r4, 11
+; BE-PWR8-NEXT:    li r5, 27
 ; BE-PWR8-NEXT:    addi r3, r3, g@toc@l
 ; BE-PWR8-NEXT:    lxvd2x vs0, r3, r4
-; BE-PWR8-NEXT:    ldx r5, r3, r5
-; BE-PWR8-NEXT:    ldx r6, r3, r6
-; BE-PWR8-NEXT:    stxvd2x vs0, r3, r7
-; BE-PWR8-NEXT:    li r7, 43
-; BE-PWR8-NEXT:    stdx r5, r3, r4
-; BE-PWR8-NEXT:    stdx r6, r3, r7
+; BE-PWR8-NEXT:    lxvd2x vs1, r3, r5
+; BE-PWR8-NEXT:    li r4, 35
+; BE-PWR8-NEXT:    li r5, 19
+; BE-PWR8-NEXT:    stxvd2x vs1, r3, r4
+; BE-PWR8-NEXT:    stxvd2x vs0, r3, r5
 ; BE-PWR8-NEXT:    blr
 entry:
   %0 = bitcast <256 x i1>* @g to i8*

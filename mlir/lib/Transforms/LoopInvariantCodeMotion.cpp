@@ -66,14 +66,13 @@ static bool canBeHoisted(Operation *op,
   // can be hoisted.
   for (auto &region : op->getRegions()) {
     for (auto &block : region) {
-      for (auto &innerOp : block.without_terminator())
+      for (auto &innerOp : block)
         if (!canBeHoisted(&innerOp, definedOutside))
           return false;
     }
   }
   return true;
 }
-
 
 LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
   auto &loopBody = looplike.getLoopBody();

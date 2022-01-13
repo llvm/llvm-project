@@ -300,3 +300,28 @@ entry:
   %cmp = icmp eq i32** %gepi32, %cast
   ret i1 %cmp
 }
+
+define void @test_zero_offset_cycle({ i64, i64 }* %arg) {
+; CHECK-LABEL: @test_zero_offset_cycle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[LOOP_CONT:%.*]]
+; CHECK:       loop.cont:
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  %gep = getelementptr inbounds { i64, i64 }, { i64, i64 }* %arg, i32 0, i32 1
+  %gep.int = ptrtoint i64* %gep to i32
+  br label %loop
+
+loop:
+  %phi = phi i32 [ %gep.int, %entry ], [ %gep.int2, %loop.cont ], [ %phi, %loop ]
+  %phi.ptr = inttoptr i32 %phi to i64*
+  %cmp = icmp eq i64* %gep, %phi.ptr
+  br i1 %cmp, label %loop, label %loop.cont
+
+loop.cont:
+  %gep.int2 = ptrtoint i64* %gep to i32
+  br label %loop
+}

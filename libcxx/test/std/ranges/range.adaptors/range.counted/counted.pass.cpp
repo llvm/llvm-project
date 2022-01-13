@@ -48,9 +48,6 @@ constexpr bool test() {
   {
     static_assert(std::addressof(std::views::counted) == std::addressof(std::ranges::views::counted));
 
-    auto copy = std::views::counted;
-    static_assert(std::semiregular<decltype(copy)>);
-
     static_assert( CountedInvocable<int*, size_t>);
     static_assert(!CountedInvocable<int*, LvalueConvertible>);
     static_assert( CountedInvocable<int*, LvalueConvertible&>);

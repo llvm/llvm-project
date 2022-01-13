@@ -149,6 +149,17 @@ static unsigned getLEArOpcode(bool IsLP64) {
   return IsLP64 ? X86::LEA64r : X86::LEA32r;
 }
 
+static unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm) {
+  if (Use64BitReg) {
+    if (isUInt<32>(Imm))
+      return X86::MOV32ri64;
+    if (isInt<32>(Imm))
+      return X86::MOV64ri32;
+    return X86::MOV64ri;
+  }
+  return X86::MOV32ri;
+}
+
 static bool isEAXLiveIn(MachineBasicBlock &MBB) {
   for (MachineBasicBlock::RegisterMaskPair RegMask : MBB.liveins()) {
     unsigned Reg = RegMask.PhysReg;
@@ -237,11 +248,10 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
     else
       Reg = TRI->findDeadCallerSavedReg(MBB, MBBI);
 
-    unsigned MovRIOpc = Is64Bit ? X86::MOV64ri : X86::MOV32ri;
     unsigned AddSubRROpc =
         isSub ? getSUBrrOpcode(Is64Bit) : getADDrrOpcode(Is64Bit);
     if (Reg) {
-      BuildMI(MBB, MBBI, DL, TII.get(MovRIOpc), Reg)
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Offset)), Reg)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(AddSubRROpc), StackPtr)
@@ -267,7 +277,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
         Offset = -(Offset - SlotSize);
       else
         Offset = Offset + SlotSize;
-      BuildMI(MBB, MBBI, DL, TII.get(MovRIOpc), Rax)
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Offset)), Rax)
           .addImm(Offset)
           .setMIFlag(Flag);
       MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII.get(X86::ADD64rr), Rax)
@@ -434,7 +444,7 @@ void X86FrameLowering::BuildCFI(MachineBasicBlock &MBB,
 
 /// Emits Dwarf Info specifying offsets of callee saved registers and
 /// frame pointer. This is called only when basic block sections are enabled.
-void X86FrameLowering::emitCalleeSavedFrameMoves(
+void X86FrameLowering::emitCalleeSavedFrameMovesFullCFA(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) const {
   MachineFunction &MF = *MBB.getParent();
   if (!hasFP(MF)) {
@@ -637,6 +647,8 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
     uint64_t AlignOffset) const {
   assert(Offset && "null offset");
 
+  const bool NeedsDwarfCFI = needsDwarfCFI(MF);
+  const bool HasFP = hasFP(MF);
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const X86TargetLowering &TLI = *STI.getTargetLowering();
   const unsigned MovMIOpc = Is64Bit ? X86::MOV64mi32 : X86::MOV32mi;
@@ -676,17 +688,36 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   Register FinalStackProbed = Uses64BitFramePtr ? X86::R11
                               : Is64Bit         ? X86::R11D
                                                 : X86::EAX;
+
   BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), FinalStackProbed)
       .addReg(StackPtr)
       .setMIFlag(MachineInstr::FrameSetup);
 
   // save loop bound
   {
-    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, Offset);
+    const unsigned BoundOffset = alignDown(Offset, StackProbeSize);
+    const unsigned SUBOpc = getSUBriOpcode(Uses64BitFramePtr, BoundOffset);
     BuildMI(MBB, MBBI, DL, TII.get(SUBOpc), FinalStackProbed)
         .addReg(FinalStackProbed)
-        .addImm(Offset / StackProbeSize * StackProbeSize)
+        .addImm(BoundOffset)
         .setMIFlag(MachineInstr::FrameSetup);
+
+    // while in the loop, use loop-invariant reg for CFI,
+    // instead of the stack pointer, which changes during the loop
+    if (!HasFP && NeedsDwarfCFI) {
+      // x32 uses the same DWARF register numbers as x86-64,
+      // so there isn't a register number for r11d, we must use r11 instead
+      const Register DwarfFinalStackProbed =
+          STI.isTarget64BitILP32()
+              ? Register(getX86SubSuperRegister(FinalStackProbed, 64))
+              : FinalStackProbed;
+
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createDefCfaRegister(
+                   nullptr, TRI->getDwarfRegNum(DwarfFinalStackProbed, true)));
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createAdjustCfaOffset(nullptr, BoundOffset));
+    }
   }
 
   // allocate a page
@@ -725,13 +756,28 @@ void X86FrameLowering::emitStackProbeInlineGenericLoop(
   MBB.addSuccessor(testMBB);
 
   // handle tail
-  unsigned TailOffset = Offset % StackProbeSize;
+  const unsigned TailOffset = Offset % StackProbeSize;
+  MachineBasicBlock::iterator TailMBBIter = tailMBB->begin();
   if (TailOffset) {
     const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, TailOffset);
-    BuildMI(*tailMBB, tailMBB->begin(), DL, TII.get(Opc), StackPtr)
+    BuildMI(*tailMBB, TailMBBIter, DL, TII.get(Opc), StackPtr)
         .addReg(StackPtr)
         .addImm(TailOffset)
         .setMIFlag(MachineInstr::FrameSetup);
+  }
+
+  // after the loop, switch back to stack pointer for CFI
+  if (!HasFP && NeedsDwarfCFI) {
+    // x32 uses the same DWARF register numbers as x86-64,
+    // so there isn't a register number for esp, we must use rsp instead
+    const Register DwarfStackPtr =
+        STI.isTarget64BitILP32()
+            ? Register(getX86SubSuperRegister(StackPtr, 64))
+            : Register(StackPtr);
+
+    BuildCFI(*tailMBB, TailMBBIter, DL,
+             MCCFIInstruction::createDefCfaRegister(
+                 nullptr, TRI->getDwarfRegNum(DwarfStackPtr, true)));
   }
 
   // Update Live In information
@@ -1705,19 +1751,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       // Handle the 64-bit Windows ABI case where we need to call __chkstk.
       // Function prologue is responsible for adjusting the stack pointer.
       int64_t Alloc = isEAXAlive ? NumBytes - 8 : NumBytes;
-      if (isUInt<32>(Alloc)) {
-        BuildMI(MBB, MBBI, DL, TII.get(X86::MOV32ri), X86::EAX)
-            .addImm(Alloc)
-            .setMIFlag(MachineInstr::FrameSetup);
-      } else if (isInt<32>(Alloc)) {
-        BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri32), X86::RAX)
-            .addImm(Alloc)
-            .setMIFlag(MachineInstr::FrameSetup);
-      } else {
-        BuildMI(MBB, MBBI, DL, TII.get(X86::MOV64ri), X86::RAX)
-            .addImm(Alloc)
-            .setMIFlag(MachineInstr::FrameSetup);
-      }
+      BuildMI(MBB, MBBI, DL, TII.get(getMOVriOpcode(Is64Bit, Alloc)), X86::RAX)
+          .addImm(Alloc)
+          .setMIFlag(MachineInstr::FrameSetup);
     } else {
       // Allocate NumBytes-4 bytes on stack in case of isEAXAlive.
       // We'll also use 4 already allocated bytes for EAX.
@@ -2944,15 +2980,16 @@ void X86FrameLowering::adjustForSegmentedStacks(
     const unsigned Reg10 = IsLP64 ? X86::R10 : X86::R10D;
     const unsigned Reg11 = IsLP64 ? X86::R11 : X86::R11D;
     const unsigned MOVrr = IsLP64 ? X86::MOV64rr : X86::MOV32rr;
-    const unsigned MOVri = IsLP64 ? X86::MOV64ri : X86::MOV32ri;
 
     if (IsNested)
       BuildMI(allocMBB, DL, TII.get(MOVrr), RegAX).addReg(Reg10);
 
-    BuildMI(allocMBB, DL, TII.get(MOVri), Reg10)
-      .addImm(StackSize);
-    BuildMI(allocMBB, DL, TII.get(MOVri), Reg11)
-      .addImm(X86FI->getArgumentStackSize());
+    BuildMI(allocMBB, DL, TII.get(getMOVriOpcode(IsLP64, StackSize)), Reg10)
+        .addImm(StackSize);
+    BuildMI(allocMBB, DL,
+            TII.get(getMOVriOpcode(IsLP64, X86FI->getArgumentStackSize())),
+            Reg11)
+        .addImm(X86FI->getArgumentStackSize());
   } else {
     BuildMI(allocMBB, DL, TII.get(X86::PUSHi32))
       .addImm(X86FI->getArgumentStackSize());

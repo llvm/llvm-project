@@ -204,8 +204,8 @@ struct WriterContext {
 
   WriterContext(bool IsSparse, std::mutex &ErrLock,
                 SmallSet<instrprof_error, 4> &WriterErrorCodes)
-      : Lock(), Writer(IsSparse), Errors(), ErrLock(ErrLock),
-        WriterErrorCodes(WriterErrorCodes) {}
+      : Writer(IsSparse), ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {
+  }
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -968,7 +968,7 @@ static int merge_main(int argc, const char *argv[]) {
       "gen-cs-nested-profile", cl::Hidden, cl::init(false),
       cl::desc("Generate nested function profiles for CSSPGO"));
   cl::opt<std::string> DebugInfoFilename(
-      "debug-info", cl::init(""), cl::Hidden,
+      "debug-info", cl::init(""),
       cl::desc("Use the provided debug info to correlate the raw profile."));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
@@ -2303,8 +2303,7 @@ struct HotFuncInfo {
   uint64_t EntryCount;
 
   HotFuncInfo()
-      : FuncName(), TotalCount(0), TotalCountPercent(0.0f), MaxCount(0),
-        EntryCount(0) {}
+      : TotalCount(0), TotalCountPercent(0.0f), MaxCount(0), EntryCount(0) {}
 
   HotFuncInfo(StringRef FN, uint64_t TS, double TSP, uint64_t MS, uint64_t ES)
       : FuncName(FN.begin(), FN.end()), TotalCount(TS), TotalCountPercent(TSP),
