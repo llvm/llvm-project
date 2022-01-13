@@ -38776,6 +38776,8 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
   case X86ISD::VBROADCAST:
   case X86ISD::MOVDDUP:
   case X86ISD::PSHUFD:
+  case X86ISD::PSHUFHW:
+  case X86ISD::PSHUFLW:
   case X86ISD::VPERMI:
   case X86ISD::VPERMILPI: {
     if (N.getOperand(0).getValueType() == ShuffleVT &&
