@@ -3479,6 +3479,7 @@ void CodeGenModule::emitMultiVersionFunctions() {
 void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
   assert(FD && "Not a FunctionDecl?");
+  assert(FD->isCPUDispatchMultiVersion() && "Not a multiversion function?");
   const auto *DD = FD->getAttr<CPUDispatchAttr>();
   assert(DD && "Not a cpu_dispatch Function?");
   llvm::Type *DeclTy = getTypes().ConvertType(FD->getType());
@@ -3498,7 +3499,7 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
                                Context.getTargetAddressSpace(FD->getType())),
         false);
     assert(ResolverName.endswith(".resolver") &&
-           "CPUDispatch IFunc resolver doesn't end with .resolver?");
+           "CPUDispatch IFunc resolver doesn't end with .resolver??");
   }
   else {
     ResolverType = DeclTy;
