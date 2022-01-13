@@ -701,7 +701,7 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     // s_cbranch_scc0?
 
     // Loop back if there are still variants to cover
-    BuildMI(LoopBB, E, DL, TII->get(AMDGPU::S_CBRANCH_EXECNZ)).addMBB(&LoopBB);
+    BuildMI(LoopBB, E, DL, TII->get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
 
     MachineBasicBlock::iterator First = RemainderBB.begin();
     BuildMI(RemainderBB, First, DL, TII->get(MovOpc), Exec)
