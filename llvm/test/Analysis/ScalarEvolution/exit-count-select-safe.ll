@@ -417,4 +417,39 @@ for.body5:                                        ; preds = %for.cond4
   br label %for.cond4
 }
 
+define i64 @uminseq_vs_ptrtoint_complexity(i64 %n, i64 %m, i64* %ptr) {
+; CHECK-LABEL: 'uminseq_vs_ptrtoint_complexity'
+; CHECK-NEXT:  Classifying expressions for: @uminseq_vs_ptrtoint_complexity
+; CHECK-NEXT:    %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%n umin_seq %m) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i64 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%n umin_seq %m)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %ptr.int = ptrtoint i64* %ptr to i64
+; CHECK-NEXT:    --> (ptrtoint i64* %ptr to i64) U: full-set S: full-set
+; CHECK-NEXT:    %r = add i64 %i, %ptr.int
+; CHECK-NEXT:    --> {(ptrtoint i64* %ptr to i64),+,1}<%loop> U: full-set S: full-set --> ((ptrtoint i64* %ptr to i64) + (%n umin_seq %m)) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @uminseq_vs_ptrtoint_complexity
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq %m)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq %m)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i64 [0, %entry], [%i.next, %loop]
+  %i.next = add i64 %i, 1
+  %cond_p0 = icmp ult i64 %i, %n
+  %cond_p1 = icmp ult i64 %i, %m
+  %cond = select i1 %cond_p0, i1 %cond_p1, i1 false
+  br i1 %cond, label %loop, label %exit
+exit:
+  %ptr.int = ptrtoint i64* %ptr to i64
+  %r = add i64 %i, %ptr.int
+  ret i64 %r
+}
+
 declare i32 @llvm.umin.i32(i32, i32)
