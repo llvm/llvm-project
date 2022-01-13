@@ -40,7 +40,7 @@ static IntegerAttr subIntegerAttrs(PatternRewriter &builder, Value res,
 }
 
 /// Invert an integer comparison predicate.
-static arith::CmpIPredicate invertPredicate(arith::CmpIPredicate pred) {
+arith::CmpIPredicate arith::invertPredicate(arith::CmpIPredicate pred) {
   switch (pred) {
   case arith::CmpIPredicate::eq:
     return arith::CmpIPredicate::ne;

@@ -411,44 +411,35 @@ endif ()
 
 # TODO: Projects that depend on libc++ should use LIBCXX_GENERATED_INCLUDE_DIR
 # instead of hard-coding include/c++/v1.
+
+set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
+    "Path where target-agnostic libc++ headers should be installed.")
+set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
+    "Path where built libc++ runtime libraries should be installed.")
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE PATH
       "Path where built libc++ libraries should be installed.")
-  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++ runtime libraries should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
-      "Path where target-agnostic libc++ headers should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1" CACHE PATH
       "Path where target-specific libc++ headers should be installed.")
   if(LIBCXX_LIBDIR_SUBDIR)
     string(APPEND LIBCXX_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
     string(APPEND LIBCXX_INSTALL_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
   endif()
-elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-  set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
-  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
-  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
-      "Path where built libc++ libraries should be installed.")
-  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++ runtime libraries should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
-      "Path where target-agnostic libc++ headers should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}" CACHE PATH
-      "Path where target-specific libc++ headers should be installed.")
 else()
-  set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
-  set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+  if(LLVM_LIBRARY_OUTPUT_INTDIR)
+    set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+    set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+  else()
+    set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+    set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+  endif()
   set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LIBCXX_GENERATED_INCLUDE_DIR}")
   set(LIBCXX_INSTALL_LIBRARY_DIR lib${LIBCXX_LIBDIR_SUFFIX} CACHE PATH
       "Path where built libc++ libraries should be installed.")
-  set(LIBCXX_INSTALL_RUNTIME_DIR bin CACHE PATH
-      "Path where built libc++ runtime libraries should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_DIR "include/c++/v1" CACHE PATH
-      "Path where target-agnostic libc++ headers should be installed.")
   set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${LIBCXX_INSTALL_INCLUDE_DIR}" CACHE PATH
       "Path where target-specific libc++ headers should be installed.")
 endif()

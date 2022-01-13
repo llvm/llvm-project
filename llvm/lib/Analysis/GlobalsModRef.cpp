@@ -401,14 +401,14 @@ bool GlobalsAAResult::AnalyzeUsesOfPointer(Value *V,
 
 /// AnalyzeIndirectGlobalMemory - We found an non-address-taken global variable
 /// which holds a pointer type.  See if the global always points to non-aliased
-/// heap memory: that is, all initializers of the globals are allocations, and
-/// those allocations have no use other than initialization of the global.
+/// heap memory: that is, all initializers of the globals store a value known
+/// to be obtained via a noalias return function call which have no other use.
 /// Further, all loads out of GV must directly use the memory, not store the
 /// pointer somewhere.  If this is true, we consider the memory pointed to by
 /// GV to be owned by GV and can disambiguate other pointers from it.
 bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
   // Keep track of values related to the allocation of the memory, f.e. the
-  // value produced by the malloc call and any casts.
+  // value produced by the noalias call and any casts.
   std::vector<Value *> AllocRelatedValues;
 
   // If the initializer is a valid pointer, bail.
@@ -438,7 +438,7 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
       // Check the value being stored.
       Value *Ptr = getUnderlyingObject(SI->getOperand(0));
 
-      if (!isAllocLikeFn(Ptr, &GetTLI(*SI->getFunction())))
+      if (!isNoAliasCall(Ptr))
         return false; // Too hard to analyze.
 
       // Analyze all uses of the allocation.  If any of them are used in a

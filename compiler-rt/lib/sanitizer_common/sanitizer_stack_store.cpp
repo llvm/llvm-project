@@ -234,6 +234,11 @@ static uptr *UncompressLzw(const u8 *from, const u8 *from_end, uptr *to,
   return to;
 }
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma warning(push)
+// Disable 'nonstandard extension used: zero-sized array in struct/union'.
+#  pragma warning(disable : 4200)
+#endif
 namespace {
 struct PackedHeader {
   uptr size;
@@ -241,6 +246,9 @@ struct PackedHeader {
   u8 data[];
 };
 }  // namespace
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma warning(pop)
+#endif
 
 uptr *StackStore::BlockInfo::GetOrUnpack(StackStore *store) {
   SpinMutexLock l(&mtx_);

@@ -23,7 +23,7 @@ define i32 @test1(i32 %a) {
 ; CHECK-NEXT:    retl
 entry:
   %0 = add i32 %a, 4
-  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test1, %fail)) to label %normal [label %fail]
+  callbr void asm "xorl $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test1, %fail)) to label %normal [label %fail]
 
 normal:
   ret i32 0
@@ -53,7 +53,7 @@ define i32 @test1b(i32 %a) {
 ; CHECK-NEXT:    retl
 entry:
   %0 = add i32 %a, 4
-  callbr void asm inteldialect "xor $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test1b, %fail)) to label %normal [label %fail]
+  callbr void asm inteldialect "xor $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test1b, %fail)) to label %normal [label %fail]
 
 normal:
   ret i32 0
@@ -74,7 +74,7 @@ entry:
 
 unreachableasm:
   %0 = add i32 %a, 4
-  callbr void asm sideeffect "xorl $0, $0; jmp ${1:l}", "r,X,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test2, %fail)) to label %normal [label %fail]
+  callbr void asm sideeffect "xorl $0, $0; jmp ${1:l}", "r,i,~{dirflag},~{fpsr},~{flags}"(i32 %0, i8* blockaddress(@test2, %fail)) to label %normal [label %fail]
 
 normal:
   ret i32 0
@@ -148,11 +148,11 @@ label03:                                          ; preds = %normal0, %label04, 
   br label %label04
 
 label04:                                          ; preds = %normal0, %label03
-  callbr void asm sideeffect "jmp ${0:l}; jmp ${1:l}; jmp ${2:l}", "X,X,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test3, %label01), i8* blockaddress(@test3, %label02), i8* blockaddress(@test3, %label03))
+  callbr void asm sideeffect "jmp ${0:l}; jmp ${1:l}; jmp ${2:l}", "i,i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test3, %label01), i8* blockaddress(@test3, %label02), i8* blockaddress(@test3, %label03))
           to label %normal0 [label %label01, label %label02, label %label03]
 
 normal0:                                          ; preds = %label04
-  callbr void asm sideeffect "jmp ${0:l}; jmp ${1:l}; jmp ${2:l}; jmp ${3:l}", "X,X,X,X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test3, %label01), i8* blockaddress(@test3, %label02), i8* blockaddress(@test3, %label03), i8* blockaddress(@test3, %label04))
+  callbr void asm sideeffect "jmp ${0:l}; jmp ${1:l}; jmp ${2:l}; jmp ${3:l}", "i,i,i,i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test3, %label01), i8* blockaddress(@test3, %label02), i8* blockaddress(@test3, %label03), i8* blockaddress(@test3, %label04))
           to label %normal1 [label %label01, label %label02, label %label03, label %label04]
 
 normal1:                                          ; preds = %normal0
@@ -175,11 +175,11 @@ define void @test4() {
 ; CHECK-NEXT:  .LBB4_3: # %quux
 ; CHECK-NEXT:    retl
 entry:
-  callbr void asm sideeffect "ja $0", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
+  callbr void asm sideeffect "ja $0", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
           to label %asm.fallthrough [label %quux]
 
 asm.fallthrough:                                  ; preds = %entry
-  callbr void asm sideeffect "ja ${0:l}", "X,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
+  callbr void asm sideeffect "ja ${0:l}", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test4, %quux))
           to label %cleanup [label %quux]
 
 quux:                                             ; preds = %asm.fallthrough, %entry
