@@ -16387,6 +16387,29 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
     }
   }
 
+  // Index = shl((step(const) + splat(offset))), splat(shift))
+  if (Index.getOpcode() == ISD::SHL &&
+      Index.getOperand(0).getOpcode() == ISD::ADD &&
+      Index.getOperand(0).getOperand(0).getOpcode() == ISD::STEP_VECTOR) {
+    SDValue Add = Index.getOperand(0);
+    SDValue ShiftOp = Index.getOperand(1);
+    SDValue StepOp = Add.getOperand(0);
+    SDValue OffsetOp = Add.getOperand(1);
+    if (auto *Shift =
+            dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(ShiftOp)))
+      if (auto Offset = DAG.getSplatValue(OffsetOp)) {
+        int64_t Step =
+            cast<ConstantSDNode>(StepOp.getOperand(0))->getSExtValue();
+        // Stride does not scale explicitly by 'Scale', because it happens in
+        // the gather/scatter addressing mode.
+        Stride = Step << Shift->getSExtValue();
+        // BasePtr = BasePtr + ((Offset * Scale) << Shift)
+        Offset = DAG.getNode(ISD::MUL, DL, MVT::i64, Offset, N->getScale());
+        Offset = DAG.getNode(ISD::SHL, DL, MVT::i64, Offset, SDValue(Shift, 0));
+        BasePtr = DAG.getNode(ISD::ADD, DL, MVT::i64, BasePtr, Offset);
+      }
+  }
+
   // Return early because no supported pattern is found.
   if (Stride == 0)
     return false;
