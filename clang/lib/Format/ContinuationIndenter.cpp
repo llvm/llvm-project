@@ -485,7 +485,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     // different LineFormatter would be used otherwise.
     if (Previous.ClosesTemplateDeclaration)
       return Style.AlwaysBreakTemplateDeclarations != FormatStyle::BTDS_No;
-    if (Previous.is(TT_FunctionAnnotationRParen))
+    if (Previous.is(TT_FunctionAnnotationRParen) &&
+        State.Line->Type != LT_PreprocessorDirective)
       return true;
     if (Previous.is(TT_LeadingJavaAnnotation) && Current.isNot(tok::l_paren) &&
         Current.isNot(TT_LeadingJavaAnnotation))
