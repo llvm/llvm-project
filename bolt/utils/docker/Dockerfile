@@ -11,7 +11,7 @@ RUN apt-get update && \
 
 WORKDIR /home/bolt
 
-RUN git clone --depth 1 https://github.com/facebookincubator/BOLT llvm-project
+RUN git clone --depth 1 https://github.com/llvm/llvm-project
 
 RUN mkdir build && \
     cd build && \
