@@ -5957,9 +5957,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       Align Alignment(1);
       if (MaybeAlign RetAlign = AI.CB->getRetAlign())
         Alignment = max(Alignment, RetAlign);
-      if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
-        Optional<APInt> AlignmentAPI =
-            getAPInt(A, *this, *AI.CB->getArgOperand(0));
+      if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
+        Optional<APInt> AlignmentAPI = getAPInt(A, *this, *Align);
         assert(AlignmentAPI.hasValue() &&
                "Expected an alignment during manifest!");
         Alignment =
@@ -6053,6 +6052,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
   ChangeStatus Changed = ChangeStatus::UNCHANGED;
   const Function *F = getAnchorScope();
+  const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
 
   const auto &LivenessAA =
       A.getAAFor<AAIsDead>(*this, IRPosition::function(*F), DepClassTy::NONE);
@@ -6268,14 +6268,16 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       continue;
 
     if (MaxHeapToStackSize == -1) {
-      if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC)
-        if (!getAPInt(A, *this, *AI.CB->getArgOperand(0)).hasValue()) {
+      if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
+        Value *Align = getAllocAlignment(AI.CB, TLI);
+        if (!Align || !getAPInt(A, *this, *Align)) {
           LLVM_DEBUG(dbgs() << "[H2S] Unknown allocation alignment: " << *AI.CB
                             << "\n");
           AI.Status = AllocationInfo::INVALID;
           Changed = ChangeStatus::CHANGED;
           continue;
         }
+      }
     } else {
       Optional<APInt> Size = getSize(A, *this, AI);
       if (!Size.hasValue() || Size.getValue().ugt(MaxHeapToStackSize)) {
