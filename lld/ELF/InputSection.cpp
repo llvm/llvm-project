@@ -890,38 +890,6 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (expr == R_NONE)
       continue;
 
-    if (expr == R_SIZE) {
-      target.relocateNoSym(bufLoc, type,
-                           SignExtend64<bits>(sym.getSize() + addend));
-      continue;
-    }
-
-    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
-    // sections.
-    if (expr != R_ABS && expr != R_DTPREL && expr != R_GOTPLTREL &&
-        expr != R_RISCV_ADD) {
-      std::string msg = getLocation<ELFT>(offset) +
-                        ": has non-ABS relocation " + toString(type) +
-                        " against symbol '" + toString(sym) + "'";
-      if (expr != R_PC && expr != R_ARM_PCA) {
-        error(msg);
-        return;
-      }
-
-      // If the control reaches here, we found a PC-relative relocation in a
-      // non-ALLOC section. Since non-ALLOC section is not loaded into memory
-      // at runtime, the notion of PC-relative doesn't make sense here. So,
-      // this is a usage error. However, GNU linkers historically accept such
-      // relocations without any errors and relocate them as if they were at
-      // address 0. For bug-compatibilty, we accept them with warnings. We
-      // know Steel Bank Common Lisp as of 2018 have this bug.
-      warn(msg);
-      target.relocateNoSym(
-          bufLoc, type,
-          SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));
-      continue;
-    }
-
     if (tombstone ||
         (isDebug && (type == target.symbolicRel || expr == R_DTPREL))) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
@@ -961,7 +929,44 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
         continue;
       }
     }
-    target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
+
+    // For a relocatable link, only tombstone values are applied.
+    if (config->relocatable)
+      continue;
+
+    if (expr == R_SIZE) {
+      target.relocateNoSym(bufLoc, type,
+                           SignExtend64<bits>(sym.getSize() + addend));
+      continue;
+    }
+
+    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
+    // sections.
+    if (expr == R_ABS || expr == R_DTPREL || expr == R_GOTPLTREL ||
+        expr == R_RISCV_ADD) {
+      target.relocateNoSym(bufLoc, type, SignExtend64<bits>(sym.getVA(addend)));
+      continue;
+    }
+
+    std::string msg = getLocation<ELFT>(offset) + ": has non-ABS relocation " +
+                      toString(type) + " against symbol '" + toString(sym) +
+                      "'";
+    if (expr != R_PC && expr != R_ARM_PCA) {
+      error(msg);
+      return;
+    }
+
+    // If the control reaches here, we found a PC-relative relocation in a
+    // non-ALLOC section. Since non-ALLOC section is not loaded into memory
+    // at runtime, the notion of PC-relative doesn't make sense here. So,
+    // this is a usage error. However, GNU linkers historically accept such
+    // relocations without any errors and relocate them as if they were at
+    // address 0. For bug-compatibilty, we accept them with warnings. We
+    // know Steel Bank Common Lisp as of 2018 have this bug.
+    warn(msg);
+    target.relocateNoSym(
+        bufLoc, type,
+        SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));
   }
 }
 
@@ -993,15 +998,15 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   }
 
   auto *sec = cast<InputSection>(this);
-  if (config->relocatable) {
+  if (config->relocatable)
     relocateNonAllocForRelocatable(sec, buf);
-  } else {
-    const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
-    if (rels.areRelocsRel())
-      sec->relocateNonAlloc<ELFT>(buf, rels.rels);
-    else
-      sec->relocateNonAlloc<ELFT>(buf, rels.relas);
-  }
+  // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
+  // locations with tombstone values.
+  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    sec->relocateNonAlloc<ELFT>(buf, rels.rels);
+  else
+    sec->relocateNonAlloc<ELFT>(buf, rels.relas);
 }
 
 void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
