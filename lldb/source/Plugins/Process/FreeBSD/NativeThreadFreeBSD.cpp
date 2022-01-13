@@ -313,3 +313,27 @@ NativeThreadFreeBSD::CopyWatchpointsFrom(NativeThreadFreeBSD &source) {
   }
   return s;
 }
+
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+NativeThreadFreeBSD::GetSiginfo() const {
+  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+
+  struct ptrace_lwpinfo info;
+  const auto siginfo_err = NativeProcessFreeBSD::PtraceWrapper(
+      PT_LWPINFO, GetID(), &info, sizeof(info));
+  if (siginfo_err.Fail()) {
+    LLDB_LOG(log, "PT_LWPINFO failed {0}", siginfo_err);
+    return siginfo_err.ToError();
+  }
+
+  if (info.pl_event != PL_EVENT_SIGNAL)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Thread not signaled");
+  if (!(info.pl_flags & PL_FLAG_SI))
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "No siginfo for thread");
+
+  return llvm::MemoryBuffer::getMemBufferCopy(
+      llvm::StringRef(reinterpret_cast<const char *>(&info.pl_siginfo),
+                      sizeof(info.pl_siginfo)));
+}
