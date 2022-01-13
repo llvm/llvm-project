@@ -10,16 +10,15 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// template<class R, class F>
-//   transform_view(R&&, F) -> transform_view<views::all_t<R>, F>;
+// template<class R>
+//   reverse_view(R&&) -> reverse_view<views::all_t<R>>;
 
 #include <ranges>
-#include <cassert>
-#include <concepts>
 
-struct PlusOne {
-    int operator()(int x) const;
-};
+#include <concepts>
+#include <utility>
+
+#include "test_iterators.h"
 
 struct View : std::ranges::view_base {
   int *begin() const;
@@ -42,30 +41,29 @@ void testCTAD() {
     View v;
     Range r;
     BorrowedRange br;
-    PlusOne f;
 
     static_assert(std::same_as<
-        decltype(std::ranges::transform_view(v, f)),
-        std::ranges::transform_view<View, PlusOne>
+        decltype(std::ranges::reverse_view(v)),
+        std::ranges::reverse_view<View>
     >);
     static_assert(std::same_as<
-        decltype(std::ranges::transform_view(std::move(v), f)),
-        std::ranges::transform_view<View, PlusOne>
+        decltype(std::ranges::reverse_view(std::move(v))),
+        std::ranges::reverse_view<View>
     >);
     static_assert(std::same_as<
-        decltype(std::ranges::transform_view(r, f)),
-        std::ranges::transform_view<std::ranges::ref_view<Range>, PlusOne>
+        decltype(std::ranges::reverse_view(r)),
+        std::ranges::reverse_view<std::ranges::ref_view<Range>>
     >);
     static_assert(std::same_as<
-        decltype(std::ranges::transform_view(std::move(r), f)),
-        std::ranges::transform_view<std::ranges::owning_view<Range>, PlusOne>
+        decltype(std::ranges::reverse_view(std::move(r))),
+        std::ranges::reverse_view<std::ranges::owning_view<Range>>
     >);
     static_assert(std::same_as<
-        decltype(std::ranges::transform_view(br, f)),
-        std::ranges::transform_view<std::ranges::ref_view<BorrowedRange>, PlusOne>
+        decltype(std::ranges::reverse_view(br)),
+        std::ranges::reverse_view<std::ranges::ref_view<BorrowedRange>>
     >);
     static_assert(std::same_as<
-        decltype(std::ranges::transform_view(std::move(br), f)),
-        std::ranges::transform_view<std::ranges::owning_view<BorrowedRange>, PlusOne>
+        decltype(std::ranges::reverse_view(std::move(br))),
+        std::ranges::reverse_view<std::ranges::owning_view<BorrowedRange>>
     >);
 }

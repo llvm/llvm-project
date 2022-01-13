@@ -799,6 +799,7 @@ module std [system] {
       module iota_view              { private header "__ranges/iota_view.h" }
       module join_view              { private header "__ranges/join_view.h" }
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
+      module owning_view            { private header "__ranges/owning_view.h" }
       module range_adaptor          { private header "__ranges/range_adaptor.h" }
       module ref_view               { private header "__ranges/ref_view.h" }
       module reverse_view           { private header "__ranges/reverse_view.h" }
