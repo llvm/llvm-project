@@ -51,12 +51,13 @@ using namespace llvm;
 
 enum AllocType : uint8_t {
   OpNewLike          = 1<<0, // allocates; never returns null
-  MallocLike         = 1<<1 | OpNewLike, // allocates; may return null
+  MallocLike         = 1<<1, // allocates; may return null
   AlignedAllocLike   = 1<<2, // allocates with alignment; may return null
   CallocLike         = 1<<3, // allocates + bzero
   ReallocLike        = 1<<4, // reallocates
   StrDupLike         = 1<<5,
-  MallocOrCallocLike = MallocLike | CallocLike | AlignedAllocLike,
+  MallocOrOpNewLike  = MallocLike | OpNewLike,
+  MallocOrCallocLike = MallocLike | OpNewLike | CallocLike | AlignedAllocLike,
   AllocLike          = MallocOrCallocLike | StrDupLike,
   AnyAlloc           = AllocLike | ReallocLike
 };
@@ -236,11 +237,11 @@ bool llvm::isAllocationFn(
 /// Tests if a value is a call or invoke to a library function that
 /// allocates uninitialized memory (such as malloc).
 bool llvm::isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
-  return getAllocationData(V, MallocLike, TLI).hasValue();
+  return getAllocationData(V, MallocOrOpNewLike, TLI).hasValue();
 }
 bool llvm::isMallocLikeFn(
     const Value *V, function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
-  return getAllocationData(V, MallocLike, GetTLI)
+  return getAllocationData(V, MallocOrOpNewLike, GetTLI)
       .hasValue();
 }
 
