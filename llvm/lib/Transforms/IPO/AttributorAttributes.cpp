@@ -6022,10 +6022,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       return getAPInt(A, AA, *AI.CB->getArgOperand(0));
 
     if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC)
-      // Only if the alignment is also constant we return a size.
-      return getAPInt(A, AA, *AI.CB->getArgOperand(0)).hasValue()
-                 ? getAPInt(A, AA, *AI.CB->getArgOperand(1))
-                 : llvm::None;
+      return getAPInt(A, AA, *AI.CB->getArgOperand(1));
 
     assert(AI.Kind == AllocationInfo::AllocationKind::CALLOC &&
            "Expected only callocs are left");
@@ -6267,23 +6264,24 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (AI.Status == AllocationInfo::INVALID)
       continue;
 
-    if (MaxHeapToStackSize == -1) {
-      if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
-        Value *Align = getAllocAlignment(AI.CB, TLI);
-        if (!Align || !getAPInt(A, *this, *Align)) {
-          LLVM_DEBUG(dbgs() << "[H2S] Unknown allocation alignment: " << *AI.CB
-                            << "\n");
-          AI.Status = AllocationInfo::INVALID;
-          Changed = ChangeStatus::CHANGED;
-          continue;
-        }
+    if (Value *Align = getAllocAlignment(AI.CB, TLI)) {
+      if (!getAPInt(A, *this, *Align)) {
+        // Can't generate an alloca which respects the required alignment
+        // on the allocation.
+        LLVM_DEBUG(dbgs() << "[H2S] Unknown allocation alignment: " << *AI.CB
+                          << "\n");
+        AI.Status = AllocationInfo::INVALID;
+        Changed = ChangeStatus::CHANGED;
+        continue;
       }
-    } else {
+    }
+
+    if (MaxHeapToStackSize != -1) {
       Optional<APInt> Size = getSize(A, *this, AI);
       if (!Size.hasValue() || Size.getValue().ugt(MaxHeapToStackSize)) {
         LLVM_DEBUG({
           if (!Size.hasValue())
-            dbgs() << "[H2S] Unknown allocation size (or alignment): " << *AI.CB
+            dbgs() << "[H2S] Unknown allocation size: " << *AI.CB
                    << "\n";
           else
             dbgs() << "[H2S] Allocation size too large: " << *AI.CB << " vs. "
