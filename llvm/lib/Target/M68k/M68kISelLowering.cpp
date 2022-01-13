@@ -268,7 +268,7 @@ static bool MatchingStackOffset(SDValue Arg, unsigned Offset,
 
   int FI = INT_MAX;
   if (Arg.getOpcode() == ISD::CopyFromReg) {
-    unsigned VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
+    Register VR = cast<RegisterSDNode>(Arg.getOperand(1))->getReg();
     if (!Register::isVirtualRegister(VR))
       return false;
     MachineInstr *Def = MRI->getVRegDef(VR);
@@ -900,7 +900,7 @@ SDValue M68kTargetLowering::LowerFormalArguments(
       else
         llvm_unreachable("Unknown argument type!");
 
-      unsigned Reg = MF.addLiveIn(VA.getLocReg(), RC);
+      Register Reg = MF.addLiveIn(VA.getLocReg(), RC);
       ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
       // If this is an 8 or 16-bit value, it is really passed promoted to 32
@@ -1276,7 +1276,7 @@ bool M68kTargetLowering::IsEligibleForTailCallOptimization(
         CCValAssign &VA = ArgLocs[i];
         if (!VA.isRegLoc())
           continue;
-        unsigned Reg = VA.getLocReg();
+        Register Reg = VA.getLocReg();
         switch (Reg) {
         default:
           break;
@@ -3101,9 +3101,9 @@ M68kTargetLowering::EmitLoweredSelect(MachineInstr &MI,
   // destination registers, and the registers that went into the PHI.
 
   for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd; ++MIIt) {
-    unsigned DestReg = MIIt->getOperand(0).getReg();
-    unsigned Op1Reg = MIIt->getOperand(1).getReg();
-    unsigned Op2Reg = MIIt->getOperand(2).getReg();
+    Register DestReg = MIIt->getOperand(0).getReg();
+    Register Op1Reg = MIIt->getOperand(1).getReg();
+    Register Op2Reg = MIIt->getOperand(2).getReg();
 
     // If this CMOV we are generating is the opposite condition from
     // the jump we generated, then we have to swap the operands for the
@@ -3211,13 +3211,13 @@ SDValue M68kTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     auto &MRI = MF.getRegInfo();
     auto SPTy = getPointerTy(DAG.getDataLayout());
     auto *ARClass = getRegClassFor(SPTy);
-    unsigned Vreg = MRI.createVirtualRegister(ARClass);
+    Register Vreg = MRI.createVirtualRegister(ARClass);
     Chain = DAG.getCopyToReg(Chain, DL, Vreg, Size);
     Result = DAG.getNode(M68kISD::SEG_ALLOCA, DL, SPTy, Chain,
                          DAG.getRegister(Vreg, SPTy));
   } else {
     auto &TLI = DAG.getTargetLoweringInfo();
-    unsigned SPReg = TLI.getStackPointerRegisterToSaveRestore();
+    Register SPReg = TLI.getStackPointerRegisterToSaveRestore();
     assert(SPReg && "Target cannot require DYNAMIC_STACKALLOC expansion and"
                     " not tell us which reg is the stack pointer!");
 
