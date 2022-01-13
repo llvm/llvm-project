@@ -12,9 +12,10 @@
 #include "../src/cxa_guard_impl.h"
 #include <cassert>
 
-// Disable GCC warning about tautological comparison of a function's address
-#if defined(__GNUC__) && !defined(__clang__)
-# pragma GCC diagnostic ignored "-Waddress"
+#if defined(__clang__)
+#  pragma clang diagnostic ignored "-Wtautological-pointer-compare"
+#elif defined(__GNUC__)
+#  pragma GCC diagnostic ignored "-Waddress"
 #endif
 
 using namespace __cxxabiv1;
@@ -135,7 +136,7 @@ int main(int, char**) {
 #if (defined(__APPLE__) || defined(__linux__))  && !defined(_LIBCXXABI_HAS_NO_THREADS)
     assert(PlatformThreadID);
 #endif
-    if (PlatformSupportsThreadID()) {
+    if (PlatformThreadID != nullptr) {
       assert(PlatformThreadID() != 0);
       assert(PlatformThreadID() == PlatformThreadID());
     }
