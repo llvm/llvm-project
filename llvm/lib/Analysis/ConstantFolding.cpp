@@ -671,9 +671,12 @@ Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
 
   // Try hard to fold loads from bitcasted strange and non-type-safe things.
   if (Offset.getMinSignedBits() <= 64)
-    return FoldReinterpretLoadFromConst(C, Ty, Offset.getSExtValue(), DL);
+    if (Constant *Result =
+            FoldReinterpretLoadFromConst(C, Ty, Offset.getSExtValue(), DL))
+      return Result;
 
-  return nullptr;
+  // Try an offset-independent fold of a uniform value.
+  return ConstantFoldLoadFromUniformValue(C, Ty);
 }
 
 Constant *llvm::ConstantFoldLoadFromConst(Constant *C, Type *Ty,
