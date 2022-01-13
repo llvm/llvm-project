@@ -23,8 +23,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter>
 class _LIBCPP_TEMPLATE_VIS move_iterator
 {
-private:
-    _Iter __i;
 public:
     typedef _Iter                                            iterator_type;
     typedef typename iterator_traits<iterator_type>::value_type value_type;
@@ -49,16 +47,16 @@ public:
 #endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator() : __i() {}
+    move_iterator() : __current_() {}
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    explicit move_iterator(_Iter __x) : __i(__x) {}
+    explicit move_iterator(_Iter __x) : __current_(__x) {}
 
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value
     > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator(const move_iterator<_Up>& __u) : __i(__u.base()) {}
+    move_iterator(const move_iterator<_Up>& __u) : __current_(__u.base()) {}
 
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value &&
@@ -67,33 +65,37 @@ public:
     > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     move_iterator& operator=(const move_iterator<_Up>& __u) {
-        __i = __u.base();
+        __current_ = __u.base();
         return *this;
     }
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 _Iter base() const {return __i;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    reference operator*() const { return static_cast<reference>(*__i); }
+    _Iter base() const { return __current_; }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    pointer  operator->() const { return __i;}
+    reference operator*() const { return static_cast<reference>(*__current_); }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator& operator++() {++__i; return *this;}
+    pointer  operator->() const { return __current_; }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator  operator++(int) {move_iterator __tmp(*this); ++__i; return __tmp;}
+    move_iterator& operator++() { ++__current_; return *this; }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator& operator--() {--__i; return *this;}
+    move_iterator  operator++(int) { move_iterator __tmp(*this); ++__current_; return __tmp; }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator  operator--(int) {move_iterator __tmp(*this); --__i; return __tmp;}
+    move_iterator& operator--() { --__current_; return *this; }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator  operator+ (difference_type __n) const {return move_iterator(__i + __n);}
+    move_iterator  operator--(int) { move_iterator __tmp(*this); --__current_; return __tmp; }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator& operator+=(difference_type __n) {__i += __n; return *this;}
+    move_iterator  operator+ (difference_type __n) const { return move_iterator(__current_ + __n); }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator  operator- (difference_type __n) const {return move_iterator(__i - __n);}
+    move_iterator& operator+=(difference_type __n) { __current_ += __n; return *this; }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    move_iterator& operator-=(difference_type __n) {__i -= __n; return *this;}
+    move_iterator  operator- (difference_type __n) const { return move_iterator(__current_ - __n); }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    reference operator[](difference_type __n) const { return static_cast<reference>(__i[__n]); }
+    move_iterator& operator-=(difference_type __n) { __current_ -= __n; return *this; }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    reference operator[](difference_type __n) const { return static_cast<reference>(__current_[__n]); }
+
+private:
+    _Iter __current_;
 };
 
 template <class _Iter1, class _Iter2>
