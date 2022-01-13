@@ -7694,23 +7694,6 @@ SDValue SelectionDAG::getLoadVP(ISD::MemIndexedMode AM,
                                 SDValue Offset, SDValue Mask, SDValue EVL,
                                 EVT MemVT, MachineMemOperand *MMO,
                                 bool IsExpanding) {
-  if (VT == MemVT) {
-    ExtType = ISD::NON_EXTLOAD;
-  } else if (ExtType == ISD::NON_EXTLOAD) {
-    assert(VT == MemVT && "Non-extending load from different memory type!");
-  } else {
-    // Extending load.
-    assert(MemVT.getScalarType().bitsLT(VT.getScalarType()) &&
-           "Should only be an extending load, not truncating!");
-    assert(VT.isInteger() == MemVT.isInteger() &&
-           "Cannot convert from FP to Int or Int -> FP!");
-    assert(VT.isVector() == MemVT.isVector() &&
-           "Cannot use an ext load to convert to or from a vector!");
-    assert((!VT.isVector() ||
-            VT.getVectorElementCount() == MemVT.getVectorElementCount()) &&
-           "Cannot use an ext load to change the number of vector elements!");
-  }
-
   bool Indexed = AM != ISD::UNINDEXED;
   assert((Indexed || Offset.isUndef()) && "Unindexed load with an offset!");
 
@@ -7799,48 +7782,29 @@ SDValue SelectionDAG::getIndexedLoadVP(SDValue OrigLoad, const SDLoc &dl,
 }
 
 SDValue SelectionDAG::getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val,
-                                 SDValue Ptr, SDValue Mask, SDValue EVL,
-                                 MachinePointerInfo PtrInfo, Align Alignment,
-                                 MachineMemOperand::Flags MMOFlags,
-                                 const AAMDNodes &AAInfo, bool IsCompressing) {
+                                 SDValue Ptr, SDValue Offset, SDValue Mask,
+                                 SDValue EVL, EVT MemVT, MachineMemOperand *MMO,
+                                 ISD::MemIndexedMode AM, bool IsTruncating,
+                                 bool IsCompressing) {
   assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
-
-  MMOFlags |= MachineMemOperand::MOStore;
-  assert((MMOFlags & MachineMemOperand::MOLoad) == 0);
-
-  if (PtrInfo.V.isNull())
-    PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
-
-  MachineFunction &MF = getMachineFunction();
-  uint64_t Size =
-      MemoryLocation::getSizeOrUnknown(Val.getValueType().getStoreSize());
-  MachineMemOperand *MMO =
-      MF.getMachineMemOperand(PtrInfo, MMOFlags, Size, Alignment, AAInfo);
-  return getStoreVP(Chain, dl, Val, Ptr, Mask, EVL, MMO, IsCompressing);
-}
-
-SDValue SelectionDAG::getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val,
-                                 SDValue Ptr, SDValue Mask, SDValue EVL,
-                                 MachineMemOperand *MMO, bool IsCompressing) {
-  assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
-  EVT VT = Val.getValueType();
-  SDVTList VTs = getVTList(MVT::Other);
-  SDValue Undef = getUNDEF(Ptr.getValueType());
-  SDValue Ops[] = {Chain, Val, Ptr, Undef, Mask, EVL};
+  bool Indexed = AM != ISD::UNINDEXED;
+  assert((Indexed || Offset.isUndef()) && "Unindexed vp_store with an offset!");
+  SDVTList VTs = Indexed ? getVTList(Ptr.getValueType(), MVT::Other)
+                         : getVTList(MVT::Other);
+  SDValue Ops[] = {Chain, Val, Ptr, Offset, Mask, EVL};
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::VP_STORE, VTs, Ops);
-  ID.AddInteger(VT.getRawBits());
+  ID.AddInteger(MemVT.getRawBits());
   ID.AddInteger(getSyntheticNodeSubclassData<VPStoreSDNode>(
-      dl.getIROrder(), VTs, ISD::UNINDEXED, false, IsCompressing, VT, MMO));
+      dl.getIROrder(), VTs, AM, IsTruncating, IsCompressing, MemVT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
     cast<VPStoreSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  auto *N =
-      newSDNode<VPStoreSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs,
-                               ISD::UNINDEXED, false, IsCompressing, VT, MMO);
+  auto *N = newSDNode<VPStoreSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs, AM,
+                                     IsTruncating, IsCompressing, MemVT, MMO);
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
@@ -7882,7 +7846,9 @@ SDValue SelectionDAG::getTruncStoreVP(SDValue Chain, const SDLoc &dl,
 
   assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
   if (VT == SVT)
-    return getStoreVP(Chain, dl, Val, Ptr, Mask, EVL, MMO, IsCompressing);
+    return getStoreVP(Chain, dl, Val, Ptr, getUNDEF(Ptr.getValueType()), Mask,
+                      EVL, VT, MMO, ISD::UNINDEXED,
+                      /*IsTruncating*/ false, IsCompressing);
 
   assert(SVT.getScalarType().bitsLT(VT.getScalarType()) &&
          "Should only be a truncating store, not extending!");

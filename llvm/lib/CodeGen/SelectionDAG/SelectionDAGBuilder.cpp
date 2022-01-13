@@ -7389,12 +7389,14 @@ void SelectionDAGBuilder::visitVPStoreScatter(const VPIntrinsic &VPIntrin,
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   SDValue ST;
   if (!IsScatter) {
+    SDValue Ptr = OpValues[1];
+    SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
     MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
         MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
         MemoryLocation::UnknownSize, *Alignment, AAInfo);
-    ST =
-        DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], OpValues[1],
-                       OpValues[2], OpValues[3], MMO, false /* IsTruncating */);
+    ST = DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], Ptr, Offset,
+                        OpValues[2], OpValues[3], VT, MMO, ISD::UNINDEXED,
+                        /* IsTruncating */ false, /*IsCompressing*/ false);
   } else {
     unsigned AS =
         PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
