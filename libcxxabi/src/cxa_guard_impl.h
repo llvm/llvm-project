@@ -157,6 +157,46 @@ constexpr uint32_t (*PlatformThreadID)() = nullptr;
 #endif
 
 //===----------------------------------------------------------------------===//
+//                          GuardByte
+//===----------------------------------------------------------------------===//
+
+static constexpr uint8_t UNSET = 0;
+static constexpr uint8_t COMPLETE_BIT = (1 << 0);
+static constexpr uint8_t PENDING_BIT = (1 << 1);
+static constexpr uint8_t WAITING_BIT = (1 << 2);
+
+/// Manages reads and writes to the guard byte.
+struct GuardByte {
+  GuardByte() = delete;
+  GuardByte(GuardByte const&) = delete;
+  GuardByte& operator=(GuardByte const&) = delete;
+
+  explicit GuardByte(uint8_t* const guard_byte_address) : guard_byte(guard_byte_address) {}
+
+public:
+  /// The guard byte portion of cxa_guard_acquire. Returns true if
+  /// initialization has already been completed.
+  /// Note: On completion, we haven't 'acquired' ownership of anything mutex
+  /// related. The name is simply referring to __cxa_guard_acquire.
+  bool acquire() {
+    // if guard_byte is non-zero, we have already completed initialization
+    // (i.e. release has been called)
+    return guard_byte.load(std::_AO_Acquire) != UNSET;
+  }
+
+  /// The guard byte portion of cxa_guard_release.
+  /// Note: On completion, we haven't 'released' ownership of anything mutex
+  /// related. The name is simply referring to __cxa_guard_release.
+  void release() { guard_byte.store(COMPLETE_BIT, std::_AO_Release); }
+
+  /// The guard byte portion of cxa_guard_abort.
+  void abort() {} // Nothing to do
+
+private:
+  AtomicInt<uint8_t> guard_byte;
+};
+
+//===----------------------------------------------------------------------===//
 //                          GuardBase
 //===----------------------------------------------------------------------===//
 
@@ -167,51 +207,51 @@ enum class AcquireResult {
 constexpr AcquireResult INIT_IS_DONE = AcquireResult::INIT_IS_DONE;
 constexpr AcquireResult INIT_IS_PENDING = AcquireResult::INIT_IS_PENDING;
 
-static constexpr uint8_t UNSET = 0;
-static constexpr uint8_t COMPLETE_BIT = (1 << 0);
-static constexpr uint8_t PENDING_BIT = (1 << 1);
-static constexpr uint8_t WAITING_BIT = (1 << 2);
-
 template <class Derived>
 struct GuardObject {
   GuardObject() = delete;
   GuardObject(GuardObject const&) = delete;
   GuardObject& operator=(GuardObject const&) = delete;
 
-  explicit GuardObject(uint32_t* g)
-      : base_address(g), guard_byte_address(reinterpret_cast<uint8_t*>(g)),
-        init_byte_address(reinterpret_cast<uint8_t*>(g) + 1), thread_id_address(nullptr) {}
-
-  explicit GuardObject(uint64_t* g)
-      : base_address(g), guard_byte_address(reinterpret_cast<uint8_t*>(g)),
-        init_byte_address(reinterpret_cast<uint8_t*>(g) + 1), thread_id_address(reinterpret_cast<uint32_t*>(g) + 1) {}
+private:
+  GuardByte guard_byte;
 
 public:
-  /// Implements __cxa_guard_acquire
+  /// ARM Constructor
+  explicit GuardObject(uint32_t* g)
+      : guard_byte(reinterpret_cast<uint8_t*>(g)), base_address(g),
+        init_byte_address(reinterpret_cast<uint8_t*>(g) + 1), thread_id_address(nullptr) {}
+
+  /// Itanium Constructor
+  explicit GuardObject(uint64_t* g)
+      : guard_byte(reinterpret_cast<uint8_t*>(g)), base_address(g),
+        init_byte_address(reinterpret_cast<uint8_t*>(g) + 1), thread_id_address(reinterpret_cast<uint32_t*>(g) + 1) {}
+
+  /// Implements __cxa_guard_acquire.
   AcquireResult cxa_guard_acquire() {
-    AtomicInt<uint8_t> guard_byte(guard_byte_address);
-    if (guard_byte.load(std::_AO_Acquire) != UNSET)
+    if (guard_byte.acquire())
       return INIT_IS_DONE;
     return derived()->acquire_init_byte();
   }
 
-  /// Implements __cxa_guard_release
+  /// Implements __cxa_guard_release.
   void cxa_guard_release() {
-    AtomicInt<uint8_t> guard_byte(guard_byte_address);
-    // Store complete first, so that when release wakes other folks, they see
-    // it as having been completed.
-    guard_byte.store(COMPLETE_BIT, std::_AO_Release);
+    // Update guard byte first, so if somebody is woken up by release_init_byte
+    // and comes all the way back around to __cxa_guard_acquire again, they see
+    // it as having completed initialization.
+    guard_byte.release();
     derived()->release_init_byte();
   }
 
-  /// Implements __cxa_guard_abort
-  void cxa_guard_abort() { derived()->abort_init_byte(); }
+  /// Implements __cxa_guard_abort.
+  void cxa_guard_abort() {
+    guard_byte.abort();
+    derived()->abort_init_byte();
+  }
 
 public:
   /// base_address - the address of the original guard object.
   void* const base_address;
-  /// The address of the guard byte at offset 0.
-  uint8_t* const guard_byte_address;
   /// The address of the byte used by the implementation during initialization.
   uint8_t* const init_byte_address;
   /// An optional address storing an identifier for the thread performing initialization.
