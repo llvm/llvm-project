@@ -107,8 +107,8 @@ define amdgpu_kernel void @s_test_imin_sle_v4i8(<4 x i8> addrspace(1)* %out, [8 
 }
 
 ; FUNC-LABEL: {{^}}s_test_imin_sle_v2i16:
-; GCN: s_load_dword s
-; GCN: s_load_dword s
+; GCN: s_load_dwordx2 s
+; GCN: s_load_dwordx2 s
 
 ; SI: s_ashr_i32
 ; SI: s_sext_i32_i16

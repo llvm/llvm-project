@@ -165,21 +165,19 @@ define amdgpu_kernel void @s_test_sub_self_v2i16(<2 x i16> addrspace(1)* %out, <
 define amdgpu_kernel void @s_test_sub_v2i16_kernarg(<2 x i16> addrspace(1)* %out, <2 x i16> %a, <2 x i16> %b) #1 {
 ; GFX9-LABEL: s_test_sub_v2i16_kernarg:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x30
-; GFX9-NEXT:    s_load_dword s3, s[0:1], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX9-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s6, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_pk_sub_i16 v0, s3, v0
+; GFX9-NEXT:    v_mov_b32_e32 v0, s3
+; GFX9-NEXT:    v_pk_sub_i16 v0, s2, v0
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX9-NEXT:    s_endpgm
 ;
 ; VI-LABEL: s_test_sub_v2i16_kernarg:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s4, s[0:1], 0x2c
-; VI-NEXT:    s_load_dword s5, s[0:1], 0x30
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2c
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
@@ -197,9 +195,8 @@ define amdgpu_kernel void @s_test_sub_v2i16_kernarg(<2 x i16> addrspace(1)* %out
 ;
 ; GFX10-LABEL: s_test_sub_v2i16_kernarg:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; GFX10-NEXT:    s_load_dword s3, s[0:1], 0x30
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
 ; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX10-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX10-NEXT:    s_mov_b32 s6, -1

@@ -854,13 +854,6 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
           (VecTy && TTI.getLoadVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
         continue;
 
-      // Make sure all the users of a vector are constant-index extracts.
-      if (isa<VectorType>(Ty) && !llvm::all_of(LI->users(), [](const User *U) {
-            const ExtractElementInst *EEI = dyn_cast<ExtractElementInst>(U);
-            return EEI && isa<ConstantInt>(EEI->getOperand(1));
-          }))
-        continue;
-
       // Save the load locations.
       const ChainID ID = getChainID(Ptr);
       LoadRefs[ID].push_back(LI);
@@ -899,12 +892,6 @@ Vectorizer::collectInstructions(BasicBlock *BB) {
       // No point in looking at these if they're too big to vectorize.
       if (TySize > VecRegSize / 2 ||
           (VecTy && TTI.getStoreVectorFactor(VF, TySize, TySize / 8, VecTy) == 0))
-        continue;
-
-      if (isa<VectorType>(Ty) && !llvm::all_of(SI->users(), [](const User *U) {
-            const ExtractElementInst *EEI = dyn_cast<ExtractElementInst>(U);
-            return EEI && isa<ConstantInt>(EEI->getOperand(1));
-          }))
         continue;
 
       // Save store location.
@@ -1290,51 +1277,31 @@ bool Vectorizer::vectorizeLoadChain(
       Builder.CreateAlignedLoad(VecTy, Bitcast, MaybeAlign(Alignment));
   propagateMetadata(LI, Chain);
 
-  if (VecLoadTy) {
-    SmallVector<Instruction *, 16> InstrsToErase;
-
-    unsigned VecWidth = VecLoadTy->getNumElements();
-    for (unsigned I = 0, E = Chain.size(); I != E; ++I) {
-      for (auto Use : Chain[I]->users()) {
-        // All users of vector loads are ExtractElement instructions with
-        // constant indices, otherwise we would have bailed before now.
-        Instruction *UI = cast<Instruction>(Use);
-        unsigned Idx = cast<ConstantInt>(UI->getOperand(1))->getZExtValue();
-        unsigned NewIdx = Idx + I * VecWidth;
-        Value *V = Builder.CreateExtractElement(LI, Builder.getInt32(NewIdx),
-                                                UI->getName());
-        if (V->getType() != UI->getType())
-          V = Builder.CreateBitCast(V, UI->getType());
-
-        // Replace the old instruction.
-        UI->replaceAllUsesWith(V);
-        InstrsToErase.push_back(UI);
-      }
+  for (unsigned I = 0, E = Chain.size(); I != E; ++I) {
+    Value *CV = Chain[I];
+    Value *V;
+    if (VecLoadTy) {
+      // Extract a subvector using shufflevector.
+      unsigned VecWidth = VecLoadTy->getNumElements();
+      auto Mask =
+          llvm::to_vector<8>(llvm::seq<int>(I * VecWidth, (I + 1) * VecWidth));
+      V = Builder.CreateShuffleVector(LI, Mask, CV->getName());
+    } else {
+      V = Builder.CreateExtractElement(LI, Builder.getInt32(I), CV->getName());
     }
 
-    // Bitcast might not be an Instruction, if the value being loaded is a
-    // constant.  In that case, no need to reorder anything.
-    if (Instruction *BitcastInst = dyn_cast<Instruction>(Bitcast))
-      reorder(BitcastInst);
-
-    for (auto I : InstrsToErase)
-      I->eraseFromParent();
-  } else {
-    for (unsigned I = 0, E = Chain.size(); I != E; ++I) {
-      Value *CV = Chain[I];
-      Value *V =
-          Builder.CreateExtractElement(LI, Builder.getInt32(I), CV->getName());
-      if (V->getType() != CV->getType()) {
-        V = Builder.CreateBitOrPointerCast(V, CV->getType());
-      }
-
-      // Replace the old instruction.
-      CV->replaceAllUsesWith(V);
+    if (V->getType() != CV->getType()) {
+      V = Builder.CreateBitOrPointerCast(V, CV->getType());
     }
 
-    if (Instruction *BitcastInst = dyn_cast<Instruction>(Bitcast))
-      reorder(BitcastInst);
+    // Replace the old instruction.
+    CV->replaceAllUsesWith(V);
   }
+
+  // Bitcast might not be an Instruction, if the value being loaded is a
+  // constant. In that case, no need to reorder anything.
+  if (Instruction *BitcastInst = dyn_cast<Instruction>(Bitcast))
+    reorder(BitcastInst);
 
   eraseInstructions(Chain);
 
