@@ -45,6 +45,8 @@ def riscv_shfl   : SDNode<"RISCVISD::SHFL",   SDTIntBinOp>;
 def riscv_shflw  : SDNode<"RISCVISD::SHFLW",  SDT_RISCVIntBinOpW>;
 def riscv_unshfl : SDNode<"RISCVISD::UNSHFL", SDTIntBinOp>;
 def riscv_unshflw: SDNode<"RISCVISD::UNSHFLW",SDT_RISCVIntBinOpW>;
+def riscv_bfp    : SDNode<"RISCVISD::BFP",    SDTIntBinOp>;
+def riscv_bfpw   : SDNode<"RISCVISD::BFPW",   SDT_RISCVIntBinOpW>;
 def riscv_bcompress    : SDNode<"RISCVISD::BCOMPRESS",   SDTIntBinOp>;
 def riscv_bcompressw   : SDNode<"RISCVISD::BCOMPRESSW",  SDT_RISCVIntBinOpW>;
 def riscv_bdecompress  : SDNode<"RISCVISD::BDECOMPRESS", SDTIntBinOp>;
@@ -1129,3 +1131,9 @@ let Predicates = [HasStdExtZbr, IsRV64] in {
 def : PatGpr<int_riscv_crc32_d, CRC32D>;
 def : PatGpr<int_riscv_crc32c_d, CRC32CD>;
 } // Predicates = [HasStdExtZbr, IsRV64]
+
+let Predicates = [HasStdExtZbf] in
+def : PatGprGpr<riscv_bfp, BFP>;
+
+let Predicates = [HasStdExtZbf, IsRV64] in
+def : PatGprGpr<riscv_bfpw, BFPW>;
