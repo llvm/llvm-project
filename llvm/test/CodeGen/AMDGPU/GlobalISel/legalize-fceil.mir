@@ -108,8 +108,7 @@ body: |
     ; SI-NEXT: [[AND2:%[0-9]+]]:_(s1) = G_AND [[FCMP]], [[FCMP1]]
     ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[AND2]](s1), [[C9]], [[C8]]
     ; SI-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[SELECT1]], [[SELECT2]]
-    ; SI-NEXT: [[FCEIL:%[0-9]+]]:_(s64) = G_FCEIL [[COPY]]
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[FCEIL]](s64)
+    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](s64)
     ; CI-LABEL: name: test_fceil_s64
     ; CI: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
     ; CI-NEXT: [[FCEIL:%[0-9]+]]:_(s64) = G_FCEIL [[COPY]]
@@ -279,7 +278,6 @@ body: |
     ; SI-NEXT: [[AND2:%[0-9]+]]:_(s1) = G_AND [[FCMP]], [[FCMP1]]
     ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[AND2]](s1), [[C9]], [[C8]]
     ; SI-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[SELECT1]], [[SELECT2]]
-    ; SI-NEXT: [[FCEIL:%[0-9]+]]:_(s64) = G_FCEIL [[UV]]
     ; SI-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV1]](s64)
     ; SI-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ubfe), [[UV5]](s32), [[C]](s32), [[C1]](s32)
     ; SI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C2]]
@@ -296,9 +294,8 @@ body: |
     ; SI-NEXT: [[FCMP3:%[0-9]+]]:_(s1) = G_FCMP floatpred(one), [[UV1]](s64), [[SELECT4]]
     ; SI-NEXT: [[AND5:%[0-9]+]]:_(s1) = G_AND [[FCMP2]], [[FCMP3]]
     ; SI-NEXT: [[SELECT5:%[0-9]+]]:_(s64) = G_SELECT [[AND5]](s1), [[C9]], [[C8]]
-    ; SI-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[SELECT4]], [[SELECT5]]
-    ; SI-NEXT: [[FCEIL1:%[0-9]+]]:_(s64) = G_FCEIL [[UV1]]
-    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FCEIL]](s64), [[FCEIL1]](s64)
+    ; SI-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[SELECT4]], [[SELECT5]]
+    ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FADD]](s64), [[FADD1]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
     ; CI-LABEL: name: test_fceil_v2s64
     ; CI: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3

@@ -1993,6 +1993,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
 
   // TODO: Should this propagate fast-math-flags?
   B.buildFAdd(MI.getOperand(0).getReg(), Trunc, Add);
+  MI.eraseFromParent();
   return true;
 }
 
