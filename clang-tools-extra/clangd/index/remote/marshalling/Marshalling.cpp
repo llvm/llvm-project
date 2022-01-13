@@ -269,7 +269,6 @@ llvm::Expected<Symbol> Marshaller::toProtobuf(const clangd::Symbol &From) {
     return Declaration.takeError();
   *Result.mutable_canonical_declaration() = *Declaration;
   Result.set_references(From.References);
-  Result.set_origin(static_cast<uint32_t>(From.Origin));
   Result.set_signature(From.Signature.str());
   Result.set_template_specialization_args(
       From.TemplateSpecializationArgs.str());

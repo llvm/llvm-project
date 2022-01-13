@@ -602,7 +602,7 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
     auto NewIndex = std::make_unique<SwapIndex>(std::make_unique<MemIndex>());
     auto IndexLoadTask = [File = External.Location,
                           PlaceHolder = NewIndex.get()] {
-      if (auto Idx = loadIndex(File, /*UseDex=*/true))
+      if (auto Idx = loadIndex(File, SymbolOrigin::Static, /*UseDex=*/true))
         PlaceHolder->reset(std::move(Idx));
     };
     if (Tasks) {
