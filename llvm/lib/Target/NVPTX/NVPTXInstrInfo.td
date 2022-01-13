@@ -249,6 +249,32 @@ multiclass F3<string OpcStr, SDNode OpNode> {
                (ins Float32Regs:$a, f32imm:$b),
                !strconcat(OpcStr, ".f32 \t$dst, $a, $b;"),
                [(set Float32Regs:$dst, (OpNode Float32Regs:$a, fpimm:$b))]>;
+
+   def f16rr_ftz :
+     NVPTXInst<(outs Float16Regs:$dst),
+               (ins Float16Regs:$a, Float16Regs:$b),
+               !strconcat(OpcStr, ".ftz.f16 \t$dst, $a, $b;"),
+               [(set Float16Regs:$dst, (OpNode Float16Regs:$a, Float16Regs:$b))]>,
+               Requires<[useFP16Math, doF32FTZ]>;
+   def f16rr :
+     NVPTXInst<(outs Float16Regs:$dst),
+               (ins Float16Regs:$a, Float16Regs:$b),
+               !strconcat(OpcStr, ".f16 \t$dst, $a, $b;"),
+               [(set Float16Regs:$dst, (OpNode Float16Regs:$a, Float16Regs:$b))]>,
+               Requires<[useFP16Math]>;
+
+   def f16x2rr_ftz :
+     NVPTXInst<(outs Float16x2Regs:$dst),
+               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+               !strconcat(OpcStr, ".ftz.f16x2 \t$dst, $a, $b;"),
+               [(set Float16x2Regs:$dst, (OpNode Float16x2Regs:$a, Float16x2Regs:$b))]>,
+               Requires<[useFP16Math, doF32FTZ]>;
+   def f16x2rr :
+     NVPTXInst<(outs Float16x2Regs:$dst),
+               (ins Float16x2Regs:$a, Float16x2Regs:$b),
+               !strconcat(OpcStr, ".f16x2 \t$dst, $a, $b;"),
+               [(set Float16x2Regs:$dst, (OpNode Float16x2Regs:$a, Float16x2Regs:$b))]>,
+               Requires<[useFP16Math]>;
 }
 
 // Template for instructions which take three FP args.  The

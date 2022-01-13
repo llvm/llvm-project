@@ -560,10 +560,14 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setOperationAction(Op, MVT::f64, Legal);
     setOperationAction(Op, MVT::v2f16, Expand);
   }
-  setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
-  setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
-  setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
-  setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
+  // max.f16 is supported on sm_80+.
+  if (STI.allowFP16Math() && STI.getSmVersion() >= 80 &&
+      STI.getPTXVersion() >= 70) {
+    setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::v2f16, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::v2f16, Legal);
+  }
 
   // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
   // No FPOW or FREM in PTX.
