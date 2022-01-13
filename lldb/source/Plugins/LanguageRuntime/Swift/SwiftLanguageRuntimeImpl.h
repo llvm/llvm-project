@@ -247,7 +247,7 @@ protected:
   /// If \p instance points to a Swift object, retrieve its
   /// RecordTypeInfo and pass it to the callback \p fn. Repeat the
   /// process with all superclasses. If \p fn returns \p true, early
-  /// exit and return \ptrue. Otherwise return \p false.
+  /// exit and return \p true. Otherwise return \p false.
   bool ForEachSuperClassType(ValueObject &instance,
                              std::function<bool(SuperClassType)> fn);
 

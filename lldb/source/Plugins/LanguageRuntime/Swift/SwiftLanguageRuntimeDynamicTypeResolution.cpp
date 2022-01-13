@@ -1574,22 +1574,36 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
     NodePointer type_node = dem.demangleSymbol(mangled);
     llvm::StringRef type_name = TypeSystemSwiftTypeRef::GetBaseName(
         ts->CanonicalizeSugar(dem, type_node));
+
+    auto *reflection_ctx = GetReflectionContext();
+    if (!reflection_ctx)
+      return {};
+    CompilerType instance_type = valobj->GetCompilerType();
+    auto *instance_ts =
+        llvm::dyn_cast_or_null<TypeSystemSwift>(instance_type.GetTypeSystem());
+    if (!instance_ts)
+      return {};
+
+    // LLDBTypeInfoProvider needs to kept alive until as long as supers gets accessed.
     llvm::SmallVector<SuperClassType, 2> supers;
-    ForEachSuperClassType(*valobj, [&](SuperClassType sc) -> bool {
-      if (!found_start) {
-        // The ValueObject always points to the same class instance,
-        // even when querying base classes. Drop base classes until we
-        // reach the requested type.
-        if (auto *tr = sc.get_typeref()) {
-          NodePointer base_class = tr->getDemangling(dem);
-          if (TypeSystemSwiftTypeRef::GetBaseName(base_class) != type_name)
-            return false;
-          found_start = true;
-        }
-      }
-      supers.push_back(sc);
-      return supers.size() >= 2;
-    });
+    LLDBTypeInfoProvider tip(*this, *instance_ts);
+    lldb::addr_t pointer = valobj->GetPointerValue();
+    reflection_ctx->ForEachSuperClassType(
+        &tip, pointer, [&](SuperClassType sc) -> bool {
+          if (!found_start) {
+            // The ValueObject always points to the same class instance,
+            // even when querying base classes. Drop base classes until we
+            // reach the requested type.
+            if (auto *tr = sc.get_typeref()) {
+              NodePointer base_class = tr->getDemangling(dem);
+              if (TypeSystemSwiftTypeRef::GetBaseName(base_class) != type_name)
+                return false;
+              found_start = true;
+            }
+          }
+          supers.push_back(sc);
+          return supers.size() >= 2;
+        });
 
     if (supers.size() == 0) {
       LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
