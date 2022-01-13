@@ -40,4 +40,6 @@ int main(int, char**) {
   assert(stack.top() == 4);
   stack.pop();
   assert(stack.empty());
+
+  return 0;
 }
