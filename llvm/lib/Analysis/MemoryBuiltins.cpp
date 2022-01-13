@@ -305,6 +305,85 @@ Value *llvm::getAllocAlignment(const CallBase *V,
   return V->getOperand(FnData->AlignParam);
 }
 
+/// When we're compiling N-bit code, and the user uses parameters that are
+/// greater than N bits (e.g. uint64_t on a 32-bit build), we can run into
+/// trouble with APInt size issues. This function handles resizing + overflow
+/// checks for us. Check and zext or trunc \p I depending on IntTyBits and
+/// I's value.
+static bool CheckedZextOrTrunc(APInt &I, unsigned IntTyBits) {
+  // More bits than we can handle. Checking the bit width isn't necessary, but
+  // it's faster than checking active bits, and should give `false` in the
+  // vast majority of cases.
+  if (I.getBitWidth() > IntTyBits && I.getActiveBits() > IntTyBits)
+    return false;
+  if (I.getBitWidth() != IntTyBits)
+    I = I.zextOrTrunc(IntTyBits);
+  return true;
+}
+
+Optional<APInt>
+llvm::getAllocSize(const CallBase *CB,
+                   const TargetLibraryInfo *TLI,
+                   std::function<const Value*(const Value*)> Mapper) {
+  // Note: This handles both explicitly listed allocation functions and
+  // allocsize.  The code structure could stand to be cleaned up a bit.
+  Optional<AllocFnsTy> FnData = getAllocationSize(CB, TLI);
+  if (!FnData)
+    return None;
+
+  // Get the index type for this address space, results and intermediate
+  // computations are performed at that width.
+  auto &DL = CB->getModule()->getDataLayout();
+  const unsigned IntTyBits = DL.getIndexTypeSizeInBits(CB->getType());
+
+  // Handle strdup-like functions separately.
+  if (FnData->AllocTy == StrDupLike) {
+    APInt Size(IntTyBits, GetStringLength(Mapper(CB->getArgOperand(0))));
+    if (!Size)
+      return None;
+
+    // Strndup limits strlen.
+    if (FnData->FstParam > 0) {
+      const ConstantInt *Arg =
+        dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
+      if (!Arg)
+        return None;
+
+      APInt MaxSize = Arg->getValue().zextOrSelf(IntTyBits);
+      if (Size.ugt(MaxSize))
+        Size = MaxSize + 1;
+    }
+    return Size;
+  }
+
+  const ConstantInt *Arg =
+    dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->FstParam)));
+  if (!Arg)
+    return None;
+
+  APInt Size = Arg->getValue();
+  if (!CheckedZextOrTrunc(Size, IntTyBits))
+    return None;
+
+  // Size is determined by just 1 parameter.
+  if (FnData->SndParam < 0)
+    return Size;
+
+  Arg = dyn_cast<ConstantInt>(Mapper(CB->getArgOperand(FnData->SndParam)));
+  if (!Arg)
+    return None;
+
+  APInt NumElems = Arg->getValue();
+  if (!CheckedZextOrTrunc(NumElems, IntTyBits))
+    return None;
+
+  bool Overflow;
+  Size = Size.umul_ov(NumElems, Overflow);
+  if (Overflow)
+    return None;
+  return Size;
+}
+
 Constant *llvm::getInitialValueOfAllocation(const CallBase *Alloc,
                                             const TargetLibraryInfo *TLI,
                                             Type *Ty) {
@@ -535,20 +614,8 @@ SizeOffsetType ObjectSizeOffsetVisitor::compute(Value *V) {
   return unknown();
 }
 
-/// When we're compiling N-bit code, and the user uses parameters that are
-/// greater than N bits (e.g. uint64_t on a 32-bit build), we can run into
-/// trouble with APInt size issues. This function handles resizing + overflow
-/// checks for us. Check and zext or trunc \p I depending on IntTyBits and
-/// I's value.
 bool ObjectSizeOffsetVisitor::CheckedZextOrTrunc(APInt &I) {
-  // More bits than we can handle. Checking the bit width isn't necessary, but
-  // it's faster than checking active bits, and should give `false` in the
-  // vast majority of cases.
-  if (I.getBitWidth() > IntTyBits && I.getActiveBits() > IntTyBits)
-    return false;
-  if (I.getBitWidth() != IntTyBits)
-    I = I.zextOrTrunc(IntTyBits);
-  return true;
+  return ::CheckedZextOrTrunc(I, IntTyBits);
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
@@ -589,53 +656,10 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitCallBase(CallBase &CB) {
-  Optional<AllocFnsTy> FnData = getAllocationSize(&CB, TLI);
-  if (!FnData)
-    return unknown();
-
-  // Handle strdup-like functions separately.
-  if (FnData->AllocTy == StrDupLike) {
-    APInt Size(IntTyBits, GetStringLength(CB.getArgOperand(0)));
-    if (!Size)
-      return unknown();
-
-    // Strndup limits strlen.
-    if (FnData->FstParam > 0) {
-      ConstantInt *Arg =
-          dyn_cast<ConstantInt>(CB.getArgOperand(FnData->FstParam));
-      if (!Arg)
-        return unknown();
-
-      APInt MaxSize = Arg->getValue().zextOrSelf(IntTyBits);
-      if (Size.ugt(MaxSize))
-        Size = MaxSize + 1;
-    }
-    return std::make_pair(Size, Zero);
-  }
-
-  ConstantInt *Arg = dyn_cast<ConstantInt>(CB.getArgOperand(FnData->FstParam));
-  if (!Arg)
-    return unknown();
-
-  APInt Size = Arg->getValue();
-  if (!CheckedZextOrTrunc(Size))
-    return unknown();
-
-  // Size is determined by just 1 parameter.
-  if (FnData->SndParam < 0)
-    return std::make_pair(Size, Zero);
-
-  Arg = dyn_cast<ConstantInt>(CB.getArgOperand(FnData->SndParam));
-  if (!Arg)
-    return unknown();
-
-  APInt NumElems = Arg->getValue();
-  if (!CheckedZextOrTrunc(NumElems))
-    return unknown();
-
-  bool Overflow;
-  Size = Size.umul_ov(NumElems, Overflow);
-  return Overflow ? unknown() : std::make_pair(Size, Zero);
+  auto Mapper = [](const Value *V) { return V; };
+  if (Optional<APInt> Size = getAllocSize(&CB, TLI, Mapper))
+    return std::make_pair(*Size, Zero);
+  return unknown();
 }
 
 SizeOffsetType
