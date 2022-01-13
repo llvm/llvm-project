@@ -883,3 +883,12 @@ func @atomic_rmw(%I : memref<10xi32>, %ival : i32, %F : memref<10xf32>, %fval : 
   // CHECK: llvm.atomicrmw _and %{{.*}}, %{{.*}} acq_rel
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @collapse_static_shape_with_non_identity_layout
+func @collapse_static_shape_with_non_identity_layout(%arg: memref<1x1x8x8xf32, affine_map<(d0, d1, d2, d3)[s0] -> (d0 * 64 + s0 + d1 * 64 + d2 * 8 + d3)>>) -> memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>> {
+// CHECK-NOT: memref.collapse_shape
+  %1 = memref.collapse_shape %arg [[0, 1, 2, 3]] : memref<1x1x8x8xf32, affine_map<(d0, d1, d2, d3)[s0] -> (d0 * 64 + s0 + d1 * 64 + d2 * 8 + d3)>> into memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
+  return %1 : memref<64xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
+}
