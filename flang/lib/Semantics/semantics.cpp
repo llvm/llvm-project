@@ -332,7 +332,7 @@ SourceName SemanticsContext::SaveTempName(std::string &&name) {
 
 SourceName SemanticsContext::GetTempName(const Scope &scope) {
   for (const auto &str : tempNames_) {
-    if (str.size() > 5 && str.substr(0, 5) == ".F18.") {
+    if (IsTempName(str)) {
       SourceName name{str};
       if (scope.find(name) == scope.end()) {
         return name;
@@ -340,6 +340,10 @@ SourceName SemanticsContext::GetTempName(const Scope &scope) {
     }
   }
   return SaveTempName(".F18."s + std::to_string(tempNames_.size()));
+}
+
+bool SemanticsContext::IsTempName(const std::string &name) {
+  return name.size() > 5 && name.substr(0, 5) == ".F18.";
 }
 
 Scope *SemanticsContext::GetBuiltinModule(const char *name) {

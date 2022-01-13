@@ -173,6 +173,7 @@ public:
   SymbolVector GetIndexVars(IndexVarKind);
   SourceName SaveTempName(std::string &&);
   SourceName GetTempName(const Scope &);
+  static bool IsTempName(const std::string &);
 
   // Locate and process the contents of a built-in module on demand
   Scope *GetBuiltinModule(const char *name);

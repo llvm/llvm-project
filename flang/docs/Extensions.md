@@ -81,7 +81,9 @@ end
 * Kind specification with `*`, e.g. `REAL*4`
 * `DOUBLE COMPLEX`
 * Signed complex literal constants
-* DEC `STRUCTURE`, `RECORD`, `UNION`, and `MAP`
+* DEC `STRUCTURE`, `RECORD`, with '%FILL'; but `UNION`, and `MAP`
+  are not yet supported throughout compilation, and elicit a
+  "not yet implemented" message.
 * Structure field access with `.field`
 * `BYTE` as synonym for `INTEGER(KIND=1)`
 * Quad precision REAL literals with `Q`
