@@ -66,7 +66,7 @@ public:
 #if defined(LONG_DOUBLE_IS_DOUBLE)
     __llvm_libc::fputil::FPBits<long double> expected_fp =
         __llvm_libc::fputil::FPBits<long double>(expectedRawData64);
-    const int expectedErrno = expectedErrno64;
+    const int expected_errno = expectedErrno64;
 #elif defined(SPECIAL_X86_LONG_DOUBLE)
     __llvm_libc::fputil::FPBits<long double> expected_fp =
         __llvm_libc::fputil::FPBits<long double>(expectedRawData80);
@@ -74,7 +74,7 @@ public:
 #else
     __llvm_libc::fputil::FPBits<long double> expected_fp =
         __llvm_libc::fputil::FPBits<long double>(expectedRawData128);
-    const int expectedErrno = expectedErrno128;
+    const int expected_errno = expectedErrno128;
 #endif
 
     errno = 0;
