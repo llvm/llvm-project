@@ -188,7 +188,19 @@ void update(SelectionTree::Selection &Result, SelectionTree::Selection New) {
 // As well as comments, don't count semicolons as real tokens.
 // They're not properly claimed as expr-statement is missing from the AST.
 bool shouldIgnore(const syntax::Token &Tok) {
-  return Tok.kind() == tok::comment || Tok.kind() == tok::semi;
+  switch (Tok.kind()) {
+    // Even "attached" comments are not considered part of a node's range.
+    case tok::comment:
+    // The AST doesn't directly store locations for terminating semicolons.
+    case tok::semi:
+    // We don't have locations for cvr-qualifiers: see QualifiedTypeLoc.
+    case tok::kw_const:
+    case tok::kw_volatile:
+    case tok::kw_restrict:
+      return true;
+    default:
+      return false;
+  }
 }
 
 // Determine whether 'Target' is the first expansion of the macro

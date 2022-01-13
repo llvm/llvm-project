@@ -331,9 +331,17 @@ TEST(SelectionTest, CommonAncestor) {
 
       {"int (*getFunc([[do^uble]]))(int);", "BuiltinTypeLoc"},
 
+      // Member pointers and pack expansion use declarator syntax, but are
+      // restricted so they don't need special casing.
+      {"class X{}; [[int X::^*]]y[10];", "MemberPointerTypeLoc"},
+      {"template<typename ...T> void foo([[T*^...]]x);",
+       "PackExpansionTypeLoc"},
+      {"template<typename ...T> void foo([[^T]]*...x);",
+       "TemplateTypeParmTypeLoc"},
+
       // FIXME: the AST has no location info for qualifiers.
       {"const [[a^uto]] x = 42;", "AutoTypeLoc"},
-      {"[[co^nst auto x = 42]];", "VarDecl"},
+      {"co^nst auto x = 42;", nullptr},
 
       {"^", nullptr},
       {"void foo() { [[foo^^]] (); }", "DeclRefExpr"},
