@@ -1594,9 +1594,12 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     if (!LT.second.isVector())
       return 0;
 
-    // The type may be split. Normalize the index to the new type.
-    unsigned Width = LT.second.getVectorNumElements();
-    Index = Index % Width;
+    // The type may be split. For fixed-width vectors we can normalize the
+    // index to the new type.
+    if (LT.second.isFixedLengthVector()) {
+      unsigned Width = LT.second.getVectorNumElements();
+      Index = Index % Width;
+    }
 
     // The element at index zero is already inside the vector.
     if (Index == 0)
