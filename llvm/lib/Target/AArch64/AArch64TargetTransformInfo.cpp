@@ -1168,6 +1168,32 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   return None;
 }
 
+Optional<Value *> AArch64TTIImpl::simplifyDemandedVectorEltsIntrinsic(
+    InstCombiner &IC, IntrinsicInst &II, APInt OrigDemandedElts,
+    APInt &UndefElts, APInt &UndefElts2, APInt &UndefElts3,
+    std::function<void(Instruction *, unsigned, APInt, APInt &)>
+        SimplifyAndSetOp) const {
+  switch (II.getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::aarch64_neon_fcvtxn:
+  case Intrinsic::aarch64_neon_rshrn:
+  case Intrinsic::aarch64_neon_sqrshrn:
+  case Intrinsic::aarch64_neon_sqrshrun:
+  case Intrinsic::aarch64_neon_sqshrn:
+  case Intrinsic::aarch64_neon_sqshrun:
+  case Intrinsic::aarch64_neon_sqxtn:
+  case Intrinsic::aarch64_neon_sqxtun:
+  case Intrinsic::aarch64_neon_uqrshrn:
+  case Intrinsic::aarch64_neon_uqshrn:
+  case Intrinsic::aarch64_neon_uqxtn:
+    SimplifyAndSetOp(&II, 0, OrigDemandedElts, UndefElts);
+    break;
+  }
+
+  return None;
+}
+
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
                                            ArrayRef<const Value *> Args) {
 
