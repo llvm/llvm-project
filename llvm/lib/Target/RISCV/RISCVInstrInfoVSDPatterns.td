@@ -363,6 +363,31 @@ multiclass VPatNConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
+multiclass VPatWidenBinarySDNode_VV_VX_WV_WX<SDNode op, PatFrags extop, string instruction_name> {
+  foreach vti = AllWidenableIntVectors in {
+    def : Pat<(op (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs2))),
+                  (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
+              (!cast<Instruction>(instruction_name#"_VV_"#vti.Vti.LMul.MX)
+                 vti.Vti.RegClass:$rs2, vti.Vti.RegClass:$rs1, 
+                 vti.Vti.AVL, vti.Vti.Log2SEW)>;
+    def : Pat<(op (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs2))),
+                  (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1))))),
+              (!cast<Instruction>(instruction_name#"_VX_"#vti.Vti.LMul.MX)
+                 vti.Vti.RegClass:$rs2, GPR:$rs1, 
+                 vti.Vti.AVL, vti.Vti.Log2SEW)>;
+    def : Pat<(op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
+                  (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
+              (!cast<Instruction>(instruction_name#"_WV_"#vti.Vti.LMul.MX)
+                 vti.Wti.RegClass:$rs2, vti.Vti.RegClass:$rs1, 
+                 vti.Vti.AVL, vti.Vti.Log2SEW)>;
+    def : Pat<(op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
+                  (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1))))),
+              (!cast<Instruction>(instruction_name#"_WX_"#vti.Vti.LMul.MX)
+                 vti.Wti.RegClass:$rs2, GPR:$rs1, 
+                 vti.Vti.AVL, vti.Vti.Log2SEW)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -398,6 +423,15 @@ foreach vti = AllIntegerVectors in {
             (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX)
                  vti.RegClass:$rs1, simm5:$rs2, vti.AVL, vti.Log2SEW)>;
 }
+
+// 12.2. Vector Widening Integer Add and Subtract
+defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, sext_oneuse, "PseudoVWADD">;
+defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, zext_oneuse, "PseudoVWADDU">;
+defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, anyext_oneuse, "PseudoVWADDU">;
+
+defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, sext_oneuse, "PseudoVWSUB">;
+defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, zext_oneuse, "PseudoVWSUBU">;
+defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, anyext_oneuse, "PseudoVWSUBU">;
 
 // 12.3. Vector Integer Extension
 defm : VPatExtendSDNode_V<[zext, anyext], "PseudoVZEXT", "VF2",
