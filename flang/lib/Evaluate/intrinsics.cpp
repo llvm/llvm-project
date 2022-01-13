@@ -1496,8 +1496,6 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         if (!arrayArg) {
           arrayArg = arg;
           arrayArgName = d.keyword;
-        } else {
-          argOk &= rank == arrayArg->Rank();
         }
         break;
       case Rank::coarray:
