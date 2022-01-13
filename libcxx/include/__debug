@@ -23,9 +23,9 @@
 #endif
 
 #if _LIBCPP_DEBUG_LEVEL >= 1 || defined(_LIBCPP_BUILDING_LIBRARY)
-#   include <cstdlib>
-#   include <cstdio>
 #   include <cstddef>
+#   include <cstdio>
+#   include <cstdlib>
 #endif
 
 #if _LIBCPP_DEBUG_LEVEL == 0
