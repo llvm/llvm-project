@@ -277,7 +277,6 @@ func @dma_unknown_size(%arg0: memref<?x?xf32>) {
       // size -- not yet implemented.
       // CHECK: affine.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<?x?xf32>
       affine.load %arg0[%i, %j] : memref<? x ? x f32>
-      // expected-error@-6 {{copy generation failed for one or more memref's in this block}}
     }
   }
   return
@@ -297,7 +296,6 @@ func @dma_memref_3d(%arg0: memref<1024x1024x1024xf32>) {
         // not yet implemented.
         // CHECK: affine.load %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<1024x1024x1024xf32>
         %v = affine.load %arg0[%idx, %idy, %idz] : memref<1024 x 1024 x 1024 x f32>
-        // expected-error@-10 {{copy generation failed for one or more memref's in this block}}
       }
     }
   }

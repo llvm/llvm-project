@@ -2970,24 +2970,13 @@ static bool getFullMemRefAsRegion(Operation *op, unsigned numParamLoopIVs,
   return true;
 }
 
-/// Performs explicit copying for the contiguous sequence of operations in the
-/// block iterator range [`begin', `end'), where `end' can't be past the
-/// terminator of the block (since additional operations are potentially
-/// inserted right before `end`. Returns the total size of fast memory space
-/// buffers used. `copyOptions` provides various parameters, and the output
-/// argument `copyNests` is the set of all copy nests inserted, each represented
-/// by its root affine.for. Since we generate alloc's and dealloc's for all fast
-/// buffers (before and after the range of operations resp. or at a hoisted
-/// position), all of the fast memory capacity is assumed to be available for
-/// processing this block range. When 'filterMemRef' is specified, copies are
-/// only generated for the provided MemRef.
-uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
-                                      Block::iterator end,
-                                      const AffineCopyOptions &copyOptions,
-                                      Optional<Value> filterMemRef,
-                                      DenseSet<Operation *> &copyNests) {
+LogicalResult mlir::affineDataCopyGenerate(Block::iterator begin,
+                                           Block::iterator end,
+                                           const AffineCopyOptions &copyOptions,
+                                           Optional<Value> filterMemRef,
+                                           DenseSet<Operation *> &copyNests) {
   if (begin == end)
-    return 0;
+    return success();
 
   assert(begin->getBlock() == std::prev(end)->getBlock() &&
          "Inconsistent block begin/end args");
@@ -3109,9 +3098,9 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
   });
 
   if (error) {
-    begin->emitError(
-        "copy generation failed for one or more memref's in this block\n");
-    return 0;
+    LLVM_DEBUG(begin->emitError(
+        "copy generation failed for one or more memref's in this block\n"));
+    return failure();
   }
 
   uint64_t totalCopyBuffersSizeInBytes = 0;
@@ -3147,18 +3136,18 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
   processRegions(writeRegions);
 
   if (!ret) {
-    begin->emitError(
-        "copy generation failed for one or more memref's in this block\n");
-    return totalCopyBuffersSizeInBytes;
+    LLVM_DEBUG(begin->emitError(
+        "copy generation failed for one or more memref's in this block\n"));
+    return failure();
   }
 
   // For a range of operations, a note will be emitted at the caller.
   AffineForOp forOp;
   uint64_t sizeInKib = llvm::divideCeil(totalCopyBuffersSizeInBytes, 1024);
   if (llvm::DebugFlag && (forOp = dyn_cast<AffineForOp>(&*begin))) {
-    forOp.emitRemark()
-        << sizeInKib
-        << " KiB of copy buffers in fast memory space for this block\n";
+    LLVM_DEBUG(forOp.emitRemark()
+               << sizeInKib
+               << " KiB of copy buffers in fast memory space for this block\n");
   }
 
   if (totalCopyBuffersSizeInBytes > copyOptions.fastMemCapacityBytes) {
@@ -3167,15 +3156,15 @@ uint64_t mlir::affineDataCopyGenerate(Block::iterator begin,
     block->getParentOp()->emitWarning(str);
   }
 
-  return totalCopyBuffersSizeInBytes;
+  return success();
 }
 
 // A convenience version of affineDataCopyGenerate for all ops in the body of
 // an AffineForOp.
-uint64_t mlir::affineDataCopyGenerate(AffineForOp forOp,
-                                      const AffineCopyOptions &copyOptions,
-                                      Optional<Value> filterMemRef,
-                                      DenseSet<Operation *> &copyNests) {
+LogicalResult mlir::affineDataCopyGenerate(AffineForOp forOp,
+                                           const AffineCopyOptions &copyOptions,
+                                           Optional<Value> filterMemRef,
+                                           DenseSet<Operation *> &copyNests) {
   return affineDataCopyGenerate(forOp.getBody()->begin(),
                                 std::prev(forOp.getBody()->end()), copyOptions,
                                 filterMemRef, copyNests);
