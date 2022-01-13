@@ -1961,7 +1961,7 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
     EXPECT_EQ(64u, Res.getBitWidth());
     EXPECT_EQ(NumBits, Res.Zero.countTrailingOnes());
     EXPECT_EQ(64u, Res.One.countTrailingZeros());
-    EXPECT_EQ(Align(1 << NumBits), Info.computeKnownAlignment(Copies[Idx]));
+    EXPECT_EQ(Align(1ull << NumBits), Info.computeKnownAlignment(Copies[Idx]));
   };
 
   CheckBits(0, Copies.size() - 7);
