@@ -1491,8 +1491,7 @@ bool WebAssemblyTargetLowering::MatchTableForLowering(SelectionDAG &DAG,
     if (GA) {
       // We are in Case 2 above.
       Idx = Base->getOperand(1);
-      if (!Idx || GA->getNumValues() != 1 || Idx->getNumValues() != 1)
-        return false;
+      assert(GA->getNumValues() == 1);
     } else {
       // This might be Case 1 above (or an error)
       SDValue V = Base->getOperand(0);
