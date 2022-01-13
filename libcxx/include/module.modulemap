@@ -661,6 +661,10 @@ module std [system] {
       module concepts                        { private header "__memory/concepts.h" }
       module construct_at                    { private header "__memory/construct_at.h" }
       module pointer_traits                  { private header "__memory/pointer_traits.h" }
+      module ranges_construct_at {
+        private header "__memory/ranges_construct_at.h"
+        export __function_like
+      }
       module ranges_uninitialized_algorithms {
         private header "__memory/ranges_uninitialized_algorithms.h"
         export __function_like

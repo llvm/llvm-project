@@ -249,6 +249,7 @@ set(files
   __memory/concepts.h
   __memory/construct_at.h
   __memory/pointer_traits.h
+  __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
