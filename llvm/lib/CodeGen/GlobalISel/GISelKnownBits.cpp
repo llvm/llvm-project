@@ -40,7 +40,7 @@ Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
   case TargetOpcode::G_ASSERT_ALIGN: {
     // TODO: Min with source
     int64_t LogAlign = MI->getOperand(2).getImm();
-    return Align(1u << LogAlign);
+    return Align(1ull << LogAlign);
   }
   case TargetOpcode::G_FRAME_INDEX: {
     int FrameIdx = MI->getOperand(1).getIndex();
