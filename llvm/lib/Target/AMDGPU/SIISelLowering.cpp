@@ -6756,14 +6756,23 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_workitem_id_x:
+    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 0) == 0)
+      return DAG.getConstant(0, DL, MVT::i32);
+
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDX);
   case Intrinsic::amdgcn_workitem_id_y:
+    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 1) == 0)
+      return DAG.getConstant(0, DL, MVT::i32);
+
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDY);
   case Intrinsic::amdgcn_workitem_id_z:
+    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 2) == 0)
+      return DAG.getConstant(0, DL, MVT::i32);
+
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDZ);
