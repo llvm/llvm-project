@@ -28,10 +28,10 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::uninitialized_move_n <https://llvm.org/D116023>`_
 | `ranges::uninitialized_fill <https://llvm.org/D115626>`_
 | `ranges::uninitialized_fill_n <https://llvm.org/D115626>`_
-| ranges::construct_at
-| ranges::destroy
-| ranges::destroy_at
-| ranges::destroy_n",[special.mem.concepts],Konstantin Varlamov,In progress
+| `ranges::construct_at <https://llvm.org/D116078>`_
+| `ranges::destroy <https://llvm.org/D116078>`_
+| `ranges::destroy_at <https://llvm.org/D116078>`_
+| `ranges::destroy_n <https://llvm.org/D116078>`_",[special.mem.concepts],Konstantin Varlamov,✅
 [strings],Adds begin/end and updates const_iterator.,[iterator.concepts],Unassigned,Not started
 [views.span],Same as [strings],[iterator.concepts],Unassigned,Not started
 `[iterator.cust.move] <http://wg21.link/iterator.cust.move>`_,`ranges::iter_move <https://llvm.org/D99873>`_,,Zoe Carver,✅
