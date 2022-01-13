@@ -103,6 +103,9 @@ TEST(getLinuxHostCPUName, AArch64) {
             "cortex-a53");
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd40"),
+            "neoverse-v1");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd0c"),
             "neoverse-n1");
   // Verify that both CPU implementer and CPU part are checked:
