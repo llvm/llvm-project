@@ -15,7 +15,7 @@ define i32 @test_return(i32* %p, i32 %oldval, i32 %newval) {
 ; CHECK-NEXT:    stlxr w8, w2, [x0]
 ; CHECK-NEXT:    cbnz w8, LBB0_1
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    mov w0, #-1
+; CHECK-NEXT:    mov w0, #1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_4: ; %cmpxchg.nostore
 ; CHECK-NEXT:    mov w0, wzr
@@ -64,7 +64,7 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; CHECK-NEXT:    stlxrb w9, w2, [x0]
 ; CHECK-NEXT:    cbnz w9, LBB1_1
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    mov w8, #-1
+; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    eor w0, w8, #0x1
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB1_4: ; %cmpxchg.nostore
@@ -188,7 +188,7 @@ define i1 @test_conditional2(i32 %a, i32 %b, i32* %c) {
 ; CHECK-NEXT:    stlxr w8, w20, [x19]
 ; CHECK-NEXT:    cbnz w8, LBB3_1
 ; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    mov w8, #-1
+; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    b LBB3_5
 ; CHECK-NEXT:  LBB3_4: ; %cmpxchg.nostore
 ; CHECK-NEXT:    mov w8, wzr

@@ -4767,7 +4767,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                          C->isTargetOpcode(), C->isOpaque());
     case ISD::ANY_EXTEND:
       // Some targets like RISCV prefer to sign extend some types.
-      if (TLI->isSExtCheaperThanZExt(Operand.getValueType(), VT, Operand))
+      if (TLI->isSExtCheaperThanZExt(Operand.getValueType(), VT))
         return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
                            C->isTargetOpcode(), C->isOpaque());
       return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,

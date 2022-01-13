@@ -1198,8 +1198,7 @@ bool RISCVTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return TargetLowering::isZExtFree(Val, VT2);
 }
 
-bool RISCVTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT,
-                                                SDValue V) const {
+bool RISCVTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 

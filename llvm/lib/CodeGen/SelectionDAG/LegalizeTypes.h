@@ -283,7 +283,7 @@ private:
     EVT OldVT = Op.getValueType();
     SDLoc DL(Op);
     Op = GetPromotedInteger(Op);
-    if (TLI.isSExtCheaperThanZExt(OldVT, Op.getValueType(), Op))
+    if (TLI.isSExtCheaperThanZExt(OldVT, Op.getValueType()))
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, Op.getValueType(), Op,
                          DAG.getValueType(OldVT));
     return DAG.getZeroExtendInReg(Op, DL, OldVT);
