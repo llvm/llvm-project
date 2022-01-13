@@ -102,11 +102,34 @@ public:
     return Loops[Index];
   }
 
+  /// Get the loop index of the given loop \p L.
+  unsigned getLoopIndex(const Loop &L) const {
+    for (unsigned I = 0; I < getNumLoops(); ++I)
+      if (getLoop(I) == &L)
+        return I;
+    llvm_unreachable("Loop not in the loop nest");
+  }
+
   /// Return the number of loops in the nest.
   size_t getNumLoops() const { return Loops.size(); }
 
   /// Get the loops in the nest.
   ArrayRef<Loop *> getLoops() const { return Loops; }
+
+  /// Get the loops in the nest at the given \p Depth.
+  LoopVectorTy getLoopsAtDepth(unsigned Depth) const {
+    assert(Depth >= Loops.front()->getLoopDepth() &&
+           Depth <= Loops.back()->getLoopDepth() && "Invalid depth");
+    LoopVectorTy Result;
+    for (unsigned I = 0; I < getNumLoops(); ++I) {
+      Loop *L = getLoop(I);
+      if (L->getLoopDepth() == Depth)
+        Result.push_back(L);
+      else if (L->getLoopDepth() > Depth)
+        break;
+    }
+    return Result;
+  }
 
   /// Retrieve a vector of perfect loop nests contained in the current loop
   /// nest. For example, given the following  nest containing 4 loops, this
