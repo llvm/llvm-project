@@ -154,8 +154,20 @@ StorageLocation *Environment::getThisPointeeStorageLocation() const {
   return DACtx->getThisPointeeStorageLocation();
 }
 
-void Environment::setValue(const StorageLocation &Loc, Value &Value) {
-  LocToVal[&Loc] = &Value;
+void Environment::setValue(const StorageLocation &Loc, Value &Val) {
+  LocToVal[&Loc] = &Val;
+
+  if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
+    auto &AggregateLoc = *cast<AggregateStorageLocation>(&Loc);
+
+    const QualType Type = AggregateLoc.getType();
+    assert(Type->isStructureOrClassType());
+
+    for (const FieldDecl *Field : Type->getAsRecordDecl()->fields()) {
+      assert(Field != nullptr);
+      setValue(AggregateLoc.getChild(*Field), StructVal->getChild(*Field));
+    }
+  }
 }
 
 Value *Environment::getValue(const StorageLocation &Loc) const {
