@@ -232,12 +232,10 @@ namespace {
 
 /// An implementation of the generic ReflectionContextInterface that
 /// is templatized on target pointer width and specialized to either
-/// 32-bit or 64-bit pointers.
-template <unsigned PointerSize>
+/// 32-bit or 64-bit pointers, with and without ObjC interoperability.
+template <typename ReflectionContext>
 class TargetReflectionContext
     : public SwiftLanguageRuntimeImpl::ReflectionContextInterface {
-  using ReflectionContext = swift::reflection::ReflectionContext<
-      swift::External<swift::RuntimeTarget<PointerSize>>>;
   ReflectionContext m_reflection_ctx;
 
 public:
@@ -349,14 +347,30 @@ public:
 
 std::unique_ptr<SwiftLanguageRuntimeImpl::ReflectionContextInterface>
 SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext32(
-    std::shared_ptr<swift::remote::MemoryReader> reader) {
-  return std::make_unique<TargetReflectionContext<4>>(reader);
+    std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop) {
+  using ReflectionContext32ObjCInterop =
+      TargetReflectionContext<swift::reflection::ReflectionContext<
+          swift::External<swift::WithObjCInterop<swift::RuntimeTarget<4>>>>>;
+  using ReflectionContext32NoObjCInterop =
+      TargetReflectionContext<swift::reflection::ReflectionContext<
+          swift::External<swift::NoObjCInterop<swift::RuntimeTarget<4>>>>>;
+  if (ObjCInterop)    
+    return std::make_unique<ReflectionContext32ObjCInterop>(reader);
+  return std::make_unique<ReflectionContext32NoObjCInterop>(reader);
 }
 
 std::unique_ptr<SwiftLanguageRuntimeImpl::ReflectionContextInterface>
 SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext64(
-    std::shared_ptr<swift::remote::MemoryReader> reader) {
-  return std::make_unique<TargetReflectionContext<8>>(reader);
+    std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop) {
+  using ReflectionContext64ObjCInterop =
+      TargetReflectionContext<swift::reflection::ReflectionContext<
+          swift::External<swift::WithObjCInterop<swift::RuntimeTarget<8>>>>>;
+  using ReflectionContext64NoObjCInterop =
+      TargetReflectionContext<swift::reflection::ReflectionContext<
+          swift::External<swift::NoObjCInterop<swift::RuntimeTarget<8>>>>>;
+  if (ObjCInterop)
+    return std::make_unique<ReflectionContext64ObjCInterop>(reader);
+  return std::make_unique<ReflectionContext64NoObjCInterop>(reader);
 }
 
 SwiftLanguageRuntimeImpl::ReflectionContextInterface::

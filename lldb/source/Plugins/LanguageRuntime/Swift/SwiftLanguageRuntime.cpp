@@ -461,14 +461,24 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
 
   auto &target = m_process.GetTarget();
   if (auto exe_module = target.GetExecutableModule()) {
+    bool objc_interop = (bool)findRuntime(m_process, RuntimeKind::ObjC);
+    const char *objc_interop_msg =
+        objc_interop ? "with Objective-C interopability" : "Swift only";
+
     auto &triple = exe_module->GetArchitecture().GetTriple();
-    if (triple.isArch64Bit())
+    if (triple.isArch64Bit()) {
+      LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Initializing a 64-bit reflection context (%s) for \"%s\"",
+                triple.str().c_str(), objc_interop_msg);
       m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
-          this->GetMemoryReader());
-    else if (triple.isArch32Bit())
+          this->GetMemoryReader(), objc_interop);
+    } else if (triple.isArch32Bit()) {
+      LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Initializing a 32-bit reflection context (%s) for \"%s\"",
+                triple.str().c_str(), objc_interop_msg);
       m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
-          this->GetMemoryReader());
-    else {
+          this->GetMemoryReader(), objc_interop);
+    } else {
       LLDB_LOGF(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
                 "Could not initialize reflection context for \"%s\"",
                 triple.str().c_str());

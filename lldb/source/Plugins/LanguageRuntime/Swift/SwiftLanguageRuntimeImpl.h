@@ -200,12 +200,12 @@ public:
     /// Return a 32-bit reflection context.
     static std::unique_ptr<ReflectionContextInterface>
     CreateReflectionContext32(
-        std::shared_ptr<swift::remote::MemoryReader> reader);
+        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop);
 
     /// Return a 64-bit reflection context.
     static std::unique_ptr<ReflectionContextInterface>
     CreateReflectionContext64(
-        std::shared_ptr<swift::remote::MemoryReader> reader);
+        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop);
 
     virtual ~ReflectionContextInterface();
 
