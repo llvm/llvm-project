@@ -830,20 +830,6 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
-  // TODO: Currently we handle only loops with 1 induction variable.
-  if (Inductions.size() != 1) {
-    LLVM_DEBUG(dbgs() << "Loops with more than 1 induction variables are not "
-                      << "supported currently.\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "MultiIndutionOuter",
-                                      OuterLoop->getStartLoc(),
-                                      OuterLoop->getHeader())
-             << "Only outer loops with 1 induction variable can be "
-                "interchanged currently.";
-    });
-    return true;
-  }
-
   Inductions.clear();
   if (!findInductionAndReductions(InnerLoop, Inductions, nullptr)) {
     LLVM_DEBUG(
@@ -1612,7 +1598,6 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   updateSuccessor(InnerLoopLatchPredecessorBI, InnerLoopLatch,
                   InnerLoopLatchSuccessor, DTUpdates);
 
-
   if (OuterLoopLatchBI->getSuccessor(0) == OuterLoopHeader)
     OuterLoopLatchSuccessor = OuterLoopLatchBI->getSuccessor(1);
   else
@@ -1642,12 +1627,13 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
       InnerLoopPHIs.push_back(cast<PHINode>(&PHI));
   for (PHINode &PHI : OuterLoopHeader->phis())
     if (OuterInnerReductions.contains(&PHI))
-      OuterLoopPHIs.push_back(cast<PHINode>(&PHI));
+      OuterLoopPHIs.push_back(&PHI);
 
   // Now move the remaining reduction PHIs from outer to inner loop header and
   // vice versa. The PHI nodes must be part of a reduction across the inner and
   // outer loop and all the remains to do is and updating the incoming blocks.
   for (PHINode *PHI : OuterLoopPHIs) {
+    LLVM_DEBUG(dbgs() << "Outer loop reduction PHIs:\n"; PHI->dump(););
     PHI->moveBefore(InnerLoopHeader->getFirstNonPHI());
     assert(OuterInnerReductions.count(PHI) && "Expected a reduction PHI node");
   }
