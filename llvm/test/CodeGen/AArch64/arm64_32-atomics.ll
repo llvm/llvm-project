@@ -249,7 +249,7 @@ define {i8*, i1} @test_cmpxchg_ptr(i8** %addr, i8* %cmp, i8* %new) {
 ; CHECK:     stlxr [[SUCCESS:w[0-9]+]], w2, [x0]
 ; CHECK:     cbnz [[SUCCESS]], [[LOOP]]
 
-; CHECK:     mov w1, #1
+; CHECK:     mov w1, #-1
 ; CHECK:     mov w0, [[OLD]]
 ; CHECK:     ret
 
