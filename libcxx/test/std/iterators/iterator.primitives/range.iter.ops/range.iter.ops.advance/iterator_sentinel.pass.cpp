@@ -18,32 +18,9 @@
 #include <cstddef>
 
 #include "test_iterators.h"
+#include "../types.h"
 
 using range_t = std::array<int, 10>;
-
-class distance_apriori_sentinel {
-public:
-  distance_apriori_sentinel() = default;
-  constexpr explicit distance_apriori_sentinel(std::ptrdiff_t const count) : count_(count) {}
-
-  constexpr bool operator==(std::input_or_output_iterator auto const&) const {
-    assert(false && "difference op should take precedence");
-    return false;
-  }
-
-  friend constexpr std::ptrdiff_t operator-(std::input_or_output_iterator auto const&,
-                                            distance_apriori_sentinel const y) {
-    return -y.count_;
-  }
-
-  friend constexpr std::ptrdiff_t operator-(distance_apriori_sentinel const x,
-                                            std::input_or_output_iterator auto const&) {
-    return x.count_;
-  }
-
-private:
-  std::ptrdiff_t count_ = 0;
-};
 
 template <class It, class Sent = It>
 constexpr void check_assignable_case() {
