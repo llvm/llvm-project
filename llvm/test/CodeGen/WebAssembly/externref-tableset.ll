@@ -79,4 +79,19 @@ define void @set_externref_table_with_var_offset2(%externref %g, i32 %i) {
   ret void
 }
 
+declare i32 @get_table_slot() local_unnamed_addr
+
+define void @set_externref_table_with_id_from_call(%externref %g) {
+; CHECK-LABEL: set_externref_table_with_id_from_call:
+; CHECK-NEXT:  .functype       set_externref_table_with_id_from_call (externref) -> ()
+; CHECK-NEXT:  call    get_table_slot
+; CHECK-NEXT:  local.get       0
+; CHECK-NEXT:  table.set       externref_table
+; CHECK-NEXT:  end_function
+  %id = call i32 @get_table_slot()
+  %p = getelementptr [0 x %externref], [0 x %externref] addrspace (1)* @externref_table, i32 0, i32 %id
+  store %externref %g, %externref addrspace(1)* %p
+  ret void
+}
+
 ; CHECK: .tabletype externref_table, externref
