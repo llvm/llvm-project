@@ -1080,7 +1080,7 @@ struct ParsedAttributesWithRange : ParsedAttributes {
   SourceRange Range;
 };
 struct ParsedAttributesViewWithRange : ParsedAttributesView {
-  ParsedAttributesViewWithRange() : ParsedAttributesView() {}
+  ParsedAttributesViewWithRange() {}
   void clearListOnly() {
     ParsedAttributesView::clearListOnly();
     Range = SourceRange();
