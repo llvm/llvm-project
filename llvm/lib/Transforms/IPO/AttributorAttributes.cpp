@@ -1182,7 +1182,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
           return HandlePassthroughUser(Usr, OffsetInfoMap[CurPtr], Follow);
         if (CE->isCompare())
           return true;
-        if (!CE->isGEPWithNoNotionalOverIndexing()) {
+        if (!isa<GEPOperator>(CE)) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled constant user " << *CE
                             << "\n");
           return false;
