@@ -906,8 +906,8 @@ static LogicalResult verify(InitTensorOp op) {
     return op->emitError("expected ")
            << resultType.getRank() << " sizes values";
 
-  Type expectedType =
-      InitTensorOp::inferResultType(staticSizes, resultType.getElementType());
+  Type expectedType = InitTensorOp::inferResultType(
+      staticSizes, resultType.getElementType(), resultType.getEncoding());
   if (resultType != expectedType) {
     return op.emitError("specified type ")
            << resultType << " does not match the inferred type "
@@ -917,8 +917,8 @@ static LogicalResult verify(InitTensorOp op) {
 }
 
 Type InitTensorOp::inferResultType(ArrayRef<int64_t> staticSizes,
-                                   Type elementType) {
-  return RankedTensorType::get(staticSizes, elementType);
+                                   Type elementType, Attribute encoding) {
+  return RankedTensorType::get(staticSizes, elementType, encoding);
 }
 
 namespace {

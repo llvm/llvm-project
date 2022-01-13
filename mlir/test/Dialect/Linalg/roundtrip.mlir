@@ -435,15 +435,18 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x
 
 // -----
 
+#attr = {"foo"}
 func @init_tensor(%arg0 : index, %arg1 : index)
 {
   %0 = linalg.init_tensor [3, 42] : tensor<3x42xf32>
   %1 = linalg.init_tensor [4, %arg0, %arg1, 5] : tensor<4x?x?x5xf32>
+  %2 = linalg.init_tensor [2, 2] : tensor<2x2xf32, #attr>
   return
 }
 // CHECK-LABEL: func @init_tensor
 //       CHECK:   linalg.init_tensor [3, 42] : tensor<3x42xf32>
 //       CHECK:   linalg.init_tensor [4, %{{.*}}, %{{.*}}, 5] : tensor<4x?x?x5xf32>
+//       CHECK:   linalg.init_tensor [2, 2] : tensor<2x2xf32, {foo}>
 
 // -----
 
