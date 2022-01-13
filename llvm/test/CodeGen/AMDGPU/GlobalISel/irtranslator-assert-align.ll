@@ -159,7 +159,8 @@ define void @declaration_result_align_8() {
   ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY18]](s32), [[COPY19]](s32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   G_STORE [[C]](s8), [[MV]](p1) :: (store (s8) into %ir.ptr, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p1) = G_ASSERT_ALIGN [[MV]], 8
+  ; CHECK-NEXT:   G_STORE [[C]](s8), [[ASSERT_ALIGN]](p1) :: (store (s8) into %ir.ptr, align 8, addrspace 1)
   ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY8]]
   ; CHECK-NEXT:   S_SETPC_B64_return [[COPY20]]
   %ptr = call i8 addrspace(1)* @returns_ptr_align8()
