@@ -14,8 +14,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
 #include <__ranges/access.h>
-#include <__utility/forward.h>
-#include <concepts>
+#include <__utility/auto_cast.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,34 +34,32 @@ namespace __data {
 
   template <class _Tp>
   concept __member_data =
+    __can_borrow<_Tp> &&
     requires(_Tp&& __t) {
-      { _VSTD::forward<_Tp>(__t) } -> __can_borrow;
-      { __t.data() } -> __ptr_to_object;
+      { _LIBCPP_AUTO_CAST(__t.data()) } -> __ptr_to_object;
     };
 
   template <class _Tp>
   concept __ranges_begin_invocable =
     !__member_data<_Tp> &&
+    __can_borrow<_Tp> &&
     requires(_Tp&& __t) {
-      { _VSTD::forward<_Tp>(__t) } -> __can_borrow;
-      { ranges::begin(_VSTD::forward<_Tp>(__t)) } -> contiguous_iterator;
+      { ranges::begin(__t) } -> contiguous_iterator;
     };
 
   struct __fn {
     template <__member_data _Tp>
-      requires __can_borrow<_Tp>
     _LIBCPP_HIDE_FROM_ABI
-    constexpr __ptr_to_object auto operator()(_Tp&& __t) const
+    constexpr auto operator()(_Tp&& __t) const
         noexcept(noexcept(__t.data())) {
       return __t.data();
     }
 
     template<__ranges_begin_invocable _Tp>
-      requires __can_borrow<_Tp>
     _LIBCPP_HIDE_FROM_ABI
-    constexpr __ptr_to_object auto operator()(_Tp&& __t) const
-        noexcept(noexcept(_VSTD::to_address(ranges::begin(_VSTD::forward<_Tp>(__t))))) {
-      return _VSTD::to_address(ranges::begin(_VSTD::forward<_Tp>(__t)));
+    constexpr auto operator()(_Tp&& __t) const
+        noexcept(noexcept(_VSTD::to_address(ranges::begin(__t)))) {
+      return _VSTD::to_address(ranges::begin(__t));
     }
   };
 }

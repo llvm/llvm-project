@@ -36,9 +36,45 @@ struct DataMember {
   int x;
   constexpr const int *data() const { return &x; }
 };
-
 static_assert( std::is_invocable_v<RangeDataT, DataMember &>);
 static_assert(!std::is_invocable_v<RangeDataT, DataMember &&>);
+static_assert( std::is_invocable_v<RangeDataT, DataMember const&>);
+static_assert(!std::is_invocable_v<RangeDataT, DataMember const&&>);
+
+constexpr bool testReturnTypes() {
+  {
+    int *x[2];
+    ASSERT_SAME_TYPE(decltype(std::ranges::data(x)), int**);
+  }
+  {
+    int x[2][2];
+    ASSERT_SAME_TYPE(decltype(std::ranges::data(x)), int(*)[2]);
+  }
+  {
+    struct D {
+      char*& data();
+      short*& data() const;
+    };
+    ASSERT_SAME_TYPE(decltype(std::ranges::data(std::declval<D&>())), char*);
+    static_assert(!std::is_invocable_v<RangeDataT, D&&>);
+    ASSERT_SAME_TYPE(decltype(std::ranges::data(std::declval<const D&>())), short*);
+    static_assert(!std::is_invocable_v<RangeDataT, const D&&>);
+  }
+  {
+    struct NC {
+      char *begin() const;
+      char *end() const;
+      int *data();
+    };
+    static_assert(!std::ranges::contiguous_range<NC>);
+    static_assert( std::ranges::contiguous_range<const NC>);
+    ASSERT_SAME_TYPE(decltype(std::ranges::data(std::declval<NC&>())), int*);
+    static_assert(!std::is_invocable_v<RangeDataT, NC&&>);
+    ASSERT_SAME_TYPE(decltype(std::ranges::data(std::declval<const NC&>())), char*);
+    static_assert(!std::is_invocable_v<RangeDataT, const NC&&>);
+  }
+  return true;
+}
 
 struct VoidDataMember {
   void *data() const;
@@ -49,21 +85,14 @@ struct Empty { };
 struct EmptyDataMember {
   Empty data() const;
 };
-
 static_assert(!std::is_invocable_v<RangeDataT, EmptyDataMember const&>);
 
-struct EmptyPtrDataMember {
-  Empty x;
-  constexpr const Empty *data() const { return &x; }
-};
-
-struct PtrConvertible {
-  operator int*() const;
-};
 struct PtrConvertibleDataMember {
-  PtrConvertible data() const;
+  struct Ptr {
+    operator int*() const;
+  };
+  Ptr data() const;
 };
-
 static_assert(!std::is_invocable_v<RangeDataT, PtrConvertibleDataMember const&>);
 
 struct NonConstDataMember {
@@ -74,14 +103,13 @@ struct NonConstDataMember {
 struct EnabledBorrowingDataMember {
   constexpr int *data() { return &globalBuff[0]; }
 };
-
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<EnabledBorrowingDataMember> = true;
 
 struct DataMemberAndBegin {
   int x;
   constexpr const int *data() const { return &x; }
-  constexpr const int *begin() const { return &x; }
+  const int *begin() const;
 };
 
 constexpr bool testDataMember() {
@@ -147,8 +175,10 @@ struct BeginMemberRvalue {
 
   ContiguousIter begin() &&;
 };
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRvalue&>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRvalue&&>);
 static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRvalue const&>);
+static_assert(!std::is_invocable_v<RangeDataT, BeginMemberRvalue const&&>);
 
 struct BeginMemberBorrowingEnabled {
   constexpr contiguous_iterator<int*> begin() { return contiguous_iterator<int*>{&globalBuff[1]}; }
@@ -188,6 +218,8 @@ struct RandomButNotContiguous {
 static_assert(!std::is_invocable_v<RangeDataT, RandomButNotContiguous>);
 
 int main(int, char**) {
+  static_assert(testReturnTypes());
+
   testDataMember();
   static_assert(testDataMember());
 
