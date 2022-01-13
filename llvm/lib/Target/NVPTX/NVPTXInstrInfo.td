@@ -868,6 +868,8 @@ defm FMUL : F3_fma_component<"mul", fmul>;
 
 defm FMIN : F3<"min", fminnum>;
 defm FMAX : F3<"max", fmaxnum>;
+defm FMINNAN : F3<"min.NaN", fminimum>;
+defm FMAXNAN : F3<"max.NaN", fmaximum>;
 
 defm FABS  : F2<"abs", fabs>;
 defm FNEG  : F2<"neg", fneg>;
