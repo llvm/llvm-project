@@ -1309,6 +1309,37 @@ for.end:
 
 declare float @llvm.fmuladd.f32(float, float, float)
 
+; Test case with invariant store where fadd is strict.
+define void @reduction_store_to_invariant_address(float* %dst, float* readonly %src) {
+; CHECK-ORDERED-LABEL: @reduction_store_to_invariant_address(
+; CHECK-ORDERED-NOT: vector.body
+
+; CHECK-UNORDERED-LABEL: @reduction_store_to_invariant_address(
+; CHECK-UNORDERED-NOT: vector.body
+
+; CHECK-NOT-VECTORIZED-LABEL: @reduction_store_to_invariant_address(
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
+entry:
+  %arrayidx = getelementptr inbounds float, float* %dst, i64 42
+  store float 0.000000e+00, float* %arrayidx, align 4
+  br label %for.body
+
+for.body:
+  %0 = phi float [ 0.000000e+00, %entry ], [ %add, %for.body ]
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %arrayidx1 = getelementptr inbounds float, float* %src, i64 %indvars.iv
+  %1 = load float, float* %arrayidx1, align 4
+  %add = fadd float %0, %1
+  store float %add, float* %arrayidx, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond = icmp eq i64 %indvars.iv.next, 1000
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+}
+
 !0 = distinct !{!0, !5, !9, !11}
 !1 = distinct !{!1, !5, !10, !11}
 !2 = distinct !{!2, !6, !9, !11}

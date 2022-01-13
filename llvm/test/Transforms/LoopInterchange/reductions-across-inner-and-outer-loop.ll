@@ -151,6 +151,44 @@ for1.loopexit:                                 ; preds = %for1.inc
   ret i64 %sum.inc.lcssa2
 }
 
+; Check that we do not interchange if reduction is stored in an invariant address inside inner loop
+; REMARKS: --- !Missed
+; REMARKS-NEXT: Pass:            loop-interchange
+; REMARKS-NEXT: Name:            UnsupportedPHIOuter
+; REMARKS-NEXT: Function:        test4
+
+define i64 @test4([100 x [100 x i64]]* %Arr, i64* %dst) {
+entry:
+  %gep.dst = getelementptr inbounds i64, i64* %dst, i64 42
+  br label %for1.header
+
+for1.header:                                         ; preds = %for1.inc, %entry
+  %indvars.iv23 = phi i64 [ 0, %entry ], [ %indvars.iv.next24, %for1.inc ]
+  %sum.outer = phi i64 [ 0, %entry ], [ %sum.inc.lcssa, %for1.inc ]
+  br label %for2
+
+for2:                                        ; preds = %for2, %for1.header
+  %indvars.iv = phi i64 [ 0, %for1.header ], [ %indvars.iv.next.3, %for2 ]
+  %sum.inner = phi i64 [ %sum.outer, %for1.header ], [ %sum.inc, %for2 ]
+  %arrayidx = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* %Arr, i64 0, i64 %indvars.iv, i64 %indvars.iv23
+  %lv = load i64, i64* %arrayidx, align 4
+  %sum.inc = add i64 %sum.inner, %lv
+  store i64 %sum.inc, i64* %gep.dst, align 4
+  %indvars.iv.next.3 = add nuw nsw i64 %indvars.iv, 1
+  %exit1 = icmp eq i64 %indvars.iv.next.3, 100
+  br i1 %exit1, label %for1.inc, label %for2
+
+for1.inc:                                ; preds = %for2
+  %sum.inc.lcssa = phi i64 [ %sum.inc, %for2 ]
+  %indvars.iv.next24 = add nuw nsw i64 %indvars.iv23, 1
+  %exit2 = icmp eq i64 %indvars.iv.next24, 100
+  br i1 %exit2, label %for1.loopexit, label %for1.header
+
+for1.loopexit:                                 ; preds = %for1.inc
+  %sum.inc.lcssa2 = phi i64 [ %sum.inc.lcssa, %for1.inc ]
+  ret i64 %sum.inc.lcssa2
+}
+
 ; Check that we do not interchange or crash if the PHI in the outer loop gets a
 ; constant from the inner loop.
 ; REMARKS: --- !Missed
