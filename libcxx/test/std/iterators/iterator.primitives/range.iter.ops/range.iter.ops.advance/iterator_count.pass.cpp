@@ -13,67 +13,58 @@
 
 #include <iterator>
 
-#include <array>
 #include <cassert>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
-using range_t = std::array<int, 10>;
+template <bool Count, typename It>
+constexpr void check(int* first, std::iter_difference_t<It> n, int* expected) {
+  using Difference = std::iter_difference_t<It>;
+  Difference const M = (expected - first); // expected travel distance (which may be negative)
+  auto abs = [](auto x) { return x < 0 ? -x : x; };
 
-template <std::input_or_output_iterator It>
-constexpr void check_move_forward(std::ptrdiff_t const n) {
-  auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(It(range.begin()));
-  std::ranges::advance(first, n);
-
-  assert(first.base().base() == range.begin() + n);
-  if constexpr (std::random_access_iterator<It>) {
-    assert(first.stride_count() == 0 || first.stride_count() == 1);
-    assert(first.stride_displacement() == 1);
-  } else {
-    assert(first.stride_count() == n);
-    assert(first.stride_displacement() == n);
+  {
+    It it(first);
+    std::ranges::advance(it, n);
+    assert(base(it) == expected);
+    ASSERT_SAME_TYPE(decltype(std::ranges::advance(it, n)), void);
   }
-}
 
-template <std::bidirectional_iterator It>
-constexpr void check_move_backward(std::ptrdiff_t const n) {
-  auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(It(range.begin() + n));
-  std::ranges::advance(first, -n);
-  assert(first.base().base() == range.begin());
-
-  if constexpr (std::random_access_iterator<It>) {
-    assert(first.stride_count() == 0 || first.stride_count() == 1);
-    assert(first.stride_displacement() == 1);
-  } else {
-    assert(first.stride_count() == n);
-    assert(first.stride_displacement() == -n);
+  // Count operations
+  if constexpr (Count) {
+    auto it = stride_counting_iterator(It(first));
+    std::ranges::advance(it, n);
+    if constexpr (std::random_access_iterator<It>) {
+      assert(it.stride_count() <= 1);
+    } else {
+      assert(it.stride_count() == abs(M));
+    }
   }
 }
 
 constexpr bool test() {
-  check_move_forward<cpp17_input_iterator<range_t::const_iterator> >(1);
-  check_move_forward<cpp20_input_iterator<range_t::const_iterator> >(2);
-  check_move_forward<forward_iterator<range_t::const_iterator> >(3);
-  check_move_forward<bidirectional_iterator<range_t::const_iterator> >(4);
-  check_move_forward<random_access_iterator<range_t::const_iterator> >(5);
-  check_move_forward<contiguous_iterator<range_t::const_iterator> >(6);
-  check_move_forward<output_iterator<range_t::iterator> >(7);
+  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  check_move_backward<bidirectional_iterator<range_t::const_iterator> >(4);
-  check_move_backward<random_access_iterator<range_t::const_iterator> >(5);
-  check_move_backward<contiguous_iterator<range_t::const_iterator> >(6);
+  // Check advancing forward
+  for (int n = 0; n != 10; ++n) {
+    check<false, cpp17_input_iterator<int*>>(  range, n, range+n);
+    check<false, cpp20_input_iterator<int*>>(  range, n, range+n);
+    check<true,  forward_iterator<int*>>(      range, n, range+n);
+    check<true,  bidirectional_iterator<int*>>(range, n, range+n);
+    check<true,  random_access_iterator<int*>>(range, n, range+n);
+    check<true,  contiguous_iterator<int*>>(   range, n, range+n);
+    check<true,  int*>(                        range, n, range+n);
+    check<true,  output_iterator<int*> >(      range, n, range+n);
+  }
 
-  // Zero should be checked for each case and each overload
-  check_move_forward<cpp17_input_iterator<range_t::const_iterator> >(0);
-  check_move_forward<cpp20_input_iterator<range_t::const_iterator> >(0);
-  check_move_forward<forward_iterator<range_t::const_iterator> >(0);
-  check_move_forward<bidirectional_iterator<range_t::const_iterator> >(0);
-  check_move_forward<random_access_iterator<range_t::const_iterator> >(0);
-  check_move_forward<output_iterator<range_t::iterator> >(0);
-  check_move_backward<bidirectional_iterator<range_t::const_iterator> >(0);
-  check_move_backward<random_access_iterator<range_t::const_iterator> >(0);
+  // Check advancing backward
+  for (int n = 0; n != 10; ++n) {
+    check<true,  bidirectional_iterator<int*>>(range+9, -n, range+9 - n);
+    check<true,  random_access_iterator<int*>>(range+9, -n, range+9 - n);
+    check<true,  contiguous_iterator<int*>>(   range+9, -n, range+9 - n);
+    check<true,  int*>(                        range+9, -n, range+9 - n);
+  }
 
   return true;
 }

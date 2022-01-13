@@ -12,40 +12,39 @@
 // ranges::prev(it, n)
 
 #include <iterator>
+
 #include <cassert>
+#include <concepts>
 #include <utility>
 
 #include "test_iterators.h"
 
-template <std::input_or_output_iterator It>
-constexpr void check(It it, std::ptrdiff_t n, int const* expected) {
-  stride_counting_iterator result = std::ranges::prev(stride_counting_iterator(std::move(it)), n);
-  assert(result.base().base() == expected);
-
-  if constexpr (std::random_access_iterator<It>) {
-    assert(result.stride_count() <= 1);
-    // we can't say anything about the stride displacement, cause we could be using -= or +=.
-  } else {
-    std::ptrdiff_t const abs_n = n < 0 ? -n : n;
-    assert(result.stride_count() == abs_n);
-    assert(result.stride_displacement() == -n);
-  }
+template <typename It>
+constexpr void check(int* first, std::iter_difference_t<It> n, int* expected) {
+  It it(first);
+  std::same_as<It> auto result = std::ranges::prev(std::move(it), n);
+  assert(base(result) == expected);
 }
 
 constexpr bool test() {
   int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  check(bidirectional_iterator(&range[8]), 6, &range[2]);
-  check(random_access_iterator(&range[7]), 4, &range[3]);
-  check(contiguous_iterator(&range[5]), 5, &range[0]);
+  // Check prev() forward
+  for (int n = 0; n != 10; ++n) {
+    check<bidirectional_iterator<int*>>(range+n, n, range);
+    check<random_access_iterator<int*>>(range+n, n, range);
+    check<contiguous_iterator<int*>>(   range+n, n, range);
+    check<int*>(                        range+n, n, range);
+  }
 
-  check(bidirectional_iterator(&range[2]), 0, &range[2]);
-  check(random_access_iterator(&range[3]), 0, &range[3]);
-  check(contiguous_iterator(&range[0]), 0, &range[0]);
+  // Check prev() backward
+  for (int n = 0; n != 10; ++n) {
+    check<bidirectional_iterator<int*>>(range, -n, range+n);
+    check<random_access_iterator<int*>>(range, -n, range+n);
+    check<contiguous_iterator<int*>>(   range, -n, range+n);
+    check<int*>(                        range, -n, range+n);
+  }
 
-  check(bidirectional_iterator(&range[3]), -5, &range[8]);
-  check(random_access_iterator(&range[3]), -3, &range[6]);
-  check(contiguous_iterator(&range[3]), -1, &range[4]);
   return true;
 }
 

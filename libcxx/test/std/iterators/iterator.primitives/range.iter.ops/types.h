@@ -14,6 +14,8 @@
 #include <iterator>
 #include <utility>
 
+#include "test_iterators.h" // for the fallthrough base() function
+
 class distance_apriori_sentinel {
 public:
   distance_apriori_sentinel() = default;
