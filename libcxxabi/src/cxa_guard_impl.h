@@ -590,6 +590,26 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+//                          Convenience Classes
+//===----------------------------------------------------------------------===//
+
+/// NoThreadsGuard - Manages initialization without performing any inter-thread
+/// synchronization.
+using NoThreadsGuard = GuardObject<InitByteNoThreads>;
+
+/// GlobalMutexGuard - Manages initialization using a global mutex and
+/// condition variable.
+template <class Mutex, class CondVar, Mutex& global_mutex, CondVar& global_cond,
+          uint32_t (*GetThreadID)() = PlatformThreadID>
+using GlobalMutexGuard = GuardObject<InitByteGlobalMutex<Mutex, CondVar, global_mutex, global_cond, GetThreadID>>;
+
+/// FutexGuard - Manages initialization using atomics and the futex syscall for
+/// waiting and waking.
+template <void (*Wait)(int*, int) = PlatformFutexWait, void (*Wake)(int*) = PlatformFutexWake,
+          uint32_t (*GetThreadIDArg)() = PlatformThreadID>
+using FutexGuard = GuardObject<InitByteFutex<Wait, Wake, GetThreadIDArg>>;
+
+//===----------------------------------------------------------------------===//
 //
 //===----------------------------------------------------------------------===//
 
@@ -605,23 +625,20 @@ enum class Implementation { NoThreads, GlobalMutex, Futex };
 template <Implementation Impl>
 struct SelectImplementation;
 
-/// Manage initialization without performing any inter-thread synchronization.
 template <>
 struct SelectImplementation<Implementation::NoThreads> {
-  using type = GuardObject<InitByteNoThreads>;
+  using type = NoThreadsGuard;
 };
 
-/// Manage initialization using a global mutex and condition variable.
 template <>
 struct SelectImplementation<Implementation::GlobalMutex> {
-  using type = GuardObject<InitByteGlobalMutex<LibcppMutex, LibcppCondVar, GlobalStatic<LibcppMutex>::instance,
-                                               GlobalStatic<LibcppCondVar>::instance, PlatformThreadID>>;
+  using type = GlobalMutexGuard<LibcppMutex, LibcppCondVar, GlobalStatic<LibcppMutex>::instance,
+                                GlobalStatic<LibcppCondVar>::instance, PlatformThreadID>;
 };
 
-/// Manage initialization using atomics and the futex syscall for waiting and waking.
 template <>
 struct SelectImplementation<Implementation::Futex> {
-  using type = GuardObject<InitByteFutex<PlatformFutexWait, PlatformFutexWake, PlatformThreadID>>;
+  using type = FutexGuard<PlatformFutexWait, PlatformFutexWake, PlatformThreadID>;
 };
 
 // TODO(EricWF): We should prefer the futex implementation when available. But
