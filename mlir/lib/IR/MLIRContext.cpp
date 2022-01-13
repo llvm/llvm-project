@@ -182,7 +182,7 @@ public:
   llvm::StringMap<OperationName::Impl> operations;
 
   /// A vector of operation info specifically for registered operations.
-  SmallVector<RegisteredOperationName> registeredOperations;
+  llvm::StringMap<RegisteredOperationName> registeredOperations;
 
   /// A mutex used when accessing operation information.
   llvm::sys::SmartRWMutex<true> operationInfoMutex;
@@ -576,8 +576,9 @@ std::vector<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
   // We just have the operations in a non-deterministic hash table order. Dump
   // into a temporary array, then sort it by operation name to get a stable
   // ordering.
-  std::vector<RegisteredOperationName> result(
-      impl->registeredOperations.begin(), impl->registeredOperations.end());
+  auto unwrappedNames = llvm::make_second_range(impl->registeredOperations);
+  std::vector<RegisteredOperationName> result(unwrappedNames.begin(),
+                                              unwrappedNames.end());
   llvm::array_pod_sort(result.begin(), result.end(),
                        [](const RegisteredOperationName *lhs,
                           const RegisteredOperationName *rhs) {
@@ -589,7 +590,7 @@ std::vector<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
 }
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
-  return OperationName(name, this).isRegistered();
+  return RegisteredOperationName::lookup(name, this).hasValue();
 }
 
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
@@ -649,6 +650,15 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   // Check for an existing name in read-only mode.
   bool isMultithreadingEnabled = context->isMultithreadingEnabled();
   if (isMultithreadingEnabled) {
+    // Check the registered info map first. In the overwhelmingly common case,
+    // the entry will be in here and it also removes the need to acquire any
+    // locks.
+    auto registeredIt = ctxImpl.registeredOperations.find(name);
+    if (LLVM_LIKELY(registeredIt != ctxImpl.registeredOperations.end())) {
+      impl = registeredIt->second.impl;
+      return;
+    }
+
     llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
     auto it = ctxImpl.operations.find(name);
     if (it != ctxImpl.operations.end()) {
@@ -675,6 +685,15 @@ StringRef OperationName::getDialectNamespace() const {
 //===----------------------------------------------------------------------===//
 // RegisteredOperationName
 //===----------------------------------------------------------------------===//
+
+Optional<RegisteredOperationName>
+RegisteredOperationName::lookup(StringRef name, MLIRContext *ctx) {
+  auto &impl = ctx->getImpl();
+  auto it = impl.registeredOperations.find(name);
+  if (it != impl.registeredOperations.end())
+    return it->getValue();
+  return llvm::None;
+}
 
 ParseResult
 RegisteredOperationName::parseAssembly(OpAsmParser &parser,
@@ -717,7 +736,8 @@ void RegisteredOperationName::insert(
                  << "' is already registered.\n";
     abort();
   }
-  ctxImpl.registeredOperations.push_back(RegisteredOperationName(&impl));
+  ctxImpl.registeredOperations.try_emplace(name,
+                                           RegisteredOperationName(&impl));
 
   // Update the registered info for this operation.
   impl.dialect = &dialect;
