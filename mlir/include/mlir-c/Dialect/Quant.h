@@ -1,4 +1,4 @@
-//===-- mlir-c/Dialect/LLVM.h - C API for LLVM --------------------*- C -*-===//
+//===-- mlir-c/Dialect/Quant.h - C API for LLVM -------------------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
