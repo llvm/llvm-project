@@ -239,6 +239,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
     llvm::Type *elementType;
     uint64_t numElements;
+    bool isScalable = false;
     if (auto *arrayTy = dyn_cast<llvm::ArrayType>(llvmType)) {
       elementType = arrayTy->getElementType();
       numElements = arrayTy->getNumElements();
@@ -248,6 +249,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     } else if (auto *sVectorTy = dyn_cast<llvm::ScalableVectorType>(llvmType)) {
       elementType = sVectorTy->getElementType();
       numElements = sVectorTy->getMinNumElements();
+      isScalable = true;
     } else {
       llvm_unreachable("unrecognized constant vector type");
     }
@@ -265,7 +267,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
       return nullptr;
     if (llvmType->isVectorTy())
       return llvm::ConstantVector::getSplat(
-          llvm::ElementCount::get(numElements, /*Scalable=*/false), child);
+          llvm::ElementCount::get(numElements, /*Scalable=*/isScalable), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
       SmallVector<llvm::Constant *, 8> constants(numElements, child);

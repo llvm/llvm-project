@@ -90,6 +90,8 @@ llvm.func @return_ppi8_42_9() -> !llvm.ptr<ptr<i8, 42>, 9>
 llvm.func @return_v4_i32() -> vector<4xi32>
 // CHECK: declare <4 x float> @return_v4_float()
 llvm.func @return_v4_float() -> vector<4xf32>
+// CHECK: declare <vscale x 4 x float> @return_vs_4_float()
+llvm.func @return_vs_4_float() -> vector<[4]xf32>
 // CHECK: declare <vscale x 4 x i32> @return_vs_4_i32()
 llvm.func @return_vs_4_i32() -> !llvm.vec<?x4 x i32>
 // CHECK: declare <vscale x 8 x half> @return_vs_8_half()
