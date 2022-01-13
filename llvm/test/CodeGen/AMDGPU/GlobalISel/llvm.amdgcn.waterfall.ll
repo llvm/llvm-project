@@ -3225,6 +3225,160 @@ define amdgpu_ps {<4 x float>,<4 x float>} @test_waterfall_multi_begin_uniform_i
   ret {<4 x float> , <4 x float>} %insert1
 }
 
+define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fptr) {
+; PRE-GFX10-LABEL: test_indirect_call_vgpr_ptr_arg_and_reuse:
+; PRE-GFX10:       ; %bb.0:
+; PRE-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; PRE-GFX10-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; PRE-GFX10-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; PRE-GFX10-NEXT:    s_mov_b64 exec, s[34:35]
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s33, 6
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s4, 0
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s5, 1
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s6, 2
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s7, 3
+; PRE-GFX10-NEXT:    s_mov_b32 s33, s32
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s30, 4
+; PRE-GFX10-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; PRE-GFX10-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v41, v0
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v42, v1
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s31, 5
+; PRE-GFX10-NEXT:    s_mov_b64 s[4:5], exec
+; PRE-GFX10-NEXT:    s_addk_i32 s32, 0x400
+; PRE-GFX10-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
+; PRE-GFX10-NEXT:    v_readfirstlane_b32 s34, v42
+; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[30:31], s34, v42
+; PRE-GFX10-NEXT:    s_and_saveexec_b64 s[6:7], s[30:31]
+; PRE-GFX10-NEXT:    s_bfe_u64 s[30:31], s[34:35], 0x200000
+; PRE-GFX10-NEXT:    v_mov_b32_e32 v0, v41
+; PRE-GFX10-NEXT:    s_swappc_b64 s[30:31], s[30:31]
+; PRE-GFX10-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; PRE-GFX10-NEXT:    s_cbranch_execnz .LBB18_1
+; PRE-GFX10-NEXT:  ; %bb.2:
+; PRE-GFX10-NEXT:    s_mov_b64 exec, s[4:5]
+; PRE-GFX10-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
+; PRE-GFX10-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; PRE-GFX10-NEXT:    v_readlane_b32 s30, v40, 4
+; PRE-GFX10-NEXT:    v_readlane_b32 s31, v40, 5
+; PRE-GFX10-NEXT:    v_readlane_b32 s7, v40, 3
+; PRE-GFX10-NEXT:    v_readlane_b32 s6, v40, 2
+; PRE-GFX10-NEXT:    v_readlane_b32 s5, v40, 1
+; PRE-GFX10-NEXT:    v_readlane_b32 s4, v40, 0
+; PRE-GFX10-NEXT:    s_addk_i32 s32, 0xfc00
+; PRE-GFX10-NEXT:    v_readlane_b32 s33, v40, 6
+; PRE-GFX10-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; PRE-GFX10-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; PRE-GFX10-NEXT:    s_mov_b64 exec, s[34:35]
+; PRE-GFX10-NEXT:    s_waitcnt vmcnt(0)
+; PRE-GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-32-LABEL: test_indirect_call_vgpr_ptr_arg_and_reuse:
+; GFX10-32:       ; %bb.0:
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-32-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-32-NEXT:    s_or_saveexec_b32 s34, -1
+; GFX10-32-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GFX10-32-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s34
+; GFX10-32-NEXT:    v_writelane_b32 v40, s33, 4
+; GFX10-32-NEXT:    s_mov_b32 s33, s32
+; GFX10-32-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX10-32-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX10-32-NEXT:    v_mov_b32_e32 v41, v0
+; GFX10-32-NEXT:    v_writelane_b32 v40, s4, 0
+; GFX10-32-NEXT:    v_mov_b32_e32 v42, v1
+; GFX10-32-NEXT:    s_mov_b32 s4, exec_lo
+; GFX10-32-NEXT:    s_addk_i32 s32, 0x200
+; GFX10-32-NEXT:    v_writelane_b32 v40, s5, 1
+; GFX10-32-NEXT:    v_writelane_b32 v40, s30, 2
+; GFX10-32-NEXT:    v_writelane_b32 v40, s31, 3
+; GFX10-32-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-32-NEXT:    v_readfirstlane_b32 s30, v42
+; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s31, s30, v42
+; GFX10-32-NEXT:    s_and_saveexec_b32 s5, s31
+; GFX10-32-NEXT:    v_mov_b32_e32 v0, v41
+; GFX10-32-NEXT:    s_bfe_u64 s[30:31], s[30:31], 0x200000
+; GFX10-32-NEXT:    s_swappc_b64 s[30:31], s[30:31]
+; GFX10-32-NEXT:    s_xor_b32 exec_lo, exec_lo, s5
+; GFX10-32-NEXT:    s_cbranch_execnz .LBB18_1
+; GFX10-32-NEXT:  ; %bb.2:
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10-32-NEXT:    s_clause 0x1
+; GFX10-32-NEXT:    buffer_load_dword v42, off, s[0:3], s33
+; GFX10-32-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4
+; GFX10-32-NEXT:    v_readlane_b32 s30, v40, 2
+; GFX10-32-NEXT:    v_readlane_b32 s31, v40, 3
+; GFX10-32-NEXT:    v_readlane_b32 s5, v40, 1
+; GFX10-32-NEXT:    v_readlane_b32 s4, v40, 0
+; GFX10-32-NEXT:    s_addk_i32 s32, 0xfe00
+; GFX10-32-NEXT:    v_readlane_b32 s33, v40, 4
+; GFX10-32-NEXT:    s_or_saveexec_b32 s34, -1
+; GFX10-32-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; GFX10-32-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-32-NEXT:    s_mov_b32 exec_lo, s34
+; GFX10-32-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-32-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-64-LABEL: test_indirect_call_vgpr_ptr_arg_and_reuse:
+; GFX10-64:       ; %bb.0:
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-64-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-64-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GFX10-64-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GFX10-64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-64-NEXT:    s_mov_b64 exec, s[34:35]
+; GFX10-64-NEXT:    v_writelane_b32 v40, s33, 6
+; GFX10-64-NEXT:    s_mov_b32 s33, s32
+; GFX10-64-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX10-64-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX10-64-NEXT:    v_mov_b32_e32 v41, v0
+; GFX10-64-NEXT:    v_writelane_b32 v40, s4, 0
+; GFX10-64-NEXT:    v_mov_b32_e32 v42, v1
+; GFX10-64-NEXT:    s_addk_i32 s32, 0x400
+; GFX10-64-NEXT:    v_writelane_b32 v40, s5, 1
+; GFX10-64-NEXT:    s_mov_b64 s[4:5], exec
+; GFX10-64-NEXT:    v_writelane_b32 v40, s6, 2
+; GFX10-64-NEXT:    v_writelane_b32 v40, s7, 3
+; GFX10-64-NEXT:    v_writelane_b32 v40, s30, 4
+; GFX10-64-NEXT:    v_writelane_b32 v40, s31, 5
+; GFX10-64-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
+; GFX10-64-NEXT:    v_readfirstlane_b32 s34, v42
+; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[30:31], s34, v42
+; GFX10-64-NEXT:    s_and_saveexec_b64 s[6:7], s[30:31]
+; GFX10-64-NEXT:    v_mov_b32_e32 v0, v41
+; GFX10-64-NEXT:    s_bfe_u64 s[30:31], s[34:35], 0x200000
+; GFX10-64-NEXT:    s_swappc_b64 s[30:31], s[30:31]
+; GFX10-64-NEXT:    s_xor_b64 exec, exec, s[6:7]
+; GFX10-64-NEXT:    s_cbranch_execnz .LBB18_1
+; GFX10-64-NEXT:  ; %bb.2:
+; GFX10-64-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX10-64-NEXT:    s_clause 0x1
+; GFX10-64-NEXT:    buffer_load_dword v42, off, s[0:3], s33
+; GFX10-64-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4
+; GFX10-64-NEXT:    v_readlane_b32 s30, v40, 4
+; GFX10-64-NEXT:    v_readlane_b32 s31, v40, 5
+; GFX10-64-NEXT:    v_readlane_b32 s7, v40, 3
+; GFX10-64-NEXT:    v_readlane_b32 s6, v40, 2
+; GFX10-64-NEXT:    v_readlane_b32 s5, v40, 1
+; GFX10-64-NEXT:    v_readlane_b32 s4, v40, 0
+; GFX10-64-NEXT:    s_addk_i32 s32, 0xfc00
+; GFX10-64-NEXT:    v_readlane_b32 s33, v40, 6
+; GFX10-64-NEXT:    s_or_saveexec_b64 s[34:35], -1
+; GFX10-64-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
+; GFX10-64-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-64-NEXT:    s_mov_b64 exec, s[34:35]
+; GFX10-64-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-64-NEXT:    s_setpc_b64 s[30:31]
+  %tok = call i32 @llvm.amdgcn.waterfall.begin.i32(i32 0, i32 %fptr)
+  %s_fptr = call i32 @llvm.amdgcn.waterfall.readfirstlane.i32.i32(i32 %tok, i32 %fptr)
+  %ext = zext i32 %s_fptr to i64
+  %f = inttoptr i64 %ext to i32(i32)*
+  %callres = call amdgpu_gfx i32 %f(i32 %i)
+  %r3 = call i32 @llvm.amdgcn.waterfall.end.i32(i32 %tok, i32 %callres)
+  ret i32 %r3
+}
+
 declare i32 @llvm.amdgcn.waterfall.begin.i32(i32, i32) #6
 declare i32 @llvm.amdgcn.waterfall.begin.v2i32(i32, <2 x i32>) #6
 declare i32 @llvm.amdgcn.waterfall.begin.v4i32(i32, <4 x i32>) #6
