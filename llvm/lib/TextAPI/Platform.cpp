@@ -85,6 +85,7 @@ StringRef getPlatformName(PlatformType Platform) {
   case PLATFORM_DRIVERKIT:
     return "DriverKit";
   }
+  llvm_unreachable("Unknown llvm::MachO::PlatformType enum");
 }
 
 PlatformType getPlatformFromName(StringRef Name) {
@@ -128,6 +129,7 @@ std::string getOSAndEnvironmentName(PlatformType Platform,
   case PLATFORM_DRIVERKIT:
     return "driverkit" + Version;
   }
+  llvm_unreachable("Unknown llvm::MachO::PlatformType enum");
 }
 
 } // end namespace MachO.
