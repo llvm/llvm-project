@@ -10333,6 +10333,9 @@ private:
     /// The directive kind, `begin declare target` or `declare target`.
     OpenMPDirectiveKind Kind;
 
+    /// The directive with indirect clause.
+    Optional<Expr *> Indirect;
+
     /// The directive location.
     SourceLocation Loc;
 
@@ -10639,7 +10642,7 @@ public:
   /// Called on correct id-expression from the '#pragma omp declare target'.
   void ActOnOpenMPDeclareTargetName(NamedDecl *ND, SourceLocation Loc,
                                     OMPDeclareTargetDeclAttr::MapTypeTy MT,
-                                    OMPDeclareTargetDeclAttr::DevTypeTy DT);
+                                    DeclareTargetContextInfo &DTCI);
 
   /// Check declaration inside target region.
   void

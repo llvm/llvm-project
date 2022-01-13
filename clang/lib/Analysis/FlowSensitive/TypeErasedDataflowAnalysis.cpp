@@ -123,7 +123,7 @@ TypeErasedDataflowAnalysisState transferBlock(
     assert(S != nullptr);
 
     transfer(*S, State.Env);
-    State.Lattice = Analysis.transferTypeErased(S, State.Lattice, State.Env);
+    Analysis.transferTypeErased(S, State.Lattice, State.Env);
 
     if (HandleTransferredStmt != nullptr)
       HandleTransferredStmt(CfgStmt.getValue(), State);

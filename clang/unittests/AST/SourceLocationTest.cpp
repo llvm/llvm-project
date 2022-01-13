@@ -246,7 +246,7 @@ TEST(TypeLoc, AutoTypeLocRange) {
   RangeVerifier<TypeLoc> Verifier;
   Verifier.expectRange(1, 1, 1, 14);
   EXPECT_TRUE(Verifier.match("decltype(auto) a = 1;", typeLoc(loc(autoType())),
-                             Lang_CXX11));
+                             Lang_CXX14));
 }
 
 TEST(TypeLoc, LongDoubleRange) {

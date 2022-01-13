@@ -129,8 +129,11 @@ public:
   void writeTo(uint8_t *buf) override;
 
   void addEntry(Symbol &sym);
+  bool addTlsDescEntry(Symbol &sym);
   bool addDynTlsEntry(Symbol &sym);
   bool addTlsIndex();
+  uint32_t getTlsDescOffset(const Symbol &sym) const;
+  uint64_t getTlsDescAddr(const Symbol &sym) const;
   uint64_t getGlobalDynAddr(const Symbol &b) const;
   uint64_t getGlobalDynOffset(const Symbol &b) const;
 

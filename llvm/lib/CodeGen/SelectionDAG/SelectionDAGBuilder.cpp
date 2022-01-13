@@ -1683,6 +1683,8 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   if (const MetadataAsValue *MD = dyn_cast<MetadataAsValue>(V)) {
     return DAG.getMDNode(cast<MDNode>(MD->getMetadata()));
   }
+  if (const auto *BB = dyn_cast<BasicBlock>(V))
+    return DAG.getBasicBlock(FuncInfo.MBBMap[BB]);
   llvm_unreachable("Can't get register for value!");
 }
 
@@ -8558,7 +8560,6 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 
   unsigned ArgNo = 0;   // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0;   // ResNo - The result number of the next output.
-  unsigned NumMatchingOps = 0;
   for (auto &T : TargetConstraints) {
     ConstraintOperands.push_back(SDISelAsmOperandInfo(T));
     SDISelAsmOperandInfo &OpInfo = ConstraintOperands.back();
@@ -8566,24 +8567,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     // Compute the value type for each operand.
     if (OpInfo.hasArg()) {
       OpInfo.CallOperandVal = Call.getArgOperand(ArgNo);
-
-      // Process the call argument. BasicBlocks are labels, currently appearing
-      // only in asm's.
-      if (isa<CallBrInst>(Call) &&
-          ArgNo >= (cast<CallBrInst>(&Call)->arg_size() -
-                        cast<CallBrInst>(&Call)->getNumIndirectDests() -
-                        NumMatchingOps) &&
-          (NumMatchingOps == 0 ||
-           ArgNo < (cast<CallBrInst>(&Call)->arg_size() - NumMatchingOps))) {
-        const auto *BA = cast<BlockAddress>(OpInfo.CallOperandVal);
-        EVT VT = TLI.getValueType(DAG.getDataLayout(), BA->getType(), true);
-        OpInfo.CallOperand = DAG.getTargetBlockAddress(BA, VT);
-      } else if (const auto *BB = dyn_cast<BasicBlock>(OpInfo.CallOperandVal)) {
-        OpInfo.CallOperand = DAG.getBasicBlock(FuncInfo.MBBMap[BB]);
-      } else {
-        OpInfo.CallOperand = getValue(OpInfo.CallOperandVal);
-      }
-
+      OpInfo.CallOperand = getValue(OpInfo.CallOperandVal);
       Type *ParamElemTy = Call.getAttributes().getParamElementType(ArgNo);
       EVT VT = OpInfo.getCallOperandValEVT(*DAG.getContext(), TLI,
                                            DAG.getDataLayout(), ParamElemTy);
@@ -8605,9 +8589,6 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     } else {
       OpInfo.ConstraintVT = MVT::Other;
     }
-
-    if (OpInfo.hasMatchingInput())
-      ++NumMatchingOps;
 
     if (!HasSideEffect)
       HasSideEffect = OpInfo.hasMemory(TLI);
@@ -11244,12 +11225,6 @@ void SelectionDAGBuilder::visitVectorSplice(const CallInst &I) {
   }
 
   unsigned NumElts = VT.getVectorNumElements();
-
-  if ((-Imm > NumElts) || (Imm >= NumElts)) {
-    // Result is undefined if immediate is out-of-bounds.
-    setValue(&I, DAG.getUNDEF(VT));
-    return;
-  }
 
   uint64_t Idx = (NumElts + Imm) % NumElts;
 

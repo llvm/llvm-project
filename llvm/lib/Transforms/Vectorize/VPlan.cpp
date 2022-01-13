@@ -1356,21 +1356,15 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
-  assert(!VF.isScalable() && "the code following assumes non scalables ECs");
   Value *VStart = VF.isScalar()
                       ? CanonicalIV
-                      : Builder.CreateVectorSplat(VF.getKnownMinValue(),
-                                                  CanonicalIV, "broadcast");
+                      : Builder.CreateVectorSplat(VF, CanonicalIV, "broadcast");
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part) {
-    SmallVector<Constant *, 8> Indices;
-    for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
-      Indices.push_back(
-          ConstantInt::get(STy, Part * VF.getKnownMinValue() + Lane));
-    // If VF == 1, there is only one iteration in the loop above, thus the
-    // element pushed back into Indices is ConstantInt::get(STy, Part)
-    Constant *VStep =
-        VF.isScalar() ? Indices.back() : ConstantVector::get(Indices);
-    // Add the consecutive indices to the vector value.
+    Value *VStep = createStepForVF(Builder, STy, VF, Part);
+    if (VF.isVector()) {
+      VStep = Builder.CreateVectorSplat(VF, VStep);
+      VStep = Builder.CreateAdd(VStep, Builder.CreateStepVector(VStep->getType()));
+    }
     Value *CanonicalVectorIV = Builder.CreateAdd(VStart, VStep, "vec.iv");
     State.set(this, CanonicalVectorIV, Part);
   }

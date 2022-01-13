@@ -1071,6 +1071,9 @@ public:
   bool HasUserDeclaredSetterMethod(const ObjCPropertyDecl *P) const;
   ObjCIvarDecl *getIvarDecl(IdentifierInfo *Id) const;
 
+  ObjCPropertyDecl *getProperty(const IdentifierInfo *Id,
+                                bool IsInstance) const;
+
   ObjCPropertyDecl *
   FindPropertyDeclaration(const IdentifierInfo *PropertyId,
                           ObjCPropertyQueryKind QueryKind) const;

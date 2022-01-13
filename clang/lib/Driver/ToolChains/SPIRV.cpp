@@ -70,3 +70,24 @@ clang::driver::Tool *SPIRVToolChain::getTool(Action::ActionClass AC) const {
   }
   return ToolChain::getTool(AC);
 }
+clang::driver::Tool *SPIRVToolChain::buildLinker() const {
+  return new tools::SPIRV::Linker(*this);
+}
+
+void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+                                 const InputInfo &Output,
+                                 const InputInfoList &Inputs,
+                                 const ArgList &Args,
+                                 const char *LinkingOutput) const {
+  const ToolChain &ToolChain = getToolChain();
+  std::string Linker = ToolChain.GetProgramPath(getShortName());
+  ArgStringList CmdArgs;
+  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Output.getFilename());
+
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Args.MakeArgString(Linker), CmdArgs,
+                                         Inputs, Output));
+}

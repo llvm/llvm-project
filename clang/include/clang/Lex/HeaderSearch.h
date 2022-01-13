@@ -34,6 +34,12 @@
 #include <utility>
 #include <vector>
 
+namespace llvm {
+
+class Triple;
+
+} // namespace llvm
+
 namespace clang {
 
 class DiagnosticsEngine;
@@ -165,22 +171,23 @@ class HeaderSearch {
   /// Header-search options used to initialize this header search.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
 
-  /// Mapping from SearchDir to HeaderSearchOptions::UserEntries indices.
-  llvm::DenseMap<unsigned, unsigned> SearchDirToHSEntry;
-
   DiagnosticsEngine &Diags;
   FileManager &FileMgr;
 
+  /// The allocator owning search directories.
+  llvm::SpecificBumpPtrAllocator<DirectoryLookup> SearchDirsAlloc;
   /// \#include search path information.  Requests for \#include "x" search the
   /// directory of the \#including file first, then each directory in SearchDirs
   /// consecutively. Requests for <x> search the current dir first, then each
   /// directory in SearchDirs, starting at AngledDirIdx, consecutively.  If
   /// NoCurDirSearch is true, then the check for the file in the current
   /// directory is suppressed.
-  std::vector<DirectoryLookup> SearchDirs;
-  /// Whether the DirectoryLookup at the corresponding index in SearchDirs has
-  /// been successfully used to lookup a file.
-  std::vector<bool> SearchDirsUsage;
+  std::vector<DirectoryLookup *> SearchDirs;
+  /// Set of SearchDirs that have been successfully used to lookup a file.
+  llvm::DenseSet<const DirectoryLookup *> UsedSearchDirs;
+  /// Mapping from SearchDir to HeaderSearchOptions::UserEntries indices.
+  llvm::DenseMap<const DirectoryLookup *, unsigned> SearchDirToHSEntry;
+
   unsigned AngledDirIdx = 0;
   unsigned SystemDirIdx = 0;
   bool NoCurDirSearch = false;
@@ -285,6 +292,11 @@ public:
 
   /// Add an additional search path.
   void AddSearchPath(const DirectoryLookup &dir, bool isAngled);
+
+  /// Add an additional system search path.
+  void AddSystemSearchPath(const DirectoryLookup &dir) {
+    SearchDirs.push_back(storeSearchDir(dir));
+  }
 
   /// Set the list of system header prefixes.
   void SetSystemHeaderPrefixes(ArrayRef<std::pair<std::string, bool>> P) {
@@ -487,7 +499,11 @@ public:
 
   /// Determine which HeaderSearchOptions::UserEntries have been successfully
   /// used so far and mark their index with 'true' in the resulting bit vector.
+  // TODO: Use llvm::BitVector instead.
   std::vector<bool> computeUserEntryUsage() const;
+  /// Return a bit vector of length \c SearchDirs.size() that indicates for each
+  /// search directory whether it was used.
+  std::vector<bool> getSearchDirUsage() const;
 
   /// This method returns a HeaderMap for the specified
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
@@ -617,6 +633,11 @@ public:
   void loadTopLevelSystemModules();
 
 private:
+  /// Stores the given search directory and returns a stable pointer.
+  DirectoryLookup *storeSearchDir(const DirectoryLookup &Dir) {
+    return new (SearchDirsAlloc.Allocate()) DirectoryLookup(Dir);
+  }
+
   /// Lookup a module with the given module name and search-name.
   ///
   /// \param ModuleName The name of the module we're looking for.
@@ -703,8 +724,9 @@ private:
   void cacheLookupSuccess(LookupFileCacheInfo &CacheLookup, unsigned HitIdx,
                           SourceLocation IncludeLoc);
   /// Note that a lookup at the given include location was successful using the
-  /// search path at index `HitIdx`.
-  void noteLookupUsage(unsigned HitIdx, SourceLocation IncludeLoc);
+  /// given search path.
+  void noteLookupUsage(const DirectoryLookup *SearchDir,
+                       SourceLocation IncludeLoc);
 
 public:
   /// Retrieve the module map.
@@ -727,7 +749,8 @@ public:
                                             bool WantExternal = true) const;
 
   // Used by external tools
-  using search_dir_iterator = std::vector<DirectoryLookup>::const_iterator;
+  using search_dir_iterator =
+      llvm::pointee_iterator<decltype(SearchDirs)::const_iterator>;
 
   search_dir_iterator search_dir_begin() const { return SearchDirs.begin(); }
   search_dir_iterator search_dir_end() const { return SearchDirs.end(); }
@@ -754,9 +777,6 @@ public:
   }
 
   search_dir_iterator system_dir_end() const { return SearchDirs.end(); }
-
-  /// Get the index of the given search directory.
-  Optional<unsigned> searchDirIdx(const DirectoryLookup &DL) const;
 
   /// Retrieve a uniqued framework name.
   StringRef getUniqueFrameworkName(StringRef Framework);
@@ -838,6 +858,12 @@ private:
   LoadModuleMapResult loadModuleMapFile(const DirectoryEntry *Dir,
                                         bool IsSystem, bool IsFramework);
 };
+
+/// Apply the header search options to get given HeaderSearch object.
+void ApplyHeaderSearchOptions(HeaderSearch &HS,
+                              const HeaderSearchOptions &HSOpts,
+                              const LangOptions &Lang,
+                              const llvm::Triple &triple);
 
 } // namespace clang
 

@@ -121,9 +121,12 @@ check_cxx_compiler_flag(-Wno-pedantic COMPILER_RT_HAS_WNO_PEDANTIC)
 check_cxx_compiler_flag(-Wno-format COMPILER_RT_HAS_WNO_FORMAT)
 check_cxx_compiler_flag(-Wno-format-pedantic COMPILER_RT_HAS_WNO_FORMAT_PEDANTIC)
 
+check_cxx_compiler_flag("/experimental:external /external:W0" COMPILER_RT_HAS_EXTERNAL_FLAG)
+
 check_cxx_compiler_flag(/W4 COMPILER_RT_HAS_W4_FLAG)
 check_cxx_compiler_flag(/WX COMPILER_RT_HAS_WX_FLAG)
 check_cxx_compiler_flag(/wd4146 COMPILER_RT_HAS_WD4146_FLAG)
+check_cxx_compiler_flag(/wd4206 COMPILER_RT_HAS_WD4206_FLAG)
 check_cxx_compiler_flag(/wd4291 COMPILER_RT_HAS_WD4291_FLAG)
 check_cxx_compiler_flag(/wd4221 COMPILER_RT_HAS_WD4221_FLAG)
 check_cxx_compiler_flag(/wd4391 COMPILER_RT_HAS_WD4391_FLAG)

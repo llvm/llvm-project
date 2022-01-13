@@ -268,8 +268,8 @@ size_t SBProcess::PutSTDIN(const char *src, size_t src_len) {
 }
 
 size_t SBProcess::GetSTDOUT(char *dst, size_t dst_len) const {
-  LLDB_RECORD_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetSTDOUT,
-                                    (char *, size_t), dst, "", dst_len);
+  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetSTDOUT, (char *, size_t), dst,
+                           "", dst_len);
 
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
@@ -282,8 +282,8 @@ size_t SBProcess::GetSTDOUT(char *dst, size_t dst_len) const {
 }
 
 size_t SBProcess::GetSTDERR(char *dst, size_t dst_len) const {
-  LLDB_RECORD_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetSTDERR,
-                                    (char *, size_t), dst, "", dst_len);
+  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetSTDERR, (char *, size_t), dst,
+                           "", dst_len);
 
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
@@ -296,8 +296,8 @@ size_t SBProcess::GetSTDERR(char *dst, size_t dst_len) const {
 }
 
 size_t SBProcess::GetAsyncProfileData(char *dst, size_t dst_len) const {
-  LLDB_RECORD_CHAR_PTR_METHOD_CONST(size_t, SBProcess, GetAsyncProfileData,
-                                    (char *, size_t), dst, "", dst_len);
+  LLDB_RECORD_METHOD_CONST(size_t, SBProcess, GetAsyncProfileData,
+                           (char *, size_t), dst, "", dst_len);
 
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
@@ -842,9 +842,9 @@ const char *SBProcess::GetBroadcasterClass() {
 
 size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,
                              SBError &sb_error) {
-  LLDB_RECORD_DUMMY(size_t, SBProcess, ReadMemory,
-                    (lldb::addr_t, void *, size_t, lldb::SBError &), addr, dst,
-                    dst_len, sb_error);
+  LLDB_RECORD_METHOD(size_t, SBProcess, ReadMemory,
+                     (lldb::addr_t, void *, size_t, lldb::SBError &), addr, dst,
+                     dst_len, sb_error);
 
   size_t bytes_read = 0;
 
@@ -869,9 +869,9 @@ size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,
 
 size_t SBProcess::ReadCStringFromMemory(addr_t addr, void *buf, size_t size,
                                         lldb::SBError &sb_error) {
-  LLDB_RECORD_DUMMY(size_t, SBProcess, ReadCStringFromMemory,
-                    (lldb::addr_t, void *, size_t, lldb::SBError &), addr, buf,
-                    size, sb_error);
+  LLDB_RECORD_METHOD(size_t, SBProcess, ReadCStringFromMemory,
+                     (lldb::addr_t, void *, size_t, lldb::SBError &), addr, buf,
+                     size, sb_error);
 
   size_t bytes_read = 0;
   ProcessSP process_sp(GetSP());
@@ -939,9 +939,9 @@ lldb::addr_t SBProcess::ReadPointerFromMemory(addr_t addr,
 
 size_t SBProcess::WriteMemory(addr_t addr, const void *src, size_t src_len,
                               SBError &sb_error) {
-  LLDB_RECORD_DUMMY(size_t, SBProcess, WriteMemory,
-                    (lldb::addr_t, const void *, size_t, lldb::SBError &), addr,
-                    src, src_len, sb_error);
+  LLDB_RECORD_METHOD(size_t, SBProcess, WriteMemory,
+                     (lldb::addr_t, const void *, size_t, lldb::SBError &),
+                     addr, src, src_len, sb_error);
 
   size_t bytes_written = 0;
 

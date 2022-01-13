@@ -39,6 +39,7 @@ CSKYAsmPrinter::CSKYAsmPrinter(llvm::TargetMachine &TM,
     : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this) {}
 
 bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  MCP = MF.getConstantPool();
   Subtarget = &MF.getSubtarget<CSKYSubtarget>();
   return AsmPrinter::runOnMachineFunction(MF);
 }
@@ -57,10 +58,52 @@ void CSKYAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 // instructions) auto-generated.
 #include "CSKYGenMCPseudoLowering.inc"
 
+void CSKYAsmPrinter::emitCustomConstantPool(const MachineInstr *MI) {
+
+  // This instruction represents a floating constant pool in the function.
+  // The first operand is the ID# for this instruction, the second is the
+  // index into the MachineConstantPool that this is, the third is the size
+  // in bytes of this constant pool entry.
+  // The required alignment is specified on the basic block holding this MI.
+  unsigned LabelId = (unsigned)MI->getOperand(0).getImm();
+  unsigned CPIdx = (unsigned)MI->getOperand(1).getIndex();
+
+  // If this is the first entry of the pool, mark it.
+  if (!InConstantPool) {
+    OutStreamer->emitValueToAlignment(4);
+    InConstantPool = true;
+  }
+
+  OutStreamer->emitLabel(GetCPISymbol(LabelId));
+
+  const MachineConstantPoolEntry &MCPE = MCP->getConstants()[CPIdx];
+  if (MCPE.isMachineConstantPoolEntry())
+    emitMachineConstantPoolValue(MCPE.Val.MachineCPVal);
+  else
+    emitGlobalConstant(MF->getDataLayout(), MCPE.Val.ConstVal);
+  return;
+}
+
+void CSKYAsmPrinter::emitFunctionBodyEnd() {
+  // Make sure to terminate any constant pools that were at the end
+  // of the function.
+  if (!InConstantPool)
+    return;
+  InConstantPool = false;
+}
+
 void CSKYAsmPrinter::emitInstruction(const MachineInstr *MI) {
   // Do any auto-generated pseudo lowerings.
   if (emitPseudoExpansionLowering(*OutStreamer, MI))
     return;
+
+  // If we just ended a constant pool, mark it as such.
+  if (InConstantPool && MI->getOpcode() != CSKY::CONSTPOOL_ENTRY) {
+    InConstantPool = false;
+  }
+
+  if (MI->getOpcode() == CSKY::CONSTPOOL_ENTRY)
+    return emitCustomConstantPool(MI);
 
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);

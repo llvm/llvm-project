@@ -996,8 +996,9 @@ public:
 /// value, however, is not. So this can be used as a quick way to test for
 /// equality, presence of attributes, etc.
 class AttrBuilder {
+  LLVMContext &Ctx;
   std::bitset<Attribute::EndAttrKinds> Attrs;
-  std::map<SmallString<32>, SmallString<32>, std::less<>> TargetDepAttrs;
+  SmallVector<Attribute, 8> TargetDepAttrs;
   std::array<uint64_t, Attribute::NumIntAttrKinds> IntAttrs = {};
   std::array<Type *, Attribute::NumTypeAttrKinds> TypeAttrs = {};
 
@@ -1005,16 +1006,16 @@ class AttrBuilder {
   Optional<unsigned> kindToTypeIndex(Attribute::AttrKind Kind) const;
 
 public:
-  AttrBuilder() = default;
+  AttrBuilder(LLVMContext &Ctx) : Ctx(Ctx) {}
   AttrBuilder(const AttrBuilder &) = delete;
   AttrBuilder(AttrBuilder &&) = default;
 
-  AttrBuilder(const Attribute &A) {
+  AttrBuilder(LLVMContext &Ctx, const Attribute &A) : Ctx(Ctx) {
     addAttribute(A);
   }
 
-  AttrBuilder(AttributeList AS, unsigned Idx);
-  AttrBuilder(AttributeSet AS);
+  AttrBuilder(LLVMContext &Ctx, AttributeList AS, unsigned Idx);
+  AttrBuilder(LLVMContext &Ctx, AttributeSet AS);
 
   void clear();
 

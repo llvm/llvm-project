@@ -22,10 +22,10 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::uninitialized_default_construct_n <https://llvm.org/D115315>`_
 | `ranges::uninitialized_value_construct <https://llvm.org/D115626>`_
 | `ranges::uninitialized_value_construct_n <https://llvm.org/D115626>`_
-| ranges::uninitialized_copy
-| ranges::uninitialized_copy_n
-| ranges::uninitialized_move
-| ranges::uninitialized_move_n
+| `ranges::uninitialized_copy <https://llvm.org/D116023>`_
+| `ranges::uninitialized_copy_n <https://llvm.org/D116023>`_
+| `ranges::uninitialized_move <https://llvm.org/D116023>`_
+| `ranges::uninitialized_move_n <https://llvm.org/D116023>`_
 | `ranges::uninitialized_fill <https://llvm.org/D115626>`_
 | `ranges::uninitialized_fill_n <https://llvm.org/D115626>`_
 | ranges::construct_at

@@ -95,12 +95,6 @@ __attribute__((always_inline)) inline long syscall(long __number, long __arg1,
   return retcode;
 }
 
-template <typename... Ts>
-__attribute__((always_inline)) inline long syscall(long __number, Ts... ts) {
-  static_assert(sizeof...(Ts) <= 6, "Too many arguments for syscall");
-  return syscall(__number, (long)ts...);
-}
-
 #undef SYSCALL_CLOBBER_LIST
 
 } // namespace __llvm_libc

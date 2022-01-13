@@ -354,13 +354,9 @@ CGDebugInfo::computeChecksum(FileID FID, SmallString<32> &Checksum) const {
   if (!MemBuffer)
     return None;
 
-  llvm::MD5 Hash;
-  llvm::MD5::MD5Result Result;
-
-  Hash.update(MemBuffer->getBuffer());
-  Hash.final(Result);
-
-  Hash.stringifyResult(Result, Checksum);
+  llvm::toHex(
+      llvm::MD5::hash(llvm::arrayRefFromStringRef(MemBuffer->getBuffer())),
+      /*LowerCase*/ true, Checksum);
   return llvm::DIFile::CSK_MD5;
 }
 

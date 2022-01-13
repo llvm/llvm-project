@@ -16,6 +16,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DATAFLOWANALYSISCONTEXT_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
@@ -70,6 +71,23 @@ public:
     return It == DeclToLoc.end() ? nullptr : It->second;
   }
 
+  /// Assigns `Loc` as the storage location of `E`.
+  ///
+  /// Requirements:
+  ///
+  ///  `E` must not be assigned a storage location.
+  void setStorageLocation(const Expr &E, StorageLocation &Loc) {
+    assert(ExprToLoc.find(&E) == ExprToLoc.end());
+    ExprToLoc[&E] = &Loc;
+  }
+
+  /// Returns the storage location assigned to `E` or null if `E` has no
+  /// assigned storage location.
+  StorageLocation *getStorageLocation(const Expr &E) const {
+    auto It = ExprToLoc.find(&E);
+    return It == ExprToLoc.end() ? nullptr : It->second;
+  }
+
 private:
   // Storage for the state of a program.
   std::vector<std::unique_ptr<StorageLocation>> Locs;
@@ -81,7 +99,7 @@ private:
   // basic blocks are evaluated multiple times. The storage locations that are
   // in scope for a particular basic block are stored in `Environment`.
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
-  // FIXME: Add `Expr` to `StorageLocation` map.
+  llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
 
   // FIXME: Add `StorageLocation` for `this`.
 

@@ -144,6 +144,14 @@ def CompoundNestedOuter : Test_Attr<"CompoundNestedOuter"> {
   let assemblyFormat = "`<` `i`  $inner `>`";
 }
 
+def CompoundNestedOuterQual : Test_Attr<"CompoundNestedOuterQual"> {
+  let mnemonic = "cmpnd_nested_outer_qual";
+
+  // List of type parameters.
+  let parameters = (ins CompoundNestedInner:$inner);
+  let assemblyFormat = "`<` `i`  qualified($inner) `>`";
+}
+
 def TestParamOne : AttrParameter<"int64_t", ""> {}
 
 def TestParamTwo : AttrParameter<"std::string", "", "llvm::StringRef"> {

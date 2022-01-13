@@ -601,8 +601,8 @@ SBStructuredData SBBreakpoint::SerializeToStructuredData() {
 }
 
 void SBBreakpoint::SetCallback(SBBreakpointHitCallback callback, void *baton) {
-  LLDB_RECORD_DUMMY(void, SBBreakpoint, SetCallback,
-                    (lldb::SBBreakpointHitCallback, void *), callback, baton);
+  LLDB_RECORD_METHOD(void, SBBreakpoint, SetCallback,
+                     (lldb::SBBreakpointHitCallback, void *), callback, baton);
 
   BreakpointSP bkpt_sp = GetSP();
 

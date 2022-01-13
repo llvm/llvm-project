@@ -486,6 +486,9 @@ void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
   NamingCheckFailure &Failure = NamingCheckFailures[ID];
   SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
 
+  if (!isValidAsciiIdentifier(Info.Fixup))
+    Failure.FixStatus = ShouldFixStatus::FixInvalidIdentifier;
+
   Failure.Info = std::move(Info);
   addUsage(ID, Range);
 }

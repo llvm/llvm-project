@@ -117,9 +117,8 @@ define i64 @ll_a_op_b_1(i64 %a, i64 %b) {
 ; CHECK-NEXT:    cmpq $1, %rdx
 ; CHECK-NEXT:    jg .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    cmovleq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rcx, %rax
 ; CHECK-NEXT:    imulq %rdi, %rax
 ; CHECK-NEXT:  .LBB3_2: # %return
 ; CHECK-NEXT:    retq
@@ -256,9 +255,8 @@ define i64 @ll_a_1(i64 %a, i64 %b) {
 ; CHECK-NEXT:    cmpq $1, %rdi
 ; CHECK-NEXT:    jg .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    movl $1, %ecx
-; CHECK-NEXT:    cmovleq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rcx, %rax
 ; CHECK-NEXT:    imulq %rdi, %rax
 ; CHECK-NEXT:  .LBB8_2: # %return
 ; CHECK-NEXT:    retq
@@ -412,9 +410,8 @@ define i64 @i_a_op_b_1(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    jg .LBB13_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    cmovlel %eax, %ecx
+; CHECK-NEXT:    cmovll %eax, %ecx
 ; CHECK-NEXT:    imull %edi, %ecx
 ; CHECK-NEXT:  .LBB13_2: # %return
 ; CHECK-NEXT:    movslq %ecx, %rax
@@ -563,9 +560,8 @@ define i64 @i_a_1(i32 signext %a, i32 signext %b) {
 ; CHECK-NEXT:    cmpl $1, %edi
 ; CHECK-NEXT:    jg .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
-; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    cmovlel %eax, %esi
+; CHECK-NEXT:    cmovll %eax, %esi
 ; CHECK-NEXT:    imull %edi, %esi
 ; CHECK-NEXT:  .LBB18_2: # %return
 ; CHECK-NEXT:    movslq %esi, %rax

@@ -144,7 +144,6 @@ AARCH64_ARCH_EXT_NAME("flagm",        AArch64::AEK_FLAGM,       "+flagm", "-flag
 AARCH64_ARCH_EXT_NAME("sme",          AArch64::AEK_SME,         "+sme",   "-sme")
 AARCH64_ARCH_EXT_NAME("sme-f64",      AArch64::AEK_SMEF64,      "+sme-f64", "-sme-f64")
 AARCH64_ARCH_EXT_NAME("sme-i64",      AArch64::AEK_SMEI64,      "+sme-i64", "-sme-i64")
-AARCH64_ARCH_EXT_NAME("pmuv3p4",      AArch64::AEK_PERFMON,     "+perfmon", "-perfmon")
 #undef AARCH64_ARCH_EXT_NAME
 
 #ifndef AARCH64_CPU_NAME

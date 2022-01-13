@@ -53,7 +53,11 @@ def LinalgComprehensiveModuleBufferize :
            "Use stack allocations for memrefs (for testing purposes only)">,
     Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
            /*default=*/"0",
-           "Analyze ops in random order with a given seed (fuzzer)">
+           "Analyze ops in random order with a given seed (fuzzer)">,
+    Option<"initTensorElimination", "init-tensor-elimination", "bool",
+            /*default=*/"false",
+           "(Experimental) Try to eliminate init_tensor operations that are "
+           "anchored at an insert_slice op">,
   ];
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }

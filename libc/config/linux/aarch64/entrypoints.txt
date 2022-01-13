@@ -169,6 +169,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
+
+    # sys/mman.h entrypoints
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

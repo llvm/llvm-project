@@ -37,8 +37,8 @@ def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
     Input:
     ```mlir
     func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
-      %0 = alloc() : memref<10xf32>
-      %1 = alloc() : memref<10xf32>
+      %0 = memref.alloc() : memref<10xf32>
+      %1 = memref.alloc() : memref<10xf32>
       %cst = arith.constant 0.000000e+00 : f32
       affine.for %arg2 = 0 to 10 {
         affine.store %cst, %0[%arg2] : memref<10xf32>
@@ -60,8 +60,8 @@ def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
     Output:
     ```mlir
     func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
-      %0 = alloc() : memref<1xf32>
-      %1 = alloc() : memref<1xf32>
+      %0 = memref.alloc() : memref<1xf32>
+      %1 = memref.alloc() : memref<1xf32>
       %cst = arith.constant 0.000000e+00 : f32
       affine.for %arg2 = 0 to 10 {
         affine.store %cst, %0[0] : memref<1xf32>
@@ -161,9 +161,9 @@ def AffinePipelineDataTransfer
 
     ```mlir
     func @pipelinedatatransfer() {
-      %0 = alloc() : memref<256xf32>
-      %1 = alloc() : memref<32xf32, 1>
-      %2 = alloc() : memref<1xf32>
+      %0 = memref.alloc() : memref<256xf32>
+      %1 = memref.alloc() : memref<32xf32, 1>
+      %2 = memref.alloc() : memref<1xf32>
       %c0 = arith.constant 0 : index
       %c128 = arith.constant 128 : index
       affine.for %i0 = 0 to 8 {
@@ -184,11 +184,11 @@ def AffinePipelineDataTransfer
       func @pipelinedatatransfer() {
         %c8 = arith.constant 8 : index
         %c0 = arith.constant 0 : index
-        %0 = alloc() : memref<256xf32>
+        %0 = memref.alloc() : memref<256xf32>
         %c0_0 = arith.constant 0 : index
         %c128 = arith.constant 128 : index
-        %1 = alloc() : memref<2x32xf32, 1>
-        %2 = alloc() : memref<2x1xf32>
+        %1 = memref.alloc() : memref<2x32xf32, 1>
+        %2 = memref.alloc() : memref<2x1xf32>
         affine.dma_start %0[%c0], %1[%c0 mod 2, %c0], %2[%c0 mod 2, symbol(%c0_0)], %c128 : memref<256xf32>, memref<2x32xf32, 1>, memref<2x1xf32>
         affine.for %arg0 = 1 to 8 {
           affine.dma_start %0[%arg0], %1[%arg0 mod 2, %arg0], %2[%arg0 mod 2, symbol(%c0_0)], %c128 : memref<256xf32>, memref<2x32xf32, 1>, memref<2x1xf32>
@@ -207,8 +207,8 @@ def AffinePipelineDataTransfer
         %6 = affine.load %1[%3 mod 2, %3] : memref<2x32xf32, 1>
         %7 = "compute"(%6) : (f32) -> f32
         affine.store %7, %1[%3 mod 2, %3] : memref<2x32xf32, 1>
-        dealloc %2 : memref<2x1xf32>
-        dealloc %1 : memref<2x32xf32, 1>
+        memref.dealloc %2 : memref<2x1xf32>
+        memref.dealloc %1 : memref<2x32xf32, 1>
         return
       }
     }
@@ -435,7 +435,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
             %p = arith.mulf %a, %a : f64
             affine.store %p, %A[%arg3] : memref<16xf64, #tile>
       }
-      %c = alloc() : memref<16xf64, #tile>
+      %c = memref.alloc() : memref<16xf64, #tile>
       %d = affine.load %c[0] : memref<16xf64, #tile>
       return %A: memref<16xf64, #tile>
     }
@@ -451,7 +451,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
         %4 = arith.mulf %3, %3 : f64
         affine.store %4, %arg0[%arg3 floordiv 4, %arg3 mod 4]: memref<4x4xf64>
       }
-      %0 = alloc() : memref<4x4xf64>
+      %0 = memref.alloc() : memref<4x4xf64>
       %1 = affine.apply #map1()
       %2 = affine.load %0[0, 0] : memref<4x4xf64>
       return %arg0 : memref<4x4xf64>

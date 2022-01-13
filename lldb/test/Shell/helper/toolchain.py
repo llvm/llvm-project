@@ -71,7 +71,6 @@ def use_lldb_substitutions(config):
                   extra_args=['platform'],
                   unresolved='ignore'),
         'lldb-test',
-        'lldb-instr',
         'lldb-vscode',
         ToolSubst('%build',
                   command="'" + sys.executable + "'",

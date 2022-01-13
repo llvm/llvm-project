@@ -374,6 +374,12 @@ void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
   DiagnosticMapping Mapping = makeUserMapping(Map, L);
   Mapping.setUpgradedFromWarning(WasUpgradedFromWarning);
 
+  // Make sure we propagate the NoWarningAsError flag from an existing
+  // mapping (which may be the default mapping).
+  DiagnosticMapping &Info = GetCurDiagState()->getOrAddMapping(Diag);
+  Mapping.setNoWarningAsError(Info.hasNoWarningAsError() ||
+                              Mapping.hasNoWarningAsError());
+
   // Common case; setting all the diagnostics of a group in one place.
   if ((L.isInvalid() || L == DiagStatesByLoc.getCurDiagStateLoc()) &&
       DiagStatesByLoc.getCurDiagState()) {

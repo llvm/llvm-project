@@ -1009,7 +1009,7 @@ struct FoldInitTensorWithTensorReshapeOp
     Location loc = reshapeOp.getLoc();
     ReifiedRankedShapedTypeDims resultShapes;
     ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        dyn_cast<ReifyRankedShapedTypeOpInterface>(reshapeOp.getOperation());
+        cast<ReifyRankedShapedTypeOpInterface>(reshapeOp.getOperation());
     if (failed(reifyShapedTypeInterface.reifyResultShapes(rewriter,
                                                           resultShapes)) ||
         !llvm::hasSingleElement(resultShapes))

@@ -89,7 +89,15 @@ public:
   /// Get the parameter in the element.
   const AttrOrTypeParameter &getParam() const { return param; }
 
+  /// Indicate if this variable is printed "qualified" (that is it is
+  /// prefixed with the `#dialect.mnemonic`).
+  bool shouldBeQualified() { return shouldBeQualifiedFlag; }
+  void setShouldBeQualified(bool qualified = true) {
+    shouldBeQualifiedFlag = qualified;
+  }
+
 private:
+  bool shouldBeQualifiedFlag = false;
   AttrOrTypeParameter param;
 };
 
@@ -165,6 +173,10 @@ static const char *const defaultParameterParser =
 /// Default printer for attribute or type parameters.
 static const char *const defaultParameterPrinter =
     "$_printer.printStrippedAttrOrType($_self)";
+
+/// Qualified printer for attribute or type parameters: it does not elide
+/// dialect and mnemonic.
+static const char *const qualifiedParameterPrinter = "$_printer << $_self";
 
 /// Print an error when failing to parse an element.
 ///
@@ -251,7 +263,7 @@ private:
   void genLiteralPrinter(StringRef value, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a variable.
   void genVariablePrinter(const AttrOrTypeParameter &param, FmtContext &ctx,
-                          MethodBody &os);
+                          MethodBody &os, bool printQualified = false);
   /// Generate the printer code for a `params` directive.
   void genParamsPrinter(ParamsDirective *el, FmtContext &ctx, MethodBody &os);
   /// Generate the printer code for a `struct` directive.
@@ -435,7 +447,8 @@ void AttrOrTypeFormat::genElementPrinter(Element *el, FmtContext &ctx,
   if (auto *strct = dyn_cast<StructDirective>(el))
     return genStructPrinter(strct, ctx, os);
   if (auto *var = dyn_cast<VariableElement>(el))
-    return genVariablePrinter(var->getParam(), ctx, os);
+    return genVariablePrinter(var->getParam(), ctx, os,
+                              var->shouldBeQualified());
 
   llvm_unreachable("unknown format element");
 }
@@ -455,7 +468,8 @@ void AttrOrTypeFormat::genLiteralPrinter(StringRef value, FmtContext &ctx,
 }
 
 void AttrOrTypeFormat::genVariablePrinter(const AttrOrTypeParameter &param,
-                                          FmtContext &ctx, MethodBody &os) {
+                                          FmtContext &ctx, MethodBody &os,
+                                          bool printQualified) {
   /// Insert a space before the next parameter, if necessary.
   if (shouldEmitSpace || !lastWasPunctuation)
     os << tgfmt("  $_printer << ' ';\n", &ctx);
@@ -464,7 +478,9 @@ void AttrOrTypeFormat::genVariablePrinter(const AttrOrTypeParameter &param,
 
   ctx.withSelf(getParameterAccessorName(param.getName()) + "()");
   os << "  ";
-  if (auto printer = param.getPrinter())
+  if (printQualified)
+    os << tgfmt(qualifiedParameterPrinter, &ctx) << ";\n";
+  else if (auto printer = param.getPrinter())
     os << tgfmt(*printer, &ctx) << ";\n";
   else
     os << tgfmt(defaultParameterPrinter, &ctx) << ";\n";
@@ -546,6 +562,9 @@ private:
   FailureOr<std::unique_ptr<Element>> parseDirective(ParserContext ctx);
   /// Parse a `params` directive.
   FailureOr<std::unique_ptr<Element>> parseParamsDirective();
+  /// Parse a `qualified` directive.
+  FailureOr<std::unique_ptr<Element>>
+  parseQualifiedDirective(ParserContext ctx);
   /// Parse a `struct` directive.
   FailureOr<std::unique_ptr<Element>> parseStructDirective();
 
@@ -643,6 +662,8 @@ FailureOr<std::unique_ptr<Element>>
 FormatParser::parseDirective(ParserContext ctx) {
 
   switch (curToken.getKind()) {
+  case FormatToken::kw_qualified:
+    return parseQualifiedDirective(ctx);
   case FormatToken::kw_params:
     return parseParamsDirective();
   case FormatToken::kw_struct:
@@ -654,6 +675,24 @@ FormatParser::parseDirective(ParserContext ctx) {
   default:
     return emitError("unknown directive in format: " + curToken.getSpelling());
   }
+}
+
+FailureOr<std::unique_ptr<Element>>
+FormatParser::parseQualifiedDirective(ParserContext ctx) {
+  consumeToken();
+  if (failed(parseToken(FormatToken::l_paren,
+                        "expected '(' before argument list")))
+    return failure();
+  FailureOr<std::unique_ptr<Element>> var = parseElement(ctx);
+  if (failed(var))
+    return var;
+  if (!isa<VariableElement>(*var))
+    return emitError("`qualified` argument list expected a variable");
+  cast<VariableElement>(var->get())->setShouldBeQualified();
+  if (failed(
+          parseToken(FormatToken::r_paren, "expected ')' after argument list")))
+    return failure();
+  return var;
 }
 
 FailureOr<std::unique_ptr<Element>> FormatParser::parseParamsDirective() {

@@ -651,6 +651,16 @@ The available directives are as follows:
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
 
+*   `qualified` ( type_or_attribute )
+
+    -   Wraps a `type` directive or an attribute parameter.
+    -   Used to force printing the type or attribute prefixed with its dialect
+        and mnemonic. For example the `vector.multi_reduction` operation has a
+        `kind` attribute ; by default the declarative assembly will print:
+        `vector.multi_reduction <minf>, ...` but using `qualified($kind)` in the
+        declarative assembly format will print it instead as:
+        `vector.multi_reduction #vector.kind<minf>, ...`.
+
 #### Literals
 
 A literal is either a keyword or punctuation surrounded by \`\`.

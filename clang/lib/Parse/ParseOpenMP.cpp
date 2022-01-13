@@ -1814,38 +1814,55 @@ parseOpenMPSimpleClause(Parser &P, OpenMPClauseKind Kind) {
 void Parser::ParseOMPDeclareTargetClauses(
     Sema::DeclareTargetContextInfo &DTCI) {
   SourceLocation DeviceTypeLoc;
-  bool RequiresToOrLinkClause = false;
-  bool HasToOrLinkClause = false;
+  bool RequiresToOrLinkOrIndirectClause = false;
+  bool HasToOrLinkOrIndirectClause = false;
   while (Tok.isNot(tok::annot_pragma_openmp_end)) {
     OMPDeclareTargetDeclAttr::MapTypeTy MT = OMPDeclareTargetDeclAttr::MT_To;
     bool HasIdentifier = Tok.is(tok::identifier);
     if (HasIdentifier) {
       // If we see any clause we need a to or link clause.
-      RequiresToOrLinkClause = true;
+      RequiresToOrLinkOrIndirectClause = true;
       IdentifierInfo *II = Tok.getIdentifierInfo();
       StringRef ClauseName = II->getName();
       bool IsDeviceTypeClause =
           getLangOpts().OpenMP >= 50 &&
           getOpenMPClauseKind(ClauseName) == OMPC_device_type;
 
+      bool IsIndirectClause = getLangOpts().OpenMP >= 51 &&
+                              getOpenMPClauseKind(ClauseName) == OMPC_indirect;
+      if (DTCI.Indirect.hasValue() && IsIndirectClause) {
+        Diag(Tok, diag::err_omp_more_one_clause)
+            << getOpenMPDirectiveName(OMPD_declare_target)
+            << getOpenMPClauseName(OMPC_indirect) << 0;
+        break;
+      }
       bool IsToOrLinkClause =
           OMPDeclareTargetDeclAttr::ConvertStrToMapTypeTy(ClauseName, MT);
       assert((!IsDeviceTypeClause || !IsToOrLinkClause) && "Cannot be both!");
 
-      if (!IsDeviceTypeClause && DTCI.Kind == OMPD_begin_declare_target) {
+      if (!IsDeviceTypeClause && !IsIndirectClause &&
+          DTCI.Kind == OMPD_begin_declare_target) {
         Diag(Tok, diag::err_omp_declare_target_unexpected_clause)
-            << ClauseName << 0;
+            << ClauseName << (getLangOpts().OpenMP >= 51 ? 3 : 0);
         break;
       }
-      if (!IsDeviceTypeClause && !IsToOrLinkClause) {
+      if (!IsDeviceTypeClause && !IsToOrLinkClause && !IsIndirectClause) {
         Diag(Tok, diag::err_omp_declare_target_unexpected_clause)
-            << ClauseName << (getLangOpts().OpenMP >= 50 ? 2 : 1);
+            << ClauseName
+            << (getLangOpts().OpenMP >= 51   ? 4
+                : getLangOpts().OpenMP >= 50 ? 2
+                                             : 1);
         break;
       }
 
-      if (IsToOrLinkClause)
-        HasToOrLinkClause = true;
+      if (IsToOrLinkClause || IsIndirectClause)
+        HasToOrLinkOrIndirectClause = true;
 
+      if (IsIndirectClause) {
+        if (!ParseOpenMPIndirectClause(DTCI, /*ParseOnly*/ false))
+          break;
+        continue;
+      }
       // Parse 'device_type' clause and go to next clause if any.
       if (IsDeviceTypeClause) {
         Optional<SimpleClauseData> DevTypeData =
@@ -1911,10 +1928,14 @@ void Parser::ParseOMPDeclareTargetClauses(
       ConsumeToken();
   }
 
+  if (DTCI.Indirect.hasValue() && DTCI.DT != OMPDeclareTargetDeclAttr::DT_Any)
+    Diag(DeviceTypeLoc, diag::err_omp_declare_target_indirect_device_type);
+
   // For declare target require at least 'to' or 'link' to be present.
-  if (DTCI.Kind == OMPD_declare_target && RequiresToOrLinkClause &&
-      !HasToOrLinkClause)
-    Diag(DTCI.Loc, diag::err_omp_declare_target_missing_to_or_link_clause);
+  if (DTCI.Kind == OMPD_declare_target && RequiresToOrLinkOrIndirectClause &&
+      !HasToOrLinkOrIndirectClause)
+    Diag(DTCI.Loc, diag::err_omp_declare_target_missing_to_or_link_clause)
+        << (getLangOpts().OpenMP >= 51 ? 1 : 0);
 
   SkipUntil(tok::annot_pragma_openmp_end, StopBeforeMatch);
 }
@@ -2283,11 +2304,12 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_declare_target: {
     SourceLocation DTLoc = ConsumeAnyToken();
     bool HasClauses = Tok.isNot(tok::annot_pragma_openmp_end);
-    bool HasImplicitMappings =
-        DKind == OMPD_begin_declare_target || !HasClauses;
     Sema::DeclareTargetContextInfo DTCI(DKind, DTLoc);
     if (HasClauses)
       ParseOMPDeclareTargetClauses(DTCI);
+    bool HasImplicitMappings =
+        DKind == OMPD_begin_declare_target || !HasClauses ||
+        (DTCI.ExplicitlyMapped.empty() && DTCI.Indirect.hasValue());
 
     // Skip the last annot_pragma_openmp_end.
     ConsumeAnyToken();
@@ -3382,6 +3404,47 @@ OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
   if (ParseOnly)
     return nullptr;
   return Actions.ActOnOpenMPSingleExprClause(Kind, Val.get(), Loc, LLoc, RLoc);
+}
+
+/// Parse indirect clause for '#pragma omp declare target' directive.
+///  'indirect' '[' '(' invoked-by-fptr ')' ']'
+/// where invoked-by-fptr is a constant boolean expression that evaluates to
+/// true or false at compile time.
+bool Parser::ParseOpenMPIndirectClause(Sema::DeclareTargetContextInfo &DTCI,
+                                       bool ParseOnly) {
+  SourceLocation Loc = ConsumeToken();
+  SourceLocation RLoc;
+
+  if (Tok.isNot(tok::l_paren)) {
+    if (ParseOnly)
+      return false;
+    DTCI.Indirect = nullptr;
+    return true;
+  }
+
+  ExprResult Val =
+      ParseOpenMPParensExpr(getOpenMPClauseName(OMPC_indirect), RLoc);
+  if (Val.isInvalid())
+    return false;
+
+  if (ParseOnly)
+    return false;
+
+  if (!Val.get()->isValueDependent() && !Val.get()->isTypeDependent() &&
+      !Val.get()->isInstantiationDependent() &&
+      !Val.get()->containsUnexpandedParameterPack()) {
+    ExprResult Ret = Actions.CheckBooleanCondition(Loc, Val.get());
+    if (Ret.isInvalid())
+      return false;
+    llvm::APSInt Result;
+    Ret = Actions.VerifyIntegerConstantExpression(Val.get(), &Result,
+                                                  Sema::AllowFold);
+    if (Ret.isInvalid())
+      return false;
+    DTCI.Indirect = Val.get();
+    return true;
+  }
+  return false;
 }
 
 /// Parsing of OpenMP clauses that use an interop-var.

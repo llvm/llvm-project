@@ -256,6 +256,7 @@ bool mlir::linalg::comprehensive_bufferize::BufferizationState::
 /// themselves (e.g., ExtractSliceOp).
 bool mlir::linalg::comprehensive_bufferize::BufferizationState::isValueRead(
     Value value) const {
+  assert(value.getType().isa<TensorType>() && "expected TensorType");
   SmallVector<OpOperand *> workingSet;
   for (OpOperand &use : value.getUses())
     workingSet.push_back(&use);
@@ -347,6 +348,16 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::BufferizationState(
   });
 }
 
+// bufferization.to_memref is not allowed to change the rank.
+static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
+#ifndef NDEBUG
+  auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>();
+  assert((!rankedTensorType || memrefType.cast<MemRefType>().getRank() ==
+                                   rankedTensorType.getRank()) &&
+         "to_memref would be invalid: mismatching ranks");
+#endif
+}
+
 static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
   assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
 
@@ -364,6 +375,7 @@ static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
     memrefType = getUnrankedMemRefType(
         tensor.getType().cast<TensorType>().getElementType());
   }
+  ensureToMemrefOpIsValid(tensor, memrefType);
   return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
                                                     tensor);
 }

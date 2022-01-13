@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
 #define _LIBCPP___ITERATOR_REVERSE_ITERATOR_H
 
-#include <__config>
 #include <__compare/compare_three_way_result.h>
 #include <__compare/three_way_comparable.h>
+#include <__config>
 #include <__iterator/iterator.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>

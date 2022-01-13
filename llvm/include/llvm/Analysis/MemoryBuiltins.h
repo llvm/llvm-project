@@ -88,14 +88,6 @@ bool isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 /// reallocates memory (e.g., realloc).
 bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
 
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory and throws if an allocation failed (e.g., new).
-bool isOpNewLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory (strdup, strndup).
-bool isStrdupLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-
 //===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
 //
@@ -113,6 +105,19 @@ inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
 //
+
+/// Return false if the allocation can have side effects on the program state
+/// we are required to preserve beyond the effect of allocating a new object.
+/// Ex: If our allocation routine has a counter for the number of objects
+/// allocated, and the program prints it on exit, can the value change due
+/// to optimization? Answer is highly language dependent.
+/// Note: *Removable* really does mean removable; it does not mean observable.
+/// A language (e.g. C++) can allow removing allocations without allowing
+/// insertion or speculative execution of allocation routines.
+bool isAllocRemovable(const CallBase *V, const TargetLibraryInfo *TLI);
+
+/// Gets the alignment argument for an aligned_alloc-like function
+Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
 
 /// If this allocation function initializes memory to a fixed value, return
 /// said value in the requested type.  Otherwise, return nullptr.

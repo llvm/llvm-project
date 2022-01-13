@@ -641,6 +641,12 @@ template <class BidirectionalIterator, class Compare>
     constexpr bool     // constexpr in C++20
     prev_permutation(BidirectionalIterator first, BidirectionalIterator last, Compare comp);
 
+namespace ranges {
+// [algorithms.results], algorithm result types
+template<class InputIterator, class OutputIterator>
+    struct in_out_result;
+}
+
 }  // std
 
 */
@@ -673,8 +679,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/count_if.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/equal_range.h>
-#include <__algorithm/fill_n.h>
 #include <__algorithm/fill.h>
+#include <__algorithm/fill_n.h>
 #include <__algorithm/find.h>
 #include <__algorithm/find_end.h>
 #include <__algorithm/find_first_of.h>
@@ -682,9 +688,10 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/find_if_not.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n.h>
-#include <__algorithm/generate_n.h>
 #include <__algorithm/generate.h>
+#include <__algorithm/generate_n.h>
 #include <__algorithm/half_positive.h>
+#include <__algorithm/in_out_result.h>
 #include <__algorithm/includes.h>
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/is_heap.h>
@@ -747,8 +754,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/swap_ranges.h>
 #include <__algorithm/transform.h>
-#include <__algorithm/unique_copy.h>
 #include <__algorithm/unique.h>
+#include <__algorithm/unique_copy.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__algorithm/upper_bound.h>
 

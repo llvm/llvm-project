@@ -40,7 +40,7 @@ struct SourceRange {
 
 /// A VariantValue instance annotated with its parser context.
 struct ParserValue {
-  ParserValue() {}
+  ParserValue() : Range() {}
   StringRef Text;
   SourceRange Range;
   VariantValue Value;

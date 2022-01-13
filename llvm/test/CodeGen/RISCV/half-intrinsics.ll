@@ -45,9 +45,8 @@ define half @sqrt_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call sqrtf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -59,9 +58,8 @@ define half @sqrt_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call sqrtf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -127,9 +125,8 @@ define half @powi_f16(half %a, i32 %b) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    call __powisf2@plt
@@ -145,9 +142,8 @@ define half @powi_f16(half %a, i32 %b) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    sext.w a1, s0
 ; RV64I-NEXT:    call __powisf2@plt
@@ -211,9 +207,8 @@ define half @sin_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call sinf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -225,9 +220,8 @@ define half @sin_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call sinf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -289,9 +283,8 @@ define half @cos_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call cosf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -303,9 +296,8 @@ define half @cos_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call cosf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -630,9 +622,8 @@ define half @exp_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call expf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -644,9 +635,8 @@ define half @exp_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call expf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -708,9 +698,8 @@ define half @exp2_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call exp2f@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -722,9 +711,8 @@ define half @exp2_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call exp2f@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -786,9 +774,8 @@ define half @log_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call logf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -800,9 +787,8 @@ define half @log_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call logf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -864,9 +850,8 @@ define half @log10_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call log10f@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -878,9 +863,8 @@ define half @log10_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call log10f@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -942,9 +926,8 @@ define half @log2_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call log2f@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -956,9 +939,8 @@ define half @log2_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call log2f@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1188,16 +1170,14 @@ define half @fabs_f16(half %a) nounwind {
 ;
 ; RV32I-LABEL: fabs_f16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a1, 8
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 17
+; RV32I-NEXT:    srli a0, a0, 17
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: fabs_f16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 8
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 49
+; RV64I-NEXT:    srli a0, a0, 49
 ; RV64I-NEXT:    ret
   %1 = call half @llvm.fabs.f16(half %a)
   ret half %1
@@ -1403,9 +1383,8 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 1048568
 ; RV32I-NEXT:    and a1, a1, a2
-; RV32I-NEXT:    lui a2, 8
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    slli a0, a0, 17
+; RV32I-NEXT:    srli a0, a0, 17
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -1413,9 +1392,8 @@ define half @copysign_f16(half %a, half %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 1048568
 ; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    lui a2, 8
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 49
+; RV64I-NEXT:    srli a0, a0, 49
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = call half @llvm.copysign.f16(half %a, half %b)
@@ -1473,9 +1451,8 @@ define half @floor_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call floorf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1487,9 +1464,8 @@ define half @floor_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call floorf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1551,9 +1527,8 @@ define half @ceil_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call ceilf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1565,9 +1540,8 @@ define half @ceil_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call ceilf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1629,9 +1603,8 @@ define half @trunc_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call truncf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1643,9 +1616,8 @@ define half @trunc_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call truncf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1707,9 +1679,8 @@ define half @rint_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call rintf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1721,9 +1692,8 @@ define half @rint_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call rintf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1785,9 +1755,8 @@ define half @nearbyint_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call nearbyintf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1799,9 +1768,8 @@ define half @nearbyint_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call nearbyintf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1863,9 +1831,8 @@ define half @round_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call roundf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1877,9 +1844,8 @@ define half @round_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call roundf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1941,9 +1907,8 @@ define half @roundeven_f16(half %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call roundevenf@plt
 ; RV32I-NEXT:    call __gnu_f2h_ieee@plt
@@ -1955,9 +1920,8 @@ define half @roundeven_f16(half %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call roundevenf@plt
 ; RV64I-NEXT:    call __gnu_f2h_ieee@plt

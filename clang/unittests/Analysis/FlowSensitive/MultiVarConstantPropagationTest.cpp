@@ -132,8 +132,8 @@ public:
     return ConstantPropagationLattice::bottom();
   }
 
-  ConstantPropagationLattice
-  transfer(const Stmt *S, ConstantPropagationLattice Vars, Environment &Env) {
+  void transfer(const Stmt *S, ConstantPropagationLattice &Vars,
+                Environment &Env) {
     auto matcher =
         stmt(anyOf(declStmt(hasSingleDecl(
                        varDecl(decl().bind(kVar), hasType(isInteger()),
@@ -148,7 +148,7 @@ public:
     ASTContext &Context = getASTContext();
     auto Results = match(matcher, *S, Context);
     if (Results.empty())
-      return Vars;
+      return;
     const BoundNodes &Nodes = Results[0];
 
     const auto *Var = Nodes.getNodeAs<clang::VarDecl>(kVar);
@@ -165,10 +165,7 @@ public:
         // is (it is implementation defined), so we set it to top.
         Vars[Var] = ValueLattice::top();
       }
-      return Vars;
-    }
-
-    if (Nodes.getNodeAs<clang::Expr>(kJustAssignment)) {
+    } else if (Nodes.getNodeAs<clang::Expr>(kJustAssignment)) {
       const auto *E = Nodes.getNodeAs<clang::Expr>(kRHS);
       assert(E != nullptr);
 
@@ -176,18 +173,12 @@ public:
       Vars[Var] = (E->EvaluateAsInt(R, Context) && R.Val.isInt())
                       ? ValueLattice(R.Val.getInt().getExtValue())
                       : ValueLattice::top();
-      return Vars;
-    }
-
-    // Any assignment involving the expression itself resets the variable to
-    // "unknown". A more advanced analysis could try to evaluate the compound
-    // assignment. For example, `x += 0` need not invalidate `x`.
-    if (Nodes.getNodeAs<clang::Expr>(kAssignment)) {
+    } else if (Nodes.getNodeAs<clang::Expr>(kAssignment)) {
+      // Any assignment involving the expression itself resets the variable to
+      // "unknown". A more advanced analysis could try to evaluate the compound
+      // assignment. For example, `x += 0` need not invalidate `x`.
       Vars[Var] = ValueLattice::top();
-      return Vars;
     }
-
-    llvm_unreachable("expected at least one bound identifier");
   }
 };
 

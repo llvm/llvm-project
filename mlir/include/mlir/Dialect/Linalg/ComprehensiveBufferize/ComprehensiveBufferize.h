@@ -26,7 +26,7 @@ LogicalResult analyzeOp(Operation *op, BufferizationState &state);
 
 /// Bufferize `op` and its nested ops. Bufferization decisions are stored in
 /// `state`.
-LogicalResult bufferizeOp(Operation *op, BufferizationState &state);
+LogicalResult bufferizeOp(Operation *op, const BufferizationState &state);
 
 /// Run Comprehensive Bufferize on the given op: Analysis + Bufferization
 LogicalResult

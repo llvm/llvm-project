@@ -170,10 +170,12 @@ sequentially.
 
 ---
 ## DexUnreachable
-    DexUnreachable()
+    DexUnreachable([, **from_line=1][,**to_line=Max][,**on_line])
 
 ### Description
-Expect the source line this is found on will never be stepped on to.
+Expect the source line this is found on will never be stepped on to. If either
+'on_line' or both 'from_line' and 'to_line' are specified, checks that the
+specified line(s) are not stepped on.
 
 ### Heuristic
 [TODO]

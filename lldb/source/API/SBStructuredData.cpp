@@ -196,8 +196,8 @@ bool SBStructuredData::GetBooleanValue(bool fail_value) const {
 }
 
 size_t SBStructuredData::GetStringValue(char *dst, size_t dst_len) const {
-  LLDB_RECORD_CHAR_PTR_METHOD_CONST(size_t, SBStructuredData, GetStringValue,
-                                    (char *, size_t), dst, "", dst_len);
+  LLDB_RECORD_METHOD_CONST(size_t, SBStructuredData, GetStringValue,
+                           (char *, size_t), dst, "", dst_len);
 
   return m_impl_up->GetStringValue(dst, dst_len);
 }

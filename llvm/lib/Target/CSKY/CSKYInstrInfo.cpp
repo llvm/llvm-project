@@ -537,3 +537,22 @@ Register CSKYInstrInfo::getGlobalBaseReg(MachineFunction &MF) const {
   CFI->setGlobalBaseReg(GlobalBaseReg);
   return GlobalBaseReg;
 }
+
+unsigned CSKYInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  default:
+    return MI.getDesc().getSize();
+  case CSKY::CONSTPOOL_ENTRY:
+    return MI.getOperand(2).getImm();
+  case CSKY::SPILL_CARRY:
+  case CSKY::RESTORE_CARRY:
+  case CSKY::PseudoTLSLA32:
+    return 8;
+  case TargetOpcode::INLINEASM_BR:
+  case TargetOpcode::INLINEASM: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const char *AsmStr = MI.getOperand(0).getSymbolName();
+    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+  }
+  }
+}

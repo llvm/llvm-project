@@ -1185,10 +1185,10 @@ static bool MayContainThrowingOrExitingCall(Instruction *Begin,
 
 static AttrBuilder IdentifyValidAttributes(CallBase &CB) {
 
-  AttrBuilder AB(CB.getAttributes(), AttributeList::ReturnIndex);
+  AttrBuilder AB(CB.getContext(), CB.getAttributes(), AttributeList::ReturnIndex);
   if (AB.empty())
     return AB;
-  AttrBuilder Valid;
+  AttrBuilder Valid(CB.getContext());
   // Only allow these white listed attributes to be propagated back to the
   // callee. This is because other attributes may only be valid on the call
   // itself, i.e. attributes such as signext and zeroext.

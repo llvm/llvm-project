@@ -556,9 +556,22 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
               return (*this)(assoc.expr());
             }
           },
-          [&](const semantics::SubprogramDetails &subp) {
+          [&](const semantics::SubprogramDetails &subp) -> Result {
             if (subp.isFunction()) {
-              return (*this)(subp.result());
+              auto resultShape{(*this)(subp.result())};
+              if (resultShape && !useResultSymbolShape_) {
+                // Ensure the shape does not contain descriptor inquiries, they
+                // may refer to symbols belonging to the called subprogram scope
+                // that are meaningless on the caller side without the related
+                // call expression.
+                for (auto extent : *resultShape) {
+                  if (extent &&
+                      std::holds_alternative<DescriptorInquiry>(extent->u)) {
+                    return std::nullopt;
+                  }
+                }
+              }
+              return resultShape;
             } else {
               return Result{};
             }

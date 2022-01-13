@@ -204,3 +204,31 @@ return:                                           ; preds = %entry, %asm.fallthr
   %retval.0 = phi i32 [ %add, %asm.fallthrough2 ], [ -2, %label_true ], [ -1, %asm.fallthrough ], [ -1, %entry ]
   ret i32 %retval.0
 }
+
+; Test5 - test that we don't rely on a positional constraint. ie. +r in
+; GCCAsmStmt being turned into "={esp},0" since after D87279 they're turned
+; into "={esp},{esp}". This previously caused an ICE; this test is more so
+; about avoiding another ICE than what the actual output is.
+define dso_local void @test5() {
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:  .Ltmp6: # Block address taken
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    retl
+  %1 = call i32 @llvm.read_register.i32(metadata !3)
+  %2 = callbr i32 asm "", "={esp},X,{esp},~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test5, %4), i32 %1)
+          to label %3 [label %4]
+
+3:
+  call void @llvm.write_register.i32(metadata !3, i32 %2)
+  br label %4
+
+4:
+  ret void
+}
+
+declare i32 @llvm.read_register.i32(metadata)
+declare void @llvm.write_register.i32(metadata, i32)
+!3 = !{!"esp"}
