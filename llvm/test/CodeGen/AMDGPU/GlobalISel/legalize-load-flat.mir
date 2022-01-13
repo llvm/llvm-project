@@ -6575,3 +6575,27 @@ body: |
     $vgpr0_vgpr1 = COPY %1
 ...
 
+# Make sure there's no crash on very high alignments
+---
+name: test_load_flat_s32_align536870912
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CI-LABEL: name: test_load_flat_s32_align536870912
+    ; CI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 536870912)
+    ; CI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; VI-LABEL: name: test_load_flat_s32_align536870912
+    ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 536870912)
+    ; VI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    ; GFX9-LABEL: name: test_load_flat_s32_align536870912
+    ; GFX9: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 536870912)
+    ; GFX9-NEXT: $vgpr0 = COPY [[LOAD]](s32)
+    %0:_(p0) = COPY $vgpr0_vgpr1
+    %1:_(s32) = G_LOAD %0 :: (load (s16), align 536870912)
+    $vgpr0 = COPY %1
+
+...
