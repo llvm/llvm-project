@@ -11760,9 +11760,9 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       if (RegName.consume_front("[")) {
         uint32_t End;
         bool Failed = RegName.consumeInteger(10, Idx);
-        Failed &= !RegName.consume_front(":");
-        Failed &= RegName.consumeInteger(10, End);
-        Failed &= !RegName.consume_back("]");
+        Failed |= !RegName.consume_front(":");
+        Failed |= RegName.consumeInteger(10, End);
+        Failed |= !RegName.consume_back("]");
         if (!Failed) {
           uint32_t Width = (End - Idx + 1) * 32;
           MCRegister Reg = RC->getRegister(Idx);
