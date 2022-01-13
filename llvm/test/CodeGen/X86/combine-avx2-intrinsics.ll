@@ -113,7 +113,7 @@ define <4 x i32> @demandedelts_vpsravd(<4 x i32> %a0, <4 x i32> %a1) {
 define <4 x i64> @demandedelts_vpsrlvq(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: demandedelts_vpsrlvq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpsrlvq %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpbroadcastq %xmm0, %ymm0
 ; CHECK-NEXT:    retq
   %shuffle = shufflevector <4 x i64> %a1, <4 x i64> undef, <4 x i32> zeroinitializer
@@ -123,16 +123,13 @@ define <4 x i64> @demandedelts_vpsrlvq(<4 x i64> %a0, <4 x i64> %a1) {
 }
 
 ;
-; isBinOp Handling (TODO)
+; isBinOp Handling
 ;
 
 define <4 x i32> @binop_shuffle_vpsllvd(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: binop_shuffle_vpsllvd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[3,2,1,0]
 ; CHECK-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; CHECK-NEXT:    retq
   %shuffle0 = shufflevector <4 x i32> %a0, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %shuffle1 = shufflevector <4 x i32> %a1, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -144,10 +141,7 @@ define <4 x i32> @binop_shuffle_vpsllvd(<4 x i32> %a0, <4 x i32> %a1) {
 define <8 x i32> @binop_shuffle_vpsravd(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-LABEL: binop_shuffle_vpsravd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[3,2,1,0,7,6,5,4]
 ; CHECK-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; CHECK-NEXT:    retq
   %shuffle0 = shufflevector <8 x i32> %a0, <8 x i32> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
   %shuffle1 = shufflevector <8 x i32> %a1, <8 x i32> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
@@ -159,10 +153,7 @@ define <8 x i32> @binop_shuffle_vpsravd(<8 x i32> %a0, <8 x i32> %a1) {
 define <4 x i64> @binop_shuffle_vpsrlvq(<4 x i64> %a0, <4 x i64> %a1) {
 ; CHECK-LABEL: binop_shuffle_vpsrlvq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[3,2,1,0]
 ; CHECK-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
 ; CHECK-NEXT:    retq
   %shuffle0 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %shuffle1 = shufflevector <4 x i64> %a1, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>

@@ -31,16 +31,13 @@ define <4 x i32> @demandedelts_vpshld(<4 x i32> %a0, <4 x i32> %a1) {
 }
 
 ;
-; isBinOp Handling (TODO)
+; isBinOp Handling
 ;
 
 define <8 x i16> @binop_shuffle_vpshaw(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: binop_shuffle_vpshaw:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
 ; CHECK-NEXT:    vpshlw %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
 ; CHECK-NEXT:    retq
   %shuffle0 = shufflevector <8 x i16> %a0, <8 x i16> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
   %shuffle1 = shufflevector <8 x i16> %a1, <8 x i16> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 4, i32 5, i32 6, i32 7>
@@ -49,6 +46,7 @@ define <8 x i16> @binop_shuffle_vpshaw(<8 x i16> %a0, <8 x i16> %a1) {
   ret <8 x i16> %result
 }
 
+; TODO - canonicalizeShuffleWithBinOps - handle scaled shuffle masks.
 define <2 x i64> @binop_shuffle_vpshlq(<2 x i64> %a0, <2 x i64> %a1) {
 ; CHECK-LABEL: binop_shuffle_vpshlq:
 ; CHECK:       # %bb.0:
