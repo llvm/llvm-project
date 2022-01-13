@@ -337,105 +337,66 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
   return Changed;
 }
 
-static bool isSafeSROAElementUse(Value *V);
-
-/// Return true if the specified GEP is a safe user of a derived
-/// expression from a global that we want to SROA.
-static bool isSafeSROAGEP(User *U) {
-  // Check to see if this ConstantExpr GEP is SRA'able.  In particular, we
-  // don't like < 3 operand CE's, and we don't like non-constant integer
-  // indices.  This enforces that all uses are 'gep GV, 0, C, ...' for some
-  // value of C.
-  if (U->getNumOperands() < 3 || !isa<Constant>(U->getOperand(1)) ||
-      !cast<Constant>(U->getOperand(1))->isNullValue())
-    return false;
-
-  gep_type_iterator GEPI = gep_type_begin(U), E = gep_type_end(U);
-  ++GEPI; // Skip over the pointer index.
-
-  // For all other level we require that the indices are constant and inrange.
-  // In particular, consider: A[0][i].  We cannot know that the user isn't doing
-  // invalid things like allowing i to index an out-of-range subscript that
-  // accesses A[1]. This can also happen between different members of a struct
-  // in llvm IR.
-  for (; GEPI != E; ++GEPI) {
-    if (GEPI.isStruct())
+/// Look at all uses of the global and determine which (offset, type) pairs it
+/// can be split into.
+static bool collectSRATypes(DenseMap<uint64_t, Type *> &Types, GlobalValue *GV,
+                            const DataLayout &DL) {
+  SmallVector<Use *, 16> Worklist;
+  SmallPtrSet<Use *, 16> Visited;
+  auto AppendUses = [&](Value *V) {
+    for (Use &U : V->uses())
+      if (Visited.insert(&U).second)
+        Worklist.push_back(&U);
+  };
+  AppendUses(GV);
+  while (!Worklist.empty()) {
+    Use *U = Worklist.pop_back_val();
+    User *V = U->getUser();
+    if (isa<BitCastOperator>(V) || isa<AddrSpaceCastOperator>(V)) {
+      AppendUses(V);
       continue;
+    }
 
-    ConstantInt *IdxVal = dyn_cast<ConstantInt>(GEPI.getOperand());
-    if (!IdxVal || (GEPI.isBoundedSequential() &&
-                    IdxVal->getZExtValue() >= GEPI.getSequentialNumElements()))
-      return false;
-  }
+    if (auto *GEP = dyn_cast<GEPOperator>(V)) {
+      if (!GEP->hasAllConstantIndices())
+        return false;
+      AppendUses(V);
+      continue;
+    }
 
-  return llvm::all_of(U->users(), isSafeSROAElementUse);
-}
+    if (Value *Ptr = getLoadStorePointerOperand(V)) {
+      // This is storing the global address into somewhere, not storing into
+      // the global.
+      if (isa<StoreInst>(V) && U->getOperandNo() == 0)
+        return false;
 
-/// Return true if the specified instruction is a safe user of a derived
-/// expression from a global that we want to SROA.
-static bool isSafeSROAElementUse(Value *V) {
-  // We might have a dead and dangling constant hanging off of here.
-  if (Constant *C = dyn_cast<Constant>(V))
-    return isSafeToDestroyConstant(C);
+      APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+      Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
+                                                   /* AllowNonInbounds */ true);
+      if (Ptr != GV || Offset.getActiveBits() >= 64)
+        return false;
 
-  Instruction *I = dyn_cast<Instruction>(V);
-  if (!I) return false;
+      // TODO: We currently require that all accesses at a given offset must
+      // use the same type. This could be relaxed.
+      Type *Ty = getLoadStoreType(V);
+      auto It = Types.try_emplace(Offset.getZExtValue(), Ty).first;
+      if (Ty != It->second)
+        return false;
+      continue;
+    }
 
-  // Loads are ok.
-  if (isa<LoadInst>(I)) return true;
+    // Ignore dead constant users.
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (!isSafeToDestroyConstant(C))
+        return false;
+      continue;
+    }
 
-  // Stores *to* the pointer are ok.
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->getOperand(0) != V;
-
-  // Otherwise, it must be a GEP. Check it and its users are safe to SRA.
-  return isa<GetElementPtrInst>(I) && isSafeSROAGEP(I);
-}
-
-/// Look at all uses of the global and decide whether it is safe for us to
-/// perform this transformation.
-static bool GlobalUsersSafeToSRA(GlobalValue *GV) {
-  for (User *U : GV->users()) {
-    // The user of the global must be a GEP Inst or a ConstantExpr GEP.
-    if (!isa<GetElementPtrInst>(U) &&
-        (!isa<ConstantExpr>(U) ||
-        cast<ConstantExpr>(U)->getOpcode() != Instruction::GetElementPtr))
-      return false;
-
-    // Check the gep and it's users are safe to SRA
-    if (!isSafeSROAGEP(U))
-      return false;
+    // Unknown user.
+    return false;
   }
 
   return true;
-}
-
-static bool IsSRASequential(Type *T) {
-  return isa<ArrayType>(T) || isa<VectorType>(T);
-}
-static uint64_t GetSRASequentialNumElements(Type *T) {
-  if (ArrayType *AT = dyn_cast<ArrayType>(T))
-    return AT->getNumElements();
-  return cast<FixedVectorType>(T)->getNumElements();
-}
-static Type *GetSRASequentialElementType(Type *T) {
-  if (ArrayType *AT = dyn_cast<ArrayType>(T))
-    return AT->getElementType();
-  return cast<VectorType>(T)->getElementType();
-}
-static bool CanDoGlobalSRA(GlobalVariable *GV) {
-  Constant *Init = GV->getInitializer();
-
-  if (isa<StructType>(Init->getType())) {
-    // nothing to check
-  } else if (IsSRASequential(Init->getType())) {
-    if (GetSRASequentialNumElements(Init->getType()) > 16 &&
-        GV->hasNUsesOrMore(16))
-      return false; // It's not worth it.
-  } else
-    return false;
-
-  return GlobalUsersSafeToSRA(GV);
 }
 
 /// Copy over the debug info for a variable to its SRA replacements.
@@ -468,160 +429,140 @@ static void transferSRADebugInfo(GlobalVariable *GV, GlobalVariable *NGV,
 /// transformation is safe already.  We return the first global variable we
 /// insert so that the caller can reprocess it.
 static GlobalVariable *SRAGlobal(GlobalVariable *GV, const DataLayout &DL) {
-  // Make sure this global only has simple uses that we can SRA.
-  if (!CanDoGlobalSRA(GV))
+  assert(GV->hasLocalLinkage());
+
+  // Collect types to split into.
+  DenseMap<uint64_t, Type *> Types;
+  if (!collectSRATypes(Types, GV, DL) || Types.empty())
     return nullptr;
 
-  assert(GV->hasLocalLinkage());
-  Constant *Init = GV->getInitializer();
-  Type *Ty = Init->getType();
-  uint64_t VarSize = DL.getTypeSizeInBits(Ty);
+  // Make sure we don't SRA back to the same type.
+  if (Types.size() == 1 && Types.begin()->second == GV->getValueType())
+    return nullptr;
 
-  std::map<unsigned, GlobalVariable *> NewGlobals;
+  // Don't perform SRA if we would have to split into many globals.
+  if (Types.size() > 16)
+    return nullptr;
 
-  // Get the alignment of the global, either explicit or target-specific.
-  Align StartAlignment =
-      DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getType());
+  // Sort by offset.
+  SmallVector<std::pair<uint64_t, Type *>, 16> TypesVector;
+  append_range(TypesVector, Types);
+  sort(TypesVector,
+       [](const auto &A, const auto &B) { return A.first < B.first; });
 
-  // Loop over all users and create replacement variables for used aggregate
-  // elements.
-  for (User *GEP : GV->users()) {
-    assert(((isa<ConstantExpr>(GEP) && cast<ConstantExpr>(GEP)->getOpcode() ==
-                                           Instruction::GetElementPtr) ||
-            isa<GetElementPtrInst>(GEP)) &&
-           "NonGEP CE's are not SRAable!");
+  // Check that the types are non-overlapping.
+  uint64_t Offset = 0;
+  for (const auto &Pair : TypesVector) {
+    // Overlaps with previous type.
+    if (Pair.first < Offset)
+      return nullptr;
 
-    // Ignore the 1th operand, which has to be zero or else the program is quite
-    // broken (undefined).  Get the 2nd operand, which is the structure or array
-    // index.
-    unsigned ElementIdx = cast<ConstantInt>(GEP->getOperand(2))->getZExtValue();
-    if (NewGlobals.count(ElementIdx) == 1)
-      continue; // we`ve already created replacement variable
-    assert(NewGlobals.count(ElementIdx) == 0);
-
-    Type *ElTy = nullptr;
-    if (StructType *STy = dyn_cast<StructType>(Ty))
-      ElTy = STy->getElementType(ElementIdx);
-    else
-      ElTy = GetSRASequentialElementType(Ty);
-    assert(ElTy);
-
-    Constant *In = Init->getAggregateElement(ElementIdx);
-    assert(In && "Couldn't get element of initializer?");
-
-    GlobalVariable *NGV = new GlobalVariable(
-        ElTy, false, GlobalVariable::InternalLinkage, In,
-        GV->getName() + "." + Twine(ElementIdx), GV->getThreadLocalMode(),
-        GV->getType()->getAddressSpace());
-    NGV->copyAttributesFrom(GV);
-    NewGlobals.insert(std::make_pair(ElementIdx, NGV));
-
-    if (StructType *STy = dyn_cast<StructType>(Ty)) {
-      const StructLayout &Layout = *DL.getStructLayout(STy);
-
-      // Calculate the known alignment of the field.  If the original aggregate
-      // had 256 byte alignment for example, something might depend on that:
-      // propagate info to each field.
-      uint64_t FieldOffset = Layout.getElementOffset(ElementIdx);
-      Align NewAlign = commonAlignment(StartAlignment, FieldOffset);
-      if (NewAlign > DL.getABITypeAlign(STy->getElementType(ElementIdx)))
-        NGV->setAlignment(NewAlign);
-
-      // Copy over the debug info for the variable.
-      uint64_t Size = DL.getTypeAllocSizeInBits(NGV->getValueType());
-      uint64_t FragmentOffsetInBits = Layout.getElementOffsetInBits(ElementIdx);
-      transferSRADebugInfo(GV, NGV, FragmentOffsetInBits, Size, VarSize);
-    } else {
-      uint64_t EltSize = DL.getTypeAllocSize(ElTy);
-      Align EltAlign = DL.getABITypeAlign(ElTy);
-      uint64_t FragmentSizeInBits = DL.getTypeAllocSizeInBits(ElTy);
-
-      // Calculate the known alignment of the field.  If the original aggregate
-      // had 256 byte alignment for example, something might depend on that:
-      // propagate info to each field.
-      Align NewAlign = commonAlignment(StartAlignment, EltSize * ElementIdx);
-      if (NewAlign > EltAlign)
-        NGV->setAlignment(NewAlign);
-      transferSRADebugInfo(GV, NGV, FragmentSizeInBits * ElementIdx,
-                           FragmentSizeInBits, VarSize);
-    }
+    Offset = Pair.first + DL.getTypeAllocSize(Pair.second);
   }
 
-  if (NewGlobals.empty())
+  // Some accesses go beyond the end of the global, don't bother.
+  if (Offset > DL.getTypeAllocSize(GV->getValueType()))
     return nullptr;
 
-  Module::GlobalListType &Globals = GV->getParent()->getGlobalList();
-  for (auto NewGlobalVar : NewGlobals)
-    Globals.push_back(NewGlobalVar.second);
+  // Collect initializers for new globals.
+  Constant *OrigInit = GV->getInitializer();
+  DenseMap<uint64_t, Constant *> Initializers;
+  for (const auto &Pair : Types) {
+    Constant *NewInit = ConstantFoldLoadFromConst(OrigInit, Pair.second,
+                                                  APInt(64, Pair.first), DL);
+    if (!NewInit) {
+      LLVM_DEBUG(dbgs() << "Global SRA: Failed to evaluate initializer of "
+                        << *GV << " with type " << *Pair.second << " at offset "
+                        << Pair.first << "\n");
+      return nullptr;
+    }
+    Initializers.insert({Pair.first, NewInit});
+  }
 
   LLVM_DEBUG(dbgs() << "PERFORMING GLOBAL SRA ON: " << *GV << "\n");
 
-  Constant *NullInt =Constant::getNullValue(Type::getInt32Ty(GV->getContext()));
+  // Get the alignment of the global, either explicit or target-specific.
+  Align StartAlignment =
+      DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
+  uint64_t VarSize = DL.getTypeSizeInBits(GV->getValueType());
 
-  // Loop over all of the uses of the global, replacing the constantexpr geps,
-  // with smaller constantexpr geps or direct references.
-  while (!GV->use_empty()) {
-    User *GEP = GV->user_back();
-    assert(((isa<ConstantExpr>(GEP) &&
-             cast<ConstantExpr>(GEP)->getOpcode()==Instruction::GetElementPtr)||
-            isa<GetElementPtrInst>(GEP)) && "NonGEP CE's are not SRAable!");
+  // Create replacement globals.
+  DenseMap<uint64_t, GlobalVariable *> NewGlobals;
+  unsigned NameSuffix = 0;
+  for (auto &Pair : TypesVector) {
+    uint64_t Offset = Pair.first;
+    Type *Ty = Pair.second;
+    GlobalVariable *NGV = new GlobalVariable(
+        *GV->getParent(), Ty, false, GlobalVariable::InternalLinkage,
+        Initializers[Offset], GV->getName() + "." + Twine(NameSuffix++), GV,
+        GV->getThreadLocalMode(), GV->getAddressSpace());
+    NGV->copyAttributesFrom(GV);
+    NewGlobals.insert({Offset, NGV});
 
-    // Ignore the 1th operand, which has to be zero or else the program is quite
-    // broken (undefined).  Get the 2nd operand, which is the structure or array
-    // index.
-    unsigned ElementIdx = cast<ConstantInt>(GEP->getOperand(2))->getZExtValue();
-    assert(NewGlobals.count(ElementIdx) == 1);
+    // Calculate the known alignment of the field.  If the original aggregate
+    // had 256 byte alignment for example, something might depend on that:
+    // propagate info to each field.
+    Align NewAlign = commonAlignment(StartAlignment, Offset);
+    if (NewAlign > DL.getABITypeAlign(Ty))
+      NGV->setAlignment(NewAlign);
 
-    Value *NewPtr = NewGlobals[ElementIdx];
-    Type *NewTy = NewGlobals[ElementIdx]->getValueType();
-
-    // Form a shorter GEP if needed.
-    if (GEP->getNumOperands() > 3) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(GEP)) {
-        SmallVector<Constant*, 8> Idxs;
-        Idxs.push_back(NullInt);
-        for (unsigned i = 3, e = CE->getNumOperands(); i != e; ++i)
-          Idxs.push_back(CE->getOperand(i));
-        NewPtr =
-            ConstantExpr::getGetElementPtr(NewTy, cast<Constant>(NewPtr), Idxs);
-      } else {
-        GetElementPtrInst *GEPI = cast<GetElementPtrInst>(GEP);
-        SmallVector<Value*, 8> Idxs;
-        Idxs.push_back(NullInt);
-        for (unsigned i = 3, e = GEPI->getNumOperands(); i != e; ++i)
-          Idxs.push_back(GEPI->getOperand(i));
-        NewPtr = GetElementPtrInst::Create(
-            NewTy, NewPtr, Idxs, GEPI->getName() + "." + Twine(ElementIdx),
-            GEPI);
-      }
-    }
-    GEP->replaceAllUsesWith(NewPtr);
-
-    // We changed the pointer of any memory access user. Recalculate alignments.
-    for (User *U : NewPtr->users()) {
-      if (auto *Load = dyn_cast<LoadInst>(U)) {
-        Align PrefAlign = DL.getPrefTypeAlign(Load->getType());
-        Align NewAlign = getOrEnforceKnownAlignment(Load->getPointerOperand(),
-                                                    PrefAlign, DL, Load);
-        Load->setAlignment(NewAlign);
-      }
-      if (auto *Store = dyn_cast<StoreInst>(U)) {
-        Align PrefAlign =
-            DL.getPrefTypeAlign(Store->getValueOperand()->getType());
-        Align NewAlign = getOrEnforceKnownAlignment(Store->getPointerOperand(),
-                                                    PrefAlign, DL, Store);
-        Store->setAlignment(NewAlign);
-      }
-    }
-
-    if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(GEP))
-      GEPI->eraseFromParent();
-    else
-      cast<ConstantExpr>(GEP)->destroyConstant();
+    // Copy over the debug info for the variable.
+    transferSRADebugInfo(GV, NGV, Offset * 8, DL.getTypeAllocSizeInBits(Ty),
+                         VarSize);
   }
 
-  // Delete the old global, now that it is dead.
-  Globals.erase(GV);
+  // Replace uses of the original global with uses of the new global.
+  SmallVector<Value *, 16> Worklist;
+  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<WeakTrackingVH, 16> DeadInsts;
+  auto AppendUsers = [&](Value *V) {
+    for (User *U : V->users())
+      if (Visited.insert(U).second)
+        Worklist.push_back(U);
+  };
+  AppendUsers(GV);
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (isa<BitCastOperator>(V) || isa<AddrSpaceCastOperator>(V) ||
+        isa<GEPOperator>(V)) {
+      AppendUsers(V);
+      if (isa<Instruction>(V))
+        DeadInsts.push_back(V);
+      continue;
+    }
+
+    if (Value *Ptr = getLoadStorePointerOperand(V)) {
+      APInt Offset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+      Ptr = Ptr->stripAndAccumulateConstantOffsets(DL, Offset,
+                                                   /* AllowNonInbounds */ true);
+      assert(Ptr == GV && "Load/store must be from/to global");
+      GlobalVariable *NGV = NewGlobals[Offset.getZExtValue()];
+      assert(NGV && "Must have replacement global for this offset");
+
+      // Update the pointer operand and recalculate alignment.
+      Align PrefAlign = DL.getPrefTypeAlign(getLoadStoreType(V));
+      Align NewAlign =
+          getOrEnforceKnownAlignment(NGV, PrefAlign, DL, cast<Instruction>(V));
+
+      if (auto *LI = dyn_cast<LoadInst>(V)) {
+        LI->setOperand(0, NGV);
+        LI->setAlignment(NewAlign);
+      } else {
+        auto *SI = cast<StoreInst>(V);
+        SI->setOperand(1, NGV);
+        SI->setAlignment(NewAlign);
+      }
+      continue;
+    }
+
+    assert(isa<Constant>(V) && isSafeToDestroyConstant(cast<Constant>(V)) &&
+           "Other users can only be dead constants");
+  }
+
+  // Delete old instructions and global.
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
+  GV->removeDeadConstantUsers();
+  GV->eraseFromParent();
   ++NumSRA;
 
   assert(NewGlobals.size() > 0);
