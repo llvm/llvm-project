@@ -1381,7 +1381,7 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
-  Value *CanonicalIV = State.get(getParent()->getPlan()->getCanonicalIV(), 0);
+  Value *CanonicalIV = State.get(getOperand(0), 0);
   Type *STy = CanonicalIV->getType();
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   ElementCount VF = State.VF;
@@ -1404,7 +1404,8 @@ void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
-  O << " = WIDEN-CANONICAL-INDUCTION";
+  O << " = WIDEN-CANONICAL-INDUCTION ";
+  printOperands(O, SlotTracker);
 }
 #endif
 
