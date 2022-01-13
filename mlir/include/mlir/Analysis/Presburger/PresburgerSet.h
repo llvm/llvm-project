@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_PRESBURGERSET_H
-#define MLIR_ANALYSIS_PRESBURGERSET_H
+#ifndef MLIR_ANALYSIS_PRESBURGER_PRESBURGERSET_H
+#define MLIR_ANALYSIS_PRESBURGER_PRESBURGERSET_H
 
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 
@@ -122,4 +122,4 @@ private:
 
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_PRESBURGERSET_H
+#endif // MLIR_ANALYSIS_PRESBURGER_PRESBURGERSET_H

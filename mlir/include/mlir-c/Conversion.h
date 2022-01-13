@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_C_CONVERSIONS_H
-#define MLIR_C_CONVERSIONS_H
+#ifndef MLIR_C_CONVERSION_H
+#define MLIR_C_CONVERSION_H
 
 #include "mlir-c/Support.h"
 
 #include "mlir/Conversion/Passes.capi.h.inc"
 
-#endif // MLIR_C_CONVERSIONS_H
+#endif // MLIR_C_CONVERSION_H

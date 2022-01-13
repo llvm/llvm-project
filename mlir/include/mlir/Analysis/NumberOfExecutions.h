@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_NUMBER_OF_EXECUTIONS_H
-#define MLIR_ANALYSIS_NUMBER_OF_EXECUTIONS_H
+#ifndef MLIR_ANALYSIS_NUMBEROFEXECUTIONS_H
+#define MLIR_ANALYSIS_NUMBEROFEXECUTIONS_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -104,4 +104,4 @@ private:
 
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_NUMBER_OF_EXECUTIONS_H
+#endif // MLIR_ANALYSIS_NUMBEROFEXECUTIONS_H

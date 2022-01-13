@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
-#define MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
+#ifndef MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H
+#define MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
@@ -168,4 +168,4 @@ spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
 } // namespace spirv
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SPIRV_SPIRVCONVERSION_H
+#endif // MLIR_DIALECT_SPIRV_TRANSFORMS_SPIRVCONVERSION_H

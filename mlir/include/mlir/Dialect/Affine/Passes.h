@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_AFFINE_TRANSFORMS_PASSES_H
-#define MLIR_DIALECT_AFFINE_TRANSFORMS_PASSES_H
+#ifndef MLIR_DIALECT_AFFINE_PASSES_H
+#define MLIR_DIALECT_AFFINE_PASSES_H
 
 #include "mlir/Pass/Pass.h"
 #include <limits>
@@ -93,4 +93,4 @@ std::unique_ptr<OperationPass<FuncOp>> createSuperVectorizePass();
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_AFFINE_RANSFORMS_PASSES_H
+#endif // MLIR_DIALECT_AFFINE_PASSES_H

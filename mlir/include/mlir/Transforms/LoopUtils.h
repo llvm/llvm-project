@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_LOOP_UTILS_H
-#define MLIR_TRANSFORMS_LOOP_UTILS_H
+#ifndef MLIR_TRANSFORMS_LOOPUTILS_H
+#define MLIR_TRANSFORMS_LOOPUTILS_H
 
 #include "mlir/IR/Block.h"
 #include "mlir/Support/LLVM.h"
@@ -325,4 +325,4 @@ LogicalResult moveLoopInvariantCode(LoopLikeOpInterface looplike);
 
 } // namespace mlir
 
-#endif // MLIR_TRANSFORMS_LOOP_UTILS_H
+#endif // MLIR_TRANSFORMS_LOOPUTILS_H

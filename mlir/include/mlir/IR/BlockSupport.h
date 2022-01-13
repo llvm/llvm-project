@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_BLOCK_SUPPORT_H
-#define MLIR_IR_BLOCK_SUPPORT_H
+#ifndef MLIR_IR_BLOCKSUPPORT_H
+#define MLIR_IR_BLOCKSUPPORT_H
 
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -259,4 +259,4 @@ private:
 
 } // namespace llvm
 
-#endif // MLIR_IR_BLOCK_SUPPORT_H
+#endif // MLIR_IR_BLOCKSUPPORT_H

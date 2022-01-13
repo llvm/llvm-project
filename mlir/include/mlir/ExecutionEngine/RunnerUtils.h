@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EXECUTIONENGINE_RUNNERUTILS_H_
-#define EXECUTIONENGINE_RUNNERUTILS_H_
+#ifndef MLIR_EXECUTIONENGINE_RUNNERUTILS_H
+#define MLIR_EXECUTIONENGINE_RUNNERUTILS_H
 
 #ifdef _WIN32
 #ifndef MLIR_RUNNERUTILS_EXPORT
@@ -399,4 +399,4 @@ extern "C" MLIR_RUNNERUTILS_EXPORT int64_t verifyMemRefF64(int64_t rank,
                                                            void *actualPtr,
                                                            void *expectedPtr);
 
-#endif // EXECUTIONENGINE_RUNNERUTILS_H_
+#endif // MLIR_EXECUTIONENGINE_RUNNERUTILS_H

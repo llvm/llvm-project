@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_MATH_TRANSFORMATIONS_APPROXIMATION_H_
-#define MLIR_DIALECT_MATH_TRANSFORMATIONS_APPROXIMATION_H_
+#ifndef MLIR_DIALECT_MATH_TRANSFORMS_APPROXIMATION_H
+#define MLIR_DIALECT_MATH_TRANSFORMS_APPROXIMATION_H
 
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/PatternMatch.h"
@@ -26,4 +26,4 @@ public:
 } // namespace math
 } // namespace mlir
 
-#endif // MLIR_DIALECT_MATH_TRANSFORMATIONS_APPROXIMATION_H_
+#endif // MLIR_DIALECT_MATH_TRANSFORMS_APPROXIMATION_H

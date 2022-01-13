@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_MLIRLSPSERVER_MLIRLSPSERVERMAIN_H
-#define MLIR_TOOLS_MLIRLSPSERVER_MLIRLSPSERVERMAIN_H
+#ifndef MLIR_TOOLS_MLIR_LSP_SERVER_MLIRLSPSERVERMAIN_H
+#define MLIR_TOOLS_MLIR_LSP_SERVER_MLIRLSPSERVERMAIN_H
 
 namespace mlir {
 class DialectRegistry;
@@ -25,4 +25,4 @@ LogicalResult MlirLspServerMain(int argc, char **argv,
 
 } // namespace mlir
 
-#endif // MLIR_TOOLS_MLIRLSPSERVER_MLIRLSPSERVERMAIN_H
+#endif // MLIR_TOOLS_MLIR_LSP_SERVER_MLIRLSPSERVERMAIN_H
