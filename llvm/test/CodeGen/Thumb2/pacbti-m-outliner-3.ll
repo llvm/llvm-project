@@ -48,7 +48,6 @@ return:                                           ; preds = %entry, %if.end
 }
 
 ; CHECK-LABEL: f:
-; CHECK:       bmi    .LBB
 ; ...
 ; CHECK:       pac    r12, lr, sp
 ; CHECK-NEXT:  .save  {r4, r5, r6, lr}
@@ -66,14 +65,13 @@ return:                                           ; preds = %entry, %if.end
 ; CHECK-NEXT:  sub     sp, #4
 ; CHECK-NEXT:  .cfi_def_cfa_offset 24
 ; ...
+; CHECK:        bl  OUTLINED_FUNCTION_0
+; ...
 ; CHECK:        add    sp, #4
 ; CHECK-NEXT:   ldr    r12, [sp], #4
 ; CHECK-NEXT:   pop.w  {r4, r5, r6, lr}
 ; CHECK-NEXT:   aut    r12, lr, sp
 ; CHECK-NEXT:   bx     lr
-; ...
-; CHECK: .LBB
-; CHECK:        bx    lr
 
 
 define hidden i32 @g(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
@@ -97,8 +95,6 @@ return:                                           ; preds = %entry, %if.end
   ret i32 %retval.0
 }
 ; CHECK-LABEL: g:
-; CHECK:       bmi    .LBB
-; ...
 ; CHECK:       pac    r12, lr, sp
 ; CHECK-NEXT:  .save  {r4, r5, r6, lr}
 ; CHECK-NEXT:  push   {r4, r5, r6, lr}
@@ -115,14 +111,13 @@ return:                                           ; preds = %entry, %if.end
 ; CHECK-NEXT:  sub    sp, #4
 ; CHECK-NEXT:  .cfi_def_cfa_offset 24
 ; ...
+; CHECK:        bl  OUTLINED_FUNCTION_0
+; ...
 ; CHECK:       add    sp, #4
 ; CHECK-NEXT:  ldr    r12, [sp], #4
 ; CHECK-NEXT:  pop.w  {r4, r5, r6, lr}
 ; CHECK-NEXT:  aut    r12, lr, sp
 ; CHECK-NEXT:  bx     lr
-; ...
-; CHECK: .LBB
-; CHECK:       bx     lr
 
 ; CHECK-LABEL: OUTLINED_FUNCTION_0:
 ; CHECK:       pac    r12, lr, sp

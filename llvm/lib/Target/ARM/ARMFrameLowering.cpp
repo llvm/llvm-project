@@ -1812,7 +1812,7 @@ bool ARMFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
   // shrinkwrapping can cause clobbering of r12 when the PAC code is
   // generated. A follow-up patch will fix this in a more performant manner.
   if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress(
-          false /*SpillsLR */))
+          true /* SpillsLR */))
     return false;
 
   return true;

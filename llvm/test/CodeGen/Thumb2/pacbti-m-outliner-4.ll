@@ -45,8 +45,6 @@ if.end:                                           ; preds = %entry
 
 ; CHECK-LABEL: _Z1hii:
 ; ...
-; CHECK:    bxgt    lr
-; ...
 ; CHECK:    pac    r12, lr, sp
 ; CHECK-NEXT:    .save    {r7, lr}
 ; CHECK-NEXT:    push    {r7, lr}
@@ -62,7 +60,7 @@ if.end:                                           ; preds = %entry
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; ...
 ; CHECK-NOT: pac
-; CHECK-NOT: aut
+; CHECK: aut
 ; CHECK:     .cfi_endproc
 
 declare dso_local i8* @__cxa_allocate_exception(i32) local_unnamed_addr
@@ -90,8 +88,6 @@ return:                                           ; preds = %entry, %if.end
 
 ; CHECK-LABEL: _Z1fiiii:
 ; ...
-; CHECK:    bmi    .L[[B:[a-zA-Z0-9]*]]
-; ...
 ; CHECK:    pac    r12, lr, sp
 ; CHECK-NEXT:    .save    {r4, r5, r6, lr}
 ; CHECK-NEXT:    push    {r4, r5, r6, lr}
@@ -108,15 +104,13 @@ return:                                           ; preds = %entry, %if.end
 ; CHECK-NEXT:    sub    sp, #4
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; ...
+; CHECK:    bl	OUTLINED_FUNCTION_0
+; ...
 ; CHECK:    add    sp, #4
 ; CHECK-NEXT:    ldr    r12, [sp], #4
 ; CHECK-NEXT:    pop.w    {r4, r5, r6, lr}
 ; CHECK-NEXT:    aut    r12, lr, sp
 ; CHECK-NEXT:    bx    lr
-; ...
-; CHECK: .L[[B]]
-; ...
-; CHECK:    bx    lr
 
 
 
@@ -141,8 +135,6 @@ return:                                           ; preds = %entry, %if.end
 
 ; CHECK-LABEL: _Z1giiii:
 ; ...
-; CHECK:    bmi    .L[[B:[a-zA-Z0-9]*]]
-; ...
 ; CHECK:    pac    r12, lr, sp
 ; CHECK-NEXT:    .save    {r4, r5, r6, lr}
 ; CHECK-NEXT:    push    {r4, r5, r6, lr}
@@ -159,15 +151,13 @@ return:                                           ; preds = %entry, %if.end
 ; CHECK-NEXT:    sub    sp, #4
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; ...
+; CHECK:    bl	OUTLINED_FUNCTION_0
+; ...
 ; CHECK:    add    sp, #4
 ; CHECK-NEXT:    ldr    r12, [sp], #4
 ; CHECK-NEXT:    pop.w    {r4, r5, r6, lr}
 ; CHECK-NEXT:    aut    r12, lr, sp
 ; CHECK-NEXT:    bx    lr
-; ...
-; CHECK: .L[[B]]
-; ...
-; CHECK:    bx    lr
 
 
 ; CHEK-LABEL: OUTLINED_FUNCTION_0:
@@ -195,25 +185,25 @@ attributes #2 = { noreturn }
 ; UNWIND-NEXT:  0xB0      ; finish
 ; UNWIND-NEXT:  0xB0      ; finish
 
-; UNWIND-LABEL: FunctionAddress: 0x2C
+; UNWIND-LABEL: FunctionAddress: 0x3C
 ; UNWIND:       Opcodes
 ; UNWIND-NEXT:  0x00      ; vsp = vsp + 4
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
 ; UNWIND-NEXT:  0xAA      ; pop {r4, r5, r6, lr}
 
-; UNWIND-LABEL: FunctionAddress: 0x62
+; UNWIND-LABEL: FunctionAddress: 0x72
 ; UNWIND:       Opcodes
 ; UNWIND-NEXT:  0x00      ; vsp = vsp + 4
 ; UNWIND-NEXT:  0xB4      ; pop ra_auth_code
 ; UNWIND-NEXT:  0xAA      ; pop {r4, r5, r6, lr}
 
-; UNWIND-LABEL: FunctionAddress: 0x98
+; UNWIND-LABEL: FunctionAddress: 0xA8
 ; UNWIND:       Opcodes
 ; UNWIND-NEXT:  0xB0      ; finish
 ; UNWIND-NEXT:  0xB0      ; finish
 ; UNWIND-NEXT:  0xB0      ; finish
 
-; UNWIND: 00000099 {{.*}} OUTLINED_FUNCTION_0
-; UWNIND: 0000002d {{.*}} _Z1fiiii
-; UWNIND: 00000063 {{.*}} _Z1giiii
+; UNWIND: 000000a9 {{.*}} OUTLINED_FUNCTION_0
 ; UWNIND: 00000001 {{.*}} _Z1hii
+; UWNIND: 0000003d {{.*}} _Z1fiiii
+; UWNIND: 00000073 {{.*}} _Z1giiii
