@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+
 // XFAIL: LIBCXX-AIX-FIXME
+
 // <numeric>
 
 // template <class _Float>

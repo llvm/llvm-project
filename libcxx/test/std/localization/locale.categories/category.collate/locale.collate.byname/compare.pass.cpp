@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
 // REQUIRES: locale.en_US.UTF-8
 
 // <locale>
@@ -25,6 +24,8 @@
 // XFAIL: target={{.*}}-linux-gnu{{.*}}
 
 // XFAIL: LIBCXX-WINDOWS-FIXME
+
+// XFAIL: LIBCXX-AIX-FIXME
 
 #include <locale>
 #include <string>

@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <memory>
 
 // Test weak_ptr<T> with trivial_abi as return-type.
@@ -15,6 +13,7 @@
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI
 
 // XFAIL: gcc
+// XFAIL: LIBCXX-AIX-FIXME
 
 #include <memory>
 #include <cassert>
