@@ -60,6 +60,10 @@ MlirType mlirPDLRangeTypeGet(MlirType elementType) {
   return wrap(pdl::RangeType::get(unwrap(elementType)));
 }
 
+MlirType mlirPDLRangeTypeGetElementType(MlirType type) {
+  return wrap(unwrap(type).cast<pdl::RangeType>().getElementType());
+}
+
 //===---------------------------------------------------------------------===//
 // TypeType
 //===---------------------------------------------------------------------===//

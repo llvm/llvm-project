@@ -146,6 +146,7 @@ void testRangeType(MlirContext ctx) {
   MlirType parsedType = mlirTypeParseGet(
       ctx, mlirStringRefCreateFromCString("!pdl.range<type>"));
   MlirType constructedType = mlirPDLRangeTypeGet(typeType);
+  MlirType elementType = mlirPDLRangeTypeGetElementType(constructedType);
 
   assert(!mlirTypeIsNull(typeType) && "couldn't get PDLTypeType");
   assert(!mlirTypeIsNull(parsedType) && "couldn't parse PDLAttributeType");
@@ -191,11 +192,15 @@ void testRangeType(MlirContext ctx) {
 
   // CHECK: equal: 1
   fprintf(stderr, "equal: %d\n", mlirTypeEqual(parsedType, constructedType));
+  // CHECK: equal: 1
+  fprintf(stderr, "equal: %d\n", mlirTypeEqual(typeType, elementType));
 
   // CHECK: !pdl.range<type>
   mlirTypeDump(parsedType);
   // CHECK: !pdl.range<type>
   mlirTypeDump(constructedType);
+  // CHECK: !pdl.type
+  mlirTypeDump(elementType);
 
   fprintf(stderr, "\n\n");
 }
