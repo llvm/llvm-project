@@ -9,10 +9,12 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_COMPILEUNITINDEX_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_COMPILEUNITINDEX_H
 
+#include "lldb/Utility/RangeMap.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -69,6 +71,17 @@ struct CompilandIndexItem {
   // command line, etc.  This usually contains exactly 5 items which
   // are references to other strings.
   llvm::SmallVector<llvm::codeview::TypeIndex, 5> m_build_info;
+
+  // Inlinee lines table in this compile unit.
+  std::map<llvm::codeview::TypeIndex, llvm::codeview::InlineeSourceLine>
+      m_inline_map;
+
+  // It's the line table parsed from DEBUG_S_LINES sections, mapping the file
+  // address range to file index and source line number.
+  using GlobalLineTable =
+      lldb_private::RangeDataVector<lldb::addr_t, uint32_t,
+                                    std::pair<uint32_t, uint32_t>>;
+  GlobalLineTable m_global_line_table;
 };
 
 /// Indexes information about all compile units.  This is really just a map of

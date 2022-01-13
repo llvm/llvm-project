@@ -106,6 +106,24 @@ static void ParseExtendedInfo(PdbIndex &index, CompilandIndexItem &item) {
   }
 }
 
+static void ParseInlineeLineTableForCompileUnit(CompilandIndexItem &item) {
+  for (const auto &ss : item.m_debug_stream.getSubsectionsArray()) {
+    if (ss.kind() != DebugSubsectionKind::InlineeLines)
+      continue;
+
+    DebugInlineeLinesSubsectionRef inlinee_lines;
+    llvm::BinaryStreamReader reader(ss.getRecordData());
+    if (llvm::Error error = inlinee_lines.initialize(reader)) {
+      consumeError(std::move(error));
+      continue;
+    }
+
+    for (const InlineeSourceLine &Line : inlinee_lines) {
+      item.m_inline_map[Line.Header->Inlinee] = Line;
+    }
+  }
+}
+
 CompilandIndexItem::CompilandIndexItem(
     PdbCompilandId id, llvm::pdb::ModuleDebugStreamRef debug_stream,
     llvm::pdb::DbiModuleDescriptor descriptor)
@@ -142,6 +160,7 @@ CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
   cci = std::make_unique<CompilandIndexItem>(
       PdbCompilandId{modi}, std::move(debug_stream), std::move(descriptor));
   ParseExtendedInfo(m_index, *cci);
+  ParseInlineeLineTableForCompileUnit(*cci);
 
   cci->m_strings.initialize(debug_stream.getSubsectionsArray());
   PDBStringTable &strings = cantFail(m_index.pdb().getStringTable());
