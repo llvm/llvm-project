@@ -12,6 +12,7 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <utility>
 
 class distance_apriori_sentinel {
 public:
@@ -35,6 +36,20 @@ public:
 
 private:
   std::ptrdiff_t count_ = 0;
+};
+
+// Sentinel type that can be assigned to an iterator. This is to test the cases where the
+// various iterator operations use assignment instead of successive increments/decrements.
+template <class It>
+class assignable_sentinel {
+public:
+    explicit assignable_sentinel() = default;
+    constexpr explicit assignable_sentinel(const It& it) : base_(base(it)) {}
+    constexpr operator It() const { return It(base_); }
+    constexpr bool operator==(const It& other) const { return base_ == base(other); }
+    friend constexpr It base(const assignable_sentinel& s) { return It(s.base_); }
+private:
+    decltype(base(std::declval<It>())) base_;
 };
 
 #endif // TEST_STD_ITERATORS_ITERATOR_PRIMITIVES_RANGE_ITER_OPS_TYPES_H
