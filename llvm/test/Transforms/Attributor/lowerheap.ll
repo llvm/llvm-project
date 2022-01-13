@@ -46,11 +46,10 @@ define i64 @g(i64 %len) {
 ; IS________NPM-LABEL: define {{[^@]+}}@g
 ; IS________NPM-SAME: (i64 [[LEN:%.*]]) {
 ; IS________NPM-NEXT:  entry:
-; IS________NPM-NEXT:    [[H2S_CALLOC_SIZE:%.*]] = mul i64 [[LEN]], 8
-; IS________NPM-NEXT:    [[TMP0:%.*]] = alloca i8, i64 [[H2S_CALLOC_SIZE]], align 1
-; IS________NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP0]] to i8*
-; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 [[H2S_CALLOC_SIZE]], i1 false)
-; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[TMP0]]) #[[ATTR2]]
+; IS________NPM-NEXT:    [[TMP0:%.*]] = mul i64 [[LEN]], 8
+; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 [[TMP0]], align 1
+; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP1]], i8 0, i64 [[TMP0]], i1 false)
+; IS________NPM-NEXT:    [[RES:%.*]] = call i64 @subfn(i8* [[TMP1]]) #[[ATTR2]]
 ; IS________NPM-NEXT:    ret i64 [[RES]]
 ;
 entry:

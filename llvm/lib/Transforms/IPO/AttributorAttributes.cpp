@@ -5974,6 +5974,11 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         Alloca = new BitCastInst(Alloca, AI.CB->getType(), "malloc_bc",
                                  Alloca->getNextNode());
 
+      auto *I8Ty = Type::getInt8Ty(F->getContext());
+      auto *InitVal = getInitialValueOfAllocation(AI.CB, TLI, I8Ty);
+      assert(InitVal &&
+             "Must be able to materialize initial memory state of allocation");
+
       A.changeValueAfterManifest(*AI.CB, *Alloca);
 
       if (auto *II = dyn_cast<InvokeInst>(AI.CB)) {
@@ -5984,18 +5989,13 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         A.deleteAfterManifest(*AI.CB);
       }
 
-      // Zero out the allocated memory if it was a calloc.
-      if (AI.Kind == AllocationInfo::AllocationKind::CALLOC) {
-        auto *BI = new BitCastInst(Alloca, AI.CB->getType(), "calloc_bc",
-                                   Alloca->getNextNode());
-        Value *Ops[] = {
-            BI, ConstantInt::get(F->getContext(), APInt(8, 0, false)), Size,
-            ConstantInt::get(Type::getInt1Ty(F->getContext()), false)};
-
-        Type *Tys[] = {BI->getType(), AI.CB->getOperand(0)->getType()};
-        Module *M = F->getParent();
-        Function *Fn = Intrinsic::getDeclaration(M, Intrinsic::memset, Tys);
-        CallInst::Create(Fn, Ops, "", BI->getNextNode());
+      // Initialize the alloca with the same value as used by the allocation
+      // function.  We can skip undef as the initial value of an alloc is
+      // undef, and the memset would simply end up being DSEd.
+      if (!isa<UndefValue>(InitVal)) {
+        IRBuilder<> Builder(Alloca->getNextNode());
+        // TODO: Use alignment above if align!=1
+        Builder.CreateMemSet(Alloca, InitVal, Size, None);
       }
       HasChanged = ChangeStatus::CHANGED;
     }

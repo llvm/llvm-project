@@ -229,8 +229,7 @@ define void @test0() {
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test0() {
 ; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 8, align 1
-; IS________NPM-NEXT:    [[CALLOC_BC:%.*]] = bitcast i8* [[TMP1]] to i8*
-; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[CALLOC_BC]], i8 0, i64 8, i1 false)
+; IS________NPM-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[TMP1]], i8 0, i64 8, i1 false)
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* noalias nocapture nofree [[TMP1]])
 ; IS________NPM-NEXT:    ret void
 ;
