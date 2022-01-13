@@ -11730,25 +11730,51 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       return std::make_pair(0U, RC);
   }
 
-  if (Constraint.size() > 1) {
-    if (Constraint[1] == 'v') {
+  if (Constraint.startswith("{") && Constraint.endswith("}")) {
+    StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
+    if (RegName.consume_front("v")) {
       RC = &AMDGPU::VGPR_32RegClass;
-    } else if (Constraint[1] == 's') {
+    } else if (RegName.consume_front("s")) {
       RC = &AMDGPU::SGPR_32RegClass;
-    } else if (Constraint[1] == 'a') {
+    } else if (RegName.consume_front("a")) {
       RC = &AMDGPU::AGPR_32RegClass;
     }
 
     if (RC) {
       uint32_t Idx;
-      bool Failed = Constraint.substr(2).getAsInteger(10, Idx);
-      if (!Failed && Idx < RC->getNumRegs())
-        return std::make_pair(RC->getRegister(Idx), RC);
+      if (RegName.consume_front("[")) {
+        uint32_t End;
+        bool Failed = RegName.consumeInteger(10, Idx);
+        Failed &= !RegName.consume_front(":");
+        Failed &= RegName.consumeInteger(10, End);
+        Failed &= !RegName.consume_back("]");
+        if (!Failed) {
+          uint32_t Width = (End - Idx + 1) * 32;
+          MCRegister Reg = RC->getRegister(Idx);
+          if (SIRegisterInfo::isVGPRClass(RC))
+            RC = TRI->getVGPRClassForBitWidth(Width);
+          else if (SIRegisterInfo::isSGPRClass(RC))
+            RC = TRI->getSGPRClassForBitWidth(Width);
+          else if (SIRegisterInfo::isAGPRClass(RC))
+            RC = TRI->getAGPRClassForBitWidth(Width);
+          if (RC) {
+            Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
+            return std::make_pair(Reg, RC);
+          }
+        }
+      } else {
+        bool Failed = RegName.getAsInteger(10, Idx);
+        if (!Failed && Idx < RC->getNumRegs())
+          return std::make_pair(RC->getRegister(Idx), RC);
+      }
     }
   }
 
-  // FIXME: Returns VS_32 for physical SGPR constraints
-  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  if (Ret.first)
+    Ret.second = TRI->getPhysRegClass(Ret.first);
+
+  return Ret;
 }
 
 static bool isImmConstraint(StringRef Constraint) {
@@ -12445,17 +12471,10 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
       for (auto &TC : TargetConstraints) {
         if (TC.Type == InlineAsm::isOutput) {
           ComputeConstraintToUse(TC, SDValue());
-          unsigned AssignedReg;
-          const TargetRegisterClass *RC;
-          std::tie(AssignedReg, RC) = getRegForInlineAsmConstraint(
-              SIRI, TC.ConstraintCode, TC.ConstraintVT);
-          if (RC) {
-            MachineRegisterInfo &MRI = MF.getRegInfo();
-            if (AssignedReg != 0 && SIRI->isSGPRReg(MRI, AssignedReg))
-              return true;
-            else if (SIRI->isSGPRClass(RC))
-              return true;
-          }
+          const TargetRegisterClass *RC = getRegForInlineAsmConstraint(
+              SIRI, TC.ConstraintCode, TC.ConstraintVT).second;
+          if (RC && SIRI->isSGPRClass(RC))
+            return true;
         }
       }
     }
