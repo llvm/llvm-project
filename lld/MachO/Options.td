@@ -79,6 +79,15 @@ def no_warn_dylib_install_name: Joined<["--"], "no-warn-dylib-install-name">,
 def warn_dylib_install_name: Joined<["--"], "warn-dylib-install-name">,
     HelpText<"Warn on -install-name if -dylib is not passed">,
     Group<grp_lld>;
+def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
+    HelpText<"Reorder sections with call graph profile (default)">,
+    Group<grp_lld>;
+def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
+    HelpText<"Do not reorder sections with call graph profile">,
+    Group<grp_lld>;
+def print_symbol_order: Joined<["--"], "print-symbol-order=">,
+    HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
+    Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

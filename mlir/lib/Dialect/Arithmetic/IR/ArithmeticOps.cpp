@@ -1299,6 +1299,12 @@ OpFoldResult arith::CmpFOp::fold(ArrayRef<Attribute> operands) {
   auto lhs = operands.front().dyn_cast_or_null<FloatAttr>();
   auto rhs = operands.back().dyn_cast_or_null<FloatAttr>();
 
+  // If one operand is NaN, making them both NaN does not change the result.
+  if (lhs && lhs.getValue().isNaN())
+    rhs = lhs;
+  if (rhs && rhs.getValue().isNaN())
+    lhs = rhs;
+
   if (!lhs || !rhs)
     return {};
 

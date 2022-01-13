@@ -41,10 +41,10 @@ exit:
   ret void
 }
 
-; FIXME: The fakeresume1 here should be marked as musttail.
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
-; CHECK-NOT: musttail call fastcc void @fakeresume1(i64* align 8 null)
+; CHECK:         musttail call fastcc void @fakeresume1(i64* align 8 null)
+; CHECK-NEXT:    ret void
 
 ; It has a cleanup bb.
 define void @f() #0 {
@@ -94,7 +94,8 @@ exit:
 ; FIXME: The fakeresume1 here should be marked as musttail.
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @f.resume(
-; CHECK-NOT: musttail call fastcc void @fakeresume1(i64* align 8 null)
+; CHECK:         musttail call fastcc void @fakeresume1(i64* align 8 null)
+; CHECK-NEXT:    ret void
 
 declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*) #1
 declare i1 @llvm.coro.alloc(token) #2

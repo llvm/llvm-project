@@ -19,7 +19,8 @@ define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x)
 ; CHECK-NEXT:    "  WIDEN-CALL ir\<%call\> = call @llvm.sqrt.f32(ir\<%lv\>)\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr ir\<%x\>, ir\<%iv\>\l" +
 ; CHECK-NEXT:    "  WIDEN store ir\<%arrayidx2\>, ir\<%call\>\l" +
-; CHECK-NEXT:    "  EMIT vp\<{{.+}}\> = VF * UF +(nuw) vp\<[[CAN_IV]]\>\l" +
+; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT:%.+]]\> = VF * UF +(nuw) vp\<[[CAN_IV]]\>\l" +
+; CHECK-NEXT:    "  EMIT branch-on-count vp\<[[CAN_IV_NEXT]]\> vp\<{{.+}}\>\l" +
 ; CHECK-NEXT:    "No successors\l"
 ; CHECK-NEXT:  ]
 ;

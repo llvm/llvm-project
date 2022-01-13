@@ -255,8 +255,7 @@ define void @f3(i16* noalias %a,
 ; LV-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP1]])
 ; LV-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
-; LV-NEXT:    [[TMP2:%.*]] = add i32 0, [[MUL_RESULT]]
-; LV-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[TMP2]], 0
+; LV-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[MUL_RESULT]], 0
 ; LV-NEXT:    [[TMP8:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
 ; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[TMP7]]

@@ -795,6 +795,7 @@ public:
     ActiveLaneMask,
     CanonicalIVIncrement,
     CanonicalIVIncrementNUW,
+    BranchOnCount,
   };
 
 private:
@@ -873,6 +874,7 @@ public:
     case Instruction::Unreachable:
     case Instruction::Fence:
     case Instruction::AtomicRMW:
+    case VPInstruction::BranchOnCount:
       return false;
     default:
       return true;

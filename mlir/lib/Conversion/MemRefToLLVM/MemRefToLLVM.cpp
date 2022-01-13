@@ -106,7 +106,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
                               Operation *op) const {
     uint64_t sizeDivisor = getMemRefEltSizeInBytes(type, op);
     for (unsigned i = 0, e = type.getRank(); i < e; i++) {
-      if (type.isDynamic(type.getDimSize(i)))
+      if (ShapedType::isDynamic(type.getDimSize(i)))
         continue;
       sizeDivisor = sizeDivisor * type.getDimSize(i);
     }
@@ -1467,7 +1467,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
                   ArrayRef<int64_t> strides, Value nextSize,
                   Value runningStride, unsigned idx) const {
     assert(idx < strides.size());
-    if (!MemRefType::isDynamicStrideOrOffset(strides[idx]))
+    if (!ShapedType::isDynamicStrideOrOffset(strides[idx]))
       return createIndexConstant(rewriter, loc, strides[idx]);
     if (nextSize)
       return runningStride

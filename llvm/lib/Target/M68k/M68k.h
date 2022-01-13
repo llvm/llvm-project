@@ -54,4 +54,4 @@ createM68kInstructionSelector(const M68kTargetMachine &, const M68kSubtarget &,
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68K_H

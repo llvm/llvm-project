@@ -22,7 +22,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/PartialDiagnostic.h"
-#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
@@ -6042,8 +6041,6 @@ namespace {
              DS.getTypeSpecType() == TST_auto_type ||
              DS.getTypeSpecType() == TST_unspecified);
       TL.setNameLoc(DS.getTypeSpecTypeLoc());
-      if (DS.getTypeSpecType() == TST_decltype_auto)
-        TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
       if (!DS.isConstrainedAuto())
         return;
       TemplateIdAnnotation *TemplateId = DS.getRepAsTemplateId();

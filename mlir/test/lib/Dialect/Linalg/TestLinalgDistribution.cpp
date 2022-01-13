@@ -59,7 +59,7 @@ void TestLinalgDistribution::runOnFunction() {
       distributeTiledLoopsPatterns, getDistributionOptions(),
       LinalgTransformationFilter(
           ArrayRef<StringAttr>{},
-          {StringAttr::get("distributed", funcOp.getContext())})
+          {StringAttr::get(funcOp.getContext(), "distributed")})
           .addFilter([](Operation *op) {
             return success(!op->getParentOfType<linalg::TiledLoopOp>());
           }));

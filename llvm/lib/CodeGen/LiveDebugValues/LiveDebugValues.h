@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/ADT/Triple.h"
 
 namespace llvm {
 
@@ -36,6 +37,9 @@ public:
 extern LDVImpl *makeVarLocBasedLiveDebugValues();
 extern LDVImpl *makeInstrRefBasedLiveDebugValues();
 extern LDVImpl *makeHeterogeneousLiveDebugValues();
+
+extern bool debuginfoShouldUseDebugInstrRef(const Triple &T);
+
 } // namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_LIVEDEBUGVALUES_LIVEDEBUGVALUES_H

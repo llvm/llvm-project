@@ -16,13 +16,9 @@
 //     struct in_out_result;
 // }
 
-
 #include <algorithm>
 #include <cassert>
 #include <type_traits>
-
-// FIXME(varconst): this test doesn't work on Fuchsia.
-#ifndef __Fuchsia__
 
 struct A {
   A(int&);
@@ -46,15 +42,13 @@ static_assert(std::is_convertible_v<const std::ranges::in_out_result<int, int>&&
 static_assert(!std::is_nothrow_convertible_v<const std::ranges::in_out_result<int, int>&&,
     std::ranges::in_out_result<long, long>>);
 
-#endif // __Fuchsia__
-
 int main(int, char**) {
-#ifndef __Fuchsia__
   // Conversion, fundamental types.
   {
     std::ranges::in_out_result<int, bool> x = {2, false};
-    std::ranges::in_out_result<double, char> y = x;
-    assert(y.in == 2.0);
+    // FIXME(varconst): try a narrowing conversion.
+    std::ranges::in_out_result<long, char> y = x;
+    assert(y.in == 2);
     assert(y.out == '\0');
   }
 
@@ -134,8 +128,6 @@ int main(int, char**) {
     static_assert(
         !std::is_convertible_v<std::ranges::in_out_result<Foo1, Foo2>, std::ranges::in_out_result<Bar1, Bar2>>);
   }
-#endif // __Fuchsia__
 
   return 0;
 }
-

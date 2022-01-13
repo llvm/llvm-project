@@ -3677,6 +3677,12 @@ unsigned int AsmPrinter::getDwarfOffsetByteSize() const {
       OutStreamer->getContext().getDwarfFormat());
 }
 
+dwarf::FormParams AsmPrinter::getDwarfFormParams() const {
+  return {getDwarfVersion(), uint8_t(getPointerSize()),
+          OutStreamer->getContext().getDwarfFormat(),
+          MAI->doesDwarfUseRelocationsAcrossSections()};
+}
+
 unsigned int AsmPrinter::getUnitLengthFieldByteSize() const {
   return dwarf::getUnitLengthFieldByteSize(
       OutStreamer->getContext().getDwarfFormat());

@@ -176,6 +176,19 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
     return false;
   }
 
+  if (Exit->empty()) {
+    errs() << "VPlan vector loop exit must end with BranchOnCount "
+              "VPInstruction but is empty\n";
+    return false;
+  }
+
+  auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exit->end()));
+  if (!LastInst || LastInst->getOpcode() != VPInstruction::BranchOnCount) {
+    errs() << "VPlan vector loop exit must end with BranchOnCount "
+              "VPInstruction\n";
+    return false;
+  }
+
   for (const VPRegionBlock *Region :
        VPBlockUtils::blocksOnly<const VPRegionBlock>(
            depth_first(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(

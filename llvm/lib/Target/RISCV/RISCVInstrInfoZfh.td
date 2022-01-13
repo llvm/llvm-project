@@ -182,6 +182,10 @@ def : InstAlias<"fge.h $rd, $rs, $rt",
 let Predicates = [HasStdExtZfhmin] in {
 def PseudoFLH  : PseudoFloatLoad<"flh", FPR16>;
 def PseudoFSH  : PseudoStore<"fsh", FPR16>;
+let usesCustomInserter = 1 in {
+def PseudoQuietFLE_H : PseudoQuietFCMP<FPR16>;
+def PseudoQuietFLT_H : PseudoQuietFCMP<FPR16>;
+}
 } // Predicates = [HasStdExtZfhmin]
 
 //===----------------------------------------------------------------------===//
@@ -246,13 +250,34 @@ def : PatFpr16Fpr16<fminnum, FMIN_H>;
 def : PatFpr16Fpr16<fmaxnum, FMAX_H>;
 
 /// Setcc
+// FIXME: SETEQ/SETLT/SETLE imply nonans, can we pick better instructions for
+// strict versions of those.
 
-def : PatFpr16Fpr16<seteq, FEQ_H>;
-def : PatFpr16Fpr16<setoeq, FEQ_H>;
-def : PatFpr16Fpr16<setlt, FLT_H>;
-def : PatFpr16Fpr16<setolt, FLT_H>;
-def : PatFpr16Fpr16<setle, FLE_H>;
-def : PatFpr16Fpr16<setole, FLE_H>;
+// Match non-signaling FEQ_D
+def : PatSetCC<FPR16, any_fsetcc, SETEQ, FEQ_H>;
+def : PatSetCC<FPR16, any_fsetcc, SETOEQ, FEQ_H>;
+def : PatSetCC<FPR16, strict_fsetcc, SETLT, PseudoQuietFLT_H>;
+def : PatSetCC<FPR16, strict_fsetcc, SETOLT, PseudoQuietFLT_H>;
+def : PatSetCC<FPR16, strict_fsetcc, SETLE, PseudoQuietFLE_H>;
+def : PatSetCC<FPR16, strict_fsetcc, SETOLE, PseudoQuietFLE_H>;
+
+// Match signaling FEQ_H
+def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs2, SETEQ),
+          (AND (FLE_H $rs1, $rs2),
+               (FLE_H $rs2, $rs1))>;
+def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs2, SETOEQ),
+          (AND (FLE_H $rs1, $rs2),
+               (FLE_H $rs2, $rs1))>;
+// If both operands are the same, use a single FLE.
+def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs1, SETEQ),
+          (FLE_H $rs1, $rs1)>;
+def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs1, SETOEQ),
+          (FLE_H $rs1, $rs1)>;
+
+def : PatSetCC<FPR16, any_fsetccs, SETLT, FLT_H>;
+def : PatSetCC<FPR16, any_fsetccs, SETOLT, FLT_H>;
+def : PatSetCC<FPR16, any_fsetccs, SETLE, FLE_H>;
+def : PatSetCC<FPR16, any_fsetccs, SETOLE, FLE_H>;
 
 def Select_FPR16_Using_CC_GPR : SelectCC_rrirr<FPR16, GPR>;
 } // Predicates = [HasStdExtZfh]

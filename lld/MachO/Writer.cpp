@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
+#include "CallGraphSort.h"
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -865,6 +866,8 @@ static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
 // Each section gets assigned the priority of the highest-priority symbol it
 // contains.
 static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
+  if (config->callGraphProfileSort)
+    return computeCallGraphProfileOrder();
   DenseMap<const InputSection *, size_t> sectionPriorities;
 
   if (config->priorities.empty())
@@ -1175,7 +1178,13 @@ template <class LP> void Writer::run() {
   sortSegmentsAndSections();
   createLoadCommands<LP>();
   finalizeAddresses();
-  threadPool.async(writeMapFile);
+  threadPool.async([&] {
+    if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
+      timeTraceProfilerInitialize(config->timeTraceGranularity, "writeMapFile");
+    writeMapFile();
+    if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
+      timeTraceProfilerFinishThread();
+  });
   finalizeLinkEditSegment();
   writeOutputFile();
 }

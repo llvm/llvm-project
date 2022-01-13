@@ -365,10 +365,13 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     Section &Sec = B.getSection();
     ErrStream << "In graph " << G.getName() << ", section " << Sec.getName()
               << ": relocation target ";
-    if (E.getTarget().hasName())
-      ErrStream << "\"" << E.getTarget().getName() << "\" ";
-    ErrStream << "at address " << formatv("{0:x}", E.getTarget().getAddress());
-    ErrStream << " is out of range of " << G.getEdgeKindName(E.getKind())
+    if (E.getTarget().hasName()) {
+      ErrStream << "\"" << E.getTarget().getName() << "\"";
+    } else
+      ErrStream << E.getTarget().getBlock().getSection().getName() << " + "
+                << formatv("{0:x}", E.getOffset());
+    ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
+              << " is out of range of " << G.getEdgeKindName(E.getKind())
               << " fixup at " << formatv("{0:x}", B.getFixupAddress(E)) << " (";
 
     Symbol *BestSymbolForBlock = nullptr;

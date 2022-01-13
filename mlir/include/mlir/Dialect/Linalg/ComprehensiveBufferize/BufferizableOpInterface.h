@@ -346,10 +346,10 @@ public:
   /// In the above example, Values with a star satisfy the condition. When
   /// starting the traversal from Value 1, the resulting SetVector is:
   /// { 2, 7, 8, 5 }
-  llvm::SetVector<Value> findValueInReverseUseDefChain(
+  SetVector<Value> findValueInReverseUseDefChain(
       Value value, llvm::function_ref<bool(Value)> condition) const;
 
-  /// Find the Value of the last preceding write of a given Value.
+  /// Find the Values of the last preceding write of a given Value.
   ///
   /// Note: Unknown ops are handled conservatively and assumed to be writes.
   /// Furthermore, BlockArguments are also assumed to be writes. There is no
@@ -357,7 +357,7 @@ public:
   ///
   /// Note: When reaching an end of the reverse SSA use-def chain, that value
   /// is returned regardless of whether it is a memory write or not.
-  Value findLastPrecedingWrite(Value value) const;
+  SetVector<Value> findLastPrecedingWrite(Value value) const;
 
   /// Creates a memref allocation.
   FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,

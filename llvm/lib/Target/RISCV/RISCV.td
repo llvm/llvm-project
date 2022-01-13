@@ -65,7 +65,7 @@ def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
                            "'C' (Compressed Instructions)">;
 
 def FeatureStdExtZba
-    : SubtargetFeature<"experimental-zba", "HasStdExtZba", "true",
+    : SubtargetFeature<"zba", "HasStdExtZba", "true",
                        "'Zba' (Address calculation 'B' Instructions)">;
 def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
                              AssemblerPredicate<(all_of FeatureStdExtZba),
@@ -73,14 +73,14 @@ def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
 def NotHasStdExtZba : Predicate<"!Subtarget->hasStdExtZba()">;
 
 def FeatureStdExtZbb
-    : SubtargetFeature<"experimental-zbb", "HasStdExtZbb", "true",
+    : SubtargetFeature<"zbb", "HasStdExtZbb", "true",
                        "'Zbb' (Base 'B' Instructions)">;
 def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbb),
                              "'Zbb' (Base 'B' Instructions)">;
 
 def FeatureStdExtZbc
-    : SubtargetFeature<"experimental-zbc", "HasStdExtZbc", "true",
+    : SubtargetFeature<"zbc", "HasStdExtZbc", "true",
                        "'Zbc' (Carry-Less 'B' Instructions)">;
 def HasStdExtZbc : Predicate<"Subtarget->hasStdExtZbc()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbc),
@@ -122,7 +122,7 @@ def HasStdExtZbr : Predicate<"Subtarget->hasStdExtZbr()">,
                              "'Zbr' (Polynomial Reduction 'B' Instructions)">;
 
 def FeatureStdExtZbs
-    : SubtargetFeature<"experimental-zbs", "HasStdExtZbs", "true",
+    : SubtargetFeature<"zbs", "HasStdExtZbs", "true",
                        "'Zbs' (Single-Bit 'B' Instructions)">;
 def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbs),
@@ -198,6 +198,9 @@ foreach i = {1-31} in
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
                                           "true", "Enable save/restore.">;
 
+def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
+                                   "SiFive 7-Series processors">;
+
 //===----------------------------------------------------------------------===//
 // Named operands for CSR instructions.
 //===----------------------------------------------------------------------===//
@@ -226,8 +229,10 @@ def : ProcessorModel<"generic-rv64", NoSchedModel, [Feature64Bit]>;
 def : ProcessorModel<"rocket-rv32", RocketModel, []>;
 def : ProcessorModel<"rocket-rv64", RocketModel, [Feature64Bit]>;
 
-def : ProcessorModel<"sifive-7-rv32", SiFive7Model, []>;
-def : ProcessorModel<"sifive-7-rv64", SiFive7Model, [Feature64Bit]>;
+def : ProcessorModel<"sifive-7-rv32", SiFive7Model, [],
+                     [TuneSiFive7]>;
+def : ProcessorModel<"sifive-7-rv64", SiFive7Model, [Feature64Bit],
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-e20", RocketModel, [FeatureStdExtM,
                                                  FeatureStdExtC]>;
@@ -253,7 +258,8 @@ def : ProcessorModel<"sifive-e34", RocketModel, [FeatureStdExtM,
 def : ProcessorModel<"sifive-e76", SiFive7Model, [FeatureStdExtM,
                                                   FeatureStdExtA,
                                                   FeatureStdExtF,
-                                                  FeatureStdExtC]>;
+                                                  FeatureStdExtC],
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-s21", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
@@ -277,7 +283,8 @@ def : ProcessorModel<"sifive-s76", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtA,
                                                   FeatureStdExtF,
                                                   FeatureStdExtD,
-                                                  FeatureStdExtC]>;
+                                                  FeatureStdExtC],
+                     [TuneSiFive7]>;
 
 def : ProcessorModel<"sifive-u54", RocketModel, [Feature64Bit,
                                                  FeatureStdExtM,
@@ -291,7 +298,8 @@ def : ProcessorModel<"sifive-u74", SiFive7Model, [Feature64Bit,
                                                   FeatureStdExtA,
                                                   FeatureStdExtF,
                                                   FeatureStdExtD,
-                                                  FeatureStdExtC]>;
+                                                  FeatureStdExtC],
+                     [TuneSiFive7]>;
 
 //===----------------------------------------------------------------------===//
 // Define the RISC-V target.

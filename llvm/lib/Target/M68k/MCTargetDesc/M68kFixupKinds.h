@@ -51,4 +51,4 @@ static inline MCFixupKind getFixupForSize(unsigned Size, bool isPCRel) {
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68k_MCTARGETDESC_M68kFIXUPKINDS_H

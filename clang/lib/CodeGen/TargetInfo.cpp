@@ -11417,7 +11417,7 @@ TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
   auto &C = CGF.getLLVMContext();
   std::string Name = Invoke->getName().str() + "_kernel";
   auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
-  auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
+  auto *F = llvm::Function::Create(FT, llvm::GlobalValue::ExternalLinkage, Name,
                                    &CGF.CGM.getModule());
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);

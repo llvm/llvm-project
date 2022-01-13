@@ -1,0 +1,13 @@
+static_library("MCA") {
+  output_name = "LLVMTargetX86MCA"
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/MCA",
+    "//llvm/lib/Target/X86/MCTargetDesc",
+    "//llvm/lib/Target/X86/TargetInfo",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ ".." ]
+  sources = [ "X86CustomBehaviour.cpp" ]
+}

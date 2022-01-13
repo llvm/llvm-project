@@ -1079,6 +1079,16 @@ static bool isDivZero(Value *X, Value *Y, const SimplifyQuery &Q,
   }
 
   // IsSigned == false.
+
+  // Is the unsigned dividend known to be less than a constant divisor?
+  // TODO: Convert this (and above) to range analysis
+  //      ("computeConstantRangeIncludingKnownBits")?
+  const APInt *C;
+  if (match(Y, m_APInt(C)) &&
+      computeKnownBits(X, Q.DL, 0, Q.AC, Q.CxtI, Q.DT).getMaxValue().ult(*C))
+    return true;
+
+  // Try again for any divisor:
   // Is the dividend unsigned less than the divisor?
   return isICmpTrue(ICmpInst::ICMP_ULT, X, Y, Q, MaxRecurse);
 }

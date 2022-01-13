@@ -332,8 +332,8 @@ define i32 @fshl_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet an efficient pattern-matching with bit manipulation
 ; instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions that can match more efficiently this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions that can match more efficiently this pattern.
 
 declare i64 @llvm.fshl.i64(i64, i64, i64)
 
@@ -407,8 +407,8 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) nounwind {
 ; As we are not matching directly i64 code patterns on RV32 some i64 patterns
 ; don't have yet an efficient pattern-matching with bit manipulation
 ; instructions on RV32.
-; This test is presented here in case future expansions of the experimental-b
-; extension introduce instructions that can match more efficiently this pattern.
+; This test is presented here in case future expansions of the Bitmanip
+; extensions introduce instructions that can match more efficiently this pattern.
 
 declare i64 @llvm.fshr.i64(i64, i64, i64)
 

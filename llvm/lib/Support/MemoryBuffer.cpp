@@ -227,23 +227,9 @@ public:
 
 static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
 getMemoryBufferForStream(sys::fs::file_t FD, const Twine &BufferName) {
-  const ssize_t ChunkSize = 4096*4;
-  SmallString<ChunkSize> Buffer;
-
-  // Read into Buffer until we hit EOF.
-  size_t Size = Buffer.size();
-  for (;;) {
-    Buffer.resize_for_overwrite(Size + ChunkSize);
-    Expected<size_t> ReadBytes = sys::fs::readNativeFile(
-        FD, makeMutableArrayRef(Buffer.begin() + Size, ChunkSize));
-    if (!ReadBytes)
-      return errorToErrorCode(ReadBytes.takeError());
-    if (*ReadBytes == 0)
-      break;
-    Size += *ReadBytes;
-  }
-  Buffer.truncate(Size);
-
+  SmallString<sys::fs::DefaultReadChunkSize> Buffer;
+  if (Error E = sys::fs::readNativeFileToEOF(FD, Buffer))
+    return errorToErrorCode(std::move(E));
   return getMemBufferCopyImpl(Buffer, BufferName);
 }
 

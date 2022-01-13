@@ -3,11 +3,11 @@
 ; RUN:   | FileCheck %s -check-prefix=RV32I
 ; RUN: llc -mtriple=riscv64 -riscv-disable-using-constant-pool-for-large-ints -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
-; RUN: llc -mtriple=riscv64 -riscv-disable-using-constant-pool-for-large-ints -mattr=+experimental-zba \
+; RUN: llc -mtriple=riscv64 -riscv-disable-using-constant-pool-for-large-ints -mattr=+zba \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s -check-prefix=RV64IZBA
-; RUN: llc -mtriple=riscv64 -riscv-disable-using-constant-pool-for-large-ints -mattr=+experimental-zbb \
+; RUN: llc -mtriple=riscv64 -riscv-disable-using-constant-pool-for-large-ints -mattr=+zbb \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s -check-prefix=RV64IZBB
-; RUN: llc -mtriple=riscv64 -riscv-disable-using-constant-pool-for-large-ints -mattr=+experimental-zbs \
+; RUN: llc -mtriple=riscv64 -riscv-disable-using-constant-pool-for-large-ints -mattr=+zbs \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s -check-prefix=RV64IZBS
 
 ; Materializing constants

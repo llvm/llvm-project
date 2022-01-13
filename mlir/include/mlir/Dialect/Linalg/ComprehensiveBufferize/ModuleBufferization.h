@@ -31,7 +31,7 @@ runComprehensiveBufferize(ModuleOp moduleOp,
 
 namespace std_ext {
 
-void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
+void registerModuleBufferizationExternalModels(DialectRegistry &registry);
 
 } // namespace std_ext
 } // namespace comprehensive_bufferize

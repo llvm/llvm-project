@@ -128,7 +128,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; CHECK-NEXT:   [[S_MOV_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32_term $exec_lo
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -151,7 +151,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_term]]
+  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -176,7 +176,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr6
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; CHECK-NEXT:   [[S_MOV_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32_term $exec_lo
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -202,7 +202,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_term]]
+  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -228,7 +228,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; CHECK-NEXT:   [[S_MOV_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32_term $exec_lo
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -254,7 +254,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_term]]
+  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -586,7 +586,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[COPY6]], [[S_MOV_B32_]], implicit-def $scc
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; CHECK-NEXT:   [[S_MOV_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32_term $exec_lo
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -609,7 +609,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_term]]
+  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -638,7 +638,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY5]], [[COPY7]], 0, implicit $exec
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub0_sub1
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]].sub2_sub3
-  ; CHECK-NEXT:   [[S_MOV_B32_term:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32_term $exec_lo
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
@@ -661,7 +661,7 @@ define amdgpu_ps void @raw_tbuffer_store_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_term]]
+  ; CHECK-NEXT:   $exec_lo = S_MOV_B32_term [[S_MOV_B32_1]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   S_ENDPGM 0
