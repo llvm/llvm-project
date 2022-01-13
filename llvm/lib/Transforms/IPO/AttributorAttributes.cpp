@@ -5943,15 +5943,15 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       Optional<APInt> SizeAPI = getSize(A, *this, AI);
       if (SizeAPI.hasValue()) {
         Size = ConstantInt::get(AI.CB->getContext(), *SizeAPI);
-      } else if (AI.Kind == AllocationInfo::AllocationKind::CALLOC) {
-        auto *Num = AI.CB->getOperand(0);
-        auto *SizeT = AI.CB->getOperand(1);
-        IRBuilder<> B(AI.CB);
-        Size = B.CreateMul(Num, SizeT, "h2s.calloc.size");
-      } else if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC) {
-        Size = AI.CB->getOperand(1);
       } else {
-        Size = AI.CB->getOperand(0);
+        LLVMContext &Ctx = AI.CB->getContext();
+        auto &DL = A.getInfoCache().getDL();
+        ObjectSizeOpts Opts;
+        ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, Opts);
+        SizeOffsetEvalType SizeOffsetPair = Eval.compute(AI.CB);
+        assert(SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown() &&
+               cast<ConstantInt>(SizeOffsetPair.second)->isZero());
+        Size = SizeOffsetPair.first;
       }
 
       Align Alignment(1);
