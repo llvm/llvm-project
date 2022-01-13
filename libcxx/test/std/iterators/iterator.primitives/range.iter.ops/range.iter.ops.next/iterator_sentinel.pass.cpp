@@ -22,20 +22,6 @@
 
 using range_t = std::array<int, 10>;
 
-// Sentinel type that can be assigned to an iterator. This is to test the case where
-// std::ranges::next uses assignment instead of successive increments below.
-template <class It>
-class assignable_sentinel {
-public:
-    explicit assignable_sentinel() = default;
-    constexpr explicit assignable_sentinel(const It& it) : base_(base(it)) {}
-    constexpr operator It() const { return It(base_); }
-    constexpr bool operator==(const It& other) const { return base_ == base(other); }
-    friend constexpr It base(const assignable_sentinel& s) { return It(s.base_); }
-private:
-    decltype(base(std::declval<It>())) base_;
-};
-
 template <bool Count, typename It>
 constexpr void check_assignable(int* it, int* last, int const* expected) {
   {
