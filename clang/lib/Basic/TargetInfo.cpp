@@ -151,6 +151,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   PlatformMinVersion = VersionTuple();
 
   MaxOpenCLWorkGroupSize = 1024;
+  ProgramAddrSpace = 0;
 }
 
 // Out of line virtual dtor for TargetInfo.
