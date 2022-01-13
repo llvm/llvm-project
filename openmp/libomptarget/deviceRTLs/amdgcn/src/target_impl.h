@@ -32,6 +32,7 @@ typedef uint64_t __kmpc_impl_lanemask_t;
 #define ALIGN(N) __attribute__((aligned(N)))
 #define PLUGIN_ACCESSIBLE                                                      \
   __attribute__((used))   /* Don't discard values the plugin reads */          \
+  __attribute__((weak))   /* We may have multiple definitions */               \
   __attribute__((retain)) /* Also needed to keep values alive */               \
   __attribute__((visibility("default"))) /* Access via SHT_HASH */             \
   __attribute__((section(".data")))      /* Not .bss, can write before load */
