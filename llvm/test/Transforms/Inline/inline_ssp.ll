@@ -9,10 +9,18 @@
 
 ; These first four functions (@fun_sspreq, @fun_sspstrong, @fun_ssp, @fun_nossp)
 ; are used by the remaining functions to ensure that the SSP attributes are
-; propagated correctly.  The caller should have its SSP attribute set as:
+; propagated correctly.  If the caller had an SSP attribute before inlining, it
+; should have its new SSP attribute set as:
 ; strictest(caller-ssp-attr, callee-ssp-attr), where strictness is ordered as:
-;  sspreq > sspstrong > ssp > [no ssp]
+;  sspreq > sspstrong > ssp
+
 define internal void @fun_sspreq() sspreq {
+entry:
+  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str3, i32 0, i32 0))
+  ret void
+}
+
+define internal void @fun_sspreq_alwaysinline() sspreq alwaysinline {
 entry:
   %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str3, i32 0, i32 0))
   ret void
@@ -63,6 +71,13 @@ define void @inline_req_nossp() {
 entry:
 ; CHECK: @inline_req_nossp() {
   call void @fun_sspreq()
+  ret void
+}
+
+define void @alwaysinline_req_nossp() {
+entry:
+; CHECK: @alwaysinline_req_nossp() {
+  call void @fun_sspreq_alwaysinline()
   ret void
 }
 

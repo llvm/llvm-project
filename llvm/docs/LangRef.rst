@@ -1995,11 +1995,9 @@ example:
     Variables that are identified as requiring a protector will be arranged
     on the stack such that they are adjacent to the stack protector guard.
 
-    A function with the ``ssp`` attribute but without the ``alwaysinline``
-    attribute cannot be inlined into a function without a
-    ``ssp/sspreq/sspstrong`` attribute. If inlined, the caller will get the
-    ``ssp`` attribute. ``call``, ``invoke``, and ``callbr`` instructions with
-    the ``alwaysinline`` attribute force inlining.
+    If a function with an ``ssp`` attribute is inlined into a calling function,
+    the attribute is not carried over to the calling function.
+
 ``sspstrong``
     This attribute indicates that the function should emit a stack smashing
     protector. This attribute causes a strong heuristic to be used when
@@ -2024,12 +2022,10 @@ example:
 
     This overrides the ``ssp`` function attribute.
 
-    A function with the ``sspstrong`` attribute but without the
-    ``alwaysinline`` attribute cannot be inlined into a function without a
-    ``ssp/sspstrong/sspreq`` attribute. If inlined, the caller will get the
-    ``sspstrong`` attribute unless the ``sspreq`` attribute exists.  ``call``,
-    ``invoke``, and ``callbr`` instructions with the ``alwaysinline`` attribute
-    force inlining.
+    If a function with an ``sspstrong`` attribute is inlined into a calling
+    function which has an ``ssp`` attribute, the calling function's attribute
+    will be upgraded to ``sspstrong``.
+
 ``sspreq``
     This attribute indicates that the function should *always* emit a stack
     smashing protector. This overrides the ``ssp`` and ``sspstrong`` function
@@ -2046,11 +2042,9 @@ example:
     #. Variables that have had their address taken are 3rd closest to the
        protector.
 
-    A function with the ``sspreq`` attribute but without the ``alwaysinline``
-    attribute cannot be inlined into a function without a
-    ``ssp/sspstrong/sspreq`` attribute. If inlined, the caller will get the
-    ``sspreq`` attribute.  ``call``, ``invoke``, and ``callbr`` instructions
-    with the ``alwaysinline`` attribute force inlining.
+    If a function with an ``sspreq`` attribute is inlined into a calling
+    function which has an ``ssp`` or ``sspstrong`` attribute, the calling
+    function's attribute will be upgraded to ``sspreq``.
 
 ``strictfp``
     This attribute indicates that the function was called from a scope that
