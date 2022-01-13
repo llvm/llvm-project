@@ -515,6 +515,26 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIPDL",
+    srcs = [
+        "lib/CAPI/Dialect/PDL.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/PDL.h",
+    ],
+    header_deps = [
+        ":CAPIIRHeaders",
+    ],
+    includes = ["include"],
+    deps = [
+        ":CAPIIR",
+        ":PDLDialect",
+        ":PDLOpsIncGen",
+        ":PDLTypesIncGen",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIConversion",
     srcs = ["lib/CAPI/Conversion/Passes.cpp"],
     hdrs = ["include/mlir-c/Conversion.h"],
