@@ -189,7 +189,7 @@ TEST(NamelistTests, ShortArrayInput) {
   EXPECT_EQ(*bDesc->ZeroBasedIndexedElement<int>(1), -2);
 }
 
-TEST(NamelistTypes, ScalarSubstring) {
+TEST(NamelistTests, ScalarSubstring) {
   OwningPtr<Descriptor> scDesc{MakeArray<TypeCategory::Character, 1>(
       std::vector<int>{}, std::vector<std::string>{"abcdefgh"}, 8)};
   const NamelistGroup::Item items[]{{"a", *scDesc}};
@@ -217,7 +217,7 @@ TEST(NamelistTypes, ScalarSubstring) {
   EXPECT_EQ(got, expect);
 }
 
-TEST(NamelistTypes, ArraySubstring) {
+TEST(NamelistTests, ArraySubstring) {
   OwningPtr<Descriptor> scDesc{
       MakeArray<TypeCategory::Character, 1>(std::vector<int>{2},
           std::vector<std::string>{"abcdefgh", "ijklmnop"}, 8)};
@@ -243,6 +243,34 @@ TEST(NamelistTypes, ArraySubstring) {
   ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
   std::string got{out, sizeof out};
   static const std::string expect{"&JUSTA A= 'aBCDEfgh' 'iJKLMnop'/        "};
+  EXPECT_EQ(got, expect);
+}
+
+TEST(NamelistTests, Skip) {
+  OwningPtr<Descriptor> scDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{-1})};
+  const NamelistGroup::Item items[]{{"j", *scDesc}};
+  const NamelistGroup group{"nml", 1, items};
+  static char t1[]{"&skip a='str''ing'/&nml j=123/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist input with skipping";
+  char out[20];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{"&NML J= 123/        "};
   EXPECT_EQ(got, expect);
 }
 

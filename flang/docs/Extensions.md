@@ -212,6 +212,9 @@ end
   This legacy extension supports pre-Fortran'77 usage in which
   variables initialized in DATA statements with Hollerith literals
   as modifiable formats.
+* At runtime, `NAMELIST` input will skip over `NAMELIST` groups
+  with other names, and will treat text before and between groups
+  as if they were comment lines, even if not begun with `!`.
 
 ### Extensions supported when enabled by options
 
