@@ -8436,7 +8436,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
     if (Legal->getPrimaryInduction())
       IV = Plan->getOrAddVPValue(Legal->getPrimaryInduction());
     else {
-      auto *IVRecipe = new VPWidenCanonicalIVRecipe();
+      auto *IVRecipe = new VPWidenCanonicalIVRecipe(Plan->getCanonicalIV());
       HeaderVPBB->insert(IVRecipe, NewInsertionPoint);
       IV = IVRecipe;
     }

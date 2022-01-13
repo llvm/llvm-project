@@ -245,7 +245,7 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK-NEXT: loop:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 21, %iv.next
-; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION
+; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]> vp<[[BTC]]>
 ; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr ir<%A>, ir<0>
 ; CHECK-NEXT: Successor(s): pred.load
