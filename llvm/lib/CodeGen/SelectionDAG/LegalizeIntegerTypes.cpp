@@ -1704,7 +1704,7 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &LHS, SDValue &RHS,
   SDValue OpL = GetPromotedInteger(LHS);
   SDValue OpR = GetPromotedInteger(RHS);
 
-  if (TLI.isSExtCheaperThanZExt(LHS.getValueType(), OpL.getValueType(), LHS)) {
+  if (TLI.isSExtCheaperThanZExt(LHS.getValueType(), OpL.getValueType())) {
     // The target would prefer to promote the comparison operand with sign
     // extension. Honor that unless the promoted values are already zero
     // extended.

@@ -14,8 +14,18 @@ entry:
   ret <8 x i1> %Shuff
 }
 
+; CHECK: lCPI1_0:
+; CHECK:          .byte   0                       ; 0x0
+; CHECK:          .byte   0                       ; 0x0
+; CHECK:          .byte   0                       ; 0x0
+; CHECK:          .byte   0                       ; 0x0
+; CHECK:          .byte   1                       ; 0x1
+; CHECK:          .byte   0                       ; 0x0
+; CHECK:          .byte   0                       ; 0x0
+; CHECK:          .byte   0                       ; 0x0
 ; CHECK: test2
-; CHECK: movi    d{{[0-9]+}}, #0x0000ff00000000
+; CHECK: adrp    x[[REG2:[0-9]+]], lCPI1_0@PAGE
+; CHECK: ldr     d[[REG1:[0-9]+]], [x[[REG2]], lCPI1_0@PAGEOFF]
 define <8 x i1>@test2() {
 bb:
   %Shuff = shufflevector <8 x i1> zeroinitializer,
@@ -26,7 +36,7 @@ bb:
 }
 
 ; CHECK: test3
-; CHECK: movi.2d v{{[0-9]+}}, #0x0000ff000000ff
+; CHECK: movi.4s v{{[0-9]+}}, #1
 define <16 x i1> @test3(i1* %ptr, i32 %v) {
 bb:
   %Shuff = shufflevector <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0>, <16 x i1> undef,
@@ -35,13 +45,11 @@ bb:
                  i32 14, i32 0>
   ret <16 x i1> %Shuff
 }
-
-
 ; CHECK: lCPI3_0:
 ; CHECK:         .byte   0                       ; 0x0
 ; CHECK:         .byte   0                       ; 0x0
 ; CHECK:         .byte   0                       ; 0x0
-; CHECK:         .byte   255                     ; 0xff
+; CHECK:         .byte   1                       ; 0x1
 ; CHECK:         .byte   0                       ; 0x0
 ; CHECK:         .byte   0                       ; 0x0
 ; CHECK:         .byte   0                       ; 0x0

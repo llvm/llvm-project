@@ -177,7 +177,7 @@ define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint
 ; CHECK-NEXT:    bl consume
 ; CHECK-NEXT:    b .LBB8_3
 ; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    mov w19, #-1
+; CHECK-NEXT:    mov w19, #1
 ; CHECK-NEXT:  .LBB8_3: // %common.ret
 ; CHECK-NEXT:    and w0, w19, #0x1
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
