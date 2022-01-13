@@ -889,6 +889,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECREDUCE_ADD);
   setTargetDAGCombine(ISD::STEP_VECTOR);
 
+  setTargetDAGCombine(ISD::MGATHER);
+  setTargetDAGCombine(ISD::MSCATTER);
+
   setTargetDAGCombine(ISD::FP_EXTEND);
 
   setTargetDAGCombine(ISD::GlobalAddress);
@@ -16358,6 +16361,93 @@ static SDValue performSTORECombine(SDNode *N,
   return SDValue();
 }
 
+// Analyse the specified address returning true if a more optimal addressing
+// mode is available. When returning true all parameters are updated to reflect
+// their recommended values.
+static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
+                                     SDValue &BasePtr, SDValue &Index,
+                                     ISD::MemIndexType &IndexType,
+                                     SelectionDAG &DAG) {
+  // Only consider element types that are pointer sized as smaller types can
+  // be easily promoted.
+  EVT IndexVT = Index.getValueType();
+  if (IndexVT.getVectorElementType() != MVT::i64 || IndexVT == MVT::nxv2i64)
+    return false;
+
+  int64_t Stride = 0;
+  SDLoc DL(N);
+  // Index = step(const) + splat(offset)
+  if (Index.getOpcode() == ISD::ADD &&
+      Index.getOperand(0).getOpcode() == ISD::STEP_VECTOR) {
+    SDValue StepVector = Index.getOperand(0);
+    if (auto Offset = DAG.getSplatValue(Index.getOperand(1))) {
+      Stride = cast<ConstantSDNode>(StepVector.getOperand(0))->getSExtValue();
+      Offset = DAG.getNode(ISD::MUL, DL, MVT::i64, Offset, N->getScale());
+      BasePtr = DAG.getNode(ISD::ADD, DL, MVT::i64, BasePtr, Offset);
+    }
+  }
+
+  // Return early because no supported pattern is found.
+  if (Stride == 0)
+    return false;
+
+  if (Stride < std::numeric_limits<int32_t>::min() ||
+      Stride > std::numeric_limits<int32_t>::max())
+    return false;
+
+  const auto &Subtarget =
+      static_cast<const AArch64Subtarget &>(DAG.getSubtarget());
+  unsigned MaxVScale =
+      Subtarget.getMaxSVEVectorSizeInBits() / AArch64::SVEBitsPerBlock;
+  int64_t LastElementOffset =
+      IndexVT.getVectorMinNumElements() * Stride * MaxVScale;
+
+  if (LastElementOffset < std::numeric_limits<int32_t>::min() ||
+      LastElementOffset > std::numeric_limits<int32_t>::max())
+    return false;
+
+  EVT NewIndexVT = IndexVT.changeVectorElementType(MVT::i32);
+  Index = DAG.getNode(ISD::STEP_VECTOR, DL, NewIndexVT,
+                      DAG.getTargetConstant(Stride, DL, MVT::i32));
+  return true;
+}
+
+static SDValue performMaskedGatherScatterCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  MaskedGatherScatterSDNode *MGS = cast<MaskedGatherScatterSDNode>(N);
+  assert(MGS && "Can only combine gather load or scatter store nodes");
+
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDLoc DL(MGS);
+  SDValue Chain = MGS->getChain();
+  SDValue Scale = MGS->getScale();
+  SDValue Index = MGS->getIndex();
+  SDValue Mask = MGS->getMask();
+  SDValue BasePtr = MGS->getBasePtr();
+  ISD::MemIndexType IndexType = MGS->getIndexType();
+
+  if (!findMoreOptimalIndexType(MGS, BasePtr, Index, IndexType, DAG))
+    return SDValue();
+
+  // Here we catch such cases early and change MGATHER's IndexType to allow
+  // the use of an Index that's more legalisation friendly.
+  if (auto *MGT = dyn_cast<MaskedGatherSDNode>(MGS)) {
+    SDValue PassThru = MGT->getPassThru();
+    SDValue Ops[] = {Chain, PassThru, Mask, BasePtr, Index, Scale};
+    return DAG.getMaskedGather(
+        DAG.getVTList(N->getValueType(0), MVT::Other), MGT->getMemoryVT(), DL,
+        Ops, MGT->getMemOperand(), IndexType, MGT->getExtensionType());
+  }
+  auto *MSC = cast<MaskedScatterSDNode>(MGS);
+  SDValue Data = MSC->getValue();
+  SDValue Ops[] = {Chain, Data, Mask, BasePtr, Index, Scale};
+  return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), MSC->getMemoryVT(), DL,
+                              Ops, MSC->getMemOperand(), IndexType,
+                              MSC->isTruncatingStore());
+}
+
 /// Target-specific DAG combine function for NEON load/store intrinsics
 /// to merge base address updates.
 static SDValue performNEONPostLDSTCombine(SDNode *N,
@@ -17820,6 +17910,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     break;
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
+  case ISD::MGATHER:
+  case ISD::MSCATTER:
+    return performMaskedGatherScatterCombine(N, DCI, DAG);
   case ISD::VECTOR_SPLICE:
     return performSVESpliceCombine(N, DAG);
   case ISD::FP_EXTEND:
