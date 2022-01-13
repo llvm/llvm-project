@@ -576,6 +576,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"compilationDatabase",        // clangd extension
        llvm::json::Object{{"automaticReload", true}}},
       {"callHierarchyProvider", true},
+      {"clangdInlayHintsProvider", true},
   };
 
   {
@@ -607,10 +608,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   if (Opts.FoldingRanges)
     ServerCaps["foldingRangeProvider"] = true;
-
-  // FIXME: once inlayHints can be disabled in config, always advertise.
-  if (Opts.InlayHints)
-    ServerCaps["clangdInlayHintsProvider"] = true;
 
   std::vector<llvm::StringRef> Commands;
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())

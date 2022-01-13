@@ -23,7 +23,6 @@
 #include "index/ProjectAware.h"
 #include "index/Serialization.h"
 #include "index/remote/Client.h"
-#include "refactor/Rename.h"
 #include "support/Path.h"
 #include "support/Shutdown.h"
 #include "support/ThreadCrashReporter.h"
@@ -294,6 +293,7 @@ RetiredFlag<bool> AsyncPreamble("async-preamble");
 RetiredFlag<bool> CollectMainFileRefs("collect-main-file-refs");
 RetiredFlag<bool> CrossFileRename("cross-file-rename");
 RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
+RetiredFlag<std::string> InlayHints("inlay-hints");
 
 opt<int> LimitResults{
     "limit-results",
@@ -324,15 +324,6 @@ opt<bool> FoldingRanges{
     cat(Features),
     desc("Enable preview of FoldingRanges feature"),
     init(false),
-    Hidden,
-};
-
-opt<bool> InlayHints{
-    "inlay-hints",
-    cat(Features),
-    desc("Enable InlayHints feature"),
-    init(ClangdLSPServer::Options().InlayHints),
-    // FIXME: allow inlayHints to be disabled in Config and remove this option.
     Hidden,
 };
 
@@ -884,7 +875,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.FoldingRanges = FoldingRanges;
-  Opts.InlayHints = InlayHints;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 
   Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;
