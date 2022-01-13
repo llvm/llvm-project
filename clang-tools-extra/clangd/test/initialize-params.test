@@ -121,6 +121,7 @@
 # CHECK-NEXT:        "openClose": true,
 # CHECK-NEXT:        "save": true
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "typeDefinitionProvider": true,
 # CHECK-NEXT:      "typeHierarchyProvider": true
 # CHECK-NEXT:      "workspaceSymbolProvider": true
 # CHECK-NEXT:    },
