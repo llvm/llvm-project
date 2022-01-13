@@ -2053,12 +2053,13 @@ void OpEmitter::genSideEffectInterfaceMethods() {
       } else if (location.kind == EffectKind::Symbol) {
         // A symbol reference requires adding the proper attribute.
         const auto *attr = op.getArg(location.index).get<NamedAttribute *>();
+        std::string argName = op.getGetterName(attr->name);
         if (attr->attr.isOptional()) {
-          body << "  if (auto symbolRef = " << attr->name << "Attr())\n  "
+          body << "  if (auto symbolRef = " << argName << "Attr())\n  "
                << llvm::formatv(addEffectCode, effect, "symbolRef, ", resource)
                       .str();
         } else {
-          body << llvm::formatv(addEffectCode, effect, attr->name + "(), ",
+          body << llvm::formatv(addEffectCode, effect, argName + "Attr(), ",
                                 resource)
                       .str();
         }
