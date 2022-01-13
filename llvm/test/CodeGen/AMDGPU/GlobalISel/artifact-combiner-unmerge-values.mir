@@ -1338,3 +1338,169 @@ body:             |
   S_ENDPGM 0, implicit %3, implicit %4, implicit %5, implicit %6
 
 ...
+
+---
+name: test_unmerge_values_s32_from_sext_v2s64_from_v2s1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: test_unmerge_values_s32_from_sext_v2s64_from_v2s1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ANYEXT]], 1
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ANYEXT1]], 1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG1]](s64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[UV2]](s32)
+    ; CHECK-NEXT: $vgpr3 = COPY [[UV3]](s32)
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s1) = G_ICMP intpred(eq), %0, %2
+    %4:_(s1) = G_ICMP intpred(eq), %1, %2
+    %5:_(<2 x s1>) = G_BUILD_VECTOR %3, %4
+    %6:_(<2 x s64>) = G_SEXT %5
+    %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32) = G_UNMERGE_VALUES %6
+    $vgpr0 = COPY %7
+    $vgpr1 = COPY %8
+    $vgpr2 = COPY %9
+    $vgpr3 = COPY %10
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+
+...
+
+---
+name: test_unmerge_values_s32_from_zext_v2s64_from_v2s1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: test_unmerge_values_s32_from_zext_v2s64_from_v2s1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[ANYEXT1]], [[C]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AND]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AND1]](s64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[UV2]](s32)
+    ; CHECK-NEXT: $vgpr3 = COPY [[UV3]](s32)
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s1) = G_ICMP intpred(eq), %0, %2
+    %4:_(s1) = G_ICMP intpred(eq), %1, %2
+    %5:_(<2 x s1>) = G_BUILD_VECTOR %3, %4
+    %6:_(<2 x s64>) = G_ZEXT %5
+    %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32) = G_UNMERGE_VALUES %6
+    $vgpr0 = COPY %7
+    $vgpr1 = COPY %8
+    $vgpr2 = COPY %9
+    $vgpr3 = COPY %10
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+
+...
+
+---
+name: test_unmerge_values_s32_from_anyext_v2s64_from_v2s1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: test_unmerge_values_s32_from_anyext_v2s64_from_v2s1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT1]](s64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[UV2]](s32)
+    ; CHECK-NEXT: $vgpr3 = COPY [[UV3]](s32)
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s1) = G_ICMP intpred(eq), %0, %2
+    %4:_(s1) = G_ICMP intpred(eq), %1, %2
+    %5:_(<2 x s1>) = G_BUILD_VECTOR %3, %4
+    %6:_(<2 x s64>) = G_ANYEXT %5
+    %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32) = G_UNMERGE_VALUES %6
+    $vgpr0 = COPY %7
+    $vgpr1 = COPY %8
+    $vgpr2 = COPY %9
+    $vgpr3 = COPY %10
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
+
+...
+
+---
+name: test_unmerge_values_s32_from_sext_v3s64_from_v3s1
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+
+    ; CHECK-LABEL: name: test_unmerge_values_s32_from_sext_v3s64_from_v3s1
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY3]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY2]](s32), [[COPY3]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ANYEXT]], 1
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ANYEXT1]], 1
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP2]](s1)
+    ; CHECK-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ANYEXT2]], 1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG1]](s64)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG2]](s64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[UV2]](s32)
+    ; CHECK-NEXT: $vgpr3 = COPY [[UV3]](s32)
+    ; CHECK-NEXT: $vgpr4 = COPY [[UV4]](s32)
+    ; CHECK-NEXT: $vgpr5 = COPY [[UV5]](s32)
+    ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s32) = COPY $vgpr2
+    %3:_(s32) = COPY $vgpr3
+    %4:_(s1) = G_ICMP intpred(eq), %0, %3
+    %5:_(s1) = G_ICMP intpred(eq), %1, %3
+    %6:_(s1) = G_ICMP intpred(eq), %2, %3
+    %7:_(<3 x s1>) = G_BUILD_VECTOR %4, %5, %6
+    %8:_(<3 x s64>) = G_SEXT %7
+    %9:_(s32), %10:_(s32), %11:_(s32), %12:_(s32), %13:_(s32), %14:_(s32) = G_UNMERGE_VALUES %8
+    $vgpr0 = COPY %9
+    $vgpr1 = COPY %10
+    $vgpr2 = COPY %11
+    $vgpr3 = COPY %12
+    $vgpr4 = COPY %13
+    $vgpr5 = COPY %14
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3 , implicit $vgpr4, implicit $vgpr5
+
+...
