@@ -285,12 +285,15 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
     return {};
   }
 
-  // If the return type is a constrained 'auto', we need to include the token
-  // after the concept. Unfortunately, the source range of an AutoTypeLoc, if it
-  // is constrained, does not include the 'auto'.
-  // FIXME: fix the AutoTypeLoc location in clang.
+  // If the return type is a constrained 'auto' or 'decltype(auto)', we need to
+  // include the tokens after the concept. Unfortunately, the source range of an
+  // AutoTypeLoc, if it is constrained, does not include the 'auto' or
+  // 'decltype(auto)'. If the return type is a plain 'decltype(...)', the
+  // source range only contains the first 'decltype' token.
   auto ATL = ReturnLoc.getAs<AutoTypeLoc>();
-  if (ATL && ATL.isConstrained() && !ATL.isDecltypeAuto()) {
+  if ((ATL && (ATL.isConstrained() ||
+               ATL.getAutoKeyword() == AutoTypeKeyword::DecltypeAuto)) ||
+      ReturnLoc.getAs<DecltypeTypeLoc>()) {
     SourceLocation End =
         expandIfMacroId(ReturnLoc.getSourceRange().getEnd(), SM);
     SourceLocation BeginNameF = expandIfMacroId(F.getLocation(), SM);

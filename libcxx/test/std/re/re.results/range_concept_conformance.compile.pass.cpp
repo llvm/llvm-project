@@ -26,7 +26,7 @@ static_assert(std::ranges::contiguous_range<std::cmatch>);
 static_assert(!std::ranges::view<std::cmatch>);
 static_assert(std::ranges::sized_range<std::cmatch>);
 static_assert(!std::ranges::borrowed_range<std::cmatch>);
-static_assert(!std::ranges::viewable_range<std::cmatch>);
+static_assert(std::ranges::viewable_range<std::cmatch>);
 
 static_assert(std::same_as<std::ranges::iterator_t<std::cmatch const>, std::cmatch::const_iterator>);
 static_assert(std::ranges::common_range<std::cmatch const>);

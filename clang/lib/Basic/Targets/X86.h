@@ -533,11 +533,12 @@ public:
     DoubleAlign = LongLongAlign = 64;
     bool IsWinCOFF =
         getTriple().isOSWindows() && getTriple().isOSBinFormatCOFF();
-    resetDataLayout(IsWinCOFF ? "e-m:x-p:32:32-p270:32:32-p271:32:32-p272:64:"
-                                "64-i64:64-f80:32-n8:16:32-a:0:32-S32"
-                              : "e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:"
-                                "64-i64:64-f80:32-n8:16:32-a:0:32-S32",
-                    IsWinCOFF ? "_" : "");
+    bool IsMSVC = getTriple().isWindowsMSVCEnvironment();
+    std::string Layout = IsWinCOFF ? "e-m:x" : "e-m:e";
+    Layout += "-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-";
+    Layout += IsMSVC ? "f80:128" : "f80:32";
+    Layout += "-n8:16:32-a:0:32-S32";
+    resetDataLayout(Layout, IsWinCOFF ? "_" : "");
   }
 };
 

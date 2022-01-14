@@ -101,4 +101,4 @@ uint64_t DylibSymbol::getVA() const {
   return isInStubs() ? getStubVA() : Symbol::getVA();
 }
 
-void LazySymbol::fetchArchiveMember() { getFile()->fetch(sym); }
+void LazyArchive::fetchArchiveMember() { getFile()->fetch(sym); }

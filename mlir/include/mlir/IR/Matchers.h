@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_MATCHERS_H
-#define MLIR_MATCHERS_H
+#ifndef MLIR_IR_MATCHERS_H
+#define MLIR_IR_MATCHERS_H
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -166,7 +166,7 @@ typename std::enable_if_t<
                       Operation *>::value,
     bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
-  if (auto defOp = op->getOperand(idx).getDefiningOp())
+  if (auto *defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);
   return false;
 }
@@ -296,4 +296,4 @@ inline auto m_Val(Value v) { return detail::PatternMatcherValue(v); }
 
 } // namespace mlir
 
-#endif // MLIR_MATCHERS_H
+#endif // MLIR_IR_MATCHERS_H

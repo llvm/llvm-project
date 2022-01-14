@@ -35,7 +35,7 @@ func @main() -> () {
   // CHECK-NEXT: [3,   4,   5]
 
   %copy_two = memref.alloc() : memref<3x2xf32>
-  %copy_two_casted = memref.reinterpret_cast %copy_two to offset: [0], sizes: [2, 3], strides:[1, 2]
+  %copy_two_casted = memref.reinterpret_cast %copy_two to offset: [0], sizes: [2, 3], strides: [1, 2]
     : memref<3x2xf32> to memref<2x3xf32, offset: 0, strides: [1, 2]>
   memref.copy %input, %copy_two_casted : memref<2x3xf32> to memref<2x3xf32, offset: 0, strides: [1, 2]>
   %unranked_copy_two = memref.cast %copy_two : memref<3x2xf32> to memref<*xf32>
@@ -49,6 +49,13 @@ func @main() -> () {
   %copy_empty = memref.alloc() : memref<3x0x1xf32>
   // Copying an empty shape should do nothing (and should not crash).
   memref.copy %input_empty, %copy_empty : memref<3x0x1xf32> to memref<3x0x1xf32>
+
+  %input_empty_casted = memref.reinterpret_cast %input_empty to offset: [0], sizes: [0, 3, 1], strides: [3, 1, 1]
+    : memref<3x0x1xf32> to memref<0x3x1xf32, offset: 0, strides: [3, 1, 1]>
+  %copy_empty_casted = memref.alloc() : memref<0x3x1xf32>
+  // Copying a casted empty shape should do nothing (and should not crash).
+  memref.copy %input_empty_casted, %copy_empty_casted : memref<0x3x1xf32, offset: 0, strides: [3, 1, 1]> to memref<0x3x1xf32>
+
   memref.dealloc %copy_empty : memref<3x0x1xf32>
   memref.dealloc %input_empty : memref<3x0x1xf32>
   memref.dealloc %copy_two : memref<3x2xf32>

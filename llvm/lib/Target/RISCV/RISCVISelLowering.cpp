@@ -343,6 +343,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f16, Legal);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f16, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f16, Expand);
@@ -393,6 +395,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FMUL, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FDIV, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Legal);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
@@ -426,6 +430,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Legal);
+    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
     for (auto CC : FPCCToExpand)
       setCondCodeAction(CC, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
@@ -2215,6 +2221,17 @@ static SDValue splatPartsI64WithVL(const SDLoc &DL, MVT VT, SDValue Lo,
     // node in order to try and match RVV vector/scalar instructions.
     if ((LoC >> 31) == HiC)
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, Lo, VL);
+
+    // If vl is equal to VLMax and Hi constant is equal to Lo, we could use
+    // vmv.v.x whose EEW = 32 to lower it.
+    auto *Const = dyn_cast<ConstantSDNode>(VL);
+    if (LoC == HiC && Const && Const->getSExtValue() == RISCV::VLMaxSentinel) {
+      MVT InterVT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
+      // TODO: if vl <= min(VLMAX), we can also do this. But we could not
+      // access the subtarget here now.
+      auto InterVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterVT, Lo, VL);
+      return DAG.getNode(ISD::BITCAST, DL, VT, InterVec);
+    }
   }
 
   // Fall back to a stack store and stride x0 vector load.
@@ -4179,6 +4196,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                        : RISCVISD::BDECOMPRESS;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2));
   }
+  case Intrinsic::riscv_bfp:
+    return DAG.getNode(RISCVISD::BFP, DL, XLenVT, Op.getOperand(1),
+                       Op.getOperand(2));
   case Intrinsic::riscv_vmv_x_s:
     assert(Op.getValueType() == XLenVT && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
@@ -6269,6 +6289,17 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       break;
     }
+    case Intrinsic::riscv_bfp: {
+      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+             "Unexpected custom legalisation");
+      SDValue NewOp1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue NewOp2 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res = DAG.getNode(RISCVISD::BFPW, DL, MVT::i64, NewOp1, NewOp2);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      break;
+    }
     case Intrinsic::riscv_vmv_x_s: {
       EVT VT = N->getValueType(0);
       MVT XLenVT = Subtarget.getXLenVT();
@@ -8070,6 +8101,42 @@ static bool isSelectPseudo(MachineInstr &MI) {
   }
 }
 
+static MachineBasicBlock *emitQuietFCMP(MachineInstr &MI, MachineBasicBlock *BB,
+                                        unsigned RelOpcode, unsigned EqOpcode,
+                                        const RISCVSubtarget &Subtarget) {
+  DebugLoc DL = MI.getDebugLoc();
+  Register DstReg = MI.getOperand(0).getReg();
+  Register Src1Reg = MI.getOperand(1).getReg();
+  Register Src2Reg = MI.getOperand(2).getReg();
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  Register SavedFFlags = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+
+  // Save the current FFLAGS.
+  BuildMI(*BB, MI, DL, TII.get(RISCV::ReadFFLAGS), SavedFFlags);
+
+  auto MIB = BuildMI(*BB, MI, DL, TII.get(RelOpcode), DstReg)
+                 .addReg(Src1Reg)
+                 .addReg(Src2Reg);
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
+  // Restore the FFLAGS.
+  BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
+      .addReg(SavedFFlags, RegState::Kill);
+
+  // Issue a dummy FEQ opcode to raise exception for signaling NaNs.
+  auto MIB2 = BuildMI(*BB, MI, DL, TII.get(EqOpcode), RISCV::X0)
+                  .addReg(Src1Reg, getKillRegState(MI.getOperand(1).isKill()))
+                  .addReg(Src2Reg, getKillRegState(MI.getOperand(2).isKill()));
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    MIB2->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
+  // Erase the pseudoinstruction.
+  MI.eraseFromParent();
+  return BB;
+}
+
 static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
                                            MachineBasicBlock *BB,
                                            const RISCVSubtarget &Subtarget) {
@@ -8211,6 +8278,18 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitBuildPairF64Pseudo(MI, BB);
   case RISCV::SplitF64Pseudo:
     return emitSplitF64Pseudo(MI, BB);
+  case RISCV::PseudoQuietFLE_H:
+    return emitQuietFCMP(MI, BB, RISCV::FLE_H, RISCV::FEQ_H, Subtarget);
+  case RISCV::PseudoQuietFLT_H:
+    return emitQuietFCMP(MI, BB, RISCV::FLT_H, RISCV::FEQ_H, Subtarget);
+  case RISCV::PseudoQuietFLE_S:
+    return emitQuietFCMP(MI, BB, RISCV::FLE_S, RISCV::FEQ_S, Subtarget);
+  case RISCV::PseudoQuietFLT_S:
+    return emitQuietFCMP(MI, BB, RISCV::FLT_S, RISCV::FEQ_S, Subtarget);
+  case RISCV::PseudoQuietFLE_D:
+    return emitQuietFCMP(MI, BB, RISCV::FLE_D, RISCV::FEQ_D, Subtarget);
+  case RISCV::PseudoQuietFLT_D:
+    return emitQuietFCMP(MI, BB, RISCV::FLT_D, RISCV::FEQ_D, Subtarget);
   }
 }
 
@@ -9645,6 +9724,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SHFLW)
   NODE_NAME_CASE(UNSHFL)
   NODE_NAME_CASE(UNSHFLW)
+  NODE_NAME_CASE(BFP)
+  NODE_NAME_CASE(BFPW)
   NODE_NAME_CASE(BCOMPRESS)
   NODE_NAME_CASE(BCOMPRESSW)
   NODE_NAME_CASE(BDECOMPRESS)

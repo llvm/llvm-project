@@ -26,6 +26,7 @@ set(files
   __algorithm/generate.h
   __algorithm/generate_n.h
   __algorithm/half_positive.h
+  __algorithm/in_in_result.h
   __algorithm/in_out_result.h
   __algorithm/includes.h
   __algorithm/inplace_merge.h
@@ -249,6 +250,7 @@ set(files
   __memory/concepts.h
   __memory/construct_at.h
   __memory/pointer_traits.h
+  __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
@@ -325,6 +327,7 @@ set(files
   __ranges/iota_view.h
   __ranges/join_view.h
   __ranges/non_propagating_cache.h
+  __ranges/owning_view.h
   __ranges/range_adaptor.h
   __ranges/ref_view.h
   __ranges/reverse_view.h

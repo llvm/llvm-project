@@ -1473,6 +1473,12 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
   verifyFormat("for (;;)\n"
                "  for (;;) continue;",
                AllowsMergedLoops);
+  verifyFormat("for (;;)\n"
+               "  while (true) continue;",
+               AllowsMergedLoops);
+  verifyFormat("BOOST_FOREACH (int v, vec)\n"
+               "  for (;;) continue;",
+               AllowsMergedLoops);
   verifyFormat("for (;;) // Can't merge this\n"
                "  continue;",
                AllowsMergedLoops);
@@ -2157,7 +2163,7 @@ TEST_F(FormatTest, ForEachLoops) {
                "  foreach (Item *item, itemlist) {}\n"
                "  Q_FOREACH (Item *item, itemlist) {}\n"
                "  BOOST_FOREACH (Item *item, itemlist) {}\n"
-               "  UNKNOWN_FORACH(Item * item, itemlist) {}\n"
+               "  UNKNOWN_FOREACH(Item * item, itemlist) {}\n"
                "}");
 
   FormatStyle Style = getLLVMStyle();
@@ -2167,7 +2173,7 @@ TEST_F(FormatTest, ForEachLoops) {
                "  foreach(Item *item, itemlist) {}\n"
                "  Q_FOREACH(Item *item, itemlist) {}\n"
                "  BOOST_FOREACH(Item *item, itemlist) {}\n"
-               "  UNKNOWN_FORACH(Item * item, itemlist) {}\n"
+               "  UNKNOWN_FOREACH(Item * item, itemlist) {}\n"
                "}",
                Style);
 
@@ -4802,6 +4808,13 @@ TEST_F(FormatTest, MacroCallsWithoutTrailingSemicolon) {
   verifyFormat("void foo(int a) { FOO(a) }\n"
                "uint32_t bar() {}",
                Style);
+}
+
+TEST_F(FormatTest, FormatsMacrosWithZeroColumnWidth) {
+  FormatStyle ZeroColumn = getLLVMStyleWithColumns(0);
+
+  verifyFormat("#define A LOOOOOOOOOOOOOOOOOOONG() LOOOOOOOOOOOOOOOOOOONG()",
+               ZeroColumn);
 }
 
 TEST_F(FormatTest, LayoutMacroDefinitionsStatementsSpanningBlocks) {
@@ -9459,6 +9472,11 @@ TEST_F(FormatTest, UnderstandsNewAndDelete) {
                "    new (aaaaaaaaaaaaaaaaaaaaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaa))\n"
                "        typename aaaaaaaaaaaaaaaaaaaaaaaa();");
   verifyFormat("delete[] h->p;");
+
+  verifyFormat("void operator delete(void *foo) ATTRIB;");
+  verifyFormat("void operator new(void *foo) ATTRIB;");
+  verifyFormat("void operator delete[](void *foo) ATTRIB;");
+  verifyFormat("void operator delete(void *ptr) noexcept;");
 }
 
 TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {

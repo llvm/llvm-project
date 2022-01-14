@@ -244,4 +244,4 @@ static inline unsigned getMaskedSpillRegister(unsigned order) {
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_MCTARGETDESC_M68KBASEINFO_H

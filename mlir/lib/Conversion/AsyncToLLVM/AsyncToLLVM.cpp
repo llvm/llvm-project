@@ -983,7 +983,7 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   llvmConverter.addConversion(AsyncRuntimeTypeConverter::convertAsyncTypes);
 
   // Convert async types in function signatures and function calls.
-  populateFuncOpTypeConversionPattern(patterns, converter);
+  populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, converter);
   populateCallOpTypeConversionPattern(patterns, converter);
 
   // Convert return operations inside async.execute regions.

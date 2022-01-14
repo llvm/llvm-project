@@ -33,13 +33,13 @@ namespace llvm {
 /// values. Also applies target-specific constant folding when not using
 /// InstructionSimplify.
 class InstSimplifyFolder final : public IRBuilderFolder {
-  const DataLayout &DL;
   TargetFolder ConstFolder;
+  SimplifyQuery SQ;
 
   virtual void anchor();
 
 public:
-  InstSimplifyFolder(const DataLayout &DL) : DL(DL), ConstFolder(DL) {}
+  InstSimplifyFolder(const DataLayout &DL) : ConstFolder(DL), SQ(DL) {}
 
   //===--------------------------------------------------------------------===//
   // Value-based folders.
@@ -47,18 +47,28 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
+  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
+                 bool HasNSW = false) const override {
+    return SimplifyAddInst(LHS, RHS, HasNUW, HasNSW, SQ);
+  }
+
   Value *FoldOr(Value *LHS, Value *RHS) const override {
-    return SimplifyOrInst(LHS, RHS, SimplifyQuery(DL));
+    return SimplifyOrInst(LHS, RHS, SQ);
+  }
+
+  Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
+    return SimplifyICmpInst(P, LHS, RHS, SQ);
+  }
+
+  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                 bool IsInBounds = false) const override {
+    return SimplifyGEPInst(Ty, Ptr, IdxList, IsInBounds, SQ);
   }
 
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
-  Value *CreateAdd(Constant *LHS, Constant *RHS, bool HasNUW = false,
-                   bool HasNSW = false) const override {
-    return ConstFolder.CreateAdd(LHS, RHS, HasNUW, HasNSW);
-  }
   Value *CreateFAdd(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateFAdd(LHS, RHS);
   }
@@ -140,43 +150,6 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
-  // Memory Instructions
-  //===--------------------------------------------------------------------===//
-
-  Value *CreateGetElementPtr(Type *Ty, Constant *C,
-                             ArrayRef<Constant *> IdxList) const override {
-    return ConstFolder.CreateGetElementPtr(Ty, C, IdxList);
-  }
-  Value *CreateGetElementPtr(Type *Ty, Constant *C,
-                             Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return ConstFolder.CreateGetElementPtr(Ty, C, Idx);
-  }
-  Value *CreateGetElementPtr(Type *Ty, Constant *C,
-                             ArrayRef<Value *> IdxList) const override {
-    return ConstFolder.CreateGetElementPtr(Ty, C, IdxList);
-  }
-
-  Value *
-  CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                              ArrayRef<Constant *> IdxList) const override {
-    return ConstFolder.CreateInBoundsGetElementPtr(Ty, C, IdxList);
-  }
-  Value *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                                     Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return ConstFolder.CreateInBoundsGetElementPtr(Ty, C, Idx);
-  }
-  Value *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                                     ArrayRef<Value *> IdxList) const override {
-    return ConstFolder.CreateInBoundsGetElementPtr(Ty, C, IdxList);
-  }
-
-  //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 
@@ -238,10 +211,6 @@ public:
   // Compare Instructions
   //===--------------------------------------------------------------------===//
 
-  Value *CreateICmp(CmpInst::Predicate P, Constant *LHS,
-                    Constant *RHS) const override {
-    return ConstFolder.CreateICmp(P, LHS, RHS);
-  }
   Value *CreateFCmp(CmpInst::Predicate P, Constant *LHS,
                     Constant *RHS) const override {
     return ConstFolder.CreateFCmp(P, LHS, RHS);

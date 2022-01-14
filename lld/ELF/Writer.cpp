@@ -385,12 +385,12 @@ template <class ELFT> void elf::createSyntheticSections() {
       add(*part.verNeed);
 
       if (config->gnuHash) {
-        part.gnuHashTab = make<GnuHashTableSection>();
+        part.gnuHashTab = std::make_unique<GnuHashTableSection>();
         add(*part.gnuHashTab);
       }
 
       if (config->sysvHash) {
-        part.hashTab = make<HashTableSection>();
+        part.hashTab = std::make_unique<HashTableSection>();
         add(*part.hashTab);
       }
 
@@ -538,8 +538,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   // finalizeSections does that.
   finalizeSections();
   checkExecuteOnly();
-  if (errorCount())
-    return;
 
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
@@ -1998,10 +1996,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     }
   }
 
-  // Do not proceed if there was an undefined symbol.
-  if (errorCount())
-    return;
-
   if (in.mipsGot)
     in.mipsGot->build();
 
@@ -2097,8 +2091,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : partitions) {
       finalizeSynthetic(part.dynSymTab.get());
-      finalizeSynthetic(part.gnuHashTab);
-      finalizeSynthetic(part.hashTab);
+      finalizeSynthetic(part.gnuHashTab.get());
+      finalizeSynthetic(part.hashTab.get());
       finalizeSynthetic(part.verDef.get());
       finalizeSynthetic(part.relaDyn.get());
       finalizeSynthetic(part.relrDyn.get());
@@ -2134,6 +2128,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   //    sometimes using forward symbol declarations. We want to set the correct
   //    values. They also might change after adding the thunks.
   finalizeAddressDependentContent();
+
+  // All information needed for OutputSection part of Map file is available.
   if (errorCount())
     return;
 

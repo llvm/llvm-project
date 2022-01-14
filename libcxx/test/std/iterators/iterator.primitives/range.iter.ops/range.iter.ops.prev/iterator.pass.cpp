@@ -17,22 +17,25 @@
 #include "test_iterators.h"
 
 template <class It>
-constexpr void check() {
-  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  assert(std::ranges::prev(It(&range[1])) == It(&range[0]));
-  assert(std::ranges::prev(It(&range[4])) == It(&range[3]));
-  assert(std::ranges::prev(It(&range[5])) == It(&range[4]));
-  assert(std::ranges::prev(It(&range[6])) == It(&range[5]));
-  assert(std::ranges::prev(It(&range[10])) == It(&range[9]));
+constexpr void check(int* first, int* expected) {
+  It it(first);
+  std::same_as<It> auto result = std::ranges::prev(std::move(it));
+  assert(base(result) == expected);
 }
 
 constexpr bool test() {
-  check<bidirectional_iterator<int*>>();
-  check<random_access_iterator<int*>>();
-  check<contiguous_iterator<int*>>();
-  check<int*>();
+  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+  for (int n = 1; n != 10; ++n) {
+    check<bidirectional_iterator<int*>>(range+n, range+n-1);
+    check<random_access_iterator<int*>>(range+n, range+n-1);
+    check<contiguous_iterator<int*>>(   range+n, range+n-1);
+    check<int*>(                        range+n, range+n-1);
+  }
+
   return true;
 }
+
 
 int main(int, char**) {
   test();

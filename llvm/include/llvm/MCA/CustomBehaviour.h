@@ -43,6 +43,10 @@ public:
 
   virtual ~InstrPostProcess() {}
 
+  /// This method can be overriden by targets to modify the mca::Instruction
+  /// object after it has been lowered from the MCInst.
+  /// This is generally a less disruptive alternative to modifying the
+  /// scheduling model.
   virtual void postProcessInstruction(std::unique_ptr<Instruction> &Inst,
                                       const MCInst &MCI) {}
 };

@@ -362,7 +362,7 @@ LogicalResult boundCheckLoadOrStoreOp(LoadOrStoreOpPointer loadOrStoreOp,
                                       bool emitError = true);
 
 /// Returns the number of surrounding loops common to both A and B.
-unsigned getNumCommonSurroundingLoops(Operation &A, Operation &B);
+unsigned getNumCommonSurroundingLoops(Operation &a, Operation &b);
 
 /// Gets the memory footprint of all data touched in the specified memory space
 /// in bytes; if the memory space is unspecified, considers all memory spaces.

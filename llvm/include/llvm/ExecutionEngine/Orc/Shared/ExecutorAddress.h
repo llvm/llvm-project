@@ -167,6 +167,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ExecutorAddr &A) {
   return OS << formatv("{0:x}", A.getValue());
 }
 
+inline raw_ostream &operator<<(raw_ostream &OS, const ExecutorAddrRange &R) {
+  return OS << formatv("{0:x} -- {1:x}", R.Start.getValue(), R.End.getValue());
+}
+
 namespace shared {
 
 class SPSExecutorAddr {};

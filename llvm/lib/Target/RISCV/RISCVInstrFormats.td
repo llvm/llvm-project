@@ -206,6 +206,13 @@ class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string
   let isCodeGenOnly = 1;
 }
 
+class PseudoQuietFCMP<RegisterClass Ty>
+    : Pseudo<(outs GPR:$rd), (ins Ty:$rs1, Ty:$rs2), []> {
+  let hasSideEffects = 1;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
 // Pseudo load instructions.
 class PseudoLoad<string opcodestr, RegisterClass rdty = GPR>
     : Pseudo<(outs rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {

@@ -492,7 +492,7 @@ class MemorySanitizer {
 public:
   MemorySanitizer(Module &M, MemorySanitizerOptions Options)
       : CompileKernel(Options.Kernel), TrackOrigins(Options.TrackOrigins),
-        Recover(Options.Recover) {
+        Recover(Options.Recover), EagerChecks(Options.EagerChecks) {
     initializeModule(M);
   }
 
@@ -522,6 +522,7 @@ private:
   /// Track origins (allocation points) of uninitialized values.
   int TrackOrigins;
   bool Recover;
+  bool EagerChecks;
 
   LLVMContext *C;
   Type *IntptrTy;
@@ -665,10 +666,12 @@ template <class T> T getOptOrDefault(const cl::opt<T> &Opt, T Default) {
 
 } // end anonymous namespace
 
-MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K)
+MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
+                                               bool EagerChecks)
     : Kernel(getOptOrDefault(ClEnableKmsan, K)),
       TrackOrigins(getOptOrDefault(ClTrackOrigins, Kernel ? 2 : TO)),
-      Recover(getOptOrDefault(ClKeepGoing, Kernel || R)) {}
+      Recover(getOptOrDefault(ClKeepGoing, Kernel || R)),
+      EagerChecks(getOptOrDefault(ClEagerChecks, EagerChecks)) {}
 
 PreservedAnalyses MemorySanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
@@ -695,6 +698,8 @@ void MemorySanitizerPass::printPipeline(
     OS << "recover;";
   if (Options.Kernel)
     OS << "kernel;";
+  if (Options.EagerChecks)
+    OS << "eager-checks;";
   OS << "track-origins=" << Options.TrackOrigins;
   OS << ">";
 }
@@ -1702,21 +1707,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         }
 
         bool FArgByVal = FArg.hasByValAttr();
-        bool FArgNoUndef = FArg.hasAttribute(Attribute::NoUndef);
-        bool FArgEagerCheck = ClEagerChecks && !FArgByVal && FArgNoUndef;
-        unsigned Size =
-            FArg.hasByValAttr()
-                ? DL.getTypeAllocSize(FArg.getParamByValType())
-                : DL.getTypeAllocSize(FArg.getType());
+        unsigned Size = FArgByVal
+                            ? DL.getTypeAllocSize(FArg.getParamByValType())
+                            : DL.getTypeAllocSize(FArg.getType());
 
         if (A == &FArg) {
           bool Overflow = ArgOffset + Size > kParamTLSSize;
+          bool FArgEagerCheck = MS.EagerChecks && !FArgByVal &&
+                                FArg.hasAttribute(Attribute::NoUndef);
+
           if (FArgEagerCheck) {
             *ShadowPtr = getCleanShadow(V);
             setOrigin(A, getCleanOrigin());
             break;
           } else if (FArgByVal) {
-            Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
             // ByVal pointer itself has clean shadow. We copy the actual
             // argument shadow to the underlying memory.
             // Figure out maximal valid memcpy alignment.
@@ -1733,6 +1737,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                   CpShadowPtr, Constant::getNullValue(EntryIRB.getInt8Ty()),
                   Size, ArgAlign);
             } else {
+              Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
               const Align CopyAlign = std::min(ArgAlign, kShadowTLSAlignment);
               Value *Cpy = EntryIRB.CreateMemCpy(CpShadowPtr, CopyAlign, Base,
                                                  CopyAlign, Size);
@@ -1741,12 +1746,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             }
             *ShadowPtr = getCleanShadow(V);
           } else {
-            // Shadow over TLS
-            Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
             if (Overflow) {
               // ParamTLS overflow.
               *ShadowPtr = getCleanShadow(V);
             } else {
+              // Shadow over TLS
+              Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
               *ShadowPtr = EntryIRB.CreateAlignedLoad(getShadowTy(&FArg), Base,
                                                       kShadowTLSAlignment);
             }
@@ -3679,7 +3684,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       maybeMarkSanitizerLibraryCallNoBuiltin(Call, TLI);
     }
     IRBuilder<> IRB(&CB);
-    bool MayCheckCall = ClEagerChecks;
+    bool MayCheckCall = MS.EagerChecks;
     if (Function *Func = CB.getCalledFunction()) {
       // __sanitizer_unaligned_{load,store} functions may be called by users
       // and always expects shadows in the TLS. So don't check them.
@@ -3697,15 +3702,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         continue;
       }
       unsigned Size = 0;
-      Value *Store = nullptr;
-      // Compute the Shadow for arg even if it is ByVal, because
-      // in that case getShadow() will copy the actual arg shadow to
-      // __msan_param_tls.
-      Value *ArgShadow = getShadow(A);
-      Value *ArgShadowBase = getShadowPtrForArgument(A, IRB, ArgOffset);
-      LLVM_DEBUG(dbgs() << "  Arg#" << i << ": " << *A
-                        << " Shadow: " << *ArgShadow << "\n");
-      bool ArgIsInitialized = false;
       const DataLayout &DL = F.getParent()->getDataLayout();
 
       bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
@@ -3716,6 +3712,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         insertShadowCheck(A, &CB);
         Size = DL.getTypeAllocSize(A->getType());
       } else {
+        bool ArgIsInitialized = false;
+        Value *Store = nullptr;
+        // Compute the Shadow for arg even if it is ByVal, because
+        // in that case getShadow() will copy the actual arg shadow to
+        // __msan_param_tls.
+        Value *ArgShadow = getShadow(A);
+        Value *ArgShadowBase = getShadowPtrForArgument(A, IRB, ArgOffset);
+        LLVM_DEBUG(dbgs() << "  Arg#" << i << ": " << *A
+                          << " Shadow: " << *ArgShadow << "\n");
         if (ByVal) {
           // ByVal requires some special handling as it's too big for a single
           // load
@@ -3832,10 +3837,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *ShadowPtr = getShadowPtrForRetval(RetVal, IRB);
     bool HasNoUndef =
         F.hasRetAttribute(Attribute::NoUndef);
-    bool StoreShadow = !(ClEagerChecks && HasNoUndef);
+    bool StoreShadow = !(MS.EagerChecks && HasNoUndef);
     // FIXME: Consider using SpecialCaseList to specify a list of functions that
     // must always return fully initialized values. For now, we hardcode "main".
-    bool EagerCheck = (ClEagerChecks && HasNoUndef) || (F.getName() == "main");
+    bool EagerCheck = (MS.EagerChecks && HasNoUndef) || (F.getName() == "main");
 
     Value *Shadow = getShadow(RetVal);
     bool StoreOrigin = true;

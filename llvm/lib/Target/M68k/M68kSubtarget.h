@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_CPU0_M68KSUBTARGET_H
-#define LLVM_LIB_TARGET_CPU0_M68KSUBTARGET_H
+#ifndef LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H
+#define LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H
 
 #include "M68kFrameLowering.h"
 #include "M68kISelLowering.h"
@@ -179,4 +179,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H

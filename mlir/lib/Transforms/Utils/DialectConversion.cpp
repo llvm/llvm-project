@@ -3095,11 +3095,6 @@ void mlir::populateFunctionLikeTypeConversionPattern(
       functionLikeOpName, patterns.getContext(), converter);
 }
 
-void mlir::populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
-                                               TypeConverter &converter) {
-  populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, converter);
-}
-
 //===----------------------------------------------------------------------===//
 // ConversionTarget
 //===----------------------------------------------------------------------===//

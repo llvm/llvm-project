@@ -63,6 +63,7 @@ endfunction(get_object_files_for_test)
 #      HDRS  <list of .h files for the test>
 #      DEPENDS <list of dependencies>
 #      COMPILE_OPTIONS <list of special compile options for this target>
+#      LINK_OPTIONS <list of special linking options for this target>
 #    )
 function(add_libc_unittest target_name)
   if(NOT LLVM_INCLUDE_TESTS)
@@ -71,9 +72,9 @@ function(add_libc_unittest target_name)
 
   cmake_parse_arguments(
     "LIBC_UNITTEST"
-    "" # No optional arguments
+    "NO_RUN_POSTBUILD" # Optional arguments
     "SUITE" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_OPTIONS" # Multi-value arguments
     "NO_LIBC_UNITTEST_TEST_MAIN"
     ${ARGN}
   )
@@ -140,6 +141,12 @@ function(add_libc_unittest target_name)
   endif()
 
   target_link_libraries(${fq_target_name} PRIVATE ${link_object_files})
+  if(LIBC_UNITTEST_LINK_OPTIONS)
+    target_link_options(
+      ${fq_target_name}
+      PRIVATE ${LIBC_UNITTEST_LINK_OPTIONS}
+    )
+  endif()
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -155,11 +162,14 @@ function(add_libc_unittest target_name)
     target_link_libraries(${fq_target_name} PRIVATE LibcUnitTest LibcUnitTestMain libc_test_utils)
   endif()
 
-  add_custom_command(
-    TARGET ${fq_target_name}
-    POST_BUILD
-    COMMAND $<TARGET_FILE:${fq_target_name}>
-  )
+  if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
+    add_custom_command(
+      TARGET ${fq_target_name}
+      POST_BUILD
+      COMMAND $<TARGET_FILE:${fq_target_name}>
+    )
+  endif()
+
   if(LIBC_UNITTEST_SUITE)
     add_dependencies(
       ${LIBC_UNITTEST_SUITE}

@@ -66,8 +66,6 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
   for (const Use &U : V->uses()) {
     const User *UR = U.getUser();
     if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(UR)) {
-      GS.HasNonInstructionUser = true;
-
       // If the result of the constantexpr isn't pointer type, then we won't
       // know to expect it in various places.  Just reject early.
       if (!isa<PointerType>(CE->getType()))
@@ -172,12 +170,10 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
         return true; // Any other non-load instruction might take address!
       }
     } else if (const Constant *C = dyn_cast<Constant>(UR)) {
-      GS.HasNonInstructionUser = true;
       // We might have a dead and dangling constant hanging off of here.
       if (!isSafeToDestroyConstant(C))
         return true;
     } else {
-      GS.HasNonInstructionUser = true;
       // Otherwise must be some other user.
       return true;
     }

@@ -162,7 +162,7 @@ void DefinitionBlockSeparator::separateBlocks(
       // handled in another case if the line following is opening a
       // definition.
       if (!TargetToken->closesScope() && !IsPPConditional(OpeningLineIndex)) {
-        // Check whether current line may be precedings of a definition line.
+        // Check whether current line may precede a definition line.
         while (OpeningLineIndex + 1 < Lines.size() &&
                MayPrecedeDefinition(/*Direction=*/0))
           ++OpeningLineIndex;

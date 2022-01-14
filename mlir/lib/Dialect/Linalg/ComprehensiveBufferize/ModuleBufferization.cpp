@@ -938,7 +938,7 @@ struct FuncOpInterface
 } // namespace mlir
 
 void mlir::linalg::comprehensive_bufferize::std_ext::
-    registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
+    registerModuleBufferizationExternalModels(DialectRegistry &registry) {
   registry.addOpInterface<CallOp, std_ext::CallOpInterface>();
   registry.addOpInterface<ReturnOp, std_ext::ReturnOpInterface>();
   registry.addOpInterface<FuncOp, std_ext::FuncOpInterface>();

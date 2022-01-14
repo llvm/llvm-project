@@ -12,29 +12,34 @@
 // ranges::next(it)
 
 #include <iterator>
+
 #include <cassert>
+#include <concepts>
+#include <utility>
 
 #include "test_iterators.h"
 
 template <class It>
-constexpr void check() {
-  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  assert(&*std::ranges::next(It(&range[0])) == &range[1]);
-  assert(&*std::ranges::next(It(&range[1])) == &range[2]);
-  assert(&*std::ranges::next(It(&range[2])) == &range[3]);
-  assert(&*std::ranges::next(It(&range[3])) == &range[4]);
-  assert(&*std::ranges::next(It(&range[4])) == &range[5]);
-  assert(&*std::ranges::next(It(&range[5])) == &range[6]);
+constexpr void check(int* first, int* expected) {
+  It it(first);
+  std::same_as<It> auto result = std::ranges::next(std::move(it));
+  assert(base(result) == expected);
 }
 
 constexpr bool test() {
-  check<cpp17_input_iterator<int*>>();
-  check<cpp20_input_iterator<int*>>();
-  check<forward_iterator<int*>>();
-  check<bidirectional_iterator<int*>>();
-  check<random_access_iterator<int*>>();
-  check<contiguous_iterator<int*>>();
-  check<output_iterator<int*>>();
+  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+  for (int n = 0; n != 9; ++n) {
+    check<cpp17_input_iterator<int*>>(  range+n, range+n+1);
+    check<cpp20_input_iterator<int*>>(  range+n, range+n+1);
+    check<forward_iterator<int*>>(      range+n, range+n+1);
+    check<bidirectional_iterator<int*>>(range+n, range+n+1);
+    check<random_access_iterator<int*>>(range+n, range+n+1);
+    check<contiguous_iterator<int*>>(   range+n, range+n+1);
+    check<output_iterator<int*>>(       range+n, range+n+1);
+    check<int*>(                        range+n, range+n+1);
+  }
+
   return true;
 }
 

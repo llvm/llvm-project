@@ -195,6 +195,8 @@ public:
   NODE(parser, ComponentAttrSpec)
   NODE(parser, ComponentDataSource)
   NODE(parser, ComponentDecl)
+  NODE(parser, FillDecl)
+  NODE(parser, ComponentOrFill)
   NODE(parser, ComponentDefStmt)
   NODE(parser, ComponentSpec)
   NODE(parser, ComputedGotoStmt)

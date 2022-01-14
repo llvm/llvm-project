@@ -81,7 +81,7 @@ public:
 
   using AbstractTy = AbstractType;
 
-  constexpr Type() : impl(nullptr) {}
+  constexpr Type() {}
   /* implicit */ Type(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 
@@ -179,7 +179,7 @@ public:
   const AbstractTy &getAbstractType() { return impl->getAbstractType(); }
 
 protected:
-  ImplType *impl;
+  ImplType *impl{nullptr};
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, Type type) {
@@ -259,11 +259,11 @@ namespace llvm {
 // Type hash just like pointers.
 template <> struct DenseMapInfo<mlir::Type> {
   static mlir::Type getEmptyKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
   }
   static mlir::Type getTombstoneKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
   }
   static unsigned getHashValue(mlir::Type val) { return mlir::hash_value(val); }

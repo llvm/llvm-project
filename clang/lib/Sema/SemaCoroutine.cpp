@@ -653,7 +653,7 @@ static void checkNoThrow(Sema &S, const Stmt *E,
       }
       if (ThrowingDecls.empty()) {
         // [dcl.fct.def.coroutine]p15
-        //   The expression co_­await promise.final_­suspend() shall not be
+        //   The expression co_await promise.final_suspend() shall not be
         //   potentially-throwing ([except.spec]).
         //
         // First time seeing an error, emit the error message.
@@ -663,32 +663,32 @@ static void checkNoThrow(Sema &S, const Stmt *E,
       ThrowingDecls.insert(D);
     }
   };
-  auto SC = E->getStmtClass();
-  if (SC == Expr::CXXConstructExprClass) {
-    auto const *Ctor = cast<CXXConstructExpr>(E)->getConstructor();
+
+  if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
+    CXXConstructorDecl *Ctor = CE->getConstructor();
     checkDeclNoexcept(Ctor);
     // Check the corresponding destructor of the constructor.
-    checkDeclNoexcept(Ctor->getParent()->getDestructor(), true);
-  } else if (SC == Expr::CallExprClass || SC == Expr::CXXMemberCallExprClass ||
-             SC == Expr::CXXOperatorCallExprClass) {
-    if (!cast<CallExpr>(E)->isTypeDependent()) {
-      checkDeclNoexcept(cast<CallExpr>(E)->getCalleeDecl());
-      auto ReturnType = cast<CallExpr>(E)->getCallReturnType(S.getASTContext());
-      // Check the destructor of the call return type, if any.
-      if (ReturnType.isDestructedType() ==
-          QualType::DestructionKind::DK_cxx_destructor) {
-        const auto *T =
-            cast<RecordType>(ReturnType.getCanonicalType().getTypePtr());
-        checkDeclNoexcept(
-            dyn_cast<CXXRecordDecl>(T->getDecl())->getDestructor(), true);
-      }
+    checkDeclNoexcept(Ctor->getParent()->getDestructor(), /*IsDtor=*/true);
+  } else if (auto *CE = dyn_cast<CallExpr>(E)) {
+    if (CE->isTypeDependent())
+      return;
+
+    checkDeclNoexcept(CE->getCalleeDecl());
+    QualType ReturnType = CE->getCallReturnType(S.getASTContext());
+    // Check the destructor of the call return type, if any.
+    if (ReturnType.isDestructedType() ==
+        QualType::DestructionKind::DK_cxx_destructor) {
+      const auto *T =
+          cast<RecordType>(ReturnType.getCanonicalType().getTypePtr());
+      checkDeclNoexcept(dyn_cast<CXXRecordDecl>(T->getDecl())->getDestructor(),
+                        /*IsDtor=*/true);
     }
-  }
-  for (const auto *Child : E->children()) {
-    if (!Child)
-      continue;
-    checkNoThrow(S, Child, ThrowingDecls);
-  }
+  } else
+    for (const auto *Child : E->children()) {
+      if (!Child)
+        continue;
+      checkNoThrow(S, Child, ThrowingDecls);
+    }
 }
 
 bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
@@ -1184,13 +1184,13 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
          "cannot make statement while the promise type is dependent");
 
   // [dcl.fct.def.coroutine]p10
-  //   If a search for the name get_­return_­object_­on_­allocation_­failure in
+  //   If a search for the name get_return_object_on_allocation_failure in
   // the scope of the promise type ([class.member.lookup]) finds any
   // declarations, then the result of a call to an allocation function used to
   // obtain storage for the coroutine state is assumed to return nullptr if it
   // fails to obtain storage, ... If the allocation function returns nullptr,
   // ... and the return value is obtained by a call to
-  // T::get_­return_­object_­on_­allocation_­failure(), where T is the
+  // T::get_return_object_on_allocation_failure(), where T is the
   // promise type.
   DeclarationName DN =
       S.PP.getIdentifierInfo("get_return_object_on_allocation_failure");
@@ -1433,10 +1433,10 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
          "cannot make statement while the promise type is dependent");
 
   // [dcl.fct.def.coroutine]/p6
-  // If searches for the names return_­void and return_­value in the scope of
+  // If searches for the names return_void and return_value in the scope of
   // the promise type each find any declarations, the program is ill-formed.
-  // [Note 1: If return_­void is found, flowing off the end of a coroutine is
-  // equivalent to a co_­return with no operand. Otherwise, flowing off the end
+  // [Note 1: If return_void is found, flowing off the end of a coroutine is
+  // equivalent to a co_return with no operand. Otherwise, flowing off the end
   // of a coroutine results in undefined behavior ([stmt.return.coroutine]). —
   // end note]
   bool HasRVoid, HasRValue;
@@ -1529,7 +1529,7 @@ bool CoroutineStmtBuilder::makeOnException() {
 
 bool CoroutineStmtBuilder::makeReturnObject() {
   // [dcl.fct.def.coroutine]p7
-  // The expression promise.get_­return_­object() is used to initialize the
+  // The expression promise.get_return_object() is used to initialize the
   // returned reference or prvalue result object of a call to a coroutine.
   ExprResult ReturnObject =
       buildPromiseCall(S, Fn.CoroutinePromise, Loc, "get_return_object", None);

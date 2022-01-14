@@ -15,8 +15,8 @@
 // Pybind-based internals of the core libraries).
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_BINDINGS_PYTHON_PYBIND_ADAPTORS_H
-#define MLIR_BINDINGS_PYTHON_PYBIND_ADAPTORS_H
+#ifndef MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H
+#define MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H
 
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -86,10 +86,7 @@ struct type_caster<MlirAttribute> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToAttribute(capsule.ptr());
-    if (mlirAttributeIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirAttributeIsNull(value);
   }
   static handle cast(MlirAttribute v, return_value_policy, handle) {
     py::object capsule =
@@ -117,10 +114,7 @@ struct type_caster<MlirContext> {
     }
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToContext(capsule.ptr());
-    if (mlirContextIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirContextIsNull(value);
   }
 };
 
@@ -132,10 +126,7 @@ struct type_caster<MlirLocation> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToLocation(capsule.ptr());
-    if (mlirLocationIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirLocationIsNull(value);
   }
   static handle cast(MlirLocation v, return_value_policy, handle) {
     py::object capsule =
@@ -154,10 +145,7 @@ struct type_caster<MlirModule> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToModule(capsule.ptr());
-    if (mlirModuleIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirModuleIsNull(value);
   }
   static handle cast(MlirModule v, return_value_policy, handle) {
     py::object capsule =
@@ -176,10 +164,7 @@ struct type_caster<MlirOperation> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToOperation(capsule.ptr());
-    if (mlirOperationIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirOperationIsNull(value);
   }
   static handle cast(MlirOperation v, return_value_policy, handle) {
     if (v.ptr == nullptr)
@@ -200,10 +185,7 @@ struct type_caster<MlirPassManager> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToPassManager(capsule.ptr());
-    if (mlirPassManagerIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirPassManagerIsNull(value);
   }
 };
 
@@ -214,10 +196,7 @@ struct type_caster<MlirType> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToType(capsule.ptr());
-    if (mlirTypeIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirTypeIsNull(value);
   }
   static handle cast(MlirType t, return_value_policy, handle) {
     py::object capsule =
@@ -250,7 +229,7 @@ namespace adaptors {
 class pure_subclass {
 public:
   pure_subclass(py::handle scope, const char *derivedClassName,
-                py::object superClass) {
+                const py::object &superClass) {
     py::object pyType =
         py::reinterpret_borrow<py::object>((PyObject *)&PyType_Type);
     py::object metaclass = pyType(superClass);
@@ -335,7 +314,8 @@ public:
   /// as the mlir.ir class (otherwise, it will trigger a recursive
   /// initialization).
   mlir_attribute_subclass(py::handle scope, const char *typeClassName,
-                          IsAFunctionTy isaFunction, py::object superClass)
+                          IsAFunctionTy isaFunction,
+                          const py::object &superClass)
       : pure_subclass(scope, typeClassName, superClass) {
     // Casting constructor. Note that defining an __init__ method is special
     // and not yet generalized on pure_subclass (it requires a somewhat
@@ -386,7 +366,7 @@ public:
   /// as the mlir.ir class (otherwise, it will trigger a recursive
   /// initialization).
   mlir_type_subclass(py::handle scope, const char *typeClassName,
-                     IsAFunctionTy isaFunction, py::object superClass)
+                     IsAFunctionTy isaFunction, const py::object &superClass)
       : pure_subclass(scope, typeClassName, superClass) {
     // Casting constructor. Note that defining an __init__ method is special
     // and not yet generalized on pure_subclass (it requires a somewhat
@@ -423,4 +403,4 @@ public:
 } // namespace python
 } // namespace mlir
 
-#endif // MLIR_BINDINGS_PYTHON_PYBIND_ADAPTORS_H
+#endif // MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H

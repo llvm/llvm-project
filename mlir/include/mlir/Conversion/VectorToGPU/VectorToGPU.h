@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSCF_VECTORTOGPU_H_
-#define MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSCF_VECTORTOGPU_H_
+#ifndef MLIR_CONVERSION_VECTORTOGPU_VECTORTOGPU_H
+#define MLIR_CONVERSION_VECTORTOGPU_VECTORTOGPU_H
 
 #include "mlir/IR/PatternMatch.h"
 
@@ -31,4 +31,4 @@ std::unique_ptr<Pass> createConvertVectorToGPUPass();
 
 } // namespace mlir
 
-#endif // MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSCF_VECTORTOGPU_H_
+#endif // MLIR_CONVERSION_VECTORTOGPU_VECTORTOGPU_H

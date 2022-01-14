@@ -1188,6 +1188,7 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   StringRef SectionVal;
 
   GetObjCImageInfo(M, VersionVal, ImageInfoFlags, SectionVal);
+  emitCGProfileMetadata(Streamer, M);
 
   // The section is mandatory. If we don't have it, then we don't have GC info.
   if (SectionVal.empty())

@@ -47,4 +47,29 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_pair("_D8demangle4test12__ModuleInfoZ",
                        "ModuleInfo for demangle.test"),
         std::make_pair("_D8demangle4__S14testZ", "demangle.test"),
-        std::make_pair("_D8demangle4__Sd4testZ", "demangle.__Sd.test")));
+        std::make_pair("_D8demangle4__Sd4testZ", "demangle.__Sd.test"),
+        std::make_pair("_D8demangle3fooi", "demangle.foo"),
+        std::make_pair("_D8demangle3foo",
+                       nullptr), // symbol without a type sequence.
+        std::make_pair("_D8demangle3fooinvalidtypeseq",
+                       nullptr), // invalid type sequence.
+        std::make_pair(
+            "_D8demangle3ABCQe1ai",
+            "demangle.ABC.ABC.a"), // symbol back reference: `Qe` is a back
+                                   // reference for position 5, counting from e
+                                   // char, so decoding it points to `3`. Since
+                                   // `3` is a number, 3 chars get read and it
+                                   // succeeded.
+        std::make_pair("_D8demangle3ABCQa1ai",
+                       nullptr), // invalid symbol back reference (recursive).
+        std::make_pair("_D8demangleQDXXXXXXXXXXXXx",
+                       nullptr), // overflow back reference position.
+        std::make_pair(
+            "_D8demangle4ABCi1aQd",
+            "demangle.ABCi.a"), // type back reference: `Qd` is a back reference
+                                // for position 4, counting from `d` char, so
+                                // decoding it points to `i`.
+        std::make_pair("_D8demangle3fooQXXXx",
+                       nullptr), // invalid type back reference position.
+        std::make_pair("_D8demangle5recurQa",
+                       nullptr))); // invalid type back reference (recursive).

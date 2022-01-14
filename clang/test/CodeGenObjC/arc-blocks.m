@@ -8,6 +8,10 @@
 // CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP46:.*]] = linkonce_odr hidden unnamed_addr constant { i64, i64, i8*, i8*, i8*, i8* } { i64 0, i64 48, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32s to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @{{.*}}, i32 0, i32 0) }, align 8
 // CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP48:.*]] = linkonce_odr hidden unnamed_addr constant { i64, i64, i8*, i8*, i8*, i64 } { i64 0, i64 40, i8* bitcast (void (i8*, i8*)* @__copy_helper_block_8_32b to i8*), i8* bitcast (void (i8*)* @__destroy_helper_block_8_32s to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @{{.*}}, i32 0, i32 0), i64 256 }, align 8
 
+// Check that no copy/dispose helpers are emitted for this block.
+
+// CHECK-COMMON: @[[BLOCK_DESCRIPTOR_TMP10:.*]] = linkonce_odr hidden unnamed_addr constant { i64, i64, i8*, i8* } { i64 0, i64 40, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @{{.*}}, i32 0, i32 0), i8* getelementptr inbounds ([1 x i8], [1 x i8]* @{{.*}}, i32 0, i32 0) }, align 8
+
 // This shouldn't crash.
 void test0(id (^maker)(void)) {
   maker();
@@ -768,6 +772,21 @@ id test22(int c, id x) {
 void test23(id x, Test23 *t) {
   [t m:123, ^{ (void)x; }];
 }
+
+// CHECK-COMMON-LABEL: define internal void @"\01+[Test24 m]"(
+// CHECK-COMMON: %[[BLOCK_DESCRIPTOR:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>, <{ i8*, i32, i32, i8*, %[[STRUCT_BLOCK_DESCRIPTOR]]*, i8* }>* %{{.*}}, i32 0, i32 4
+// CHECK: store %[[STRUCT_BLOCK_DESCRIPTOR]]* bitcast ({ i64, i64, i8*, i8* }* @[[BLOCK_DESCRIPTOR_TMP10]] to %[[STRUCT_BLOCK_DESCRIPTOR]]*), %[[STRUCT_BLOCK_DESCRIPTOR]]** %[[BLOCK_DESCRIPTOR]],
+
+@interface Test24
+@property (class) void (^block)(void);
++(void)m;
+@end
+
+@implementation Test24
++(void)m {
+  self.block = ^{ (void)self; };
+}
+@end
 
 // CHECK: attributes [[NUW]] = { nounwind }
 // CHECK-UNOPT: attributes [[NUW]] = { nounwind }

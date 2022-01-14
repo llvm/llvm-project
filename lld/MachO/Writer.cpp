@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
+#include "CallGraphSort.h"
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -415,19 +416,19 @@ public:
   void writeTo(uint8_t *buf) const override {
     auto *c = reinterpret_cast<version_min_command *>(buf);
     switch (platformInfo.target.Platform) {
-    case PlatformKind::macOS:
+    case PLATFORM_MACOS:
       c->cmd = LC_VERSION_MIN_MACOSX;
       break;
-    case PlatformKind::iOS:
-    case PlatformKind::iOSSimulator:
+    case PLATFORM_IOS:
+    case PLATFORM_IOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_IPHONEOS;
       break;
-    case PlatformKind::tvOS:
-    case PlatformKind::tvOSSimulator:
+    case PLATFORM_TVOS:
+    case PLATFORM_TVOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_TVOS;
       break;
-    case PlatformKind::watchOS:
-    case PlatformKind::watchOSSimulator:
+    case PLATFORM_WATCHOS:
+    case PLATFORM_WATCHOSSIMULATOR:
       c->cmd = LC_VERSION_MIN_WATCHOS;
       break;
     default:
@@ -709,14 +710,14 @@ void Writer::scanSymbols() {
 
 // TODO: ld64 enforces the old load commands in a few other cases.
 static bool useLCBuildVersion(const PlatformInfo &platformInfo) {
-  static const std::vector<std::pair<PlatformKind, VersionTuple>> minVersion = {
-      {PlatformKind::macOS, VersionTuple(10, 14)},
-      {PlatformKind::iOS, VersionTuple(12, 0)},
-      {PlatformKind::iOSSimulator, VersionTuple(13, 0)},
-      {PlatformKind::tvOS, VersionTuple(12, 0)},
-      {PlatformKind::tvOSSimulator, VersionTuple(13, 0)},
-      {PlatformKind::watchOS, VersionTuple(5, 0)},
-      {PlatformKind::watchOSSimulator, VersionTuple(6, 0)}};
+  static const std::vector<std::pair<PlatformType, VersionTuple>> minVersion = {
+      {PLATFORM_MACOS, VersionTuple(10, 14)},
+      {PLATFORM_IOS, VersionTuple(12, 0)},
+      {PLATFORM_IOSSIMULATOR, VersionTuple(13, 0)},
+      {PLATFORM_TVOS, VersionTuple(12, 0)},
+      {PLATFORM_TVOSSIMULATOR, VersionTuple(13, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(5, 0)},
+      {PLATFORM_WATCHOSSIMULATOR, VersionTuple(6, 0)}};
   auto it = llvm::find_if(minVersion, [&](const auto &p) {
     return p.first == platformInfo.target.Platform;
   });
@@ -865,6 +866,8 @@ static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
 // Each section gets assigned the priority of the highest-priority symbol it
 // contains.
 static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
+  if (config->callGraphProfileSort)
+    return computeCallGraphProfileOrder();
   DenseMap<const InputSection *, size_t> sectionPriorities;
 
   if (config->priorities.empty())
@@ -1175,7 +1178,13 @@ template <class LP> void Writer::run() {
   sortSegmentsAndSections();
   createLoadCommands<LP>();
   finalizeAddresses();
-  threadPool.async(writeMapFile);
+  threadPool.async([&] {
+    if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
+      timeTraceProfilerInitialize(config->timeTraceGranularity, "writeMapFile");
+    writeMapFile();
+    if (LLVM_ENABLE_THREADS && config->timeTraceEnabled)
+      timeTraceProfilerFinishThread();
+  });
   finalizeLinkEditSegment();
   writeOutputFile();
 }

@@ -63,8 +63,7 @@ namespace clang {
                            ParsedTemplateTy Template,
                            SourceLocation TemplateLoc)
       : Kind(ParsedTemplateArgument::Template),
-        Arg(Template.getAsOpaquePtr()),
-        SS(SS), Loc(TemplateLoc), EllipsisLoc() { }
+        Arg(Template.getAsOpaquePtr()), SS(SS), Loc(TemplateLoc) {}
 
     /// Determine whether the given template argument is invalid.
     bool isInvalid() const { return Arg == nullptr; }

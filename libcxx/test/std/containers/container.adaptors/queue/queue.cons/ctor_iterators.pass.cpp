@@ -41,4 +41,6 @@ int main(int, char**) {
   assert(queue.front() == 1);
   queue.pop();
   assert(queue.empty());
+
+  return 0;
 }

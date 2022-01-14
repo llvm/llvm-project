@@ -134,18 +134,7 @@ module m
 
   program new
     use m2
-    integer a
-    real    b,c
-    type seqType
-      sequence
-      integer number
-    end type
-    type(SeqType) num
-    COMMON b,a,c,num
     type(newType) m2_number2
-    !C876
-    !ERROR: Blank COMMON object 'b' must not be initialized in a DATA statement
-    DATA b /1/
     !C876
     !ERROR: USE-associated object 'm2_i' must not be initialized in a DATA statement
     DATA m2_i /1/
@@ -155,7 +144,4 @@ module m
     !C876
     !OK: m2_number2 is not associated through use association
     DATA m2_number2%number /1/
-    !C876
-    !ERROR: Blank COMMON object 'num' must not be initialized in a DATA statement
-    DATA num%number /1/
   end program

@@ -604,6 +604,7 @@ static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
       cur_module.addAddressRange(cur_beg, cur_end, executable,
                                  writable);
     } else if (phdr->p_type == PT_NOTE) {
+#  ifdef NT_GNU_BUILD_ID
       uptr off = 0;
       while (off + sizeof(ElfW(Nhdr)) < phdr->p_memsz) {
         auto *nhdr = reinterpret_cast<const ElfW(Nhdr) *>(info->dlpi_addr +
@@ -629,6 +630,7 @@ static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
         off += sizeof(*nhdr) + RoundUpTo(nhdr->n_namesz, 4) +
                RoundUpTo(nhdr->n_descsz, 4);
       }
+#  endif
     }
   }
   modules->push_back(cur_module);

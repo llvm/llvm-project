@@ -103,7 +103,9 @@ def _ParseIndexPage(index_page_html):
     # This accidentally accepts begin/end despite the (iterator) caption: the
     # (since C++11) note is first. They are good symbols, so the bug is unfixed.
     caption = symbol_href.next_sibling
-    variant = isinstance(caption, NavigableString) and "(" in caption
+    variant = None
+    if isinstance(caption, NavigableString) and "(" in caption:
+      variant = caption.text.strip(" ()")
     symbol_tt = symbol_href.find("tt")
     if symbol_tt:
       symbols.append((symbol_tt.text.rstrip("<>()"), # strip any trailing <>()
@@ -116,7 +118,7 @@ def _ReadSymbolPage(path, name):
     return _ParseSymbolPage(f.read(), name)
 
 
-def _GetSymbols(pool, root_dir, index_page_name, namespace):
+def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
   """Get all symbols listed in the index page. All symbols should be in the
   given namespace.
 
@@ -135,7 +137,9 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace):
     for symbol_name, symbol_page_path, variant in _ParseIndexPage(f.read()):
       # Variant symbols (e.g. the std::locale version of isalpha) add ambiguity.
       # FIXME: use these as a fallback rather than ignoring entirely.
-      if variant:
+      variants_for_symbol = variants_to_accept.get(
+          (namespace or "") + symbol_name, ())
+      if variant and variant not in variants_for_symbol:
         continue
       path = os.path.join(root_dir, symbol_page_path)
       results.append((symbol_name,
@@ -158,6 +162,13 @@ def GetSymbols(parse_pages):
   Args:
     parse_pages: a list of tuples (page_root_dir, index_page_name, namespace)
   """
+  # By default we prefer the non-variant versions, as they're more common. But
+  # there are some symbols, whose variant is more common. This list describes
+  # those symbols.
+  variants_to_accept = {
+      # std::remove<> has variant algorithm.
+      "std::remove": ("algorithm"),
+  }
   symbols = []
   # Run many workers to process individual symbol pages under the symbol index.
   # Don't allow workers to capture Ctrl-C.
@@ -165,7 +176,8 @@ def GetSymbols(parse_pages):
       initializer=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN))
   try:
     for root_dir, page_name, namespace in parse_pages:
-      symbols.extend(_GetSymbols(pool, root_dir, page_name, namespace))
+      symbols.extend(_GetSymbols(pool, root_dir, page_name, namespace,
+                                 variants_to_accept))
   finally:
     pool.terminate()
     pool.join()

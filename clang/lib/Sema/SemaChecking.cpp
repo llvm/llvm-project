@@ -1750,10 +1750,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
       return ExprError();
     break;
   case Builtin::BI__builtin_alloca_with_align:
+  case Builtin::BI__builtin_alloca_with_align_uninitialized:
     if (SemaBuiltinAllocaWithAlign(TheCall))
       return ExprError();
     LLVM_FALLTHROUGH;
   case Builtin::BI__builtin_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
     Diag(TheCall->getBeginLoc(), diag::warn_alloca)
         << TheCall->getDirectCallee();
     break;
@@ -2235,8 +2237,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  // __builtin_reduce_xor supports vector of integers only.
-  case Builtin::BI__builtin_reduce_xor: {
+  // These builtins support vectors of integers only.
+  case Builtin::BI__builtin_reduce_xor:
+  case Builtin::BI__builtin_reduce_or:
+  case Builtin::BI__builtin_reduce_and: {
     if (PrepareBuiltinReduceMathOneArgCall(TheCall))
       return ExprError();
 
