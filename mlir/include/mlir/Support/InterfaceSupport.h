@@ -260,9 +260,10 @@ private:
   /// Returns an instance of the concept object for the given interface id if it
   /// was registered to this map, null otherwise.
   void *lookup(TypeID id) const {
-    auto it = llvm::lower_bound(interfaces, id, [](const auto &it, TypeID id) {
-      return compare(it.first, id);
-    });
+    const auto *it =
+        llvm::lower_bound(interfaces, id, [](const auto &it, TypeID id) {
+          return compare(it.first, id);
+        });
     return (it != interfaces.end() && it->first == id) ? it->second : nullptr;
   }
 

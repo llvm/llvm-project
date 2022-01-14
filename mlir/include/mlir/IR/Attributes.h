@@ -231,11 +231,11 @@ namespace llvm {
 // Attribute hash just like pointers.
 template <> struct DenseMapInfo<mlir::Attribute> {
   static mlir::Attribute getEmptyKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
   }
   static mlir::Attribute getTombstoneKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::Attribute(static_cast<mlir::Attribute::ImplType *>(pointer));
   }
   static unsigned getHashValue(mlir::Attribute val) {

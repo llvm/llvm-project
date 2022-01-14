@@ -575,11 +575,11 @@ namespace llvm {
 template <>
 struct DenseMapInfo<mlir::AffineMap> {
   static mlir::AffineMap getEmptyKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
   }
   static mlir::AffineMap getTombstoneKey() {
-    auto pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
   }
   static unsigned getHashValue(mlir::AffineMap val) {
