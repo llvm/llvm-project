@@ -1198,9 +1198,10 @@ NewGVN::ExprResult NewGVN::createExpression(Instruction *I) const {
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (auto *GEPI = dyn_cast<GetElementPtrInst>(I)) {
-    Value *V = SimplifyGEPInst(GEPI->getSourceElementType(),
-                               ArrayRef<Value *>(E->op_begin(), E->op_end()),
-                               GEPI->isInBounds(), SQ);
+    Value *V =
+        SimplifyGEPInst(GEPI->getSourceElementType(), *E->op_begin(),
+                        makeArrayRef(std::next(E->op_begin()), E->op_end()),
+                        GEPI->isInBounds(), SQ);
     if (auto Simplified = checkExprResults(E, I, V))
       return Simplified;
   } else if (AllConstant) {
