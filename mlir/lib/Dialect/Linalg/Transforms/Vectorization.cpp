@@ -1287,6 +1287,22 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
 //===----------------------------------------------------------------------===//
 // Convolution vectorization patterns
 //===----------------------------------------------------------------------===//
+
+template <int N>
+static void bindShapeDims(ShapedType shapedType) {}
+
+template <int N, typename IntTy, typename... IntTy2>
+static void bindShapeDims(ShapedType shapedType, IntTy &val, IntTy2 &...vals) {
+  val = shapedType.getShape()[N];
+  bindShapeDims<N + 1, IntTy2 &...>(shapedType, vals...);
+}
+
+/// Bind a pack of int& to the leading dimensions of shapedType.getShape().
+template <typename... IntTy>
+static void bindShapeDims(ShapedType shapedType, IntTy &...vals) {
+  bindShapeDims<0>(shapedType, vals...);
+}
+
 namespace {
 /// Generate a vector implementation for either:
 /// ```
@@ -1354,11 +1370,11 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     if (!valid)
       return failure();
 
-    int nSize = lhsShapedType.getShape()[0];
-    int wSize = resShapedType.getShape()[1];
-    int cSize = lhsShapedType.getShape()[2];
-    int kwSize = rhsShapedType.getShape()[0];
-    int fSize = rhsShapedType.getShape()[2];
+    int64_t nSize, wSize, cSize, kwSize, fSize;
+    // kernel{kw, c, f}
+    bindShapeDims(rhsShapedType, kwSize, cSize, fSize);
+    // out{n, w, f}
+    bindShapeDims(resShapedType, nSize, wSize);
 
     vector::TransferWriteOp write;
     Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
@@ -1398,30 +1414,28 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     //===------------------------------------------------------------------===//
     // Unroll along kw and read slices of lhs and rhs.
     SmallVector<Value> lhsVals, rhsVals, resVals;
+    // Extract lhs slice of size {n, wSizeStep, c} @ [0, sw * w + dw * kw, 0].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
-      // Extract rhs slice of size {c, f} @ [kw].
-      rhsVals.push_back(builder.create<vector::ExtractOp>(
-          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
-
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        // Extract lhs slice of size {n, wSizeStep, c}
-        //   @ [0, sw * w + dw * kw, 0].
         lhsVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
             loc, lhs,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
             /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
-
-        // This does not depend on kw.
-        if (kw == 0) {
-          // Extract res slice: {n, wSizeStep, f} @ [0, w, 0].
-          resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
-              loc, res,
-              /*offsets=*/ArrayRef<int64_t>{0, w, 0},
-              /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, fSize},
-              /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
-        }
       }
+    }
+    // Extract rhs slice of size {c, f} @ [kw].
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      rhsVals.push_back(builder.create<vector::ExtractOp>(
+          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
+    }
+    // Extract res slice: {n, wSizeStep, f} @ [0, w, 0].
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
+          loc, res,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+          /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, fSize},
+          /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
     }
 
     auto linearIndex = [&](int64_t kw, int64_t w) {
@@ -1476,14 +1490,15 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
-  FailureOr<Operation *> dilatedConv() {
+  FailureOr<Operation *> depthwiseConv() {
     if (!valid)
       return failure();
 
-    int nSize = lhsShapedType.getShape()[0];
-    int wSize = resShapedType.getShape()[1];
-    int cSize = lhsShapedType.getShape()[2];
-    int kwSize = rhsShapedType.getShape()[0];
+    int64_t nSize, wSize, cSize, kwSize;
+    // kernel{kw, c}
+    bindShapeDims(rhsShapedType, kwSize, cSize);
+    // out{n, w, c}
+    bindShapeDims(resShapedType, nSize, wSize);
 
     vector::TransferWriteOp write;
     Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
@@ -1522,30 +1537,29 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     //===------------------------------------------------------------------===//
     // Unroll along kw and read slices of lhs and rhs.
     SmallVector<Value> lhsVals, rhsVals, resVals;
+    // Extract lhs slice of size {n, wSizeStep, c}
+    //   @ [0, sw * w + dw * kw, 0].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
-      // Extract rhs slice of size {c} @ [kw].
-      rhsVals.push_back(builder.create<vector::ExtractOp>(
-          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
-
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        // Extract lhs slice of size {n, wSizeStep, c}
-        //   @ [0, sw * w + dw * kw, 0].
         lhsVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
             loc, lhs,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
             /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
-
-        // This does not depend on kw.
-        if (kw == 0) {
-          // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
-          resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
-              loc, res,
-              /*offsets=*/ArrayRef<int64_t>{0, w, 0},
-              /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
-              /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
-        }
       }
+    }
+    // Extract rhs slice of size {c} @ [kw].
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      rhsVals.push_back(builder.create<vector::ExtractOp>(
+          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
+    }
+    // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
+          loc, res,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+          /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
+          /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
     }
 
     auto linearIndex = [&](int64_t kw, int64_t w) {
@@ -1555,7 +1569,7 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        resVals[w] = dilatedConv1dSliceAsFma(
+        resVals[w] = depthwiseConv1dSliceAsFma(
             builder, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw], resVals[w]);
       }
     }
@@ -1580,8 +1594,8 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   }
 
   /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to fma.
-  Value dilatedConv1dSliceAsFma(OpBuilder &b, Location loc, Value lhs,
-                                Value rhs, Value res) {
+  Value depthwiseConv1dSliceAsFma(OpBuilder &b, Location loc, Value lhs,
+                                  Value rhs, Value res) {
     Value bcast = builder.create<vector::BroadcastOp>(loc, res.getType(), rhs);
     return b.create<vector::FMAOp>(loc, lhs, bcast, res);
   }
@@ -1614,7 +1628,7 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c},
                 /*resIndex*/ {n, w, c}}))
-      return dilatedConv();
+      return depthwiseConv();
     return failure();
   }
 
