@@ -59,9 +59,13 @@ void IoErrorHandler::SignalError(int iostatOrErrno) {
 
 void IoErrorHandler::Forward(
     int ioStatOrErrno, const char *msg, std::size_t length) {
-  SignalError(ioStatOrErrno);
-  if (ioStat_ != IostatOk && (flags_ & hasIoMsg)) {
+  if (ioStat_ != IostatOk && msg && (flags_ & hasIoMsg)) {
     ioMsg_ = SaveDefaultCharacter(msg, length, *this);
+  }
+  if (ioStatOrErrno != IostatOk && msg) {
+    SignalError(ioStatOrErrno, "%.*s", static_cast<int>(length), msg);
+  } else {
+    SignalError(ioStatOrErrno);
   }
 }
 
