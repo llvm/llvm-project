@@ -2,6 +2,7 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 
 declare void @use(i32)
+declare void @sideeffect()
 
 define i32 @add_const_incoming0_speculative(i1 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_const_incoming0_speculative(
@@ -655,6 +656,90 @@ then:
   %p1 = phi i64 [ %y, %if ], [ 43, %entry ]
   %r = or i64 %p0, %p1
   ret i64 %r
+}
+
+define i8 @mul_const_incoming0_speculatable(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_const_incoming0_speculatable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[THEN]]
+; CHECK:       then:
+; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ 42, [[ENTRY:%.*]] ], [ [[X:%.*]], [[IF]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ 17, [[ENTRY]] ], [ [[Y:%.*]], [[IF]] ]
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    [[R:%.*]] = mul i8 [[P0]], [[P1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  br i1 %b, label %if, label %then
+
+if:
+  br label %then
+
+then:
+  %p0 = phi i8 [ 42, %entry ], [ %x, %if ]
+  %p1 = phi i8 [ 17, %entry ], [ %y, %if ]
+  call void @sideeffect()
+  %r = mul i8 %p0, %p1
+  ret i8 %r
+}
+
+define i8 @udiv_const_incoming0_not_speculatable(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_const_incoming0_not_speculatable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[THEN]]
+; CHECK:       then:
+; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ 42, [[ENTRY:%.*]] ], [ [[X:%.*]], [[IF]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ 17, [[ENTRY]] ], [ [[Y:%.*]], [[IF]] ]
+; CHECK-NEXT:    call void @sideeffect()
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[P0]], [[P1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  br i1 %b, label %if, label %then
+
+if:
+  br label %then
+
+then:
+  %p0 = phi i8 [ 42, %entry ], [ %x, %if ]
+  %p1 = phi i8 [ 17, %entry ], [ %y, %if ]
+  call void @sideeffect()
+  %r = udiv i8 %p0, %p1
+  ret i8 %r
+}
+
+define i8 @udiv_const_incoming0_different_block(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_const_incoming0_different_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[THEN]]
+; CHECK:       then:
+; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ 42, [[ENTRY:%.*]] ], [ [[X:%.*]], [[IF]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ 17, [[ENTRY]] ], [ [[Y:%.*]], [[IF]] ]
+; CHECK-NEXT:    br label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[P0]], [[P1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  br i1 %b, label %if, label %then
+
+if:
+  br label %then
+
+then:
+  %p0 = phi i8 [ 42, %entry ], [ %x, %if ]
+  %p1 = phi i8 [ 17, %entry ], [ %y, %if ]
+  br label %end
+
+end:
+  %r = udiv i8 %p0, %p1
+  ret i8 %r
 }
 
 define { i64, i32 } @ParseRetVal(i1 %b, { i64, i32 } ()* %x) {
