@@ -94,7 +94,9 @@ set(MLIR_TEST_DEPENDS
   mlir_async_runtime
   )
 
-# The native target may not be enabled when cross compiling, raise an error.
+# The native target may not be enabled, in this case we won't
+# run tests that involves executing on the host: do not build
+# useless binaries.
 if(TARGET ${LLVM_NATIVE_ARCH})
   list(APPEND MLIR_TEST_DEPENDS
     mlir-cpu-runner
