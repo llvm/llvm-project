@@ -89,6 +89,8 @@ int main(int, char**) {
     test<char, const char *, wchar_t> ('X', chars, chars+10, L"0X1X2X3X4X5X6X7X8X9");
     test<char, const int *,  wchar_t> ('x',  ints,  ints+10, L"10x11x12x13x14x15x16x17x18x19");
 #endif
+    // TODO(var-const): uncomment when it becomes possible to instantiate a `basic_ostream` object with a sized
+    // character type (see https://llvm.org/PR53119).
 //  test<char, const char *, char16_t>('X', chars, chars+10, u"0X1X2X3X4X5X6X7X8X9");
 //  test<char, const int *,  char16_t>('x',  ints,  ints+10, u"10x11x12x13x14x15x16x17x18x19");
 //  test<char, const char *, char32_t>('X', chars, chars+10, U"0X1X2X3X4X5X6X7X8X9");

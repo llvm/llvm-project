@@ -94,6 +94,8 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   doIOTest<wchar_t>();
 #endif
+  // TODO(var-const): uncomment when it becomes possible to instantiate a `basic_ostream` object with a sized character
+  // type (see https://llvm.org/PR53119).
   //doIOTest<char16_t>();
   //doIOTest<char32_t>();
   test_LWG2989();
