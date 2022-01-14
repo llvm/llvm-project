@@ -56,7 +56,7 @@ public:
   }
   PyObjectRef(const PyObjectRef &other)
       : referrent(other.referrent), object(other.object /* copies */) {}
-  ~PyObjectRef() {}
+  ~PyObjectRef() = default;
 
   int getRefCount() {
     if (!object)

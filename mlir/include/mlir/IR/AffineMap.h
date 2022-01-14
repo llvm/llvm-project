@@ -39,7 +39,7 @@ class AffineMap {
 public:
   using ImplType = detail::AffineMapStorage;
 
-  constexpr AffineMap() {}
+  constexpr AffineMap() = default;
   explicit AffineMap(ImplType *map) : map(map) {}
 
   /// Returns a zero result affine map with no dimensions or symbols: () -> ().
@@ -323,7 +323,7 @@ inline ::llvm::hash_code hash_value(AffineMap arg) {
 /// A mutable affine map. Its affine expressions are however unique.
 struct MutableAffineMap {
 public:
-  MutableAffineMap() {}
+  MutableAffineMap() = default;
   MutableAffineMap(AffineMap map);
 
   ArrayRef<AffineExpr> getResults() const { return results; }

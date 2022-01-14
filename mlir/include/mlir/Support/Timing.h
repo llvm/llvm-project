@@ -184,8 +184,8 @@ private:
 /// manager implementations.
 class Timer {
 public:
-  Timer() {}
-  Timer(const Timer &other) : tm(other.tm), handle(other.handle) {}
+  Timer() = default;
+  Timer(const Timer &other) = default;
   Timer(Timer &&other) : Timer(other) {
     other.tm = nullptr;
     other.handle = nullptr;
