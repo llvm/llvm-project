@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 multiclass vgathermh<RegisterClass RC> {
-  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1, mayStore = 1 in
+  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1,
+  mayStore = 1, addrMode = BaseImmOffset, accessSize = HalfWordAccess in
   def NAME : CVI_GATHER_TMP_LD_Resource_NoOpcode<(outs ),
                            (ins IntRegs:$_dst_, s4_0Imm:$Ii,
                                 IntRegs:$Rt, ModRegs:$Mu, RC:$Vv),
@@ -16,7 +17,8 @@ multiclass vgathermh<RegisterClass RC> {
 }
 
 multiclass vgathermw<RegisterClass RC> {
-  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1, mayStore = 1 in
+  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1,
+  mayStore = 1, addrMode = BaseImmOffset, accessSize = WordAccess in
   def NAME : CVI_GATHER_TMP_LD_Resource_NoOpcode<(outs ),
                            (ins IntRegs:$_dst_, s4_0Imm:$Ii,
                                 IntRegs:$Rt, ModRegs:$Mu, RC:$Vv),
@@ -25,7 +27,8 @@ multiclass vgathermw<RegisterClass RC> {
 }
 
 multiclass vgathermhw<RegisterClass RC> {
-  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1, mayStore = 1 in
+  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1,
+   mayStore = 1, addrMode = BaseImmOffset, accessSize = HalfWordAccess in
   def NAME : CVI_GATHER_TMP_LD_Resource_NoOpcode<(outs ),
                            (ins IntRegs:$_dst_, s4_0Imm:$Ii,
                                 IntRegs:$Rt, ModRegs:$Mu, RC:$Vv),
@@ -38,7 +41,8 @@ defm V6_vgathermw_pseudo  : vgathermw<HvxVR>;
 defm V6_vgathermhw_pseudo  : vgathermhw<HvxWR>;
 
 multiclass vgathermhq<RegisterClass RC1, RegisterClass RC2> {
-  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1, mayStore = 1 in
+  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1,
+  mayStore = 1, addrMode = BaseImmOffset, accessSize = HalfWordAccess in
   def NAME : CVI_GATHER_TMP_LD_Resource_NoOpcode<(outs ),
                            (ins IntRegs:$_dst_, s4_0Imm:$Ii,
                                 RC2:$Vq, IntRegs:$Rt, ModRegs:$Mu,
@@ -48,7 +52,8 @@ multiclass vgathermhq<RegisterClass RC1, RegisterClass RC2> {
 }
 
 multiclass vgathermwq<RegisterClass RC1, RegisterClass RC2> {
-  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1, mayStore = 1 in
+  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1,
+  mayStore = 1, addrMode = BaseImmOffset, accessSize = WordAccess in
   def NAME : CVI_GATHER_TMP_LD_Resource_NoOpcode<(outs ),
                            (ins IntRegs:$_dst_, s4_0Imm:$Ii,
                                 RC2:$Vq, IntRegs:$Rt, ModRegs:$Mu,
@@ -58,7 +63,8 @@ multiclass vgathermwq<RegisterClass RC1, RegisterClass RC2> {
 }
 
 multiclass vgathermhwq<RegisterClass RC1, RegisterClass RC2> {
-  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1, mayStore = 1 in
+  let isCodeGenOnly = 1, isPseudo = 1, mayLoad = 1,
+  mayStore = 1, addrMode = BaseImmOffset, accessSize = HalfWordAccess  in
   def NAME : CVI_GATHER_TMP_LD_Resource_NoOpcode<(outs ),
                            (ins IntRegs:$_dst_, s4_0Imm:$Ii,
                               RC2:$Vq, IntRegs:$Rt, ModRegs:$Mu,

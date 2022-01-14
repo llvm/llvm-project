@@ -385,6 +385,10 @@ unsigned HexagonOptAddrMode::getBaseOpPosition(MachineInstr *MI) {
 }
 
 unsigned HexagonOptAddrMode::getOffsetOpPosition(MachineInstr *MI) {
+  assert(
+      (HII->getAddrMode(*MI) == HexagonII::BaseImmOffset) &&
+      "Looking for an offset in non-BaseImmOffset addressing mode instruction");
+
   const MCInstrDesc &MID = MI->getDesc();
   switch (MI->getOpcode()) {
   // vgather pseudos are mayLoad and mayStore
@@ -413,8 +417,9 @@ bool HexagonOptAddrMode::processAddUses(NodeAddr<StmtNode *> AddSN,
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *MI = SN.Addr->getCode();
     const MCInstrDesc &MID = MI->getDesc();
-    if ((!MID.mayLoad() && !MID.mayStore()))
-        return false;
+    if ((!MID.mayLoad() && !MID.mayStore()) ||
+        HII->getAddrMode(*MI) != HexagonII::BaseImmOffset)
+      return false;
 
     MachineOperand BaseOp = MI->getOperand(getBaseOpPosition(MI));
 
