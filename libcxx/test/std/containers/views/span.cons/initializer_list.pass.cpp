@@ -21,12 +21,12 @@ struct Sink {
     constexpr Sink(Sink*) {}
 };
 
-constexpr size_t count(std::span<const Sink> sp) {
+constexpr std::size_t count(std::span<const Sink> sp) {
     return sp.size();
 }
 
 template<int N>
-constexpr size_t countn(std::span<const Sink, N> sp) {
+constexpr std::size_t countn(std::span<const Sink, N> sp) {
     return sp.size();
 }
 
