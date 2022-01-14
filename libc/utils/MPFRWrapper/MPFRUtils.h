@@ -31,6 +31,7 @@ enum class Operation : int {
   Expm1,
   Floor,
   Log,
+  Log2,
   Mod2PI,
   ModPIOver2,
   ModPIOver4,
@@ -325,6 +326,23 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                  EXPECT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
   (__VA_ARGS__)
 
+#define EXPECT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
+  {                                                                            \
+    namespace mpfr = __llvm_libc::testing::mpfr;                               \
+    mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
+    EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
+                      mpfr::RoundingMode::Nearest);                            \
+    mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
+    EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
+                      mpfr::RoundingMode::Upward);                             \
+    mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
+    EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
+                      mpfr::RoundingMode::Downward);                           \
+    mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
+    EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
+                      mpfr::RoundingMode::TowardZero);                         \
+  }
+
 #define ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
   ASSERT_THAT(match_value,                                                     \
               __llvm_libc::testing::mpfr::get_mpfr_matcher<op>(                \
@@ -340,5 +358,22 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
   GET_MPFR_MACRO(__VA_ARGS__, ASSERT_MPFR_MATCH_ROUNDING,                      \
                  ASSERT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
   (__VA_ARGS__)
+
+#define ASSERT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
+  {                                                                            \
+    namespace mpfr = __llvm_libc::testing::mpfr;                               \
+    mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
+    ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
+                      mpfr::RoundingMode::Nearest);                            \
+    mpfr::ForceRoundingMode __r2(mpfr::RoundingMode::Upward);                  \
+    ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
+                      mpfr::RoundingMode::Upward);                             \
+    mpfr::ForceRoundingMode __r3(mpfr::RoundingMode::Downward);                \
+    ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
+                      mpfr::RoundingMode::Downward);                           \
+    mpfr::ForceRoundingMode __r4(mpfr::RoundingMode::TowardZero);              \
+    ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
+                      mpfr::RoundingMode::TowardZero);                         \
+  }
 
 #endif // LLVM_LIBC_UTILS_TESTUTILS_MPFRUTILS_H

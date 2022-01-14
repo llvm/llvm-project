@@ -4296,8 +4296,14 @@ bool DeclarationVisitor::Pre(const parser::DataComponentDefStmt &x) {
   if (derivedTypeInfo_.sequence) { // C740
     if (const auto *declType{GetDeclTypeSpec()}) {
       if (!declType->AsIntrinsic() && !declType->IsSequenceType()) {
-        Say("A sequence type data component must either be of an"
-            " intrinsic type or a derived sequence type"_err_en_US);
+        if (GetAttrs().test(Attr::POINTER) &&
+            context().IsEnabled(common::LanguageFeature::PointerInSeqType)) {
+          if (context().ShouldWarn(common::LanguageFeature::PointerInSeqType)) {
+            Say("A sequence type data component that is a pointer to a non-sequence type is not standard"_en_US);
+          }
+        } else {
+          Say("A sequence type data component must either be of an intrinsic type or a derived sequence type"_err_en_US);
+        }
       }
     }
   }

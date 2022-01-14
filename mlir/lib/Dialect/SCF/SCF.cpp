@@ -2546,7 +2546,7 @@ struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
       }
     }
 
-    if (argsToErase.size() == 0)
+    if (argsToErase.empty())
       return failure();
 
     rewriter.startRootUpdate(op);
