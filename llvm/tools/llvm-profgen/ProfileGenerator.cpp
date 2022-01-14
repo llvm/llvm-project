@@ -614,8 +614,8 @@ void CSProfileGenerator::computeSizeForProfiledFunctions() {
 
 void CSProfileGenerator::generateLineNumBasedProfile() {
   for (const auto &CI : SampleCounters) {
-    const StringBasedCtxKey *CtxKey =
-        dyn_cast<StringBasedCtxKey>(CI.first.getPtr());
+    const auto *CtxKey = cast<StringBasedCtxKey>(CI.first.getPtr());
+
     // Get or create function profile for the range
     FunctionSamples &FunctionProfile =
         getFunctionProfileForContext(CtxKey->Context, CtxKey->WasLeafInlined);
