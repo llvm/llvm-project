@@ -223,10 +223,6 @@ static Optional<AllocFnsTy> getAllocationSize(const Value *V,
   return Result;
 }
 
-
-//===----------------------------------------------------------------------===//
-//  Properties of allocation functions
-//
 /// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
@@ -286,10 +282,6 @@ bool llvm::isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI) {
   return getAllocationDataForFunction(F, ReallocLike, TLI).hasValue();
 }
 
-
-//===----------------------------------------------------------------------===//
-//  Properties of allocation functions
-//
 bool llvm::isAllocRemovable(const CallBase *CB, const TargetLibraryInfo *TLI) {
   assert(isAllocationFn(CB, TLI));
 
@@ -408,10 +400,6 @@ Constant *llvm::getInitialValueOfAllocation(const CallBase *Alloc,
   return nullptr;
 }
 
-
-//===----------------------------------------------------------------------===//
-//  free Call Utility Functions.
-//
 /// isLibFreeFunction - Returns true if the function is a builtin free()
 bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   unsigned ExpectedNumParams;
