@@ -30,6 +30,42 @@ using namespace llvm;
 //
 //===----------------------------------------------------------------------===//
 
+static bool isUsedAsMemCpySource(const Value *V, bool &OtherUse) {
+  bool UsedAsMemCpySource = false;
+  for (const User *U : V->users())
+    if (const Instruction *User = dyn_cast<Instruction>(U)) {
+      if (isa<BitCastInst>(User) || isa<GetElementPtrInst>(User)) {
+        UsedAsMemCpySource |= isUsedAsMemCpySource(User, OtherUse);
+        continue;
+      }
+      if (const MemCpyInst *Memcpy = dyn_cast<MemCpyInst>(User)) {
+        if (Memcpy->getOperand(1) == V && !Memcpy->isVolatile()) {
+          UsedAsMemCpySource = true;
+          continue;
+        }
+      }
+      OtherUse = true;
+    }
+  return UsedAsMemCpySource;
+}
+
+unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
+  unsigned Bonus = 0;
+
+  // Increase the threshold if an incoming argument is used only as a memcpy
+  // source.
+  if (Function *Callee = CB->getCalledFunction())
+    for (Argument &Arg : Callee->args()) {
+      bool OtherUse = false;
+      if (isUsedAsMemCpySource(&Arg, OtherUse) && !OtherUse)
+        Bonus += 150;
+    }
+
+  LLVM_DEBUG(if (Bonus)
+               dbgs() << "++ SZTTI Adding inlining bonus: " << Bonus << "\n";);
+  return Bonus;
+}
+
 InstructionCost SystemZTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                               TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy());
