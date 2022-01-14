@@ -231,6 +231,9 @@ CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
 ENUM_CODEGENOPT(SanitizeAddressDtor, llvm::AsanDtorKind, 2,
                 llvm::AsanDtorKind::Global)  ///< Set how ASan global
                                              ///< destructors are emitted.
+CODEGENOPT(SanitizeMemoryParamRetval, 1, 0) ///< Enable detection of uninitialized
+                                            ///< parameters and return values
+                                            ///< in MemorySanitizer
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection
                                              ///< in MemorySanitizer
 CODEGENOPT(SanitizeCfiCrossDso, 1, 0) ///< Enable cross-dso support in CFI.
