@@ -199,6 +199,7 @@ end
 * Objects in blank COMMON may be initialized.
 * Multiple specifications of the SAVE attribute on the same object
   are allowed, with a warning.
+* Specific intrinsic functions BABS, IIABS, JIABS, KIABS, ZABS, and CDABS.
 
 ### Extensions supported when enabled by options
 
