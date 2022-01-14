@@ -94,31 +94,12 @@ void Lexer::skipLineStartingDecorations() {
   if (BufferPtr == CommentEnd)
     return;
 
-  switch (*BufferPtr) {
-  case ' ':
-  case '\t':
-  case '\f':
-  case '\v': {
-    const char *NewBufferPtr = BufferPtr;
-    NewBufferPtr++;
-    if (NewBufferPtr == CommentEnd)
+  const char *NewBufferPtr = BufferPtr;
+  while (isHorizontalWhitespace(*NewBufferPtr))
+    if (++NewBufferPtr == CommentEnd)
       return;
-
-    char C = *NewBufferPtr;
-    while (isHorizontalWhitespace(C)) {
-      NewBufferPtr++;
-      if (NewBufferPtr == CommentEnd)
-        return;
-      C = *NewBufferPtr;
-    }
-    if (C == '*')
-      BufferPtr = NewBufferPtr + 1;
-    break;
-  }
-  case '*':
-    BufferPtr++;
-    break;
-  }
+  if (*NewBufferPtr == '*')
+    BufferPtr = NewBufferPtr + 1;
 }
 
 namespace {
