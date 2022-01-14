@@ -29,6 +29,19 @@ entry:
   ret void
 }
 
+define i32 @f(i32 %x, i32 %y) {
+; GCN-LABEL: f:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %xx = or i32 %x, -128 ; 0xffffff80
+  %yy = or i32 %y, -128 ; 0xffffff80
+  %r = mul i32 %xx, %yy
+  %rr = lshr i32 %r, 14
+  ret i32 %rr
+}
+
 ; Function Attrs: nounwind readnone speculatable
 declare i32 @llvm.amdgcn.workitem.id.x() #20
 
