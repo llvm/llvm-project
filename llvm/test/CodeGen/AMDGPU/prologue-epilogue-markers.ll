@@ -21,12 +21,9 @@ define hidden void @_Z9base_casev() #0 !dbg !6 {
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 2560, 0
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-NEXT:    v_writelane_b32 v0, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v0, s31, 1
-; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x0c, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x00, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x20 ;
-; CHECK-NEXT:    v_writelane_b32 v0, exec_lo, 2
-; CHECK-NEXT:    v_writelane_b32 v0, exec_hi, 3
-; CHECK-NEXT:    .cfi_escape 0x10, 0x11, 0x0c, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x40, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x60 ;
+; CHECK-NEXT:    v_writelane_b32 v0, exec_lo, 0
+; CHECK-NEXT:    v_writelane_b32 v0, exec_hi, 1
+; CHECK-NEXT:    .cfi_escape 0x10, 0x11, 0x0c, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x00, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x20 ;
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .loc 0 7 3 prologue_end ; file.cpp:7:3
 ; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
@@ -40,8 +37,8 @@ define hidden void @_Z9base_casev() #0 !dbg !6 {
 ; DWARFLINE:		.debug_line contents
 ; DWARFLINE:		Address            Line   Column File   ISA Discriminator Flags
 ; DWARFLINE:		0x0000000000000000      5      0      0   0             0  is_stmt
-; DWARFLINE-NEXT:	0x0000000000000034      7      3      0   0             0  is_stmt prologue_end
-; DWARFLINE-NEXT:	0x000000000000004c      7      3      0   0             0  is_stmt end_sequence
+; DWARFLINE-NEXT:	0x0000000000000024      7      3      0   0             0  is_stmt prologue_end
+; DWARFLINE-NEXT:	0x000000000000003c      7      3      0   0             0  is_stmt end_sequence
 
 entry:
   ret void, !dbg !7

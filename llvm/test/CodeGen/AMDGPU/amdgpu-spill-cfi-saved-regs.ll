@@ -26,42 +26,8 @@ entry:
 ; FIXME: ideally this would not care what VGPR we spill to, but since we are
 ; using .cfi_escape it isn't trivial/possible to make this general yet
 
-; CHECK: v_writelane_b32 v0, s30, 0
-; CHECK-NEXT: v_writelane_b32 v0, s31, 1
-
-; DW_CFA_expression [0x10]
-;   PC_64 ULEB128(17)=[0x10]
-;   BLOCK_LENGTH ULEB128(12)=[0x0c]
-;     DW_OP_regx [0x90]
-;       VGPR0_wave64 ULEB128(2560)=[0x80, 0x14]
-;     DW_OP_bit_piece [0x9d]
-;       PIECE_SIZE [0x20]
-;       PIECE_OFFSET [0x00]
-;     DW_OP_regx [0x90]
-;       VGPR0_wave64 ULEB128(2560)=[0x80, 0x14]
-;     DW_OP_bit_piece [0x9d]
-;       PIECE_SIZE [0x20]
-;       PIECE_OFFSET [0x20]
-; WAVE64-NEXT: .cfi_escape 0x10, 0x10, 0x0c, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x00, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x20
-
-; DW_CFA_expression [0x10]
-;   PC_64 ULEB128(17)=[0x10]
-;   BLOCK_LENGTH ULEB128(12)=[0x0c]
-;     DW_OP_regx [0x90]
-;       VGPR0_wave32 ULEB128(1536)=[0x80, 0x0c]
-;     DW_OP_bit_piece [0x9d]
-;       PIECE_SIZE [0x20]
-;       PIECE_OFFSET [0x00]
-;     DW_OP_regx [0x90]
-;       VGPR0_wave32 ULEB128(1536)=[0x80, 0x0c]
-;     DW_OP_bit_piece [0x9d]
-;       PIECE_SIZE [0x20]
-;       PIECE_OFFSET [0x20]
-; WAVE32-NEXT: .cfi_escape 0x10, 0x10, 0x0c, 0x90, 0x80, 0x0c, 0x9d, 0x20, 0x00, 0x90, 0x80, 0x0c, 0x9d, 0x20, 0x20
-
-
-; WAVE64: v_writelane_b32 v0, exec_lo, 2
-; WAVE64-NEXT: v_writelane_b32 v0, exec_hi, 3
+; WAVE64: v_writelane_b32 v0, exec_lo, 0
+; WAVE64-NEXT: v_writelane_b32 v0, exec_hi, 1
 ; DW_CFA_expression [0x10]
 ;   EXEC_MASK_wave64 ULEB128(17)=[0x11]
 ;   BLOCK_LENGTH ULEB128(12)=[0x0c]
@@ -69,15 +35,15 @@ entry:
 ;       VGPR0_wave64 ULEB128(2560)=[0x80, 0x14]
 ;     DW_OP_bit_piece [0x9d]
 ;       PIECE_SIZE [0x20]
-;       PIECE_OFFSET [0x40]
+;       PIECE_OFFSET [0x00]
 ;     DW_OP_regx [0x90]
 ;       VGPR0_wave64 ULEB128(2560)=[0x80, 0x14]
 ;     DW_OP_bit_piece [0x9d]
 ;       PIECE_SIZE [0x20]
-;       PIECE_OFFSET [0x60]
-; WAVE64-NEXT: .cfi_escape 0x10, 0x11, 0x0c, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x40, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x60
+;       PIECE_OFFSET [0x20]
+; WAVE64-NEXT: .cfi_escape 0x10, 0x11, 0x0c, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x00, 0x90, 0x80, 0x14, 0x9d, 0x20, 0x20
 
-; WAVE32: v_writelane_b32 v0, exec_lo, 2
+; WAVE32: v_writelane_b32 v0, exec_lo, 0
 ; DW_CFA_expression [0x10]
 ;   EXEC_MASK_wave32 ULEB128(1)=[0x01]
 ;   BLOCK_LENGTH ULEB128(6)=[0x06]
@@ -85,8 +51,8 @@ entry:
 ;       VGPR0_wave32 ULEB128(1536)=[0x80, 0x0c]
 ;     DW_OP_bit_piece [0x9d]
 ;       PIECE_SIZE [0x20]
-;       PIECE_OFFSET [0x40]
-; WAVE32-NEXT: .cfi_escape 0x10, 0x01, 0x06, 0x90, 0x80, 0x0c, 0x9d, 0x20, 0x40
+;       PIECE_OFFSET [0x00]
+; WAVE32-NEXT: .cfi_escape 0x10, 0x01, 0x06, 0x90, 0x80, 0x0c, 0x9d, 0x20, 0x00
 
 ; CHECK-NOT: .cfi_{{.*}}
 ; CHECK: .cfi_endproc
@@ -104,9 +70,6 @@ entry:
 ; CHECK: buffer_store_dword [[CSR:v[0-9]+]], off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK: s_mov_b{{(32|64)}} {{(exec|exec_lo)}},
 
-; CHECK: v_writelane_b32 [[CSR]], s30, {{[0-9]+}}
-; CHECK-NEXT: v_writelane_b32 [[CSR]], s31, {{[0-9]+}}
-
 ; WAVE64: v_writelane_b32 [[CSR]], exec_lo, {{[0-9]+}}
 ; WAVE64-NEXT: v_writelane_b32 [[CSR]], exec_hi, {{[0-9]+}}
 
@@ -122,11 +85,10 @@ entry:
   ret void
 }
 
-; There's no return here, so the return address live in was
-; deleted. It needs to be re-added as a live in to the entry block.
+; There's no return here, so the return address live in was deleted.
 ; CHECK-LABEL: {{^}}empty_func:
-; CHECK: v_writelane_b32 v0, s30, 0
-; CHECK: v_writelane_b32 v0, s31, 1
+; CHECK-NOT: v_writelane_b32 v0, s30, 0
+; CHECK-NOT: v_writelane_b32 v0, s31, 1
 define void @empty_func() {
   unreachable
 }
@@ -136,16 +98,11 @@ define void @empty_func() {
 ; CHECK-LABEL: no_vgprs_to_spill_into:
 ; CHECK: %bb.0:
 
-; WAVE64: v_mov_b32_e32 v0, s30
+; WAVE64: v_mov_b32_e32 v0, exec_lo
 ; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 ; 4-byte Folded Spill
-; WAVE64-NEXT: v_mov_b32_e32 v0, s31
-; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; WAVE64-NEXT: .cfi_offset 16, 0
-; WAVE64-NEXT: v_mov_b32_e32 v0, exec_lo
-; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; WAVE64-NEXT: v_mov_b32_e32 v0, exec_hi
-; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; WAVE64-NEXT: .cfi_offset 17, 512
+; WAVE64-NEXT: buffer_store_dword v0, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; WAVE64-NEXT: .cfi_offset 17, 0
  
 define void @no_vgprs_to_spill_into() #1 {
   call void asm sideeffect "",
@@ -156,32 +113,27 @@ define void @no_vgprs_to_spill_into() #1 {
   ret void
 }
 
-; Check that the FP, RA and EXEC needs to be spilled to memory, even though
+; Check that the FP and EXEC needs to be spilled to memory, even though
 ; we have reserved VGPR but there are no available free lanes.
 
-; CHECK-LABEL: callee_need_to_spill_fp_ra_exec_to_memory:
+; CHECK-LABEL: callee_need_to_spill_fp_exec_to_memory:
 ; CHECK: %bb.0:
 
 ; WAVE32: s_or_saveexec_b32 [[EXEC_COPY:s[0-9]+]], -1
 ; WAVE32-NEXT: buffer_store_dword [[RES_VGPR:v[0-9]+]], off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; WAVE32: s_mov_b32 exec_lo, [[EXEC_COPY]]
-; WAVE32: v_mov_b32_e32 [[TEMP_VGPR:v[0-9]+]], s30
+; WAVE32-NEXT: v_mov_b32_e32 [[TEMP_VGPR:v[0-9]+]], exec_lo
 ; WAVE32-NEXT: buffer_store_dword [[TEMP_VGPR]], off, s[0:3], s32 offset:196 ; 4-byte Folded Spill
-; WAVE32-NEXT: v_mov_b32_e32 [[TEMP_VGPR]], s31
-; WAVE32-NEXT: buffer_store_dword [[TEMP_VGPR]], off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
-; WAVE32-NEXT: .cfi_offset 16, 6272
-; WAVE32-NEXT: v_mov_b32_e32 [[TEMP_VGPR]], exec_lo
-; WAVE32-NEXT: buffer_store_dword [[TEMP_VGPR]], off, s[0:3], s32 offset:204 ; 4-byte Folded Spill
-; WAVE32-NEXT: .cfi_offset 1, 6528
+; WAVE32-NEXT: .cfi_offset 1, 6272
 ; WAVE32-NEXT: v_mov_b32_e32 [[TEMP_VGPR]], s33
-; WAVE32-NEXT: buffer_store_dword [[TEMP_VGPR]], off, s[0:3], s32 offset:208 ; 4-byte Folded Spill
+; WAVE32-NEXT: buffer_store_dword [[TEMP_VGPR]], off, s[0:3], s32 offset:200 ; 4-byte Folded Spill
 ; WAVE32: buffer_store_dword v40, off, s[0:3], s33 offset
 ; WAVE32-COUNT-47: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33
 ; WAVE32: v_writelane_b32 [[RES_VGPR]], s34, 0
 ; WAVE32-COUNT-31: v_writelane_b32 [[RES_VGPR]], s{{[0-9]+}}, {{[0-9]+}}
 
 
-define void @callee_need_to_spill_fp_ra_exec_to_memory() #2 {
+define void @callee_need_to_spill_fp_exec_to_memory() #2 {
   call void asm sideeffect "; clobber nonpreserved and 32 CSR SGPRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
     ,~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19}

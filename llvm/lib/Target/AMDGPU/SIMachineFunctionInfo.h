@@ -506,7 +506,6 @@ public: // FIXME
   Register SGPRForBPSaveRestoreCopy;
   Optional<int> BasePointerSaveIndex;
 
-  Optional<int> ReturnAddressSaveIndex;
   Optional<int> EXECSaveIndex;
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);

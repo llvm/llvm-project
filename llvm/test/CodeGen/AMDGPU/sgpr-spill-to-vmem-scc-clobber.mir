@@ -263,8 +263,6 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr30_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 $exec
   ; VMEM-GFX8-NEXT:   $exec = S_MOV_B64 1
@@ -348,8 +346,6 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr30_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 $exec
   ; VMEM-GFX8-NEXT:   $exec = S_MOV_B64 1
@@ -438,8 +434,6 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr30_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 $exec
   ; VMEM-GFX8-NEXT:   $exec = S_MOV_B64 3
@@ -524,8 +518,6 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr30_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 $exec
   ; VMEM-GFX8-NEXT:   $exec = S_MOV_B64 3
@@ -618,8 +610,6 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr30_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 $exec
   ; VMEM-GFX8-NEXT:   $exec = S_MOV_B64 1
@@ -714,8 +704,6 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28_lo16
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr30_lo16
-  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr31_lo16
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   $sgpr4_sgpr5 = S_MOV_B64 $exec
   ; VMEM-GFX8-NEXT:   $exec = S_MOV_B64 1

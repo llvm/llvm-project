@@ -172,9 +172,9 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .vgpr_count:     0x1{{$}}
 ; GCN-NEXT:      no_stack_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GCN-NEXT:        .sgpr_count:     0x26{{$}}
-; GCN-NEXT:        .stack_frame_size_in_bytes: 0{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2{{$}}
+; GCN-NEXT:        .sgpr_count:     0x24{{$}}
+; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
+; GCN-NEXT:        .vgpr_count:     0x3{{$}}
 ; GCN-NEXT:      no_stack_extern_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
@@ -210,9 +210,9 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .vgpr_count:     0x2{{$}}
 ; GCN-NEXT:      simple_stack_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GCN-NEXT:        .sgpr_count:     0x26{{$}}
+; GCN-NEXT:        .sgpr_count:     0x24{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x20{{$}}
-; GCN-NEXT:        .vgpr_count:     0x3{{$}}
+; GCN-NEXT:        .vgpr_count:     0x4{{$}}
 ; GCN-NEXT:      simple_stack_extern_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
