@@ -86,10 +86,7 @@ struct type_caster<MlirAttribute> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToAttribute(capsule.ptr());
-    if (mlirAttributeIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirAttributeIsNull(value);
   }
   static handle cast(MlirAttribute v, return_value_policy, handle) {
     py::object capsule =
@@ -117,10 +114,7 @@ struct type_caster<MlirContext> {
     }
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToContext(capsule.ptr());
-    if (mlirContextIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirContextIsNull(value);
   }
 };
 
@@ -132,10 +126,7 @@ struct type_caster<MlirLocation> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToLocation(capsule.ptr());
-    if (mlirLocationIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirLocationIsNull(value);
   }
   static handle cast(MlirLocation v, return_value_policy, handle) {
     py::object capsule =
@@ -154,10 +145,7 @@ struct type_caster<MlirModule> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToModule(capsule.ptr());
-    if (mlirModuleIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirModuleIsNull(value);
   }
   static handle cast(MlirModule v, return_value_policy, handle) {
     py::object capsule =
@@ -176,10 +164,7 @@ struct type_caster<MlirOperation> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToOperation(capsule.ptr());
-    if (mlirOperationIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirOperationIsNull(value);
   }
   static handle cast(MlirOperation v, return_value_policy, handle) {
     if (v.ptr == nullptr)
@@ -200,10 +185,7 @@ struct type_caster<MlirPassManager> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToPassManager(capsule.ptr());
-    if (mlirPassManagerIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirPassManagerIsNull(value);
   }
 };
 
@@ -214,10 +196,7 @@ struct type_caster<MlirType> {
   bool load(handle src, bool) {
     py::object capsule = mlirApiObjectToCapsule(src);
     value = mlirPythonCapsuleToType(capsule.ptr());
-    if (mlirTypeIsNull(value)) {
-      return false;
-    }
-    return true;
+    return !mlirTypeIsNull(value);
   }
   static handle cast(MlirType t, return_value_policy, handle) {
     py::object capsule =
