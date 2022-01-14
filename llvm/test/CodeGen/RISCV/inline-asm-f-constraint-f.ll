@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64F %s
 ; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefix=RV32D %s
+; RUN:   | FileCheck -check-prefix=RV32F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefix=RV64D %s
+; RUN:   | FileCheck -check-prefix=RV64F %s
 
 @gf = external global float
 
@@ -32,28 +32,6 @@ define float @constraint_f_float(float %a) nounwind {
 ; RV64F-NEXT:    #NO_APP
 ; RV64F-NEXT:    fmv.x.w a0, ft0
 ; RV64F-NEXT:    ret
-;
-; RV32D-LABEL: constraint_f_float:
-; RV32D:       # %bb.0:
-; RV32D-NEXT:    lui a1, %hi(gf)
-; RV32D-NEXT:    flw ft0, %lo(gf)(a1)
-; RV32D-NEXT:    fmv.w.x ft1, a0
-; RV32D-NEXT:    #APP
-; RV32D-NEXT:    fadd.s ft0, ft1, ft0
-; RV32D-NEXT:    #NO_APP
-; RV32D-NEXT:    fmv.x.w a0, ft0
-; RV32D-NEXT:    ret
-;
-; RV64D-LABEL: constraint_f_float:
-; RV64D:       # %bb.0:
-; RV64D-NEXT:    lui a1, %hi(gf)
-; RV64D-NEXT:    flw ft0, %lo(gf)(a1)
-; RV64D-NEXT:    fmv.w.x ft1, a0
-; RV64D-NEXT:    #APP
-; RV64D-NEXT:    fadd.s ft0, ft1, ft0
-; RV64D-NEXT:    #NO_APP
-; RV64D-NEXT:    fmv.x.w a0, ft0
-; RV64D-NEXT:    ret
   %1 = load float, float* @gf
   %2 = tail call float asm "fadd.s $0, $1, $2", "=f,f,f"(float %a, float %1)
   ret float %2
@@ -81,34 +59,6 @@ define float @constraint_f_float_abi_name(float %a) nounwind {
 ; RV64F-NEXT:    #NO_APP
 ; RV64F-NEXT:    fmv.x.w a0, ft0
 ; RV64F-NEXT:    ret
-;
-; RV32D-LABEL: constraint_f_float_abi_name:
-; RV32D:       # %bb.0:
-; RV32D-NEXT:    lui a1, %hi(gf)
-; RV32D-NEXT:    flw ft0, %lo(gf)(a1)
-; RV32D-NEXT:    fmv.w.x ft1, a0
-; RV32D-NEXT:    fcvt.d.s fa0, ft1
-; RV32D-NEXT:    fcvt.d.s fs0, ft0
-; RV32D-NEXT:    #APP
-; RV32D-NEXT:    fadd.s ft0, fa0, fs0
-; RV32D-NEXT:    #NO_APP
-; RV32D-NEXT:    fcvt.s.d ft0, ft0
-; RV32D-NEXT:    fmv.x.w a0, ft0
-; RV32D-NEXT:    ret
-;
-; RV64D-LABEL: constraint_f_float_abi_name:
-; RV64D:       # %bb.0:
-; RV64D-NEXT:    lui a1, %hi(gf)
-; RV64D-NEXT:    flw ft0, %lo(gf)(a1)
-; RV64D-NEXT:    fmv.w.x ft1, a0
-; RV64D-NEXT:    fcvt.d.s fa0, ft1
-; RV64D-NEXT:    fcvt.d.s fs0, ft0
-; RV64D-NEXT:    #APP
-; RV64D-NEXT:    fadd.s ft0, fa0, fs0
-; RV64D-NEXT:    #NO_APP
-; RV64D-NEXT:    fcvt.s.d ft0, ft0
-; RV64D-NEXT:    fmv.x.w a0, ft0
-; RV64D-NEXT:    ret
   %1 = load float, float* @gf
   %2 = tail call float asm "fadd.s $0, $1, $2", "={ft0},{fa0},{fs0}"(float %a, float %1)
   ret float %2

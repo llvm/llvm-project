@@ -9969,12 +9969,18 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                         .Default(RISCV::NoRegister);
     if (FReg != RISCV::NoRegister) {
       assert(RISCV::F0_F <= FReg && FReg <= RISCV::F31_F && "Unknown fp-reg");
-      if (Subtarget.hasStdExtD()) {
+      if (Subtarget.hasStdExtD() && (VT == MVT::f64 || VT == MVT::Other)) {
         unsigned RegNo = FReg - RISCV::F0_F;
         unsigned DReg = RISCV::F0_D + RegNo;
         return std::make_pair(DReg, &RISCV::FPR64RegClass);
       }
-      return std::make_pair(FReg, &RISCV::FPR32RegClass);
+      if (VT == MVT::f32 || VT == MVT::Other)
+        return std::make_pair(FReg, &RISCV::FPR32RegClass);
+      if (Subtarget.hasStdExtZfh() && VT == MVT::f16) {
+        unsigned RegNo = FReg - RISCV::F0_F;
+        unsigned HReg = RISCV::F0_H + RegNo;
+        return std::make_pair(HReg, &RISCV::FPR16RegClass);
+      }
     }
   }
 
