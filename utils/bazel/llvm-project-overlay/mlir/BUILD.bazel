@@ -382,9 +382,11 @@ mlir_c_api_cc_library(
     srcs = [
         "lib/CAPI/Interfaces/Interfaces.cpp",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":IR",
         ":InferTypeOpInterface",
         "//llvm:Support",
@@ -398,15 +400,16 @@ mlir_c_api_cc_library(
         "lib/CAPI/Dialect/AsyncPasses.cpp",
     ],
     hdrs = ["include/mlir-c/Dialect/Async.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
         ":AsyncPassIncGen",
-        ":CAPIIRHeaders",
     ],
     includes = ["include"],
     deps = [
         ":Async",
         ":AsyncTransforms",
-        ":CAPIIR",
         ":Pass",
     ],
 )
@@ -420,13 +423,14 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/Linalg.h",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":LinalgPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":LinalgOps",
         ":LinalgTransforms",
         ":Pass",
@@ -441,12 +445,11 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/LLVM.h",
     ],
-    header_deps = [
-        ":CAPIIRHeaders",
+    capi_deps = [
+        ":CAPIIR",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":LLVMDialect",
     ],
 )
@@ -460,13 +463,14 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/GPU.h",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":GPUPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":GPUDialect",
         ":GPUTransforms",
         ":Pass",
@@ -482,13 +486,14 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/SparseTensor.h",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":SparseTensorPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":Pass",
         ":SparseTensor",
         ":SparseTensorTransforms",
@@ -504,12 +509,11 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/Quant.h",
     ],
-    header_deps = [
-        ":CAPIIRHeaders",
+    capi_deps = [
+        ":CAPIIR",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":QuantOps",
     ],
 )
@@ -538,13 +542,14 @@ mlir_c_api_cc_library(
     name = "CAPIConversion",
     srcs = ["lib/CAPI/Conversion/Passes.cpp"],
     hdrs = ["include/mlir-c/Conversion.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":ConversionPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":ConversionPasses",
         ":Pass",
     ],
@@ -554,12 +559,11 @@ mlir_c_api_cc_library(
     name = "CAPIDebug",
     srcs = ["lib/CAPI/Debug/Debug.cpp"],
     hdrs = ["include/mlir-c/Debug.h"],
-    header_deps = [
-        ":CAPIIRHeaders",
+    capi_deps = [
+        ":CAPIIR",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":Support",
         "//llvm:Support",
     ],
@@ -572,13 +576,14 @@ mlir_c_api_cc_library(
         "include/mlir-c/ExecutionEngine.h",
         "include/mlir/CAPI/ExecutionEngine.h",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":ExecutionEngine",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":ExecutionEngineUtils",
         ":LLVMToLLVMIRTranslation",
         "//llvm:OrcJIT",
@@ -590,13 +595,14 @@ mlir_c_api_cc_library(
     name = "CAPITransforms",
     srcs = ["lib/CAPI/Transforms/Passes.cpp"],
     hdrs = ["include/mlir-c/Transforms.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":TransformsPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":Pass",
         ":Transforms",
     ],
@@ -606,13 +612,12 @@ mlir_c_api_cc_library(
     name = "CAPIRegistration",
     srcs = ["lib/CAPI/Registration/Registration.cpp"],
     hdrs = ["include/mlir-c/Registration.h"],
-    header_deps = [
-        ":CAPIIRHeaders",
+    capi_deps = [
+        ":CAPIIR",
     ],
     includes = ["include"],
     deps = [
         ":AllPassesAndDialects",
-        ":CAPIIR",
         ":LLVMToLLVMIRTranslation",
     ],
 )
