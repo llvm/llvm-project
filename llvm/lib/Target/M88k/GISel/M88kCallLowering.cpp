@@ -256,8 +256,8 @@ bool M88kCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   auto &DL = F.getParent()->getDataLayout();
 
   // Setup virtual register to hold incoming return address register aka %r1.
-  Register ReturnAddrVReg =
-      getFunctionLiveInPhysReg(MF, TII, M88k::R1, M88k::GPRRCRegClass);
+  Register ReturnAddrVReg = getFunctionLiveInPhysReg(
+      MF, TII, M88k::R1, M88k::GPRRCRegClass, MIRBuilder.getDebugLoc());
   MRI.setType(ReturnAddrVReg, LLT::pointer(0, 32));
 
   auto MIB = MIRBuilder.buildInstrNoInsert(M88k::RET);
