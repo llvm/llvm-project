@@ -81,7 +81,7 @@ static void addLLCOptArg(const llvm::opt::ArgList &Args,
         A->getOption().matches(options::OPT_Ofast))
       OOpt = "3";
     else if (A->getOption().matches(options::OPT_O0))
-      OOpt = IsLlc ? "2" : "0"; // llc fails at O0 for OpenMP kernels
+      OOpt = "0";
     else if (A->getOption().matches(options::OPT_O)) {
       // Clang and opt support -Os/-Oz; llc only supports -O0, -O1, -O2 and -O3
       // so we map -Os/-Oz to -O2.
