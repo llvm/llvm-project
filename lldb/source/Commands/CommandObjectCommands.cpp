@@ -485,8 +485,9 @@ protected:
     OptionArgVectorSP option_arg_vector_sp =
         OptionArgVectorSP(new OptionArgVector);
 
-    if (CommandObjectSP cmd_obj_sp =
-            m_interpreter.GetCommandSPExact(cmd_obj.GetCommandName())) {
+    const bool include_aliases = true;
+    if (CommandObjectSP cmd_obj_sp = m_interpreter.GetCommandSPExact(
+            cmd_obj.GetCommandName(), include_aliases)) {
       if (m_interpreter.AliasExists(alias_command) ||
           m_interpreter.UserCommandExists(alias_command)) {
         result.AppendWarningWithFormat(
