@@ -96,7 +96,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr const _Iter& base() const& { return __current_; }
+  constexpr const _Iter& base() const& noexcept { return __current_; }
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr _Iter base() && { return _VSTD::move(__current_); }
