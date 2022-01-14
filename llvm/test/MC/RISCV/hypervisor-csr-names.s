@@ -373,3 +373,63 @@ csrrs t2, 0x244, zero
 csrrs t1, vsatp, zero
 # uimm12
 csrrs t2, 0x280, zero
+
+#########################################
+# State Enable Extension (Smstateen)
+#########################################
+
+# hstateen0
+# name
+# CHECK-INST: csrrs t1, hstateen0, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xc0,0x60]
+# CHECK-INST-ALIAS: csrr t1, hstateen0
+# uimm12
+# CHECK-INST: csrrs t2, hstateen0, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xc0,0x60]
+# CHECK-INST-ALIAS: csrr t2, hstateen0
+# name
+csrrs t1, hstateen0, zero
+# uimm12
+csrrs t2, 0x60C, zero
+
+# hstateen1
+# name
+# CHECK-INST: csrrs t1, hstateen1, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x60]
+# CHECK-INST-ALIAS: csrr t1, hstateen1
+# uimm12
+# CHECK-INST: csrrs t2, hstateen1, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x60]
+# CHECK-INST-ALIAS: csrr t2, hstateen1
+# name
+csrrs t1, hstateen1, zero
+# uimm12
+csrrs t2, 0x60D, zero
+
+# hstateen2
+# name
+# CHECK-INST: csrrs t1, hstateen2, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x60]
+# CHECK-INST-ALIAS: csrr t1, hstateen2
+# uimm12
+# CHECK-INST: csrrs t2, hstateen2, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x60]
+# CHECK-INST-ALIAS: csrr t2, hstateen2
+# name
+csrrs t1, hstateen2, zero
+# uimm12
+csrrs t2, 0x60E, zero
+
+# hstateen3
+# name
+# CHECK-INST: csrrs t1, hstateen3, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x60]
+# CHECK-INST-ALIAS: csrr t1, hstateen3
+# uimm12
+# CHECK-INST: csrrs t2, hstateen3, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x60]
+# CHECK-INST-ALIAS: csrr t2, hstateen3
+# name
+csrrs t1, hstateen3, zero
+# uimm12
+csrrs t2, 0x60F, zero
