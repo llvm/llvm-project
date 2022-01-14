@@ -1199,7 +1199,7 @@ Currently, only the following parameter attributes are defined:
 
     The ``elementtype`` argument attribute can be used to specify a pointer
     element type in a way that is compatible with `opaque pointers
-    <OpaquePointers.html>`_.
+    <OpaquePointers.html>`__.
 
     The ``elementtype`` attribute by itself does not carry any specific
     semantics. However, certain intrinsics may require this attribute to be

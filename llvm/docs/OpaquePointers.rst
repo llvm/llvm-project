@@ -202,6 +202,6 @@ still some major open problems:
   pointers.
 
 * Loop access analysis does not support opaque pointers yet, and is currently
-  the main source of assertion failurse in optimized builds.
+  the main source of assertion failures in optimized builds.
 
 * Miscellanous uses of pointer element types remain everywhere.
