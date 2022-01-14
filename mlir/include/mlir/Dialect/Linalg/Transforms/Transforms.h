@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
-#define DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
+#ifndef MLIR_DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H
+#define MLIR_DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -1390,4 +1390,4 @@ public:
 } // namespace linalg
 } // namespace mlir
 
-#endif // DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
+#endif // MLIR_DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_AFFINE_ANALYSIS_H
-#define MLIR_ANALYSIS_AFFINE_ANALYSIS_H
+#ifndef MLIR_ANALYSIS_AFFINEANALYSIS_H
+#define MLIR_ANALYSIS_AFFINEANALYSIS_H
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -185,4 +185,4 @@ void getDependenceComponents(
 
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_AFFINE_ANALYSIS_H
+#endif // MLIR_ANALYSIS_AFFINEANALYSIS_H

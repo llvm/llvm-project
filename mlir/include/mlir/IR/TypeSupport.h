@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_TYPE_SUPPORT_H
-#define MLIR_IR_TYPE_SUPPORT_H
+#ifndef MLIR_IR_TYPESUPPORT_H
+#define MLIR_IR_TYPESUPPORT_H
 
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/StorageUniquerSupport.h"

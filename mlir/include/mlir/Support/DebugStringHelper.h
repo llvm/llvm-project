@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DEBUGSTRINGHELPER_H_
-#define MLIR_DEBUGSTRINGHELPER_H_
+#ifndef MLIR_SUPPORT_DEBUGSTRINGHELPER_H
+#define MLIR_SUPPORT_DEBUGSTRINGHELPER_H
 
 #include <string>
 
@@ -40,4 +40,4 @@ inline std::ostream &operator<<(std::ostream &out, const llvm::Twine &twine) {
   return out;
 }
 
-#endif // MLIR_DEBUGSTRINGHELPER_H_
+#endif // MLIR_SUPPORT_DEBUGSTRINGHELPER_H

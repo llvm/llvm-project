@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TUTORIAL_TOY_AST_H_
-#define MLIR_TUTORIAL_TOY_AST_H_
+#ifndef TOY_AST_H
+#define TOY_AST_H
 
 #include "toy/Lexer.h"
 
@@ -239,4 +239,4 @@ void dump(ModuleAST &);
 
 } // namespace toy
 
-#endif // MLIR_TUTORIAL_TOY_AST_H_
+#endif // TOY_AST_H

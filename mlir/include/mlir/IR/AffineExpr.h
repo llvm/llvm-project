@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_AFFINE_EXPR_H
-#define MLIR_IR_AFFINE_EXPR_H
+#ifndef MLIR_IR_AFFINEEXPR_H
+#define MLIR_IR_AFFINEEXPR_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -361,4 +361,4 @@ struct DenseMapInfo<mlir::AffineExpr> {
 
 } // namespace llvm
 
-#endif // MLIR_IR_AFFINE_EXPR_H
+#endif // MLIR_IR_AFFINEEXPR_H

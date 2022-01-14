@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_PATTERNMATCHER_H
-#define MLIR_PATTERNMATCHER_H
+#ifndef MLIR_IR_PATTERNMATCH_H
+#define MLIR_IR_PATTERNMATCH_H
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -1091,4 +1091,4 @@ private:
 
 } // namespace mlir
 
-#endif // MLIR_PATTERN_MATCH_H
+#endif // MLIR_IR_PATTERNMATCH_H

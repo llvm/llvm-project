@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_VECTOR_VECTORREWRITEPATTERNS_H_
-#define DIALECT_VECTOR_VECTORREWRITEPATTERNS_H_
+#ifndef MLIR_DIALECT_VECTOR_VECTORREWRITEPATTERNS_H
+#define MLIR_DIALECT_VECTOR_VECTORREWRITEPATTERNS_H
 
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
@@ -504,4 +504,4 @@ private:
 } // namespace vector
 } // namespace mlir
 
-#endif // DIALECT_VECTOR_VECTORREWRITEPATTERNS_H_
+#endif // MLIR_DIALECT_VECTOR_VECTORREWRITEPATTERNS_H

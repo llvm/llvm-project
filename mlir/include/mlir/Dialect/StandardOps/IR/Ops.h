@@ -42,4 +42,4 @@ class PatternRewriter;
 
 #include "mlir/Dialect/StandardOps/IR/OpsDialect.h.inc"
 
-#endif // MLIR_DIALECT_IR_STANDARDOPS_IR_OPS_H
+#endif // MLIR_DIALECT_STANDARDOPS_IR_OPS_H

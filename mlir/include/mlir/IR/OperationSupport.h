@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_IR_OPERATION_SUPPORT_H
-#define MLIR_IR_OPERATION_SUPPORT_H
+#ifndef MLIR_IR_OPERATIONSUPPORT_H
+#define MLIR_IR_OPERATIONSUPPORT_H
 
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"

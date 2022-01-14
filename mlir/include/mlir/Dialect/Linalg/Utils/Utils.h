@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_UTILS_H_
-#define MLIR_DIALECT_LINALG_UTILS_H_
+#ifndef MLIR_DIALECT_LINALG_UTILS_UTILS_H
+#define MLIR_DIALECT_LINALG_UTILS_UTILS_H
 
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -431,4 +431,4 @@ struct GenerateLoopNest {
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_UTILS_H_
+#endif // MLIR_DIALECT_LINALG_UTILS_UTILS_H

@@ -15,8 +15,8 @@
 // Pybind-based internals of the core libraries).
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_BINDINGS_PYTHON_PYBIND_ADAPTORS_H
-#define MLIR_BINDINGS_PYTHON_PYBIND_ADAPTORS_H
+#ifndef MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H
+#define MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H
 
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -423,4 +423,4 @@ public:
 } // namespace python
 } // namespace mlir
 
-#endif // MLIR_BINDINGS_PYTHON_PYBIND_ADAPTORS_H
+#endif // MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H

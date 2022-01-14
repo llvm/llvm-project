@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TOOLS_PDLL_AST_DIAGNOSTICS_H_
-#define MLIR_TOOLS_PDLL_AST_DIAGNOSTICS_H_
+#ifndef MLIR_TOOLS_PDLL_AST_DIAGNOSTIC_H
+#define MLIR_TOOLS_PDLL_AST_DIAGNOSTIC_H
 
 #include <string>
 
@@ -179,4 +179,4 @@ private:
 } // namespace pdll
 } // namespace mlir
 
-#endif // MLIR_TOOLS_PDLL_AST_DIAGNOSTICS_H_
+#endif // MLIR_TOOLS_PDLL_AST_DIAGNOSTIC_H

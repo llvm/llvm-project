@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EXECUTIONENGINE_CRUNNERUTILS_H_
-#define EXECUTIONENGINE_CRUNNERUTILS_H_
+#ifndef MLIR_EXECUTIONENGINE_CRUNNERUTILS_H
+#define MLIR_EXECUTIONENGINE_CRUNNERUTILS_H
 
 #ifdef _WIN32
 #ifndef MLIR_CRUNNERUTILS_EXPORT
@@ -356,4 +356,4 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_flops(double flops);
 extern "C" MLIR_CRUNNERUTILS_EXPORT double rtclock();
 
-#endif // EXECUTIONENGINE_CRUNNERUTILS_H_
+#endif // MLIR_EXECUTIONENGINE_CRUNNERUTILS_H

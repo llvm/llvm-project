@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_TRAITS
-#define MLIR_DIALECT_TRAITS
+#ifndef MLIR_DIALECT_TRAITS_H
+#define MLIR_DIALECT_TRAITS_H
 
 #include "mlir/IR/OpDefinition.h"
 
@@ -96,4 +96,4 @@ public:
 } // namespace OpTrait
 } // namespace mlir
 
-#endif // MLIR_DIALECT_TRAITS
+#endif // MLIR_DIALECT_TRAITS_H

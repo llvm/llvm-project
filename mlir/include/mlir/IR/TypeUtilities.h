@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_SUPPORT_TYPEUTILITIES_H
-#define MLIR_SUPPORT_TYPEUTILITIES_H
+#ifndef MLIR_IR_TYPEUTILITIES_H
+#define MLIR_IR_TYPEUTILITIES_H
 
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/STLExtras.h"
@@ -99,4 +99,4 @@ using ResultElementTypeRange = iterator_range<ResultElementTypeIterator>;
 
 } // namespace mlir
 
-#endif // MLIR_SUPPORT_TYPEUTILITIES_H
+#endif // MLIR_IR_TYPEUTILITIES_H
