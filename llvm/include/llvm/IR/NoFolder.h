@@ -54,6 +54,11 @@ public:
     return nullptr;
   }
 
+  Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                 bool IsInBounds = false) const override {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -177,46 +182,6 @@ public:
   Instruction *CreateUnOp(Instruction::UnaryOps Opc,
                           Constant *C) const override {
     return UnaryOperator::Create(Opc, C);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Memory Instructions
-  //===--------------------------------------------------------------------===//
-
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                ArrayRef<Constant *> IdxList) const override {
-    return ConstantExpr::getGetElementPtr(Ty, C, IdxList);
-  }
-
-  Constant *CreateGetElementPtr(Type *Ty, Constant *C,
-                                Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return ConstantExpr::getGetElementPtr(Ty, C, Idx);
-  }
-
-  Instruction *CreateGetElementPtr(Type *Ty, Constant *C,
-                                   ArrayRef<Value *> IdxList) const override {
-    return GetElementPtrInst::Create(Ty, C, IdxList);
-  }
-
-  Constant *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Constant *> IdxList) const override {
-    return ConstantExpr::getInBoundsGetElementPtr(Ty, C, IdxList);
-  }
-
-  Constant *CreateInBoundsGetElementPtr(Type *Ty, Constant *C,
-                                        Constant *Idx) const override {
-    // This form of the function only exists to avoid ambiguous overload
-    // warnings about whether to convert Idx to ArrayRef<Constant *> or
-    // ArrayRef<Value *>.
-    return ConstantExpr::getInBoundsGetElementPtr(Ty, C, Idx);
-  }
-
-  Instruction *CreateInBoundsGetElementPtr(
-      Type *Ty, Constant *C, ArrayRef<Value *> IdxList) const override {
-    return GetElementPtrInst::CreateInBounds(Ty, C, IdxList);
   }
 
   //===--------------------------------------------------------------------===//
