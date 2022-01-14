@@ -159,7 +159,7 @@ func @simple_tensor_test(%t1 : tensor<?xf32>, %f : f32) -> tensor<?xf32> {
   // CHECK-TENSOR: %[[alloc:.*]] = memref.alloc
   // CHECK-TENSOR: %[[casted:.*]] = memref.cast %[[alloc]]
   // CHECK-TENSOR: %[[casted_tensor:.*]] = bufferization.to_tensor %[[casted]]
-  // CHECK-TENSOR: memref.copy %[[t1_memref]], %[[casted]]
+  // CHECK-TENSOR: memref.copy %[[t1_memref]], %[[alloc]]
   // CHECK-TENSOR: memref.store %{{.*}}, %[[alloc]]
   %0 = tensor.insert %f into %t1[%c0] : tensor<?xf32>
   // CHECK-TENSOR: return %[[casted_tensor]]
@@ -177,7 +177,7 @@ func @simple_scf_for(
   // CHECK-SCF: %[[t1_memref:.*]] = bufferization.to_memref %[[t1]]
   // CHECK-SCF: %[[alloc:.*]] = memref.alloc
   // CHECK-SCF: %[[casted:.*]] = memref.cast %[[alloc]]
-  // CHECK-SCF: memref.copy %[[t1_memref]], %[[casted]]
+  // CHECK-SCF: memref.copy %[[t1_memref]], %[[alloc]]
   // CHECK-SCF: %[[scf_for:.*]] = scf.for %[[iv:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[arg0:.*]] = %[[casted]]) -> ({{.*}}) {
   %0 = scf.for %iv = %c0 to %sz step %step iter_args(%arg0 = %t1) -> tensor<?xf32> {
     // CHECK-SCF: %[[arg0_tensor:.*]] = bufferization.to_tensor %[[arg0]]
