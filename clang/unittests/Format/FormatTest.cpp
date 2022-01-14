@@ -2157,7 +2157,7 @@ TEST_F(FormatTest, ForEachLoops) {
                "  foreach (Item *item, itemlist) {}\n"
                "  Q_FOREACH (Item *item, itemlist) {}\n"
                "  BOOST_FOREACH (Item *item, itemlist) {}\n"
-               "  UNKNOWN_FORACH(Item * item, itemlist) {}\n"
+               "  UNKNOWN_FOREACH(Item * item, itemlist) {}\n"
                "}");
 
   FormatStyle Style = getLLVMStyle();
@@ -2167,7 +2167,7 @@ TEST_F(FormatTest, ForEachLoops) {
                "  foreach(Item *item, itemlist) {}\n"
                "  Q_FOREACH(Item *item, itemlist) {}\n"
                "  BOOST_FOREACH(Item *item, itemlist) {}\n"
-               "  UNKNOWN_FORACH(Item * item, itemlist) {}\n"
+               "  UNKNOWN_FOREACH(Item * item, itemlist) {}\n"
                "}",
                Style);
 
