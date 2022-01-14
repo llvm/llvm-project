@@ -622,14 +622,15 @@ bool AMDGPUInstPrinter::needsVccMods(const MCInstrDesc &Desc,
 void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
+  unsigned Opc = MI->getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+  int ModIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
   // 0, 1 and 2 are the first printed operands in different cases
   // If there are printed modifiers, printOperandAndFPInputMods or
   // printOperandAndIntInputMods will be called instead
   if ((OpNo == 0 ||
        (OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP)) ||
-       (OpNo == 2 && (Desc.TSFlags & SIInstrFlags::DPP) &&
-        (Desc.hasImplicitUseOfPhysReg(AMDGPU::MODE)))) &&
+       (OpNo == 2 && (Desc.TSFlags & SIInstrFlags::DPP) && ModIdx != -1)) &&
       (Desc.TSFlags & SIInstrFlags::VOPC) &&
       (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
        Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO)))
