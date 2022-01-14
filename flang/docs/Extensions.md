@@ -197,6 +197,8 @@ end
 * External unit 0 is predefined and connected to the standard error output,
   and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
 * Objects in blank COMMON may be initialized.
+* Multiple specifications of the SAVE attribute on the same object
+  are allowed, with a warning.
 
 ### Extensions supported when enabled by options
 
