@@ -2494,6 +2494,10 @@ OpenMPIRBuilder::createOrderedDepend(const LocationDescription &Loc,
                                      InsertPointTy AllocaIP, unsigned NumLoops,
                                      ArrayRef<llvm::Value *> StoreValues,
                                      const Twine &Name, bool IsDependSource) {
+  for (size_t I = 0; I < StoreValues.size(); I++)
+    assert(StoreValues[I]->getType()->isIntegerTy(64) &&
+           "OpenMP runtime requires depend vec with i64 type");
+
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -2508,7 +2512,8 @@ OpenMPIRBuilder::createOrderedDepend(const LocationDescription &Loc,
   for (unsigned I = 0; I < NumLoops; ++I) {
     Value *DependAddrGEPIter = Builder.CreateInBoundsGEP(
         ArrI64Ty, ArgsBase, {Builder.getInt64(0), Builder.getInt64(I)});
-    Builder.CreateStore(StoreValues[I], DependAddrGEPIter);
+    StoreInst *STInst = Builder.CreateStore(StoreValues[I], DependAddrGEPIter);
+    STInst->setAlignment(Align(8));
   }
 
   Value *DependBaseAddrGEP = Builder.CreateInBoundsGEP(
