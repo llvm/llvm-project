@@ -256,6 +256,15 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "int j;\n"
                                     "};}",
                                     CompactNamespacesStyle));
+  EXPECT_EQ("namespace out { namespace {\n"
+            "int i;\n"
+            "int j;\n"
+            "}}// namespace out",
+            fixNamespaceEndComments("namespace out { namespace {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}}",
+                                    CompactNamespacesStyle));
 
   // Adds an end comment after a semicolon.
   EXPECT_EQ("namespace {\n"
@@ -608,6 +617,11 @@ TEST_F(NamespaceEndCommentsFixerTest, UpdatesInvalidEndLineComment) {
             fixNamespaceEndComments("namespace out { namespace in {\n"
                                     "}// banamespace in\n"
                                     "} // namespace out",
+                                    CompactNamespacesStyle));
+  EXPECT_EQ("namespace out { namespace {\n"
+            "}} // namespace out",
+            fixNamespaceEndComments("namespace out { namespace {\n"
+                                    "}} // namespace out::",
                                     CompactNamespacesStyle));
 }
 

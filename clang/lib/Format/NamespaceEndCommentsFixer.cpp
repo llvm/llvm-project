@@ -261,7 +261,8 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
           updateEndComment(EndCommentPrevTok, std::string(), SourceMgr, &Fixes);
         }
         ++CompactedNamespacesCount;
-        AllNamespaceNames = "::" + NamespaceName + AllNamespaceNames;
+        if (!NamespaceName.empty())
+          AllNamespaceNames = "::" + NamespaceName + AllNamespaceNames;
         continue;
       }
       NamespaceName += AllNamespaceNames;
