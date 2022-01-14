@@ -477,7 +477,7 @@ void TSPReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
   // Define final function layout based on layout that maximizes weight
   uint64_t Last = BestLast;
   uint64_t Set = BestSet;
-  std::vector<bool> Visited;
+  BitVector Visited;
   Visited.resize(N);
   Visited[Last] = true;
   Order.push_back(IndexToBB[Last]);

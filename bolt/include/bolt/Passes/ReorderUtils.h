@@ -142,7 +142,7 @@ public:
 private:
   size_t Size;
   std::vector<ValueType> Cache;
-  std::vector<bool> Valid;
+  BitVector Valid;
 
   size_t index(const Cluster *First, const Cluster *Second) const {
     return (First->id() * Size) + Second->id();
