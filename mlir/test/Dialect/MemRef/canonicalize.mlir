@@ -525,3 +525,13 @@ func @copy_of_cast(%m1: memref<?xf32>, %m2: memref<*xf32>) {
 //  CHECK-SAME:     %[[m1:.*]]: memref<?xf32>, %[[m2:.*]]: memref<*xf32>
 //       CHECK:   %[[casted2:.*]] = memref.cast %[[m2]]
 //       CHECK:   memref.copy %[[m1]], %[[casted2]]
+
+// -----
+
+func @self_copy(%m1: memref<?xf32>) {
+  memref.copy %m1, %m1 : memref<?xf32> to memref<?xf32>
+  return
+}
+
+// CHECK-LABEL: func @self_copy
+//  CHECK-NEXT:   return

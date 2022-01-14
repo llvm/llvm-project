@@ -486,11 +486,25 @@ struct FoldCopyOfCast : public OpRewritePattern<CopyOp> {
     return success(modified);
   }
 };
+
+/// Fold memref.copy(%x, %x).
+struct FoldSelfCopy : public OpRewritePattern<CopyOp> {
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CopyOp copyOp,
+                                PatternRewriter &rewriter) const override {
+    if (copyOp.source() != copyOp.target())
+      return failure();
+
+    rewriter.eraseOp(copyOp);
+    return success();
+  }
+};
 } // namespace
 
 void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldCopyOfCast>(context);
+  results.add<FoldCopyOfCast, FoldSelfCopy>(context);
 }
 
 //===----------------------------------------------------------------------===//
