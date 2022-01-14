@@ -27,9 +27,9 @@ llvm::ArrayRef<DiagnosticRecord> diagtool::getBuiltinDiagnosticsByName() {
 // FIXME: Is it worth having two tables, especially when this one can get
 // out of sync easily?
 static const DiagnosticRecord BuiltinDiagnosticsByID[] = {
-#define DIAG(ENUM,CLASS,DEFAULT_MAPPING,DESC,GROUP,               \
-             SFINAE,NOWERROR,SHOWINSYSHEADER,DEFER,CATEGORY)            \
-  { #ENUM, diag::ENUM, STR_SIZE(#ENUM, uint8_t) },
+#define DIAG(ENUM, CLASS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFER, CATEGORY)                 \
+  {#ENUM, diag::ENUM, STR_SIZE(#ENUM, uint8_t)},
 #include "clang/Basic/DiagnosticCommonKinds.inc"
 #include "clang/Basic/DiagnosticCrossTUKinds.inc"
 #include "clang/Basic/DiagnosticDriverKinds.inc"

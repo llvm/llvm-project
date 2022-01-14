@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
+#include <utility>
 
 namespace llvm {
 class RecordKeeper;
@@ -30,7 +31,7 @@ public:
   /// GenInfo constructor should not be invoked directly, instead use
   /// GenRegistration or registerGen.
   GenInfo(StringRef arg, StringRef description, GenFunction generator)
-      : arg(arg), description(description), generator(generator) {}
+      : arg(arg), description(description), generator(std::move(generator)) {}
 
   /// Invokes the generator and returns whether the generator failed.
   bool invoke(const llvm::RecordKeeper &recordKeeper, raw_ostream &os) const {

@@ -771,6 +771,17 @@ TEST(DiagnosticsTest, NoFixItInMacro) {
                                 Not(WithFix(_)))));
 }
 
+TEST(DiagnosticsTest, PragmaSystemHeader) {
+  Annotations Test("#pragma clang [[system_header]]\n");
+  auto TU = TestTU::withCode(Test.code());
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      ElementsAre(AllOf(
+          Diag(Test.range(), "#pragma system_header ignored in main file"))));
+  TU.Filename = "TestTU.h";
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+}
+
 TEST(ClangdTest, MSAsm) {
   // Parsing MS assembly tries to use the target MCAsmInfo, which we don't link.
   // We used to crash here. Now clang emits a diagnostic, which we filter out.

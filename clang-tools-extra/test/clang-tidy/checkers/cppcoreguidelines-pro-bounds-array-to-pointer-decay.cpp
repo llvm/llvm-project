@@ -49,3 +49,14 @@ void bug25362() {
   void *a[2];
   f2(static_cast<void *const*>(a)); // OK, explicit cast
 }
+
+void issue31155(int i) {
+  const char *a = i ? "foo" : "bar";    // OK, decay string literal to pointer
+  const char *b = i ? "foo" : "foobar"; // OK, decay string literal to pointer
+
+  char arr[1];
+  const char *c = i ? arr : "bar";
+  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: do not implicitly decay an array into a pointer
+  const char *d = i ? "foo" : arr;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: do not implicitly decay an array into a pointer
+}

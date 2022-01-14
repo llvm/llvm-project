@@ -195,6 +195,8 @@ public:
     addDirectiveHandler<&DarwinAsmParser::parseMacOSXVersionMin>(
       ".macosx_version_min");
     addDirectiveHandler<&DarwinAsmParser::parseBuildVersion>(".build_version");
+    addDirectiveHandler<&DarwinAsmParser::parseDirectiveCGProfile>(
+        ".cg_profile");
 
     LastVersionDirective = SMLoc();
   }
@@ -467,6 +469,7 @@ public:
   bool parseSDKVersion(VersionTuple &SDKVersion);
   void checkVersion(StringRef Directive, StringRef Arg, SMLoc Loc,
                     Triple::OSType ExpectedOS);
+  bool parseDirectiveCGProfile(StringRef Directive, SMLoc Loc);
 };
 
 } // end anonymous namespace
@@ -1142,6 +1145,8 @@ bool DarwinAsmParser::parseVersionMin(StringRef Directive, SMLoc Loc,
 
 static Triple::OSType getOSTypeFromPlatform(MachO::PlatformType Type) {
   switch (Type) {
+  case MachO::PLATFORM_UNKNOWN: /* silence warning */
+    break;
   case MachO::PLATFORM_MACOS:   return Triple::MacOSX;
   case MachO::PLATFORM_IOS:     return Triple::IOS;
   case MachO::PLATFORM_TVOS:    return Triple::TvOS;
@@ -1198,6 +1203,11 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
+/// parseDirectiveCGProfile
+///   ::= .cg_profile from, to, count
+bool DarwinAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
+  return MCAsmParserExtension::ParseDirectiveCGProfile(S, Loc);
+}
 
 namespace llvm {
 

@@ -66,3 +66,11 @@ _add_capi_test_executable(mlir-capi-quant-test
     MLIRCAPIRegistration
     MLIRCAPIQuant
 )
+
+_add_capi_test_executable(mlir-capi-pdl-test
+  pdl.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegistration
+    MLIRCAPIPDL
+)

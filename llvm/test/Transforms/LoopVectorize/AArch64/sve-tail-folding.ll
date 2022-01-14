@@ -570,10 +570,10 @@ define i32 @add_reduction_i32(i32* %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[TMP11]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* [[TMP12]], i32 4, <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP13]] = add <vscale x 4 x i32> [[VEC_PHI]], [[WIDE_MASKED_LOAD]]
+; CHECK-NEXT:    [[TMP16:%.*]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> [[TMP13]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP14]], 4
 ; CHECK-NEXT:    [[INDEX_NEXT2]] = add i64 [[INDEX1]], [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i32> [[TMP13]], <vscale x 4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %middle.block, label %vector.body, !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:

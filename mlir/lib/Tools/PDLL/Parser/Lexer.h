@@ -130,7 +130,7 @@ public:
   }
 
   /// Return if the token has the given kind.
-  bool is(Kind K) const { return kind == K; }
+  bool is(Kind k) const { return kind == k; }
 
   /// Return a location for the start of this token.
   llvm::SMLoc getStartLoc() const {

@@ -41,7 +41,7 @@ class ShapedTypeComponents {
 
 public:
   /// Default construction is an unranked shape.
-  ShapedTypeComponents() : elementType(nullptr), attr(nullptr), ranked(false){};
+  ShapedTypeComponents() : elementType(nullptr), attr(nullptr){};
   ShapedTypeComponents(Type elementType)
       : elementType(elementType), attr(nullptr), ranked(false) {}
   ShapedTypeComponents(ShapedType shapedType) : attr(nullptr) {
@@ -83,7 +83,7 @@ private:
   ShapeStorageT dims;
   Type elementType;
   Attribute attr;
-  bool ranked;
+  bool ranked{false};
 };
 
 /// Adaptor class to abstract the differences between whether value is from

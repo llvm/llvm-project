@@ -40,7 +40,7 @@ static IntegerAttr subIntegerAttrs(PatternRewriter &builder, Value res,
 }
 
 /// Invert an integer comparison predicate.
-static arith::CmpIPredicate invertPredicate(arith::CmpIPredicate pred) {
+arith::CmpIPredicate arith::invertPredicate(arith::CmpIPredicate pred) {
   switch (pred) {
   case arith::CmpIPredicate::eq:
     return arith::CmpIPredicate::ne;
@@ -1298,6 +1298,12 @@ OpFoldResult arith::CmpFOp::fold(ArrayRef<Attribute> operands) {
 
   auto lhs = operands.front().dyn_cast_or_null<FloatAttr>();
   auto rhs = operands.back().dyn_cast_or_null<FloatAttr>();
+
+  // If one operand is NaN, making them both NaN does not change the result.
+  if (lhs && lhs.getValue().isNaN())
+    rhs = lhs;
+  if (rhs && rhs.getValue().isNaN())
+    lhs = rhs;
 
   if (!lhs || !rhs)
     return {};

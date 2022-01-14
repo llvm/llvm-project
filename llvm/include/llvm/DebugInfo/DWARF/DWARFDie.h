@@ -470,6 +470,10 @@ inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
   return std::make_reverse_iterator(begin());
 }
 
+void dumpTypeQualifiedName(const DWARFDie &DIE, raw_ostream &OS);
+void dumpTypeUnqualifiedName(const DWARFDie &DIE, raw_ostream &OS,
+                             std::string *OriginalFullName = nullptr);
+
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_DWARF_DWARFDIE_H

@@ -25,7 +25,7 @@ namespace {
 
 struct TosaOptionalDecompositions
     : public TosaOptionalDecompositionsBase<TosaOptionalDecompositions> {
-  void runOnFunction() {
+  void runOnFunction() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     auto func = getFunction();

@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_NATIVEPDB_SYMBOLFILENATIVEPDB_H
 
+#include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolFile.h"
 
 #include "llvm/ADT/DenseMap.h"
@@ -161,6 +162,25 @@ public:
   void DumpClangAST(Stream &s) override;
 
 private:
+  struct LineTableEntryComparator {
+    bool operator()(const lldb_private::LineTable::Entry &lhs,
+                    const lldb_private::LineTable::Entry &rhs) const {
+      return lhs.file_addr < rhs.file_addr;
+    }
+  };
+
+  // From address range relative to function base to source line number.
+  using RangeSourceLineVector =
+      lldb_private::RangeDataVector<uint32_t, uint32_t, int32_t>;
+  // InlineSite contains information in a S_INLINESITE record.
+  struct InlineSite {
+    PdbCompilandSymId parent_id;
+    std::shared_ptr<InlineFunctionInfo> inline_function_info;
+    RangeSourceLineVector ranges;
+    std::vector<lldb_private::LineTable::Entry> line_entries;
+    InlineSite(PdbCompilandSymId parent_id) : parent_id(parent_id){};
+  };
+
   uint32_t CalculateNumCompileUnits() override;
 
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
@@ -225,6 +245,16 @@ private:
                                       VariableList &variables);
   size_t ParseVariablesForBlock(PdbCompilandSymId block_id);
 
+  llvm::Expected<uint32_t> GetFileIndex(const CompilandIndexItem &cii,
+                                        uint32_t file_id);
+
+  size_t ParseSymbolArrayInScope(
+      PdbCompilandSymId parent,
+      llvm::function_ref<bool(llvm::codeview::SymbolKind, PdbCompilandSymId)>
+          fn);
+
+  void ParseInlineSite(PdbCompilandSymId inline_site_id, Address func_addr);
+
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;
@@ -241,6 +271,9 @@ private:
   llvm::DenseMap<lldb::user_id_t, lldb::FunctionSP> m_functions;
   llvm::DenseMap<lldb::user_id_t, lldb::CompUnitSP> m_compilands;
   llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;
+  llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
+  // A map from file id in records to file index in support files.
+  llvm::DenseMap<uint32_t, uint32_t> m_file_indexes;
 };
 
 } // namespace npdb

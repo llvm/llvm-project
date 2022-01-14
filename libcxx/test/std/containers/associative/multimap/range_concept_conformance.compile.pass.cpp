@@ -27,7 +27,7 @@ static_assert(!std::ranges::view<range>);
 static_assert(!std::ranges::random_access_range<range>);
 static_assert(std::ranges::sized_range<range>);
 static_assert(!std::ranges::borrowed_range<range>);
-static_assert(!std::ranges::viewable_range<range>);
+static_assert(std::ranges::viewable_range<range>);
 
 static_assert(std::same_as<std::ranges::iterator_t<range const>, range::const_iterator>);
 static_assert(std::ranges::common_range<range const>);

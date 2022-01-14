@@ -165,7 +165,7 @@ void format_test_string(T world, T universe, TestFunction check,
       STR("hello {:{}}"), world, -1);
   check_exception(
       "A format-spec arg-id replacement exceeds the maximum supported value",
-      STR("hello {:{}}"), world, -1u);
+      STR("hello {:{}}"), world, unsigned(-1));
   check_exception("Argument index out of bounds", STR("hello {:{}}"), world);
   check_exception(
       "A format-spec arg-id replacement argument isn't an integral type",
@@ -201,7 +201,7 @@ void format_test_string(T world, T universe, TestFunction check,
       STR("hello {:.{}}"), world, -1);
   check_exception(
       "A format-spec arg-id replacement exceeds the maximum supported value",
-      STR("hello {:.{}}"), world, -1u);
+      STR("hello {:.{}}"), world, ~0u);
   check_exception("Argument index out of bounds", STR("hello {:.{}}"), world);
   check_exception(
       "A format-spec arg-id replacement argument isn't an integral type",

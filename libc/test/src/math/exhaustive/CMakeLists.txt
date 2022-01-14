@@ -1,5 +1,15 @@
 add_libc_exhaustive_testsuite(libc_math_exhaustive_tests)
 
+add_object_library(
+  exhaustive_test
+  HDRS
+    exhaustive_test.h
+  SRCS
+    exhaustive_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.standalone_cpp
+)
+
 add_fp_unittest(
   sqrtf_test
   NEED_MPFR
@@ -54,13 +64,17 @@ add_fp_unittest(
 
 add_fp_unittest(
   logf_test
+  NO_RUN_POSTBUILD
   NEED_MPFR
   SUITE
     libc_math_exhaustive_tests
   SRCS
     logf_test.cpp
   DEPENDS
+    .exhaustive_test
     libc.include.math
     libc.src.math.logf
     libc.src.__support.FPUtil.fputil
+  LINK_OPTIONS
+    -lpthread
 )

@@ -162,7 +162,7 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
   llvm::SmallVector<mlir::NamedAttribute> attrs;
   if (asTarget)
     attrs.emplace_back(
-        mlir::Identifier::get(fir::getTargetAttrName(), getContext()),
+        mlir::StringAttr::get(getContext(), fir::getTargetAttrName()),
         getUnitAttr());
   // Create the local variable.
   if (name.empty()) {
@@ -298,9 +298,9 @@ fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,
                                                       llvm::StringRef data) {
   auto type = fir::CharacterType::get(getContext(), 1, data.size());
   auto strAttr = mlir::StringAttr::get(getContext(), data);
-  auto valTag = mlir::Identifier::get(fir::StringLitOp::value(), getContext());
+  auto valTag = mlir::StringAttr::get(getContext(), fir::StringLitOp::value());
   mlir::NamedAttribute dataAttr(valTag, strAttr);
-  auto sizeTag = mlir::Identifier::get(fir::StringLitOp::size(), getContext());
+  auto sizeTag = mlir::StringAttr::get(getContext(), fir::StringLitOp::size());
   mlir::NamedAttribute sizeAttr(sizeTag, getI64IntegerAttr(data.size()));
   llvm::SmallVector<mlir::NamedAttribute> attrs{dataAttr, sizeAttr};
   return create<fir::StringLitOp>(loc, llvm::ArrayRef<mlir::Type>{type},

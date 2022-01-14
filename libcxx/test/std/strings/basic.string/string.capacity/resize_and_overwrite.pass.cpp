@@ -13,6 +13,7 @@
 // template<class Operation>
 // void resize_and_overwrite(size_type n, Operation op)
 
+#include <algorithm>
 #include <cassert>
 #include <string>
 

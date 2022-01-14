@@ -121,7 +121,7 @@ public:
   void setAccess(iterator I, AccessSpecifier AS) { I.I->setAccess(AS); }
 
   void clear() { decls().clear(); }
-  void set_size(unsigned N) { decls().set_size(N); }
+  void truncate(unsigned N) { decls().truncate(N); }
 
   bool empty() const { return decls().empty(); }
   unsigned size() const { return decls().size(); }

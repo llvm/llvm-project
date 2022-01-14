@@ -48,7 +48,7 @@ public:
   /// This class represents the base class of a debug action handler.
   class HandlerBase {
   public:
-    virtual ~HandlerBase() {}
+    virtual ~HandlerBase() = default;
 
     /// Return the unique handler id of this handler, use for casting
     /// functionality.

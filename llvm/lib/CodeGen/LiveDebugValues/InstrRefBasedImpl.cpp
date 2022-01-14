@@ -283,6 +283,11 @@ public:
       LocIdx Idx = Location.Idx;
       ValueIDNum &VNum = MLocs[Idx.asU64()];
       VarLocs.push_back(VNum);
+
+      // Short-circuit unnecessary preferred location update.
+      if (VLocs.empty())
+        continue;
+
       auto it = ValueToLoc.find(VNum);
       // In order of preference, pick:
       //  * Callee saved registers,

@@ -68,10 +68,13 @@ std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
 }
 
 void mlir::tosa::addTosaToLinalgPasses(OpPassManager &pm) {
+  // Optional decompositions are designed to benefit linalg.
   pm.addNestedPass<FuncOp>(mlir::tosa::createTosaOptionalDecompositions());
-  pm.addNestedPass<FuncOp>(createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(createTosaToLinalgNamed());
   pm.addNestedPass<FuncOp>(mlir::createCanonicalizerPass());
-  pm.addNestedPass<FuncOp>(createTosaMakeBroadcastablePass());
-  pm.addNestedPass<FuncOp>(createTosaToLinalg());
+
+  pm.addNestedPass<FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgNamed());
+  pm.addNestedPass<FuncOp>(mlir::createCanonicalizerPass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaMakeBroadcastablePass());
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());
 }

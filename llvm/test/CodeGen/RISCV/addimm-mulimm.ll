@@ -2,9 +2,9 @@
 ;; Test that (mul (add x, c1), c2) can be transformed to
 ;; (add (mul x, c2), c1*c2) if profitable.
 
-; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-zba -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+m,+zba -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IMB %s
-; RUN: llc -mtriple=riscv64 -mattr=+m,+experimental-zba -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+m,+zba -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64IMB %s
 
 define i32 @add_mul_combine_accept_a1(i32 %x) {

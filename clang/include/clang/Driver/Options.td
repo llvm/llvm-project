@@ -1669,6 +1669,13 @@ def sanitize_address_destructor_EQ
       NormalizedValuesScope<"llvm::AsanDtorKind">,
       NormalizedValues<["None", "Global"]>,
       MarshallingInfoEnum<CodeGenOpts<"SanitizeAddressDtor">, "Global">;
+defm sanitize_memory_param_retval
+  : BoolOption<"f", "sanitize-memory-param-retval",
+      CodeGenOpts<"SanitizeMemoryParamRetval">,
+      DefaultFalse,
+      PosFlag<SetTrue, [CC1Option], "Enable">, NegFlag<SetFalse, [], "Disable">,
+      BothFlags<[], " detection of uninitialized parameters and return values">>,
+    Group<f_clang_Group>;
 // Note: This flag was introduced when it was necessary to distinguish between
 //       ABI for correct codegen.  This is no longer needed, but the flag is
 //       not removed since targeting either ABI will behave the same.

@@ -73,10 +73,6 @@ struct GlobalStatus {
   const Function *AccessingFunction = nullptr;
   bool HasMultipleAccessingFunctions = false;
 
-  /// Set to true if this global has a user that is not an instruction (e.g. a
-  /// constant expr or GV initializer).
-  bool HasNonInstructionUser = false;
-
   /// Set to the strongest atomic ordering requirement.
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
 

@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define dso_local i32 @hoge() local_unnamed_addr #0 {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    callbr void asm sideeffect "", "X"(i8* blockaddress(@hoge, [[BB2:%.*]]))
+; CHECK-NEXT:    callbr void asm sideeffect "", "i"(i8* blockaddress(@hoge, [[BB2:%.*]]))
 ; CHECK-NEXT:    to label [[BB1:%.*]] [label %bb2]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
@@ -17,7 +17,7 @@ define dso_local i32 @hoge() local_unnamed_addr #0 {
 ; CHECK-NEXT:    br label [[BB2]]
 ;
 bb:
-  callbr void asm sideeffect "", "X"(i8* blockaddress(@hoge, %bb2)) #1
+  callbr void asm sideeffect "", "i"(i8* blockaddress(@hoge, %bb2)) #1
   to label %bb1 [label %bb2]
 
 bb1:                                              ; preds = %bb

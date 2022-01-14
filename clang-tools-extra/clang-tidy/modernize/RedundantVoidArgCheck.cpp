@@ -20,15 +20,12 @@ namespace {
 
 // Determine if the given QualType is a nullary function or pointer to same.
 bool protoTypeHasNoParms(QualType QT) {
-  if (const auto *PT = QT->getAs<PointerType>()) {
+  if (const auto *PT = QT->getAs<PointerType>())
     QT = PT->getPointeeType();
-  }
-  if (auto *MPT = QT->getAs<MemberPointerType>()) {
+  if (auto *MPT = QT->getAs<MemberPointerType>())
     QT = MPT->getPointeeType();
-  }
-  if (const auto *FP = QT->getAs<FunctionProtoType>()) {
+  if (const auto *FP = QT->getAs<FunctionProtoType>())
     return FP->getNumParams() == 0;
-  }
   return false;
 }
 
@@ -48,7 +45,8 @@ void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
                                   unless(isInstantiated()), unless(isExternC()))
                          .bind(FunctionId),
                      this);
-  Finder->addMatcher(typedefNameDecl().bind(TypedefId), this);
+  Finder->addMatcher(typedefNameDecl(unless(isImplicit())).bind(TypedefId),
+                     this);
   auto ParenFunctionType = parenType(innerType(functionType()));
   auto PointerToFunctionType = pointee(ParenFunctionType);
   auto FunctionOrMemberPointer =
@@ -72,34 +70,36 @@ void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
 
 void RedundantVoidArgCheck::check(const MatchFinder::MatchResult &Result) {
   const BoundNodes &Nodes = Result.Nodes;
-  if (const auto *Function = Nodes.getNodeAs<FunctionDecl>(FunctionId)) {
+  if (const auto *Function = Nodes.getNodeAs<FunctionDecl>(FunctionId))
     processFunctionDecl(Result, Function);
-  } else if (const auto *TypedefName =
-                 Nodes.getNodeAs<TypedefNameDecl>(TypedefId)) {
+  else if (const auto *TypedefName =
+               Nodes.getNodeAs<TypedefNameDecl>(TypedefId))
     processTypedefNameDecl(Result, TypedefName);
-  } else if (const auto *Member = Nodes.getNodeAs<FieldDecl>(FieldId)) {
+  else if (const auto *Member = Nodes.getNodeAs<FieldDecl>(FieldId))
     processFieldDecl(Result, Member);
-  } else if (const auto *Var = Nodes.getNodeAs<VarDecl>(VarId)) {
+  else if (const auto *Var = Nodes.getNodeAs<VarDecl>(VarId))
     processVarDecl(Result, Var);
-  } else if (const auto *NamedCast =
-                 Nodes.getNodeAs<CXXNamedCastExpr>(NamedCastId)) {
+  else if (const auto *NamedCast =
+               Nodes.getNodeAs<CXXNamedCastExpr>(NamedCastId))
     processNamedCastExpr(Result, NamedCast);
-  } else if (const auto *CStyleCast =
-                 Nodes.getNodeAs<CStyleCastExpr>(CStyleCastId)) {
+  else if (const auto *CStyleCast =
+               Nodes.getNodeAs<CStyleCastExpr>(CStyleCastId))
     processExplicitCastExpr(Result, CStyleCast);
-  } else if (const auto *ExplicitCast =
-                 Nodes.getNodeAs<ExplicitCastExpr>(ExplicitCastId)) {
+  else if (const auto *ExplicitCast =
+               Nodes.getNodeAs<ExplicitCastExpr>(ExplicitCastId))
     processExplicitCastExpr(Result, ExplicitCast);
-  } else if (const auto *Lambda = Nodes.getNodeAs<LambdaExpr>(LambdaId)) {
+  else if (const auto *Lambda = Nodes.getNodeAs<LambdaExpr>(LambdaId))
     processLambdaExpr(Result, Lambda);
-  }
 }
 
 void RedundantVoidArgCheck::processFunctionDecl(
     const MatchFinder::MatchResult &Result, const FunctionDecl *Function) {
+  const auto *Method = dyn_cast<CXXMethodDecl>(Function);
+  SourceLocation Start = Method && Method->getParent()->isLambda()
+                             ? Method->getBeginLoc()
+                             : Function->getLocation();
+  SourceLocation End = Function->getEndLoc();
   if (Function->isThisDeclarationADefinition()) {
-    SourceLocation Start = Function->getBeginLoc();
-    SourceLocation End = Function->getEndLoc();
     if (const Stmt *Body = Function->getBody()) {
       End = Body->getBeginLoc();
       if (End.isMacroID() &&
@@ -109,10 +109,20 @@ void RedundantVoidArgCheck::processFunctionDecl(
     }
     removeVoidArgumentTokens(Result, SourceRange(Start, End),
                              "function definition");
-  } else {
-    removeVoidArgumentTokens(Result, Function->getSourceRange(),
+  } else
+    removeVoidArgumentTokens(Result, SourceRange(Start, End),
                              "function declaration");
-  }
+}
+
+bool isMacroIdentifier(const IdentifierTable &Idents, const Token &ProtoToken) {
+  if (!ProtoToken.is(tok::TokenKind::raw_identifier))
+    return false;
+
+  IdentifierTable::iterator It = Idents.find(ProtoToken.getRawIdentifier());
+  if (It == Idents.end())
+    return false;
+
+  return It->second->hadMacroDefinition();
 }
 
 void RedundantVoidArgCheck::removeVoidArgumentTokens(
@@ -127,49 +137,86 @@ void RedundantVoidArgCheck::removeVoidArgumentTokens(
           .str();
   Lexer PrototypeLexer(CharRange.getBegin(), getLangOpts(), DeclText.data(),
                        DeclText.data(), DeclText.data() + DeclText.size());
-  enum TokenState {
-    NothingYet,
-    SawLeftParen,
-    SawVoid,
+  enum class TokenState {
+    Start,
+    MacroId,
+    MacroLeftParen,
+    MacroArguments,
+    LeftParen,
+    Void,
   };
-  TokenState State = NothingYet;
+  TokenState State = TokenState::Start;
   Token VoidToken;
   Token ProtoToken;
+  const IdentifierTable &Idents = Result.Context->Idents;
+  int MacroLevel = 0;
   std::string Diagnostic =
       ("redundant void argument list in " + GrammarLocation).str();
 
   while (!PrototypeLexer.LexFromRawLexer(ProtoToken)) {
     switch (State) {
-    case NothingYet:
-      if (ProtoToken.is(tok::TokenKind::l_paren)) {
-        State = SawLeftParen;
+    case TokenState::Start:
+      if (ProtoToken.is(tok::TokenKind::l_paren))
+        State = TokenState::LeftParen;
+      else if (isMacroIdentifier(Idents, ProtoToken))
+        State = TokenState::MacroId;
+      break;
+    case TokenState::MacroId:
+      if (ProtoToken.is(tok::TokenKind::l_paren))
+        State = TokenState::MacroLeftParen;
+      else
+        State = TokenState::Start;
+      break;
+    case TokenState::MacroLeftParen:
+      ++MacroLevel;
+      if (ProtoToken.is(tok::TokenKind::raw_identifier)) {
+        if (isMacroIdentifier(Idents, ProtoToken))
+          State = TokenState::MacroId;
+        else
+          State = TokenState::MacroArguments;
+      } else if (ProtoToken.is(tok::TokenKind::r_paren)) {
+        --MacroLevel;
+        if (MacroLevel == 0)
+          State = TokenState::Start;
+        else
+          State = TokenState::MacroId;
+      } else
+        State = TokenState::MacroArguments;
+      break;
+    case TokenState::MacroArguments:
+      if (isMacroIdentifier(Idents, ProtoToken))
+        State = TokenState::MacroLeftParen;
+      else if (ProtoToken.is(tok::TokenKind::r_paren)) {
+        --MacroLevel;
+        if (MacroLevel == 0)
+          State = TokenState::Start;
       }
       break;
-    case SawLeftParen:
-      if (ProtoToken.is(tok::TokenKind::raw_identifier) &&
-          ProtoToken.getRawIdentifier() == "void") {
-        State = SawVoid;
-        VoidToken = ProtoToken;
-      } else if (ProtoToken.is(tok::TokenKind::l_paren)) {
-        State = SawLeftParen;
-      } else {
-        State = NothingYet;
-      }
+    case TokenState::LeftParen:
+      if (ProtoToken.is(tok::TokenKind::raw_identifier)) {
+        if (isMacroIdentifier(Idents, ProtoToken))
+          State = TokenState::MacroId;
+        else if (ProtoToken.getRawIdentifier() == "void") {
+          State = TokenState::Void;
+          VoidToken = ProtoToken;
+        }
+      } else if (ProtoToken.is(tok::TokenKind::l_paren))
+        State = TokenState::LeftParen;
+      else
+        State = TokenState::Start;
       break;
-    case SawVoid:
-      State = NothingYet;
-      if (ProtoToken.is(tok::TokenKind::r_paren)) {
+    case TokenState::Void:
+      State = TokenState::Start;
+      if (ProtoToken.is(tok::TokenKind::r_paren))
         removeVoidToken(VoidToken, Diagnostic);
-      } else if (ProtoToken.is(tok::TokenKind::l_paren)) {
-        State = SawLeftParen;
-      }
+      else if (ProtoToken.is(tok::TokenKind::l_paren))
+        State = TokenState::LeftParen;
       break;
     }
   }
 
-  if (State == SawVoid && ProtoToken.is(tok::TokenKind::r_paren)) {
+  if (State == TokenState::Void && ProtoToken.is(tok::TokenKind::r_paren))
     removeVoidToken(VoidToken, Diagnostic);
-  }
 }
 
 void RedundantVoidArgCheck::removeVoidToken(Token VoidToken,
@@ -181,19 +228,17 @@ void RedundantVoidArgCheck::removeVoidToken(Token VoidToken,
 void RedundantVoidArgCheck::processTypedefNameDecl(
     const MatchFinder::MatchResult &Result,
     const TypedefNameDecl *TypedefName) {
-  if (protoTypeHasNoParms(TypedefName->getUnderlyingType())) {
+  if (protoTypeHasNoParms(TypedefName->getUnderlyingType()))
     removeVoidArgumentTokens(Result, TypedefName->getSourceRange(),
                              isa<TypedefDecl>(TypedefName) ? "typedef"
                                                            : "type alias");
-  }
 }
 
 void RedundantVoidArgCheck::processFieldDecl(
     const MatchFinder::MatchResult &Result, const FieldDecl *Member) {
-  if (protoTypeHasNoParms(Member->getType())) {
+  if (protoTypeHasNoParms(Member->getType()))
     removeVoidArgumentTokens(Result, Member->getSourceRange(),
                              "field declaration");
-  }
 }
 
 void RedundantVoidArgCheck::processVarDecl(
@@ -206,30 +251,27 @@ void RedundantVoidArgCheck::processVarDecl(
               .getLocWithOffset(-1);
       removeVoidArgumentTokens(Result, SourceRange(Begin, InitStart),
                                "variable declaration with initializer");
-    } else {
+    } else
       removeVoidArgumentTokens(Result, Var->getSourceRange(),
                                "variable declaration");
-    }
   }
 }
 
 void RedundantVoidArgCheck::processNamedCastExpr(
     const MatchFinder::MatchResult &Result, const CXXNamedCastExpr *NamedCast) {
-  if (protoTypeHasNoParms(NamedCast->getTypeAsWritten())) {
+  if (protoTypeHasNoParms(NamedCast->getTypeAsWritten()))
     removeVoidArgumentTokens(
         Result,
         NamedCast->getTypeInfoAsWritten()->getTypeLoc().getSourceRange(),
         "named cast");
-  }
 }
 
 void RedundantVoidArgCheck::processExplicitCastExpr(
     const MatchFinder::MatchResult &Result,
     const ExplicitCastExpr *ExplicitCast) {
-  if (protoTypeHasNoParms(ExplicitCast->getTypeAsWritten())) {
+  if (protoTypeHasNoParms(ExplicitCast->getTypeAsWritten()))
     removeVoidArgumentTokens(Result, ExplicitCast->getSourceRange(),
                              "cast expression");
-  }
 }
 
 void RedundantVoidArgCheck::processLambdaExpr(

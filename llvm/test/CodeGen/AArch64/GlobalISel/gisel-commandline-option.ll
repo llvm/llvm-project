@@ -71,7 +71,7 @@
 ; VERIFY-NEXT:   Verify generated machine code
 ; ENABLED-NEXT:  Localizer
 ; VERIFY-O0-NEXT:   Verify generated machine code
-; ENABLED-O1-NEXT: Analysis for ComputingKnownBits
+; ENABLED-NEXT: Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT: Lazy Branch Probability Analysis
 ; ENABLED-O1-NEXT: Lazy Block Frequency Analysis
 ; ENABLED-NEXT:  InstructionSelect

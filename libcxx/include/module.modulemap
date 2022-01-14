@@ -246,6 +246,7 @@ module std [system] {
       module generate                 { private header "__algorithm/generate.h" }
       module generate_n               { private header "__algorithm/generate_n.h" }
       module half_positive            { private header "__algorithm/half_positive.h" }
+      module in_in_result             { private header "__algorithm/in_in_result.h" }
       module in_out_result            { private header "__algorithm/in_out_result.h" }
       module includes                 { private header "__algorithm/includes.h" }
       module inplace_merge            { private header "__algorithm/inplace_merge.h" }
@@ -661,6 +662,10 @@ module std [system] {
       module concepts                        { private header "__memory/concepts.h" }
       module construct_at                    { private header "__memory/construct_at.h" }
       module pointer_traits                  { private header "__memory/pointer_traits.h" }
+      module ranges_construct_at {
+        private header "__memory/ranges_construct_at.h"
+        export __function_like
+      }
       module ranges_uninitialized_algorithms {
         private header "__memory/ranges_uninitialized_algorithms.h"
         export __function_like
@@ -795,6 +800,7 @@ module std [system] {
       module iota_view              { private header "__ranges/iota_view.h" }
       module join_view              { private header "__ranges/join_view.h" }
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
+      module owning_view            { private header "__ranges/owning_view.h" }
       module range_adaptor          { private header "__ranges/range_adaptor.h" }
       module ref_view               { private header "__ranges/ref_view.h" }
       module reverse_view           { private header "__ranges/reverse_view.h" }

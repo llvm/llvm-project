@@ -1111,11 +1111,11 @@ static void runMRIScript() {
 }
 
 static bool handleGenericOption(StringRef arg) {
-  if (arg == "-help" || arg == "--help" || arg == "-h") {
+  if (arg == "--help" || arg == "-h") {
     printHelpMessage();
     return true;
   }
-  if (arg == "-version" || arg == "--version") {
+  if (arg == "--version") {
     cl::PrintVersionMessage();
     return true;
   }
@@ -1129,8 +1129,6 @@ static const char *matchFlagWithArg(StringRef Expected,
 
   if (Arg.startswith("--"))
     Arg = Arg.substr(2);
-  else if (Arg.startswith("-"))
-    Arg = Arg.substr(1);
 
   size_t len = Expected.size();
   if (Arg == Expected) {

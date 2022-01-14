@@ -94,7 +94,7 @@ Uninitialised memory,uninitialized_default_construct,Konstantin Varlamov,`D11531
 Uninitialised memory,uninitialized_default_construct_n,Konstantin Varlamov,`D115315 <https://llvm.org/D115315>`_,✅
 Uninitialised memory,uninitialized_value_construct,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
 Uninitialised memory,uninitialized_value_construct_n,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
-Uninitialised memory,destroy,Konstantin Varlamov,n/a,Not started
-Uninitialised memory,destroy_n,Konstantin Varlamov,n/a,Not started
-Uninitialised memory,destroy_at,Konstantin Varlamov,n/a,Not started
-Uninitialised memory,construct_at,Konstantin Varlamov,n/a,Not started
+Uninitialised memory,destroy,Konstantin Varlamov,`D116078 <https://llvm.org/D116078>`_,✅
+Uninitialised memory,destroy_n,Konstantin Varlamov,`D116078 <https://llvm.org/D116078>`_,✅
+Uninitialised memory,destroy_at,Konstantin Varlamov,`D116078 <https://llvm.org/D116078>`_,✅
+Uninitialised memory,construct_at,Konstantin Varlamov,`D116078 <https://llvm.org/D116078>`_,✅

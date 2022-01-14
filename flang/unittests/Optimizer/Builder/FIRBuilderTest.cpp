@@ -238,7 +238,7 @@ TEST_F(FIRBuilderTest, uniqueCFIdent) {
 
 TEST_F(FIRBuilderTest, locationToLineNo) {
   auto builder = getBuilder();
-  auto loc = mlir::FileLineColLoc::get(builder.getIdentifier("file1"), 10, 5);
+  auto loc = mlir::FileLineColLoc::get(builder.getStringAttr("file1"), 10, 5);
   mlir::Value line =
       fir::factory::locationToLineNo(builder, loc, builder.getI64Type());
   checkIntegerConstant(line, builder.getI64Type(), 10);
@@ -260,7 +260,7 @@ TEST_F(FIRBuilderTest, hasDynamicSize) {
 TEST_F(FIRBuilderTest, locationToFilename) {
   auto builder = getBuilder();
   auto loc =
-      mlir::FileLineColLoc::get(builder.getIdentifier("file1.f90"), 10, 5);
+      mlir::FileLineColLoc::get(builder.getStringAttr("file1.f90"), 10, 5);
   mlir::Value locToFile = fir::factory::locationToFilename(builder, loc);
   auto addrOp = dyn_cast<fir::AddrOfOp>(locToFile.getDefiningOp());
   auto symbol = addrOp.symbol().getRootReference().getValue();

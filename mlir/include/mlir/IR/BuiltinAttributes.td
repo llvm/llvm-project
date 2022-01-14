@@ -949,12 +949,6 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
       return getValue().compare(rhs.getValue());
     }
 
-    /// FIXME: Defined as part of transition of Identifier->StringAttr. Prefer
-    /// using the other `get` methods instead.
-    static StringAttr get(const Twine &str, MLIRContext *context) {
-      return get(context, str);
-    }
-
   private:
     /// Return an empty StringAttr with NoneType type. This is a special variant
     /// of the `get` method that is used by the MLIRContext to cache the

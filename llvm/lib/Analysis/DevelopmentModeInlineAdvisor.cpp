@@ -412,8 +412,6 @@ size_t DevelopmentModeMLInlineAdvisor::getTotalSizeEstimate() {
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    if (isFunctionDeleted(&F))
-      continue;
     Ret += *getNativeSizeEstimate(F);
   }
   return Ret;

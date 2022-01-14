@@ -172,13 +172,13 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
       resStrides(bT.getRank(), 0);
   for (int64_t idx = 0, e = aT.getRank(); idx < e; ++idx) {
     resShape[idx] =
-        (aShape[idx] == bShape[idx]) ? aShape[idx] : MemRefType::kDynamicSize;
+        (aShape[idx] == bShape[idx]) ? aShape[idx] : ShapedType::kDynamicSize;
     resStrides[idx] = (aStrides[idx] == bStrides[idx])
                           ? aStrides[idx]
-                          : MemRefType::kDynamicStrideOrOffset;
+                          : ShapedType::kDynamicStrideOrOffset;
   }
   resOffset =
-      (aOffset == bOffset) ? aOffset : MemRefType::kDynamicStrideOrOffset;
+      (aOffset == bOffset) ? aOffset : ShapedType::kDynamicStrideOrOffset;
   return MemRefType::get(
       resShape, aT.getElementType(),
       makeStridedLinearLayoutMap(resStrides, resOffset, aT.getContext()));

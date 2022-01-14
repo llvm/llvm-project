@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
-#define MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
+#ifndef MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H
+#define MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H
 
 #include "mlir/Pass/Pass.h"
 
@@ -65,4 +65,4 @@ void populateStdExpandOpsPatterns(RewritePatternSet &patterns);
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_STANDARD_TRANSFORMS_PASSES_H_
+#endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_PASSES_H

@@ -645,8 +645,7 @@ define void @sink_dominance(i32* %ptr, i32 %N) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[UMAX1]], 4
@@ -730,8 +729,7 @@ define void @sink_dominance_2(i32* %ptr, i32 %N) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[N]], i32 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[UMAX1]], 4

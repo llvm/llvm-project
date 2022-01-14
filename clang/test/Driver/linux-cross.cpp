@@ -210,3 +210,14 @@
 // RUN: %clang -### %s --target=i686-linux-musl -mx32 --sysroot= \
 // RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_X32
 // MUSL_X32: "-dynamic-linker" "/lib/ld-musl-x32.so.1"
+
+/// -r suppresses default -l and crt*.o like -nostdlib.
+// RUN: %clang -### %s --target=x86_64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
+// RUN:   --stdlib=platform --rtlib=platform -r 2>&1 | FileCheck %s --check-prefix=RELOCATABLE
+// RELOCATABLE:      "-internal-isystem"
+// RELOCATABLE-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
+// RELOCATABLE:      "-L
+// RELOCATABLE-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10"
+// RELOCATABLE-NOT:  "-l
+// RELOCATABLE-NOT:  crt{{[^.]+}}.o

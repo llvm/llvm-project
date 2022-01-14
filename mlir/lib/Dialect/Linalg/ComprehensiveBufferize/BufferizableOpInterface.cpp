@@ -305,26 +305,18 @@ llvm::SetVector<Value> mlir::linalg::comprehensive_bufferize::
   return result;
 }
 
-// Find the Value of the last preceding write of a given Value.
-Value mlir::linalg::comprehensive_bufferize::BufferizationState::
-    findLastPrecedingWrite(Value value) const {
-  SetVector<Value> result =
-      findValueInReverseUseDefChain(value, [&](Value value) {
-        Operation *op = value.getDefiningOp();
-        if (!op)
-          return true;
-        auto bufferizableOp = options.dynCastBufferizableOp(op);
-        if (!bufferizableOp)
-          return true;
-        return bufferizableOp.isMemoryWrite(value.cast<OpResult>(), *this);
-      });
-
-  // To simplify the analysis, `scf.if` ops are considered memory writes. There
-  // are currently no other ops where one OpResult may alias with multiple
-  // OpOperands. Therefore, this function should return exactly one result at
-  // the moment.
-  assert(result.size() == 1 && "expected exactly one result");
-  return result.front();
+// Find the Values of the last preceding write of a given Value.
+llvm::SetVector<Value> mlir::linalg::comprehensive_bufferize::
+    BufferizationState::findLastPrecedingWrite(Value value) const {
+  return findValueInReverseUseDefChain(value, [&](Value value) {
+    Operation *op = value.getDefiningOp();
+    if (!op)
+      return true;
+    auto bufferizableOp = options.dynCastBufferizableOp(op);
+    if (!bufferizableOp)
+      return true;
+    return bufferizableOp.isMemoryWrite(value.cast<OpResult>(), *this);
+  });
 }
 
 mlir::linalg::comprehensive_bufferize::BufferizationState::BufferizationState(
@@ -385,7 +377,8 @@ static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
 /// bufferization is necessary.
 FailureOr<Value>
 mlir::linalg::comprehensive_bufferize::BufferizationState::getBuffer(
-    RewriterBase &rewriter, OpOperand &opOperand, bool forceInPlace) const {
+    RewriterBase &rewriter, OpOperand &opOperand, bool forceInPlace,
+    Optional<Operation *> customCopyInsertionPoint) const {
   OpBuilder::InsertionGuard guard(rewriter);
   Operation *op = opOperand.getOwner();
   Location loc = op->getLoc();
@@ -404,15 +397,19 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::getBuffer(
       createAlloc(rewriter, loc, operandBuffer, options.createDeallocs);
   if (failed(resultBuffer))
     return failure();
-  // Do not copy if the last preceding write of `operand` is an op that does
+  // Do not copy if the last preceding writes of `operand` are ops that do
   // not write (skipping ops that merely create aliases). E.g., InitTensorOp.
   // Note: If `findLastPrecedingWrite` reaches the end of the reverse SSA
   // use-def chain, it returns that value, regardless of whether it is a
   // memory write or not.
-  Value lastWrite = findLastPrecedingWrite(operand);
-  if (auto bufferizableOp = options.dynCastBufferizableOp(lastWrite))
-    if (!bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(), *this))
-      return resultBuffer;
+  SetVector<Value> lastWrites = findLastPrecedingWrite(operand);
+  if (llvm::none_of(lastWrites, [&](Value lastWrite) {
+        if (auto bufferizableOp = options.dynCastBufferizableOp(lastWrite))
+          return bufferizableOp.isMemoryWrite(lastWrite.cast<OpResult>(),
+                                              *this);
+        return true;
+      }))
+    return resultBuffer;
   // Do not copy if the copied data is never read.
   OpResult aliasingOpResult = getAliasingOpResult(opOperand);
   if (aliasingOpResult && !bufferizesToMemoryRead(opOperand) &&
@@ -422,9 +419,14 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::getBuffer(
   if (bufferizesToMemoryWrite(opOperand) && !bufferizesToMemoryRead(opOperand))
     return resultBuffer;
 
-  // The copy happens right before the op that is bufferized.
-  rewriter.setInsertionPoint(op);
+  if (customCopyInsertionPoint) {
+    rewriter.setInsertionPoint(*customCopyInsertionPoint);
+  } else {
+    // The copy happens right before the op that is bufferized.
+    rewriter.setInsertionPoint(op);
+  }
   createMemCpy(rewriter, loc, operandBuffer, *resultBuffer);
+
   return resultBuffer;
 }
 

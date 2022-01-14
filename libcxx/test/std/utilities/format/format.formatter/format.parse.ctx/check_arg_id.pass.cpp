@@ -35,11 +35,11 @@ constexpr bool test() {
 void test_exception() {
   [] {
     std::format_parse_context context("", 1);
-    context.next_arg_id();
+    TEST_IGNORE_NODISCARD context.next_arg_id();
     try {
       context.check_arg_id(0);
       assert(false);
-    } catch (const std::format_error& e) {
+    } catch ([[maybe_unused]] const std::format_error& e) {
       LIBCPP_ASSERT(strcmp(e.what(), "Using manual argument numbering in automatic "
                                      "argument numbering mode") == 0);
       return;

@@ -46,8 +46,9 @@ int main(int, char**) {
   // Conversion, fundamental types.
   {
     std::ranges::in_out_result<int, bool> x = {2, false};
-    std::ranges::in_out_result<double, char> y = x;
-    assert(y.in == 2.0);
+    // FIXME(varconst): try a narrowing conversion.
+    std::ranges::in_out_result<long, char> y = x;
+    assert(y.in == 2);
     assert(y.out == '\0');
   }
 

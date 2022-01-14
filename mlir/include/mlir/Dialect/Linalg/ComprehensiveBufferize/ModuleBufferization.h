@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULE_BUFFERIZATION_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULE_BUFFERIZATION_H
+#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULEBUFFERIZATION_H
+#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULEBUFFERIZATION_H
 
 #include <memory>
 
@@ -31,11 +31,11 @@ runComprehensiveBufferize(ModuleOp moduleOp,
 
 namespace std_ext {
 
-void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
+void registerModuleBufferizationExternalModels(DialectRegistry &registry);
 
 } // namespace std_ext
 } // namespace comprehensive_bufferize
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULE_BUFFERIZATION_H
+#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULEBUFFERIZATION_H

@@ -335,14 +335,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
     FAM.clear(*DeadF, DeadF->getName());
 
     // And delete the actual function from the module.
-    // The Advisor may use Function pointers to efficiently index various
-    // internal maps, e.g. for memoization. Function cleanup passes like
-    // argument promotion create new functions. It is possible for a new
-    // function to be allocated at the address of a deleted function. We could
-    // index using names, but that's inefficient. Alternatively, we let the
-    // Advisor free the functions when it sees fit.
-    DeadF->getBasicBlockList().clear();
-    M.getFunctionList().remove(DeadF);
+    M.getFunctionList().erase(DeadF);
 
     ++NumDeleted;
   }

@@ -88,6 +88,22 @@ public:
     return It == ExprToLoc.end() ? nullptr : It->second;
   }
 
+  /// Assigns `Loc` as the storage location of the `this` pointee.
+  ///
+  /// Requirements:
+  ///
+  ///  The `this` pointee must not be assigned a storage location.
+  void setThisPointeeStorageLocation(StorageLocation &Loc) {
+    assert(ThisPointeeLoc == nullptr);
+    ThisPointeeLoc = &Loc;
+  }
+
+  /// Returns the storage location assigned to the `this` pointee or null if the
+  /// `this` pointee has no assigned storage location.
+  StorageLocation *getThisPointeeStorageLocation() const {
+    return ThisPointeeLoc;
+  }
+
 private:
   // Storage for the state of a program.
   std::vector<std::unique_ptr<StorageLocation>> Locs;
@@ -101,7 +117,7 @@ private:
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
 
-  // FIXME: Add `StorageLocation` for `this`.
+  StorageLocation *ThisPointeeLoc = nullptr;
 
   // FIXME: Add support for boolean expressions.
 };

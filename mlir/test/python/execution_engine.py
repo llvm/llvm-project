@@ -1,5 +1,5 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
-
+# REQUIRES: llvm_has_native_target
 import gc, sys
 from mlir.ir import *
 from mlir.passmanager import *

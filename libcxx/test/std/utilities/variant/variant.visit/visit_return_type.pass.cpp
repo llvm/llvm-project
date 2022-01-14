@@ -451,7 +451,7 @@ void test_derived_from_variant() {
   // Check that visit unambiguously picks the variant, even if the other base has __impl member.
   struct ImplVariantBase {
     struct Callable {
-      bool operator()();
+      bool operator()() const { assert(false); return false; }
     };
 
     Callable __impl;

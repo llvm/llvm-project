@@ -909,8 +909,8 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-AVX512-WIN:       # %bb.0:
 ; X86-AVX512-WIN-NEXT:    pushl %ebp
 ; X86-AVX512-WIN-NEXT:    movl %esp, %ebp
-; X86-AVX512-WIN-NEXT:    andl $-8, %esp
-; X86-AVX512-WIN-NEXT:    subl $8, %esp
+; X86-AVX512-WIN-NEXT:    andl $-16, %esp
+; X86-AVX512-WIN-NEXT:    subl $16, %esp
 ; X86-AVX512-WIN-NEXT:    fldt 8(%ebp)
 ; X86-AVX512-WIN-NEXT:    flds __real@5f000000
 ; X86-AVX512-WIN-NEXT:    xorl %edx, %edx
@@ -985,8 +985,8 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-SSE3-WIN:       # %bb.0:
 ; X86-SSE3-WIN-NEXT:    pushl %ebp
 ; X86-SSE3-WIN-NEXT:    movl %esp, %ebp
-; X86-SSE3-WIN-NEXT:    andl $-8, %esp
-; X86-SSE3-WIN-NEXT:    subl $8, %esp
+; X86-SSE3-WIN-NEXT:    andl $-16, %esp
+; X86-SSE3-WIN-NEXT:    subl $16, %esp
 ; X86-SSE3-WIN-NEXT:    fldt 8(%ebp)
 ; X86-SSE3-WIN-NEXT:    flds __real@5f000000
 ; X86-SSE3-WIN-NEXT:    xorl %edx, %edx
@@ -1061,8 +1061,8 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-SSE2-WIN:       # %bb.0:
 ; X86-SSE2-WIN-NEXT:    pushl %ebp
 ; X86-SSE2-WIN-NEXT:    movl %esp, %ebp
-; X86-SSE2-WIN-NEXT:    andl $-8, %esp
-; X86-SSE2-WIN-NEXT:    subl $16, %esp
+; X86-SSE2-WIN-NEXT:    andl $-16, %esp
+; X86-SSE2-WIN-NEXT:    subl $32, %esp
 ; X86-SSE2-WIN-NEXT:    fldt 8(%ebp)
 ; X86-SSE2-WIN-NEXT:    flds __real@5f000000
 ; X86-SSE2-WIN-NEXT:    xorl %edx, %edx
@@ -1161,8 +1161,8 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87-WIN:       # %bb.0:
 ; X87-WIN-NEXT:    pushl %ebp
 ; X87-WIN-NEXT:    movl %esp, %ebp
-; X87-WIN-NEXT:    andl $-8, %esp
-; X87-WIN-NEXT:    subl $16, %esp
+; X87-WIN-NEXT:    andl $-16, %esp
+; X87-WIN-NEXT:    subl $32, %esp
 ; X87-WIN-NEXT:    fldt 8(%ebp)
 ; X87-WIN-NEXT:    flds __real@5f000000
 ; X87-WIN-NEXT:    fucom %st(1)
@@ -1235,8 +1235,8 @@ define i64 @x_to_s64(x86_fp80 %a) nounwind {
 ; X86-AVX512-WIN:       # %bb.0:
 ; X86-AVX512-WIN-NEXT:    pushl %ebp
 ; X86-AVX512-WIN-NEXT:    movl %esp, %ebp
-; X86-AVX512-WIN-NEXT:    andl $-8, %esp
-; X86-AVX512-WIN-NEXT:    subl $8, %esp
+; X86-AVX512-WIN-NEXT:    andl $-16, %esp
+; X86-AVX512-WIN-NEXT:    subl $16, %esp
 ; X86-AVX512-WIN-NEXT:    fldt 8(%ebp)
 ; X86-AVX512-WIN-NEXT:    fisttpll (%esp)
 ; X86-AVX512-WIN-NEXT:    movl (%esp), %eax
@@ -1275,8 +1275,8 @@ define i64 @x_to_s64(x86_fp80 %a) nounwind {
 ; X86-SSE3-WIN:       # %bb.0:
 ; X86-SSE3-WIN-NEXT:    pushl %ebp
 ; X86-SSE3-WIN-NEXT:    movl %esp, %ebp
-; X86-SSE3-WIN-NEXT:    andl $-8, %esp
-; X86-SSE3-WIN-NEXT:    subl $8, %esp
+; X86-SSE3-WIN-NEXT:    andl $-16, %esp
+; X86-SSE3-WIN-NEXT:    subl $16, %esp
 ; X86-SSE3-WIN-NEXT:    fldt 8(%ebp)
 ; X86-SSE3-WIN-NEXT:    fisttpll (%esp)
 ; X86-SSE3-WIN-NEXT:    movl (%esp), %eax
@@ -1315,8 +1315,8 @@ define i64 @x_to_s64(x86_fp80 %a) nounwind {
 ; X86-SSE2-WIN:       # %bb.0:
 ; X86-SSE2-WIN-NEXT:    pushl %ebp
 ; X86-SSE2-WIN-NEXT:    movl %esp, %ebp
-; X86-SSE2-WIN-NEXT:    andl $-8, %esp
-; X86-SSE2-WIN-NEXT:    subl $16, %esp
+; X86-SSE2-WIN-NEXT:    andl $-16, %esp
+; X86-SSE2-WIN-NEXT:    subl $32, %esp
 ; X86-SSE2-WIN-NEXT:    fldt 8(%ebp)
 ; X86-SSE2-WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X86-SSE2-WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
@@ -1379,8 +1379,8 @@ define i64 @x_to_s64(x86_fp80 %a) nounwind {
 ; X87-WIN:       # %bb.0:
 ; X87-WIN-NEXT:    pushl %ebp
 ; X87-WIN-NEXT:    movl %esp, %ebp
-; X87-WIN-NEXT:    andl $-8, %esp
-; X87-WIN-NEXT:    subl $16, %esp
+; X87-WIN-NEXT:    andl $-16, %esp
+; X87-WIN-NEXT:    subl $32, %esp
 ; X87-WIN-NEXT:    fldt 8(%ebp)
 ; X87-WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; X87-WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax

@@ -90,12 +90,16 @@ void TestAffineDataCopy::runOnFunction() {
                                    /*fastMemCapacityBytes=*/32 * 1024 * 1024UL};
   DenseSet<Operation *> copyNests;
   if (clMemRefFilter) {
-    affineDataCopyGenerate(loopNest, copyOptions, load.getMemRef(), copyNests);
+    if (failed(affineDataCopyGenerate(loopNest, copyOptions, load.getMemRef(),
+                                      copyNests)))
+      return;
   } else if (clTestGenerateCopyForMemRegion) {
     CopyGenerateResult result;
     MemRefRegion region(loopNest.getLoc());
-    (void)region.compute(load, /*loopDepth=*/0);
-    (void)generateCopyForMemRegion(region, loopNest, copyOptions, result);
+    if (failed(region.compute(load, /*loopDepth=*/0)))
+      return;
+    if (failed(generateCopyForMemRegion(region, loopNest, copyOptions, result)))
+      return;
   }
 
   // Promote any single iteration loops in the copy nests and simplify

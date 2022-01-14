@@ -779,18 +779,22 @@ void Constant::removeDeadConstantUsers() const {
   }
 }
 
-bool Constant::hasOneLiveUse() const {
+bool Constant::hasOneLiveUse() const { return hasNLiveUses(1); }
+
+bool Constant::hasZeroLiveUses() const { return hasNLiveUses(0); }
+
+bool Constant::hasNLiveUses(unsigned N) const {
   unsigned NumUses = 0;
-  for (const Use &use : uses()) {
-    const Constant *User = dyn_cast<Constant>(use.getUser());
+  for (const Use &U : uses()) {
+    const Constant *User = dyn_cast<Constant>(U.getUser());
     if (!User || !constantIsDead(User, /* RemoveDeadUsers= */ false)) {
       ++NumUses;
 
-      if (NumUses > 1)
+      if (NumUses > N)
         return false;
     }
   }
-  return NumUses == 1;
+  return NumUses == N;
 }
 
 Constant *Constant::replaceUndefsWith(Constant *C, Constant *Replacement) {
