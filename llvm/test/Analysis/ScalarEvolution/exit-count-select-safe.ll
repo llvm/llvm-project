@@ -410,6 +410,38 @@ exit:
   ret i32 %i
 }
 
+define i32 @logical_and_2ops_and_constant(i32 %n, i32 %m, i32 %k) {
+; CHECK-LABEL: 'logical_and_2ops_and_constant'
+; CHECK-NEXT:  Classifying expressions for: @logical_and_2ops_and_constant
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,43) S: [0,43) Exits: (%n umin_seq 42) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,44) S: [1,44) Exits: (1 + (%n umin_seq 42))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %n, i32 42)
+; CHECK-NEXT:    --> (42 umin %n) U: [0,43) S: [0,43) Exits: (42 umin %n) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:    %cond = select i1 %cond_p1, i1 true, i1 %cond_p0
+; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_and_2ops_and_constant
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (%n umin_seq 42)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 42
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%n umin_seq 42)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+loop:
+  %i = phi i32 [0, %entry], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %umin = call i32 @llvm.umin.i32(i32 %n, i32 42)
+  %cond_p0 = icmp uge i32 %i, %umin
+  %cond_p1 = icmp uge i32 %i, %n
+  %cond = select i1 %cond_p1, i1 true, i1 %cond_p0
+  br i1 %cond, label %exit, label %loop
+exit:
+  ret i32 %i
+}
+
 define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-LABEL: 'computeSCEVAtScope'
 ; CHECK-NEXT:  Classifying expressions for: @computeSCEVAtScope
