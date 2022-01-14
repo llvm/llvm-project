@@ -311,6 +311,7 @@ void packet_store_release(uint32_t *packet, uint16_t header, uint16_t rest) {
 
 uint16_t create_header() {
   uint16_t header = HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE;
+  // header |= 1 << 8; // set barrier bit?
   header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
   header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
   return header;
@@ -958,25 +959,51 @@ static RTLDeviceInfoTy DeviceInfo;
 
 namespace {
 
+uint16_t create_BarrierAND_header() {
+  uint16_t header = HSA_PACKET_TYPE_BARRIER_AND << HSA_PACKET_HEADER_TYPE;
+  header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE;
+  header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
+  return header;
+}
+
+static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
+  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
+  bool full = true;
+  while (full) {
+    full =
+        packet_id >= (queue->size + hsa_queue_load_read_index_scacquire(queue));
+  }
+  return packet_id;
+}
+
 // Enable delaying of memory copy completion check
 // and unlocking of host pointers used in the transfer
 class AMDGPUAsyncInfoDataTy {
 public:
+  AMDGPUAsyncInfoDataTy(){};
   AMDGPUAsyncInfoDataTy(hsa_signal_t signal, void *hostPtr)
       : signal(signal), hostPtr(hostPtr) {}
 
-  AMDGPUAsyncInfoDataTy(AMDGPUAsyncInfoDataTy &) = delete;
+  AMDGPUAsyncInfoDataTy(const AMDGPUAsyncInfoDataTy &) = delete;
   AMDGPUAsyncInfoDataTy(AMDGPUAsyncInfoDataTy &&) = default; // assume noexcept
+
+  AMDGPUAsyncInfoDataTy &operator=(const AMDGPUAsyncInfoDataTy &&tmp) {
+    signal = tmp.signal;
+    hostPtr = tmp.hostPtr;
+    return *this;
+  }
+
+  inline hsa_signal_t getSignal() const { return signal; }
 
   hsa_status_t waitToComplete() {
     hsa_signal_value_t init = 1;
     hsa_signal_value_t success = 0;
     hsa_status_t err = wait_for_signal(signal, init, success);
-
     DeviceInfo.FreeSignalPool.push(signal);
-    hsa_amd_memory_unlock(hostPtr);
     return err;
   }
+
+  hsa_status_t releaseResources() { return hsa_amd_memory_unlock(hostPtr); }
 
 private:
   hsa_signal_t signal;
@@ -986,13 +1013,27 @@ private:
 // Enable delaying of kernel launch completion check
 class AMDGPUAsyncInfoComputeTy {
 public:
+  AMDGPUAsyncInfoComputeTy()
+      : kernelExecutionCompleted(false), ArgPool(nullptr), kernarg(nullptr) {}
   AMDGPUAsyncInfoComputeTy(hsa_signal_t signal, KernelArgPool *ArgPool,
                            void *kernarg)
-      : signal(signal), ArgPool(ArgPool), kernarg(kernarg) {}
+      : kernelExecutionCompleted(false), signal(signal), ArgPool(ArgPool),
+        kernarg(kernarg) {}
 
-  AMDGPUAsyncInfoComputeTy(AMDGPUAsyncInfoComputeTy &) = delete;
-  AMDGPUAsyncInfoComputeTy(AMDGPUAsyncInfoComputeTy &&) =
-      default; // assume noexcept
+  ~AMDGPUAsyncInfoComputeTy() {}
+  AMDGPUAsyncInfoComputeTy(const AMDGPUAsyncInfoComputeTy &) = delete;
+
+  AMDGPUAsyncInfoComputeTy(AMDGPUAsyncInfoComputeTy &&tmp) = default;
+
+  AMDGPUAsyncInfoComputeTy &operator=(const AMDGPUAsyncInfoComputeTy &&tmp) {
+    kernelExecutionCompleted = tmp.kernelExecutionCompleted;
+    signal = tmp.signal;
+    ArgPool = tmp.ArgPool;
+    kernarg = tmp.kernarg;
+    return *this;
+  }
+
+  inline bool hasCompleted() const { return kernelExecutionCompleted; }
 
   hsa_status_t waitToComplete() {
     hsa_signal_value_t init = 1;
@@ -1001,18 +1042,219 @@ public:
     DeviceInfo.FreeSignalPool.push(signal);
     assert(ArgPool);
     ArgPool->deallocate(kernarg);
+    kernelExecutionCompleted = true;
     return err;
   }
 
 private:
+  // used to prevent tgt_rtl_data_retrieve to start copy before kernel has
+  // finishe
+  bool kernelExecutionCompleted;
+
   hsa_signal_t signal;
   KernelArgPool *ArgPool; // needed for deallocation of kernarg
   void *kernarg;          // kernarg ptr used by kernel launch
 };
 
+class AMDGPUAsyncInfoQueueTy {
+public:
+  AMDGPUAsyncInfoQueueTy()
+      : hasMapEnteringInfo(false), hasMapExitingInfo(false),
+        hasKernelLaunchInfo(false),
+        kernelLaunchInfo(AMDGPUAsyncInfoComputeTy()) {
+    // reserve capacity for vectors: best guess or get libomptarget to tell us
+    // precisely how much (modify interface)
+  }
+
+  ~AMDGPUAsyncInfoQueueTy() {
+    mapEnteringInfo.clear();
+    mapExitingInfo.clear();
+  }
+
+  void addMapEnteringInfo(AMDGPUAsyncInfoDataTy &&enter) {
+    hasMapEnteringInfo = true;
+    mapEnteringInfo.emplace_back(std::move(enter));
+  }
+
+  void addMapExitingInfo(AMDGPUAsyncInfoDataTy &&exit) {
+    hasMapExitingInfo = true;
+    mapExitingInfo.emplace_back(std::move(exit));
+  }
+
+  void addKernelLaunchInfo(const AMDGPUAsyncInfoComputeTy &&launch) {
+    hasKernelLaunchInfo = true;
+    kernelLaunchInfo = std::move(launch);
+  }
+
+  inline bool needToWaitForKernel() const {
+    return hasKernelLaunchInfo && !kernelLaunchInfo.hasCompleted();
+  }
+
+  AMDGPUAsyncInfoComputeTy &getKernelInfo() { return kernelLaunchInfo; }
+
+  // create barrierAND packets for map-entering info's
+  hsa_status_t createMapEnteringDependencies(hsa_queue_t *queue);
+  hsa_status_t waitForKernelCompletion();
+  void waitForMapExiting();
+  hsa_status_t synchronize();
+
+private:
+  // currently a literal constant in the HSA header file
+  static constexpr size_t maxBarrierANDSignals =
+      sizeof(hsa_barrier_and_packet_s::dep_signal) / sizeof(hsa_signal_t);
+  bool hasMapEnteringInfo;
+  bool hasMapExitingInfo;
+  bool hasKernelLaunchInfo;
+
+  std::vector<AMDGPUAsyncInfoDataTy> mapEnteringInfo;
+  std::vector<AMDGPUAsyncInfoDataTy> mapExitingInfo;
+  AMDGPUAsyncInfoComputeTy kernelLaunchInfo;
+
+  // signals used by barrierAND packets (if needed)
+  std::vector<hsa_signal_t> barrierANDCompletionSignals;
+};
+
+hsa_status_t
+AMDGPUAsyncInfoQueueTy::createMapEnteringDependencies(hsa_queue_t *queue) {
+  // fast track: kernel without map-entering phase
+  if (!hasMapEnteringInfo)
+    return HSA_STATUS_SUCCESS;
+
+  int numBarrierANDPackets =
+      mapEnteringInfo.size() / maxBarrierANDSignals +
+      ((mapEnteringInfo.size() % maxBarrierANDSignals == 0) ? 0 : 1);
+
+  // to schedule numBarrierANDPackets (n) Barrier-AND packets, we need
+  // - n completion signals
+  // - n packet IDs
+  // - n packets
+  uint64_t barrierANDMapEnteringPacketIDs[numBarrierANDPackets];
+  hsa_barrier_and_packet_s
+      *barrierANDMapEnteringBarrierPackets[numBarrierANDPackets];
+  for (int i = 0; i < numBarrierANDPackets; i++) {
+    hsa_signal_t completion_signal = DeviceInfo.FreeSignalPool.pop();
+    if (completion_signal.handle == 0) {
+      DP("Failed to get signal instance\n");
+      return HSA_STATUS_ERROR;
+    }
+    barrierANDCompletionSignals.emplace_back(completion_signal);
+
+    uint64_t packetId = acquire_available_packet_id(queue);
+    barrierANDMapEnteringPacketIDs[i] = packetId;
+    const uint32_t mask = queue->size - 1; // size is a power of 2
+    hsa_barrier_and_packet_s *barrierPacket =
+        (hsa_barrier_and_packet_s *)queue->base_address + (packetId & mask);
+
+    // completion signal is not needed: can I leave this empty?
+    // check at runtime
+    barrierPacket->completion_signal =
+        completion_signal; // link packet to its completion signal
+
+    barrierANDMapEnteringBarrierPackets[i] = barrierPacket;
+  }
+
+  // Create input dependecies between map-entering info and BarrierAND
+  // packet
+  for (int i = 0, k = 0; i < mapEnteringInfo.size(); i += 5, k++) {
+    // Fill Barrier-AND packet with signals from MapEntering phase
+    hsa_signal_t zeroHandleSignal;
+    zeroHandleSignal.handle = 0;
+    barrierANDMapEnteringBarrierPackets[k]->dep_signal[0] =
+        mapEnteringInfo[i].getSignal();
+    barrierANDMapEnteringBarrierPackets[k]->dep_signal[1] =
+        (i + 1 < mapEnteringInfo.size()) ? mapEnteringInfo[i + 1].getSignal()
+                                         : zeroHandleSignal;
+    barrierANDMapEnteringBarrierPackets[k]->dep_signal[2] =
+        (i + 2 < mapEnteringInfo.size()) ? mapEnteringInfo[i + 2].getSignal()
+                                         : zeroHandleSignal;
+    barrierANDMapEnteringBarrierPackets[k]->dep_signal[3] =
+        (i + 3 < mapEnteringInfo.size()) ? mapEnteringInfo[i + 3].getSignal()
+                                         : zeroHandleSignal;
+    barrierANDMapEnteringBarrierPackets[k]->dep_signal[4] =
+        (i + 4 < mapEnteringInfo.size()) ? mapEnteringInfo[i + 4].getSignal()
+                                         : zeroHandleSignal;
+
+    // enqueue into device queue
+    // Set signal to 1. It will be decremented to 0 by HSA runtime once
+    // Barrier-AND packet is complete
+    hsa_signal_store_relaxed(
+        barrierANDMapEnteringBarrierPackets[k]->completion_signal, 1);
+
+    // Publish the packet indicating it is ready to be processed
+    core::packet_store_release(
+        reinterpret_cast<uint32_t *>(barrierANDMapEnteringBarrierPackets[k]),
+        create_BarrierAND_header(), 0);
+
+    hsa_signal_store_relaxed(queue->doorbell_signal,
+                             barrierANDMapEnteringPacketIDs[k]);
+  }
+  return HSA_STATUS_SUCCESS;
+}
+
+hsa_status_t AMDGPUAsyncInfoQueueTy::waitForKernelCompletion() {
+  if (!hasKernelLaunchInfo)
+    return HSA_STATUS_SUCCESS;
+  return kernelLaunchInfo.waitToComplete();
+}
+
+void AMDGPUAsyncInfoQueueTy::waitForMapExiting() {
+  if (!hasMapExitingInfo)
+    return;
+
+  for (auto &&s : mapExitingInfo)
+    s.waitToComplete();
+}
+
+hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
+  // fast tracks:
+  // - kernel with no map-entering and no map-exiting info's
+  // - single data submission
+  // - single data retrieval
+  if (hasKernelLaunchInfo && !hasMapEnteringInfo && !hasMapExitingInfo)
+    return waitForKernelCompletion();
+
+  // in absence of kernel and map exiting info, only wait for data submit's
+  if (!hasKernelLaunchInfo && hasMapEnteringInfo && !hasMapExitingInfo) {
+    for(auto &&enter : mapEnteringInfo) {
+      enter.waitToComplete();
+      enter.releaseResources();
+    }
+    return HSA_STATUS_SUCCESS;
+  }
+
+  // in absence of kernel and map entering info's, only wait for data retrieve's
+  if (!hasKernelLaunchInfo && !hasMapEnteringInfo && hasMapExitingInfo) {
+    for(auto &&exit : mapExitingInfo) {
+      exit.waitToComplete();
+      exit.releaseResources();
+    }
+    return HSA_STATUS_SUCCESS;
+  }
+
+  // slow track: all other cases, such as any combination
+  // of kernel plus map-entering or map-exiting info's
+  // or both. Either have to wait for kernel (no map-exiting)
+  // or for all map-exiting events
+  if (!hasMapExitingInfo) {
+    waitForKernelCompletion();
+  } else
+    waitForMapExiting();
+
+  // finally, release all resources
+  for (auto &&ent : mapEnteringInfo)
+    ent.releaseResources();
+
+  for (auto &&ext : mapExitingInfo)
+    ext.releaseResources();
+
+  for (int i = 0; i < barrierANDCompletionSignals.size(); i++)
+    DeviceInfo.FreeSignalPool.push(barrierANDCompletionSignals[i]);
+
+  return HSA_STATUS_SUCCESS;
+}
+
 int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
-                     __tgt_async_info *AsyncInfo) {
-  assert(AsyncInfo && "AsynrcInfo is nullptr");
+                     AMDGPUAsyncInfoDataTy &AsyncData) {
   assert(DeviceId < DeviceInfo.NumberOfDevices && "Device ID too large");
   // Return success if we are not copying back to host from target.
   if (!HstPtr)
@@ -1033,9 +1275,7 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
     return OFFLOAD_FAIL;
   }
 
-  AMDGPUAsyncInfoDataTy AsyncCopyInfo(signal, HstPtr);
-  err = AsyncCopyInfo.waitToComplete();
-
+  AsyncData = std::move(AMDGPUAsyncInfoDataTy(signal, HstPtr));
   DP("DONE Retrieve data %ld bytes, (tgt:%016llx) -> (hst:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)TgtPtr,
      (long long unsigned)(Elf64_Addr)HstPtr);
@@ -1043,8 +1283,7 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
 }
 
 int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
-                   __tgt_async_info *AsyncInfo) {
-  assert(AsyncInfo && "AsyncInfo is nullptr");
+                   AMDGPUAsyncInfoDataTy &AsyncData) {
   hsa_status_t err;
   assert(DeviceId < DeviceInfo.NumberOfDevices && "Device ID too large");
   // Return success if we are not doing host to target.
@@ -1064,38 +1303,23 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
     return OFFLOAD_FAIL;
   }
 
-  AMDGPUAsyncInfoDataTy AsyncCopyInfo(signal, HstPtr);
-  err = AsyncCopyInfo.waitToComplete();
-
+  AsyncData = std::move(AMDGPUAsyncInfoDataTy(signal, HstPtr));
   return err;
 }
 
-// Async.
-// The implementation was written with cuda streams in mind. The semantics of
-// that are to execute kernels on a queue in order of insertion. A synchronise
-// call then makes writes visible between host and device. This means a series
-// of N data_submit_async calls are expected to execute serially. HSA offers
-// various options to run the data copies concurrently. This may require changes
-// to libomptarget.
-
-// __tgt_async_info* contains a void * Queue. Queue = 0 is used to indicate that
-// there are no outstanding kernels that need to be synchronized. Any async call
-// may be passed a Queue==0, at which point the cuda implementation will set it
-// to non-null (see getStream). The cuda streams are per-device. Upstream may
-// change this interface to explicitly initialize the AsyncInfo_pointer, but
-// until then hsa lazily initializes it as well.
-
 void initAsyncInfo(__tgt_async_info *AsyncInfo) {
-  // set non-null while using async calls, return to null to indicate completion
   assert(AsyncInfo);
   if (!AsyncInfo->Queue) {
-    AsyncInfo->Queue = reinterpret_cast<void *>(UINT64_MAX);
+    AsyncInfo->Queue = new AMDGPUAsyncInfoQueueTy();
   }
 }
 void finiAsyncInfo(__tgt_async_info *AsyncInfo) {
   assert(AsyncInfo);
   assert(AsyncInfo->Queue);
-  AsyncInfo->Queue = 0;
+  AMDGPUAsyncInfoQueueTy *AMDAsyncInfoQueue =
+      reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue);
+  delete (AMDAsyncInfoQueue);
+  AsyncInfo->Queue = nullptr;
 }
 
 // Determine launch values for threadsPerGroup and num_groups.
@@ -1279,20 +1503,11 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int WarpSize,
 #endif
 }
 
-static uint64_t acquire_available_packet_id(hsa_queue_t *queue) {
-  uint64_t packet_id = hsa_queue_add_write_index_relaxed(queue, 1);
-  bool full = true;
-  while (full) {
-    full =
-        packet_id >= (queue->size + hsa_queue_load_read_index_scacquire(queue));
-  }
-  return packet_id;
-}
-
 int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
                         ptrdiff_t *tgt_offsets, int32_t arg_num,
                         int32_t num_teams, int32_t thread_limit,
-                        uint64_t loop_tripcount) {
+                        uint64_t loop_tripcount,
+                        AMDGPUAsyncInfoQueueTy &AsyncInfo) {
   // Set the context we are using
   // update thread limit content in gpu memory if un-initialized or specified
   // from host
@@ -1366,6 +1581,9 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     if (!queue) {
       return OFFLOAD_FAIL;
     }
+
+    AsyncInfo.createMapEnteringDependencies(queue);
+
     uint64_t packet_id = acquire_available_packet_id(queue);
 
     const uint32_t mask = queue->size - 1; // size is a power of 2
@@ -1479,8 +1697,8 @@ int32_t runRegionLocked(int32_t device_id, void *tgt_entry_ptr, void **tgt_args,
     hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
     // wait for completion, then free signal and kernarg
-    AMDGPUAsyncInfoComputeTy AMDGPUAsyncInfo(s, ArgPool, kernarg);
-    AMDGPUAsyncInfo.waitToComplete();
+    AsyncInfo.addKernelLaunchInfo(
+        AMDGPUAsyncInfoComputeTy(s, ArgPool, kernarg));
   }
 
   DP("Kernel completed\n");
@@ -2445,12 +2663,15 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
 int32_t __tgt_rtl_data_submit(int device_id, void *tgt_ptr, void *hst_ptr,
                               int64_t size) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  __tgt_async_info AsyncInfo;
-  int32_t rc = dataSubmit(device_id, tgt_ptr, hst_ptr, size, &AsyncInfo);
+  AMDGPUAsyncInfoDataTy AsyncData;
+  int32_t rc = dataSubmit(device_id, tgt_ptr, hst_ptr, size, AsyncData);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
+  AsyncData.waitToComplete();
+  AsyncData.releaseResources();
+
+  return rc;
 }
 
 int32_t __tgt_rtl_data_submit_async(int device_id, void *tgt_ptr, void *hst_ptr,
@@ -2458,7 +2679,11 @@ int32_t __tgt_rtl_data_submit_async(int device_id, void *tgt_ptr, void *hst_ptr,
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
   if (AsyncInfo) {
     initAsyncInfo(AsyncInfo);
-    return dataSubmit(device_id, tgt_ptr, hst_ptr, size, AsyncInfo);
+    AMDGPUAsyncInfoDataTy AsyncData;
+    int32_t rc = dataSubmit(device_id, tgt_ptr, hst_ptr, size, AsyncData);
+    reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue)
+        ->addMapEnteringInfo(std::move(AsyncData));
+    return rc;
   } else {
     return __tgt_rtl_data_submit(device_id, tgt_ptr, hst_ptr, size);
   }
@@ -2467,21 +2692,37 @@ int32_t __tgt_rtl_data_submit_async(int device_id, void *tgt_ptr, void *hst_ptr,
 int32_t __tgt_rtl_data_retrieve(int device_id, void *hst_ptr, void *tgt_ptr,
                                 int64_t size) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  __tgt_async_info AsyncInfo;
-  int32_t rc = dataRetrieve(device_id, hst_ptr, tgt_ptr, size, &AsyncInfo);
+  AMDGPUAsyncInfoDataTy AsyncData;
+  int32_t rc = dataRetrieve(device_id, hst_ptr, tgt_ptr, size, AsyncData);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
+  AsyncData.waitToComplete();
+  AsyncData.releaseResources();
+  return rc;
 }
 
 int32_t __tgt_rtl_data_retrieve_async(int device_id, void *hst_ptr,
                                       void *tgt_ptr, int64_t size,
                                       __tgt_async_info *AsyncInfo) {
-  assert(AsyncInfo && "AsyncInfo is nullptr");
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  initAsyncInfo(AsyncInfo);
-  return dataRetrieve(device_id, hst_ptr, tgt_ptr, size, AsyncInfo);
+  if (AsyncInfo) {
+    initAsyncInfo(AsyncInfo);
+    AMDGPUAsyncInfoDataTy AsyncData;
+    AMDGPUAsyncInfoQueueTy *AsyncInfoQueue =
+        reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue);
+
+    // if data retrieve call is part of target region, wait for kernel to
+    // complete
+    if (AsyncInfoQueue->needToWaitForKernel())
+      AsyncInfoQueue->getKernelInfo().waitToComplete();
+
+    int32_t rc = dataRetrieve(device_id, hst_ptr, tgt_ptr, size, AsyncData);
+    reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue)
+        ->addMapExitingInfo(std::move(AsyncData));
+    return rc;
+  } else
+    return __tgt_rtl_data_retrieve(device_id, hst_ptr, tgt_ptr, size);
 }
 
 int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
@@ -2496,12 +2737,14 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
                                          int32_t thread_limit,
                                          uint64_t loop_tripcount) {
 
+  AMDGPUAsyncInfoQueueTy AsyncInfo;
   DeviceInfo.load_run_lock.lock_shared();
   int32_t res =
       runRegionLocked(device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num,
-                      num_teams, thread_limit, loop_tripcount);
+                      num_teams, thread_limit, loop_tripcount, AsyncInfo);
 
   DeviceInfo.load_run_lock.unlock_shared();
+  AsyncInfo.waitForKernelCompletion();
   return res;
 }
 
@@ -2523,10 +2766,14 @@ int32_t __tgt_rtl_run_target_team_region_async(
     int32_t thread_limit, uint64_t loop_tripcount,
     __tgt_async_info *AsyncInfo) {
 
+  initAsyncInfo(AsyncInfo);
+  AMDGPUAsyncInfoQueueTy *AsyncInfoQueue =
+      reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue);
+
   DeviceInfo.load_run_lock.lock_shared();
   int32_t res =
       runRegionLocked(device_id, tgt_entry_ptr, tgt_args, tgt_offsets, arg_num,
-                      num_teams, thread_limit, loop_tripcount);
+                      num_teams, thread_limit, loop_tripcount, *AsyncInfoQueue);
 
   DeviceInfo.load_run_lock.unlock_shared();
   return res;
@@ -2557,6 +2804,9 @@ int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {
   // is not ensured by devices.cpp for amdgcn
   // assert(AsyncInfo->Queue && "AsyncInfo->Queue is nullptr");
   if (AsyncInfo->Queue) {
+    AMDGPUAsyncInfoQueueTy *AMDGPUAsyncInfoQueue =
+        reinterpret_cast<AMDGPUAsyncInfoQueueTy *>(AsyncInfo->Queue);
+    AMDGPUAsyncInfoQueue->synchronize();
     finiAsyncInfo(AsyncInfo);
   }
   return OFFLOAD_SUCCESS;
