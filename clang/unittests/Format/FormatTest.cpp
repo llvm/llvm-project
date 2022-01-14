@@ -3560,6 +3560,86 @@ TEST_F(FormatTest, FormatsNamespaces) {
                    "} // namespace out",
                    Style));
 
+  FormatStyle ShortInlineFunctions = getLLVMStyle();
+  ShortInlineFunctions.NamespaceIndentation = FormatStyle::NI_All;
+  ShortInlineFunctions.AllowShortFunctionsOnASingleLine =
+      FormatStyle::SFS_Inline;
+  verifyFormat("namespace {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  int some_int;\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace interface {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace interface\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  class X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  struct X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  union X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("extern \"C\" {\n"
+               "void f() {\n"
+               "  return;\n"
+               "}\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  class X {\n"
+               "    void f() { return; }\n"
+               "  } x;\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  [[nodiscard]] class X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  static class X {\n"
+               "    void f() { return; }\n"
+               "  } x;\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  constexpr class X {\n"
+               "    void f() { return; }\n"
+               "  } x;\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+
+  ShortInlineFunctions.IndentExternBlock = FormatStyle::IEBS_Indent;
+  verifyFormat("extern \"C\" {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+
   Style.NamespaceIndentation = FormatStyle::NI_Inner;
   EXPECT_EQ("namespace out {\n"
             "int i;\n"

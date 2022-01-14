@@ -602,5 +602,16 @@ TEST_F(FormatTestJava, RetainsLogicalShifts) {
                "}");
 }
 
+TEST_F(FormatTestJava, ShortFunctions) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Java);
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  verifyFormat("enum Enum {\n"
+               "  E1,\n"
+               "  E2;\n"
+               "  void f() { return; }\n"
+               "}",
+               Style);
+}
+
 } // namespace format
 } // end namespace clang
