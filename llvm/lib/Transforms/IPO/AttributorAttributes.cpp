@@ -6017,22 +6017,17 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
   Optional<APInt> getSize(Attributor &A, const AbstractAttribute &AA,
                           AllocationInfo &AI) {
+    auto Mapper = [&](const Value *V) -> const Value* {
+      bool Dead = false;
+      if (Optional<Constant *> SimpleV = A.getAssumedConstant(*V, AA, Dead))
+        if (*SimpleV)
+          return *SimpleV;
+      return V;
+    };
 
-    if (AI.Kind == AllocationInfo::AllocationKind::MALLOC)
-      return getAPInt(A, AA, *AI.CB->getArgOperand(0));
-
-    if (AI.Kind == AllocationInfo::AllocationKind::ALIGNED_ALLOC)
-      return getAPInt(A, AA, *AI.CB->getArgOperand(1));
-
-    assert(AI.Kind == AllocationInfo::AllocationKind::CALLOC &&
-           "Expected only callocs are left");
-    Optional<APInt> Num = getAPInt(A, AA, *AI.CB->getArgOperand(0));
-    Optional<APInt> Size = getAPInt(A, AA, *AI.CB->getArgOperand(1));
-    if (!Num.hasValue() || !Size.hasValue())
-      return llvm::None;
-    bool Overflow = false;
-    Size = Size.getValue().umul_ov(Num.getValue(), Overflow);
-    return Overflow ? llvm::None : Size;
+    const Function *F = getAnchorScope();
+    const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
+    return getAllocSize(AI.CB, TLI, Mapper);
   }
 
   /// Collection of all malloc-like calls in a function with associated
