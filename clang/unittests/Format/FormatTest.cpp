@@ -3830,6 +3830,21 @@ TEST_F(FormatTest, FormatsCompactNamespaces) {
                    "} // namespace mid\n"
                    "} // namespace out",
                    Style));
+
+  Style.CompactNamespaces = true;
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+  verifyFormat("namespace out { namespace in {\n"
+               "}} // namespace out::in",
+               Style);
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "}} // namespace out::in",
+            format("namespace out {\n"
+                   "namespace in {\n"
+                   "} // namespace in\n"
+                   "} // namespace out",
+                   Style));
 }
 
 TEST_F(FormatTest, FormatsExternC) {
