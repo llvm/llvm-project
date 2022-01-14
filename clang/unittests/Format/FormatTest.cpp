@@ -19607,13 +19607,15 @@ TEST_F(FormatTest, HandlesUTF8BOM) {
 TEST_F(FormatTest, CountsUTF8CharactersProperly) {
   verifyFormat("\"Однажды в студёную зимнюю пору...\"",
                getLLVMStyleWithColumns(35));
-  verifyFormat("\"一 二 三 四 五 六 七 八 九 十\"", getLLVMStyleWithColumns(31));
+  verifyFormat("\"一 二 三 四 五 六 七 八 九 十\"",
+               getLLVMStyleWithColumns(31));
   verifyFormat("// Однажды в студёную зимнюю пору...",
                getLLVMStyleWithColumns(36));
   verifyFormat("// 一 二 三 四 五 六 七 八 九 十", getLLVMStyleWithColumns(32));
   verifyFormat("/* Однажды в студёную зимнюю пору... */",
                getLLVMStyleWithColumns(39));
-  verifyFormat("/* 一 二 三 四 五 六 七 八 九 十 */", getLLVMStyleWithColumns(35));
+  verifyFormat("/* 一 二 三 四 五 六 七 八 九 十 */",
+               getLLVMStyleWithColumns(35));
 }
 
 TEST_F(FormatTest, SplitsUTF8Strings) {
@@ -19633,20 +19635,21 @@ TEST_F(FormatTest, SplitsUTF8Strings) {
             "\"пору,\"",
             format("\"Однажды, в студёную зимнюю пору,\"",
                    getLLVMStyleWithColumns(13)));
-  EXPECT_EQ("\"一 二 三 \"\n"
-            "\"四 五六 \"\n"
-            "\"七 八 九 \"\n"
-            "\"十\"",
-            format("\"一 二 三 四 五六 七 八 九 十\"", getLLVMStyleWithColumns(11)));
   EXPECT_EQ(
-      "\"一\t\"\n"
-      "\"二 \t\"\n"
-      "\"三 四 \"\n"
-      "\"五\t\"\n"
-      "\"六 \t\"\n"
-      "\"七 \"\n"
-      "\"八九十\tqq\"",
-      format("\"一\t二 \t三 四 五\t六 \t七 八九十\tqq\"", getLLVMStyleWithColumns(11)));
+      "\"一 二 三 \"\n"
+      "\"四 五六 \"\n"
+      "\"七 八 九 \"\n"
+      "\"十\"",
+      format("\"一 二 三 四 五六 七 八 九 十\"", getLLVMStyleWithColumns(11)));
+  EXPECT_EQ("\"一\t\"\n"
+            "\"二 \t\"\n"
+            "\"三 四 \"\n"
+            "\"五\t\"\n"
+            "\"六 \t\"\n"
+            "\"七 \"\n"
+            "\"八九十\tqq\"",
+            format("\"一\t二 \t三 四 五\t六 \t七 八九十\tqq\"",
+                   getLLVMStyleWithColumns(11)));
 
   // UTF8 character in an escape sequence.
   EXPECT_EQ("\"aaaaaa\"\n"
@@ -19691,16 +19694,16 @@ TEST_F(FormatTest, SplitsUTF8BlockComments) {
             format("/* Гляжу, поднимается медленно в гору\n"
                    " * Лошадка, везущая хворосту воз. */",
                    getLLVMStyleWithColumns(13)));
-  EXPECT_EQ("/* 一二三\n"
-            " * 四五六七\n"
-            " * 八  九\n"
-            " * 十  */",
-            format("/* 一二三 四五六七 八  九 十  */", getLLVMStyleWithColumns(9)));
+  EXPECT_EQ(
+      "/* 一二三\n"
+      " * 四五六七\n"
+      " * 八  九\n"
+      " * 十  */",
+      format("/* 一二三 四五六七 八  九 十  */", getLLVMStyleWithColumns(9)));
   EXPECT_EQ("/* 𝓣𝓮𝓼𝓽 𝔣𝔬𝔲𝔯\n"
             " * 𝕓𝕪𝕥𝕖\n"
             " * 𝖀𝕿𝕱-𝟠 */",
-            format("/* 𝓣𝓮𝓼𝓽 𝔣𝔬𝔲𝔯 𝕓𝕪𝕥𝕖 𝖀𝕿𝕱-𝟠 */",
-                   getLLVMStyleWithColumns(12)));
+            format("/* 𝓣𝓮𝓼𝓽 𝔣𝔬𝔲𝔯 𝕓𝕪𝕥𝕖 𝖀𝕿𝕱-𝟠 */", getLLVMStyleWithColumns(12)));
 }
 
 #endif // _MSC_VER
