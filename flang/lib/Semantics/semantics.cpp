@@ -195,14 +195,6 @@ int SemanticsContext::GetDefaultKind(TypeCategory category) const {
   return defaultKinds_.GetDefaultKind(category);
 }
 
-bool SemanticsContext::IsEnabled(common::LanguageFeature feature) const {
-  return languageFeatures_.IsEnabled(feature);
-}
-
-bool SemanticsContext::ShouldWarn(common::LanguageFeature feature) const {
-  return languageFeatures_.ShouldWarn(feature);
-}
-
 const DeclTypeSpec &SemanticsContext::MakeNumericType(
     TypeCategory category, int kind) {
   if (kind == 0) {
