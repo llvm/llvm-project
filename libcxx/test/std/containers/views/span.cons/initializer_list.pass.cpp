@@ -15,6 +15,7 @@
 
 #include <span>
 #include <cassert>
+#include <cstddef>
 
 struct Sink {
     constexpr Sink() = default;
@@ -38,8 +39,7 @@ constexpr bool test() {
     return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test();
     static_assert(test());
 
