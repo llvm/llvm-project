@@ -203,6 +203,13 @@ TEST(SelectionTest, CommonAncestor) {
       },
       {
           R"cpp(
+            #define TARGET void foo()
+            [[TAR^GET{ return; }]]
+          )cpp",
+          "FunctionDecl",
+      },
+      {
+          R"cpp(
             struct S { S(const char*); };
             [[S s ^= "foo"]];
           )cpp",
