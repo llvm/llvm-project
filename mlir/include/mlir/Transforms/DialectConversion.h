@@ -774,7 +774,7 @@ public:
   /// Register the operations of the given dialects as dynamically legal, i.e.
   /// requiring custom handling by the callback.
   template <typename... Names>
-  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback,
+  void addDynamicallyLegalDialect(const DynamicLegalityCallbackFn &callback,
                                   StringRef name, Names... names) {
     SmallVector<StringRef, 2> dialectNames({name, names...});
     setDialectAction(dialectNames, LegalizationAction::Dynamic);

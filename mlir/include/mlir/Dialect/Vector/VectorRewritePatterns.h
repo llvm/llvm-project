@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_VECTOR_VECTORREWRITEPATTERNS_H
 #define MLIR_DIALECT_VECTOR_VECTORREWRITEPATTERNS_H
 
+#include <utility>
+
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -101,7 +103,7 @@ struct UnrollVectorOptions {
   /// attempted on the operation.
   FilterConstraintFnType filterConstraint = nullptr;
   UnrollVectorOptions &setFilterConstraint(FilterConstraintFnType constraint) {
-    filterConstraint = constraint;
+    filterConstraint = std::move(constraint);
     return *this;
   }
 
@@ -111,7 +113,7 @@ struct UnrollVectorOptions {
   /// operation. The unrolling is aborted if the function returns `llvm::None`.
   NativeShapeFnType nativeShape = nullptr;
   UnrollVectorOptions &setNativeShapeFn(NativeShapeFnType fn) {
-    nativeShape = fn;
+    nativeShape = std::move(fn);
     return *this;
   }
 
@@ -321,7 +323,7 @@ struct VectorTransferFullPartialRewriter : public RewritePattern {
           [](VectorTransferOpInterface op) { return success(); },
       PatternBenefit benefit = 1)
       : RewritePattern(MatchAnyOpTypeTag(), benefit, context), options(options),
-        filter(filter) {}
+        filter(std::move(filter)) {}
 
   /// Performs the rewrite.
   LogicalResult matchAndRewrite(Operation *op,
@@ -360,7 +362,8 @@ public:
       vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformOptions(vectorTransformOptions), filter(constraint) {}
+        vectorTransformOptions(vectorTransformOptions),
+        filter(std::move(constraint)) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override;
@@ -401,7 +404,8 @@ public:
       vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformOptions(vectorTransformOptions), filter(constraint) {}
+        vectorTransformOptions(vectorTransformOptions),
+        filter(std::move(constraint)) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override;
@@ -443,7 +447,8 @@ public:
 
   ContractionOpToDotLowering(
       vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context, FilterConstraintType constraint = defaultFilter)
+      MLIRContext *context,
+      const FilterConstraintType &constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
         vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
 
@@ -484,7 +489,8 @@ public:
                         MLIRContext *context,
                         FilterConstraintType constraint = defaultFilter)
       : OpRewritePattern<vector::ContractionOp>(context),
-        vectorTransformOptions(vectorTransformOptions), filter(constraint) {}
+        vectorTransformOptions(vectorTransformOptions),
+        filter(std::move(constraint)) {}
 
   LogicalResult matchAndRewrite(vector::ContractionOp op,
                                 PatternRewriter &rewriter) const override;
