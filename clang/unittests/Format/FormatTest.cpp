@@ -1473,6 +1473,12 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
   verifyFormat("for (;;)\n"
                "  for (;;) continue;",
                AllowsMergedLoops);
+  verifyFormat("for (;;)\n"
+               "  while (true) continue;",
+               AllowsMergedLoops);
+  verifyFormat("BOOST_FOREACH (int v, vec)\n"
+               "  for (;;) continue;",
+               AllowsMergedLoops);
   verifyFormat("for (;;) // Can't merge this\n"
                "  continue;",
                AllowsMergedLoops);
