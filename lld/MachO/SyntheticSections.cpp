@@ -1379,26 +1379,15 @@ DeduplicatedCStringSection::DeduplicatedCStringSection()
 void DeduplicatedCStringSection::finalizeContents() {
   // Add all string pieces to the string table builder to create section
   // contents.
-  for (const CStringInputSection *isec : inputs)
+  for (CStringInputSection *isec : inputs) {
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i)
       if (isec->pieces[i].live)
-        builder.add(isec->getCachedHashStringRef(i));
-
-  // Fix the string table content. After this, the contents will never change.
-  builder.finalizeInOrder();
-
-  // finalize() fixed tail-optimized strings, so we can now get
-  // offsets of strings. Get an offset for each string and save it
-  // to a corresponding SectionPiece for easy access.
-  for (CStringInputSection *isec : inputs) {
-    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
-      if (!isec->pieces[i].live)
-        continue;
-      isec->pieces[i].outSecOff =
-          builder.getOffset(isec->getCachedHashStringRef(i));
-      isec->isFinal = true;
-    }
+        isec->pieces[i].outSecOff =
+            builder.add(isec->getCachedHashStringRef(i));
+    isec->isFinal = true;
   }
+
+  builder.finalizeInOrder();
 }
 
 // This section is actually emitted as __TEXT,__const by ld64, but clang may
