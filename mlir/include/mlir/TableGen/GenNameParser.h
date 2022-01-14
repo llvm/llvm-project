@@ -23,8 +23,8 @@ class GenInfo;
 struct GenNameParser : public llvm::cl::parser<const GenInfo *> {
   GenNameParser(llvm::cl::Option &opt);
 
-  void printOptionInfo(const llvm::cl::Option &O,
-                       size_t GlobalWidth) const override;
+  void printOptionInfo(const llvm::cl::Option &o,
+                       size_t globalWidth) const override;
 };
 } // namespace mlir
 

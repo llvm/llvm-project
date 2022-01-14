@@ -23,11 +23,11 @@ namespace mlir {
 template <typename Op, typename XOp, typename YOp, typename ZOp>
 struct GPUIndexIntrinsicOpLowering : public ConvertOpToLLVMPattern<Op> {
 private:
-  enum dimension { X = 0, Y = 1, Z = 2, invalid };
+  enum Dimension { X = 0, Y = 1, Z = 2, invalid };
   unsigned indexBitwidth;
 
-  static dimension dimensionToIndex(Op op) {
-    return StringSwitch<dimension>(op.dimension())
+  static Dimension dimensionToIndex(Op op) {
+    return StringSwitch<Dimension>(op.dimension())
         .Case("x", X)
         .Case("y", Y)
         .Case("z", Z)

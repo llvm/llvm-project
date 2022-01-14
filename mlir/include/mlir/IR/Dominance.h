@@ -207,9 +207,9 @@ struct GraphTraits<mlir::DominanceInfoNode *> {
   using ChildIteratorType = mlir::DominanceInfoNode::const_iterator;
   using NodeRef = mlir::DominanceInfoNode *;
 
-  static NodeRef getEntryNode(NodeRef N) { return N; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static NodeRef getEntryNode(NodeRef n) { return n; }
+  static inline ChildIteratorType childBegin(NodeRef n) { return n->begin(); }
+  static inline ChildIteratorType childEnd(NodeRef n) { return n->end(); }
 };
 
 template <>
@@ -217,9 +217,9 @@ struct GraphTraits<const mlir::DominanceInfoNode *> {
   using ChildIteratorType = mlir::DominanceInfoNode::const_iterator;
   using NodeRef = const mlir::DominanceInfoNode *;
 
-  static NodeRef getEntryNode(NodeRef N) { return N; }
-  static inline ChildIteratorType child_begin(NodeRef N) { return N->begin(); }
-  static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
+  static NodeRef getEntryNode(NodeRef n) { return n; }
+  static inline ChildIteratorType childBegin(NodeRef n) { return n->begin(); }
+  static inline ChildIteratorType childEnd(NodeRef n) { return n->end(); }
 };
 
 } // namespace llvm

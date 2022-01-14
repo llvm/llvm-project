@@ -34,7 +34,7 @@ public:
 
   // Token classification.
   Kind getKind() const { return kind; }
-  bool is(Kind K) const { return kind == K; }
+  bool is(Kind k) const { return kind == k; }
 
   bool isAny(Kind k1, Kind k2) const { return is(k1) || is(k2); }
 
