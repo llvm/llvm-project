@@ -135,7 +135,7 @@ public:
   static bool isValidResultType(Type type);
 
   /// Returns whether the function is variadic.
-  bool isVarArg();
+  bool isVarArg() const;
 
   /// Gets or creates an instance of LLVM dialect function in the same context
   /// as the `result` type.
@@ -145,8 +145,16 @@ public:
   getChecked(function_ref<InFlightDiagnostic()> emitError, Type result,
              ArrayRef<Type> arguments, bool isVarArg = false);
 
+  /// Returns a clone of this function type with the given argument
+  /// and result types.
+  LLVMFunctionType clone(TypeRange inputs, TypeRange results) const;
+
   /// Returns the result type of the function.
   Type getReturnType();
+
+  /// Returns the result type of the function as an ArrayRef, enabling better
+  /// integration with generic MLIR utilities.
+  ArrayRef<Type> getReturnTypes();
 
   /// Returns the number of arguments to the function.
   unsigned getNumParams();

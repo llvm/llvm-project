@@ -3964,7 +3964,7 @@ def SPV_SelectType : AnyTypeOf<[SPV_Scalar, SPV_Vector, SPV_AnyPtr]>;
 // Check that an op can only be used within the scope of a function-like op.
 def InFunctionScope : PredOpTrait<
   "op must appear in a function-like op's block",
-  CPred<"isNestedInFunctionLikeOp($_op.getParentOp())">>;
+  CPred<"isNestedInFunctionOpInterface($_op.getParentOp())">>;
 
 // Check that an op can only be used within the scope of a module-like op.
 def InModuleScope : PredOpTrait<

@@ -104,8 +104,7 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
         rewriter.create<FuncOp>(rewriter.getUnknownLoc(), name, opFunctionTy);
     opFunc.setPrivate();
   }
-  assert(SymbolTable::lookupSymbolIn(module, name)
-             ->template hasTrait<mlir::OpTrait::FunctionLike>());
+  assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
 
   rewriter.replaceOpWithNewOp<CallOp>(op, name, op.getType(),
                                       op->getOperands());

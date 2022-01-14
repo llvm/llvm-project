@@ -9,7 +9,7 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 
@@ -129,7 +129,7 @@ spirv::getEntryPointABIAttr(ArrayRef<int32_t> localSize, MLIRContext *context) {
 }
 
 spirv::EntryPointABIAttr spirv::lookupEntryPointABI(Operation *op) {
-  while (op && !op->hasTrait<OpTrait::FunctionLike>())
+  while (op && !isa<FunctionOpInterface>(op))
     op = op->getParentOp();
   if (!op)
     return {};

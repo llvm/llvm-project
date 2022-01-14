@@ -619,7 +619,7 @@ void MLIRDocument::findDocumentSymbols(
     // If this operation defines a symbol, record it.
     if (SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op)) {
       symbols.emplace_back(symbol.getName(),
-                           op->hasTrait<OpTrait::FunctionLike>()
+                           isa<FunctionOpInterface>(op)
                                ? lsp::SymbolKind::Function
                                : lsp::SymbolKind::Class,
                            getRangeFromLoc(sourceMgr, def->scopeLoc),

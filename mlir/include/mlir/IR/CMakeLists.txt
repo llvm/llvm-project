@@ -37,6 +37,12 @@ mlir_tablegen(BuiltinTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(BuiltinTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_public_tablegen_target(MLIRBuiltinTypeInterfacesIncGen)
 
+set(LLVM_TARGET_DEFINITIONS FunctionInterfaces.td)
+mlir_tablegen(FunctionOpInterfaces.h.inc -gen-op-interface-decls)
+mlir_tablegen(FunctionOpInterfaces.cpp.inc -gen-op-interface-defs)
+add_public_tablegen_target(MLIRFunctionInterfacesIncGen)
+add_dependencies(mlir-generic-headers MLIRFunctionInterfacesIncGen)
+
 set(LLVM_TARGET_DEFINITIONS SubElementInterfaces.td)
 mlir_tablegen(SubElementAttrInterfaces.h.inc -gen-attr-interface-decls)
 mlir_tablegen(SubElementAttrInterfaces.cpp.inc -gen-attr-interface-defs)

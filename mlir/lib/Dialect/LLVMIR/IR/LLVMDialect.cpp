@@ -1976,8 +1976,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
 
   assert(type.cast<LLVMFunctionType>().getNumParams() == argAttrs.size() &&
          "expected as many argument attribute lists as arguments");
-  function_like_impl::addArgAndResultAttrs(builder, result, argAttrs,
-                                           /*resultAttrs=*/llvm::None);
+  function_interface_impl::addArgAndResultAttrs(builder, result, argAttrs,
+                                                /*resultAttrs=*/llvm::None);
 }
 
 // Builds an LLVM function type from the given lists of input and output types.
@@ -1986,7 +1986,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
 static Type
 buildLLVMFunctionType(OpAsmParser &parser, llvm::SMLoc loc,
                       ArrayRef<Type> inputs, ArrayRef<Type> outputs,
-                      function_like_impl::VariadicFlag variadicFlag) {
+                      function_interface_impl::VariadicFlag variadicFlag) {
   Builder &b = parser.getBuilder();
   if (outputs.size() > 1) {
     parser.emitError(loc, "failed to construct function type: expected zero or "
@@ -2043,23 +2043,23 @@ static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
   auto signatureLocation = parser.getCurrentLocation();
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
                              result.attributes) ||
-      function_like_impl::parseFunctionSignature(
+      function_interface_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/true, entryArgs, argTypes, argAttrs,
           isVariadic, resultTypes, resultAttrs))
     return failure();
 
   auto type =
       buildLLVMFunctionType(parser, signatureLocation, argTypes, resultTypes,
-                            function_like_impl::VariadicFlag(isVariadic));
+                            function_interface_impl::VariadicFlag(isVariadic));
   if (!type)
     return failure();
-  result.addAttribute(function_like_impl::getTypeAttrName(),
+  result.addAttribute(FunctionOpInterface::getTypeAttrName(),
                       TypeAttr::get(type));
 
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  function_like_impl::addArgAndResultAttrs(parser.getBuilder(), result,
-                                           argAttrs, resultAttrs);
+  function_interface_impl::addArgAndResultAttrs(parser.getBuilder(), result,
+                                                argAttrs, resultAttrs);
 
   auto *body = result.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -2087,9 +2087,9 @@ static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
   if (!returnType.isa<LLVMVoidType>())
     resTypes.push_back(returnType);
 
-  function_like_impl::printFunctionSignature(p, op, argTypes, op.isVarArg(),
-                                             resTypes);
-  function_like_impl::printFunctionAttributes(
+  function_interface_impl::printFunctionSignature(p, op, argTypes,
+                                                  op.isVarArg(), resTypes);
+  function_interface_impl::printFunctionAttributes(
       p, op, argTypes.size(), resTypes.size(), {getLinkageAttrName()});
 
   // Print the body if this is not an external function.
@@ -2101,9 +2101,6 @@ static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
   }
 }
 
-// Hook for OpTrait::FunctionLike, called after verifying that the 'type'
-// attribute is present.  This can check for preconditions of the
-// getNumArguments hook not failing.
 LogicalResult LLVMFuncOp::verifyType() {
   auto llvmType = getTypeAttr().getValue().dyn_cast_or_null<LLVMFunctionType>();
   if (!llvmType)
@@ -2111,23 +2108,6 @@ LogicalResult LLVMFuncOp::verifyType() {
                        "' attribute of wrapped LLVM function type");
 
   return success();
-}
-
-// Hook for OpTrait::FunctionLike, returns the number of function arguments.
-// Depends on the type attribute being correct as checked by verifyType
-unsigned LLVMFuncOp::getNumFuncArguments() { return getType().getNumParams(); }
-
-// Hook for OpTrait::FunctionLike, returns the number of function results.
-// Depends on the type attribute being correct as checked by verifyType
-unsigned LLVMFuncOp::getNumFuncResults() {
-  // We model LLVM functions that return void as having zero results,
-  // and all others as having one result.
-  // If we modeled a void return as one result, then it would be possible to
-  // attach an MLIR result attribute to it, and it isn't clear what semantics we
-  // would assign to that.
-  if (getType().getReturnType().isa<LLVMVoidType>())
-    return 0;
-  return 1;
 }
 
 // Verifies LLVM- and implementation-specific properties of the LLVM func Op:
@@ -2140,6 +2120,14 @@ static LogicalResult verify(LLVMFuncOp op) {
     return op.emitOpError()
            << "functions cannot have '"
            << stringifyLinkage(LLVM::Linkage::Common) << "' linkage";
+
+  // Check to see if this function has a void return with a result attribute to
+  // it. It isn't clear what semantics we would assign to that.
+  if (op.getType().getReturnType().isa<LLVMVoidType>() &&
+      !op.getResultAttrs(0).empty()) {
+    return op.emitOpError()
+           << "cannot attach result attributes to functions with a void return";
+  }
 
   if (op.isExternal()) {
     if (op.getLinkage() != LLVM::Linkage::External &&

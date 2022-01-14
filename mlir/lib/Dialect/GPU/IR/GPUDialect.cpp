@@ -672,7 +672,7 @@ parseLaunchFuncOperands(OpAsmParser &parser,
     return success();
   SmallVector<NamedAttrList, 4> argAttrs;
   bool isVariadic = false;
-  return function_like_impl::parseFunctionArgumentList(
+  return function_interface_impl::parseFunctionArgumentList(
       parser, /*allowAttributes=*/false,
       /*allowVariadic=*/false, argNames, argTypes, argAttrs, isVariadic);
 }
@@ -790,7 +790,7 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (failed(function_like_impl::parseFunctionSignature(
+  if (failed(function_interface_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
           isVariadic, resultTypes, resultAttrs)))
     return failure();
@@ -829,8 +829,8 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
   // Parse attributes.
   if (failed(parser.parseOptionalAttrDictWithKeyword(result.attributes)))
     return failure();
-  function_like_impl::addArgAndResultAttrs(builder, result, argAttrs,
-                                           resultAttrs);
+  function_interface_impl::addArgAndResultAttrs(builder, result, argAttrs,
+                                                resultAttrs);
 
   // Parse the region. If no argument names were provided, take all names
   // (including those of attributions) from the entry block.
@@ -855,7 +855,7 @@ static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
   p.printSymbolName(op.getName());
 
   FunctionType type = op.getType();
-  function_like_impl::printFunctionSignature(
+  function_interface_impl::printFunctionSignature(
       p, op.getOperation(), type.getInputs(),
       /*isVariadic=*/false, type.getResults());
 
@@ -864,7 +864,7 @@ static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
   if (op.isKernel())
     p << ' ' << op.getKernelKeyword();
 
-  function_like_impl::printFunctionAttributes(
+  function_interface_impl::printFunctionAttributes(
       p, op.getOperation(), type.getNumInputs(), type.getNumResults(),
       {op.getNumWorkgroupAttributionsAttrName(),
        GPUDialect::getKernelFuncAttrName()});
@@ -872,7 +872,6 @@ static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
   p.printRegion(op.getBody(), /*printEntryBlockArgs=*/false);
 }
 
-/// Hook for FunctionLike verifier.
 LogicalResult GPUFuncOp::verifyType() {
   Type type = getTypeAttr().getValue();
   if (!type.isa<FunctionType>())

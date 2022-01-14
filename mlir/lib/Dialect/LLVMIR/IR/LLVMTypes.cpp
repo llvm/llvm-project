@@ -113,7 +113,16 @@ LLVMFunctionType::getChecked(function_ref<InFlightDiagnostic()> emitError,
                           isVarArg);
 }
 
+LLVMFunctionType LLVMFunctionType::clone(TypeRange inputs,
+                                         TypeRange results) const {
+  assert(results.size() == 1 && "expected a single result type");
+  return get(results[0], llvm::to_vector(inputs), isVarArg());
+}
+
 Type LLVMFunctionType::getReturnType() { return getImpl()->getReturnType(); }
+ArrayRef<Type> LLVMFunctionType::getReturnTypes() {
+  return getImpl()->getReturnType();
+}
 
 unsigned LLVMFunctionType::getNumParams() {
   return getImpl()->getArgumentTypes().size();
@@ -123,7 +132,7 @@ Type LLVMFunctionType::getParamType(unsigned i) {
   return getImpl()->getArgumentTypes()[i];
 }
 
-bool LLVMFunctionType::isVarArg() { return getImpl()->isVariadic(); }
+bool LLVMFunctionType::isVarArg() const { return getImpl()->isVariadic(); }
 
 ArrayRef<Type> LLVMFunctionType::getParams() {
   return getImpl()->getArgumentTypes();

@@ -54,10 +54,10 @@ static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
                                  SmallVectorImpl<NamedAttribute> &result) {
   for (const auto &attr : attrs) {
     if (attr.getName() == SymbolTable::getSymbolAttrName() ||
-        attr.getName() == function_like_impl::getTypeAttrName() ||
+        attr.getName() == FunctionOpInterface::getTypeAttrName() ||
         attr.getName() == "std.varargs" ||
         (filterArgAttrs &&
-         attr.getName() == function_like_impl::getArgDictAttrName()))
+         attr.getName() == FunctionOpInterface::getArgDictAttrName()))
       continue;
     result.push_back(attr);
   }
@@ -251,7 +251,7 @@ protected:
           newArgAttrs[mapping->inputNo + j] = argAttrDicts[i];
       }
       attributes.push_back(
-          rewriter.getNamedAttr(function_like_impl::getArgDictAttrName(),
+          rewriter.getNamedAttr(FunctionOpInterface::getArgDictAttrName(),
                                 rewriter.getArrayAttr(newArgAttrs)));
     }
     for (const auto &pair : llvm::enumerate(attributes)) {

@@ -493,17 +493,17 @@ private:
 };
 
 /// Add a pattern to the given pattern list to convert the signature of a
-/// FunctionLike op with the given type converter. This only supports
-/// FunctionLike ops which use FunctionType to represent their type.
-void populateFunctionLikeTypeConversionPattern(StringRef functionLikeOpName,
-                                               RewritePatternSet &patterns,
-                                               TypeConverter &converter);
+/// FunctionOpInterface op with the given type converter. This only supports
+/// ops which use FunctionType to represent their type.
+void populateFunctionOpInterfaceTypeConversionPattern(
+    StringRef functionLikeOpName, RewritePatternSet &patterns,
+    TypeConverter &converter);
 
 template <typename FuncOpT>
-void populateFunctionLikeTypeConversionPattern(RewritePatternSet &patterns,
-                                               TypeConverter &converter) {
-  populateFunctionLikeTypeConversionPattern(FuncOpT::getOperationName(),
-                                            patterns, converter);
+void populateFunctionOpInterfaceTypeConversionPattern(
+    RewritePatternSet &patterns, TypeConverter &converter) {
+  populateFunctionOpInterfaceTypeConversionPattern(FuncOpT::getOperationName(),
+                                                   patterns, converter);
 }
 
 //===----------------------------------------------------------------------===//

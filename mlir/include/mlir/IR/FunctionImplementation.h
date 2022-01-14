@@ -15,12 +15,12 @@
 #ifndef MLIR_IR_FUNCTIONIMPLEMENTATION_H_
 #define MLIR_IR_FUNCTIONIMPLEMENTATION_H_
 
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 
 namespace mlir {
 
-namespace function_like_impl {
+namespace function_interface_impl {
 
 /// A named class for passing around the variadic flag.
 class VariadicFlag {
@@ -44,7 +44,7 @@ void addArgAndResultAttrs(Builder &builder, OperationState &result,
                           ArrayRef<NamedAttrList> argAttrs,
                           ArrayRef<NamedAttrList> resultAttrs);
 
-/// Callback type for `parseFunctionLikeOp`, the callback should produce the
+/// Callback type for `parseFunctionOp`, the callback should produce the
 /// type that will be associated with a function-like operation from lists of
 /// function arguments and results, VariadicFlag indicates whether the function
 /// should have variadic arguments; in case of error, it may populate the last
@@ -81,18 +81,17 @@ parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
 /// whether the function is variadic.  If the builder returns a null type,
 /// `result` will not contain the `type` attribute.  The caller can then add a
 /// type, report the error or delegate the reporting to the op's verifier.
-ParseResult parseFunctionLikeOp(OpAsmParser &parser, OperationState &result,
-                                bool allowVariadic,
-                                FuncTypeBuilder funcTypeBuilder);
+ParseResult parseFunctionOp(OpAsmParser &parser, OperationState &result,
+                            bool allowVariadic,
+                            FuncTypeBuilder funcTypeBuilder);
 
 /// Printer implementation for function-like operations.  Accepts lists of
 /// argument and result types to use while printing.
-void printFunctionLikeOp(OpAsmPrinter &p, Operation *op,
-                         ArrayRef<Type> argTypes, bool isVariadic,
-                         ArrayRef<Type> resultTypes);
+void printFunctionOp(OpAsmPrinter &p, Operation *op, ArrayRef<Type> argTypes,
+                     bool isVariadic, ArrayRef<Type> resultTypes);
 
-/// Prints the signature of the function-like operation `op`.  Assumes `op` has
-/// the FunctionLike trait and passed the verification.
+/// Prints the signature of the function-like operation `op`. Assumes `op` has
+/// is a FunctionOpInterface and has passed verification.
 void printFunctionSignature(OpAsmPrinter &p, Operation *op,
                             ArrayRef<Type> argTypes, bool isVariadic,
                             ArrayRef<Type> resultTypes);
@@ -100,13 +99,13 @@ void printFunctionSignature(OpAsmPrinter &p, Operation *op,
 /// Prints the list of function prefixed with the "attributes" keyword. The
 /// attributes with names listed in "elided" as well as those used by the
 /// function-like operation internally are not printed. Nothing is printed
-/// if all attributes are elided. Assumes `op` has the `FunctionLike` trait and
-/// passed the verification.
+/// if all attributes are elided. Assumes `op` is a FunctionOpInterface and
+/// has passed verification.
 void printFunctionAttributes(OpAsmPrinter &p, Operation *op, unsigned numInputs,
                              unsigned numResults,
                              ArrayRef<StringRef> elided = {});
 
-} // namespace function_like_impl
+} // namespace function_interface_impl
 
 } // namespace mlir
 

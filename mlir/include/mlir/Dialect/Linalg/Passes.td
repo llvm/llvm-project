@@ -17,7 +17,8 @@ def ConvertElementwiseToLinalg : Pass<"convert-elementwise-to-linalg", ""> {
     Convert ops with the `ElementwiseMappable` trait to linalg parallel loops.
 
     This pass only converts ops that operate on ranked tensors. It can be
-    run on op which contains linalg ops (most commonly a FunctionLike op).
+    run on op which contains linalg ops (most commonly a
+    FunctionOpInterface op).
   }];
   let constructor = "mlir::createConvertElementwiseToLinalgPass()";
   let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
@@ -240,9 +241,9 @@ def LinalgDetensorize : Pass<"linalg-detensorize", ""> {
     control flow inside a function. All blocks except for the entry block are
     detensored by converting their arguments whenever possible.
 
-    This can be run on any op with the FunctionLike trait and must not be
+    This can be run on any FunctionOpInterface op and must not be
     run on others. This is because it performs specific legalization of the
-    blocks that make up the body, which it assumes has a FunctionLike trait.
+    blocks that make up the body, which it assumes has is a FunctionOpInterface.
   }];
   let options = [
     Option<"aggressiveMode", "aggressive-mode", "bool", /*default=*/"false",

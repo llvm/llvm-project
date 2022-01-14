@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpsInterfaces.td"
+include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -1237,8 +1238,9 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
   let assemblyFormat = "attr-dict";
 }
 
-def LLVM_LLVMFuncOp : LLVM_Op<"func",
-    [AutomaticAllocationScope, IsolatedFromAbove, FunctionLike, Symbol]> {
+def LLVM_LLVMFuncOp : LLVM_Op<"func", [
+    AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface, Symbol
+  ]> {
   let summary = "LLVM dialect function.";
 
   let description = [{
@@ -1292,24 +1294,19 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func",
     Block *addEntryBlock();
 
     LLVMFunctionType getType() {
-      return (*this)->getAttrOfType<TypeAttr>(getTypeAttrName())
-          .getValue().cast<LLVMFunctionType>();
+      return getTypeAttr().getValue().cast<LLVMFunctionType>();
     }
-    bool isVarArg() {
-      return getType().isVarArg();
-    }
+    bool isVarArg() { return getType().isVarArg(); }
 
-    // Hook for OpTrait::FunctionLike, returns the number of function arguments`.
-    // Depends on the type attribute being correct as checked by verifyType.
-    unsigned getNumFuncArguments();
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() { return getType().getParams(); }
 
-    // Hook for OpTrait::FunctionLike, returns the number of function results.
-    // Depends on the type attribute being correct as checked by verifyType.
-    unsigned getNumFuncResults();
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() { return getType().getReturnTypes(); }
 
-    // Hook for OpTrait::FunctionLike, called after verifying that the 'type'
-    // attribute is present.  This can check for preconditions of the
-    // getNumArguments hook not failing.
+    /// Hook for FunctionOpInterface, called after verifying that the 'type'
+    /// attribute is present.  This can check for preconditions of the
+    /// getNumArguments hook not failing.
     LogicalResult verifyType();
   }];
 

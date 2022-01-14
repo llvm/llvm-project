@@ -15,7 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -133,7 +133,7 @@ LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
              << "'" << BufferizableOpInterface::kInplaceableAttrName
              << "' is expected to be a boolean attribute";
     }
-    if (!op->hasTrait<OpTrait::FunctionLike>())
+    if (!isa<FunctionOpInterface>(op))
       return op->emitError() << "expected " << attr.getName()
                              << " to be used on function-like operations";
     return success();
@@ -144,7 +144,7 @@ LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
              << "'" << BufferizableOpInterface::kBufferLayoutAttrName
              << "' is expected to be a affine map attribute";
     }
-    if (!op->hasTrait<OpTrait::FunctionLike>())
+    if (!isa<FunctionOpInterface>(op))
       return op->emitError() << "expected " << attr.getName()
                              << " to be used on function-like operations";
     return success();

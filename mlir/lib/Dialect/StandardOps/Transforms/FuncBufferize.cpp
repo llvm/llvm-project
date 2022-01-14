@@ -31,7 +31,8 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
     RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
-    populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, typeConverter);
+    populateFunctionOpInterfaceTypeConversionPattern<FuncOp>(patterns,
+                                                             typeConverter);
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
       return typeConverter.isSignatureLegal(op.getType()) &&
              typeConverter.isLegal(&op.getBody());
