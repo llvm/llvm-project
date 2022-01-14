@@ -63,7 +63,6 @@ public:
                 : IsFunctionResult(symbol)     ? "Function result"
                 : IsAllocatable(symbol)        ? "Allocatable"
                 : IsInitialized(symbol, true)  ? "Default-initialized"
-                : IsInBlankCommon(symbol)      ? "Blank COMMON object"
                 : IsProcedure(symbol) && !IsPointer(symbol) ? "Procedure"
                 // remaining checks don't apply to components
                 : !isFirstSymbol                   ? nullptr
@@ -77,9 +76,15 @@ public:
           "%s '%s' must not be initialized in a DATA statement"_err_en_US,
           whyNot, symbol.name());
       return false;
-    } else if (IsProcedurePointer(symbol)) {
+    }
+    if (IsProcedurePointer(symbol)) {
       context_.Say(source_,
           "Procedure pointer '%s' in a DATA statement is not standard"_en_US,
+          symbol.name());
+    }
+    if (IsInBlankCommon(symbol)) {
+      context_.Say(source_,
+          "Blank COMMON object '%s' in a DATA statement is not standard"_en_US,
           symbol.name());
     }
     return true;

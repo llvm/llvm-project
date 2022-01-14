@@ -196,6 +196,7 @@ end
   exactly one is unlimited polymorphic).
 * External unit 0 is predefined and connected to the standard error output,
   and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
+* Objects in blank COMMON may be initialized.
 
 ### Extensions supported when enabled by options
 
