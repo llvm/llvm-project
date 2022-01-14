@@ -247,14 +247,14 @@ bool llvm::isMallocLikeFn(
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates uninitialized memory with alignment (such as aligned_alloc).
-bool llvm::isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
+static bool isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, AlignedAllocLike, TLI)
       .hasValue();
 }
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates zero-filled memory (such as calloc).
-bool llvm::isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
+static bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, CallocLike, TLI).hasValue();
 }
 
