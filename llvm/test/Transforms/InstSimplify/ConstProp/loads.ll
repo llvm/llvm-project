@@ -331,7 +331,7 @@ define i32 @load_padding() {
 ; Same as the previous case, but with an all-undef initializer.
 define i32 @load_all_undef() {
 ; CHECK-LABEL: @load_all_undef(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 undef
 ;
   %v = load i32, i32* getelementptr (i32, i32* bitcast ({ i32, [4 x i8] }* @g_all_undef to i32*), i64 1)
   ret i32 %v
