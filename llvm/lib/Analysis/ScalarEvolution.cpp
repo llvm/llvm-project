@@ -2117,6 +2117,22 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   return S;
 }
 
+const SCEV *ScalarEvolution::getCastExpr(SCEVTypes Kind, const SCEV *Op,
+                                         Type *Ty) {
+  switch (Kind) {
+  case scTruncate:
+    return getTruncateExpr(Op, Ty);
+  case scZeroExtend:
+    return getZeroExtendExpr(Op, Ty);
+  case scSignExtend:
+    return getSignExtendExpr(Op, Ty);
+  case scPtrToInt:
+    return getPtrToIntExpr(Op, Ty);
+  default:
+    llvm_unreachable("Not a SCEV cast expression!");
+  }
+}
+
 /// getAnyExtendExpr - Return a SCEV for the given operand extended with
 /// unspecified bits out to the given type.
 const SCEV *ScalarEvolution::getAnyExtendExpr(const SCEV *Op,
@@ -9390,32 +9406,11 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     return AddRec;
   }
 
-  if (const SCEVZeroExtendExpr *Cast = dyn_cast<SCEVZeroExtendExpr>(V)) {
+  if (const SCEVCastExpr *Cast = dyn_cast<SCEVCastExpr>(V)) {
     const SCEV *Op = getSCEVAtScope(Cast->getOperand(), L);
     if (Op == Cast->getOperand())
       return Cast;  // must be loop invariant
-    return getZeroExtendExpr(Op, Cast->getType());
-  }
-
-  if (const SCEVSignExtendExpr *Cast = dyn_cast<SCEVSignExtendExpr>(V)) {
-    const SCEV *Op = getSCEVAtScope(Cast->getOperand(), L);
-    if (Op == Cast->getOperand())
-      return Cast;  // must be loop invariant
-    return getSignExtendExpr(Op, Cast->getType());
-  }
-
-  if (const SCEVTruncateExpr *Cast = dyn_cast<SCEVTruncateExpr>(V)) {
-    const SCEV *Op = getSCEVAtScope(Cast->getOperand(), L);
-    if (Op == Cast->getOperand())
-      return Cast;  // must be loop invariant
-    return getTruncateExpr(Op, Cast->getType());
-  }
-
-  if (const SCEVPtrToIntExpr *Cast = dyn_cast<SCEVPtrToIntExpr>(V)) {
-    const SCEV *Op = getSCEVAtScope(Cast->getOperand(), L);
-    if (Op == Cast->getOperand())
-      return Cast; // must be loop invariant
-    return getPtrToIntExpr(Op, Cast->getType());
+    return getCastExpr(Cast->getSCEVType(), Op, Cast->getType());
   }
 
   llvm_unreachable("Unknown SCEV type!");
