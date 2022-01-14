@@ -879,7 +879,14 @@ void StoreDiags::flushLastDiag() {
 }
 
 bool isBuiltinDiagnosticSuppressed(unsigned ID,
-                                   const llvm::StringSet<> &Suppress) {
+                                   const llvm::StringSet<> &Suppress,
+                                   const LangOptions &LangOpts) {
+  // Don't complain about header-only stuff in mainfiles if it's a header.
+  // FIXME: would be cleaner to suppress in clang, once we decide whether the
+  //        behavior should be to silently-ignore or respect the pragma.
+  if (ID == diag::pp_pragma_sysheader_in_main_file && LangOpts.IsHeaderFile)
+    return true;
+
   if (const char *CodePtr = getDiagnosticCode(ID)) {
     if (Suppress.contains(normalizeSuppressedCode(CodePtr)))
       return true;
