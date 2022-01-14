@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include <utility>
 #include <vector>
 
 namespace toy {
@@ -46,7 +47,7 @@ public:
   };
 
   ExprAST(ExprASTKind kind, Location location)
-      : kind(kind), location(location) {}
+      : kind(kind), location(std::move(location)) {}
   virtual ~ExprAST() = default;
 
   ExprASTKind getKind() const { return kind; }
@@ -66,7 +67,8 @@ class NumberExprAST : public ExprAST {
   double Val;
 
 public:
-  NumberExprAST(Location loc, double val) : ExprAST(Expr_Num, loc), Val(val) {}
+  NumberExprAST(Location loc, double val)
+      : ExprAST(Expr_Num, std::move(loc)), Val(val) {}
 
   double getValue() { return Val; }
 
@@ -82,7 +84,7 @@ class LiteralExprAST : public ExprAST {
 public:
   LiteralExprAST(Location loc, std::vector<std::unique_ptr<ExprAST>> values,
                  std::vector<int64_t> dims)
-      : ExprAST(Expr_Literal, loc), values(std::move(values)),
+      : ExprAST(Expr_Literal, std::move(loc)), values(std::move(values)),
         dims(std::move(dims)) {}
 
   llvm::ArrayRef<std::unique_ptr<ExprAST>> getValues() { return values; }
@@ -99,7 +101,8 @@ class StructLiteralExprAST : public ExprAST {
 public:
   StructLiteralExprAST(Location loc,
                        std::vector<std::unique_ptr<ExprAST>> values)
-      : ExprAST(Expr_StructLiteral, loc), values(std::move(values)) {}
+      : ExprAST(Expr_StructLiteral, std::move(loc)), values(std::move(values)) {
+  }
 
   llvm::ArrayRef<std::unique_ptr<ExprAST>> getValues() { return values; }
 
@@ -115,7 +118,7 @@ class VariableExprAST : public ExprAST {
 
 public:
   VariableExprAST(Location loc, llvm::StringRef name)
-      : ExprAST(Expr_Var, loc), name(name) {}
+      : ExprAST(Expr_Var, std::move(loc)), name(name) {}
 
   llvm::StringRef getName() { return name; }
 
@@ -132,8 +135,8 @@ class VarDeclExprAST : public ExprAST {
 public:
   VarDeclExprAST(Location loc, llvm::StringRef name, VarType type,
                  std::unique_ptr<ExprAST> initVal = nullptr)
-      : ExprAST(Expr_VarDecl, loc), name(name), type(std::move(type)),
-        initVal(std::move(initVal)) {}
+      : ExprAST(Expr_VarDecl, std::move(loc)), name(name),
+        type(std::move(type)), initVal(std::move(initVal)) {}
 
   llvm::StringRef getName() { return name; }
   ExprAST *getInitVal() { return initVal.get(); }
@@ -149,7 +152,7 @@ class ReturnExprAST : public ExprAST {
 
 public:
   ReturnExprAST(Location loc, llvm::Optional<std::unique_ptr<ExprAST>> expr)
-      : ExprAST(Expr_Return, loc), expr(std::move(expr)) {}
+      : ExprAST(Expr_Return, std::move(loc)), expr(std::move(expr)) {}
 
   llvm::Optional<ExprAST *> getExpr() {
     if (expr.hasValue())
@@ -173,7 +176,7 @@ public:
 
   BinaryExprAST(Location loc, char Op, std::unique_ptr<ExprAST> lhs,
                 std::unique_ptr<ExprAST> rhs)
-      : ExprAST(Expr_BinOp, loc), op(Op), lhs(std::move(lhs)),
+      : ExprAST(Expr_BinOp, std::move(loc)), op(Op), lhs(std::move(lhs)),
         rhs(std::move(rhs)) {}
 
   /// LLVM style RTTI
@@ -188,7 +191,8 @@ class CallExprAST : public ExprAST {
 public:
   CallExprAST(Location loc, const std::string &callee,
               std::vector<std::unique_ptr<ExprAST>> args)
-      : ExprAST(Expr_Call, loc), callee(callee), args(std::move(args)) {}
+      : ExprAST(Expr_Call, std::move(loc)), callee(callee),
+        args(std::move(args)) {}
 
   llvm::StringRef getCallee() { return callee; }
   llvm::ArrayRef<std::unique_ptr<ExprAST>> getArgs() { return args; }
@@ -203,7 +207,7 @@ class PrintExprAST : public ExprAST {
 
 public:
   PrintExprAST(Location loc, std::unique_ptr<ExprAST> arg)
-      : ExprAST(Expr_Print, loc), arg(std::move(arg)) {}
+      : ExprAST(Expr_Print, std::move(loc)), arg(std::move(arg)) {}
 
   ExprAST *getArg() { return arg.get(); }
 
@@ -222,7 +226,7 @@ class PrototypeAST {
 public:
   PrototypeAST(Location location, const std::string &name,
                std::vector<std::unique_ptr<VarDeclExprAST>> args)
-      : location(location), name(name), args(std::move(args)) {}
+      : location(std::move(location)), name(name), args(std::move(args)) {}
 
   const Location &loc() { return location; }
   llvm::StringRef getName() const { return name; }
@@ -274,7 +278,7 @@ class StructAST : public RecordAST {
 public:
   StructAST(Location location, const std::string &name,
             std::vector<std::unique_ptr<VarDeclExprAST>> variables)
-      : RecordAST(Record_Struct), location(location), name(name),
+      : RecordAST(Record_Struct), location(std::move(location)), name(name),
         variables(std::move(variables)) {}
 
   const Location &loc() { return location; }

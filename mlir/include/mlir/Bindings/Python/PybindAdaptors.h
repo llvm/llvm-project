@@ -250,7 +250,7 @@ namespace adaptors {
 class pure_subclass {
 public:
   pure_subclass(py::handle scope, const char *derivedClassName,
-                py::object superClass) {
+                const py::object &superClass) {
     py::object pyType =
         py::reinterpret_borrow<py::object>((PyObject *)&PyType_Type);
     py::object metaclass = pyType(superClass);
@@ -335,7 +335,8 @@ public:
   /// as the mlir.ir class (otherwise, it will trigger a recursive
   /// initialization).
   mlir_attribute_subclass(py::handle scope, const char *typeClassName,
-                          IsAFunctionTy isaFunction, py::object superClass)
+                          IsAFunctionTy isaFunction,
+                          const py::object &superClass)
       : pure_subclass(scope, typeClassName, superClass) {
     // Casting constructor. Note that defining an __init__ method is special
     // and not yet generalized on pure_subclass (it requires a somewhat
@@ -386,7 +387,7 @@ public:
   /// as the mlir.ir class (otherwise, it will trigger a recursive
   /// initialization).
   mlir_type_subclass(py::handle scope, const char *typeClassName,
-                     IsAFunctionTy isaFunction, py::object superClass)
+                     IsAFunctionTy isaFunction, const py::object &superClass)
       : pure_subclass(scope, typeClassName, superClass) {
     // Casting constructor. Note that defining an __init__ method is special
     // and not yet generalized on pure_subclass (it requires a somewhat

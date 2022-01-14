@@ -133,7 +133,7 @@ struct PyPrintAccumulator {
 /// or binary.
 class PyFileAccumulator {
 public:
-  PyFileAccumulator(pybind11::object fileObject, bool binary)
+  PyFileAccumulator(const pybind11::object &fileObject, bool binary)
       : pyWriteFunction(fileObject.attr("write")), binary(binary) {}
 
   void *getUserData() { return this; }

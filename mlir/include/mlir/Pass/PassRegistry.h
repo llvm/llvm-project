@@ -17,6 +17,7 @@
 #include "mlir/Pass/PassOptions.h"
 #include "mlir/Support/TypeID.h"
 #include <functional>
+#include <utility>
 
 namespace mlir {
 class OpPassManager;
@@ -76,7 +77,7 @@ protected:
       std::function<void(function_ref<void(const detail::PassOptions &)>)>
           optHandler)
       : arg(arg), description(description), builder(builder),
-        optHandler(optHandler) {}
+        optHandler(std::move(optHandler)) {}
 
 private:
   /// The argument with which to invoke the pass via mlir-opt.
@@ -100,7 +101,7 @@ public:
       StringRef arg, StringRef description, const PassRegistryFunction &builder,
       std::function<void(function_ref<void(const detail::PassOptions &)>)>
           optHandler)
-      : PassRegistryEntry(arg, description, builder, optHandler) {}
+      : PassRegistryEntry(arg, description, builder, std::move(optHandler)) {}
 };
 
 /// A structure to represent the information for a derived pass class.
@@ -182,8 +183,9 @@ struct PassPipelineRegistration {
 /// Convenience specialization of PassPipelineRegistration for EmptyPassOptions
 /// that does not pass an empty options struct to the pass builder function.
 template <> struct PassPipelineRegistration<EmptyPipelineOptions> {
-  PassPipelineRegistration(StringRef arg, StringRef description,
-                           std::function<void(OpPassManager &)> builder) {
+  PassPipelineRegistration(
+      StringRef arg, StringRef description,
+      const std::function<void(OpPassManager &)> &builder) {
     registerPassPipeline(
         arg, description,
         [builder](OpPassManager &pm, StringRef optionsStr,
