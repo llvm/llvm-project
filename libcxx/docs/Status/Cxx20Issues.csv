@@ -291,7 +291,7 @@
 "`3387 <https://wg21.link/LWG3387>`__","|sect|\ [range.reverse.view] ``reverse_view<V>``\  unintentionally requires ``range<const V>``\ ","Prague","","","|ranges|"
 "`3388 <https://wg21.link/LWG3388>`__","``view``\  iterator types have ill-formed ``<=>``\  operators","Prague","","","|ranges|"
 "`3389 <https://wg21.link/LWG3389>`__","A move-only iterator still does not have a ``counted_iterator``\ ","Prague","","","|ranges|"
-"`3390 <https://wg21.link/LWG3390>`__","``make_move_iterator()``\  cannot be used to construct a ``move_iterator``\  for a move-only iterator","Prague","","","|ranges|"
+"`3390 <https://wg21.link/LWG3390>`__","``make_move_iterator()``\  cannot be used to construct a ``move_iterator``\  for a move-only iterator","Prague","|Complete|","14.0","|ranges|"
 "`3393 <https://wg21.link/LWG3393>`__","Missing/incorrect feature test macro for coroutines","Prague","|Complete|","14.0"
 "`3395 <https://wg21.link/LWG3395>`__","Definition for three-way comparison needs to be updated (US 152)","Prague","","","|spaceship|"
 "`3396 <https://wg21.link/LWG3396>`__","Clarify point of reference for ``source_location::current()``\  (DE 169)","Prague","",""

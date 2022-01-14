@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__utility/move.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -53,7 +54,7 @@ public:
     move_iterator() : __current_() {}
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
-    explicit move_iterator(_Iter __i) : __current_(__i) {}
+    explicit move_iterator(_Iter __i) : __current_(_VSTD::move(__i)) {}
 
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value && is_convertible<const _Up&, _Iter>::value
@@ -176,7 +177,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX14
 move_iterator<_Iter>
 make_move_iterator(_Iter __i)
 {
-    return move_iterator<_Iter>(__i);
+    return move_iterator<_Iter>(_VSTD::move(__i));
 }
 
 _LIBCPP_END_NAMESPACE_STD
