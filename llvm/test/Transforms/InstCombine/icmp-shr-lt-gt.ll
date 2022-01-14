@@ -2216,48 +2216,8 @@ define i1 @lshrugt_03_15_exact(i4 %x) {
   ret i1 %c
 }
 
-define i1 @ashr_00_00_noexact(i8 %x) {
-; CHECK-LABEL: @ashr_00_00_noexact(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 79
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %s = ashr i8 %x, 3
-  %c = icmp sge i8 %s, 10
-  ret i1 %c
-}
-
-define i1 @ashr_00_01_noexact(i8 %x) {
-; CHECK-LABEL: @ashr_00_01_noexact(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 80
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %s = ashr i8 %x, 3
-  %c = icmp slt i8 %s, 10
-  ret i1 %c
-}
-
-define i1 @ashr_00_03_noexact(i8 %x) {
-; CHECK-LABEL: @ashr_00_03_noexact(
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 80
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %s = ashr i8 %x, 3
-  %c = icmp ult i8 %s, 10
-  ret i1 %c
-}
-
-define i1 @ashr_00_00_exact(i8 %x) {
-; CHECK-LABEL: @ashr_00_00_exact(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X:%.*]], 80
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %s = ashr exact i8 %x, 3
-  %c = icmp ne i8 %s, 10
-  ret i1 %c
-}
-
-define i1 @ashr_00_01_exact(i8 %x) {
-; CHECK-LABEL: @ashr_00_01_exact(
+define i1 @ashr_eq_exact(i8 %x) {
+; CHECK-LABEL: @ashr_eq_exact(
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X:%.*]], 80
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -2266,28 +2226,18 @@ define i1 @ashr_00_01_exact(i8 %x) {
   ret i1 %c
 }
 
-define i1 @ashr_00_02_exact(i8 %x) {
-; CHECK-LABEL: @ashr_00_02_exact(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 80
+define i1 @ashr_ne_exact(i8 %x) {
+; CHECK-LABEL: @ashr_ne_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X:%.*]], 80
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i8 %x, 3
-  %c = icmp sgt i8 %s, 10
+  %c = icmp ne i8 %s, 10
   ret i1 %c
 }
 
-define i1 @ashr_00_03_exact(i8 %x) {
-; CHECK-LABEL: @ashr_00_03_exact(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 88
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %s = ashr exact i8 %x, 3
-  %c = icmp sle i8 %s, 10
-  ret i1 %c
-}
-
-define i1 @ashr_00_04_exact(i8 %x) {
-; CHECK-LABEL: @ashr_00_04_exact(
+define i1 @ashr_ugt_exact(i8 %x) {
+; CHECK-LABEL: @ashr_ugt_exact(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X:%.*]], 80
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -2296,13 +2246,185 @@ define i1 @ashr_00_04_exact(i8 %x) {
   ret i1 %c
 }
 
-define i1 @ashr_00_05_exact(i8 %x) {
-; CHECK-LABEL: @ashr_00_05_exact(
+
+define i1 @ashr_uge_exact(i8 %x) {
+; CHECK-LABEL: @ashr_uge_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X:%.*]], 72
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp uge i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_ult_exact(i8 %x) {
+; CHECK-LABEL: @ashr_ult_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp ult i8 %s, 10
+  ret i1 %c
+}
+
+
+define i1 @ashr_ule_exact(i8 %x) {
+; CHECK-LABEL: @ashr_ule_exact(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 88
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i8 %x, 3
   %c = icmp ule i8 %s, 10
+  ret i1 %c
+}
+
+
+define i1 @ashr_sgt_exact(i8 %x) {
+; CHECK-LABEL: @ashr_sgt_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp sgt i8 %s, 10
+  ret i1 %c
+}
+
+
+define i1 @ashr_sge_exact(i8 %x) {
+; CHECK-LABEL: @ashr_sge_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 72
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp sge i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_slt_exact(i8 %x) {
+; CHECK-LABEL: @ashr_slt_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp slt i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_sle_exact(i8 %x) {
+; CHECK-LABEL: @ashr_sle_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 88
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp sle i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_eq_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_eq_noexact(
+; CHECK-NEXT:    [[S_MASK:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[S_MASK]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp eq i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_ne_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_ne_noexact(
+; CHECK-NEXT:    [[S_MASK:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[S_MASK]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp ne i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_ugt_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_ugt_noexact(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[S]], 10
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp ugt i8 %s, 10
+  ret i1 %c
+}
+
+
+define i1 @ashr_uge_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_uge_noexact(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[S]], 9
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp uge i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_ult_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_ult_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp ult i8 %s, 10
+  ret i1 %c
+}
+
+
+define i1 @ashr_ule_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_ule_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 88
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp ule i8 %s, 10
+  ret i1 %c
+}
+
+
+define i1 @ashr_sgt_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_sgt_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 87
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp sgt i8 %s, 10
+  ret i1 %c
+}
+
+
+define i1 @ashr_sge_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_sge_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 79
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp sge i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_slt_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_slt_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp slt i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_sle_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_sle_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 88
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp sle i8 %s, 10
   ret i1 %c
 }
 
