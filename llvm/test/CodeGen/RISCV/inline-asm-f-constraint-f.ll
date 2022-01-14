@@ -11,27 +11,6 @@
 @gf = external global float
 
 define float @constraint_f_float(float %a) nounwind {
-; RV32-LABEL: constraint_f_float:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, %hi(gf)
-; RV32-NEXT:    flw ft0, %lo(gf)(a1)
-; RV32-NEXT:    fmv.w.x ft1, a0
-; RV32-NEXT:    #APP
-; RV32-NEXT:    fadd.s ft0, ft1, ft0
-; RV32-NEXT:    #NO_APP
-; RV32-NEXT:    fmv.x.w a0, ft0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: constraint_f_float:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, %hi(gf)
-; RV64-NEXT:    flw ft0, %lo(gf)(a1)
-; RV64-NEXT:    fmv.w.x ft1, a0
-; RV64-NEXT:    #APP
-; RV64-NEXT:    fadd.s ft0, ft1, ft0
-; RV64-NEXT:    #NO_APP
-; RV64-NEXT:    fmv.x.w a0, ft0
-; RV64-NEXT:    ret
 ; RV32F-LABEL: constraint_f_float:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    lui a1, %hi(gf)
