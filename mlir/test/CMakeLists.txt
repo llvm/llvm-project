@@ -75,7 +75,6 @@ configure_lit_site_cfg(
 
 set(MLIR_TEST_DEPENDS
   FileCheck count not split-file
-  mlir-capi-execution-engine-test
   mlir-capi-ir-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
@@ -89,9 +88,6 @@ set(MLIR_TEST_DEPENDS
   mlir-reduce
   mlir-tblgen
   mlir-translate
-  mlir_runner_utils
-  mlir_c_runner_utils
-  mlir_async_runtime
   )
 
 # The native target may not be enabled, in this case we won't
@@ -101,6 +97,10 @@ if(TARGET ${LLVM_NATIVE_ARCH})
   list(APPEND MLIR_TEST_DEPENDS
     mlir-cpu-runner
     llc
+    mlir_async_runtime
+    mlir-capi-execution-engine-test
+    mlir_c_runner_utils
+    mlir_runner_utils
   )
 endif()
 
