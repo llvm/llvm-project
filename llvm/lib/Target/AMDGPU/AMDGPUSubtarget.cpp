@@ -772,11 +772,11 @@ unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
 }
 
 unsigned
-GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratchInit) const {
+GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratch) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX10)
     return 2; // VCC. FLAT_SCRATCH and XNACK are no longer in SGPRs.
 
-  if (HasFlatScratchInit || HasArchitectedFlatScratch) {
+  if (HasFlatScratch || HasArchitectedFlatScratch) {
     if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return 6; // FLAT_SCRATCH, XNACK, VCC (in that order).
     if (getGeneration() == AMDGPUSubtarget::SEA_ISLANDS)
@@ -794,20 +794,11 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
 }
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
-  // The logic to detect if the function has
-  // flat scratch init is slightly different than how
-  // SIMachineFunctionInfo constructor derives.
-  // We don't use amdgpu-calls, amdgpu-stack-objects
-  // attributes and isAmdHsaOrMesa here as it doesn't really matter.
-  // TODO: Outline this derivation logic and have just
-  // one common function in the backend to avoid duplication.
-  bool isEntry = AMDGPU::isEntryFunctionCC(F.getCallingConv());
-  bool FunctionHasFlatScratchInit = false;
-  if (hasFlatAddressSpace() && isEntry && !flatScratchIsArchitected() &&
-      enableFlatScratch()) {
-    FunctionHasFlatScratchInit = true;
-  }
-  return getBaseReservedNumSGPRs(FunctionHasFlatScratchInit);
+  // In principle we do not need to reserve SGPR pair used for flat_scratch if
+  // we know flat instructions do not access the stack anywhere in the
+  // program. For now assume it's needed if we have flat instructions.
+  const bool KernelUsesFlatScratch = hasFlatAddressSpace();
+  return getBaseReservedNumSGPRs(KernelUsesFlatScratch);
 }
 
 unsigned GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
