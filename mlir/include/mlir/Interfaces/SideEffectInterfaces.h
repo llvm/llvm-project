@@ -77,7 +77,7 @@ private:
 /// class represents an abstract interface for a given resource.
 class Resource {
 public:
-  virtual ~Resource() {}
+  virtual ~Resource() = default;
 
   /// This base class is used for derived effects that are non-parametric.
   template <typename DerivedResource, typename BaseResource = Resource>

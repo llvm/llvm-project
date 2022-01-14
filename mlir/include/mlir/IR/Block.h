@@ -29,7 +29,7 @@ class ValueTypeRange;
 class Block : public IRObjectWithUseList<BlockOperand>,
               public llvm::ilist_node_with_parent<Block, Region> {
 public:
-  explicit Block() {}
+  explicit Block() = default;
   ~Block();
 
   void clear() {

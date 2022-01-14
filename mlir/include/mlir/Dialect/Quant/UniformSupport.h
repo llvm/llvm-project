@@ -120,7 +120,7 @@ public:
     return isSigned ? qValue.getSExtValue() : qValue.getZExtValue();
   }
 
-  virtual ~UniformQuantizedValueConverter() {}
+  virtual ~UniformQuantizedValueConverter() = default;
 
 private:
   // An optimized implementation to quantize f32 to i8/u8 with C++ native

@@ -67,7 +67,7 @@ std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 /// executed after the analysis, but before bufferization. They can be used to
 /// implement custom dialect-specific optimizations.
 struct PostAnalysisStep {
-  virtual ~PostAnalysisStep() {}
+  virtual ~PostAnalysisStep() = default;
 
   /// Run the post analysis step. This function may modify the IR, but must keep
   /// `aliasInfo` consistent. Newly created operations and operations that

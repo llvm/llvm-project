@@ -27,7 +27,7 @@ class AsmParserImpl : public BaseT {
 public:
   AsmParserImpl(llvm::SMLoc nameLoc, Parser &parser)
       : nameLoc(nameLoc), parser(parser) {}
-  ~AsmParserImpl() override {}
+  ~AsmParserImpl() override = default;
 
   /// Return the location of the original name token.
   llvm::SMLoc getNameLoc() const override { return nameLoc; }
