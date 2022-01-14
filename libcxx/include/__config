@@ -257,6 +257,10 @@
 #  endif // defined(__GLIBC_PREREQ)
 #endif // defined(__linux__)
 
+#if defined(__MVS__)
+#  include <features.h> // for __NATIVE_ASCII_F
+#endif
+
 #ifdef __LITTLE_ENDIAN__
 #  if __LITTLE_ENDIAN__
 #    define _LIBCPP_LITTLE_ENDIAN
@@ -1220,8 +1224,8 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 #if defined(__BIONIC__) || defined(__NuttX__) ||      \
-    defined(__Fuchsia__) || defined(__wasi__) || defined(_LIBCPP_HAS_MUSL_LIBC) || \
-    defined(__MVS__) || defined(__OpenBSD__)
+    defined(__Fuchsia__) || defined(__wasi__) ||		  \
+    defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
 
