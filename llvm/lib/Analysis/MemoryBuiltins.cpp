@@ -251,11 +251,6 @@ bool llvm::isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
   return getAllocationData(V, AlignedAllocLike, TLI)
       .hasValue();
 }
-bool llvm::isAlignedAllocLikeFn(
-    const Value *V, function_ref<const TargetLibraryInfo &(Function &)> GetTLI) {
-  return getAllocationData(V, AlignedAllocLike, GetTLI)
-      .hasValue();
-}
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates zero-filled memory (such as calloc).
