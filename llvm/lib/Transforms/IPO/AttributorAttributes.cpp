@@ -5771,13 +5771,6 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     /// The call that allocates the memory.
     CallBase *const CB;
 
-    /// The kind of allocation.
-    const enum class AllocationKind {
-      MALLOC,
-      CALLOC,
-      ALIGNED_ALLOC,
-    } Kind;
-
     /// The library function id for the allocation.
     LibFunc LibraryFunctionId = NotLibFunc;
 
@@ -5834,20 +5827,17 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
         DeallocationInfos[CB] = new (A.Allocator) DeallocationInfo{CB};
         return true;
       }
-      bool IsMalloc = isMallocLikeFn(CB, TLI);
-      bool IsAlignedAllocLike = !IsMalloc && isAlignedAllocLikeFn(CB, TLI);
-      bool IsCalloc =
-          !IsMalloc && !IsAlignedAllocLike && isCallocLikeFn(CB, TLI);
-      if (!IsMalloc && !IsAlignedAllocLike && !IsCalloc)
-        return true;
-      auto Kind =
-          IsMalloc ? AllocationInfo::AllocationKind::MALLOC
-                   : (IsCalloc ? AllocationInfo::AllocationKind::CALLOC
-                               : AllocationInfo::AllocationKind::ALIGNED_ALLOC);
-
-      AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB, Kind};
-      AllocationInfos[CB] = AI;
-      TLI->getLibFunc(*CB, AI->LibraryFunctionId);
+      // To do heap to stack, we need to know that the allocation itself is
+      // removable once uses are rewritten, and that we can initialize the
+      // alloca to the same pattern as the original allocation result.
+      if (isAllocationFn(CB, TLI) && isAllocRemovable(CB, TLI)) {
+        auto *I8Ty = Type::getInt8Ty(CB->getParent()->getContext());
+        if (nullptr != getInitialValueOfAllocation(CB, TLI, I8Ty)) {
+          AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB};
+          AllocationInfos[CB] = AI;
+          TLI->getLibFunc(*CB, AI->LibraryFunctionId);
+        }
+      }
       return true;
     };
 
