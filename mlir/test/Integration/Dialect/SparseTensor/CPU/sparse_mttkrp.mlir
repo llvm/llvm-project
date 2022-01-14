@@ -26,7 +26,7 @@
 
 !Filename = type !llvm.ptr<i8>
 
-#SparseMatrix = #sparse_tensor.encoding<{
+#SparseTensor = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed", "compressed" ]
 }>
 
@@ -51,14 +51,14 @@ module {
   // Computes Matricized Tensor Times Khatri-Rao Product (MTTKRP) kernel. See
   // http://tensor-compiler.org/docs/data_analytics/index.html.
   //
-  func @kernel_mttkrp(%argb: tensor<?x?x?xf64, #SparseMatrix>,
+  func @kernel_mttkrp(%argb: tensor<?x?x?xf64, #SparseTensor>,
                       %argc: tensor<?x?xf64>,
                       %argd: tensor<?x?xf64>,
                       %arga: tensor<?x?xf64> {linalg.inplaceable = true})
 		      -> tensor<?x?xf64> {
     %0 = linalg.generic #mttkrp
       ins(%argb, %argc, %argd:
-            tensor<?x?x?xf64, #SparseMatrix>, tensor<?x?xf64>, tensor<?x?xf64>)
+            tensor<?x?x?xf64, #SparseTensor>, tensor<?x?xf64>, tensor<?x?xf64>)
       outs(%arga: tensor<?x?xf64>) {
       ^bb(%b: f64, %c: f64, %d: f64, %a: f64):
         %0 = arith.mulf %b, %c : f64
@@ -87,7 +87,7 @@ module {
     // Read the sparse B input from a file.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
     %b = sparse_tensor.new %fileName
-          : !Filename to tensor<?x?x?xf64, #SparseMatrix>
+          : !Filename to tensor<?x?x?xf64, #SparseTensor>
 
     // Initialize dense C and D inputs and dense output A.
     %cdata = memref.alloc(%c3, %c5) : memref<?x?xf64>
@@ -124,7 +124,7 @@ module {
 
     // Call kernel.
     %0 = call @kernel_mttkrp(%b, %c, %d, %a)
-      : (tensor<?x?x?xf64, #SparseMatrix>,
+      : (tensor<?x?x?xf64, #SparseTensor>,
         tensor<?x?xf64>, tensor<?x?xf64>, tensor<?x?xf64>) -> tensor<?x?xf64>
 
     // Print the result for verification.
@@ -141,7 +141,7 @@ module {
     memref.dealloc %adata : memref<?x?xf64>
     memref.dealloc %cdata : memref<?x?xf64>
     memref.dealloc %ddata : memref<?x?xf64>
-    sparse_tensor.release %b : tensor<?x?x?xf64, #SparseMatrix>
+    sparse_tensor.release %b : tensor<?x?x?xf64, #SparseTensor>
 
     return
   }
