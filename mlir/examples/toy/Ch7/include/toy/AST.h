@@ -64,13 +64,13 @@ using ExprASTList = std::vector<std::unique_ptr<ExprAST>>;
 
 /// Expression class for numeric literals like "1.0".
 class NumberExprAST : public ExprAST {
-  double Val;
+  double val;
 
 public:
   NumberExprAST(Location loc, double val)
-      : ExprAST(Expr_Num, std::move(loc)), Val(val) {}
+      : ExprAST(Expr_Num, std::move(loc)), val(val) {}
 
-  double getValue() { return Val; }
+  double getValue() { return val; }
 
   /// LLVM style RTTI
   static bool classof(const ExprAST *c) { return c->getKind() == Expr_Num; }
@@ -174,9 +174,9 @@ public:
   ExprAST *getLHS() { return lhs.get(); }
   ExprAST *getRHS() { return rhs.get(); }
 
-  BinaryExprAST(Location loc, char Op, std::unique_ptr<ExprAST> lhs,
+  BinaryExprAST(Location loc, char op, std::unique_ptr<ExprAST> lhs,
                 std::unique_ptr<ExprAST> rhs)
-      : ExprAST(Expr_BinOp, std::move(loc)), op(Op), lhs(std::move(lhs)),
+      : ExprAST(Expr_BinOp, std::move(loc)), op(op), lhs(std::move(lhs)),
         rhs(std::move(rhs)) {}
 
   /// LLVM style RTTI
@@ -264,8 +264,8 @@ public:
   ExprASTList *getBody() { return body.get(); }
 
   /// LLVM style RTTI
-  static bool classof(const RecordAST *R) {
-    return R->getKind() == Record_Function;
+  static bool classof(const RecordAST *r) {
+    return r->getKind() == Record_Function;
   }
 };
 
@@ -288,8 +288,8 @@ public:
   }
 
   /// LLVM style RTTI
-  static bool classof(const RecordAST *R) {
-    return R->getKind() == Record_Struct;
+  static bool classof(const RecordAST *r) {
+    return r->getKind() == Record_Struct;
   }
 };
 
