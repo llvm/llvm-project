@@ -2239,9 +2239,10 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
   // those conditions rather than checking them. This is difficult because of
   // undef/poison (PR34838).
   if (IsAShr) {
-    if (Pred == CmpInst::ICMP_SLT || (Pred == CmpInst::ICMP_SGT && IsExact)) {
-      // icmp slt (ashr X, ShAmtC), C --> icmp slt X, (C << ShAmtC)
-      // icmp sgt (ashr exact X, ShAmtC), C --> icmp sgt X, (C << ShAmtC)
+    if (Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT || IsExact) {
+      // When ShAmtC can be shifted losslessly:
+      // icmp PRED (ashr exact X, ShAmtC), C --> icmp PRED X, (C << ShAmtC)
+      // icmp slt/ult (ashr X, ShAmtC), C --> icmp slt/ult X, (C << ShAmtC)
       APInt ShiftedC = C.shl(ShAmtVal);
       if (ShiftedC.ashr(ShAmtVal) == C)
         return new ICmpInst(Pred, X, ConstantInt::get(ShrTy, ShiftedC));
