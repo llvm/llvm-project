@@ -52,18 +52,18 @@ OpFoldResult math::Log2Op::fold(ArrayRef<Attribute> operands) {
   if (!attr)
     return {};
 
-  auto FT = getType().cast<FloatType>();
+  auto ft = getType().cast<FloatType>();
 
-  APFloat APF = attr.getValue();
+  APFloat apf = attr.getValue();
 
-  if (APF.isNegative())
+  if (apf.isNegative())
     return {};
 
-  if (FT.getWidth() == 64)
-    return FloatAttr::get(getType(), log2(APF.convertToDouble()));
+  if (ft.getWidth() == 64)
+    return FloatAttr::get(getType(), log2(apf.convertToDouble()));
 
-  if (FT.getWidth() == 32)
-    return FloatAttr::get(getType(), log2f(APF.convertToDouble()));
+  if (ft.getWidth() == 32)
+    return FloatAttr::get(getType(), log2f(apf.convertToDouble()));
 
   return {};
 }
