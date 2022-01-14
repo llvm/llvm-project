@@ -187,25 +187,26 @@ struct AffineCopyOptions {
 /// Performs explicit copying for the contiguous sequence of operations in the
 /// block iterator range [`begin', `end'), where `end' can't be past the
 /// terminator of the block (since additional operations are potentially
-/// inserted right before `end`. Returns the total size of fast memory space
-/// buffers used. `copyOptions` provides various parameters, and the output
-/// argument `copyNests` is the set of all copy nests inserted, each represented
-/// by its root affine.for. Since we generate alloc's and dealloc's for all fast
-/// buffers (before and after the range of operations resp. or at a hoisted
-/// position), all of the fast memory capacity is assumed to be available for
-/// processing this block range. When 'filterMemRef' is specified, copies are
-/// only generated for the provided MemRef.
-uint64_t affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
-                                const AffineCopyOptions &copyOptions,
-                                Optional<Value> filterMemRef,
-                                DenseSet<Operation *> &copyNests);
+/// inserted right before `end`. `copyOptions` provides various parameters, and
+/// the output argument `copyNests` is the set of all copy nests inserted, each
+/// represented by its root affine.for. Since we generate alloc's and dealloc's
+/// for all fast buffers (before and after the range of operations resp. or at a
+/// hoisted position), all of the fast memory capacity is assumed to be
+/// available for processing this block range. When 'filterMemRef' is specified,
+/// copies are only generated for the provided MemRef. Returns success if the
+/// explicit copying succeeded for all memrefs on which affine load/stores were
+/// encountered.
+LogicalResult affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
+                                     const AffineCopyOptions &copyOptions,
+                                     Optional<Value> filterMemRef,
+                                     DenseSet<Operation *> &copyNests);
 
 /// A convenience version of affineDataCopyGenerate for all ops in the body of
 /// an AffineForOp.
-uint64_t affineDataCopyGenerate(AffineForOp forOp,
-                                const AffineCopyOptions &copyOptions,
-                                Optional<Value> filterMemRef,
-                                DenseSet<Operation *> &copyNests);
+LogicalResult affineDataCopyGenerate(AffineForOp forOp,
+                                     const AffineCopyOptions &copyOptions,
+                                     Optional<Value> filterMemRef,
+                                     DenseSet<Operation *> &copyNests);
 
 /// Result for calling generateCopyForMemRegion.
 struct CopyGenerateResult {
