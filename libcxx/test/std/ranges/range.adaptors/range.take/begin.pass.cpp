@@ -21,6 +21,14 @@
 #include "test_range.h"
 #include "types.h"
 
+struct NonCommonSimpleView : std::ranges::view_base {
+  int* begin() const;
+  sentinel_wrapper<int*> end() const;
+  size_t size() { return 0; }  // deliberately non-const
+};
+static_assert(std::ranges::sized_range<NonCommonSimpleView>);
+static_assert(!std::ranges::sized_range<const NonCommonSimpleView>);
+
 constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -61,6 +69,13 @@ constexpr bool test() {
     const std::ranges::take_view<MoveOnlyView> tv(MoveOnlyView{buffer}, 4);
     assert(tv.begin() == std::counted_iterator<int*>(buffer, 4));
     ASSERT_SAME_TYPE(decltype(tv.begin()), std::counted_iterator<int*>);
+  }
+
+  // __simple_view<V> && sized_range<V> && !size_range<!V>
+  {
+    std::ranges::take_view<NonCommonSimpleView> tv{};
+    ASSERT_SAME_TYPE(decltype(tv.begin()), std::counted_iterator<int*>);
+    ASSERT_SAME_TYPE(decltype(std::as_const(tv).begin()), std::counted_iterator<int*>);
   }
 
   return true;

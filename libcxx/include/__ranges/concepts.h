@@ -83,11 +83,11 @@ namespace ranges {
     movable<_Tp> &&
     enable_view<_Tp>;
 
-  template<class _Range>
+  template <class _Range>
   concept __simple_view =
     view<_Range> && range<const _Range> &&
     same_as<iterator_t<_Range>, iterator_t<const _Range>> &&
-    same_as<sentinel_t<_Range>, iterator_t<const _Range>>;
+    same_as<sentinel_t<_Range>, sentinel_t<const _Range>>;
 
   // [range.refinements], other range refinements
   template <class _Rp, class _Tp>
