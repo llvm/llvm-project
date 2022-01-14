@@ -227,3 +227,21 @@ csrrs t2, 0x180, zero
 csrrs t1, scontext, zero
 # uimm12
 csrrs t2, 0x5A8, zero
+
+#########################################
+# Supervisor Count Overflow (Sscofpmf)
+#########################################
+
+# scountovf
+# name
+# CHECK-INST: csrrs t1, scountovf, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x00,0xda]
+# CHECK-INST-ALIAS: csrr t1, scountovf
+# uimm12
+# CHECK-INST: csrrs t2, scountovf, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x00,0xda]
+# CHECK-INST-ALIAS: csrr t2, scountovf
+# name
+csrrs t1, scountovf, zero
+# uimm12
+csrrs t2, 0xDA0, zero
