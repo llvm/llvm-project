@@ -81,11 +81,6 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
     options->allocationFns->deallocationFn = [](OpBuilder &b, Location loc,
                                                 Value v) {};
   }
-  // TODO: Change to memref::CopyOp (default memCpyFn).
-  options->allocationFns->memCpyFn = [](OpBuilder &b, Location loc, Value from,
-                                        Value to) {
-    b.create<linalg::CopyOp>(loc, from, to);
-  };
 
   options->allowReturnMemref = allowReturnMemref;
   options->allowUnknownOps = allowUnknownOps;

@@ -141,7 +141,7 @@ func @unknown_op_not_writable(
   // introducing a RaW conflict.
   // CHECK: %[[dim:.*]] = tensor.dim %[[dummy]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
-  // CHECK: linalg.copy(%[[dummy_memref]], %[[alloc]])
+  // CHECK: memref.copy %[[dummy_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
   %1 = vector.transfer_write %v, %0[%idx] : vector<5xf32>, tensor<?xf32>
 
