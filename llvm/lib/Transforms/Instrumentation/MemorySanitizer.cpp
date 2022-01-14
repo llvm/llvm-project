@@ -1736,27 +1736,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
               LLVM_DEBUG(dbgs() << "  ByValCpy: " << *Cpy << "\n");
               (void)Cpy;
             }
+          }
+
+          if (Overflow || FArg.hasByValAttr() ||
+              (MS.EagerChecks && FArg.hasAttribute(Attribute::NoUndef))) {
             *ShadowPtr = getCleanShadow(V);
             setOrigin(A, getCleanOrigin());
-          } else if (MS.EagerChecks && FArg.hasAttribute(Attribute::NoUndef)) {
-            *ShadowPtr = getCleanShadow(V);
-            setOrigin(A, getCleanOrigin());
-            break;
           } else {
-            if (Overflow) {
-              // ParamTLS overflow.
-              *ShadowPtr = getCleanShadow(V);
-              setOrigin(A, getCleanOrigin());
-            } else {
-              // Shadow over TLS
-              Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
-              *ShadowPtr = EntryIRB.CreateAlignedLoad(getShadowTy(&FArg), Base,
-                                                      kShadowTLSAlignment);
-              if (MS.TrackOrigins) {
-                Value *OriginPtr =
-                    getOriginPtrForArgument(&FArg, EntryIRB, ArgOffset);
-                setOrigin(A, EntryIRB.CreateLoad(MS.OriginTy, OriginPtr));
-              }
+            // Shadow over TLS
+            Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
+            *ShadowPtr = EntryIRB.CreateAlignedLoad(getShadowTy(&FArg), Base,
+                                                    kShadowTLSAlignment);
+            if (MS.TrackOrigins) {
+              Value *OriginPtr =
+                  getOriginPtrForArgument(&FArg, EntryIRB, ArgOffset);
+              setOrigin(A, EntryIRB.CreateLoad(MS.OriginTy, OriginPtr));
             }
           }
           LLVM_DEBUG(dbgs()
