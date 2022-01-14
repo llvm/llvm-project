@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
@@ -196,15 +197,19 @@ protected:
       };
     )"));
 
-    test::checkDataflow<FunctionCallAnalysis>(
-        Code, "target",
-        [](ASTContext &C, Environment &) { return FunctionCallAnalysis(C); },
-        [&Expectations](
-            llvm::ArrayRef<std::pair<
-                std::string, DataflowAnalysisState<FunctionCallLattice>>>
-                Results,
-            ASTContext &) { EXPECT_THAT(Results, Expectations); },
-        {"-fsyntax-only", "-std=c++17"}, FilesContents);
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<FunctionCallAnalysis>(
+            Code, "target",
+            [](ASTContext &C, Environment &) {
+              return FunctionCallAnalysis(C);
+            },
+            [&Expectations](
+                llvm::ArrayRef<std::pair<
+                    std::string, DataflowAnalysisState<FunctionCallLattice>>>
+                    Results,
+                ASTContext &) { EXPECT_THAT(Results, Expectations); },
+            {"-fsyntax-only", "-std=c++17"}, FilesContents),
+        llvm::Succeeded());
   }
 };
 

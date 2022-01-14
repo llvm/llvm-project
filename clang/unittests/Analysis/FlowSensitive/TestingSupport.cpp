@@ -20,7 +20,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Annotations.h"
-#include "gtest/gtest.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -30,28 +29,6 @@
 
 using namespace clang;
 using namespace dataflow;
-
-namespace {
-using ast_matchers::MatchFinder;
-
-class FindTranslationUnitCallback : public MatchFinder::MatchCallback {
-public:
-  explicit FindTranslationUnitCallback(
-      std::function<void(ASTContext &)> Operation)
-      : Operation{Operation} {}
-
-  void run(const MatchFinder::MatchResult &Result) override {
-    const auto *TU = Result.Nodes.getNodeAs<TranslationUnitDecl>("tu");
-    if (TU->getASTContext().getDiagnostics().getClient()->getNumErrors() != 0) {
-      FAIL() << "Source file has syntax or type errors, they were printed to "
-                "the test log";
-    }
-    Operation(TU->getASTContext());
-  }
-
-  std::function<void(ASTContext &)> Operation;
-};
-} // namespace
 
 static bool
 isAnnotationDirectlyAfterStatement(const Stmt *Stmt, unsigned AnnotationBegin,
