@@ -25,6 +25,7 @@
 
 #include "AMDGPUResourceUsageAnalysis.h"
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -102,8 +103,7 @@ bool AMDGPUResourceUsageAnalysis::runOnSCC(CallGraphSCC &SCC) {
   if (!TPC)
     return false;
 
-  const TargetMachine &TM = TPC->getTM<TargetMachine>();
-  bool HasIndirectCall = false;
+  TM = static_cast<const GCNTargetMachine *>(&TPC->getTM<TargetMachine>());
 
   for (CallGraphNode *I : SCC) {
     Function *F = I->getFunction();
@@ -118,19 +118,14 @@ bool AMDGPUResourceUsageAnalysis::runOnSCC(CallGraphSCC &SCC) {
         std::make_pair(&MF.getFunction(), SIFunctionResourceInfo()));
     SIFunctionResourceInfo &Info = CI.first->second;
     assert(CI.second && "should only be called once per function");
-    Info = analyzeResourceUsage(MF, TM);
-    HasIndirectCall |= Info.HasIndirectCall;
+    Info = analyzeResourceUsage(MF);
   }
-
-  if (HasIndirectCall)
-    propagateIndirectCallRegisterUsage();
 
   return false;
 }
 
 AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo
-AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
-    const MachineFunction &MF, const TargetMachine &TM) const {
+AMDGPUResourceUsageAnalysis::analyzeResourceUsage(const MachineFunction &MF) {
   SIFunctionResourceInfo Info;
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
@@ -476,9 +471,16 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
               std::max(CalleeFrameSize,
                        static_cast<uint64_t>(AssumedStackSizeForExternalCall));
 
+          const SIFunctionResourceInfo &WorstCase =
+              getWorstCaseResourceInfo(*MF.getFunction().getParent());
+          MaxSGPR = std::max(WorstCase.NumExplicitSGPR - 1, MaxSGPR);
+          MaxVGPR = std::max(WorstCase.NumVGPR - 1, MaxVGPR);
+          MaxAGPR = std::max(WorstCase.NumAGPR - 1, MaxAGPR);
+
           // Register usage of indirect calls gets handled later
           Info.UsesVCC = true;
-          Info.UsesFlatScratch = ST.hasFlatAddressSpace();
+          Info.UsesFlatScratch |=
+              WorstCase.UsesFlatScratch && ST.hasFlatAddressSpace();
           Info.HasDynamicallySizedStack = true;
           Info.HasIndirectCall = true;
         } else {
@@ -507,31 +509,49 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   return Info;
 }
 
-void AMDGPUResourceUsageAnalysis::propagateIndirectCallRegisterUsage() {
-  // Collect the maximum number of registers from non-hardware-entrypoints.
-  // All these functions are potential targets for indirect calls.
-  int32_t NonKernelMaxSGPRs = 0;
-  int32_t NonKernelMaxVGPRs = 0;
-  int32_t NonKernelMaxAGPRs = 0;
+const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &
+AMDGPUResourceUsageAnalysis::getWorstCaseResourceInfo(const Module &M) {
+  if (ModuleWorstCaseInfo)
+    return *ModuleWorstCaseInfo;
 
-  for (const auto &I : CallGraphResourceInfo) {
-    if (!AMDGPU::isEntryFunctionCC(I.getFirst()->getCallingConv())) {
-      auto &Info = I.getSecond();
-      NonKernelMaxSGPRs = std::max(NonKernelMaxSGPRs, Info.NumExplicitSGPR);
-      NonKernelMaxVGPRs = std::max(NonKernelMaxVGPRs, Info.NumVGPR);
-      NonKernelMaxAGPRs = std::max(NonKernelMaxAGPRs, Info.NumAGPR);
-    }
-  }
+  computeWorstCaseModuleRegisterUsage(M);
+  return *ModuleWorstCaseInfo;
+}
 
-  // Add register usage for functions with indirect calls.
-  // For calls to unknown functions, we assume the maximum register usage of
-  // all non-hardware-entrypoints in the current module.
-  for (auto &I : CallGraphResourceInfo) {
-    auto &Info = I.getSecond();
-    if (Info.HasIndirectCall) {
-      Info.NumExplicitSGPR = std::max(Info.NumExplicitSGPR, NonKernelMaxSGPRs);
-      Info.NumVGPR = std::max(Info.NumVGPR, NonKernelMaxVGPRs);
-      Info.NumAGPR = std::max(Info.NumAGPR, NonKernelMaxAGPRs);
+/// Find the worst case register usage for all callable functions in the module,
+/// assuming all reachable functions are defined in the current module.
+void AMDGPUResourceUsageAnalysis::computeWorstCaseModuleRegisterUsage(
+    const Module &M) {
+  assert(!ModuleWorstCaseInfo);
+  ModuleWorstCaseInfo = SIFunctionResourceInfo();
+  ModuleWorstCaseInfo->UsesVCC = true;
+  ModuleWorstCaseInfo->HasDynamicallySizedStack = true;
+  ModuleWorstCaseInfo->HasRecursion = true;
+  ModuleWorstCaseInfo->HasIndirectCall = true;
+
+  for (const Function &F : M) {
+    if (F.isIntrinsic())
+      continue;
+
+    if (AMDGPU::isEntryFunctionCC(F.getCallingConv()))
+      continue;
+
+    const GCNSubtarget &ST = TM->getSubtarget<GCNSubtarget>(F);
+    const int32_t MaxVGPR = ST.getMaxNumVGPRs(F);
+    const int32_t MaxSGPR = ST.getMaxNumSGPRs(F);
+
+    ModuleWorstCaseInfo->NumVGPR =
+        std::max(ModuleWorstCaseInfo->NumVGPR, MaxVGPR);
+
+    if (ST.hasMAIInsts()) {
+      const int32_t MaxAGPR = ST.getMaxNumAGPRs(F);
+      ModuleWorstCaseInfo->NumAGPR =
+          std::max(ModuleWorstCaseInfo->NumAGPR, MaxAGPR);
     }
+
+    ModuleWorstCaseInfo->NumExplicitSGPR =
+        std::max(ModuleWorstCaseInfo->NumExplicitSGPR, MaxSGPR);
+
+    ModuleWorstCaseInfo->UsesFlatScratch |= ST.hasFlatAddressSpace();
   }
 }

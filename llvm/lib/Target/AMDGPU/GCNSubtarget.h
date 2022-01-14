@@ -1105,6 +1105,10 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const Function &F) const;
 
+  unsigned getMaxNumAGPRs(const Function &F) const {
+    return getMaxNumVGPRs(F);
+  }
+
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p MF, or number of VGPRs explicitly
   /// requested using "amdgpu-num-vgpr" attribute attached to function \p MF.

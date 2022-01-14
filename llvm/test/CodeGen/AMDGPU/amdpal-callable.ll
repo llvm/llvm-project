@@ -144,7 +144,8 @@ attributes #0 = { nounwind }
 
 ; GCN: amdpal.pipelines:
 ; GCN-NEXT:  - .registers:
-; GCN-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf01ca{{$}}
+; SDAG-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf03cf{{$}}
+; GISEL-NEXT:      0x2e12 (COMPUTE_PGM_RSRC1): 0xaf03cf{{$}}
 ; GCN-NEXT:      0x2e13 (COMPUTE_PGM_RSRC2): 0x8001{{$}}
 ; GCN-NEXT:    .shader_functions:
 ; GCN-NEXT:      dynamic_stack:
@@ -177,22 +178,24 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .vgpr_count:     0x2{{$}}
 ; GCN-NEXT:      no_stack_extern_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
-; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
+; GFX8-NEXT:        .sgpr_count:     0x68{{$}}
+; GFX9-NEXT:        .sgpr_count:     0x6c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
-; GCN-NEXT:        .vgpr_count:     0x29{{$}}
+; GCN-NEXT:        .vgpr_count:     0x40{{$}}
 ; GCN-NEXT:      no_stack_extern_call_many_args:
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
-; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
+; GFX8-NEXT:        .sgpr_count:     0x68{{$}}
+; GFX9-NEXT:        .sgpr_count:     0x6c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x90{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2a{{$}}
+; SDAG-NEXT:        .vgpr_count:     0x40{{$}}
+; GISEL-NEXT:        .vgpr_count:     0x40{{$}}
 ; GCN-NEXT:      no_stack_indirect_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
-; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
+; GFX8-NEXT:        .sgpr_count:     0x68{{$}}
+; GFX9-NEXT:        .sgpr_count:     0x6c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2a{{$}}
+; SDAG-NEXT:        .vgpr_count:     0x40{{$}}
+; GISEL-NEXT:        .vgpr_count:     0x40{{$}}
 ; GCN-NEXT:      simple_lds:
 ; GCN-NEXT:        .lds_size:       0x100{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x20{{$}}
@@ -215,16 +218,17 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .vgpr_count:     0x3{{$}}
 ; GCN-NEXT:      simple_stack_extern_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
-; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
+; GFX8-NEXT:        .sgpr_count:     0x68{{$}}
+; GFX9-NEXT:        .sgpr_count:     0x6c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x20{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2a{{$}}
+; GCN-NEXT:        .vgpr_count:     0x40{{$}}
 ; GCN-NEXT:      simple_stack_indirect_call:
 ; GCN-NEXT:        .lds_size:       0{{$}}
-; GFX8-NEXT:        .sgpr_count:     0x28{{$}}
-; GFX9-NEXT:        .sgpr_count:     0x2c{{$}}
+; GFX8-NEXT:        .sgpr_count:     0x68{{$}}
+; GFX9-NEXT:        .sgpr_count:     0x6c{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x20{{$}}
-; GCN-NEXT:        .vgpr_count:     0x2b{{$}}
+; SDAG-NEXT:        .vgpr_count:     0x40{{$}}
+; GISEL-NEXT:        .vgpr_count:     0x40{{$}}
 ; GCN-NEXT:      simple_stack_recurse:
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x26{{$}}
