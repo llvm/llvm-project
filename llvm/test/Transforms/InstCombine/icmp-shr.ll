@@ -493,18 +493,71 @@ define i1 @exact_multiuse(i32 %x) {
   ret i1 %cmp
 }
 
-declare void @foo2(<2 x i32>)
-define <2 x i1> @exact_eq0_multiuse(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @exact_eq0_multiuse(
-; CHECK-NEXT:    [[SH:%.*]] = ashr exact <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SH]], zeroinitializer
-; CHECK-NEXT:    call void @foo2(<2 x i32> [[SH]])
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; PR9343 #1
+define i1 @ashr_exact_eq_0(i32 %X, i32 %Y) {
+; CHECK-LABEL: @ashr_exact_eq_0(
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[B]]
 ;
-  %sh = ashr exact <2 x i32> %x, %y
-  %cmp = icmp eq <2 x i32> %sh, zeroinitializer
-  call void @foo2(<2 x i32> %sh)
-  ret <2 x i1> %cmp
+  %A = ashr exact i32 %X, %Y
+  %B = icmp eq i32 %A, 0
+  ret i1 %B
+}
+
+define i1 @ashr_exact_ne_0_uses(i32 %X, i32 %Y) {
+; CHECK-LABEL: @ashr_exact_ne_0_uses(
+; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @foo(i32 [[A]])
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[A]], 0
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %A = ashr exact i32 %X, %Y
+  call void @foo(i32 %A)
+  %B = icmp ne i32 %A, 0
+  ret i1 %B
+}
+
+define <2 x i1> @ashr_exact_eq_0_vec(<2 x i32> %X, <2 x i32> %Y) {
+; CHECK-LABEL: @ashr_exact_eq_0_vec(
+; CHECK-NEXT:    [[B:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[B]]
+;
+  %A = ashr exact <2 x i32> %X, %Y
+  %B = icmp eq <2 x i32> %A, zeroinitializer
+  ret <2 x i1> %B
+}
+
+define i1 @lshr_exact_ne_0(i32 %X, i32 %Y) {
+; CHECK-LABEL: @lshr_exact_ne_0(
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %A = lshr exact i32 %X, %Y
+  %B = icmp ne i32 %A, 0
+  ret i1 %B
+}
+
+define i1 @lshr_exact_eq_0_uses(i32 %X, i32 %Y) {
+; CHECK-LABEL: @lshr_exact_eq_0_uses(
+; CHECK-NEXT:    [[A:%.*]] = lshr exact i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @foo(i32 [[A]])
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    ret i1 [[B]]
+;
+  %A = lshr exact i32 %X, %Y
+  call void @foo(i32 %A)
+  %B = icmp eq i32 %A, 0
+  ret i1 %B
+}
+
+define <2 x i1> @lshr_exact_ne_0_vec(<2 x i32> %X, <2 x i32> %Y) {
+; CHECK-LABEL: @lshr_exact_ne_0_vec(
+; CHECK-NEXT:    [[B:%.*]] = icmp ne <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[B]]
+;
+  %A = lshr exact <2 x i32> %X, %Y
+  %B = icmp ne <2 x i32> %A, zeroinitializer
+  ret <2 x i1> %B
 }
 
 ; Verify conversions of ashr+icmp to a sign-bit test.
