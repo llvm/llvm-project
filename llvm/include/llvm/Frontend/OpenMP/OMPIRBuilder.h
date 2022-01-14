@@ -689,7 +689,8 @@ public:
                              omp::IdentFlag Flags = omp::IdentFlag(0),
                              unsigned Reserve2Flags = 0);
 
-  /// Create a global flag \p Namein the module with initial value \p Value.
+  /// Create a hidden global flag \p Name in the module with initial value \p
+  /// Value.
   GlobalValue *createGlobalFlag(unsigned Value, StringRef Name);
 
   /// Generate control flow and cleanup for cancellation.

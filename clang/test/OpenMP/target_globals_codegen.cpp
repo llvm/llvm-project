@@ -12,25 +12,25 @@
 #define HEADER
 
 //.
-// CHECK: @__omp_rtl_debug_kind = weak_odr constant i32 1
-// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr constant i32 0
-// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr constant i32 0
+// CHECK: @__omp_rtl_debug_kind = weak_odr hidden constant i32 1
+// CHECK: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 //.
-// CHECK-EQ: @__omp_rtl_debug_kind = weak_odr constant i32 111
-// CHECK-EQ: @__omp_rtl_assume_teams_oversubscription = weak_odr constant i32 0
-// CHECK-EQ: @__omp_rtl_assume_threads_oversubscription = weak_odr constant i32 0
+// CHECK-EQ: @__omp_rtl_debug_kind = weak_odr hidden constant i32 111
+// CHECK-EQ: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK-EQ: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 //.
-// CHECK-DEFAULT: @__omp_rtl_debug_kind = weak_odr constant i32 0
-// CHECK-DEFAULT: @__omp_rtl_assume_teams_oversubscription = weak_odr constant i32 0
-// CHECK-DEFAULT: @__omp_rtl_assume_threads_oversubscription = weak_odr constant i32 0
+// CHECK-DEFAULT: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK-DEFAULT: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK-DEFAULT: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 //.
-// CHECK-THREADS: @__omp_rtl_debug_kind = weak_odr constant i32 0
-// CHECK-THREADS: @__omp_rtl_assume_teams_oversubscription = weak_odr constant i32 0
-// CHECK-THREADS: @__omp_rtl_assume_threads_oversubscription = weak_odr constant i32 1
+// CHECK-THREADS: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK-THREADS: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 0
+// CHECK-THREADS: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 1
 //.
-// CHECK-TEAMS: @__omp_rtl_debug_kind = weak_odr constant i32 0
-// CHECK-TEAMS: @__omp_rtl_assume_teams_oversubscription = weak_odr constant i32 1
-// CHECK-TEAMS: @__omp_rtl_assume_threads_oversubscription = weak_odr constant i32 0
+// CHECK-TEAMS: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK-TEAMS: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
+// CHECK-TEAMS: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 //.
 void foo() {
 #pragma omp target

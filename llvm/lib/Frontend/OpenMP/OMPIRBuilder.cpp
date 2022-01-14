@@ -254,6 +254,7 @@ GlobalValue *OpenMPIRBuilder::createGlobalFlag(unsigned Value, StringRef Name) {
       new GlobalVariable(M, I32Ty,
                          /* isConstant = */ true, GlobalValue::WeakODRLinkage,
                          ConstantInt::get(I32Ty, Value), Name);
+  GV->setVisibility(GlobalValue::HiddenVisibility);
 
   return GV;
 }
