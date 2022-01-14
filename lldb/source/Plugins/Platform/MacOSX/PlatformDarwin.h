@@ -60,7 +60,9 @@ public:
   bool ModuleIsExcludedForUnconstrainedSearches(
       lldb_private::Target &target, const lldb::ModuleSP &module_sp) override;
 
-  void ARMGetSupportedArchitectures(std::vector<lldb_private::ArchSpec> &archs);
+  void
+  ARMGetSupportedArchitectures(std::vector<lldb_private::ArchSpec> &archs,
+                               llvm::Optional<llvm::Triple::OSType> os = {});
 
   void x86GetSupportedArchitectures(std::vector<lldb_private::ArchSpec> &archs);
 
@@ -140,6 +142,8 @@ protected:
       const lldb_private::ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
       const lldb_private::FileSpecList *module_search_paths_ptr,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+
+  virtual bool CheckLocalSharedCache() const { return IsHost(); }
 
   struct SDKEnumeratorInfo {
     lldb_private::FileSpec found_path;
