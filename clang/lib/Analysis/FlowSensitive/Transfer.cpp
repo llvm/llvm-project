@@ -87,11 +87,50 @@ public:
   }
 
   void VisitDeclStmt(const DeclStmt *S) {
-    // FIXME: Add support for group decls, e.g: `int a, b;`
-    if (S->isSingleDecl()) {
-      if (const auto *D = dyn_cast<VarDecl>(S->getSingleDecl())) {
-        visitVarDecl(*D);
+    // Group decls are converted into single decls in the CFG so the cast below
+    // is safe.
+    const auto &D = *cast<VarDecl>(S->getSingleDecl());
+    auto &Loc = Env.createStorageLocation(D);
+    Env.setStorageLocation(D, Loc);
+
+    const Expr *InitExpr = D.getInit();
+    if (InitExpr == nullptr) {
+      // No initializer expression - associate `Loc` with a new value.
+      Env.initValueInStorageLocation(Loc, D.getType());
+      return;
+    }
+
+    // The CFG does not contain `ParenExpr` as top-level statements in basic
+    // blocks, however sub-expressions can still be of that type.
+    InitExpr = skipExprWithCleanups(D.getInit()->IgnoreParens());
+    assert(InitExpr != nullptr);
+
+    if (D.getType()->isReferenceType()) {
+      // Initializing a reference variable - do not create a reference to
+      // reference.
+      if (auto *InitExprLoc =
+              Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
+        auto &Val =
+            Env.takeOwnership(std::make_unique<ReferenceValue>(*InitExprLoc));
+        Env.setValue(Loc, Val);
+      } else {
+        // FIXME: The initializer expression must always be assigned a value.
+        // Replace this with an assert when we have sufficient coverage of
+        // language features.
+        Env.initValueInStorageLocation(Loc, D.getType());
       }
+      return;
+    }
+
+    if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None)) {
+      Env.setValue(Loc, *InitExprVal);
+    } else if (!D.getType()->isStructureOrClassType()) {
+      // FIXME: The initializer expression must always be assigned a value.
+      // Replace this with an assert when we have sufficient coverage of
+      // language features.
+      Env.initValueInStorageLocation(Loc, D.getType());
+    } else {
+      llvm_unreachable("structs and classes must always be assigned values");
     }
   }
 
@@ -309,57 +348,34 @@ public:
     Env.setStorageLocation(*S, *SubExprLoc);
   }
 
-  // FIXME: Add support for:
-  // - CXXBindTemporaryExpr
-  // - CXXBoolLiteralExpr
-  // - CXXStaticCastExpr
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *S) {
+    const Expr *SubExpr = S->getSubExpr();
+    assert(SubExpr != nullptr);
 
-private:
-  void visitVarDecl(const VarDecl &D) {
-    auto &Loc = Env.createStorageLocation(D);
-    Env.setStorageLocation(D, Loc);
-
-    const Expr *InitExpr = D.getInit();
-    if (InitExpr == nullptr) {
-      // No initializer expression - associate `Loc` with a new value.
-      Env.initValueInStorageLocation(Loc, D.getType());
+    auto *SubExprLoc = Env.getStorageLocation(*SubExpr, SkipPast::None);
+    if (SubExprLoc == nullptr)
       return;
-    }
 
-    // The CFG does not contain `ParenExpr` as top-level statements in basic
-    // blocks, however sub-expressions can still be of that type.
-    InitExpr = skipExprWithCleanups(D.getInit()->IgnoreParens());
-    assert(InitExpr != nullptr);
+    Env.setStorageLocation(*S, *SubExprLoc);
+  }
 
-    if (D.getType()->isReferenceType()) {
-      // Initializing a reference variable - do not create a reference to
-      // reference.
-      if (auto *InitExprLoc =
-              Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
-        auto &Val =
-            Env.takeOwnership(std::make_unique<ReferenceValue>(*InitExprLoc));
-        Env.setValue(Loc, Val);
-      } else {
-        // FIXME: The initializer expression must always be assigned a value.
-        // Replace this with an assert when we have sufficient coverage of
-        // language features.
-        Env.initValueInStorageLocation(Loc, D.getType());
-      }
-      return;
-    }
+  void VisitCXXStaticCastExpr(const CXXStaticCastExpr *S) {
+    if (S->getCastKind() == CK_NoOp) {
+      const Expr *SubExpr = S->getSubExpr();
+      assert(SubExpr != nullptr);
 
-    if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None)) {
-      Env.setValue(Loc, *InitExprVal);
-    } else if (!D.getType()->isStructureOrClassType()) {
-      // FIXME: The initializer expression must always be assigned a value.
-      // Replace this with an assert when we have sufficient coverage of
-      // language features.
-      Env.initValueInStorageLocation(Loc, D.getType());
-    } else {
-      llvm_unreachable("structs and classes must always be assigned values");
+      auto *SubExprLoc = Env.getStorageLocation(*SubExpr, SkipPast::None);
+      if (SubExprLoc == nullptr)
+        return;
+
+      Env.setStorageLocation(*S, *SubExprLoc);
     }
   }
 
+  // FIXME: Add support for:
+  // - CXXBoolLiteralExpr
+
+private:
   Environment &Env;
 };
 

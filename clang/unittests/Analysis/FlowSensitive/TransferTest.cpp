@@ -489,6 +489,44 @@ TEST_F(TransferTest, SelfReferentialPointerVarDecl) {
       });
 }
 
+TEST_F(TransferTest, MultipleVarsDecl) {
+  std::string Code = R"(
+    void target() {
+      int Foo, Bar;
+      (void)0;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const StorageLocation *FooLoc =
+                    Env.getStorageLocation(*FooDecl, SkipPast::None);
+                ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
+
+                const StorageLocation *BarLoc =
+                    Env.getStorageLocation(*BarDecl, SkipPast::None);
+                ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
+
+                const Value *FooVal = Env.getValue(*FooLoc);
+                EXPECT_TRUE(isa_and_nonnull<IntegerValue>(FooVal));
+
+                const Value *BarVal = Env.getValue(*BarLoc);
+                EXPECT_TRUE(isa_and_nonnull<IntegerValue>(BarVal));
+              });
+}
+
 TEST_F(TransferTest, JoinVarDecl) {
   std::string Code = R"(
     void target(bool B) {
@@ -1587,6 +1625,73 @@ TEST_F(TransferTest, MoveConstructor) {
             cast<IntegerValue>(Env2.getValue(FooLoc1->getChild(*BazDecl)));
         EXPECT_EQ(FooBazVal2, BarBazVal1);
       });
+}
+
+TEST_F(TransferTest, BindTemporary) {
+  std::string Code = R"(
+    struct A {
+      virtual ~A() = default;
+
+      int Baz;
+    };
+
+    void target(A Foo) {
+      int Bar = A(Foo).Baz;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+                ASSERT_THAT(BazDecl, NotNull());
+
+                const auto &FooVal =
+                    *cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None));
+                const auto *BarVal =
+                    cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
+                EXPECT_EQ(BarVal, &FooVal.getChild(*BazDecl));
+              });
+}
+
+TEST_F(TransferTest, StaticCast) {
+  std::string Code = R"(
+    void target(int Foo) {
+      int Bar = static_cast<int>(Foo);
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *FooVal =
+                    cast<IntegerValue>(Env.getValue(*FooDecl, SkipPast::None));
+                const auto *BarVal =
+                    cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
+                EXPECT_EQ(FooVal, BarVal);
+              });
 }
 
 } // namespace
