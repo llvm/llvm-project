@@ -93,7 +93,7 @@ public:
 
   FlatAffineConstraints(const MutableAffineMap &map);
 
-  virtual ~FlatAffineConstraints() = default;
+  ~FlatAffineConstraints() override = default;
 
   /// Return the kind of this FlatAffineConstraints.
   Kind getKind() const override { return Kind::FlatAffineConstraints; }
@@ -358,8 +358,7 @@ public:
   using FlatAffineConstraints::insertDimId;
   unsigned insertSymbolId(unsigned pos, ValueRange vals);
   using FlatAffineConstraints::insertSymbolId;
-  virtual unsigned insertId(IdKind kind, unsigned pos,
-                            unsigned num = 1) override;
+  unsigned insertId(IdKind kind, unsigned pos, unsigned num = 1) override;
   unsigned insertId(IdKind kind, unsigned pos, ValueRange vals);
 
   /// Append identifiers of the specified kind after the last identifier of that
@@ -521,7 +520,7 @@ protected:
   /// Removes identifiers in the column range [idStart, idLimit), and copies any
   /// remaining valid data into place, updates member variables, and resizes
   /// arrays as needed.
-  virtual void removeIdRange(unsigned idStart, unsigned idLimit) override;
+  void removeIdRange(unsigned idStart, unsigned idLimit) override;
 
   /// Eliminates the identifier at the specified position using Fourier-Motzkin
   /// variable elimination, but uses Gaussian elimination if there is an

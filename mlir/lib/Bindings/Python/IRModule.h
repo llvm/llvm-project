@@ -496,7 +496,7 @@ class PyOperation;
 using PyOperationRef = PyObjectRef<PyOperation>;
 class PyOperation : public PyOperationBase, public BaseContextObject {
 public:
-  ~PyOperation();
+  ~PyOperation() override;
   PyOperation &getOperation() override { return *this; }
 
   /// Returns a PyOperation for the given MlirOperation, optionally associating
