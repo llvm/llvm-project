@@ -86,7 +86,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
   MachineFunction &MF = MIRBuilder.getMF();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   bool CanBeTailCalled = CB.isTailCall() &&
                          isInTailCallPosition(CB, MF.getTarget()) &&
                          (MF.getFunction()
@@ -109,7 +108,6 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
     // argument points into the caller's stack frame.
     CanBeTailCalled = false;
   }
-
 
   // First step is to marshall all the function's parameters into the correct
   // physregs and memory locations. Gather the sequence of argument types that
@@ -138,22 +136,9 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   else
     Info.Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
-  Register ReturnHintAlignReg;
-  Align ReturnHintAlign;
-
   Info.OrigRet = ArgInfo{ResRegs, RetTy, 0, ISD::ArgFlagsTy{}};
-
-  if (!Info.OrigRet.Ty->isVoidTy()) {
+  if (!Info.OrigRet.Ty->isVoidTy())
     setArgFlags(Info.OrigRet, AttributeList::ReturnIndex, DL, CB);
-
-    if (MaybeAlign Alignment = CB.getRetAlign()) {
-      if (*Alignment > Align(1)) {
-        ReturnHintAlignReg = MRI.cloneVirtualRegister(ResRegs[0]);
-        ReturnHintAlign = *Alignment;
-        std::swap(Info.OrigRet.Regs[0], ReturnHintAlignReg);
-      }
-    }
-  }
 
   Info.CB = &CB;
   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
@@ -162,15 +147,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.IsMustTailCall = CB.isMustTailCall();
   Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = IsVarArg;
-  if (!lowerCall(MIRBuilder, Info))
-    return false;
-
-  if (ReturnHintAlignReg) {
-    MIRBuilder.buildAssertAlign(ReturnHintAlignReg, Info.OrigRet.Regs[0],
-                                ReturnHintAlign);
-  }
-
-  return true;
+  return lowerCall(MIRBuilder, Info);
 }
 
 template <typename FuncInfoTy>
