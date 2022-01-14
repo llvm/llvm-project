@@ -7,7 +7,7 @@
 // CHECK: --- Defs ---
 
 // CHECK: def C0 {
-// CHECK:   list<list<int>> ret = {{\[}}[1, 2, 3], [1, 2, 3]];
+// CHECK{LITERAL}: list<list<int>> ret = [[1, 2, 3], [1, 2, 3]];
 // CHECK: }
 
 // The variable name 'a' is used both in the "inner" and in the "outer" foreach.
