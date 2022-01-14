@@ -347,6 +347,69 @@ exit:
   ret i32 %i
 }
 
+define i32 @logical_or_5ops_redundant_opearand_of_inner_uminseq(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
+; CHECK-LABEL: 'logical_or_5ops_redundant_opearand_of_inner_uminseq'
+; CHECK-NEXT:  Classifying expressions for: @logical_or_5ops_redundant_opearand_of_inner_uminseq
+; CHECK-NEXT:    %first.i = phi i32 [ 0, %entry ], [ %first.i.next, %first.loop ]
+; CHECK-NEXT:    --> {0,+,1}<%first.loop> U: full-set S: full-set Exits: (%e umin_seq %d umin_seq %a) LoopDispositions: { %first.loop: Computable }
+; CHECK-NEXT:    %first.i.next = add i32 %first.i, 1
+; CHECK-NEXT:    --> {1,+,1}<%first.loop> U: full-set S: full-set Exits: (1 + (%e umin_seq %d umin_seq %a)) LoopDispositions: { %first.loop: Computable }
+; CHECK-NEXT:    %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
+; CHECK-NEXT:    --> %cond_p3 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %first.loop: Variant }
+; CHECK-NEXT:    %cond_p4 = select i1 %cond_p3, i1 true, i1 %cond_p2
+; CHECK-NEXT:    --> %cond_p4 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %first.loop: Variant }
+; CHECK-NEXT:    %i = phi i32 [ 0, %first.loop.exit ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: (%a umin_seq %b umin_seq ((%e umin_seq %d umin_seq %a) umin %c umin %d)) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add i32 %i, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: (1 + (%a umin_seq %b umin_seq ((%e umin_seq %d umin_seq %a) umin %c umin %d))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %umin = call i32 @llvm.umin.i32(i32 %c, i32 %d)
+; CHECK-NEXT:    --> (%c umin %d) U: full-set S: full-set Exits: (%c umin %d) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:    %umin2 = call i32 @llvm.umin.i32(i32 %umin, i32 %first.i)
+; CHECK-NEXT:    --> ({0,+,1}<%first.loop> umin %c umin %d) U: full-set S: full-set --> ((%e umin_seq %d umin_seq %a) umin %c umin %d) U: full-set S: full-set Exits: ((%e umin_seq %d umin_seq %a) umin %c umin %d) LoopDispositions: { %loop: Invariant }
+; CHECK-NEXT:    %cond_p8 = select i1 %cond_p5, i1 true, i1 %cond_p6
+; CHECK-NEXT:    --> %cond_p8 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %cond = select i1 %cond_p8, i1 true, i1 %cond_p7
+; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @logical_or_5ops_redundant_opearand_of_inner_uminseq
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (%a umin_seq %b umin_seq ((%e umin_seq %d umin_seq %a) umin %c umin %d))
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (%a umin_seq %b umin_seq ((%e umin_seq %d umin_seq %a) umin %c umin %d))
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %first.loop: backedge-taken count is (%e umin_seq %d umin_seq %a)
+; CHECK-NEXT:  Loop %first.loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %first.loop: Predicated backedge-taken count is (%e umin_seq %d umin_seq %a)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %first.loop: Trip multiple is 1
+;
+entry:
+  br label %first.loop
+first.loop:
+  %first.i = phi i32 [0, %entry], [%first.i.next, %first.loop]
+  %first.i.next = add i32 %first.i, 1
+  %cond_p0 = icmp uge i32 %first.i, %e
+  %cond_p1 = icmp uge i32 %first.i, %d
+  %cond_p2 = icmp uge i32 %first.i, %a
+  %cond_p3 = select i1 %cond_p0, i1 true, i1 %cond_p1
+  %cond_p4 = select i1 %cond_p3, i1 true, i1 %cond_p2
+  br i1 %cond_p4, label %first.loop.exit, label %first.loop
+first.loop.exit:
+  br label %loop
+loop:
+  %i = phi i32 [0, %first.loop.exit], [%i.next, %loop]
+  %i.next = add i32 %i, 1
+  %umin = call i32 @llvm.umin.i32(i32 %c, i32 %d)
+  %umin2 = call i32 @llvm.umin.i32(i32 %umin, i32 %first.i)
+  %cond_p5 = icmp uge i32 %i, %a
+  %cond_p6 = icmp uge i32 %i, %b
+  %cond_p7 = icmp uge i32 %i, %umin2
+  %cond_p8 = select i1 %cond_p5, i1 true, i1 %cond_p6
+  %cond = select i1 %cond_p8, i1 true, i1 %cond_p7
+  br i1 %cond, label %exit, label %loop
+exit:
+  ret i32 %i
+}
+
 define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-LABEL: 'computeSCEVAtScope'
 ; CHECK-NEXT:  Classifying expressions for: @computeSCEVAtScope
