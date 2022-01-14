@@ -723,13 +723,13 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     MemRefDescriptor srcDesc(adaptor.source());
 
     // Compute number of elements.
-    Value numElements;
+    Value numElements = rewriter.create<LLVM::ConstantOp>(
+        loc, getIndexType(), rewriter.getIndexAttr(1));
     for (int pos = 0; pos < srcType.getRank(); ++pos) {
       auto size = srcDesc.size(rewriter, loc, pos);
-      numElements = numElements
-                        ? rewriter.create<LLVM::MulOp>(loc, numElements, size)
-                        : size;
+      numElements = rewriter.create<LLVM::MulOp>(loc, numElements, size);
     }
+
     // Get element size.
     auto sizeInBytes = getSizeInBytes(loc, srcType.getElementType(), rewriter);
     // Compute total.
