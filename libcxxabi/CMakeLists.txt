@@ -267,6 +267,9 @@ include(HandleLibcxxabiFlags)
 #===============================================================================
 
 # Configure target flags
+if(ZOS)
+  add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
+endif()
 if(LIBCXXABI_TARGET_TRIPLE)
   add_target_flags_if_supported("--target=${LIBCXXABI_TARGET_TRIPLE}")
 endif()

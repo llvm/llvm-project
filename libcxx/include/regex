@@ -1310,19 +1310,51 @@ regex_traits<_CharT>::isctype(char_type __c, char_class_type __m) const
     return (__c == '_' && (__m & __regex_word));
 }
 
+inline _LIBCPP_INLINE_VISIBILITY
+bool __is_07(unsigned char c)
+{
+    return (c & 0xF8u) ==
+#if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
+        0xF0;
+#else
+        0x30;
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+bool __is_89(unsigned char c)
+{
+    return (c & 0xFEu) ==
+#if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
+        0xF8;
+#else
+        0x38;
+#endif
+}
+
+inline _LIBCPP_INLINE_VISIBILITY
+unsigned char __to_lower(unsigned char c)
+{
+#if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
+    return c & 0xBF;
+#else
+    return c | 0x20;
+#endif
+}
+
 template <class _CharT>
 int
 regex_traits<_CharT>::__regex_traits_value(unsigned char __ch, int __radix)
 {
-    if ((__ch & 0xF8u) == 0x30)  // '0' <= __ch && __ch <= '7'
+    if (__is_07(__ch))  // '0' <= __ch && __ch <= '7'
         return __ch - '0';
     if (__radix != 8)
     {
-        if ((__ch & 0xFEu) == 0x38)  // '8' <= __ch && __ch <= '9'
+        if (__is_89(__ch))  // '8' <= __ch && __ch <= '9'
             return __ch - '0';
         if (__radix == 16)
         {
-            __ch |= 0x20;  // tolower
+            __ch = __to_lower(__ch);  // tolower
             if ('a' <= __ch && __ch <= 'f')
                 return __ch - ('a' - 10);
         }
