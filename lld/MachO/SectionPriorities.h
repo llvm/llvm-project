@@ -44,7 +44,8 @@ void parseOrderFile(StringRef path);
 //
 // If either an order file or a call graph profile are present, this is used
 // as the source of priorities. If both are present, the order file takes
-// precedence. If neither is present, an empty map is returned.
+// precedence, but the call graph profile is still used for symbols that don't
+// appear in the order file. If neither is present, an empty map is returned.
 //
 // Each section gets assigned the priority of the highest-priority symbol it
 // contains.
