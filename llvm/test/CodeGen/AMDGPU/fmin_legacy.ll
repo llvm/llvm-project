@@ -31,7 +31,7 @@ define amdgpu_kernel void @s_test_fmin_legacy_subreg_inputs_f32(float addrspace(
 }
 
 ; FUNC-LABEL: {{^}}s_test_fmin_legacy_ule_f32:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN-DAG: s_load_dwordx2 s[[[A:[0-9]+]]:[[B:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 
 ; SI-SAFE: v_mov_b32_e32 [[VA:v[0-9]+]], s[[A]]
 
@@ -56,7 +56,7 @@ define amdgpu_kernel void @s_test_fmin_legacy_ule_f32(float addrspace(1)* %out, 
 ; Nsz also needed
 ; FIXME: Should separate tests
 ; GCN-LABEL: {{^}}s_test_fmin_legacy_ule_f32_nnan_src:
-; GCN: s_load_dwordx2 s{{\[}}[[A:[0-9]+]]:[[B:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
+; GCN: s_load_dwordx2 s[[[A:[0-9]+]]:[[B:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, {{0xb|0x2c}}
 
 ; GCN-DAG: v_add_f32_e64 [[ADD_A:v[0-9]+]], s[[A]], 1.0
 ; GCN-DAG: v_add_f32_e64 [[ADD_B:v[0-9]+]], s[[B]], 2.0

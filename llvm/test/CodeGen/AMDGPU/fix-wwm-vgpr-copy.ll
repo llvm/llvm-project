@@ -28,11 +28,11 @@ work:
 ; GCN: s_not_b64 exec, exec
   %tmp1189 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 4, i32 1)
 
-; GCN: s_or_saveexec_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, -1
+; GCN: s_or_saveexec_b64 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], -1
 ; GCN: v_lshlrev_b32_e32 v[[tmp1191:[0-9]+]], 2, v[[tmp1189]]
   %tmp1191 = mul i32 %tmp1189, 4
 
-; GCN: s_mov_b64 exec, s{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_mov_b64 exec, s[[[LO]]:[[HI]]]
   %tmp1196 = tail call i32 @llvm.amdgcn.wwm.i32(i32 %tmp1191)
 
   %tmp34 = icmp eq i32 %arg, 0
@@ -65,11 +65,11 @@ work:
 ; GCN: s_not_b64 exec, exec
   %tmp1189 = tail call i32 @llvm.amdgcn.set.inactive.i32(i32 4, i32 1)
 
-; GCN: s_or_saveexec_b64 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}, -1
+; GCN: s_or_saveexec_b64 s[[[LO:[0-9]+]]:[[HI:[0-9]+]]], -1
 ; GCN: v_lshlrev_b32_e32 v[[tmp1191:[0-9]+]], 2, v[[tmp1189]]
   %tmp1191 = mul i32 %tmp1189, 4
 
-; GCN: s_mov_b64 exec, s{{\[}}[[LO]]:[[HI]]{{\]}}
+; GCN: s_mov_b64 exec, s[[[LO]]:[[HI]]]
   %tmp1196 = tail call i32 @llvm.amdgcn.strict.wwm.i32(i32 %tmp1191)
 
   %tmp34 = icmp eq i32 %arg, 0

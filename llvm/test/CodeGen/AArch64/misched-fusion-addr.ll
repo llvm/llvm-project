@@ -26,9 +26,9 @@ define dso_local void @ldst_8bit() {
 
 ; CHECK-LABEL: ldst_8bit:
 ; CHECK: adrp [[RB:x[0-9]+]], var_8bit
-; CHECK-NEXT: ldrb {{w[0-9]+}}, {{\[}}[[RB]], {{#?}}:lo12:var_8bit{{\]}}
+; CHECK-NEXT: ldrb {{w[0-9]+}}, [[[RB]], {{#?}}:lo12:var_8bit]
 ; CHECK: adrp [[RH:x[0-9]+]], var_16bit
-; CHECK-NEXT: strh {{w[0-9]+}}, {{\[}}[[RH]], {{#?}}:lo12:var_16bit{{\]}}
+; CHECK-NEXT: strh {{w[0-9]+}}, [[[RH]], {{#?}}:lo12:var_16bit]
 }
 
 define dso_local void @ldst_16bit() {
@@ -41,9 +41,9 @@ define dso_local void @ldst_16bit() {
 
 ; CHECK-LABEL: ldst_16bit:
 ; CHECK: adrp [[RH:x[0-9]+]], var_16bit
-; CHECK-NEXT: ldrh {{w[0-9]+}}, {{\[}}[[RH]], {{#?}}:lo12:var_16bit{{\]}}
+; CHECK-NEXT: ldrh {{w[0-9]+}}, [[[RH]], {{#?}}:lo12:var_16bit]
 ; CHECK: adrp [[RW:x[0-9]+]], var_32bit
-; CHECK-NEXT: str {{w[0-9]+}}, {{\[}}[[RW]], {{#?}}:lo12:var_32bit{{\]}}
+; CHECK-NEXT: str {{w[0-9]+}}, [[[RW]], {{#?}}:lo12:var_32bit]
 }
 
 define dso_local void @ldst_32bit() {
@@ -55,9 +55,9 @@ define dso_local void @ldst_32bit() {
 
 ; CHECK-LABEL: ldst_32bit:
 ; CHECK: adrp [[RW:x[0-9]+]], var_32bit
-; CHECK-NEXT: ldr {{w[0-9]+}}, {{\[}}[[RW]], {{#?}}:lo12:var_32bit{{\]}}
+; CHECK-NEXT: ldr {{w[0-9]+}}, [[[RW]], {{#?}}:lo12:var_32bit]
 ; CHECK: adrp [[RL:x[0-9]+]], var_64bit
-; CHECK-NEXT: str {{x[0-9]+}}, {{\[}}[[RL]], {{#?}}:lo12:var_64bit{{\]}}
+; CHECK-NEXT: str {{x[0-9]+}}, [[[RL]], {{#?}}:lo12:var_64bit]
 }
 
 define dso_local void @ldst_64bit() {
@@ -69,7 +69,7 @@ define dso_local void @ldst_64bit() {
 
 ; CHECK-LABEL: ldst_64bit:
 ; CHECK: adrp [[RL:x[0-9]+]], var_64bit
-; CHECK-NEXT: ldr {{x[0-9]+}}, {{\[}}[[RL]], {{#?}}:lo12:var_64bit{{\]}}
+; CHECK-NEXT: ldr {{x[0-9]+}}, [[[RL]], {{#?}}:lo12:var_64bit]
 ; CHECK: adrp [[RQ:x[0-9]+]], var_128bit
 ; CHECK-NEXT: add {{x[0-9]+}}, [[RQ]], {{#?}}:lo12:var_128bit
 }
@@ -82,9 +82,9 @@ define dso_local void @ldst_half() {
 
 ; CHECK-LABEL: ldst_half:
 ; CHECK: adrp [[RH:x[0-9]+]], var_half
-; CHECK-NEXT: ldr {{h[0-9]+}}, {{\[}}[[RH]], {{#?}}:lo12:var_half{{\]}}
+; CHECK-NEXT: ldr {{h[0-9]+}}, [[[RH]], {{#?}}:lo12:var_half]
 ; CHECK: adrp [[RF:x[0-9]+]], var_float
-; CHECK-NEXT: str {{s[0-9]+}}, {{\[}}[[RF]], {{#?}}:lo12:var_float{{\]}}
+; CHECK-NEXT: str {{s[0-9]+}}, [[[RF]], {{#?}}:lo12:var_float]
 }
 
 define dso_local void @ldst_float() {
@@ -95,9 +95,9 @@ define dso_local void @ldst_float() {
 
 ; CHECK-LABEL: ldst_float:
 ; CHECK: adrp [[RF:x[0-9]+]], var_float
-; CHECK-NEXT: ldr {{s[0-9]+}}, {{\[}}[[RF]], {{#?}}:lo12:var_float{{\]}}
+; CHECK-NEXT: ldr {{s[0-9]+}}, [[[RF]], {{#?}}:lo12:var_float]
 ; CHECK: adrp [[RD:x[0-9]+]], var_double
-; CHECK-NEXT: str {{d[0-9]+}}, {{\[}}[[RD]], {{#?}}:lo12:var_double{{\]}}
+; CHECK-NEXT: str {{d[0-9]+}}, [[[RD]], {{#?}}:lo12:var_double]
 }
 
 define dso_local void @ldst_double() {
@@ -111,7 +111,7 @@ define dso_local void @ldst_double() {
 
 ; CHECK-LABEL: ldst_double:
 ; CHECK: adrp [[RD:x[0-9]+]], var_double
-; CHECK-NEXT: ldr {{d[0-9]+}}, {{\[}}[[RD]], {{#?}}:lo12:var_double{{\]}}
+; CHECK-NEXT: ldr {{d[0-9]+}}, [[[RD]], {{#?}}:lo12:var_double]
 ; CHECK: adrp [[RQ:x[0-9]+]], var_double2
-; CHECK-NEXT: str {{q[0-9]+}}, {{\[}}[[RQ]], {{#?}}:lo12:var_double2{{\]}}
+; CHECK-NEXT: str {{q[0-9]+}}, [[[RQ]], {{#?}}:lo12:var_double2]
 }

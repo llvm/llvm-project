@@ -70,8 +70,8 @@ define amdgpu_kernel void @fabs_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 }
 
 ; GCN-LABEL: {{^}}fabs_fn_fold:
-; SI: s_load_dwordx2 s{{\[}}[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0xb
-; VI: s_load_dwordx2 s{{\[}}[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0x2c
+; SI: s_load_dwordx2 s[[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0xb
+; VI: s_load_dwordx2 s[[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: and
 ; GCN: v_mov_b32_e32 [[V_MUL_VI:v[0-9]+]], s[[MUL_VAL]]
 ; GCN: v_mul_f32_e64 v{{[0-9]+}}, |s[[ABS_VALUE]]|, [[V_MUL_VI]]
@@ -83,8 +83,8 @@ define amdgpu_kernel void @fabs_fn_fold(float addrspace(1)* %out, float %in0, fl
 }
 
 ; FUNC-LABEL: {{^}}fabs_fold:
-; SI: s_load_dwordx2 s{{\[}}[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0xb
-; VI: s_load_dwordx2 s{{\[}}[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0x2c
+; SI: s_load_dwordx2 s[[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0xb
+; VI: s_load_dwordx2 s[[[ABS_VALUE:[0-9]+]]:[[MUL_VAL:[0-9]+]]], s[{{[0-9]+:[0-9]+}}], 0x2c
 ; GCN-NOT: and
 ; GCN: v_mov_b32_e32 [[V_MUL_VI:v[0-9]+]], s[[MUL_VAL]]
 ; GCN: v_mul_f32_e64 v{{[0-9]+}}, |s[[ABS_VALUE]]|, [[V_MUL_VI]]

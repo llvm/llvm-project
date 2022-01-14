@@ -457,7 +457,7 @@ define amdgpu_ps float @no_fold_fi_imm_soffset(<4 x i32> inreg %rsrc) {
 ; CHECK-LABEL: {{^}}no_fold_fi_reg_soffset:
 ; CHECK-DAG: v_mov_b32_e32 v[[FI:[0-9]+]], 4{{$}}
 ; CHECK-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s
-; CHECK: buffer_load_dword v0, v{{\[}}[[FI]]:[[HI]]
+; CHECK: buffer_load_dword v0, v[[[FI]]:[[HI]]
 define amdgpu_ps float @no_fold_fi_reg_soffset(<4 x i32> inreg %rsrc, i32 inreg %soffset) {
   %alloca = alloca i32, addrspace(5)
   %alloca.cast = ptrtoint i32 addrspace(5)* %alloca to i32

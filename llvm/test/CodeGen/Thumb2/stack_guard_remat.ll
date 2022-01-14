@@ -7,18 +7,18 @@
 ;PIC:   movt  [[R0]], :upper16:(L___stack_chk_guard$non_lazy_ptr-([[LABEL0]]+4))
 ;PIC: [[LABEL0]]:
 ;PIC:   add [[R0]], pc
-;PIC:   ldr [[R1:r[0-9]+]], {{\[}}[[R0]]{{\]}}
-;PIC:   ldr {{r[0-9]+}}, {{\[}}[[R1]]{{\]}}
+;PIC:   ldr [[R1:r[0-9]+]], [[[R0]]]
+;PIC:   ldr {{r[0-9]+}}, [[[R1]]]
 
 ;STATIC:   foo2
 ;STATIC:   movw  [[R0:r[0-9]+]], :lower16:___stack_chk_guard
 ;STATIC:   movt  [[R0]], :upper16:___stack_chk_guard
-;STATIC:   ldr {{r[0-9]+}}, {{\[}}[[R0]]{{\]}}
+;STATIC:   ldr {{r[0-9]+}}, [[[R0]]]
 
 ;DYNAMIC-NO-PIC:   foo2
 ;DYNAMIC-NO-PIC:   movw  [[R0:r[0-9]+]], :lower16:L___stack_chk_guard$non_lazy_ptr
 ;DYNAMIC-NO-PIC:   movt  [[R0]], :upper16:L___stack_chk_guard$non_lazy_ptr
-;DYNAMIC-NO-PIC:   ldr {{r[0-9]+}}, {{\[}}[[R0]]{{\]}}
+;DYNAMIC-NO-PIC:   ldr {{r[0-9]+}}, [[[R0]]]
 
 ; Function Attrs: nounwind ssp
 define i32 @test_stack_guard_remat() #0 {

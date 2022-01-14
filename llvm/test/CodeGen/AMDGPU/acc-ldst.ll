@@ -26,7 +26,7 @@ bb:
 ; GCN-LABEL: {{^}}test_load1_mfma_store1:
 ; GCN:      global_load_dword a{{[0-9]+}}, v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:  v_accvgpr_read
-; GCN:      v_mfma_f32_32x32x1f32 a{{\[}}[[N:[0-9]+]]:
+; GCN:      v_mfma_f32_32x32x1f32 a[[[N:[0-9]+]]:
 ; GCN-NEXT: s_nop 7
 ; GCN-NEXT: s_nop 7
 ; GCN-NEXT: s_nop 2
@@ -194,7 +194,7 @@ bb:
 ; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN:     v_mfma_i32_4x4x4i8 a{{\[}}[[N:[0-9]+]]:
+; GCN:     v_mfma_i32_4x4x4i8 a[[[N:[0-9]+]]:
 ; GCN:     v_accvgpr_read_b32 [[V:v[0-9]+]], a[[N]]{{$}}
 ; GCN:     global_atomic_add v{{[0-9]+}}, v{{[0-9:]+}}, [[V]], s[{{[0-9:]+}}] glc
 ; GCN:     global_store_dword v{{[0-9]+}}, v{{[0-9]+}},
@@ -217,7 +217,7 @@ bb:
 ; GCN-LABEL: {{^}}test_atomic_mfma_4xi32_atomic64_store:
 ; GCN:         global_atomic_sub_x2 v[{{[0-9:]+}}], v{{[0-9:]+}}, v[{{[0-9:]+}}], s[{{[0-9:]+}}] glc
 ; GCN-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN:         v_mfma_i32_4x4x4i8 a{{\[}}[[N:[0-9]+]]:
+; GCN:         v_mfma_i32_4x4x4i8 a[[[N:[0-9]+]]:
 ; GCN:         v_accvgpr_read_b32 v{{[0-9]+}}, a{{[0-9]+}}
 ; GCN:         v_accvgpr_read_b32 v{{[0-9]+}}, a{{[0-9]+}}
 ; GCN:         global_atomic_add_x2 v[{{[0-9:]+}}], v{{[0-9:]+}}, v[{{[0-9:]+}}], s[{{[0-9:]+}}] glc
@@ -244,7 +244,7 @@ bb:
 ; GCN-LABEL: {{^}}test_load_mfma_ds2_store:
 ; GCN-DAG: ds_read_b128 [[IN:a\[[0-9:]+\]]], v{{[0-9:]+}}
 ; GCN-NOT: v_accvgpr_write
-; GCN-DAG: v_mfma_i32_4x4x4i8 a{{\[}}[[N:[0-9]+]]:{{[0-9]+}}], v{{[0-9:]+}}, v{{[0-9:]+}}, [[IN]]
+; GCN-DAG: v_mfma_i32_4x4x4i8 a[[[N:[0-9]+]]:{{[0-9]+}}], v{{[0-9:]+}}, v{{[0-9:]+}}, [[IN]]
 ; GCN-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}}
 ; GCN-NOT: v_accvgpr_read
 ; GCN:     ds_write_b32 v{{[0-9]+}}, a[[N]] offset:128

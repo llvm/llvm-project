@@ -212,7 +212,7 @@ entry:
 
 ; ALWAYS-DAG: ldg [[PA:x.*]], [x{{.*}}]
 ; ALWAYS-DAG: ldrb [[B:w.*]], [sp]
-; ALWAYS-DAG: ldrb [[A:w.*]], {{\[}}[[PA]]{{\]}}
+; ALWAYS-DAG: ldrb [[A:w.*]], [[[PA]]]
 
 ; COMMON: ret
 

@@ -27,7 +27,7 @@ define <8 x i16> @foo(<8 x i16> %a) nounwind readnone {
 ; CHECK:	.p2align	2
 ; CHECK:_foo:                                   ; @foo
 ; CHECK:	adrp	[[BASE:x[0-9]+]], lCPI0_0@PAGE
-; CHECK:	ldr	q[[REG:[0-9]+]], {{\[}}[[BASE]], lCPI0_0@PAGEOFF]
+; CHECK:	ldr	q[[REG:[0-9]+]], [[[BASE]], lCPI0_0@PAGEOFF]
 ; CHECK:	tbl.16b	v0, { v0 }, v[[REG]]
 ; CHECK:	ret
 

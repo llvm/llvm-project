@@ -1001,8 +1001,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_cmpxchg_i64_ret_offset:
-; CIVI: buffer_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]{{:[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:32 glc{{$}}
-; CIVI: buffer_store_dwordx2 v{{\[}}[[RET]]:
+; CIVI: buffer_atomic_cmpswap_x2 v[[[RET:[0-9]+]]{{:[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:32 glc{{$}}
+; CIVI: buffer_store_dwordx2 v[[[RET]]:
 
 ; GFX9: global_atomic_cmpswap_x2 [[RET:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}} offset:32 glc{{$}}
 define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(i64 addrspace(1)* %out, i64 addrspace(1)* %out2, i64 %in, i64 %old) {
@@ -1027,11 +1027,11 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_cmpxchg_i64_ret_addr64_offset:
-; CI: buffer_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:32 glc{{$}}
-; VI: flat_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]:{{[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] glc{{$}}
-; CIVI: buffer_store_dwordx2 v{{\[}}[[RET]]:
+; CI: buffer_atomic_cmpswap_x2 v[[[RET:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 offset:32 glc{{$}}
+; VI: flat_atomic_cmpswap_x2 v[[[RET:[0-9]+]]:{{[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] glc{{$}}
+; CIVI: buffer_store_dwordx2 v[[[RET]]:
 
-; GFX9: global_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]:{{[0-9]+\]}}, v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] offset:32 glc{{$}}
+; GFX9: global_atomic_cmpswap_x2 v[[[RET:[0-9]+]]:{{[0-9]+\]}}, v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] offset:32 glc{{$}}
 define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(i64 addrspace(1)* %out, i64 addrspace(1)* %out2, i64 %in, i64 %index, i64 %old) {
 entry:
   %ptr = getelementptr i64, i64 addrspace(1)* %out, i64 %index
@@ -1052,10 +1052,10 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_cmpxchg_i64_ret:
-; CIVI: buffer_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]:{{[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc
-; CIVI: buffer_store_dwordx2 v{{\[}}[[RET]]:
+; CIVI: buffer_atomic_cmpswap_x2 v[[[RET:[0-9]+]]:{{[0-9]+}}], off, s[{{[0-9]+}}:{{[0-9]+}}], 0 glc
+; CIVI: buffer_store_dwordx2 v[[[RET]]:
 
-; GFX9: global_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]:{{[0-9]+\]}}, v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+:[0-9]+}}] glc{{$}}
+; GFX9: global_atomic_cmpswap_x2 v[[[RET:[0-9]+]]:{{[0-9]+\]}}, v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+:[0-9]+}}] glc{{$}}
 define amdgpu_kernel void @atomic_cmpxchg_i64_ret(i64 addrspace(1)* %out, i64 addrspace(1)* %out2, i64 %in, i64 %old) {
 entry:
   %val = cmpxchg volatile i64 addrspace(1)* %out, i64 %old, i64 %in seq_cst seq_cst
@@ -1076,11 +1076,11 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}atomic_cmpxchg_i64_ret_addr64:
-; CI: buffer_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 glc{{$}}
-; VI: flat_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]:{{[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] glc{{$}}
-; CIVI: buffer_store_dwordx2 v{{\[}}[[RET]]:
+; CI: buffer_atomic_cmpswap_x2 v[[[RET:[0-9]+]]:{{[0-9]+}}], v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 glc{{$}}
+; VI: flat_atomic_cmpswap_x2 v[[[RET:[0-9]+]]:{{[0-9]+\]}}, v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}] glc{{$}}
+; CIVI: buffer_store_dwordx2 v[[[RET]]:
 
-; GFX9: global_atomic_cmpswap_x2 v{{\[}}[[RET:[0-9]+]]:{{[0-9]+\]}}, v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] glc{{$}}
+; GFX9: global_atomic_cmpswap_x2 v[[[RET:[0-9]+]]:{{[0-9]+\]}}, v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] glc{{$}}
 define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(i64 addrspace(1)* %out, i64 addrspace(1)* %out2, i64 %in, i64 %index, i64 %old) {
 entry:
   %ptr = getelementptr i64, i64 addrspace(1)* %out, i64 %index
@@ -1107,7 +1107,7 @@ entry:
 ; GCN-LABEL: {{^}}atomic_load_i64_neg_offset:
 ; CI: v_mov_b32_e32 v[[LO:[0-9]+]], 0xffffffe0
 ; CI: v_mov_b32_e32 v[[HI:[0-9]+]], -1
-; CI: buffer_load_dwordx2 [[RET:v\[[0-9]+:[0-9]+\]]], v{{\[}}[[LO]]:[[HI]]{{\]}}, s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 glc{{$}}
+; CI: buffer_load_dwordx2 [[RET:v\[[0-9]+:[0-9]+\]]], v[[[LO]]:[[HI]]], s[{{[0-9]+}}:{{[0-9]+}}], 0 addr64 glc{{$}}
 
 ; VI: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0xffffffe0
 ; VI-NEXT: s_addc_u32 s{{[0-9]+}}, s{{[0-9]+}}, -1

@@ -116,13 +116,13 @@ define amdgpu_kernel void @v_extractelement_v4f16_2(half addrspace(1)* %out, <4 
 
 ; GCN-LABEL: {{^}}v_insertelement_v4f16_dynamic_vgpr:
 ; GCN-DAG: {{flat|global|buffer}}_load_dword [[IDX:v[0-9]+]],
-; GCN-DAG: {{flat|global|buffer}}_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
+; GCN-DAG: {{flat|global|buffer}}_load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, [[IDX]]
 
-; GFX89: v_lshrrev_b64 v{{\[}}[[SHIFT_LO:[0-9]+]]:[[SHIFT_HI:[0-9]+]]{{\]}}, [[SCALED_IDX]], v{{\[}}[[LO]]:[[HI]]{{\]}}
+; GFX89: v_lshrrev_b64 v[[[SHIFT_LO:[0-9]+]]:[[SHIFT_HI:[0-9]+]]], [[SCALED_IDX]], v[[[LO]]:[[HI]]]
 ; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, v[[SHIFT_LO]]
 
-; SI: v_lshr_b64 v{{\[}}[[SHIFT_LO:[0-9]+]]:[[SHIFT_HI:[0-9]+]]{{\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}, [[SCALED_IDX]]
+; SI: v_lshr_b64 v[[[SHIFT_LO:[0-9]+]]:[[SHIFT_HI:[0-9]+]]], v[[[LO]]:[[HI]]], [[SCALED_IDX]]
 ; SI: buffer_store_short v[[SHIFT_LO]]
 define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(half addrspace(1)* %out, <4 x half> addrspace(1)* %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1

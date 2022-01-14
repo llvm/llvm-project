@@ -29,7 +29,7 @@ entry:
 ; CHECK: movw [[BASE:r[0-9]+]], :lower16:static_val
 ; CHECK: movt [[BASE]], :upper16:static_val
 ; ldm is not formed when the coalescer failed to coalesce everything.
-; CHECK: ldrd    r2, [[TMP:r[0-9]+]], {{\[}}[[BASE]]{{\]}}
+; CHECK: ldrd    r2, [[TMP:r[0-9]+]], [[[BASE]]]
 ; CHECK: movw r0, #555
 define i32 @main() {
 entry:
@@ -56,7 +56,7 @@ entry:
 ; CHECK: movw [[BASE:r[0-9]+]], :lower16:static_val
 ; CHECK: movt [[BASE]], :upper16:static_val
 ; ldm is not formed when the coalescer failed to coalesce everything.
-; CHECK: ldrd     r2, [[TMP:r[0-9]+]], {{\[}}[[BASE]]{{\]}}
+; CHECK: ldrd     r2, [[TMP:r[0-9]+]], [[[BASE]]]
 ; CHECK: movw r0, #555
 define i32 @main_fixed_arg() {
 entry:

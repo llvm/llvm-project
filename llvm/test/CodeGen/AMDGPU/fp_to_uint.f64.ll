@@ -38,15 +38,15 @@ define amdgpu_kernel void @fp_to_uint_v4i32_v4f64(<4 x i32> addrspace(1)* %out, 
 ; CI-DAG: s_mov_b32 s[[K0_LO:[0-9]+]], 0{{$}}
 ; CI-DAG: s_mov_b32 s[[K0_HI:[0-9]+]], 0x3df00000
 
-; CI-DAG: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], [[VAL]], s{{\[}}[[K0_LO]]:[[K0_HI]]{{\]}}
+; CI-DAG: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], [[VAL]], s[[[K0_LO]]:[[K0_HI]]]
 ; CI-DAG: v_floor_f64_e32 [[FLOOR:v\[[0-9]+:[0-9]+\]]], [[MUL]]
 
 ; CI-DAG: s_mov_b32 s[[K1_HI:[0-9]+]], 0xc1f00000
 
-; CI-DAG: v_fma_f64 [[FMA:v\[[0-9]+:[0-9]+\]]], [[FLOOR]], s{{\[[0-9]+}}:[[K1_HI]]{{\]}}, [[TRUNC]]
+; CI-DAG: v_fma_f64 [[FMA:v\[[0-9]+:[0-9]+\]]], [[FLOOR]], s{{\[[0-9]+}}:[[K1_HI]]], [[TRUNC]]
 ; CI-DAG: v_cvt_u32_f64_e32 v[[LO:[0-9]+]], [[FMA]]
 ; CI-DAG: v_cvt_u32_f64_e32 v[[HI:[0-9]+]], [[FLOOR]]
-; CI: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+; CI: buffer_store_dwordx2 v[[[LO]]:[[HI]]]
 define amdgpu_kernel void @fp_to_uint_i64_f64(i64 addrspace(1)* %out, double addrspace(1)* %in) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
   %gep = getelementptr double, double addrspace(1)* %in, i32 %tid

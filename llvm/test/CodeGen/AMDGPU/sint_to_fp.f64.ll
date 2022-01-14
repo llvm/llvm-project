@@ -19,14 +19,14 @@ define amdgpu_kernel void @sint_to_fp_i32_to_f64(double addrspace(1)* %out, i32 
 ; VI-DAG: s_cselect_b32 s[[SSEL:[0-9]+]], 0xbff00000, 0
 ; VI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; VI-DAG: v_mov_b32_e32 v[[SEL:[0-9]+]], s[[SSEL]]
-; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
+; VI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[ZERO]]:[[SEL]]]
 ; VI: s_endpgm
 
 ; SI-DAG: s_cmp_eq_u32
 ; SI-DAG: s_cselect_b64 vcc, -1, 0
 ; SI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, v{{[0-9]+}}, vcc
 ; SI-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; SI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
+; SI: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[ZERO]]:[[SEL]]]
 ; SI: s_endpgm
 define amdgpu_kernel void @sint_to_fp_i1_f64(double addrspace(1)* %out, i32 %in) {
   %cmp = icmp eq i32 %in, 0
@@ -54,7 +54,7 @@ define amdgpu_kernel void @s_sint_to_fp_i64_to_f64(double addrspace(1)* %out, i6
 }
 
 ; GCN-LABEL: @v_sint_to_fp_i64_to_f64
-; GCN: flat_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
+; GCN: flat_load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
 ; GCN-DAG: v_cvt_f64_i32_e32 [[HI_CONV:v\[[0-9]+:[0-9]+\]]], v[[HI]]
 ; GCN-DAG: v_cvt_f64_u32_e32 [[LO_CONV:v\[[0-9]+:[0-9]+\]]], v[[LO]]
 ; GCN-DAG: v_ldexp_f64 [[LDEXP:v\[[0-9]+:[0-9]+\]]], [[HI_CONV]], 32

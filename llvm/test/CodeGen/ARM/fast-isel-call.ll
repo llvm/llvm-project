@@ -107,11 +107,11 @@ entry:
 
 ; ARM-LONG-MACHO: {{(movw)|(ldr)}} [[R1:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
 ; ARM-LONG-MACHO: {{(movt [[R1]], :upper16:L_bar\$non_lazy_ptr)?}}
-; ARM-LONG-MACHO: ldr [[R:r[0-9]+]], {{\[}}[[R1]]]
+; ARM-LONG-MACHO: ldr [[R:r[0-9]+]], [[[R1]]]
 
 ; ARM-LONG-ELF: movw [[R1:r[0-9]*]], :lower16:bar
 ; ARM-LONG-ELF: movt [[R1]], :upper16:bar
-; ARM-LONG-ELF: ldr [[R:r[0-9]+]], {{\[}}[[R1]]]
+; ARM-LONG-ELF: ldr [[R:r[0-9]+]], [[[R1]]]
 
 ; ARM-LONG: blx [[R]]
 ; THUMB-LABEL: @t10
@@ -133,7 +133,7 @@ entry:
 ; THUMB-LONG-LABEL: @t10
 ; THUMB-LONG: {{(movw)|(ldr.n)}} [[R1:l?r[0-9]*]], {{(:lower16:L_bar\$non_lazy_ptr)|(.LCPI)}}
 ; THUMB-LONG: {{(movt [[R1]], :upper16:L_bar\$non_lazy_ptr)?}}
-; THUMB-LONG: ldr{{(.w)?}} [[R:r[0-9]+]], {{\[}}[[R1]]{{\]}}
+; THUMB-LONG: ldr{{(.w)?}} [[R:r[0-9]+]], [[[R1]]]
 ; THUMB-LONG: blx [[R]]
   %call = call i32 @bar(i8 zeroext 0, i8 zeroext -8, i8 zeroext -69, i8 zeroext 28, i8 zeroext 40, i8 zeroext -70)
   ret i32 0

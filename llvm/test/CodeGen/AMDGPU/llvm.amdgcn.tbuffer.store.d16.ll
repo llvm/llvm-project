@@ -19,7 +19,7 @@ main_body:
 ; UNPACKED-DAG: s_and_b32 [[MASKED:s[0-9]+]], [[S_DATA]], 0xffff{{$}}
 ; UNPACKED-DAG: v_mov_b32_e32 v[[V_LO:[0-9]+]], [[MASKED]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[V_HI:[0-9]+]], [[SHR]]
-; UNPACKED: tbuffer_store_format_d16_xy v{{\[}}[[V_LO]]:[[V_HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
+; UNPACKED: tbuffer_store_format_d16_xy v[[[V_LO]]:[[V_HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 
 ; PACKED: tbuffer_store_format_d16_xy v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 define amdgpu_kernel void @tbuffer_store_d16_xy(<4 x i32> %rsrc, <2 x half> %data, i32 %vindex) {
@@ -29,7 +29,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xyz:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x10
+; GCN-DAG: s_load_dwordx2 s[[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x10
 
 ; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
@@ -38,12 +38,12 @@ main_body:
 
 ; UNPACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], [[MASKED0]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SHR1]]
-; UNPACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
+; UNPACKED: tbuffer_store_format_d16_xyz v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 
 ; PACKED-DAG: s_and_b32 [[SHR0:s[0-9]+]], s[[S_DATA_1]], 0xffff{{$}}
 ; PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
 ; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SHR0]]
-; PACKED: tbuffer_store_format_d16_xyz v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
+; PACKED: tbuffer_store_format_d16_xyz v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <3 x half> %data, i32 %vindex) {
 main_body:
   call void @llvm.amdgcn.tbuffer.store.v3f16(<3 x half> %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0, i32 1, i32 2, i1 0, i1 0)
@@ -51,7 +51,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}tbuffer_store_d16_xyzw:
-; GCN-DAG: s_load_dwordx2 s{{\[}}[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]{{\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x10
+; GCN-DAG: s_load_dwordx2 s[[[S_DATA_0:[0-9]+]]:[[S_DATA_1:[0-9]+]]], s{{\[[0-9]+:[0-9]+\]}}, 0x10
 
 ; UNPACKED-DAG: s_mov_b32 [[K:s[0-9]+]], 0xffff{{$}}
 ; UNPACKED-DAG: s_lshr_b32 [[SHR0:s[0-9]+]], s[[S_DATA_0]], 16
@@ -61,11 +61,11 @@ main_body:
 
 ; UNPACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], [[MASKED0]]
 ; UNPACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], [[SHR1]]
-; UNPACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
+; UNPACKED: tbuffer_store_format_d16_xyzw v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 
 ; PACKED-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], s[[S_DATA_0]]
 ; PACKED-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s[[S_DATA_1]]
-; PACKED: tbuffer_store_format_d16_xyzw v{{\[}}[[LO]]:[[HI]]{{\]}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
+; PACKED: tbuffer_store_format_d16_xyzw v[[[LO]]:[[HI]]], v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], 0 format:[BUF_NUM_FORMAT_USCALED] idxen
 define amdgpu_kernel void @tbuffer_store_d16_xyzw(<4 x i32> %rsrc, <4 x half> %data, i32 %vindex) {
 main_body:
   call void @llvm.amdgcn.tbuffer.store.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0, i32 1, i32 2, i1 0, i1 0)

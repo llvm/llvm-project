@@ -71,7 +71,7 @@ entry:
 ; AS-DAG: add [[ADD:x[0-9]+]], [[LSL]], #64
 ; AS-DAG: and [[AND:x[0-9]+]], [[ADD]], #0xfffffffffffffff0
 ; AS-DAG: add [[ADR:x[0-9]+]], x0, [[AND]]
-; AS-DAG: ld4 { v[[V0:[0-9]+]].4s, v[[V1:[0-9]+]].4s, v[[V2:[0-9]+]].4s, v[[V3:[0-9]+]].4s }, {{\[}}[[ADR]]{{\]}}
+; AS-DAG: ld4 { v[[V0:[0-9]+]].4s, v[[V1:[0-9]+]].4s, v[[V2:[0-9]+]].4s, v[[V3:[0-9]+]].4s }, [[[ADR]]]
 ; AS-DAG: str q[[V0]]
 ; AS-DAG: str q[[V1]]
 ; AS-DAG: str q[[V2]]
@@ -133,7 +133,7 @@ entry:
 ; AS-DAG: add [[ADD:x[0-9]+]], x0, #4
 ; AS-DAG: and [[AND:x[0-9]+]], [[LSL]], #0xfffffffffffffff0
 ; AS-DAG: add [[ADR:x[0-9]+]], [[ADD]], [[AND]]
-; AS-DAG: ld4 { v[[V0:[0-9]+]].4s, v[[V1:[0-9]+]].4s, v[[V2:[0-9]+]].4s, v[[V3:[0-9]+]].4s }, {{\[}}[[ADR]]{{\]}}
+; AS-DAG: ld4 { v[[V0:[0-9]+]].4s, v[[V1:[0-9]+]].4s, v[[V2:[0-9]+]].4s, v[[V3:[0-9]+]].4s }, [[[ADR]]]
 ; AS-DAG: str q[[V0]]
 ; AS-DAG: str q[[V1]]
 ; AS-DAG: str q[[V2]]

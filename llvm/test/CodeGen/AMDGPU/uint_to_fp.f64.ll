@@ -4,7 +4,7 @@
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; GCN-LABEL: {{^}}v_uint_to_fp_i64_to_f64
-; GCN: flat_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
+; GCN: flat_load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
 ; GCN-DAG: v_cvt_f64_u32_e32 [[HI_CONV:v\[[0-9]+:[0-9]+\]]], v[[HI]]
 ; GCN-DAG: v_cvt_f64_u32_e32 [[LO_CONV:v\[[0-9]+:[0-9]+\]]], v[[LO]]
 ; GCN-DAG: v_ldexp_f64 [[LDEXP:v\[[0-9]+:[0-9]+\]]], [[HI_CONV]], 32
@@ -82,7 +82,7 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f64(<4 x double> addrspace(1)
 ; SI-DAG: s_cselect_b64 vcc, -1, 0
 ; SI-DAG: v_cndmask_b32_e32 v[[SEL:[0-9]+]], 0, {{v[0-9]+}}, vcc
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
-; GCN: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[ZERO]]:[[SEL]]{{\]}}
+; GCN: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v[[[ZERO]]:[[SEL]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @uint_to_fp_i1_to_f64(double addrspace(1)* %out, i32 %in) {
   %cmp = icmp eq i32 %in, 0

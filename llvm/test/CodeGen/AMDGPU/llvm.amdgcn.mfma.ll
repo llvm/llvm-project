@@ -410,9 +410,9 @@ bb:
 ; GCN-DAG:         v_mov_b32_e32 v[[TWO:[0-9]+]], 0x40004000
 ; GCN-DAG:         v_mov_b32_e32 v[[ONE:[0-9]+]], 0x3c003c00
 ; NOLIT-SRCC-DAG:  v_accvgpr_write_b32 a{{[0-9]+}}, 1.0
-; NOLIT-SRCC:      v_mfma_f32_32x32x8f16 a[{{[0-9]+:[0-9]+}}], v{{\[}}[[ONE]]:{{[0-9]+}}], v{{\[}}[[TWO]]:{{[0-9]+}}], a[{{[0-9:]+}}]
-; LIT-SRCC:        v_mfma_f32_32x32x8f16 a[{{[0-9]+:[0-9]+}}], v{{\[}}[[ONE]]:{{[0-9]+}}], v{{\[}}[[TWO]]:{{[0-9]+}}], 1.0
-; GFX90A:          v_mfma_f32_32x32x8f16 a[{{[0-9]+:[0-9]+}}], v{{\[}}[[ONE]]:{{[0-9]+}}], v{{\[}}[[TWO]]:{{[0-9]+}}], 1.0
+; NOLIT-SRCC:      v_mfma_f32_32x32x8f16 a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], a[{{[0-9:]+}}]
+; LIT-SRCC:        v_mfma_f32_32x32x8f16 a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], 1.0
+; GFX90A:          v_mfma_f32_32x32x8f16 a[{{[0-9]+:[0-9]+}}], v[[[ONE]]:{{[0-9]+}}], v[[[TWO]]:{{[0-9]+}}], 1.0
 ; GFX908-COUNT-16: v_accvgpr_read_b32
 ; GFX908:          global_store_dwordx4
 ; GFX90A-NOT:      v_accvgpr_read_b32

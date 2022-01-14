@@ -25,7 +25,7 @@ entry:
 ; A little more complicated case where more sub-dword loads could be coalesced
 ; if they are not widening earlier.
 ; GCN-LABEL: {{^}}load_4i16:
-; GCN: s_load_dwordx2 s{{\[}}[[D0:[0-9]+]]:[[D1:[0-9]+]]{{\]}}, s[4:5], 0x4
+; GCN: s_load_dwordx2 s[[[D0:[0-9]+]]:[[D1:[0-9]+]]], s[4:5], 0x4
 ; GCN-NOT: s_load_dword {{s[0-9]+}}, s[4:5], 0x4
 ; GCN-DAG: s_lshr_b32 s{{[0-9]+}}, s[[D0]], 16
 ; GCN-DAG: s_lshr_b32 s{{[0-9]+}}, s[[D1]], 16

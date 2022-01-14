@@ -3,11 +3,11 @@
 ; CHECK-LABEL: cmpxchg_monotonic_32:
 ; CHECK:          mov [[ADDR:x[0-9]+]], x0
 ; CHECK: [[RETRY:.LBB[0-9_]+]]:
-; CHECK-NEXT:     ldaxr w0, {{\[}}[[ADDR]]{{\]}}
+; CHECK-NEXT:     ldaxr w0, [[[ADDR]]]
 ; CHECK-NEXT:     cmp w0, w1
 ; CHECK-NEXT:     b.ne [[DONE:.LBB[0-9_]+]]
 ; CHECK-NEXT: // %bb.2:
-; CHECK-NEXT:     stlxr [[STATUS:w[0-9]+]], w2, {{\[}}[[ADDR]]{{\]}}
+; CHECK-NEXT:     stlxr [[STATUS:w[0-9]+]], w2, [[[ADDR]]]
 ; CHECK-NEXT:     cbnz [[STATUS]], [[RETRY]]
 ; CHECK-NEXT: [[DONE]]:
 ; CHECK-NEXT:     cmp w0, w1
@@ -28,11 +28,11 @@ define i32 @cmpxchg_monotonic_32(i32* %p, i32 %cmp, i32 %new, i32* %ps) #0 {
 ; CHECK:          mov [[ADDR:x[0-9]+]], x0
 ; CHECK:          ldr [[NEW:w[0-9]+]], [x2]
 ; CHECK-NEXT: [[RETRY:.LBB[0-9_]+]]:
-; CHECK-NEXT:     ldaxr w0, {{\[}}[[ADDR]]{{\]}}
+; CHECK-NEXT:     ldaxr w0, [[[ADDR]]]
 ; CHECK-NEXT:     cmp w0, w1
 ; CHECK-NEXT:     b.ne [[DONE:.LBB[0-9_]+]]
 ; CHECK-NEXT: // %bb.2:
-; CHECK-NEXT:     stlxr [[STATUS:w[0-9]+]], [[NEW]], {{\[}}[[ADDR]]{{\]}}
+; CHECK-NEXT:     stlxr [[STATUS:w[0-9]+]], [[NEW]], [[[ADDR]]]
 ; CHECK-NEXT:     cbnz [[STATUS]], [[RETRY]]
 ; CHECK-NEXT: [[DONE]]:
 ; CHECK-NEXT:     cmp w0, w1
@@ -52,11 +52,11 @@ define i32 @cmpxchg_acq_rel_32_load(i32* %p, i32 %cmp, i32* %pnew, i32* %ps) #0 
 ; CHECK-LABEL: cmpxchg_seq_cst_64:
 ; CHECK: mov [[ADDR:x[0-9]+]], x0
 ; CHECK: [[RETRY:.LBB[0-9_]+]]:
-; CHECK-NEXT:     ldaxr x0, {{\[}}[[ADDR]]{{\]}}
+; CHECK-NEXT:     ldaxr x0, [[[ADDR]]]
 ; CHECK-NEXT:     cmp x0, x1
 ; CHECK-NEXT:     b.ne [[DONE:.LBB[0-9_]+]]
 ; CHECK-NEXT: // %bb.2:
-; CHECK-NEXT:     stlxr [[STATUS]], x2, {{\[}}[[ADDR]]{{\]}}
+; CHECK-NEXT:     stlxr [[STATUS]], x2, [[[ADDR]]]
 ; CHECK-NEXT:     cbnz [[STATUS]], [[RETRY]]
 ; CHECK-NEXT: [[DONE]]:
 ; CHECK-NEXT:     cmp x0, x1

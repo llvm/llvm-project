@@ -8,7 +8,7 @@
 ; CHECK: v_add_u32_e32 v[[ADD:[0-9]+]], vcc, 0xc80, v[[SHL]]
 ; CHECK-NOT: v_lshl
 ; CHECK: v_add_u32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[ADD]]
-; CHECK: load_dword v{{[0-9]+}}, v{{\[}}[[ADDRLO]]:
+; CHECK: load_dword v{{[0-9]+}}, v[[[ADDRLO]]:
 define amdgpu_kernel void @add_const_offset(i32 addrspace(1)* nocapture %arg) {
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -25,7 +25,7 @@ bb:
 ; CHECK: v_or_b32_e32 v[[OR:[0-9]+]], 0x1000, v[[SHL]]
 ; CHECK-NOT: v_lshl
 ; CHECK: v_add_u32_e32 v[[ADDRLO:[0-9]+]], vcc, s{{[0-9]+}}, v[[OR]]
-; CHECK: load_dword v{{[0-9]+}}, v{{\[}}[[ADDRLO]]:
+; CHECK: load_dword v{{[0-9]+}}, v[[[ADDRLO]]:
 define amdgpu_kernel void @or_const_offset(i32 addrspace(1)* nocapture %arg) {
 bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()

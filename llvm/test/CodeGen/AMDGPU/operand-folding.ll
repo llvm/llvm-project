@@ -45,7 +45,7 @@ endif:
 ; CHECK-DAG: s_addc_u32 [[HI:s[0-9]+]], s{{[0-9]+}}, 0
 ; CHECK-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], [[LO]]
 ; CHECK-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], [[HI]]
-; CHECK: buffer_store_dwordx2 v{{\[}}[[VLO]]:[[VHI]]{{\]}},
+; CHECK: buffer_store_dwordx2 v[[[VLO]]:[[VHI]]],
 
 define amdgpu_kernel void @fold_64bit_constant_add(i64 addrspace(1)* %out, i32 %cmp, i64 %val) #1 {
 entry:
@@ -112,7 +112,7 @@ entry:
 
 ; A subregister use operand should not be tied.
 ; CHECK-LABEL: {{^}}no_fold_tied_subregister:
-; CHECK: buffer_load_dwordx2 v{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]{{\]}}
+; CHECK: buffer_load_dwordx2 v[[[LO:[0-9]+]]:[[HI:[0-9]+]]]
 ; CHECK: v_mac_f32_e32 v[[LO]], 0x41200000, v[[HI]]
 ; CHECK: buffer_store_dword v[[LO]]
 define amdgpu_kernel void @no_fold_tied_subregister() #1 {

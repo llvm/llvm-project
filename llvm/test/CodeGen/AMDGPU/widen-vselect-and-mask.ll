@@ -8,7 +8,7 @@
 ; GCN: v_cmp_u_f64_e64 [[CMP:s\[[0-9]+:[0-9]+\]]],
 ; GCN: v_cndmask_b32_e64 v[[VSEL:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: v_mov_b32_e32 v[[VSEL_EXT:[0-9]+]], v[[VSEL]]
-; GCN: v_cmp_lt_i64_e32 vcc, -1, v{{\[}}[[VSEL]]:[[VSEL_EXT]]{{\]}}
+; GCN: v_cmp_lt_i64_e32 vcc, -1, v[[[VSEL]]:[[VSEL_EXT]]]
 define amdgpu_kernel void @widen_vselect_and_mask_v4f64(<4 x double> %arg) #0 {
 bb:
   %tmp = extractelement <4 x double> %arg, i64 0
@@ -30,7 +30,7 @@ bb:
 ; GCN: v_cmp_eq_u64_e64 [[CMP:s\[[0-9]+:[0-9]+\]]],
 ; GCN: v_cndmask_b32_e64 v[[VSEL:[0-9]+]], 0, -1, [[CMP]]
 ; GCN: v_mov_b32_e32 v[[VSEL_EXT:[0-9]+]], v[[VSEL]]
-; GCN: v_cmp_lt_i64_e32 vcc, -1, v{{\[}}[[VSEL]]:[[VSEL_EXT]]{{\]}}
+; GCN: v_cmp_lt_i64_e32 vcc, -1, v[[[VSEL]]:[[VSEL_EXT]]]
 define amdgpu_kernel void @widen_vselect_and_mask_v4i64(<4 x i64> %arg) #0 {
 bb:
   %tmp = extractelement <4 x i64> %arg, i64 0

@@ -239,7 +239,7 @@ define <2 x i8> @test_truncate(<2 x i128> %in) {
 ; CHECK-LABEL: test_truncate:
 ; CHECK: vmov.32 [[REG:d[0-9]+]][0], r0
 ; CHECK-NEXT: mov [[BASE:r[0-9]+]], sp
-; CHECK-NEXT: vld1.32 {[[REG]][1]}, {{\[}}[[BASE]]:32]
+; CHECK-NEXT: vld1.32 {[[REG]][1]}, [[[BASE]]:32]
 ; CHECK-NEXT: vmov r0, r1, [[REG]]
 entry:
   %res = trunc <2 x i128> %in to <2 x i8>

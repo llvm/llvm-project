@@ -42,7 +42,7 @@ entry:
 ; GCN: v_cvt_f32_f16_e32 v[[A_F32:[0-9]+]], v[[A_F16]]
 ; GCN: v_cvt_i32_f32_e32 v[[R_I64_Low:[0-9]+]], v[[A_F32]]
 ; GCN: v_ashrrev_i32_e32 v[[R_I64_High:[0-9]+]], 31, v[[R_I64_Low]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[R_I64_Low]]{{\:}}[[R_I64_High]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[R_I64_Low]]{{\:}}[[R_I64_High]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptosi_f16_to_i64(
     i64 addrspace(1)* %r,
@@ -121,7 +121,7 @@ entry:
 ; VI-NOT: DEADBEEF
 ; VI-DAG: v_ashrrev_i32_e32 v[[R_I64_1_High:[0-9]+]], 31, v[[R_I64_1_Low]]
 ; VI-DAG: v_ashrrev_i32_e32 v[[R_I64_0_High:[0-9]+]], 31, v[[R_I64_0_Low]]
-; GCN: buffer_store_dwordx4 v{{\[}}[[R_I64_0_Low]]{{\:}}[[R_I64_1_High]]{{\]}}
+; GCN: buffer_store_dwordx4 v[[[R_I64_0_Low]]{{\:}}[[R_I64_1_High]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptosi_v2f16_to_v2i64(
     <2 x i64> addrspace(1)* %r,

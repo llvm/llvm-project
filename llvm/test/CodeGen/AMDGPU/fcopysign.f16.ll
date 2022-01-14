@@ -63,12 +63,12 @@ entry:
 
 ; GCN-LABEL: {{^}}test_copysign_out_f64_mag_f16_sign_f64:
 ; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[MAG:[0-9]+]]
-; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]{{\]}}
+; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v[[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]]
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; GCN-DAG: v_cvt_f32_f16_e32 v[[MAG_EXT:[0-9]+]], v[[MAG]]
-; GCN-DAG: v_cvt_f64_f32_e32 v{{\[}}[[MAG_EXT_LO:[0-9]+]]:[[MAG_EXT_HI:[0-9]+]]{{\]}}, v[[MAG_EXT]]
+; GCN-DAG: v_cvt_f64_f32_e32 v[[[MAG_EXT_LO:[0-9]+]]:[[MAG_EXT_HI:[0-9]+]]], v[[MAG_EXT]]
 ; GCN: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_EXT_HI]], v[[SIGN_HI]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[MAG_EXT_LO]]:[[OUT_HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[MAG_EXT_LO]]:[[OUT_HI]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_out_f64_mag_f16_sign_f64(
   double addrspace(1)* %arg_out,
@@ -113,14 +113,14 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}test_copysign_out_f64_mag_f64_sign_f16:
-; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[MAG_LO:[0-9]+]]:[[MAG_HI:[0-9]+]]{{\]}}
+; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v[[[MAG_LO:[0-9]+]]:[[MAG_HI:[0-9]+]]]
 ; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[SIGN:[0-9]+]]
 ; GCN-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[SIGN_F32:[0-9]+]], v[[SIGN]]
 ; SI: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_HI]], v[[SIGN_F32]]
 ; GFX89-DAG: v_lshlrev_b32_e32 v[[SIGN_SHIFT:[0-9]+]], 16, v[[SIGN]]
 ; GFX89: v_bfi_b32 v[[OUT_HI:[0-9]+]], s[[CONST]], v[[MAG_HI]], v[[SIGN_SHIFT]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[MAG_LO]]:[[OUT_HI]]{{\]}}
+; GCN: buffer_store_dwordx2 v[[[MAG_LO]]:[[OUT_HI]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copysign_out_f64_mag_f64_sign_f16(
   double addrspace(1)* %arg_out,
@@ -168,7 +168,7 @@ entry:
 
 ; GCN-LABEL: {{^}}test_copysign_out_f16_mag_f16_sign_f64:
 ; GCN-DAG: {{buffer|flat|global}}_load_ushort v[[MAG:[0-9]+]]
-; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]{{\]}}
+; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v[[[SIGN_LO:[0-9]+]]:[[SIGN_HI:[0-9]+]]]
 ; SI-DAG: s_brev_b32 s[[CONST:[0-9]+]], -2
 ; SI-DAG: v_cvt_f32_f16_e32 v[[MAG_F32:[0-9]+]], v[[MAG]]
 ; SI: v_bfi_b32 v[[OUT_F32:[0-9]+]], s[[CONST]], v[[MAG_F32]], v[[SIGN_HI]]
