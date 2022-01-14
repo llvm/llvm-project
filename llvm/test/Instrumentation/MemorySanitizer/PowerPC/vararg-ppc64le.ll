@@ -91,7 +91,7 @@ define i32 @bar7([4 x i64]* %arg) {
 }
 
 ; CHECK-LABEL: @bar7
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to i8*), i8* align 8 {{.*}}, i64 32, i1 false)
+; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 8) to i8*), i8* align 8 {{.*}}, i64 32, i1 false)
 ; CHECK: store {{.*}} 40, {{.*}} @__msan_va_arg_overflow_size_tls
 
 ; Test that MSan doesn't generate code overflowing __msan_va_arg_tls when too many arguments are
