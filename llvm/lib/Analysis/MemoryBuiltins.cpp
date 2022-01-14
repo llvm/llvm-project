@@ -62,6 +62,42 @@ enum AllocType : uint8_t {
   AnyAlloc           = AllocLike | ReallocLike
 };
 
+enum class MallocFamily {
+  Malloc,
+  CPPNew,             // new(unsigned int)
+  CPPNewAligned,      // new(unsigned int, align_val_t)
+  CPPNewArray,        // new[](unsigned int)
+  CPPNewArrayAligned, // new[](unsigned long, align_val_t)
+  MSVCNew,            // new(unsigned int)
+  MSVCArrayNew,       // new[](unsigned int)
+  VecMalloc,
+  KmpcAllocShared,
+};
+
+StringRef mangledNameForMallocFamily(const MallocFamily &Family) {
+  switch (Family) {
+  case MallocFamily::Malloc:
+    return "malloc";
+  case MallocFamily::CPPNew:
+    return "_Znwm";
+  case MallocFamily::CPPNewAligned:
+    return "_ZnwmSt11align_val_t";
+  case MallocFamily::CPPNewArray:
+    return "_Znam";
+  case MallocFamily::CPPNewArrayAligned:
+    return "_ZnamSt11align_val_t";
+  case MallocFamily::MSVCNew:
+    return "??2@YAPAXI@Z";
+  case MallocFamily::MSVCArrayNew:
+    return "??_U@YAPAXI@Z";
+  case MallocFamily::VecMalloc:
+    return "vec_malloc";
+  case MallocFamily::KmpcAllocShared:
+    return "__kmpc_alloc_shared";
+  }
+  llvm_unreachable("missing an alloc family");
+}
+
 struct AllocFnsTy {
   AllocType AllocTy;
   unsigned NumParams;
@@ -69,50 +105,54 @@ struct AllocFnsTy {
   int FstParam, SndParam;
   // Alignment parameter for aligned_alloc and aligned new
   int AlignParam;
+  // Name of default allocator function to group malloc/free calls by family
+  MallocFamily Family;
 };
 
+// clang-format off
 // FIXME: certain users need more information. E.g., SimplifyLibCalls needs to
 // know which functions are nounwind, noalias, nocapture parameters, etc.
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
-    {LibFunc_malloc,                            {MallocLike,       1,  0, -1, -1}},
-    {LibFunc_vec_malloc,                        {MallocLike,       1,  0, -1, -1}},
-    {LibFunc_valloc,                            {MallocLike,       1,  0, -1, -1}},
-    {LibFunc_Znwj,                              {OpNewLike,        1,  0, -1, -1}}, // new(unsigned int)
-    {LibFunc_ZnwjRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1}}, // new(unsigned int, nothrow)
-    {LibFunc_ZnwjSt11align_val_t,               {OpNewLike,        2,  0, -1,  1}}, // new(unsigned int, align_val_t)
-    {LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1}}, // new(unsigned int, align_val_t, nothrow)
-    {LibFunc_Znwm,                              {OpNewLike,        1,  0, -1, -1}}, // new(unsigned long)
-    {LibFunc_ZnwmRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1}}, // new(unsigned long, nothrow)
-    {LibFunc_ZnwmSt11align_val_t,               {OpNewLike,        2,  0, -1,  1}}, // new(unsigned long, align_val_t)
-    {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1}}, // new(unsigned long, align_val_t, nothrow)
-    {LibFunc_Znaj,                              {OpNewLike,        1,  0, -1, -1}}, // new[](unsigned int)
-    {LibFunc_ZnajRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1}}, // new[](unsigned int, nothrow)
-    {LibFunc_ZnajSt11align_val_t,               {OpNewLike,        2,  0, -1,  1}}, // new[](unsigned int, align_val_t)
-    {LibFunc_ZnajSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1}}, // new[](unsigned int, align_val_t, nothrow)
-    {LibFunc_Znam,                              {OpNewLike,        1,  0, -1, -1}}, // new[](unsigned long)
-    {LibFunc_ZnamRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1}}, // new[](unsigned long, nothrow)
-    {LibFunc_ZnamSt11align_val_t,               {OpNewLike,        2,  0, -1,  1}}, // new[](unsigned long, align_val_t)
-    {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1}}, // new[](unsigned long, align_val_t, nothrow)
-    {LibFunc_msvc_new_int,                      {OpNewLike,        1,  0, -1, -1}}, // new(unsigned int)
-    {LibFunc_msvc_new_int_nothrow,              {MallocLike,       2,  0, -1, -1}}, // new(unsigned int, nothrow)
-    {LibFunc_msvc_new_longlong,                 {OpNewLike,        1,  0, -1, -1}}, // new(unsigned long long)
-    {LibFunc_msvc_new_longlong_nothrow,         {MallocLike,       2,  0, -1, -1}}, // new(unsigned long long, nothrow)
-    {LibFunc_msvc_new_array_int,                {OpNewLike,        1,  0, -1, -1}}, // new[](unsigned int)
-    {LibFunc_msvc_new_array_int_nothrow,        {MallocLike,       2,  0, -1, -1}}, // new[](unsigned int, nothrow)
-    {LibFunc_msvc_new_array_longlong,           {OpNewLike,        1,  0, -1, -1}}, // new[](unsigned long long)
-    {LibFunc_msvc_new_array_longlong_nothrow,   {MallocLike,       2,  0, -1, -1}}, // new[](unsigned long long, nothrow)
-    {LibFunc_aligned_alloc,                     {AlignedAllocLike, 2,  1, -1,  0}},
-    {LibFunc_memalign,                          {AlignedAllocLike, 2,  1, -1,  0}},
-    {LibFunc_calloc,                            {CallocLike,       2,  0,  1, -1}},
-    {LibFunc_vec_calloc,                        {CallocLike,       2,  0,  1, -1}},
-    {LibFunc_realloc,                           {ReallocLike,      2,  1, -1, -1}},
-    {LibFunc_vec_realloc,                       {ReallocLike,      2,  1, -1, -1}},
-    {LibFunc_reallocf,                          {ReallocLike,      2,  1, -1, -1}},
-    {LibFunc_strdup,                            {StrDupLike,       1, -1, -1, -1}},
-    {LibFunc_strndup,                           {StrDupLike,       2,  1, -1, -1}},
-    {LibFunc___kmpc_alloc_shared,               {MallocLike,       1,  0, -1, -1}},
+    {LibFunc_malloc,                            {MallocLike,       1,  0, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_vec_malloc,                        {MallocLike,       1,  0, -1, -1, MallocFamily::VecMalloc}},
+    {LibFunc_valloc,                            {MallocLike,       1,  0, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_Znwj,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned int)
+    {LibFunc_ZnwjRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned int, nothrow)
+    {LibFunc_ZnwjSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t)
+    {LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned int, align_val_t, nothrow)
+    {LibFunc_Znwm,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long)
+    {LibFunc_ZnwmRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNew}},             // new(unsigned long, nothrow)
+    {LibFunc_ZnwmSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t)
+    {LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewAligned}},      // new(unsigned long, align_val_t, nothrow)
+    {LibFunc_Znaj,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned int)
+    {LibFunc_ZnajRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned int, nothrow)
+    {LibFunc_ZnajSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned int, align_val_t)
+    {LibFunc_ZnajSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned int, align_val_t, nothrow)
+    {LibFunc_Znam,                              {OpNewLike,        1,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned long)
+    {LibFunc_ZnamRKSt9nothrow_t,                {MallocLike,       2,  0, -1, -1, MallocFamily::CPPNewArray}},        // new[](unsigned long, nothrow)
+    {LibFunc_ZnamSt11align_val_t,               {OpNewLike,        2,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned long, align_val_t)
+    {LibFunc_ZnamSt11align_val_tRKSt9nothrow_t, {MallocLike,       3,  0, -1,  1, MallocFamily::CPPNewArrayAligned}}, // new[](unsigned long, align_val_t, nothrow)
+    {LibFunc_msvc_new_int,                      {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned int)
+    {LibFunc_msvc_new_int_nothrow,              {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned int, nothrow)
+    {LibFunc_msvc_new_longlong,                 {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned long long)
+    {LibFunc_msvc_new_longlong_nothrow,         {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCNew}},            // new(unsigned long long, nothrow)
+    {LibFunc_msvc_new_array_int,                {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned int)
+    {LibFunc_msvc_new_array_int_nothrow,        {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned int, nothrow)
+    {LibFunc_msvc_new_array_longlong,           {OpNewLike,        1,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned long long)
+    {LibFunc_msvc_new_array_longlong_nothrow,   {MallocLike,       2,  0, -1, -1, MallocFamily::MSVCArrayNew}},       // new[](unsigned long long, nothrow)
+    {LibFunc_aligned_alloc,                     {AlignedAllocLike, 2,  1, -1,  0, MallocFamily::Malloc}},
+    {LibFunc_memalign,                          {AlignedAllocLike, 2,  1, -1,  0, MallocFamily::Malloc}},
+    {LibFunc_calloc,                            {CallocLike,       2,  0,  1, -1, MallocFamily::Malloc}},
+    {LibFunc_vec_calloc,                        {CallocLike,       2,  0,  1, -1, MallocFamily::VecMalloc}},
+    {LibFunc_realloc,                           {ReallocLike,      2,  1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_vec_realloc,                       {ReallocLike,      2,  1, -1, -1, MallocFamily::VecMalloc}},
+    {LibFunc_reallocf,                          {ReallocLike,      2,  1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_strdup,                            {StrDupLike,       1, -1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc_strndup,                           {StrDupLike,       2,  1, -1, -1, MallocFamily::Malloc}},
+    {LibFunc___kmpc_alloc_shared,               {MallocLike,       1,  0, -1, -1, MallocFamily::KmpcAllocShared}},
     // TODO: Handle "int posix_memalign(void **, size_t, size_t)"
 };
+// clang-format on
 
 static const Function *getCalledFunction(const Value *V,
                                          bool &IsNoBuiltin) {
@@ -397,40 +437,42 @@ Constant *llvm::getInitialValueOfAllocation(const CallBase *Alloc,
 
 struct FreeFnsTy {
   unsigned NumParams;
+  // Name of default allocator function to group malloc/free calls by family
+  MallocFamily Family;
 };
 
 // clang-format off
 static const std::pair<LibFunc, FreeFnsTy> FreeFnData[] = {
-    {LibFunc_free,                               {1}},
-    {LibFunc_ZdlPv,                              {1}}, // operator delete(void*)
-    {LibFunc_ZdaPv,                              {1}}, // operator delete[](void*)
-    {LibFunc_msvc_delete_ptr32,                  {1}}, // operator delete(void*)
-    {LibFunc_msvc_delete_ptr64,                  {1}}, // operator delete(void*)
-    {LibFunc_msvc_delete_array_ptr32,            {1}}, // operator delete[](void*)
-    {LibFunc_msvc_delete_array_ptr64,            {1}}, // operator delete[](void*)
-    {LibFunc_ZdlPvj,                             {2}}, // delete(void*, uint)
-    {LibFunc_ZdlPvm,                             {2}}, // delete(void*, ulong)
-    {LibFunc_ZdlPvRKSt9nothrow_t,                {2}}, // delete(void*, nothrow)
-    {LibFunc_ZdlPvSt11align_val_t,               {2}}, // delete(void*, align_val_t)
-    {LibFunc_ZdaPvj,                             {2}}, // delete[](void*, uint)
-    {LibFunc_ZdaPvm,                             {2}}, // delete[](void*, ulong)
-    {LibFunc_ZdaPvRKSt9nothrow_t,                {2}}, // delete[](void*, nothrow)
-    {LibFunc_ZdaPvSt11align_val_t,               {2}}, // delete[](void*, align_val_t)
-    {LibFunc_msvc_delete_ptr32_int,              {2}}, // delete(void*, uint)
-    {LibFunc_msvc_delete_ptr64_longlong,         {2}}, // delete(void*, ulonglong)
-    {LibFunc_msvc_delete_ptr32_nothrow,          {2}}, // delete(void*, nothrow)
-    {LibFunc_msvc_delete_ptr64_nothrow,          {2}}, // delete(void*, nothrow)
-    {LibFunc_msvc_delete_array_ptr32_int,        {2}}, // delete[](void*, uint)
-    {LibFunc_msvc_delete_array_ptr64_longlong,   {2}}, // delete[](void*, ulonglong)
-    {LibFunc_msvc_delete_array_ptr32_nothrow,    {2}}, // delete[](void*, nothrow)
-    {LibFunc_msvc_delete_array_ptr64_nothrow,    {2}}, // delete[](void*, nothrow)
-    {LibFunc___kmpc_free_shared,                 {2}}, // OpenMP Offloading RTL free
-    {LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t, {3}}, // delete(void*, align_val_t, nothrow)
-    {LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t, {3}}, // delete[](void*, align_val_t, nothrow)
-    {LibFunc_ZdlPvjSt11align_val_t,              {3}}, // delete(void*, unsigned int, align_val_t)
-    {LibFunc_ZdlPvmSt11align_val_t,              {3}}, // delete(void*, unsigned long, align_val_t)
-    {LibFunc_ZdaPvjSt11align_val_t,              {3}}, // delete[](void*, unsigned int, align_val_t)
-    {LibFunc_ZdaPvmSt11align_val_t,              {3}}, // delete[](void*, unsigned long, align_val_t)
+    {LibFunc_free,                               {1, MallocFamily::Malloc}},
+    {LibFunc_ZdlPv,                              {1, MallocFamily::CPPNew}},             // operator delete(void*)
+    {LibFunc_ZdaPv,                              {1, MallocFamily::CPPNewArray}},        // operator delete[](void*)
+    {LibFunc_msvc_delete_ptr32,                  {1, MallocFamily::MSVCNew}},            // operator delete(void*)
+    {LibFunc_msvc_delete_ptr64,                  {1, MallocFamily::MSVCNew}},            // operator delete(void*)
+    {LibFunc_msvc_delete_array_ptr32,            {1, MallocFamily::MSVCArrayNew}},       // operator delete[](void*)
+    {LibFunc_msvc_delete_array_ptr64,            {1, MallocFamily::MSVCArrayNew}},       // operator delete[](void*)
+    {LibFunc_ZdlPvj,                             {2, MallocFamily::CPPNew}},             // delete(void*, uint)
+    {LibFunc_ZdlPvm,                             {2, MallocFamily::CPPNew}},             // delete(void*, ulong)
+    {LibFunc_ZdlPvRKSt9nothrow_t,                {2, MallocFamily::CPPNew}},             // delete(void*, nothrow)
+    {LibFunc_ZdlPvSt11align_val_t,               {2, MallocFamily::CPPNewAligned}},      // delete(void*, align_val_t)
+    {LibFunc_ZdaPvj,                             {2, MallocFamily::CPPNewArray}},        // delete[](void*, uint)
+    {LibFunc_ZdaPvm,                             {2, MallocFamily::CPPNewArray}},        // delete[](void*, ulong)
+    {LibFunc_ZdaPvRKSt9nothrow_t,                {2, MallocFamily::CPPNewArray}},        // delete[](void*, nothrow)
+    {LibFunc_ZdaPvSt11align_val_t,               {2, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, align_val_t)
+    {LibFunc_msvc_delete_ptr32_int,              {2, MallocFamily::MSVCNew}},            // delete(void*, uint)
+    {LibFunc_msvc_delete_ptr64_longlong,         {2, MallocFamily::MSVCNew}},            // delete(void*, ulonglong)
+    {LibFunc_msvc_delete_ptr32_nothrow,          {2, MallocFamily::MSVCNew}},            // delete(void*, nothrow)
+    {LibFunc_msvc_delete_ptr64_nothrow,          {2, MallocFamily::MSVCNew}},            // delete(void*, nothrow)
+    {LibFunc_msvc_delete_array_ptr32_int,        {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, uint)
+    {LibFunc_msvc_delete_array_ptr64_longlong,   {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, ulonglong)
+    {LibFunc_msvc_delete_array_ptr32_nothrow,    {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
+    {LibFunc_msvc_delete_array_ptr64_nothrow,    {2, MallocFamily::MSVCArrayNew}},       // delete[](void*, nothrow)
+    {LibFunc___kmpc_free_shared,                 {2, MallocFamily::KmpcAllocShared}},    // OpenMP Offloading RTL free
+    {LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t, {3, MallocFamily::CPPNewAligned}},      // delete(void*, align_val_t, nothrow)
+    {LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t, {3, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, align_val_t, nothrow)
+    {LibFunc_ZdlPvjSt11align_val_t,              {3, MallocFamily::CPPNewAligned}},      // delete(void*, unsigned int, align_val_t)
+    {LibFunc_ZdlPvmSt11align_val_t,              {3, MallocFamily::CPPNewAligned}},      // delete(void*, unsigned long, align_val_t)
+    {LibFunc_ZdaPvjSt11align_val_t,              {3, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, unsigned int, align_val_t)
+    {LibFunc_ZdaPvmSt11align_val_t,              {3, MallocFamily::CPPNewArrayAligned}}, // delete[](void*, unsigned long, align_val_t)
 };
 // clang-format on
 
@@ -443,6 +485,24 @@ Optional<FreeFnsTy> getFreeFunctionDataForFunction(const Function *Callee,
   if (Iter == std::end(FreeFnData))
     return None;
   return Iter->second;
+}
+
+Optional<StringRef> llvm::getAllocationFamily(const Value *I,
+                                              const TargetLibraryInfo *TLI) {
+  bool IsNoBuiltin;
+  const Function *Callee = getCalledFunction(I, IsNoBuiltin);
+  if (Callee == nullptr)
+    return None;
+  LibFunc TLIFn;
+  if (!TLI || !TLI->getLibFunc(*Callee, TLIFn) || !TLI->has(TLIFn))
+    return None;
+  const auto AllocData = getAllocationDataForFunction(Callee, AnyAlloc, TLI);
+  if (AllocData.hasValue())
+    return mangledNameForMallocFamily(AllocData.getValue().Family);
+  const auto FreeData = getFreeFunctionDataForFunction(Callee, TLIFn);
+  if (FreeData.hasValue())
+    return mangledNameForMallocFamily(FreeData.getValue().Family);
+  return None;
 }
 
 /// isLibFreeFunction - Returns true if the function is a builtin free()

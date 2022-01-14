@@ -117,6 +117,12 @@ Constant *getInitialValueOfAllocation(const CallBase *Alloc,
                                       const TargetLibraryInfo *TLI,
                                       Type *Ty);
 
+/// If a function is part of an allocation family (e.g.
+/// malloc/realloc/calloc/free), return the identifier for its family
+/// of functions.
+Optional<StringRef> getAllocationFamily(const Value *I,
+                                        const TargetLibraryInfo *TLI);
+
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
 //
