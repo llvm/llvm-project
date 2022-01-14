@@ -129,26 +129,6 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       "void", "getSuccessorRegions",
       (ins "::mlir::Optional<unsigned>":$index, "::mlir::ArrayRef<::mlir::Attribute>":$operands,
            "::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
-    >,
-    InterfaceMethod<[{
-        Populates countPerRegion with the number of times this operation will
-        invoke the attached regions (assuming the regions yield normally, i.e.
-        do not abort or invoke an infinite loop). If the number of region
-        invocations is not known statically it will set the number of
-        invocations to `kUnknownNumRegionInvocations`.
-
-        `operands` is a set of optional attributes that either correspond to a
-        constant values for each operand of this operation, or null if that
-        operand is not a constant.
-      }],
-      "void", "getNumRegionInvocations",
-      (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands,
-           "::mlir::SmallVectorImpl<int64_t> &":$countPerRegion), [{}],
-      /*defaultImplementation=*/[{
-        unsigned numRegions = this->getOperation()->getNumRegions();
-        assert(countPerRegion.empty());
-        countPerRegion.resize(numRegions, kUnknownNumRegionInvocations);
-      }]
     >
   ];
 
