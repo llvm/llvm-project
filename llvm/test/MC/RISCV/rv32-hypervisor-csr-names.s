@@ -40,6 +40,24 @@ csrrs t1, htimedeltah, zero
 # uimm12
 csrrs t2, 0x615, zero
 
+################################
+# Virtual Supervisor Registers
+################################
+
+# vstimecmph
+# name
+# CHECK-INST: csrrs t1, vstimecmph, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x25]
+# CHECK-INST-ALIAS: csrr t1, vstimecmph
+# uimm12
+# CHECK-INST: csrrs t2, vstimecmph, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x25]
+# CHECK-INST-ALIAS: csrr t2, vstimecmph
+# name
+csrrs t1, vstimecmph, zero
+# uimm12
+csrrs t2, 0x25D, zero
+
 #########################################
 # State Enable Extension (Smstateen)
 #########################################

@@ -360,6 +360,20 @@ csrrs t1, vsip, zero
 # uimm12
 csrrs t2, 0x244, zero
 
+# vstimecmp
+# name
+# CHECK-INST: csrrs t1, vstimecmp, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x24]
+# CHECK-INST-ALIAS: csrr t1, vstimecmp
+# uimm12
+# CHECK-INST: csrrs t2, vstimecmp, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x24]
+# CHECK-INST-ALIAS: csrr t2, vstimecmp
+# name
+csrrs t1, vstimecmp, zero
+# uimm12
+csrrs t2, 0x24D, zero
+
 # vsatp
 # name
 # CHECK-INST: csrrs t1, vsatp, zero

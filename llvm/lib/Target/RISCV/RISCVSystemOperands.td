@@ -125,6 +125,9 @@ def : SysReg<"sideleg", 0x103>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
+def : SysReg<"stimecmp", 0x14D>;
+let isRV32Only = 1 in
+def : SysReg<"stimecmph", 0x15D>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Configuration
@@ -221,6 +224,9 @@ def : SysReg<"vsepc", 0x241>;
 def : SysReg<"vscause", 0x242>;
 def : SysReg<"vstval", 0x243>;
 def : SysReg<"vsip", 0x244>;
+def : SysReg<"vstimecmp", 0x24D>;
+let isRV32Only = 1 in
+def : SysReg<"vstimecmph", 0x25D>;
 def : SysReg<"vsatp", 0x280>;
 
 //===----------------------------------------------------------------------===//

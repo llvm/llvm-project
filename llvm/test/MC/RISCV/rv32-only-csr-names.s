@@ -128,3 +128,6 @@ csrrs t1, hstateen0h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system regis
 csrrs t1, hstateen1h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
 csrrs t1, hstateen3h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
 csrrs t1, hstateen3h, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+
+csrrs t1, stimecmph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
+csrrs t1, vstimecmph, zero # CHECK-NEED-RV32: :[[@LINE]]:11: error: system register use requires an option to be enabled
