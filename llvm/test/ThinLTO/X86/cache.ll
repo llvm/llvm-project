@@ -20,7 +20,7 @@
 ; RUN:  -r=%t2.bc,_main,plx \
 ; RUN:  -r=%t2.bc,_globalfunc,lx \
 ; RUN:  -r=%t.bc,_globalfunc,plx
-; RUN: ls %t.cache.noindex | count 0
+; RUN: not ls %t.cache.noindex
 
 
 ; Repeat again, *with* hash this time.

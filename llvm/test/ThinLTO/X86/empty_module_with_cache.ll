@@ -28,7 +28,7 @@
 ; RUN: rm -Rf %t.cache
 ; RUN: llvm-lto2 run -o %t.o %t2.bc  %t.bc -cache-dir %t.cache \
 ; RUN:  -r=%t2.bc,_main,plx
-; RUN: ls %t.cache | count 0
+; RUN: not ls %t.cache
 
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

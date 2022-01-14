@@ -30,8 +30,6 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
                                      Twine TempFilePrefixRef,
                                      Twine CacheDirectoryPathRef,
                                      AddBufferFn AddBuffer) {
-  if (std::error_code EC = sys::fs::create_directories(CacheDirectoryPathRef))
-    return errorCodeToError(EC);
 
   // Create local copies which are safely captured-by-copy in lambdas
   SmallString<64> CacheName, TempFilePrefix, CacheDirectoryPath;
@@ -140,6 +138,12 @@ Expected<FileCache> llvm::localCache(Twine CacheNameRef,
     };
 
     return [=](size_t Task) -> Expected<std::unique_ptr<CachedFileStream>> {
+      // Create the cache directory if not already done. Doing this lazily
+      // ensures the filesystem isn't mutated until the cache is.
+      if (std::error_code EC = sys::fs::create_directories(
+              CacheDirectoryPath, /*IgnoreExisting=*/true))
+        return errorCodeToError(EC);
+
       // Write to a temporary to avoid race condition
       SmallString<64> TempFilenameModel;
       sys::path::append(TempFilenameModel, CacheDirectoryPath,

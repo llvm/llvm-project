@@ -17,6 +17,17 @@
 #define setenv(name, var, ignore) _putenv_s(name, var)
 #endif
 
+#define ASSERT_NO_ERROR(x)                                                     \
+  if (std::error_code ASSERT_NO_ERROR_ec = x) {                                \
+    SmallString<128> MessageStorage;                                           \
+    raw_svector_ostream Message(MessageStorage);                               \
+    Message << #x ": did not return errc::success.\n"                          \
+            << "error number: " << ASSERT_NO_ERROR_ec.value() << "\n"          \
+            << "error message: " << ASSERT_NO_ERROR_ec.message() << "\n";      \
+    GTEST_FATAL_FAILURE_(MessageStorage.c_str());                              \
+  } else {                                                                     \
+  }
+
 using namespace llvm;
 
 // Check that the Debuginfod client can find locally cached artifacts.
@@ -40,11 +51,12 @@ TEST(DebuginfodClient, CacheHit) {
 // Check that the Debuginfod client returns an Error when it fails to find an
 // artifact.
 TEST(DebuginfodClient, CacheMiss) {
-  // Set the cache path to a temp directory to avoid permissions issues if $HOME
-  // is not writable.
-  SmallString<32> TempDir;
-  sys::path::system_temp_directory(true, TempDir);
-  setenv("DEBUGINFOD_CACHE_PATH", TempDir.c_str(),
+  SmallString<32> CacheDir;
+  ASSERT_NO_ERROR(
+      sys::fs::createUniqueDirectory("debuginfod-unittest", CacheDir));
+  sys::path::append(CacheDir, "cachedir");
+  ASSERT_FALSE(sys::fs::exists(CacheDir));
+  setenv("DEBUGINFOD_CACHE_PATH", CacheDir.c_str(),
          /*replace=*/1);
   // Ensure there are no urls to guarantee a cache miss.
   setenv("DEBUGINFOD_URLS", "", /*replace=*/1);
@@ -52,4 +64,6 @@ TEST(DebuginfodClient, CacheMiss) {
   Expected<std::string> PathOrErr = getCachedOrDownloadArtifact(
       /*UniqueKey=*/"nonexistent-key", /*UrlPath=*/"/null");
   EXPECT_THAT_EXPECTED(PathOrErr, Failed<StringError>());
+  // A cache miss with no possible URLs should not create the cache directory.
+  EXPECT_FALSE(sys::fs::exists(CacheDir));
 }
