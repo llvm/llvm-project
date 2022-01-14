@@ -115,6 +115,18 @@ API Changes
   You must now explicitly initialize with a ``chrono::month`` and
   ``chrono::weekday_indexed`` instead of "meh, whenever".
 
+- C++20 requires that ``std::basic_string::reserve(n)`` never reduce the capacity
+  of the string. (For that, use ``shrink_to_fit()``.) Prior to this release, libc++'s
+  ``std::basic_string::reserve(n)`` could reduce capacity in C++17 and before, but
+  not in C++20 and later. This caused ODR violations when mixing code compiled under
+  different Standard modes. After this change, libc++'s ``std::basic_string::reserve(n)``
+  never reduces capacity, even in C++17 and before.
+  C++20 deprecates the zero-argument overload of ``std::basic_string::reserve()``,
+  but specifically permits it to reduce capacity. To avoid breaking existing code
+  assuming that ``std::basic_string::reserve()`` will shrink, libc++ maintains
+  the behavior to shrink, even though that makes ``std::basic_string::reserve()`` not
+  a synonym for ``std::basic_string::reserve(0)`` in any Standard mode anymore.
+
 ABI Changes
 -----------
 
