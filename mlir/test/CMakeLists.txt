@@ -74,7 +74,7 @@ configure_lit_site_cfg(
   )
 
 set(MLIR_TEST_DEPENDS
-  FileCheck count not split-file llc
+  FileCheck count not split-file
   mlir-capi-execution-engine-test
   mlir-capi-ir-test
   mlir-capi-llvm-test
@@ -82,7 +82,6 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-sparse-tensor-test
   mlir-capi-quant-test
   mlir-capi-pdl-test
-  mlir-cpu-runner
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
@@ -94,6 +93,14 @@ set(MLIR_TEST_DEPENDS
   mlir_c_runner_utils
   mlir_async_runtime
   )
+
+# The native target may not be enabled when cross compiling, raise an error.
+if(TARGET ${LLVM_NATIVE_ARCH})
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-cpu-runner
+    llc
+  )
+endif()
 
 if (MLIR_INCLUDE_INTEGRATION_TESTS)
   list(APPEND MLIR_TEST_DEPENDS lli)
