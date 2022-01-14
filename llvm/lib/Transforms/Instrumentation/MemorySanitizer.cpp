@@ -3726,10 +3726,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
               getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), Alignment,
                                  /*isStore*/ false)
                   .first;
-
-          Store = IRB.CreateMemCpy(ArgShadowBase, Alignment, AShadowPtr,
-                                   Alignment, Size);
-          // TODO(glider): need to copy origins.
+          if (!PropagateShadow) {
+            Store = IRB.CreateMemSet(ArgShadowBase,
+                                     Constant::getNullValue(IRB.getInt8Ty()),
+                                     Size, Alignment);
+          } else {
+            Store = IRB.CreateMemCpy(ArgShadowBase, Alignment, AShadowPtr,
+                                     Alignment, Size);
+          }
         } else {
           // Any other parameters mean we need bit-grained tracking of uninit
           // data
