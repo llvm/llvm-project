@@ -2297,6 +2297,35 @@ static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
   return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
 }
 
+// Is the mask a slidedown that shifts in undefs.
+static int matchShuffleAsSlideDown(ArrayRef<int> Mask) {
+  int Size = Mask.size();
+
+  // Elements shifted in should be undef.
+  auto CheckUndefs = [&](int Shift) {
+    for (int i = Size - Shift; i != Size; ++i)
+      if (Mask[i] >= 0)
+        return false;
+    return true;
+  };
+
+  // Elements should be shifted or undef.
+  auto MatchShift = [&](int Shift) {
+    for (int i = 0; i != Size - Shift; ++i)
+       if (Mask[i] >= 0 && Mask[i] != Shift + i)
+         return false;
+    return true;
+  };
+
+  // Try all possible shifts.
+  for (int Shift = 1; Shift != Size; ++Shift)
+    if (CheckUndefs(Shift) && MatchShift(Shift))
+      return Shift;
+
+  // No match.
+  return -1;
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -2380,6 +2409,20 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                       DAG.getConstant(Lane, DL, XLenVT), TrueMask, VL);
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
+  }
+
+  // Try to match as a slidedown.
+  int SlideAmt = matchShuffleAsSlideDown(SVN->getMask());
+  if (SlideAmt >= 0) {
+    // TODO: Should we reduce the VL to account for the upper undef elements?
+    // Requires additional vsetvlis, but might be faster to execute.
+    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
+    SDValue SlideDown =
+        DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
+                    DAG.getUNDEF(ContainerVT), V1,
+                    DAG.getConstant(SlideAmt, DL, XLenVT),
+                    TrueMask, VL);
+    return convertFromScalableVector(VT, SlideDown, DAG, Subtarget);
   }
 
   // Detect shuffles which can be re-expressed as vector selects; these are
