@@ -52427,6 +52427,20 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     unsigned NumOps = Ops.size();
     switch (Op0.getOpcode()) {
+    case X86ISD::VBROADCAST: {
+      if (!IsSplat && VT == MVT::v4f64 && llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op.getOperand(0).getValueType().is128BitVector();
+          }))
+        return DAG.getNode(X86ISD::MOVDDUP, DL, VT,
+                           ConcatSubOperand(VT, Ops, 0));
+      break;
+    }
+    case X86ISD::MOVDDUP: {
+      if (!IsSplat)
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0));
+      break;
+    }
     case X86ISD::SHUFP: {
       // Add SHUFPD support if/when necessary.
       if (!IsSplat && VT.getScalarType() == MVT::f32 &&

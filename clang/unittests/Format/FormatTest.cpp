@@ -1473,6 +1473,12 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
   verifyFormat("for (;;)\n"
                "  for (;;) continue;",
                AllowsMergedLoops);
+  verifyFormat("for (;;)\n"
+               "  while (true) continue;",
+               AllowsMergedLoops);
+  verifyFormat("BOOST_FOREACH (int v, vec)\n"
+               "  for (;;) continue;",
+               AllowsMergedLoops);
   verifyFormat("for (;;) // Can't merge this\n"
                "  continue;",
                AllowsMergedLoops);
@@ -2157,7 +2163,7 @@ TEST_F(FormatTest, ForEachLoops) {
                "  foreach (Item *item, itemlist) {}\n"
                "  Q_FOREACH (Item *item, itemlist) {}\n"
                "  BOOST_FOREACH (Item *item, itemlist) {}\n"
-               "  UNKNOWN_FORACH(Item * item, itemlist) {}\n"
+               "  UNKNOWN_FOREACH(Item * item, itemlist) {}\n"
                "}");
 
   FormatStyle Style = getLLVMStyle();
@@ -2167,7 +2173,7 @@ TEST_F(FormatTest, ForEachLoops) {
                "  foreach(Item *item, itemlist) {}\n"
                "  Q_FOREACH(Item *item, itemlist) {}\n"
                "  BOOST_FOREACH(Item *item, itemlist) {}\n"
-               "  UNKNOWN_FORACH(Item * item, itemlist) {}\n"
+               "  UNKNOWN_FOREACH(Item * item, itemlist) {}\n"
                "}",
                Style);
 
