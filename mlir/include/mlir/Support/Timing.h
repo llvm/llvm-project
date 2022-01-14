@@ -228,8 +228,7 @@ public:
   ///
   /// The `nameBuilder` function is not guaranteed to be called.
   Timer nest(const void *id, function_ref<std::string()> nameBuilder) {
-    return tm ? Timer(*tm, tm->nestTimer(handle, id, std::move(nameBuilder)))
-              : Timer();
+    return tm ? Timer(*tm, tm->nestTimer(handle, id, nameBuilder)) : Timer();
   }
 
   /// See above.

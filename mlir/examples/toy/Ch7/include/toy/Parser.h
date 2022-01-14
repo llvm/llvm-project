@@ -253,11 +253,11 @@ private:
       if (args.size() != 1)
         return parseError<ExprAST>("<single arg>", "as argument to print()");
 
-      return std::make_unique<PrintExprAST>(std::move(loc), std::move(args[0]));
+      return std::make_unique<PrintExprAST>(loc, std::move(args[0]));
     }
 
     // Call to a user-defined function
-    return std::make_unique<CallExprAST>(std::move(loc), std::string(name),
+    return std::make_unique<CallExprAST>(loc, std::string(name),
                                          std::move(args));
   }
 
