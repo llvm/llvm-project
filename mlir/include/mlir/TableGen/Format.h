@@ -152,7 +152,7 @@ public:
   FmtObjectBase(const FmtObjectBase &that) = delete;
 
   FmtObjectBase(FmtObjectBase &&that)
-      : fmt(std::move(that.fmt)), context(that.context),
+      : fmt(that.fmt), context(that.context),
         adapters(), // adapters are initialized by FmtObject
         replacements(std::move(that.replacements)) {}
 

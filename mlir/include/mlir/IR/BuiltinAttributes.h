@@ -900,8 +900,7 @@ auto SparseElementsAttr::value_begin() const -> iterator<T> {
   auto valueIt = getValues().value_begin<T>();
   const std::vector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
   std::function<T(ptrdiff_t)> mapFn =
-      [flatSparseIndices{std::move(flatSparseIndices)},
-       valueIt{std::move(valueIt)},
+      [flatSparseIndices{flatSparseIndices}, valueIt{std::move(valueIt)},
        zeroValue{std::move(zeroValue)}](ptrdiff_t index) {
         // Try to map the current index to one of the sparse indices.
         for (unsigned i = 0, e = flatSparseIndices.size(); i != e; ++i)

@@ -38,7 +38,7 @@ public:
   ElementsAttrIndexer(ElementsAttrIndexer &&rhs)
       : isContiguous(rhs.isContiguous), isSplat(rhs.isSplat) {
     if (isContiguous)
-      conState = std::move(rhs.conState);
+      conState = rhs.conState;
     else
       new (&nonConState) NonContiguousState(std::move(rhs.nonConState));
   }
