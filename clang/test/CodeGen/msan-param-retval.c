@@ -5,7 +5,7 @@
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -Xclang -enable-noundef-analysis -mllvm -msan-eager-checks -o - %s | \
 // RUN:     FileCheck %s --check-prefixes=NOUNDEF,EAGER
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -fsanitize-memory-param-retval -o - %s | \
-// RUN:     FileCheck %s --check-prefixes=CLEAN
+// RUN:     FileCheck %s --check-prefixes=NOUNDEF,EAGER
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -Xclang -enable-noundef-analysis -fsanitize-memory-param-retval -o - %s | \
 // RUN:     FileCheck %s --check-prefixes=NOUNDEF,EAGER
 
