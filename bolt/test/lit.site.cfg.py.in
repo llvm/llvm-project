@@ -19,6 +19,8 @@ config.enable_backtrace = @ENABLE_BACKTRACES@
 config.host_arch = "@HOST_ARCH@"
 config.enable_abi_breaking_checks = "@LLVM_ENABLE_ABI_BREAKING_CHECKS@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
+config.bolt_clang = "@BOLT_CLANG_EXE@"
+config.bolt_lld = "@BOLT_LLD_EXE@"
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.

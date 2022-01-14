@@ -55,8 +55,8 @@ if config.bolt_enable_runtime:
 
 llvm_config.use_default_substitutions()
 
-llvm_config.use_clang()
-llvm_config.use_lld()
+llvm_config.use_clang(additional_tool_dirs=[os.path.dirname(config.bolt_clang)])
+llvm_config.use_lld(additional_tool_dirs=[os.path.dirname(config.bolt_lld)])
 
 config.substitutions.append(('%cflags', '-no-pie'))
 config.substitutions.append(('%cxxflags', '-no-pie'))
