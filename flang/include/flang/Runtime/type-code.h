@@ -33,11 +33,11 @@ public:
     return raw_ >= CFI_type_signed_char && raw_ <= CFI_type_ptrdiff_t;
   }
   constexpr bool IsReal() const {
-    return raw_ >= CFI_type_float && raw_ <= CFI_type_long_double;
+    return raw_ >= CFI_type_half_float && raw_ <= CFI_type_float128;
   }
   constexpr bool IsComplex() const {
-    return raw_ >= CFI_type_float_Complex &&
-        raw_ <= CFI_type_long_double_Complex;
+    return raw_ >= CFI_type_half_float_Complex &&
+        raw_ <= CFI_type_float128_Complex;
   }
   constexpr bool IsCharacter() const {
     return raw_ == CFI_type_char || raw_ == CFI_type_char16_t ||
