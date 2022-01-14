@@ -75,8 +75,12 @@ public:
     return defaultKinds_.doublePrecisionKind();
   }
   int quadPrecisionKind() const { return defaultKinds_.quadPrecisionKind(); }
-  bool IsEnabled(common::LanguageFeature) const;
-  bool ShouldWarn(common::LanguageFeature) const;
+  bool IsEnabled(common::LanguageFeature feature) const {
+    return languageFeatures_.IsEnabled(feature);
+  }
+  bool ShouldWarn(common::LanguageFeature feature) const {
+    return languageFeatures_.ShouldWarn(feature);
+  }
   const std::optional<parser::CharBlock> &location() const { return location_; }
   const std::vector<std::string> &searchDirectories() const {
     return searchDirectories_;
@@ -173,6 +177,7 @@ public:
   SymbolVector GetIndexVars(IndexVarKind);
   SourceName SaveTempName(std::string &&);
   SourceName GetTempName(const Scope &);
+  static bool IsTempName(const std::string &);
 
   // Locate and process the contents of a built-in module on demand
   Scope *GetBuiltinModule(const char *name);

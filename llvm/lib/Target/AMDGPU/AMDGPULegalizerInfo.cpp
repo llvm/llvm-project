@@ -272,8 +272,8 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   const bool IsLoad = Query.Opcode != AMDGPU::G_STORE;
 
   unsigned RegSize = Ty.getSizeInBits();
-  unsigned MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
-  unsigned AlignBits = Query.MMODescrs[0].AlignInBits;
+  uint64_t MemSize = Query.MMODescrs[0].MemoryTy.getSizeInBits();
+  uint64_t AlignBits = Query.MMODescrs[0].AlignInBits;
   unsigned AS = Query.Types[1].getAddressSpace();
 
   // All of these need to be custom lowered to cast the pointer operand.
@@ -380,7 +380,7 @@ static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
 /// access up to the alignment. Note this case when the memory access itself
 /// changes, not the size of the result register.
 static bool shouldWidenLoad(const GCNSubtarget &ST, LLT MemoryTy,
-                            unsigned AlignInBits, unsigned AddrSpace,
+                            uint64_t AlignInBits, unsigned AddrSpace,
                             unsigned Opcode) {
   unsigned SizeInBits = MemoryTy.getSizeInBits();
   // We don't want to widen cases that are naturally legal.
@@ -1172,7 +1172,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               if (MemSize > MaxSize)
                 return std::make_pair(0, LLT::scalar(MaxSize));
 
-              unsigned Align = Query.MMODescrs[0].AlignInBits;
+              uint64_t Align = Query.MMODescrs[0].AlignInBits;
               return std::make_pair(0, LLT::scalar(Align));
             })
         .fewerElementsIf(
@@ -1993,6 +1993,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
 
   // TODO: Should this propagate fast-math-flags?
   B.buildFAdd(MI.getOperand(0).getReg(), Trunc, Add);
+  MI.eraseFromParent();
   return true;
 }
 
@@ -2547,7 +2548,7 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   const LLT MemTy = MMO->getMemoryType();
   const Align MemAlign = MMO->getAlign();
   const unsigned MemSize = MemTy.getSizeInBits();
-  const unsigned AlignInBits = 8 * MemAlign.value();
+  const uint64_t AlignInBits = 8 * MemAlign.value();
 
   // Widen non-power-of-2 loads to the alignment if needed
   if (shouldWidenLoad(ST, MemTy, AlignInBits, AddrSpace, MI.getOpcode())) {
@@ -2887,6 +2888,8 @@ bool AMDGPULegalizerInfo::loadInputValue(Register DstReg, MachineIRBuilder &B,
 
     Register AndMaskSrc = LiveIn;
 
+    // TODO: Avoid clearing the high bits if we know workitem id y/z are always
+    // 0.
     if (Shift != 0) {
       auto ShiftAmt = B.buildConstant(S32, Shift);
       AndMaskSrc = B.buildLShr(S32, LiveIn, ShiftAmt).getReg(0);
@@ -4965,6 +4968,12 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   return true;
 }
 
+static bool replaceWithConstant(MachineIRBuilder &B, MachineInstr &MI, int64_t C) {
+  B.buildConstant(MI.getOperand(0).getReg(), C);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -5068,12 +5077,20 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_implicitarg_ptr:
     return legalizeImplicitArgPtr(MI, MRI, B);
   case Intrinsic::amdgcn_workitem_id_x:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 0) == 0)
+      return replaceWithConstant(B, MI, 0);
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_X);
   case Intrinsic::amdgcn_workitem_id_y:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 1) == 0)
+      return replaceWithConstant(B, MI, 0);
+
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
   case Intrinsic::amdgcn_workitem_id_z:
+    if (ST.getMaxWorkitemID(B.getMF().getFunction(), 2) == 0)
+      return replaceWithConstant(B, MI, 0);
+
     return legalizePreloadedArgIntrin(MI, MRI, B,
                                       AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
   case Intrinsic::amdgcn_workgroup_id_x:

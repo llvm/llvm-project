@@ -66,5 +66,18 @@ module module1
       k=2,m=3))
     !ERROR: ABSTRACT derived type 'abstract' may not be used in a structure constructor
     call abstractarg(abstract(0)(n=1))
+    !This case is ok
   end subroutine errors
+  subroutine polycomponent
+    type :: poly
+      class(*), allocatable :: p
+    end type poly
+    type(poly) :: x
+    ! These cases are not errors
+    x = poly(1)
+    x = poly('hello')
+    x = poly(type1(1)(123))
+    !ERROR: Value in structure constructor is incompatible with  component 'p' of type CLASS(*)
+    x = poly(z'feedface')
+  end subroutine
 end module module1

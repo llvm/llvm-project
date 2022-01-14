@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TUTORIAL_TOY_PARSER_H
-#define MLIR_TUTORIAL_TOY_PARSER_H
+#ifndef TOY_PARSER_H
+#define TOY_PARSER_H
 
 #include "toy/AST.h"
 #include "toy/Lexer.h"
@@ -253,11 +253,11 @@ private:
       if (args.size() != 1)
         return parseError<ExprAST>("<single arg>", "as argument to print()");
 
-      return std::make_unique<PrintExprAST>(std::move(loc), std::move(args[0]));
+      return std::make_unique<PrintExprAST>(loc, std::move(args[0]));
     }
 
     // Call to a user-defined function
-    return std::make_unique<CallExprAST>(std::move(loc), std::string(name),
+    return std::make_unique<CallExprAST>(loc, std::string(name),
                                          std::move(args));
   }
 
@@ -680,4 +680,4 @@ private:
 
 } // namespace toy
 
-#endif // MLIR_TUTORIAL_TOY_PARSER_H
+#endif // TOY_PARSER_H

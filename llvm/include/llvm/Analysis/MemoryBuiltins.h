@@ -49,6 +49,10 @@ class Type;
 class UndefValue;
 class Value;
 
+//===----------------------------------------------------------------------===//
+//  Properties of allocation functions
+//
+
 /// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
@@ -61,16 +65,6 @@ bool isAllocationFn(const Value *V,
 bool isMallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 bool isMallocLikeFn(const Value *V,
                     function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates uninitialized memory with alignment (such as aligned_alloc).
-bool isAlignedAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-bool isAlignedAllocLikeFn(
-    const Value *V, function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates zero-filled memory (such as calloc).
-bool isCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
@@ -89,20 +83,6 @@ bool isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
 
 //===----------------------------------------------------------------------===//
-//  free Call Utility Functions.
-//
-
-/// isLibFreeFunction - Returns true if the function is a builtin free()
-bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
-
-/// isFreeCall - Returns non-null if the value is a call to the builtin free()
-const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
-
-inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
-  return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
-}
-
-//===----------------------------------------------------------------------===//
 //  Properties of allocation functions
 //
 
@@ -119,11 +99,33 @@ bool isAllocRemovable(const CallBase *V, const TargetLibraryInfo *TLI);
 /// Gets the alignment argument for an aligned_alloc-like function
 Value *getAllocAlignment(const CallBase *V, const TargetLibraryInfo *TLI);
 
+/// Return the size of the requested allocation.  With a trivial mapper, this is
+/// identical to calling getObjectSize(..., Exact).  A mapper function can be
+/// used to replace one Value* (operand to the allocation) with another.  This
+/// is useful when doing abstract interpretation.
+Optional<APInt> getAllocSize(const CallBase *CB,
+                             const TargetLibraryInfo *TLI,
+                             std::function<const Value*(const Value*)> Mapper);
+
 /// If this allocation function initializes memory to a fixed value, return
 /// said value in the requested type.  Otherwise, return nullptr.
 Constant *getInitialValueOfAllocation(const CallBase *Alloc,
                                       const TargetLibraryInfo *TLI,
                                       Type *Ty);
+
+//===----------------------------------------------------------------------===//
+//  free Call Utility Functions.
+//
+
+/// isLibFreeFunction - Returns true if the function is a builtin free()
+bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
+
+/// isFreeCall - Returns non-null if the value is a call to the builtin free()
+const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
+
+inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
+  return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
+}
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.

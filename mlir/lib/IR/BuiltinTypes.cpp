@@ -304,7 +304,7 @@ void VectorType::walkImmediateSubElements(
 }
 
 VectorType VectorType::cloneWith(Optional<ArrayRef<int64_t>> shape,
-                                 Type elementType) {
+                                 Type elementType) const {
   return VectorType::get(shape.getValueOr(getShape()), elementType,
                          getNumScalableDims());
 }

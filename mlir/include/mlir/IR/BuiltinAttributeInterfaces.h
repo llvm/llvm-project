@@ -38,7 +38,7 @@ public:
   ElementsAttrIndexer(ElementsAttrIndexer &&rhs)
       : isContiguous(rhs.isContiguous), isSplat(rhs.isSplat) {
     if (isContiguous)
-      conState = std::move(rhs.conState);
+      conState = rhs.conState;
     else
       new (&nonConState) NonContiguousState(std::move(rhs.nonConState));
   }
@@ -109,7 +109,7 @@ private:
     /// This allows for all iterator and element types to be completely
     /// type-erased.
     struct OpaqueIteratorBase {
-      virtual ~OpaqueIteratorBase() {}
+      virtual ~OpaqueIteratorBase() = default;
       virtual std::unique_ptr<OpaqueIteratorBase> clone() const = 0;
     };
     /// This class is used to represent the abstract base of an opaque iterator

@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 #include <unordered_map>
+#include <utility>
 
 #define DEBUG_TYPE "aggregator"
 
@@ -286,7 +287,7 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
     return;
   }
 
-  FileBuf.reset(MB->release());
+  FileBuf = std::move(*MB);
   ParsingBuf = FileBuf->getBuffer();
   if (ParsingBuf.empty()) {
     errs() << "PERF2BOLT-WARNING: build-id will not be checked because perf "
@@ -347,7 +348,7 @@ void DataAggregator::parsePreAggregated() {
     exit(1);
   }
 
-  FileBuf.reset(MB->release());
+  FileBuf = std::move(*MB);
   ParsingBuf = FileBuf->getBuffer();
   Col = 0;
   Line = 1;
@@ -501,7 +502,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       exit(1);
     }
 
-    FileBuf.reset(MB->release());
+    FileBuf = std::move(*MB);
     ParsingBuf = FileBuf->getBuffer();
     Col = 0;
     Line = 1;
@@ -585,7 +586,7 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     exit(1);
   }
 
-  FileBuf.reset(MB->release());
+  FileBuf = std::move(*MB);
   ParsingBuf = FileBuf->getBuffer();
   Col = 0;
   Line = 1;

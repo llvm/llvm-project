@@ -302,7 +302,7 @@ public:
   }
 
   /// Return true if the given symbol has no uses.
-  bool use_empty(Operation *symbol) const {
+  bool useEmpty(Operation *symbol) const {
     return !symbolToUsers.count(symbol);
   }
 

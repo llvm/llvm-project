@@ -18,7 +18,7 @@ namespace mlir {
 
 namespace gpu {
 class GPUFuncOp;
-}
+} // namespace gpu
 
 /// Promotes a function argument to workgroup memory in the given function. The
 /// copies will be inserted in the beginning and in the end of the function.

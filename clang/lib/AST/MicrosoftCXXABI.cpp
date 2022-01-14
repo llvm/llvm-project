@@ -168,8 +168,8 @@ class MicrosoftNumberingContext : public MangleNumberingContext {
 
 public:
   MicrosoftNumberingContext()
-      : MangleNumberingContext(), LambdaManglingNumber(0),
-        StaticLocalNumber(0), StaticThreadlocalNumber(0) {}
+      : LambdaManglingNumber(0), StaticLocalNumber(0),
+        StaticThreadlocalNumber(0) {}
 
   unsigned getManglingNumber(const CXXMethodDecl *CallOperator) override {
     return ++LambdaManglingNumber;

@@ -1168,10 +1168,14 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     MemRefType dstType = reshapeOp.getResultType();
     MemRefType srcType = reshapeOp.getSrcType();
-    if (!srcType.getLayout().isIdentity() ||
-        !dstType.getLayout().isIdentity()) {
-      return rewriter.notifyMatchFailure(reshapeOp,
-                                         "only empty layout map is supported");
+
+    // The condition on the layouts can be ignored when all shapes are static.
+    if (!srcType.hasStaticShape() || !dstType.hasStaticShape()) {
+      if (!srcType.getLayout().isIdentity() ||
+          !dstType.getLayout().isIdentity()) {
+        return rewriter.notifyMatchFailure(
+            reshapeOp, "only empty layout map is supported");
+      }
     }
 
     int64_t offset;

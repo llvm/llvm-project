@@ -37,7 +37,7 @@ encounter any issues.
 
 ### Docker Image
 
-You can build and use the docker image containing BOLT using our [docker file](./bolt/utils/docker/Dockerfile).
+You can build and use the docker image containing BOLT using our [docker file](utils/docker/Dockerfile).
 Alternatively, you can build BOLT manually using the steps below.
 
 ### Manual Build
@@ -77,7 +77,7 @@ Or if you rather use tcmalloc:
 
 ## Usage
 
-For a complete practical guide of using BOLT see [Optimizing Clang with BOLT](./bolt/docs/OptimizingClang.md).
+For a complete practical guide of using BOLT see [Optimizing Clang with BOLT](docs/OptimizingClang.md).
 
 ### Step 0
 

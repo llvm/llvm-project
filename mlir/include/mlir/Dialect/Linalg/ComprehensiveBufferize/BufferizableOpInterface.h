@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZABLEOPINTERFACE_H_
 #define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZABLEOPINTERFACE_H_
 
+#include <utility>
+
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -48,7 +50,8 @@ struct AllocationCallbacks {
 
   AllocationCallbacks(AllocationFn allocFn, DeallocationFn deallocFn,
                       MemCpyFn copyFn)
-      : allocationFn(allocFn), deallocationFn(deallocFn), memCpyFn(copyFn) {}
+      : allocationFn(std::move(allocFn)), deallocationFn(std::move(deallocFn)),
+        memCpyFn(std::move(copyFn)) {}
 
   /// A function that allocates memory.
   AllocationFn allocationFn;
@@ -67,7 +70,7 @@ std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
 /// executed after the analysis, but before bufferization. They can be used to
 /// implement custom dialect-specific optimizations.
 struct PostAnalysisStep {
-  virtual ~PostAnalysisStep() {}
+  virtual ~PostAnalysisStep() = default;
 
   /// Run the post analysis step. This function may modify the IR, but must keep
   /// `aliasInfo` consistent. Newly created operations and operations that

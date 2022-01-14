@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_LINALG_H_
-#define MLIR_DIALECT_LINALG_LINALG_H_
+#ifndef MLIR_DIALECT_LINALG_IR_LINALG_H
+#define MLIR_DIALECT_LINALG_IR_LINALG_H
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
@@ -120,4 +120,4 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.h.inc"
 
-#endif // MLIR_DIALECT_LINALG_LINALG_H_
+#endif // MLIR_DIALECT_LINALG_IR_LINALG_H

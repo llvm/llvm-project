@@ -1252,9 +1252,12 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
 
   // Walk the use list of the global seeing if all the uses are load or store.
   // If there is anything else, bail out.
-  for (User *U : GV->users())
+  for (User *U : GV->users()) {
     if (!isa<LoadInst>(U) && !isa<StoreInst>(U))
       return false;
+    if (getLoadStoreType(U) != GVElType)
+      return false;
+  }
 
   LLVM_DEBUG(dbgs() << "   *** SHRINKING TO BOOL: " << *GV << "\n");
 

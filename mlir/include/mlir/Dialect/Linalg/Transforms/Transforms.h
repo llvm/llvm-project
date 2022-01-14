@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
-#define DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
+#ifndef MLIR_DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H
+#define MLIR_DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H
+
+#include <utility>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -443,7 +445,7 @@ struct LinalgTransformationFilter {
                                          Operation *op) const;
   bool hasReplacementFilter(Operation *op) const;
 
-  LinalgTransformationFilter &addFilter(FilterFunction f) {
+  LinalgTransformationFilter &addFilter(const FilterFunction &f) {
     if (f)
       filters.push_back(f);
     return *this;
@@ -550,7 +552,7 @@ struct LinalgTilingOptions {
   /// Set the `tileSizeComputationFunction` to return the values `ts`. The
   /// values must not fold away when tiling. Otherwise, use a more robust
   /// `tileSizeComputationFunction`.
-  LinalgTilingOptions &setTileSizes(SmallVector<Value, 4> ts) {
+  LinalgTilingOptions &setTileSizes(const SmallVector<Value, 4> &ts) {
     tileSizeComputationFunction = [=](OpBuilder &, Operation *) { return ts; };
     return *this;
   }
@@ -918,6 +920,9 @@ private:
   LinalgTransformationFilter filter;
 };
 
+/// Return vector::CombiningKind for the given op.
+llvm::Optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
+
 //===----------------------------------------------------------------------===//
 // Transformation and lowering options exposed as auxiliary structs.
 //===----------------------------------------------------------------------===//
@@ -1160,7 +1165,7 @@ struct GeneralizePadTensorOpPattern : public OpRewritePattern<PadTensorOp> {
                                OptimizeCopyFn optimizeCopyFn = nullptr,
                                PatternBenefit benefit = 1)
       : OpRewritePattern<PadTensorOp>(context, benefit),
-        optimizeCopyFn(optimizeCopyFn) {}
+        optimizeCopyFn(std::move(optimizeCopyFn)) {}
   LogicalResult matchAndRewrite(PadTensorOp padOp,
                                 PatternRewriter &rewriter) const override;
 
@@ -1276,7 +1281,7 @@ class ConvOpVectorization : public OpRewritePattern<ConvOp> {
   SmallVector<bool, 4> mask;
 
 public:
-  ConvOpVectorization(MLIRContext *context, SmallVector<bool, 4> msk)
+  ConvOpVectorization(MLIRContext *context, const SmallVector<bool, 4> &msk)
       : OpRewritePattern<ConvOp>(context) {
     assert(msk.size() == N && "Mask size does not match rank");
     this->mask = msk;
@@ -1390,4 +1395,4 @@ public:
 } // namespace linalg
 } // namespace mlir
 
-#endif // DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H_
+#endif // MLIR_DIALECT_LINALG_TRANSFORMS_TRANSFORMS_H

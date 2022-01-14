@@ -765,7 +765,7 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
     MCDataFragment *Frag = dyn_cast_or_null<MCDataFragment>(
         &*CGProfileSection->getFragmentList().begin());
     assert(Frag && "call graph profile section not reserved");
-    Frag->getContents().set_size(0);
+    Frag->getContents().clear();
     raw_svector_ostream OS(Frag->getContents());
     for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();

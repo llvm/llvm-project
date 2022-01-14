@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_UTILS_H_
-#define MLIR_DIALECT_LINALG_UTILS_H_
+#ifndef MLIR_DIALECT_LINALG_UTILS_UTILS_H
+#define MLIR_DIALECT_LINALG_UTILS_UTILS_H
 
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -41,7 +41,7 @@ template <typename T, unsigned N>
 void applyPermutationToVector(SmallVector<T, N> &inVec,
                               ArrayRef<int64_t> permutation) {
   SmallVector<T, N> auxVec(inVec.size());
-  for (auto en : enumerate(permutation))
+  for (const auto &en : enumerate(permutation))
     auxVec[en.index()] = inVec[en.value()];
   inVec = auxVec;
 }
@@ -431,4 +431,4 @@ struct GenerateLoopNest {
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_UTILS_H_
+#endif // MLIR_DIALECT_LINALG_UTILS_UTILS_H

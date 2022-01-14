@@ -663,32 +663,32 @@ static void checkNoThrow(Sema &S, const Stmt *E,
       ThrowingDecls.insert(D);
     }
   };
-  auto SC = E->getStmtClass();
-  if (SC == Expr::CXXConstructExprClass) {
-    auto const *Ctor = cast<CXXConstructExpr>(E)->getConstructor();
+
+  if (auto *CE = dyn_cast<CXXConstructExpr>(E)) {
+    CXXConstructorDecl *Ctor = CE->getConstructor();
     checkDeclNoexcept(Ctor);
     // Check the corresponding destructor of the constructor.
-    checkDeclNoexcept(Ctor->getParent()->getDestructor(), true);
-  } else if (SC == Expr::CallExprClass || SC == Expr::CXXMemberCallExprClass ||
-             SC == Expr::CXXOperatorCallExprClass) {
-    if (!cast<CallExpr>(E)->isTypeDependent()) {
-      checkDeclNoexcept(cast<CallExpr>(E)->getCalleeDecl());
-      auto ReturnType = cast<CallExpr>(E)->getCallReturnType(S.getASTContext());
-      // Check the destructor of the call return type, if any.
-      if (ReturnType.isDestructedType() ==
-          QualType::DestructionKind::DK_cxx_destructor) {
-        const auto *T =
-            cast<RecordType>(ReturnType.getCanonicalType().getTypePtr());
-        checkDeclNoexcept(
-            dyn_cast<CXXRecordDecl>(T->getDecl())->getDestructor(), true);
-      }
+    checkDeclNoexcept(Ctor->getParent()->getDestructor(), /*IsDtor=*/true);
+  } else if (auto *CE = dyn_cast<CallExpr>(E)) {
+    if (CE->isTypeDependent())
+      return;
+
+    checkDeclNoexcept(CE->getCalleeDecl());
+    QualType ReturnType = CE->getCallReturnType(S.getASTContext());
+    // Check the destructor of the call return type, if any.
+    if (ReturnType.isDestructedType() ==
+        QualType::DestructionKind::DK_cxx_destructor) {
+      const auto *T =
+          cast<RecordType>(ReturnType.getCanonicalType().getTypePtr());
+      checkDeclNoexcept(dyn_cast<CXXRecordDecl>(T->getDecl())->getDestructor(),
+                        /*IsDtor=*/true);
     }
-  }
-  for (const auto *Child : E->children()) {
-    if (!Child)
-      continue;
-    checkNoThrow(S, Child, ThrowingDecls);
-  }
+  } else
+    for (const auto *Child : E->children()) {
+      if (!Child)
+        continue;
+      checkNoThrow(S, Child, ThrowingDecls);
+    }
 }
 
 bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {

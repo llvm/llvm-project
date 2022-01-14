@@ -945,27 +945,23 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // of other functions to one, changing inline cost thresholds. Non-local
       // discardable functions with comdats are checked later on.
       bool CalleeWasDeleted = false;
-      if (Callee.isDiscardableIfUnused()) {
-        // To check this we also need to nuke any dead constant uses (perhaps
-        // made dead by this operation on other functions).
-        Callee.removeDeadConstantUsers();
-        if (Callee.use_empty() && !CG.isLibFunction(Callee)) {
-          if (Callee.hasLocalLinkage() || !Callee.hasComdat()) {
-            Calls->erase_if([&](const std::pair<CallBase *, int> &Call) {
-              return Call.first->getCaller() == &Callee;
-            });
-            // Clear the body and queue the function itself for deletion when we
-            // finish inlining and call graph updates.
-            // Note that after this point, it is an error to do anything other
-            // than use the callee's address or delete it.
-            Callee.dropAllReferences();
-            assert(!is_contained(DeadFunctions, &Callee) &&
-                   "Cannot put cause a function to become dead twice!");
-            DeadFunctions.push_back(&Callee);
-            CalleeWasDeleted = true;
-          } else {
-            DeadFunctionsInComdats.push_back(&Callee);
-          }
+      if (Callee.isDiscardableIfUnused() && Callee.hasZeroLiveUses() &&
+          !CG.isLibFunction(Callee)) {
+        if (Callee.hasLocalLinkage() || !Callee.hasComdat()) {
+          Calls->erase_if([&](const std::pair<CallBase *, int> &Call) {
+            return Call.first->getCaller() == &Callee;
+          });
+          // Clear the body and queue the function itself for deletion when we
+          // finish inlining and call graph updates.
+          // Note that after this point, it is an error to do anything other
+          // than use the callee's address or delete it.
+          Callee.dropAllReferences();
+          assert(!is_contained(DeadFunctions, &Callee) &&
+                 "Cannot put cause a function to become dead twice!");
+          DeadFunctions.push_back(&Callee);
+          CalleeWasDeleted = true;
+        } else {
+          DeadFunctionsInComdats.push_back(&Callee);
         }
       }
       if (CalleeWasDeleted)

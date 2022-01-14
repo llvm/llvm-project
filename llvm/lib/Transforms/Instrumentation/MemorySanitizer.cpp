@@ -1707,21 +1707,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         }
 
         bool FArgByVal = FArg.hasByValAttr();
-        bool FArgNoUndef = FArg.hasAttribute(Attribute::NoUndef);
-        bool FArgEagerCheck = MS.EagerChecks && !FArgByVal && FArgNoUndef;
-        unsigned Size =
-            FArg.hasByValAttr()
-                ? DL.getTypeAllocSize(FArg.getParamByValType())
-                : DL.getTypeAllocSize(FArg.getType());
+        unsigned Size = FArgByVal
+                            ? DL.getTypeAllocSize(FArg.getParamByValType())
+                            : DL.getTypeAllocSize(FArg.getType());
 
         if (A == &FArg) {
           bool Overflow = ArgOffset + Size > kParamTLSSize;
+          bool FArgEagerCheck = MS.EagerChecks && !FArgByVal &&
+                                FArg.hasAttribute(Attribute::NoUndef);
+
           if (FArgEagerCheck) {
             *ShadowPtr = getCleanShadow(V);
             setOrigin(A, getCleanOrigin());
             break;
           } else if (FArgByVal) {
-            Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
             // ByVal pointer itself has clean shadow. We copy the actual
             // argument shadow to the underlying memory.
             // Figure out maximal valid memcpy alignment.
@@ -1738,6 +1737,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                   CpShadowPtr, Constant::getNullValue(EntryIRB.getInt8Ty()),
                   Size, ArgAlign);
             } else {
+              Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
               const Align CopyAlign = std::min(ArgAlign, kShadowTLSAlignment);
               Value *Cpy = EntryIRB.CreateMemCpy(CpShadowPtr, CopyAlign, Base,
                                                  CopyAlign, Size);
@@ -1746,12 +1746,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             }
             *ShadowPtr = getCleanShadow(V);
           } else {
-            // Shadow over TLS
-            Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
             if (Overflow) {
               // ParamTLS overflow.
               *ShadowPtr = getCleanShadow(V);
             } else {
+              // Shadow over TLS
+              Value *Base = getShadowPtrForArgument(&FArg, EntryIRB, ArgOffset);
               *ShadowPtr = EntryIRB.CreateAlignedLoad(getShadowTy(&FArg), Base,
                                                       kShadowTLSAlignment);
             }
@@ -3702,15 +3702,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         continue;
       }
       unsigned Size = 0;
-      Value *Store = nullptr;
-      // Compute the Shadow for arg even if it is ByVal, because
-      // in that case getShadow() will copy the actual arg shadow to
-      // __msan_param_tls.
-      Value *ArgShadow = getShadow(A);
-      Value *ArgShadowBase = getShadowPtrForArgument(A, IRB, ArgOffset);
-      LLVM_DEBUG(dbgs() << "  Arg#" << i << ": " << *A
-                        << " Shadow: " << *ArgShadow << "\n");
-      bool ArgIsInitialized = false;
       const DataLayout &DL = F.getParent()->getDataLayout();
 
       bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
@@ -3721,6 +3712,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         insertShadowCheck(A, &CB);
         Size = DL.getTypeAllocSize(A->getType());
       } else {
+        bool ArgIsInitialized = false;
+        Value *Store = nullptr;
+        // Compute the Shadow for arg even if it is ByVal, because
+        // in that case getShadow() will copy the actual arg shadow to
+        // __msan_param_tls.
+        Value *ArgShadow = getShadow(A);
+        Value *ArgShadowBase = getShadowPtrForArgument(A, IRB, ArgOffset);
+        LLVM_DEBUG(dbgs() << "  Arg#" << i << ": " << *A
+                          << " Shadow: " << *ArgShadow << "\n");
         if (ByVal) {
           // ByVal requires some special handling as it's too big for a single
           // load

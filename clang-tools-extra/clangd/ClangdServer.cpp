@@ -810,6 +810,17 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
                             Transient);
 }
 
+void ClangdServer::findType(llvm::StringRef File, Position Pos,
+                            Callback<std::vector<LocatedSymbol>> CB) {
+  auto Action =
+      [Pos, CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        CB(clangd::findType(InpAST->AST, Pos));
+      };
+  WorkScheduler->runWithAST("FindType", File, std::move(Action));
+}
+
 void ClangdServer::findImplementations(
     PathRef File, Position Pos, Callback<std::vector<LocatedSymbol>> CB) {
   auto Action = [Pos, CB = std::move(CB),

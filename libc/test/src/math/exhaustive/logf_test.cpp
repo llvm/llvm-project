@@ -6,21 +6,46 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "exhaustive_test.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/logf.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-TEST(LlvmLibcLogfExhaustiveTest, AllValues) {
-  uint32_t bits = 0U;
-  do {
-    FPBits xbits(bits);
-    float x = float(xbits);
-    EXPECT_MPFR_MATCH(mpfr::Operation::Log, x, __llvm_libc::logf(x), 0.5);
-  } while (bits++ < 0x7f7f'ffffU);
+struct LlvmLibcLogfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
+  void check(uint32_t start, uint32_t stop,
+             mpfr::RoundingMode rounding) override {
+    mpfr::ForceRoundingMode r(rounding);
+    uint32_t bits = start;
+    do {
+      FPBits xbits(bits);
+      float x = float(xbits);
+      EXPECT_MPFR_MATCH(mpfr::Operation::Log, x, __llvm_libc::logf(x), 0.5,
+                        rounding);
+    } while (bits++ < stop);
+  }
+};
+
+TEST_F(LlvmLibcLogfExhaustiveTest, RoundNearestTieToEven) {
+  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U, /*nthreads=*/16,
+                  mpfr::RoundingMode::Nearest);
+}
+
+TEST_F(LlvmLibcLogfExhaustiveTest, RoundUp) {
+  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U, /*nthreads=*/16,
+                  mpfr::RoundingMode::Upward);
+}
+
+TEST_F(LlvmLibcLogfExhaustiveTest, RoundDown) {
+  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U, /*nthreads=*/16,
+                  mpfr::RoundingMode::Downward);
+}
+
+TEST_F(LlvmLibcLogfExhaustiveTest, RoundTowardZero) {
+  test_full_range(/*start=*/0U, /*stop=*/0x7f80'0000U, /*nthreads=*/16,
+                  mpfr::RoundingMode::TowardZero);
 }
