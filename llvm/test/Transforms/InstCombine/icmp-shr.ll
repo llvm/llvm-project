@@ -508,7 +508,7 @@ define i1 @ashr_exact_ne_0_uses(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @ashr_exact_ne_0_uses(
 ; CHECK-NEXT:    [[A:%.*]] = ashr exact i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @foo(i32 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[A]], 0
+; CHECK-NEXT:    [[B:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %A = ashr exact i32 %X, %Y
@@ -541,7 +541,7 @@ define i1 @lshr_exact_eq_0_uses(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @lshr_exact_eq_0_uses(
 ; CHECK-NEXT:    [[A:%.*]] = lshr exact i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @foo(i32 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[B]]
 ;
   %A = lshr exact i32 %X, %Y
