@@ -2,7 +2,7 @@ from __future__ import division
 import lldb.formatters.Logger
 
 # C++ STL formatters for LLDB
-# As there are many versions of the libcstd++, you are encouraged to look at the STL
+# As there are many versions of the libstdc++, you are encouraged to look at the STL
 # implementation for your platform before relying on these formatters to do the right
 # thing for your setup
 
