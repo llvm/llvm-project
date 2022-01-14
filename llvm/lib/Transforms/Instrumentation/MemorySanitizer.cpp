@@ -1706,21 +1706,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           continue;
         }
 
-        bool FArgByVal = FArg.hasByValAttr();
-        unsigned Size = FArgByVal
+        unsigned Size = FArg.hasByValAttr()
                             ? DL.getTypeAllocSize(FArg.getParamByValType())
                             : DL.getTypeAllocSize(FArg.getType());
 
         if (A == &FArg) {
           bool Overflow = ArgOffset + Size > kParamTLSSize;
-          bool FArgEagerCheck = MS.EagerChecks && !FArgByVal &&
-                                FArg.hasAttribute(Attribute::NoUndef);
-
-          if (FArgEagerCheck) {
-            *ShadowPtr = getCleanShadow(V);
-            setOrigin(A, getCleanOrigin());
-            break;
-          } else if (FArgByVal) {
+          if (FArg.hasByValAttr()) {
             // ByVal pointer itself has clean shadow. We copy the actual
             // argument shadow to the underlying memory.
             // Figure out maximal valid memcpy alignment.
@@ -1745,6 +1737,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
               (void)Cpy;
             }
             *ShadowPtr = getCleanShadow(V);
+          } else if (MS.EagerChecks && FArg.hasAttribute(Attribute::NoUndef)) {
+            *ShadowPtr = getCleanShadow(V);
+            setOrigin(A, getCleanOrigin());
+            break;
           } else {
             if (Overflow) {
               // ParamTLS overflow.
