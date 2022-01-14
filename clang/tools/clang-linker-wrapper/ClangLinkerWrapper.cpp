@@ -736,6 +736,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   SmallVector<std::unique_ptr<lto::InputFile>, 4> BitcodeFiles;
   SmallVector<std::string, 4> NewInputFiles;
   StringMap<bool> UsedInRegularObj;
+  StringMap<bool> UsedInSharedLib;
 
   // Search for bitcode files in the input and create an LTO input file. If it
   // is not a bitcode file, scan its symbol table for symbols we need to
@@ -759,7 +760,11 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
         if (!Name)
           return Name.takeError();
 
-        UsedInRegularObj[*Name] = true;
+        // Record if we've seen these symbols in any object or shared libraries.
+        if ((*ObjFile)->isRelocatableObject()) {
+          UsedInRegularObj[*Name] = true;
+        } else
+          UsedInSharedLib[*Name] = true;
       }
     } else {
       Expected<std::unique_ptr<lto::InputFile>> InputFileOrErr =
@@ -767,6 +772,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
       if (!InputFileOrErr)
         return InputFileOrErr.takeError();
 
+      // Save the input file and the buffer associated with its memory.
       BitcodeFiles.push_back(std::move(*InputFileOrErr));
       SavedBuffers.push_back(std::move(*BufferOrErr));
     }
@@ -797,22 +803,16 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
     return false;
   };
 
-  // We have visibility of the whole program if every input is bitcode, all
-  // inputs are statically linked so there should be no external references.
+  // We assume visibility of the whole program if every input file was bitcode.
   bool WholeProgram = BitcodeFiles.size() == InputFiles.size();
   auto LTOBackend = (EmbedBC)
                         ? createLTO(TheTriple, Arch, WholeProgram, LinkOnly)
                         : createLTO(TheTriple, Arch, WholeProgram);
 
-  // TODO: Run more tests to verify that this is correct.
-  // Create the LTO instance with the necessary config and add the bitcode files
-  // to it after resolving symbols. We make a few assumptions about symbol
-  // resolution.
-  // 1. The target is going to be a stand-alone executable file.
-  // 2. We do not support relocatable object files.
-  // 3. All inputs are relocatable object files extracted from host binaries, so
-  //    there is no resolution to a dynamic library.
-  StringMap<bool> PrevailingSymbols;
+  // We need to resolve the symbols so the LTO backend knows which symbols need
+  // to be kept or can be internalized. This is a simplified symbol resolution
+  // scheme to approximate the full resolution a linker would do.
+  DenseSet<StringRef> PrevailingSymbols;
   for (auto &BitcodeFile : BitcodeFiles) {
     const auto Symbols = BitcodeFile->symbols();
     SmallVector<lto::SymbolResolution, 16> Resolutions(Symbols.size());
@@ -821,35 +821,43 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
       lto::SymbolResolution &Res = Resolutions[Idx++];
 
       // We will use this as the prevailing symbol definition in LTO unless
-      // it is undefined in the module or another symbol has already been used.
-      Res.Prevailing = !Sym.isUndefined() && !PrevailingSymbols[Sym.getName()];
+      // it is undefined or another definition has already been used.
+      Res.Prevailing =
+          !Sym.isUndefined() && PrevailingSymbols.insert(Sym.getName()).second;
 
-      // We need LTO to preserve symbols referenced in other object files, or
-      // are needed by the rest of the toolchain.
+      // We need LTO to preseve the following global symbols:
+      // 1) Symbols used in regular objects.
+      // 2) Sections that will be given a __start/__stop symbol.
+      // 3) Prevailing symbols that are needed visibile to external libraries.
       Res.VisibleToRegularObj =
           UsedInRegularObj[Sym.getName()] ||
           isValidCIdentifier(Sym.getSectionName()) ||
-          (Res.Prevailing && Sym.getName().startswith("__omp"));
+          (Res.Prevailing &&
+           (Sym.getVisibility() != GlobalValue::HiddenVisibility &&
+            !Sym.canBeOmittedFromSymbolTable()));
 
-      // We do not currently support shared libraries, so no symbols will be
-      // referenced externally by shared libraries.
-      Res.ExportDynamic = false;
+      // Identify symbols that must be exported dynamically and can be
+      // referenced by other files.
+      Res.ExportDynamic =
+          Sym.getVisibility() != GlobalValue::HiddenVisibility &&
+          (UsedInSharedLib[Sym.getName()] ||
+           !Sym.canBeOmittedFromSymbolTable());
 
-      // The result will currently always be an executable, so the only time the
-      // definition will not reside in this link unit is if it's undefined.
-      Res.FinalDefinitionInLinkageUnit = !Sym.isUndefined();
+      // The final definition will reside in this linkage unit if the symbol is
+      // defined and local to the module. This only checks for bitcode files,
+      // full assertion will require complete symbol resolution.
+      Res.FinalDefinitionInLinkageUnit =
+          Sym.getVisibility() != GlobalValue::DefaultVisibility &&
+          (!Sym.isUndefined() && !Sym.isCommon());
 
       // We do not support linker redefined symbols (e.g. --wrap) for device
       // image linking, so the symbols will not be changed after LTO.
       Res.LinkerRedefined = false;
-
-      // Mark this symbol as the prevailing one.
-      PrevailingSymbols[Sym.getName()] |= Res.Prevailing;
     }
 
     // Add the bitcode file with its resolved symbols to the LTO job.
     if (Error Err = LTOBackend->add(std::move(BitcodeFile), Resolutions))
-      return std::move(Err);
+      return Err;
   }
 
   // Run the LTO job to compile the bitcode.
@@ -868,7 +876,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   };
 
   if (Error Err = LTOBackend->run(AddStream))
-    return std::move(Err);
+    return Err;
 
   // Is we are compiling for NVPTX we need to run the assembler first.
   for (auto &File : Files) {
@@ -907,7 +915,7 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
 
     // Run LTO on any bitcode files and replace the input with the result.
     if (Error Err = linkBitcodeFiles(LinkerInput.getValue(), TheTriple, Arch))
-      return std::move(Err);
+      return Err;
 
     // If we are embedding bitcode for JIT, skip the final device linking.
     if (EmbedBC) {
