@@ -2238,8 +2238,7 @@ define i1 @ashr_00_01_noexact(i8 %x) {
 
 define i1 @ashr_00_03_noexact(i8 %x) {
 ; CHECK-LABEL: @ashr_00_03_noexact(
-; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], 10
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 80
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i8 %x, 3
@@ -2289,8 +2288,7 @@ define i1 @ashr_00_03_exact(i8 %x) {
 
 define i1 @ashr_00_04_exact(i8 %x) {
 ; CHECK-LABEL: @ashr_00_04_exact(
-; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[S]], 10
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X:%.*]], 80
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i8 %x, 3
@@ -2300,8 +2298,7 @@ define i1 @ashr_00_04_exact(i8 %x) {
 
 define i1 @ashr_00_05_exact(i8 %x) {
 ; CHECK-LABEL: @ashr_00_05_exact(
-; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], 11
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X:%.*]], 88
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i8 %x, 3
@@ -2312,7 +2309,7 @@ define i1 @ashr_00_05_exact(i8 %x) {
 define i1 @ashr_00_00_ashr_extra_use(i8 %x, i8* %ptr) {
 ; CHECK-LABEL: @ashr_00_00_ashr_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], 11
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 88
 ; CHECK-NEXT:    store i8 [[S]], i8* [[PTR:%.*]], align 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -2324,8 +2321,7 @@ define i1 @ashr_00_00_ashr_extra_use(i8 %x, i8* %ptr) {
 
 define <4 x i1> @ashr_00_00_vec(<4 x i8> %x) {
 ; CHECK-LABEL: @ashr_00_00_vec(
-; CHECK-NEXT:    [[S:%.*]] = ashr exact <4 x i8> [[X:%.*]], <i8 3, i8 3, i8 3, i8 3>
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i8> [[S]], <i8 11, i8 11, i8 11, i8 11>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i8> [[X:%.*]], <i8 88, i8 88, i8 88, i8 88>
 ; CHECK-NEXT:    ret <4 x i1> [[C]]
 ;
   %s = ashr exact <4 x i8> %x, <i8 3,i8 3, i8 3, i8 3>

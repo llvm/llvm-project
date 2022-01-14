@@ -463,26 +463,6 @@ void ForOp::getSuccessorRegions(Optional<unsigned> index,
   regions.push_back(RegionSuccessor(getResults()));
 }
 
-void ForOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
-                                    SmallVectorImpl<int64_t> &countPerRegion) {
-  assert(countPerRegion.empty());
-  countPerRegion.resize(1);
-
-  auto lb = operands[0].dyn_cast_or_null<IntegerAttr>();
-  auto ub = operands[1].dyn_cast_or_null<IntegerAttr>();
-  auto step = operands[2].dyn_cast_or_null<IntegerAttr>();
-
-  // Loop bounds are not known statically.
-  if (!lb || !ub || !step || step.getValue().getSExtValue() == 0) {
-    countPerRegion[0] = kUnknownNumRegionInvocations;
-    return;
-  }
-
-  countPerRegion[0] =
-      ceilDiv(ub.getValue().getSExtValue() - lb.getValue().getSExtValue(),
-              step.getValue().getSExtValue());
-}
-
 LoopNest mlir::scf::buildLoopNest(
     OpBuilder &builder, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps, ValueRange iterArgs,
@@ -1180,23 +1160,6 @@ void IfOp::getSuccessorRegions(Optional<unsigned> index,
 
   // Add the successor regions using the condition.
   regions.push_back(RegionSuccessor(condition ? &getThenRegion() : elseRegion));
-}
-
-/// If the condition is a constant, returns 1 for the executed block and 0 for
-/// the other. Otherwise, returns `kUnknownNumRegionInvocations` for both
-/// successors.
-void IfOp::getNumRegionInvocations(ArrayRef<Attribute> operands,
-                                   SmallVectorImpl<int64_t> &countPerRegion) {
-  if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
-    // If the condition is true, `then` is executed once and `else` zero times,
-    // and vice-versa.
-    bool cond = condAttr.getValue().isOneValue();
-    countPerRegion.assign(1, cond ? 1 : 0);
-    countPerRegion.push_back(cond ? 0 : 1);
-  } else {
-    // Non-constant condition: unknown invocations for both successors.
-    countPerRegion.assign(2, kUnknownNumRegionInvocations);
-  }
 }
 
 LogicalResult IfOp::fold(ArrayRef<Attribute> operands,

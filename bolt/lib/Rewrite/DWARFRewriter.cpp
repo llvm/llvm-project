@@ -1502,11 +1502,15 @@ void DWARFRewriter::patchLowHigh(DWARFDie DIE, DebugAddressRange Range,
     TempDebugPatcher->addLE64Patch(LowPCOffset, Range.LowPC);
   }
 
+  uint64_t HighPC = Range.HighPC;
+  // The DW_FORM_data* is delta between high and low pc
+  if (HighPCVal->V.getForm() != dwarf::Form::DW_FORM_addr)
+    HighPC -= Range.LowPC;
+
   if (isHighPcFormEightBytes(HighPCVal->V.getForm()))
-    TempDebugPatcher->addLE64Patch(HighPCOffset, Range.HighPC - Range.LowPC);
+    TempDebugPatcher->addLE64Patch(HighPCOffset, HighPC);
   else
-    TempDebugPatcher->addLE32Patch(HighPCOffset, Range.HighPC - Range.LowPC,
-                                   HighPCVal->Size);
+    TempDebugPatcher->addLE32Patch(HighPCOffset, HighPC);
 }
 
 void DWARFRewriter::convertToRangesPatchAbbrev(

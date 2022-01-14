@@ -770,8 +770,7 @@ define i1 @ashr_ult_1(i4 %x) {
 
 define i1 @ashr_ult_2(i4 %x) {
 ; CHECK-LABEL: @ashr_ult_2(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[S]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[X:%.*]], 4
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
@@ -783,8 +782,7 @@ define i1 @ashr_ult_2(i4 %x) {
 
 define i1 @ashr_ult_3(i4 %x) {
 ; CHECK-LABEL: @ashr_ult_3(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[S]], 3
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[X:%.*]], 6
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
@@ -877,8 +875,7 @@ define i1 @ashr_ult_11(i4 %x) {
 
 define i1 @ashr_ult_12(i4 %x) {
 ; CHECK-LABEL: @ashr_ult_12(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[S]], -4
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i4 [[X:%.*]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
@@ -890,8 +887,7 @@ define i1 @ashr_ult_12(i4 %x) {
 
 define i1 @ashr_ult_13(i4 %x) {
 ; CHECK-LABEL: @ashr_ult_13(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[S]], -3
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[X:%.*]], -6
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
@@ -903,8 +899,7 @@ define i1 @ashr_ult_13(i4 %x) {
 
 define i1 @ashr_ult_14(i4 %x) {
 ; CHECK-LABEL: @ashr_ult_14(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[S]], -2
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[X:%.*]], -4
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
