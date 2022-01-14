@@ -16544,30 +16544,22 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
             lowerShuffleAsLanePermuteAndSHUFP(DL, VT, V1, V2, Mask, DAG))
       return V;
 
-  // Always allow ElementRotate patterns - these are sometimes hidden but its
-  // still better to avoid splitting.
-  SDValue RotV1 = V1, RotV2 = V2;
-  bool IsElementRotate = 0 <= matchShuffleAsElementRotate(RotV1, RotV2, Mask);
-
   // If there are only inputs from one 128-bit lane, splitting will in fact be
   // less expensive. The flags track whether the given lane contains an element
   // that crosses to another lane.
-  if (!IsElementRotate) {
-    if (!Subtarget.hasAVX2()) {
-      bool LaneCrossing[2] = {false, false};
-      for (int i = 0; i < Size; ++i)
-        if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
-          LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
-      if (!LaneCrossing[0] || !LaneCrossing[1])
-        return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
-    } else {
-      bool LaneUsed[2] = {false, false};
-      for (int i = 0; i < Size; ++i)
-        if (Mask[i] >= 0)
-          LaneUsed[(Mask[i] % Size) / LaneSize] = true;
-      if (!LaneUsed[0] || !LaneUsed[1])
-        return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
-    }
+  bool AllLanes;
+  if (!Subtarget.hasAVX2()) {
+    bool LaneCrossing[2] = {false, false};
+    for (int i = 0; i < Size; ++i)
+      if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
+        LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
+    AllLanes = LaneCrossing[0] && LaneCrossing[1];
+  } else {
+    bool LaneUsed[2] = {false, false};
+    for (int i = 0; i < Size; ++i)
+      if (Mask[i] >= 0)
+        LaneUsed[(Mask[i] % Size) / LaneSize] = true;
+    AllLanes = LaneUsed[0] && LaneUsed[1];
   }
 
   // TODO - we could support shuffling V2 in the Flipped input.
@@ -16584,6 +16576,11 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
   }
   assert(!is128BitLaneCrossingShuffleMask(VT, InLaneMask) &&
          "In-lane shuffle mask expected");
+
+  // If we're not using both lanes in each lane and the inlane mask is not
+  // repeating, then we're better off splitting.
+  if (!AllLanes && !is128BitLaneRepeatedShuffleMask(VT, InLaneMask))
+    return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
 
   // Flip the lanes, and shuffle the results which should now be in-lane.
   MVT PVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
