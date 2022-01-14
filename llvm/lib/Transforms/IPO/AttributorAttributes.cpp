@@ -6008,8 +6008,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
   Optional<APInt> getSize(Attributor &A, const AbstractAttribute &AA,
                           AllocationInfo &AI) {
     auto Mapper = [&](const Value *V) -> const Value* {
-      bool Dead = false;
-      if (Optional<Constant *> SimpleV = A.getAssumedConstant(*V, AA, Dead))
+      bool UsedAssumedInformation = false;
+      if (Optional<Constant *> SimpleV = A.getAssumedConstant(*V, AA, UsedAssumedInformation))
         if (*SimpleV)
           return *SimpleV;
       return V;
