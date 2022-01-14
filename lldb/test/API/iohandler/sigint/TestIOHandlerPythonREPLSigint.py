@@ -25,6 +25,7 @@ class TestCase(PExpectTest):
     # under ASAN on a loaded machine..
     @skipIfAsan
     @skipIfWindows
+    @skipIf(oslist=["linux"], archs=["arm"])
     def test_while_evaluating_code(self):
         """ Tests SIGINT handling while Python code is being evaluated."""
         self.start_python_repl()
