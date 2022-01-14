@@ -72,6 +72,8 @@
 // CHECK-RELOCATABLE-NOT: "-pie"
 // CHECK-RELOCATABLE-NOT: "--build-id"
 // CHECK-RELOCATABLE: "-r"
+// CHECK-RELOCATABLE-NOT: "-l
+// CHECK-RELOCATABLE-NOT: crt{{[^.]+}}.o
 
 // RUN: %clang %s -### --target=x86_64-unknown-fuchsia -nodefaultlibs -fuse-ld=lld 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
