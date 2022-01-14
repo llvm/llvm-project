@@ -49,6 +49,10 @@ class Type;
 class UndefValue;
 class Value;
 
+//===----------------------------------------------------------------------===//
+//  Properties of allocation functions
+//
+
 /// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
@@ -77,20 +81,6 @@ bool isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 /// Tests if a function is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
 bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
-
-//===----------------------------------------------------------------------===//
-//  free Call Utility Functions.
-//
-
-/// isLibFreeFunction - Returns true if the function is a builtin free()
-bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
-
-/// isFreeCall - Returns non-null if the value is a call to the builtin free()
-const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
-
-inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
-  return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
-}
 
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
@@ -122,6 +112,20 @@ Optional<APInt> getAllocSize(const CallBase *CB,
 Constant *getInitialValueOfAllocation(const CallBase *Alloc,
                                       const TargetLibraryInfo *TLI,
                                       Type *Ty);
+
+//===----------------------------------------------------------------------===//
+//  free Call Utility Functions.
+//
+
+/// isLibFreeFunction - Returns true if the function is a builtin free()
+bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
+
+/// isFreeCall - Returns non-null if the value is a call to the builtin free()
+const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);
+
+inline CallInst *isFreeCall(Value *I, const TargetLibraryInfo *TLI) {
+  return const_cast<CallInst*>(isFreeCall((const Value*)I, TLI));
+}
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.
