@@ -57,11 +57,11 @@ static int GY;
 
 // TODO: It is odd, probably wrong, that we don't mangle all variables.
 
-// DEVICE-DAG: @G1 = hidden {{.*}}global i32 0, align 4
+// DEVICE-DAG: @G1 = {{.*}}global i32 0, align 4
 // DEVICE-DAG: @_ZL2G2 = internal {{.*}}global i32 0, align 4
-// DEVICE-DAG: @G3 = hidden {{.*}}global i32 0, align 4
+// DEVICE-DAG: @G3 = {{.*}}global i32 0, align 4
 // DEVICE-DAG: @_ZL2G4 = internal {{.*}}global i32 0, align 4
-// DEVICE-DAG: @G5 = hidden {{.*}}global i32 0, align 4
+// DEVICE-DAG: @G5 = {{.*}}global i32 0, align 4
 // DEVICE-DAG: @_ZL2G6 = internal {{.*}}global i32 0, align 4
 // DEVICE-NOT: ref
 // DEVICE-NOT: llvm.used
