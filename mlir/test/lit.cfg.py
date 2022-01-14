@@ -107,12 +107,10 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 config.environment['FILECHECK_OPTS'] = "-enable-var-scope --allow-unused-prefixes=false"
 
 
-# LLVM can be configured with an empty default triple
-# by passing ` -DLLVM_DEFAULT_TARGET_TRIPLE="" `.
-# This is how LLVM filters tests that require the host target
-# to be available for JIT tests.
-if config.target_triple:
-    config.available_features.add('default_triple')
+if config.native_target in config.targets_to_build:
+    config.available_features.add('llvm_has_native_target')
+
+
 
 # Add the python path for both the source and binary tree.
 # Note that presently, the python sources come from the source tree and the

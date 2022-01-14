@@ -29,6 +29,12 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   # Passed to lit.site.cfg.py.in to set up the path where to find the libraries.
   set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
+
+  # The native target may not be enabled when cross compiling, raise an error.
+  if(NOT TARGET ${LLVM_NATIVE_ARCH})
+    message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
+  endif()
+
   # Copy test data over.
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
