@@ -10,7 +10,7 @@
 
 #include "src/__support/CPP/StringView.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/architectures.h"
+#include "src/__support/FPUtil/PlatformDefs.h"
 #include "utils/UnitTest/FPMatcher.h"
 
 #include <cmath>
@@ -47,7 +47,11 @@ template <> struct Precision<double> {
   static constexpr unsigned int VALUE = 53;
 };
 
-#if !(defined(LLVM_LIBC_ARCH_X86))
+#if defined(LONG_DOUBLE_IS_DOUBLE)
+template <> struct Precision<long double> {
+  static constexpr unsigned int VALUE = 53;
+};
+#elif defined(SPECIAL_X86_LONG_DOUBLE)
 template <> struct Precision<long double> {
   static constexpr unsigned int VALUE = 64;
 };
