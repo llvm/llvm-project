@@ -320,6 +320,9 @@ private:
   /// Eat string matching regexp \code \s*\* \endcode.
   void skipLineStartingDecorations();
 
+  /// Skip over pure text.
+  const char *skipTextToken();
+
   /// Lex comment text, including commands if ParseCommands is set to true.
   void lexCommentText(Token &T);
 
