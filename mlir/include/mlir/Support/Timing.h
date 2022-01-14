@@ -353,7 +353,7 @@ public:
 
   DefaultTimingManager();
   DefaultTimingManager(DefaultTimingManager &&rhs);
-  virtual ~DefaultTimingManager();
+  ~DefaultTimingManager() override;
 
   // Disable copying of the `DefaultTimingManager`.
   DefaultTimingManager(const DefaultTimingManager &rhs) = delete;
