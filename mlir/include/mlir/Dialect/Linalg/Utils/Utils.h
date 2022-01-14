@@ -41,7 +41,7 @@ template <typename T, unsigned N>
 void applyPermutationToVector(SmallVector<T, N> &inVec,
                               ArrayRef<int64_t> permutation) {
   SmallVector<T, N> auxVec(inVec.size());
-  for (auto en : enumerate(permutation))
+  for (const auto &en : enumerate(permutation))
     auxVec[en.index()] = inVec[en.value()];
   inVec = auxVec;
 }
