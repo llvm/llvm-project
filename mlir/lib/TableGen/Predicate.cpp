@@ -28,7 +28,7 @@ Pred::Pred(const llvm::Record *record) : def(record) {
 }
 
 // Construct a Predicate from an initializer.
-Pred::Pred(const llvm::Init *init) : def(nullptr) {
+Pred::Pred(const llvm::Init *init) {
   if (const auto *defInit = dyn_cast_or_null<llvm::DefInit>(init))
     def = defInit->getDef();
 }

@@ -81,7 +81,7 @@ public:
 
   using AbstractTy = AbstractType;
 
-  constexpr Type() : impl(nullptr) {}
+  constexpr Type() {}
   /* implicit */ Type(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 
@@ -179,7 +179,7 @@ public:
   const AbstractTy &getAbstractType() { return impl->getAbstractType(); }
 
 protected:
-  ImplType *impl;
+  ImplType *impl{nullptr};
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, Type type) {

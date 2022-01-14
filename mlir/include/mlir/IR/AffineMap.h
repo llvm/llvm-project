@@ -39,7 +39,7 @@ class AffineMap {
 public:
   using ImplType = detail::AffineMapStorage;
 
-  constexpr AffineMap() : map(nullptr) {}
+  constexpr AffineMap() {}
   explicit AffineMap(ImplType *map) : map(map) {}
 
   /// Returns a zero result affine map with no dimensions or symbols: () -> ().
@@ -309,7 +309,7 @@ public:
   }
 
 private:
-  ImplType *map;
+  ImplType *map{nullptr};
 
   static AffineMap getImpl(unsigned dimCount, unsigned symbolCount,
                            ArrayRef<AffineExpr> results, MLIRContext *context);

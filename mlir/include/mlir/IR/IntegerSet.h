@@ -45,7 +45,7 @@ class IntegerSet {
 public:
   using ImplType = detail::IntegerSetStorage;
 
-  constexpr IntegerSet() : set(nullptr) {}
+  constexpr IntegerSet() {}
   explicit IntegerSet(ImplType *set) : set(set) {}
 
   static IntegerSet get(unsigned dimCount, unsigned symbolCount,
@@ -116,7 +116,7 @@ public:
   }
 
 private:
-  ImplType *set;
+  ImplType *set{nullptr};
 };
 
 // Make AffineExpr hashable.
