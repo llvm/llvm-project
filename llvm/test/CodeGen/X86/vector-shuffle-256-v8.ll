@@ -628,9 +628,9 @@ define <8 x float> @shuffle_v8f32_00224466(<8 x float> %a, <8 x float> %b) {
 define <8 x float> @shuffle_v8f32_00224466_v4f32(<4 x float> %a, <4 x float> %b) {
 ; ALL-LABEL: shuffle_v8f32_00224466_v4f32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
-; ALL-NEXT:    vmovsldup {{.*#+}} xmm1 = xmm1[0,0,2,2]
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vmovsldup {{.*#+}} ymm0 = ymm0[0,0,2,2,4,4,6,6]
 ; ALL-NEXT:    retq
   %1 = shufflevector <4 x float> %a, <4 x float> %a, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   %2 = shufflevector <4 x float> %b, <4 x float> %b, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
@@ -659,9 +659,9 @@ define <8 x float> @shuffle_v8f32_11335577(<8 x float> %a, <8 x float> %b) {
 define <8 x float> @shuffle_v8f32_11335577_v4f32(<4 x float> %a, <4 x float> %b) {
 ; ALL-LABEL: shuffle_v8f32_11335577_v4f32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; ALL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
 ; ALL-NEXT:    retq
   %1 = shufflevector <4 x float> %a, <4 x float> %a, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
   %2 = shufflevector <4 x float> %b, <4 x float> %b, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
