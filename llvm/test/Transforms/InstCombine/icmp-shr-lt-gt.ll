@@ -2216,6 +2216,123 @@ define i1 @lshrugt_03_15_exact(i4 %x) {
   ret i1 %c
 }
 
+define i1 @ashr_00_00_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_00_00_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 79
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp sge i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_01_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_00_01_noexact(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp slt i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_03_noexact(i8 %x) {
+; CHECK-LABEL: @ashr_00_03_noexact(
+; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], 10
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr i8 %x, 3
+  %c = icmp ult i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_00_exact(i8 %x) {
+; CHECK-LABEL: @ashr_00_00_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp ne i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_01_exact(i8 %x) {
+; CHECK-LABEL: @ashr_00_01_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp eq i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_02_exact(i8 %x) {
+; CHECK-LABEL: @ashr_00_02_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp sgt i8 [[X:%.*]], 80
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp sgt i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_03_exact(i8 %x) {
+; CHECK-LABEL: @ashr_00_03_exact(
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i8 [[X:%.*]], 88
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp sle i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_04_exact(i8 %x) {
+; CHECK-LABEL: @ashr_00_04_exact(
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[S]], 10
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp ugt i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_05_exact(i8 %x) {
+; CHECK-LABEL: @ashr_00_05_exact(
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], 11
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp ule i8 %s, 10
+  ret i1 %c
+}
+
+define i1 @ashr_00_00_ashr_extra_use(i8 %x, i8* %ptr) {
+; CHECK-LABEL: @ashr_00_00_ashr_extra_use(
+; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], 11
+; CHECK-NEXT:    store i8 [[S]], i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = ashr exact i8 %x, 3
+  %c = icmp ule i8 %s, 10
+  store i8 %s, i8* %ptr
+  ret i1 %c
+}
+
+define <4 x i1> @ashr_00_00_vec(<4 x i8> %x) {
+; CHECK-LABEL: @ashr_00_00_vec(
+; CHECK-NEXT:    [[S:%.*]] = ashr exact <4 x i8> [[X:%.*]], <i8 3, i8 3, i8 3, i8 3>
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <4 x i8> [[S]], <i8 11, i8 11, i8 11, i8 11>
+; CHECK-NEXT:    ret <4 x i1> [[C]]
+;
+  %s = ashr exact <4 x i8> %x, <i8 3,i8 3, i8 3, i8 3>
+  %c = icmp ule <4 x i8> %s, <i8 10,i8 10,i8 10,i8 10>
+  ret <4 x i1> %c
+}
+
 define i1 @lshrult_01_00_exact(i4 %x) {
 ; CHECK-LABEL: @lshrult_01_00_exact(
 ; CHECK-NEXT:    ret i1 false
