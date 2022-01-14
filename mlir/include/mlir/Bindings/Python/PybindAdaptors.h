@@ -320,7 +320,11 @@ public:
     // Casting constructor. Note that defining an __init__ method is special
     // and not yet generalized on pure_subclass (it requires a somewhat
     // different cpp_function and other requirements on chaining to super
-    // __init__ make it more awkward to do generally).
+    // __init__ make it more awkward to do generally). It is marked as
+    // `is_new_style_constructor` to suppress the deprecation warning from
+    // pybind11 related to placement-new since we are not doing any allocation
+    // here but relying on the superclass constructor that does "new-style"
+    // allocation for pybind11.
     std::string captureTypeName(
         typeClassName); // As string in case if typeClassName is not static.
     py::cpp_function initCf(
@@ -336,7 +340,9 @@ public:
           }
           superClass.attr("__init__")(self, otherType);
         },
-        py::arg("cast_from_type"), py::is_method(py::none()),
+        py::name("__init__"), py::arg("cast_from_type"),
+        py::is_method(scope.attr(typeClassName)),
+        py::detail::is_new_style_constructor(),
         "Casts the passed type to this specific sub-type.");
     thisClass.attr("__init__") = initCf;
 
@@ -371,7 +377,11 @@ public:
     // Casting constructor. Note that defining an __init__ method is special
     // and not yet generalized on pure_subclass (it requires a somewhat
     // different cpp_function and other requirements on chaining to super
-    // __init__ make it more awkward to do generally).
+    // __init__ make it more awkward to do generally). It is marked as
+    // `is_new_style_constructor` to suppress the deprecation warning from
+    // pybind11 related to placement-new since we are not doing any allocation
+    // here but relying on the superclass constructor that does "new-style"
+    // allocation for pybind11.
     std::string captureTypeName(
         typeClassName); // As string in case if typeClassName is not static.
     py::cpp_function initCf(
@@ -387,7 +397,9 @@ public:
           }
           superClass.attr("__init__")(self, otherType);
         },
-        py::arg("cast_from_type"), py::is_method(py::none()),
+        py::name("__init__"), py::arg("cast_from_type"),
+        py::is_method(scope.attr(typeClassName)),
+        py::detail::is_new_style_constructor(),
         "Casts the passed type to this specific sub-type.");
     thisClass.attr("__init__") = initCf;
 
