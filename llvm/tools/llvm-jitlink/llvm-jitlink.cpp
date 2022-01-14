@@ -82,9 +82,16 @@ static cl::list<std::string>
               cl::desc("Link against library X in the library search paths"),
               cl::Prefix, cl::cat(JITLinkCategory));
 
-static cl::list<std::string> LibrariesHidden(
-    "hidden-l", cl::desc("Link against library X in the library search paths"),
-    cl::Prefix, cl::cat(JITLinkCategory));
+static cl::list<std::string>
+    LibrariesHidden("hidden-l",
+                    cl::desc("Link against library X in the library search "
+                             "paths with hidden visibility"),
+                    cl::Prefix, cl::cat(JITLinkCategory));
+
+static cl::list<std::string>
+    LoadHidden("load_hidden",
+               cl::desc("Link against library X with hidden visibility"),
+               cl::cat(JITLinkCategory));
 
 static cl::opt<bool> NoExec("noexec", cl::desc("Do not execute loaded code"),
                             cl::init(false), cl::cat(JITLinkCategory));
@@ -1403,6 +1410,8 @@ static Error addObjects(Session &S,
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
     const std::string &InputFile = *InputFileItr;
+    if (StringRef(InputFile).endswith(".a"))
+      continue;
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
@@ -1474,14 +1483,41 @@ static Error addLibraries(Session &S,
     }
   });
 
-  // 2. Collect library loads from -lx, -hidden-lx.
+  // 2. Collect library loads
   struct LibraryLoad {
     StringRef LibName;
+    bool IsPath = false;
     unsigned Position;
     StringRef *CandidateExtensions;
     enum { Standard, Hidden } Modifier;
   };
   std::vector<LibraryLoad> LibraryLoads;
+  // Add archive files from the inputs to LibraryLoads.
+  for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
+       InputFileItr != InputFileEnd; ++InputFileItr) {
+    StringRef InputFile = *InputFileItr;
+    if (!InputFile.endswith(".a"))
+      continue;
+    LibraryLoad LL;
+    LL.LibName = InputFile;
+    LL.IsPath = true;
+    LL.Position = InputFiles.getPosition(InputFileItr - InputFiles.begin());
+    LL.CandidateExtensions = nullptr;
+    LL.Modifier = LibraryLoad::Standard;
+    LibraryLoads.push_back(std::move(LL));
+  }
+
+  // Add -load_hidden arguments to LibraryLoads.
+  for (auto LibItr = LoadHidden.begin(), LibEnd = LoadHidden.end();
+       LibItr != LibEnd; ++LibItr) {
+    LibraryLoad LL;
+    LL.LibName = *LibItr;
+    LL.IsPath = true;
+    LL.Position = LoadHidden.getPosition(LibItr - LoadHidden.begin());
+    LL.CandidateExtensions = nullptr;
+    LL.Modifier = LibraryLoad::Hidden;
+    LibraryLoads.push_back(std::move(LL));
+  }
   StringRef StandardExtensions[] = {".so", ".dylib", ".a"};
   StringRef ArchiveExtensionsOnly[] = {".a"};
 
@@ -1511,7 +1547,7 @@ static Error addLibraries(Session &S,
 
   // If there are any load-<modified> options then turn on flag overrides
   // to avoid flag mismatch errors.
-  if (!LibrariesHidden.empty())
+  if (!LibrariesHidden.empty() || !LoadHidden.empty())
     S.ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
 
   // Sort library loads by position in the argument list.
@@ -1520,6 +1556,24 @@ static Error addLibraries(Session &S,
   });
 
   // 3. Process library loads.
+  auto AddArchive = [&](const char *Path, const LibraryLoad &LL)
+      -> Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>> {
+    unique_function<Expected<MaterializationUnit::Interface>(
+        ExecutionSession & ES, MemoryBufferRef ObjBuffer)>
+        GetObjFileInterface;
+    switch (LL.Modifier) {
+    case LibraryLoad::Standard:
+      GetObjFileInterface = getObjectFileInterface;
+      break;
+    case LibraryLoad::Hidden:
+      GetObjFileInterface = getObjectFileInterfaceHidden;
+      break;
+    }
+    return StaticLibraryDefinitionGenerator::Load(
+        S.ObjLayer, Path, S.ES.getExecutorProcessControl().getTargetTriple(),
+        std::move(GetObjFileInterface));
+  };
+
   for (auto &LL : LibraryLoads) {
     bool LibFound = false;
     auto &JD = *std::prev(IdxToJD.lower_bound(LL.Position))->second;
@@ -1527,6 +1581,18 @@ static Error addLibraries(Session &S,
     // If this is the name of a JITDylib then link against that.
     if (auto *LJD = S.ES.getJITDylibByName(LL.LibName)) {
       JD.addToLinkOrder(*LJD);
+      continue;
+    }
+
+    if (LL.IsPath) {
+      auto G = AddArchive(LL.LibName.str().c_str(), LL);
+      if (!G)
+        return createFileError(LL.LibName, G.takeError());
+      JD.addGenerator(std::move(*G));
+      LLVM_DEBUG({
+        dbgs() << "Adding generator for static library " << LL.LibName << " to "
+               << JD.getName() << "\n";
+      });
       continue;
     }
 
@@ -1583,21 +1649,7 @@ static Error addLibraries(Session &S,
           }
           case file_magic::archive:
           case file_magic::macho_universal_binary: {
-            unique_function<Expected<MaterializationUnit::Interface>(
-                ExecutionSession & ES, MemoryBufferRef ObjBuffer)>
-                GetObjFileInterface;
-            switch (LL.Modifier) {
-            case LibraryLoad::Standard:
-              GetObjFileInterface = getObjectFileInterface;
-              break;
-            case LibraryLoad::Hidden:
-              GetObjFileInterface = getObjectFileInterfaceHidden;
-              break;
-            }
-            auto G = StaticLibraryDefinitionGenerator::Load(
-                S.ObjLayer, LibPath.data(),
-                S.ES.getExecutorProcessControl().getTargetTriple(),
-                std::move(GetObjFileInterface));
+            auto G = AddArchive(LibPath.data(), LL);
             if (!G)
               return G.takeError();
             JD.addGenerator(std::move(*G));

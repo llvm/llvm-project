@@ -6,6 +6,8 @@
 # RUN:   -o %t/MachO_archive_load_hidden_support.o %s
 # RUN: llvm-jitlink -noexec %t/MachO_archive_load_hidden_support.o \
 # RUN:   -L%t -hidden-lExtraDef
+# RUN: llvm-jitlink -noexec %t/MachO_archive_load_hidden_support.o \
+# RUN:   -load_hidden %t/libExtraDef.a
 #
 # Expect this test to succeed -- ExtraDef should be hidden, but visible to
 # ExtraDefRef as they're linked in the same JITDylib. This tests that we're
