@@ -106,6 +106,8 @@ public:
   /// Sorts elements lexicographically by index.
   void sort() {
     assert(!iteratorLocked && "Attempt to sort() after startIterator()");
+    // TODO: we may want to cache an `isSorted` bit, to avoid
+    // unnecessary/redundant sorting.
     std::sort(elements.begin(), elements.end(), lexOrder);
   }
   /// Returns rank.
@@ -269,6 +271,8 @@ public:
         pointers[r].push_back(0);
     // Then assign contents from coordinate scheme tensor if provided.
     if (tensor) {
+      // Lexicographically sort the tensor, to ensure precondition of `fromCOO`.
+      tensor->sort();
       const std::vector<Element<V>> &elements = tensor->getElements();
       uint64_t nnz = elements.size();
       values.reserve(nnz);
@@ -386,7 +390,6 @@ public:
       assert(tensor->getRank() == rank);
       for (uint64_t r = 0; r < rank; r++)
         assert(sizes[r] == 0 || tensor->getSizes()[perm[r]] == sizes[r]);
-      tensor->sort(); // sort lexicographically
       n = new SparseTensorStorage<P, I, V>(tensor->getSizes(), perm, sparsity,
                                            tensor);
       delete tensor;
@@ -403,6 +406,7 @@ private:
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
   /// tensor in coordinate scheme. This method prepares the pointers and
   /// indices arrays under the given per-dimension dense/sparse annotations.
+  /// Precondition: the `elements` must be lexicographically sorted.
   void fromCOO(const std::vector<Element<V>> &elements, uint64_t lo,
                uint64_t hi, uint64_t d) {
     // Once dimensions are exhausted, insert the numerical values.
