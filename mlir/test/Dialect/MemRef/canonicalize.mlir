@@ -510,3 +510,18 @@ func @atomicrmw_cast_fold(%arg0 : f32, %arg1 : memref<4xf32>, %c : index) {
 
 // CHECK-LABEL: func @atomicrmw_cast_fold
 // CHECK-NEXT: memref.atomic_rmw addf %arg0, %arg1[%arg2] : (f32, memref<4xf32>) -> f32
+
+// -----
+
+#map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+func @copy_of_cast(%m1: memref<?xf32>, %m2: memref<*xf32>) {
+  %casted1 = memref.cast %m1 : memref<?xf32> to memref<?xf32, #map>
+  %casted2 = memref.cast %m2 : memref<*xf32> to memref<?xf32, #map>
+  memref.copy %casted1, %casted2 : memref<?xf32, #map> to memref<?xf32, #map>
+  return
+}
+
+// CHECK-LABEL: func @copy_of_cast(
+//  CHECK-SAME:     %[[m1:.*]]: memref<?xf32>, %[[m2:.*]]: memref<*xf32>
+//       CHECK:   %[[casted2:.*]] = memref.cast %[[m2]]
+//       CHECK:   memref.copy %[[m1]], %[[casted2]]
