@@ -231,9 +231,7 @@ public:
   /// Lookup the registered operation information for the given operation.
   /// Returns None if the operation isn't registered.
   static Optional<RegisteredOperationName> lookup(StringRef name,
-                                                  MLIRContext *ctx) {
-    return OperationName(name, ctx).getRegisteredInfo();
-  }
+                                                  MLIRContext *ctx);
 
   /// Register a new operation in a Dialect object.
   /// This constructor is used by Dialect objects when they register the list of
@@ -582,9 +580,12 @@ struct OperationState {
 
 public:
   OperationState(Location location, StringRef name);
-
   OperationState(Location location, OperationName name);
 
+  OperationState(Location location, OperationName name, ValueRange operands,
+                 TypeRange types, ArrayRef<NamedAttribute> attributes,
+                 BlockRange successors = {},
+                 MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(Location location, StringRef name, ValueRange operands,
                  TypeRange types, ArrayRef<NamedAttribute> attributes,
                  BlockRange successors = {},
