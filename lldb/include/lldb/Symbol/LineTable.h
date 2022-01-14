@@ -206,7 +206,6 @@ public:
 
   LineTable *LinkLineTable(const FileRangeMap &file_range_map);
 
-protected:
   struct Entry {
     Entry()
         : line(0), is_start_of_statement(false), is_start_of_basic_block(false),
@@ -303,6 +302,7 @@ protected:
     uint16_t file_idx = 0;
   };
 
+protected:
   struct EntrySearchInfo {
     LineTable *line_table;
     lldb_private::Section *a_section;
