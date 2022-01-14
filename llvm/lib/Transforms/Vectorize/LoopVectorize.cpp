@@ -2333,19 +2333,7 @@ Value *InnerLoopVectorizer::getBroadcastInstrs(Value *V) {
 static Value *getStepVector(Value *Val, Value *StartIdx, Value *Step,
                             Instruction::BinaryOps BinOp, ElementCount VF,
                             IRBuilder<> &Builder) {
-  if (VF.isScalar()) {
-    // When unrolling and the VF is 1, we only need to add a simple scalar.
-    Type *Ty = Val->getType();
-    assert(!Ty->isVectorTy() && "Val must be a scalar");
-
-    if (Ty->isFloatingPointTy()) {
-      // Floating-point operations inherit FMF via the builder's flags.
-      Value *MulOp = Builder.CreateFMul(StartIdx, Step);
-      return Builder.CreateBinOp(BinOp, Val, MulOp);
-    }
-    return Builder.CreateAdd(Val, Builder.CreateMul(StartIdx, Step),
-                             "induction");
-  }
+  assert(VF.isVector() && "only vector VFs are supported");
 
   // Create and check the types.
   auto *ValVTy = cast<VectorType>(Val->getType());
@@ -2580,7 +2568,29 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
   Value *Step = CreateStepValue(ID.getStep());
   if (State.VF.isScalar()) {
     Value *ScalarIV = CreateScalarIV(Step);
-    CreateSplatIV(ScalarIV, Step);
+    Type *ScalarTy = IntegerType::get(ScalarIV->getContext(),
+                                      Step->getType()->getScalarSizeInBits());
+
+    Instruction::BinaryOps IncOp = ID.getInductionOpcode();
+    if (IncOp == Instruction::BinaryOpsEnd)
+      IncOp = Instruction::Add;
+    for (unsigned Part = 0; Part < UF; ++Part) {
+      Value *StartIdx = ConstantInt::get(ScalarTy, Part);
+      Instruction::BinaryOps MulOp = Instruction::Mul;
+      if (Step->getType()->isFloatingPointTy()) {
+        StartIdx = Builder.CreateUIToFP(StartIdx, Step->getType());
+        MulOp = Instruction::FMul;
+      }
+
+      Value *Mul = Builder.CreateBinOp(MulOp, StartIdx, Step);
+      Value *EntryPart = Builder.CreateBinOp(IncOp, ScalarIV, Mul, "induction");
+      State.set(Def, EntryPart, Part);
+      if (Trunc) {
+        assert(!Step->getType()->isFloatingPointTy() &&
+               "fp inductions shouldn't be truncated");
+        addMetadata(EntryPart, Trunc);
+      }
+    }
     return;
   }
 
