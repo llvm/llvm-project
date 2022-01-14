@@ -203,7 +203,7 @@ private:
 
   /// A generic function to emit constraints
   void emitConstraints(const ConstraintMap &constraints, StringRef selfName,
-                       const char *const codeTemplate);
+                       const char *codeTemplate);
 
   /// Assign a unique name to a unique constraint.
   std::string getUniqueName(StringRef kind, unsigned index);
