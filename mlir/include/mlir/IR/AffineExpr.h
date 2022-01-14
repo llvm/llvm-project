@@ -69,7 +69,7 @@ class AffineExpr {
 public:
   using ImplType = detail::AffineExprStorage;
 
-  constexpr AffineExpr() : expr(nullptr) {}
+  constexpr AffineExpr() {}
   /* implicit */ AffineExpr(const ImplType *expr)
       : expr(const_cast<ImplType *>(expr)) {}
 
@@ -195,7 +195,7 @@ public:
   }
 
 protected:
-  ImplType *expr;
+  ImplType *expr{nullptr};
 };
 
 /// Affine binary operation expression. An affine binary operation could be an

@@ -33,7 +33,7 @@ public:
   using ValueType = void;
   using AbstractTy = AbstractAttribute;
 
-  constexpr Attribute() : impl(nullptr) {}
+  constexpr Attribute() {}
   /* implicit */ Attribute(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 
@@ -96,7 +96,7 @@ public:
   }
 
 protected:
-  ImplType *impl;
+  ImplType *impl{nullptr};
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, Attribute attr) {

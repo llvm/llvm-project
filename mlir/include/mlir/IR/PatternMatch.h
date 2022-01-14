@@ -33,7 +33,7 @@ class PatternBenefit {
   enum { ImpossibleToMatchSentinel = 65535 };
 
 public:
-  PatternBenefit() : representation(ImpossibleToMatchSentinel) {}
+  PatternBenefit() {}
   PatternBenefit(unsigned benefit);
   PatternBenefit(const PatternBenefit &) = default;
   PatternBenefit &operator=(const PatternBenefit &) = default;
@@ -57,7 +57,7 @@ public:
   bool operator>=(const PatternBenefit &rhs) const { return !(*this < rhs); }
 
 private:
-  unsigned short representation;
+  unsigned short representation{ImpossibleToMatchSentinel};
 };
 
 //===----------------------------------------------------------------------===//
@@ -402,7 +402,7 @@ public:
 
   /// Construct a new PDL value.
   PDLValue(const PDLValue &other) = default;
-  PDLValue(std::nullptr_t = nullptr) : value(nullptr), kind(Kind::Attribute) {}
+  PDLValue(std::nullptr_t = nullptr) {}
   PDLValue(Attribute value)
       : value(value.getAsOpaquePointer()), kind(Kind::Attribute) {}
   PDLValue(Operation *value) : value(value), kind(Kind::Operation) {}
@@ -486,9 +486,9 @@ private:
   }
 
   /// The internal opaque representation of a PDLValue.
-  const void *value;
+  const void *value{nullptr};
   /// The kind of the opaque value.
-  Kind kind;
+  Kind kind{Kind::Attribute};
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {

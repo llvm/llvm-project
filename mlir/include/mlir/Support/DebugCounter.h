@@ -54,11 +54,10 @@ private:
   /// This struct represents a specific counter being tracked.
   struct Counter {
     Counter(int64_t countToSkip = 0, int64_t countToStopAfter = -1)
-        : count(0), countToSkip(countToSkip),
-          countToStopAfter(countToStopAfter) {}
+        : countToSkip(countToSkip), countToStopAfter(countToStopAfter) {}
 
     /// The current count of this counter.
-    int64_t count;
+    int64_t count{0};
     /// The number of initial executions of this counter to skip.
     int64_t countToSkip;
     /// The number of times to execute this counter before stopping.

@@ -68,8 +68,7 @@ public:
       : region(region), inputs(regionInputs) {}
   /// Initialize a successor that branches back to/out of the parent operation.
   RegionSuccessor(Optional<Operation::result_range> results = {})
-      : region(nullptr), inputs(results ? ValueRange(*results) : ValueRange()) {
-  }
+      : inputs(results ? ValueRange(*results) : ValueRange()) {}
 
   /// Return the given region successor. Returns nullptr if the successor is the
   /// parent operation.
@@ -83,7 +82,7 @@ public:
   ValueRange getSuccessorInputs() const { return inputs; }
 
 private:
-  Region *region;
+  Region *region{nullptr};
   ValueRange inputs;
 };
 

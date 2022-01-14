@@ -21,9 +21,7 @@ class OperationPass;
 /// This should kept in sync with VectorToLLVM options defined for the
 /// ConvertVectorToLLVM pass in include/mlir/Conversion/Passes.td
 struct LowerVectorToLLVMOptions {
-  LowerVectorToLLVMOptions()
-      : reassociateFPReductions(false), indexOptimizations(true),
-        armNeon(false), armSVE(false), amx(false), x86Vector(false) {}
+  LowerVectorToLLVMOptions() {}
 
   LowerVectorToLLVMOptions &enableReassociateFPReductions(bool b = true) {
     reassociateFPReductions = b;
@@ -50,12 +48,12 @@ struct LowerVectorToLLVMOptions {
     return *this;
   }
 
-  bool reassociateFPReductions;
-  bool indexOptimizations;
-  bool armNeon;
-  bool armSVE;
-  bool amx;
-  bool x86Vector;
+  bool reassociateFPReductions{false};
+  bool indexOptimizations{true};
+  bool armNeon{false};
+  bool armSVE{false};
+  bool amx{false};
+  bool x86Vector{false};
 };
 
 /// Collect a set of patterns to convert from Vector contractions to LLVM Matrix

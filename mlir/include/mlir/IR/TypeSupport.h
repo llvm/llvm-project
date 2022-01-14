@@ -131,7 +131,7 @@ public:
 
 protected:
   /// This constructor is used by derived classes as part of the TypeUniquer.
-  TypeStorage() : abstractType(nullptr) {}
+  TypeStorage() {}
 
 private:
   /// Set the abstract type for this storage instance. This is used by the
@@ -141,7 +141,7 @@ private:
   }
 
   /// The abstract description for this type.
-  AbstractType *abstractType;
+  AbstractType *abstractType{nullptr};
 };
 
 /// Default storage type for types that require no additional initialization or

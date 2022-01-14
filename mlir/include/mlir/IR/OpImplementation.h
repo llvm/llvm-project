@@ -126,7 +126,7 @@ public:
 protected:
   /// Initialize the printer with no internal implementation. In this case, all
   /// virtual methods of this class must be overriden.
-  AsmPrinter() : impl(nullptr) {}
+  AsmPrinter() {}
 
 private:
   AsmPrinter(const AsmPrinter &) = delete;
@@ -141,7 +141,7 @@ private:
   virtual LogicalResult printAlias(Type type);
 
   /// The internal implementation of the printer.
-  Impl *impl;
+  Impl *impl{nullptr};
 };
 
 template <typename AsmPrinterT>
