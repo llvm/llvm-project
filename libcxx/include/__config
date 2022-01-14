@@ -1223,8 +1223,8 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #   define _LIBCPP_C_HAS_NO_GETS
 #endif
 
-#if defined(__BIONIC__) || defined(__NuttX__) ||      \
-    defined(__Fuchsia__) || defined(__wasi__) ||		  \
+#if defined(__BIONIC__) || defined(__NuttX__) ||           \
+    defined(__Fuchsia__) || defined(__wasi__) ||           \
     defined(_LIBCPP_HAS_MUSL_LIBC) || defined(__OpenBSD__)
 #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #endif
