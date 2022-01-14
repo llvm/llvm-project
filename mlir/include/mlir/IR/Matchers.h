@@ -166,7 +166,7 @@ typename std::enable_if_t<
                       Operation *>::value,
     bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
-  if (auto defOp = op->getOperand(idx).getDefiningOp())
+  if (auto *defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);
   return false;
 }
