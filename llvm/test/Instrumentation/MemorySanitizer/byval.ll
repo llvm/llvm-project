@@ -11,7 +11,6 @@ define i128 @ByValArgument(i32, i128* byval(i128) %p) sanitize_memory {
 ; CHECK-LABEL: @ByValArgument(
 ; CHECK-NEXT:  entry:
 ; CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} @__msan_param_tls to i64), i64 8) to i8*), i64 16, i1 false)
-; CHECK:         load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*)
 ; CHECK:         %x = load i128, i128* %p
 ; CHECK:         load i128
 ; CHECK:         load i32
@@ -42,7 +41,6 @@ define void @ByValForward(i32, i128* byval(i128) %p) sanitize_memory {
 ; CHECK-LABEL: @ByValForward(
 ; CHECK-NEXT:  entry:
 ; CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} @__msan_param_tls to i64), i64 8) to i8*), i64 16, i1 false)
-; CHECK:         load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*)
 ; CHECK:         store i64 0, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0)
 ; CHECK-NEXT:    call void @Fn(
 ; CHECK-NEXT:    ret void
@@ -70,7 +68,6 @@ define void @ByValForwardByVal(i32, i128* byval(i128) %p) sanitize_memory {
 ; CHECK-LABEL: @ByValForwardByVal(
 ; CHECK-NEXT:  entry:
 ; CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64({{.*}} @__msan_param_tls to i64), i64 8) to i8*), i64 16, i1 false)
-; CHECK:         load i32, i32* inttoptr (i64 add (i64 ptrtoint ([200 x i32]* @__msan_param_origin_tls to i64), i64 8) to i32*) 
 ; CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast ([100 x i64]* @__msan_param_tls to i8*), i8* {{.*}}, i64 16, i1 false)
 ; CHECK:         store i32 {{.*}}, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0)
 ; CHECK-NEXT:    call void @FnByVal(
