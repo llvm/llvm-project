@@ -4,6 +4,13 @@ LD64 vs LLD-MACHO
 
 This doc lists all significant deliberate differences in behavior between LD64 and LLD-MachO.
 
+``-no_deduplicate`` Flag
+**********************
+- LD64:
+   * This turns off ICF (deduplication pass) in the linker.
+- LLD
+   * This turns off ICF and string merging in the linker.
+
 ObjC symbols treatment
 **********************
 There are differences in how LLD and LD64 handle ObjC symbols loaded from archives.

@@ -6,7 +6,6 @@
 ## `--version` flag.)
 # RUN: %lld --version \
 # RUN:   -dynamic \
-# RUN:   -no_deduplicate \
 # RUN:   -lto_library /lib/foo \
 # RUN:   -macosx_version_min 0 \
 # RUN:   -no_dtrace_dof \
