@@ -15,35 +15,79 @@
 
 #include <iterator>
 #include <cassert>
+#include <type_traits>
 
+#include "test_iterators.h"
 #include "test_macros.h"
-#include "types.h"
 
-void test() {
-  int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+struct IterMovingIt {
+  using value_type = int;
+  using difference_type = int;
+  explicit IterMovingIt() = default;
+  IterMovingIt(const IterMovingIt&); // copyable, but this test shouldn't make copies
+  IterMovingIt(IterMovingIt&&) = default;
+  IterMovingIt& operator=(const IterMovingIt&);
+  int& operator*() const;
+  constexpr IterMovingIt& operator++() { return *this; }
+  IterMovingIt operator++(int);
+  friend constexpr int iter_move(const IterMovingIt&) {
+    return 42;
+  }
+  bool operator==(std::default_sentinel_t) const;
+};
+static_assert(std::input_iterator<IterMovingIt>);
 
+constexpr bool test() {
   {
-    auto iter1 = cpp17_input_iterator<int*>(buffer);
-    auto commonIter1 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
-    assert(std::ranges::iter_move(commonIter1) == 1);
-    ASSERT_SAME_TYPE(decltype(std::ranges::iter_move(commonIter1)), int&&);
+    using It = int*;
+    using CommonIt = std::common_iterator<It, sentinel_wrapper<It>>;
+    int a[] = {1, 2, 3};
+    CommonIt it = CommonIt(It(a));
+    ASSERT_NOEXCEPT(iter_move(it));
+    ASSERT_NOEXCEPT(std::ranges::iter_move(it));
+    ASSERT_SAME_TYPE(decltype(iter_move(it)), int&&);
+    ASSERT_SAME_TYPE(decltype(std::ranges::iter_move(it)), int&&);
+    assert(iter_move(it) == 1);
+    if (!std::is_constant_evaluated()) {
+      ++it;
+      assert(iter_move(it) == 2);
+    }
   }
   {
-    auto iter1 = forward_iterator<int*>(buffer);
-    auto commonIter1 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
-    assert(std::ranges::iter_move(commonIter1) == 1);
-    ASSERT_SAME_TYPE(decltype(std::ranges::iter_move(commonIter1)), int&&);
+    using It = const int*;
+    using CommonIt = std::common_iterator<It, sentinel_wrapper<It>>;
+    int a[] = {1, 2, 3};
+    CommonIt it = CommonIt(It(a));
+    ASSERT_NOEXCEPT(iter_move(it));
+    ASSERT_NOEXCEPT(std::ranges::iter_move(it));
+    ASSERT_SAME_TYPE(decltype(iter_move(it)), const int&&);
+    ASSERT_SAME_TYPE(decltype(std::ranges::iter_move(it)), const int&&);
+    assert(iter_move(it) == 1);
+    if (!std::is_constant_evaluated()) {
+      ++it;
+      assert(iter_move(it) == 2);
+    }
   }
   {
-    auto iter1 = random_access_iterator<int*>(buffer);
-    auto commonIter1 = std::common_iterator<decltype(iter1), sentinel_type<int*>>(iter1);
-    assert(std::ranges::iter_move(commonIter1) == 1);
-    ASSERT_SAME_TYPE(decltype(std::ranges::iter_move(commonIter1)), int&&);
+    using It = IterMovingIt;
+    using CommonIt = std::common_iterator<It, std::default_sentinel_t>;
+    CommonIt it = CommonIt(It());
+    ASSERT_NOT_NOEXCEPT(iter_move(it));
+    ASSERT_NOT_NOEXCEPT(std::ranges::iter_move(it));
+    ASSERT_SAME_TYPE(decltype(iter_move(it)), int);
+    ASSERT_SAME_TYPE(decltype(std::ranges::iter_move(it)), int);
+    assert(iter_move(it) == 42);
+    if (!std::is_constant_evaluated()) {
+      ++it;
+      assert(iter_move(it) == 42);
+    }
   }
+  return true;
 }
 
 int main(int, char**) {
   test();
+  static_assert(test());
 
   return 0;
 }
