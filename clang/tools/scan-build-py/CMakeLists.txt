@@ -43,7 +43,7 @@ foreach(BinFile ${BinFiles})
                          ${CMAKE_BINARY_DIR}/bin/scan-build-py
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/bin/scan-build)
     install (PROGRAMS "bin/scan-build"
-             DESTINATION bin
+             DESTINATION "${CMAKE_INSTALL_BINDIR}"
              RENAME scan-build-py
              COMPONENT scan-build-py)
     list(APPEND Depends ${CMAKE_BINARY_DIR}/bin/scan-build-py)
@@ -56,7 +56,7 @@ foreach(BinFile ${BinFiles})
                          ${CMAKE_BINARY_DIR}/bin/
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/bin/${BinFile})
     install(PROGRAMS bin/${BinFile}
-            DESTINATION bin
+            DESTINATION "${CMAKE_INSTALL_BINDIR}"
             COMPONENT scan-build-py)
     list(APPEND Depends ${CMAKE_BINARY_DIR}/bin/${BinFile})
   endif()
@@ -72,7 +72,7 @@ foreach(lib ${LibExecs})
                      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libexec/${lib})
   list(APPEND Depends ${CMAKE_BINARY_DIR}/libexec/${lib})
   install(PROGRAMS libexec/${lib}
-          DESTINATION libexec
+          DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}"
           COMPONENT scan-build-py)
 endforeach()
 

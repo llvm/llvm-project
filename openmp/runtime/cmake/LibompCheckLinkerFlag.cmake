@@ -8,6 +8,8 @@
 #//===----------------------------------------------------------------------===//
 #
 
+include(GNUInstallDirs)
+
 # Checking a linker flag to build a shared library
 # There is no real trivial way to do this in CMake, so we implement it here
 # this will have ${boolean} = TRUE if the flag succeeds, otherwise FALSE.

@@ -22,4 +22,4 @@ target_link_libraries(clang-nvlink-wrapper
   ${CLANG_NVLINK_WRAPPER_LIB_DEPS}
   )
 
-install(TARGETS clang-nvlink-wrapper RUNTIME DESTINATION bin)
+install(TARGETS clang-nvlink-wrapper RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
