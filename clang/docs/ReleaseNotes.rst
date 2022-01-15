@@ -310,6 +310,9 @@ clang-format
   `const` `volatile` `static` `inline` `constexpr` `restrict`
   to be controlled relative to the `type`.
 
+- Option ``RemoveBracesLLVM`` has been added to remove optional braces of
+  control statements for the LLVM style.
+
 - Option ``SeparateDefinitionBlocks`` has been added to insert or remove empty
   lines between definition blocks including functions, classes, structs, enums,
   and namespaces.
