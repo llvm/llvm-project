@@ -40,7 +40,7 @@
 ; RV32F: .attribute 5, "rv32i2p0_f2p0"
 ; RV32D: .attribute 5, "rv32i2p0_f2p0_d2p0"
 ; RV32C: .attribute 5, "rv32i2p0_c2p0"
-; RV32V: .attribute 5, "rv32i2p0_v0p10_zvlsseg0p10"
+; RV32V: .attribute 5, "rv32i2p0_v0p10_zvamo0p10_zvl128b0p10_zvl32b0p10_zvl64b0p10_zvlsseg0p10"
 ; RV32ZFHMIN: .attribute 5, "rv32i2p0_f2p0_zfhmin1p0"
 ; RV32ZFH: .attribute 5, "rv32i2p0_f2p0_zfh1p0_zfhmin1p0"
 ; RV32ZBA: .attribute 5, "rv32i2p0_zba1p0"
@@ -53,7 +53,7 @@
 ; RV32ZBR: .attribute 5, "rv32i2p0_zbr0p93"
 ; RV32ZBS: .attribute 5, "rv32i2p0_zbs1p0"
 ; RV32ZBT: .attribute 5, "rv32i2p0_zbt0p93"
-; RV32COMBINED: .attribute 5, "rv32i2p0_f2p0_v0p10_zfh1p0_zfhmin1p0_zbb1p0_zvlsseg0p10"
+; RV32COMBINED: .attribute 5, "rv32i2p0_f2p0_v0p10_zfh1p0_zfhmin1p0_zbb1p0_zvamo0p10_zvl128b0p10_zvl32b0p10_zvl64b0p10_zvlsseg0p10"
 
 ; RV64M: .attribute 5, "rv64i2p0_m2p0"
 ; RV64A: .attribute 5, "rv64i2p0_a2p0"
@@ -72,8 +72,8 @@
 ; RV64ZBR: .attribute 5, "rv64i2p0_zbr0p93"
 ; RV64ZBS: .attribute 5, "rv64i2p0_zbs1p0"
 ; RV64ZBT: .attribute 5, "rv64i2p0_zbt0p93"
-; RV64V: .attribute 5, "rv64i2p0_v0p10_zvlsseg0p10"
-; RV64COMBINED: .attribute 5, "rv64i2p0_f2p0_v0p10_zfh1p0_zfhmin1p0_zbb1p0_zvlsseg0p10"
+; RV64V: .attribute 5, "rv64i2p0_v0p10_zvamo0p10_zvl128b0p10_zvl32b0p10_zvl64b0p10_zvlsseg0p10"
+; RV64COMBINED: .attribute 5, "rv64i2p0_f2p0_v0p10_zfh1p0_zfhmin1p0_zbb1p0_zvamo0p10_zvl128b0p10_zvl32b0p10_zvl64b0p10_zvlsseg0p10"
 
 
 define i32 @addi(i32 %a) {

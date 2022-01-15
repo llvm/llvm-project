@@ -18,6 +18,7 @@
 #include "RISCVRegisterBankInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -140,7 +141,15 @@ unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
          "Tried to get vector length without Zve or V extension support!");
   if (RVVVectorBitsMax == 0)
     return 0;
-  assert(RVVVectorBitsMax >= 128 && RVVVectorBitsMax <= 65536 &&
+
+  // ZvlLen specifies the minimum required vlen. The upper bound provided by
+  // riscv-v-vector-bits-max should be no less than it.
+  if (RVVVectorBitsMax < ZvlLen)
+    report_fatal_error("riscv-v-vector-bits-max specified is lower "
+                       "than the Zvl*b limitation");
+
+  // FIXME: Change to >= 32 when VLEN = 32 is supported
+  assert(RVVVectorBitsMax >= 64 && RVVVectorBitsMax <= 65536 &&
          isPowerOf2_32(RVVVectorBitsMax) &&
          "V extension requires vector length to be in the range of 128 to "
          "65536 and a power of 2!");
@@ -152,10 +161,17 @@ unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
 }
 
 unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
+  // ZvlLen specifies the minimum required vlen. The lower bound provided by
+  // riscv-v-vector-bits-min should be no less than it.
+  if (RVVVectorBitsMin != 0 && RVVVectorBitsMin < ZvlLen)
+    report_fatal_error("riscv-v-vector-bits-min specified is lower "
+                       "than the Zvl*b limitation");
+
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
+  // FIXME: Change to >= 32 when VLEN = 32 is supported
   assert((RVVVectorBitsMin == 0 ||
-          (RVVVectorBitsMin >= 128 && RVVVectorBitsMax <= 65536 &&
+          (RVVVectorBitsMin >= 64 && RVVVectorBitsMax <= 65536 &&
            isPowerOf2_32(RVVVectorBitsMin))) &&
          "V extension requires vector length to be in the range of 128 to "
          "65536 and a power of 2!");
