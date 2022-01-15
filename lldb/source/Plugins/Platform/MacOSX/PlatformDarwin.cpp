@@ -237,7 +237,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
 
   Status err;
 
-  if (IsHost()) {
+  if (CheckLocalSharedCache()) {
     // When debugging on the host, we are most likely using the same shared
     // cache as our inferior. The dylibs from the shared cache might not
     // exist on the filesystem, so let's use the images in our own memory
@@ -644,7 +644,7 @@ const char *PlatformDarwin::GetCompatibleArch(ArchSpec::Core core, size_t idx) {
 /// distinct names (e.g. armv7f) but armv7 binaries run fine on an armv7f
 /// processor.
 void PlatformDarwin::ARMGetSupportedArchitectures(
-    std::vector<ArchSpec> &archs) {
+    std::vector<ArchSpec> &archs, llvm::Optional<llvm::Triple::OSType> os) {
   const ArchSpec system_arch = GetSystemArchitecture();
   const ArchSpec::Core system_core = system_arch.GetCore();
 
@@ -654,6 +654,8 @@ void PlatformDarwin::ARMGetSupportedArchitectures(
     llvm::Triple triple;
     triple.setArchName(compatible_arch);
     triple.setVendor(llvm::Triple::VendorType::Apple);
+    if (os)
+      triple.setOS(*os);
     archs.push_back(ArchSpec(triple));
   }
 }
