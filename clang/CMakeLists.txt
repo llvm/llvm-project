@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-include(GNUInstallDirs)
-
 # If we are not building as a part of LLVM, build Clang as an
 # standalone project, using LLVM as an external library:
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -426,7 +424,7 @@ include_directories(BEFORE
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/clang include/clang-c
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION include
     COMPONENT clang-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -435,7 +433,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/clang
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION include
     COMPONENT clang-headers
     FILES_MATCHING
     PATTERN "CMakeFiles" EXCLUDE
@@ -455,7 +453,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   add_custom_target(bash-autocomplete DEPENDS utils/bash-autocomplete.sh)
   install(PROGRAMS utils/bash-autocomplete.sh
-          DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+          DESTINATION share/clang
           COMPONENT bash-autocomplete)
   if(NOT LLVM_ENABLE_IDE)
     add_llvm_install_targets(install-bash-autocomplete
