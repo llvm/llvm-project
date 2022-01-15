@@ -47,7 +47,7 @@ if(CLANG_INSTALL_SCANBUILD)
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/bin/${BinFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/bin/${BinFile})
     install(PROGRAMS bin/${BinFile}
-            DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            DESTINATION bin
             COMPONENT scan-build)
   endforeach()
 
@@ -61,7 +61,7 @@ if(CLANG_INSTALL_SCANBUILD)
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/libexec/${LibexecFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/libexec/${LibexecFile})
     install(PROGRAMS libexec/${LibexecFile}
-            DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}"
+            DESTINATION libexec
             COMPONENT scan-build)
   endforeach()
 
@@ -89,7 +89,7 @@ if(CLANG_INSTALL_SCANBUILD)
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/share/scan-build/${ShareFile})
     list(APPEND Depends ${CMAKE_BINARY_DIR}/share/scan-build/${ShareFile})
     install(FILES share/scan-build/${ShareFile}
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/scan-build"
+            DESTINATION share/scan-build
             COMPONENT scan-build)
   endforeach()
 

@@ -19,8 +19,8 @@ clang_target_link_libraries(clang-rename
   )
 
 install(PROGRAMS clang-rename.py
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-rename)
 install(PROGRAMS clang-rename.el
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-rename)
