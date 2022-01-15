@@ -78,6 +78,15 @@ public:
     return nullptr;
   }
 
+  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+    auto *CC = dyn_cast<Constant>(C);
+    auto *TC = dyn_cast<Constant>(True);
+    auto *FC = dyn_cast<Constant>(False);
+    if (CC && TC && FC)
+      return ConstantExpr::getSelect(CC, TC, FC);
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -246,11 +255,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Other Instructions
   //===--------------------------------------------------------------------===//
-
-  Constant *CreateSelect(Constant *C, Constant *True,
-                         Constant *False) const override {
-    return ConstantExpr::getSelect(C, True, False);
-  }
 
   Constant *CreateExtractElement(Constant *Vec, Constant *Idx) const override {
     return ConstantExpr::getExtractElement(Vec, Idx);

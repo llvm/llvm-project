@@ -65,6 +65,10 @@ public:
     return SimplifyGEPInst(Ty, Ptr, IdxList, IsInBounds, SQ);
   }
 
+  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+    return SimplifySelectInst(C, True, False, SQ);
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -219,11 +223,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Other Instructions
   //===--------------------------------------------------------------------===//
-
-  Value *CreateSelect(Constant *C, Constant *True,
-                      Constant *False) const override {
-    return ConstFolder.CreateSelect(C, True, False);
-  }
 
   Value *CreateExtractElement(Constant *Vec, Constant *Idx) const override {
     return ConstFolder.CreateExtractElement(Vec, Idx);
