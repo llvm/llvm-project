@@ -10,13 +10,13 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -mattr=+f -mattr=+d \
 ; RUN:   -target-abi lp64d < %s | FileCheck %s -check-prefix=RV64IFD
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs -mattr=+f \
-; RUN:   -mattr=+experimental-zfh -target-abi ilp32f < %s \
+; RUN:   -mattr=+zfh -target-abi ilp32f < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32IFZFH
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs -mattr=+f -mattr=+d \
-; RUN:   -mattr=+experimental-zfh -target-abi ilp32d < %s \
+; RUN:   -mattr=+zfh -target-abi ilp32d < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32IFDZFH
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs -mattr=+f -mattr=+d \
-; RUN:   -mattr=+experimental-zfh -target-abi lp64d < %s \
+; RUN:   -mattr=+zfh -target-abi lp64d < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64IFDZFH
 
 ; Test fcopysign scenarios where the sign argument is casted to the type of the

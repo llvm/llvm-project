@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64IF
 ; RUN: llc -mtriple=riscv32 -mattr=+f -target-abi=ilp32f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV32-ILP32F
 ; RUN: llc -mtriple=riscv64 -mattr=+f -target-abi=lp64f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64-LP64F
-; RUN: llc -mtriple=riscv32 -mattr=+f,+experimental-zfhmin -target-abi=ilp32f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV32-ILP32ZFHMIN
-; RUN: llc -mtriple=riscv64 -mattr=+f,+experimental-zfhmin -target-abi=lp64f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64-LP64ZFHMIN
+; RUN: llc -mtriple=riscv32 -mattr=+f,+zfhmin -target-abi=ilp32f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV32-ILP32ZFHMIN
+; RUN: llc -mtriple=riscv64 -mattr=+f,+zfhmin -target-abi=lp64f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64-LP64ZFHMIN
 
 ; Tests passing half arguments and returns without Zfh.
 ; Covers with and without F extension and ilp32f/ilp64f
