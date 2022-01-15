@@ -4,7 +4,7 @@
 
 declare i32 @llvm.riscv.bfp.i32(i32 %a, i32 %b)
 
-define i32 @bfp32(i32 %a, i32 %b) nounwind {
+define signext i32 @bfp32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBF-LABEL: bfp32:
 ; RV64ZBF:       # %bb.0:
 ; RV64ZBF-NEXT:    bfpw a0, a0, a1
