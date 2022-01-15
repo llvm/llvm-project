@@ -10,6 +10,8 @@ endif()
 
 cmake_minimum_required(VERSION 3.13.4)
 
+include(GNUInstallDirs)
+
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 # Add path for custom modules
@@ -210,7 +212,7 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-set(LIBCXXABI_INSTALL_RUNTIME_DIR bin CACHE PATH
+set(LIBCXXABI_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path where built libc++abi runtime libraries should be installed.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
