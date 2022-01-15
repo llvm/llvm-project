@@ -271,14 +271,14 @@ private:
     MCAssembler &MCA = getStreamer().getAssembler();
     int64_t Offset;
     if (!LocalOffset->evaluateAsAbsolute(Offset, MCA))
-      MCA.getContext().reportFatalError(
-          LocalOffset->getLoc(), ".localentry expression must be absolute.");
+      MCA.getContext().reportError(LocalOffset->getLoc(),
+                                   ".localentry expression must be absolute");
 
     switch (Offset) {
     default:
-      MCA.getContext().reportFatalError(
-          LocalOffset->getLoc(),
-          ".localentry expression is not a valid power of 2.");
+      MCA.getContext().reportError(
+          LocalOffset->getLoc(), ".localentry expression must be a power of 2");
+      return 0;
     case 0:
       return 0;
     case 1:
