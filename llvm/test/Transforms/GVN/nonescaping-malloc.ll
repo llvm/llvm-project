@@ -35,7 +35,7 @@ entry:
 
 declare i64 @strlen(i8* nocapture) nounwind readonly
 
-declare noalias i8* @malloc(i64) nounwind inaccessiblememonly
+declare noalias i8* @malloc(i64) nounwind
 
 declare i32 @_ZN4llvm13StringMapImpl15LookupBucketForENS_9StringRefE(%"struct.llvm::StringMapImpl"*, i64, i64)
 
@@ -66,7 +66,7 @@ bb4.i:                                            ; preds = %entry
   %tmp4.i.i = sub i32 %tmp1.i.i, %tmp3.i.i
   %tmp5.i.i = add i32 %tmp4.i.i, 17
   %tmp8.i.i = zext i32 %tmp5.i.i to i64
-  %tmp.i20.i.i = tail call noalias i8* @malloc(i64 %tmp8.i.i) nounwind inaccessiblememonly
+  %tmp.i20.i.i = tail call noalias i8* @malloc(i64 %tmp8.i.i) nounwind
   %tmp10.i.i = bitcast i8* %tmp.i20.i.i to %"struct.llvm::StringMapEntry<void*>"*
   %tmp12.i.i = icmp eq i8* %tmp.i20.i.i, null
   br i1 %tmp12.i.i, label %_ZN4llvm14StringMapEntryIPvE6CreateINS_15MallocAllocatorES1_EEPS2_PKcS7_RT_T0_.exit.i, label %bb.i.i
