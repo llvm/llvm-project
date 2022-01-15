@@ -122,7 +122,7 @@ DWORD WINAPI RunThread(void *argument) {
           OpenThread(THREAD_ALL_ACCESS, FALSE, thread_entry.th32ThreadID);
       CHECK(thread);
 
-      if (SuspendThread(thread) == -1) {
+      if (SuspendThread(thread) == (DWORD)-1) {
         DWORD last_error = GetLastError();
 
         VPrintf(1, "Could not suspend thread %lu (error %lu)",
