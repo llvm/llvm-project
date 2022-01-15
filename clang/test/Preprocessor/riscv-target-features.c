@@ -228,10 +228,18 @@
 // CHECK-V-EXT: __riscv_vector 1
 // CHECK-V-EXT: __riscv_zvlsseg 10000
 
-// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv32izfh0p1 -x c -E -dM %s \
+// RUN: %clang -target riscv32-unknown-linux-gnu \
+// RUN: -march=rv32izfhmin1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZFHMIN-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izfhmin1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZFHMIN-EXT %s
+// CHECK-ZFHMIN-EXT: __riscv_zfhmin 10000
+
+// RUN: %clang -target riscv32-unknown-linux-gnu \
+// RUN: -march=rv32izfh1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFH-EXT %s
-// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
-// RUN: -march=rv64izfh0p1 -x c -E -dM %s \
+// RUN: %clang -target riscv64-unknown-linux-gnu \
+// RUN: -march=rv64izfh1p0 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZFH-EXT %s
-// CHECK-ZFH-EXT: __riscv_zfh 1000
+// CHECK-ZFH-EXT: __riscv_zfh 10000
