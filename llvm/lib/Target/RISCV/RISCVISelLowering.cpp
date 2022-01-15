@@ -5811,6 +5811,35 @@ SDValue RISCVTargetLowering::lowerSET_ROUNDING(SDValue Op,
                      RMValue);
 }
 
+static RISCVISD::NodeType getRISCVWOpcodeByIntr(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected Intrinsic");
+  case Intrinsic::riscv_grev:
+    return RISCVISD::GREVW;
+  case Intrinsic::riscv_gorc:
+    return RISCVISD::GORCW;
+  case Intrinsic::riscv_bcompress:
+    return RISCVISD::BCOMPRESSW;
+  case Intrinsic::riscv_bdecompress:
+    return RISCVISD::BDECOMPRESSW;
+  case Intrinsic::riscv_bfp:
+    return RISCVISD::BFPW;
+  }
+}
+
+// Converts the given intrinsic to a i64 operation with any extension.
+static SDValue customLegalizeToWOpByIntr(SDNode *N, SelectionDAG &DAG,
+                                         unsigned IntNo) {
+  SDLoc DL(N);
+  RISCVISD::NodeType WOpcode = getRISCVWOpcodeByIntr(IntNo);
+  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+  SDValue NewOp2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+  SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp1, NewOp2);
+  // ReplaceNodeResults requires we maintain the same type for the return value.
+  return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
+}
+
 // Returns the opcode of the target-specific SDNode that implements the 32-bit
 // form of the given Opcode.
 static RISCVISD::NodeType getRISCVWOpcode(unsigned Opcode) {
@@ -6271,6 +6300,16 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     default:
       llvm_unreachable(
           "Don't know how to custom type legalize this intrinsic!");
+    case Intrinsic::riscv_grev:
+    case Intrinsic::riscv_gorc:
+    case Intrinsic::riscv_bcompress:
+    case Intrinsic::riscv_bdecompress:
+    case Intrinsic::riscv_bfp: {
+      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+             "Unexpected custom legalisation");
+      Results.push_back(customLegalizeToWOpByIntr(N, DAG, IntNo));
+      break;
+    }
     case Intrinsic::riscv_orc_b: {
       // Lower to the GORCI encoding for orc.b with the operand extended.
       SDValue NewOp =
@@ -6282,20 +6321,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                 DAG.getConstant(7, DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
-    }
-    case Intrinsic::riscv_grev:
-    case Intrinsic::riscv_gorc: {
-      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
-      SDValue NewOp1 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue NewOp2 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      unsigned Opc =
-          IntNo == Intrinsic::riscv_grev ? RISCVISD::GREVW : RISCVISD::GORCW;
-      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp1, NewOp2);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      break;
     }
     case Intrinsic::riscv_shfl:
     case Intrinsic::riscv_unshfl: {
@@ -6314,32 +6339,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
             IntNo == Intrinsic::riscv_shfl ? RISCVISD::SHFL : RISCVISD::UNSHFL;
       }
       SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp1, NewOp2);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      break;
-    }
-    case Intrinsic::riscv_bcompress:
-    case Intrinsic::riscv_bdecompress: {
-      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
-      SDValue NewOp1 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue NewOp2 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      unsigned Opc = IntNo == Intrinsic::riscv_bcompress
-                         ? RISCVISD::BCOMPRESSW
-                         : RISCVISD::BDECOMPRESSW;
-      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp1, NewOp2);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      break;
-    }
-    case Intrinsic::riscv_bfp: {
-      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
-      SDValue NewOp1 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue NewOp2 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      SDValue Res = DAG.getNode(RISCVISD::BFPW, DL, MVT::i64, NewOp1, NewOp2);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       break;
     }
