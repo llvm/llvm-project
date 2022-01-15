@@ -490,11 +490,11 @@ if( MSVC )
 
   # Get all linker flags in upper case form so we can search them.
   string(CONCAT all_linker_flags_uppercase
-     ${CMAKE_EXE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}}
-     ${CMAKE_EXE_LINKER_FLAGS}
-     ${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}}
-     ${CMAKE_MODULE_LINKER_FLAGS}
-     ${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}}
+     ${CMAKE_EXE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
+     ${CMAKE_EXE_LINKER_FLAGS} " "
+     ${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
+     ${CMAKE_MODULE_LINKER_FLAGS} " "
+     ${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} " "
      ${CMAKE_SHARED_LINKER_FLAGS})
   string(TOUPPER "${all_linker_flags_uppercase}" all_linker_flags_uppercase)
 

@@ -79,12 +79,11 @@ entry:
   ret void
 }
 
-; FIXME: Shadow for byval should be reset not copied before the call.
 define void @ByValForwardByValNoSanitize(i32, i128* byval(i128) %p) {
 ; CHECK-LABEL: @ByValForwardByValNoSanitize(
 ; CHECK-NEXT:  entry:
 ; CHECK:         call void @llvm.memset.p0i8.i64(i8* align 8 {{.*}}, i8 0, i64 16, i1 false)
-; CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast ([100 x i64]* @__msan_param_tls to i8*), i8* {{.*}}, i64 16, i1 false) 
+; CHECK:         call void @llvm.memset.p0i8.i64(i8* bitcast ([100 x i64]* @__msan_param_tls to i8*), i8 0, i64 16, i1 false)
 ; CHECK:         store i32 0, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0)
 ; CHECK-NEXT:    call void @FnByVal(
 ; CHECK-NEXT:    ret void

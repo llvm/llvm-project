@@ -150,9 +150,21 @@ def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
                   AssemblerPredicate<(all_of(not FeatureNoRVCHints)),
                                       "RVC Hint Instructions">;
 
+def FeatureStdExtZvl32b : SubtargetFeature<"experimental-zvl32b", "ZvlLen", "ExtZvl::Zvl32b",
+                       "'Zvl' (Minimum Vector Length) 32">;
+
+foreach i = { 6-15 } in {
+    defvar I = !shl(1, i);
+    def FeatureStdExtZvl#I#b :
+        SubtargetFeature<"experimental-zvl"#I#"b", "ZvlLen", "ExtZvl::Zvl"#I#"b",
+                        "'Zvl' (Minimum Vector Length) "#I,
+                        [!cast<SubtargetFeature>("FeatureStdExtZvl"#!srl(I, 1)#"b")]>;
+}
+
 def FeatureStdExtV
     : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
-                       "'V' (Vector Instructions)">;
+                       "'V' (Vector Instructions)",
+                       [FeatureStdExtZvl128b]>;
 def HasStdExtV : Predicate<"Subtarget->hasStdExtV()">,
                            AssemblerPredicate<(all_of FeatureStdExtV),
                            "'V' (Vector Instructions)">;
