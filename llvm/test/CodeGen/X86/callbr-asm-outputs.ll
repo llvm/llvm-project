@@ -20,7 +20,7 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT:    retl
 entry:
   %add = add nsw i32 %x, 4
-  %ret = callbr i32 asm "xorl $1, $0; jmp ${2:l}", "=r,r,X,~{dirflag},~{fpsr},~{flags}"(i32 %add, i8* blockaddress(@test1, %abnormal))
+  %ret = callbr i32 asm "xorl $1, $0; jmp ${2:l}", "=r,r,i,~{dirflag},~{fpsr},~{flags}"(i32 %add, i8* blockaddress(@test1, %abnormal))
           to label %normal [label %abnormal]
 
 normal:
@@ -77,11 +77,11 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "={si},={di},r,X,X,0,1,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i8* blockaddress(@test2, %label_true), i8* blockaddress(@test2, %return), i32 %out1, i32 %out2)
+  %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "={si},={di},r,i,i,0,1,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i8* blockaddress(@test2, %label_true), i8* blockaddress(@test2, %return), i32 %out1, i32 %out2)
           to label %if.end [label %label_true, label %return]
 
 if.else:                                          ; preds = %entry
-  %1 = callbr { i32, i32 } asm sideeffect "testl $0, $1; testl $2, $3; jne ${5:l}", "={si},={di},r,r,X,X,0,1,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i32 %out2, i8* blockaddress(@test2, %label_true), i8* blockaddress(@test2, %return), i32 %out1, i32 %out2)
+  %1 = callbr { i32, i32 } asm sideeffect "testl $0, $1; testl $2, $3; jne ${5:l}", "={si},={di},r,r,i,i,0,1,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i32 %out2, i8* blockaddress(@test2, %label_true), i8* blockaddress(@test2, %return), i32 %out1, i32 %out2)
           to label %if.end [label %label_true, label %return]
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -140,10 +140,10 @@ entry:
   br i1 %cmp, label %true, label %false
 
 true:
-  %0 = callbr { i32, i32 } asm sideeffect ".word $0, $1", "={si},={di},X" (i8* blockaddress(@test3, %indirect)) to label %asm.fallthrough [label %indirect]
+  %0 = callbr { i32, i32 } asm sideeffect ".word $0, $1", "={si},={di},i" (i8* blockaddress(@test3, %indirect)) to label %asm.fallthrough [label %indirect]
 
 false:
-  %1 = callbr { i32, i32 } asm sideeffect ".word $0, $1", "={ax},={dx},X" (i8* blockaddress(@test3, %indirect)) to label %asm.fallthrough [label %indirect]
+  %1 = callbr { i32, i32 } asm sideeffect ".word $0, $1", "={ax},={dx},i" (i8* blockaddress(@test3, %indirect)) to label %asm.fallthrough [label %indirect]
 
 asm.fallthrough:
   %vals = phi { i32, i32 } [ %0, %true ], [ %1, %false ]
@@ -182,13 +182,13 @@ define i32 @test4(i32 %out1, i32 %out2) {
 ; CHECK-NEXT:  .LBB3_4: # %return
 ; CHECK-NEXT:    retl
 entry:
-  %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "=r,=r,r,X,X,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i8* blockaddress(@test4, %label_true), i8* blockaddress(@test4, %return))
+  %0 = callbr { i32, i32 } asm sideeffect "testl $0, $0; testl $1, $2; jne ${3:l}", "=r,=r,r,i,i,~{dirflag},~{fpsr},~{flags}"(i32 %out1, i8* blockaddress(@test4, %label_true), i8* blockaddress(@test4, %return))
           to label %asm.fallthrough [label %label_true, label %return]
 
 asm.fallthrough:                                  ; preds = %entry
   %asmresult = extractvalue { i32, i32 } %0, 0
   %asmresult1 = extractvalue { i32, i32 } %0, 1
-  %1 = callbr { i32, i32 } asm sideeffect "testl $0, $1; testl $2, $3; jne ${5:l}", "=r,=r,r,r,X,X,~{dirflag},~{fpsr},~{flags}"(i32 %asmresult, i32 %asmresult1, i8* blockaddress(@test4, %label_true), i8* blockaddress(@test4, %return))
+  %1 = callbr { i32, i32 } asm sideeffect "testl $0, $1; testl $2, $3; jne ${5:l}", "=r,=r,r,r,i,i,~{dirflag},~{fpsr},~{flags}"(i32 %asmresult, i32 %asmresult1, i8* blockaddress(@test4, %label_true), i8* blockaddress(@test4, %return))
           to label %asm.fallthrough2 [label %label_true, label %return]
 
 asm.fallthrough2:                                 ; preds = %asm.fallthrough
@@ -204,3 +204,31 @@ return:                                           ; preds = %entry, %asm.fallthr
   %retval.0 = phi i32 [ %add, %asm.fallthrough2 ], [ -2, %label_true ], [ -1, %asm.fallthrough ], [ -1, %entry ]
   ret i32 %retval.0
 }
+
+; Test5 - test that we don't rely on a positional constraint. ie. +r in
+; GCCAsmStmt being turned into "={esp},0" since after D87279 they're turned
+; into "={esp},{esp}". This previously caused an ICE; this test is more so
+; about avoiding another ICE than what the actual output is.
+define dso_local void @test5() {
+; CHECK-LABEL: test5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:  .Ltmp6: # Block address taken
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    retl
+  %1 = call i32 @llvm.read_register.i32(metadata !3)
+  %2 = callbr i32 asm "", "={esp},X,{esp},~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@test5, %4), i32 %1)
+          to label %3 [label %4]
+
+3:
+  call void @llvm.write_register.i32(metadata !3, i32 %2)
+  br label %4
+
+4:
+  ret void
+}
+
+declare i32 @llvm.read_register.i32(metadata)
+declare void @llvm.write_register.i32(metadata, i32)
+!3 = !{!"esp"}

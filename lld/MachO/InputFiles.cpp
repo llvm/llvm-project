@@ -63,10 +63,12 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/InterfaceFile.h"
 
@@ -114,7 +116,7 @@ static std::vector<PlatformInfo> getPlatformInfos(const InputFile *input) {
   std::vector<PlatformInfo> platformInfos;
   for (auto *cmd : findCommands<build_version_command>(hdr, LC_BUILD_VERSION)) {
     PlatformInfo info;
-    info.target.Platform = static_cast<PlatformKind>(cmd->platform);
+    info.target.Platform = static_cast<PlatformType>(cmd->platform);
     info.minimum = decodeVersion(cmd->minos);
     platformInfos.emplace_back(std::move(info));
   }
@@ -124,16 +126,16 @@ static std::vector<PlatformInfo> getPlatformInfos(const InputFile *input) {
     PlatformInfo info;
     switch (cmd->cmd) {
     case LC_VERSION_MIN_MACOSX:
-      info.target.Platform = PlatformKind::macOS;
+      info.target.Platform = PLATFORM_MACOS;
       break;
     case LC_VERSION_MIN_IPHONEOS:
-      info.target.Platform = PlatformKind::iOS;
+      info.target.Platform = PLATFORM_IOS;
       break;
     case LC_VERSION_MIN_TVOS:
-      info.target.Platform = PlatformKind::tvOS;
+      info.target.Platform = PLATFORM_TVOS;
       break;
     case LC_VERSION_MIN_WATCHOS:
-      info.target.Platform = PlatformKind::watchOS;
+      info.target.Platform = PLATFORM_WATCHOS;
       break;
     }
     info.minimum = decodeVersion(cmd->version);
@@ -325,6 +327,25 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
       if (name == section_names::compactUnwind)
         compactUnwindSection = &sections.back();
     } else if (segname == segment_names::llvm) {
+      if (name == "__cg_profile" && config->callGraphProfileSort) {
+        TimeTraceScope timeScope("Parsing call graph section");
+        BinaryStreamReader reader(data, support::little);
+        while (!reader.empty()) {
+          uint32_t fromIndex, toIndex;
+          uint64_t count;
+          if (Error err = reader.readInteger(fromIndex))
+            fatal(toString(this) + ": Expected 32-bit integer");
+          if (Error err = reader.readInteger(toIndex))
+            fatal(toString(this) + ": Expected 32-bit integer");
+          if (Error err = reader.readInteger(count))
+            fatal(toString(this) + ": Expected 64-bit integer");
+          callGraph.emplace_back();
+          CallGraphEntry &entry = callGraph.back();
+          entry.fromIndex = fromIndex;
+          entry.toIndex = toIndex;
+          entry.count = count;
+        }
+      }
       // ld64 does not appear to emit contents from sections within the __LLVM
       // segment. Symbols within those sections point to bitcode metadata
       // instead of actual symbols. Global symbols within those sections could
@@ -1426,7 +1447,7 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
 
 void ArchiveFile::addLazySymbols() {
   for (const object::Archive::Symbol &sym : file->symbols())
-    symtab->addLazy(sym.getName(), this, sym);
+    symtab->addLazyArchive(sym.getName(), this, sym);
 }
 
 static Expected<InputFile *> loadArchiveMember(MemoryBufferRef mb,

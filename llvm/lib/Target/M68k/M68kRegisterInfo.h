@@ -1,4 +1,4 @@
-//===-- M68kRegisterInfo.h - M68k Register Information Impl --*- C++ --===//
+//===-- M68kRegisterInfo.h - M68k Register Information Impl -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -106,4 +106,4 @@ public:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KREGISTERINFO_H

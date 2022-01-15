@@ -181,82 +181,189 @@ template <class InputIterator, class ForwardIterator>
 ForwardIterator
 uninitialized_copy(InputIterator first, InputIterator last, ForwardIterator result);
 
+namespace ranges {
+
+template<class InputIterator, class OutputIterator>
+using uninitialized_copy_result = in_out_result<InputIterator, OutputIterator>; // since C++20
+
+template<input_iterator InputIterator, sentinel-for<InputIterator> Sentinel1, nothrow-forward-iterator OutputIterator, nothrow-sentinel-for<OutputIterator> Sentinel2>
+  requires constructible_from<iter_value_t<OutputIterator>, iter_reference_t<InputIterator>>
+uninitialized_copy_result<InputIterator, OutputIterator>
+uninitialized_copy(InputIterator ifirst, Sentinel1 ilast, OutputIterator ofirst, Sentinel2 olast); // since C++20
+
+template<input_range InputRange, nothrow-forward-range OutputRange>
+  requires constructible_from<range_value_t<OutputRange>, range_reference_t<InputRange>>
+uninitialized_copy_result<borrowed_iterator_t<InputRange>, borrowed_iterator_t<OutputRange>>
+uninitialized_copy(InputRange&& in_range, OutputRange&& out_range); // since C++20
+
+}
+
 template <class InputIterator, class Size, class ForwardIterator>
 ForwardIterator
 uninitialized_copy_n(InputIterator first, Size n, ForwardIterator result);
 
+namespace ranges {
+
+template<class InputIterator, class OutputIterator>
+using uninitialized_copy_n_result = in_out_result<InputIterator, OutputIterator>; // since C++20
+
+template<input_iterator InputIterator, nothrow-forward-iterator OutputIterator, nothrow-sentinel-for<OutputIterator> Sentinel>
+  requires constructible_from<iter_value_t<OutputIterator>, iter_reference_t<InputIterator>>
+uninitialized_copy_n_result<InputIterator, OutputIterator>
+uninitialized_copy_n(InputIterator ifirst, iter_difference_t<InputIterator> n, OutputIterator ofirst, Sentinel olast); // since C++20
+
+}
+
 template <class ForwardIterator, class T>
 void uninitialized_fill(ForwardIterator first, ForwardIterator last, const T& x);
 
+namespace ranges {
+
 template <nothrow-forward-iterator ForwardIterator, nothrow-sentinel-for<ForwardIterator> Sentinel, class T>
   requires constructible_from<iter_value_t<ForwardIterator>, const T&>
-ForwardIterator ranges::uninitialized_fill(ForwardIterator first, Sentinel last, const T& x); // since C++20
+ForwardIterator uninitialized_fill(ForwardIterator first, Sentinel last, const T& x); // since C++20
 
 template <nothrow-forward-range ForwardRange, class T>
   requires constructible_from<range_value_t<ForwardRange>, const T&>
-borrowed_iterator_t<ForwardRange> ranges::uninitialized_fill(ForwardRange&& range, const T& x); // since C++20
+borrowed_iterator_t<ForwardRange> uninitialized_fill(ForwardRange&& range, const T& x); // since C++20
+
+}
 
 template <class ForwardIterator, class Size, class T>
 ForwardIterator
 uninitialized_fill_n(ForwardIterator first, Size n, const T& x);
 
+namespace ranges {
+
 template <nothrow-forward-iterator ForwardIterator, class T>
   requires constructible_from<iter_value_t<ForwardIterator>, const T&>
-ForwardIterator ranges::uninitialized_fill_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
+ForwardIterator uninitialized_fill_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
+
+}
 
 template <class T, class ...Args>
 constexpr T* construct_at(T* location, Args&& ...args); // since C++20
 
+namespace ranges {
+  template<class T, class... Args>
+    constexpr T* construct_at(T* location, Args&&... args); // since C++20
+}
+
 template <class T>
 void destroy_at(T* location); // constexpr in C++20
+
+namespace ranges {
+  template<destructible T>
+    constexpr void destroy_at(T* location) noexcept; // since C++20
+}
 
 template <class ForwardIterator>
 void destroy(ForwardIterator first, ForwardIterator last); // constexpr in C++20
 
+namespace ranges {
+  template<nothrow-input-iterator InputIterator, nothrow-sentinel-for<InputIterator> Sentinel>
+    requires destructible<iter_value_t<InputIterator>>
+    constexpr InputIterator destroy(InputIterator first, Sentinel last) noexcept; // since C++20
+  template<nothrow-input-range InputRange>
+    requires destructible<range_value_t<InputRange>>
+    constexpr borrowed_iterator_t<InputRange> destroy(InputRange&& range) noexcept; // since C++20
+}
+
 template <class ForwardIterator, class Size>
 ForwardIterator destroy_n(ForwardIterator first, Size n); // constexpr in C++20
+
+namespace ranges {
+  template<nothrow-input-iterator InputIterator>
+    requires destructible<iter_value_t<InputIterator>>
+    constexpr InputIterator destroy_n(InputIterator first, iter_difference_t<InputIterator> n) noexcept; // since C++20
+}
 
 template <class InputIterator, class ForwardIterator>
  ForwardIterator uninitialized_move(InputIterator first, InputIterator last, ForwardIterator result);
 
+namespace ranges {
+
+template<class InputIterator, class OutputIterator>
+using uninitialized_move_result = in_out_result<InputIterator, OutputIterator>; // since C++20
+
+template <input_iterator InputIterator, sentinel_for<InputIterator> Sentinel1, nothrow-forward-iterator OutputIterator, nothrow-sentinel-for<O> Sentinel2>
+  requires constructible_from<iter_value_t<OutputIterator>, iter_rvalue_reference_t<InputIterator>>
+uninitialized_move_result<InputIterator, OutputIterator>
+uninitialized_move(InputIterator ifirst, Sentinel1 ilast, OutputIterator ofirst, Sentinel2 olast); // since C++20
+
+template<input_range InputRange, nothrow-forward-range OutputRange>
+  requires constructible_from<range_value_t<OutputRange>, range_rvalue_reference_t<InputRange>>
+uninitialized_move_result<borrowed_iterator_t<InputRange>, borrowed_iterator_t<OutputRange>>
+uninitialized_move(InputRange&& in_range, OutputRange&& out_range); // since C++20
+
+}
+
 template <class InputIterator, class Size, class ForwardIterator>
  pair<InputIterator,ForwardIterator> uninitialized_move_n(InputIterator first, Size n, ForwardIterator result);
+
+namespace ranges {
+
+template<class InputIterator, class OutputIterator>
+using uninitialized_move_n_result = in_out_result<InputIterator, OutputIterator>; // since C++20
+
+template<input_iterator InputIterator, nothrow-forward-iterator OutputIterator, nothrow-sentinel-for<OutputIterator> Sentinel>
+  requires constructible_from<iter_value_t<OutputIterator>, iter_rvalue_reference_t<InputIterator>>
+uninitialized_move_n_result<InputIterator, OutputIterator>
+uninitialized_move_n(InputIterator ifirst, iter_difference_t<InputIterator> n, OutputIterator ofirst, Sentinel olast); // since C++20
+
+}
 
 template <class ForwardIterator>
  void uninitialized_value_construct(ForwardIterator first, ForwardIterator last);
 
+namespace ranges {
+
 template <nothrow-forward-iterator ForwardIterator, nothrow-sentinel-for<ForwardIterator> Sentinel>
   requires default_initializable<iter_value_t<ForwardIterator>>
- ForwardIterator ranges::uninitialized_value_construct(ForwardIterator first, Sentinel last); // since C++20
+ ForwardIterator uninitialized_value_construct(ForwardIterator first, Sentinel last); // since C++20
 
 template <nothrow-forward-range ForwardRange>
   requires default_initializable<range_value_t<ForwardRange>>
- borrowed_iterator_t<ForwardRange> ranges::uninitialized_value_construct(ForwardRange&& r); // since C++20
+ borrowed_iterator_t<ForwardRange> uninitialized_value_construct(ForwardRange&& r); // since C++20
+
+}
 
 template <class ForwardIterator, class Size>
  ForwardIterator uninitialized_value_construct_n(ForwardIterator first, Size n);
 
+namespace ranges {
+
 template <nothrow-forward-iterator ForwardIterator>
   requires default_initializable<iter_value_t<ForwardIterator>>
- ForwardIterator ranges::uninitialized_value_construct_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
+ ForwardIterator uninitialized_value_construct_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
+
+}
 
 template <class ForwardIterator>
  void uninitialized_default_construct(ForwardIterator first, ForwardIterator last);
 
+namespace ranges {
+
 template <nothrow-forward-iterator ForwardIterator, nothrow-sentinel-for<ForwardIterator> Sentinel>
   requires default_initializable<iter_value_t<ForwardIterator>>
- ForwardIterator ranges::uninitialized_default_construct(ForwardIterator first, Sentinel last); // since C++20
+ ForwardIterator uninitialized_default_construct(ForwardIterator first, Sentinel last); // since C++20
 
 template <nothrow-forward-range ForwardRange>
   requires default_initializable<range_value_t<ForwardRange>>
- borrowed_iterator_t<ForwardRange> ranges::uninitialized_default_construct(ForwardRange&& r); // since C++20
+ borrowed_iterator_t<ForwardRange> uninitialized_default_construct(ForwardRange&& r); // since C++20
+
+}
 
 template <class ForwardIterator, class Size>
  ForwardIterator uninitialized_default_construct_n(ForwardIterator first, Size n);
 
+namespace ranges {
+
 template <nothrow-forward-iterator ForwardIterator>
   requires default_initializable<iter_value_t<ForwardIterator>>
- ForwardIterator ranges::uninitialized_default_construct_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
+ ForwardIterator uninitialized_default_construct_n(ForwardIterator first, iter_difference_t<ForwardIterator> n); // since C++20
+
+}
 
 template <class Y> struct auto_ptr_ref {};      // deprecated in C++11, removed in C++17
 
@@ -708,6 +815,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <__memory/concepts.h>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
+#include <__memory/ranges_construct_at.h>
 #include <__memory/ranges_uninitialized_algorithms.h>
 #include <__memory/raw_storage_iterator.h>
 #include <__memory/shared_ptr.h>

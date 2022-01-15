@@ -245,13 +245,11 @@ def execute_in_tmp_dir(run, lit_config):
     tmp_dir = None
     if 'LIT_PRESERVES_TMP' not in os.environ:
         import tempfile
-        tmp_dir = tempfile.mkdtemp(prefix="lit_tmp_")
-        os.environ.update({
-                'TMPDIR': tmp_dir,
-                'TMP': tmp_dir,
-                'TEMP': tmp_dir,
-                'TEMPDIR': tmp_dir,
-                })
+        tmp_dir = tempfile.mkdtemp(prefix='lit_tmp_')
+        tmp_dir_envs = {k: tmp_dir for k in ['TMP', 'TMPDIR', 'TEMP', 'TEMPDIR']}
+        os.environ.update(tmp_dir_envs)
+        for cfg in {t.config for t in run.tests}:
+            cfg.environment.update(tmp_dir_envs)
     try:
         run.execute()
     finally:

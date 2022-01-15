@@ -22,7 +22,6 @@ namespace mlir {
 // Forward declarations.
 class Block;
 class ConversionPatternRewriter;
-class FuncOp;
 class MLIRContext;
 class Operation;
 class Type;
@@ -507,11 +506,6 @@ void populateFunctionLikeTypeConversionPattern(RewritePatternSet &patterns,
                                             patterns, converter);
 }
 
-/// Add a pattern to the given pattern list to convert the signature of a FuncOp
-/// with the given type converter.
-void populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
-                                         TypeConverter &converter);
-
 //===----------------------------------------------------------------------===//
 // Conversion PatternRewriter
 //===----------------------------------------------------------------------===//
@@ -780,11 +774,11 @@ public:
   /// Register the operations of the given dialects as dynamically legal, i.e.
   /// requiring custom handling by the callback.
   template <typename... Names>
-  void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback,
+  void addDynamicallyLegalDialect(const DynamicLegalityCallbackFn &callback,
                                   StringRef name, Names... names) {
     SmallVector<StringRef, 2> dialectNames({name, names...});
     setDialectAction(dialectNames, LegalizationAction::Dynamic);
-    setLegalityCallback(dialectNames, std::move(callback));
+    setLegalityCallback(dialectNames, callback);
   }
   template <typename... Args>
   void addDynamicallyLegalDialect(DynamicLegalityCallbackFn callback) {

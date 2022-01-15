@@ -146,10 +146,7 @@ bool mlir::isLegalForReturnOpTypeConversionPattern(Operation *op,
 
   // ReturnLike operations have to be legalized with their parent. For
   // return this is handled, for other ops they remain as is.
-  if (op->hasTrait<OpTrait::ReturnLike>())
-    return true;
-
-  return false;
+  return op->hasTrait<OpTrait::ReturnLike>();
 }
 
 bool mlir::isNotBranchOpInterfaceOrReturnLikeOp(Operation *op) {

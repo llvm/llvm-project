@@ -53,7 +53,14 @@ def LinalgComprehensiveModuleBufferize :
            "Use stack allocations for memrefs (for testing purposes only)">,
     Option<"analysisFuzzerSeed", "analysis-fuzzer-seed", "unsigned",
            /*default=*/"0",
-           "Analyze ops in random order with a given seed (fuzzer)">
+           "Analyze ops in random order with a given seed (fuzzer)">,
+    Option<"initTensorElimination", "init-tensor-elimination", "bool",
+            /*default=*/"false",
+           "(Experimental) Try to eliminate init_tensor operations that are "
+           "anchored at an insert_slice op">,
+    Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
+           "Specify if buffers should be deallocated. For compatibility with "
+           "core bufferization passes.">,
   ];
   let constructor = "mlir::createLinalgComprehensiveModuleBufferizePass()";
 }
@@ -237,6 +244,12 @@ def LinalgDetensorize : Pass<"linalg-detensorize", ""> {
     run on others. This is because it performs specific legalization of the
     blocks that make up the body, which it assumes has a FunctionLike trait.
   }];
+  let options = [
+    Option<"aggressiveMode", "aggressive-mode", "bool", /*default=*/"false",
+           "Detensorize all ops that qualify for detensoring along with branch"
+           " operands and basic-block arguments.">
+
+  ];
 }
 
 def LinalgStrategyTileAndFusePass

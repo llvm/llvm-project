@@ -335,10 +335,6 @@ static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
   unsigned width = type.isIndex() ? IndexType::kInternalStorageBitWidth
                                   : type.getIntOrFloatBitWidth();
 
-  // APInt cannot hold a zero bit value.
-  if (width == 0)
-    return llvm::None;
-
   if (width > result.getBitWidth()) {
     result = result.zext(width);
   } else if (width < result.getBitWidth()) {
@@ -350,7 +346,12 @@ static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
     result = result.trunc(width);
   }
 
-  if (isNegative) {
+  if (width == 0) {
+    // 0 bit integers cannot be negative and manipulation of their sign bit will
+    // assert, so short-cut validation here.
+    if (isNegative)
+      return llvm::None;
+  } else if (isNegative) {
     // The value is negative, we have an overflow if the sign bit is not set
     // in the negated apInt.
     result.negate();

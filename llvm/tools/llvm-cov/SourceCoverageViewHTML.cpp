@@ -322,7 +322,7 @@ std::string
 CoveragePrinterHTML::buildLinkToFile(StringRef SF,
                                      const FileCoverageSummary &FCS) const {
   SmallString<128> LinkTextStr(sys::path::relative_path(FCS.Name));
-  sys::path::remove_dots(LinkTextStr, /*remove_dot_dots=*/true);
+  sys::path::remove_dots(LinkTextStr, /*remove_dot_dot=*/true);
   sys::path::native(LinkTextStr);
   std::string LinkText = escape(LinkTextStr, Opts);
   std::string LinkTarget =

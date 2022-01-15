@@ -215,6 +215,33 @@ TEST(TypeLoc, LongRange) {
   EXPECT_TRUE(Verifier.match("long a;", typeLoc()));
 }
 
+TEST(TypeLoc, DecltypeTypeLocRange) {
+  llvm::Annotations Code(R"(
+    $full1[[decltype(1)]] a;
+    struct A {struct B{};} var;
+    $full2[[decltype(var)]]::B c;
+  )");
+  auto AST = tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{});
+  ASTContext &Ctx = AST->getASTContext();
+  const auto &SM = Ctx.getSourceManager();
+
+  auto MatchedLocs = clang::ast_matchers::match(
+      typeLoc(loc(decltypeType())).bind("target"), Ctx);
+  ASSERT_EQ(MatchedLocs.size(), 2u);
+  auto verify = [&](SourceRange ActualRange,
+                    const llvm::Annotations::Range &Expected) {
+    auto ActualCharRange =
+        Lexer::getAsCharRange(ActualRange, SM, Ctx.getLangOpts());
+    EXPECT_EQ(SM.getFileOffset(ActualCharRange.getBegin()), Expected.Begin);
+    EXPECT_EQ(SM.getFileOffset(ActualCharRange.getEnd()), Expected.End);
+  };
+  const auto *Target1 = MatchedLocs[0].getNodeAs<DecltypeTypeLoc>("target");
+  verify(Target1->getSourceRange(), Code.range("full1"));
+
+  const auto *Target2 = MatchedLocs[1].getNodeAs<DecltypeTypeLoc>("target");
+  verify(Target2->getSourceRange(), Code.range("full2"));
+}
+
 TEST(TypeLoc, LongDoubleRange) {
   RangeVerifier<TypeLoc> Verifier;
   Verifier.expectRange(1, 1, 1, 6);
@@ -559,7 +586,7 @@ TEST(FriendDecl, FriendDecltypeLocation) {
 
 TEST(FriendDecl, FriendDecltypeRange) {
   RangeVerifier<FriendDecl> Verifier;
-  Verifier.expectRange(4, 1, 4, 8);
+  Verifier.expectRange(4, 1, 4, 22);
   EXPECT_TRUE(Verifier.match("struct A;\n"
                              "A foo();\n"
                              "struct A {\n"

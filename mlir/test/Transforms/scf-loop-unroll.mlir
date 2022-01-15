@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s --test-loop-unrolling="unroll-factor=3" -split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s --test-loop-unrolling="unroll-factor=1" -split-input-file -canonicalize | FileCheck %s --check-prefix UNROLL-BY-1
 
 // CHECK-LABEL: scf_loop_unroll_single
 func @scf_loop_unroll_single(%arg0 : f32, %arg1 : f32) -> f32 {
@@ -41,4 +42,17 @@ func @scf_loop_unroll_double_symbolic_ub(%arg0 : f32, %arg1 : f32, %n : index) -
   // CHECK-NEXT: %[[SUM1:.*]]:2 = scf.for {{.*}} = %[[UB]] to %[[N]] step %[[C1]] iter_args(%[[V1:.*]] = %[[SUM]]#0, %[[V2:.*]] = %[[SUM]]#1)
   // CHECK:      }
   // CHECK-NEXT: return %[[SUM1]]#0, %[[SUM1]]#1
+}
+
+// UNROLL-BY-1-LABEL: scf_loop_unroll_factor_1_promote
+func @scf_loop_unroll_factor_1_promote() -> () {
+  %step = arith.constant 1 : index
+  %lo = arith.constant 0 : index
+  %hi = arith.constant 1 : index
+  scf.for %i = %lo to %hi step %step {
+    %x = "test.foo"(%i) : (index) -> i32
+  }
+  return
+  // UNROLL-BY-1-NEXT: %[[C0:.*]] = arith.constant 0 : index
+  // UNROLL-BY-1-NEXT: %{{.*}} = "test.foo"(%[[C0]]) : (index) -> i32
 }

@@ -80,6 +80,19 @@ struct DOTGraphTraits<PostDominatorTree*>
 };
 }
 
+PreservedAnalyses DomTreePrinterPass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
+  WriteDOTGraphToFile(F, &AM.getResult<DominatorTreeAnalysis>(F), "dom", false);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses DomTreeOnlyPrinterPass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  WriteDOTGraphToFile(F, &AM.getResult<DominatorTreeAnalysis>(F), "domonly",
+                      true);
+  return PreservedAnalyses::all();
+}
+
 void DominatorTree::viewGraph(const Twine &Name, const Twine &Title) {
 #ifndef NDEBUG
   ViewGraph(this, Name, false, Title);

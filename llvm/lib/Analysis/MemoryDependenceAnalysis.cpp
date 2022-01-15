@@ -594,7 +594,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // turn into undef.  Note that we can bypass the allocation itself when
     // looking for a clobber in many cases; that's an alias property and is
     // handled by BasicAA.
-    if (isa<AllocaInst>(Inst) || isNoAliasFn(Inst, &TLI)) {
+    if (isa<AllocaInst>(Inst) || isNoAliasCall(Inst)) {
       const Value *AccessPtr = getUnderlyingObject(MemLoc.Ptr);
       if (AccessPtr == Inst || BatchAA.isMustAlias(Inst, AccessPtr))
         return MemDepResult::getDef(Inst);

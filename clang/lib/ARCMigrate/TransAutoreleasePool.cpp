@@ -229,8 +229,9 @@ private:
     bool IsFollowedBySimpleReturnStmt;
     SmallVector<ObjCMessageExpr *, 4> Releases;
 
-    PoolScope() : PoolVar(nullptr), CompoundParent(nullptr), Begin(), End(),
-                  IsFollowedBySimpleReturnStmt(false) { }
+    PoolScope()
+        : PoolVar(nullptr), CompoundParent(nullptr),
+          IsFollowedBySimpleReturnStmt(false) {}
 
     SourceRange getIndentedRange() const {
       Stmt::child_iterator rangeS = Begin;

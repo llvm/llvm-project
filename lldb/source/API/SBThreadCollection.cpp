@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBThreadCollection.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Target/ThreadList.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBThreadCollection::SBThreadCollection() : m_opaque_sp() {
+SBThreadCollection::SBThreadCollection() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBThreadCollection);
 }
 
@@ -32,7 +32,7 @@ operator=(const SBThreadCollection &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBThreadCollection::SBThreadCollection(const ThreadCollectionSP &threads)
@@ -85,26 +85,5 @@ SBThread SBThreadCollection::GetThreadAtIndex(size_t idx) {
   SBThread thread;
   if (m_opaque_sp && idx < m_opaque_sp->GetSize())
     thread = m_opaque_sp->GetThreadAtIndex(idx);
-  return LLDB_RECORD_RESULT(thread);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBThreadCollection>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadCollection, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBThreadCollection,
-                            (const lldb::SBThreadCollection &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBThreadCollection &,
-      SBThreadCollection, operator=,(const lldb::SBThreadCollection &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBThreadCollection, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBThreadCollection, operator bool, ());
-  LLDB_REGISTER_METHOD(size_t, SBThreadCollection, GetSize, ());
-  LLDB_REGISTER_METHOD(lldb::SBThread, SBThreadCollection, GetThreadAtIndex,
-                       (size_t));
-}
-
-}
+  return thread;
 }

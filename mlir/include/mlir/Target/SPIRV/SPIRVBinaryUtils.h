@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TARGET_SPIRV_BINARY_UTILS_H_
-#define MLIR_TARGET_SPIRV_BINARY_UTILS_H_
+#ifndef MLIR_TARGET_SPIRV_SPIRVBINARYUTILS_H
+#define MLIR_TARGET_SPIRV_SPIRVBINARYUTILS_H
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Support/LLVM.h"
@@ -54,4 +54,4 @@ inline StringRef decodeStringLiteral(ArrayRef<uint32_t> words,
 } // namespace spirv
 } // namespace mlir
 
-#endif // MLIR_TARGET_SPIRV_BINARY_UTILS_H_
+#endif // MLIR_TARGET_SPIRV_SPIRVBINARYUTILS_H

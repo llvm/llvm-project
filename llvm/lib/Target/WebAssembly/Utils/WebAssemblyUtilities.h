@@ -25,7 +25,6 @@ class MachineInstr;
 class MachineOperand;
 class MCContext;
 class MCSymbolWasm;
-class StringRef;
 class WebAssemblyFunctionInfo;
 class WebAssemblySubtarget;
 

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -74,6 +75,11 @@ struct TestPDLByteCodePass
   StringRef getArgument() const final { return "test-pdl-bytecode-pass"; }
   StringRef getDescription() const final {
     return "Test PDL ByteCode functionality";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    // Mark the pdl_interp dialect as a dependent. This is needed, because we
+    // create ops from that dialect as a part of the PDL-to-PDLInterp lowering.
+    registry.insert<pdl_interp::PDLInterpDialect>();
   }
   void runOnOperation() final {
     ModuleOp module = getOperation();

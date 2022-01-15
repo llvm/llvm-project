@@ -174,28 +174,28 @@ body: |
     ; VI-LABEL: name: test_addrspacecast_p5_to_p0
     ; VI: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; VI-NEXT: [[C:%[0-9]+]]:_(p5) = G_CONSTANT i32 -1
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; VI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C2]](s64)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
+    ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
     ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
-    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p5), [[C]]
     ; VI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p5)
     ; VI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
-    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(p5) = G_CONSTANT i32 -1
+    ; VI-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p5), [[C1]]
+    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
     ; GFX9-LABEL: name: test_addrspacecast_p5_to_p0
     ; GFX9: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(p5) = G_CONSTANT i32 -1
-    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; GFX9-NEXT: [[S_GETREG_B32_:%[0-9]+]]:sreg_32(s32) = S_GETREG_B32 30735
-    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_]], [[C2]](s32)
-    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](p5), [[C]]
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_]], [[C]](s32)
     ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p5)
     ; GFX9-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[SHL]](s32)
-    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
+    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(p5) = G_CONSTANT i32 -1
+    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](p5), [[C1]]
+    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
     ; SI-LABEL: name: test_addrspacecast_p5_to_p0
     ; SI: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
@@ -257,28 +257,28 @@ body: |
     ; VI-LABEL: name: test_addrspacecast_p3_to_p0
     ; VI: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; VI-NEXT: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; VI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C2]](s64)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
     ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
-    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p3), [[C]]
     ; VI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p3)
     ; VI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
-    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
+    ; VI-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](p3), [[C1]]
+    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
     ; GFX9-LABEL: name: test_addrspacecast_p3_to_p0
     ; GFX9: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
-    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; GFX9-NEXT: [[S_GETREG_B32_:%[0-9]+]]:sreg_32(s32) = S_GETREG_B32 31759
-    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_]], [[C2]](s32)
-    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](p3), [[C]]
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_]], [[C]](s32)
     ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
     ; GFX9-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[SHL]](s32)
-    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
+    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
+    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](p3), [[C1]]
+    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
     ; SI-LABEL: name: test_addrspacecast_p3_to_p0
     ; SI: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
@@ -463,43 +463,43 @@ body: |
     ; VI: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY1]](<2 x p3>)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; VI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C2]](s64)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
+    ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
     ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
-    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](p3), [[C]]
     ; VI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV]](p3)
     ; VI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
-    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
+    ; VI-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](p3), [[C1]]
+    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; VI-NEXT: [[COPY3:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; VI-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY3]], [[C2]](s64)
+    ; VI-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY3]], [[C]](s64)
     ; VI-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
-    ; VI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[C]]
     ; VI-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV1]](p3)
     ; VI-NEXT: [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT1]](s32), [[LOAD1]](s32)
-    ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP1]](s1), [[MV1]], [[C1]]
+    ; VI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[C1]]
+    ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP1]](s1), [[MV1]], [[C2]]
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[SELECT]](p0), [[SELECT1]](p0)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p0>)
     ; GFX9-LABEL: name: test_addrspacecast_v2p3_to_v2p0
     ; GFX9: [[COPY:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY]](<2 x p3>)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
-    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
     ; GFX9-NEXT: [[S_GETREG_B32_:%[0-9]+]]:sreg_32(s32) = S_GETREG_B32 31759
-    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_]], [[C2]](s32)
-    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](p3), [[C]]
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_]], [[C]](s32)
     ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV]](p3)
     ; GFX9-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[SHL]](s32)
-    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C1]]
+    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
+    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(p0) = G_CONSTANT i64 0
+    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](p3), [[C1]]
+    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; GFX9-NEXT: [[S_GETREG_B32_1:%[0-9]+]]:sreg_32(s32) = S_GETREG_B32 31759
-    ; GFX9-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_1]], [[C2]](s32)
-    ; GFX9-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[C]]
+    ; GFX9-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_1]], [[C]](s32)
     ; GFX9-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV1]](p3)
     ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT1]](s32), [[SHL1]](s32)
-    ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP1]](s1), [[MV1]], [[C1]]
+    ; GFX9-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[C1]]
+    ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP1]](s1), [[MV1]], [[C2]]
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[SELECT]](p0), [[SELECT1]](p0)
     ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p0>)
     ; SI-LABEL: name: test_addrspacecast_v2p3_to_v2p0
@@ -636,6 +636,43 @@ body: |
     ; SI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](p6), [[C]](p6)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p0)
     %0:_(p6) = COPY $vgpr0
+    %1:_(p0) = G_ADDRSPACE_CAST %0
+    $vgpr0_vgpr1 = COPY %1
+...
+---
+name: test_addrspacecast_p5_fi_to_p0
+machineFunctionInfo:
+  argumentInfo:
+    queuePtr: { reg: '$sgpr4_sgpr5' }
+stack:
+  - { id: 0, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    ; VI-LABEL: name: test_addrspacecast_p5_fi_to_p0
+    ; VI: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    ; VI-NEXT: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
+    ; VI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
+    ; VI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p5)
+    ; VI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
+    ; VI-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY [[MV]](p0)
+    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[COPY2]](p0)
+    ; GFX9-LABEL: name: test_addrspacecast_p5_fi_to_p0
+    ; GFX9: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+    ; GFX9-NEXT: [[S_GETREG_B32_:%[0-9]+]]:sreg_32(s32) = S_GETREG_B32 30735
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[S_GETREG_B32_]], [[C]](s32)
+    ; GFX9-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p5)
+    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[SHL]](s32)
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY [[MV]](p0)
+    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[COPY]](p0)
+    ; SI-LABEL: name: test_addrspacecast_p5_fi_to_p0
+    ; SI: [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
+    ; SI-NEXT: [[ADDRSPACE_CAST:%[0-9]+]]:_(p0) = G_ADDRSPACE_CAST [[FRAME_INDEX]](p5)
+    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[ADDRSPACE_CAST]](p0)
+    %0:_(p5) = G_FRAME_INDEX %stack.0
     %1:_(p0) = G_ADDRSPACE_CAST %0
     $vgpr0_vgpr1 = COPY %1
 ...

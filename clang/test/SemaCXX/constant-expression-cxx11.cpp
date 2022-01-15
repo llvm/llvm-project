@@ -1939,20 +1939,16 @@ namespace Lifetime {
 
   constexpr int &get(int &&n) { return n; }
   // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
-  // cxx2b-error@-2 {{no return statement in constexpr function}} See PR40598
   constexpr int &&get_rv(int &&n) { return static_cast<int&&>(n); }
   struct S {
     int &&r;
     int &s;
     int t;
-    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // expected-note {{read of object outside its lifetime}}
-    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {}
-    // cxx2b-warning@-1 {{reference 's' is not yet bound to a value when used here}}
-    // cxx2b-note@-2    {{read of uninitialized object is not allowed in a constant expression}}
-    // cxx11_20-note@-3 {{read of object outside its lifetime}}
+    constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // cxx11_20-note {{read of object outside its lifetime}}
+    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // cxx11_20-note {{read of object outside its lifetime}}
   };
-  constexpr int k1 = S().t; // expected-error {{constant expression}} expected-note {{in call}}
-  constexpr int k2 = S(0).t; // expected-error {{constant expression}} expected-note {{in call}}
+  constexpr int k1 = S().t; // expected-error {{constant expression}} cxx11_20-note {{in call}}
+  constexpr int k2 = S(0).t; // expected-error {{constant expression}} cxx11_20-note {{in call}}
 
   struct Q {
     int n = 0;

@@ -3584,6 +3584,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = KnownBits::smin(Known, Known2);
     break;
   }
+  case ISD::FP_TO_UINT_SAT: {
+    // FP_TO_UINT_SAT produces an unsigned value that fits in the saturating VT.
+    EVT VT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+    Known.Zero |= APInt::getBitsSetFrom(BitWidth, VT.getScalarSizeInBits());
+    break;
+  }
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     if (Op.getResNo() == 1) {
       // The boolean result conforms to getBooleanContents.
@@ -3860,6 +3866,10 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
 
+  case ISD::FP_TO_SINT_SAT:
+    // FP_TO_SINT_SAT produces a signed value that fits in the saturating VT.
+    Tmp = cast<VTSDNode>(Op.getOperand(1))->getVT().getScalarSizeInBits();
+    return VTBits - Tmp + 1;
   case ISD::SIGN_EXTEND:
     Tmp = VTBits - Op.getOperand(0).getScalarValueSizeInBits();
     return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth+1) + Tmp;
@@ -4294,31 +4304,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   // Finally, if we can prove that the top bits of the result are 0's or 1's,
   // use this information.
   KnownBits Known = computeKnownBits(Op, DemandedElts, Depth);
-
-  APInt Mask;
-  if (Known.isNonNegative()) {        // sign bit is 0
-    Mask = Known.Zero;
-  } else if (Known.isNegative()) {  // sign bit is 1;
-    Mask = Known.One;
-  } else {
-    // Nothing known.
-    return FirstAnswer;
-  }
-
-  // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
-  // the number of identical bits in the top of the input value.
-  Mask <<= Mask.getBitWidth()-VTBits;
-  return std::max(FirstAnswer, Mask.countLeadingOnes());
+  return std::max(FirstAnswer, Known.countMinSignBits());
 }
 
-unsigned SelectionDAG::ComputeMinSignedBits(SDValue Op, unsigned Depth) const {
+unsigned SelectionDAG::ComputeMaxSignificantBits(SDValue Op,
+                                                 unsigned Depth) const {
   unsigned SignBits = ComputeNumSignBits(Op, Depth);
   return Op.getScalarValueSizeInBits() - SignBits + 1;
 }
 
-unsigned SelectionDAG::ComputeMinSignedBits(SDValue Op,
-                                            const APInt &DemandedElts,
-                                            unsigned Depth) const {
+unsigned SelectionDAG::ComputeMaxSignificantBits(SDValue Op,
+                                                 const APInt &DemandedElts,
+                                                 unsigned Depth) const {
   unsigned SignBits = ComputeNumSignBits(Op, DemandedElts, Depth);
   return Op.getScalarValueSizeInBits() - SignBits + 1;
 }
@@ -6358,7 +6355,7 @@ static SDValue getMemsetStringVal(EVT VT, const SDLoc &dl, SelectionDAG &DAG,
   Type *Ty = VT.getTypeForEVT(*DAG.getContext());
   if (TLI.shouldConvertConstantLoadToIntImm(Val, Ty))
     return DAG.getConstant(Val, dl, VT);
-  return SDValue(nullptr, 0);
+  return SDValue();
 }
 
 SDValue SelectionDAG::getMemBasePlusOffset(SDValue Base, TypeSize Offset,
@@ -10658,6 +10655,23 @@ SelectionDAG::SplitVector(const SDValue &N, const SDLoc &DL, const EVT &LoVT,
   // fixed-width result vectors, that runtime scaling factor is 1.
   Hi = getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, N,
                getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
+  return std::make_pair(Lo, Hi);
+}
+
+std::pair<SDValue, SDValue> SelectionDAG::SplitEVL(SDValue N, EVT VecVT,
+                                                   const SDLoc &DL) {
+  // Split the vector length parameter.
+  // %evl -> umin(%evl, %halfnumelts) and usubsat(%evl - %halfnumelts).
+  EVT VT = N.getValueType();
+  assert(VecVT.getVectorElementCount().isKnownEven() &&
+         "Expecting the mask to be an evenly-sized vector");
+  unsigned HalfMinNumElts = VecVT.getVectorMinNumElements() / 2;
+  SDValue HalfNumElts =
+      VecVT.isFixedLengthVector()
+          ? getConstant(HalfMinNumElts, DL, VT)
+          : getVScale(DL, VT, APInt(VT.getScalarSizeInBits(), HalfMinNumElts));
+  SDValue Lo = getNode(ISD::UMIN, DL, VT, N, HalfNumElts);
+  SDValue Hi = getNode(ISD::USUBSAT, DL, VT, N, HalfNumElts);
   return std::make_pair(Lo, Hi);
 }
 

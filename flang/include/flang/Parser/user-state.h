@@ -140,5 +140,10 @@ struct StructureComponents {
   using resultType = DataComponentDefStmt;
   static std::optional<DataComponentDefStmt> Parse(ParseState &);
 };
+
+struct NestedStructureStmt {
+  using resultType = StructureStmt;
+  static std::optional<StructureStmt> Parse(ParseState &);
+};
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_USER_STATE_H_

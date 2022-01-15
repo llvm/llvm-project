@@ -198,7 +198,7 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
   llvm::SmallVector<Value> newLoopArg;
   // For existing loop argument initialize them with the right version from the
   // prologue.
-  for (auto retVal :
+  for (const auto &retVal :
        llvm::enumerate(forOp.getBody()->getTerminator()->getOperands())) {
     Operation *def = retVal.value().getDefiningOp();
     assert(def && "Only support loop carried dependencies of distance 1");
@@ -245,7 +245,7 @@ void LoopPipelinerInternal::createKernel(
   rewriter.setInsertionPoint(newForOp.getBody(), newForOp.getBody()->begin());
   BlockAndValueMapping mapping;
   mapping.map(forOp.getInductionVar(), newForOp.getInductionVar());
-  for (auto arg : llvm::enumerate(forOp.getRegionIterArgs())) {
+  for (const auto &arg : llvm::enumerate(forOp.getRegionIterArgs())) {
     mapping.map(arg.value(), newForOp.getRegionIterArgs()[arg.index()]);
   }
   for (Operation *op : opOrder) {
@@ -325,7 +325,7 @@ void LoopPipelinerInternal::createKernel(
     yieldOperands.push_back(mapping.lookupOrDefault(it.first));
   }
   // Map the yield operand to the forOp returned value.
-  for (auto retVal :
+  for (const auto &retVal :
        llvm::enumerate(forOp.getBody()->getTerminator()->getOperands())) {
     Operation *def = retVal.value().getDefiningOp();
     assert(def && "Only support loop carried dependencies of distance 1");

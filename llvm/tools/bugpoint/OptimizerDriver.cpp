@@ -139,7 +139,7 @@ bool BugDriver::runPasses(Module &Program,
   if (EC) {
     errs() << getToolName()
            << ": Error making unique filename: " << EC.message() << "\n";
-    return 1;
+    return true;
   }
   OutputFilename = std::string(UniqueFilename.str());
 
@@ -150,7 +150,7 @@ bool BugDriver::runPasses(Module &Program,
     errs() << getToolName()
            << ": Error making unique filename: " << toString(Temp.takeError())
            << "\n";
-    return 1;
+    return true;
   }
   DiscardTemp Discard{*Temp};
   raw_fd_ostream OS(Temp->FD, /*shouldClose*/ false);
@@ -160,7 +160,7 @@ bool BugDriver::runPasses(Module &Program,
   if (OS.has_error()) {
     errs() << "Error writing bitcode file: " << Temp->TmpName << "\n";
     OS.clear_error();
-    return 1;
+    return true;
   }
 
   std::string tool = OptCmd;
@@ -173,11 +173,11 @@ bool BugDriver::runPasses(Module &Program,
   }
   if (tool.empty()) {
     errs() << "Cannot find `opt' in PATH!\n";
-    return 1;
+    return true;
   }
   if (!sys::fs::exists(tool)) {
     errs() << "Specified `opt' binary does not exist: " << tool << "\n";
-    return 1;
+    return true;
   }
 
   std::string Prog;
@@ -190,7 +190,7 @@ bool BugDriver::runPasses(Module &Program,
     Prog = tool;
   if (Prog.empty()) {
     errs() << "Cannot find `valgrind' in PATH!\n";
-    return 1;
+    return true;
   }
 
   // setup the child process' arguments

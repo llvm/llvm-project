@@ -50,6 +50,46 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; Similar to @f(), but with a struct type.
+; ALL-LABEL: @f_struct(
+define void @f_struct({ i32, i8 } * noalias nocapture %A, { i32, i8 }* noalias nocapture readonly %B, i64 %N,
+               i64 %stride) {
+
+; ONE_STRIDE_SPEC: %ident.check = icmp ne i64 %stride, 1
+
+entry:
+; NO_ONE_STRIDE_SPEC-NOT: %load_initial = load { i32, i8 }, { i32, i8 }* %A
+; ONE_STRIDE_SPEC: %load_initial = load { i32, i8 }, { i32, i8 }* %A
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+; NO_ONE_STRIDE_SPEC-NOT: %store_forwarded = phi { i32, i8 } [ %load_initial, {{.*}} ], [ %ins, %for.body ]
+; ONE_STRIDE_SPEC: %store_forwarded = phi { i32, i8 } [  %load_initial, {{.*}} ], [ %ins, %for.body ]
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %mul = mul i64 %indvars.iv, %stride
+  %arrayidx = getelementptr inbounds { i32, i8 }, { i32, i8 }* %A, i64 %mul
+  %load = load { i32, i8 }, { i32, i8 }* %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds { i32, i8 }, { i32, i8 }* %B, i64 %indvars.iv
+  %load_1 = load { i32, i8 }, { i32, i8 }* %arrayidx2, align 4
+
+; NO_ONE_STRIDE_SPEC-NOT: %v1 = extractvalue { i32, i8 } %store_forwarded
+; ONE_STRIDE_SPEC: %v1 = extractvalue { i32, i8 } %store_forwarded
+; ONE_STRIDE_SPEC: %add = add i32 %v1, %v2
+
+  %v1 = extractvalue { i32, i8 } %load, 0
+  %v2 = extractvalue { i32, i8} %load_1, 0
+  %add = add i32 %v1, %v2
+  %ins = insertvalue { i32, i8 } undef, i32 %add, 0
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %arrayidx_next = getelementptr inbounds { i32, i8 }, { i32, i8 }* %A, i64 %indvars.iv.next
+  store { i32, i8 } %ins, { i32, i8 }* %arrayidx_next, align 4
+  %exitcond = icmp eq i64 %indvars.iv.next, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body
+  ret void
+}
+
 ; With two symbolic strides:
 ;
 ;   for (unsigned i = 0; i < 100; i++)

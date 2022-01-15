@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_LINALG_INTERFACE_IMPL_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_LINALG_INTERFACE_IMPL_H
+#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_LINALGINTERFACEIMPL_H
+#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_LINALGINTERFACEIMPL_H
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 
@@ -23,6 +23,12 @@ class BufferizationAliasInfo;
 namespace linalg_ext {
 
 struct InitTensorEliminationStep : public PostAnalysisStep {
+  /// A function that matches anchor OpOperands for InitTensorOp elimination.
+  using AnchorMatchFn = std::function<bool(OpOperand &)>;
+
+  /// A function that rewrites matched anchors.
+  using RewriteFn = std::function<Value(OpBuilder &, Location, OpOperand &)>;
+
   /// Try to eliminate InitTensorOps inside `op`.
   ///
   /// * `rewriteFunc` generates the replacement for the InitTensorOp.
@@ -33,12 +39,11 @@ struct InitTensorEliminationStep : public PostAnalysisStep {
   ///   InitTensorOp.
   /// * The result of `rewriteFunc` must usually be analyzed for inplacability.
   ///   This analysis can be skipped with `skipAnalysis`.
-  LogicalResult eliminateInitTensors(
-      Operation *op, BufferizationState &state,
-      BufferizationAliasInfo &aliasInfo,
-      std::function<bool(OpOperand &)> anchorMatchFunc,
-      std::function<Value(OpBuilder &, Location, OpOperand &)> rewriteFunc,
-      SmallVector<Operation *> &newOps);
+  LogicalResult eliminateInitTensors(Operation *op, BufferizationState &state,
+                                     BufferizationAliasInfo &aliasInfo,
+                                     AnchorMatchFn anchorMatchFunc,
+                                     RewriteFn rewriteFunc,
+                                     SmallVector<Operation *> &newOps);
 };
 
 /// Try to eliminate InitTensorOps inside `op` that are anchored on an
@@ -58,4 +63,4 @@ void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_LINALG_INTERFACE_IMPL_H
+#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_LINALGINTERFACEIMPL_H

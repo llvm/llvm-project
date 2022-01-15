@@ -871,13 +871,6 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   Function *newFunction = Function::Create(
       funcType, GlobalValue::InternalLinkage, oldFunction->getAddressSpace(),
       oldFunction->getName() + "." + SuffixToUse, M);
-  // If the old function is no-throw, so is the new one.
-  if (oldFunction->doesNotThrow())
-    newFunction->setDoesNotThrow();
-
-  // Inherit the uwtable attribute if we need to.
-  if (oldFunction->hasUWTable())
-    newFunction->setHasUWTable();
 
   // Inherit all of the target dependent attributes and white-listed
   // target independent attributes.
@@ -893,53 +886,26 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
     } else
       switch (Attr.getKindAsEnum()) {
       // Those attributes cannot be propagated safely. Explicitly list them
-      // here so we get a warning if new attributes are added. This list also
-      // includes non-function attributes.
-      case Attribute::Alignment:
+      // here so we get a warning if new attributes are added.
       case Attribute::AllocSize:
       case Attribute::ArgMemOnly:
       case Attribute::Builtin:
-      case Attribute::ByVal:
       case Attribute::Convergent:
-      case Attribute::Dereferenceable:
-      case Attribute::DereferenceableOrNull:
-      case Attribute::ElementType:
-      case Attribute::InAlloca:
-      case Attribute::InReg:
       case Attribute::InaccessibleMemOnly:
       case Attribute::InaccessibleMemOrArgMemOnly:
       case Attribute::JumpTable:
       case Attribute::Naked:
-      case Attribute::Nest:
-      case Attribute::NoAlias:
       case Attribute::NoBuiltin:
-      case Attribute::NoCapture:
       case Attribute::NoMerge:
       case Attribute::NoReturn:
       case Attribute::NoSync:
-      case Attribute::NoUndef:
-      case Attribute::None:
-      case Attribute::NonNull:
-      case Attribute::Preallocated:
       case Attribute::ReadNone:
       case Attribute::ReadOnly:
-      case Attribute::Returned:
       case Attribute::ReturnsTwice:
-      case Attribute::SExt:
       case Attribute::Speculatable:
       case Attribute::StackAlignment:
-      case Attribute::StructRet:
-      case Attribute::SwiftError:
-      case Attribute::SwiftSelf:
-      case Attribute::SwiftAsync:
       case Attribute::WillReturn:
       case Attribute::WriteOnly:
-      case Attribute::ZExt:
-      case Attribute::ImmArg:
-      case Attribute::ByRef:
-      case Attribute::EndAttrKinds:
-      case Attribute::EmptyKey:
-      case Attribute::TombstoneKey:
         continue;
       // Those attributes should be safe to propagate to the extracted function.
       case Attribute::AlwaysInline:
@@ -980,6 +946,35 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::MustProgress:
       case Attribute::NoProfile:
         break;
+      // These attributes cannot be applied to functions.
+      case Attribute::Alignment:
+      case Attribute::ByVal:
+      case Attribute::Dereferenceable:
+      case Attribute::DereferenceableOrNull:
+      case Attribute::ElementType:
+      case Attribute::InAlloca:
+      case Attribute::InReg:
+      case Attribute::Nest:
+      case Attribute::NoAlias:
+      case Attribute::NoCapture:
+      case Attribute::NoUndef:
+      case Attribute::NonNull:
+      case Attribute::Preallocated:
+      case Attribute::Returned:
+      case Attribute::SExt:
+      case Attribute::StructRet:
+      case Attribute::SwiftError:
+      case Attribute::SwiftSelf:
+      case Attribute::SwiftAsync:
+      case Attribute::ZExt:
+      case Attribute::ImmArg:
+      case Attribute::ByRef:
+      //  These are not really attributes.
+      case Attribute::None:
+      case Attribute::EndAttrKinds:
+      case Attribute::EmptyKey:
+      case Attribute::TombstoneKey:
+        llvm_unreachable("Not a function attribute");
       }
 
     newFunction->addFnAttr(Attr);

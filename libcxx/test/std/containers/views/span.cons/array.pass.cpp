@@ -74,50 +74,48 @@ void checkCV()
     }
 }
 
-
-template <typename T>
-constexpr bool testConstexprSpan()
-{
-    constexpr T val[2] = {};
-
-    ASSERT_NOEXCEPT(std::span<const T>   {val});
-    ASSERT_NOEXCEPT(std::span<const T, 2>{val});
-    std::span<const T>    s1{val};
-    std::span<const T, 2> s2{val};
-    return
-        s1.data() == &val[0] && s1.size() == 2
-    &&  s2.data() == &val[0] && s2.size() == 2;
-}
-
-
-template <typename T>
-void testRuntimeSpan()
+template<class T>
+constexpr bool testSpan()
 {
     T val[2] = {};
-    ASSERT_NOEXCEPT(std::span<T>   {val});
+
+    ASSERT_NOEXCEPT(std::span<T>{val});
     ASSERT_NOEXCEPT(std::span<T, 2>{val});
-    std::span<T>    s1{val};
-    std::span<T, 2> s2{val};
-    assert(s1.data() == &val[0] && s1.size() == 2);
-    assert(s2.data() == &val[0] && s2.size() == 2);
+    ASSERT_NOEXCEPT(std::span<const T>{val});
+    ASSERT_NOEXCEPT(std::span<const T, 2>{val});
+
+    std::span<T> s1 = val;
+    std::span<T, 2> s2 = val;
+    std::span<const T> s3 = val;
+    std::span<const T, 2> s4 = val;
+    assert(s1.data() == val && s1.size() == 2);
+    assert(s2.data() == val && s2.size() == 2);
+    assert(s3.data() == val && s3.size() == 2);
+    assert(s4.data() == val && s4.size() == 2);
+
+    std::span<const int> s5 = {{1,2}};
+    std::span<const int, 2> s6 = {{1,2}};
+    assert(s5.size() == 2);  // and it dangles
+    assert(s6.size() == 2);  // and it dangles
+
+    return true;
 }
 
-struct A{};
+
+struct A {};
 
 int main(int, char**)
 {
-    static_assert(testConstexprSpan<int>(),    "");
-    static_assert(testConstexprSpan<long>(),   "");
-    static_assert(testConstexprSpan<double>(), "");
-    static_assert(testConstexprSpan<A>(),      "");
+    testSpan<int>();
+    testSpan<double>();
+    testSpan<A>();
+    testSpan<std::string>();
 
-    testRuntimeSpan<int>();
-    testRuntimeSpan<long>();
-    testRuntimeSpan<double>();
-    testRuntimeSpan<std::string>();
-    testRuntimeSpan<A>();
+    static_assert(testSpan<int>());
+    static_assert(testSpan<double>());
+    static_assert(testSpan<A>());
 
     checkCV();
 
-  return 0;
+    return 0;
 }

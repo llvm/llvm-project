@@ -542,7 +542,7 @@ void html::HighlightMacros(Rewriter &R, FileID FID, const Preprocessor& PP) {
 
   // Lex all the tokens in raw mode, to avoid entering #includes or expanding
   // macros.
-  while (1) {
+  while (true) {
     Token Tok;
     L.LexFromRawLexer(Tok);
 

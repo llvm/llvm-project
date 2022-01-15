@@ -649,10 +649,10 @@ public:
 
 */
 
-#include <experimental/__config>
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <experimental/__config>
 #include <functional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -689,7 +689,7 @@ class __simd_storage<_Tp, __simd_abi<_StorageKind::_Array, __num_element>> {
   friend struct simd_mask;
 
 public:
-  _Tp __get(size_t __index) const noexcept { return __storage_[__index]; };
+  _Tp __get(size_t __index) const noexcept { return __storage_[__index]; }
   void __set(size_t __index, _Tp __val) noexcept {
     __storage_[__index] = __val;
   }
@@ -706,7 +706,7 @@ class __simd_storage<_Tp, __simd_abi<_StorageKind::_Scalar, 1>> {
   friend struct simd_mask;
 
 public:
-  _Tp __get(size_t __index) const noexcept { return (&__storage_)[__index]; };
+  _Tp __get(size_t __index) const noexcept { return (&__storage_)[__index]; }
   void __set(size_t __index, _Tp __val) noexcept {
     (&__storage_)[__index] = __val;
   }
@@ -770,7 +770,7 @@ struct __vec_ext_traits {
   _LIBCPP_SPECIALIZE_VEC_EXT(_TYPE, 29);                                       \
   _LIBCPP_SPECIALIZE_VEC_EXT(_TYPE, 30);                                       \
   _LIBCPP_SPECIALIZE_VEC_EXT(_TYPE, 31);                                       \
-  _LIBCPP_SPECIALIZE_VEC_EXT(_TYPE, 32);
+  _LIBCPP_SPECIALIZE_VEC_EXT(_TYPE, 32)
 
 _LIBCPP_SPECIALIZE_VEC_EXT_32(char);
 _LIBCPP_SPECIALIZE_VEC_EXT_32(char16_t);
@@ -808,7 +808,7 @@ class __simd_storage<_Tp, __simd_abi<_StorageKind::_VecExt, __num_element>> {
   friend struct simd_mask;
 
 public:
-  _Tp __get(size_t __index) const noexcept { return __storage_[__index]; };
+  _Tp __get(size_t __index) const noexcept { return __storage_[__index]; }
   void __set(size_t __index, _Tp __val) noexcept {
     __storage_[__index] = __val;
   }

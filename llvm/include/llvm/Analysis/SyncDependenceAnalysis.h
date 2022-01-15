@@ -27,7 +27,6 @@ namespace llvm {
 
 class BasicBlock;
 class DominatorTree;
-class Loop;
 class PostDominatorTree;
 
 using ConstBlockSet = SmallPtrSet<const BasicBlock *, 4>;

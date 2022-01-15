@@ -132,7 +132,7 @@ void propagateShapesToTosaWhile(
     }
 
     for (auto yieldOp : yieldOps) {
-      for (auto it : llvm::enumerate(yieldOp.getOperands())) {
+      for (const auto &it : llvm::enumerate(yieldOp.getOperands())) {
         auto newKnowledge =
             ValueKnowledge::getKnowledgeFromType(it.value().getType());
         yieldTypeInfo[it.index()] =

@@ -56,10 +56,10 @@ public:
   using reference = value_type &;
 
   CoverageMappingIterator()
-      : Reader(nullptr), Record(), ReadErr(coveragemap_error::success) {}
+      : Reader(nullptr), ReadErr(coveragemap_error::success) {}
 
   CoverageMappingIterator(CoverageMappingReader *Reader)
-      : Reader(Reader), Record(), ReadErr(coveragemap_error::success) {
+      : Reader(Reader), ReadErr(coveragemap_error::success) {
     increment();
   }
 

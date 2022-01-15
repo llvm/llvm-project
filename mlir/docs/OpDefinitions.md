@@ -651,6 +651,16 @@ The available directives are as follows:
     -   `input` must be either an operand or result [variable](#variables), the
         `operands` directive, or the `results` directive.
 
+*   `qualified` ( type_or_attribute )
+
+    -   Wraps a `type` directive or an attribute parameter.
+    -   Used to force printing the type or attribute prefixed with its dialect
+        and mnemonic. For example the `vector.multi_reduction` operation has a
+        `kind` attribute ; by default the declarative assembly will print:
+        `vector.multi_reduction <minf>, ...` but using `qualified($kind)` in the
+        declarative assembly format will print it instead as:
+        `vector.multi_reduction #vector.kind<minf>, ...`.
+
 #### Literals
 
 A literal is either a keyword or punctuation surrounded by \`\`.
@@ -963,6 +973,16 @@ literally to the generated C++ op class.
 Note that `extraClassDeclaration` is a mechanism intended for long-tail cases by
 power users; for not-yet-implemented widely-applicable cases, improving the
 infrastructure is preferable.
+
+### Extra definitions
+
+When defining base op classes in TableGen that are inherited many times by
+different ops, users may want to provide common definitions of utility and
+interface functions. However, many of these definitions may not be desirable or
+possible in `extraClassDeclaration`, which append them to the op's C++ class
+declaration. In these cases, users can add an `extraClassDefinition` to define
+code that is added to the generated source file inside the op's C++ namespace.
+The substitution `$cppClass` is replaced by the op's C++ class name.
 
 ### Generated C++ code
 

@@ -20,9 +20,6 @@
 namespace llvm {
 
 class GCNSubtarget;
-class MachineFunction;
-class MachineInstr;
-class MachineInstrBuilder;
 class MachineMemOperand;
 
 class AMDGPUInstrInfo {

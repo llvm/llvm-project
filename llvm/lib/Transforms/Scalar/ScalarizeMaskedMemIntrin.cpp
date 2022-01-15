@@ -959,7 +959,8 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       Type *LoadTy = CI->getType();
       Align Alignment = DL.getValueOrABITypeAlignment(MA,
                                                       LoadTy->getScalarType());
-      if (TTI.isLegalMaskedGather(LoadTy, Alignment))
+      if (TTI.isLegalMaskedGather(LoadTy, Alignment) &&
+          !TTI.forceScalarizeMaskedGather(cast<VectorType>(LoadTy), Alignment))
         return false;
       scalarizeMaskedGather(DL, CI, DTU, ModifiedDT);
       return true;
@@ -970,7 +971,9 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       Type *StoreTy = CI->getArgOperand(0)->getType();
       Align Alignment = DL.getValueOrABITypeAlignment(MA,
                                                       StoreTy->getScalarType());
-      if (TTI.isLegalMaskedScatter(StoreTy, Alignment))
+      if (TTI.isLegalMaskedScatter(StoreTy, Alignment) &&
+          !TTI.forceScalarizeMaskedScatter(cast<VectorType>(StoreTy),
+                                           Alignment))
         return false;
       scalarizeMaskedScatter(DL, CI, DTU, ModifiedDT);
       return true;

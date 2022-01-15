@@ -160,7 +160,7 @@ SerializeToHsacoPass::loadLibraries(SmallVectorImpl<char> &path,
     llvm::StringRef pathRef(path.data(), path.size());
     std::unique_ptr<llvm::Module> library =
         llvm::getLazyIRFileModule(pathRef, error, context);
-    path.set_size(dirLength);
+    path.truncate(dirLength);
     if (!library) {
       getOperation().emitError() << "Failed to load library " << file
                                  << " from " << path << error.getMessage();

@@ -226,7 +226,8 @@ Value *PHITransAddr::PHITranslateSubExpr(Value *V, BasicBlock *CurBB,
       return GEP;
 
     // Simplify the GEP to handle 'gep x, 0' -> x etc.
-    if (Value *V = SimplifyGEPInst(GEP->getSourceElementType(), GEPOps,
+    if (Value *V = SimplifyGEPInst(GEP->getSourceElementType(), GEPOps[0],
+                                   ArrayRef<Value *>(GEPOps).slice(1),
                                    GEP->isInBounds(), {DL, TLI, DT, AC})) {
       for (unsigned i = 0, e = GEPOps.size(); i != e; ++i)
         RemoveInstInputs(GEPOps[i], InstInputs);

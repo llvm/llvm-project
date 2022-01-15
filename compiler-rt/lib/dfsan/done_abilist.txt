@@ -46,6 +46,10 @@ fun:dfsan_get_init_origin=uninstrumented
 fun:dfsan_get_init_origin=discard
 fun:dfsan_get_track_origins=uninstrumented
 fun:dfsan_get_track_origins=discard
+fun:dfsan_set_conditional_callback=uninstrumented
+fun:dfsan_set_conditional_callback=discard
+fun:dfsan_get_labels_in_signal_conditional=uninstrumented
+fun:dfsan_get_labels_in_signal_conditional=discard
 
 ###############################################################################
 # glibc

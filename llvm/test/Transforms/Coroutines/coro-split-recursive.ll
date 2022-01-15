@@ -13,7 +13,7 @@ declare i8 @llvm.coro.suspend(token, i1)
 ; CHECK: call void @foo()
 ; CHECK-LABEL: define {{.*}}void @foo.destroy(
 
-define void @foo() {
+define void @foo() "coroutine.presplit"="0" {
 entry:
   %__promise = alloca i32, align 8
   %0 = bitcast i32* %__promise to i8*

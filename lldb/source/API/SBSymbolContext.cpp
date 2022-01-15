@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSymbolContext.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Module.h"
@@ -18,7 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBSymbolContext::SBSymbolContext() : m_opaque_up() {
+SBSymbolContext::SBSymbolContext() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBSymbolContext);
 }
 
@@ -28,7 +28,7 @@ SBSymbolContext::SBSymbolContext(const SymbolContext &sc)
                           (const lldb_private::SymbolContext &), sc);
 }
 
-SBSymbolContext::SBSymbolContext(const SBSymbolContext &rhs) : m_opaque_up() {
+SBSymbolContext::SBSymbolContext(const SBSymbolContext &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBSymbolContext, (const lldb::SBSymbolContext &),
                           rhs);
 
@@ -44,7 +44,7 @@ const SBSymbolContext &SBSymbolContext::operator=(const SBSymbolContext &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBSymbolContext::IsValid() const {
@@ -67,15 +67,14 @@ SBModule SBSymbolContext::GetModule() {
     sb_module.SetSP(module_sp);
   }
 
-  return LLDB_RECORD_RESULT(sb_module);
+  return sb_module;
 }
 
 SBCompileUnit SBSymbolContext::GetCompileUnit() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBCompileUnit, SBSymbolContext,
                              GetCompileUnit);
 
-  return LLDB_RECORD_RESULT(
-      SBCompileUnit(m_opaque_up ? m_opaque_up->comp_unit : nullptr));
+  return SBCompileUnit(m_opaque_up ? m_opaque_up->comp_unit : nullptr);
 }
 
 SBFunction SBSymbolContext::GetFunction() {
@@ -88,14 +87,13 @@ SBFunction SBSymbolContext::GetFunction() {
 
   SBFunction sb_function(function);
 
-  return LLDB_RECORD_RESULT(sb_function);
+  return sb_function;
 }
 
 SBBlock SBSymbolContext::GetBlock() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBlock, SBSymbolContext, GetBlock);
 
-  return LLDB_RECORD_RESULT(
-      SBBlock(m_opaque_up ? m_opaque_up->block : nullptr));
+  return SBBlock(m_opaque_up ? m_opaque_up->block : nullptr);
 }
 
 SBLineEntry SBSymbolContext::GetLineEntry() {
@@ -105,7 +103,7 @@ SBLineEntry SBSymbolContext::GetLineEntry() {
   if (m_opaque_up)
     sb_line_entry.SetLineEntry(m_opaque_up->line_entry);
 
-  return LLDB_RECORD_RESULT(sb_line_entry);
+  return sb_line_entry;
 }
 
 SBSymbol SBSymbolContext::GetSymbol() {
@@ -118,7 +116,7 @@ SBSymbol SBSymbolContext::GetSymbol() {
 
   SBSymbol sb_symbol(symbol);
 
-  return LLDB_RECORD_RESULT(sb_symbol);
+  return sb_symbol;
 }
 
 void SBSymbolContext::SetModule(lldb::SBModule module) {
@@ -216,47 +214,7 @@ SBSymbolContext::GetParentOfInlinedScope(const SBAddress &curr_frame_pc,
   if (m_opaque_up.get() && curr_frame_pc.IsValid()) {
     if (m_opaque_up->GetParentOfInlinedScope(curr_frame_pc.ref(), sb_sc.ref(),
                                              parent_frame_addr.ref()))
-      return LLDB_RECORD_RESULT(sb_sc);
+      return sb_sc;
   }
-  return LLDB_RECORD_RESULT(SBSymbolContext());
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBSymbolContext>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBSymbolContext, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBSymbolContext,
-                            (const lldb_private::SymbolContext &));
-  LLDB_REGISTER_CONSTRUCTOR(SBSymbolContext, (const lldb::SBSymbolContext &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBSymbolContext &,
-      SBSymbolContext, operator=,(const lldb::SBSymbolContext &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContext, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBSymbolContext, operator bool, ());
-  LLDB_REGISTER_METHOD(lldb::SBModule, SBSymbolContext, GetModule, ());
-  LLDB_REGISTER_METHOD(lldb::SBCompileUnit, SBSymbolContext, GetCompileUnit,
-                       ());
-  LLDB_REGISTER_METHOD(lldb::SBFunction, SBSymbolContext, GetFunction, ());
-  LLDB_REGISTER_METHOD(lldb::SBBlock, SBSymbolContext, GetBlock, ());
-  LLDB_REGISTER_METHOD(lldb::SBLineEntry, SBSymbolContext, GetLineEntry, ());
-  LLDB_REGISTER_METHOD(lldb::SBSymbol, SBSymbolContext, GetSymbol, ());
-  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetModule, (lldb::SBModule));
-  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetCompileUnit,
-                       (lldb::SBCompileUnit));
-  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetFunction,
-                       (lldb::SBFunction));
-  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetBlock, (lldb::SBBlock));
-  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetLineEntry,
-                       (lldb::SBLineEntry));
-  LLDB_REGISTER_METHOD(void, SBSymbolContext, SetSymbol, (lldb::SBSymbol));
-  LLDB_REGISTER_METHOD(bool, SBSymbolContext, GetDescription,
-                       (lldb::SBStream &));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBSymbolContext, SBSymbolContext,
-                             GetParentOfInlinedScope,
-                             (const lldb::SBAddress &, lldb::SBAddress &));
-}
-
-}
+  return SBSymbolContext();
 }

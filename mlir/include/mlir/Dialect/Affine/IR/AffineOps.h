@@ -56,7 +56,7 @@ bool isTopLevelValue(Value value);
 //
 //   %num_elements = arith.constant 256
 //   %idx = arith.constant 0 : index
-//   %tag = alloc() : memref<1xi32, 4>
+//   %tag = memref.alloc() : memref<1xi32, 4>
 //   affine.dma_start %src[%i + 3, %j], %dst[%k + 7, %l], %tag[%idx],
 //     %num_elements :
 //       memref<40x128xf32, 0>, memref<2x1024xf32, 1>, memref<1xi32, 2>
@@ -440,9 +440,9 @@ public:
   using operand_iterator = AffineForOp::operand_iterator;
   using operand_range = AffineForOp::operand_range;
 
-  operand_iterator operand_begin() { return op.operand_begin() + opStart; }
-  operand_iterator operand_end() { return op.operand_begin() + opEnd; }
-  operand_range getOperands() { return {operand_begin(), operand_end()}; }
+  operand_iterator operandBegin() { return op.operand_begin() + opStart; }
+  operand_iterator operandEnd() { return op.operand_begin() + opEnd; }
+  operand_range getOperands() { return {operandBegin(), operandEnd()}; }
 
 private:
   // 'affine.for' operation that contains this bound.

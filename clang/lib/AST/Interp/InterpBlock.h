@@ -25,10 +25,8 @@ namespace clang {
 namespace interp {
 class Block;
 class DeadBlock;
-class Context;
 class InterpState;
 class Pointer;
-class Function;
 enum PrimType : unsigned;
 
 /// A memory block, either on the stack or in the heap.

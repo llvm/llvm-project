@@ -27,6 +27,15 @@ func @memref_reinterpret_cast_static_to_dynamic_sizes(%in: memref<?xf32>)
   return %out : memref<10x?xf32, offset: ?, strides: [?, 1]>
 }
 
+// CHECK-LABEL: func @memref_reinterpret_cast_dynamic_offset
+func @memref_reinterpret_cast_dynamic_offset(%in: memref<?xf32>, %offset: index)
+    -> memref<10x?xf32, offset: ?, strides: [?, 1]> {
+  %out = memref.reinterpret_cast %in to
+           offset: [%offset], sizes: [10, 10], strides: [1, 1]
+           : memref<?xf32> to memref<10x?xf32, offset: ?, strides: [?, 1]>
+  return %out : memref<10x?xf32, offset: ?, strides: [?, 1]>
+}
+
 // CHECK-LABEL: func @memref_reshape(
 func @memref_reshape(%unranked: memref<*xf32>, %shape1: memref<1xi32>,
          %shape2: memref<2xi32>, %shape3: memref<?xi32>) -> memref<*xf32> {
@@ -225,5 +234,15 @@ func @rank(%t : memref<4x4x?xf32>) {
 
   // CHECK: %{{.*}} = memref.rank %{{.*}} : memref<4x4x?xf32>
   %1 = memref.rank %t : memref<4x4x?xf32>
+  return
+}
+
+// ------
+
+// CHECK-LABEL: func @atomic_rmw
+// CHECK-SAME: ([[BUF:%.*]]: memref<10xf32>, [[VAL:%.*]]: f32, [[I:%.*]]: index)
+func @atomic_rmw(%I: memref<10xf32>, %val: f32, %i : index) {
+  %x = memref.atomic_rmw addf %val, %I[%i] : (f32, memref<10xf32>) -> f32
+  // CHECK: memref.atomic_rmw addf [[VAL]], [[BUF]]{{\[}}[[I]]]
   return
 }

@@ -277,7 +277,7 @@ Parser::TPResult Parser::TryParseSimpleDeclaration(bool AllowForRangeDecl) {
 ///         '{' '}'
 ///
 Parser::TPResult Parser::TryParseInitDeclaratorList() {
-  while (1) {
+  while (true) {
     // declarator
     TPResult TPR = TryParseDeclarator(false/*mayBeAbstract*/);
     if (TPR != TPResult::Ambiguous)
@@ -1068,7 +1068,7 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
   if (mayHaveDirectInit)
     return TPResult::Ambiguous;
 
-  while (1) {
+  while (true) {
     TPResult TPR(TPResult::Ambiguous);
 
     if (Tok.is(tok::l_paren)) {
@@ -1898,7 +1898,7 @@ Parser::TryParseParameterDeclarationClause(bool *InvalidAsDeclaration,
   //   parameter-declaration
   //   parameter-declaration-list ',' parameter-declaration
   //
-  while (1) {
+  while (true) {
     // '...'[opt]
     if (Tok.is(tok::ellipsis)) {
       ConsumeToken();

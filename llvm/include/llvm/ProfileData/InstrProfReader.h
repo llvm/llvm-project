@@ -233,7 +233,8 @@ private:
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
-  const uint64_t *CountersStart;
+  const char *CountersStart;
+  const char *CountersEnd;
   const char *NamesStart;
   const char *NamesEnd;
   // After value profile is all read, this pointer points to
@@ -310,6 +311,15 @@ private:
   bool atEnd() const { return Data == DataEnd; }
 
   void advanceData() {
+    // `CountersDelta` is a constant zero when using debug info correlation.
+    if (!Correlator) {
+      // The initial CountersDelta is the in-memory address difference between
+      // the data and counts sections:
+      // start(__llvm_prf_cnts) - start(__llvm_prf_data)
+      // As we advance to the next record, we maintain the correct CountersDelta
+      // with respect to the next record.
+      CountersDelta -= sizeof(*Data);
+    }
     Data++;
     ValueDataStart += CurValueDataSize;
   }
@@ -319,20 +329,11 @@ private:
       return (const char *)ValueDataStart;
   }
 
-  /// Get the offset of \p CounterPtr from the start of the counters section of
-  /// the profile. The offset has units of "number of counters", i.e. increasing
-  /// the offset by 1 corresponds to an increase in the *byte offset* by 8.
-  ptrdiff_t getCounterOffset(IntPtrT CounterPtr) const {
-    return (swap(CounterPtr) - CountersDelta) / sizeof(uint64_t);
-  }
-
-  const uint64_t *getCounter(ptrdiff_t Offset) const {
-    return CountersStart + Offset;
-  }
-
   StringRef getName(uint64_t NameRef) const {
     return Symtab->getFuncName(swap(NameRef));
   }
+
+  int getCounterTypeSize() const { return sizeof(uint64_t); }
 };
 
 using RawInstrProfReader32 = RawInstrProfReader<uint32_t>;

@@ -72,7 +72,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
     SmallVector<wchar_t, MAX_PATH> U16Result;
     DWORD Len = MAX_PATH;
     do {
-      U16Result.reserve(Len);
+      U16Result.resize_for_overwrite(Len);
       // Lets attach the extension manually. That is needed for files
       // with a point in name like aaa.bbb. SearchPathW will not add extension
       // from its argument to such files because it thinks they already had one.
@@ -82,13 +82,13 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
         return EC;
 
       Len = ::SearchPathW(Path, c_str(U16NameExt), nullptr,
-                          U16Result.capacity(), U16Result.data(), nullptr);
-    } while (Len > U16Result.capacity());
+                          U16Result.size(), U16Result.data(), nullptr);
+    } while (Len > U16Result.size());
 
     if (Len == 0)
       continue;
 
-    U16Result.set_size(Len);
+    U16Result.truncate(Len);
 
     if (std::error_code EC =
         windows::UTF16ToUTF8(U16Result.data(), U16Result.size(), U8Result))

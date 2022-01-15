@@ -33,7 +33,6 @@ class ConstantArray;
 class GlobalVariable;
 class Function;
 class Module;
-class TargetMachine;
 class Value;
 
 namespace orc {

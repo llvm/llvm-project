@@ -23,7 +23,7 @@ void t1() {
 // CHECK-SAME: mov eax, $2
 // CHECK-SAME: mov eax, dword ptr $3
 // CHECK-SAME: mov eax, dword ptr $4
-// CHECK-SAME: "*m,*m,*m,*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3Bar3ptrE, i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3ptrE, i32** @_ZN3Foo3ptrE)
+// CHECK-SAME: "*m,*m,*m,*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32** elementtype(i32*) @_ZN3Foo3ptrE, i32** elementtype(i32*) @_ZN3Foo3Bar3ptrE, i32** elementtype(i32*) @_ZN3Foo3ptrE, i32** elementtype(i32*) @_ZN3Foo3ptrE, i32** elementtype(i32*) @_ZN3Foo3ptrE)
   __asm mov eax, Foo ::ptr
   __asm mov eax, Foo :: Bar :: ptr
   __asm mov eax, [Foo:: ptr]
@@ -92,7 +92,7 @@ void T4::test() {
 // CHECK: call void asm sideeffect inteldialect
 // CHECK-SAME: mov eax, $1
 // CHECK-SAME: mov $0, eax
-// CHECK-SAME: "=*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* @_ZN2T41yE, i32* {{.*}})
+// CHECK-SAME: "=*m,*m,~{eax},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @_ZN2T41yE, i32* elementtype(i32) {{.*}})
 }
 
 template <class T> struct T5 {
@@ -111,7 +111,7 @@ void test5() {
   // CHECK-SAME: push $0
   // CHECK-SAME: call dword ptr ${2:P}
   // CHECK-SAME: mov $1, eax
-  // CHECK-SAME: "=*m,=*m,*m,~{esp},~{dirflag},~{fpsr},~{flags}"(i32* %y, i32* %x, i32 (float)* @_ZN2T5IiE6createIfEEiT_)
+  // CHECK-SAME: "=*m,=*m,*m,~{esp},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %y, i32* elementtype(i32) %x, i32 (float)* elementtype(i32 (float)) @_ZN2T5IiE6createIfEEiT_)
 }
 
 // Just verify this doesn't emit an error.

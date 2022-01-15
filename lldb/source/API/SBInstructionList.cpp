@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBInstructionList.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBInstructionList::SBInstructionList() : m_opaque_sp() {
+SBInstructionList::SBInstructionList() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBInstructionList);
 }
 
@@ -39,7 +39,7 @@ operator=(const SBInstructionList &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBInstructionList::~SBInstructionList() = default;
@@ -71,7 +71,7 @@ SBInstruction SBInstructionList::GetInstructionAtIndex(uint32_t idx) {
     inst.SetOpaque(
         m_opaque_sp,
         m_opaque_sp->GetInstructionList().GetInstructionAtIndex(idx));
-  return LLDB_RECORD_RESULT(inst);
+  return inst;
 }
 
 size_t SBInstructionList::GetInstructionsCount(const SBAddress &start,
@@ -197,38 +197,4 @@ bool SBInstructionList::DumpEmulationForAllInstructions(const char *triple) {
     }
   }
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBInstructionList>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBInstructionList, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBInstructionList,
-                            (const lldb::SBInstructionList &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBInstructionList &,
-      SBInstructionList, operator=,(const lldb::SBInstructionList &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBInstructionList, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBInstructionList, operator bool, ());
-  LLDB_REGISTER_METHOD(size_t, SBInstructionList, GetSize, ());
-  LLDB_REGISTER_METHOD(lldb::SBInstruction, SBInstructionList,
-                       GetInstructionAtIndex, (uint32_t));
-  LLDB_REGISTER_METHOD(
-      size_t, SBInstructionList, GetInstructionsCount,
-      (const lldb::SBAddress &, const lldb::SBAddress &, bool));
-  LLDB_REGISTER_METHOD(void, SBInstructionList, Clear, ());
-  LLDB_REGISTER_METHOD(void, SBInstructionList, AppendInstruction,
-                       (lldb::SBInstruction));
-  LLDB_REGISTER_METHOD(void, SBInstructionList, Print, (FILE *));
-  LLDB_REGISTER_METHOD(void, SBInstructionList, Print, (SBFile));
-  LLDB_REGISTER_METHOD(void, SBInstructionList, Print, (FileSP));
-  LLDB_REGISTER_METHOD(bool, SBInstructionList, GetDescription,
-                       (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(bool, SBInstructionList,
-                       DumpEmulationForAllInstructions, (const char *));
-}
-
-}
 }

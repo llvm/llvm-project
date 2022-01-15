@@ -4452,7 +4452,7 @@ namespace {
 
   public:
     SubstituteDeducedTypeTransform(Sema &SemaRef, DependentAuto DA)
-        : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef), Replacement(),
+        : TreeTransform<SubstituteDeducedTypeTransform>(SemaRef),
           ReplacementIsPack(DA.IsPack), UseTypeSugar(true) {}
 
     SubstituteDeducedTypeTransform(Sema &SemaRef, QualType Replacement,
@@ -5355,7 +5355,7 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
   bool AtLeastAsSpecialized;
   S.runWithSufficientStackSpace(Info.getLocation(), [&] {
     AtLeastAsSpecialized = !FinishTemplateArgumentDeduction(
-        S, P2, /*IsPartialOrdering=*/true,
+        S, P2, /*PartialOrdering=*/true,
         TemplateArgumentList(TemplateArgumentList::OnStack,
                              TST1->template_arguments()),
         Deduced, Info);

@@ -382,6 +382,8 @@ __OMP_RTL(__kmpc_doacross_wait, false, Void, IdentPtr, Int32, Int64Ptr)
 __OMP_RTL(__kmpc_doacross_fini, false, Void, IdentPtr, Int32)
 
 __OMP_RTL(__kmpc_alloc, false, VoidPtr, /* Int */ Int32, SizeTy, VoidPtr)
+__OMP_RTL(__kmpc_aligned_alloc, false, VoidPtr, /* Int */ Int32, SizeTy, SizeTy,
+          VoidPtr)
 __OMP_RTL(__kmpc_free, false, Void, /* Int */ Int32, VoidPtr, VoidPtr)
 
 __OMP_RTL(__kmpc_init_allocator, false, /* omp_allocator_handle_t */ VoidPtr,
@@ -905,6 +907,8 @@ __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
                 ParamAttrs(NoCaptureAttrs))
 
 __OMP_RTL_ATTRS(__kmpc_alloc, DefaultAttrs, ReturnPtrAttrs, ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_aligned_alloc, DefaultAttrs, ReturnPtrAttrs,
+                ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free, AllocAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(__kmpc_init_allocator, DefaultAttrs, ReturnPtrAttrs,
@@ -1130,6 +1134,8 @@ __OMP_TRAIT_PROPERTY(implementation, vendor, gnu)
 __OMP_TRAIT_PROPERTY(implementation, vendor, ibm)
 __OMP_TRAIT_PROPERTY(implementation, vendor, intel)
 __OMP_TRAIT_PROPERTY(implementation, vendor, llvm)
+__OMP_TRAIT_PROPERTY(implementation, vendor, nec)
+__OMP_TRAIT_PROPERTY(implementation, vendor, nvidia)
 __OMP_TRAIT_PROPERTY(implementation, vendor, pgi)
 __OMP_TRAIT_PROPERTY(implementation, vendor, ti)
 __OMP_TRAIT_PROPERTY(implementation, vendor, unknown)

@@ -258,7 +258,7 @@ define void @fist1(x86_fp80 %x, i32* %p) nounwind ssp {
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
-  tail call void asm sideeffect "fistl $1", "{st},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, i32* %p) nounwind
+  tail call void asm sideeffect "fistl $1", "{st},*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, i32* elementtype(i32) %p) nounwind
   ret void
 }
 
@@ -282,7 +282,7 @@ define x86_fp80 @fist2(x86_fp80 %x, i32* %p) nounwind ssp {
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    retl
 entry:
-  %0 = tail call x86_fp80 asm "fistl $2", "=&{st},0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, i32* %p) nounwind
+  %0 = tail call x86_fp80 asm "fistl $2", "=&{st},0,*m,~{memory},~{dirflag},~{fpsr},~{flags}"(x86_fp80 %x, i32* elementtype(i32) %p) nounwind
   ret x86_fp80 %0
 }
 
@@ -485,7 +485,7 @@ entry:
 
 sw.bb4.i:
   %1 = call x86_fp80 asm sideeffect "frndint", "={st},0,~{dirflag},~{fpsr},~{flags}"(x86_fp80 %0)
-  call void asm sideeffect "fldcw $0", "*m,~{dirflag},~{fpsr},~{flags}"(i32* undef)
+  call void asm sideeffect "fldcw $0", "*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) undef)
   br label %_Z5tointRKe.exit
 
 _Z5tointRKe.exit:

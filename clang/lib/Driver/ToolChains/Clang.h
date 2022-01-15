@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_Clang_H
-#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_Clang_H
+#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CLANG_H
+#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_CLANG_H
 
 #include "MSVC.h"
 #include "clang/Basic/DebugInfoOptions.h"

@@ -768,9 +768,9 @@ public:
       // Write out the EXC registers
       data.PutHex32(EXCRegSet);
       data.PutHex32(EXCWordCount);
-      PrintRegisterValue(reg_ctx, "far", NULL, 8, data);
-      PrintRegisterValue(reg_ctx, "esr", NULL, 4, data);
-      PrintRegisterValue(reg_ctx, "exception", NULL, 4, data);
+      PrintRegisterValue(reg_ctx, "far", nullptr, 8, data);
+      PrintRegisterValue(reg_ctx, "esr", nullptr, 4, data);
+      PrintRegisterValue(reg_ctx, "exception", nullptr, 4, data);
       return true;
     }
     return false;
@@ -5073,7 +5073,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   lldb::offset_t offset = lc_offset;
   for (uint32_t i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == NULL)
+    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
       break;
 
     llvm::MachO::version_min_command version_min;
@@ -5123,7 +5123,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   offset = lc_offset;
   for (uint32_t i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == NULL)
+    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
       break;
 
     do {
@@ -5149,7 +5149,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
           triple.setEnvironmentName(os_env.environment);
         add_triple(triple);
       }
-    } while (0);
+    } while (false);
     offset = cmd_offset + load_cmd.cmdsize;
   }
 

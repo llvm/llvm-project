@@ -44,7 +44,6 @@
 namespace llvm {
 
 class BasicBlock;
-class BranchInst;
 class DominatorTree;
 class Instruction;
 class LoopBlocksRPO;

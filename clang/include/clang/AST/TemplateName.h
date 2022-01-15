@@ -26,14 +26,12 @@ namespace clang {
 
 class ASTContext;
 class DependentTemplateName;
-class DiagnosticBuilder;
 class IdentifierInfo;
 class NamedDecl;
 class NestedNameSpecifier;
 enum OverloadedOperatorKind : int;
 class OverloadedTemplateStorage;
 class AssumedTemplateStorage;
-class PartialDiagnostic;
 struct PrintingPolicy;
 class QualifiedTemplateName;
 class SubstTemplateTemplateParmPackStorage;

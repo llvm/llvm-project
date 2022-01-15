@@ -4460,8 +4460,9 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
               CGF.getContext().getASTRecordLayout(CaptureRecord);
           unsigned Offset =
               Layout.getFieldOffset(It->second->getFieldIndex()) / CharWidth;
-          (void)DI->EmitDeclareOfAutoVariable(SharedVar, ContextValue,
-                                              CGF.Builder, false);
+          if (CGF.CGM.getCodeGenOpts().hasReducedDebugInfo())
+            (void)DI->EmitDeclareOfAutoVariable(SharedVar, ContextValue,
+                                                CGF.Builder, false);
           llvm::Instruction &Last = CGF.Builder.GetInsertBlock()->back();
           // Get the call dbg.declare instruction we just created and update
           // its DIExpression to add offset to base address.
@@ -4560,8 +4561,10 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
                             CGF.getContext().getDeclAlign(Pair.first));
         Scope.addPrivate(Pair.first, [Replacement]() { return Replacement; });
         if (auto *DI = CGF.getDebugInfo())
-          DI->EmitDeclareOfAutoVariable(Pair.first, Pair.second.getPointer(),
-                                        CGF.Builder, /*UsePointerValue*/ true);
+          if (CGF.CGM.getCodeGenOpts().hasReducedDebugInfo())
+            (void)DI->EmitDeclareOfAutoVariable(
+                Pair.first, Pair.second.getPointer(), CGF.Builder,
+                /*UsePointerValue*/ true);
       }
       // Adjust mapping for internal locals by mapping actual memory instead of
       // a pointer to this memory.
@@ -6046,6 +6049,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_inbranch:
   case OMPC_notinbranch:
   case OMPC_link:
+  case OMPC_indirect:
   case OMPC_use:
   case OMPC_novariants:
   case OMPC_nocontext:
@@ -6789,7 +6793,7 @@ void CodeGenFunction::EmitOMPTargetDataDirective(
 
   public:
     explicit DevicePointerPrivActionTy(bool &PrivatizeDevicePointers)
-        : PrePostActionTy(), PrivatizeDevicePointers(PrivatizeDevicePointers) {}
+        : PrivatizeDevicePointers(PrivatizeDevicePointers) {}
     void Enter(CodeGenFunction &CGF) override {
       PrivatizeDevicePointers = true;
     }

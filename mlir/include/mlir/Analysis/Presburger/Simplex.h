@@ -17,7 +17,6 @@
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "mlir/IR/Location.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -181,7 +180,7 @@ public:
   void rollback(unsigned snapshot);
 
   /// Add all the constraints from the given IntegerPolyhedron.
-  void intersectIntegerPolyhedron(const IntegerPolyhedron &fac);
+  void intersectIntegerPolyhedron(const IntegerPolyhedron &poly);
 
   /// Returns a rational sample point. This should not be called when Simplex is
   /// empty.
@@ -387,9 +386,9 @@ public:
   /// Check if the specified equality already holds in the polytope.
   bool isRedundantEquality(ArrayRef<int64_t> coeffs);
 
-  /// Returns true if this Simplex's polytope is a rational subset of `fac`.
+  /// Returns true if this Simplex's polytope is a rational subset of `poly`.
   /// Otherwise, returns false.
-  bool isRationalSubsetOf(const IntegerPolyhedron &fac);
+  bool isRationalSubsetOf(const IntegerPolyhedron &poly);
 
 private:
   friend class GBRSimplex;

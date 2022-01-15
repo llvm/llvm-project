@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Errc.h"
@@ -106,6 +107,30 @@ void HeaderSearch::PrintStats() {
 
   llvm::errs() << NumFrameworkLookups << " framework lookups.\n"
                << NumSubFrameworkLookups << " subframework lookups.\n";
+}
+
+void HeaderSearch::SetSearchPaths(
+    std::vector<DirectoryLookup> dirs, unsigned int angledDirIdx,
+    unsigned int systemDirIdx, bool noCurDirSearch,
+    llvm::DenseMap<unsigned int, unsigned int> searchDirToHSEntry) {
+  assert(angledDirIdx <= systemDirIdx && systemDirIdx <= dirs.size() &&
+         "Directory indices are unordered");
+  SearchDirs = std::move(dirs);
+  SearchDirsUsage.assign(SearchDirs.size(), false);
+  AngledDirIdx = angledDirIdx;
+  SystemDirIdx = systemDirIdx;
+  NoCurDirSearch = noCurDirSearch;
+  SearchDirToHSEntry = std::move(searchDirToHSEntry);
+  //LookupFileCache.clear();
+}
+
+void HeaderSearch::AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
+  unsigned idx = isAngled ? SystemDirIdx : AngledDirIdx;
+  SearchDirs.insert(SearchDirs.begin() + idx, dir);
+  SearchDirsUsage.insert(SearchDirsUsage.begin() + idx, false);
+  if (!isAngled)
+    AngledDirIdx++;
+  SystemDirIdx++;
 }
 
 std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
@@ -720,7 +745,8 @@ static const char *copyString(StringRef Str, llvm::BumpPtrAllocator &Alloc) {
 }
 
 static bool isFrameworkStylePath(StringRef Path, bool &IsPrivateHeader,
-                                 SmallVectorImpl<char> &FrameworkName) {
+                                 SmallVectorImpl<char> &FrameworkName,
+                                 SmallVectorImpl<char> &IncludeSpelling) {
   using namespace llvm::sys;
   path::const_iterator I = path::begin(Path);
   path::const_iterator E = path::end(Path);
@@ -736,15 +762,22 @@ static bool isFrameworkStylePath(StringRef Path, bool &IsPrivateHeader,
   // and some other variations among these lines.
   int FoundComp = 0;
   while (I != E) {
-    if (*I == "Headers")
+    if (*I == "Headers") {
       ++FoundComp;
-    if (I->endswith(".framework")) {
-      FrameworkName.append(I->begin(), I->end());
-      ++FoundComp;
-    }
-    if (*I == "PrivateHeaders") {
+    } else if (*I == "PrivateHeaders") {
       ++FoundComp;
       IsPrivateHeader = true;
+    } else if (I->endswith(".framework")) {
+      StringRef Name = I->drop_back(10); // Drop .framework
+      // Need to reset the strings and counter to support nested frameworks.
+      FrameworkName.clear();
+      FrameworkName.append(Name.begin(), Name.end());
+      IncludeSpelling.clear();
+      IncludeSpelling.append(Name.begin(), Name.end());
+      FoundComp = 1;
+    } else if (FoundComp >= 2) {
+      IncludeSpelling.push_back('/');
+      IncludeSpelling.append(I->begin(), I->end());
     }
     ++I;
   }
@@ -759,20 +792,24 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
                          bool FoundByHeaderMap = false) {
   bool IsIncluderPrivateHeader = false;
   SmallString<128> FromFramework, ToFramework;
-  if (!isFrameworkStylePath(Includer, IsIncluderPrivateHeader, FromFramework))
+  SmallString<128> FromIncludeSpelling, ToIncludeSpelling;
+  if (!isFrameworkStylePath(Includer, IsIncluderPrivateHeader, FromFramework,
+                            FromIncludeSpelling))
     return;
   bool IsIncludeePrivateHeader = false;
-  bool IsIncludeeInFramework = isFrameworkStylePath(
-      IncludeFE->getName(), IsIncludeePrivateHeader, ToFramework);
+  bool IsIncludeeInFramework =
+      isFrameworkStylePath(IncludeFE->getName(), IsIncludeePrivateHeader,
+                           ToFramework, ToIncludeSpelling);
 
   if (!isAngled && !FoundByHeaderMap) {
     SmallString<128> NewInclude("<");
     if (IsIncludeeInFramework) {
-      NewInclude += ToFramework.str().drop_back(10); // drop .framework
-      NewInclude += "/";
+      NewInclude += ToIncludeSpelling;
+      NewInclude += ">";
+    } else {
+      NewInclude += IncludeFilename;
+      NewInclude += ">";
     }
-    NewInclude += IncludeFilename;
-    NewInclude += ">";
     Diags.Report(IncludeLoc, diag::warn_quoted_include_in_framework_header)
         << IncludeFilename
         << FixItHint::CreateReplacement(IncludeLoc, NewInclude);
@@ -1779,11 +1816,8 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
   }
 
   // Populate the list of modules.
-  for (ModuleMap::module_iterator M = ModMap.module_begin(),
-                               MEnd = ModMap.module_end();
-       M != MEnd; ++M) {
-    Modules.push_back(M->getValue());
-  }
+  llvm::transform(ModMap.modules(), std::back_inserter(Modules),
+                  [](const auto &NameAndMod) { return NameAndMod.second; });
 }
 
 void HeaderSearch::loadTopLevelSystemModules() {
@@ -1843,9 +1877,9 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   using namespace llvm::sys;
 
   unsigned BestPrefixLength = 0;
-  // Checks whether Dir and File shares a common prefix, if they do and that's
-  // the longest prefix we've seen so for it returns true and updates the
-  // BestPrefixLength accordingly.
+  // Checks whether `Dir` is a strict path prefix of `File`. If so and that's
+  // the longest prefix we've seen so for it, returns true and updates the
+  // `BestPrefixLength` accordingly.
   auto CheckDir = [&](llvm::StringRef Dir) -> bool {
     llvm::SmallString<32> DirPath(Dir.begin(), Dir.end());
     if (!WorkingDir.empty() && !path::is_absolute(Dir))
@@ -1880,26 +1914,48 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
           path::is_separator(NI->front()) && path::is_separator(DI->front()))
         continue;
 
+      // Special case Apple .sdk folders since the search path is typically a
+      // symlink like `iPhoneSimulator14.5.sdk` while the file is instead
+      // located in `iPhoneSimulator.sdk` (the real folder).
+      if (NI->endswith(".sdk") && DI->endswith(".sdk")) {
+        StringRef NBasename = path::stem(*NI);
+        StringRef DBasename = path::stem(*DI);
+        if (DBasename.startswith(NBasename))
+          continue;
+      }
+
       if (*NI != *DI)
         break;
     }
     return false;
   };
 
+  bool BestPrefixIsFramework = false;
   for (unsigned I = 0; I != SearchDirs.size(); ++I) {
-    // FIXME: Support this search within frameworks.
-    if (!SearchDirs[I].isNormalDir())
-      continue;
-
-    StringRef Dir = SearchDirs[I].getDir()->getName();
-    if (CheckDir(Dir) && IsSystem)
-      *IsSystem = BestPrefixLength ? I >= SystemDirIdx : false;
+    if (SearchDirs[I].isNormalDir()) {
+      StringRef Dir = SearchDirs[I].getDir()->getName();
+      if (CheckDir(Dir)) {
+        if (IsSystem)
+          *IsSystem = BestPrefixLength ? I >= SystemDirIdx : false;
+        BestPrefixIsFramework = false;
+      }
+    } else if (SearchDirs[I].isFramework()) {
+      StringRef Dir = SearchDirs[I].getFrameworkDir()->getName();
+      if (CheckDir(Dir)) {
+        if (IsSystem)
+          *IsSystem = BestPrefixLength ? I >= SystemDirIdx : false;
+        BestPrefixIsFramework = true;
+      }
+    }
   }
 
   // Try to shorten include path using TUs directory, if we couldn't find any
   // suitable prefix in include search paths.
-  if (!BestPrefixLength && CheckDir(path::parent_path(MainFile)) && IsSystem)
-    *IsSystem = false;
+  if (!BestPrefixLength && CheckDir(path::parent_path(MainFile))) {
+    if (IsSystem)
+      *IsSystem = false;
+    BestPrefixIsFramework = false;
+  }
 
   // Try resolving resulting filename via reverse search in header maps,
   // key from header name is user prefered name for the include file.
@@ -1912,8 +1968,19 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
         SearchDirs[I].getHeaderMap()->reverseLookupFilename(Filename);
     if (!SpelledFilename.empty()) {
       Filename = SpelledFilename;
+      BestPrefixIsFramework = false;
       break;
     }
+  }
+
+  // If the best prefix is a framework path, we need to compute the proper
+  // include spelling for the framework header.
+  bool IsPrivateHeader;
+  SmallString<128> FrameworkName, IncludeSpelling;
+  if (BestPrefixIsFramework &&
+      isFrameworkStylePath(Filename, IsPrivateHeader, FrameworkName,
+                           IncludeSpelling)) {
+    Filename = IncludeSpelling;
   }
   return path::convert_to_slash(Filename);
 }

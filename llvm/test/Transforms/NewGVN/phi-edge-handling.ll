@@ -5,7 +5,7 @@
 ;; Block 6 is reachable, but edge 6->4 is not
 ;; This means the phi value is undef, not 0
 ; Function Attrs: ssp uwtable
-define i16 @hoge() local_unnamed_addr #0 align 2 {
+define i16 @hoge() {
 ; CHECK-LABEL: @hoge(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    switch i8 undef, label [[BB7:%.*]] [
@@ -21,7 +21,7 @@ define i16 @hoge() local_unnamed_addr #0 align 2 {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    ret i16 undef
 ; CHECK:       bb6:
-; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[BB4]], !llvm.loop !1
+; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[BB4]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    unreachable
 ;
@@ -45,16 +45,108 @@ bb4:                                              ; preds = %bb6, %bb2
   ret i16 %tmp
 
 bb6:                                              ; preds = %bb4
-  br i1 true, label %bb3, label %bb4, !llvm.loop !1
+  br i1 true, label %bb3, label %bb4
 
 bb7:                                              ; preds = %bb
   unreachable
 }
 
-attributes #0 = { ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+define i8 @only_undef(i1 %cond) {
+; CHECK-LABEL: @only_undef(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i8 undef
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [undef, %A], [undef, %B]
+  ret i8 %r
+}
 
-!llvm.ident = !{!0}
+define i8 @only_poison(i1 %cond) {
+; CHECK-LABEL: @only_poison(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i8 poison
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [poison, %A], [poison, %B]
+  ret i8 %r
+}
 
-!0 = !{!"clang version 5.0.0"}
-!1 = distinct !{!1, !2}
-!2 = !{!"llvm.loop.unroll.disable"}
+define i8 @undef_poison(i1 %cond) {
+; CHECK-LABEL: @undef_poison(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i8 undef
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [undef, %A], [poison, %B]
+  ret i8 %r
+}
+
+define i8 @value_undef(i1 %cond, i8 %v) {
+; CHECK-LABEL: @value_undef(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i8 [[V:%.*]]
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [undef, %A], [%v, %B]
+  ret i8 %r
+}
+
+define i8 @value_poison(i1 %cond, i8 %v) {
+; CHECK-LABEL: @value_poison(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
+; CHECK-NEXT:    ret i8 [[V:%.*]]
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [poison, %A], [%v, %B]
+  ret i8 %r
+}

@@ -1,4 +1,4 @@
-//===-- M68kSubtarget.h - Define Subtarget for the M68k -----*- C++ -*-===//
+//===-- M68kSubtarget.h - Define Subtarget for the M68k ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_CPU0_M68KSUBTARGET_H
-#define LLVM_LIB_TARGET_CPU0_M68KSUBTARGET_H
+#ifndef LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H
+#define LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H
 
 #include "M68kFrameLowering.h"
 #include "M68kISelLowering.h"
@@ -179,4 +179,4 @@ public:
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_M68KSUBTARGET_H

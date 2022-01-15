@@ -127,6 +127,41 @@ static std::pair<Value *, Value *> matchStridedConstant(Constant *StartC) {
   return std::make_pair(StartVal, Stride);
 }
 
+static std::pair<Value *, Value *> matchStridedStart(Value *Start,
+                                                     IRBuilder<> &Builder) {
+  // Base case, start is a strided constant.
+  auto *StartC = dyn_cast<Constant>(Start);
+  if (StartC)
+    return matchStridedConstant(StartC);
+
+  // Not a constant, maybe it's a strided constant with a splat added to it.
+  auto *BO = dyn_cast<BinaryOperator>(Start);
+  if (!BO || BO->getOpcode() != Instruction::Add)
+    return std::make_pair(nullptr, nullptr);
+
+  // Look for an operand that is splatted.
+  unsigned OtherIndex = 1;
+  Value *Splat = getSplatValue(BO->getOperand(0));
+  if (!Splat) {
+    Splat = getSplatValue(BO->getOperand(1));
+    OtherIndex = 0;
+  }
+  if (!Splat)
+    return std::make_pair(nullptr, nullptr);
+
+  Value *Stride;
+  std::tie(Start, Stride) = matchStridedStart(BO->getOperand(OtherIndex),
+                                              Builder);
+  if (!Start)
+    return std::make_pair(nullptr, nullptr);
+
+  // Add the splat value to the start.
+  Builder.SetInsertPoint(BO);
+  Builder.SetCurrentDebugLocation(DebugLoc());
+  Start = Builder.CreateAdd(Start, Splat);
+  return std::make_pair(Start, Stride);
+}
+
 // Recursively, walk about the use-def chain until we find a Phi with a strided
 // start value. Build and update a scalar recurrence as we unwind the recursion.
 // We also update the Stride as we unwind. Our goal is to move all of the
@@ -161,12 +196,7 @@ bool RISCVGatherScatterLowering::matchStridedRecurrence(Value *Index, Loop *L,
     if (!Step)
       return false;
 
-    // Start should be a strided constant.
-    auto *StartC = dyn_cast<Constant>(Start);
-    if (!StartC)
-      return false;
-
-    std::tie(Start, Stride) = matchStridedConstant(StartC);
+    std::tie(Start, Stride) = matchStridedStart(Start, Builder);
     if (!Start)
       return false;
     assert(Stride != nullptr);

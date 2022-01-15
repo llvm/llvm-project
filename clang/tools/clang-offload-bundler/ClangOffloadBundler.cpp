@@ -356,7 +356,7 @@ class BinaryFileHandler final : public FileHandler {
   std::string CurWriteBundleTarget;
 
 public:
-  BinaryFileHandler() : FileHandler() {}
+  BinaryFileHandler() {}
 
   ~BinaryFileHandler() final {}
 
@@ -576,8 +576,7 @@ class ObjectFileHandler final : public FileHandler {
 
 public:
   ObjectFileHandler(std::unique_ptr<ObjectFile> ObjIn)
-      : FileHandler(), Obj(std::move(ObjIn)),
-        CurrentSection(Obj->section_begin()),
+      : Obj(std::move(ObjIn)), CurrentSection(Obj->section_begin()),
         NextSection(Obj->section_begin()) {}
 
   ~ObjectFileHandler() final {}
@@ -813,8 +812,7 @@ protected:
   }
 
 public:
-  TextFileHandler(StringRef Comment)
-      : FileHandler(), Comment(Comment), ReadChars(0) {
+  TextFileHandler(StringRef Comment) : Comment(Comment), ReadChars(0) {
     BundleStartString =
         "\n" + Comment.str() + " " OFFLOAD_BUNDLER_MAGIC_STR "__START__ ";
     BundleEndString =

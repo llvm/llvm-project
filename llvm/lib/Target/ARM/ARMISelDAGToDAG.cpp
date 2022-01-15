@@ -3227,7 +3227,7 @@ bool ARMDAGToDAGISel::transformFixedFloatingPointConversion(SDNode *N,
     if (!ImmAPF.getExactInverse(&ToConvert))
       return false;
   }
-  APSInt Converted(64, 0);
+  APSInt Converted(64, false);
   bool IsExact;
   ToConvert.convertToInteger(Converted, llvm::RoundingMode::NearestTiesToEven,
                              &IsExact);
@@ -5737,8 +5737,7 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
   // them into a GPRPair.
 
   SDLoc dl(N);
-  SDValue Glue = N->getGluedNode() ? N->getOperand(NumOps-1)
-                                   : SDValue(nullptr,0);
+  SDValue Glue = N->getGluedNode() ? N->getOperand(NumOps - 1) : SDValue();
 
   SmallVector<bool, 8> OpChanged;
   // Glue node will be appended late.

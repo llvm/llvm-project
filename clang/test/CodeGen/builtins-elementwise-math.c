@@ -205,3 +205,51 @@ void test_builtin_elementwise_ceil(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call <4 x float> @llvm.ceil.v4f32(<4 x float> [[VF1]])
   vf2 = __builtin_elementwise_ceil(vf1);
 }
+
+void test_builtin_elementwise_floor(float f1, float f2, double d1, double d2,
+                                    float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_floor(
+  // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.floor.f32(float [[F1]])
+  f2 = __builtin_elementwise_floor(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, double* %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.floor.f64(double [[D1]])
+  d2 = __builtin_elementwise_floor(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, <4 x float>* %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.floor.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_floor(vf1);
+}
+
+void test_builtin_elementwise_roundeven(float f1, float f2, double d1, double d2,
+                                        float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_roundeven(
+  // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.roundeven.f32(float [[F1]])
+  f2 = __builtin_elementwise_roundeven(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, double* %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.roundeven.f64(double [[D1]])
+  d2 = __builtin_elementwise_roundeven(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, <4 x float>* %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.roundeven.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_roundeven(vf1);
+}
+
+void test_builtin_elementwise_trunc(float f1, float f2, double d1, double d2,
+                                    float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_trunc(
+  // CHECK:      [[F1:%.+]] = load float, float* %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.trunc.f32(float [[F1]])
+  f2 = __builtin_elementwise_trunc(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, double* %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.trunc.f64(double [[D1]])
+  d2 = __builtin_elementwise_trunc(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, <4 x float>* %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.trunc.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_trunc(vf1);
+}

@@ -17,6 +17,7 @@
 
 namespace Fortran::parser {
 struct DataStmtSet;
+struct DataStmtValue;
 }
 namespace Fortran::evaluate {
 class ExpressionAnalyzer;
@@ -39,6 +40,11 @@ using DataInitializations = std::map<const Symbol *, SymbolDataInitialization>;
 // compatibility.
 void AccumulateDataInitializations(DataInitializations &,
     evaluate::ExpressionAnalyzer &, const parser::DataStmtSet &);
+
+// For legacy DATA-style initialization extension: integer n(2)/1,2/
+void AccumulateDataInitializations(DataInitializations &,
+    evaluate::ExpressionAnalyzer &, const Symbol &,
+    const std::list<common::Indirection<parser::DataStmtValue>> &);
 
 void ConvertToInitializers(
     DataInitializations &, evaluate::ExpressionAnalyzer &);

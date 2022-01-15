@@ -10,6 +10,6 @@ target triple = "msp430-elf"
 define void @f() {
 entry:
 ; CHECK: mov r1, &256
-  call void asm sideeffect "mov r1, $0", "*m"(i8* inttoptr (i16 256 to i8*))
+  call void asm sideeffect "mov r1, $0", "*m"(i8* elementtype(i8) inttoptr (i16 256 to i8*))
   ret void
 }

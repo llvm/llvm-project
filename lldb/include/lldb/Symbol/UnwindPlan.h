@@ -395,12 +395,10 @@ public:
   typedef std::shared_ptr<Row> RowSP;
 
   UnwindPlan(lldb::RegisterKind reg_kind)
-      : m_row_list(), m_plan_valid_address_range(), m_register_kind(reg_kind),
-        m_return_addr_register(LLDB_INVALID_REGNUM), m_source_name(),
+      : m_register_kind(reg_kind), m_return_addr_register(LLDB_INVALID_REGNUM),
         m_plan_is_sourced_from_compiler(eLazyBoolCalculate),
         m_plan_is_valid_at_all_instruction_locations(eLazyBoolCalculate),
-        m_plan_is_for_signal_trap(eLazyBoolCalculate),
-        m_lsda_address(), m_personality_func_addr() {}
+        m_plan_is_for_signal_trap(eLazyBoolCalculate) {}
 
   // Performs a deep copy of the plan, including all the rows (expensive).
   UnwindPlan(const UnwindPlan &rhs)
@@ -442,7 +440,7 @@ public:
     m_return_addr_register = regnum;
   }
 
-  uint32_t GetReturnAddressRegister(void) { return m_return_addr_register; }
+  uint32_t GetReturnAddressRegister() { return m_return_addr_register; }
 
   uint32_t GetInitialCFARegister() const {
     if (m_row_list.empty())

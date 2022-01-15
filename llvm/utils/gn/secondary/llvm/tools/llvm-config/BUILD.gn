@@ -36,7 +36,7 @@ write_cmake_config("BuildVariables.inc") {
     lib = ""
   }
 
-  # Windows doesn't use any of libxml2,terminfo, zlib by default.
+  # Windows doesn't use any of libxml2, terminfo, zlib by default.
   # Make GN not warn about these variables being unused.
   not_needed([
                "l",
@@ -45,10 +45,8 @@ write_cmake_config("BuildVariables.inc") {
 
   system_libs = ""
   if (host_os == "win") {
-    # libuuid required for FOLDERID_Profile usage in
-    # lib/Support/Windows/Path.inc.
-    # advapi32 required for CryptAcquireContextW in
-    # lib/Support/Windows/Path.inc
+    # uuid.lib for FOLDERID_Profile in lib/Support/Windows/Path.inc.
+    # advapi32.lib for CryptAcquireContextW in lib/Support/Windows/Path.inc.
     system_libs = "psapi.lib shell32.lib ole32.lib uuid.lib advapi32.lib"
   } else {
     system_libs += "-lm"
@@ -73,6 +71,7 @@ write_cmake_config("BuildVariables.inc") {
   }
 
   values = [
+    "CMAKE_INSTALL_INCLUDEDIR=include",
     "LLVM_SRC_ROOT=" + rebase_path("//llvm"),
     "LLVM_OBJ_ROOT=" + rebase_path(root_out_dir),
 

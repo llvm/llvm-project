@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/Utils/TFUtils.h"
+#include "google/protobuf/struct.pb.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
 #include "llvm/AsmParser/Parser.h"
@@ -182,7 +183,7 @@ TEST(TFUtilsTest, Logger) {
   L.flush(OS);
 
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -218,7 +219,7 @@ TEST(TFUtilsTest, LoggerInt32FeaturesAndReward) {
   L.flush(OS);
 
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -252,7 +253,7 @@ TEST(TFUtilsTest, LoggerNoReward) {
   raw_string_ostream OS(Result);
   L.flush(OS);
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("the_float", float_list, 0, F00);
   PROTO_CHECKER("the_float", float_list, 1, F10);
   PROTO_CHECKER("alternate_name", int64_list, 0, F01);
@@ -278,8 +279,37 @@ TEST(TFUtilsTest, LoggerFinalReward) {
   const float Zero[]{0.0};
   const float R[]{3.14};
   tensorflow::SequenceExample Expected;
-  EXPECT_TRUE(Expected.ParseFromString(Result));
+  ASSERT_TRUE(Expected.ParseFromString(Result));
   PROTO_CHECKER("reward", float_list, 0, Zero);
   PROTO_CHECKER("reward", float_list, 1, Zero);
   PROTO_CHECKER("reward", float_list, 2, R);
+}
+
+TEST(TFUtilsTest, LoggerGroup) {
+  std::vector<LoggedFeatureSpec> Features;
+  Features.push_back({TensorSpec::createSpec<float>("the_float", {1}), None});
+  Features.push_back({TensorSpec::createSpec<int64_t>("the_int", {1}), None});
+
+  auto Rewards = TensorSpec::createSpec<float>("reward", {1});
+  StringMap<std::unique_ptr<Logger>> Loggers;
+  std::vector<std::string> Names{"a", "b"};
+  size_t Bump = 0;
+  for (auto Name : Names) {
+    auto L = std::make_unique<Logger>(Features, Rewards, true);
+    for (int64_t I = 0; I < 3; ++I) {
+      float F = static_cast<float>(I) + Bump;
+      L->logFloatValue(0, &F);
+      L->logInt64Value(1, &I);
+    }
+    L->logFloatFinalReward(3.14 + Bump);
+    Loggers.insert(std::make_pair(Name, std::move(L)));
+  }
+  std::string Result;
+  raw_string_ostream OS(Result);
+  Logger::flushLogs(OS, Loggers);
+  google::protobuf::Struct Expected;
+  ASSERT_TRUE(Expected.ParseFromString(Result));
+  EXPECT_EQ(Expected.fields_size(), 2);
+  EXPECT_TRUE(Expected.fields().contains("a"));
+  EXPECT_TRUE(Expected.fields().contains("b"));
 }

@@ -82,70 +82,70 @@ std::unique_ptr<Pass> createLinalgDetensorizePass();
 //===----------------------------------------------------------------------===//
 /// Create a LinalgStrategyTileAndFusePass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyTileAndFusePass(
-    StringRef opName = "", linalg::LinalgTilingAndFusionOptions opt = {},
-    linalg::LinalgTransformationFilter filter =
+    StringRef opName = "", const linalg::LinalgTilingAndFusionOptions &opt = {},
+    const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyTilePass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyTilePass(
     StringRef opName = "",
-    linalg::LinalgTilingOptions opt = linalg::LinalgTilingOptions(),
-    linalg::LinalgTransformationFilter filter =
+    const linalg::LinalgTilingOptions &opt = linalg::LinalgTilingOptions(),
+    const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyPadPass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyPadPass(
     StringRef opName = "",
-    linalg::LinalgPaddingOptions opt = linalg::LinalgPaddingOptions(),
-    linalg::LinalgTransformationFilter filter =
+    const linalg::LinalgPaddingOptions &opt = linalg::LinalgPaddingOptions(),
+    const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyPromotePass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyPromotePass(
     StringRef opName = "",
-    linalg::LinalgPromotionOptions opt = linalg::LinalgPromotionOptions(),
-    linalg::LinalgTransformationFilter filter =
+    const linalg::LinalgPromotionOptions &opt =
+        linalg::LinalgPromotionOptions(),
+    const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyGeneralizePass.
-std::unique_ptr<OperationPass<FuncOp>>
-createLinalgStrategyGeneralizePass(StringRef opName = "",
-                                   linalg::LinalgTransformationFilter filter =
-                                       linalg::LinalgTransformationFilter());
+std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyGeneralizePass(
+    StringRef opName = "", const linalg::LinalgTransformationFilter &filter =
+                               linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyDecomposePass.
 // TODO: if/when we need finer control add an `opName` parameter.
-std::unique_ptr<OperationPass<FuncOp>>
-createLinalgStrategyDecomposePass(linalg::LinalgTransformationFilter filter =
-                                      linalg::LinalgTransformationFilter());
+std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyDecomposePass(
+    const linalg::LinalgTransformationFilter &filter =
+        linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyInterchangePass.
-std::unique_ptr<OperationPass<FuncOp>>
-createLinalgStrategyInterchangePass(ArrayRef<int64_t> iteratorInterchange = {},
-                                    linalg::LinalgTransformationFilter filter =
-                                        linalg::LinalgTransformationFilter());
+std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyInterchangePass(
+    ArrayRef<int64_t> iteratorInterchange = {},
+    const linalg::LinalgTransformationFilter &filter =
+        linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyVectorizePass.
-std::unique_ptr<OperationPass<FuncOp>>
-createLinalgStrategyVectorizePass(StringRef opName = "",
-                                  linalg::LinalgVectorizationOptions opt =
-                                      linalg::LinalgVectorizationOptions(),
-                                  linalg::LinalgTransformationFilter filter =
-                                      linalg::LinalgTransformationFilter(),
-                                  bool padVectorize = false);
+std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyVectorizePass(
+    StringRef opName = "",
+    linalg::LinalgVectorizationOptions opt =
+        linalg::LinalgVectorizationOptions(),
+    const linalg::LinalgTransformationFilter &filter =
+        linalg::LinalgTransformationFilter(),
+    bool padVectorize = false);
 
 /// Create a LinalgStrategyEnablePass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyEnablePass(
     linalg::LinalgEnablingOptions opt = linalg::LinalgEnablingOptions(),
-    linalg::LinalgTransformationFilter filter =
+    const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyLowerVectorsPass.
-std::unique_ptr<OperationPass<FuncOp>>
-createLinalgStrategyLowerVectorsPass(linalg::LinalgVectorLoweringOptions opt =
-                                         linalg::LinalgVectorLoweringOptions(),
-                                     linalg::LinalgTransformationFilter filter =
-                                         linalg::LinalgTransformationFilter());
+std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyLowerVectorsPass(
+    linalg::LinalgVectorLoweringOptions opt =
+        linalg::LinalgVectorLoweringOptions(),
+    const linalg::LinalgTransformationFilter &filter =
+        linalg::LinalgTransformationFilter());
 
 /// Create a LinalgStrategyRemoveMarkersPass.
 std::unique_ptr<OperationPass<FuncOp>> createLinalgStrategyRemoveMarkersPass();

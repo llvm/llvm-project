@@ -4499,6 +4499,10 @@ Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   }
 
   // C99 6.5.3.4p4: the type (an unsigned integer type) is size_t.
+  if (isUnevaluatedContext() && ExprKind == UETT_SizeOf &&
+      TInfo->getType()->isVariablyModifiedType())
+    TInfo = TransformToPotentiallyEvaluated(TInfo);
+
   return new (Context) UnaryExprOrTypeTraitExpr(
       ExprKind, TInfo, Context.getSizeType(), OpLoc, R.getEnd());
 }
@@ -4645,6 +4649,38 @@ static bool isMSPropertySubscriptExpr(Sema &S, Expr *Base) {
   return isa<MSPropertySubscriptExpr>(BaseNoParens);
 }
 
+// Returns the type used for LHS[RHS], given one of LHS, RHS is type-dependent.
+// Typically this is DependentTy, but can sometimes be more precise.
+//
+// There are cases when we could determine a non-dependent type:
+//  - LHS and RHS may have non-dependent types despite being type-dependent
+//    (e.g. unbounded array static members of the current instantiation)
+//  - one may be a dependent-sized array with known element type
+//  - one may be a dependent-typed valid index (enum in current instantiation)
+//
+// We *always* return a dependent type, in such cases it is DependentTy.
+// This avoids creating type-dependent expressions with non-dependent types.
+// FIXME: is this important to avoid? See https://reviews.llvm.org/D107275
+static QualType getDependentArraySubscriptType(Expr *LHS, Expr *RHS,
+                                               const ASTContext &Ctx) {
+  assert(LHS->isTypeDependent() || RHS->isTypeDependent());
+  QualType LTy = LHS->getType(), RTy = RHS->getType();
+  QualType Result = Ctx.DependentTy;
+  if (RTy->isIntegralOrUnscopedEnumerationType()) {
+    if (const PointerType *PT = LTy->getAs<PointerType>())
+      Result = PT->getPointeeType();
+    else if (const ArrayType *AT = LTy->getAsArrayTypeUnsafe())
+      Result = AT->getElementType();
+  } else if (LTy->isIntegralOrUnscopedEnumerationType()) {
+    if (const PointerType *PT = RTy->getAs<PointerType>())
+      Result = PT->getPointeeType();
+    else if (const ArrayType *AT = RTy->getAsArrayTypeUnsafe())
+      Result = AT->getElementType();
+  }
+  // Ensure we return a dependent type.
+  return Result->isDependentType() ? Result : Ctx.DependentTy;
+}
+
 ExprResult
 Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base, SourceLocation lbLoc,
                               Expr *idx, SourceLocation rbLoc) {
@@ -4737,8 +4773,9 @@ Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base, SourceLocation lbLoc,
   // Build an unanalyzed expression if either operand is type-dependent.
   if (getLangOpts().CPlusPlus &&
       (base->isTypeDependent() || idx->isTypeDependent())) {
-    return new (Context) ArraySubscriptExpr(base, idx, Context.DependentTy,
-                                            VK_LValue, OK_Ordinary, rbLoc);
+    return new (Context) ArraySubscriptExpr(
+        base, idx, getDependentArraySubscriptType(base, idx, getASTContext()),
+        VK_LValue, OK_Ordinary, rbLoc);
   }
 
   // MSDN, property (C++)
@@ -5492,7 +5529,8 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
   if (LHSTy->isDependentType() || RHSTy->isDependentType()) {
     BaseExpr = LHSExp;
     IndexExpr = RHSExp;
-    ResultType = Context.DependentTy;
+    ResultType =
+        getDependentArraySubscriptType(LHSExp, RHSExp, getASTContext());
   } else if (const PointerType *PTy = LHSTy->getAs<PointerType>()) {
     BaseExpr = LHSExp;
     IndexExpr = RHSExp;
@@ -7693,8 +7731,7 @@ Sema::ActOnCastExpr(Scope *S, SourceLocation LParenLoc,
     CastExpr = Result.get();
   }
 
-  if (getLangOpts().CPlusPlus && !castType->isVoidType() &&
-      !getSourceManager().isInSystemMacro(LParenLoc))
+  if (getLangOpts().CPlusPlus && !castType->isVoidType())
     Diag(LParenLoc, diag::warn_old_style_cast) << CastExpr->getSourceRange();
 
   CheckTollFreeBridgeCast(castType, CastExpr);
@@ -15912,7 +15949,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
       // promoted type and the underlying type are the same except for
       // signedness. Ask the AST for the correctly corresponding type and see
       // if that's compatible.
-      if (!PromoteType.isNull() &&
+      if (!PromoteType.isNull() && !UnderlyingType->isBooleanType() &&
           PromoteType->isUnsignedIntegerType() !=
               UnderlyingType->isUnsignedIntegerType()) {
         UnderlyingType =
@@ -16566,6 +16603,16 @@ ExprResult Sema::TransformToPotentiallyEvaluated(Expr *E) {
   if (isUnevaluatedContext())
     return E;
   return TransformToPE(*this).TransformExpr(E);
+}
+
+TypeSourceInfo *Sema::TransformToPotentiallyEvaluated(TypeSourceInfo *TInfo) {
+  assert(isUnevaluatedContext() &&
+         "Should only transform unevaluated expressions");
+  ExprEvalContexts.back().Context =
+      ExprEvalContexts[ExprEvalContexts.size() - 2].Context;
+  if (isUnevaluatedContext())
+    return TInfo;
+  return TransformToPE(*this).TransformType(TInfo);
 }
 
 void
@@ -19175,10 +19222,12 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
 }
 
 Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
-                                           Expr *SubExpr, ConditionKind CK) {
-  // Empty conditions are valid in for-statements.
+                                           Expr *SubExpr, ConditionKind CK,
+                                           bool MissingOK) {
+  // MissingOK indicates whether having no condition expression is valid
+  // (for loop) or invalid (e.g. while loop).
   if (!SubExpr)
-    return ConditionResult();
+    return MissingOK ? ConditionResult() : ConditionError();
 
   ExprResult Cond;
   switch (CK) {
@@ -19196,7 +19245,7 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
   }
   if (Cond.isInvalid()) {
     Cond = CreateRecoveryExpr(SubExpr->getBeginLoc(), SubExpr->getEndLoc(),
-                              {SubExpr});
+                              {SubExpr}, PreferredConditionType(CK));
     if (!Cond.get())
       return ConditionError();
   }

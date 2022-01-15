@@ -63,7 +63,6 @@ public:
                 : IsFunctionResult(symbol)     ? "Function result"
                 : IsAllocatable(symbol)        ? "Allocatable"
                 : IsInitialized(symbol, true)  ? "Default-initialized"
-                : IsInBlankCommon(symbol)      ? "Blank COMMON object"
                 : IsProcedure(symbol) && !IsPointer(symbol) ? "Procedure"
                 // remaining checks don't apply to components
                 : !isFirstSymbol                   ? nullptr
@@ -77,9 +76,15 @@ public:
           "%s '%s' must not be initialized in a DATA statement"_err_en_US,
           whyNot, symbol.name());
       return false;
-    } else if (IsProcedurePointer(symbol)) {
+    }
+    if (IsProcedurePointer(symbol)) {
       context_.Say(source_,
           "Procedure pointer '%s' in a DATA statement is not standard"_en_US,
+          symbol.name());
+    }
+    if (IsInBlankCommon(symbol)) {
+      context_.Say(source_,
+          "Blank COMMON object '%s' in a DATA statement is not standard"_en_US,
           symbol.name());
     }
     return true;
@@ -218,6 +223,29 @@ void DataChecker::Leave(const parser::DataStmtSet &set) {
     AccumulateDataInitializations(inits_, exprAnalyzer_, set);
   }
   currentSetHasFatalErrors_ = false;
+}
+
+// Handle legacy DATA-style initialization, e.g. REAL PI/3.14159/, for
+// variables and components (esp. for DEC STRUCTUREs)
+template <typename A> void DataChecker::LegacyDataInit(const A &decl) {
+  if (const auto &init{
+          std::get<std::optional<parser::Initialization>>(decl.t)}) {
+    const Symbol *name{std::get<parser::Name>(decl.t).symbol};
+    const auto *list{
+        std::get_if<std::list<common::Indirection<parser::DataStmtValue>>>(
+            &init->u)};
+    if (name && list) {
+      AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
+    }
+  }
+}
+
+void DataChecker::Leave(const parser::ComponentDecl &decl) {
+  LegacyDataInit(decl);
+}
+
+void DataChecker::Leave(const parser::EntityDecl &decl) {
+  LegacyDataInit(decl);
 }
 
 void DataChecker::CompileDataInitializationsIntoInitializers() {

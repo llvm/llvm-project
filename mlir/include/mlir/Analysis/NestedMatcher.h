@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_MLFUNCTIONMATCHER_H_
-#define MLIR_ANALYSIS_MLFUNCTIONMATCHER_H_
+#ifndef MLIR_ANALYSIS_NESTEDMATCHER_H
+#define MLIR_ANALYSIS_NESTEDMATCHER_H
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
@@ -65,7 +65,7 @@ private:
   NestedMatch() = default;
 
   /// Payload, holds a NestedMatch and all its children along this branch.
-  Operation *matchedOperation;
+  Operation *matchedOperation = nullptr;
   ArrayRef<NestedMatch> matchedChildren;
 };
 
@@ -180,15 +180,15 @@ public:
 namespace matcher {
 // Syntactic sugar NestedPattern builder functions.
 NestedPattern Op(FilterFunctionType filter = defaultFilterFunction);
-NestedPattern If(NestedPattern child);
-NestedPattern If(FilterFunctionType filter, NestedPattern child);
+NestedPattern If(const NestedPattern &child);
+NestedPattern If(const FilterFunctionType &filter, const NestedPattern &child);
 NestedPattern If(ArrayRef<NestedPattern> nested = {});
-NestedPattern If(FilterFunctionType filter,
+NestedPattern If(const FilterFunctionType &filter,
                  ArrayRef<NestedPattern> nested = {});
-NestedPattern For(NestedPattern child);
-NestedPattern For(FilterFunctionType filter, NestedPattern child);
+NestedPattern For(const NestedPattern &child);
+NestedPattern For(const FilterFunctionType &filter, const NestedPattern &child);
 NestedPattern For(ArrayRef<NestedPattern> nested = {});
-NestedPattern For(FilterFunctionType filter,
+NestedPattern For(const FilterFunctionType &filter,
                   ArrayRef<NestedPattern> nested = {});
 
 bool isParallelLoop(Operation &op);
@@ -198,4 +198,4 @@ bool isLoadOrStore(Operation &op);
 } // namespace matcher
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_MLFUNCTIONMATCHER_H_
+#endif // MLIR_ANALYSIS_NESTEDMATCHER_H

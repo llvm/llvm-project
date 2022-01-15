@@ -1091,7 +1091,6 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    sd s6, 32(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s7, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s8, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s9, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
@@ -1102,12 +1101,11 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset s6, -64
 ; CHECK-NEXT:    .cfi_offset s7, -72
 ; CHECK-NEXT:    .cfi_offset s8, -80
-; CHECK-NEXT:    .cfi_offset s9, -88
-; CHECK-NEXT:    lhu s5, 0(a1)
+; CHECK-NEXT:    lhu s6, 0(a1)
 ; CHECK-NEXT:    lhu s2, 56(a1)
 ; CHECK-NEXT:    lhu s3, 48(a1)
 ; CHECK-NEXT:    lhu s4, 40(a1)
-; CHECK-NEXT:    lhu s6, 32(a1)
+; CHECK-NEXT:    lhu s5, 32(a1)
 ; CHECK-NEXT:    lhu s7, 24(a1)
 ; CHECK-NEXT:    lhu s1, 16(a1)
 ; CHECK-NEXT:    lhu a1, 8(a1)
@@ -1117,13 +1115,13 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    mv s8, a0
 ; CHECK-NEXT:    mv a0, s1
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
-; CHECK-NEXT:    mv s9, a0
+; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    mv a0, s7
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
-; CHECK-NEXT:    mv s1, a0
-; CHECK-NEXT:    mv a0, s6
+; CHECK-NEXT:    mv s7, a0
+; CHECK-NEXT:    mv a0, s5
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
-; CHECK-NEXT:    mv s6, a0
+; CHECK-NEXT:    mv s5, a0
 ; CHECK-NEXT:    mv a0, s4
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
 ; CHECK-NEXT:    mv s4, a0
@@ -1134,69 +1132,61 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s1
-; CHECK-NEXT:    fsw ft0, 4(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    fmv.w.x ft0, s9
-; CHECK-NEXT:    fcvt.lu.s s7, ft0, rtz
+; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s8
 ; CHECK-NEXT:    fcvt.lu.s s8, ft0, rtz
-; CHECK-NEXT:    sext.w s1, s8
-; CHECK-NEXT:    mv a0, s5
+; CHECK-NEXT:    mv a0, s6
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.lu.s a6, ft0, rtz
-; CHECK-NEXT:    sext.w a0, a6
-; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    bltu a0, a1, .LBB16_2
+; CHECK-NEXT:    lui a0, 16
+; CHECK-NEXT:    addiw a1, a0, -1
+; CHECK-NEXT:    bltu a6, a1, .LBB16_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    mv a6, a1
 ; CHECK-NEXT:  .LBB16_2: # %entry
-; CHECK-NEXT:    fmv.w.x ft0, s6
-; CHECK-NEXT:    flw ft1, 4(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    fcvt.lu.s a7, ft1, rtz
-; CHECK-NEXT:    sext.w a4, s7
-; CHECK-NEXT:    bltu s1, a1, .LBB16_4
+; CHECK-NEXT:    fmv.w.x ft1, s7
+; CHECK-NEXT:    flw ft0, 12(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    fcvt.lu.s a2, ft0, rtz
+; CHECK-NEXT:    bltu s8, a1, .LBB16_4
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    mv s8, a1
 ; CHECK-NEXT:  .LBB16_4: # %entry
-; CHECK-NEXT:    fmv.w.x ft1, s4
-; CHECK-NEXT:    fcvt.lu.s a3, ft0, rtz
-; CHECK-NEXT:    sext.w a5, a7
-; CHECK-NEXT:    bltu a4, a1, .LBB16_6
+; CHECK-NEXT:    fmv.w.x ft0, s5
+; CHECK-NEXT:    fcvt.lu.s a3, ft1, rtz
+; CHECK-NEXT:    bltu a2, a1, .LBB16_6
 ; CHECK-NEXT:  # %bb.5: # %entry
-; CHECK-NEXT:    mv s7, a1
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB16_6: # %entry
-; CHECK-NEXT:    fmv.w.x ft0, s3
-; CHECK-NEXT:    fcvt.lu.s a4, ft1, rtz
-; CHECK-NEXT:    sext.w s1, a3
-; CHECK-NEXT:    bltu a5, a1, .LBB16_8
+; CHECK-NEXT:    fmv.w.x ft1, s4
+; CHECK-NEXT:    fcvt.lu.s a4, ft0, rtz
+; CHECK-NEXT:    bltu a3, a1, .LBB16_8
 ; CHECK-NEXT:  # %bb.7: # %entry
-; CHECK-NEXT:    mv a7, a1
-; CHECK-NEXT:  .LBB16_8: # %entry
-; CHECK-NEXT:    fmv.w.x ft1, s2
-; CHECK-NEXT:    fcvt.lu.s a5, ft0, rtz
-; CHECK-NEXT:    sext.w a0, a4
-; CHECK-NEXT:    bltu s1, a1, .LBB16_10
-; CHECK-NEXT:  # %bb.9: # %entry
 ; CHECK-NEXT:    mv a3, a1
+; CHECK-NEXT:  .LBB16_8: # %entry
+; CHECK-NEXT:    fmv.w.x ft0, s3
+; CHECK-NEXT:    fcvt.lu.s a5, ft1, rtz
+; CHECK-NEXT:    bltu a4, a1, .LBB16_10
+; CHECK-NEXT:  # %bb.9: # %entry
+; CHECK-NEXT:    mv a4, a1
 ; CHECK-NEXT:  .LBB16_10: # %entry
-; CHECK-NEXT:    fcvt.lu.s s1, ft1, rtz
-; CHECK-NEXT:    sext.w a2, a5
-; CHECK-NEXT:    bgeu a0, a1, .LBB16_15
+; CHECK-NEXT:    fmv.w.x ft1, s2
+; CHECK-NEXT:    fcvt.lu.s s1, ft0, rtz
+; CHECK-NEXT:    bgeu a5, a1, .LBB16_15
 ; CHECK-NEXT:  # %bb.11: # %entry
-; CHECK-NEXT:    sext.w a0, s1
-; CHECK-NEXT:    bgeu a2, a1, .LBB16_16
+; CHECK-NEXT:    fcvt.lu.s a0, ft1, rtz
+; CHECK-NEXT:    bgeu s1, a1, .LBB16_16
 ; CHECK-NEXT:  .LBB16_12: # %entry
 ; CHECK-NEXT:    bltu a0, a1, .LBB16_14
 ; CHECK-NEXT:  .LBB16_13: # %entry
-; CHECK-NEXT:    mv s1, a1
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB16_14: # %entry
-; CHECK-NEXT:    sh s1, 14(s0)
-; CHECK-NEXT:    sh a5, 12(s0)
-; CHECK-NEXT:    sh a4, 10(s0)
-; CHECK-NEXT:    sh a3, 8(s0)
-; CHECK-NEXT:    sh a7, 6(s0)
-; CHECK-NEXT:    sh s7, 4(s0)
+; CHECK-NEXT:    sh a0, 14(s0)
+; CHECK-NEXT:    sh s1, 12(s0)
+; CHECK-NEXT:    sh a5, 10(s0)
+; CHECK-NEXT:    sh a4, 8(s0)
+; CHECK-NEXT:    sh a3, 6(s0)
+; CHECK-NEXT:    sh a2, 4(s0)
 ; CHECK-NEXT:    sh s8, 2(s0)
 ; CHECK-NEXT:    sh a6, 0(s0)
 ; CHECK-NEXT:    ld ra, 88(sp) # 8-byte Folded Reload
@@ -1209,15 +1199,14 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    ld s6, 32(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s7, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s8, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s9, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 96
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB16_15: # %entry
-; CHECK-NEXT:    mv a4, a1
-; CHECK-NEXT:    sext.w a0, s1
-; CHECK-NEXT:    bltu a2, a1, .LBB16_12
-; CHECK-NEXT:  .LBB16_16: # %entry
 ; CHECK-NEXT:    mv a5, a1
+; CHECK-NEXT:    fcvt.lu.s a0, ft1, rtz
+; CHECK-NEXT:    bltu s1, a1, .LBB16_12
+; CHECK-NEXT:  .LBB16_16: # %entry
+; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    bgeu a0, a1, .LBB16_13
 ; CHECK-NEXT:    j .LBB16_14
 entry:

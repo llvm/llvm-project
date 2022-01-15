@@ -284,7 +284,7 @@ struct BufferAllocationLoopHoistingState : BufferAllocationHoistingStateBase {
   using BufferAllocationHoistingStateBase::BufferAllocationHoistingStateBase;
 
   /// Remembers the dominator block of all aliases.
-  Block *aliasDominatorBlock;
+  Block *aliasDominatorBlock = nullptr;
 
   /// Computes the upper bound for the placement block search.
   Block *computeUpperBound(Block *dominatorBlock, Block *dependencyBlock) {

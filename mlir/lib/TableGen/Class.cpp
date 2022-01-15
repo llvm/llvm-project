@@ -260,6 +260,11 @@ void ExtraClassDeclaration::writeDeclTo(raw_indented_ostream &os) const {
   os.printReindented(extraClassDeclaration);
 }
 
+void ExtraClassDeclaration::writeDefTo(raw_indented_ostream &os,
+                                       StringRef namePrefix) const {
+  os.printReindented(extraClassDefinition);
+}
+
 //===----------------------------------------------------------------------===//
 // Class definitions
 //===----------------------------------------------------------------------===//

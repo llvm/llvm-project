@@ -835,6 +835,20 @@ struct DSEState {
     if (!isGuaranteedLoopIndependent(DeadI, KillingI, DeadLoc))
       return OW_Unknown;
 
+    const Value *DeadPtr = DeadLoc.Ptr->stripPointerCasts();
+    const Value *KillingPtr = KillingLoc.Ptr->stripPointerCasts();
+    const Value *DeadUndObj = getUnderlyingObject(DeadPtr);
+    const Value *KillingUndObj = getUnderlyingObject(KillingPtr);
+
+    // Check whether the killing store overwrites the whole object, in which
+    // case the size/offset of the dead store does not matter.
+    if (DeadUndObj == KillingUndObj && KillingLoc.Size.isPrecise()) {
+      uint64_t KillingUndObjSize = getPointerSize(KillingUndObj, DL, TLI, &F);
+      if (KillingUndObjSize != MemoryLocation::UnknownSize &&
+          KillingUndObjSize == KillingLoc.Size.getValue())
+        return OW_Complete;
+    }
+
     // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
     // get imprecise values here, though (except for unknown sizes).
     if (!KillingLoc.Size.isPrecise() || !DeadLoc.Size.isPrecise()) {
@@ -875,14 +889,6 @@ struct DSEState {
         return OW_Complete;
     }
 
-    // Check to see if the killing store is to the entire object (either a
-    // global, an alloca, or a byval/inalloca argument).  If so, then it clearly
-    // overwrites any other store to the same object.
-    const Value *DeadPtr = DeadLoc.Ptr->stripPointerCasts();
-    const Value *KillingPtr = KillingLoc.Ptr->stripPointerCasts();
-    const Value *DeadUndObj = getUnderlyingObject(DeadPtr);
-    const Value *KillingUndObj = getUnderlyingObject(KillingPtr);
-
     // If we can't resolve the same pointers to the same object, then we can't
     // analyze them at all.
     if (DeadUndObj != KillingUndObj) {
@@ -895,12 +901,6 @@ struct DSEState {
         return OW_None;
       return OW_Unknown;
     }
-
-    // If the KillingI store is to a recognizable object, get its size.
-    uint64_t KillingUndObjSize = getPointerSize(KillingUndObj, DL, TLI, &F);
-    if (KillingUndObjSize != MemoryLocation::UnknownSize)
-      if (KillingUndObjSize == KillingSize && KillingUndObjSize >= DeadSize)
-        return OW_Complete;
 
     // Okay, we have stores to two completely different pointers.  Try to
     // decompose the pointer into a "base + constant_offset" form.  If the base
@@ -959,10 +959,8 @@ struct DSEState {
     if (I.second) {
       if (!isInvisibleToCallerBeforeRet(V)) {
         I.first->second = false;
-      } else {
-        auto *Inst = dyn_cast<Instruction>(V);
-        if (Inst && isAllocLikeFn(Inst, &TLI))
-          I.first->second = !PointerMayBeCaptured(V, true, false);
+      } else if (isNoAliasCall(V)) {
+        I.first->second = !PointerMayBeCaptured(V, true, false);
       }
     }
     return I.first->second;
@@ -972,15 +970,12 @@ struct DSEState {
     if (isa<AllocaInst>(V))
       return true;
     auto I = InvisibleToCallerBeforeRet.insert({V, false});
-    if (I.second) {
-      auto *Inst = dyn_cast<Instruction>(V);
-      if (Inst && isAllocLikeFn(Inst, &TLI))
-        // NOTE: This could be made more precise by PointerMayBeCapturedBefore
-        // with the killing MemoryDef. But we refrain from doing so for now to
-        // limit compile-time and this does not cause any changes to the number
-        // of stores removed on a large test set in practice.
-        I.first->second = !PointerMayBeCaptured(V, false, true);
-    }
+    if (I.second && isNoAliasCall(V))
+      // NOTE: This could be made more precise by PointerMayBeCapturedBefore
+      // with the killing MemoryDef. But we refrain from doing so for now to
+      // limit compile-time and this does not cause any changes to the number
+      // of stores removed on a large test set in practice.
+      I.first->second = !PointerMayBeCaptured(V, false, true);
     return I.first->second;
   }
 
@@ -1696,6 +1691,84 @@ struct DSEState {
     return MadeChange;
   }
 
+  /// If we have a zero initializing memset following a call to malloc,
+  /// try folding it into a call to calloc.
+  bool tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
+    Instruction *DefI = Def->getMemoryInst();
+    MemSetInst *MemSet = dyn_cast<MemSetInst>(DefI);
+    if (!MemSet)
+      // TODO: Could handle zero store to small allocation as well.
+      return false;
+    Constant *StoredConstant = dyn_cast<Constant>(MemSet->getValue());
+    if (!StoredConstant || !StoredConstant->isNullValue())
+      return false;
+
+    if (!isRemovable(DefI))
+      // The memset might be volatile..
+      return false;
+
+    if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
+        F.hasFnAttribute(Attribute::SanitizeAddress) ||
+        F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+        F.getName() == "calloc")
+      return false;
+    auto *Malloc = const_cast<CallInst *>(dyn_cast<CallInst>(DefUO));
+    if (!Malloc)
+      return false;
+    auto *InnerCallee = Malloc->getCalledFunction();
+    if (!InnerCallee)
+      return false;
+    LibFunc Func;
+    if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
+        Func != LibFunc_malloc)
+      return false;
+
+    auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
+      // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
+      // of malloc block
+      auto *MallocBB = Malloc->getParent(),
+        *MemsetBB = Memset->getParent();
+      if (MallocBB == MemsetBB)
+        return true;
+      auto *Ptr = Memset->getArgOperand(0);
+      auto *TI = MallocBB->getTerminator();
+      ICmpInst::Predicate Pred;
+      BasicBlock *TrueBB, *FalseBB;
+      if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Ptr), m_Zero()), TrueBB,
+                          FalseBB)))
+        return false;
+      if (Pred != ICmpInst::ICMP_EQ || MemsetBB != FalseBB)
+        return false;
+      return true;
+    };
+
+    if (Malloc->getOperand(0) != MemSet->getLength())
+      return false;
+    if (!shouldCreateCalloc(Malloc, MemSet) ||
+        !DT.dominates(Malloc, MemSet) ||
+        !memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT))
+      return false;
+    IRBuilder<> IRB(Malloc);
+    const auto &DL = Malloc->getModule()->getDataLayout();
+    auto *Calloc =
+      emitCalloc(ConstantInt::get(IRB.getIntPtrTy(DL), 1),
+                 Malloc->getArgOperand(0), IRB, TLI);
+    if (!Calloc)
+      return false;
+    MemorySSAUpdater Updater(&MSSA);
+    auto *LastDef =
+      cast<MemoryDef>(Updater.getMemorySSA()->getMemoryAccess(Malloc));
+    auto *NewAccess =
+      Updater.createMemoryAccessAfter(cast<Instruction>(Calloc), LastDef,
+                                      LastDef);
+    auto *NewAccessMD = cast<MemoryDef>(NewAccess);
+    Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
+    Updater.removeMemoryAccess(Malloc);
+    Malloc->replaceAllUsesWith(Calloc);
+    Malloc->eraseFromParent();
+    return true;
+  }
+
   /// \returns true if \p Def is a no-op store, either because it
   /// directly stores back a loaded value or stores zero to a calloced object.
   bool storeIsNoop(MemoryDef *Def, const Value *DefUO) {
@@ -1713,80 +1786,17 @@ struct DSEState {
     if (!isRemovable(DefI))
       return false;
 
-    if (StoredConstant && StoredConstant->isNullValue()) {
-      auto *DefUOInst = dyn_cast<Instruction>(DefUO);
-      if (DefUOInst) {
-        if (isCallocLikeFn(DefUOInst, &TLI)) {
-          auto *UnderlyingDef =
-              cast<MemoryDef>(MSSA.getMemoryAccess(DefUOInst));
-          // If UnderlyingDef is the clobbering access of Def, no instructions
-          // between them can modify the memory location.
-          auto *ClobberDef =
-              MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def);
-          return UnderlyingDef == ClobberDef;
-        }
-
-        if (MemSet) {
-          if (F.hasFnAttribute(Attribute::SanitizeMemory) ||
-              F.hasFnAttribute(Attribute::SanitizeAddress) ||
-              F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
-              F.getName() == "calloc")
-            return false;
-          auto *Malloc = const_cast<CallInst *>(dyn_cast<CallInst>(DefUOInst));
-          if (!Malloc)
-            return false;
-          auto *InnerCallee = Malloc->getCalledFunction();
-          if (!InnerCallee)
-            return false;
-          LibFunc Func;
-          if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
-              Func != LibFunc_malloc)
-            return false;
-
-          auto shouldCreateCalloc = [](CallInst *Malloc, CallInst *Memset) {
-            // Check for br(icmp ptr, null), truebb, falsebb) pattern at the end
-            // of malloc block
-            auto *MallocBB = Malloc->getParent(),
-                 *MemsetBB = Memset->getParent();
-            if (MallocBB == MemsetBB)
-              return true;
-            auto *Ptr = Memset->getArgOperand(0);
-            auto *TI = MallocBB->getTerminator();
-            ICmpInst::Predicate Pred;
-            BasicBlock *TrueBB, *FalseBB;
-            if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Ptr), m_Zero()), TrueBB,
-                                FalseBB)))
-              return false;
-            if (Pred != ICmpInst::ICMP_EQ || MemsetBB != FalseBB)
-              return false;
-            return true;
-          };
-
-          if (Malloc->getOperand(0) == MemSet->getLength()) {
-            if (shouldCreateCalloc(Malloc, MemSet) &&
-                DT.dominates(Malloc, MemSet) &&
-                memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT)) {
-              IRBuilder<> IRB(Malloc);
-              const auto &DL = Malloc->getModule()->getDataLayout();
-              if (auto *Calloc =
-                      emitCalloc(ConstantInt::get(IRB.getIntPtrTy(DL), 1),
-                                 Malloc->getArgOperand(0), IRB, TLI)) {
-                MemorySSAUpdater Updater(&MSSA);
-                auto *LastDef = cast<MemoryDef>(
-                    Updater.getMemorySSA()->getMemoryAccess(Malloc));
-                auto *NewAccess = Updater.createMemoryAccessAfter(
-                    cast<Instruction>(Calloc), LastDef, LastDef);
-                auto *NewAccessMD = cast<MemoryDef>(NewAccess);
-                Updater.insertDef(NewAccessMD, /*RenameUses=*/true);
-                Updater.removeMemoryAccess(Malloc);
-                Malloc->replaceAllUsesWith(Calloc);
-                Malloc->eraseFromParent();
-                return true;
-              }
-              return false;
-            }
-          }
-        }
+    if (StoredConstant && isAllocationFn(DefUO, &TLI)) {
+      auto *CB = cast<CallBase>(DefUO);
+      auto *InitC = getInitialValueOfAllocation(CB, &TLI,
+                                                StoredConstant->getType());
+      if (InitC && InitC == StoredConstant) {
+        auto *UnderlyingDef = cast<MemoryDef>(MSSA.getMemoryAccess(CB));
+        // If UnderlyingDef is the clobbering access of Def, no instructions
+        // between them can modify the memory location.
+        auto *ClobberDef =
+          MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def);
+        return UnderlyingDef == ClobberDef;
       }
     }
 
@@ -2071,6 +2081,15 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
                         << '\n');
       State.deleteDeadInstruction(KillingI);
       NumRedundantStores++;
+      MadeChange = true;
+      continue;
+    }
+
+    // Can we form a calloc from a memset/malloc pair?
+    if (!Shortend && State.tryFoldIntoCalloc(KillingDef, KillingUndObj)) {
+      LLVM_DEBUG(dbgs() << "DSE: Remove memset after forming calloc:\n"
+                        << "  DEAD: " << *KillingI << '\n');
+      State.deleteDeadInstruction(KillingI);
       MadeChange = true;
       continue;
     }

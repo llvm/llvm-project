@@ -32,6 +32,7 @@ struct traits_sfinae_base<T, void_t<typename T::promise_type>> {
 
 template <class Ret, class... Args>
 struct coroutine_traits : public traits_sfinae_base<Ret> {};
+// expected-note@-1{{declared here}}
 } // namespace std::experimental
 
 struct suspend_never {

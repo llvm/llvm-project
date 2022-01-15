@@ -56,6 +56,17 @@ struct StringRefZ {
   const uint32_t size;
 };
 
+// Some index properties of a symbol are stored separately in this auxiliary
+// struct to decrease sizeof(SymbolUnion) in the majority of cases.
+struct SymbolAux {
+  uint32_t gotIdx = -1;
+  uint32_t pltIdx = -1;
+  uint32_t tlsDescIdx = -1;
+  uint32_t tlsGdIdx = -1;
+};
+
+extern SmallVector<SymbolAux, 0> symAux;
+
 // The base class for real symbol classes.
 class Symbol {
 public:
@@ -79,11 +90,10 @@ protected:
   mutable uint32_t nameSize;
 
 public:
+  // A symAux index used to access GOT/PLT entry indexes. This is allocated in
+  // postScanRelocations().
+  uint32_t auxIdx = -1;
   uint32_t dynsymIndex = 0;
-  uint32_t gotIndex = -1;
-  uint32_t pltIndex = -1;
-
-  uint32_t globalDynIndex = -1;
 
   // This field is a index to the symbol's version definition.
   uint16_t verdefIndex = -1;
@@ -191,8 +201,21 @@ public:
     return nameData + nameSize;
   }
 
-  bool isInGot() const { return gotIndex != -1U; }
-  bool isInPlt() const { return pltIndex != -1U; }
+  uint32_t getGotIdx() const {
+    return auxIdx == uint32_t(-1) ? uint32_t(-1) : symAux[auxIdx].gotIdx;
+  }
+  uint32_t getPltIdx() const {
+    return auxIdx == uint32_t(-1) ? uint32_t(-1) : symAux[auxIdx].pltIdx;
+  }
+  uint32_t getTlsDescIdx() const {
+    return auxIdx == uint32_t(-1) ? uint32_t(-1) : symAux[auxIdx].tlsDescIdx;
+  }
+  uint32_t getTlsGdIdx() const {
+    return auxIdx == uint32_t(-1) ? uint32_t(-1) : symAux[auxIdx].tlsGdIdx;
+  }
+
+  bool isInGot() const { return getGotIdx() != uint32_t(-1); }
+  bool isInPlt() const { return getPltIdx() != uint32_t(-1); }
 
   uint64_t getVA(int64_t addend = 0) const;
 
@@ -300,6 +323,16 @@ public:
   uint8_t needsGotDtprel : 1;
   uint8_t needsTlsIe : 1;
   uint8_t hasDirectReloc : 1;
+
+  bool needsDynReloc() const {
+    return needsCopy || needsGot || needsPlt || needsTlsDesc || needsTlsGd ||
+           needsTlsGdToIe || needsTlsLd || needsGotDtprel || needsTlsIe;
+  }
+  void allocateAux() {
+    assert(auxIdx == uint32_t(-1));
+    auxIdx = symAux.size();
+    symAux.emplace_back();
+  }
 
   // The partition whose dynamic symbol table contains this symbol's definition.
   uint8_t partition = 1;
@@ -504,9 +537,9 @@ union SymbolUnion {
 };
 
 // It is important to keep the size of SymbolUnion small for performance and
-// memory usage reasons. 80 bytes is a soft limit based on the size of Defined
+// memory usage reasons. 72 bytes is a soft limit based on the size of Defined
 // on a 64-bit system.
-static_assert(sizeof(SymbolUnion) <= 80, "SymbolUnion too large");
+static_assert(sizeof(SymbolUnion) <= 72, "SymbolUnion too large");
 
 template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),

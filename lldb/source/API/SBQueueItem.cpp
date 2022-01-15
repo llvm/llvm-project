@@ -8,7 +8,7 @@
 
 #include "lldb/lldb-forward.h"
 
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBQueueItem.h"
 #include "lldb/API/SBThread.h"
@@ -21,9 +21,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 // Constructors
-SBQueueItem::SBQueueItem() : m_queue_item_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBQueueItem);
-}
+SBQueueItem::SBQueueItem() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBQueueItem); }
 
 SBQueueItem::SBQueueItem(const QueueItemSP &queue_item_sp)
     : m_queue_item_sp(queue_item_sp) {
@@ -82,7 +80,7 @@ SBAddress SBQueueItem::GetAddress() const {
   if (m_queue_item_sp) {
     result.SetAddress(m_queue_item_sp->GetAddress());
   }
-  return LLDB_RECORD_RESULT(result);
+  return result;
 }
 
 void SBQueueItem::SetAddress(SBAddress addr) {
@@ -113,28 +111,5 @@ SBThread SBQueueItem::GetExtendedBacktraceThread(const char *type) {
       }
     }
   }
-  return LLDB_RECORD_RESULT(result);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBQueueItem>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBQueueItem, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBQueueItem, (const lldb::QueueItemSP &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBQueueItem, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBQueueItem, operator bool, ());
-  LLDB_REGISTER_METHOD(void, SBQueueItem, Clear, ());
-  LLDB_REGISTER_METHOD(void, SBQueueItem, SetQueueItem,
-                       (const lldb::QueueItemSP &));
-  LLDB_REGISTER_METHOD_CONST(lldb::QueueItemKind, SBQueueItem, GetKind, ());
-  LLDB_REGISTER_METHOD(void, SBQueueItem, SetKind, (lldb::QueueItemKind));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBAddress, SBQueueItem, GetAddress, ());
-  LLDB_REGISTER_METHOD(void, SBQueueItem, SetAddress, (lldb::SBAddress));
-  LLDB_REGISTER_METHOD(lldb::SBThread, SBQueueItem,
-                       GetExtendedBacktraceThread, (const char *));
-}
-
-}
+  return result;
 }

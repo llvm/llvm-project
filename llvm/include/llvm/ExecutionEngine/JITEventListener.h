@@ -24,7 +24,6 @@
 namespace llvm {
 
 class IntelJITEventsWrapper;
-class MachineFunction;
 class OProfileWrapper;
 
 namespace object {

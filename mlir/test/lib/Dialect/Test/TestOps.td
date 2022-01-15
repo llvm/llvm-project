@@ -382,7 +382,10 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
 
   let extraClassDeclaration = [{
     /// Return the callee of this operation.
-    ::mlir::CallInterfaceCallable getCallableForCallee() {
+    ::mlir::CallInterfaceCallable getCallableForCallee();
+  }];
+  let extraClassDefinition = [{
+    ::mlir::CallInterfaceCallable $cppClass::getCallableForCallee() {
       return (*this)->getAttrOfType<::mlir::SymbolRefAttr>("callee");
     }
   }];
@@ -1952,9 +1955,19 @@ def FormatNestedCompoundAttr : TEST_Op<"format_cpmd_nested_attr"> {
   let assemblyFormat = "`nested` $nested attr-dict-with-keyword";
 }
 
+def FormatQualifiedCompoundAttr : TEST_Op<"format_qual_cpmd_nested_attr"> {
+  let arguments = (ins CompoundNestedOuter:$nested);
+  let assemblyFormat = "`nested` qualified($nested) attr-dict-with-keyword";
+}
+
 def FormatNestedType : TEST_Op<"format_cpmd_nested_type"> {
   let arguments = (ins CompoundNestedOuterType:$nested);
   let assemblyFormat = "$nested `nested` type($nested) attr-dict-with-keyword";
+}
+
+def FormatQualifiedNestedType : TEST_Op<"format_qual_cpmd_nested_type"> {
+  let arguments = (ins CompoundNestedOuterType:$nested);
+  let assemblyFormat = "$nested `nested` qualified(type($nested)) attr-dict-with-keyword";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2137,6 +2150,12 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
       return ::mlir::success();
     }
    }];
+}
+
+// Check that formatget supports DeclareOpInterfaceMethods.
+def FormatInferType2Op : TEST_Op<"format_infer_type2", [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let results = (outs AnyType);
+  let assemblyFormat = "attr-dict";
 }
 
 // Base class for testing mixing allOperandTypes, allOperands, and
@@ -2560,5 +2579,25 @@ def TestDefaultStrAttrHasValueOp : TEST_Op<"has_str_value"> {
 
 def : Pat<(TestDefaultStrAttrNoValueOp $value),
           (TestDefaultStrAttrHasValueOp ConstantStrAttr<StrAttr, "foo">)>;
+
+//===----------------------------------------------------------------------===//
+// Test Ops with effects
+//===----------------------------------------------------------------------===//
+
+def TestResource : Resource<"TestResource">;
+
+def TestEffectsOpA : TEST_Op<"op_with_effects_a"> {
+    let arguments = (ins
+        Arg<Variadic<AnyMemRef>, "", [MemRead]>,
+        Arg<FlatSymbolRefAttr, "", [MemRead]>:$first,
+        Arg<SymbolRefAttr, "", [MemWrite]>:$second,
+        Arg<OptionalAttr<SymbolRefAttr>, "", [MemRead]>:$optional_symbol
+        );
+
+    let results = (outs Res<AnyMemRef, "", [MemAlloc<TestResource>]>);
+}
+
+def TestEffectsOpB : TEST_Op<"op_with_effects_b",
+    [MemoryEffects<[MemWrite<TestResource>]>]>;
 
 #endif // TEST_OPS

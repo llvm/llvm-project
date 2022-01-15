@@ -884,7 +884,9 @@ public:
     RefSCC *RC = nullptr;
 
     /// Build the begin iterator for a node.
-    postorder_ref_scc_iterator(LazyCallGraph &G) : G(&G), RC(getRC(G, 0)) {}
+    postorder_ref_scc_iterator(LazyCallGraph &G) : G(&G), RC(getRC(G, 0)) {
+      incrementUntilNonEmptyRefSCC();
+    }
 
     /// Build the end iterator for a node. This is selected purely by overload.
     postorder_ref_scc_iterator(LazyCallGraph &G, IsAtEndT /*Nonce*/) : G(&G) {}
@@ -899,6 +901,17 @@ public:
       return G.PostOrderRefSCCs[Index];
     }
 
+    // Keep incrementing until RC is non-empty (or null).
+    void incrementUntilNonEmptyRefSCC() {
+      while (RC && RC->size() == 0)
+        increment();
+    }
+
+    void increment() {
+      assert(RC && "Cannot increment the end iterator!");
+      RC = getRC(*G, G->RefSCCIndices.find(RC)->second + 1);
+    }
+
   public:
     bool operator==(const postorder_ref_scc_iterator &Arg) const {
       return G == Arg.G && RC == Arg.RC;
@@ -908,8 +921,8 @@ public:
 
     using iterator_facade_base::operator++;
     postorder_ref_scc_iterator &operator++() {
-      assert(RC && "Cannot increment the end iterator!");
-      RC = getRC(*G, G->RefSCCIndices.find(RC)->second + 1);
+      increment();
+      incrementUntilNonEmptyRefSCC();
       return *this;
     }
   };
@@ -1190,7 +1203,7 @@ private:
   }
 };
 
-inline LazyCallGraph::Edge::Edge() : Value() {}
+inline LazyCallGraph::Edge::Edge() {}
 inline LazyCallGraph::Edge::Edge(Node &N, Kind K) : Value(&N, K) {}
 
 inline LazyCallGraph::Edge::operator bool() const {

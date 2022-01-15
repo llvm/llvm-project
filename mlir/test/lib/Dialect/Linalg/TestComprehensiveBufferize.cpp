@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -49,18 +50,20 @@ struct TestComprehensiveFunctionBufferize
 
   TestComprehensiveFunctionBufferize() = default;
   TestComprehensiveFunctionBufferize(
-      const TestComprehensiveFunctionBufferize &pass) {}
+      const TestComprehensiveFunctionBufferize &pass)
+      : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect, linalg::LinalgDialect,
                     memref::MemRefDialect, tensor::TensorDialect,
-                    vector::VectorDialect, scf::SCFDialect,
+                    vector::VectorDialect, scf::SCFDialect, StandardOpsDialect,
                     arith::ArithmeticDialect, AffineDialect>();
     affine_ext::registerBufferizableOpInterfaceExternalModels(registry);
     arith_ext::registerBufferizableOpInterfaceExternalModels(registry);
     bufferization_ext::registerBufferizableOpInterfaceExternalModels(registry);
     linalg_ext::registerBufferizableOpInterfaceExternalModels(registry);
     scf_ext::registerBufferizableOpInterfaceExternalModels(registry);
+    std_ext::registerBufferizableOpInterfaceExternalModels(registry);
     tensor_ext::registerBufferizableOpInterfaceExternalModels(registry);
     vector_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
@@ -89,34 +92,36 @@ struct TestComprehensiveFunctionBufferize
       *this, "dialect-filter",
       llvm::cl::desc("Bufferize only ops from the specified dialects"),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  Option<bool> createDeallocs{
+      *this, "create-deallocs",
+      llvm::cl::desc("Specify if buffers should be deallocated"),
+      llvm::cl::init(true)};
 };
 } // namespace
 
 void TestComprehensiveFunctionBufferize::runOnFunction() {
-  BufferizationOptions options;
+  auto options = std::make_unique<BufferizationOptions>();
 
-  // Enable InitTensorOp elimination.
-  options.addPostAnalysisStep<
-      linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
-  // TODO: Find a way to enable this step automatically when bufferizing
-  // tensor dialect ops.
-  options.addPostAnalysisStep<tensor_ext::InplaceInsertSliceOpAnalysis>();
   if (!allowReturnMemref)
-    options.addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
 
-  options.allowReturnMemref = allowReturnMemref;
-  options.allowUnknownOps = allowUnknownOps;
-  options.testAnalysisOnly = testAnalysisOnly;
-  options.analysisFuzzerSeed = analysisFuzzerSeed;
+  options->allowReturnMemref = allowReturnMemref;
+  options->allowUnknownOps = allowUnknownOps;
+  options->testAnalysisOnly = testAnalysisOnly;
+  options->analysisFuzzerSeed = analysisFuzzerSeed;
+  options->createDeallocs = createDeallocs;
 
   if (dialectFilter.hasValue()) {
-    options.dialectFilter.emplace();
+    options->dialectFilter.emplace();
     for (const std::string &dialectNamespace : dialectFilter)
-      options.dialectFilter->insert(dialectNamespace);
+      options->dialectFilter->insert(dialectNamespace);
   }
 
   Operation *op = getFunction().getOperation();
-  if (failed(runComprehensiveBufferize(op, options)))
+  if (failed(runComprehensiveBufferize(op, std::move(options))))
+    return;
+
+  if (testAnalysisOnly)
     return;
 
   OpPassManager cleanupPipeline("builtin.func");

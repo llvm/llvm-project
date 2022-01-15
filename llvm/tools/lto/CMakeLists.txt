@@ -33,7 +33,7 @@ add_llvm_library(${LTO_LIBRARY_NAME} ${LTO_LIBRARY_TYPE} INSTALL_WITH_TOOLCHAIN
     ${SOURCES} DEPENDS intrinsics_gen)
 
 install(FILES ${LLVM_MAIN_INCLUDE_DIR}/llvm-c/lto.h
-  DESTINATION include/llvm-c
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-c"
   COMPONENT LTO)
 
 if (APPLE)

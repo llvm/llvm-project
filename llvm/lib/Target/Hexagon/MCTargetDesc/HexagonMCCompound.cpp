@@ -365,8 +365,10 @@ static bool lookForCompound(MCInstrInfo const &MCII, MCContext &Context,
                MCI.begin() + HexagonMCInstrInfo::bundleInstructionsOffset;
            B != MCI.end(); ++B) {
         MCInst const *Inst = B->getInst();
-        if (JumpInst == Inst)
+        if (JumpInst == Inst) {
+          BExtended = false;
           continue;
+        }
         if (HexagonMCInstrInfo::isImmext(*Inst)) {
           BExtended = true;
           continue;
@@ -405,24 +407,27 @@ void HexagonMCInstrInfo::tryCompound(MCInstrInfo const &MCII, MCSubtargetInfo co
   if (MCI.size() < 2)
     return;
 
-  bool StartedValid = llvm::HexagonMCShuffle(Context, false, MCII, STI, MCI);
-
   // Create a vector, needed to keep the order of jump instructions.
   MCInst CheckList(MCI);
+
+  // Keep the last known good bundle around in case the shuffle fails.
+  MCInst LastValidBundle(MCI);
+
+  bool PreviouslyValid = llvm::HexagonMCShuffle(Context, false, MCII, STI, MCI);
 
   // Look for compounds until none are found, only update the bundle when
   // a compound is found.
   while (lookForCompound(MCII, Context, CheckList)) {
-    // Keep the original bundle around in case the shuffle fails.
-    MCInst OriginalBundle(MCI);
-
     // Need to update the bundle.
     MCI = CheckList;
 
-    if (StartedValid &&
-        !llvm::HexagonMCShuffle(Context, false, MCII, STI, MCI)) {
+    const bool IsValid = llvm::HexagonMCShuffle(Context, false, MCII, STI, MCI);
+    if (PreviouslyValid && !IsValid) {
       LLVM_DEBUG(dbgs() << "Found ERROR\n");
-      MCI = OriginalBundle;
+      MCI = LastValidBundle;
+    } else if (IsValid) {
+      LastValidBundle = MCI;
+      PreviouslyValid = true;
     }
   }
 }

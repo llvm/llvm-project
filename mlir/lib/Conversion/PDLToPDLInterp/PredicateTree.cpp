@@ -158,11 +158,14 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
   // group, we treat it as all of the operands/results of the operation.
   /// Operands.
   if (operands.size() == 1 && operands[0].getType().isa<pdl::RangeType>()) {
-    getTreePredicates(predList, operands.front(), builder, inputs,
-                      builder.getAllOperands(opPos));
+    // Ignore the operands if we are performing an upward traversal (in that
+    // case, they have already been visited).
+    if (opPos->isRoot() || opPos->isOperandDefiningOp())
+      getTreePredicates(predList, operands.front(), builder, inputs,
+                        builder.getAllOperands(opPos));
   } else {
     bool foundVariableLength = false;
-    for (auto operandIt : llvm::enumerate(operands)) {
+    for (const auto &operandIt : llvm::enumerate(operands)) {
       bool isVariadic = operandIt.value().getType().isa<pdl::RangeType>();
       foundVariableLength |= isVariadic;
 
@@ -271,7 +274,7 @@ static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
   Position *pos = *std::max_element(allPositions.begin(), allPositions.end(),
                                     comparePosDepth);
   PredicateBuilder::Predicate pred =
-      builder.getConstraint(op.name(), std::move(allPositions), parameters);
+      builder.getConstraint(op.name(), allPositions, parameters);
   predList.emplace_back(pos, pred);
 }
 
@@ -460,7 +463,7 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
             }
 
             // Default case: visit all the operands.
-            for (auto p : llvm::enumerate(operationOp.operands()))
+            for (const auto &p : llvm::enumerate(operationOp.operands()))
               toVisit.emplace(p.value(), entry.value, p.index(),
                               entry.depth + 1);
           })
@@ -502,23 +505,47 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
          "the pattern contains a candidate root disconnected from the others");
 }
 
+/// Returns true if the operand at the given index needs to be queried using an
+/// operand group, i.e., if it is variadic itself or follows a variadic operand.
+static bool useOperandGroup(pdl::OperationOp op, unsigned index) {
+  OperandRange operands = op.operands();
+  assert(index < operands.size() && "operand index out of range");
+  for (unsigned i = 0; i <= index; ++i)
+    if (operands[i].getType().isa<pdl::RangeType>())
+      return true;
+  return false;
+}
+
 /// Visit a node during upward traversal.
-void visitUpward(std::vector<PositionalPredicate> &predList, OpIndex opIndex,
-                 PredicateBuilder &builder,
-                 DenseMap<Value, Position *> &valueToPosition, Position *&pos,
-                 bool &first) {
+static void visitUpward(std::vector<PositionalPredicate> &predList,
+                        OpIndex opIndex, PredicateBuilder &builder,
+                        DenseMap<Value, Position *> &valueToPosition,
+                        Position *&pos, unsigned rootID) {
   Value value = opIndex.parent;
   TypeSwitch<Operation *>(value.getDefiningOp())
       .Case<pdl::OperationOp>([&](auto operationOp) {
         LLVM_DEBUG(llvm::dbgs() << "  * Value: " << value << "\n");
-        OperationPosition *opPos = builder.getUsersOp(pos, opIndex.index);
 
-        // Guard against traversing back to where we came from.
-        if (first) {
-          Position *parent = pos->getParent();
-          predList.emplace_back(opPos, builder.getNotEqualTo(parent));
-          first = false;
+        // Get users and iterate over them.
+        Position *usersPos = builder.getUsers(pos, /*useRepresentative=*/true);
+        Position *foreachPos = builder.getForEach(usersPos, rootID);
+        OperationPosition *opPos = builder.getPassthroughOp(foreachPos);
+
+        // Compare the operand(s) of the user against the input value(s).
+        Position *operandPos;
+        if (!opIndex.index) {
+          // We are querying all the operands of the operation.
+          operandPos = builder.getAllOperands(opPos);
+        } else if (useOperandGroup(operationOp, *opIndex.index)) {
+          // We are querying an operand group.
+          Type type = operationOp.operands()[*opIndex.index].getType();
+          bool variadic = type.isa<pdl::RangeType>();
+          operandPos = builder.getOperandGroup(opPos, opIndex.index, variadic);
+        } else {
+          // We are querying an individual operand.
+          operandPos = builder.getOperand(opPos, *opIndex.index);
         }
+        predList.emplace_back(operandPos, builder.getEqualTo(pos));
 
         // Guard against duplicate upward visits. These are not possible,
         // because if this value was already visited, it would have been
@@ -540,6 +567,9 @@ void visitUpward(std::vector<PositionalPredicate> &predList, OpIndex opIndex,
         auto *opPos = dyn_cast<OperationPosition>(pos);
         assert(opPos && "operations and results must be interleaved");
         pos = builder.getResult(opPos, *opIndex.index);
+
+        // Insert the result position in case we have not visited it yet.
+        valueToPosition.try_emplace(value, pos);
       })
       .Case<pdl::ResultsOp>([&](auto resultOp) {
         // Traverse up a group of results.
@@ -550,6 +580,9 @@ void visitUpward(std::vector<PositionalPredicate> &predList, OpIndex opIndex,
           pos = builder.getResultGroup(opPos, opIndex.index, isVariadic);
         else
           pos = builder.getAllResults(opPos);
+
+        // Insert the result position in case we have not visited it yet.
+        valueToPosition.try_emplace(value, pos);
       });
 }
 
@@ -568,7 +601,8 @@ static Value buildPredicateList(pdl::PatternOp pattern,
   LLVM_DEBUG({
     llvm::dbgs() << "Graph:\n";
     for (auto &target : graph) {
-      llvm::dbgs() << "  * " << target.first << "\n";
+      llvm::dbgs() << "  * " << target.first.getLoc() << " " << target.first
+                   << "\n";
       for (auto &source : target.second) {
         RootOrderingEntry &entry = source.second;
         llvm::dbgs() << "      <- " << source.first << ": " << entry.cost.first
@@ -601,6 +635,17 @@ static Value buildPredicateList(pdl::PatternOp pattern,
     bestEdges = solver.preOrderTraversal(roots);
   }
 
+  // Print the best solution.
+  LLVM_DEBUG({
+    llvm::dbgs() << "Best tree:\n";
+    for (const std::pair<Value, Value> &edge : bestEdges) {
+      llvm::dbgs() << "  * " << edge.first;
+      if (edge.second)
+        llvm::dbgs() << " <- " << edge.second;
+      llvm::dbgs() << "\n";
+    }
+  });
+
   LLVM_DEBUG(llvm::dbgs() << "Calling key getTreePredicates:\n");
   LLVM_DEBUG(llvm::dbgs() << "  * Value: " << bestRoot << "\n");
 
@@ -612,9 +657,9 @@ static Value buildPredicateList(pdl::PatternOp pattern,
   // Traverse the selected optimal branching. For all edges in order, traverse
   // up starting from the connector, until the candidate root is reached, and
   // call getTreePredicates at every node along the way.
-  for (const std::pair<Value, Value> &edge : bestEdges) {
-    Value target = edge.first;
-    Value source = edge.second;
+  for (const auto &it : llvm::enumerate(bestEdges)) {
+    Value target = it.value().first;
+    Value source = it.value().second;
 
     // Check if we already visited the target root. This happens in two cases:
     // 1) the initial root (bestRoot);
@@ -629,14 +674,13 @@ static Value buildPredicateList(pdl::PatternOp pattern,
     LLVM_DEBUG(llvm::dbgs() << "  * Connector: " << connector.getLoc() << "\n");
     DenseMap<Value, OpIndex> parentMap = parentMaps.lookup(target);
     Position *pos = valueToPosition.lookup(connector);
-    assert(pos && "The value has not been traversed yet");
-    bool first = true;
+    assert(pos && "connector has not been traversed yet");
 
     // Traverse from the connector upwards towards the target root.
     for (Value value = connector; value != target;) {
       OpIndex opIndex = parentMap.lookup(value);
       assert(opIndex.parent && "missing parent");
-      visitUpward(predList, opIndex, builder, valueToPosition, pos, first);
+      visitUpward(predList, opIndex, builder, valueToPosition, pos, it.index());
       value = opIndex.parent;
     }
   }
@@ -677,6 +721,11 @@ struct OrderedPredicate {
   /// opposed to those shared across patterns.
   unsigned secondary = 0;
 
+  /// The tie breaking ID, used to preserve a deterministic (insertion) order
+  /// among all the predicates with the same priority, depth, and position /
+  /// predicate dependency.
+  unsigned id = 0;
+
   /// A map between a pattern operation and the answer to the predicate question
   /// within that pattern.
   DenseMap<Operation *, Qualifier *> patternToAnswer;
@@ -689,12 +738,13 @@ struct OrderedPredicate {
     // * lower depth
     // * lower position dependency
     // * lower predicate dependency
+    // * lower tie breaking ID
     auto *rhsPos = rhs.position;
     return std::make_tuple(primary, secondary, rhsPos->getOperationDepth(),
-                           rhsPos->getKind(), rhs.question->getKind()) >
+                           rhsPos->getKind(), rhs.question->getKind(), rhs.id) >
            std::make_tuple(rhs.primary, rhs.secondary,
                            position->getOperationDepth(), position->getKind(),
-                           question->getKind());
+                           question->getKind(), id);
   }
 };
 
@@ -859,6 +909,9 @@ MatcherNode::generateMatcherTree(ModuleOp module, PredicateBuilder &builder,
       auto it = uniqued.insert(predicate);
       it.first->patternToAnswer.try_emplace(patternAndPredList.pattern,
                                             predicate.answer);
+      // Mark the insertion order (0-based indexing).
+      if (it.second)
+        it.first->id = uniqued.size() - 1;
     }
   }
 
@@ -895,9 +948,9 @@ MatcherNode::generateMatcherTree(ModuleOp module, PredicateBuilder &builder,
   ordered.reserve(uniqued.size());
   for (auto &ip : uniqued)
     ordered.push_back(&ip);
-  std::stable_sort(
-      ordered.begin(), ordered.end(),
-      [](OrderedPredicate *lhs, OrderedPredicate *rhs) { return *lhs < *rhs; });
+  llvm::sort(ordered, [](OrderedPredicate *lhs, OrderedPredicate *rhs) {
+    return *lhs < *rhs;
+  });
 
   // Build the matchers for each of the pattern predicate lists.
   std::unique_ptr<MatcherNode> root;

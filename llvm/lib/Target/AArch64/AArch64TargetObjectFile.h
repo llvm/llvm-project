@@ -13,7 +13,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 
 namespace llvm {
-class AArch64TargetMachine;
 
 /// This implementation is used for AArch64 ELF targets (Linux in particular).
 class AArch64_ELFTargetObjectFile : public TargetLoweringObjectFileELF {

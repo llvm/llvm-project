@@ -1706,8 +1706,8 @@ namespace {
 
   struct MemberPtr {
     MemberPtr() {}
-    explicit MemberPtr(const ValueDecl *Decl) :
-      DeclAndIsDerivedMember(Decl, false), Path() {}
+    explicit MemberPtr(const ValueDecl *Decl)
+        : DeclAndIsDerivedMember(Decl, false) {}
 
     /// The member or (direct or indirect) field referred to by this member
     /// pointer, or 0 if this is a null member pointer.
@@ -4933,8 +4933,13 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
     if (SS->getConditionVariable() &&
         !EvaluateDecl(Info, SS->getConditionVariable()))
       return ESR_Failed;
-    if (!EvaluateInteger(SS->getCond(), Value, Info))
-      return ESR_Failed;
+    if (SS->getCond()->isValueDependent()) {
+      if (!EvaluateDependentExpr(SS->getCond(), Info))
+        return ESR_Failed;
+    } else {
+      if (!EvaluateInteger(SS->getCond(), Value, Info))
+        return ESR_Failed;
+    }
     if (!CondScope.destroy())
       return ESR_Failed;
   }
@@ -6037,7 +6042,7 @@ static bool EvaluateArgs(ArrayRef<const Expr *> Args, CallRef Call,
           unsigned ASTIdx = Idx.getASTIndex();
           if (ASTIdx >= Args.size())
             continue;
-          ForbiddenNullArgs[ASTIdx] = 1;
+          ForbiddenNullArgs[ASTIdx] = true;
         }
     }
   }
@@ -10432,6 +10437,15 @@ bool VectorExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
 
   APValue SubExprValue;
   if (!Evaluate(SubExprValue, Info, SubExpr))
+    return false;
+
+  // FIXME: This vector evaluator someday needs to be changed to be LValue
+  // aware/keep LValue information around, rather than dealing with just vector
+  // types directly. Until then, we cannot handle cases where the operand to
+  // these unary operators is an LValue. The only case I've been able to see
+  // cause this is operator++ assigning to a member expression (only valid in
+  // altivec compilations) in C mode, so this shouldn't limit us too much.
+  if (SubExprValue.isLValue())
     return false;
 
   assert(SubExprValue.getVectorLength() == VD->getNumElements() &&

@@ -13,4 +13,4 @@ def matmul(
     B=TensorDef(T, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True)):
   implements(ContractionOpInterface)
-  C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
+  C[D.m, D.n] += TypeFn.cast(U, A[D.m, D.k]) * TypeFn.cast(U, B[D.k, D.n])

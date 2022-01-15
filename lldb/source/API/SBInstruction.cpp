@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBInstruction.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBFrame.h"
@@ -66,7 +66,7 @@ protected:
 using namespace lldb;
 using namespace lldb_private;
 
-SBInstruction::SBInstruction() : m_opaque_sp() {
+SBInstruction::SBInstruction() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBInstruction);
 }
 
@@ -86,7 +86,7 @@ const SBInstruction &SBInstruction::operator=(const SBInstruction &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBInstruction::~SBInstruction() = default;
@@ -108,7 +108,7 @@ SBAddress SBInstruction::GetAddress() {
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp && inst_sp->GetAddress().IsValid())
     sb_addr.SetAddress(inst_sp->GetAddress());
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 const char *SBInstruction::GetMnemonic(SBTarget target) {
@@ -192,7 +192,7 @@ SBData SBInstruction::GetData(SBTarget target) {
       sb_data.SetOpaque(data_extractor_sp);
     }
   }
-  return LLDB_RECORD_RESULT(sb_data);
+  return sb_data;
 }
 
 bool SBInstruction::DoesBranch() {
@@ -340,44 +340,4 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
   if (inst_sp)
     return inst_sp->TestEmulation(output_stream.get(), test_file);
   return false;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBInstruction>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBInstruction, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBInstruction, (const lldb::SBInstruction &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBInstruction &,
-      SBInstruction, operator=,(const lldb::SBInstruction &));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBInstruction, operator bool, ());
-  LLDB_REGISTER_METHOD(lldb::SBAddress, SBInstruction, GetAddress, ());
-  LLDB_REGISTER_METHOD(const char *, SBInstruction, GetMnemonic,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(const char *, SBInstruction, GetOperands,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(const char *, SBInstruction, GetComment,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(size_t, SBInstruction, GetByteSize, ());
-  LLDB_REGISTER_METHOD(lldb::SBData, SBInstruction, GetData,
-                       (lldb::SBTarget));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, DoesBranch, ());
-  LLDB_REGISTER_METHOD(bool, SBInstruction, HasDelaySlot, ());
-  LLDB_REGISTER_METHOD(bool, SBInstruction, CanSetBreakpoint, ());
-  LLDB_REGISTER_METHOD(bool, SBInstruction, GetDescription,
-                       (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(void, SBInstruction, Print, (FILE *));
-  LLDB_REGISTER_METHOD(void, SBInstruction, Print, (SBFile));
-  LLDB_REGISTER_METHOD(void, SBInstruction, Print, (FileSP));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, EmulateWithFrame,
-                       (lldb::SBFrame &, uint32_t));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, DumpEmulation, (const char *));
-  LLDB_REGISTER_METHOD(bool, SBInstruction, TestEmulation,
-                       (lldb::SBStream &, const char *));
-}
-
-}
 }

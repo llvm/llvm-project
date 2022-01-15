@@ -90,7 +90,6 @@ CGOPT(bool, EnableAddrsig)
 CGOPT(bool, EmitCallSiteInfo)
 CGOPT(bool, EnableMachineFunctionSplitter)
 CGOPT(bool, EnableDebugEntryValues)
-CGOPT_EXP(bool, ValueTrackingVariableLocations)
 CGOPT(bool, ForceDwarfFrameSection)
 CGOPT(bool, XRayOmitFunctionIndex)
 CGOPT(bool, DebugStrictDwarf)
@@ -433,12 +432,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(EnableDebugEntryValues);
 
-  static cl::opt<bool> ValueTrackingVariableLocations(
-      "experimental-debug-variable-locations",
-      cl::desc("Use experimental new value-tracking variable locations"),
-      cl::init(false));
-  CGBINDOPT(ValueTrackingVariableLocations);
-
   static cl::opt<bool> EnableMachineFunctionSplitter(
       "split-machine-functions",
       cl::desc("Split out cold basic blocks from machine functions based on "
@@ -539,12 +532,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.DebugStrictDwarf = getDebugStrictDwarf();
   Options.LoopAlignment = getAlignLoops();
 
-  if (auto Opt = getExplicitValueTrackingVariableLocations())
-    Options.ValueTrackingVariableLocations = *Opt;
-  else
-    Options.ValueTrackingVariableLocations =
-        getDefaultValueTrackingVariableLocations(TheTriple);
-
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
   Options.ThreadModel = getThreadModel();
@@ -620,7 +607,7 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
                                     Function &F) {
   auto &Ctx = F.getContext();
   AttributeList Attrs = F.getAttributes();
-  AttrBuilder NewAttrs;
+  AttrBuilder NewAttrs(Ctx);
 
   if (!CPU.empty() && !F.hasFnAttribute("target-cpu"))
     NewAttrs.addAttribute("target-cpu", CPU);
@@ -698,8 +685,3 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
     setFunctionAttributes(CPU, Features, F);
 }
 
-bool codegen::getDefaultValueTrackingVariableLocations(const llvm::Triple &T) {
-  if (T.getArch() == llvm::Triple::x86_64)
-    return true;
-  return false;
-}

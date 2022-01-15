@@ -256,9 +256,9 @@ private:
   bool wasRun;
 public:
   static char ID;
-  explicit FunctionPassManagerImpl() :
-    Pass(PT_PassManager, ID), PMDataManager(),
-    PMTopLevelManager(new FPPassManager()), wasRun(false) {}
+  explicit FunctionPassManagerImpl()
+      : Pass(PT_PassManager, ID), PMTopLevelManager(new FPPassManager()),
+        wasRun(false) {}
 
   /// \copydoc FunctionPassManager::add()
   void add(Pass *P) {
@@ -387,8 +387,7 @@ namespace {
 class MPPassManager : public Pass, public PMDataManager {
 public:
   static char ID;
-  explicit MPPassManager() :
-    Pass(PT_PassManager, ID), PMDataManager() { }
+  explicit MPPassManager() : Pass(PT_PassManager, ID) {}
 
   // Delete on the fly managers.
   ~MPPassManager() override {
@@ -478,9 +477,8 @@ class PassManagerImpl : public Pass,
 
 public:
   static char ID;
-  explicit PassManagerImpl() :
-    Pass(PT_PassManager, ID), PMDataManager(),
-                              PMTopLevelManager(new MPPassManager()) {}
+  explicit PassManagerImpl()
+      : Pass(PT_PassManager, ID), PMTopLevelManager(new MPPassManager()) {}
 
   /// \copydoc PassManager::add()
   void add(Pass *P) {

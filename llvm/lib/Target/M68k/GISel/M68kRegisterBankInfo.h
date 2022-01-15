@@ -1,4 +1,4 @@
-//===-- M68kRegisterBankInfo.h ---------------------------------*- C++ -*-===//
+//===-- M68kRegisterBankInfo.h ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -42,4 +42,4 @@ public:
   getInstrMapping(const MachineInstr &MI) const override;
 };
 } // end namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_M68K_GLSEL_M68KREGISTERBANKINFO_H

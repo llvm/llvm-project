@@ -59,8 +59,10 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   ::mlir::ValueRange getODSOperands(unsigned index);
 // CHECK:   ::mlir::Value getA();
 // CHECK:   ::mlir::ValueRange getB();
-// CHECK:   ::mlir::IntegerAttr getAttr1();
-// CHECK:   ::mlir::FloatAttr getAttr2();
+// CHECK:   ::mlir::IntegerAttr getAttr1Attr();
+// CHECK:   uint32_t getAttr1();
+// CHECK:   ::mlir::FloatAttr getAttr2Attr();
+// CHECK:   ::llvm::Optional< ::llvm::APFloat > getAttr2();
 // CHECK:   ::mlir::Region &getSomeRegion();
 // CHECK:   ::mlir::RegionRange getSomeRegions();
 // CHECK: private:

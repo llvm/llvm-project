@@ -9,6 +9,8 @@
 
 /* RUN: mlir-capi-execution-engine-test 2>&1 | FileCheck %s
  */
+/* REQUIRES: llvm_has_native_target
+*/
 
 #include "mlir-c/Conversion.h"
 #include "mlir-c/ExecutionEngine.h"

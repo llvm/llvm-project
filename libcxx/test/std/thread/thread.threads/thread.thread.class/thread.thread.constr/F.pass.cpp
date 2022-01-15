@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: libcpp-has-no-threads
-// XFAIL: LIBCXX-AIX-FIXME
 
 // <thread>
 
@@ -15,6 +12,7 @@
 
 // template <class F, class ...Args> thread(F&& f, Args&&... args);
 
+// UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: sanitizer-new-delete
 
 // This fails on MinGW when statically linked, if built with Clang 13 or older.

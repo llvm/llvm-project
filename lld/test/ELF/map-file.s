@@ -6,6 +6,7 @@
 # RUN: echo '.global baz; baz: ret' | llvm-mc -filetype=obj -triple=x86_64 - -o %t4.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/map-file5.s -o %t5.o
 # RUN: echo '.global hey; hey: ret' | llvm-mc -filetype=obj -triple=x86_64 - -o %t6.o
+# RUN: echo '.reloc ., R_X86_64_RELATIVE, 0' | llvm-mc -filetype=obj -triple=x86_64 - -o %t7.o
 # RUN: ld.lld -shared %t5.o -o %t5.so -soname dso
 # RUN: rm -f %t4.a
 # RUN: llvm-ar rc %t4.a %t4.o
@@ -15,6 +16,9 @@
 # RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so %t6.a -o %t --print-map | FileCheck --match-full-lines -strict-whitespace %s
 # RUN: ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so %t6.a -o %t -Map=%t.map
 # RUN: FileCheck -match-full-lines -strict-whitespace %s < %t.map
+
+## A relocation error does not suppress the output.
+# RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a %t5.so %t6.a %t7.o -o /dev/null -M | FileCheck --strict-whitespace --check-prefix=CHECK2 %s
 
 .global _start
 _start:
@@ -101,6 +105,12 @@ labs = 0x1AB5
 # CHECK-NEXT:               0                0       84     1         <internal>:(.shstrtab)
 # CHECK-NEXT:               0                0       71     1 .strtab
 # CHECK-NEXT:               0                0       71     1         <internal>:(.strtab)
+
+# CHECK2:                 VMA              LMA     Size Align Out     In      Symbol
+# CHECK2-NEXT:         200200           200200       78     8 .dynsym
+# CHECK2-NEXT:         200200           200200       78     8         <internal>:(.dynsym)
+# CHECK2-NEXT:         200278           200278       2c     8 .gnu.hash
+# CHECK2-NEXT:         200278           200278       2c     8         <internal>:(.gnu.hash)
 
 # RUN: not ld.lld %t1.o %t2.o %t3.o %t4.a -o /dev/null -Map=/ 2>&1 \
 # RUN:  | FileCheck --check-prefix=FAIL %s

@@ -14,6 +14,8 @@
 #ifndef MLIR_CAPI_UTILS_H
 #define MLIR_CAPI_UTILS_H
 
+#include <utility>
+
 #include "mlir-c/Support.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,7 +31,7 @@ class CallbackOstream : public llvm::raw_ostream {
 public:
   CallbackOstream(std::function<void(MlirStringRef, void *)> callback,
                   void *opaqueData)
-      : raw_ostream(/*unbuffered=*/true), callback(callback),
+      : raw_ostream(/*unbuffered=*/true), callback(std::move(callback)),
         opaqueData(opaqueData), pos(0u) {}
 
   void write_impl(const char *ptr, size_t size) override {

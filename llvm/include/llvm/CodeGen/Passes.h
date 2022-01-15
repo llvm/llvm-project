@@ -30,7 +30,6 @@ class MemoryBuffer;
 class ModulePass;
 class Pass;
 class TargetMachine;
-class TargetRegisterClass;
 class raw_ostream;
 
 } // End llvm namespace

@@ -46,6 +46,7 @@ Getting Started with libc++
    Status/Format
    Status/Ranges
    Status/Spaceship
+   Status/Zip
 
 
 .. toctree::
@@ -157,7 +158,7 @@ This list contains known issues with libc++
 
 A full list of currently open libc++ bugs can be `found here`__.
 
-.. __:  https://bugs.llvm.org/buglist.cgi?component=All%20Bugs&product=libc%2B%2B&query_format=advanced&resolution=---&order=changeddate%20DESC%2Cassigned_to%20DESC%2Cbug_status%2Cpriority%2Cbug_id&list_id=74184
+.. __:  https://github.com/llvm/llvm-project/labels/libc%2B%2B
 
 
 Design Documents
@@ -198,7 +199,7 @@ and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 **Bug Reports**
 
 If you think you've found a bug in libc++, please report it using
-the `LLVM Bugzilla`_. If you're not sure, you
+the `LLVM bug tracker`_. If you're not sure, you
 can post a message to the `libcxx-dev mailing list`_ or on IRC.
 
 **Patches**
@@ -217,7 +218,7 @@ Quick Links
 ===========
 * `LLVM Homepage <https://llvm.org/>`_
 * `libc++abi Homepage <http://libcxxabi.llvm.org/>`_
-* `LLVM Bugzilla <https://bugs.llvm.org/>`_
+* `LLVM bug tracker <https://github.com/llvm/llvm-project/labels/libc++/>`_
 * `libcxx-commits Mailing List`_
 * `libcxx-dev Mailing List`_
 * `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/main/libcxx/>`_

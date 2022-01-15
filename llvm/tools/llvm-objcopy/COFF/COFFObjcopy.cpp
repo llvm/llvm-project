@@ -130,7 +130,8 @@ static uint32_t flagsToCharacteristics(SectionFlag AllFlags, uint32_t OldChar) {
   return NewCharacteristics;
 }
 
-static Error handleArgs(const CommonConfig &Config, Object &Obj) {
+static Error handleArgs(const CommonConfig &Config,
+                        const COFFConfig &COFFConfig, Object &Obj) {
   // Perform the actual section removals.
   Obj.removeSections([&Config](const Section &Sec) {
     // Contrary to --only-keep-debug, --only-section fully removes sections that
@@ -256,18 +257,34 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
     if (Error E = addGnuDebugLink(Obj, Config.AddGnuDebugLink))
       return E;
 
+  if (COFFConfig.Subsystem || COFFConfig.MajorSubsystemVersion ||
+      COFFConfig.MinorSubsystemVersion) {
+    if (!Obj.IsPE)
+      return createStringError(
+          errc::invalid_argument,
+          "'" + Config.OutputFilename +
+              "': unable to set subsystem on a relocatable object file");
+    if (COFFConfig.Subsystem)
+      Obj.PeHeader.Subsystem = *COFFConfig.Subsystem;
+    if (COFFConfig.MajorSubsystemVersion)
+      Obj.PeHeader.MajorSubsystemVersion = *COFFConfig.MajorSubsystemVersion;
+    if (COFFConfig.MinorSubsystemVersion)
+      Obj.PeHeader.MinorSubsystemVersion = *COFFConfig.MinorSubsystemVersion;
+  }
+
   return Error::success();
 }
 
-Error executeObjcopyOnBinary(const CommonConfig &Config, const COFFConfig &,
-                             COFFObjectFile &In, raw_ostream &Out) {
+Error executeObjcopyOnBinary(const CommonConfig &Config,
+                             const COFFConfig &COFFConfig, COFFObjectFile &In,
+                             raw_ostream &Out) {
   COFFReader Reader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = Reader.create();
   if (!ObjOrErr)
     return createFileError(Config.InputFilename, ObjOrErr.takeError());
   Object *Obj = ObjOrErr->get();
   assert(Obj && "Unable to deserialize COFF object");
-  if (Error E = handleArgs(Config, *Obj))
+  if (Error E = handleArgs(Config, COFFConfig, *Obj))
     return createFileError(Config.InputFilename, std::move(E));
   COFFWriter Writer(*Obj, Out);
   if (Error E = Writer.write())

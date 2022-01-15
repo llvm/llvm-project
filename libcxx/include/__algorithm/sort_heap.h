@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___ALGORITHM_SORT_HEAP_H
 #define _LIBCPP___ALGORITHM_SORT_HEAP_H
 
-#include <__config>
 #include <__algorithm/comp.h>
 #include <__algorithm/comp_ref_type.h>
 #include <__algorithm/pop_heap.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <type_traits> // swap
 

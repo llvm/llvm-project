@@ -58,3 +58,19 @@ _add_capi_test_executable(mlir-capi-sparse-tensor-test
     MLIRCAPIRegistration
     MLIRCAPISparseTensor
 )
+
+_add_capi_test_executable(mlir-capi-quant-test
+  quant.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegistration
+    MLIRCAPIQuant
+)
+
+_add_capi_test_executable(mlir-capi-pdl-test
+  pdl.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIRegistration
+    MLIRCAPIPDL
+)

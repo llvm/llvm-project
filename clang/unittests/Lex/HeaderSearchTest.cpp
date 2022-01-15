@@ -15,7 +15,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -45,6 +44,15 @@ protected:
     assert(DE);
     auto DL = DirectoryLookup(*DE, SrcMgr::C_User, /*isFramework=*/false);
     Search.AddSearchPath(DL, /*isAngled=*/false);
+  }
+
+  void addSystemFrameworkSearchDir(llvm::StringRef Dir) {
+    VFS->addFile(Dir, 0, llvm::MemoryBuffer::getMemBuffer(""), /*User=*/None,
+                 /*Group=*/None, llvm::sys::fs::file_type::directory_file);
+    auto DE = FileMgr.getOptionalDirectoryRef(Dir);
+    assert(DE);
+    auto DL = DirectoryLookup(*DE, SrcMgr::C_System, /*isFramework=*/true);
+    Search.AddSystemSearchPath(DL);
   }
 
   void addHeaderMap(llvm::StringRef Filename,
@@ -153,6 +161,29 @@ TEST_F(HeaderSearchTest, IncludeFromSameDirectory) {
                                                    /*WorkingDir=*/"",
                                                    /*MainFile=*/"/y/a.cc"),
             "y/z/t.h");
+}
+
+TEST_F(HeaderSearchTest, SdkFramework) {
+  addSystemFrameworkSearchDir(
+      "/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk/Frameworks/");
+  bool IsSystem = false;
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics(
+                "/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/"
+                "Frameworks/AppKit.framework/Headers/NSView.h",
+                /*WorkingDir=*/"",
+                /*MainFile=*/"", &IsSystem),
+            "AppKit/NSView.h");
+  EXPECT_TRUE(IsSystem);
+}
+
+TEST_F(HeaderSearchTest, NestedFramework) {
+  addSystemFrameworkSearchDir("/Platforms/MacOSX/Frameworks");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics(
+                "/Platforms/MacOSX/Frameworks/AppKit.framework/Frameworks/"
+                "Sub.framework/Headers/Sub.h",
+                /*WorkingDir=*/"",
+                /*MainFile=*/""),
+            "Sub/Sub.h");
 }
 
 // Helper struct with null terminator character to make MemoryBuffer happy.

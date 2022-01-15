@@ -250,7 +250,7 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr) {
     // current sets of nodes and this node don't matter.  Look past it to see if
     // we can merge anything else into this matching group.
     unsigned Scan = OptionIdx;
-    while (1) {
+    while (true) {
       // If we ran out of stuff to scan, we're done.
       if (Scan == e) break;
       

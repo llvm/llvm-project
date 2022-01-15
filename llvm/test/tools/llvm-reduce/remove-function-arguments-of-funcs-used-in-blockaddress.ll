@@ -13,9 +13,9 @@ bb:
 bb4:
 ; CHECK-INTERESTINGNESS: callbr void asm
 ; CHECK-INTERESTINGNESS-SAME: blockaddress
-; CHECK-FINAL: callbr void asm sideeffect "", "X"(i8* blockaddress(@func, %bb11))
+; CHECK-FINAL: callbr void asm sideeffect "", "i"(i8* blockaddress(@func, %bb11))
 ; CHECK-ALL: to label %bb5 [label %bb11]
-  callbr void asm sideeffect "", "X"(i8* blockaddress(@func, %bb11))
+  callbr void asm sideeffect "", "i"(i8* blockaddress(@func, %bb11))
           to label %bb5 [label %bb11]
 
 ; CHECK-ALL: bb5:

@@ -504,9 +504,12 @@ Sema::ActOnDependentMemberExpr(Expr *BaseExpr, QualType BaseType,
     }
   }
 
-  assert(BaseType->isDependentType() ||
-         NameInfo.getName().isDependentName() ||
-         isDependentScopeSpecifier(SS));
+  assert(BaseType->isDependentType() || NameInfo.getName().isDependentName() ||
+         isDependentScopeSpecifier(SS) ||
+         (TemplateArgs && llvm::any_of(TemplateArgs->arguments(),
+                                       [](const TemplateArgumentLoc &Arg) {
+                                         return Arg.getArgument().isDependent();
+                                       })));
 
   // Get the type being accessed in BaseType.  If this is an arrow, the BaseExpr
   // must have pointer type, and the accessed type is the pointee.

@@ -148,12 +148,11 @@ Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty, APInt Offset,
 Constant *ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
                                        const DataLayout &DL);
 
-/// ConstantFoldLoadThroughGEPConstantExpr - Given a constant and a
-/// getelementptr constantexpr, return the constant value being addressed by the
-/// constant expression, or null if something is funny and we can't decide.
-Constant *ConstantFoldLoadThroughGEPConstantExpr(Constant *C, ConstantExpr *CE,
-                                                 Type *Ty,
-                                                 const DataLayout &DL);
+/// If C is a uniform value where all bits are the same (either all zero, all
+/// ones, all undef or all poison), return the corresponding uniform value in
+/// the new type. If the value is not uniform or the result cannot be
+/// represented, return null.
+Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty);
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.

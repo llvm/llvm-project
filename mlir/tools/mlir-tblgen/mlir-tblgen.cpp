@@ -29,7 +29,7 @@ using namespace mlir;
 static llvm::ManagedStatic<std::vector<GenInfo>> generatorRegistry;
 
 mlir::GenRegistration::GenRegistration(StringRef arg, StringRef description,
-                                       GenFunction function) {
+                                       const GenFunction &function) {
   generatorRegistry->emplace_back(arg, description, function);
 }
 

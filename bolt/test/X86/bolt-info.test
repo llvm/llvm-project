@@ -1,0 +1,7 @@
+# Check that the .bolt_info section is generated properly.
+RUN: %clang %S/Inputs/icf-jump-tables.c -o %t
+RUN: llvm-bolt %t -o %t.bolt && \
+RUN: llvm-objdump -s -j .note.bolt_info %t.bolt | grep -v "file format" | \
+RUN:   cut -c 44- | tr -d '\n' | FileCheck %s
+
+CHECK: BOLT revision: {{.*}}, command line: {{.*}}llvm-bolt {{.*}}/bolt-info.test.tmp -o {{.*}}/bolt-info.test.tmp.bolt

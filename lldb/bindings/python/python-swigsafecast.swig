@@ -1,18 +1,31 @@
 namespace lldb_private {
 namespace python {
 
-PyObject *SBTypeToSWIGWrapper(lldb::SBEvent &event_sb) {
-  return SWIG_NewPointerObj(&event_sb, SWIGTYPE_p_lldb__SBEvent, 0);
-}
-
-PyObject *SBTypeToSWIGWrapper(lldb::SBCommandReturnObject &cmd_ret_obj_sb) {
-  return SWIG_NewPointerObj(&cmd_ret_obj_sb,
-                            SWIGTYPE_p_lldb__SBCommandReturnObject, 0);
-}
-
 PythonObject ToSWIGHelper(void *obj, swig_type_info *info) {
   return {PyRefType::Owned, SWIG_NewPointerObj(obj, info, SWIG_POINTER_OWN)};
 }
+
+/// A class that automatically clears an SB object when it goes out of scope.
+/// Use for cases where the SB object points to a temporary/unowned entity.
+template <typename T> class ScopedPythonObject : PythonObject {
+public:
+  ScopedPythonObject(T *sb, swig_type_info *info)
+      : PythonObject(ToSWIGHelper(sb, info)), m_sb(sb) {}
+  ~ScopedPythonObject() {
+    if (m_sb)
+      *m_sb = T();
+  }
+  ScopedPythonObject(ScopedPythonObject &&rhs)
+      : PythonObject(std::move(rhs)), m_sb(std::exchange(rhs.m_sb, nullptr)) {}
+  ScopedPythonObject(const ScopedPythonObject &) = delete;
+  ScopedPythonObject &operator=(const ScopedPythonObject &) = delete;
+  ScopedPythonObject &operator=(ScopedPythonObject &&) = delete;
+
+  const PythonObject &obj() const { return *this; }
+
+private:
+  T *m_sb;
+};
 
 PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb) {
   return ToSWIGHelper(value_sb.release(), SWIGTYPE_p_lldb__SBValue);
@@ -92,6 +105,18 @@ PythonObject ToSWIGWrapper(const TypeSummaryOptions &summary_options) {
 PythonObject ToSWIGWrapper(const SymbolContext &sym_ctx) {
   return ToSWIGHelper(new lldb::SBSymbolContext(sym_ctx),
                       SWIGTYPE_p_lldb__SBSymbolContext);
+}
+
+ScopedPythonObject<lldb::SBCommandReturnObject>
+ToSWIGWrapper(CommandReturnObject &cmd_retobj) {
+  return ScopedPythonObject<lldb::SBCommandReturnObject>(
+      new lldb::SBCommandReturnObject(cmd_retobj),
+      SWIGTYPE_p_lldb__SBCommandReturnObject);
+}
+
+ScopedPythonObject<lldb::SBEvent> ToSWIGWrapper(Event *event) {
+  return ScopedPythonObject<lldb::SBEvent>(new lldb::SBEvent(event),
+                                           SWIGTYPE_p_lldb__SBEvent);
 }
 
 } // namespace python

@@ -7,10 +7,10 @@ target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 define internal void @set_fast_math() nounwind {
 entry:
 	%fsr = alloca i32		; <i32*> [#uses=4]
-	call void asm "st %fsr, $0", "=*m"(i32* %fsr) nounwind
+	call void asm "st %fsr, $0", "=*m"(i32* elementtype(i32) %fsr) nounwind
 	%0 = load i32, i32* %fsr, align 4		; <i32> [#uses=1]
 	%1 = or i32 %0, 4194304		; <i32> [#uses=1]
 	store i32 %1, i32* %fsr, align 4
-	call void asm sideeffect "ld $0, %fsr", "*m"(i32* %fsr) nounwind
+	call void asm sideeffect "ld $0, %fsr", "*m"(i32* elementtype(i32) %fsr) nounwind
 	ret void
 }

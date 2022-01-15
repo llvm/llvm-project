@@ -47,34 +47,34 @@ b4:                                               ; preds = %b3
 b5:                                               ; preds = %b5, %b4
   %v6 = phi i32* [ %v5, %b4 ], [ %v29, %b5 ]
   %v7 = phi i32 [ 0, %b4 ], [ %v27, %b5 ]
-  %v8 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v8 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v8, i32* %v6, align 4, !tbaa !0
   %v9 = getelementptr i32, i32* %v6, i32 1
-  %v10 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v10 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v10, i32* %v9, align 4, !tbaa !0
   %v11 = getelementptr i32, i32* %v6, i32 2
-  %v12 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v12 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v12, i32* %v11, align 4, !tbaa !0
   %v13 = getelementptr i32, i32* %v6, i32 3
-  %v14 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v14 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v14, i32* %v13, align 4, !tbaa !0
   %v15 = getelementptr i32, i32* %v6, i32 4
-  %v16 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v16 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v16, i32* %v15, align 4, !tbaa !0
   %v17 = getelementptr i32, i32* %v6, i32 5
-  %v18 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v18 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v18, i32* %v17, align 4, !tbaa !0
   %v19 = getelementptr i32, i32* %v6, i32 6
-  %v20 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v20 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v20, i32* %v19, align 4, !tbaa !0
   %v21 = getelementptr i32, i32* %v6, i32 7
-  %v22 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v22 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v22, i32* %v21, align 4, !tbaa !0
   %v23 = getelementptr i32, i32* %v6, i32 8
-  %v24 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v24 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v24, i32* %v23, align 4, !tbaa !0
   %v25 = getelementptr i32, i32* %v6, i32 9
-  %v26 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* @g3, i32* @g3, i32 1, i32* @g3), !srcloc !4
+  %v26 = tail call i32 asm sideeffect "1:     $0 = memw_locked($2)\0A       $0 = add($0, $3)\0A       memw_locked($2, p0) = $0\0A       if !p0 jump 1b\0A", "=&r,=*m,r,r,*m,~{p0}"(i32* elementtype(i32) @g3, i32* @g3, i32 1, i32* elementtype(i32) @g3), !srcloc !4
   store i32 %v26, i32* %v25, align 4, !tbaa !0
   %v27 = add nsw i32 %v7, 10
   %v28 = icmp eq i32 %v27, 100

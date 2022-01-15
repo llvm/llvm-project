@@ -1451,9 +1451,9 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
   // restore FPSCR from stack and clear bits 0-4, 7, 28-31
   // The other bits are program global according to the AAPCS
   if (passesFPReg) {
-    BuildMI(MBB, MBBI, DL, TII->get(ARM::t2LDRi8), SpareReg)
+    BuildMI(MBB, MBBI, DL, TII->get(ARM::tLDRspi), SpareReg)
         .addReg(ARM::SP)
-        .addImm(0x40)
+        .addImm(0x10)
         .add(predOps(ARMCC::AL));
     BuildMI(MBB, MBBI, DL, TII->get(ARM::t2BICri), SpareReg)
         .addReg(SpareReg)

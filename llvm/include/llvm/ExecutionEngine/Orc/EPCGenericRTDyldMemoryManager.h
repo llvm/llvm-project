@@ -89,11 +89,6 @@ private:
     ExecutorAddr RemoteAddr;
   };
 
-  struct EHFrame {
-    ExecutorAddr Addr;
-    uint64_t Size;
-  };
-
   // Group of section allocations to be allocated together in the executor. The
   // RemoteCodeAddr will stand in as the id of the group for deallocation
   // purposes.
@@ -107,7 +102,7 @@ private:
     ExecutorAddrRange RemoteCode;
     ExecutorAddrRange RemoteROData;
     ExecutorAddrRange RemoteRWData;
-    std::vector<EHFrame> UnfinalizedEHFrames;
+    std::vector<ExecutorAddrRange> UnfinalizedEHFrames;
     std::vector<Alloc> CodeAllocs, RODataAllocs, RWDataAllocs;
   };
 

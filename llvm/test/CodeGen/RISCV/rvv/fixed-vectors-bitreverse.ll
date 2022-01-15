@@ -422,43 +422,25 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    slli a1, a3, 48
 ; LMULMAX2-RV64-NEXT:    vand.vx v8, v8, a1
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v11, v8
+; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI2_0)
+; LMULMAX2-RV64-NEXT:    ld a1, %lo(.LCPI2_0)(a1)
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v8, v10
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v8, v9
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v9, v8, 4
-; LMULMAX2-RV64-NEXT:    lui a1, 3855
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -241
 ; LMULMAX2-RV64-NEXT:    vand.vx v9, v9, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v8, v8, a1
+; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI2_1)
+; LMULMAX2-RV64-NEXT:    ld a1, %lo(.LCPI2_1)(a1)
 ; LMULMAX2-RV64-NEXT:    vsll.vi v8, v8, 4
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v9, v8
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v9, v8, 2
-; LMULMAX2-RV64-NEXT:    lui a1, 13107
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
 ; LMULMAX2-RV64-NEXT:    vand.vx v9, v9, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v8, v8, a1
+; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI2_2)
+; LMULMAX2-RV64-NEXT:    ld a1, %lo(.LCPI2_2)(a1)
 ; LMULMAX2-RV64-NEXT:    vsll.vi v8, v8, 2
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v9, v8
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v9, v8, 1
-; LMULMAX2-RV64-NEXT:    lui a1, 21845
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
 ; LMULMAX2-RV64-NEXT:    vand.vx v9, v9, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v8, v8, a1
 ; LMULMAX2-RV64-NEXT:    vadd.vv v8, v8, v8
@@ -583,43 +565,25 @@ define void @bitreverse_v2i64(<2 x i64>* %x, <2 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    slli a1, a3, 48
 ; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a1
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v11, v8
+; LMULMAX1-RV64-NEXT:    lui a1, %hi(.LCPI2_0)
+; LMULMAX1-RV64-NEXT:    ld a1, %lo(.LCPI2_0)(a1)
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v8, v10
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v8, v9
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v9, v8, 4
-; LMULMAX1-RV64-NEXT:    lui a1, 3855
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, 241
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 241
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, -241
 ; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a1
+; LMULMAX1-RV64-NEXT:    lui a1, %hi(.LCPI2_1)
+; LMULMAX1-RV64-NEXT:    ld a1, %lo(.LCPI2_1)(a1)
 ; LMULMAX1-RV64-NEXT:    vsll.vi v8, v8, 4
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v9, v8
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v9, v8, 2
-; LMULMAX1-RV64-NEXT:    lui a1, 13107
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 819
 ; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a1
+; LMULMAX1-RV64-NEXT:    lui a1, %hi(.LCPI2_2)
+; LMULMAX1-RV64-NEXT:    ld a1, %lo(.LCPI2_2)(a1)
 ; LMULMAX1-RV64-NEXT:    vsll.vi v8, v8, 2
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v9, v8
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v9, v8, 1
-; LMULMAX1-RV64-NEXT:    lui a1, 21845
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
 ; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a1
 ; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a1
 ; LMULMAX1-RV64-NEXT:    vadd.vv v8, v8, v8
@@ -1148,43 +1112,25 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-RV64-NEXT:    slli a1, a3, 48
 ; LMULMAX2-RV64-NEXT:    vand.vx v8, v8, a1
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v14, v8
+; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI5_0)
+; LMULMAX2-RV64-NEXT:    ld a1, %lo(.LCPI5_0)(a1)
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v8, v12
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v8, v10
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v10, v8, 4
-; LMULMAX2-RV64-NEXT:    lui a1, 3855
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 241
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, -241
 ; LMULMAX2-RV64-NEXT:    vand.vx v10, v10, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v8, v8, a1
+; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI5_1)
+; LMULMAX2-RV64-NEXT:    ld a1, %lo(.LCPI5_1)(a1)
 ; LMULMAX2-RV64-NEXT:    vsll.vi v8, v8, 4
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v10, v8
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v10, v8, 2
-; LMULMAX2-RV64-NEXT:    lui a1, 13107
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 819
 ; LMULMAX2-RV64-NEXT:    vand.vx v10, v10, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v8, v8, a1
+; LMULMAX2-RV64-NEXT:    lui a1, %hi(.LCPI5_2)
+; LMULMAX2-RV64-NEXT:    ld a1, %lo(.LCPI5_2)(a1)
 ; LMULMAX2-RV64-NEXT:    vsll.vi v8, v8, 2
 ; LMULMAX2-RV64-NEXT:    vor.vv v8, v10, v8
 ; LMULMAX2-RV64-NEXT:    vsrl.vi v10, v8, 1
-; LMULMAX2-RV64-NEXT:    lui a1, 21845
-; LMULMAX2-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX2-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX2-RV64-NEXT:    addi a1, a1, 1365
 ; LMULMAX2-RV64-NEXT:    vand.vx v10, v10, a1
 ; LMULMAX2-RV64-NEXT:    vand.vx v8, v8, a1
 ; LMULMAX2-RV64-NEXT:    vadd.vv v8, v8, v8
@@ -1325,70 +1271,52 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v10, v9, t0
 ; LMULMAX1-RV64-NEXT:    li t1, 40
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v11, v9, t1
-; LMULMAX1-RV64-NEXT:    lui a1, 16
-; LMULMAX1-RV64-NEXT:    addiw t2, a1, -256
+; LMULMAX1-RV64-NEXT:    lui a4, 16
+; LMULMAX1-RV64-NEXT:    addiw t2, a4, -256
 ; LMULMAX1-RV64-NEXT:    vand.vx v11, v11, t2
 ; LMULMAX1-RV64-NEXT:    vor.vv v10, v11, v10
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v11, v9, 24
 ; LMULMAX1-RV64-NEXT:    lui a6, 4080
 ; LMULMAX1-RV64-NEXT:    vand.vx v11, v11, a6
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v12, v9, 8
-; LMULMAX1-RV64-NEXT:    li a3, 255
-; LMULMAX1-RV64-NEXT:    slli t3, a3, 24
+; LMULMAX1-RV64-NEXT:    li a5, 255
+; LMULMAX1-RV64-NEXT:    slli t3, a5, 24
 ; LMULMAX1-RV64-NEXT:    vand.vx v12, v12, t3
 ; LMULMAX1-RV64-NEXT:    vor.vv v11, v12, v11
 ; LMULMAX1-RV64-NEXT:    vor.vv v10, v11, v10
 ; LMULMAX1-RV64-NEXT:    vsll.vi v11, v9, 8
-; LMULMAX1-RV64-NEXT:    slli t4, a3, 32
+; LMULMAX1-RV64-NEXT:    slli t4, a5, 32
 ; LMULMAX1-RV64-NEXT:    vand.vx v11, v11, t4
 ; LMULMAX1-RV64-NEXT:    vsll.vi v12, v9, 24
-; LMULMAX1-RV64-NEXT:    slli a2, a3, 40
-; LMULMAX1-RV64-NEXT:    vand.vx v12, v12, a2
+; LMULMAX1-RV64-NEXT:    slli a3, a5, 40
+; LMULMAX1-RV64-NEXT:    vand.vx v12, v12, a3
 ; LMULMAX1-RV64-NEXT:    vor.vv v11, v12, v11
 ; LMULMAX1-RV64-NEXT:    vsll.vx v12, v9, t0
 ; LMULMAX1-RV64-NEXT:    vsll.vx v9, v9, t1
-; LMULMAX1-RV64-NEXT:    slli a3, a3, 48
-; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a3
+; LMULMAX1-RV64-NEXT:    slli a5, a5, 48
+; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a5
 ; LMULMAX1-RV64-NEXT:    vor.vv v9, v12, v9
+; LMULMAX1-RV64-NEXT:    lui a4, %hi(.LCPI5_0)
+; LMULMAX1-RV64-NEXT:    ld a4, %lo(.LCPI5_0)(a4)
 ; LMULMAX1-RV64-NEXT:    vor.vv v9, v9, v11
 ; LMULMAX1-RV64-NEXT:    vor.vv v9, v9, v10
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v10, v9, 4
-; LMULMAX1-RV64-NEXT:    lui a4, 3855
-; LMULMAX1-RV64-NEXT:    addiw a4, a4, 241
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, -241
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, 241
-; LMULMAX1-RV64-NEXT:    slli a4, a4, 12
-; LMULMAX1-RV64-NEXT:    addi a4, a4, -241
 ; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a4
 ; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a4
+; LMULMAX1-RV64-NEXT:    lui a1, %hi(.LCPI5_1)
+; LMULMAX1-RV64-NEXT:    ld a1, %lo(.LCPI5_1)(a1)
 ; LMULMAX1-RV64-NEXT:    vsll.vi v9, v9, 4
 ; LMULMAX1-RV64-NEXT:    vor.vv v9, v10, v9
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v10, v9, 2
-; LMULMAX1-RV64-NEXT:    lui a5, 13107
-; LMULMAX1-RV64-NEXT:    addiw a5, a5, 819
-; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
-; LMULMAX1-RV64-NEXT:    addi a5, a5, 819
-; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
-; LMULMAX1-RV64-NEXT:    addi a5, a5, 819
-; LMULMAX1-RV64-NEXT:    slli a5, a5, 12
-; LMULMAX1-RV64-NEXT:    addi a5, a5, 819
-; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a5
-; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a5
+; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a1
+; LMULMAX1-RV64-NEXT:    lui a2, %hi(.LCPI5_2)
+; LMULMAX1-RV64-NEXT:    ld a2, %lo(.LCPI5_2)(a2)
 ; LMULMAX1-RV64-NEXT:    vsll.vi v9, v9, 2
 ; LMULMAX1-RV64-NEXT:    vor.vv v9, v10, v9
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v10, v9, 1
-; LMULMAX1-RV64-NEXT:    lui a1, 21845
-; LMULMAX1-RV64-NEXT:    addiw a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    slli a1, a1, 12
-; LMULMAX1-RV64-NEXT:    addi a1, a1, 1365
-; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a1
-; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a2
+; LMULMAX1-RV64-NEXT:    vand.vx v9, v9, a2
 ; LMULMAX1-RV64-NEXT:    vadd.vv v9, v9, v9
 ; LMULMAX1-RV64-NEXT:    vor.vv v9, v10, v9
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v10, v8, t0
@@ -1404,11 +1332,11 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsll.vi v11, v8, 8
 ; LMULMAX1-RV64-NEXT:    vand.vx v11, v11, t4
 ; LMULMAX1-RV64-NEXT:    vsll.vi v12, v8, 24
-; LMULMAX1-RV64-NEXT:    vand.vx v12, v12, a2
+; LMULMAX1-RV64-NEXT:    vand.vx v12, v12, a3
 ; LMULMAX1-RV64-NEXT:    vor.vv v11, v12, v11
 ; LMULMAX1-RV64-NEXT:    vsll.vx v12, v8, t0
 ; LMULMAX1-RV64-NEXT:    vsll.vx v8, v8, t1
-; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a3
+; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a5
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v12, v8
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v8, v11
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v8, v10
@@ -1418,13 +1346,13 @@ define void @bitreverse_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-RV64-NEXT:    vsll.vi v8, v8, 4
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v10, v8
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v10, v8, 2
-; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a5
-; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a5
+; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a1
 ; LMULMAX1-RV64-NEXT:    vsll.vi v8, v8, 2
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v10, v8
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v10, v8, 1
-; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a1
-; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a1
+; LMULMAX1-RV64-NEXT:    vand.vx v10, v10, a2
+; LMULMAX1-RV64-NEXT:    vand.vx v8, v8, a2
 ; LMULMAX1-RV64-NEXT:    vadd.vv v8, v8, v8
 ; LMULMAX1-RV64-NEXT:    vor.vv v8, v10, v8
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBLaunchInfo.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
@@ -23,8 +23,7 @@ using namespace lldb_private;
 
 class lldb_private::SBLaunchInfoImpl : public ProcessLaunchInfo {
 public:
-  SBLaunchInfoImpl()
-      : ProcessLaunchInfo(), m_envp(GetEnvironment().getEnvp()) {}
+  SBLaunchInfoImpl() : m_envp(GetEnvironment().getEnvp()) {}
 
   const char *const *GetEnvp() const { return m_envp; }
   void RegenerateEnvp() { m_envp = GetEnvironment().getEnvp(); }
@@ -59,7 +58,7 @@ SBLaunchInfo &SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
                      SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &), rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBLaunchInfo::~SBLaunchInfo() = default;
@@ -117,7 +116,7 @@ void SBLaunchInfo::SetGroupID(uint32_t gid) {
 SBFileSpec SBLaunchInfo::GetExecutableFile() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBLaunchInfo, GetExecutableFile);
 
-  return LLDB_RECORD_RESULT(SBFileSpec(m_opaque_sp->GetExecutableFile()));
+  return SBFileSpec(m_opaque_sp->GetExecutableFile());
 }
 
 void SBLaunchInfo::SetExecutableFile(SBFileSpec exe_file,
@@ -131,7 +130,7 @@ void SBLaunchInfo::SetExecutableFile(SBFileSpec exe_file,
 SBListener SBLaunchInfo::GetListener() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBListener, SBLaunchInfo, GetListener);
 
-  return LLDB_RECORD_RESULT(SBListener(m_opaque_sp->GetListener()));
+  return SBListener(m_opaque_sp->GetListener());
 }
 
 void SBLaunchInfo::SetListener(SBListener &listener) {
@@ -204,8 +203,7 @@ void SBLaunchInfo::SetEnvironment(const SBEnvironment &env, bool append) {
 
 SBEnvironment SBLaunchInfo::GetEnvironment() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBLaunchInfo, GetEnvironment);
-  return LLDB_RECORD_RESULT(
-      SBEnvironment(Environment(m_opaque_sp->GetEnvironment())));
+  return SBEnvironment(Environment(m_opaque_sp->GetEnvironment()));
 }
 
 void SBLaunchInfo::Clear() {
@@ -374,7 +372,7 @@ lldb::SBStructuredData SBLaunchInfo::GetScriptedProcessDictionary() const {
   SBStructuredData data;
   data.m_impl_up->SetObjectSP(dict_sp);
 
-  return LLDB_RECORD_RESULT(data);
+  return data;
 }
 
 void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
@@ -394,80 +392,4 @@ void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
     return;
 
   m_opaque_sp->SetScriptedProcessDictionarySP(dict_sp);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBLaunchInfo>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const char **));
-  LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &));
-  LLDB_REGISTER_METHOD(SBLaunchInfo &,
-                       SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &));
-  LLDB_REGISTER_METHOD(lldb::pid_t, SBLaunchInfo, GetProcessID, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetUserID, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetGroupID, ());
-  LLDB_REGISTER_METHOD(bool, SBLaunchInfo, UserIDIsValid, ());
-  LLDB_REGISTER_METHOD(bool, SBLaunchInfo, GroupIDIsValid, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetUserID, (uint32_t));
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetGroupID, (uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBFileSpec, SBLaunchInfo, GetExecutableFile, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetExecutableFile,
-                       (lldb::SBFileSpec, bool));
-  LLDB_REGISTER_METHOD(lldb::SBListener, SBLaunchInfo, GetListener, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetListener, (lldb::SBListener &));
-  LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetNumArguments, ());
-  LLDB_REGISTER_METHOD(const char *, SBLaunchInfo, GetArgumentAtIndex,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetArguments,
-                       (const char **, bool));
-  LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetNumEnvironmentEntries, ());
-  LLDB_REGISTER_METHOD(const char *, SBLaunchInfo, GetEnvironmentEntryAtIndex,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetEnvironmentEntries,
-                       (const char **, bool));
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, Clear, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBLaunchInfo, GetWorkingDirectory,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetWorkingDirectory,
-                       (const char *));
-  LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetLaunchFlags, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetLaunchFlags, (uint32_t));
-  LLDB_REGISTER_METHOD(const char *, SBLaunchInfo, GetProcessPluginName, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetProcessPluginName,
-                       (const char *));
-  LLDB_REGISTER_METHOD(const char *, SBLaunchInfo, GetShell, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetShell, (const char *));
-  LLDB_REGISTER_METHOD(bool, SBLaunchInfo, GetShellExpandArguments, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetShellExpandArguments, (bool));
-  LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetResumeCount, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetResumeCount, (uint32_t));
-  LLDB_REGISTER_METHOD(bool, SBLaunchInfo, AddCloseFileAction, (int));
-  LLDB_REGISTER_METHOD(bool, SBLaunchInfo, AddDuplicateFileAction,
-                       (int, int));
-  LLDB_REGISTER_METHOD(bool, SBLaunchInfo, AddOpenFileAction,
-                       (int, const char *, bool, bool));
-  LLDB_REGISTER_METHOD(bool, SBLaunchInfo, AddSuppressFileAction,
-                       (int, bool, bool));
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetLaunchEventData,
-                       (const char *));
-  LLDB_REGISTER_METHOD_CONST(const char *, SBLaunchInfo, GetLaunchEventData,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetDetachOnError, (bool));
-  LLDB_REGISTER_METHOD_CONST(bool, SBLaunchInfo, GetDetachOnError, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBLaunchInfo,
-                             GetScriptedProcessClassName, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetScriptedProcessClassName,
-                       (const char *));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBStructuredData, SBLaunchInfo,
-                             GetScriptedProcessDictionary, ());
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetScriptedProcessDictionary,
-                       (lldb::SBStructuredData));
-  LLDB_REGISTER_METHOD(void, SBLaunchInfo, SetEnvironment,
-                       (const lldb::SBEnvironment &, bool));
-  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBLaunchInfo, GetEnvironment, ());
-}
-
-}
 }

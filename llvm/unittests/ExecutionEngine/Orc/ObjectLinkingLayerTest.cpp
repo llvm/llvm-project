@@ -44,7 +44,8 @@ TEST_F(ObjectLinkingLayerTest, AddLinkGraph) {
                                   support::little, x86_64::getEdgeKindName);
 
   auto &Sec1 = G->createSection("__data", MemProt::Read | MemProt::Write);
-  auto &B1 = G->createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
+  auto &B1 = G->createContentBlock(Sec1, BlockContent,
+                                   orc::ExecutorAddr(0x1000), 8, 0);
   G->addDefinedSymbol(B1, 4, "_X", 4, Linkage::Strong, Scope::Default, false,
                       false);
 

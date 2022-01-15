@@ -485,7 +485,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     // different LineFormatter would be used otherwise.
     if (Previous.ClosesTemplateDeclaration)
       return Style.AlwaysBreakTemplateDeclarations != FormatStyle::BTDS_No;
-    if (Previous.is(TT_FunctionAnnotationRParen))
+    if (Previous.is(TT_FunctionAnnotationRParen) &&
+        State.Line->Type != LT_PreprocessorDirective)
       return true;
     if (Previous.is(TT_LeadingJavaAnnotation) && Current.isNot(tok::l_paren) &&
         Current.isNot(TT_LeadingJavaAnnotation))
@@ -1288,10 +1289,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
         State.Stack[i].NoLineBreak = true;
     State.Stack[State.Stack.size() - 2].NestedBlockInlined = false;
   }
-  if (Previous &&
-      (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) ||
-       Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr)) &&
-      !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
+  if (Previous && (Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) ||
+                   (Previous->isOneOf(tok::l_paren, tok::comma, tok::colon) &&
+                    !Previous->isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)))) {
     State.Stack.back().NestedBlockInlined =
         !Newline && hasNestedBlockInlined(Previous, Current, Style);
   }

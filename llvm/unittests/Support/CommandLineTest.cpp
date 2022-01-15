@@ -827,7 +827,7 @@ TEST(CommandLineTest, ResponseFiles) {
   llvm::BumpPtrAllocator A;
   llvm::StringSaver Saver(A);
   ASSERT_TRUE(llvm::cl::ExpandResponseFiles(
-      Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true,
+      Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true, false,
       /*CurrentDir=*/StringRef(TestRoot), FS));
   EXPECT_THAT(Argv, testing::Pointwise(
                         StringEquality(),
@@ -889,9 +889,9 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 #else
   cl::TokenizerCallback Tokenizer = cl::TokenizeGNUCommandLine;
 #endif
-  ASSERT_FALSE(cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false,
-                                       /*CurrentDir=*/llvm::StringRef(TestRoot),
-                                       FS));
+  ASSERT_FALSE(
+      cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, false,
+                              /*CurrentDir=*/llvm::StringRef(TestRoot), FS));
 
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(),
@@ -929,7 +929,7 @@ TEST(CommandLineTest, ResponseFilesAtArguments) {
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ASSERT_FALSE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
-                                       false, false,
+                                       false, false, false,
                                        /*CurrentDir=*/StringRef(TestRoot), FS));
 
   // ASSERT instead of EXPECT to prevent potential out-of-bounds access.
@@ -964,7 +964,7 @@ TEST(CommandLineTest, ResponseFileRelativePath) {
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
-                                      false, true,
+                                      false, true, false,
                                       /*CurrentDir=*/StringRef(TestRoot), FS));
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(), {"test/test", "-flag"}));
@@ -984,7 +984,7 @@ TEST(CommandLineTest, ResponseFileEOLs) {
   BumpPtrAllocator A;
   StringSaver Saver(A);
   ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeWindowsCommandLine,
-                                      Argv, true, true,
+                                      Argv, true, true, false,
                                       /*CurrentDir=*/StringRef(TestRoot), FS));
   const char *Expected[] = {"clang", "-Xclang", "-Wno-whatever", nullptr,
                             "input.cpp"};
@@ -1038,24 +1038,38 @@ TEST(CommandLineTest, ReadConfigFile) {
   llvm::SmallVector<const char *, 1> Argv;
 
   TempDir TestDir("unittest", /*Unique*/ true);
+  TempDir TestSubDir(TestDir.path("subdir"), /*Unique*/ false);
 
-  llvm::SmallString<128> TestCfg;
-  llvm::sys::path::append(TestCfg, TestDir.path(), "foo");
-
+  llvm::SmallString<128> TestCfg = TestDir.path("foo");
   TempFile ConfigFile(TestCfg, "",
                       "# Comment\n"
                       "-option_1\n"
+                      "-option_2=<CFGDIR>/dir1\n"
+                      "-option_3=<CFGDIR>\n"
+                      "-option_4 <CFGDIR>\n"
+                      "-option_5=<CFG\\\n"
+                      "DIR>\n"
+                      "-option_6=<CFGDIR>/dir1,<CFGDIR>/dir2\n"
                       "@subconfig\n"
-                      "-option_3=abcd\n"
-                      "-option_4=\\\n"
+                      "-option_11=abcd\n"
+                      "-option_12=\\\n"
                       "cdef\n");
 
-  llvm::SmallString<128> TestCfg2;
-  llvm::sys::path::append(TestCfg2, TestDir.path(), "subconfig");
+  llvm::SmallString<128> TestCfg2 = TestDir.path("subconfig");
   TempFile ConfigFile2(TestCfg2, "",
-                       "-option_2\n"
+                       "-option_7\n"
+                       "-option_8=<CFGDIR>/dir2\n"
+                       "@subdir/subfoo\n"
                        "\n"
                        "   # comment\n");
+
+  llvm::SmallString<128> TestCfg3 = TestSubDir.path("subfoo");
+  TempFile ConfigFile3(TestCfg3, "",
+                       "-option_9=<CFGDIR>/dir3\n"
+                       "@<CFGDIR>/subfoo2\n");
+
+  llvm::SmallString<128> TestCfg4 = TestSubDir.path("subfoo2");
+  TempFile ConfigFile4(TestCfg4, "", "-option_10\n");
 
   // Make sure the current directory is not the directory where config files
   // resides. In this case the code that expands response files will not find
@@ -1071,11 +1085,26 @@ TEST(CommandLineTest, ReadConfigFile) {
   bool Result = llvm::cl::readConfigFile(ConfigFile.path(), Saver, Argv);
 
   EXPECT_TRUE(Result);
-  EXPECT_EQ(Argv.size(), 4U);
+  EXPECT_EQ(Argv.size(), 13U);
   EXPECT_STREQ(Argv[0], "-option_1");
-  EXPECT_STREQ(Argv[1], "-option_2");
-  EXPECT_STREQ(Argv[2], "-option_3=abcd");
-  EXPECT_STREQ(Argv[3], "-option_4=cdef");
+  EXPECT_STREQ(Argv[1],
+               ("-option_2=" + TestDir.path() + "/dir1").str().c_str());
+  EXPECT_STREQ(Argv[2], ("-option_3=" + TestDir.path()).str().c_str());
+  EXPECT_STREQ(Argv[3], "-option_4");
+  EXPECT_STREQ(Argv[4], TestDir.path().str().c_str());
+  EXPECT_STREQ(Argv[5], ("-option_5=" + TestDir.path()).str().c_str());
+  EXPECT_STREQ(Argv[6], ("-option_6=" + TestDir.path() + "/dir1," +
+                         TestDir.path() + "/dir2")
+                            .str()
+                            .c_str());
+  EXPECT_STREQ(Argv[7], "-option_7");
+  EXPECT_STREQ(Argv[8],
+               ("-option_8=" + TestDir.path() + "/dir2").str().c_str());
+  EXPECT_STREQ(Argv[9],
+               ("-option_9=" + TestSubDir.path() + "/dir3").str().c_str());
+  EXPECT_STREQ(Argv[10], "-option_10");
+  EXPECT_STREQ(Argv[11], "-option_11=abcd");
+  EXPECT_STREQ(Argv[12], "-option_12=cdef");
 }
 
 TEST(CommandLineTest, PositionalEatArgsError) {

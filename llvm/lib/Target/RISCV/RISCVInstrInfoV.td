@@ -19,17 +19,21 @@ include "RISCVInstrFormatsV.td"
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def VTypeIAsmOperand : AsmOperandClass {
-  let Name = "VTypeI";
+class VTypeIAsmOperand<int VTypeINum> : AsmOperandClass {
+  let Name = "VTypeI" # VTypeINum;
   let ParserMethod = "parseVTypeI";
   let DiagnosticType = "InvalidVTypeI";
+  let RenderMethod = "addVTypeIOperands";
 }
 
-def VTypeIOp : Operand<XLenVT> {
-  let ParserMatchClass = VTypeIAsmOperand;
+class VTypeIOp<int VTypeINum> : Operand<XLenVT> {
+  let ParserMatchClass = VTypeIAsmOperand<VTypeINum>;
   let PrintMethod = "printVTypeI";
-  let DecoderMethod = "decodeUImmOperand<11>";
+  let DecoderMethod = "decodeUImmOperand<"#VTypeINum#">";
 }
+
+def VTypeIOp10 : VTypeIOp<10>;
+def VTypeIOp11 : VTypeIOp<11>;
 
 def VMaskAsmOperand : AsmOperandClass {
   let Name = "RVVMaskRegOpOperand";
@@ -76,6 +80,9 @@ def simm5_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
     return MCOp.isBareSymbolRef();
   }];
 }
+
+def simm5_plus1_nonzero : ImmLeaf<XLenVT,
+  [{return Imm != 0 && ((isInt<5>(Imm) && Imm != -16) || Imm == 16);}]>;
 
 //===----------------------------------------------------------------------===//
 // Scheduling definitions.
@@ -772,10 +779,10 @@ multiclass VWholeLoadN<bits<3> nf, string opcodestr, RegisterClass VRC> {
 
 let Predicates = [HasStdExtV] in {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
-def VSETVLI : RVInstSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp:$vtypei),
+def VSETVLI : RVInstSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp11:$vtypei),
                            "vsetvli", "$rd, $rs1, $vtypei">;
 
-def VSETIVLI : RVInstSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp:$vtypei),
+def VSETIVLI : RVInstSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp10:$vtypei),
                              "vsetivli", "$rd, $uimm, $vtypei">;
 
 def VSETVL : RVInstSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
@@ -794,6 +801,10 @@ foreach eew = [8, 16, 32, 64] in {
   // Vector Strided Instructions
   def VLSE#eew#_V  : VStridedLoad<w,  "vlse"#eew#".v">, VLSSched<eew>;
   def VSSE#eew#_V  : VStridedStore<w,  "vsse"#eew#".v">, VSSSched<eew>;
+}
+
+foreach eew = [8, 16, 32] in {
+  defvar w = !cast<RISCVWidth>("LSWidth" # eew);
 
   // Vector Indexed Instructions
   def VLUXEI#eew#_V :
@@ -805,7 +816,21 @@ foreach eew = [8, 16, 32, 64] in {
   def VSOXEI#eew#_V :
     VIndexedStore<MOPSTIndexedOrder, w, "vsoxei"#eew#".v">, VSXSched<eew, "O">;
 }
+} // Predicates = [HasStdExtV]
 
+let Predicates = [HasStdExtV, IsRV64] in {
+  // Vector Indexed Instructions
+  def VLUXEI64_V : VIndexedLoad<MOPLDIndexedUnord, LSWidth64, "vluxei64.v">,
+                   VLXSched<64, "U">;
+  def VLOXEI64_V : VIndexedLoad<MOPLDIndexedOrder, LSWidth64, "vloxei64.v">,
+                   VLXSched<64, "O">;
+  def VSUXEI64_V : VIndexedStore<MOPSTIndexedUnord, LSWidth64, "vsuxei64.v">,
+                   VSXSched<64, "U">;
+  def VSOXEI64_V : VIndexedStore<MOPSTIndexedOrder, LSWidth64, "vsoxei64.v">,
+                   VSXSched<64, "O">;
+} // Predicates = [HasStdExtV, IsRV64]
+
+let Predicates = [HasStdExtV] in {
 def VLM_V : VUnitStrideLoadMask<"vlm.v">,
              Sched<[WriteVLDM, ReadVLDX]>;
 def VSM_V : VUnitStrideStoreMask<"vsm.v">,
@@ -1423,6 +1448,10 @@ let Predicates = [HasStdExtZvlsseg] in {
         VStridedSegmentLoad<!add(nf, -1), w, "vlsseg"#nf#"e"#eew#".v">;
       def VSSSEG#nf#E#eew#_V :
         VStridedSegmentStore<!add(nf, -1), w, "vssseg"#nf#"e"#eew#".v">;
+    }
+
+    foreach eew = [8, 16, 32] in {
+      defvar w = !cast<RISCVWidth>("LSWidth"#eew);
 
       // Vector Indexed Instructions
       def VLUXSEG#nf#EI#eew#_V :
@@ -1440,5 +1469,23 @@ let Predicates = [HasStdExtZvlsseg] in {
     }
   }
 } // Predicates = [HasStdExtZvlsseg]
+
+let Predicates = [HasStdExtZvlsseg, IsRV64] in {
+  foreach nf=2-8 in {
+    // Vector Indexed Instructions
+    def VLUXSEG#nf#EI64_V :
+      VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, LSWidth64,
+                          "vluxseg"#nf#"ei64.v">;
+    def VLOXSEG#nf#EI64_V :
+      VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, LSWidth64,
+                          "vloxseg"#nf#"ei64.v">;
+    def VSUXSEG#nf#EI64_V :
+      VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, LSWidth64,
+                           "vsuxseg"#nf#"ei64.v">;
+    def VSOXSEG#nf#EI64_V :
+      VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, LSWidth64,
+                           "vsoxseg"#nf#"ei64.v">;
+  }
+} // Predicates = [HasStdExtZvlsseg, IsRV64]
 
 include "RISCVInstrInfoVPseudos.td"

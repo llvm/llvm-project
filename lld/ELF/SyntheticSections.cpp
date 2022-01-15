@@ -650,14 +650,20 @@ GotSection::GotSection()
 }
 
 void GotSection::addEntry(Symbol &sym) {
-  sym.gotIndex = numEntries;
-  ++numEntries;
+  assert(sym.auxIdx == symAux.size() - 1);
+  symAux.back().gotIdx = numEntries++;
+}
+
+bool GotSection::addTlsDescEntry(Symbol &sym) {
+  assert(sym.auxIdx == symAux.size() - 1);
+  symAux.back().tlsDescIdx = numEntries;
+  numEntries += 2;
+  return true;
 }
 
 bool GotSection::addDynTlsEntry(Symbol &sym) {
-  if (sym.globalDynIndex != -1U)
-    return false;
-  sym.globalDynIndex = numEntries;
+  assert(sym.auxIdx == symAux.size() - 1);
+  symAux.back().tlsGdIdx = numEntries;
   // Global Dynamic TLS entries take two GOT slots.
   numEntries += 2;
   return true;
@@ -673,12 +679,20 @@ bool GotSection::addTlsIndex() {
   return true;
 }
 
+uint32_t GotSection::getTlsDescOffset(const Symbol &sym) const {
+  return sym.getTlsDescIdx() * config->wordsize;
+}
+
+uint64_t GotSection::getTlsDescAddr(const Symbol &sym) const {
+  return getVA() + getTlsDescOffset(sym);
+}
+
 uint64_t GotSection::getGlobalDynAddr(const Symbol &b) const {
-  return this->getVA() + b.globalDynIndex * config->wordsize;
+  return this->getVA() + b.getTlsGdIdx() * config->wordsize;
 }
 
 uint64_t GotSection::getGlobalDynOffset(const Symbol &b) const {
-  return b.globalDynIndex * config->wordsize;
+  return b.getTlsGdIdx() * config->wordsize;
 }
 
 void GotSection::finalizeContents() {
@@ -972,12 +986,18 @@ void MipsGotSection::build() {
     }
   }
 
-  // Update Symbol::gotIndex field to use this
+  // Update SymbolAux::gotIdx field to use this
   // value later in the `sortMipsSymbols` function.
-  for (auto &p : primGot->global)
-    p.first->gotIndex = p.second;
-  for (auto &p : primGot->relocs)
-    p.first->gotIndex = p.second;
+  for (auto &p : primGot->global) {
+    if (p.first->auxIdx == uint32_t(-1))
+      p.first->allocateAux();
+    symAux.back().gotIdx = p.second;
+  }
+  for (auto &p : primGot->relocs) {
+    if (p.first->auxIdx == uint32_t(-1))
+      p.first->allocateAux();
+    symAux.back().gotIdx = p.second;
+  }
 
   // Create dynamic relocations.
   for (FileGot &got : gots) {
@@ -1145,7 +1165,8 @@ GotPltSection::GotPltSection()
 }
 
 void GotPltSection::addEntry(Symbol &sym) {
-  assert(sym.pltIndex == entries.size());
+  assert(sym.auxIdx == symAux.size() - 1 &&
+         symAux.back().pltIdx == entries.size());
   entries.push_back(&sym);
 }
 
@@ -1190,7 +1211,7 @@ IgotPltSection::IgotPltSection()
                        target->gotEntrySize, getIgotPltName()) {}
 
 void IgotPltSection::addEntry(Symbol &sym) {
-  assert(sym.pltIndex == entries.size());
+  assert(symAux.back().pltIdx == entries.size());
   entries.push_back(&sym);
 }
 
@@ -1391,7 +1412,8 @@ DynamicSection<ELFT>::computeContents() {
         addInt(isRela ? DT_RELACOUNT : DT_RELCOUNT, numRelativeRels);
     }
   }
-  if (part.relrDyn && !part.relrDyn->relocs.empty()) {
+  if (part.relrDyn && part.relrDyn->getParent() &&
+      !part.relrDyn->relocs.empty()) {
     addInSec(config->useAndroidRelrTags ? DT_ANDROID_RELR : DT_RELR,
              *part.relrDyn);
     addInt(config->useAndroidRelrTags ? DT_ANDROID_RELRSZ : DT_RELRSZ,
@@ -1442,9 +1464,9 @@ DynamicSection<ELFT>::computeContents() {
   addInt(DT_STRSZ, part.dynStrTab->getSize());
   if (!config->zText)
     addInt(DT_TEXTREL, 0);
-  if (part.gnuHashTab)
+  if (part.gnuHashTab && part.gnuHashTab->getParent())
     addInSec(DT_GNU_HASH, *part.gnuHashTab);
-  if (part.hashTab)
+  if (part.hashTab && part.hashTab->getParent())
     addInSec(DT_HASH, *part.hashTab);
 
   if (isMain) {
@@ -2069,7 +2091,7 @@ static bool sortMipsSymbols(const SymbolTableEntry &l,
   // Sort entries related to non-local preemptible symbols by GOT indexes.
   // All other entries go to the beginning of a dynsym in arbitrary order.
   if (l.sym->isInGot() && r.sym->isInGot())
-    return l.sym->gotIndex < r.sym->gotIndex;
+    return l.sym->getGotIdx() < r.sym->getGotIdx();
   if (!l.sym->isInGot() && !r.sym->isInGot())
     return false;
   return !l.sym->isInGot();
@@ -2546,7 +2568,8 @@ void PltSection::writeTo(uint8_t *buf) {
 }
 
 void PltSection::addEntry(Symbol &sym) {
-  sym.pltIndex = entries.size();
+  assert(sym.auxIdx == symAux.size() - 1);
+  symAux.back().pltIdx = entries.size();
   entries.push_back(&sym);
 }
 
@@ -2592,7 +2615,8 @@ size_t IpltSection::getSize() const {
 }
 
 void IpltSection::addEntry(Symbol &sym) {
-  sym.pltIndex = entries.size();
+  assert(sym.auxIdx == symAux.size() - 1);
+  symAux.back().pltIdx = entries.size();
   entries.push_back(&sym);
 }
 

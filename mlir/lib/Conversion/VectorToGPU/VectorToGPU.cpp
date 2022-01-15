@@ -84,9 +84,7 @@ static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp) {
                                           readOp.getContext());
   // TODO: Support transpose once it is added to GPU dialect ops.
   // For now we only support (d0, d1) -> (d0, d1) and (d0, d1) -> (0, d1).
-  if (!map.isMinorIdentity() && map != broadcastInnerDim)
-    return false;
-  return true;
+  return !(!map.isMinorIdentity() && map != broadcastInnerDim);
 }
 
 // Return true if the transfer op can be converted to a MMA matrix store.
@@ -451,7 +449,7 @@ static void convertForOp(scf::ForOp op,
                          llvm::DenseMap<Value, Value> &valueMapping) {
   SmallVector<Value> newOperands;
   SmallVector<std::pair<size_t, size_t>> argMapping;
-  for (auto operand : llvm::enumerate(op.getIterOperands())) {
+  for (const auto &operand : llvm::enumerate(op.getIterOperands())) {
     auto it = valueMapping.find(operand.value());
     if (it == valueMapping.end())
       continue;
@@ -476,7 +474,7 @@ static void convertYieldOp(scf::YieldOp op,
   OpBuilder b(op);
   auto loop = cast<scf::ForOp>(op->getParentOp());
   auto yieldOperands = llvm::to_vector<4>(op.getOperands());
-  for (auto operand : llvm::enumerate(op.getOperands())) {
+  for (const auto &operand : llvm::enumerate(op.getOperands())) {
     auto it = valueMapping.find(operand.value());
     if (it == valueMapping.end())
       continue;

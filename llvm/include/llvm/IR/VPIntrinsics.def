@@ -39,9 +39,9 @@
 // same name.  Since the operands are also the same, we open the property
 // scopes for both the VPIntrinsic and the SDNode at once.
 // \p VPSD     The SelectionDAG Node id (eg VP_ADD).
-// \p LEGALPOS The operand position of the SDNode that is used for legalizing
-//             this SDNode. This can be `-1`, in which case the return type of
-//             the SDNode is used.
+// \p LEGALPOS The operand position of the SDNode that is used for legalizing.
+//             If LEGALPOS < 0, then the return type given by
+//             TheNode->getValueType(-1-LEGALPOS) is used.
 // \p TDNAME   The name of the TableGen definition of this SDNode.
 // \p MASKPOS  The mask operand position.
 // \p EVLPOS   The explicit vector length operand position.
@@ -348,6 +348,10 @@ HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fmul, VP_REDUCE_FMUL,
 BEGIN_REGISTER_VP(vp_select, 0, 3, VP_SELECT, -1)
 VP_PROPERTY_FUNCTIONAL_OPC(Select)
 END_REGISTER_VP(vp_select, VP_SELECT)
+
+// llvm.vp.merge(mask,on_true,on_false,pivot)
+BEGIN_REGISTER_VP(vp_merge, 0, 3, VP_MERGE, -1)
+END_REGISTER_VP(vp_merge, VP_MERGE)
 
 BEGIN_REGISTER_VP(experimental_vp_splice, 3, 5, EXPERIMENTAL_VP_SPLICE, -1)
 END_REGISTER_VP(experimental_vp_splice, EXPERIMENTAL_VP_SPLICE)

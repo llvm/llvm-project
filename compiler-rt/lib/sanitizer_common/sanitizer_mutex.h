@@ -20,25 +20,27 @@
 
 namespace __sanitizer {
 
-class MUTEX StaticSpinMutex {
+class SANITIZER_MUTEX StaticSpinMutex {
  public:
   void Init() {
     atomic_store(&state_, 0, memory_order_relaxed);
   }
 
-  void Lock() ACQUIRE() {
+  void Lock() SANITIZER_ACQUIRE() {
     if (LIKELY(TryLock()))
       return;
     LockSlow();
   }
 
-  bool TryLock() TRY_ACQUIRE(true) {
+  bool TryLock() SANITIZER_TRY_ACQUIRE(true) {
     return atomic_exchange(&state_, 1, memory_order_acquire) == 0;
   }
 
-  void Unlock() RELEASE() { atomic_store(&state_, 0, memory_order_release); }
+  void Unlock() SANITIZER_RELEASE() {
+    atomic_store(&state_, 0, memory_order_release);
+  }
 
-  void CheckLocked() const CHECK_LOCKED() {
+  void CheckLocked() const SANITIZER_CHECK_LOCKED() {
     CHECK_EQ(atomic_load(&state_, memory_order_relaxed), 1);
   }
 
@@ -48,7 +50,7 @@ class MUTEX StaticSpinMutex {
   void LockSlow();
 };
 
-class MUTEX SpinMutex : public StaticSpinMutex {
+class SANITIZER_MUTEX SpinMutex : public StaticSpinMutex {
  public:
   SpinMutex() {
     Init();
@@ -156,12 +158,12 @@ class CheckedMutex {
 // Derive from CheckedMutex for the purposes of EBO.
 // We could make it a field marked with [[no_unique_address]],
 // but this attribute is not supported by some older compilers.
-class MUTEX Mutex : CheckedMutex {
+class SANITIZER_MUTEX Mutex : CheckedMutex {
  public:
   explicit constexpr Mutex(MutexType type = MutexUnchecked)
       : CheckedMutex(type) {}
 
-  void Lock() ACQUIRE() {
+  void Lock() SANITIZER_ACQUIRE() {
     CheckedMutex::Lock();
     u64 reset_mask = ~0ull;
     u64 state = atomic_load_relaxed(&state_);
@@ -206,7 +208,7 @@ class MUTEX Mutex : CheckedMutex {
     }
   }
 
-  void Unlock() RELEASE() {
+  void Unlock() SANITIZER_RELEASE() {
     CheckedMutex::Unlock();
     bool wake_writer;
     u64 wake_readers;
@@ -234,7 +236,7 @@ class MUTEX Mutex : CheckedMutex {
       readers_.Post(wake_readers);
   }
 
-  void ReadLock() ACQUIRE_SHARED() {
+  void ReadLock() SANITIZER_ACQUIRE_SHARED() {
     CheckedMutex::Lock();
     u64 reset_mask = ~0ull;
     u64 state = atomic_load_relaxed(&state_);
@@ -271,7 +273,7 @@ class MUTEX Mutex : CheckedMutex {
     }
   }
 
-  void ReadUnlock() RELEASE_SHARED() {
+  void ReadUnlock() SANITIZER_RELEASE_SHARED() {
     CheckedMutex::Unlock();
     bool wake;
     u64 new_state;
@@ -297,13 +299,13 @@ class MUTEX Mutex : CheckedMutex {
   // owns the mutex but a child checks that it is locked. Rather than
   // maintaining complex state to work around those situations, the check only
   // checks that the mutex is owned.
-  void CheckWriteLocked() const CHECK_LOCKED() {
+  void CheckWriteLocked() const SANITIZER_CHECK_LOCKED() {
     CHECK(atomic_load(&state_, memory_order_relaxed) & kWriterLock);
   }
 
-  void CheckLocked() const CHECK_LOCKED() { CheckWriteLocked(); }
+  void CheckLocked() const SANITIZER_CHECK_LOCKED() { CheckWriteLocked(); }
 
-  void CheckReadLocked() const CHECK_LOCKED() {
+  void CheckReadLocked() const SANITIZER_CHECK_LOCKED() {
     CHECK(atomic_load(&state_, memory_order_relaxed) & kReaderLockMask);
   }
 
@@ -361,13 +363,13 @@ void FutexWait(atomic_uint32_t *p, u32 cmp);
 void FutexWake(atomic_uint32_t *p, u32 count);
 
 template <typename MutexType>
-class SCOPED_LOCK GenericScopedLock {
+class SANITIZER_SCOPED_LOCK GenericScopedLock {
  public:
-  explicit GenericScopedLock(MutexType *mu) ACQUIRE(mu) : mu_(mu) {
+  explicit GenericScopedLock(MutexType *mu) SANITIZER_ACQUIRE(mu) : mu_(mu) {
     mu_->Lock();
   }
 
-  ~GenericScopedLock() RELEASE() { mu_->Unlock(); }
+  ~GenericScopedLock() SANITIZER_RELEASE() { mu_->Unlock(); }
 
  private:
   MutexType *mu_;
@@ -377,13 +379,14 @@ class SCOPED_LOCK GenericScopedLock {
 };
 
 template <typename MutexType>
-class SCOPED_LOCK GenericScopedReadLock {
+class SANITIZER_SCOPED_LOCK GenericScopedReadLock {
  public:
-  explicit GenericScopedReadLock(MutexType *mu) ACQUIRE(mu) : mu_(mu) {
+  explicit GenericScopedReadLock(MutexType *mu) SANITIZER_ACQUIRE(mu)
+      : mu_(mu) {
     mu_->ReadLock();
   }
 
-  ~GenericScopedReadLock() RELEASE() { mu_->ReadUnlock(); }
+  ~GenericScopedReadLock() SANITIZER_RELEASE() { mu_->ReadUnlock(); }
 
  private:
   MutexType *mu_;
@@ -393,10 +396,10 @@ class SCOPED_LOCK GenericScopedReadLock {
 };
 
 template <typename MutexType>
-class SCOPED_LOCK GenericScopedRWLock {
+class SANITIZER_SCOPED_LOCK GenericScopedRWLock {
  public:
   ALWAYS_INLINE explicit GenericScopedRWLock(MutexType *mu, bool write)
-      ACQUIRE(mu)
+      SANITIZER_ACQUIRE(mu)
       : mu_(mu), write_(write) {
     if (write_)
       mu_->Lock();
@@ -404,7 +407,7 @@ class SCOPED_LOCK GenericScopedRWLock {
       mu_->ReadLock();
   }
 
-  ALWAYS_INLINE ~GenericScopedRWLock() RELEASE() {
+  ALWAYS_INLINE ~GenericScopedRWLock() SANITIZER_RELEASE() {
     if (write_)
       mu_->Unlock();
     else

@@ -668,7 +668,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
   //
   CXXScopeSpec SS;
   ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                 /*ObjectHadErrors=*/false,
+                                 /*ObjectHasErrors=*/false,
                                  /*EnteringContext=*/false);
 
   Token Replacement;
@@ -1877,8 +1877,8 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
       QualType PreferredType;
       if (TypeRep)
         PreferredType = Actions.ProduceConstructorSignatureHelp(
-            getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-            DS.getEndLoc(), Exprs, T.getOpenLocation());
+            TypeRep.get()->getCanonicalTypeInternal(), DS.getEndLoc(), Exprs,
+            T.getOpenLocation(), /*Braced=*/false);
       CalledSignatureHelp = true;
       return PreferredType;
     };
@@ -1953,6 +1953,9 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
 /// \param Loc The location of the start of the statement that requires this
 /// condition, e.g., the "for" in a for loop.
 ///
+/// \param MissingOK Whether an empty condition is acceptable here. Otherwise
+/// it is considered an error to be recovered from.
+///
 /// \param FRI If non-null, a for range declaration is permitted, and if
 /// present will be parsed and stored here, and a null result will be returned.
 ///
@@ -1960,11 +1963,10 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
 /// appropriate moment for a 'for' loop.
 ///
 /// \returns The parsed condition.
-Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
-                                                SourceLocation Loc,
-                                                Sema::ConditionKind CK,
-                                                ForRangeInfo *FRI,
-                                                bool EnterForConditionScope) {
+Sema::ConditionResult
+Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
+                          Sema::ConditionKind CK, bool MissingOK,
+                          ForRangeInfo *FRI, bool EnterForConditionScope) {
   // Helper to ensure we always enter a continue/break scope if requested.
   struct ForConditionScopeRAII {
     Scope *S;
@@ -2019,7 +2021,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
       }
       ConsumeToken();
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
-      return ParseCXXCondition(nullptr, Loc, CK);
+      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
     // Parse the expression.
@@ -2031,10 +2033,11 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
       WarnOnInit();
       *InitStmt = Actions.ActOnExprStmt(Expr.get());
       ConsumeToken();
-      return ParseCXXCondition(nullptr, Loc, CK);
+      return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK);
+    return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK,
+                                  MissingOK);
   }
 
   case ConditionOrInitStatement::InitStmtDecl: {
@@ -2048,7 +2051,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
       DG = ParseSimpleDeclaration(DeclaratorContext::SelectionInit, DeclEnd,
                                   attrs, /*RequireSemi=*/true);
     *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
-    return ParseCXXCondition(nullptr, Loc, CK);
+    return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
   }
 
   case ConditionOrInitStatement::ForRangeDecl: {
@@ -2454,8 +2457,8 @@ bool Parser::ParseUnqualifiedIdTemplateId(
   // Parse the enclosed template argument list.
   SourceLocation LAngleLoc, RAngleLoc;
   TemplateArgList TemplateArgs;
-  if (ParseTemplateIdAfterTemplateName(true, LAngleLoc, TemplateArgs,
-                                       RAngleLoc))
+  if (ParseTemplateIdAfterTemplateName(true, LAngleLoc, TemplateArgs, RAngleLoc,
+                                       Template))
     return true;
 
   // If this is a non-template, we already issued a diagnostic.
@@ -3167,8 +3170,9 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
         // `new decltype(invalid) (^)`.
         if (TypeRep)
           PreferredType = Actions.ProduceConstructorSignatureHelp(
-              getCurScope(), TypeRep.get()->getCanonicalTypeInternal(),
-              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen);
+              TypeRep.get()->getCanonicalTypeInternal(),
+              DeclaratorInfo.getEndLoc(), ConstructorArgs, ConstructorLParen,
+              /*Braced=*/false);
         CalledSignatureHelp = true;
         return PreferredType;
       };

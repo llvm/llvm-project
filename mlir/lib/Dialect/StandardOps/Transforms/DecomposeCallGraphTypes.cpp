@@ -67,7 +67,7 @@ struct DecomposeCallGraphTypesForFuncArgs
 
     // Convert function arguments using the provided TypeConverter.
     TypeConverter::SignatureConversion conversion(functionType.getNumInputs());
-    for (auto argType : llvm::enumerate(functionType.getInputs())) {
+    for (const auto &argType : llvm::enumerate(functionType.getInputs())) {
       SmallVector<Type, 2> decomposedTypes;
       if (failed(typeConverter->convertType(argType.value(), decomposedTypes)))
         return failure();

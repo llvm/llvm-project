@@ -1094,6 +1094,13 @@ public:
   inline MCRegister getSubReg(MCRegister Reg, unsigned Idx) const {
     return static_cast<const MCRegisterInfo *>(this)->getSubReg(Reg, Idx);
   }
+
+  /// Some targets have non-allocatable registers that aren't technically part
+  /// of the explicit callee saved register list, but should be handled as such
+  /// in certain cases.
+  virtual bool isNonallocatableRegisterCalleeSave(MCRegister Reg) const {
+    return false;
+  }
 };
 
 //===----------------------------------------------------------------------===//

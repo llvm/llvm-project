@@ -248,8 +248,7 @@ public:
   PGOCounterPromoter(
       DenseMap<Loop *, SmallVector<LoadStorePair, 8>> &LoopToCands,
       Loop &CurLoop, LoopInfo &LI, BlockFrequencyInfo *BFI)
-      : LoopToCandidates(LoopToCands), ExitBlocks(), InsertPts(), L(CurLoop),
-        LI(LI), BFI(BFI) {
+      : LoopToCandidates(LoopToCands), L(CurLoop), LI(LI), BFI(BFI) {
 
     // Skip collection of ExitBlocks and InsertPts for loops that will not be
     // able to have counters promoted.
@@ -997,8 +996,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
         ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
   }
 
-  if (DebugInfoCorrelate)
+  if (DebugInfoCorrelate) {
+    // Mark the counter variable as used so that it isn't optimized out.
+    CompilerUsedVars.push_back(PD.RegionCounters);
     return PD.RegionCounters;
+  }
 
   // Create data variable.
   auto *IntPtrTy = M->getDataLayout().getIntPtrType(M->getContext());

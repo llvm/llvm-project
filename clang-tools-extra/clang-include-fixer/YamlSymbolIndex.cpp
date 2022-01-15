@@ -15,7 +15,6 @@
 #include <string>
 #include <vector>
 
-using clang::find_all_symbols::SymbolInfo;
 using clang::find_all_symbols::SymbolAndSignals;
 
 namespace clang {

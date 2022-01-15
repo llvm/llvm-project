@@ -73,9 +73,6 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
-// A constant value to represent unknown number of region invocations.
-const int64_t mlir::kUnknownNumRegionInvocations = -1;
-
 /// Verify that types match along all region control flow edges originating from
 /// `sourceNo` (region # if source is a region, llvm::None if source is parent
 /// op). `getInputsTypesForRegion` is a function that returns the types of the
@@ -131,7 +128,7 @@ verifyTypesAlongAllEdges(Operation *op, Optional<unsigned> sourceNo,
                                  << succInputsTypes.size();
     }
 
-    for (auto typesIdx :
+    for (const auto &typesIdx :
          llvm::enumerate(llvm::zip(*sourceTypes, succInputsTypes))) {
       Type sourceType = std::get<0>(typesIdx.value());
       Type inputType = std::get<1>(typesIdx.value());
@@ -266,7 +263,7 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
             return false;
           // Compute index of region.
           int64_t beginIndex = -1;
-          for (auto it : llvm::enumerate(branchOp->getRegions()))
+          for (const auto &it : llvm::enumerate(branchOp->getRegions()))
             if (&it.value() == begin)
               beginIndex = it.index();
           assert(beginIndex != -1 && "could not find region in op");

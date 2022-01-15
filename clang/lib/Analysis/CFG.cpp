@@ -531,9 +531,7 @@ class CFGBuilder {
 public:
   explicit CFGBuilder(ASTContext *astContext,
                       const CFG::BuildOptions &buildOpts)
-      : Context(astContext), cfg(new CFG()), // crew a new CFG
-        ConstructionContextMap(), BuildOpts(buildOpts) {}
-
+      : Context(astContext), cfg(new CFG()), BuildOpts(buildOpts) {}
 
   // buildCFG - Used by external clients to construct the CFG.
   std::unique_ptr<CFG> buildCFG(const Decl *D, Stmt *Statement);
@@ -3354,7 +3352,7 @@ CFGBlock *CFGBuilder::VisitGCCAsmStmt(GCCAsmStmt *G, AddStmtChoice asc) {
   // Save "Succ" in BackpatchBlocks. In the backpatch processing, "Succ" is
   // used to avoid adding "Succ" again.
   BackpatchBlocks.push_back(JumpSource(Succ, ScopePos));
-  return Block;
+  return VisitChildren(G);
 }
 
 CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {

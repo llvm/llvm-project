@@ -614,7 +614,7 @@ void MachOWriter::writeExportsTrieData() {
 }
 
 void MachOWriter::writeTail() {
-  typedef void (MachOWriter::*WriteHandlerType)(void);
+  typedef void (MachOWriter::*WriteHandlerType)();
   typedef std::pair<uint64_t, WriteHandlerType> WriteOperation;
   SmallVector<WriteOperation, 7> Queue;
 

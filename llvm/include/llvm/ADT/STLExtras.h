@@ -416,20 +416,14 @@ auto reverse(ContainerTy &&C,
   return make_range(C.rbegin(), C.rend());
 }
 
-// Returns a std::reverse_iterator wrapped around the given iterator.
-template <typename IteratorTy>
-std::reverse_iterator<IteratorTy> make_reverse_iterator(IteratorTy It) {
-  return std::reverse_iterator<IteratorTy>(It);
-}
-
 // Returns an iterator_range over the given container which iterates in reverse.
 // Note that the container must have begin()/end() methods which return
 // bidirectional iterators for this to work.
 template <typename ContainerTy>
 auto reverse(ContainerTy &&C,
              std::enable_if_t<!has_rbegin<ContainerTy>::value> * = nullptr) {
-  return make_range(llvm::make_reverse_iterator(std::end(C)),
-                    llvm::make_reverse_iterator(std::begin(C)));
+  return make_range(std::make_reverse_iterator(std::end(C)),
+                    std::make_reverse_iterator(std::begin(C)));
 }
 
 /// An iterator adaptor that filters the elements of given inner iterators.

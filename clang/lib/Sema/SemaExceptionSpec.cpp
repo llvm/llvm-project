@@ -391,9 +391,8 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
         NewProto->getExtProtoInfo().withExceptionSpec(ESI)));
   }
 
-  if (getLangOpts().MSVCCompat && ESI.Type != EST_DependentNoexcept) {
-    // Allow missing exception specifications in redeclarations as an extension.
-    DiagID = diag::ext_ms_missing_exception_specification;
+  if (getLangOpts().MSVCCompat && isDynamicExceptionSpec(ESI.Type)) {
+    DiagID = diag::ext_missing_exception_specification;
     ReturnValueOnError = false;
   } else if (New->isReplaceableGlobalAllocationFunction() &&
              ESI.Type != EST_DependentNoexcept) {
@@ -402,6 +401,10 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
     DiagID = diag::ext_missing_exception_specification;
     ReturnValueOnError = false;
   } else if (ESI.Type == EST_NoThrow) {
+    // Don't emit any warning for missing 'nothrow' in MSVC.
+    if (getLangOpts().MSVCCompat) {
+      return false;
+    }
     // Allow missing attribute 'nothrow' in redeclarations, since this is a very
     // common omission.
     DiagID = diag::ext_missing_exception_specification;

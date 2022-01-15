@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULE_BUFFERIZATION_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULE_BUFFERIZATION_H
+#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULEBUFFERIZATION_H
+#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULEBUFFERIZATION_H
+
+#include <memory>
 
 namespace mlir {
 
@@ -20,18 +22,20 @@ namespace comprehensive_bufferize {
 
 struct BufferizationOptions;
 
-/// Bufferize the given module. This bufferizations performs a simple function
-/// call analysis to determine which function arguments are inplaceable.
-LogicalResult runComprehensiveBufferize(ModuleOp moduleOp,
-                                        const BufferizationOptions &options);
+/// Run Module Bufferization on the given module. Performs a simple function
+/// call analysis to determine which function arguments are inplaceable. Then
+/// analyzes and bufferizes FuncOps one-by-one with Comprehensive Bufferization.
+LogicalResult
+runComprehensiveBufferize(ModuleOp moduleOp,
+                          std::unique_ptr<BufferizationOptions> options);
 
 namespace std_ext {
 
-void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
+void registerModuleBufferizationExternalModels(DialectRegistry &registry);
 
 } // namespace std_ext
 } // namespace comprehensive_bufferize
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULE_BUFFERIZATION_H
+#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_MODULEBUFFERIZATION_H

@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_TENSOR_INTERFACE_IMPL_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_TENSOR_INTERFACE_IMPL_H
-
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_TENSORINTERFACEIMPL_H
+#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_TENSORINTERFACEIMPL_H
 
 namespace mlir {
 
@@ -19,12 +17,6 @@ namespace linalg {
 namespace comprehensive_bufferize {
 namespace tensor_ext {
 
-struct InplaceInsertSliceOpAnalysis : public PostAnalysisStep {
-  LogicalResult run(Operation *op, BufferizationState &state,
-                    BufferizationAliasInfo &aliasInfo,
-                    SmallVector<Operation *> &newOps) override;
-};
-
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
 
 } // namespace tensor_ext
@@ -32,4 +24,4 @@ void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_TENSOR_INTERFACE_IMPL_H
+#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_TENSORINTERFACEIMPL_H

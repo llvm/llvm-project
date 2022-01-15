@@ -669,7 +669,7 @@ def : InstRW<[M3WriteNEONB], (instregex "^DUPv.+gpr")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^DUPv.+lane")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^EXTv")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^[SU]?Q?XTU?Nv")>;
-def : InstRW<[M3WriteNSHF1], (instregex "^CPY")>;
+def : InstRW<[M3WriteNSHF1], (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[M3WriteNSHF1], (instregex "^INSv.+lane")>;
 def : InstRW<[M3WriteMOVI],  (instregex "^MOVI")>;
 def : InstRW<[M3WriteNALU1], (instregex "^FMOVv")>;

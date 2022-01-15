@@ -32,7 +32,6 @@
 namespace llvm {
 
 class AAResults;
-class DataLayout;
 class PHINode;
 class SelectInst;
 class Value;

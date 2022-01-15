@@ -477,7 +477,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
   getNextToken(); // eat (
   std::vector<std::unique_ptr<ExprAST>> Args;
   if (CurTok != ')') {
-    while (1) {
+    while (true) {
       if (auto Arg = ParseExpression())
         Args.push_back(std::move(Arg));
       else
@@ -587,7 +587,7 @@ static std::unique_ptr<ExprAST> ParseVarExpr() {
   if (CurTok != tok_identifier)
     return LogError("expected identifier after var");
 
-  while (1) {
+  while (true) {
     std::string Name = IdentifierStr;
     getNextToken(); // eat identifier.
 
@@ -671,7 +671,7 @@ static std::unique_ptr<ExprAST> ParseUnary() {
 static std::unique_ptr<ExprAST> ParseBinOpRHS(int ExprPrec,
                                               std::unique_ptr<ExprAST> LHS) {
   // If this is a binop, find its precedence.
-  while (1) {
+  while (true) {
     int TokPrec = GetTokPrecedence();
 
     // If this is a binop that binds at least as tightly as the current binop,
@@ -1365,7 +1365,7 @@ static void HandleTopLevelExpression() {
 
 /// top ::= definition | external | expression | ';'
 static void MainLoop() {
-  while (1) {
+  while (true) {
     switch (CurTok) {
     case tok_eof:
       return;
@@ -1447,7 +1447,7 @@ int main() {
   // but we'd like actual source locations.
   KSDbgInfo.TheCU = DBuilder->createCompileUnit(
       dwarf::DW_LANG_C, DBuilder->createFile("fib.ks", "."),
-      "Kaleidoscope Compiler", 0, "", 0);
+      "Kaleidoscope Compiler", false, "", 0);
 
   // Run the main "interpreter loop" now.
   MainLoop();

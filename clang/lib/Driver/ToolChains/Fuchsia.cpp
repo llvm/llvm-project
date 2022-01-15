@@ -109,7 +109,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles,
+                   options::OPT_r)) {
     if (!Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("Scrt1.o")));
     }
@@ -131,7 +132,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
   ToolChain.addProfileRTLibs(Args, CmdArgs);
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
+                   options::OPT_r)) {
     if (Args.hasArg(options::OPT_static))
       CmdArgs.push_back("-Bdynamic");
 
@@ -191,9 +193,11 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 
   auto FilePaths = [&](const Multilib &M) -> std::vector<std::string> {
     std::vector<std::string> FP;
-    SmallString<128> P(getStdlibPath());
-    llvm::sys::path::append(P, M.gccSuffix());
-    FP.push_back(std::string(P.str()));
+    for (const std::string &Path : getStdlibPaths()) {
+      SmallString<128> P(Path);
+      llvm::sys::path::append(P, M.gccSuffix());
+      FP.push_back(std::string(P.str()));
+    }
     return FP;
   };
 

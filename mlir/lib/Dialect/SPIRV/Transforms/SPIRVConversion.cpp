@@ -235,7 +235,7 @@ getTypeNumBytes(const SPIRVTypeConverter::Options &options, Type type) {
       return llvm::None;
 
     int64_t memrefSize = -1;
-    for (auto shape : enumerate(dims))
+    for (const auto &shape : enumerate(dims))
       memrefSize = std::max(memrefSize, shape.value() * strides[shape.index()]);
 
     return (offset + memrefSize) * elementSize.getValue();
@@ -557,7 +557,7 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
     return failure();
 
   TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
-  for (auto argType : enumerate(fnType.getInputs())) {
+  for (const auto &argType : enumerate(fnType.getInputs())) {
     auto convertedType = getTypeConverter()->convertType(argType.value());
     if (!convertedType)
       return failure();
@@ -778,7 +778,7 @@ Value mlir::spirv::linearizeIndex(ValueRange indices, ArrayRef<int64_t> strides,
 
   Value linearizedIndex = builder.create<spirv::ConstantOp>(
       loc, integerType, IntegerAttr::get(integerType, offset));
-  for (auto index : llvm::enumerate(indices)) {
+  for (const auto &index : llvm::enumerate(indices)) {
     Value strideVal = builder.create<spirv::ConstantOp>(
         loc, integerType,
         IntegerAttr::get(integerType, strides[index.index()]));

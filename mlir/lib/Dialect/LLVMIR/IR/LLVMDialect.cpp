@@ -19,6 +19,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Matchers.h"
 
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -313,7 +314,7 @@ static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
                                ElementsAttr caseValues,
                                SuccessorRange caseDestinations,
                                OperandRangeRange caseOperands,
-                               TypeRangeRange caseOperandTypes) {
+                               const TypeRangeRange &caseOperandTypes) {
   if (!caseValues)
     return;
 
@@ -356,12 +357,197 @@ SwitchOp::getMutableSuccessorOperands(unsigned index) {
 }
 
 //===----------------------------------------------------------------------===//
+// Code for LLVM::GEPOp.
+//===----------------------------------------------------------------------===//
+
+constexpr int GEPOp::kDynamicIndex;
+
+/// Populates `indices` with positions of GEP indices that would correspond to
+/// LLVMStructTypes potentially nested in the given type. The type currently
+/// visited gets `currentIndex` and LLVM container types are visited
+/// recursively. The recursion is bounded and takes care of recursive types by
+/// means of the `visited` set.
+static void recordStructIndices(Type type, unsigned currentIndex,
+                                SmallVectorImpl<unsigned> &indices,
+                                SmallVectorImpl<unsigned> *structSizes,
+                                SmallPtrSet<Type, 4> &visited) {
+  if (visited.contains(type))
+    return;
+
+  visited.insert(type);
+
+  llvm::TypeSwitch<Type>(type)
+      .Case<LLVMStructType>([&](LLVMStructType structType) {
+        indices.push_back(currentIndex);
+        if (structSizes)
+          structSizes->push_back(structType.getBody().size());
+        for (Type elementType : structType.getBody())
+          recordStructIndices(elementType, currentIndex + 1, indices,
+                              structSizes, visited);
+      })
+      .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
+            LLVMArrayType>([&](auto containerType) {
+        recordStructIndices(containerType.getElementType(), currentIndex + 1,
+                            indices, structSizes, visited);
+      });
+}
+
+/// Populates `indices` with positions of GEP indices that correspond to
+/// LLVMStructTypes potentially nested in the given `baseGEPType`, which must
+/// be either an LLVMPointer type or a vector thereof. If `structSizes` is
+/// provided, it is populated with sizes of the indexed structs for bounds
+/// verification purposes.
+static void
+findKnownStructIndices(Type baseGEPType, SmallVectorImpl<unsigned> &indices,
+                       SmallVectorImpl<unsigned> *structSizes = nullptr) {
+  Type type = baseGEPType;
+  if (auto vectorType = type.dyn_cast<VectorType>())
+    type = vectorType.getElementType();
+  if (auto scalableVectorType = type.dyn_cast<LLVMScalableVectorType>())
+    type = scalableVectorType.getElementType();
+  if (auto fixedVectorType = type.dyn_cast<LLVMFixedVectorType>())
+    type = fixedVectorType.getElementType();
+
+  Type pointeeType = type.cast<LLVMPointerType>().getElementType();
+  SmallPtrSet<Type, 4> visited;
+  recordStructIndices(pointeeType, /*currentIndex=*/1, indices, structSizes,
+                      visited);
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Value basePtr, ValueRange operands,
+                  ArrayRef<NamedAttribute> attributes) {
+  build(builder, result, resultType, basePtr, operands,
+        SmallVector<int32_t>(operands.size(), LLVM::GEPOp::kDynamicIndex),
+        attributes);
+}
+
+void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
+                  Value basePtr, ValueRange indices,
+                  ArrayRef<int32_t> structIndices,
+                  ArrayRef<NamedAttribute> attributes) {
+  SmallVector<Value> remainingIndices;
+  SmallVector<int32_t> updatedStructIndices(structIndices.begin(),
+                                            structIndices.end());
+  SmallVector<unsigned> structRelatedPositions;
+  findKnownStructIndices(basePtr.getType(), structRelatedPositions);
+
+  SmallVector<unsigned> operandsToErase;
+  for (unsigned pos : structRelatedPositions) {
+    // GEP may not be indexing as deep as some structs are located.
+    if (pos >= structIndices.size())
+      continue;
+
+    // If the index is already static, it's fine.
+    if (structIndices[pos] != kDynamicIndex)
+      continue;
+
+    // Find the corresponding operand.
+    unsigned operandPos =
+        std::count(structIndices.begin(), std::next(structIndices.begin(), pos),
+                   kDynamicIndex);
+
+    // Extract the constant value from the operand and put it into the attribute
+    // instead.
+    APInt staticIndexValue;
+    bool matched =
+        matchPattern(indices[operandPos], m_ConstantInt(&staticIndexValue));
+    (void)matched;
+    assert(matched && "index into a struct must be a constant");
+    assert(staticIndexValue.sge(APInt::getSignedMinValue(/*numBits=*/32)) &&
+           "struct index underflows 32-bit integer");
+    assert(staticIndexValue.sle(APInt::getSignedMaxValue(/*numBits=*/32)) &&
+           "struct index overflows 32-bit integer");
+    auto staticIndex = static_cast<int32_t>(staticIndexValue.getSExtValue());
+    updatedStructIndices[pos] = staticIndex;
+    operandsToErase.push_back(operandPos);
+  }
+
+  for (unsigned i = 0, e = indices.size(); i < e; ++i) {
+    if (!llvm::is_contained(operandsToErase, i))
+      remainingIndices.push_back(indices[i]);
+  }
+
+  assert(remainingIndices.size() == static_cast<size_t>(llvm::count(
+                                        updatedStructIndices, kDynamicIndex)) &&
+         "expected as many index operands as dynamic index attr elements");
+
+  result.addTypes(resultType);
+  result.addAttributes(attributes);
+  result.addAttribute("structIndices",
+                      builder.getI32TensorAttr(updatedStructIndices));
+  result.addOperands(basePtr);
+  result.addOperands(remainingIndices);
+}
+
+static ParseResult
+parseGEPIndices(OpAsmParser &parser,
+                SmallVectorImpl<OpAsmParser::OperandType> &indices,
+                DenseIntElementsAttr &structIndices) {
+  SmallVector<int32_t> constantIndices;
+  do {
+    int32_t constantIndex;
+    OptionalParseResult parsedInteger =
+        parser.parseOptionalInteger(constantIndex);
+    if (parsedInteger.hasValue()) {
+      if (failed(parsedInteger.getValue()))
+        return failure();
+      constantIndices.push_back(constantIndex);
+      continue;
+    }
+
+    constantIndices.push_back(LLVM::GEPOp::kDynamicIndex);
+    if (failed(parser.parseOperand(indices.emplace_back())))
+      return failure();
+  } while (succeeded(parser.parseOptionalComma()));
+
+  structIndices = parser.getBuilder().getI32TensorAttr(constantIndices);
+  return success();
+}
+
+static void printGEPIndices(OpAsmPrinter &printer, LLVM::GEPOp gepOp,
+                            OperandRange indices,
+                            DenseIntElementsAttr structIndices) {
+  unsigned operandIdx = 0;
+  llvm::interleaveComma(structIndices.getValues<int32_t>(), printer,
+                        [&](int32_t cst) {
+                          if (cst == LLVM::GEPOp::kDynamicIndex)
+                            printer.printOperand(indices[operandIdx++]);
+                          else
+                            printer << cst;
+                        });
+}
+
+LogicalResult verify(LLVM::GEPOp gepOp) {
+  SmallVector<unsigned> indices;
+  SmallVector<unsigned> structSizes;
+  findKnownStructIndices(gepOp.getBase().getType(), indices, &structSizes);
+  DenseIntElementsAttr structIndices = gepOp.getStructIndices();
+  for (unsigned i : llvm::seq<unsigned>(0, indices.size())) {
+    unsigned index = indices[i];
+    // GEP may not be indexing as deep as some structs nested in the type.
+    if (index >= structIndices.getNumElements())
+      continue;
+
+    int32_t staticIndex = structIndices.getValues<int32_t>()[index];
+    if (staticIndex == LLVM::GEPOp::kDynamicIndex)
+      return gepOp.emitOpError() << "expected index " << index
+                                 << " indexing a struct to be constant";
+    if (staticIndex < 0 || static_cast<unsigned>(staticIndex) >= structSizes[i])
+      return gepOp.emitOpError()
+             << "index " << index << " indexing a struct is out of bounds";
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Builder, printer and parser for for LLVM::LoadOp.
 //===----------------------------------------------------------------------===//
 
 LogicalResult verifySymbolAttribute(
     Operation *op, StringRef attributeName,
-    std::function<LogicalResult(Operation *, SymbolRefAttr)> verifySymbolType) {
+    llvm::function_ref<LogicalResult(Operation *, SymbolRefAttr)>
+        verifySymbolType) {
   if (Attribute attribute = op->getAttr(attributeName)) {
     // The attribute is already verified to be a symbol ref array attribute via
     // a constraint in the operation definition.
@@ -1484,7 +1670,7 @@ static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
 // list is parsed, returns -1.
 static int parseOptionalKeywordAlternative(OpAsmParser &parser,
                                            ArrayRef<StringRef> keywords) {
-  for (auto en : llvm::enumerate(keywords)) {
+  for (const auto &en : llvm::enumerate(keywords)) {
     if (succeeded(parser.parseOptionalKeyword(en.value())))
       return en.index();
   }
@@ -2023,6 +2209,9 @@ static LogicalResult verify(LLVM::ConstantOp op) {
   return success();
 }
 
+// Constant op constant-folds to its value.
+OpFoldResult LLVM::ConstantOp::fold(ArrayRef<Attribute>) { return getValue(); }
+
 //===----------------------------------------------------------------------===//
 // Utility functions for parsing atomic ops
 //===----------------------------------------------------------------------===//
@@ -2256,6 +2445,48 @@ static LogicalResult verify(FenceOp &op) {
     return op.emitOpError("can be given only acquire, release, acq_rel, "
                           "and seq_cst orderings");
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Folder for LLVM::BitcastOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult LLVM::BitcastOp::fold(ArrayRef<Attribute> operands) {
+  // bitcast(x : T0, T0) -> x
+  if (getArg().getType() == getType())
+    return getArg();
+  // bitcast(bitcast(x : T0, T1), T0) -> x
+  if (auto prev = getArg().getDefiningOp<BitcastOp>())
+    if (prev.getArg().getType() == getType())
+      return prev.getArg();
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// Folder for LLVM::AddrSpaceCastOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult LLVM::AddrSpaceCastOp::fold(ArrayRef<Attribute> operands) {
+  // addrcast(x : T0, T0) -> x
+  if (getArg().getType() == getType())
+    return getArg();
+  // addrcast(addrcast(x : T0, T1), T0) -> x
+  if (auto prev = getArg().getDefiningOp<AddrSpaceCastOp>())
+    if (prev.getArg().getType() == getType())
+      return prev.getArg();
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// Folder for LLVM::GEPOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
+  // gep %x:T, 0 -> %x
+  if (getBase().getType() == getType() && getIndices().size() == 1 &&
+      matchPattern(getIndices()[0], m_Zero()))
+    return getBase();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

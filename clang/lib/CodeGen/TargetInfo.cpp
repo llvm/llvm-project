@@ -855,19 +855,19 @@ public:
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
       if (const auto *Attr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
-        llvm::AttrBuilder B;
+        llvm::AttrBuilder B(GV->getContext());
         B.addAttribute("wasm-import-module", Attr->getImportModule());
         Fn->addFnAttrs(B);
       }
       if (const auto *Attr = FD->getAttr<WebAssemblyImportNameAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
-        llvm::AttrBuilder B;
+        llvm::AttrBuilder B(GV->getContext());
         B.addAttribute("wasm-import-name", Attr->getImportName());
         Fn->addFnAttrs(B);
       }
       if (const auto *Attr = FD->getAttr<WebAssemblyExportNameAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
-        llvm::AttrBuilder B;
+        llvm::AttrBuilder B(GV->getContext());
         B.addAttribute("wasm-export-name", Attr->getExportName());
         Fn->addFnAttrs(B);
       }
@@ -1606,7 +1606,7 @@ static bool isSIMDVectorType(ASTContext &Context, QualType Ty) {
 static bool isRecordWithSIMDVectorType(ASTContext &Context, QualType Ty) {
   const RecordType *RT = Ty->getAs<RecordType>();
   if (!RT)
-    return 0;
+    return false;
   const RecordDecl *RD = RT->getDecl();
 
   // If this is a C++ record, check the bases first.
@@ -6414,7 +6414,7 @@ public:
     // AAPCS guarantees that sp will be 8-byte aligned on any public interface,
     // however this is not necessarily true on taking any interrupt. Instruct
     // the backend to perform a realignment as part of the function prologue.
-    llvm::AttrBuilder B;
+    llvm::AttrBuilder B(Fn->getContext());
     B.addStackAlignmentAttr(8);
     Fn->addFnAttrs(B);
   }
@@ -9304,15 +9304,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   if (FD)
     setFunctionDeclAttributes(FD, F, M);
 
-  const bool IsOpenCLKernel =
-      M.getLangOpts().OpenCL && FD && FD->hasAttr<OpenCLKernelAttr>();
   const bool IsHIPKernel =
       M.getLangOpts().HIP && FD && FD->hasAttr<CUDAGlobalAttr>();
-
-  const bool IsOpenMP = M.getLangOpts().OpenMP && !FD;
-  if ((IsOpenCLKernel || IsHIPKernel || IsOpenMP) &&
-      (M.getTriple().getOS() == llvm::Triple::AMDHSA))
-    F->addFnAttr("amdgpu-implicitarg-num-bytes", "56");
 
   if (IsHIPKernel)
     F->addFnAttr("uniform-work-group-size", "true");
@@ -11417,7 +11410,7 @@ TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
   auto &C = CGF.getLLVMContext();
   std::string Name = Invoke->getName().str() + "_kernel";
   auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
-  auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
+  auto *F = llvm::Function::Create(FT, llvm::GlobalValue::ExternalLinkage, Name,
                                    &CGF.CGM.getModule());
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);

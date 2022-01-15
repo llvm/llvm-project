@@ -175,6 +175,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
   let extraClassDeclaration = [{
     using DenseElementsAttr::empty;
     using DenseElementsAttr::getNumElements;
+    using DenseElementsAttr::getElementType;
     using DenseElementsAttr::getValues;
     using DenseElementsAttr::isSplat;
     using DenseElementsAttr::size;
@@ -312,6 +313,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
   let extraClassDeclaration = [{
     using DenseElementsAttr::empty;
     using DenseElementsAttr::getNumElements;
+    using DenseElementsAttr::getElementType;
     using DenseElementsAttr::getValues;
     using DenseElementsAttr::isSplat;
     using DenseElementsAttr::size;
@@ -945,12 +947,6 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
       if (*this == rhs)
         return 0;
       return getValue().compare(rhs.getValue());
-    }
-
-    /// FIXME: Defined as part of transition of Identifier->StringAttr. Prefer
-    /// using the other `get` methods instead.
-    static StringAttr get(const Twine &str, MLIRContext *context) {
-      return get(context, str);
     }
 
   private:

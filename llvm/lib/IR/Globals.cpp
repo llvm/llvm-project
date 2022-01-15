@@ -95,6 +95,8 @@ void GlobalValue::eraseFromParent() {
   llvm_unreachable("not a global");
 }
 
+GlobalObject::~GlobalObject() { setComdat(nullptr); }
+
 bool GlobalValue::isInterposable() const {
   if (isInterposableLinkage(getLinkage()))
     return true;
@@ -103,10 +105,15 @@ bool GlobalValue::isInterposable() const {
 }
 
 bool GlobalValue::canBenefitFromLocalAlias() const {
-  // See AsmPrinter::getSymbolPreferLocal().
+  // See AsmPrinter::getSymbolPreferLocal(). For a deduplicate comdat kind,
+  // references to a discarded local symbol from outside the group are not
+  // allowed, so avoid the local alias.
+  auto isDeduplicateComdat = [](const Comdat *C) {
+    return C && C->getSelectionKind() != Comdat::NoDeduplicate;
+  };
   return hasDefaultVisibility() &&
          GlobalObject::isExternalLinkage(getLinkage()) && !isDeclaration() &&
-         !isa<GlobalIFunc>(this) && !hasComdat();
+         !isa<GlobalIFunc>(this) && !isDeduplicateComdat(getComdat());
 }
 
 unsigned GlobalValue::getAddressSpace() const {
@@ -180,6 +187,14 @@ const Comdat *GlobalValue::getComdat() const {
   if (isa<GlobalIFunc>(this))
     return nullptr;
   return cast<GlobalObject>(this)->getComdat();
+}
+
+void GlobalObject::setComdat(Comdat *C) {
+  if (ObjComdat)
+    ObjComdat->removeUser(this);
+  ObjComdat = C;
+  if (C)
+    C->addUser(this);
 }
 
 StringRef GlobalValue::getPartition() const {

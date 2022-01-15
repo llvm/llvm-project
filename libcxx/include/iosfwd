@@ -96,6 +96,7 @@ using u32streampos = fpos<char_traits<char32_t>::state_type>;
 
 #include <__config>
 #include <__mbstate_t.h>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

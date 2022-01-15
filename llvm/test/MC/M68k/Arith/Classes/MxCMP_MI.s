@@ -6,6 +6,12 @@ cmpi.b	#0, (-1,%pc,%d1)
 ; CHECK:      cmpi.b  #-1, (0,%pc,%d0)
 ; CHECK-SAME: encoding: [0x0c,0x3b,0x00,0xff,0x08,0x00]
 cmpi.b	#-1, (0,%pc,%d0)
+; CHECK:      cmpi.w  #0, (-1,%pc,%d3)
+; CHECK-SAME: encoding: [0x0c,0x7b,0x00,0x00,0x38,0xff]
+cmpi.w	#0, (-1,%pc,%d3)
+; CHECK:      cmpi.w  #37, (-2,%pc,%d2)
+; CHECK-SAME: encoding: [0x0c,0x7b,0x00,0x25,0x28,0xfe]
+cmpi.w	#37, (-2,%pc,%d2)
 ; CHECK:      cmpi.l  #-1, (0,%pc,%d7)
 ; CHECK-SAME: encoding: [0x0c,0xbb,0xff,0xff,0xff,0xff,0x78,0x00]
 cmpi.l	#-1, (0,%pc,%d7)
@@ -19,6 +25,12 @@ cmpi.b	#0, (0,%pc)
 ; CHECK:      cmpi.b  #-1, (-1,%pc)
 ; CHECK-SAME: encoding: [0x0c,0x3a,0x00,0xff,0xff,0xff]
 cmpi.b	#-1, (-1,%pc)
+; CHECK:      cmpi.w  #0, (-1,%pc)
+; CHECK-SAME: encoding: [0x0c,0x7a,0x00,0x00,0xff,0xff]
+cmpi.w	#0, (-1,%pc)
+; CHECK:      cmpi.w  #37, (-2,%pc)
+; CHECK-SAME: encoding: [0x0c,0x7a,0x00,0x25,0xff,0xfe]
+cmpi.w	#37, (-2,%pc)
 ; CHECK:      cmpi.l  #-1, (0,%pc)
 ; CHECK-SAME: encoding: [0x0c,0xba,0xff,0xff,0xff,0xff,0x00,0x00]
 cmpi.l	#-1, (0,%pc)
@@ -32,6 +44,12 @@ cmpi.b	#0, (-1,%a1,%a0)
 ; CHECK:      cmpi.b  #-1, (0,%a0,%a0)
 ; CHECK-SAME: encoding: [0x0c,0x30,0x00,0xff,0x88,0x00]
 cmpi.b	#-1, (0,%a0,%a0)
+; CHECK:      cmpi.w  #0, (-1,%a1,%a0)
+; CHECK-SAME: encoding: [0x0c,0x71,0x00,0x00,0x88,0xff]
+cmpi.w	#0, (-1,%a1,%a0)
+; CHECK:      cmpi.w  #37, (-2,%a0,%a0)
+; CHECK-SAME: encoding: [0x0c,0x70,0x00,0x25,0x88,0xfe]
+cmpi.w	#37, (-2,%a0,%a0)
 ; CHECK:      cmpi.l  #-1, (0,%a6,%a0)
 ; CHECK-SAME: encoding: [0x0c,0xb6,0xff,0xff,0xff,0xff,0x88,0x00]
 cmpi.l	#-1, (0,%a6,%a0)
@@ -45,6 +63,12 @@ cmpi.b	#0, (-1,%a1)
 ; CHECK:      cmpi.b  #-1, (0,%a0)
 ; CHECK-SAME: encoding: [0x0c,0x28,0x00,0xff,0x00,0x00]
 cmpi.b	#-1, (0,%a0)
+; CHECK:      cmpi.w  #0, (-1,%a1)
+; CHECK-SAME: encoding: [0x0c,0x69,0x00,0x00,0xff,0xff]
+cmpi.w	#0, (-1,%a1)
+; CHECK:      cmpi.w  #37, (-2,%a0)
+; CHECK-SAME: encoding: [0x0c,0x68,0x00,0x25,0xff,0xfe]
+cmpi.w	#37, (-2,%a0)
 ; CHECK:      cmpi.l  #-1, (0,%a6)
 ; CHECK-SAME: encoding: [0x0c,0xae,0xff,0xff,0xff,0xff,0x00,0x00]
 cmpi.l	#-1, (0,%a6)
@@ -58,10 +82,15 @@ cmpi.b	#0, (%a1)
 ; CHECK:      cmpi.b  #-1, (%a0)
 ; CHECK-SAME: encoding: [0x0c,0x10,0x00,0xff]
 cmpi.b	#-1, (%a0)
+; CHECK:      cmpi.w  #0, (%a1)
+; CHECK-SAME: encoding: [0x0c,0x51,0x00,0x00]
+cmpi.w	#0, (%a1)
+; CHECK:      cmpi.w  #37, (%a0)
+; CHECK-SAME: encoding: [0x0c,0x50,0x00,0x25]
+cmpi.w	#37, (%a0)
 ; CHECK:      cmpi.l  #-1, (%a6)
 ; CHECK-SAME: encoding: [0x0c,0x96,0xff,0xff,0xff,0xff]
 cmpi.l	#-1, (%a6)
 ; CHECK:      cmpi.l  #42, (%a1)
 ; CHECK-SAME: encoding: [0x0c,0x91,0x00,0x00,0x00,0x2a]
 cmpi.l	#42, (%a1)
-

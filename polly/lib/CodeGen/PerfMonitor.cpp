@@ -103,7 +103,7 @@ void PerfMonitor::addGlobalVariables() {
   TryRegisterGlobal(M, "__polly_perf_cycles_total_start", Builder.getInt64(0),
                     &CyclesTotalStartPtr);
 
-  TryRegisterGlobal(M, "__polly_perf_initialized", Builder.getInt1(0),
+  TryRegisterGlobal(M, "__polly_perf_initialized", Builder.getInt1(false),
                     &AlreadyInitializedPtr);
 
   TryRegisterGlobal(M, "__polly_perf_cycles_in_scops", Builder.getInt64(0),

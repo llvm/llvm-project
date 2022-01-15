@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBError.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Utility/Status.h"
@@ -17,9 +17,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBError::SBError() : m_opaque_up() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBError); }
+SBError::SBError() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBError); }
 
-SBError::SBError(const SBError &rhs) : m_opaque_up() {
+SBError::SBError(const SBError &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBError, (const lldb::SBError &), rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
@@ -33,7 +33,7 @@ const SBError &SBError::operator=(const SBError &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 const char *SBError::GetCString() const {
@@ -182,31 +182,4 @@ bool SBError::GetDescription(SBStream &description) {
     description.Printf("error: <NULL>");
 
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBError>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBError, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBError, (const lldb::SBError &));
-  LLDB_REGISTER_METHOD(const lldb::SBError &,
-                       SBError, operator=,(const lldb::SBError &));
-  LLDB_REGISTER_METHOD_CONST(const char *, SBError, GetCString, ());
-  LLDB_REGISTER_METHOD(void, SBError, Clear, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBError, Fail, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBError, Success, ());
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBError, GetError, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::ErrorType, SBError, GetType, ());
-  LLDB_REGISTER_METHOD(void, SBError, SetError, (uint32_t, lldb::ErrorType));
-  LLDB_REGISTER_METHOD(void, SBError, SetErrorToErrno, ());
-  LLDB_REGISTER_METHOD(void, SBError, SetErrorToGenericError, ());
-  LLDB_REGISTER_METHOD(void, SBError, SetErrorString, (const char *));
-  LLDB_REGISTER_METHOD_CONST(bool, SBError, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBError, operator bool, ());
-  LLDB_REGISTER_METHOD(bool, SBError, GetDescription, (lldb::SBStream &));
-}
-
-}
 }

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBlock.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFrame.h"
@@ -39,7 +39,7 @@ const SBBlock &SBBlock::operator=(const SBBlock &rhs) {
                      SBBlock, operator=,(const lldb::SBBlock &), rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBBlock::~SBBlock() { m_opaque_ptr = nullptr; }
@@ -86,7 +86,7 @@ SBFileSpec SBBlock::GetInlinedCallSiteFile() const {
     if (inlined_info)
       sb_file.SetFileSpec(inlined_info->GetCallSite().GetFile());
   }
-  return LLDB_RECORD_RESULT(sb_file);
+  return sb_file;
 }
 
 uint32_t SBBlock::GetInlinedCallSiteLine() const {
@@ -128,7 +128,7 @@ SBBlock SBBlock::GetParent() {
   SBBlock sb_block;
   if (m_opaque_ptr)
     sb_block.m_opaque_ptr = m_opaque_ptr->GetParent();
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 lldb::SBBlock SBBlock::GetContainingInlinedBlock() {
@@ -137,7 +137,7 @@ lldb::SBBlock SBBlock::GetContainingInlinedBlock() {
   SBBlock sb_block;
   if (m_opaque_ptr)
     sb_block.m_opaque_ptr = m_opaque_ptr->GetContainingInlinedBlock();
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 SBBlock SBBlock::GetSibling() {
@@ -146,7 +146,7 @@ SBBlock SBBlock::GetSibling() {
   SBBlock sb_block;
   if (m_opaque_ptr)
     sb_block.m_opaque_ptr = m_opaque_ptr->GetSibling();
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 SBBlock SBBlock::GetFirstChild() {
@@ -155,7 +155,7 @@ SBBlock SBBlock::GetFirstChild() {
   SBBlock sb_block;
   if (m_opaque_ptr)
     sb_block.m_opaque_ptr = m_opaque_ptr->GetFirstChild();
-  return LLDB_RECORD_RESULT(sb_block);
+  return sb_block;
 }
 
 lldb_private::Block *SBBlock::GetPtr() { return m_opaque_ptr; }
@@ -206,7 +206,7 @@ lldb::SBAddress SBBlock::GetRangeStartAddress(uint32_t idx) {
       sb_addr.ref() = range.GetBaseAddress();
     }
   }
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 lldb::SBAddress SBBlock::GetRangeEndAddress(uint32_t idx) {
@@ -221,7 +221,7 @@ lldb::SBAddress SBBlock::GetRangeEndAddress(uint32_t idx) {
       sb_addr.ref().Slide(range.GetByteSize());
     }
   }
-  return LLDB_RECORD_RESULT(sb_addr);
+  return sb_addr;
 }
 
 uint32_t SBBlock::GetRangeIndexForBlockAddress(lldb::SBAddress block_addr) {
@@ -289,7 +289,7 @@ lldb::SBValueList SBBlock::GetVariables(lldb::SBFrame &frame, bool arguments,
       }
     }
   }
-  return LLDB_RECORD_RESULT(value_list);
+  return value_list;
 }
 
 lldb::SBValueList SBBlock::GetVariables(lldb::SBTarget &target, bool arguments,
@@ -341,44 +341,5 @@ lldb::SBValueList SBBlock::GetVariables(lldb::SBTarget &target, bool arguments,
       }
     }
   }
-  return LLDB_RECORD_RESULT(value_list);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBBlock>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBBlock, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBBlock, (const lldb::SBBlock &));
-  LLDB_REGISTER_METHOD(const lldb::SBBlock &,
-                       SBBlock, operator=,(const lldb::SBBlock &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBBlock, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBBlock, operator bool, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBBlock, IsInlined, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBBlock, GetInlinedName, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::SBFileSpec, SBBlock,
-                             GetInlinedCallSiteFile, ());
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBBlock, GetInlinedCallSiteLine, ());
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBBlock, GetInlinedCallSiteColumn, ());
-  LLDB_REGISTER_METHOD(lldb::SBBlock, SBBlock, GetParent, ());
-  LLDB_REGISTER_METHOD(lldb::SBBlock, SBBlock, GetContainingInlinedBlock, ());
-  LLDB_REGISTER_METHOD(lldb::SBBlock, SBBlock, GetSibling, ());
-  LLDB_REGISTER_METHOD(lldb::SBBlock, SBBlock, GetFirstChild, ());
-  LLDB_REGISTER_METHOD(bool, SBBlock, GetDescription, (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(uint32_t, SBBlock, GetNumRanges, ());
-  LLDB_REGISTER_METHOD(lldb::SBAddress, SBBlock, GetRangeStartAddress,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBAddress, SBBlock, GetRangeEndAddress,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(uint32_t, SBBlock, GetRangeIndexForBlockAddress,
-                       (lldb::SBAddress));
-  LLDB_REGISTER_METHOD(
-      lldb::SBValueList, SBBlock, GetVariables,
-      (lldb::SBFrame &, bool, bool, bool, lldb::DynamicValueType));
-  LLDB_REGISTER_METHOD(lldb::SBValueList, SBBlock, GetVariables,
-                       (lldb::SBTarget &, bool, bool, bool));
-}
-
-}
+  return value_list;
 }

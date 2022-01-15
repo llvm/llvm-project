@@ -82,6 +82,14 @@ private:
     /// movement has been issued. This mutex *must* be locked right before
     /// releasing the mapping table lock.
     std::mutex UpdateMtx;
+    /// Pointer to the event corresponding to the data update of this map.
+    /// Note: At present this event is created when the first data transfer from
+    /// host to device is issued, and only being used for H2D. It is not used
+    /// for data transfer in another direction (device to host). It is still
+    /// unclear whether we need it for D2H. If in the future we need similar
+    /// mechanism for D2H, and if the event cannot be shared between them, Event
+    /// should be written as <tt>void *Event[2]</tt>.
+    void *Event = nullptr;
   };
   // When HostDataToTargetTy is used by std::set, std::set::iterator is const
   // use unique_ptr to make States mutable.
@@ -114,6 +122,12 @@ public:
 
   /// Get the hold reference count.
   uint64_t getHoldRefCount() const { return States->HoldRefCount; }
+
+  /// Get the event bound to this data map.
+  void *getEvent() const { return States->Event; }
+
+  /// Set the event bound to this data map.
+  void setEvent(void *Event) const { States->Event = Event; }
 
   /// Reset the specified reference count unless it's infinity.  Reset to 1
   /// (even if currently 0) so it can be followed by a decrement.

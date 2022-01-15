@@ -9,6 +9,8 @@
 #ifndef MLIR_DIALECT_QUANT_UNIFORMSUPPORT_H_
 #define MLIR_DIALECT_QUANT_UNIFORMSUPPORT_H_
 
+#include <utility>
+
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
@@ -31,7 +33,7 @@ namespace quant {
 /// process.
 struct ExpressedToQuantizedConverter {
   /// Creates a converter for the given input type.
-  static const ExpressedToQuantizedConverter forInputType(Type inputType);
+  static ExpressedToQuantizedConverter forInputType(Type inputType);
 
   /// Converts the inputType to be based on the given elemental type,
   /// returning the new type (or nullptr and emit an error on failure).
@@ -79,7 +81,8 @@ public:
         roundMode(APFloat::rmNearestTiesToAway) {}
 
   UniformQuantizedValueConverter(double scale, double zeroPoint,
-                                 APFloat clampMin, APFloat clampMax,
+                                 const APFloat &clampMin,
+                                 const APFloat &clampMax,
                                  uint32_t storageBitWidth, bool isSigned)
       : scale(scale), zeroPoint(zeroPoint), clampMin(clampMin),
         clampMax(clampMax), scaleDouble(scale), zeroPointDouble(zeroPoint),
@@ -116,11 +119,11 @@ public:
   }
 
   int64_t quantizeFloatToInt64(APFloat expressedValue) const {
-    APInt qValue = quantizeFloatToInt(expressedValue);
+    APInt qValue = quantizeFloatToInt(std::move(expressedValue));
     return isSigned ? qValue.getSExtValue() : qValue.getZExtValue();
   }
 
-  virtual ~UniformQuantizedValueConverter() {}
+  virtual ~UniformQuantizedValueConverter() = default;
 
 private:
   // An optimized implementation to quantize f32 to i8/u8 with C++ native

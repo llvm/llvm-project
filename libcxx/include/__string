@@ -10,21 +10,21 @@
 #ifndef _LIBCPP___STRING
 #define _LIBCPP___STRING
 
-#include <__config>
 #include <__algorithm/copy.h>
 #include <__algorithm/copy_backward.h>
 #include <__algorithm/copy_n.h>
 #include <__algorithm/fill_n.h>
-#include <__algorithm/find_first_of.h>
 #include <__algorithm/find_end.h>
+#include <__algorithm/find_first_of.h>
 #include <__algorithm/min.h>
+#include <__config>
 #include <__functional/hash.h>     // for __murmur2_or_cityhash
 #include <__iterator/iterator_traits.h>
-#include <cstdio>      // for EOF
 #include <cstdint>     // for uint_least16_t
+#include <cstdio>      // for EOF
 #include <cstring>     // for memcpy
-#include <type_traits> // for __libcpp_is_constant_evaluated
 #include <iosfwd>      // for streampos & friends
+#include <type_traits> // for __libcpp_is_constant_evaluated
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #   include <cwchar> // for wmemcpy

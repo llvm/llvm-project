@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBExpressionOptions.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Target/Target.h"
@@ -20,8 +20,7 @@ SBExpressionOptions::SBExpressionOptions()
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBExpressionOptions);
 }
 
-SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs)
-    : m_opaque_up() {
+SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBExpressionOptions,
                           (const lldb::SBExpressionOptions &), rhs);
 
@@ -36,7 +35,7 @@ operator=(const SBExpressionOptions &rhs) {
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBExpressionOptions::~SBExpressionOptions() = default;
@@ -178,8 +177,8 @@ void SBExpressionOptions::SetLanguage(lldb::LanguageType language) {
 
 void SBExpressionOptions::SetCancelCallback(
     lldb::ExpressionCancelCallback callback, void *baton) {
-  LLDB_RECORD_DUMMY(void, SBExpressionOptions, SetCancelCallback,
-                    (lldb::ExpressionCancelCallback, void *), callback, baton);
+  LLDB_RECORD_METHOD(void, SBExpressionOptions, SetCancelCallback,
+                     (lldb::ExpressionCancelCallback, void *), callback, baton);
 
   m_opaque_up->SetCancelCallback(callback, baton);
 }
@@ -283,70 +282,4 @@ EvaluateExpressionOptions *SBExpressionOptions::get() const {
 
 EvaluateExpressionOptions &SBExpressionOptions::ref() const {
   return *(m_opaque_up.get());
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBExpressionOptions>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBExpressionOptions, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBExpressionOptions,
-                            (const lldb::SBExpressionOptions &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBExpressionOptions &,
-      SBExpressionOptions, operator=,(const lldb::SBExpressionOptions &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBExpressionOptions, GetCoerceResultToId,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetCoerceResultToId,
-                       (bool));
-  LLDB_REGISTER_METHOD_CONST(bool, SBExpressionOptions, GetUnwindOnError, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetUnwindOnError, (bool));
-  LLDB_REGISTER_METHOD_CONST(bool, SBExpressionOptions, GetIgnoreBreakpoints,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetIgnoreBreakpoints,
-                       (bool));
-  LLDB_REGISTER_METHOD_CONST(lldb::DynamicValueType, SBExpressionOptions,
-                             GetFetchDynamicValue, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetFetchDynamicValue,
-                       (lldb::DynamicValueType));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBExpressionOptions,
-                             GetTimeoutInMicroSeconds, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetTimeoutInMicroSeconds,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBExpressionOptions,
-                             GetOneThreadTimeoutInMicroSeconds, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions,
-                       SetOneThreadTimeoutInMicroSeconds, (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(bool, SBExpressionOptions, GetTryAllThreads, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetTryAllThreads, (bool));
-  LLDB_REGISTER_METHOD_CONST(bool, SBExpressionOptions, GetStopOthers, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetStopOthers, (bool));
-  LLDB_REGISTER_METHOD_CONST(bool, SBExpressionOptions, GetTrapExceptions,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetTrapExceptions, (bool));
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetLanguage,
-                       (lldb::LanguageType));
-  LLDB_REGISTER_METHOD(bool, SBExpressionOptions, GetGenerateDebugInfo, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetGenerateDebugInfo,
-                       (bool));
-  LLDB_REGISTER_METHOD(bool, SBExpressionOptions, GetSuppressPersistentResult,
-                       ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetSuppressPersistentResult,
-                       (bool));
-  LLDB_REGISTER_METHOD_CONST(const char *, SBExpressionOptions, GetPrefix,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetPrefix, (const char *));
-  LLDB_REGISTER_METHOD(bool, SBExpressionOptions, GetAutoApplyFixIts, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetAutoApplyFixIts, (bool));
-  LLDB_REGISTER_METHOD(bool, SBExpressionOptions, GetTopLevel, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetTopLevel, (bool));
-  LLDB_REGISTER_METHOD(bool, SBExpressionOptions, GetAllowJIT, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetAllowJIT, (bool));
-  LLDB_REGISTER_METHOD(uint64_t, SBExpressionOptions, GetRetriesWithFixIts, ());
-  LLDB_REGISTER_METHOD(void, SBExpressionOptions, SetRetriesWithFixIts,
-                       (uint64_t));
-}
-
-}
 }

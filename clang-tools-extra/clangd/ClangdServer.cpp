@@ -759,12 +759,13 @@ void ClangdServer::incomingCalls(
                      });
 }
 
-void ClangdServer::inlayHints(PathRef File,
+void ClangdServer::inlayHints(PathRef File, llvm::Optional<Range> RestrictRange,
                               Callback<std::vector<InlayHint>> CB) {
-  auto Action = [CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
+  auto Action = [RestrictRange(std::move(RestrictRange)),
+                 CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
       return CB(InpAST.takeError());
-    CB(clangd::inlayHints(InpAST->AST));
+    CB(clangd::inlayHints(InpAST->AST, std::move(RestrictRange)));
   };
   WorkScheduler->runWithAST("InlayHints", File, std::move(Action));
 }
@@ -807,6 +808,17 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
       };
   WorkScheduler->runWithAST("FoldingRanges", File, std::move(Action),
                             Transient);
+}
+
+void ClangdServer::findType(llvm::StringRef File, Position Pos,
+                            Callback<std::vector<LocatedSymbol>> CB) {
+  auto Action =
+      [Pos, CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        CB(clangd::findType(InpAST->AST, Pos));
+      };
+  WorkScheduler->runWithAST("FindType", File, std::move(Action));
 }
 
 void ClangdServer::findImplementations(

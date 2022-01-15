@@ -35,26 +35,14 @@ define signext i32 @gorc1_i32(i32 signext %a) nounwind {
 define i64 @gorc1_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc1_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 1
-; RV64I-NEXT:    lui a3, 21845
-; RV64I-NEXT:    addiw a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI1_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI1_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI1_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI1_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 1
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -103,26 +91,14 @@ define signext i32 @gorc2_i32(i32 signext %a) nounwind {
 define i64 @gorc2_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc2_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 2
-; RV64I-NEXT:    lui a3, 13107
-; RV64I-NEXT:    addiw a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI3_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI3_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI3_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI3_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 2
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -187,48 +163,24 @@ define signext i32 @gorc3_i32(i32 signext %a) nounwind {
 define i64 @gorc3_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc3_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 1
-; RV64I-NEXT:    lui a3, 21845
-; RV64I-NEXT:    addiw a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI5_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI5_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI5_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI5_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 1
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 2
-; RV64I-NEXT:    lui a3, 13107
-; RV64I-NEXT:    addiw a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI5_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI5_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI5_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI5_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 2
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -283,26 +235,14 @@ define signext i32 @gorc4_i32(i32 signext %a) nounwind {
 define i64 @gorc4_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc4_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 4
-; RV64I-NEXT:    lui a3, 3855
-; RV64I-NEXT:    addiw a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI7_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI7_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI7_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI7_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 4
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -367,48 +307,24 @@ define signext i32 @gorc5_i32(i32 signext %a) nounwind {
 define i64 @gorc5_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc5_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 1
-; RV64I-NEXT:    lui a3, 21845
-; RV64I-NEXT:    addiw a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI9_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI9_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI9_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI9_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 1
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 4
-; RV64I-NEXT:    lui a3, 3855
-; RV64I-NEXT:    addiw a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI9_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI9_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI9_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI9_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 4
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -479,48 +395,24 @@ define signext i32 @gorc6_i32(i32 signext %a) nounwind {
 define i64 @gorc6_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc6_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 2
-; RV64I-NEXT:    lui a3, 13107
-; RV64I-NEXT:    addiw a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI11_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI11_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI11_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI11_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 2
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 4
-; RV64I-NEXT:    lui a3, 3855
-; RV64I-NEXT:    addiw a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI11_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI11_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI11_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI11_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 4
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -608,70 +500,34 @@ define signext i32 @gorc7_i32(i32 signext %a) nounwind {
 define i64 @gorc7_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc7_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 1
-; RV64I-NEXT:    lui a3, 21845
-; RV64I-NEXT:    addiw a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI13_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI13_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI13_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI13_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 1
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 2
-; RV64I-NEXT:    lui a3, 13107
-; RV64I-NEXT:    addiw a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI13_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI13_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI13_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI13_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 2
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 4
-; RV64I-NEXT:    lui a3, 3855
-; RV64I-NEXT:    addiw a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI13_4)
+; RV64I-NEXT:    ld a1, %lo(.LCPI13_4)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI13_5)
+; RV64I-NEXT:    ld a2, %lo(.LCPI13_5)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 4
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -732,22 +588,14 @@ define signext i32 @gorc8_i32(i32 signext %a) nounwind {
 define i64 @gorc8_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc8_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 8
-; RV64I-NEXT:    lui a2, 1044496
-; RV64I-NEXT:    addiw a2, a2, -255
-; RV64I-NEXT:    slli a2, a2, 16
-; RV64I-NEXT:    addi a2, a2, -255
-; RV64I-NEXT:    slli a2, a2, 16
-; RV64I-NEXT:    addi a2, a2, -256
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 8
-; RV64I-NEXT:    lui a3, 4080
-; RV64I-NEXT:    addiw a3, a3, 255
-; RV64I-NEXT:    slli a3, a3, 16
-; RV64I-NEXT:    addi a3, a3, 255
-; RV64I-NEXT:    slli a3, a3, 16
-; RV64I-NEXT:    addi a3, a3, 255
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    lui a1, %hi(.LCPI15_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI15_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI15_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI15_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 8
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 8
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -917,32 +765,20 @@ define signext i32 @gorc2b_i32(i32 signext %a) nounwind {
 define i64 @gorc2b_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc2b_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI22_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI22_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI22_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI22_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a3, a3, a1
+; RV64I-NEXT:    srli a4, a0, 2
+; RV64I-NEXT:    and a4, a4, a2
+; RV64I-NEXT:    or a0, a4, a0
+; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a3, a0, 2
-; RV64I-NEXT:    lui a4, 13107
-; RV64I-NEXT:    addiw a4, a4, 819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 819
-; RV64I-NEXT:    and a3, a3, a4
-; RV64I-NEXT:    or a0, a3, a0
-; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 2
-; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -1028,54 +864,30 @@ define signext i32 @gorc3b_i32(i32 signext %a) nounwind {
 define i64 @gorc3b_i64(i64 %a) nounwind {
 ; RV64I-LABEL: gorc3b_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI24_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI24_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI24_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI24_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a3, a3, a1
+; RV64I-NEXT:    srli a4, a0, 1
+; RV64I-NEXT:    and a4, a4, a2
+; RV64I-NEXT:    or a0, a4, a0
+; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    lui a3, %hi(.LCPI24_2)
+; RV64I-NEXT:    ld a3, %lo(.LCPI24_2)(a3)
+; RV64I-NEXT:    lui a4, %hi(.LCPI24_3)
+; RV64I-NEXT:    ld a4, %lo(.LCPI24_3)(a4)
+; RV64I-NEXT:    slli a5, a0, 2
+; RV64I-NEXT:    and a3, a5, a3
+; RV64I-NEXT:    srli a5, a0, 2
+; RV64I-NEXT:    and a4, a5, a4
+; RV64I-NEXT:    or a0, a4, a0
+; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a3, a0, 1
-; RV64I-NEXT:    lui a4, 21845
-; RV64I-NEXT:    addiw a4, a4, 1365
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 1365
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 1365
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 1365
-; RV64I-NEXT:    and a3, a3, a4
-; RV64I-NEXT:    or a0, a3, a0
-; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a3, 1035469
-; RV64I-NEXT:    addiw a3, a3, -819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -820
-; RV64I-NEXT:    and a1, a1, a3
-; RV64I-NEXT:    srli a3, a0, 2
-; RV64I-NEXT:    lui a5, 13107
-; RV64I-NEXT:    addiw a5, a5, 819
-; RV64I-NEXT:    slli a5, a5, 12
-; RV64I-NEXT:    addi a5, a5, 819
-; RV64I-NEXT:    slli a5, a5, 12
-; RV64I-NEXT:    addi a5, a5, 819
-; RV64I-NEXT:    slli a5, a5, 12
-; RV64I-NEXT:    addi a5, a5, 819
-; RV64I-NEXT:    and a3, a3, a5
-; RV64I-NEXT:    or a0, a3, a0
-; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a2, a0, 1
-; RV64I-NEXT:    and a2, a2, a4
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -1170,25 +982,13 @@ define signext i32 @grev1_i32(i32 signext %a) nounwind {
 define i64 @grev1_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev1_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI28_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI28_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI28_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI28_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    lui a2, 21845
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1234,25 +1034,13 @@ define signext i32 @grev2_i32(i32 signext %a) nounwind {
 define i64 @grev2_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev2_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI30_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI30_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI30_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI30_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    lui a2, 13107
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1312,46 +1100,22 @@ define signext i32 @grev3_i32(i32 signext %a) nounwind {
 define i64 @grev3_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev3_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI32_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI32_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI32_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI32_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    lui a2, 21845
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI32_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI32_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI32_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI32_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    lui a2, 13107
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1402,25 +1166,13 @@ define signext i32 @grev4_i32(i32 signext %a) nounwind {
 define i64 @grev4_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev4_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI34_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI34_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI34_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI34_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 4
-; RV64I-NEXT:    lui a2, 3855
-; RV64I-NEXT:    addiw a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1480,46 +1232,22 @@ define signext i32 @grev5_i32(i32 signext %a) nounwind {
 define i64 @grev5_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev5_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI36_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI36_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI36_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI36_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    lui a2, 21845
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI36_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI36_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI36_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI36_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 4
-; RV64I-NEXT:    lui a2, 3855
-; RV64I-NEXT:    addiw a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1585,46 +1313,22 @@ define signext i32 @grev6_i32(i32 signext %a) nounwind {
 define i64 @grev6_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev6_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI38_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI38_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI38_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI38_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    lui a2, 13107
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI38_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI38_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI38_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI38_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 4
-; RV64I-NEXT:    lui a2, 3855
-; RV64I-NEXT:    addiw a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1703,67 +1407,31 @@ define signext i32 @grev7_i32(i32 signext %a) nounwind {
 define i64 @grev7_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev7_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI40_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI40_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI40_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI40_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    lui a2, 21845
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI40_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI40_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI40_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI40_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    lui a2, 13107
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 4
-; RV64I-NEXT:    lui a2, 1044721
-; RV64I-NEXT:    addiw a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 240
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI40_4)
+; RV64I-NEXT:    ld a1, %lo(.LCPI40_4)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI40_5)
+; RV64I-NEXT:    ld a2, %lo(.LCPI40_5)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 4
-; RV64I-NEXT:    lui a2, 3855
-; RV64I-NEXT:    addiw a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1819,21 +1487,13 @@ define signext i32 @grev8_i32(i32 signext %a) nounwind {
 define i64 @grev8_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev8_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 8
-; RV64I-NEXT:    lui a2, 1044496
-; RV64I-NEXT:    addiw a2, a2, -255
-; RV64I-NEXT:    slli a2, a2, 16
-; RV64I-NEXT:    addi a2, a2, -255
-; RV64I-NEXT:    slli a2, a2, 16
-; RV64I-NEXT:    addi a2, a2, -256
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI42_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI42_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI42_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI42_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 8
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 8
-; RV64I-NEXT:    lui a2, 4080
-; RV64I-NEXT:    addiw a2, a2, 255
-; RV64I-NEXT:    slli a2, a2, 16
-; RV64I-NEXT:    addi a2, a2, 255
-; RV64I-NEXT:    slli a2, a2, 16
-; RV64I-NEXT:    addi a2, a2, 255
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -1993,46 +1653,22 @@ define signext i32 @grev3b_i32(i32 signext %a) nounwind {
 define i64 @grev3b_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev3b_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a2, 1035469
-; RV64I-NEXT:    addiw a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -820
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI49_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI49_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI49_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI49_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    lui a2, 13107
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI49_2)
+; RV64I-NEXT:    ld a1, %lo(.LCPI49_2)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI49_3)
+; RV64I-NEXT:    ld a2, %lo(.LCPI49_3)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    lui a2, 21845
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -2109,52 +1745,28 @@ define signext i32 @grev2b_i32(i32 signext %a) nounwind {
 define i64 @grev2b_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev2b_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI51_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI51_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI51_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI51_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a3, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    lui a3, 21845
-; RV64I-NEXT:    addiw a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    and a0, a0, a3
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a4, 1035469
-; RV64I-NEXT:    addiw a4, a4, -819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, -819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, -819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, -820
-; RV64I-NEXT:    and a1, a1, a4
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    or a0, a3, a0
+; RV64I-NEXT:    lui a3, %hi(.LCPI51_2)
+; RV64I-NEXT:    ld a3, %lo(.LCPI51_2)(a3)
+; RV64I-NEXT:    lui a4, %hi(.LCPI51_3)
+; RV64I-NEXT:    ld a4, %lo(.LCPI51_3)(a4)
+; RV64I-NEXT:    slli a5, a0, 2
+; RV64I-NEXT:    and a3, a5, a3
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    lui a4, 13107
-; RV64I-NEXT:    addiw a4, a4, 819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 819
 ; RV64I-NEXT:    and a0, a0, a4
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    or a0, a3, a0
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    and a0, a0, a3
+; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -2244,57 +1856,33 @@ define signext i32 @grev0_i32(i32 signext %a) nounwind {
 define i64 @grev0_i64(i64 %a) nounwind {
 ; RV64I-LABEL: grev0_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    lui a2, 1026731
-; RV64I-NEXT:    addiw a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1366
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI53_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI53_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI53_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI53_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a3, a3, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    lui a3, 21845
-; RV64I-NEXT:    addiw a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    and a0, a0, a3
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    or a0, a3, a0
+; RV64I-NEXT:    lui a3, %hi(.LCPI53_2)
+; RV64I-NEXT:    ld a3, %lo(.LCPI53_2)(a3)
+; RV64I-NEXT:    lui a4, %hi(.LCPI53_3)
+; RV64I-NEXT:    ld a4, %lo(.LCPI53_3)(a4)
+; RV64I-NEXT:    slli a5, a0, 2
+; RV64I-NEXT:    and a5, a5, a3
+; RV64I-NEXT:    srli a0, a0, 2
+; RV64I-NEXT:    and a0, a0, a4
+; RV64I-NEXT:    or a0, a5, a0
+; RV64I-NEXT:    slli a5, a0, 1
+; RV64I-NEXT:    and a1, a5, a1
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    lui a4, 1035469
-; RV64I-NEXT:    addiw a4, a4, -819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, -819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, -819
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, -820
-; RV64I-NEXT:    and a1, a1, a4
+; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    lui a5, 13107
-; RV64I-NEXT:    addiw a5, a5, 819
-; RV64I-NEXT:    slli a5, a5, 12
-; RV64I-NEXT:    addi a5, a5, 819
-; RV64I-NEXT:    slli a5, a5, 12
-; RV64I-NEXT:    addi a5, a5, 819
-; RV64I-NEXT:    slli a5, a5, 12
-; RV64I-NEXT:    addi a5, a5, 819
-; RV64I-NEXT:    and a0, a0, a5
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 1
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    and a0, a0, a3
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    slli a1, a0, 2
-; RV64I-NEXT:    and a1, a1, a4
-; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    and a0, a0, a5
+; RV64I-NEXT:    and a0, a0, a4
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -2367,9 +1955,8 @@ define zeroext i16 @bswap_i16(i16 zeroext %a) nounwind {
 ; RV64I-NEXT:    srli a1, a0, 8
 ; RV64I-NEXT:    slli a0, a0, 8
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBP-LABEL: bswap_i16:
@@ -2676,43 +2263,25 @@ define i64 @bitreverse_i64(i64 %a) nounwind {
 ; RV64I-NEXT:    and a3, a4, a3
 ; RV64I-NEXT:    slli a0, a0, 56
 ; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    lui a3, %hi(.LCPI64_0)
+; RV64I-NEXT:    ld a3, %lo(.LCPI64_0)(a3)
 ; RV64I-NEXT:    or a0, a0, a2
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    srli a1, a0, 4
-; RV64I-NEXT:    lui a2, 3855
-; RV64I-NEXT:    addiw a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 241
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -241
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    and a1, a1, a3
+; RV64I-NEXT:    and a0, a0, a3
+; RV64I-NEXT:    lui a2, %hi(.LCPI64_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI64_1)(a2)
 ; RV64I-NEXT:    slli a0, a0, 4
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    srli a1, a0, 2
-; RV64I-NEXT:    lui a2, 13107
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 819
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    lui a2, %hi(.LCPI64_2)
+; RV64I-NEXT:    ld a2, %lo(.LCPI64_2)(a2)
 ; RV64I-NEXT:    slli a0, a0, 2
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    srli a1, a0, 1
-; RV64I-NEXT:    lui a2, 21845
-; RV64I-NEXT:    addiw a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, 1365
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    slli a0, a0, 1
@@ -2838,94 +2407,76 @@ define i32 @bitreverse_bswap_i32(i32 %a) {
 define i64 @bitreverse_bswap_i64(i64 %a) {
 ; RV64I-LABEL: bitreverse_bswap_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srli a2, a0, 24
+; RV64I-NEXT:    srli a1, a0, 24
 ; RV64I-NEXT:    lui a6, 4080
-; RV64I-NEXT:    and a3, a2, a6
-; RV64I-NEXT:    srli a4, a0, 8
-; RV64I-NEXT:    li a1, 255
-; RV64I-NEXT:    slli a7, a1, 24
-; RV64I-NEXT:    and a4, a4, a7
-; RV64I-NEXT:    or a3, a4, a3
-; RV64I-NEXT:    srli a4, a0, 40
-; RV64I-NEXT:    lui a5, 16
-; RV64I-NEXT:    addiw a5, a5, -256
-; RV64I-NEXT:    and a4, a4, a5
-; RV64I-NEXT:    srli a2, a0, 56
-; RV64I-NEXT:    or a2, a4, a2
-; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    slli a4, a0, 24
-; RV64I-NEXT:    slli t0, a1, 40
-; RV64I-NEXT:    and a4, a4, t0
-; RV64I-NEXT:    srliw a3, a0, 24
-; RV64I-NEXT:    slli a3, a3, 32
-; RV64I-NEXT:    or a3, a4, a3
-; RV64I-NEXT:    slli a4, a0, 40
-; RV64I-NEXT:    slli a1, a1, 48
-; RV64I-NEXT:    and a4, a4, a1
+; RV64I-NEXT:    and a1, a1, a6
+; RV64I-NEXT:    srli a3, a0, 8
+; RV64I-NEXT:    li a4, 255
+; RV64I-NEXT:    slli a7, a4, 24
+; RV64I-NEXT:    and a3, a3, a7
+; RV64I-NEXT:    or a1, a3, a1
+; RV64I-NEXT:    srli a3, a0, 40
+; RV64I-NEXT:    lui a2, 16
+; RV64I-NEXT:    addiw a2, a2, -256
+; RV64I-NEXT:    and a3, a3, a2
+; RV64I-NEXT:    srli a5, a0, 56
+; RV64I-NEXT:    or a3, a3, a5
+; RV64I-NEXT:    or a1, a1, a3
+; RV64I-NEXT:    slli a3, a0, 24
+; RV64I-NEXT:    slli t0, a4, 40
+; RV64I-NEXT:    and a3, a3, t0
+; RV64I-NEXT:    srliw a5, a0, 24
+; RV64I-NEXT:    slli a5, a5, 32
+; RV64I-NEXT:    or a3, a3, a5
+; RV64I-NEXT:    slli a5, a0, 40
+; RV64I-NEXT:    slli a4, a4, 48
+; RV64I-NEXT:    and a5, a5, a4
 ; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    or a0, a0, a4
+; RV64I-NEXT:    or a0, a0, a5
+; RV64I-NEXT:    lui a5, %hi(.LCPI68_0)
+; RV64I-NEXT:    ld a5, %lo(.LCPI68_0)(a5)
 ; RV64I-NEXT:    or a0, a0, a3
-; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    srli a2, a0, 4
-; RV64I-NEXT:    lui a3, 3855
-; RV64I-NEXT:    addiw a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 241
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, -241
-; RV64I-NEXT:    and a2, a2, a3
-; RV64I-NEXT:    and a0, a0, a3
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    srli a1, a0, 4
+; RV64I-NEXT:    and a1, a1, a5
+; RV64I-NEXT:    and a0, a0, a5
+; RV64I-NEXT:    lui a3, %hi(.LCPI68_1)
+; RV64I-NEXT:    ld a3, %lo(.LCPI68_1)(a3)
 ; RV64I-NEXT:    slli a0, a0, 4
-; RV64I-NEXT:    or a0, a2, a0
-; RV64I-NEXT:    srli a2, a0, 2
-; RV64I-NEXT:    lui a3, 13107
-; RV64I-NEXT:    addiw a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 819
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    srli a1, a0, 2
+; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    and a0, a0, a3
+; RV64I-NEXT:    lui a3, %hi(.LCPI68_2)
+; RV64I-NEXT:    ld a3, %lo(.LCPI68_2)(a3)
 ; RV64I-NEXT:    slli a0, a0, 2
-; RV64I-NEXT:    or a0, a2, a0
-; RV64I-NEXT:    srli a2, a0, 1
-; RV64I-NEXT:    lui a3, 21845
-; RV64I-NEXT:    addiw a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 1365
-; RV64I-NEXT:    and a2, a2, a3
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    srli a1, a0, 1
+; RV64I-NEXT:    and a1, a1, a3
 ; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    or a0, a2, a0
-; RV64I-NEXT:    srli a2, a0, 40
-; RV64I-NEXT:    and a2, a2, a5
-; RV64I-NEXT:    srli a3, a0, 56
-; RV64I-NEXT:    or a2, a2, a3
-; RV64I-NEXT:    srli a3, a0, 24
-; RV64I-NEXT:    and a3, a3, a6
-; RV64I-NEXT:    srli a4, a0, 8
-; RV64I-NEXT:    and a4, a4, a7
-; RV64I-NEXT:    or a3, a4, a3
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    srli a1, a0, 40
+; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a2, a0, 56
+; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    srli a2, a0, 24
+; RV64I-NEXT:    and a2, a2, a6
+; RV64I-NEXT:    srli a3, a0, 8
+; RV64I-NEXT:    and a3, a3, a7
 ; RV64I-NEXT:    or a2, a3, a2
-; RV64I-NEXT:    slli a3, a0, 24
-; RV64I-NEXT:    and a3, a3, t0
-; RV64I-NEXT:    srliw a4, a0, 24
-; RV64I-NEXT:    slli a4, a4, 32
-; RV64I-NEXT:    or a3, a3, a4
-; RV64I-NEXT:    slli a4, a0, 40
-; RV64I-NEXT:    and a1, a4, a1
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    slli a2, a0, 24
+; RV64I-NEXT:    and a2, a2, t0
+; RV64I-NEXT:    srliw a3, a0, 24
+; RV64I-NEXT:    slli a3, a3, 32
+; RV64I-NEXT:    or a2, a2, a3
+; RV64I-NEXT:    slli a3, a0, 40
+; RV64I-NEXT:    and a3, a3, a4
 ; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBP-LABEL: bitreverse_bswap_i64:
@@ -2972,30 +2523,18 @@ define signext i32 @shfl1_i32(i32 signext %a, i32 signext %b) nounwind {
 define i64 @shfl1_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: shfl1_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1035469
-; RV64I-NEXT:    addiw a1, a1, -819
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, -819
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, -819
-; RV64I-NEXT:    slli a1, a1, 13
-; RV64I-NEXT:    addi a1, a1, -1639
-; RV64I-NEXT:    and a1, a0, a1
-; RV64I-NEXT:    slli a2, a0, 1
-; RV64I-NEXT:    lui a3, 4369
-; RV64I-NEXT:    addiw a3, a3, 273
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 273
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    addi a3, a3, 273
-; RV64I-NEXT:    slli a4, a3, 14
-; RV64I-NEXT:    addi a4, a4, 1092
-; RV64I-NEXT:    and a2, a2, a4
-; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI70_1)
+; RV64I-NEXT:    ld a1, %lo(.LCPI70_1)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI70_0)
+; RV64I-NEXT:    ld a2, %lo(.LCPI70_0)(a2)
+; RV64I-NEXT:    slli a3, a0, 1
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    lui a3, %hi(.LCPI70_2)
+; RV64I-NEXT:    ld a3, %lo(.LCPI70_2)(a3)
+; RV64I-NEXT:    and a2, a0, a2
+; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    srli a0, a0, 1
-; RV64I-NEXT:    slli a2, a3, 13
-; RV64I-NEXT:    addi a2, a2, 546
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
@@ -3048,31 +2587,18 @@ define signext i32 @shfl2_i32(i32 signext %a, i32 signext %b) nounwind {
 define i64 @shfl2_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: shfl2_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 1044721
-; RV64I-NEXT:    addiw a1, a1, -241
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 241
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, -241
-; RV64I-NEXT:    slli a1, a1, 14
-; RV64I-NEXT:    addi a1, a1, 963
-; RV64I-NEXT:    and a1, a0, a1
-; RV64I-NEXT:    slli a2, a0, 2
-; RV64I-NEXT:    lui a3, 197379
-; RV64I-NEXT:    slli a3, a3, 4
-; RV64I-NEXT:    addi a3, a3, 771
-; RV64I-NEXT:    slli a4, a3, 16
-; RV64I-NEXT:    addi a4, a4, 771
-; RV64I-NEXT:    slli a4, a4, 12
-; RV64I-NEXT:    addi a4, a4, 48
-; RV64I-NEXT:    and a2, a2, a4
-; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    lui a1, %hi(.LCPI72_1)
+; RV64I-NEXT:    ld a1, %lo(.LCPI72_1)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI72_0)
+; RV64I-NEXT:    ld a2, %lo(.LCPI72_0)(a2)
+; RV64I-NEXT:    slli a3, a0, 2
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    lui a3, %hi(.LCPI72_2)
+; RV64I-NEXT:    ld a3, %lo(.LCPI72_2)(a3)
+; RV64I-NEXT:    and a2, a0, a2
+; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    srli a0, a0, 2
-; RV64I-NEXT:    slli a2, a3, 14
-; RV64I-NEXT:    addi a2, a2, 193
-; RV64I-NEXT:    slli a2, a2, 12
-; RV64I-NEXT:    addi a2, a2, -1012
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    and a0, a0, a3
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -3125,31 +2651,17 @@ define signext i32 @shfl4_i32(i32 signext %a, i32 signext %b) nounwind {
 define i64 @shfl4_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: shfl4_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 983295
-; RV64I-NEXT:    slli a1, a1, 4
-; RV64I-NEXT:    addi a1, a1, 255
-; RV64I-NEXT:    slli a1, a1, 16
-; RV64I-NEXT:    addi a1, a1, 255
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 15
+; RV64I-NEXT:    lui a1, %hi(.LCPI74_0)
+; RV64I-NEXT:    ld a1, %lo(.LCPI74_0)(a1)
+; RV64I-NEXT:    lui a2, %hi(.LCPI74_1)
+; RV64I-NEXT:    ld a2, %lo(.LCPI74_1)(a2)
+; RV64I-NEXT:    slli a3, a0, 4
+; RV64I-NEXT:    lui a4, %hi(.LCPI74_2)
+; RV64I-NEXT:    ld a4, %lo(.LCPI74_2)(a4)
+; RV64I-NEXT:    and a2, a3, a2
 ; RV64I-NEXT:    and a1, a0, a1
-; RV64I-NEXT:    slli a2, a0, 4
-; RV64I-NEXT:    lui a3, 983055
-; RV64I-NEXT:    slli a3, a3, 4
-; RV64I-NEXT:    addi a3, a3, 15
-; RV64I-NEXT:    slli a3, a3, 16
-; RV64I-NEXT:    addi a3, a3, 15
-; RV64I-NEXT:    slli a3, a3, 12
-; RV64I-NEXT:    srli a3, a3, 4
-; RV64I-NEXT:    and a2, a2, a3
 ; RV64I-NEXT:    srli a0, a0, 4
-; RV64I-NEXT:    lui a3, 240
-; RV64I-NEXT:    addiw a3, a3, 15
-; RV64I-NEXT:    slli a3, a3, 16
-; RV64I-NEXT:    addi a3, a3, 15
-; RV64I-NEXT:    slli a3, a3, 20
-; RV64I-NEXT:    addi a3, a3, 240
-; RV64I-NEXT:    and a0, a0, a3
+; RV64I-NEXT:    and a0, a0, a4
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
@@ -3274,9 +2786,8 @@ define i64 @shfl16(i64 %a, i64 %b) nounwind {
 define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: pack_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    slliw a1, a1, 16
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
@@ -3369,6 +2880,26 @@ define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %or
 }
 
+define i32 @packh_i32_2(i32 %a, i32 %b) nounwind {
+; RV64I-LABEL: packh_i32_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    andi a1, a1, 255
+; RV64I-NEXT:    slli a1, a1, 8
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBP-LABEL: packh_i32_2:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    packh a0, a0, a1
+; RV64ZBP-NEXT:    ret
+  %and = and i32 %a, 255
+  %and1 = and i32 %b, 255
+  %shl = shl i32 %and1, 8
+  %or = or i32 %shl, %and
+  ret i32 %or
+}
+
 define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: packh_i64:
 ; RV64I:       # %bb.0:
@@ -3389,12 +2920,31 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
+define i64 @packh_i64_2(i64 %a, i64 %b) nounwind {
+; RV64I-LABEL: packh_i64_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    andi a1, a1, 255
+; RV64I-NEXT:    slli a1, a1, 8
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBP-LABEL: packh_i64_2:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    packh a0, a0, a1
+; RV64ZBP-NEXT:    ret
+  %and = and i64 %a, 255
+  %and1 = and i64 %b, 255
+  %shl = shl i64 %and1, 8
+  %or = or i64 %shl, %and
+  ret i64 %or
+}
+
 define i32 @zexth_i32(i32 %a) nounwind {
 ; RV64I-LABEL: zexth_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBP-LABEL: zexth_i32:
@@ -3408,9 +2958,8 @@ define i32 @zexth_i32(i32 %a) nounwind {
 define i64 @zexth_i64(i64 %a) nounwind {
 ; RV64I-LABEL: zexth_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBP-LABEL: zexth_i64:

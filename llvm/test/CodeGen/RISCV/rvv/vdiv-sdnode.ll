@@ -918,14 +918,8 @@ define <vscale x 1 x i64> @vdiv_vi_nxv1i64_0(<vscale x 1 x i64> %va) {
 ;
 ; RV64-LABEL: vdiv_vi_nxv1i64_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 1029851
-; RV64-NEXT:    addiw a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
+; RV64-NEXT:    lui a0, %hi(.LCPI58_0)
+; RV64-NEXT:    ld a0, %lo(.LCPI58_0)(a0)
 ; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vmulh.vx v8, v8, a0
 ; RV64-NEXT:    li a0, 63
@@ -998,14 +992,8 @@ define <vscale x 2 x i64> @vdiv_vi_nxv2i64_0(<vscale x 2 x i64> %va) {
 ;
 ; RV64-LABEL: vdiv_vi_nxv2i64_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 1029851
-; RV64-NEXT:    addiw a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
+; RV64-NEXT:    lui a0, %hi(.LCPI61_0)
+; RV64-NEXT:    ld a0, %lo(.LCPI61_0)(a0)
 ; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
 ; RV64-NEXT:    vmulh.vx v8, v8, a0
 ; RV64-NEXT:    li a0, 63
@@ -1078,14 +1066,8 @@ define <vscale x 4 x i64> @vdiv_vi_nxv4i64_0(<vscale x 4 x i64> %va) {
 ;
 ; RV64-LABEL: vdiv_vi_nxv4i64_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 1029851
-; RV64-NEXT:    addiw a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
+; RV64-NEXT:    lui a0, %hi(.LCPI64_0)
+; RV64-NEXT:    ld a0, %lo(.LCPI64_0)(a0)
 ; RV64-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
 ; RV64-NEXT:    vmulh.vx v8, v8, a0
 ; RV64-NEXT:    li a0, 63
@@ -1158,14 +1140,8 @@ define <vscale x 8 x i64> @vdiv_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ;
 ; RV64-LABEL: vdiv_vi_nxv8i64_0:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 1029851
-; RV64-NEXT:    addiw a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
-; RV64-NEXT:    slli a0, a0, 12
-; RV64-NEXT:    addi a0, a0, 1755
+; RV64-NEXT:    lui a0, %hi(.LCPI67_0)
+; RV64-NEXT:    ld a0, %lo(.LCPI67_0)(a0)
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; RV64-NEXT:    vmulh.vx v8, v8, a0
 ; RV64-NEXT:    li a0, 63

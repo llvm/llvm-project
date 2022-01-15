@@ -30,7 +30,11 @@
 namespace clang {
 namespace clangd {
 
-using ReferencedLocations = llvm::DenseSet<SourceLocation>;
+struct ReferencedLocations {
+  llvm::DenseSet<SourceLocation> User;
+  llvm::DenseSet<stdlib::Symbol> Stdlib;
+};
+
 /// Finds locations of all symbols used in the main file.
 ///
 /// - RecursiveASTVisitor finds references to symbols and records their
@@ -48,17 +52,22 @@ using ReferencedLocations = llvm::DenseSet<SourceLocation>;
 /// - err on the side of reporting all possible locations
 ReferencedLocations findReferencedLocations(ParsedAST &AST);
 
+struct ReferencedFiles {
+  llvm::DenseSet<FileID> User;
+  llvm::DenseSet<stdlib::Header> Stdlib;
+};
+
 /// Retrieves IDs of all files containing SourceLocations from \p Locs.
 /// The output only includes things SourceManager sees as files (not macro IDs).
 /// This can include <built-in>, <scratch space> etc that are not true files.
-llvm::DenseSet<FileID> findReferencedFiles(const ReferencedLocations &Locs,
-                                           const IncludeStructure &Includes,
-                                           const SourceManager &SM);
+ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
+                                    const IncludeStructure &Includes,
+                                    const SourceManager &SM);
 
 /// Maps FileIDs to the internal IncludeStructure representation (HeaderIDs).
 /// FileIDs that are not true files (<built-in> etc) are dropped.
 llvm::DenseSet<IncludeStructure::HeaderID>
-translateToHeaderIDs(const llvm::DenseSet<FileID> &Files,
+translateToHeaderIDs(const ReferencedFiles &Files,
                      const IncludeStructure &Includes, const SourceManager &SM);
 
 /// Retrieves headers that are referenced from the main file but not used.
@@ -71,6 +80,15 @@ std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST);
 
 std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
                                                  llvm::StringRef Code);
+
+/// Affects whether standard library includes should be considered for removal.
+/// This is off by default for now due to implementation limitations:
+/// - macros are not tracked
+/// - symbol names without a unique associated header are not tracked
+/// - references to std-namespaced C types are not properly tracked:
+///   instead of std::size_t -> <cstddef> we see ::size_t -> <stddef.h>
+/// FIXME: remove this hack once the implementation is good enough.
+void setIncludeCleanerAnalyzesStdlib(bool B);
 
 } // namespace clangd
 } // namespace clang

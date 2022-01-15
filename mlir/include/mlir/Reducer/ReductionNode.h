@@ -48,7 +48,7 @@ public:
 
   using Range = std::pair<int, int>;
 
-  ReductionNode(ReductionNode *parent, std::vector<Range> range,
+  ReductionNode(ReductionNode *parent, const std::vector<Range> &range,
                 llvm::SpecificBumpPtrAllocator<ReductionNode> &allocator);
 
   ReductionNode *getParent() const { return parent; }
@@ -145,19 +145,19 @@ private:
   OwningOpRef<ModuleOp> module;
 
   /// The region of certain operation we're reducing in the module
-  Region *region;
+  Region *region = nullptr;
 
   /// The node we are reduced from. It means we will be in variants of parent
   /// node.
-  ReductionNode *parent;
+  ReductionNode *parent = nullptr;
 
   /// The size of module after applying the reducer patterns with range
   /// constraints. This is only valid while the interestingness has been tested.
-  size_t size;
+  size_t size = 0;
 
   /// This is true if the module has been evaluated and it exhibits the
   /// interesting behavior.
-  Tester::Interestingness interesting;
+  Tester::Interestingness interesting = Tester::Interestingness::Untested;
 
   /// `ranges` represents the selected subset of operations in the region. We
   /// implicitly number each operation in the region and ReductionTreePass will

@@ -17,14 +17,15 @@ func @fill_extract_matmul_1234(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -43,14 +44,15 @@ func @fill_extract_matmul_1243(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -68,14 +70,15 @@ func @fill_extract_matmul_1324(%arg0: tensor<518x518xf32> {linalg.buffer_layout 
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -93,14 +96,15 @@ func @fill_extract_matmul_1342(%arg0: tensor<518x518xf32> {linalg.buffer_layout 
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -118,15 +122,15 @@ func @fill_extract_matmul_1423(%arg0: tensor<518x518xf32> {linalg.buffer_layout 
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -144,15 +148,15 @@ func @fill_extract_matmul_1432(%arg0: tensor<518x518xf32> {linalg.buffer_layout 
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -171,14 +175,15 @@ func @fill_extract_matmul_2134(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -197,14 +202,15 @@ func @fill_extract_matmul_2143(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -223,15 +229,15 @@ func @fill_extract_matmul_2314(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -250,14 +256,15 @@ func @fill_extract_matmul_2341(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -276,14 +283,15 @@ func @fill_extract_matmul_2413(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -302,14 +310,15 @@ func @fill_extract_matmul_2431(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["none", "false"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -328,14 +337,15 @@ func @fill_extract_matmul_3124(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -354,14 +364,15 @@ func @fill_extract_matmul_3142(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -380,14 +391,15 @@ func @fill_extract_matmul_3214(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -406,14 +418,15 @@ func @fill_extract_matmul_3241(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %2[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %4 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -432,14 +445,15 @@ func @fill_extract_matmul_3412(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -458,14 +472,15 @@ func @fill_extract_matmul_3421(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -484,15 +499,15 @@ func @fill_extract_matmul_4123(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -511,14 +526,15 @@ func @fill_extract_matmul_4132(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -537,15 +553,15 @@ func @fill_extract_matmul_4213(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %0) : f32, tensor<256x256xf32> -> tensor<256x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %1[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%3, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -564,15 +580,15 @@ func @fill_extract_matmul_4231(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -591,14 +607,15 @@ func @fill_extract_matmul_4312(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }
@@ -617,14 +634,15 @@ func @fill_extract_matmul_4321(
   %cst_0 = arith.constant 1.000000e+00 : f32
   %0 = linalg.init_tensor [256, 256] : tensor<256x256xf32>
 
-  // CHECK: {__inplace_results_attr__ = ["false"]}
-  // CHECK-COUNT-4: {__inplace_results_attr__ = ["true"]}
+  // CHECK: {__inplace_operands_attr__ = ["false"]}
   %4 = tensor.extract_slice %0[0, 0] [16, 256] [1, 1] : tensor<256x256xf32> to tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["true"]}
   %3 = tensor.extract_slice %0[0, 0] [256, 16] [1, 1] : tensor<256x256xf32> to tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %2 = linalg.fill(%cst_0, %4) : f32, tensor<16x256xf32> -> tensor<16x256xf32>
+  // CHECK: {__inplace_operands_attr__ = ["none", "true"]}
   %1 = linalg.fill(%cst, %3) : f32, tensor<256x16xf32> -> tensor<256x16xf32>
-
+  // CHECK: {__inplace_operands_attr__ = ["true", "true", "true"]}
   %5 = linalg.matmul ins(%1, %2 : tensor<256x16xf32>, tensor<16x256xf32>) outs(%arg2 : tensor<256x256xf32>) -> tensor<256x256xf32>
   return %5 : tensor<256x256xf32>
 }

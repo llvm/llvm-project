@@ -6,7 +6,7 @@
 define %0 @f() nounwind ssp {
 entry:
   %v = alloca %0, align 8
-  call void asm sideeffect "", "=*r,r,r,0,~{dirflag},~{fpsr},~{flags}"(%0* %v, i32 0, i32 1, i128 undef) nounwind
+  call void asm sideeffect "", "=*r,r,r,0,~{dirflag},~{fpsr},~{flags}"(%0* elementtype(%0) %v, i32 0, i32 1, i128 undef) nounwind
   %0 = getelementptr inbounds %0, %0* %v, i64 0, i32 0
   %1 = load i64, i64* %0, align 8
   %2 = getelementptr inbounds %0, %0* %v, i64 0, i32 1

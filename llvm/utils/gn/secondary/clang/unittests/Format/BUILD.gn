@@ -12,6 +12,7 @@ unittest("FormatTests") {
   ]
   sources = [
     "CleanupTest.cpp",
+    "DefinitionBlockSeparatorTest.cpp",
     "FormatTest.cpp",
     "FormatTestCSharp.cpp",
     "FormatTestComments.cpp",

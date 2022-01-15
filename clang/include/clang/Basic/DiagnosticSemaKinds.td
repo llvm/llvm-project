@@ -197,7 +197,8 @@ def ext_flexible_array_init : Extension<
 
 // C++20 designated initializers
 def ext_cxx_designated_init : Extension<
-  "designated initializers are a C++20 extension">, InGroup<CXX20Designator>;
+  "designated initializers are a C++20 extension">, InGroup<CXX20Designator>,
+  SuppressInSystemMacro;
 def warn_cxx17_compat_designated_init : Warning<
   "designated initializers are incompatible with C++ standards before C++20">,
   InGroup<CXXPre20CompatPedantic>, DefaultIgnore;
@@ -449,7 +450,7 @@ def warn_decl_shadow :
           "typedef in %2|"
           "type alias in %2|"
           "structured binding}1">,
-  InGroup<Shadow>, DefaultIgnore;
+  InGroup<Shadow>, DefaultIgnore, SuppressInSystemMacro;
 def warn_decl_shadow_uncaptured_local :
   Warning<warn_decl_shadow.Text>,
   InGroup<ShadowUncapturedLocal>, DefaultIgnore;
@@ -1695,9 +1696,6 @@ def err_missing_exception_specification : Error<
 def ext_missing_exception_specification : ExtWarn<
   err_missing_exception_specification.Text>,
   InGroup<DiagGroup<"missing-exception-spec">>;
-def ext_ms_missing_exception_specification : ExtWarn<
-  err_missing_exception_specification.Text>,
-  InGroup<MicrosoftExceptionSpec>;
 def err_noexcept_needs_constant_expression : Error<
   "argument to noexcept specifier must be a constant expression">;
 def err_exception_spec_not_parsed : Error<
@@ -3944,7 +3942,8 @@ def warn_cast_align : Warning<
   "cast from %0 to %1 increases required alignment from %2 to %3">,
   InGroup<CastAlign>, DefaultIgnore;
 def warn_old_style_cast : Warning<
-  "use of old-style cast">, InGroup<OldStyleCast>, DefaultIgnore;
+  "use of old-style cast">, InGroup<OldStyleCast>, DefaultIgnore,
+  SuppressInSystemMacro;
 
 // Separate between casts to void* and non-void* pointers.
 // Some APIs use (abuse) void* for something like a user context,
@@ -9862,8 +9861,11 @@ def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
 
 def ext_mixed_decls_code : Extension<
-  "ISO C90 forbids mixing declarations and code">,
-  InGroup<DiagGroup<"declaration-after-statement">>;
+  "mixing declarations and code is a C99 extension">,
+  InGroup<DeclarationAfterStatement>;
+def warn_mixed_decls_code : Warning<
+  "mixing declarations and code is incompatible with standards before C99">,
+  InGroup<DeclarationAfterStatement>, DefaultIgnore;
 
 def err_non_local_variable_decl_in_for : Error<
   "declaration of non-local variable in 'for' loop">;
@@ -10813,11 +10815,6 @@ def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause">;
 def err_omp_var_expected : Error<
   "expected variable of the '%0' type%select{|, not %2}1">;
-def warn_unknown_declare_variant_isa_trait
-    : Warning<"isa trait '%0' is not known to the current target; verify the "
-              "spelling or consider restricting the context selector with the "
-              "'arch' selector further">,
-      InGroup<SourceUsesOpenMP>;
 def err_omp_non_pointer_type_array_shaping_base : Error<
   "expected expression with a pointer to a complete type as a base of an array "
   "shaping operation">;
@@ -11047,7 +11044,7 @@ def warn_deprecated_coroutine_namespace : Warning<
   "use std::%0 instead">,
   InGroup<DeprecatedExperimentalCoroutine>;
 def err_mixed_use_std_and_experimental_namespace_for_coroutine : Error<
-  "mixed use of std and std::experimental namespaces for "
+  "conflicting mixed use of std and std::experimental namespaces for "
   "coroutine components">;
 def err_implicit_coroutine_std_nothrow_type_not_found : Error<
   "std::nothrow was not found; include <new> before defining a coroutine which "

@@ -143,7 +143,7 @@ public:
     }
 
     if (Opts->PrintStats || Opts->ShouldSerializeStats) {
-      llvm::EnableStatistics(/* PrintOnExit= */ false);
+      llvm::EnableStatistics(/* DoPrintOnExit= */ false);
     }
 
     if (Opts->ShouldDisplayMacroExpansions)

@@ -59,7 +59,7 @@ uint32_t AppleObjCTypeEncodingParser::ReadNumber(StringLexer &type) {
 // "{CGRect=\"origin\"{CGPoint=\"x\"d\"y\"d}\"size\"{CGSize=\"width\"d\"height\"d}}"
 
 AppleObjCTypeEncodingParser::StructElement::StructElement()
-    : name(""), type(clang::QualType()) {}
+    : type(clang::QualType()) {}
 
 AppleObjCTypeEncodingParser::StructElement
 AppleObjCTypeEncodingParser::ReadStructElement(TypeSystemClang &ast_ctx,

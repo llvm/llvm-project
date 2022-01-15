@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
+#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVEBUFFERIZE_H
+#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVEBUFFERIZE_H
 
 #include "mlir/IR/BuiltinOps.h"
 
@@ -16,22 +16,25 @@ namespace mlir {
 namespace linalg {
 namespace comprehensive_bufferize {
 
+class BufferizationAliasInfo;
 struct BufferizationOptions;
 class BufferizationState;
-struct PostAnalysisStep;
 
-/// Bufferize the given operation. Reuses an existing BufferizationState object.
-LogicalResult runComprehensiveBufferize(
-    Operation *op, const BufferizationOptions &options,
-    BufferizationState &state,
-    const std::vector<std::unique_ptr<PostAnalysisStep>> &extraSteps);
+/// Analyze `op` and its nested ops. Bufferization decisions are stored in
+/// `state`.
+LogicalResult analyzeOp(Operation *op, BufferizationState &state);
 
-/// Bufferize the given operation.
-LogicalResult runComprehensiveBufferize(Operation *op,
-                                        const BufferizationOptions &options);
+/// Bufferize `op` and its nested ops. Bufferization decisions are stored in
+/// `state`.
+LogicalResult bufferizeOp(Operation *op, const BufferizationState &state);
+
+/// Run Comprehensive Bufferize on the given op: Analysis + Bufferization
+LogicalResult
+runComprehensiveBufferize(Operation *op,
+                          std::unique_ptr<BufferizationOptions> options);
 
 } // namespace comprehensive_bufferize
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVE_BUFFERIZE_H
+#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVEBUFFERIZE_H

@@ -19,10 +19,6 @@
 
 using namespace mlir;
 
-StringAttr Builder::getIdentifier(const Twine &str) {
-  return getStringAttr(str);
-}
-
 //===----------------------------------------------------------------------===//
 // Locations.
 //===----------------------------------------------------------------------===//

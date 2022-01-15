@@ -82,9 +82,16 @@ static cl::list<std::string>
               cl::desc("Link against library X in the library search paths"),
               cl::Prefix, cl::cat(JITLinkCategory));
 
-static cl::list<std::string> LibrariesHidden(
-    "hidden-l", cl::desc("Link against library X in the library search paths"),
-    cl::Prefix, cl::cat(JITLinkCategory));
+static cl::list<std::string>
+    LibrariesHidden("hidden-l",
+                    cl::desc("Link against library X in the library search "
+                             "paths with hidden visibility"),
+                    cl::Prefix, cl::cat(JITLinkCategory));
+
+static cl::list<std::string>
+    LoadHidden("load_hidden",
+               cl::desc("Link against library X with hidden visibility"),
+               cl::cat(JITLinkCategory));
 
 static cl::opt<bool> NoExec("noexec", cl::desc("Do not execute loaded code"),
                             cl::init(false), cl::cat(JITLinkCategory));
@@ -327,7 +334,7 @@ static uint64_t computeTotalBlockSizes(LinkGraph &G) {
 }
 
 static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
-  constexpr JITTargetAddress DumpWidth = 16;
+  constexpr orc::ExecutorAddrDiff DumpWidth = 16;
   static_assert(isPowerOf2_64(DumpWidth), "DumpWidth must be a power of two");
 
   // Put sections in address order.
@@ -360,12 +367,13 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
       return LHS->getAddress() < RHS->getAddress();
     });
 
-    JITTargetAddress NextAddr = Syms.front()->getAddress() & ~(DumpWidth - 1);
+    orc::ExecutorAddr NextAddr(Syms.front()->getAddress().getValue() &
+                               ~(DumpWidth - 1));
     for (auto *Sym : Syms) {
       bool IsZeroFill = Sym->getBlock().isZeroFill();
-      JITTargetAddress SymStart = Sym->getAddress();
-      JITTargetAddress SymSize = Sym->getSize();
-      JITTargetAddress SymEnd = SymStart + SymSize;
+      auto SymStart = Sym->getAddress();
+      auto SymSize = Sym->getSize();
+      auto SymEnd = SymStart + SymSize;
       const uint8_t *SymData = IsZeroFill ? nullptr
                                           : reinterpret_cast<const uint8_t *>(
                                                 Sym->getSymbolContent().data());
@@ -396,8 +404,11 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
 class JITLinkSlabAllocator final : public JITLinkMemoryManager {
 private:
   struct FinalizedAllocInfo {
+    FinalizedAllocInfo(sys::MemoryBlock Mem,
+                       std::vector<shared::WrapperFunctionCall> DeallocActions)
+        : Mem(Mem), DeallocActions(std::move(DeallocActions)) {}
     sys::MemoryBlock Mem;
-    std::vector<AllocActionCall> DeallocActions;
+    std::vector<shared::WrapperFunctionCall> DeallocActions;
   };
 
 public:
@@ -429,12 +440,20 @@ public:
           return;
         }
 
-        // FIXME: Run finalize actions.
-        assert(BL.graphAllocActions().empty() &&
-               "Support function calls not supported yet");
+        auto DeallocActions = runFinalizeActions(BL.graphAllocActions());
+        if (!DeallocActions) {
+          OnFinalized(DeallocActions.takeError());
+          return;
+        }
 
-        OnFinalized(FinalizedAlloc(
-            pointerToJITTargetAddress(new FinalizedAllocInfo())));
+        if (auto Err = Parent.freeBlock(FinalizeSegs)) {
+          OnFinalized(
+              joinErrors(std::move(Err), runDeallocActions(*DeallocActions)));
+          return;
+        }
+
+        OnFinalized(FinalizedAlloc(ExecutorAddr::fromPtr(
+            new FinalizedAllocInfo(StandardSegs, std::move(*DeallocActions)))));
       }
 
       void abandon(OnAbandonedFunction OnAbandoned) override {
@@ -500,8 +519,8 @@ public:
     sys::MemoryBlock FinalizeSegs(AllocBase + SegsSizes->StandardSegs,
                                   SegsSizes->FinalizeSegs);
 
-    auto NextStandardSegAddr = pointerToJITTargetAddress(StandardSegs.base());
-    auto NextFinalizeSegAddr = pointerToJITTargetAddress(FinalizeSegs.base());
+    auto NextStandardSegAddr = ExecutorAddr::fromPtr(StandardSegs.base());
+    auto NextFinalizeSegAddr = ExecutorAddr::fromPtr(FinalizeSegs.base());
 
     LLVM_DEBUG({
       dbgs() << "JITLinkSlabAllocator allocated:\n";
@@ -532,7 +551,7 @@ public:
         dbgs() << "  " << Group << " -> " << formatv("{0:x16}", SegAddr)
                << "\n";
       });
-      Seg.WorkingMem = jitTargetAddressToPointer<char *>(SegAddr);
+      Seg.WorkingMem = SegAddr.toPtr<char *>();
       Seg.Addr = SegAddr + NextSlabDelta;
 
       SegAddr += alignTo(Seg.ContentSize + Seg.ZeroFillSize, PageSize);
@@ -559,7 +578,7 @@ public:
     Error Err = Error::success();
     for (auto &FA : FinalizedAllocs) {
       std::unique_ptr<FinalizedAllocInfo> FAI(
-          jitTargetAddressToPointer<FinalizedAllocInfo *>(FA.release()));
+          FA.release().toPtr<FinalizedAllocInfo *>());
 
       // FIXME: Run dealloc actions.
 
@@ -613,8 +632,8 @@ private:
     // Calculate the target address delta to link as-if slab were at
     // SlabAddress.
     if (SlabAddress != ~0ULL)
-      NextSlabDelta =
-          SlabAddress - pointerToJITTargetAddress(SlabRemaining.base());
+      NextSlabDelta = ExecutorAddr(SlabAddress) -
+                      ExecutorAddr::fromPtr(SlabRemaining.base());
   }
 
   Error freeBlock(sys::MemoryBlock MB) {
@@ -1391,6 +1410,8 @@ static Error addObjects(Session &S,
     unsigned InputFileArgIdx =
         InputFiles.getPosition(InputFileItr - InputFiles.begin());
     const std::string &InputFile = *InputFileItr;
+    if (StringRef(InputFile).endswith(".a"))
+      continue;
     auto &JD = *std::prev(IdxToJD.lower_bound(InputFileArgIdx))->second;
     LLVM_DEBUG(dbgs() << "  " << InputFileArgIdx << ": \"" << InputFile
                       << "\" to " << JD.getName() << "\n";);
@@ -1462,14 +1483,41 @@ static Error addLibraries(Session &S,
     }
   });
 
-  // 2. Collect library loads from -lx, -hidden-lx.
+  // 2. Collect library loads
   struct LibraryLoad {
     StringRef LibName;
+    bool IsPath = false;
     unsigned Position;
     StringRef *CandidateExtensions;
     enum { Standard, Hidden } Modifier;
   };
   std::vector<LibraryLoad> LibraryLoads;
+  // Add archive files from the inputs to LibraryLoads.
+  for (auto InputFileItr = InputFiles.begin(), InputFileEnd = InputFiles.end();
+       InputFileItr != InputFileEnd; ++InputFileItr) {
+    StringRef InputFile = *InputFileItr;
+    if (!InputFile.endswith(".a"))
+      continue;
+    LibraryLoad LL;
+    LL.LibName = InputFile;
+    LL.IsPath = true;
+    LL.Position = InputFiles.getPosition(InputFileItr - InputFiles.begin());
+    LL.CandidateExtensions = nullptr;
+    LL.Modifier = LibraryLoad::Standard;
+    LibraryLoads.push_back(std::move(LL));
+  }
+
+  // Add -load_hidden arguments to LibraryLoads.
+  for (auto LibItr = LoadHidden.begin(), LibEnd = LoadHidden.end();
+       LibItr != LibEnd; ++LibItr) {
+    LibraryLoad LL;
+    LL.LibName = *LibItr;
+    LL.IsPath = true;
+    LL.Position = LoadHidden.getPosition(LibItr - LoadHidden.begin());
+    LL.CandidateExtensions = nullptr;
+    LL.Modifier = LibraryLoad::Hidden;
+    LibraryLoads.push_back(std::move(LL));
+  }
   StringRef StandardExtensions[] = {".so", ".dylib", ".a"};
   StringRef ArchiveExtensionsOnly[] = {".a"};
 
@@ -1499,7 +1547,7 @@ static Error addLibraries(Session &S,
 
   // If there are any load-<modified> options then turn on flag overrides
   // to avoid flag mismatch errors.
-  if (!LibrariesHidden.empty())
+  if (!LibrariesHidden.empty() || !LoadHidden.empty())
     S.ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
 
   // Sort library loads by position in the argument list.
@@ -1508,6 +1556,24 @@ static Error addLibraries(Session &S,
   });
 
   // 3. Process library loads.
+  auto AddArchive = [&](const char *Path, const LibraryLoad &LL)
+      -> Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>> {
+    unique_function<Expected<MaterializationUnit::Interface>(
+        ExecutionSession & ES, MemoryBufferRef ObjBuffer)>
+        GetObjFileInterface;
+    switch (LL.Modifier) {
+    case LibraryLoad::Standard:
+      GetObjFileInterface = getObjectFileInterface;
+      break;
+    case LibraryLoad::Hidden:
+      GetObjFileInterface = getObjectFileInterfaceHidden;
+      break;
+    }
+    return StaticLibraryDefinitionGenerator::Load(
+        S.ObjLayer, Path, S.ES.getExecutorProcessControl().getTargetTriple(),
+        std::move(GetObjFileInterface));
+  };
+
   for (auto &LL : LibraryLoads) {
     bool LibFound = false;
     auto &JD = *std::prev(IdxToJD.lower_bound(LL.Position))->second;
@@ -1515,6 +1581,18 @@ static Error addLibraries(Session &S,
     // If this is the name of a JITDylib then link against that.
     if (auto *LJD = S.ES.getJITDylibByName(LL.LibName)) {
       JD.addToLinkOrder(*LJD);
+      continue;
+    }
+
+    if (LL.IsPath) {
+      auto G = AddArchive(LL.LibName.str().c_str(), LL);
+      if (!G)
+        return createFileError(LL.LibName, G.takeError());
+      JD.addGenerator(std::move(*G));
+      LLVM_DEBUG({
+        dbgs() << "Adding generator for static library " << LL.LibName << " to "
+               << JD.getName() << "\n";
+      });
       continue;
     }
 
@@ -1571,21 +1649,7 @@ static Error addLibraries(Session &S,
           }
           case file_magic::archive:
           case file_magic::macho_universal_binary: {
-            unique_function<Expected<MaterializationUnit::Interface>(
-                ExecutionSession & ES, MemoryBufferRef ObjBuffer)>
-                GetObjFileInterface;
-            switch (LL.Modifier) {
-            case LibraryLoad::Standard:
-              GetObjFileInterface = getObjectFileInterface;
-              break;
-            case LibraryLoad::Hidden:
-              GetObjFileInterface = getObjectFileInterfaceHidden;
-              break;
-            }
-            auto G = StaticLibraryDefinitionGenerator::Load(
-                S.ObjLayer, LibPath.data(),
-                S.ES.getExecutorProcessControl().getTargetTriple(),
-                std::move(GetObjFileInterface));
+            auto G = AddArchive(LibPath.data(), LL);
             if (!G)
               return G.takeError();
             JD.addGenerator(std::move(*G));

@@ -501,8 +501,7 @@ func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
 // CHECK: [[STRUCT_PTR:%.*]] = llvm.bitcast [[UNDERLYING_DESC]]
 // CHECK-SAME: !llvm.ptr<i8> to !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, i64)>>
 // CHECK: [[C0:%.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK: [[C3_I32:%.*]] = llvm.mlir.constant(3 : i32) : i32
-// CHECK: [[SIZES_PTR:%.*]] = llvm.getelementptr [[STRUCT_PTR]]{{\[}}[[C0]], [[C3_I32]]]
+// CHECK: [[SIZES_PTR:%.*]] = llvm.getelementptr [[STRUCT_PTR]]{{\[}}[[C0]], 3]
 // CHECK: [[STRIDES_PTR:%.*]] = llvm.getelementptr [[SIZES_PTR]]{{\[}}[[RANK]]]
 // CHECK: [[SHAPE_IN_PTR:%.*]] = llvm.extractvalue [[SHAPE]][1] : [[SHAPE_TY]]
 // CHECK: [[C1_:%.*]] = llvm.mlir.constant(1 : index) : i64

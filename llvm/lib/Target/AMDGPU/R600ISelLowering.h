@@ -19,7 +19,6 @@
 
 namespace llvm {
 
-class R600InstrInfo;
 class R600Subtarget;
 
 class R600TargetLowering final : public AMDGPUTargetLowering {

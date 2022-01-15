@@ -505,8 +505,8 @@ bool HexagonGenPredicate::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   collectPredicateGPR(MF);
-  for (SetOfReg::iterator I = PredGPRs.begin(), E = PredGPRs.end(); I != E; ++I)
-    processPredicateGPR(*I);
+  for (const RegisterSubReg &R : PredGPRs)
+    processPredicateGPR(R);
 
   bool Again;
   do {

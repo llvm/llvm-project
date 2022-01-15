@@ -26,6 +26,7 @@
 //  i -> int
 //  h -> half (__fp16, OpenCL)
 //  x -> half (_Float16)
+//  y -> half (__bf16)
 //  f -> float
 //  d -> double
 //  z -> size_t
@@ -640,16 +641,23 @@ BUILTIN(__builtin_unreachable, "v", "nr")
 BUILTIN(__builtin_shufflevector, "v."   , "nct")
 BUILTIN(__builtin_convertvector, "v."   , "nct")
 BUILTIN(__builtin_alloca, "v*z"   , "Fn")
+BUILTIN(__builtin_alloca_uninitialized, "v*z", "Fn")
 BUILTIN(__builtin_alloca_with_align, "v*zIz", "Fn")
+BUILTIN(__builtin_alloca_with_align_uninitialized, "v*zIz", "Fn")
 BUILTIN(__builtin_call_with_static_chain, "v.", "nt")
 
 BUILTIN(__builtin_elementwise_abs, "v.", "nct")
 BUILTIN(__builtin_elementwise_max, "v.", "nct")
 BUILTIN(__builtin_elementwise_min, "v.", "nct")
 BUILTIN(__builtin_elementwise_ceil, "v.", "nct")
+BUILTIN(__builtin_elementwise_floor, "v.", "nct")
+BUILTIN(__builtin_elementwise_roundeven, "v.", "nct")
+BUILTIN(__builtin_elementwise_trunc, "v.", "nct")
 BUILTIN(__builtin_reduce_max, "v.", "nct")
 BUILTIN(__builtin_reduce_min, "v.", "nct")
 BUILTIN(__builtin_reduce_xor, "v.", "nct")
+BUILTIN(__builtin_reduce_or, "v.", "nct")
+BUILTIN(__builtin_reduce_and, "v.", "nct")
 
 BUILTIN(__builtin_matrix_transpose, "v.", "nFt")
 BUILTIN(__builtin_matrix_column_major_load, "v.", "nFt")

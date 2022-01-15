@@ -230,8 +230,8 @@ void UnlockAllocator();
 // Returns true if [addr, addr + sizeof(void *)) is poisoned.
 bool WordIsPoisoned(uptr addr);
 // Wrappers for ThreadRegistry access.
-void LockThreadRegistry() NO_THREAD_SAFETY_ANALYSIS;
-void UnlockThreadRegistry() NO_THREAD_SAFETY_ANALYSIS;
+void LockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
+void UnlockThreadRegistry() SANITIZER_NO_THREAD_SAFETY_ANALYSIS;
 
 struct ScopedStopTheWorldLock {
   ScopedStopTheWorldLock() {

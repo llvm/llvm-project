@@ -1495,8 +1495,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
   case DeclSpec::TST_int128:
     if (!S.Context.getTargetInfo().hasInt128Type() &&
-        !S.getLangOpts().SYCLIsDevice &&
-        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
+        !(S.getLangOpts().SYCLIsDevice || S.getLangOpts().CUDAIsDevice ||
+          (S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice)))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__int128";
     if (DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned)
@@ -5972,6 +5972,11 @@ namespace {
       TypeSourceInfo *TInfo = nullptr;
       Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
       TL.setUnderlyingTInfo(TInfo);
+    }
+    void VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+      assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
+      TL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+      TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
       // FIXME: This holds only because we only have one unary transform.

@@ -10,7 +10,7 @@
 
 int main() {
   NSArray *arrayOfInt = [NSArray arrayWithObjects:@1, @2, @3, (void *)0];
-  // CHECK: objc-cast.m:[[@LINE+1]]:{{.*}}: runtime error: invalid ObjC cast, object is a '__NSCFNumber', but expected a 'NSString'
+  // CHECK: objc-cast.m:[[@LINE+1]]:{{.*}}: runtime error: invalid ObjC cast, object is a '{{__NSCFNumber|NSConstantIntegerNumber}}', but expected a 'NSString'
   for (NSString *str in arrayOfInt) {
     NSLog(@"%@", str);
   }

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_INLINING_UTILS_H
-#define MLIR_TRANSFORMS_INLINING_UTILS_H
+#ifndef MLIR_TRANSFORMS_INLININGUTILS_H
+#define MLIR_TRANSFORMS_INLININGUTILS_H
 
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/Location.h"
@@ -246,4 +246,4 @@ LogicalResult inlineCall(InlinerInterface &interface, CallOpInterface call,
 
 } // namespace mlir
 
-#endif // MLIR_TRANSFORMS_INLINING_UTILS_H
+#endif // MLIR_TRANSFORMS_INLININGUTILS_H

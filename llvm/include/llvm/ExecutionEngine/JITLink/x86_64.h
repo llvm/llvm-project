@@ -368,18 +368,18 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   char *BlockWorkingMem = B.getAlreadyMutableContent().data();
   char *FixupPtr = BlockWorkingMem + E.getOffset();
-  JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
+  auto FixupAddress = B.getAddress() + E.getOffset();
 
   switch (E.getKind()) {
 
   case Pointer64: {
-    uint64_t Value = E.getTarget().getAddress() + E.getAddend();
+    uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     *(ulittle64_t *)FixupPtr = Value;
     break;
   }
 
   case Pointer32: {
-    uint64_t Value = E.getTarget().getAddress() + E.getAddend();
+    uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     if (LLVM_LIKELY(isInRangeForImmU32(Value)))
       *(ulittle32_t *)FixupPtr = Value;
     else
@@ -387,7 +387,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     break;
   }
   case Pointer32Signed: {
-    int64_t Value = E.getTarget().getAddress() + E.getAddend();
+    int64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     if (LLVM_LIKELY(isInRangeForImmS32(Value)))
       *(little32_t *)FixupPtr = Value;
     else
@@ -483,8 +483,8 @@ extern const char PointerJumpStubContent[6];
 inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
                                       Symbol *InitialTarget = nullptr,
                                       uint64_t InitialAddend = 0) {
-  auto &B =
-      G.createContentBlock(PointerSection, NullPointerContent, ~7ULL, 8, 0);
+  auto &B = G.createContentBlock(PointerSection, NullPointerContent,
+                                 orc::ExecutorAddr(~uint64_t(7)), 8, 0);
   if (InitialTarget)
     B.addEdge(Pointer64, 0, *InitialTarget, InitialAddend);
   return G.addAnonymousSymbol(B, 0, 8, false, false);
@@ -498,8 +498,8 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
 ///   address: highest allowable: (~5U)
 inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
                                          Symbol &PointerSymbol) {
-  auto &B =
-      G.createContentBlock(StubSection, PointerJumpStubContent, ~5ULL, 1, 0);
+  auto &B = G.createContentBlock(StubSection, PointerJumpStubContent,
+                                 orc::ExecutorAddr(~uint64_t(5)), 1, 0);
   B.addEdge(Delta32, 2, PointerSymbol, -4);
   return B;
 }
@@ -552,8 +552,7 @@ public:
            "Fell through switch, but no new kind to set");
     DEBUG_WITH_TYPE("jitlink", {
       dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
-             << formatv("{0:x}", B->getFixupAddress(E)) << " ("
-             << formatv("{0:x}", B->getAddress()) << " + "
+             << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
              << formatv("{0:x}", E.getOffset()) << ")\n";
     });
     E.setKind(KindToSet);
@@ -586,8 +585,7 @@ public:
     if (E.getKind() == x86_64::BranchPCRel32 && !E.getTarget().isDefined()) {
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
-               << formatv("{0:x}", B->getFixupAddress(E)) << " ("
-               << formatv("{0:x}", B->getAddress()) << " + "
+               << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
                << formatv("{0:x}", E.getOffset()) << ")\n";
       });
       // Set the edge kind to Branch32ToPtrJumpStubBypassable to enable it to

@@ -1,4 +1,4 @@
-//===-- M68kBaseInfo.h - Top level definitions for M68k MC --*- C++ -*-----===//
+//===-- M68kBaseInfo.h - Top level definitions for M68k MC ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -244,4 +244,4 @@ static inline unsigned getMaskedSpillRegister(unsigned order) {
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_M68K_MCTARGETDESC_M68KBASEINFO_H

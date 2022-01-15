@@ -72,15 +72,11 @@ public:
 
   LLVM_NODISCARD bool empty() const { return !Size; }
 
+protected:
   /// Set the array size to \p N, which the current array must have enough
   /// capacity for.
   ///
   /// This does not construct or destroy any elements in the vector.
-  ///
-  /// Clients can use this in conjunction with capacity() to write past the end
-  /// of the buffer when they know that more elements are available, and only
-  /// update the size later. This avoids the cost of value initializing elements
-  /// which will only be overwritten.
   void set_size(size_t N) {
     assert(N <= capacity());
     Size = N;
@@ -588,6 +584,9 @@ public:
   }
 
 private:
+  // Make set_size() private to avoid misuse in subclasses.
+  using SuperClass::set_size;
+
   template <bool ForOverwrite> void resizeImpl(size_type N) {
     if (N == this->size())
       return;

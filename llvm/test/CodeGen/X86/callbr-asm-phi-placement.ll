@@ -36,7 +36,7 @@ loop:
   %a = phi i8* [ %arg, %entry ], [ %b, %loop ]
   %b = load i8*, i8** %mem, align 8
   call void @foo(i8* %a)
-  callbr void asm sideeffect "", "*m,X"(i8* %b, i8* blockaddress(@test1, %loop))
+  callbr void asm sideeffect "", "*m,i"(i8* elementtype(i8) %b, i8* blockaddress(@test1, %loop))
           to label %end [label %loop]
 
 end:

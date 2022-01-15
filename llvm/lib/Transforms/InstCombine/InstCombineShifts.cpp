@@ -1057,6 +1057,21 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, Mask));
     }
 
+    // ((X << C) + Y) >>u C --> (X + (Y >>u C)) & (-1 >>u C)
+    // TODO: Consolidate with the more general transform that starts from shl
+    //       (the shifts are in the opposite order).
+    Value *Y;
+    if (match(Op0,
+              m_OneUse(m_c_Add(m_OneUse(m_Shl(m_Value(X), m_Specific(Op1))),
+                               m_Value(Y))))) {
+      Value *NewLshr = Builder.CreateLShr(Y, Op1);
+      Value *NewAdd = Builder.CreateAdd(NewLshr, X);
+      unsigned Op1Val = C->getLimitedValue(BitWidth);
+      APInt Bits = APInt::getLowBitsSet(BitWidth, BitWidth - Op1Val);
+      Constant *Mask = ConstantInt::get(Ty, Bits);
+      return BinaryOperator::CreateAnd(NewAdd, Mask);
+    }
+
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) &&
         (!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType()))) {
       assert(ShAmtC < X->getType()->getScalarSizeInBits() &&
@@ -1094,7 +1109,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
-    Value *Y;
     if (ShAmtC == BitWidth - 1) {
       // lshr i32 or(X,-X), 31 --> zext (X != 0)
       if (match(Op0, m_OneUse(m_c_Or(m_Neg(m_Value(X)), m_Deferred(X)))))

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -88,7 +90,8 @@ size_t PassRegistryEntry::getOptionWidth() const {
 void mlir::registerPassPipeline(
     StringRef arg, StringRef description, const PassRegistryFunction &function,
     std::function<void(function_ref<void(const PassOptions &)>)> optHandler) {
-  PassPipelineInfo pipelineInfo(arg, description, function, optHandler);
+  PassPipelineInfo pipelineInfo(arg, description, function,
+                                std::move(optHandler));
   bool inserted = passPipelineRegistry->try_emplace(arg, pipelineInfo).second;
   assert(inserted && "Pass pipeline registered multiple times");
   (void)inserted;
@@ -479,10 +482,6 @@ LogicalResult TextualPipeline::addToPipeline(
   return success();
 }
 
-/// This function parses the textual representation of a pass pipeline, and adds
-/// the result to 'pm' on success. This function returns failure if the given
-/// pipeline was invalid. 'errorStream' is an optional parameter that, if
-/// non-null, will be used to emit errors found during parsing.
 LogicalResult mlir::parsePassPipeline(StringRef pipeline, OpPassManager &pm,
                                       raw_ostream &errorStream) {
   TextualPipeline pipelineParser;
@@ -497,6 +496,24 @@ LogicalResult mlir::parsePassPipeline(StringRef pipeline, OpPassManager &pm,
   return success();
 }
 
+FailureOr<OpPassManager> mlir::parsePassPipeline(StringRef pipeline,
+                                                 raw_ostream &errorStream) {
+  // Pipelines are expected to be of the form `<op-name>(<pipeline>)`.
+  size_t pipelineStart = pipeline.find_first_of('(');
+  if (pipelineStart == 0 || pipelineStart == StringRef::npos ||
+      !pipeline.consume_back(")")) {
+    errorStream << "expected pass pipeline to be wrapped with the anchor "
+                   "operation type, e.g. `builtin.module(...)";
+    return failure();
+  }
+
+  StringRef opName = pipeline.take_front(pipelineStart);
+  OpPassManager pm(opName);
+  if (failed(parsePassPipeline(pipeline.drop_front(1 + pipelineStart), pm)))
+    return failure();
+  return pm;
+}
+
 //===----------------------------------------------------------------------===//
 // PassNameParser
 //===----------------------------------------------------------------------===//
@@ -505,7 +522,7 @@ namespace {
 /// This struct represents the possible data entries in a parsed pass pipeline
 /// list.
 struct PassArgData {
-  PassArgData() {}
+  PassArgData() = default;
   PassArgData(const PassRegistryEntry *registryEntry)
       : registryEntry(registryEntry) {}
 

@@ -28,8 +28,7 @@
 #include "llvm/MC/MCInst.h"
 using namespace llvm;
 
-ARMInstrInfo::ARMInstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI), RI() {}
+ARMInstrInfo::ARMInstrInfo(const ARMSubtarget &STI) : ARMBaseInstrInfo(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst ARMInstrInfo::getNop() const {

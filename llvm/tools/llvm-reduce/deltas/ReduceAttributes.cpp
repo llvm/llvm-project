@@ -141,7 +141,7 @@ struct AttributeCounter : public InstVisitor<AttributeCounter> {
 AttributeSet
 convertAttributeRefToAttributeSet(LLVMContext &C,
                                   ArrayRef<const Attribute *> Attributes) {
-  AttrBuilder B;
+  AttrBuilder B(C);
   for (const Attribute *A : Attributes)
     B.addAttribute(*A);
   return AttributeSet::get(C, B);

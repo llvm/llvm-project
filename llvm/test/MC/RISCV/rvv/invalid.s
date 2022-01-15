@@ -7,8 +7,21 @@ vsetivli a2, 32, e8,m1
 vsetivli a2, zero, e8,m1
 # CHECK-ERROR: immediate must be an integer in the range [0, 31]
 
+vsetivli a2, 5, (1 << 10)
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetivli a2, 5, 0x400
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 vsetivli a2, 5, e31
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, (1 << 11)
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, 0x800
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 
 vsetvli a2, a0, e31
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]

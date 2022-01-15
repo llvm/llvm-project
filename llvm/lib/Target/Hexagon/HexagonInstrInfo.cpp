@@ -146,6 +146,48 @@ static unsigned nonDbgMICount(MachineBasicBlock::const_instr_iterator MIB,
   return Count;
 }
 
+// Check if the A2_tfrsi instruction is cheap or not. If the operand has
+// to be constant-extendend it is not cheap since it occupies two slots
+// in a packet.
+bool HexagonInstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
+  // Enable the following steps only at Os/Oz
+  if (!(MI.getMF()->getFunction().hasOptSize()))
+    return MI.isAsCheapAsAMove();
+
+  if (MI.getOpcode() == Hexagon::A2_tfrsi) {
+    auto Op = MI.getOperand(1);
+    // If the instruction has a global address as operand, it is not cheap
+    // since the operand will be constant extended.
+    if (Op.getType() == MachineOperand::MO_GlobalAddress)
+      return false;
+    // If the instruction has an operand of size > 16bits, its will be
+    // const-extended and hence, it is not cheap.
+    if (Op.isImm()) {
+      int64_t Imm = Op.getImm();
+      if (!isInt<16>(Imm))
+        return false;
+    }
+  }
+  return MI.isAsCheapAsAMove();
+}
+
+// Do not sink floating point instructions that updates USR register.
+// Example:
+//    feclearexcept
+//    F2_conv_w2sf
+//    fetestexcept
+// MachineSink sinks F2_conv_w2sf and we are not able to catch exceptions.
+// TODO: On some of these floating point instructions, USR is marked as Use.
+// In reality, these instructions also Def the USR. If USR is marked as Def,
+// some of the assumptions in assembler packetization are broken.
+bool HexagonInstrInfo::shouldSink(const MachineInstr &MI) const {
+  // Assumption: A floating point instruction that reads the USR will write
+  // the USR as well.
+  if (isFloat(MI) && MI.hasRegisterImplicitUseOperand(Hexagon::USR))
+    return false;
+  return true;
+}
+
 /// Find the hardware loop instruction used to set-up the specified loop.
 /// On Hexagon, we have two instructions used to set-up the hardware loop
 /// (LOOP0, LOOP1) with corresponding endloop (ENDLOOP0, ENDLOOP1) instructions
@@ -1464,75 +1506,75 @@ HexagonInstrInfo::expandVGatherPseudo(MachineInstr &MI) const {
   switch (Opc) {
     case Hexagon::V6_vgathermh_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermh))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
-                  .add(MI.getOperand(3));
+                  .add(MI.getOperand(3))
+                  .add(MI.getOperand(4));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermw_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermw))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
-                  .add(MI.getOperand(3));
+                  .add(MI.getOperand(3))
+                  .add(MI.getOperand(4));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermhw_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhw))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
-                  .add(MI.getOperand(3));
+                  .add(MI.getOperand(3))
+                  .add(MI.getOperand(4));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermhq_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhq))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
                   .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
+                  .add(MI.getOperand(4))
+                  .add(MI.getOperand(5));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermwq_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermwq))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
                   .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
+                  .add(MI.getOperand(4))
+                  .add(MI.getOperand(5));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
 
     case Hexagon::V6_vgathermhwq_pseudo:
       First = BuildMI(MBB, MI, DL, get(Hexagon::V6_vgathermhwq))
-                  .add(MI.getOperand(1))
                   .add(MI.getOperand(2))
                   .add(MI.getOperand(3))
-                  .add(MI.getOperand(4));
+                  .add(MI.getOperand(4))
+                  .add(MI.getOperand(5));
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vS32b_new_ai))
           .add(MI.getOperand(0))
-          .addImm(0)
+          .addImm(MI.getOperand(1).getImm())
           .addReg(Hexagon::VTMP);
       MBB.erase(MI);
       return First.getInstrIterator();
@@ -1851,6 +1893,7 @@ bool HexagonInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
     case Hexagon::C4_cmplte:
     case Hexagon::C4_cmplteu:
       SrcReg2 = MI.getOperand(2).getReg();
+      Value = 0;
       return true;
 
     case Hexagon::C2_cmpeqi:
@@ -2725,7 +2768,13 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vL32b_nt_ai:
   case Hexagon::V6_vS32b_nt_ai:
   case Hexagon::V6_vL32Ub_ai:
-  case Hexagon::V6_vS32Ub_ai: {
+  case Hexagon::V6_vS32Ub_ai:
+  case Hexagon::V6_vgathermh_pseudo:
+  case Hexagon::V6_vgathermw_pseudo:
+  case Hexagon::V6_vgathermhw_pseudo:
+  case Hexagon::V6_vgathermhq_pseudo:
+  case Hexagon::V6_vgathermwq_pseudo:
+  case Hexagon::V6_vgathermhwq_pseudo: {
     unsigned VectorSize = TRI->getSpillSize(Hexagon::HvxVRRegClass);
     assert(isPowerOf2_32(VectorSize));
     if (Offset & (VectorSize-1))
@@ -2751,6 +2800,11 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::S4_storeirit_io:
   case Hexagon::S4_storeirif_io:
     return isShiftedUInt<6,2>(Offset);
+  // Handle these two compare instructions that are not extendable.
+  case Hexagon::A4_cmpbeqi:
+    return isUInt<8>(Offset);
+  case Hexagon::A4_cmpbgti:
+    return isInt<8>(Offset);
   }
 
   if (Extend)
@@ -2788,6 +2842,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memopw_io:
   case Hexagon::L4_add_memopw_io:
   case Hexagon::L4_sub_memopw_io:
+  case Hexagon::L4_iand_memopw_io:
+  case Hexagon::L4_ior_memopw_io:
   case Hexagon::L4_and_memopw_io:
   case Hexagon::L4_or_memopw_io:
     return (0 <= Offset && Offset <= 255);
@@ -2796,6 +2852,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memoph_io:
   case Hexagon::L4_add_memoph_io:
   case Hexagon::L4_sub_memoph_io:
+  case Hexagon::L4_iand_memoph_io:
+  case Hexagon::L4_ior_memoph_io:
   case Hexagon::L4_and_memoph_io:
   case Hexagon::L4_or_memoph_io:
     return (0 <= Offset && Offset <= 127);
@@ -2804,6 +2862,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L4_isub_memopb_io:
   case Hexagon::L4_add_memopb_io:
   case Hexagon::L4_sub_memopb_io:
+  case Hexagon::L4_iand_memopb_io:
+  case Hexagon::L4_ior_memopb_io:
   case Hexagon::L4_and_memopb_io:
   case Hexagon::L4_or_memopb_io:
     return (0 <= Offset && Offset <= 63);
@@ -2848,8 +2908,18 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::S2_pstorerdt_io:
   case Hexagon::S2_pstorerdf_io:
     return isShiftedUInt<6,3>(Offset);
+
+  case Hexagon::L2_loadbsw2_io:
+  case Hexagon::L2_loadbzw2_io:
+    return isShiftedInt<11,1>(Offset);
+
+  case Hexagon::L2_loadbsw4_io:
+  case Hexagon::L2_loadbzw4_io:
+    return isShiftedInt<11,2>(Offset);
   } // switch
 
+  dbgs() << "Failed Opcode is : " << Opcode << " (" << getName(Opcode)
+         << ")\n";
   llvm_unreachable("No offset range is defined for this opcode. "
                    "Please define it in the above switch statement!");
 }
@@ -3486,9 +3556,9 @@ int HexagonInstrInfo::getDuplexOpcode(const MachineInstr &MI,
     if (Iter != DupMap.end())
       return Iter->second;
   } else { // Conversion to Tiny core.
-    for (auto Iter = DupMap.begin(), End = DupMap.end(); Iter != End; ++Iter)
-      if (Iter->second == OpNum)
-        return Iter->first;
+    for (const auto &Iter : DupMap)
+      if (Iter.second == OpNum)
+        return Iter.first;
   }
   return -1;
 }
@@ -3516,6 +3586,10 @@ int HexagonInstrInfo::getDotCurOp(const MachineInstr &MI) const {
     return Hexagon::V6_vL32b_nt_cur_pi;
   case Hexagon::V6_vL32b_nt_ai:
     return Hexagon::V6_vL32b_nt_cur_ai;
+  case Hexagon::V6_vL32b_ppu:
+    return Hexagon::V6_vL32b_cur_ppu;
+  case Hexagon::V6_vL32b_nt_ppu:
+    return Hexagon::V6_vL32b_nt_cur_ppu;
   }
   return 0;
 }
@@ -3532,6 +3606,10 @@ int HexagonInstrInfo::getNonDotCurOp(const MachineInstr &MI) const {
     return Hexagon::V6_vL32b_nt_pi;
   case Hexagon::V6_vL32b_nt_cur_ai:
     return Hexagon::V6_vL32b_nt_ai;
+  case Hexagon::V6_vL32b_cur_ppu:
+    return Hexagon::V6_vL32b_ppu;
+  case Hexagon::V6_vL32b_nt_cur_ppu:
+    return Hexagon::V6_vL32b_nt_ppu;
   }
   return 0;
 }

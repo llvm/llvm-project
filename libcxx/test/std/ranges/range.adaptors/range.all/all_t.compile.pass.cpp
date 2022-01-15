@@ -16,26 +16,49 @@
 #include <ranges>
 
 #include "test_iterators.h"
-#include "test_range.h"
 
-struct View : test_range<cpp20_input_iterator>, std::ranges::view_base { };
-struct Range : test_range<cpp20_input_iterator> { };
-struct BorrowableRange : test_range<forward_iterator> { };
+struct View : std::ranges::view_base {
+  int *begin() const;
+  int *end() const;
+};
+
+struct Range {
+  int *begin() const;
+  int *end() const;
+};
+
+struct BorrowableRange {
+  int *begin() const;
+  int *end() const;
+};
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<BorrowableRange> = true;
+
+template <class T>
+concept HasAllT = requires {
+    typename std::views::all_t<T>;
+};
 
 // When T is a view, returns decay-copy(T)
 ASSERT_SAME_TYPE(std::views::all_t<View>, View);
 ASSERT_SAME_TYPE(std::views::all_t<View&>, View);
-ASSERT_SAME_TYPE(std::views::all_t<View const>, View);
-ASSERT_SAME_TYPE(std::views::all_t<View const&>, View);
+ASSERT_SAME_TYPE(std::views::all_t<View&&>, View);
+ASSERT_SAME_TYPE(std::views::all_t<const View>, View);
+ASSERT_SAME_TYPE(std::views::all_t<const View&>, View);
+ASSERT_SAME_TYPE(std::views::all_t<const View&&>, View);
 
 // Otherwise, when T is a reference to a range, returns ref_view<T>
 ASSERT_SAME_TYPE(std::views::all_t<Range&>, std::ranges::ref_view<Range>);
-ASSERT_SAME_TYPE(std::views::all_t<Range const&>, std::ranges::ref_view<Range const>);
+ASSERT_SAME_TYPE(std::views::all_t<const Range&>, std::ranges::ref_view<const Range>);
 ASSERT_SAME_TYPE(std::views::all_t<BorrowableRange&>, std::ranges::ref_view<BorrowableRange>);
-ASSERT_SAME_TYPE(std::views::all_t<BorrowableRange const&>, std::ranges::ref_view<BorrowableRange const>);
+ASSERT_SAME_TYPE(std::views::all_t<const BorrowableRange&>, std::ranges::ref_view<const BorrowableRange>);
 
-// Otherwise, returns subrange<iterator_t<T>, sentinel_t<R>>
-ASSERT_SAME_TYPE(std::views::all_t<BorrowableRange>, std::ranges::subrange<forward_iterator<int*>, sentinel>);
-ASSERT_SAME_TYPE(std::views::all_t<BorrowableRange const>, std::ranges::subrange<forward_iterator<int const*>, sentinel>);
+// Otherwise, returns owning_view<T>
+ASSERT_SAME_TYPE(std::views::all_t<Range>, std::ranges::owning_view<Range>);
+ASSERT_SAME_TYPE(std::views::all_t<Range&&>, std::ranges::owning_view<Range>);
+static_assert(!HasAllT<const Range>);
+static_assert(!HasAllT<const Range&&>);
+ASSERT_SAME_TYPE(std::views::all_t<BorrowableRange>, std::ranges::owning_view<BorrowableRange>);
+ASSERT_SAME_TYPE(std::views::all_t<BorrowableRange&&>, std::ranges::owning_view<BorrowableRange>);
+static_assert(!HasAllT<const BorrowableRange>);
+static_assert(!HasAllT<const BorrowableRange&&>);

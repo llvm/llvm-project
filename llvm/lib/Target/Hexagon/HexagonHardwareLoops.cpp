@@ -1127,8 +1127,8 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
   bool L1Used = false;
 
   // Process nested loops first.
-  for (MachineLoop::iterator I = L->begin(), E = L->end(); I != E; ++I) {
-    Changed |= convertToHardwareLoop(*I, RecL0used, RecL1used);
+  for (MachineLoop *I : *L) {
+    Changed |= convertToHardwareLoop(I, RecL0used, RecL1used);
     L0Used |= RecL0used;
     L1Used |= RecL1used;
   }
@@ -1587,16 +1587,6 @@ void HexagonHardwareLoops::setImmediate(MachineOperand &MO, int64_t Val) {
   MO.setReg(NewR);
 }
 
-static bool isImmValidForOpcode(unsigned CmpOpc, int64_t Imm) {
-  // These two instructions are not extendable.
-  if (CmpOpc == Hexagon::A4_cmpbeqi)
-    return isUInt<8>(Imm);
-  if (CmpOpc == Hexagon::A4_cmpbgti)
-    return isInt<8>(Imm);
-  // The rest of the comparison-with-immediate instructions are extendable.
-  return true;
-}
-
 bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
   MachineBasicBlock *Header = L->getHeader();
   MachineBasicBlock *Latch = L->getLoopLatch();
@@ -1812,9 +1802,9 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
       // Most comparisons of register against an immediate value allow
       // the immediate to be constant-extended. There are some exceptions
       // though. Make sure the new combination will work.
-      if (CmpImmOp->isImm())
-        if (!isImmValidForOpcode(PredDef->getOpcode(), CmpImm))
-          return false;
+      if (CmpImmOp->isImm() && !TII->isExtendable(*PredDef) &&
+          !TII->isValidOffset(PredDef->getOpcode(), CmpImm, TRI, false))
+        return false;
 
       // Make sure that the compare happens after the bump.  Otherwise,
       // after the fixup, the compare would use a yet-undefined register.

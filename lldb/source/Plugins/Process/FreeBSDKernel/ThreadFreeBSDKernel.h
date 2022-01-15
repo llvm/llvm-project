@@ -14,7 +14,7 @@
 class ThreadFreeBSDKernel : public lldb_private::Thread {
 public:
   ThreadFreeBSDKernel(lldb_private::Process &process, lldb::tid_t tid,
-                      lldb::addr_t pcb_addr);
+                      lldb::addr_t pcb_addr, std::string thread_name);
 
   ~ThreadFreeBSDKernel() override;
 
@@ -25,10 +25,24 @@ public:
   lldb::RegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
+  const char *GetName() override {
+    if (m_thread_name.empty())
+      return nullptr;
+    return m_thread_name.c_str();
+  }
+
+  void SetName(const char *name) override {
+    if (name && name[0])
+      m_thread_name.assign(name);
+    else
+      m_thread_name.clear();
+  }
+
 protected:
   bool CalculateStopInfo() override;
 
 private:
+  std::string m_thread_name;
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
   lldb::addr_t m_pcb_addr;
 };

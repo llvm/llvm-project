@@ -268,13 +268,12 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
         fromElements.getResult().getType().cast<RankedTensorType>();
     // The case where the type encodes the size of the dimension is handled
     // above.
-    assert(resultType.getShape()[index.getInt()] ==
-           RankedTensorType::kDynamicSize);
+    assert(ShapedType::isDynamic(resultType.getShape()[index.getInt()]));
 
     // Find the operand of the fromElements that corresponds to this index.
     auto dynExtents = fromElements.dynamicExtents().begin();
     for (auto dim : resultType.getShape().take_front(index.getInt()))
-      if (dim == RankedTensorType::kDynamicSize)
+      if (ShapedType::isDynamic(dim))
         dynExtents++;
 
     return Value{*dynExtents};
@@ -523,13 +522,13 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
     auto operandsIt = tensorFromElements.dynamicExtents().begin();
 
     for (int64_t dim : resultType.getShape()) {
-      if (dim != RankedTensorType::kDynamicSize) {
+      if (!ShapedType::isDynamic(dim)) {
         newShape.push_back(dim);
         continue;
       }
       APInt index;
       if (!matchPattern(*operandsIt, m_ConstantInt(&index))) {
-        newShape.push_back(RankedTensorType::kDynamicSize);
+        newShape.push_back(ShapedType::kDynamicSize);
         newOperands.push_back(*operandsIt++);
         continue;
       }
@@ -661,7 +660,7 @@ static LogicalResult verify(ReshapeOp op) {
         return op.emitOpError("source and destination tensor should have the "
                               "same number of elements");
     }
-    if (shapeSize == TensorType::kDynamicSize)
+    if (ShapedType::isDynamic(shapeSize))
       return op.emitOpError("cannot use shape operand with dynamic length to "
                             "reshape to statically-ranked tensor type");
     if (shapeSize != resultRankedType.getRank())
@@ -1017,7 +1016,7 @@ llvm::SmallDenseSet<unsigned> ExtractSliceOp::getDroppedDims() {
   ArrayRef<int64_t> resultShape = getType().getShape();
   SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
   unsigned shapePos = 0;
-  for (auto size : enumerate(mixedSizes)) {
+  for (const auto &size : enumerate(mixedSizes)) {
     Optional<int64_t> sizeVal = getConstantIntValue(size.value());
     // If the size is not 1, or if the current matched dimension of the result
     // is the same static shape as the size value (which is 1), then the
@@ -1039,7 +1038,7 @@ LogicalResult ExtractSliceOp::reifyResultShapes(
   SmallVector<OpFoldResult> mixedSizes = getMixedSizes();
   llvm::SmallDenseSet<unsigned> droppedDims = getDroppedDims();
   Location loc = getLoc();
-  for (auto size : enumerate(mixedSizes)) {
+  for (const auto &size : enumerate(mixedSizes)) {
     if (droppedDims.count(size.index()))
       continue;
     if (auto attr = size.value().dyn_cast<Attribute>()) {

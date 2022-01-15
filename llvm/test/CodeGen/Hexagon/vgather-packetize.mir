@@ -21,7 +21,7 @@ body: |
   bb.1:
     liveins: $r0, $r1, $r2, $m0, $w0
     $r1 = A2_addi $r1, 1
-    V6_vgathermhw_pseudo $r0, $r2, $m0, $w0, implicit-def $vtmp
+    V6_vgathermhw_pseudo killed $r0, 0, killed $r2, killed $m0, killed $w0, implicit-def $vtmp
     ENDLOOP0 %bb.1, implicit $lc0, implicit $sa0, implicit-def $lc0, implicit-def $p3, implicit-def $pc, implicit-def $usr
 
   bb.2:

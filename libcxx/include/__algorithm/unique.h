@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___ALGORITHM_UNIQUE_H
 #define _LIBCPP___ALGORITHM_UNIQUE_H
 
-#include <__config>
-#include <__algorithm/comp.h>
 #include <__algorithm/adjacent_find.h>
+#include <__algorithm/comp.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__utility/move.h>
 

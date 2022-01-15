@@ -35,6 +35,7 @@
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/DomPrinter.h"
 #include "llvm/Analysis/DominanceFrontier.h"
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -655,6 +656,8 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
                     ParamName)
                 .str(),
             inconvertibleErrorCode());
+    } else if (ParamName == "eager-checks") {
+      Result.EagerChecks = true;
     } else {
       return make_error<StringError>(
           formatv("invalid MemorySanitizer pass parameter '{0}' ", ParamName)

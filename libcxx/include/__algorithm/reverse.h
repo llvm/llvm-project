@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ALGORITHM_REVERSE_H
 #define _LIBCPP___ALGORITHM_REVERSE_H
 
-#include <__config>
 #include <__algorithm/iter_swap.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

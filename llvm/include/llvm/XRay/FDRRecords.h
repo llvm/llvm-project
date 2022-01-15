@@ -424,7 +424,7 @@ public:
   static constexpr uint16_t DefaultVersion = 5u;
 
   explicit RecordInitializer(DataExtractor &DE, uint64_t &OP, uint16_t V)
-      : RecordVisitor(), E(DE), OffsetPtr(OP), Version(V) {}
+      : E(DE), OffsetPtr(OP), Version(V) {}
 
   explicit RecordInitializer(DataExtractor &DE, uint64_t &OP)
       : RecordInitializer(DE, OP, DefaultVersion) {}

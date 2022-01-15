@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LLVMIR_TRANSFORMS_LEGALIZE_FOR_EXPORT_H
-#define MLIR_DIALECT_LLVMIR_TRANSFORMS_LEGALIZE_FOR_EXPORT_H
+#ifndef MLIR_DIALECT_LLVMIR_TRANSFORMS_LEGALIZEFOREXPORT_H
+#define MLIR_DIALECT_LLVMIR_TRANSFORMS_LEGALIZEFOREXPORT_H
 
 #include <memory>
 
@@ -31,4 +31,4 @@ std::unique_ptr<Pass> createLegalizeForExportPass();
 } // namespace LLVM
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_LEGALIZE_FOR_EXPORT_H
+#endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_LEGALIZEFOREXPORT_H

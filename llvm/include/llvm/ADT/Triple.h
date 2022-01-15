@@ -107,9 +107,11 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_3a,
     ARMSubArch_v9_2a,
     ARMSubArch_v9_1a,
     ARMSubArch_v9,
+    ARMSubArch_v8_8a,
     ARMSubArch_v8_7a,
     ARMSubArch_v8_6a,
     ARMSubArch_v8_5a,
@@ -270,9 +272,7 @@ public:
 
   /// Default constructor is the same as an empty string and leaves all
   /// triple fields unknown.
-  Triple()
-      : Data(), Arch(), SubArch(), Vendor(), OS(), Environment(),
-        ObjectFormat() {}
+  Triple() : Arch(), SubArch(), Vendor(), OS(), Environment(), ObjectFormat() {}
 
   explicit Triple(const Twine &Str);
   Triple(const Twine &ArchStr, const Twine &VendorStr, const Twine &OSStr);

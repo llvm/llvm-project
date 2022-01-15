@@ -137,7 +137,7 @@ DumpInstructionSymbolContext(Stream &s,
              insn.sc.module_sp->GetFileSpec().GetFilename().AsCString());
   else
     insn.sc.DumpStopContext(&s, insn.exe_ctx.GetTargetPtr(), insn.address,
-                            /*show_fullpath=*/false,
+                            /*show_fullpaths=*/false,
                             /*show_module=*/true, /*show_inlined_frames=*/false,
                             /*show_function_arguments=*/true,
                             /*show_function_name=*/true);
@@ -148,8 +148,8 @@ static void DumpInstructionDisassembly(Stream &s, InstructionSymbolInfo &insn) {
   if (!insn.instruction)
     return;
   s.Printf("    ");
-  insn.instruction->Dump(&s, /*show_address=*/false, /*show_bytes=*/false,
-                         /*max_opcode_byte_size=*/0, &insn.exe_ctx, &insn.sc,
+  insn.instruction->Dump(&s, /*max_opcode_byte_size=*/0, /*show_address=*/false,
+                         /*show_bytes=*/false, &insn.exe_ctx, &insn.sc,
                          /*prev_sym_ctx=*/nullptr,
                          /*disassembly_addr_format=*/nullptr,
                          /*max_address_text_size=*/0);

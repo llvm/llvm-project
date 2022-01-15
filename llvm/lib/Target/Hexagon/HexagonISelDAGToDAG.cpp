@@ -1176,6 +1176,9 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
       EVT UVT = U->getValueType(0);
       if (!UVT.isSimple() || !UVT.isInteger() || UVT.getSimpleVT() == MVT::i1)
         continue;
+      // Do not generate select for all i1 vector type.
+      if (UVT.isVector() && UVT.getVectorElementType() == MVT::i1)
+        continue;
       if (isMemOPCandidate(N, U))
         continue;
 

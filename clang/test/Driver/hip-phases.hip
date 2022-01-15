@@ -311,22 +311,36 @@
 //
 // RUN: %clang -target x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
 // RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o \
-// RUN: -fgpu-rdc 2>&1 | FileCheck -check-prefixes=L2,RL2 %s
+// RUN: -fgpu-rdc 2>&1 | FileCheck -check-prefixes=L2,RL2,RL2-EM %s
 //
-// L2-DAG: [[P0:[0-9]+]]: input, "{{.*}}obj1.o", object, (host-[[T:hip]])
-// RL2-DAG: [[P1:[0-9]+]]: clang-offload-unbundler, {[[P0]]}, object, (host-[[T]])
-// L2-DAG: [[P2:[0-9]+]]: input, "{{.*}}obj2.o", object, (host-[[T]])
-// RL2-DAG: [[P3:[0-9]+]]: clang-offload-unbundler, {[[P2]]}, object, (host-[[T]])
+// RUN: %clang -target x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
+// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o \
+// RUN: -fgpu-rdc --cuda-device-only 2>&1 | FileCheck -check-prefixes=L2,RL2,RL2-DEV %s
 
-// RL2-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]]}, image, (device-[[T]], [[ARCH1:gfx803]])
+// RUN: %clang -target x86_64-unknown-linux-gnu -ccc-print-phases --hip-link \
+// RUN: --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %T/obj1.o %T/obj2.o \
+// RUN: -fgpu-rdc --cuda-device-only --no-gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=L2,RL2,RL2-NB %s
+
+// L2-DAG: [[P0:[0-9]+]]: input, "{{.*}}obj1.o", object
+// RL2-DAG: [[P1:[0-9]+]]: clang-offload-unbundler, {[[P0]]}, object
+// L2-DAG: [[P2:[0-9]+]]: input, "{{.*}}obj2.o", object
+// RL2-DAG: [[P3:[0-9]+]]: clang-offload-unbundler, {[[P2]]}, object
+
+// RL2-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]]}, image, (device-[[T:hip]], [[ARCH1:gfx803]])
 // RL2-DAG: [[P5:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH1]])" {[[P4]]}, image
 // RL2-DAG: [[P6:[0-9]+]]: linker, {[[P1]], [[P3]]}, image, (device-[[T]], [[ARCH2:gfx900]])
 // RL2-DAG: [[P7:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P6]]}, image
-// RL2-DAG: [[P8:[0-9]+]]: linker, {[[P5]], [[P7]]}, object, (device-[[T]])
-// RL2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P8]]}, object
+// RL2-DEV-DAG: [[P8:[0-9]+]]: linker, {[[P5]], [[P7]]}, hip-fatbin, (device-[[T]])
+// RL2-DEV-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P8]]}, hip-fatbin
+// RL2-EM-DAG: [[P8:[0-9]+]]: linker, {[[P5]], [[P7]]}, object, (device-[[T]])
+// RL2-EM-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa)" {[[P8]]}, object
+// RL2-NB-NOT: linker
+// RL2-NB-NOT: offload
 
-// NL2-DAG: [[P4:[0-9]+]]: linker, {[[P0]], [[P2]]}, image, (host-[[T]])
-// RL2-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]], [[P9]]}, image, (host-[[T]])
+// NL2-DAG: [[P4:[0-9]+]]: linker, {[[P0]], [[P2]]}, image, (host-[[T:hip]])
+// RL2-EM-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]], [[P9]]}, image, (host-[[T]])
+// RL2-DEV-NOT: linker
 
 // Test one gpu architectures up to the preprocessor expansion output phase in device-only
 // compilation mode. no bundle.

@@ -108,7 +108,7 @@ struct to_chars_test_base
 
         // Poison the buffer for testing whether a successful std::to_chars
         // doesn't modify data beyond r.ptr.
-        std::iota(buf, buf + sizeof(buf), 1);
+        std::iota(buf, buf + sizeof(buf), char(1));
         r = to_chars(buf, buf + sizeof(buf), v, args...);
         assert(r.ec == std::errc{});
         for (size_t i = r.ptr - buf; i < sizeof(buf); ++i)

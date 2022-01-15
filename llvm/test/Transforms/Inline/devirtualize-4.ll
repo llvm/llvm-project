@@ -103,7 +103,7 @@ declare dso_local void @__cxa_pure_virtual() unnamed_addr
 
 define linkonce_odr dso_local void @_Z13DoNotOptimizeIP4ImplEvRKT_(%class.Impl** dereferenceable(8) %var) local_unnamed_addr {
 entry:
-  call void asm sideeffect "", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(%class.Impl** nonnull %var, %class.Impl** nonnull %var)
+  call void asm sideeffect "", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(%class.Impl** elementtype(%class.Impl*) nonnull %var, %class.Impl** elementtype(%class.Impl*) nonnull %var)
   ret void
 }
 

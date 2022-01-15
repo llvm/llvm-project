@@ -376,9 +376,8 @@ bool lldb_private::LLDBSWIGPythonCallThreadPlan(
 
   PythonObject result;
   if (event != nullptr) {
-    lldb::SBEvent sb_event(event);
-    PythonObject event_arg(PyRefType::Owned, SBTypeToSWIGWrapper(sb_event));
-    result = pfunc(event_arg);
+    ScopedPythonObject<SBEvent> event_arg = ToSWIGWrapper(event);
+    result = pfunc(event_arg.obj());
   } else
     result = pfunc();
 
@@ -795,7 +794,6 @@ bool lldb_private::LLDBSwigPythonCallCommand(
     lldb::DebuggerSP debugger, const char *args,
     lldb_private::CommandReturnObject &cmd_retobj,
     lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
-  lldb::SBCommandReturnObject cmd_retobj_sb(cmd_retobj);
 
   PyErr_Cleaner py_err_cleaner(true);
   auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
@@ -812,14 +810,13 @@ bool lldb_private::LLDBSwigPythonCallCommand(
     return false;
   }
   PythonObject debugger_arg = ToSWIGWrapper(std::move(debugger));
-  PythonObject cmd_retobj_arg(PyRefType::Owned,
-                              SBTypeToSWIGWrapper(cmd_retobj_sb));
+  auto cmd_retobj_arg = ToSWIGWrapper(cmd_retobj);
 
   if (argc.get().max_positional_args < 5u)
-    pfunc(debugger_arg, PythonString(args), cmd_retobj_arg, dict);
+    pfunc(debugger_arg, PythonString(args), cmd_retobj_arg.obj(), dict);
   else
     pfunc(debugger_arg, PythonString(args),
-          ToSWIGWrapper(std::move(exe_ctx_ref_sp)), cmd_retobj_arg, dict);
+          ToSWIGWrapper(std::move(exe_ctx_ref_sp)), cmd_retobj_arg.obj(), dict);
 
   return true;
 }
@@ -828,7 +825,6 @@ bool lldb_private::LLDBSwigPythonCallCommandObject(
     PyObject *implementor, lldb::DebuggerSP debugger, const char *args,
     lldb_private::CommandReturnObject &cmd_retobj,
     lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
-  lldb::SBCommandReturnObject cmd_retobj_sb(cmd_retobj);
 
   PyErr_Cleaner py_err_cleaner(true);
 
@@ -838,11 +834,10 @@ bool lldb_private::LLDBSwigPythonCallCommandObject(
   if (!pfunc.IsAllocated())
     return false;
 
-  PythonObject cmd_retobj_arg(PyRefType::Owned,
-                              SBTypeToSWIGWrapper(cmd_retobj_sb));
+  auto cmd_retobj_arg = ToSWIGWrapper(cmd_retobj);
 
   pfunc(ToSWIGWrapper(std::move(debugger)), PythonString(args),
-        ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg);
+        ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
 
   return true;
 }

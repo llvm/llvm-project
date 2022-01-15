@@ -20,8 +20,7 @@ using namespace llvm;
 
 bool CallGraphUpdater::finalize() {
   if (!DeadFunctionsInComdats.empty()) {
-    filterDeadComdatFunctions(*DeadFunctionsInComdats.front()->getParent(),
-                              DeadFunctionsInComdats);
+    filterDeadComdatFunctions(DeadFunctionsInComdats);
     DeadFunctions.append(DeadFunctionsInComdats.begin(),
                          DeadFunctionsInComdats.end());
   }

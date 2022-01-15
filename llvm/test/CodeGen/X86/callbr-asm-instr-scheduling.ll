@@ -39,7 +39,7 @@ define i64 @early_ioremap_pmd(i64 %addr) {
 ; CHECK-NEXT:    .zero (-(((.Ltmp5-.Ltmp6)-(.Ltmp4-.Ltmp2))>0))*((.Ltmp5-.Ltmp6)-(.Ltmp4-.Ltmp2)),144
 ; CHECK-NEXT:  .Ltmp7:
 entry:
-  %0 = tail call i64 asm sideeffect "mov %cr3,$0\0A\09", "=r,=*m,~{dirflag},~{fpsr},~{flags}"(i64* nonnull @__force_order)
+  %0 = tail call i64 asm sideeffect "mov %cr3,$0\0A\09", "=r,=*m,~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) nonnull @__force_order)
   %and.i = and i64 %0, 9223372036854771712
   %1 = load i64, i64* @page_offset_base, align 8
   %add = add i64 %and.i, %1
@@ -49,7 +49,7 @@ entry:
   %shr = lshr i64 %addr, %sh_prom
   %and = and i64 %shr, 511
   %arrayidx = getelementptr %struct.pgd_t, %struct.pgd_t* %2, i64 %and
-  callbr void asm sideeffect "1: jmp 6f\0A2:\0A.skip -(((5f-4f) - (2b-1b)) > 0) * ((5f-4f) - (2b-1b)),0x90\0A3:\0A.section .altinstructions,\22a\22\0A .long 1b - .\0A .long 4f - .\0A .word ${1:P}\0A .byte 3b - 1b\0A .byte 5f - 4f\0A .byte 3b - 2b\0A.previous\0A.section .altinstr_replacement,\22ax\22\0A4: jmp ${5:l}\0A5:\0A.previous\0A.section .altinstructions,\22a\22\0A .long 1b - .\0A .long 0\0A .word ${0:P}\0A .byte 3b - 1b\0A .byte 0\0A .byte 0\0A.previous\0A.section .altinstr_aux,\22ax\22\0A6:\0A testb $2,$3\0A jnz ${4:l}\0A jmp ${5:l}\0A.previous\0A", "i,i,i,*m,X,X,~{dirflag},~{fpsr},~{flags}"(i16 528, i32 117, i32 1, i8* getelementptr inbounds (%struct.cpuinfo_x86, %struct.cpuinfo_x86* @boot_cpu_data, i64 0, i32 12, i32 1, i64 58), i8* blockaddress(@early_ioremap_pmd, %if.end.i), i8* blockaddress(@early_ioremap_pmd, %if.then.i))
+  callbr void asm sideeffect "1: jmp 6f\0A2:\0A.skip -(((5f-4f) - (2b-1b)) > 0) * ((5f-4f) - (2b-1b)),0x90\0A3:\0A.section .altinstructions,\22a\22\0A .long 1b - .\0A .long 4f - .\0A .word ${1:P}\0A .byte 3b - 1b\0A .byte 5f - 4f\0A .byte 3b - 2b\0A.previous\0A.section .altinstr_replacement,\22ax\22\0A4: jmp ${5:l}\0A5:\0A.previous\0A.section .altinstructions,\22a\22\0A .long 1b - .\0A .long 0\0A .word ${0:P}\0A .byte 3b - 1b\0A .byte 0\0A .byte 0\0A.previous\0A.section .altinstr_aux,\22ax\22\0A6:\0A testb $2,$3\0A jnz ${4:l}\0A jmp ${5:l}\0A.previous\0A", "i,i,i,*m,i,i,~{dirflag},~{fpsr},~{flags}"(i16 528, i32 117, i32 1, i8* elementtype(i8) getelementptr inbounds (%struct.cpuinfo_x86, %struct.cpuinfo_x86* @boot_cpu_data, i64 0, i32 12, i32 1, i64 58), i8* blockaddress(@early_ioremap_pmd, %if.end.i), i8* blockaddress(@early_ioremap_pmd, %if.then.i))
           to label %_static_cpu_has.exit.thread.i [label %if.end.i, label %if.then.i]
 
 _static_cpu_has.exit.thread.i:                    ; preds = %entry

@@ -138,4 +138,4 @@ AST_MATCHER_FUNCTION_P(ast_matchers::internal::Matcher<Stmt>,
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONCOMPARISONCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONREWRITER_H

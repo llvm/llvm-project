@@ -61,12 +61,15 @@ auto SimpleIlist = []() {
 }();
 
 int main() {
-  // Reference symbols that might otherwise be stripped.
-  ArrayRef[0];
-  MutableArrayRef[0];
-  (void)!ExpectedValue;
-  (void)!ExpectedError;
-  *OptionalValue;
-  *OptionalNone;
-  return 0;
+  std::uintptr_t result = 0;
+  auto dont_strip = [&](const auto &val) {
+    result += reinterpret_cast<std::uintptr_t>(&val);
+  };
+  dont_strip(ArrayRef);
+  dont_strip(MutableArrayRef);
+  dont_strip(ExpectedValue);
+  dont_strip(ExpectedError);
+  dont_strip(OptionalValue);
+  dont_strip(OptionalNone);
+  return result; // Non-zero return value is OK.
 }

@@ -5,8 +5,8 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-define void @Z4() nounwind {
-; CHECK-LABEL: define void @Z4(
+define void @test(i8* %ptr.i8, float** %ptr.float) {
+; CHECK-LABEL: define void @test(
 bb:
   br label %bb3
 
@@ -24,7 +24,7 @@ bb3:                                              ; preds = %bb2, %bb
 ; CHECK: bb10:
 ; CHECK-NEXT: %t7 = icmp eq i64 %t4, 0
 ; Host %t2 computation outside the loop.
-; CHECK-NEXT: [[SCEVGEP:%[^ ]+]] = getelementptr i8, i8* undef, i64 %t4
+; CHECK-NEXT: [[SCEVGEP:%[^ ]+]] = getelementptr i8, i8* %ptr.i8, i64 %t4
 ; CHECK-NEXT: br label %bb14
 bb10:                                             ; preds = %bb9
   %t7 = icmp eq i64 %t4, 0                    ; <i1> [#uses=1]
@@ -33,7 +33,7 @@ bb10:                                             ; preds = %bb9
 
 ; CHECK: bb14:
 ; CHECK-NEXT: store i8 undef, i8* [[SCEVGEP]]
-; CHECK-NEXT: %t6 = load float*, float** undef
+; CHECK-NEXT: %t6 = load float*, float** %ptr.float
 ; Fold %t3's add within the address.
 ; CHECK-NEXT: [[SCEVGEP1:%[^ ]+]] = getelementptr float, float* %t6, i64 4
 ; CHECK-NEXT: [[SCEVGEP2:%[^ ]+]] = bitcast float* [[SCEVGEP1]] to i8*
@@ -42,9 +42,9 @@ bb10:                                             ; preds = %bb9
 ; CHECK-NEXT: store i8 undef, i8* [[ADDRESS]]
 ; CHECK-NEXT: br label %bb14
 bb14:                                             ; preds = %bb14, %bb10
-  %t2 = getelementptr inbounds i8, i8* undef, i64 %t4 ; <i8*> [#uses=1]
+  %t2 = getelementptr inbounds i8, i8* %ptr.i8, i64 %t4 ; <i8*> [#uses=1]
   store i8 undef, i8* %t2
-  %t6 = load float*, float** undef
+  %t6 = load float*, float** %ptr.float
   %t8 = bitcast float* %t6 to i8*              ; <i8*> [#uses=1]
   %t9 = getelementptr inbounds i8, i8* %t8, i64 %t3 ; <i8*> [#uses=1]
   store i8 undef, i8* %t9

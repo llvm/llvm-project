@@ -604,9 +604,9 @@ MipsConstantIslands::CPEntry
   std::vector<CPEntry> &CPEs = CPEntries[CPI];
   // Number of entries per constpool index should be small, just do a
   // linear search.
-  for (unsigned i = 0, e = CPEs.size(); i != e; ++i) {
-    if (CPEs[i].CPEMI == CPEMI)
-      return &CPEs[i];
+  for (CPEntry &CPE : CPEs) {
+    if (CPE.CPEMI == CPEMI)
+      return &CPE;
   }
   return nullptr;
 }
@@ -1052,27 +1052,27 @@ int MipsConstantIslands::findInRangeCPEntry(CPUser& U, unsigned UserOffset)
   // No.  Look for previously created clones of the CPE that are in range.
   unsigned CPI = CPEMI->getOperand(1).getIndex();
   std::vector<CPEntry> &CPEs = CPEntries[CPI];
-  for (unsigned i = 0, e = CPEs.size(); i != e; ++i) {
+  for (CPEntry &CPE : CPEs) {
     // We already tried this one
-    if (CPEs[i].CPEMI == CPEMI)
+    if (CPE.CPEMI == CPEMI)
       continue;
     // Removing CPEs can leave empty entries, skip
-    if (CPEs[i].CPEMI == nullptr)
+    if (CPE.CPEMI == nullptr)
       continue;
-    if (isCPEntryInRange(UserMI, UserOffset, CPEs[i].CPEMI, U.getMaxDisp(),
-                     U.NegOk)) {
-      LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#"
-                        << CPEs[i].CPI << "\n");
+    if (isCPEntryInRange(UserMI, UserOffset, CPE.CPEMI, U.getMaxDisp(),
+                         U.NegOk)) {
+      LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#" << CPE.CPI
+                        << "\n");
       // Point the CPUser node to the replacement
-      U.CPEMI = CPEs[i].CPEMI;
+      U.CPEMI = CPE.CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
       for (MachineOperand &MO : UserMI->operands())
         if (MO.isCPI()) {
-          MO.setIndex(CPEs[i].CPI);
+          MO.setIndex(CPE.CPI);
           break;
         }
       // Adjust the refcount of the clone...
-      CPEs[i].RefCount++;
+      CPE.RefCount++;
       // ...and the original.  If we didn't remove the old entry, none of the
       // addresses changed, so we don't need another pass.
       return decrementCPEReferenceCount(CPI, CPEMI) ? 2 : 1;
@@ -1108,27 +1108,27 @@ int MipsConstantIslands::findLongFormInRangeCPEntry
   // No.  Look for previously created clones of the CPE that are in range.
   unsigned CPI = CPEMI->getOperand(1).getIndex();
   std::vector<CPEntry> &CPEs = CPEntries[CPI];
-  for (unsigned i = 0, e = CPEs.size(); i != e; ++i) {
+  for (CPEntry &CPE : CPEs) {
     // We already tried this one
-    if (CPEs[i].CPEMI == CPEMI)
+    if (CPE.CPEMI == CPEMI)
       continue;
     // Removing CPEs can leave empty entries, skip
-    if (CPEs[i].CPEMI == nullptr)
+    if (CPE.CPEMI == nullptr)
       continue;
-    if (isCPEntryInRange(UserMI, UserOffset, CPEs[i].CPEMI,
-                         U.getLongFormMaxDisp(), U.NegOk)) {
-      LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#"
-                        << CPEs[i].CPI << "\n");
+    if (isCPEntryInRange(UserMI, UserOffset, CPE.CPEMI, U.getLongFormMaxDisp(),
+                         U.NegOk)) {
+      LLVM_DEBUG(dbgs() << "Replacing CPE#" << CPI << " with CPE#" << CPE.CPI
+                        << "\n");
       // Point the CPUser node to the replacement
-      U.CPEMI = CPEs[i].CPEMI;
+      U.CPEMI = CPE.CPEMI;
       // Change the CPI in the instruction operand to refer to the clone.
       for (MachineOperand &MO : UserMI->operands())
         if (MO.isCPI()) {
-          MO.setIndex(CPEs[i].CPI);
+          MO.setIndex(CPE.CPI);
           break;
         }
       // Adjust the refcount of the clone...
-      CPEs[i].RefCount++;
+      CPE.RefCount++;
       // ...and the original.  If we didn't remove the old entry, none of the
       // addresses changed, so we don't need another pass.
       return decrementCPEReferenceCount(CPI, CPEMI) ? 2 : 1;
@@ -1435,15 +1435,14 @@ void MipsConstantIslands::removeDeadCPEMI(MachineInstr *CPEMI) {
 /// are zero.
 bool MipsConstantIslands::removeUnusedCPEntries() {
   unsigned MadeChange = false;
-  for (unsigned i = 0, e = CPEntries.size(); i != e; ++i) {
-      std::vector<CPEntry> &CPEs = CPEntries[i];
-      for (unsigned j = 0, ee = CPEs.size(); j != ee; ++j) {
-        if (CPEs[j].RefCount == 0 && CPEs[j].CPEMI) {
-          removeDeadCPEMI(CPEs[j].CPEMI);
-          CPEs[j].CPEMI = nullptr;
-          MadeChange = true;
-        }
+  for (std::vector<CPEntry> &CPEs : CPEntries) {
+    for (CPEntry &CPE : CPEs) {
+      if (CPE.RefCount == 0 && CPE.CPEMI) {
+        removeDeadCPEMI(CPE.CPEMI);
+        CPE.CPEMI = nullptr;
+        MadeChange = true;
       }
+    }
   }
   return MadeChange;
 }

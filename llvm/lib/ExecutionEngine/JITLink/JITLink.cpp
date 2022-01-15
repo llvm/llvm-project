@@ -90,8 +90,8 @@ const char *getScopeName(Scope S) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Block &B) {
-  return OS << formatv("{0:x16}", B.getAddress()) << " -- "
-            << formatv("{0:x8}", B.getAddress() + B.getSize()) << ": "
+  return OS << B.getAddress() << " -- " << (B.getAddress() + B.getSize())
+            << ": "
             << "size = " << formatv("{0:x8}", B.getSize()) << ", "
             << (B.isZeroFill() ? "zero-fill" : "content")
             << ", align = " << B.getAlignment()
@@ -100,9 +100,8 @@ raw_ostream &operator<<(raw_ostream &OS, const Block &B) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
-  OS << formatv("{0:x16}", Sym.getAddress()) << " ("
-     << (Sym.isDefined() ? "block" : "addressable") << " + "
-     << formatv("{0:x8}", Sym.getOffset())
+  OS << Sym.getAddress() << " (" << (Sym.isDefined() ? "block" : "addressable")
+     << " + " << formatv("{0:x8}", Sym.getOffset())
      << "): size: " << formatv("{0:x8}", Sym.getSize())
      << ", linkage: " << formatv("{0:6}", getLinkageName(Sym.getLinkage()))
      << ", scope: " << formatv("{0:8}", getScopeName(Sym.getScope())) << ", "
@@ -113,9 +112,9 @@ raw_ostream &operator<<(raw_ostream &OS, const Symbol &Sym) {
 
 void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
                StringRef EdgeKindName) {
-  OS << "edge@" << formatv("{0:x16}", B.getAddress() + E.getOffset()) << ": "
-     << formatv("{0:x16}", B.getAddress()) << " + "
-     << formatv("{0:x}", E.getOffset()) << " -- " << EdgeKindName << " -> ";
+  OS << "edge@" << B.getAddress() + E.getOffset() << ": " << B.getAddress()
+     << " + " << formatv("{0:x}", E.getOffset()) << " -- " << EdgeKindName
+     << " -> ";
 
   auto &TargetSym = E.getTarget();
   if (TargetSym.hasName())
@@ -123,17 +122,16 @@ void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
   else {
     auto &TargetBlock = TargetSym.getBlock();
     auto &TargetSec = TargetBlock.getSection();
-    JITTargetAddress SecAddress = ~JITTargetAddress(0);
+    orc::ExecutorAddr SecAddress(~uint64_t(0));
     for (auto *B : TargetSec.blocks())
       if (B->getAddress() < SecAddress)
         SecAddress = B->getAddress();
 
-    JITTargetAddress SecDelta = TargetSym.getAddress() - SecAddress;
-    OS << formatv("{0:x16}", TargetSym.getAddress()) << " (section "
-       << TargetSec.getName();
+    orc::ExecutorAddrDiff SecDelta = TargetSym.getAddress() - SecAddress;
+    OS << TargetSym.getAddress() << " (section " << TargetSec.getName();
     if (SecDelta)
       OS << " + " << formatv("{0:x}", SecDelta);
-    OS << " / block " << formatv("{0:x16}", TargetBlock.getAddress());
+    OS << " / block " << TargetBlock.getAddress();
     if (TargetSym.getOffset())
       OS << " + " << formatv("{0:x}", TargetSym.getOffset());
     OS << ")";
@@ -265,7 +263,7 @@ void LinkGraph::dump(raw_ostream &OS) {
     });
 
     for (auto *B : SortedBlocks) {
-      OS << "  block " << formatv("{0:x16}", B->getAddress())
+      OS << "  block " << B->getAddress()
          << " size = " << formatv("{0:x8}", B->getSize())
          << ", align = " << B->getAlignment()
          << ", alignment-offset = " << B->getAlignmentOffset();
@@ -290,9 +288,8 @@ void LinkGraph::dump(raw_ostream &OS) {
           return LHS.getOffset() < RHS.getOffset();
         });
         for (auto &E : SortedEdges) {
-          OS << "      " << formatv("{0:x16}", B->getFixupAddress(E))
-             << " (block + " << formatv("{0:x8}", E.getOffset())
-             << "), addend = ";
+          OS << "      " << B->getFixupAddress(E) << " (block + "
+             << formatv("{0:x8}", E.getOffset()) << "), addend = ";
           if (E.getAddend() >= 0)
             OS << formatv("+{0:x8}", E.getAddend());
           else
@@ -315,16 +312,14 @@ void LinkGraph::dump(raw_ostream &OS) {
   OS << "Absolute symbols:\n";
   if (!llvm::empty(absolute_symbols())) {
     for (auto *Sym : absolute_symbols())
-      OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
-         << "\n";
+      OS << "  " << Sym->getAddress() << ": " << *Sym << "\n";
   } else
     OS << "  none\n";
 
   OS << "\nExternal symbols:\n";
   if (!llvm::empty(external_symbols())) {
     for (auto *Sym : external_symbols())
-      OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
-         << "\n";
+      OS << "  " << Sym->getAddress() << ": " << *Sym << "\n";
   } else
     OS << "  none\n";
 }
@@ -370,10 +365,13 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     Section &Sec = B.getSection();
     ErrStream << "In graph " << G.getName() << ", section " << Sec.getName()
               << ": relocation target ";
-    if (E.getTarget().hasName())
-      ErrStream << "\"" << E.getTarget().getName() << "\" ";
-    ErrStream << "at address " << formatv("{0:x}", E.getTarget().getAddress());
-    ErrStream << " is out of range of " << G.getEdgeKindName(E.getKind())
+    if (E.getTarget().hasName()) {
+      ErrStream << "\"" << E.getTarget().getName() << "\"";
+    } else
+      ErrStream << E.getTarget().getBlock().getSection().getName() << " + "
+                << formatv("{0:x}", E.getOffset());
+    ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
+              << " is out of range of " << G.getEdgeKindName(E.getKind())
               << " fixup at " << formatv("{0:x}", B.getFixupAddress(E)) << " (";
 
     Symbol *BestSymbolForBlock = nullptr;

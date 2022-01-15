@@ -856,7 +856,6 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
       // LatestPreamble is only populated by ASTWorker thread.
       return LatestPreamble || !PreambleRequests.empty() || Done;
     });
-    return;
   };
   startTask(TaskName, std::move(Task), UpdateType{WantDiags, ContentChanged},
             TUScheduler::NoInvalidation);

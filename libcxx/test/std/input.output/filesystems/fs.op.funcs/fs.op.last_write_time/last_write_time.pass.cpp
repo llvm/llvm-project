@@ -27,6 +27,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
+#include <ratio>
 #include <type_traits>
 
 #include "test_macros.h"

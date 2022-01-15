@@ -158,7 +158,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         }
       }
       if (takeBoundsFromShape) {
-        if (auto shape{GetShape(context, *array)}) {
+        if (auto shape{GetContextFreeShape(context, *array)}) {
           if (dim) {
             if (auto &dimSize{shape->at(*dim)}) {
               return Fold(context,
@@ -413,7 +413,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
-  if (name == "abs") {
+  if (name == "abs") { // incl. babs, iiabs, jiaabs, & kiabs
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>([&context](const Scalar<T> &i) -> Scalar<T> {
           typename Scalar<T>::ValueWithOverflow j{i.ABS()};
@@ -851,7 +851,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "shape") {
-    if (auto shape{GetShape(context, args[0])}) {
+    if (auto shape{GetContextFreeShape(context, args[0])}) {
       if (auto shapeExpr{AsExtentArrayExpr(*shape)}) {
         return Fold(context, ConvertToType<T>(std::move(*shapeExpr)));
       }
@@ -894,7 +894,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               return result.value;
             }));
   } else if (name == "size") {
-    if (auto shape{GetShape(context, args[0])}) {
+    if (auto shape{GetContextFreeShape(context, args[0])}) {
       if (auto &dimArg{args[1]}) { // DIM= is present, get one extent
         if (auto dim{GetInt64Arg(args[1])}) {
           int rank{GetRank(*shape)};

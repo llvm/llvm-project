@@ -68,18 +68,18 @@ TYPES: 0x00000042:   DW_TAG_structure_type
 TYPES:                 DW_AT_name {{.*}} "bar"
 
 CHECK-LABEL: .debug_cu_index contents:
-CHECK: Index Signature INFO                      ABBREV                             LINE                     STR_OFFSETS
-TYPES:     1 [[DWOA]]  {{\[}}[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
-TYPES:     3 [[DWOB]]  {{\[}}[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x00000099)      [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
-NOTYP:     3 [[DWOA]]  {{\[}}[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000010)
-NOTYP:     4 [[DWOB]]  {{\[}}[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x00000075)      [0x00000011, 0x00000022) [0x00000010, 0x00000024)
+CHECK: Index Signature INFO                 ABBREV                             LINE                     STR_OFFSETS
+TYPES:     1 [[DWOA]]  [[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
+TYPES:     3 [[DWOB]]  [[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x00000099)      [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
+NOTYP:     3 [[DWOA]]  [[[AOFF]], [[BOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x00000011) [0x00000000, 0x00000010)
+NOTYP:     4 [[DWOB]]  [[[BOFF]], [[XOFF]]) [0x0000[[BAOFF]], 0x00000075)      [0x00000011, 0x00000022) [0x00000010, 0x00000024)
 
 Ensure we do not create a debug_tu_index, even an empty or malformed one.
 NOTYPOBJ-NOT: .debug_tu_index
 
-TYPES: Index Signature  TYPES                           ABBREV                             LINE                     STR_OFFSETS
-TYPES:     1 [[FOOSIG]] {{\[}}[[FOOUOFF]], [[BARUOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
-TYPES:     4 [[BARSIG]] {{\[}}[[BARUOFF]], [[XUOFF]])   [0x0000[[BAOFF]], 0x00000099)      [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
+TYPES: Index Signature  TYPES                      ABBREV                             LINE                     STR_OFFSETS
+TYPES:     1 [[FOOSIG]] [[[FOOUOFF]], [[BARUOFF]]) [0x0000[[AAOFF]], 0x0000[[BAOFF]]) [0x00000000, 0x0000001a) [0x00000000, 0x00000010)
+TYPES:     4 [[BARSIG]] [[[BARUOFF]], [[XUOFF]])   [0x0000[[BAOFF]], 0x00000099)      [0x0000001a, 0x00000034) [0x00000010, 0x00000024)
 
 CHECK-LABEL: .debug_str.dwo contents:
 CHECK: "clang version

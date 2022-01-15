@@ -51,20 +51,18 @@ define void @doit1(i32 %n, i32 %step) local_unnamed_addr {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP7]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt i8 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP8]], i1 [[TMP9]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt i8 [[TMP7]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 false, [[TMP15]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = sext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[IDENT_CHECK]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP15]], [[IDENT_CHECK]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
@@ -178,20 +176,17 @@ define void @doit2(i32 %n, i32 %step) local_unnamed_addr  {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP4]], i8 [[TMP5]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i8 [[TMP7]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult i8 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP8]], i1 [[TMP9]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i8 [[TMP7]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP3]], i1 [[TMP9]], i1 false
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = and i1 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP10]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 false, [[TMP15]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = sext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i32 [[STEP]], [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP16]], [[IDENT_CHECK]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i1 [[TMP15]], [[IDENT_CHECK]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
@@ -379,18 +374,16 @@ define void @doit4(i32 %n, i8 signext %cstep) local_unnamed_addr {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[TMP3]], i8 [[TMP4]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = add i8 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i8 0, [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i8 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i8 [[TMP5]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP2]], i1 [[TMP7]], i1 [[TMP8]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[MUL_RESULT]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt i8 [[TMP6]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP2]], i1 [[TMP8]], i1 [[TMP7]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP0]], 255
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[CSTEP]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or i1 false, [[TMP14]]
-; CHECK-NEXT:    br i1 [[TMP15]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP12]]
+; CHECK-NEXT:    br i1 [[TMP14]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]

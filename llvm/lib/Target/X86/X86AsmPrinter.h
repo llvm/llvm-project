@@ -23,7 +23,6 @@ class MCCodeEmitter;
 class MCStreamer;
 class X86Subtarget;
 class TargetMachine;
-struct ASanAccessInfo;
 
 class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   const X86Subtarget *Subtarget = nullptr;

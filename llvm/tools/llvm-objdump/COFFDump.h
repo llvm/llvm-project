@@ -18,7 +18,6 @@ class Error;
 namespace object {
 class COFFObjectFile;
 class COFFImportFile;
-class ObjectFile;
 class RelocationRef;
 } // namespace object
 

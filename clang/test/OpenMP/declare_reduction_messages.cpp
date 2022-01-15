@@ -169,7 +169,6 @@ struct S
   #pragma omp declare reduction (xxx : U, S : bar(omp_in)) // expected-error {{non-const lvalue reference to type 'S<1>' cannot bind to a value of unrelated type 'U'}}
   static void bar(S &x); // expected-note {{passing argument to parameter 'x' here}}
 };
-// expected-warning@+2 {{extra tokens at the end of '#pragma omp declare reduction' are ignored}}
 // expected-note@+1 {{in instantiation of template class 'S<1>' requested here}}
 #pragma omp declare reduction (bar : S<1> : omp_out.foo(omp_in))
 

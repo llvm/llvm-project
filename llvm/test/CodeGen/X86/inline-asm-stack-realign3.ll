@@ -9,7 +9,7 @@ entry:
   br i1 %cond, label %doit, label %skip
 
 doit:
-  call void asm sideeffect "xor %ecx, %ecx\0A\09mov %ecx, $0", "=*m,~{ecx},~{flags}"(i32* %r)
+  call void asm sideeffect "xor %ecx, %ecx\0A\09mov %ecx, $0", "=*m,~{ecx},~{flags}"(i32* elementtype(i32) %r)
   %junk = alloca i32
   call void @bar(i32* %junk)
   br label %skip

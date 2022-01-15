@@ -81,7 +81,9 @@ end
 * Kind specification with `*`, e.g. `REAL*4`
 * `DOUBLE COMPLEX`
 * Signed complex literal constants
-* DEC `STRUCTURE`, `RECORD`, `UNION`, and `MAP`
+* DEC `STRUCTURE`, `RECORD`, with '%FILL'; but `UNION`, and `MAP`
+  are not yet supported throughout compilation, and elicit a
+  "not yet implemented" message.
 * Structure field access with `.field`
 * `BYTE` as synonym for `INTEGER(KIND=1)`
 * Quad precision REAL literals with `Q`
@@ -163,6 +165,10 @@ end
   hold true for definable arguments.
 * Assignment of `LOGICAL` to `INTEGER` and vice versa (but not other types) is
   allowed.  The values are normalized.
+* Static initialization of `LOGICAL` with `INTEGER` is allowed in `DATA` statements
+  and object initializers.
+  The results are *not* normalized to canonical `.TRUE.`/`.FALSE.`.
+  Static initialization of `INTEGER` with `LOGICAL` is also permitted.
 * An effectively empty source file (no program unit) is accepted and
   produces an empty relocatable output file.
 * A `RETURN` statement may appear in a main program.
@@ -190,6 +196,19 @@ end
   exactly one is unlimited polymorphic).
 * External unit 0 is predefined and connected to the standard error output,
   and defined as `ERROR_UNIT` in the intrinsic `ISO_FORTRAN_ENV` module.
+* Objects in blank COMMON may be initialized.
+* Multiple specifications of the SAVE attribute on the same object
+  are allowed, with a warning.
+* Specific intrinsic functions BABS, IIABS, JIABS, KIABS, ZABS, and CDABS.
+* A `POINTER` component's type need not be a sequence type when
+  the component appears in a derived type with `SEQUENCE`.
+  (This case should probably be an exception to constraint C740 in
+  the standard.)
+* Format expressions that have type but are not character and not
+  integer scalars are accepted so long as they are simply contiguous.
+  This legacy extension supports pre-Fortran'77 usage in which
+  variables initialized in DATA statements with Hollerith literals
+  as modifiable formats.
 
 ### Extensions supported when enabled by options
 

@@ -402,6 +402,21 @@ def AddiPairImmB : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+def XLenSubTrailingOnes : SDNodeXForm<imm, [{
+  uint64_t XLen = Subtarget->getXLen();
+  uint64_t TrailingOnes = N->getAPIntValue().countTrailingOnes();
+  return CurDAG->getTargetConstant(XLen - TrailingOnes, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Checks if this mask is a non-empty sequence of ones starting at the
+// least significant bit with the remainder zero and exceeds simm12.
+def TrailingOnesMask : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  return !isInt<12>(N->getSExtValue()) && isMask_64(N->getZExtValue());
+}], XLenSubTrailingOnes>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -1019,6 +1034,18 @@ def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
   return false;
 }]>;
 
+def sext_oneuse : PatFrag<(ops node:$A), (sext node:$A), [{
+  return N->hasOneUse();
+}]>;
+
+def zext_oneuse : PatFrag<(ops node:$A), (zext node:$A), [{
+  return N->hasOneUse();
+}]>;
+
+def anyext_oneuse : PatFrag<(ops node:$A), (anyext node:$A), [{
+  return N->hasOneUse();
+}]>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
@@ -1033,6 +1060,10 @@ def : PatGprSimm12<xor, XORI>;
 def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
+
+// AND with trailing ones mask exceeding simm12.
+def : Pat<(XLenVT (and GPR:$rs, TrailingOnesMask:$mask)),
+          (SRLI (SLLI $rs, TrailingOnesMask:$mask), TrailingOnesMask:$mask)>;
 
 // Match both a plain shift and one where the shift amount is masked (this is
 // typically introduced when the legalizer promotes the shift amount and
@@ -1350,6 +1381,10 @@ def ReadFRM : ReadSysReg<SysRegFRM, [FRM]>;
 def WriteFRM : WriteSysReg<SysRegFRM, [FRM]>;
 def WriteFRMImm : WriteSysRegImm<SysRegFRM, [FRM]>;
 
+let hasSideEffects = true in {
+def ReadFFLAGS : ReadSysReg<SysRegFFLAGS, [FFLAGS]>;
+def WriteFFLAGS : WriteSysReg<SysRegFFLAGS, [FFLAGS]>;
+}
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered
