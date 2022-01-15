@@ -947,7 +947,7 @@ void X86_64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 bool X86_64::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                               uint8_t stOther) const {
   if (!config->is64) {
-    error("Target doesn't support split stacks.");
+    error("target doesn't support split stacks");
     return false;
   }
 

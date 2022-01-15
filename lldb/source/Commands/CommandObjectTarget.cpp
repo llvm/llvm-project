@@ -1605,7 +1605,6 @@ static size_t LookupTypeInModule(Target *target,
   TypeList type_list;
   if (module && name_cstr && name_cstr[0]) {
     const uint32_t max_num_matches = UINT32_MAX;
-    size_t num_matches = 0;
     bool name_is_fully_qualified = false;
 
     ConstString name(name_cstr);
@@ -1616,8 +1615,10 @@ static size_t LookupTypeInModule(Target *target,
     if (type_list.Empty())
       return 0;
 
+    const uint64_t num_matches = type_list.GetSize();
+
     strm.Indent();
-    strm.Printf("%" PRIu64 " match%s found in ", (uint64_t)num_matches,
+    strm.Printf("%" PRIu64 " match%s found in ", num_matches,
                 num_matches > 1 ? "es" : "");
     DumpFullpath(strm, &module->GetFileSpec(), 0);
     strm.PutCString(":\n");

@@ -1207,30 +1207,16 @@ public:
   /// Attribute.getIntValue().
   AttrBuilder &addVScaleRangeAttrFromRawRepr(uint64_t RawVScaleRangeRepr);
 
-  /// Return true if the builder contains no target-independent
-  /// attributes.
-  bool empty() const { return Attrs.none(); }
-
   // Iterators for target-dependent attributes.
-  using td_type = decltype(TargetDepAttrs)::value_type;
-  using td_iterator = decltype(TargetDepAttrs)::iterator;
   using td_const_iterator = decltype(TargetDepAttrs)::const_iterator;
-  using td_range = iterator_range<td_iterator>;
   using td_const_range = iterator_range<td_const_iterator>;
-
-  td_iterator td_begin() { return TargetDepAttrs.begin(); }
-  td_iterator td_end() { return TargetDepAttrs.end(); }
 
   td_const_iterator td_begin() const { return TargetDepAttrs.begin(); }
   td_const_iterator td_end() const { return TargetDepAttrs.end(); }
 
-  td_range td_attrs() { return td_range(td_begin(), td_end()); }
-
   td_const_range td_attrs() const {
     return td_const_range(td_begin(), td_end());
   }
-
-  bool td_empty() const { return TargetDepAttrs.empty(); }
 
   bool operator==(const AttrBuilder &B) const;
   bool operator!=(const AttrBuilder &B) const { return !(*this == B); }
