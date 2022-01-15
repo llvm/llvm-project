@@ -377,7 +377,8 @@ static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
 /// bufferization is necessary.
 FailureOr<Value>
 mlir::linalg::comprehensive_bufferize::BufferizationState::getBuffer(
-    RewriterBase &rewriter, OpOperand &opOperand, bool forceInPlace) const {
+    RewriterBase &rewriter, OpOperand &opOperand, bool forceInPlace,
+    Optional<Operation *> customCopyInsertionPoint) const {
   OpBuilder::InsertionGuard guard(rewriter);
   Operation *op = opOperand.getOwner();
   Location loc = op->getLoc();
@@ -418,9 +419,14 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::getBuffer(
   if (bufferizesToMemoryWrite(opOperand) && !bufferizesToMemoryRead(opOperand))
     return resultBuffer;
 
-  // The copy happens right before the op that is bufferized.
-  rewriter.setInsertionPoint(op);
+  if (customCopyInsertionPoint) {
+    rewriter.setInsertionPoint(*customCopyInsertionPoint);
+  } else {
+    // The copy happens right before the op that is bufferized.
+    rewriter.setInsertionPoint(op);
+  }
   createMemCpy(rewriter, loc, operandBuffer, *resultBuffer);
+
   return resultBuffer;
 }
 

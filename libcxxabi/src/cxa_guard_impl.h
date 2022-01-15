@@ -54,6 +54,7 @@
 #  endif
 #endif
 
+#include <limits.h>
 #include <stdlib.h>
 #include <__threading_support>
 #ifndef _LIBCXXABI_HAS_NO_THREADS

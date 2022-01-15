@@ -1766,3 +1766,99 @@ module {
 // CHECK-DAG: ![[SCOPES13]] = !{![[SCOPE1]], ![[SCOPE3]]}
 // CHECK-DAG: ![[SCOPES23]] = !{![[SCOPE2]], ![[SCOPE3]]}
 
+
+// -----
+
+// It is okay to have repeated successors if they have no arguments.
+
+// CHECK-LABEL: @duplicate_block_in_switch
+// CHECK-SAME: float %[[FIRST:.*]],
+// CHECK-SAME: float %[[SECOND:.*]])
+// CHECK:   switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
+// CHECK:     i32 105, label %[[DUPLICATE:.*]]
+// CHECK:     i32 108, label %[[BLOCK:.*]]
+// CHECK:     i32 106, label %[[DUPLICATE]]
+// CHECK:   ]
+
+// CHECK: [[DEFAULT]]:
+// CHECK:   phi float [ %[[FIRST]], %{{.*}} ]
+// CHECK:   call void @bar
+
+// CHECK: [[DUPLICATE]]:
+// CHECK:   call void @baz
+
+// CHECK: [[BLOCK]]:
+// CHECK:   phi float [ %[[SECOND]], %{{.*}} ]
+// CHECK:   call void @qux
+
+llvm.func @duplicate_block_in_switch(%cond : i32, %arg1: f32, %arg2: f32) {
+  llvm.switch %cond : i32, ^bb1(%arg1: f32) [
+    105: ^bb2,
+    108: ^bb3(%arg2: f32),
+    106: ^bb2
+  ]
+
+^bb1(%arg3: f32):
+  llvm.call @bar(%arg3): (f32) -> ()
+  llvm.return
+
+^bb2:
+  llvm.call @baz() : () -> ()
+  llvm.return
+
+^bb3(%arg4: f32):
+  llvm.call @qux(%arg4) : (f32) -> ()
+  llvm.return
+}
+
+// If there are repeated successors with arguments, a new block must be created
+// for repeated successors to ensure PHI can disambiguate values based on the
+// predecessor they come from.
+
+// CHECK-LABEL: @duplicate_block_with_args_in_switch
+// CHECK-SAME: float %[[FIRST:.*]],
+// CHECK-SAME: float %[[SECOND:.*]])
+// CHECK:   switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
+// CHECK:     i32 106, label %[[DUPLICATE:.*]]
+// CHECK:     i32 105, label %[[BLOCK:.*]]
+// CHECK:     i32 108, label %[[DEDUPLICATED:.*]]
+// CHECK:   ]
+
+// CHECK: [[DEFAULT]]:
+// CHECK:   phi float [ %[[FIRST]], %{{.*}} ]
+// CHECK:   call void @bar
+
+// CHECK: [[BLOCK]]:
+// CHECK:   call void @baz
+
+// CHECK: [[DUPLICATE]]:
+// CHECK:   phi float [ %[[PHI:.*]], %[[DEDUPLICATED]] ], [ %[[FIRST]], %{{.*}} ]
+// CHECK:   call void @qux
+
+// CHECK: [[DEDUPLICATED]]:
+// CHECK:   %[[PHI]] = phi float [ %[[SECOND]], %{{.*}} ]
+// CHECK:   br label %[[DUPLICATE]]
+
+llvm.func @duplicate_block_with_args_in_switch(%cond : i32, %arg1: f32, %arg2: f32) {
+  llvm.switch %cond : i32, ^bb1(%arg1: f32) [
+    106: ^bb3(%arg1: f32),
+    105: ^bb2,
+    108: ^bb3(%arg2: f32)
+  ]
+
+^bb1(%arg3: f32):
+  llvm.call @bar(%arg3): (f32) -> ()
+  llvm.return
+
+^bb2:
+  llvm.call @baz() : () -> ()
+  llvm.return
+
+^bb3(%arg4: f32):
+  llvm.call @qux(%arg4) : (f32) -> ()
+  llvm.return
+}
+
+llvm.func @bar(f32)
+llvm.func @baz()
+llvm.func @qux(f32)

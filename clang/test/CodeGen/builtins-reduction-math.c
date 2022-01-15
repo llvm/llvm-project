@@ -68,3 +68,25 @@ void test_builtin_reduce_xor(si8 vi1, u4 vu1) {
   // CHECK-NEXT: call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[VU1]])
   unsigned r3 = __builtin_reduce_xor(vu1);
 }
+
+void test_builtin_reduce_or(si8 vi1, u4 vu1) {
+
+  // CHECK:      [[VI1:%.+]] = load <8 x i16>, <8 x i16>* %vi1.addr, align 16
+  // CHECK-NEXT: call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> [[VI1]])
+  short r2 = __builtin_reduce_or(vi1);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, <4 x i32>* %vu1.addr, align 16
+  // CHECK-NEXT: call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[VU1]])
+  unsigned r3 = __builtin_reduce_or(vu1);
+}
+
+void test_builtin_reduce_and(si8 vi1, u4 vu1) {
+
+  // CHECK:      [[VI1:%.+]] = load <8 x i16>, <8 x i16>* %vi1.addr, align 16
+  // CHECK-NEXT: call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> [[VI1]])
+  short r2 = __builtin_reduce_and(vi1);
+
+  // CHECK:      [[VU1:%.+]] = load <4 x i32>, <4 x i32>* %vu1.addr, align 16
+  // CHECK-NEXT: call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> [[VU1]])
+  unsigned r3 = __builtin_reduce_and(vu1);
+}

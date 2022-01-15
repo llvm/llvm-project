@@ -406,6 +406,7 @@ def CopyOp : MemRef_Op<"copy",
     $source `,` $target attr-dict `:` type($source) `to` type($target)
   }];
 
+  let hasCanonicalizer = 1;
   let verifier = ?;
 }
 

@@ -386,8 +386,10 @@ public:
   /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
   /// bufferization was decided.
-  FailureOr<Value> getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
-                             bool forceInPlace = false) const;
+  FailureOr<Value>
+  getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
+            bool forceInPlace = false,
+            Optional<Operation *> customCopyInsertionPoint = None) const;
 
   /// Return dialect-specific bufferization state.
   template <typename StateT>
