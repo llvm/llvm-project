@@ -91,7 +91,9 @@ set(ASAN_COMMON_DEFINITIONS ${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
 append_rtti_flag(OFF ASAN_CFLAGS)
 
 # Silence warnings in system headers with MSVC.
-append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external /external:W0 /external:anglebrackets" ASAN_CFLAGS)
+if(NOT CLANG_CL)
+  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external /external:W0 /external:anglebrackets" ASAN_CFLAGS)
+endif()
 
 # Too many existing bugs, needs cleanup.
 append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format ASAN_CFLAGS)
