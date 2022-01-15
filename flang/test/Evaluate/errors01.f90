@@ -100,4 +100,10 @@ module m
     !CHECK: error: DIM=4 argument to SPREAD must be between 1 and 3
     integer, parameter :: bad3 = spread(matrix, 4, 1)
   end subroutine
+  subroutine warnings
+    real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
+    real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
+    !CHECK: SCALE intrinsic folding overflow
+    real, parameter :: bad1 = scale(1.0, 99999)
+  end subroutine
 end module
