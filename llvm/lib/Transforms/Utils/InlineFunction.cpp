@@ -1186,7 +1186,7 @@ static bool MayContainThrowingOrExitingCall(Instruction *Begin,
 static AttrBuilder IdentifyValidAttributes(CallBase &CB) {
 
   AttrBuilder AB(CB.getContext(), CB.getAttributes(), AttributeList::ReturnIndex);
-  if (AB.empty())
+  if (!AB.hasAttributes())
     return AB;
   AttrBuilder Valid(CB.getContext());
   // Only allow these white listed attributes to be propagated back to the
@@ -1208,7 +1208,7 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     return;
 
   AttrBuilder Valid = IdentifyValidAttributes(CB);
-  if (Valid.empty())
+  if (!Valid.hasAttributes())
     return;
   auto *CalledFunction = CB.getCalledFunction();
   auto &Context = CalledFunction->getContext();
