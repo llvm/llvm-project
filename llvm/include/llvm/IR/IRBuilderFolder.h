@@ -41,6 +41,8 @@ public:
   virtual Value *FoldGEP(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
                          bool IsInBounds = false) const = 0;
 
+  virtual Value *FoldSelect(Value *C, Value *True, Value *False) const = 0;
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -111,8 +113,6 @@ public:
   // Other Instructions
   //===--------------------------------------------------------------------===//
 
-  virtual Value *CreateSelect(Constant *C, Constant *True,
-                              Constant *False) const = 0;
   virtual Value *CreateExtractElement(Constant *Vec, Constant *Idx) const = 0;
   virtual Value *CreateInsertElement(Constant *Vec, Constant *NewElt,
                                      Constant *Idx) const = 0;

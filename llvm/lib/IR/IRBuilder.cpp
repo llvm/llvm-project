@@ -984,10 +984,8 @@ CallInst *IRBuilderBase::CreateConstrainedFPCall(
 
 Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
                                    const Twine &Name, Instruction *MDFrom) {
-  if (auto *CC = dyn_cast<Constant>(C))
-    if (auto *TC = dyn_cast<Constant>(True))
-      if (auto *FC = dyn_cast<Constant>(False))
-        return Insert(Folder.CreateSelect(CC, TC, FC), Name);
+  if (auto *V = Folder.FoldSelect(C, True, False))
+    return V;
 
   SelectInst *Sel = SelectInst::Create(C, True, False);
   if (MDFrom) {
