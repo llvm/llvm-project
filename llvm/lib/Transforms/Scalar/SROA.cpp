@@ -1008,6 +1008,13 @@ private:
     if (I.use_empty())
       return markAsDead(I);
 
+    // If this is a PHI node before a catchswitch, we cannot insert any non-PHI
+    // instructions in this BB, which may be required during rewriting. Bail out
+    // on these cases.
+    if (isa<PHINode>(I) &&
+        I.getParent()->getFirstInsertionPt() == I.getParent()->end())
+      return PI.setAborted(&I);
+
     // TODO: We could use SimplifyInstruction here to fold PHINodes and
     // SelectInsts. However, doing so requires to change the current
     // dead-operand-tracking mechanism. For instance, suppose neither loading

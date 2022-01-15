@@ -6,7 +6,7 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
 config.substitutions.append(('%{flags}', ''))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -isystem %{include} -isystem %{target-include} -I %{libcxx}/test/support -include %{libcxx}/test/support/nasty_macros.h'
+    '-nostdinc++ -isystem %{include} -isystem %{target-include} -I %{libcxx}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
     '-L %{lib} -Wl,-rpath,%{lib} -nodefaultlibs -lc++ -lm -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc -latomic'

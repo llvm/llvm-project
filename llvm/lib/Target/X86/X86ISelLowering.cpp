@@ -16544,30 +16544,22 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
             lowerShuffleAsLanePermuteAndSHUFP(DL, VT, V1, V2, Mask, DAG))
       return V;
 
-  // Always allow ElementRotate patterns - these are sometimes hidden but its
-  // still better to avoid splitting.
-  SDValue RotV1 = V1, RotV2 = V2;
-  bool IsElementRotate = 0 <= matchShuffleAsElementRotate(RotV1, RotV2, Mask);
-
   // If there are only inputs from one 128-bit lane, splitting will in fact be
   // less expensive. The flags track whether the given lane contains an element
   // that crosses to another lane.
-  if (!IsElementRotate) {
-    if (!Subtarget.hasAVX2()) {
-      bool LaneCrossing[2] = {false, false};
-      for (int i = 0; i < Size; ++i)
-        if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
-          LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
-      if (!LaneCrossing[0] || !LaneCrossing[1])
-        return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
-    } else {
-      bool LaneUsed[2] = {false, false};
-      for (int i = 0; i < Size; ++i)
-        if (Mask[i] >= 0)
-          LaneUsed[(Mask[i] % Size) / LaneSize] = true;
-      if (!LaneUsed[0] || !LaneUsed[1])
-        return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
-    }
+  bool AllLanes;
+  if (!Subtarget.hasAVX2()) {
+    bool LaneCrossing[2] = {false, false};
+    for (int i = 0; i < Size; ++i)
+      if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
+        LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
+    AllLanes = LaneCrossing[0] && LaneCrossing[1];
+  } else {
+    bool LaneUsed[2] = {false, false};
+    for (int i = 0; i < Size; ++i)
+      if (Mask[i] >= 0)
+        LaneUsed[(Mask[i] % Size) / LaneSize] = true;
+    AllLanes = LaneUsed[0] && LaneUsed[1];
   }
 
   // TODO - we could support shuffling V2 in the Flipped input.
@@ -16584,6 +16576,11 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
   }
   assert(!is128BitLaneCrossingShuffleMask(VT, InLaneMask) &&
          "In-lane shuffle mask expected");
+
+  // If we're not using both lanes in each lane and the inlane mask is not
+  // repeating, then we're better off splitting.
+  if (!AllLanes && !is128BitLaneRepeatedShuffleMask(VT, InLaneMask))
+    return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
 
   // Flip the lanes, and shuffle the results which should now be in-lane.
   MVT PVT = VT.isFloatingPoint() ? MVT::v4f64 : MVT::v4i64;
@@ -52428,14 +52425,16 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     unsigned NumOps = Ops.size();
     switch (Op0.getOpcode()) {
     case X86ISD::VBROADCAST: {
-      if (!IsSplat && VT == MVT::v4f64 && llvm::all_of(Ops, [Op0](SDValue Op) {
+      if (!IsSplat && VT == MVT::v4f64 && llvm::all_of(Ops, [](SDValue Op) {
             return Op.getOperand(0).getValueType().is128BitVector();
           }))
         return DAG.getNode(X86ISD::MOVDDUP, DL, VT,
                            ConcatSubOperand(VT, Ops, 0));
       break;
     }
-    case X86ISD::MOVDDUP: {
+    case X86ISD::MOVDDUP:
+    case X86ISD::MOVSHDUP:
+    case X86ISD::MOVSLDUP: {
       if (!IsSplat)
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(VT, Ops, 0));
@@ -52463,13 +52462,20 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       LLVM_FALLTHROUGH;
     case X86ISD::VPERMILPI:
-      // TODO - add support for vXf64/vXi64 shuffles.
       if (!IsSplat && NumOps == 2 && (VT == MVT::v8f32 || VT == MVT::v8i32) &&
           Subtarget.hasAVX() && Op0.getOperand(1) == Ops[1].getOperand(1)) {
         SDValue Res = DAG.getBitcast(MVT::v8f32, ConcatSubOperand(VT, Ops, 0));
         Res = DAG.getNode(X86ISD::VPERMILPI, DL, MVT::v8f32, Res,
                           Op0.getOperand(1));
         return DAG.getBitcast(VT, Res);
+      }
+      if (!IsSplat && NumOps == 2 && VT == MVT::v4f64) {
+        uint64_t Idx0 = Ops[0].getConstantOperandVal(1);
+        uint64_t Idx1 = Ops[1].getConstantOperandVal(1);
+        uint64_t Idx = ((Idx1 & 3) << 2) | (Idx0 & 3);
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0),
+                           DAG.getTargetConstant(Idx, DL, MVT::i8));
       }
       break;
     case X86ISD::VPERMV3:

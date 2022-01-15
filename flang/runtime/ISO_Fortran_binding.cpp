@@ -178,14 +178,32 @@ static constexpr std::size_t MinElemLen(CFI_type_t type) {
   case CFI_type_ptrdiff_t:
     minElemLen = sizeof(std::ptrdiff_t);
     break;
+  case CFI_type_half_float:
+    minElemLen = 2;
+    break;
+  case CFI_type_bfloat:
+    minElemLen = 2;
+    break;
   case CFI_type_float:
     minElemLen = sizeof(float);
     break;
   case CFI_type_double:
     minElemLen = sizeof(double);
     break;
+  case CFI_type_extended_double:
+    minElemLen = 10;
+    break;
   case CFI_type_long_double:
     minElemLen = sizeof(long double);
+    break;
+  case CFI_type_float128:
+    minElemLen = 16;
+    break;
+  case CFI_type_half_float_Complex:
+    minElemLen = 2 * MinElemLen(CFI_type_half_float);
+    break;
+  case CFI_type_bfloat_Complex:
+    minElemLen = 2 * MinElemLen(CFI_type_bfloat);
     break;
   case CFI_type_float_Complex:
     minElemLen = 2 * sizeof(float);
@@ -193,8 +211,14 @@ static constexpr std::size_t MinElemLen(CFI_type_t type) {
   case CFI_type_double_Complex:
     minElemLen = 2 * sizeof(double);
     break;
+  case CFI_type_extended_double_Complex:
+    minElemLen = 2 * MinElemLen(CFI_type_extended_double);
+    break;
   case CFI_type_long_double_Complex:
     minElemLen = 2 * sizeof(long double);
+    break;
+  case CFI_type_float128_Complex:
+    minElemLen = 2 * MinElemLen(CFI_type_float128);
     break;
   case CFI_type_Bool:
     minElemLen = 1;

@@ -88,9 +88,6 @@ int main() {
 #pragma omp ordered depend(sink : i - 2)
     d[i] = a[i - 2];
   }
-  // CHECK: landingpad
-  // CHECK-NORMAL: call void @__kmpc_doacross_fini([[IDENT]], i32 [[GTID]])
-  // CHECK: br label %
 
   // CHECK: call void @__kmpc_for_static_fini(
   // CHECK-NORMAL: call void @__kmpc_doacross_fini([[IDENT]], i32 [[GTID]])
@@ -150,10 +147,6 @@ int main1() {
 #pragma omp ordered depend(sink : i - 2)
     d[i] = a[i - 2];
   }
-  // CHECK: landingpad
-  // CHECK-NORMAL: call void @__kmpc_doacross_fini([[IDENT]], i32 [[GTID]])
-  // CHECK: br label %
-
   // CHECK: call void @__kmpc_for_static_fini(
   // CHECK-NORMAL: call void @__kmpc_doacross_fini([[IDENT]], i32 [[GTID]])
   // CHECK: ret i32 0
@@ -267,10 +260,6 @@ struct TestStruct {
         baz(a[i][j], b[i][j]);
       }
   }
-  // CHECK: landingpad
-  // CHECK-NORMAL: call void @__kmpc_doacross_fini([[IDENT]], i32 [[GTID]])
-  // CHECK: br label %
-
   // CHECK: call void @__kmpc_for_static_fini(
   // CHECK-NORMAL: call void @__kmpc_doacross_fini([[IDENT]], i32 [[GTID]])
   // CHECK: ret

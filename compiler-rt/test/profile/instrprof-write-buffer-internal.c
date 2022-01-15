@@ -23,19 +23,19 @@ const void *__llvm_profile_begin_data(void);
 const void *__llvm_profile_end_data(void);
 const char *__llvm_profile_begin_names(void);
 const char *__llvm_profile_end_names(void);
-uint64_t *__llvm_profile_begin_counters(void);
-uint64_t *__llvm_profile_end_counters(void);
+char *__llvm_profile_begin_counters(void);
+char *__llvm_profile_end_counters(void);
 
 uint64_t __llvm_profile_get_size_for_buffer_internal(
-    const void *DataBegin, const void *DataEnd,
-    const uint64_t *CountersBegin, const uint64_t *CountersEnd,
-    const char *NamesBegin, const char *NamesEnd);
+    const void *DataBegin, const void *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
 
-int __llvm_profile_write_buffer_internal(
-    char *Buffer, const void *DataBegin,
-    const void *DataEnd, const uint64_t *CountersBegin,
-    const uint64_t *CountersEnd, const char *NamesBegin,
-    const char *NamesEnd);
+int __llvm_profile_write_buffer_internal(char *Buffer, const void *DataBegin,
+                                         const void *DataEnd,
+                                         const char *CountersBegin,
+                                         const char *CountersEnd,
+                                         const char *NamesBegin,
+                                         const char *NamesEnd);
 
 void __llvm_profile_set_dumped(void);
 

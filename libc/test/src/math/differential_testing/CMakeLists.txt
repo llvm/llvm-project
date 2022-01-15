@@ -234,6 +234,28 @@ add_diff_binary(
 )
 
 add_diff_binary(
+  log2f_diff
+  SRCS
+    log2f_diff.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.log2f
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
+  log2f_perf
+  SRCS
+    log2f_perf.cpp
+  DEPENDS
+    .single_input_single_output_diff
+    libc.src.math.log2f
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_diff_binary(
   logf_diff
   SRCS
     logf_diff.cpp

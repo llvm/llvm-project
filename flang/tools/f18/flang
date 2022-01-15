@@ -30,8 +30,9 @@ PRINT_VERSION="False"
 
 # === check_bash_version ======================================================
 #
-# Checks the Bash version that's used to run this script. Exits immediately if
-# it's lower than 4.4
+# Checks the Bash version that's used to run this script. Exits immediately
+# with a non-zero return code if it's lower than 4.4. Otherwise returns 0
+# (success).
 # =============================================================================
 check_bash_version() {
   message="Error: Your Bash is too old. Please use Bash >= 4.4"
@@ -42,6 +43,8 @@ check_bash_version() {
   if [[ "${BASH_VERSINFO[0]}" == 4 ]]; then
     [[ "${BASH_VERSINFO[1]:-0}" -lt 4 ]] && echo $message && exit 1
   fi
+
+  return 0
 }
 
 # === parse_args ==============================================================

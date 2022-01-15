@@ -9,7 +9,6 @@ set(LLVM_OPTIONAL_SOURCES
   Liveness.cpp
   LoopAnalysis.cpp
   NestedMatcher.cpp
-  NumberOfExecutions.cpp
   SliceAnalysis.cpp
   Utils.cpp
 
@@ -23,7 +22,6 @@ add_mlir_library(MLIRAnalysis
   DataFlowAnalysis.cpp
   DataLayoutAnalysis.cpp
   Liveness.cpp
-  NumberOfExecutions.cpp
   SliceAnalysis.cpp
 
   AliasAnalysis/LocalAliasAnalysis.cpp

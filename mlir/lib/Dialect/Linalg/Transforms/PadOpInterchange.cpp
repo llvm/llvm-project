@@ -89,7 +89,7 @@ struct FusePadTensorOp : OpRewritePattern<PadTensorOp> {
     SmallVector<OpFoldResult> offsets = padOp.getMixedLowPad();
     SmallVector<OpFoldResult> sizes;
     sizes.reserve(offsets.size());
-    for (auto shape : llvm::enumerate(
+    for (const auto &shape : llvm::enumerate(
              source.getType().cast<RankedTensorType>().getShape())) {
       if (ShapedType::isDynamic(shape.value())) {
         sizes.push_back(
