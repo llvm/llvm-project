@@ -107,7 +107,7 @@ private:
 };
 
 // For SubprogramNameDetails, the kind indicates whether it is the name
-// of a module subprogram or internal subprogram.
+// of a module subprogram or an internal subprogram or ENTRY.
 ENUM_CLASS(SubprogramKind, Module, Internal)
 
 // Symbol with SubprogramNameDetails is created when we scan for module and
@@ -121,10 +121,16 @@ public:
   SubprogramNameDetails() = delete;
   SubprogramKind kind() const { return kind_; }
   ProgramTree &node() const { return *node_; }
+  bool isEntryStmt() const { return isEntryStmt_; }
+  SubprogramNameDetails &set_isEntryStmt(bool yes = true) {
+    isEntryStmt_ = yes;
+    return *this;
+  }
 
 private:
   SubprogramKind kind_;
   common::Reference<ProgramTree> node_;
+  bool isEntryStmt_{false};
 };
 
 // A name from an entity-decl -- could be object or function.
