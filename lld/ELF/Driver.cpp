@@ -1193,17 +1193,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->zSeparate = getZSeparate(args);
   config->zShstk = hasZOption(args, "shstk");
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
-#ifdef LLD_DEFAULT_NOSTART_STOP_GC
-  // -z start-stop-gc default matches GNU ld<2015-10 and ld64 section$start
-  // symbols and can decrease file size for many instrumentations.  However,
-  // some users need time to accommodate the -z nostart-stop-gc default, so this
-  // is added as a temporary workaround.
-  config->zStartStopGC =
-      getZFlag(args, "start-stop-gc", "nostart-stop-gc", false);
-#else
   config->zStartStopGC =
       getZFlag(args, "start-stop-gc", "nostart-stop-gc", true);
-#endif
   config->zStartStopVisibility = getZStartStopVisibility(args);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");

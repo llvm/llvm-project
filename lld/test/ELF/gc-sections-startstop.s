@@ -1,7 +1,6 @@
 ## Check that group members are retained or discarded as a unit.
 
 # REQUIRES: x86
-# UNSUPPORTED: default-nostart-stop-gc
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o --gc-sections -o %t

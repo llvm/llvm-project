@@ -118,6 +118,3 @@ if tar_executable:
 # ELF tests expect the default target for ld.lld to be ELF.
 if config.ld_lld_default_mingw:
     config.excludes.append('ELF')
-
-if config.ld_lld_default_nostart_stop_gc:
-    config.available_features.add('default-nostart-stop-gc')
