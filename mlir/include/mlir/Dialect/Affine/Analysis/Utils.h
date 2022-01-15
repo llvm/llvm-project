@@ -13,10 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_UTILS_H
-#define MLIR_ANALYSIS_UTILS_H
+#ifndef MLIR_DIALECT_AFFINE_ANALYSIS_UTILS_H
+#define MLIR_DIALECT_AFFINE_ANALYSIS_UTILS_H
 
-#include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Location.h"
@@ -382,4 +382,4 @@ unsigned getInnermostCommonLoopDepth(
 
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_UTILS_H
+#endif // MLIR_DIALECT_AFFINE_ANALYSIS_UTILS_H

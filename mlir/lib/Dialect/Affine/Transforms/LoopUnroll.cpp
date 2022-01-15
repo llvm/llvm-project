@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PassDetail.h"
-#include "mlir/Analysis/LoopAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/AffineExpr.h"

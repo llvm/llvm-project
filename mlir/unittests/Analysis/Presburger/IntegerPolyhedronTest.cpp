@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
-#include "../AffineStructuresParser.h"
+#include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>

@@ -27,7 +27,7 @@ add_mlir_dialect_library(MLIRVector
   MLIRLinalg
   MLIRMemRef
   MLIRSCF
-  MLIRLoopAnalysis
+  MLIRAffineAnalysis
   MLIRDataLayoutInterfaces
   MLIRSideEffectInterfaces
   MLIRVectorInterfaces
