@@ -222,6 +222,28 @@ auto Constant<Type<TypeCategory::Character, KIND>>::At(
 }
 
 template <int KIND>
+auto Constant<Type<TypeCategory::Character, KIND>>::Substring(
+    ConstantSubscript lo, ConstantSubscript hi) const
+    -> std::optional<Constant> {
+  std::vector<Element> elements;
+  ConstantSubscript n{GetSize(shape())};
+  ConstantSubscript newLength{0};
+  if (lo > hi) { // zero-length results
+    while (n-- > 0) {
+      elements.emplace_back(); // ""
+    }
+  } else if (lo < 1 || hi > length_) {
+    return std::nullopt;
+  } else {
+    newLength = hi - lo + 1;
+    for (ConstantSubscripts at{lbounds()}; n-- > 0; IncrementSubscripts(at)) {
+      elements.emplace_back(At(at).substr(lo - 1, newLength));
+    }
+  }
+  return Constant{newLength, std::move(elements), ConstantSubscripts{shape()}};
+}
+
+template <int KIND>
 auto Constant<Type<TypeCategory::Character, KIND>>::Reshape(
     ConstantSubscripts &&dims) const -> Constant<Result> {
   std::size_t n{TotalElementCount(dims)};

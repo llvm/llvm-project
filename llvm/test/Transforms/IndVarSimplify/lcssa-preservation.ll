@@ -13,7 +13,6 @@ outer.header:
 ; CHECK: outer.header:
   %outer.iv = phi i32 [ 0, %entry ], [ %x, %outer.latch ]
   br label %inner.header
-; CHECK:   %[[SCEV_EXPANDED:.*]] = add i32
 ; CHECK:   br label %inner.header
 
 inner.header:
@@ -36,7 +35,6 @@ outer.latch:
 ; CHECK:   br i1 {{.*}}, label %outer.header, label %[[EXIT_FROM_OUTER:.*]]
 
 ; CHECK: [[EXIT_FROM_INNER]]:
-; CHECK-NEXT: %[[LCSSA:.*]] = phi i32 [ %[[SCEV_EXPANDED]], %inner.latch ]
 ; CHECK-NEXT: br label %exit
 
 ; CHECK: [[EXIT_FROM_OUTER]]:
@@ -45,6 +43,6 @@ outer.latch:
 exit:
 ; CHECK: exit:
   %exit.phi = phi i32 [ %inc, %inner.latch ], [ undef, %outer.latch ]
-; CHECK-NEXT: phi i32 [ %[[LCSSA]], %[[EXIT_FROM_INNER]] ], [ undef, %[[EXIT_FROM_OUTER]] ]
+; CHECK-NEXT: phi i32 [ undef, %[[EXIT_FROM_INNER]] ], [ undef, %[[EXIT_FROM_OUTER]] ]
   ret void
 }

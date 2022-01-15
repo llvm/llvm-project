@@ -1,4 +1,4 @@
-//===-- RISCVInstrInfoFH.td - RISC-V 'FH' instructions -----*- tablegen -*-===//
+//===-- RISCVInstrInfoZfh.td - RISC-V 'Zfh' instructions ---*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'Zfh'
-// half-precision floating-point extension, version 0.1.
-// This version is still experimental as the 'Zfh' extension hasn't been
-// ratified yet.
+// half-precision floating-point extension, version 1.0.
 //
 //===----------------------------------------------------------------------===//
 

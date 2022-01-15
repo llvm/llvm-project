@@ -59,6 +59,10 @@ public:
     return nullptr;
   }
 
+  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+    return nullptr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -247,11 +251,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Other Instructions
   //===--------------------------------------------------------------------===//
-
-  Instruction *CreateSelect(Constant *C,
-                            Constant *True, Constant *False) const override {
-    return SelectInst::Create(C, True, False);
-  }
 
   Instruction *CreateExtractElement(Constant *Vec,
                                     Constant *Idx) const override {

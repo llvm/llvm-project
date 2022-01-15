@@ -174,8 +174,10 @@ check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
 compiler_rt_check_linker_flag("-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
 compiler_rt_check_linker_flag("-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
 
-set(VERS_COMPAT_OPTION "-Wl,-z,gnu-version-script-compat")
-compiler_rt_check_linker_flag("${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
+if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+  set(VERS_COMPAT_OPTION "-Wl,-z,gnu-version-script-compat")
+  compiler_rt_check_linker_flag("${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
+endif()
 
 set(DUMMY_VERS ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/dummy.vers)
 file(WRITE ${DUMMY_VERS} "{};")

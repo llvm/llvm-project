@@ -1034,6 +1034,18 @@ def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
   return false;
 }]>;
 
+def sext_oneuse : PatFrag<(ops node:$A), (sext node:$A), [{
+  return N->hasOneUse();
+}]>;
+
+def zext_oneuse : PatFrag<(ops node:$A), (zext node:$A), [{
+  return N->hasOneUse();
+}]>;
+
+def anyext_oneuse : PatFrag<(ops node:$A), (anyext node:$A), [{
+  return N->hasOneUse();
+}]>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
