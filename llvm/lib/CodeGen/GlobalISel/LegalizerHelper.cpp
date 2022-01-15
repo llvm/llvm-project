@@ -564,7 +564,7 @@ static bool isLibCallInTailPosition(MachineInstr &MI,
   // the return. Ignore NoAlias and NonNull because they don't affect the
   // call sequence.
   AttributeList CallerAttrs = F.getAttributes();
-  if (AttrBuilder(F.getContext(), CallerAttrs, AttributeList::ReturnIndex)
+  if (AttrBuilder(F.getContext(), CallerAttrs.getRetAttrs())
           .removeAttribute(Attribute::NoAlias)
           .removeAttribute(Attribute::NonNull)
           .hasAttributes())
