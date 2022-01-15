@@ -26,6 +26,7 @@ entry:
 define i128 @ByValArgumentNoSanitize(i32, i128* byval(i128) %p) {
 ; CHECK-LABEL: @ByValArgumentNoSanitize(
 ; CHECK-NEXT:  entry:
+; CHECK:         call void @llvm.memset.p0i8.i64(i8* align 8 {{.*}}, i8 0, i64 16, i1 false)
 ; CHECK:         %x = load i128, i128* %p
 ; CHECK:         store i128 0, i128* bitcast ([100 x i64]* @__msan_retval_tls to i128*)
 ; CHECK-NEXT:    store i32 0, i32* @__msan_retval_origin_tls
@@ -50,10 +51,10 @@ entry:
   ret void
 }
 
-; FIXME: Shadow of byval pointee is copied but not reset.
 define void @ByValForwardNoSanitize(i32, i128* byval(i128) %p) {
 ; CHECK-LABEL: @ByValForwardNoSanitize(
 ; CHECK-NEXT:  entry:
+; CHECK:         call void @llvm.memset.p0i8.i64(i8* align 8 {{.*}}, i8 0, i64 16, i1 false)
 ; CHECK:         store i64 0, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0)
 ; CHECK-NEXT:    call void @Fn(
 ; CHECK-NEXT:    ret void
@@ -78,10 +79,11 @@ entry:
   ret void
 }
 
-; FIXME: Shadow of byval pointee is copied but not reset.
+; FIXME: Shadow for byval should be reset not copied before the call.
 define void @ByValForwardByValNoSanitize(i32, i128* byval(i128) %p) {
 ; CHECK-LABEL: @ByValForwardByValNoSanitize(
 ; CHECK-NEXT:  entry:
+; CHECK:         call void @llvm.memset.p0i8.i64(i8* align 8 {{.*}}, i8 0, i64 16, i1 false)
 ; CHECK:         call void @llvm.memcpy.p0i8.p0i8.i64(i8* bitcast ([100 x i64]* @__msan_param_tls to i8*), i8* {{.*}}, i64 16, i1 false) 
 ; CHECK:         store i32 0, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0)
 ; CHECK-NEXT:    call void @FnByVal(
