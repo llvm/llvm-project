@@ -1647,11 +1647,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __position)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
-        "vector::erase(iterator) called with an iterator not"
-        " referring to this vector");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
+                         "vector::erase(iterator) called with an iterator not referring to this vector");
     _LIBCPP_ASSERT(__position != end(),
         "vector::erase(iterator) called with a non-dereferenceable iterator");
     difference_type __ps = __position - cbegin();
@@ -1666,14 +1663,11 @@ template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__first)) == this,
-        "vector::erase(iterator, iterator) called with an iterator not"
-        " referring to this vector");
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__last)) == this,
-        "vector::erase(iterator, iterator) called with an iterator not"
-        " referring to this vector");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__first)) == this,
+                         "vector::erase(iterator, iterator) called with an iterator not referring to this vector");
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__last)) == this,
+                         "vector::erase(iterator, iterator) called with an iterator not referring to this vector");
+
     _LIBCPP_ASSERT(__first <= __last, "vector::erase(first, last) called with invalid range");
     pointer __p = this->__begin_ + (__first - begin());
     if (__first != __last) {
@@ -1707,11 +1701,8 @@ template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
-        "vector::insert(iterator, x) called with an iterator not"
-        " referring to this vector");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
+                         "vector::insert(iterator, x) called with an iterator not referring to this vector");
     pointer __p = this->__begin_ + (__position - begin());
     if (this->__end_ < this->__end_cap())
     {
@@ -1744,11 +1735,8 @@ template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
-        "vector::insert(iterator, x) called with an iterator not"
-        " referring to this vector");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
+                         "vector::insert(iterator, x) called with an iterator not referring to this vector");
     pointer __p = this->__begin_ + (__position - begin());
     if (this->__end_ < this->__end_cap())
     {
@@ -1777,11 +1765,8 @@ template <class... _Args>
 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
-        "vector::emplace(iterator, x) called with an iterator not"
-        " referring to this vector");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
+                         "vector::emplace(iterator, x) called with an iterator not referring to this vector");
     pointer __p = this->__begin_ + (__position - begin());
     if (this->__end_ < this->__end_cap())
     {
@@ -1812,11 +1797,8 @@ template <class _Tp, class _Allocator>
 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
-        "vector::insert(iterator, n, x) called with an iterator not"
-        " referring to this vector");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
+                         "vector::insert(iterator, n, x) called with an iterator not referring to this vector");
     pointer __p = this->__begin_ + (__position - begin());
     if (__n > 0)
     {
@@ -1863,11 +1845,8 @@ typename enable_if
 >::type
 vector<_Tp, _Allocator>::insert(const_iterator __position, _InputIterator __first, _InputIterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
-        "vector::insert(iterator, range) called with an iterator not"
-        " referring to this vector");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
+                         "vector::insert(iterator, range) called with an iterator not referring to this vector");
     difference_type __off = __position - begin();
     pointer __p = this->__begin_ + __off;
     allocator_type& __a = this->__alloc();
@@ -1916,11 +1895,8 @@ typename enable_if
 >::type
 vector<_Tp, _Allocator>::insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
-        "vector::insert(iterator, range) called with an iterator not"
-        " referring to this vector");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__position)) == this,
+                         "vector::insert(iterator, range) called with an iterator not referring to this vector");
     pointer __p = this->__begin_ + (__position - begin());
     difference_type __n = _VSTD::distance(__first, __last);
     if (__n > 0)
