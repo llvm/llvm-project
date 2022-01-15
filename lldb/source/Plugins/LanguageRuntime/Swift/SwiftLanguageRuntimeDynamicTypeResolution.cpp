@@ -2276,7 +2276,9 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
           [&](swift::SubstitutableType *type) -> swift::Type {
             auto opaque_type =
                 llvm::dyn_cast<swift::OpaqueTypeArchetypeType>(type);
-            if (!opaque_type)
+            if (!opaque_type ||
+                !opaque_type->getInterfaceType()
+                  ->is<swift::GenericTypeParamType>())
               return type;
 
             // Try to find the symbol for the opaque type descriptor in the
@@ -2308,11 +2310,13 @@ SwiftLanguageRuntimeImpl::BindGenericTypeParameters(StackFrame &stack_frame,
 
               // Ask RemoteAST to get the underlying type out of the descriptor.
               auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
+              auto genericParam = opaque_type->getInterfaceType()
+                  ->getAs<swift::GenericTypeParamType>();
               auto underlying_type_result =
                   remote_ast.getUnderlyingTypeForOpaqueType(
                       swift::remote::RemoteAddress(addr),
                       opaque_type->getSubstitutions(),
-                      opaque_type->getOrdinal());
+                      genericParam->getIndex());
 
               if (!underlying_type_result)
                 continue;

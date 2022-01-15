@@ -5643,7 +5643,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Module:
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::Placeholder:
@@ -5826,7 +5825,6 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::ProtocolComposition:
   case swift::TypeKind::Metatype:
   case swift::TypeKind::Module:
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::PrimaryArchetype:
@@ -6286,7 +6284,6 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinFloat:
     return lldb::eEncodingIEEE754; // TODO: detect if an integer is unsigned
 
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::PrimaryArchetype:
@@ -6425,7 +6422,6 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::PrimaryArchetype:
@@ -6561,7 +6557,6 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
     return 0;
 
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::PrimaryArchetype:
@@ -6858,7 +6853,6 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::Metatype:
     break;
 
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::PrimaryArchetype:
@@ -6934,7 +6928,6 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::Class:
   case swift::TypeKind::Protocol:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::PrimaryArchetype:
@@ -7287,7 +7280,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Metatype:
     break;
 
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::PrimaryArchetype:
@@ -7522,7 +7514,6 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Metatype:
       break;
 
-    case swift::TypeKind::NestedArchetype:
     case swift::TypeKind::OpaqueTypeArchetype:
     case swift::TypeKind::OpenedArchetype:
     case swift::TypeKind::PrimaryArchetype:
@@ -7779,7 +7770,6 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinNativeObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::OpaqueTypeArchetype:
   case swift::TypeKind::OpenedArchetype:
   case swift::TypeKind::PrimaryArchetype:
