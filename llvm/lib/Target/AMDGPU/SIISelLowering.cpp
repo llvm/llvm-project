@@ -2911,13 +2911,21 @@ void SITargetLowering::passSpecialInputs(
   }
 
   if (!InputReg && (NeedWorkItemIDX || NeedWorkItemIDY || NeedWorkItemIDZ)) {
-    // Workitem ids are already packed, any of present incoming arguments
-    // will carry all required fields.
-    ArgDescriptor IncomingArg = ArgDescriptor::createArg(
-      IncomingArgX ? *IncomingArgX :
-      IncomingArgY ? *IncomingArgY :
-                     *IncomingArgZ, ~0u);
-    InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, IncomingArg);
+    if (!IncomingArgX && !IncomingArgY && !IncomingArgZ) {
+      // We're in a situation where the outgoing function requires the workitem
+      // ID, but the calling function does not have it (e.g a graphics function
+      // calling a C calling convention function). This is illegal, but we need
+      // to produce something.
+      InputReg = DAG.getUNDEF(MVT::i32);
+    } else {
+      // Workitem ids are already packed, any of present incoming arguments
+      // will carry all required fields.
+      ArgDescriptor IncomingArg = ArgDescriptor::createArg(
+        IncomingArgX ? *IncomingArgX :
+        IncomingArgY ? *IncomingArgY :
+        *IncomingArgZ, ~0u);
+      InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, IncomingArg);
+    }
   }
 
   if (OutgoingArg->isRegister()) {
