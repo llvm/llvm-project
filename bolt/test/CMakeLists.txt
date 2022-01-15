@@ -13,6 +13,16 @@ set(BOLT_TEST_PARAMS
   bolt_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
   )
 
+if (BOLT_CLANG_EXE AND NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
+  add_executable(clang IMPORTED GLOBAL)
+  set_property(TARGET clang PROPERTY IMPORTED_LOCATION "${BOLT_CLANG_EXE}")
+endif()
+
+if (BOLT_LLD_EXE AND NOT "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+  add_executable(lld IMPORTED GLOBAL)
+  set_property(TARGET lld PROPERTY IMPORTED_LOCATION "${BOLT_LLD_EXE}")
+endif()
+
 list(APPEND BOLT_TEST_DEPS
   clang
   count
