@@ -5,6 +5,7 @@
 # RUN: llvm-mc -triple x86_64-apple-macosx10.9 -filetype=obj \
 # RUN:   -o %t/MachO_archive_support.o %s
 # RUN: llvm-jitlink -noexec %t/MachO_archive_support.o -lFoo -jd Foo -L%t -lExtraDef
+# RUN: llvm-jitlink -noexec %t/MachO_archive_support.o -lFoo -jd Foo %t/libExtraDef.a
 #
 # Test that archives can be loaded and referenced from other JITDylibs.
 

@@ -2796,7 +2796,7 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
   }
   auto range{specificProcs_.equal_range(&generic)};
   for (auto it{range.first}; it != range.second; ++it) {
-    auto *name{it->second.first};
+    const parser::Name *name{it->second.first};
     auto kind{it->second.second};
     const auto *symbol{FindSymbol(*name)};
     if (!symbol) {
@@ -6915,13 +6915,21 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   }
 }
 
-// Add SubprogramNameDetails symbols for module and internal subprograms
+// Add SubprogramNameDetails symbols for module and internal subprograms and
+// their ENTRY statements.
 void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
   auto kind{
       node.IsModule() ? SubprogramKind::Module : SubprogramKind::Internal};
   for (auto &child : node.children()) {
     auto &symbol{MakeSymbol(child.name(), SubprogramNameDetails{kind, child})};
     symbol.set(child.GetSubpFlag());
+    for (const auto &entryStmt : child.entryStmts()) {
+      SubprogramNameDetails details{kind, child};
+      details.set_isEntryStmt();
+      auto &symbol{
+          MakeSymbol(std::get<parser::Name>(entryStmt->t), std::move(details))};
+      symbol.set(child.GetSubpFlag());
+    }
   }
 }
 
@@ -7125,7 +7133,8 @@ void ResolveSpecificationParts(
     SemanticsContext &context, const Symbol &subprogram) {
   auto originalLocation{context.location()};
   ResolveNamesVisitor visitor{context, DEREF(sharedImplicitRulesMap)};
-  ProgramTree &node{subprogram.get<SubprogramNameDetails>().node()};
+  const auto &details{subprogram.get<SubprogramNameDetails>()};
+  ProgramTree &node{details.node()};
   const Scope &moduleScope{subprogram.owner()};
   visitor.SetScope(const_cast<Scope &>(moduleScope));
   visitor.ResolveSpecificationParts(node);
