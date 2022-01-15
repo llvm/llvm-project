@@ -4083,7 +4083,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_mqsad_pk_u16_u8:
     case Intrinsic::amdgcn_mqsad_u32_u8:
     case Intrinsic::amdgcn_cvt_pk_u8_f32:
-    case Intrinsic::amdgcn_alignbit:
     case Intrinsic::amdgcn_alignbyte:
     case Intrinsic::amdgcn_perm:
     case Intrinsic::amdgcn_fdot2:
