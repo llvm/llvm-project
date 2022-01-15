@@ -98,6 +98,20 @@ csrrs t1, scounteren, zero
 # uimm12
 csrrs t2, 0x106, zero
 
+# stimecmp
+# name
+# CHECK-INST: csrrs t1, stimecmp, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xd0,0x14]
+# CHECK-INST-ALIAS: csrr t1, stimecmp
+# uimm12
+# CHECK-INST: csrrs t2, stimecmp, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xd0,0x14]
+# CHECK-INST-ALIAS: csrr t2, stimecmp
+# name
+csrrs t1, stimecmp, zero
+# uimm12
+csrrs t2, 0x14D, zero
+
 ##################################
 # Supervisor Configuration
 ##################################
