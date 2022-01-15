@@ -3794,7 +3794,7 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   if (D)
     SetFunctionAttributes(GD, F, IsIncompleteFunction, IsThunk);
   if (ExtraAttrs.hasFnAttrs()) {
-    llvm::AttrBuilder B(F->getContext(), ExtraAttrs, llvm::AttributeList::FunctionIndex);
+    llvm::AttrBuilder B(F->getContext(), ExtraAttrs.getFnAttrs());
     F->addFnAttrs(B);
   }
 

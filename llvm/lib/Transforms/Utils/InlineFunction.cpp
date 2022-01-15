@@ -1185,7 +1185,7 @@ static bool MayContainThrowingOrExitingCall(Instruction *Begin,
 
 static AttrBuilder IdentifyValidAttributes(CallBase &CB) {
 
-  AttrBuilder AB(CB.getContext(), CB.getAttributes(), AttributeList::ReturnIndex);
+  AttrBuilder AB(CB.getContext(), CB.getAttributes().getRetAttrs());
   if (!AB.hasAttributes())
     return AB;
   AttrBuilder Valid(CB.getContext());
