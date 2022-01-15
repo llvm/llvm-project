@@ -10,11 +10,15 @@ endfunction()
 add_subdirectory(Debug)
 add_subdirectory(Dialect)
 add_subdirectory(Conversion)
-add_subdirectory(ExecutionEngine)
 add_subdirectory(Interfaces)
 add_subdirectory(IR)
 add_subdirectory(Registration)
 add_subdirectory(Transforms)
+
+# Only enable the ExecutionEngine if the native target is configured in.
+if(TARGET ${LLVM_NATIVE_ARCH})
+  add_subdirectory(ExecutionEngine)
+endif()
 
 # Build the optional CAPI dylib.
 if(MLIR_BUILD_MLIR_C_DYLIB)
@@ -33,3 +37,4 @@ if(MLIR_BUILD_MLIR_C_DYLIB)
     endif()
   endif()
 endif()
+
