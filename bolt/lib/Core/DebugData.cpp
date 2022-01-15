@@ -367,7 +367,7 @@ DebugAddrWriter *DebugLoclistWriter::AddrWriter = nullptr;
 void DebugInfoBinaryPatcher::addUnitBaseOffsetLabel(uint64_t Offset) {
   Offset -= DWPUnitOffset;
   std::lock_guard<std::mutex> Lock(WriterMutex);
-  DebugPatches.emplace_back(std::make_unique<DWARFUnitOffsetBaseLabel>(Offset));
+  DebugPatches.emplace_back(new DWARFUnitOffsetBaseLabel(Offset));
 }
 
 void DebugInfoBinaryPatcher::addDestinationReferenceLabel(uint64_t Offset) {
@@ -377,8 +377,7 @@ void DebugInfoBinaryPatcher::addDestinationReferenceLabel(uint64_t Offset) {
   if (!RetVal.second)
     return;
 
-  DebugPatches.emplace_back(
-      std::make_unique<DestinationReferenceLabel>(Offset));
+  DebugPatches.emplace_back(new DestinationReferenceLabel(Offset));
 }
 
 void DebugInfoBinaryPatcher::addReferenceToPatch(uint64_t Offset,
@@ -388,8 +387,8 @@ void DebugInfoBinaryPatcher::addReferenceToPatch(uint64_t Offset,
   Offset -= DWPUnitOffset;
   DestinationOffset -= DWPUnitOffset;
   std::lock_guard<std::mutex> Lock(WriterMutex);
-  DebugPatches.emplace_back(std::make_unique<DebugPatchReference>(
-      Offset, OldValueSize, DestinationOffset, Form));
+  DebugPatches.emplace_back(
+      new DebugPatchReference(Offset, OldValueSize, DestinationOffset, Form));
 }
 
 void DebugInfoBinaryPatcher::addUDataPatch(uint64_t Offset, uint64_t NewValue,
@@ -397,13 +396,13 @@ void DebugInfoBinaryPatcher::addUDataPatch(uint64_t Offset, uint64_t NewValue,
   Offset -= DWPUnitOffset;
   std::lock_guard<std::mutex> Lock(WriterMutex);
   DebugPatches.emplace_back(
-      std::make_unique<DebugPatchVariableSize>(Offset, OldValueSize, NewValue));
+      new DebugPatchVariableSize(Offset, OldValueSize, NewValue));
 }
 
 void DebugInfoBinaryPatcher::addLE64Patch(uint64_t Offset, uint64_t NewValue) {
   Offset -= DWPUnitOffset;
   std::lock_guard<std::mutex> Lock(WriterMutex);
-  DebugPatches.emplace_back(std::make_unique<DebugPatch64>(Offset, NewValue));
+  DebugPatches.emplace_back(new DebugPatch64(Offset, NewValue));
 }
 
 void DebugInfoBinaryPatcher::addLE32Patch(uint64_t Offset, uint32_t NewValue,
@@ -411,10 +410,9 @@ void DebugInfoBinaryPatcher::addLE32Patch(uint64_t Offset, uint32_t NewValue,
   Offset -= DWPUnitOffset;
   std::lock_guard<std::mutex> Lock(WriterMutex);
   if (OldValueSize == 4)
-    DebugPatches.emplace_back(std::make_unique<DebugPatch32>(Offset, NewValue));
+    DebugPatches.emplace_back(new DebugPatch32(Offset, NewValue));
   else
-    DebugPatches.emplace_back(
-        std::make_unique<DebugPatch64to32>(Offset, NewValue));
+    DebugPatches.emplace_back(new DebugPatch64to32(Offset, NewValue));
 }
 
 void SimpleBinaryPatcher::addBinaryPatch(uint64_t Offset,
@@ -477,15 +475,14 @@ std::string SimpleBinaryPatcher::patchBinary(StringRef BinaryContents) {
 std::unordered_map<uint32_t, uint32_t>
 DebugInfoBinaryPatcher::computeNewOffsets() {
   std::unordered_map<uint32_t, uint32_t> CUMap;
-  std::sort(
-      DebugPatches.begin(), DebugPatches.end(),
-      [](const std::unique_ptr<Patch> &V1, const std::unique_ptr<Patch> &V2) {
-        return V1.get()->Offset < V2.get()->Offset;
-      });
+  std::sort(DebugPatches.begin(), DebugPatches.end(),
+            [](const UniquePatchPtrType &V1, const UniquePatchPtrType &V2) {
+              return V1.get()->Offset < V2.get()->Offset;
+            });
 
   // Calculating changes in .debug_info size from Patches to build a map of old
   // to updated reference destination offsets.
-  for (std::unique_ptr<Patch> &PatchBase : DebugPatches) {
+  for (UniquePatchPtrType &PatchBase : DebugPatches) {
     Patch *P = PatchBase.get();
     switch (P->Kind) {
     default:
@@ -546,7 +543,7 @@ std::string DebugInfoBinaryPatcher::patchBinary(StringRef BinaryContents) {
 
   // Applying all the patches replacing current entry.
   // This might change the size of .debug_info section.
-  for (const std::unique_ptr<Patch> &PatchBase : DebugPatches) {
+  for (const UniquePatchPtrType &PatchBase : DebugPatches) {
     Patch *P = PatchBase.get();
     switch (P->Kind) {
     default:
