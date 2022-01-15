@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv64 -mattr=+experimental-zfh < %s 2>&1 | \
+# RUN: not llvm-mc -triple riscv64 -mattr=+zfh < %s 2>&1 | \
 # RUN:   FileCheck %s
 
 # Integer registers where FP regs are expected

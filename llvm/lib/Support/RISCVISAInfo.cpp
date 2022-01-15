@@ -47,6 +47,9 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"d", RISCVExtensionVersion{2, 0}},
     {"c", RISCVExtensionVersion{2, 0}},
 
+    {"zfhmin", RISCVExtensionVersion{1, 0}},
+    {"zfh", RISCVExtensionVersion{1, 0}},
+
     {"zba", RISCVExtensionVersion{1, 0}},
     {"zbb", RISCVExtensionVersion{1, 0}},
     {"zbc", RISCVExtensionVersion{1, 0}},
@@ -63,9 +66,6 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zbt", RISCVExtensionVersion{0, 93}},
 
     {"zvlsseg", RISCVExtensionVersion{0, 10}},
-
-    {"zfhmin", RISCVExtensionVersion{0, 1}},
-    {"zfh", RISCVExtensionVersion{0, 1}},
 };
 
 static bool stripExperimentalPrefix(StringRef &Ext) {
