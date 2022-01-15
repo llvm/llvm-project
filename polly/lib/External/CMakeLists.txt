@@ -290,7 +290,7 @@ if (POLLY_BUNDLED_ISL)
     install(DIRECTORY
       ${ISL_SOURCE_DIR}/include/
       ${ISL_BINARY_DIR}/include/
-      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/polly"
+      DESTINATION include/polly
       FILES_MATCHING
       PATTERN "*.h"
       PATTERN "CMakeFiles" EXCLUDE

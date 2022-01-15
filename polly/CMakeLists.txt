@@ -1,5 +1,3 @@
-include(GNUInstallDirs)
-
 # Check if this is a in tree build.
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   project(Polly)
@@ -126,13 +124,13 @@ include_directories(
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
     )
 
   install(DIRECTORY ${POLLY_BINARY_DIR}/include/
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION include
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN "CMakeFiles" EXCLUDE

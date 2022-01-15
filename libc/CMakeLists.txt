@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-include(GNUInstallDirs)
-
 # Use old version of target_sources command which converts the source
 # file paths to full paths.
 cmake_policy(SET CMP0076 OLD)
