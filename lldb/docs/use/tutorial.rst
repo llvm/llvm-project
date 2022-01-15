@@ -509,9 +509,9 @@ running anything you type will go to the STDIN of the inferior process. To
 interrupt your inferior program, type CTRL+C.
 
 If you attach to a process, or launch a process with the "--no-stdin" option,
-the command interpreter is always available to enter commands. This might be a
-little disconcerting to gdb users when always have an (lldb) prompt. This
-allows you to set a breakpoint, etc without having to explicitly interrupt the
+the command interpreter is always available to enter commands. It might be a
+little disconcerting to gdb users to always have an (lldb) prompt. This allows
+you to set a breakpoint, etc without having to explicitly interrupt the
 program you are debugging:
 
 ::
