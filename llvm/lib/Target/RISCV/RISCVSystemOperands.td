@@ -155,6 +155,12 @@ def : SysReg<"satp", 0x180>;
 def : SysReg<"scontext", 0x5A8>;
 
 //===----------------------------------------------------------------------===//
+// Supervisor Count Overflow (defined in Sscofpmf)
+//===----------------------------------------------------------------------===//
+
+def : SysReg<"scountovf", 0xDA0>;
+
+//===----------------------------------------------------------------------===//
 // Hypervisor Trap Setup
 //===----------------------------------------------------------------------===//
 
@@ -305,6 +311,12 @@ def : SysReg<"mcountinhibit", 0x320>;
 // mhpmevent3-mhpmevent31 at 0x323-0x33F.
 foreach i = 3...31 in
   def : SysReg<"mhpmevent"#i, !add(0x323, !sub(i, 3))>;
+
+// mhpmevent3h-mhpmevent31h at 0x723-0x73F
+foreach i = 3...31 in {
+  let isRV32Only = 1 in
+  def : SysReg<"mhpmevent"#i#"h", !add(0x723, !sub(i, 3))>;
+}
 
 //===----------------------------------------------------------------------===//
 // Debug/ Trace Registers (shared with Debug Mode)
