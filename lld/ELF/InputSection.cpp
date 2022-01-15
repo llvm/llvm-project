@@ -586,7 +586,7 @@ static Relocation *getRISCVPCRelHi20(const Symbol *sym, uint64_t addend) {
   InputSection *isec = cast<InputSection>(d->section);
 
   if (addend != 0)
-    warn("Non-zero addend in R_RISCV_PCREL_LO12 relocation to " +
+    warn("non-zero addend in R_RISCV_PCREL_LO12 relocation to " +
          isec->getObjMsg(d->value) + " is ignored");
 
   // Relocations are sorted by offset, so we can use std::equal_range to do
@@ -1136,7 +1136,7 @@ static void switchMorestackCallsToMorestackNonSplit(
   // __morestack_non_split.
   Symbol *moreStackNonSplit = symtab->find("__morestack_non_split");
   if (!moreStackNonSplit) {
-    error("Mixing split-stack objects requires a definition of "
+    error("mixing split-stack objects requires a definition of "
           "__morestack_non_split");
     return;
   }
