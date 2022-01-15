@@ -279,9 +279,8 @@ private:
 
   /// Return a list of all sections to include in the output binary.
   /// Populate \p NewSectionIndex with a map of input to output indices.
-  template <typename ELFT,
-            typename ELFShdrTy = typename object::ELFObjectFile<ELFT>::Elf_Shdr>
-  std::vector<ELFShdrTy>
+  template <typename ELFT>
+  std::vector<typename object::ELFObjectFile<ELFT>::Elf_Shdr>
   getOutputSections(object::ELFObjectFile<ELFT> *File,
                     std::vector<uint32_t> &NewSectionIndex);
 
@@ -293,13 +292,12 @@ private:
   /// based on the input file symbol table passed in \p SymTabSection.
   /// \p IsDynSym is set to true for dynamic symbol table since we
   /// are updating it in-place with minimal modifications.
-  template <typename ELFT,
-            typename ELFShdrTy = typename object::ELFObjectFile<ELFT>::Elf_Shdr,
-            typename WriteFuncTy, typename StrTabFuncTy>
-  void updateELFSymbolTable(object::ELFObjectFile<ELFT> *File, bool IsDynSym,
-                            const ELFShdrTy &SymTabSection,
-                            const std::vector<uint32_t> &NewSectionIndex,
-                            WriteFuncTy Write, StrTabFuncTy AddToStrTab);
+  template <typename ELFT, typename WriteFuncTy, typename StrTabFuncTy>
+  void updateELFSymbolTable(
+      object::ELFObjectFile<ELFT> *File, bool IsDynSym,
+      const typename object::ELFObjectFile<ELFT>::Elf_Shdr &SymTabSection,
+      const std::vector<uint32_t> &NewSectionIndex, WriteFuncTy Write,
+      StrTabFuncTy AddToStrTab);
 
   /// Add a notes section containing the BOLT revision and command line options.
   void addBoltInfoSection();
