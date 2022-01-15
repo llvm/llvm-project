@@ -26,13 +26,15 @@ struct in_in_result {
 
   template <class _II1, class _II2>
     requires convertible_to<const _I1&, _II1> && convertible_to<const _I2&, _II2>
-  constexpr operator in_in_result<_II1, _II2>() const & {
+   _LIBCPP_HIDE_FROM_ABI constexpr
+   operator in_in_result<_II1, _II2>() const & {
     return {in1, in2};
   }
 
   template <class _II1, class _II2>
     requires convertible_to<_I1, _II1> && convertible_to<_I2, _II2>
-    constexpr operator in_in_result<_II1, _II2>() && { return {_VSTD::move(in1), _VSTD::move(in2)}; }
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  operator in_in_result<_II1, _II2>() && { return {_VSTD::move(in1), _VSTD::move(in2)}; }
 };
 } // namespace ranges
 

@@ -116,6 +116,8 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     Features.push_back("+sme-i64");
   if (Extensions & AArch64::AEK_HBC)
     Features.push_back("+hbc");
+  if (Extensions & AArch64::AEK_MOPS)
+    Features.push_back("+mops");
 
   return true;
 }

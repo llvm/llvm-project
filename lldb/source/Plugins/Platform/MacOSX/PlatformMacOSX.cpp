@@ -144,8 +144,11 @@ std::vector<ArchSpec> PlatformMacOSX::GetSupportedArchitectures() {
   // has a 32bits variant.
   result.push_back(ArchSpec("x86_64-apple-macosx"));
   result.push_back(ArchSpec("x86_64-apple-ios-macabi"));
+  result.push_back(ArchSpec("arm64-apple-ios-macabi"));
+  result.push_back(ArchSpec("arm64e-apple-ios-macabi"));
 #else
   x86GetSupportedArchitectures(result);
+  result.push_back(ArchSpec("x86_64-apple-ios-macabi"));
 #endif
   return result;
 }
