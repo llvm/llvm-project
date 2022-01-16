@@ -2,7 +2,7 @@
 ; are unused. All unused values are typed i16, so we can easily check. We also
 ; run instcombine to fold insert/extractvalue chains and we run dce to clean up
 ; any remaining dead stuff.
-; RUN: opt < %s -deadargelim -instcombine -dce -S | not grep i16
+; RUN: opt < %s -passes='deadargelim,function(instcombine),function(dce)' -S | not grep i16
 
 define internal {i16, i32} @test(i16 %DEADARG) {
         %A = insertvalue {i16,i32} undef, i16 1, 0

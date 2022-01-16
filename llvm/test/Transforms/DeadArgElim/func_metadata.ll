@@ -1,4 +1,4 @@
-; RUN: opt -deadargelim -S < %s | FileCheck %s
+; RUN: opt -passes=deadargelim -S < %s | FileCheck %s
 
 ; Check if function level metadatas are properly cloned.
 

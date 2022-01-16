@@ -1,4 +1,4 @@
-; RUN: opt %s -deadargelim -S | FileCheck %s
+; RUN: opt %s -passes=deadargelim -S | FileCheck %s
 
 
 @block_addr = global i8* blockaddress(@varargs_func, %l1)

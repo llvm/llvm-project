@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -S | grep byval
+; RUN: opt < %s -passes=deadargelim -S | grep byval
 
 	%struct.point = type { double, double }
 @pts = global [4 x %struct.point] [ %struct.point { double 1.000000e+00, double 2.000000e+00 }, %struct.point { double 3.000000e+00, double 4.000000e+00 }, %struct.point { double 5.000000e+00, double 6.000000e+00 }, %struct.point { double 7.000000e+00, double 8.000000e+00 } ], align 32		; <[4 x %struct.point]*> [#uses=1]

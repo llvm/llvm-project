@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -S | FileCheck %s
+; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 
 define internal void @f(i32 %arg) {
 entry:

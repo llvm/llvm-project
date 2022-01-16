@@ -1,4 +1,4 @@
-; RUN: opt -S -deadargelim %s | FileCheck %s
+; RUN: opt -S -passes=deadargelim %s | FileCheck %s
 
 ; Case 0: the basic example: an entire aggregate use is returned, but it's
 ; actually only used in ways we can eliminate. We gain benefit from analysing

@@ -1,4 +1,4 @@
-; RUN: opt -S -deadargelim %s | FileCheck %s
+; RUN: opt -S -passes=deadargelim %s | FileCheck %s
 
 define internal { i64, i64 } @f(i64 %a, i64 %b) {
 start:

@@ -1,4 +1,4 @@
-; RUN: opt < %s -deadargelim -S | FileCheck %s
+; RUN: opt < %s -passes=deadargelim -S | FileCheck %s
 
 define i32 @bar(i32 %A) {
   call void (i32, ...) @thunk(i32 %A, i64 47, double 1.000000e+00)
