@@ -33,7 +33,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
@@ -398,9 +398,9 @@ Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(
-      saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC, 0,
-      getSize(), *this);
-  addSyntheticLocal(saver.save("$x"), STT_NOTYPE, 0, 0, *this);
+      saver().save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC,
+      0, getSize(), *this);
+  addSyntheticLocal(saver().save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
 uint64_t Patch843419Section::getLDSTAddr() const {
