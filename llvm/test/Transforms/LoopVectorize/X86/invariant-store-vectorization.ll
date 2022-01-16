@@ -186,7 +186,7 @@ define void @inv_val_store_to_inv_address_conditional(i32* %a, i64 %n, i32* %b, 
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
@@ -257,17 +257,17 @@ define void @variant_val_store_to_inv_address_conditional(i32* %a, i64 %n, i32* 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TMP0]] to <16 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, <16 x i32>* [[TMP1]], align 8, !alias.scope !16, !noalias !19
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, <16 x i32>* [[TMP1]], align 8, !alias.scope !17, !noalias !20
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <16 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP0]] to <16 x i32>*
-; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT19]], <16 x i32>* [[TMP3]], align 4, !alias.scope !16, !noalias !19
+; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT19]], <16 x i32>* [[TMP3]], align 4, !alias.scope !17, !noalias !20
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, i32* [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <16 x i32>*
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* [[TMP5]], i32 8, <16 x i1> [[TMP2]], <16 x i32> poison), !alias.scope !22
-; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> [[WIDE_MASKED_LOAD]], <16 x i32*> [[BROADCAST_SPLAT21]], i32 4, <16 x i1> [[TMP2]]), !alias.scope !23, !noalias !22
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* [[TMP5]], i32 8, <16 x i1> [[TMP2]], <16 x i32> poison), !alias.scope !23
+; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0i32(<16 x i32> [[WIDE_MASKED_LOAD]], <16 x i32*> [[BROADCAST_SPLAT21]], i32 4, <16 x i1> [[TMP2]]), !alias.scope !24, !noalias !23
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX16]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -300,7 +300,7 @@ define void @variant_val_store_to_inv_address_conditional(i32* %a, i64 %n, i32* 
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0i32(<8 x i32> [[WIDE_MASKED_LOAD32]], <8 x i32*> [[BROADCAST_SPLAT34]], i32 4, <8 x i1> [[TMP9]])
 ; CHECK-NEXT:    [[INDEX_NEXT35]] = add nuw i64 [[INDEX26]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT35]], [[N_VEC24]]
-; CHECK-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N25:%.*]] = icmp eq i64 [[SMAX22]], [[N_VEC24]]
 ; CHECK-NEXT:    br i1 [[CMP_N25]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -322,7 +322,7 @@ define void @variant_val_store_to_inv_address_conditional(i32* %a, i64 %n, i32* 
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP26:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT]], !llvm.loop [[LOOP27:![0-9]+]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
