@@ -1695,3 +1695,317 @@ body: |
     %2:_(<2 x s128>) = G_LSHR %0, %1
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %2
 ...
+
+---
+name: test_lshr_s65_s32
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+
+    ; SI-LABEL: name: test_lshr_s65_s32
+    ; SI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %23(s64)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; SI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C]]
+    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C1]]
+    ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; SI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[C2]]
+    ; SI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[TRUNC]]
+    ; SI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[TRUNC]](s32), [[C2]]
+    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[TRUNC]](s32), [[C3]]
+    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[TRUNC]](s32)
+    ; SI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[TRUNC]](s32)
+    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; SI-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL]]
+    ; SI-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; SI-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C4]]
+    ; SI-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
+    ; VI-LABEL: name: test_lshr_s65_s32
+    ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %23(s64)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; VI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; VI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; VI-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C]]
+    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C1]]
+    ; VI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; VI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[C2]]
+    ; VI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[TRUNC]]
+    ; VI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[TRUNC]](s32), [[C2]]
+    ; VI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[TRUNC]](s32), [[C3]]
+    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[TRUNC]](s32)
+    ; VI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[TRUNC]](s32)
+    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; VI-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL]]
+    ; VI-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; VI-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; VI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C4]]
+    ; VI-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
+    ; GFX9-LABEL: name: test_lshr_s65_s32
+    ; GFX9: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %23(s64)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C]]
+    ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C1]]
+    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; GFX9-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[C2]]
+    ; GFX9-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[TRUNC]]
+    ; GFX9-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[TRUNC]](s32), [[C2]]
+    ; GFX9-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[TRUNC]](s32), [[C3]]
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[TRUNC]](s32)
+    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[TRUNC]](s32)
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL]]
+    ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; GFX9-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; GFX9-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C4]]
+    ; GFX9-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
+    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s32) = COPY $vgpr3
+    %2:_(s65) = G_TRUNC %0
+    %3:_(s65) = G_LSHR %2, %3
+    %4:_(s96) = G_ANYEXT %3
+    $vgpr0_vgpr1_vgpr2 = COPY %4
+...
+
+---
+name: test_lshr_s65_s32_constant8
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2
+
+    ; SI-LABEL: name: test_lshr_s65_s32_constant8
+    ; SI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %23(s64)
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; SI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C]]
+    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C1]]
+    ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; SI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[C2]]
+    ; SI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[TRUNC]]
+    ; SI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[TRUNC]](s32), [[C2]]
+    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[TRUNC]](s32), [[C3]]
+    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[TRUNC]](s32)
+    ; SI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[TRUNC]](s32)
+    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; SI-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL]]
+    ; SI-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; SI-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C4]]
+    ; SI-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
+    ; VI-LABEL: name: test_lshr_s65_s32_constant8
+    ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %23(s64)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; VI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; VI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; VI-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C]]
+    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C1]]
+    ; VI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; VI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[C2]]
+    ; VI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[TRUNC]]
+    ; VI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[TRUNC]](s32), [[C2]]
+    ; VI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[TRUNC]](s32), [[C3]]
+    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[TRUNC]](s32)
+    ; VI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[TRUNC]](s32)
+    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; VI-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL]]
+    ; VI-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; VI-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; VI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C4]]
+    ; VI-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
+    ; GFX9-LABEL: name: test_lshr_s65_s32_constant8
+    ; GFX9: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC %23(s64)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C]]
+    ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C1]]
+    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; GFX9-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[C2]]
+    ; GFX9-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C2]], [[TRUNC]]
+    ; GFX9-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[TRUNC]](s32), [[C2]]
+    ; GFX9-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[TRUNC]](s32), [[C3]]
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[TRUNC]](s32)
+    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[TRUNC]](s32)
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL]]
+    ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; GFX9-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; GFX9-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C4]]
+    ; GFX9-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
+    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s32) = G_CONSTANT i32 8
+    %2:_(s65) = G_TRUNC %0
+    %3:_(s65) = G_LSHR %2, %3
+    %4:_(s96) = G_ANYEXT %3
+    $vgpr0_vgpr1_vgpr2 = COPY %4
+...
+
+---
+name: test_lshr_s65_s32_known_pow2
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+
+    ; SI-LABEL: name: test_lshr_s65_s32_known_pow2
+    ; SI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[COPY1]](s32)
+    ; SI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; SI-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; SI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; SI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; SI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; SI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; SI-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C1]]
+    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C2]]
+    ; SI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; SI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SHL]], [[C3]]
+    ; SI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C3]], [[SHL]]
+    ; SI-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; SI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[SHL]](s32), [[C3]]
+    ; SI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[SHL]](s32), [[C4]]
+    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SHL]](s32)
+    ; SI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[SHL]](s32)
+    ; SI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; SI-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL1]]
+    ; SI-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; SI-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; SI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; SI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; SI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C5]]
+    ; SI-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC]](s96)
+    ; VI-LABEL: name: test_lshr_s65_s32_known_pow2
+    ; VI: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[COPY1]](s32)
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; VI-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; VI-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; VI-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; VI-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; VI-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; VI-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C1]]
+    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C2]]
+    ; VI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; VI-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SHL]], [[C3]]
+    ; VI-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C3]], [[SHL]]
+    ; VI-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; VI-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[SHL]](s32), [[C3]]
+    ; VI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[SHL]](s32), [[C4]]
+    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SHL]](s32)
+    ; VI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[SHL]](s32)
+    ; VI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; VI-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL1]]
+    ; VI-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; VI-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; VI-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; VI-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; VI-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C5]]
+    ; VI-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC]](s96)
+    ; GFX9-LABEL: name: test_lshr_s65_s32_known_pow2
+    ; GFX9: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C]], [[COPY1]](s32)
+    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s96)
+    ; GFX9-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
+    ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV2]](s32), [[DEF]](s32)
+    ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[MV]], [[C1]]
+    ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[MV1]], [[C2]]
+    ; GFX9-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
+    ; GFX9-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SHL]], [[C3]]
+    ; GFX9-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[C3]], [[SHL]]
+    ; GFX9-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GFX9-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ult), [[SHL]](s32), [[C3]]
+    ; GFX9-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[SHL]](s32), [[C4]]
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SHL]](s32)
+    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[AND]], [[SHL]](s32)
+    ; GFX9-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[AND1]], [[SUB1]](s32)
+    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s64) = G_OR [[LSHR1]], [[SHL1]]
+    ; GFX9-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; GFX9-NEXT: [[LSHR2:%[0-9]+]]:_(s64) = G_LSHR [[AND1]], [[SUB]](s32)
+    ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[OR]], [[LSHR2]]
+    ; GFX9-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[AND]], [[SELECT]]
+    ; GFX9-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[LSHR]], [[C5]]
+    ; GFX9-NEXT: [[MV2:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT1]](s64), [[SELECT2]](s64)
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s128)
+    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC]](s96)
+    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(s32) = COPY $vgpr3
+    %2:_(s32) = G_CONSTANT i32 1
+    %3:_(s32) = G_SHL %2, %1
+    %4:_(s65) = G_TRUNC %0
+    %5:_(s65) = G_LSHR %4, %3
+    %6:_(s96) = G_ANYEXT %5
+    $vgpr0_vgpr1_vgpr2 = COPY %6
+...
