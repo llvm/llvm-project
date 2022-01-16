@@ -27,8 +27,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Endian.h"
@@ -434,7 +433,7 @@ void AArch64ABSLongThunk::writeTo(uint8_t *buf) {
 }
 
 void AArch64ABSLongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__AArch64AbsLongThunk_" + destination.getName()),
+  addSymbol(saver().save("__AArch64AbsLongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$x", STT_NOTYPE, 0, isec);
   addSymbol("$d", STT_NOTYPE, 8, isec);
@@ -460,8 +459,8 @@ void AArch64ADRPThunk::writeTo(uint8_t *buf) {
 }
 
 void AArch64ADRPThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__AArch64ADRPThunk_" + destination.getName()), STT_FUNC,
-            0, isec);
+  addSymbol(saver().save("__AArch64ADRPThunk_" + destination.getName()),
+            STT_FUNC, 0, isec);
   addSymbol("$x", STT_NOTYPE, 0, isec);
 }
 
@@ -560,7 +559,7 @@ void ARMV7ABSLongThunk::writeLong(uint8_t *buf) {
 }
 
 void ARMV7ABSLongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__ARMv7ABSLongThunk_" + destination.getName()),
+  addSymbol(saver().save("__ARMv7ABSLongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
 }
@@ -578,7 +577,7 @@ void ThumbV7ABSLongThunk::writeLong(uint8_t *buf) {
 }
 
 void ThumbV7ABSLongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__Thumbv7ABSLongThunk_" + destination.getName()),
+  addSymbol(saver().save("__Thumbv7ABSLongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
 }
@@ -599,8 +598,8 @@ void ARMV7PILongThunk::writeLong(uint8_t *buf) {
 }
 
 void ARMV7PILongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__ARMV7PILongThunk_" + destination.getName()), STT_FUNC,
-            0, isec);
+  addSymbol(saver().save("__ARMV7PILongThunk_" + destination.getName()),
+            STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
 }
 
@@ -620,7 +619,7 @@ void ThumbV7PILongThunk::writeLong(uint8_t *buf) {
 }
 
 void ThumbV7PILongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__ThumbV7PILongThunk_" + destination.getName()),
+  addSymbol(saver().save("__ThumbV7PILongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
 }
@@ -635,7 +634,7 @@ void ARMV5ABSLongThunk::writeLong(uint8_t *buf) {
 }
 
 void ARMV5ABSLongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__ARMv5ABSLongThunk_" + destination.getName()),
+  addSymbol(saver().save("__ARMv5ABSLongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
   addSymbol("$d", STT_NOTYPE, 4, isec);
@@ -661,8 +660,8 @@ void ARMV5PILongThunk::writeLong(uint8_t *buf) {
 }
 
 void ARMV5PILongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__ARMV5PILongThunk_" + destination.getName()), STT_FUNC,
-            0, isec);
+  addSymbol(saver().save("__ARMV5PILongThunk_" + destination.getName()),
+            STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
   addSymbol("$d", STT_NOTYPE, 12, isec);
 }
@@ -691,7 +690,7 @@ void ThumbV6MABSLongThunk::writeLong(uint8_t *buf) {
 }
 
 void ThumbV6MABSLongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__Thumbv6MABSLongThunk_" + destination.getName()),
+  addSymbol(saver().save("__Thumbv6MABSLongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
   addSymbol("$d", STT_NOTYPE, 8, isec);
@@ -717,7 +716,7 @@ void ThumbV6MPILongThunk::writeLong(uint8_t *buf) {
 }
 
 void ThumbV6MPILongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__Thumbv6MPILongThunk_" + destination.getName()),
+  addSymbol(saver().save("__Thumbv6MPILongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
   addSymbol("$d", STT_NOTYPE, 12, isec);
@@ -735,7 +734,7 @@ void MipsThunk::writeTo(uint8_t *buf) {
 }
 
 void MipsThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__LA25Thunk_" + destination.getName()), STT_FUNC, 0,
+  addSymbol(saver().save("__LA25Thunk_" + destination.getName()), STT_FUNC, 0,
             isec);
 }
 
@@ -758,8 +757,9 @@ void MicroMipsThunk::writeTo(uint8_t *buf) {
 }
 
 void MicroMipsThunk::addSymbols(ThunkSection &isec) {
-  Defined *d = addSymbol(
-      saver.save("__microLA25Thunk_" + destination.getName()), STT_FUNC, 0, isec);
+  Defined *d =
+      addSymbol(saver().save("__microLA25Thunk_" + destination.getName()),
+                STT_FUNC, 0, isec);
   d->stOther |= STO_MIPS_MICROMIPS;
 }
 
@@ -782,8 +782,9 @@ void MicroMipsR6Thunk::writeTo(uint8_t *buf) {
 }
 
 void MicroMipsR6Thunk::addSymbols(ThunkSection &isec) {
-  Defined *d = addSymbol(
-      saver.save("__microLA25Thunk_" + destination.getName()), STT_FUNC, 0, isec);
+  Defined *d =
+      addSymbol(saver().save("__microLA25Thunk_" + destination.getName()),
+                STT_FUNC, 0, isec);
   d->stOther |= STO_MIPS_MICROMIPS;
 }
 
@@ -843,7 +844,7 @@ void PPC32PltCallStub::addSymbols(ThunkSection &isec) {
   else
     os << ".plt_pic32.";
   os << destination.getName();
-  addSymbol(saver.save(os.str()), STT_FUNC, 0, isec);
+  addSymbol(saver().save(os.str()), STT_FUNC, 0, isec);
 }
 
 bool PPC32PltCallStub::isCompatibleWith(const InputSection &isec,
@@ -852,7 +853,7 @@ bool PPC32PltCallStub::isCompatibleWith(const InputSection &isec,
 }
 
 void PPC32LongThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__LongThunk_" + destination.getName()), STT_FUNC, 0,
+  addSymbol(saver().save("__LongThunk_" + destination.getName()), STT_FUNC, 0,
             isec);
 }
 
@@ -896,8 +897,8 @@ void PPC64PltCallStub::writeTo(uint8_t *buf) {
 }
 
 void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
-  Defined *s = addSymbol(saver.save("__plt_" + destination.getName()), STT_FUNC,
-                         0, isec);
+  Defined *s = addSymbol(saver().save("__plt_" + destination.getName()),
+                         STT_FUNC, 0, isec);
   s->needsTocRestore = true;
   s->file = destination.file;
 }
@@ -947,7 +948,7 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
 }
 
 void PPC64R2SaveStub::addSymbols(ThunkSection &isec) {
-  Defined *s = addSymbol(saver.save("__toc_save_" + destination.getName()),
+  Defined *s = addSymbol(saver().save("__toc_save_" + destination.getName()),
                          STT_FUNC, 0, isec);
   s->needsTocRestore = true;
 }
@@ -983,7 +984,7 @@ void PPC64R12SetupStub::writeTo(uint8_t *buf) {
 }
 
 void PPC64R12SetupStub::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__gep_setup_" + destination.getName()), STT_FUNC, 0,
+  addSymbol(saver().save("__gep_setup_" + destination.getName()), STT_FUNC, 0,
             isec);
 }
 
@@ -1019,7 +1020,7 @@ void PPC64PCRelPLTStub::writeTo(uint8_t *buf) {
 }
 
 void PPC64PCRelPLTStub::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__plt_pcrel_" + destination.getName()), STT_FUNC, 0,
+  addSymbol(saver().save("__plt_pcrel_" + destination.getName()), STT_FUNC, 0,
             isec);
 }
 
@@ -1035,7 +1036,7 @@ void PPC64LongBranchThunk::writeTo(uint8_t *buf) {
 }
 
 void PPC64LongBranchThunk::addSymbols(ThunkSection &isec) {
-  addSymbol(saver.save("__long_branch_" + destination.getName()), STT_FUNC, 0,
+  addSymbol(saver().save("__long_branch_" + destination.getName()), STT_FUNC, 0,
             isec);
 }
 
