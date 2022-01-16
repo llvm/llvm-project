@@ -83,7 +83,7 @@ static cl::opt<std::string>
                    cl::desc("Path for the target bitcode library"),
                    cl::cat(ClangLinkerWrapperCategory));
 
-static cl::opt<bool> EmbedBC(
+static cl::opt<bool> EmbedBitcode(
     "target-embed-bc", cl::ZeroOrMore,
     cl::desc("Embed linked bitcode instead of an executable device image"),
     cl::init(false), cl::cat(ClangLinkerWrapperCategory));
@@ -657,7 +657,7 @@ void diagnosticHandler(const DiagnosticInfo &DI) {
     WithColor::note(errs(), LinkerExecutable) << ErrStorage << "\n";
     break;
   case DS_Remark:
-    WithColor::remark(errs(), LinkerExecutable) << ErrStorage << "\n";
+    WithColor::remark(errs()) << ErrStorage << "\n";
     break;
   }
 }
@@ -710,7 +710,7 @@ std::unique_ptr<lto::LTO> createLTO(
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
-  Conf.PostInternalizeModuleHook = Hook;
+  Conf.PostOptModuleHook = Hook;
   if (TheTriple.isNVPTX())
     Conf.CGFileType = CGFT_AssemblyFile;
   else
@@ -781,6 +781,8 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
   if (BitcodeFiles.empty())
     return Error::success();
 
+  assert(!BitcodeLibrary.empty() && "Bitcode linking without `-foffload-lto`");
+
   auto HandleError = [&](std::error_code EC) {
     logAllUnhandledErrors(errorCodeToError(EC),
                           WithColor::error(errs(), LinkerExecutable));
@@ -805,7 +807,7 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
 
   // We assume visibility of the whole program if every input file was bitcode.
   bool WholeProgram = BitcodeFiles.size() == InputFiles.size();
-  auto LTOBackend = (EmbedBC)
+  auto LTOBackend = (EmbedBitcode)
                         ? createLTO(TheTriple, Arch, WholeProgram, LinkOnly)
                         : createLTO(TheTriple, Arch, WholeProgram);
 
@@ -879,14 +881,13 @@ Error linkBitcodeFiles(SmallVectorImpl<std::string> &InputFiles,
     return Err;
 
   // Is we are compiling for NVPTX we need to run the assembler first.
-  for (auto &File : Files) {
-    if (!TheTriple.isNVPTX() || EmbedBC)
-      continue;
-
-    auto FileOrErr = nvptx::assemble(File, TheTriple, Arch);
-    if (!FileOrErr)
-      return FileOrErr.takeError();
-    File = *FileOrErr;
+  if (TheTriple.isNVPTX() && !EmbedBitcode) {
+    for (auto &File : Files) {
+      auto FileOrErr = nvptx::assemble(File, TheTriple, Arch);
+      if (!FileOrErr)
+        return FileOrErr.takeError();
+      File = *FileOrErr;
+    }
   }
 
   // Append the new inputs to the device linker input.
@@ -918,7 +919,7 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
       return Err;
 
     // If we are embedding bitcode for JIT, skip the final device linking.
-    if (EmbedBC) {
+    if (EmbedBitcode) {
       assert(!LinkerInput.getValue().empty() && "No bitcode image to embed");
       LinkedImages.push_back(LinkerInput.getValue().front());
       continue;
@@ -1080,8 +1081,8 @@ int main(int argc, const char **argv) {
     if (Optional<std::string> Library = searchLibrary(Arg, LibraryPaths))
       Filename = *Library;
 
-    if (sys::path::extension(Filename) == ".o" ||
-        sys::path::extension(Filename) == ".a") {
+    if (sys::fs::exists(Filename) && (sys::path::extension(Filename) == ".o" ||
+                                      sys::path::extension(Filename) == ".a")) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
           MemoryBuffer::getFileOrSTDIN(Filename);
       if (std::error_code EC = BufferOrErr.getError())
@@ -1100,9 +1101,6 @@ int main(int argc, const char **argv) {
 
   // Add the device bitcode library to the device files if it was passed in.
   if (!BitcodeLibrary.empty()) {
-    // FIXME: Hacky workaround to avoid a backend crash at O0.
-    if (OptLevel[1] - '0' == 0)
-      OptLevel[1] = '1';
     auto DeviceAndPath = StringRef(BitcodeLibrary).split('=');
     auto TripleAndArch = DeviceAndPath.first.rsplit('-');
     DeviceFiles.emplace_back(TripleAndArch.first, TripleAndArch.second,
