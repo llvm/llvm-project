@@ -11,7 +11,7 @@ namespace test1 {
     // CHECK:      load
     // CHECK-NEXT: icmp eq {{.*}}, null
     // CHECK-NEXT: br i1
-    // CHECK:      call void @_ZN5test11AdlEPvj(i8* %{{.*}}, i32 4)
+    // CHECK:      call void @_ZN5test11AdlEPvj(i8* noundef %{{.*}}, i32 noundef 4)
     delete x;
   }
 }
@@ -27,7 +27,7 @@ namespace test2 {
 
   // CHECK: define{{.*}} [[A:%.*]]* @_ZN5test24testEv()
   A *test() {
-    // CHECK:      [[NEW:%.*]] = call noalias nonnull i8* @_Znaj(i32 44)
+    // CHECK:      [[NEW:%.*]] = call noalias noundef nonnull i8* @_Znaj(i32 noundef 44)
     // CHECK-NEXT: [[T0:%.*]] = bitcast i8* [[NEW]] to i32*
     // CHECK-NEXT: store i32 10, i32* [[T0]]
     // CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, i8* [[NEW]], i32 4
@@ -47,7 +47,7 @@ namespace test2 {
     // CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, i8* [[T2]], i32 -4
     // CHECK-NEXT: [[T4:%.*]] = bitcast i8* [[T3]] to i32*
     // CHECK-NEXT: [[T5:%.*]] = load i32, i32* [[T4]]
-    // CHECK-NEXT: call void @_ZdaPv(i8* [[T3]])
+    // CHECK-NEXT: call void @_ZdaPv(i8* noundef [[T3]])
     // CHECK-NEXT: br label
     ::delete[] p;
   }
@@ -63,7 +63,7 @@ namespace test3 {
 
   // CHECK-LABEL: define{{.*}} void @_ZN5test34testEv()
   void test() {
-    // CHECK:      [[CALL:%.*]] = call noalias nonnull i8* @_Znaj(i32 24)
+    // CHECK:      [[CALL:%.*]] = call noalias noundef nonnull i8* @_Znaj(i32 noundef 24)
     // CHECK-NEXT: bitcast i8* [[CALL]] to i32*
     // CHECK-NEXT: store i32 5
     (void) new B[5];

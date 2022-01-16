@@ -29,7 +29,7 @@ S2 f2() {
 
 // Pass and return for type size > 16 bytes.
 // CHECK: define {{.*}} void @{{.*}}f3{{.*}}(%struct.S3* noalias sret(%struct.S3) align 4 %agg.result)
-// CHECK: call void {{.*}}func3{{.*}}(%struct.S3* sret(%struct.S3) align 4 %agg.result, %struct.S3* %agg.tmp)
+// CHECK: call void {{.*}}func3{{.*}}(%struct.S3* sret(%struct.S3) align 4 %agg.result, %struct.S3* noundef %agg.tmp)
 struct S3 {
   int a[5];
 };
@@ -57,7 +57,7 @@ S4 f4() {
 
 // Pass and return from instance method called from instance method.
 // CHECK: define {{.*}} void @{{.*}}bar@Q1{{.*}}(%class.Q1* {{[^,]*}} %this, %class.P1* inreg noalias sret(%class.P1) align 1 %agg.result)
-// CHECK: call void {{.*}}foo@P1{{.*}}(%class.P1* {{[^,]*}} %ref.tmp, %class.P1* inreg sret(%class.P1) align 1 %agg.result, i8 %1)
+// CHECK: call void {{.*}}foo@P1{{.*}}(%class.P1* noundef{{[^,]*}} %ref.tmp, %class.P1* inreg sret(%class.P1) align 1 %agg.result, i8 %1)
 
 class P1 {
 public:
@@ -76,7 +76,7 @@ P1 Q1::bar() {
 
 // Pass and return from instance method called from free function.
 // CHECK: define {{.*}} void {{.*}}bar{{.*}}()
-// CHECK: call void {{.*}}foo@P2{{.*}}(%class.P2* {{[^,]*}} %ref.tmp, %class.P2* inreg sret(%class.P2) align 1 %retval, i8 %0)
+// CHECK: call void {{.*}}foo@P2{{.*}}(%class.P2* noundef{{[^,]*}} %ref.tmp, %class.P2* inreg sret(%class.P2) align 1 %retval, i8 %0)
 class P2 {
 public:
   P2 foo(P2 x);

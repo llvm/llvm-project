@@ -32,7 +32,7 @@ void foo() {
 //
 // CHECK: Function Attrs: noinline norecurse nounwind
 // CHECK-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -43,7 +43,7 @@ void foo() {
 //
 // CHECK: Function Attrs: alwaysinline norecurse nounwind
 // CHECK-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -70,7 +70,7 @@ void foo() {
 //
 // CHECK-NOINLINE: Function Attrs: noinline norecurse nounwind
 // CHECK-NOINLINE-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK-NOINLINE-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-NOINLINE-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NOINLINE-NEXT:  entry:
 // CHECK-NOINLINE-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NOINLINE-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -81,7 +81,7 @@ void foo() {
 //
 // CHECK-NOINLINE: Function Attrs: alwaysinline norecurse nounwind
 // CHECK-NOINLINE-LABEL: define {{[^@]+}}@.omp_outlined..1
-// CHECK-NOINLINE-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-NOINLINE-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NOINLINE-NEXT:  entry:
 // CHECK-NOINLINE-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK-NOINLINE-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8

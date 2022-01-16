@@ -110,7 +110,7 @@ void l() {
 // CHECK-MS-DAG: declare dso_local i32 @atexit(void ()*)
 // CHECK-MS-DYNAMIC-DAG: declare {{.*}} void @_CxxThrowException
 // CHECK-MS-STATIC-DAG: declare {{.*}} void @_CxxThrowException
-// CHECK-MS-DAG: declare dso_local nonnull i8* @"??2@YAPAXI@Z"
+// CHECK-MS-DAG: declare dso_local noundef nonnull i8* @"??2@YAPAXI@Z"
 // CHECK-MS-DAG: declare dso_local void @_Init_thread_header(i32*)
 // CHECK-MS-DAG: declare dso_local void @_Init_thread_footer(i32*)
 
@@ -120,16 +120,16 @@ void l() {
 
 // CHECK-DYNAMIC-IA-DAG: declare dllimport i32 @__cxa_thread_atexit(void (i8*)*, i8*, i8*)
 // CHECK-DYNAMIC-IA-DAG: declare dllimport i32 @__cxa_atexit(void (i8*)*, i8*, i8*)
-// CHECK-DYNAMIC-IA-DECL-DAG: declare i8* @__cxa_allocate_exception(i32)
-// CHECK-DYNAMIC-IA-NODECL-DAG: declare dllimport i8* @__cxa_allocate_exception(i32)
-// CHECK-DYNAMIC-IA-IMPORT-DAG: declare dllimport i8* @__cxa_allocate_exception(i32)
-// CHECK-DYNAMIC-IA-EXPORT-DAG: declare dllimport i8* @__cxa_allocate_exception(i32)
+// CHECK-DYNAMIC-IA-DECL-DAG: declare i8* @__cxa_allocate_exception(i32 noundef)
+// CHECK-DYNAMIC-IA-NODECL-DAG: declare dllimport i8* @__cxa_allocate_exception(i32 noundef)
+// CHECK-DYNAMIC-IA-IMPORT-DAG: declare dllimport i8* @__cxa_allocate_exception(i32 noundef)
+// CHECK-DYNAMIC-IA-EXPORT-DAG: declare dllimport i8* @__cxa_allocate_exception(i32 noundef)
 // CHECK-DYNAMIC-IA-DAG: declare dllimport void @__cxa_throw(i8*, i8*, i8*)
 // CHECK-DYNAMIC-DECL-IA-DAG: declare dllimport i32 @__cxa_guard_acquire(i64*)
 // CHECK-DYNAMIC-NODECL-IA-DAG: declare dllimport i32 @__cxa_guard_acquire(i64*)
 // CHECK-DYNAMIC-IMPORT-IA-DAG: declare dllimport i32 @__cxa_guard_acquire(i64*)
 // CHECK-DYNAMIC-EXPORT-IA-DAG: declare dllexport i32 @__cxa_guard_acquire(i64*)
-// CHECK-IA-DAG: declare dso_local nonnull i8* @_Znwj(i32)
+// CHECK-IA-DAG: declare dso_local noundef nonnull i8* @_Znwj(i32 noundef)
 // CHECK-DYNAMIC-DECL-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
 // CHECK-DYNAMIC-NODECL-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
 // CHECK-DYNAMIC-IMPORT-IA-DAG: declare dllimport void @__cxa_guard_release(i64*)
@@ -147,7 +147,7 @@ void l() {
 // CHECK-STATIC-NODECL-IA-DAG: declare dso_local i32 @__cxa_guard_acquire(i64*)
 // CHECK-STATIC-IMPORT-IA-DAG: declare dso_local i32 @__cxa_guard_acquire(i64*)
 // CHECK-STATIC-EXPORT-IA-DAG: declare dso_local i32 @__cxa_guard_acquire(i64*)
-// CHECK-IA-DAG: declare dso_local nonnull i8* @_Znwj(i32)
+// CHECK-IA-DAG: declare dso_local noundef nonnull i8* @_Znwj(i32 noundef)
 // CHECK-STATIC-DECL-IA-DAG: declare dso_local void @__cxa_guard_release(i64*)
 // CHECK-STATIC-NODECL-IA-DAG: declare dso_local void @__cxa_guard_release(i64*)
 // CHECK-STATIC-IMPORT-IA-DAG: declare dso_local void @__cxa_guard_release(i64*)

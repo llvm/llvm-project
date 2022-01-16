@@ -25,7 +25,7 @@
 long long get_val() { extern void mayThrow(); mayThrow(); return 0; }
 double *g_ptr;
 
-// CHECK-LABEL: define {{.*void}} @{{.*}}simple{{.*}}(float* {{.+}}, float* {{.+}}, float* {{.+}}, float* {{.+}})
+// CHECK-LABEL: define {{.*void}} @{{.*}}simple{{.*}}(float* noundef {{.+}}, float* noundef {{.+}}, float* noundef {{.+}}, float* noundef {{.+}})
 void simple(float *a, float *b, float *c, float *d) {
 // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 // CHECK: [[K0:%.+]] = call {{.*}}i64 @{{.*}}get_val
@@ -387,7 +387,7 @@ int templ1(T a, T *z) {
 }
 
 // Instatiation templ1<float,2>
-// CHECK-LABEL: define {{.*i32}} @{{.*}}templ1{{.*}}(float {{.+}}, float* {{.+}})
+// CHECK-LABEL: define {{.*i32}} @{{.*}}templ1{{.*}}(float noundef {{.+}}, float* noundef {{.+}})
 // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(
 void inst_templ1() {
   float a;
@@ -808,7 +808,7 @@ int bar() { extern void mayThrow(); mayThrow(); return 0; };
 void parallel_simd(float *a) {
 #pragma omp parallel for simd
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
-  // TERM_DEBUG:     invoke i32 {{.*}}bar{{.*}}()
+  // TERM_DEBUG:     invoke noundef i32 {{.*}}bar{{.*}}()
   // TERM_DEBUG:     unwind label %[[TERM_LPAD:[a-zA-Z0-9\.]+]],
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     [[TERM_LPAD]]

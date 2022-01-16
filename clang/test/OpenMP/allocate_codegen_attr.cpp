@@ -84,7 +84,7 @@ int main() {
 // CHECK-NEXT:    [[DOTB__VOID_ADDR:%.*]] = call i8* @__kmpc_alloc(i32 [[TMP0]], i64 8, i8* null)
 // CHECK-NEXT:    [[DOTB__ADDR:%.*]] = bitcast i8* [[DOTB__VOID_ADDR]] to double*
 // CHECK-NEXT:    store double 3.000000e+00, double* [[DOTB__ADDR]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooIiET_v()
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z3fooIiET_v()
 // CHECK-NEXT:    store i32 [[CALL]], i32* [[RETVAL]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[DOTB__ADDR]] to i8*
 // CHECK-NEXT:    call void @__kmpc_free(i32 [[TMP0]], i8* [[TMP1]], i8* null)
@@ -106,7 +106,7 @@ int main() {
 // CHECK-NOT:  call {{.+}} {{__kmpc_alloc|__kmpc_free}}
 extern template int ST<int>::m;
 
-// CHECK: define{{.*}} void @{{.+}}bar{{.+}}(i32 %{{.+}}, float* {{.+}})
+// CHECK: define{{.*}} void @{{.+}}bar{{.+}}(i32 noundef %{{.+}}, float* noundef {{.+}})
 void bar(int a, float &z) {
   // CHECK: [[A_VOID_PTR:%.+]] = call i8* @__kmpc_alloc(i32 [[GTID:%.+]], i64 4, i8* inttoptr (i64 1 to i8*))
   // CHECK: [[A_ADDR:%.+]] = bitcast i8* [[A_VOID_PTR]] to i32*

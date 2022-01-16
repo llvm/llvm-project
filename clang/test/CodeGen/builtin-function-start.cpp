@@ -34,13 +34,13 @@ void A::h() {}
 // CHECK: define {{.*}}i32 @_ZNK1A1iEv(%class.A* {{.*}}%this)
 int A::i() const { return 0; }
 
-// CHECK: define {{.*}}i32 @_ZNK1A1iEi(%class.A* {{.*}}%this, i32 %n)
+// CHECK: define {{.*}}i32 @_ZNK1A1iEi(%class.A* noundef {{.*}}%this, i32 noundef %n)
 int A::i(int n) const { return 0; }
 
 void h(void) {
   // CHECK: store i8* bitcast (void ()* no_cfi @_Z1bv to i8*), i8** %g
   void *g = __builtin_function_start(b);
-  // CHECK: call void @_Z1cPv(i8* bitcast (void ()* no_cfi @_Z1av to i8*))
+  // CHECK: call void @_Z1cPv(i8* noundef bitcast (void ()* no_cfi @_Z1av to i8*))
   c(__builtin_function_start(a));
 
   // CHECK: store i8* bitcast (void (%class.A*)* no_cfi @_ZN1A1fEv to i8*), i8** %Af

@@ -44,7 +44,7 @@ void test_task_affinity() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@.omp_task_privates_map.
-// CHECK-SAME: (%struct..kmp_privates.t* noalias [[TMP0:%.*]], i32** noalias [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: (%struct..kmp_privates.t* noalias noundef [[TMP0:%.*]], i32** noalias noundef [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca %struct..kmp_privates.t*, align 8
 // CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca i32**, align 8
@@ -58,7 +58,7 @@ void test_task_affinity() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@.omp_task_entry.
-// CHECK-SAME: (i32 [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: (i32 noundef [[TMP0:%.*]], %struct.kmp_task_t_with_privates* noalias noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR_I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[DOTPART_ID__ADDR_I:%.*]] = alloca i32*, align 8

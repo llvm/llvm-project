@@ -19,9 +19,9 @@
 // RUN: %clang_cc1 -triple mipsisa64r6-unknown-linux-gnuabi64 -S -emit-llvm -o - %s | FileCheck -check-prefix=N64 %s
 // RUN: %clang_cc1 -triple mipsisa64r6el-unknown-linux-gnuabi64 -S -emit-llvm -o - %s | FileCheck -check-prefix=N64 %s
 
-// O32: define{{.*}} void @fn28(%struct.T2* noalias sret(%struct.T2) align 1 %agg.result, i8 signext %arg0)
-// N32: define{{.*}} void @fn28(i8 signext %arg0)
-// N64: define{{.*}} void @fn28(i8 signext %arg0)
+// O32: define{{.*}} void @fn28(%struct.T2* noalias sret(%struct.T2) align 1 %agg.result, i8 noundef signext %arg0)
+// N32: define{{.*}} void @fn28(i8 noundef signext %arg0)
+// N64: define{{.*}} void @fn28(i8 noundef signext %arg0)
 
 typedef struct T2 {  } T2;
 T2 T2_retval;

@@ -11,7 +11,7 @@ void empty_function(void);
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK-NEXT:    call void @empty_function()
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32 1)
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo(i32 noundef 1)
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 int main() {

@@ -18,37 +18,37 @@ void f_void(void) {}
 // Scalar arguments and return values smaller than the word size are extended
 // according to the sign of their type, up to 32 bits
 
-// CHECK-LABEL: define{{.*}} zeroext i1 @f_scalar_0(i1 zeroext %x)
+// CHECK-LABEL: define{{.*}} zeroext i1 @f_scalar_0(i1 noundef zeroext %x)
 _Bool f_scalar_0(_Bool x) { return x; }
 
-// CHECK-LABEL: define{{.*}} signext i8 @f_scalar_1(i8 signext %x)
+// CHECK-LABEL: define{{.*}} signext i8 @f_scalar_1(i8 noundef signext %x)
 int8_t f_scalar_1(int8_t x) { return x; }
 
-// CHECK-LABEL: define{{.*}} zeroext i8 @f_scalar_2(i8 zeroext %x)
+// CHECK-LABEL: define{{.*}} zeroext i8 @f_scalar_2(i8 noundef zeroext %x)
 uint8_t f_scalar_2(uint8_t x) { return x; }
 
-// CHECK-LABEL: define{{.*}} i32 @f_scalar_3(i32 %x)
+// CHECK-LABEL: define{{.*}} i32 @f_scalar_3(i32 noundef %x)
 int32_t f_scalar_3(int32_t x) { return x; }
 
-// CHECK-LABEL: define{{.*}} i64 @f_scalar_4(i64 %x)
+// CHECK-LABEL: define{{.*}} i64 @f_scalar_4(i64 noundef %x)
 int64_t f_scalar_4(int64_t x) { return x; }
 
 #ifdef __SIZEOF_INT128__
-// CHECK-FORCEINT128-LABEL: define{{.*}} i128 @f_scalar_5(i128 %x)
+// CHECK-FORCEINT128-LABEL: define{{.*}} i128 @f_scalar_5(i128 noundef %x)
 __int128_t f_scalar_5(__int128_t x) { return x; }
 #endif
 
-// CHECK-LABEL: define{{.*}} float @f_fp_scalar_1(float %x)
+// CHECK-LABEL: define{{.*}} float @f_fp_scalar_1(float noundef %x)
 float f_fp_scalar_1(float x) { return x; }
 
-// CHECK-LABEL: define{{.*}} double @f_fp_scalar_2(double %x)
+// CHECK-LABEL: define{{.*}} double @f_fp_scalar_2(double noundef %x)
 double f_fp_scalar_2(double x) { return x; }
 
 // Scalars larger than 2*xlen are passed/returned indirect. However, the
 // RISC-V LLVM backend can handle this fine, so the function doesn't need to
 // be modified.
 
-// CHECK-LABEL: define{{.*}} fp128 @f_fp_scalar_3(fp128 %x)
+// CHECK-LABEL: define{{.*}} fp128 @f_fp_scalar_3(fp128 noundef %x)
 long double f_fp_scalar_3(long double x) { return x; }
 
 // Empty structs or unions are ignored.
@@ -88,7 +88,7 @@ struct tiny f_agg_tiny_ret() {
 typedef uint8_t v4i8 __attribute__((vector_size(4)));
 typedef int32_t v1i32 __attribute__((vector_size(4)));
 
-// CHECK-LABEL: define{{.*}} void @f_vec_tiny_v4i8(i32 %x.coerce)
+// CHECK-LABEL: define{{.*}} void @f_vec_tiny_v4i8(i32 noundef %x.coerce)
 void f_vec_tiny_v4i8(v4i8 x) {
   x[0] = x[1];
   x[2] = x[3];
@@ -99,7 +99,7 @@ v4i8 f_vec_tiny_v4i8_ret() {
   return (v4i8){1, 2, 3, 4};
 }
 
-// CHECK-LABEL: define{{.*}} void @f_vec_tiny_v1i32(i32 %x.coerce)
+// CHECK-LABEL: define{{.*}} void @f_vec_tiny_v1i32(i32 noundef %x.coerce)
 void f_vec_tiny_v1i32(v1i32 x) {
   x[0] = 114;
 }
@@ -127,7 +127,7 @@ struct small f_agg_small_ret() {
 typedef uint8_t v8i8 __attribute__((vector_size(8)));
 typedef int64_t v1i64 __attribute__((vector_size(8)));
 
-// CHECK-LABEL: define{{.*}} void @f_vec_small_v8i8(i64 %x.coerce)
+// CHECK-LABEL: define{{.*}} void @f_vec_small_v8i8(i64 noundef %x.coerce)
 void f_vec_small_v8i8(v8i8 x) {
   x[0] = x[7];
 }
@@ -137,7 +137,7 @@ v8i8 f_vec_small_v8i8_ret() {
   return (v8i8){1, 2, 3, 4, 5, 6, 7, 8};
 }
 
-// CHECK-LABEL: define{{.*}} void @f_vec_small_v1i64(i64 %x.coerce)
+// CHECK-LABEL: define{{.*}} void @f_vec_small_v1i64(i64 noundef %x.coerce)
 void f_vec_small_v1i64(v1i64 x) {
   x[0] = 114;
 }
@@ -170,21 +170,21 @@ struct large {
   int32_t a, b, c, d;
 };
 
-// CHECK-LABEL: define{{.*}} void @f_agg_large(%struct.large* %x)
+// CHECK-LABEL: define{{.*}} void @f_agg_large(%struct.large* noundef %x)
 void f_agg_large(struct large x) {
   x.a = x.b + x.c + x.d;
 }
 
 // The address where the struct should be written to will be the first
 // argument
-// CHECK-LABEL: define{{.*}} void @f_agg_large_ret(%struct.large* noalias sret(%struct.large) align 4 %agg.result, i32 %i, i8 signext %j)
+// CHECK-LABEL: define{{.*}} void @f_agg_large_ret(%struct.large* noalias sret(%struct.large) align 4 %agg.result, i32 noundef %i, i8 noundef signext %j)
 struct large f_agg_large_ret(int32_t i, int8_t j) {
   return (struct large){1, 2, 3, 4};
 }
 
 typedef unsigned char v16i8 __attribute__((vector_size(16)));
 
-// CHECK-LABEL: define{{.*}} void @f_vec_large_v16i8(<16 x i8>* %0)
+// CHECK-LABEL: define{{.*}} void @f_vec_large_v16i8(<16 x i8>* noundef %0)
 void f_vec_large_v16i8(v16i8 x) {
   x[0] = x[7];
 }
@@ -197,7 +197,7 @@ v16i8 f_vec_large_v16i8_ret() {
 // Scalars passed on the stack should not have signext/zeroext attributes
 // (they are anyext).
 
-// CHECK-LABEL: define{{.*}} i32 @f_scalar_stack_1(i32 %a.coerce, [2 x i32] %b.coerce, i64 %c.coerce, %struct.large* %d, i8 zeroext %e, i8 signext %f, i8 %g, i8 %h)
+// CHECK-LABEL: define{{.*}} i32 @f_scalar_stack_1(i32 %a.coerce, [2 x i32] %b.coerce, i64 %c.coerce, %struct.large* noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef %g, i8 noundef %h)
 int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
                      struct large d, uint8_t e, int8_t f, uint8_t g, int8_t h) {
   return g + h;
@@ -207,13 +207,13 @@ int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
 // the presence of large return values that consume a register due to the need
 // to pass a pointer.
 
-// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(%struct.large* noalias sret(%struct.large) align 4 %agg.result, i32 %a, i64 %b, i64 %c, fp128 %d, i8 zeroext %e, i8 %f, i8 %g)
+// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(%struct.large* noalias sret(%struct.large) align 4 %agg.result, i32 noundef %a, i64 noundef %b, i64 noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef %f, i8 noundef %g)
 struct large f_scalar_stack_2(int32_t a, int64_t b, int64_t c, long double d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};
 }
 
-// CHECK-LABEL: define{{.*}} fp128 @f_scalar_stack_4(i32 %a, i64 %b, i64 %c, fp128 %d, i8 zeroext %e, i8 %f, i8 %g)
+// CHECK-LABEL: define{{.*}} fp128 @f_scalar_stack_4(i32 noundef %a, i64 noundef %b, i64 noundef %c, fp128 noundef %d, i8 noundef zeroext %e, i8 noundef %f, i8 noundef %g)
 long double f_scalar_stack_4(int32_t a, int64_t b, int64_t c, long double d,
                              uint8_t e, int8_t f, uint8_t g) {
   return d;
@@ -222,11 +222,11 @@ long double f_scalar_stack_4(int32_t a, int64_t b, int64_t c, long double d,
 // Aggregates and >=XLen scalars passed on the stack should be lowered just as
 // they would be if passed via registers.
 
-// CHECK-LABEL: define{{.*}} void @f_scalar_stack_5(double %a, i64 %b, double %c, i64 %d, i32 %e, i64 %f, float %g, double %h, fp128 %i)
+// CHECK-LABEL: define{{.*}} void @f_scalar_stack_5(double noundef %a, i64 noundef %b, double noundef %c, i64 noundef %d, i32 noundef %e, i64 noundef %f, float noundef %g, double noundef %h, fp128 noundef %i)
 void f_scalar_stack_5(double a, int64_t b, double c, int64_t d, int e,
                       int64_t f, float g, double h, long double i) {}
 
-// CHECK-LABEL: define{{.*}} void @f_agg_stack(double %a, i64 %b, double %c, i64 %d, i32 %e.coerce, [2 x i32] %f.coerce, i64 %g.coerce, %struct.large* %h)
+// CHECK-LABEL: define{{.*}} void @f_agg_stack(double noundef %a, i64 noundef %b, double noundef %c, i64 noundef %d, i32 %e.coerce, [2 x i32] %f.coerce, i64 %g.coerce, %struct.large* noundef %h)
 void f_agg_stack(double a, int64_t b, double c, int64_t d, struct tiny e,
                  struct small f, struct small_aligned g, struct large h) {}
 
@@ -237,14 +237,14 @@ void f_agg_stack(double a, int64_t b, double c, int64_t d, struct tiny e,
 int f_va_callee(int, ...);
 
 // CHECK-LABEL: define{{.*}} void @f_va_caller()
-// CHECK: call i32 (i32, ...) @f_va_callee(i32 1, i32 2, i64 3, double 4.000000e+00, double 5.000000e+00, i32 {{%.*}}, [2 x i32] {{%.*}}, i64 {{%.*}}, %struct.large* {{%.*}})
+// CHECK: call i32 (i32, ...) @f_va_callee(i32 noundef 1, i32 noundef 2, i64 noundef 3, double noundef 4.000000e+00, double noundef 5.000000e+00, i32 {{%.*}}, [2 x i32] {{%.*}}, i64 {{%.*}}, %struct.large* noundef {{%.*}})
 void f_va_caller() {
   f_va_callee(1, 2, 3LL, 4.0f, 5.0, (struct tiny){6, 7, 8, 9},
               (struct small){10, NULL}, (struct small_aligned){11},
               (struct large){12, 13, 14, 15});
 }
 
-// CHECK-LABEL: define{{.*}} i32 @f_va_1(i8* %fmt, ...) {{.*}} {
+// CHECK-LABEL: define{{.*}} i32 @f_va_1(i8* noundef %fmt, ...) {{.*}} {
 // CHECK:   [[FMT_ADDR:%.*]] = alloca i8*, align 4
 // CHECK:   [[VA:%.*]] = alloca i8*, align 4
 // CHECK:   [[V:%.*]] = alloca i32, align 4
@@ -362,7 +362,7 @@ double f_va_3(char *fmt, ...) {
   return v + x;
 }
 
-// CHECK-LABEL: define{{.*}} i32 @f_va_4(i8* %fmt, ...) {{.*}} {
+// CHECK-LABEL: define{{.*}} i32 @f_va_4(i8* noundef %fmt, ...) {{.*}} {
 // CHECK:         [[FMT_ADDR:%.*]] = alloca i8*, align 4
 // CHECK-NEXT:    [[VA:%.*]] = alloca i8*, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4

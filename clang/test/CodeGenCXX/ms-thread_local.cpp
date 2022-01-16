@@ -44,9 +44,9 @@ A f() {
   return c;
 }
 
-// CHECK-LABEL: define dso_local i32 @"?g@@YAHXZ"()
+// CHECK-LABEL: define dso_local noundef i32 @"?g@@YAHXZ"()
 // CHECK-NOT: call void @__dyn_tls_on_demand_init()
-// CHECK-LD-LABEL: define dso_local i32 @"?g@@YAHXZ"()
+// CHECK-LD-LABEL: define dso_local noundef i32 @"?g@@YAHXZ"()
 // CHECK-LD-NOT: call void @__dyn_tls_on_demand_init()
 
 thread_local int e = 2;

@@ -13,7 +13,7 @@
 
 // CHECK-LABEL: define internal void @"\01-[NSObject Meth]"(
 - (void)Meth {
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8**, i8**)*){{.*}}, i8** @[[setpriosel]])
+// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i8**, i8**)*){{.*}}, i8** noundef @[[setpriosel]])
   [self respondsToSelector:@selector(setPriority:) ps:&@selector(setPriority:)];
 }
 - (void)setPriority:(int)p {

@@ -158,7 +158,7 @@ __complex double f11() {
 void f12() {
   int f12_1();
   void f12_2(int = f12_1());
-// CHECK: call {{.*}}{{(signext )?}}i32 {{.*}} !dbg [[DBG_F12:!.*]]
+// CHECK: call {{.*}}{{(signext )?}}i32 noundef {{.*}} !dbg [[DBG_F12:!.*]]
 #line 1400
   f12_2();
 }
@@ -296,7 +296,7 @@ void f24() {
 // CHECK-LABEL: define
 void f25_a(int x = __builtin_LINE()) {}
 void f25() {
-  // CHECK: call void @_Z5f25_ai(i32 {{(signext )?}}2700)
+  // CHECK: call void @_Z5f25_ai(i32 noundef {{(signext )?}}2700)
 #line 2700
   f25_a();
 }
