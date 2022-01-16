@@ -52,9 +52,9 @@ target_link_libraries(clang-tidy
 
 
 install(PROGRAMS clang-tidy-diff.py
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-tidy)
 install(PROGRAMS run-clang-tidy.py
-  DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  DESTINATION bin
   COMPONENT clang-tidy
   RENAME run-clang-tidy)

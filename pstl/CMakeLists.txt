@@ -7,8 +7,6 @@
 #===----------------------------------------------------------------------===##
 cmake_minimum_required(VERSION 3.13.4)
 
-include(GNUInstallDirs)
-
 set(PARALLELSTL_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/pstl/internal/pstl_config.h")
 file(STRINGS "${PARALLELSTL_VERSION_FILE}" PARALLELSTL_VERSION_SOURCE REGEX "#define _PSTL_VERSION .*$")
 string(REGEX REPLACE "#define _PSTL_VERSION (.*)$" "\\1" PARALLELSTL_VERSION_SOURCE "${PARALLELSTL_VERSION_SOURCE}")
@@ -92,10 +90,10 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
         DESTINATION lib/cmake/ParallelSTL)
 install(DIRECTORY include/
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+        DESTINATION include
         PATTERN "*.in" EXCLUDE)
 install(FILES "${PSTL_CONFIG_SITE_PATH}"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+        DESTINATION include)
 
 add_custom_target(install-pstl
                   COMMAND "${CMAKE_COMMAND}" -P "${PROJECT_BINARY_DIR}/cmake_install.cmake" -DCOMPONENT=ParallelSTL)

@@ -5,7 +5,6 @@
 
 include(CheckIncludeFile)
 include(CheckCXXSourceCompiles)
-include(GNUInstallDirs)
 include(ExtendPath)
 
 check_include_file(unwind.h HAVE_UNWIND_H)
@@ -109,13 +108,13 @@ else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
     "Path where built compiler-rt libraries should be installed.")
 endif()
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_BINDIR}")
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" bin)
 set(COMPILER_RT_INSTALL_BINARY_DIR "${default_install_path}" CACHE PATH
   "Path where built compiler-rt executables should be installed.")
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_INCLUDEDIR}")
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" include)
 set(COMPILER_RT_INSTALL_INCLUDE_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt headers should be installed.")
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_DATADIR}")
+extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" share)
 set(COMPILER_RT_INSTALL_DATA_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt data files should be installed.")
 

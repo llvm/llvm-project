@@ -19,9 +19,9 @@ target_link_libraries(clang-doc
   )
 
 install(FILES ../assets/clang-doc-default-stylesheet.css
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-doc)
 
 install(FILES ../assets/index.js
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-doc)
