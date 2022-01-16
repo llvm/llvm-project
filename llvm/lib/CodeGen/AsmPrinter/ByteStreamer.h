@@ -33,7 +33,7 @@ class ByteStreamer {
   virtual void emitSLEB128(uint64_t DWord, const Twine &Comment = "") = 0;
   virtual void emitULEB128(uint64_t DWord, const Twine &Comment = "",
                            unsigned PadTo = 0) = 0;
-  virtual void emitDIERef(const DIE &D) = 0;
+  virtual unsigned emitDIERef(const DIE &D) = 0;
 };
 
 class APByteStreamer final : public ByteStreamer {
@@ -55,11 +55,14 @@ public:
     AP.OutStreamer->AddComment(Comment);
     AP.emitULEB128(DWord, nullptr, PadTo);
   }
-  void emitDIERef(const DIE &D) override {
+  unsigned emitDIERef(const DIE &D) override {
     uint64_t Offset = D.getOffset();
     static constexpr unsigned ULEB128PadSize = 4;
     assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
     emitULEB128(Offset, "", ULEB128PadSize);
+    // Return how many comments to skip in DwarfDebug::emitDebugLocEntry to keep
+    // comments aligned with debug loc entries.
+    return ULEB128PadSize;
   }
 };
 
@@ -78,7 +81,10 @@ class HashingByteStreamer final : public ByteStreamer {
                    unsigned PadTo) override {
     Hash.addULEB128(DWord);
   }
-  void emitDIERef(const DIE &D) override { Hash.hashRawTypeReference(D); }
+  unsigned emitDIERef(const DIE &D) override {
+    Hash.hashRawTypeReference(D);
+    return 0; // Only used together with the APByteStreamer.
+  }
 };
 
 class BufferByteStreamer final : public ByteStreamer {
@@ -125,11 +131,12 @@ public:
         Comments.push_back("");
     }
   }
-  void emitDIERef(const DIE &D) override {
+  unsigned emitDIERef(const DIE &D) override {
     uint64_t Offset = D.getOffset();
     static constexpr unsigned ULEB128PadSize = 4;
     assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
     emitULEB128(Offset, "", ULEB128PadSize);
+    return 0; // Only used together with the APByteStreamer.
   }
 };
 
