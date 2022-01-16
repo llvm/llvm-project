@@ -96,10 +96,10 @@ wchar_t src;
 // CHECK-LABEL: @test10
 // FIXME: Consider lowering these to llvm.memcpy / llvm.memmove.
 void test10() {
-  // CHECK: call i32* @wmemcpy(i32* @dest, i32* @src, i32 4)
+  // CHECK: call i32* @wmemcpy(i32* noundef @dest, i32* noundef @src, i32 noundef 4)
   __builtin_wmemcpy(&dest, &src, 4);
 
-  // CHECK: call i32* @wmemmove(i32* @dest, i32* @src, i32 4)
+  // CHECK: call i32* @wmemmove(i32* noundef @dest, i32* noundef @src, i32 noundef 4)
   __builtin_wmemmove(&dest, &src, 4);
 }
 

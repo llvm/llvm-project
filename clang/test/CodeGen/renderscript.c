@@ -17,9 +17,9 @@
 _Static_assert(sizeof(long) == LONG_WIDTH_AND_ALIGN, "sizeof long is wrong");
 _Static_assert(_Alignof(long) == LONG_WIDTH_AND_ALIGN, "sizeof long is wrong");
 
-// CHECK-RS32: i64 @test_long(i64 %v)
-// CHECK-RS64: i64 @test_long(i64 %v)
-// CHECK-ARM: i32 @test_long(i32 %v)
+// CHECK-RS32: i64 @test_long(i64 noundef %v)
+// CHECK-RS64: i64 @test_long(i64 noundef %v)
+// CHECK-ARM: i32 @test_long(i32 noundef %v)
 long test_long(long v) {
   return v + 1;
 }
@@ -104,11 +104,11 @@ typedef struct {int i1, i2, i3, i4, i5; } sInt5;
 typedef struct {long l1, l2; char c; } sLong2Char;
 
 // CHECK-RS32: void @argInt5([5 x i32] %s.coerce)
-// CHECK-RS64: void @argInt5(%struct.sInt5* %s)
+// CHECK-RS64: void @argInt5(%struct.sInt5* noundef %s)
 void argInt5(sInt5 s) {}
 
 // CHECK-RS32: void @argLong2Char([3 x i64] %s.coerce)
-// CHECK-RS64: void @argLong2Char(%struct.sLong2Char* %s)
+// CHECK-RS64: void @argLong2Char(%struct.sLong2Char* noundef %s)
 void argLong2Char(sLong2Char s) {}
 
 // =============================================================================
@@ -131,8 +131,8 @@ sLong2Char retLong2Char() { sLong2Char r; return r;}
 
 typedef struct {long l1, l2, l3, l4, l5, l6, l7, l8, l9; } sLong9;
 
-// CHECK-RS32: void @argLong9(%struct.sLong9* byval(%struct.sLong9) align 8 %s)
-// CHECK-RS64: void @argLong9(%struct.sLong9* %s)
+// CHECK-RS32: void @argLong9(%struct.sLong9* noundef byval(%struct.sLong9) align 8 %s)
+// CHECK-RS64: void @argLong9(%struct.sLong9* noundef %s)
 void argLong9(sLong9 s) {}
 
 // CHECK-RS32: void @retLong9(%struct.sLong9* noalias sret(%struct.sLong9) align 8 %agg.result)

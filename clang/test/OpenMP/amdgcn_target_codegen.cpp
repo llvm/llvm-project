@@ -34,7 +34,7 @@ int test_amdgcn_target_tid_threads_simd() {
 
 #endif
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z30test_amdgcn_target_tid_threadsv_l16
-// CHECK-SAME: ([1000 x i32]* nonnull align 4 dereferenceable(4000) [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ([1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR_ADDR:%.*]] = alloca [1000 x i32]*, align 8, addrspace(5)
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
@@ -71,7 +71,7 @@ int test_amdgcn_target_tid_threads_simd() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z35test_amdgcn_target_tid_threads_simdv_l28
-// CHECK-SAME: ([1000 x i32]* nonnull align 4 dereferenceable(4000) [[ARR:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: ([1000 x i32]* noundef nonnull align 4 dereferenceable(4000) [[ARR:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR_ADDR:%.*]] = alloca [1000 x i32]*, align 8, addrspace(5)
 // CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)

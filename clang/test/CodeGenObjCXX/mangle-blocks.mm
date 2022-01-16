@@ -8,7 +8,7 @@
 int f();
 
 void foo() {
-  // CHECK-LABEL: define internal i32 @___Z3foov_block_invoke
+  // CHECK-LABEL: define internal noundef i32 @___Z3foov_block_invoke
   // CHECK: call i32 @__cxa_guard_acquire(i64* @_ZGVZZ3foovEUb_E5value
   (void)^(int x) { 
     static int value = f();
@@ -16,7 +16,7 @@ void foo() {
   };
 }
 
-// CHECK-LABEL: define internal i32 @i_block_invoke
+// CHECK-LABEL: define internal noundef i32 @i_block_invoke
 int i = ^(int x) { return x;}(i);
 
 @interface A
@@ -25,7 +25,7 @@ int i = ^(int x) { return x;}(i);
 
 @implementation A
 - (void)method { 
-  // CHECK: define internal signext i8 @"__11-[A method]_block_invoke"
+  // CHECK: define internal noundef signext i8 @"__11-[A method]_block_invoke"
   (void)^(int x) {
     // CHECK: @"_ZZZ11-[A method]EUb1_E4name"
     static const char *name = "hello";
@@ -42,7 +42,7 @@ void foo(int) {
 }
 
 namespace N {
-  // CHECK-LABEL: define internal signext i8 @___Z3fooi_block_invoke
+  // CHECK-LABEL: define internal noundef signext i8 @___Z3fooi_block_invoke
   void bar() {
     (void)^(int x) { 
       // CHECK: @_ZZZN1N3barEvEUb3_E4name

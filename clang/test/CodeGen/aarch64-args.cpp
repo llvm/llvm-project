@@ -15,9 +15,9 @@
 
 struct Empty {};
 
-// CHECK: define{{.*}} i32 @empty_arg(i32 %a)
-// CHECK-GNU-C: define{{.*}} i32 @empty_arg(i32 %a)
-// CHECK-GNU-CXX: define{{.*}} i32 @empty_arg(i8 %e.coerce, i32 %a)
+// CHECK: define{{.*}} i32 @empty_arg(i32 noundef %a)
+// CHECK-GNU-C: define{{.*}} i32 @empty_arg(i32 noundef %a)
+// CHECK-GNU-CXX: define{{.*}} i32 @empty_arg(i8 %e.coerce, i32 noundef %a)
 EXTERNC int empty_arg(struct Empty e, int a) {
   return a;
 }
@@ -38,9 +38,9 @@ struct SuperEmpty {
   int arr[0];
 };
 
-// CHECK: define{{.*}} i32 @super_empty_arg(i32 %a)
-// CHECK-GNU-C: define{{.*}} i32 @super_empty_arg(i32 %a)
-// CHECK-GNU-CXX: define{{.*}} i32 @super_empty_arg(i32 %a)
+// CHECK: define{{.*}} i32 @super_empty_arg(i32 noundef %a)
+// CHECK-GNU-C: define{{.*}} i32 @super_empty_arg(i32 noundef %a)
+// CHECK-GNU-CXX: define{{.*}} i32 @super_empty_arg(i32 noundef %a)
 EXTERNC int super_empty_arg(struct SuperEmpty e, int a) {
   return a;
 }
@@ -51,9 +51,9 @@ struct SortOfEmpty {
   struct SuperEmpty e;
 };
 
-// CHECK: define{{.*}} i32 @sort_of_empty_arg(i32 %a)
-// CHECK-GNU-C: define{{.*}} i32 @sort_of_empty_arg(i32 %a)
-// CHECK-GNU-CXX: define{{.*}} i32 @sort_of_empty_arg(i8 %e.coerce, i32 %a)
+// CHECK: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
+// CHECK-GNU-C: define{{.*}} i32 @sort_of_empty_arg(i32 noundef %a)
+// CHECK-GNU-CXX: define{{.*}} i32 @sort_of_empty_arg(i8 %e.coerce, i32 noundef %a)
 EXTERNC int sort_of_empty_arg(struct Empty e, int a) {
   return a;
 }

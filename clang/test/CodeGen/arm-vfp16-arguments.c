@@ -19,13 +19,13 @@ float16x4_t g4;
 float16x8_t g8;
 
 void st4(float16x4_t a) { g4 = a; }
-// CHECK-SOFT: define{{.*}} void @st4(<2 x i32> %a.coerce)
+// CHECK-SOFT: define{{.*}} void @st4(<2 x i32> noundef %a.coerce)
 // CHECK-SOFT: store <2 x i32> %a.coerce, <2 x i32>* bitcast (<4 x half>* @g4 to <2 x i32>*)
 //
-// CHECK-HARD: define{{.*}} arm_aapcs_vfpcc void @st4(<2 x i32> %a.coerce)
+// CHECK-HARD: define{{.*}} arm_aapcs_vfpcc void @st4(<2 x i32> noundef %a.coerce)
 // CHECK-HARD: store <2 x i32> %a.coerce, <2 x i32>* bitcast (<4 x half>* @g4 to <2 x i32>*)
 //
-// CHECK-FULL: define{{.*}} arm_aapcs_vfpcc void @st4(<4 x half> %a)
+// CHECK-FULL: define{{.*}} arm_aapcs_vfpcc void @st4(<4 x half> noundef %a)
 // CHECK-FULL: store <4 x half> %a, <4 x half>* @g4
 
 float16x4_t ld4(void) { return g4; }
@@ -42,13 +42,13 @@ float16x4_t ld4(void) { return g4; }
 // CHECK-FULL: ret <4 x half> %0
 
 void st8(float16x8_t a) { g8 = a; }
-// CHECK-SOFT: define{{.*}} void @st8(<4 x i32> %a.coerce)
+// CHECK-SOFT: define{{.*}} void @st8(<4 x i32> noundef %a.coerce)
 // CHECK-SOFT: store <4 x i32> %a.coerce, <4 x i32>* bitcast (<8 x half>* @g8 to <4 x i32>*)
 //
-// CHECK-HARD: define{{.*}} arm_aapcs_vfpcc void @st8(<4 x i32> %a.coerce)
+// CHECK-HARD: define{{.*}} arm_aapcs_vfpcc void @st8(<4 x i32> noundef %a.coerce)
 // CHECK-HARD: store <4 x i32> %a.coerce, <4 x i32>* bitcast (<8 x half>* @g8 to <4 x i32>*)
 //
-// CHECK-FULL: define{{.*}} arm_aapcs_vfpcc void @st8(<8 x half> %a)
+// CHECK-FULL: define{{.*}} arm_aapcs_vfpcc void @st8(<8 x half> noundef %a)
 // CHECK-FULL: store <8 x half> %a, <8 x half>* @g8
 
 float16x8_t ld8(void) { return g8; }

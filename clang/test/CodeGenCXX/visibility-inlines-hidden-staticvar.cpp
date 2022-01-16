@@ -13,12 +13,12 @@
 // CHECK-DAG: @_ZZ19inline_default_funcvE3var = linkonce_odr global i32 0, comdat
 // CHECK-DAG: @_ZZN13ExportedClass10inl_methodEvE3var = linkonce_odr global i32 0, comdat, align 4
 // CHECK-DAG: define{{.*}} i32 @_Z4funcv()
-// CHECK-DAG: define hidden i32 @_Z11hidden_funcv()
+// CHECK-DAG: define hidden noundef i32 @_Z11hidden_funcv()
 // CHECK-DAG: define{{.*}} i32 @_Z12default_funcv()
-// CHECK-DAG: define linkonce_odr hidden i32 @_Z11inline_funcv()
-// CHECK-DAG: define linkonce_odr hidden i32 @_Z18inline_hidden_funcv()
-// CHECK-DAG: define linkonce_odr i32 @_Z19inline_default_funcv()
-// CHECK-DAG: define linkonce_odr hidden i32 @_ZN13ExportedClass10inl_methodEv({{.*}})
+// CHECK-DAG: define linkonce_odr hidden noundef i32 @_Z11inline_funcv()
+// CHECK-DAG: define linkonce_odr hidden noundef i32 @_Z18inline_hidden_funcv()
+// CHECK-DAG: define linkonce_odr noundef i32 @_Z19inline_default_funcv()
+// CHECK-DAG: define linkonce_odr hidden noundef i32 @_ZN13ExportedClass10inl_methodEv({{.*}})
 // CHECK-DAG: define{{.*}} i32 @_ZN13ExportedClass10ext_methodEv({{.*}})
 
 // CHECK-NO-VIH-DAG: @_ZZ4funcvE3var = internal global i32 0
@@ -29,12 +29,12 @@
 // CHECK-NO-VIH-DAG: @_ZZ19inline_default_funcvE3var = linkonce_odr global i32 0, comdat
 // CHECK-NO-VIH-DAG: @_ZZN13ExportedClass10inl_methodEvE3var = linkonce_odr global i32 0, comdat, align 4
 // CHECK-NO-VIH-DAG: define{{.*}} i32 @_Z4funcv()
-// CHECK-NO-VIH-DAG: define hidden i32 @_Z11hidden_funcv()
+// CHECK-NO-VIH-DAG: define hidden noundef i32 @_Z11hidden_funcv()
 // CHECK-NO-VIH-DAG: define{{.*}} i32 @_Z12default_funcv()
-// CHECK-NO-VIH-DAG: define linkonce_odr i32 @_Z11inline_funcv()
-// CHECK-NO-VIH-DAG: define linkonce_odr hidden i32 @_Z18inline_hidden_funcv()
-// CHECK-NO-VIH-DAG: define linkonce_odr i32 @_Z19inline_default_funcv()
-// CHECK-NO-VIH-DAG: define linkonce_odr i32 @_ZN13ExportedClass10inl_methodEv({{.*}})
+// CHECK-NO-VIH-DAG: define linkonce_odr noundef i32 @_Z11inline_funcv()
+// CHECK-NO-VIH-DAG: define linkonce_odr hidden noundef i32 @_Z18inline_hidden_funcv()
+// CHECK-NO-VIH-DAG: define linkonce_odr noundef i32 @_Z19inline_default_funcv()
+// CHECK-NO-VIH-DAG: define linkonce_odr noundef i32 @_ZN13ExportedClass10inl_methodEv({{.*}})
 // CHECK-NO-VIH-DAG: define{{.*}} i32 @_ZN13ExportedClass10ext_methodEv({{.*}})
 
 // CHECK-VIS-HIDDEN-DAG: @_ZZ4funcvE3var = internal global i32 0
@@ -44,13 +44,13 @@
 // CHECK-VIS-HIDDEN-DAG: @_ZZ18inline_hidden_funcvE3var = linkonce_odr hidden global i32 0, comdat
 // CHECK-VIS-HIDDEN-DAG: @_ZZ19inline_default_funcvE3var = linkonce_odr global i32 0, comdat
 // CHECK-VIS-HIDDEN-DAG: @_ZZN13ExportedClass10inl_methodEvE3var = linkonce_odr global i32 0, comdat, align 4
-// CHECK-VIS-HIDDEN-DAG: define hidden i32 @_Z4funcv()
-// CHECK-VIS-HIDDEN-DAG: define hidden i32 @_Z11hidden_funcv()
+// CHECK-VIS-HIDDEN-DAG: define hidden noundef i32 @_Z4funcv()
+// CHECK-VIS-HIDDEN-DAG: define hidden noundef i32 @_Z11hidden_funcv()
 // CHECK-VIS-HIDDEN-DAG: define{{.*}} i32 @_Z12default_funcv()
-// CHECK-VIS-HIDDEN-DAG: define linkonce_odr hidden i32 @_Z11inline_funcv()
-// CHECK-VIS-HIDDEN-DAG: define linkonce_odr hidden i32 @_Z18inline_hidden_funcv()
-// CHECK-VIS-HIDDEN-DAG: define linkonce_odr i32 @_Z19inline_default_funcv()
-// CHECK-VIS-HIDDEN-DAG: define linkonce_odr hidden i32 @_ZN13ExportedClass10inl_methodEv({{.*}})
+// CHECK-VIS-HIDDEN-DAG: define linkonce_odr hidden noundef i32 @_Z11inline_funcv()
+// CHECK-VIS-HIDDEN-DAG: define linkonce_odr hidden noundef i32 @_Z18inline_hidden_funcv()
+// CHECK-VIS-HIDDEN-DAG: define linkonce_odr noundef i32 @_Z19inline_default_funcv()
+// CHECK-VIS-HIDDEN-DAG: define linkonce_odr hidden noundef i32 @_ZN13ExportedClass10inl_methodEv({{.*}})
 // CHECK-VIS-HIDDEN-DAG: define{{.*}} i32 @_ZN13ExportedClass10ext_methodEv({{.*}})
 
 // CHECK-VIS-PROTECTED-DAG: @_ZZ4funcvE3var = internal global i32 0
@@ -60,13 +60,13 @@
 // CHECK-VIS-PROTECTED-DAG: @_ZZ18inline_hidden_funcvE3var = linkonce_odr hidden global i32 0, comdat
 // CHECK-VIS-PROTECTED-DAG: @_ZZ19inline_default_funcvE3var = linkonce_odr global i32 0, comdat
 // CHECK-VIS-PROTECTED-DAG: @_ZZN13ExportedClass10inl_methodEvE3var = linkonce_odr global i32 0, comdat, align 4
-// CHECK-VIS-PROTECTED-DAG: define protected i32 @_Z4funcv()
-// CHECK-VIS-PROTECTED-DAG: define hidden i32 @_Z11hidden_funcv()
+// CHECK-VIS-PROTECTED-DAG: define protected noundef i32 @_Z4funcv()
+// CHECK-VIS-PROTECTED-DAG: define hidden noundef i32 @_Z11hidden_funcv()
 // CHECK-VIS-PROTECTED-DAG: define{{.*}} i32 @_Z12default_funcv()
-// CHECK-VIS-PROTECTED-DAG: define linkonce_odr hidden i32 @_Z11inline_funcv()
-// CHECK-VIS-PROTECTED-DAG: define linkonce_odr hidden i32 @_Z18inline_hidden_funcv()
-// CHECK-VIS-PROTECTED-DAG: define linkonce_odr i32 @_Z19inline_default_funcv()
-// CHECK-VIS-PROTECTED-DAG: define linkonce_odr hidden i32 @_ZN13ExportedClass10inl_methodEv({{.*}})
+// CHECK-VIS-PROTECTED-DAG: define linkonce_odr hidden noundef i32 @_Z11inline_funcv()
+// CHECK-VIS-PROTECTED-DAG: define linkonce_odr hidden noundef i32 @_Z18inline_hidden_funcv()
+// CHECK-VIS-PROTECTED-DAG: define linkonce_odr noundef i32 @_Z19inline_default_funcv()
+// CHECK-VIS-PROTECTED-DAG: define linkonce_odr hidden noundef i32 @_ZN13ExportedClass10inl_methodEv({{.*}})
 // CHECK-VIS-PROTECTED-DAG: define{{.*}} i32 @_ZN13ExportedClass10ext_methodEv({{.*}})
 
 int func(void) {

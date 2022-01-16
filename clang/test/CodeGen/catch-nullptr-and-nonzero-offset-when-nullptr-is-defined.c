@@ -25,7 +25,7 @@ extern "C" {
 #endif
 
 char *add_unsigned(char *base, unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @add_unsigned(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @add_unsigned(i8* noundef %[[BASE:.*]], i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8

@@ -6,4 +6,4 @@
 
 template int foo<int>();
 
-// CHECK: define weak_odr i32 @_Z3fooIiET_v
+// CHECK: define weak_odr noundef i32 @_Z3fooIiET_v
