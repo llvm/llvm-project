@@ -1608,11 +1608,6 @@ AttrBuilder &AttrBuilder::addAttribute(StringRef A, StringRef V) {
   return addAttribute(Attribute::get(Ctx, A, V));
 }
 
-AttrBuilder &AttrBuilder::removeAttributes(AttributeList AL, uint64_t Index) {
-  remove(AttributeMask(AL.getAttributes(Index)));
-  return *this;
-}
-
 AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
   assert((unsigned)Val < Attribute::EndAttrKinds && "Attribute out of range!");
   Attrs[Val] = false;
@@ -1803,22 +1798,6 @@ bool AttrBuilder::contains(StringRef A) const {
 
 bool AttrBuilder::hasAttributes() const {
   return !Attrs.none() || !TargetDepAttrs.empty();
-}
-
-bool AttrBuilder::hasAttributes(AttributeList AL, uint64_t Index) const {
-  AttributeSet AS = AL.getAttributes(Index);
-
-  for (const auto &Attr : AS) {
-    if (Attr.isEnumAttribute() || Attr.isIntAttribute()) {
-      if (contains(Attr.getKindAsEnum()))
-        return true;
-    } else {
-      assert(Attr.isStringAttribute() && "Invalid attribute kind!");
-      return contains(Attr.getKindAsString());
-    }
-  }
-
-  return false;
 }
 
 bool AttrBuilder::hasAlignmentAttr() const {
