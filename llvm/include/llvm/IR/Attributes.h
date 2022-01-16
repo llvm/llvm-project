@@ -1048,9 +1048,6 @@ public:
       return removeAttribute(A.getKindAsEnum());
   }
 
-  /// Remove the attributes from the builder.
-  AttrBuilder &removeAttributes(AttributeList A, uint64_t WithoutIndex);
-
   /// Add the attributes from the builder.
   AttrBuilder &merge(const AttrBuilder &B);
 
