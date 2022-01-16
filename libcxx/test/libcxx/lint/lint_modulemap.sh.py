@@ -18,6 +18,19 @@ if __name__ == '__main__':
     with open(modulemap_name, 'r') as f:
         for line in f.readlines():
             if re.match(r'^\s*module.*[{]\s*private', line):
+                # Check that these lines are all of the expected format.
+                # This incidentally checks for typos in the module name.
+                if re.match(r'^\s*module (\w+)\s+[{] private header "\1(.h)?"\s+export [*] [}]', line):
+                    # It's a top-level private header, such as <__bit_reference>.
+                    pass
+                elif re.match(r'^\s*module (\w+)\s+[{] private header "__\w+/\1[.]h" [}]', line):
+                    # It's a private submodule, such as <__utility/swap.h>.
+                    pass
+                else:
+                    okay = False
+                    print("LINE DOESN'T MATCH REGEX in libcxx/include/module.modulemap!")
+                    print(line)
+                # Check that these lines are alphabetized.
                 if (prevline is not None) and (line < prevline):
                     okay = False
                     print('LINES OUT OF ORDER in libcxx/include/module.modulemap!')
