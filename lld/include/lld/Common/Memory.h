@@ -22,41 +22,42 @@
 #define LLD_COMMON_MEMORY_H
 
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/StringSaver.h"
+#include <vector>
 
 namespace lld {
-// A base class only used by the CommonLinkerContext to keep track of the
-// SpecificAlloc<> instances.
+
+// Use this arena if your object doesn't have a destructor.
+extern llvm::BumpPtrAllocator bAlloc;
+extern llvm::StringSaver saver;
+
+void freeArena();
+
+// These two classes are hack to keep track of all
+// SpecificBumpPtrAllocator instances.
 struct SpecificAllocBase {
+  SpecificAllocBase() { instances.push_back(this); }
   virtual ~SpecificAllocBase() = default;
-  static SpecificAllocBase *getOrCreate(void *tag, size_t size, size_t align,
-                                        SpecificAllocBase *(&creator)(void *));
+  virtual void reset() = 0;
+  static std::vector<SpecificAllocBase *> instances;
 };
 
-// An arena of specific types T, created on-demand.
 template <class T> struct SpecificAlloc : public SpecificAllocBase {
-  static SpecificAllocBase *create(void *storage) {
-    return new (storage) SpecificAlloc<T>();
-  }
+  void reset() override { alloc.DestroyAll(); }
   llvm::SpecificBumpPtrAllocator<T> alloc;
-  static int tag;
 };
 
-// The address of this static member is only used as a key in
-// CommonLinkerContext::instances. Its value does not matter.
-template <class T> int SpecificAlloc<T>::tag = 0;
-
-// Creates the arena on-demand on the first call; or returns it, if it was
-// already created.
+// Use a static local for these singletons so they are only registered if an
+// object of this instance is ever constructed. Otherwise we will create and
+// register ELF allocators for COFF and the reverse.
 template <typename T>
 inline llvm::SpecificBumpPtrAllocator<T> &getSpecificAllocSingleton() {
-  SpecificAllocBase *instance = SpecificAllocBase::getOrCreate(
-      &SpecificAlloc<T>::tag, sizeof(SpecificAlloc<T>),
-      alignof(SpecificAlloc<T>), SpecificAlloc<T>::create);
-  return ((SpecificAlloc<T> *)instance)->alloc;
+  static SpecificAlloc<T> instance;
+  return instance.alloc;
 }
 
-// Creates new instances of T off a (almost) contiguous arena/object pool. The
-// instances are destroyed whenever lldMain() goes out of scope.
+// Use this arena if your object has a destructor.
+// Your destructor will be invoked from freeArena().
 template <typename T, typename... U> T *make(U &&... args) {
   return new (getSpecificAllocSingleton<T>().Allocate())
       T(std::forward<U>(args)...);

@@ -9,7 +9,6 @@
 #ifndef LLD_COMMON_DRIVER_H
 #define LLD_COMMON_DRIVER_H
 
-#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,28 +28,28 @@ SafeReturn safeLldMain(int argc, const char **argv, llvm::raw_ostream &stdoutOS,
                        llvm::raw_ostream &stderrOS);
 
 namespace coff {
-bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS);
 }
 
 namespace mingw {
-bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS);
 }
 
 namespace elf {
-bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS);
 }
 
 namespace macho {
-bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS);
 }
 
 namespace wasm {
-bool link(llvm::ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
-          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &stdoutOS, llvm::raw_ostream &stderrOS);
 }
 }
 

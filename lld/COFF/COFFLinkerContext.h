@@ -15,13 +15,12 @@
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Writer.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Timer.h"
 
 namespace lld {
 namespace coff {
 
-class COFFLinkerContext : public CommonLinkerContext {
+class COFFLinkerContext {
 public:
   COFFLinkerContext();
   COFFLinkerContext(const COFFLinkerContext &) = delete;
