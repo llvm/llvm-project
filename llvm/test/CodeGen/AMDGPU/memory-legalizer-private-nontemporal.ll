@@ -81,8 +81,8 @@ define amdgpu_kernel void @private_nontemporal_load_0(
 ; SKIP-CACHE-INV-NEXT:    s_getpc_b64 s[4:5]
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s0
 ; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
-; SKIP-CACHE-INV-NEXT:    s_load_dword s2, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s2, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s4, s4, s3
@@ -208,8 +208,8 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; SKIP-CACHE-INV-NEXT:    s_getpc_b64 s[4:5]
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s4, s0
 ; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
-; SKIP-CACHE-INV-NEXT:    s_load_dword s2, s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dword s2, s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_add_i32_e32 v0, vcc, s2, v0
@@ -336,8 +336,8 @@ define amdgpu_kernel void @private_nontemporal_store_0(
 ; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s4, s4, s3
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s5, s5, 0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_load_dword s1, s[2:3], 0x0
@@ -462,8 +462,8 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_add_u32 s4, s4, s3
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_addc_u32 s5, s5, 0
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_load_dword s1, s[2:3], 0x0

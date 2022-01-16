@@ -5183,7 +5183,7 @@ define amdgpu_ps void @amdgpu_ps_call_default_cc() {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY [[DEF]](p4)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(p4) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 36
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[C1]], [[C2]](s64)
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
