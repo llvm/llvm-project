@@ -1608,11 +1608,6 @@ AttrBuilder &AttrBuilder::addAttribute(StringRef A, StringRef V) {
   return addAttribute(Attribute::get(Ctx, A, V));
 }
 
-AttrBuilder &AttrBuilder::removeAttributes(AttributeList AL, uint64_t Index) {
-  remove(AttributeMask(AL.getAttributes(Index)));
-  return *this;
-}
-
 AttrBuilder &AttrBuilder::removeAttribute(Attribute::AttrKind Val) {
   assert((unsigned)Val < Attribute::EndAttrKinds && "Attribute out of range!");
   Attrs[Val] = false;
