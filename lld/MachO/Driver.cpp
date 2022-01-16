@@ -128,7 +128,7 @@ static Optional<StringRef> findFramework(StringRef name) {
         // only append suffix if realpath() succeeds
         Twine suffixed = location + suffix;
         if (fs::exists(suffixed))
-          return resolvedFrameworks[key] = saver().save(suffixed.str());
+          return resolvedFrameworks[key] = saver.save(suffixed.str());
       }
       // Suffix lookup failed, fall through to the no-suffix case.
     }
@@ -165,7 +165,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
         path::append(buffer, path);
         // Do not warn about paths that are computed via the syslib roots
         if (fs::is_directory(buffer)) {
-          paths.push_back(saver().save(buffer.str()));
+          paths.push_back(saver.save(buffer.str()));
           found = true;
         }
       }
@@ -183,7 +183,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
       SmallString<261> buffer(root);
       path::append(buffer, path);
       if (fs::is_directory(buffer))
-        paths.push_back(saver().save(buffer.str()));
+        paths.push_back(saver.save(buffer.str()));
     }
   }
   return paths;
@@ -1102,13 +1102,14 @@ static void referenceStubBinder() {
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
 }
 
-bool macho::link(ArrayRef<const char *> argsArr, raw_ostream &stdoutOS,
-                 raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
-  // This driver-specific context will be freed later by lldMain().
-  auto *ctx = new CommonLinkerContext;
+bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
+                 raw_ostream &stdoutOS, raw_ostream &stderrOS) {
+  lld::stdoutOS = &stdoutOS;
+  lld::stderrOS = &stderrOS;
 
-  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  ctx->e.cleanupCallback = []() {
+  errorHandler().cleanupCallback = []() {
+    freeArena();
+
     resolvedFrameworks.clear();
     resolvedLibraries.clear();
     cachedReads.clear();
@@ -1129,15 +1130,17 @@ bool macho::link(ArrayRef<const char *> argsArr, raw_ostream &stdoutOS,
     InputFile::resetIdCount();
   };
 
-  ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
+  errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
+  stderrOS.enable_colors(stderrOS.has_colors());
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
 
-  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
-                                 "(use --error-limit=0 to see all errors)";
-  ctx->e.errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
-  ctx->e.verbose = args.hasArg(OPT_verbose);
+  errorHandler().errorLimitExceededMsg =
+      "too many errors emitted, stopping now "
+      "(use --error-limit=0 to see all errors)";
+  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
+  errorHandler().verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
@@ -1181,7 +1184,7 @@ bool macho::link(ArrayRef<const char *> argsArr, raw_ostream &stdoutOS,
       // these are meaningful for our text based stripping
       if (config->osoPrefix.equals(".") || config->osoPrefix.endswith(sep))
         expanded += sep;
-      config->osoPrefix = saver().save(expanded.str());
+      config->osoPrefix = saver.save(expanded.str());
     }
   }
 
@@ -1467,7 +1470,7 @@ bool macho::link(ArrayRef<const char *> argsArr, raw_ostream &stdoutOS,
 
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
-      parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
+      parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
                        arg->getSpelling());
 
     for (const Arg *arg : args.filtered(OPT_mllvm))
@@ -1558,5 +1561,11 @@ bool macho::link(ArrayRef<const char *> argsArr, raw_ostream &stdoutOS,
 
     timeTraceProfilerCleanup();
   }
-  return errorCount() == 0;
+
+  if (canExitEarly)
+    exitLld(errorCount() ? 1 : 0);
+
+  bool ret = errorCount() == 0;
+  errorHandler().reset();
+  return ret;
 }
