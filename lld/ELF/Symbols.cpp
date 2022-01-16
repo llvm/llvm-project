@@ -268,8 +268,6 @@ MemoryBufferRef LazyArchive::getMemberBuffer() {
 }
 
 uint8_t Symbol::computeBinding() const {
-  if (config->relocatable)
-    return binding;
   if ((visibility != STV_DEFAULT && visibility != STV_PROTECTED) ||
       (versionId == VER_NDX_LOCAL && !isLazy()))
     return STB_LOCAL;
