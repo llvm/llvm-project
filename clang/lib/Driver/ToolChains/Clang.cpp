@@ -8244,6 +8244,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_analysis_EQ))
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-pass-remarks-analysis=") + A->getValue()));
+  if (Args.getLastArg(options::OPT_save_temps_EQ))
+    CmdArgs.push_back("-save-temps");
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back("-linker-path");
