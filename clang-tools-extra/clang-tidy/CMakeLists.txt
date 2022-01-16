@@ -113,7 +113,7 @@ add_subdirectory(utils)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY .
-    DESTINATION include/clang-tidy
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/clang-tidy"
     COMPONENT clang-tidy-headers
     FILES_MATCHING
     PATTERN "*.h"
