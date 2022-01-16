@@ -1,7 +1,5 @@
 # MLIR project.
 
-include(GNUInstallDirs)
-
 # Check if MLIR is built as a standalone project.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(mlir)
@@ -175,7 +173,7 @@ endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/mlir include/mlir-c
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION include
     COMPONENT mlir-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -186,7 +184,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     )
 
   install(DIRECTORY ${MLIR_INCLUDE_DIR}/mlir ${MLIR_INCLUDE_DIR}/mlir-c
-    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    DESTINATION include
     COMPONENT mlir-headers
     FILES_MATCHING
     PATTERN "*.def"

@@ -8,8 +8,6 @@ endif()
 
 cmake_minimum_required(VERSION 3.13.4)
 
-include(GNUInstallDirs)
-
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 # Add path for custom modules
@@ -139,9 +137,9 @@ set(CMAKE_MODULE_PATH
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
     ${CMAKE_MODULE_PATH})
 
-set(LIBUNWIND_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}" CACHE PATH
+set(LIBUNWIND_INSTALL_INCLUDE_DIR include CACHE PATH
     "Path where built libunwind headers should be installed.")
-set(LIBUNWIND_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
+set(LIBUNWIND_INSTALL_RUNTIME_DIR bin CACHE PATH
     "Path where built libunwind runtime libraries should be installed.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)

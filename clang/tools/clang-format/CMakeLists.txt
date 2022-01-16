@@ -21,20 +21,20 @@ if( LLVM_LIB_FUZZING_ENGINE OR LLVM_USE_SANITIZE_COVERAGE )
 endif()
 
 install(PROGRAMS clang-format-bbedit.applescript
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-format)
 install(PROGRAMS clang-format-diff.py
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-format)
 install(PROGRAMS clang-format-sublime.py
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-format)
 install(PROGRAMS clang-format.el
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-format)
 install(PROGRAMS clang-format.py
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-format)
 install(PROGRAMS git-clang-format
-  DESTINATION "${CMAKE_INSTALL_BINDIR}"
+  DESTINATION bin
   COMPONENT clang-format)

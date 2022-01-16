@@ -21,8 +21,8 @@ target_link_libraries(clang-include-fixer
   )
 
 install(PROGRAMS clang-include-fixer.el
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-include-fixer)
 install(PROGRAMS clang-include-fixer.py
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/clang"
+  DESTINATION share/clang
   COMPONENT clang-include-fixer)
