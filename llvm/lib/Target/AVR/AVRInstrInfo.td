@@ -915,6 +915,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   // neg Rd+1
   // neg Rd
   // sbc Rd+1, r1
+  let Uses = [R1] in
   def NEGWRd : Pseudo<(outs DREGS
                        : $rd),
                       (ins DREGS
@@ -1986,6 +1987,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
   def ASRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "asrwlo\t$rd",
                         [(set i16:$rd, (AVRasrlo i16:$src)), (implicit SREG)]>;
 
+  let Uses = [R1] in
   def ROLBRd : Pseudo<(outs GPR8
                        : $rd),
                       (ins GPR8
