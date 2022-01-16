@@ -1074,10 +1074,6 @@ public:
   /// Return true if the builder has IR-level attributes.
   bool hasAttributes() const;
 
-  /// Return true if the builder has any attribute that's in the
-  /// specified attribute.
-  bool hasAttributes(AttributeList A, uint64_t Index) const;
-
   /// Return true if the builder has an alignment attribute.
   bool hasAlignmentAttr() const;
 
