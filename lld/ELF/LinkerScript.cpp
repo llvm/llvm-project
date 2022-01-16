@@ -19,7 +19,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -64,8 +64,8 @@ static StringRef getOutputSectionName(const InputSectionBase *s) {
     if (InputSectionBase *rel = isec->getRelocatedSection()) {
       OutputSection *out = rel->getOutputSection();
       if (s->type == SHT_RELA)
-        return saver.save(".rela" + out->name);
-      return saver.save(".rel" + out->name);
+        return saver().save(".rela" + out->name);
+      return saver().save(".rel" + out->name);
     }
   }
 
