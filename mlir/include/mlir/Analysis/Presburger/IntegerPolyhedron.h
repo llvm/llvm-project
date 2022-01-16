@@ -14,6 +14,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
 
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
@@ -267,12 +268,10 @@ public:
   /// and the denominators in `denominators`. If no explicit representation
   /// could be found for the `i^th` local identifier, `denominators[i]` is set
   /// to 0.
-  void getLocalReprs(
-      std::vector<SmallVector<int64_t, 8>> &dividends,
-      SmallVector<unsigned, 4> &denominators,
-      std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const;
-  void getLocalReprs(
-      std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> &repr) const;
+  void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
+                     SmallVector<unsigned, 4> &denominators,
+                     std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
+  void getLocalReprs(std::vector<presburger_utils::MaybeLocalRepr> &repr) const;
   void getLocalReprs(std::vector<SmallVector<int64_t, 8>> &dividends,
                      SmallVector<unsigned, 4> &denominators) const;
 

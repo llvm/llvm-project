@@ -31,6 +31,7 @@
 #define DEBUG_TYPE "affine-structures"
 
 using namespace mlir;
+using namespace presburger_utils;
 
 namespace {
 
@@ -851,11 +852,10 @@ static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
 
   SmallVector<int64_t, 8> dividend;
   unsigned divisor;
-  auto ulPair = presburger_utils::computeSingleVarRepr(cst, foundRepr, pos,
-                                                       dividend, divisor);
+  auto ulPair = computeSingleVarRepr(cst, foundRepr, pos, dividend, divisor);
 
   // No upper-lower bound pair found for this var.
-  if (!ulPair)
+  if (ulPair.kind == ReprKind::None || ulPair.kind == ReprKind::Equality)
     return false;
 
   // Construct the dividend expression.
