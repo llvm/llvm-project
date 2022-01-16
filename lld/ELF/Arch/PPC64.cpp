@@ -11,7 +11,8 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
-#include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Memory.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -196,7 +197,7 @@ static bool addOptional(StringRef name, uint64_t value,
   Symbol *sym = symtab->find(name);
   if (!sym || sym->isDefined())
     return false;
-  sym->resolve(Defined{/*file=*/nullptr, saver().save(name), STB_GLOBAL,
+  sym->resolve(Defined{/*file=*/nullptr, saver.save(name), STB_GLOBAL,
                        STV_HIDDEN, STT_FUNC, value,
                        /*size=*/0, /*section=*/nullptr});
   defined.push_back(cast<Defined>(sym));

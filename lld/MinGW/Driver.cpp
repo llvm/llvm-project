@@ -100,7 +100,7 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> argv) {
   unsigned missingCount;
 
   SmallVector<const char *, 256> vec(argv.data(), argv.data() + argv.size());
-  cl::ExpandResponseFiles(saver(), getQuotingStyle(), vec);
+  cl::ExpandResponseFiles(saver, getQuotingStyle(), vec);
   opt::InputArgList args = this->ParseArgs(vec, missingIndex, missingCount);
 
   if (missingCount)
@@ -154,10 +154,12 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
 
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &stdoutOS,
-                 raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
-  auto *ctx = new CommonLinkerContext;
-  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
+                 raw_ostream &stdoutOS, raw_ostream &stderrOS) {
+  lld::stdoutOS = &stdoutOS;
+  lld::stderrOS = &stderrOS;
+
+  stderrOS.enable_colors(stderrOS.has_colors());
 
   MinGWOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
@@ -443,9 +445,5 @@ bool mingw::link(ArrayRef<const char *> argsArr, raw_ostream &stdoutOS,
   // Pass the actual binary name, to make error messages be printed with
   // the right prefix.
   vec[0] = argsArr[0];
-
-  // The context will be re-created in the COFF driver.
-  lld::CommonLinkerContext::destroy();
-
-  return coff::link(vec, stdoutOS, stderrOS, exitEarly, disableOutput);
+  return coff::link(vec, canExitEarly, stdoutOS, stderrOS);
 }
