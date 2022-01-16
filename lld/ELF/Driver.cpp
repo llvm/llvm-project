@@ -129,13 +129,12 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
   // Exit immediately if we don't need to return to the caller.
   // This saves time because the overhead of calling destructors
   // for all globally-allocated objects is not negligible.
+  int hasError = errorCount() ? 1 : 0;
   if (canExitEarly)
-    exitLld(errorCount() ? 1 : 0);
-
-  bool ret = errorCount() == 0;
-  if (!canExitEarly)
+    exitLld(hasError);
+  else
     errorHandler().reset();
-  return ret;
+  return !hasError;
 }
 
 // Parses a linker -m option.
