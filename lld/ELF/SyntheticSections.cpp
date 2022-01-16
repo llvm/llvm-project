@@ -1709,9 +1709,14 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
   // is to make results easier to read.
   if (sort) {
     const RelType relativeRel = target->relativeRel;
-    parallelSort(relocs, [&](const DynamicReloc &a, const DynamicReloc &b) {
-      return std::make_tuple(a.type != relativeRel, a.r_sym, a.r_offset) <
-             std::make_tuple(b.type != relativeRel, b.r_sym, b.r_offset);
+    auto nonRelative =
+        std::stable_partition(relocs.begin(), relocs.end(),
+                              [=](auto &r) { return r.type == relativeRel; });
+    parallelSort(relocs.begin(), nonRelative,
+                 [&](auto &a, auto &b) { return a.r_offset < b.r_offset; });
+    // Non-relative relocations are few, so don't bother with parallelSort.
+    std::sort(nonRelative, relocs.end(), [&](auto &a, auto &b) {
+      return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
   }
 
