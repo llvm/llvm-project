@@ -1805,22 +1805,6 @@ bool AttrBuilder::hasAttributes() const {
   return !Attrs.none() || !TargetDepAttrs.empty();
 }
 
-bool AttrBuilder::hasAttributes(AttributeList AL, uint64_t Index) const {
-  AttributeSet AS = AL.getAttributes(Index);
-
-  for (const auto &Attr : AS) {
-    if (Attr.isEnumAttribute() || Attr.isIntAttribute()) {
-      if (contains(Attr.getKindAsEnum()))
-        return true;
-    } else {
-      assert(Attr.isStringAttribute() && "Invalid attribute kind!");
-      return contains(Attr.getKindAsString());
-    }
-  }
-
-  return false;
-}
-
 bool AttrBuilder::hasAlignmentAttr() const {
   return getRawIntAttr(Attribute::Alignment) != 0;
 }
