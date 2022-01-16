@@ -41,8 +41,8 @@ v2:
 # REL-NOT: (RELCOUNT)
 
 # REL: Relocation section
-# REL:      {{.*}} R_MIPS_REL32
-# REL-NEXT: {{.*}} R_MIPS_REL32 [[V2:[0-9a-f]+]]
+# REL:      {{.*}} R_MIPS_REL32 [[V2:[0-9a-f]+]]
+# REL-NEXT: {{.*}} R_MIPS_REL32 {{$}}
 
 # REL: Symbol table
 # REL: {{.*}}: [[V2]] {{.*}} v2

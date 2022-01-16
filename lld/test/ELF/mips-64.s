@@ -32,8 +32,8 @@ v2:
 # CHECK: (RELENT)  16 (bytes)
 
 # CHECK: Relocation section
-# CHECK: [[V2:[0-9a-f]+]]  {{.*}} R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE
-# CHECK: [[V1:[0-9a-f]+]]  {{.*}} R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE [[V2]] v2
+# CHECK:      [[V1:[0-9a-f]+]]  {{.*}} R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE [[V2:[0-9a-f]+]] v2
+# CHECK-NEXT: [[V2]]            {{.*}} R_MIPS_REL32/R_MIPS_64/R_MIPS_NONE {{$}}
 
 # CHECK: Symbol table '.symtab'
 # CHECK: {{.*}}: [[V1]]  {{.*}}  v1
