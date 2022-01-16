@@ -47,7 +47,9 @@ private:
   llvm::codegen::RegisterCodeGenFlags cgf;
 };
 
-// Retrieve the global state. Only one state can exist per application.
+// Retrieve the global state. Currently only one state can exist per process,
+// but in the future we plan on supporting an arbitrary number of LLD instances
+// in a single process.
 CommonLinkerContext &commonContext();
 
 template <typename T = CommonLinkerContext> T &context() {

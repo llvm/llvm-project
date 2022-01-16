@@ -13,7 +13,10 @@
 using namespace llvm;
 using namespace lld;
 
-// Reference to the current LLD instance.
+// Reference to the current LLD instance. This is a temporary situation, until
+// we pass this context everywhere by reference, or we make it a thread_local,
+// as in https://reviews.llvm.org/D108850?id=370678 where each thread can be
+// associated with a LLD instance. Only then will LLD be free of global state.
 static CommonLinkerContext *lctx;
 
 CommonLinkerContext::CommonLinkerContext() { lctx = this; }
