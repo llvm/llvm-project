@@ -568,7 +568,7 @@ void destroyMachOTLVMgr(void *MachOTLVMgr) {
 
 Error runWrapperFunctionCalls(std::vector<WrapperFunctionCall> WFCs) {
   for (auto &WFC : WFCs)
-    if (auto Err = WFC.runWithSPSRet())
+    if (auto Err = WFC.runWithSPSRet<void>())
       return Err;
   return Error::success();
 }
