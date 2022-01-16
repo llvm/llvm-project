@@ -55,7 +55,6 @@ public:
 private:
   void copyLocalSymbols();
   void addSectionSymbols();
-  void forEachRelSec(llvm::function_ref<void(InputSectionBase &)> fn);
   void sortSections();
   void resolveShfLinkOrder();
   void finalizeAddressDependentContent();
@@ -1031,26 +1030,6 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
       Out::elfHeader, 0, STV_HIDDEN);
 }
 
-template <class ELFT>
-void Writer<ELFT>::forEachRelSec(
-    llvm::function_ref<void(InputSectionBase &)> fn) {
-  // Scan all relocations. Each relocation goes through a series
-  // of tests to determine if it needs special treatment, such as
-  // creating GOT, PLT, copy relocations, etc.
-  // Note that relocations for non-alloc sections are directly
-  // processed by InputSection::relocateNonAlloc.
-  for (InputSectionBase *isec : inputSections)
-    if (isec->isLive() && isa<InputSection>(isec) && (isec->flags & SHF_ALLOC))
-      fn(*isec);
-  for (Partition &part : partitions) {
-    for (EhInputSection *es : part.ehFrame->sections)
-      fn(*es);
-    if (part.armExidx && part.armExidx->isLive())
-      for (InputSection *ex : part.armExidx->exidxSections)
-        fn(*ex);
-  }
-}
-
 // This function generates assignments for predefined symbols (e.g. _end or
 // _etext) and inserts them into the commands sequence to be processed at the
 // appropriate time. This ensures that the value is going to be correct by the
@@ -1928,7 +1907,21 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // a linker-script-defined symbol is absolute.
     ppc64noTocRelax.clear();
     if (!config->relocatable) {
-      forEachRelSec(scanRelocations<ELFT>);
+      // Scan all relocations. Each relocation goes through a series of tests to
+      // determine if it needs special treatment, such as creating GOT, PLT,
+      // copy relocations, etc. Note that relocations for non-alloc sections are
+      // directly processed by InputSection::relocateNonAlloc.
+      for (InputSectionBase *sec : inputSections)
+        if (sec->isLive() && isa<InputSection>(sec) && (sec->flags & SHF_ALLOC))
+          scanRelocations<ELFT>(*sec);
+      for (Partition &part : partitions) {
+        for (EhInputSection *sec : part.ehFrame->sections)
+          scanRelocations<ELFT>(*sec);
+        if (part.armExidx && part.armExidx->isLive())
+          for (InputSection *sec : part.armExidx->exidxSections)
+            scanRelocations<ELFT>(*sec);
+      }
+
       reportUndefinedSymbols<ELFT>();
       postScanRelocations();
     }
