@@ -395,25 +395,53 @@ makeMethodWrapperHandler(RetT (ClassT::*Method)(ArgTs...)) {
 }
 
 /// Represents a call to a wrapper function.
-struct WrapperFunctionCall {
-  ExecutorAddr Func;
-  ExecutorAddrRange ArgData;
+class WrapperFunctionCall {
+public:
+  // FIXME: Switch to a SmallVector<char, 24> once ORC runtime has a
+  // smallvector.
+  using ArgDataBufferType = std::vector<char>;
+
+  /// Create a WrapperFunctionCall using the given SPS serializer to serialize
+  /// the arguments.
+  template <typename SPSSerializer, typename... ArgTs>
+  static Expected<WrapperFunctionCall> Create(ExecutorAddr FnAddr,
+                                              const ArgTs &...Args) {
+    ArgDataBufferType ArgData;
+    ArgData.resize(SPSSerializer::size(Args...));
+    SPSOutputBuffer OB(&ArgData[0], ArgData.size());
+    if (SPSSerializer::serialize(OB, Args...))
+      return WrapperFunctionCall(FnAddr, std::move(ArgData));
+    return make_error<StringError>("Cannot serialize arguments for "
+                                   "AllocActionCall");
+  }
 
   WrapperFunctionCall() = default;
-  WrapperFunctionCall(ExecutorAddr Func, ExecutorAddrRange ArgData)
-      : Func(Func), ArgData(ArgData) {}
 
-  /// Run and return result as WrapperFunctionResult.
-  WrapperFunctionResult run() {
-    WrapperFunctionResult WFR(
-        Func.toPtr<__orc_rt_CWrapperFunctionResult (*)(const char *, size_t)>()(
-            ArgData.Start.toPtr<const char *>(),
-            static_cast<size_t>(ArgData.size().getValue())));
-    return WFR;
+  /// Create a WrapperFunctionCall from a target function and arg buffer.
+  WrapperFunctionCall(ExecutorAddr FnAddr, ArgDataBufferType ArgData)
+      : FnAddr(FnAddr), ArgData(std::move(ArgData)) {}
+
+  /// Returns the address to be called.
+  const ExecutorAddr &getCallee() const { return FnAddr; }
+
+  /// Returns the argument data.
+  const ArgDataBufferType &getArgData() const { return ArgData; }
+
+  /// WrapperFunctionCalls convert to true if the callee is non-null.
+  explicit operator bool() const { return !!FnAddr; }
+
+  /// Run call returning raw WrapperFunctionResult.
+  WrapperFunctionResult run() const {
+    using FnTy =
+        __orc_rt_CWrapperFunctionResult(const char *ArgData, size_t ArgSize);
+    return WrapperFunctionResult(
+        FnAddr.toPtr<FnTy *>()(ArgData.data(), ArgData.size()));
   }
 
   /// Run call and deserialize result using SPS.
-  template <typename SPSRetT, typename RetT> Error runWithSPSRet(RetT &RetVal) {
+  template <typename SPSRetT, typename RetT>
+  std::enable_if_t<!std::is_same<SPSRetT, void>::value, Error>
+  runWithSPSRet(RetT &RetVal) const {
     auto WFR = run();
     if (const char *ErrMsg = WFR.getOutOfBandError())
       return make_error<StringError>(ErrMsg);
@@ -425,30 +453,49 @@ struct WrapperFunctionCall {
   }
 
   /// Overload for SPS functions returning void.
-  Error runWithSPSRet() {
+  template <typename SPSRetT>
+  std::enable_if_t<std::is_same<SPSRetT, void>::value, Error>
+  runWithSPSRet() const {
     SPSEmpty E;
     return runWithSPSRet<SPSEmpty>(E);
   }
+
+  /// Run call and deserialize an SPSError result. SPSError returns and
+  /// deserialization failures are merged into the returned error.
+  Error runWithSPSRetErrorMerged() const {
+    detail::SPSSerializableError RetErr;
+    if (auto Err = runWithSPSRet<SPSError>(RetErr))
+      return Err;
+    return detail::fromSPSSerializable(std::move(RetErr));
+  }
+
+private:
+  ExecutorAddr FnAddr;
+  std::vector<char> ArgData;
 };
 
-class SPSWrapperFunctionCall {};
+using SPSWrapperFunctionCall = SPSTuple<SPSExecutorAddr, SPSSequence<char>>;
 
 template <>
 class SPSSerializationTraits<SPSWrapperFunctionCall, WrapperFunctionCall> {
 public:
   static size_t size(const WrapperFunctionCall &WFC) {
-    return SPSArgList<SPSExecutorAddr, SPSExecutorAddrRange>::size(WFC.Func,
-                                                                   WFC.ArgData);
+    return SPSArgList<SPSExecutorAddr, SPSSequence<char>>::size(
+        WFC.getCallee(), WFC.getArgData());
   }
 
   static bool serialize(SPSOutputBuffer &OB, const WrapperFunctionCall &WFC) {
-    return SPSArgList<SPSExecutorAddr, SPSExecutorAddrRange>::serialize(
-        OB, WFC.Func, WFC.ArgData);
+    return SPSArgList<SPSExecutorAddr, SPSSequence<char>>::serialize(
+        OB, WFC.getCallee(), WFC.getArgData());
   }
 
   static bool deserialize(SPSInputBuffer &IB, WrapperFunctionCall &WFC) {
-    return SPSArgList<SPSExecutorAddr, SPSExecutorAddrRange>::deserialize(
-        IB, WFC.Func, WFC.ArgData);
+    ExecutorAddr FnAddr;
+    WrapperFunctionCall::ArgDataBufferType ArgData;
+    if (!SPSWrapperFunctionCall::AsArgList::deserialize(IB, FnAddr, ArgData))
+      return false;
+    WFC = WrapperFunctionCall(FnAddr, std::move(ArgData));
+    return true;
   }
 };
 
