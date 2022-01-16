@@ -1348,8 +1348,8 @@ bool AVRExpandPseudo::expand<AVR::ROLBRd>(Block &MBB, BlockIt MBBI) {
                  .addReg(DstReg, getKillRegState(DstIsKill))
                  .addReg(ZERO_REGISTER);
 
-  // SREG is always implicitly killed
-  MIB->getOperand(2).setIsKill();
+  MIB->getOperand(3).setIsDead(); // SREG is always dead
+  MIB->getOperand(4).setIsKill(); // SREG is always implicitly killed
 
   MI.eraseFromParent();
   return true;

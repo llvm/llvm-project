@@ -57,6 +57,8 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i8, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
 
+  setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
+
   for (MVT VT : MVT::integer_valuetypes()) {
     for (auto N : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
       setLoadExtAction(N, VT, MVT::i1, Promote);
@@ -836,6 +838,52 @@ SDValue AVRTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
+// Modify the existing ISD::INLINEASM node to add the implicit register r1.
+SDValue AVRTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
+  SDValue R1Reg = DAG.getRegister(AVR::R1, MVT::i8);
+  if (Op.getOperand(Op.getNumOperands() - 1) == R1Reg ||
+      Op.getOperand(Op.getNumOperands() - 2) == R1Reg) {
+    // R1 has already been added. Don't add it again.
+    // If this isn't handled, we get called over and over again.
+    return Op;
+  }
+
+  // Get a list of operands to the new INLINEASM node. This is mostly a copy,
+  // with some edits.
+  // Add the following operands at the end (but before the glue node, if it's
+  // there):
+  //  - The flags of the implicit R1 register operand.
+  //  - The implicit R1 register operand itself.
+  SDLoc dl(Op);
+  SmallVector<SDValue, 8> Ops;
+  SDNode *N = Op.getNode();
+  SDValue Glue;
+  for (unsigned I = 0; I < N->getNumOperands(); I++) {
+    SDValue Operand = N->getOperand(I);
+    if (Operand.getValueType() == MVT::Glue) {
+      // The glue operand always needs to be at the end, so we need to treat it
+      // specially.
+      Glue = Operand;
+    } else {
+      Ops.push_back(Operand);
+    }
+  }
+  unsigned Flags = InlineAsm::getFlagWord(InlineAsm::Kind_RegUse, 1);
+  Ops.push_back(DAG.getTargetConstant(Flags, dl, MVT::i32));
+  Ops.push_back(R1Reg);
+  if (Glue) {
+    Ops.push_back(Glue);
+  }
+
+  // Replace the current INLINEASM node with a new one that has R1 as implicit
+  // parameter.
+  SDValue New = DAG.getNode(N->getOpcode(), dl, N->getVTList(), Ops);
+  DAG.ReplaceAllUsesOfValueWith(Op, New);
+  DAG.ReplaceAllUsesOfValueWith(Op.getValue(1), New.getValue(1));
+
+  return New;
+}
+
 SDValue AVRTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
@@ -861,6 +909,8 @@ SDValue AVRTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SDIVREM:
   case ISD::UDIVREM:
     return LowerDivRem(Op, DAG);
+  case ISD::INLINEASM:
+    return LowerINLINEASM(Op, DAG);
   }
 
   return SDValue();
@@ -1451,6 +1501,10 @@ SDValue AVRTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
   }
 
+  // The R1 register must be passed as an implicit register so that R1 is
+  // correctly zeroed in interrupts.
+  Ops.push_back(DAG.getRegister(AVR::R1, MVT::i8));
+
   // Add a register mask operand representing the call-preserved registers.
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   const uint32_t *Mask =
@@ -1571,6 +1625,14 @@ AVRTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   }
 
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+
+  if (!AFI->isInterruptOrSignalHandler()) {
+    // The return instruction has an implicit R1 operand: it must contain zero
+    // on return.
+    // This is not needed in interrupts however, where R1 is handled specially
+    // (only pushed/popped when needed).
+    RetOps.push_back(DAG.getRegister(AVR::R1, MVT::i8));
+  }
 
   unsigned RetOpc =
       AFI->isInterruptOrSignalHandler() ? AVRISD::RETI_FLAG : AVRISD::RET_FLAG;
