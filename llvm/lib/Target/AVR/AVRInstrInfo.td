@@ -2390,6 +2390,10 @@ def Asr16 : ShiftPseudo<(outs DREGS
                                                      : $src, i8
                                                      : $cnt))]>;
 
+// lowered to a copy from R1, which contains the value zero.
+let usesCustomInserter=1 in
+def CopyR1 : Pseudo<(outs GPR8:$rd), (ins), "clrz\t$rd", [(set i8:$rd, 0)]>;
+
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns
 //===----------------------------------------------------------------------===//
