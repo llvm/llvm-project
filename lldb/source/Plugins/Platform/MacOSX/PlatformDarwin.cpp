@@ -631,15 +631,6 @@ static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
   return {};
 }
 
-const char *PlatformDarwin::GetCompatibleArch(ArchSpec::Core core, size_t idx) {
-  llvm::ArrayRef<const char *> compatible_archs = GetCompatibleArchs(core);
-  if (!compatible_archs.data())
-    return nullptr;
-  if (idx < compatible_archs.size())
-    return compatible_archs[idx];
-  return nullptr;
-}
-
 /// The architecture selection rules for arm processors These cpu subtypes have
 /// distinct names (e.g. armv7f) but armv7 binaries run fine on an armv7f
 /// processor.
@@ -647,12 +638,9 @@ void PlatformDarwin::ARMGetSupportedArchitectures(
     std::vector<ArchSpec> &archs, llvm::Optional<llvm::Triple::OSType> os) {
   const ArchSpec system_arch = GetSystemArchitecture();
   const ArchSpec::Core system_core = system_arch.GetCore();
-
-  const char *compatible_arch;
-  for (unsigned idx = 0;
-       (compatible_arch = GetCompatibleArch(system_core, idx)); ++idx) {
+  for (const char *arch : GetCompatibleArchs(system_core)) {
     llvm::Triple triple;
-    triple.setArchName(compatible_arch);
+    triple.setArchName(arch);
     triple.setVendor(llvm::Triple::VendorType::Apple);
     if (os)
       triple.setOS(*os);

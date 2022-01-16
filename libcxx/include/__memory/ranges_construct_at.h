@@ -38,9 +38,7 @@ namespace ranges {
 namespace __construct_at {
 
 struct __fn final : private __function_like {
-
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
 
   template<class _Tp, class... _Args, class = decltype(
     ::new (declval<void*>()) _Tp(declval<_Args>()...)
@@ -49,13 +47,12 @@ struct __fn final : private __function_like {
   constexpr _Tp* operator()(_Tp* __location, _Args&& ...__args) const {
     return _VSTD::construct_at(__location, _VSTD::forward<_Args>(__args)...);
   }
-
 };
 
 } // namespace __construct_at
 
 inline namespace __cpo {
-inline constexpr auto construct_at = __construct_at::__fn(__function_like::__tag());
+  inline constexpr auto construct_at = __construct_at::__fn(__function_like::__tag());
 } // namespace __cpo
 
 // destroy_at
@@ -63,22 +60,19 @@ inline constexpr auto construct_at = __construct_at::__fn(__function_like::__tag
 namespace __destroy_at {
 
 struct __fn final : private __function_like {
-
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
 
   template <destructible _Tp>
   _LIBCPP_HIDE_FROM_ABI
   constexpr void operator()(_Tp* __location) const noexcept {
     _VSTD::destroy_at(__location);
   }
-
 };
 
 } // namespace __destroy_at
 
 inline namespace __cpo {
-inline constexpr auto destroy_at = __destroy_at::__fn(__function_like::__tag());
+  inline constexpr auto destroy_at = __destroy_at::__fn(__function_like::__tag());
 } // namespace __cpo
 
 // destroy
@@ -86,9 +80,7 @@ inline constexpr auto destroy_at = __destroy_at::__fn(__function_like::__tag());
 namespace __destroy {
 
 struct __fn final : private __function_like {
-
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
 
   template <__nothrow_input_iterator _InputIterator, __nothrow_sentinel_for<_InputIterator> _Sentinel>
     requires destructible<iter_value_t<_InputIterator>>
@@ -103,13 +95,12 @@ struct __fn final : private __function_like {
   constexpr borrowed_iterator_t<_InputRange> operator()(_InputRange&& __range) const noexcept {
     return (*this)(ranges::begin(__range), ranges::end(__range));
   }
-
 };
 
 } // namespace __destroy
 
 inline namespace __cpo {
-inline constexpr auto destroy = __destroy::__fn(__function_like::__tag());
+  inline constexpr auto destroy = __destroy::__fn(__function_like::__tag());
 } // namespace __cpo
 
 // destroy_n
@@ -117,9 +108,7 @@ inline constexpr auto destroy = __destroy::__fn(__function_like::__tag());
 namespace __destroy_n {
 
 struct __fn final : private __function_like {
-
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
 
   template <__nothrow_input_iterator _InputIterator>
     requires destructible<iter_value_t<_InputIterator>>
@@ -127,13 +116,12 @@ struct __fn final : private __function_like {
   constexpr _InputIterator operator()(_InputIterator __first, iter_difference_t<_InputIterator> __n) const noexcept {
     return _VSTD::destroy_n(_VSTD::move(__first), __n);
   }
-
 };
 
 } // namespace __destroy_n
 
 inline namespace __cpo {
-inline constexpr auto destroy_n = __destroy_n::__fn(__function_like::__tag());
+  inline constexpr auto destroy_n = __destroy_n::__fn(__function_like::__tag());
 } // namespace __cpo
 
 } // namespace ranges

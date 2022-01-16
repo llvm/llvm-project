@@ -158,7 +158,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
 
   # Install the LLDB python module
   if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_PYTHON_INSTALL_PATH ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Resources/Python)
+    set(LLDB_PYTHON_INSTALL_PATH ${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources/Python)
   else()
     set(LLDB_PYTHON_INSTALL_PATH ${LLDB_PYTHON_RELATIVE_PATH})
   endif()
