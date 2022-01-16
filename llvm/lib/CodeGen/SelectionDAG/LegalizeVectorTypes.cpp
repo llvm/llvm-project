@@ -4368,13 +4368,13 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_LOAD(VPLoadSDNode *N) {
   SDLoc dl(N);
 
   // The mask should be widened as well
-  assert(getTypeAction(Mask.getValueType()) == TargetLowering::TypeWidenVector &&
+  assert(getTypeAction(Mask.getValueType()) ==
+             TargetLowering::TypeWidenVector &&
          "Unable to widen binary VP op");
-  EVT WideMaskVT =
-      TLI.getTypeToTransformTo(*DAG.getContext(), Mask.getValueType());
   Mask = GetWidenedVector(Mask);
   assert(Mask.getValueType().getVectorElementCount() ==
-             WideMaskVT.getVectorElementCount() &&
+             TLI.getTypeToTransformTo(*DAG.getContext(), Mask.getValueType())
+                 .getVectorElementCount() &&
          "Unable to widen vector load");
 
   SDValue Res =
@@ -5288,8 +5288,8 @@ SDValue DAGTypeLegalizer::WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo) {
 
     // We only handle the case where the stored value needs widening to an
     // identically-sized type as the mask.
-    EVT ValueVT = StVal.getValueType();
-    assert(getTypeAction(ValueVT) == TargetLowering::TypeWidenVector &&
+    assert(getTypeAction(StVal.getValueType()) ==
+               TargetLowering::TypeWidenVector &&
            "Unable to widen VP store");
     StVal = GetWidenedVector(StVal);
   }
