@@ -116,13 +116,13 @@ namespace test0 {
   B::~B() try { } catch (int i) {}
   // It will suppress the delegation optimization here, though.
 
-// CHECK2-LABEL: define{{.*}} void @_ZN5test01BD2Ev(%"struct.test0::B"* {{[^,]*}} %this, i8** %vtt) unnamed_addr
+// CHECK2-LABEL: define{{.*}} void @_ZN5test01BD2Ev(%"struct.test0::B"* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
 // CHECK2: invoke void @_ZN5test06MemberD1Ev
 // CHECK2:   unwind label [[MEM_UNWIND:%[a-zA-Z0-9.]+]]
 // CHECK2: invoke void @_ZN5test04BaseD2Ev
 // CHECK2:   unwind label [[BASE_UNWIND:%[a-zA-Z0-9.]+]]
 
-// CHECK2v11-LABEL: define{{.*}} void @_ZN5test01BD2Ev(%"struct.test0::B"* {{[^,]*}} %this, i8** %vtt) unnamed_addr
+// CHECK2v11-LABEL: define{{.*}} void @_ZN5test01BD2Ev(%"struct.test0::B"* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
 // CHECK2v11: call void @_ZN5test06MemberD1Ev
 // CHECK2v11: call void @_ZN5test04BaseD2Ev
 
@@ -182,7 +182,7 @@ namespace test1 {
   // The VTT parameter prevents this.  We could still make this work
   // for calling conventions that are safe against extra parameters.
   struct U : A, virtual B { ~U(); };
-  U::~U() {} // CHECK4-LABEL: define{{.*}} void @_ZN5test11UD2Ev(%"struct.test1::U"* {{[^,]*}} %this, i8** %vtt) unnamed_addr
+  U::~U() {} // CHECK4-LABEL: define{{.*}} void @_ZN5test11UD2Ev(%"struct.test1::U"* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
 }
 
 // PR6471
@@ -359,7 +359,7 @@ namespace test6 {
   // FIXME: way too much EH cleanup code follows
 
   C::~C() { opaque(); }
-  // CHECK5-LABEL: define{{.*}} void @_ZN5test61CD2Ev(%"struct.test6::C"* {{[^,]*}} %this, i8** %vtt) unnamed_addr
+  // CHECK5-LABEL: define{{.*}} void @_ZN5test61CD2Ev(%"struct.test6::C"* {{[^,]*}} %this, i8** noundef %vtt) unnamed_addr
   // CHECK5:   invoke void @_ZN5test66opaqueEv
   // CHECK5v03:   invoke void @_ZN5test61AD1Ev
   // CHECK5v03:   invoke void @_ZN5test61AD1Ev

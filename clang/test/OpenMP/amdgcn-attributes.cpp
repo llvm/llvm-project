@@ -28,7 +28,7 @@ int func() {
 }
 
 int callable(int x) {
-  // ALL-LABEL: @_Z8callablei(i32 %x) #1
+  // ALL-LABEL: @_Z8callablei(i32 noundef %x) #1
   return x + 1;
 }
 

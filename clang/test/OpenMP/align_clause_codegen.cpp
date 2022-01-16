@@ -173,7 +173,7 @@ int template_test() {
 // CHECK-32-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[RESULT:%.*]] = alloca double, align 8
-// CHECK-32-NEXT:    [[CALL:%.*]] = call double @_Z3runIdLj1000ELj16EET_v()
+// CHECK-32-NEXT:    [[CALL:%.*]] = call noundef double @_Z3runIdLj1000ELj16EET_v()
 // CHECK-32-NEXT:    store double [[CALL]], double* [[RESULT]], align 8
 // CHECK-32-NEXT:    ret i32 0
 //
@@ -284,7 +284,7 @@ int template_test() {
 // CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RESULT:%.*]] = alloca double, align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call double @_Z3runIdLj1000ELj16EET_v()
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef double @_Z3runIdLj1000ELj16EET_v()
 // CHECK-NEXT:    store double [[CALL]], double* [[RESULT]], align 8
 // CHECK-NEXT:    ret i32 0
 //

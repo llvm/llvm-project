@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 char *add_unsigned(char *base, unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @add_unsigned(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @add_unsigned(i8* noundef %[[BASE:.*]], i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
@@ -58,7 +58,7 @@ char *add_unsigned(char *base, unsigned long offset) {
 }
 
 char *sub_unsigned(char *base, unsigned long offset) {
-  // CHECK:                           define{{.*}} i8* @sub_unsigned(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @sub_unsigned(i8* noundef %[[BASE:.*]], i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
@@ -95,7 +95,7 @@ char *sub_unsigned(char *base, unsigned long offset) {
 }
 
 char *add_signed(char *base, signed long offset) {
-  // CHECK:                           define{{.*}} i8* @add_signed(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @add_signed(i8* noundef %[[BASE:.*]], i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
@@ -134,7 +134,7 @@ char *add_signed(char *base, signed long offset) {
 }
 
 char *sub_signed(char *base, signed long offset) {
-  // CHECK:                           define{{.*}} i8* @sub_signed(i8* %[[BASE:.*]], i64 %[[OFFSET:.*]])
+  // CHECK:                           define{{.*}} i8* @sub_signed(i8* noundef %[[BASE:.*]], i64 noundef %[[OFFSET:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        %[[OFFSET_ADDR:.*]] = alloca i64, align 8
@@ -174,7 +174,7 @@ char *sub_signed(char *base, signed long offset) {
 }
 
 char *postinc(char *base) {
-  // CHECK:                           define{{.*}} i8* @postinc(i8* %[[BASE:.*]])
+  // CHECK:                           define{{.*}} i8* @postinc(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -204,7 +204,7 @@ char *postinc(char *base) {
 }
 
 char *postdec(char *base) {
-  // CHECK:                           define{{.*}} i8* @postdec(i8* %[[BASE:.*]])
+  // CHECK:                           define{{.*}} i8* @postdec(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -234,7 +234,7 @@ char *postdec(char *base) {
 }
 
 char *preinc(char *base) {
-  // CHECK:                           define{{.*}} i8* @preinc(i8* %[[BASE:.*]])
+  // CHECK:                           define{{.*}} i8* @preinc(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8
@@ -264,7 +264,7 @@ char *preinc(char *base) {
 }
 
 char *predec(char *base) {
-  // CHECK:                           define{{.*}} i8* @predec(i8* %[[BASE:.*]])
+  // CHECK:                           define{{.*}} i8* @predec(i8* noundef %[[BASE:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[BASE_ADDR:.*]] = alloca i8*, align 8
   // CHECK-NEXT:                        store i8* %[[BASE]], i8** %[[BASE_ADDR]], align 8

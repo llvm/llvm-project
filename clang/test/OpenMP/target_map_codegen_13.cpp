@@ -113,7 +113,7 @@ void implicit_maps_class (int a){
   sss.foo(123);
 }
 
-// CK14: define internal void [[KERNEL]]([[ST]]* [[THIS:%.+]], i[[sz]] [[ARG:%.+]])
+// CK14: define internal void [[KERNEL]]([[ST]]* noundef [[THIS:%.+]], i[[sz]] noundef [[ARG:%.+]])
 // CK14: [[ADDR0:%.+]] = alloca [[ST]]*,
 // CK14: [[ADDR1:%.+]] = alloca i[[sz]],
 // CK14: store [[ST]]* [[THIS]], [[ST]]** [[ADDR0]],

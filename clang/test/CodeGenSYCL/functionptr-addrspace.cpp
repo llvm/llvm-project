@@ -7,7 +7,7 @@ __attribute__((sycl_kernel)) void kernel_single_task(const Func &kernelFunc) {
   kernelFunc();
 }
 
-// CHECK: define dso_local spir_func{{.*}}invoke_function{{.*}}(i32 ()* %fptr, i32 addrspace(4)* %ptr)
+// CHECK: define dso_local spir_func{{.*}}invoke_function{{.*}}(i32 ()* noundef %fptr, i32 addrspace(4)* noundef %ptr)
 void invoke_function(int (*fptr)(), int *ptr) {}
 
 int f() { return 0; }

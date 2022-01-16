@@ -120,7 +120,7 @@ extern "C" void fun3() {
 
 // CHECK-LABEL: define{{.*}}@fun4()
 // CHECK:  store void ()* bitcast (void ()** @[[HCKERN]] to void ()*), void ()** @kernel_ptr
-// CHECK:  call i32 @{{.*hipConfigureCall}}
+// CHECK:  call noundef i32 @{{.*hipConfigureCall}}
 // CHECK:  %[[HANDLE:.*]] = load void ()*, void ()** @kernel_ptr, align 8
 // CHECK:  %[[CAST:.*]] = bitcast void ()* %[[HANDLE]] to void ()**
 // CHECK:  %[[STUB:.*]] = load void ()*, void ()** %[[CAST]], align 8
@@ -136,7 +136,7 @@ extern "C" void fun4() {
 // CHECK:  store void ()* bitcast (void ()** @[[HCKERN]] to void ()*), void ()** @kernel_ptr
 // CHECK:  %[[HANDLE:.*]] = load void ()*, void ()** @kernel_ptr, align 8
 // CHECK:  %[[CAST:.*]] = bitcast void ()* %[[HANDLE]] to i8*
-// CHECK:  call void @launch(i8* %[[CAST]])
+// CHECK:  call void @launch(i8* noundef %[[CAST]])
 extern "C" void fun5() {
   kernel_ptr = ckernel;
   launch((void *)kernel_ptr);

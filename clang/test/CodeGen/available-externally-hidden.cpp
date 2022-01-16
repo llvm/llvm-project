@@ -17,7 +17,7 @@ class Sender {
   virtual ~Sender() {}
 };
 
-// CHECK: declare zeroext i1 @_ZThn16_N17SyncMessageFilter4SendEP7Message
+// CHECK: declare noundef zeroext i1 @_ZThn16_N17SyncMessageFilter4SendEP7Message
 class SyncMessageFilter : public Filter, public Sender {
  public:
   bool Send(Message* message) override;

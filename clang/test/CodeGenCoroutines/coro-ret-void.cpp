@@ -48,4 +48,4 @@ coro2 g() {
 
 // CHECK-LABEL: define{{.*}} void @_Z1gv(
 // CHECK: call void @_ZNSt13suspend_never12await_resumeEv(%"struct.std::suspend_never"*
-// CHECK: call void @_ZN5coro212promise_type12return_valueEi(%"struct.coro2::promise_type"* {{[^,]*}} %__promise, i32 42)
+// CHECK: call void @_ZN5coro212promise_type12return_valueEi(%"struct.coro2::promise_type"* {{[^,]*}} %__promise, i32 noundef 42)
