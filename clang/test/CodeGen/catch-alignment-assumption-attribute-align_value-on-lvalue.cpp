@@ -14,7 +14,7 @@ struct ac_struct {
 // CHECK-SANITIZE-ANYRECOVER: @[[LINE_100_ALIGNMENT_ASSUMPTION:.*]] = {{.*}}, i32 100, i32 13 }, {{.*}}* @[[ALIGNED_CHAR]] }
 
 char **load_from_ac_struct(struct ac_struct *x) {
-  // CHECK:                           define{{.*}} i8** @{{.*}}(%[[STRUCT_AC_STRUCT]]* %[[X:.*]])
+  // CHECK:                           define{{.*}} i8** @{{.*}}(%[[STRUCT_AC_STRUCT]]* noundef %[[X:.*]])
   // CHECK-NEXT:                      [[ENTRY:.*]]:
   // CHECK-NEXT:                        %[[STRUCT_AC_STRUCT_ADDR:.*]] = alloca %[[STRUCT_AC_STRUCT]]*, align 8
   // CHECK-NEXT:                        store %[[STRUCT_AC_STRUCT]]* %[[X]], %[[STRUCT_AC_STRUCT]]** %[[STRUCT_AC_STRUCT_ADDR]], align 8

@@ -27,38 +27,38 @@ namespace std { enum class align_val_t : size_t {}; }
 struct OVERALIGNED A { A(); int n[128]; };
 
 // CHECK-LABEL: define {{.*}} @_Z2a0v()
-// CHECK: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @_ZnwmSt11align_val_t(i64 512, i64 32)
-// CHECK: call void @_ZdlPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 i8* @_ZnwmSt11align_val_t(i64 noundef 512, i64 noundef 32)
+// CHECK: call void @_ZdlPvSt11align_val_t(i8* noundef %[[ALLOC]], i64 noundef 32)
 // CHECK-MS-LABEL: define {{.*}} @"?a0@@YAPEAXXZ"()
-// CHECK-MS: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 512, i64 32)
+// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 i8* @"??2@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef 512, i64 noundef 32)
 // CHECK-MS: cleanuppad
-// CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
+// CHECK-MS: call void @"??3@YAXPEAXW4align_val_t@std@@@Z"(i8* noundef %[[ALLOC]], i64 noundef 32)
 void *a0() { return new A; }
 
 // FIXME: Why don't we call the sized array deallocation overload in this case?
 // The size is known.
 //
 // CHECK-LABEL: define {{.*}} @_Z2a1l(
-// CHECK: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @_ZnamSt11align_val_t(i64 %{{.*}}, i64 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 i8* @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 noundef 32)
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1AC1Ev(
-// CHECK: call void @_ZdaPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
+// CHECK: call void @_ZdaPvSt11align_val_t(i8* noundef %[[ALLOC]], i64 noundef 32)
 // CHECK-MS-LABEL: define {{.*}} @"?a1@@YAPEAXJ@Z"(
-// CHECK-MS: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 %{{.*}}, i64 32)
+// CHECK-MS: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 i8* @"??_U@YAPEAX_KW4align_val_t@std@@@Z"(i64 noundef %{{.*}}, i64 noundef 32)
 // No array cookie.
 // CHECK-MS-NOT: store
-// CHECK-MS: invoke %struct.A* @"??0A@@QEAA@XZ"(
+// CHECK-MS: invoke noundef %struct.A* @"??0A@@QEAA@XZ"(
 // CHECK-MS: cleanuppad
-// CHECK-MS: call void @"??_V@YAXPEAXW4align_val_t@std@@@Z"(i8* %[[ALLOC]], i64 32)
+// CHECK-MS: call void @"??_V@YAXPEAXW4align_val_t@std@@@Z"(i8* noundef %[[ALLOC]], i64 noundef 32)
 void *a1(long n) { return new A[n]; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a2P1A(
-// CHECK: call void @_ZdlPvmSt11align_val_t(i8* %{{.*}}, i64 512, i64 32) #9
+// CHECK: call void @_ZdlPvmSt11align_val_t(i8* noundef %{{.*}}, i64 noundef 512, i64 noundef 32) #9
 void a2(A *p) { delete p; }
 
 // CHECK-LABEL: define {{.*}} @_Z2a3P1A(
-// CHECK: call void @_ZdaPvSt11align_val_t(i8* %{{.*}}, i64 32) #9
+// CHECK: call void @_ZdaPvSt11align_val_t(i8* noundef %{{.*}}, i64 noundef 32) #9
 void a3(A *p) { delete[] p; }
 
 
@@ -79,24 +79,24 @@ struct OVERALIGNED B {
 };
 
 // CHECK-LABEL: define {{.*}} @_Z2b0v()
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZN1BnwEmSt11align_val_t(i64 512, i64 32)
-// CHECK: call void @_ZN1BdlEPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
+// CHECK: %[[ALLOC:.*]] = call noundef i8* @_ZN1BnwEmSt11align_val_t(i64 noundef 512, i64 noundef 32)
+// CHECK: call void @_ZN1BdlEPvSt11align_val_t(i8* noundef %[[ALLOC]], i64 noundef 32)
 void *b0() { return new B; }
 
 // CHECK-LABEL: define {{.*}} @_Z2b1l(
-// CHECK: %[[ALLOC:.*]] = call noalias nonnull align 32 i8* @_ZnamSt11align_val_t(i64 %{{.*}}, i64 32)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 32 i8* @_ZnamSt11align_val_t(i64 noundef %{{.*}}, i64 noundef 32)
 // No array cookie.
 // CHECK-NOT: store
 // CHECK: invoke void @_ZN1BC1Ev(
-// CHECK: call void @_ZN1BdaEPvSt11align_val_t(i8* %[[ALLOC]], i64 32)
+// CHECK: call void @_ZN1BdaEPvSt11align_val_t(i8* noundef %[[ALLOC]], i64 noundef 32)
 void *b1(long n) { return new B[n]; }
 
 // CHECK-LABEL: define {{.*}} @_Z2b2P1B(
-// CHECK: call void @_ZN1BdlEPvSt11align_val_t(i8* %{{.*}}, i64 32)
+// CHECK: call void @_ZN1BdlEPvSt11align_val_t(i8* noundef %{{.*}}, i64 noundef 32)
 void b2(B *p) { delete p; }
 
 // CHECK-LABEL: define {{.*}} @_Z2b3P1B(
-// CHECK: call void @_ZN1BdaEPvSt11align_val_t(i8* %{{.*}}, i64 32)
+// CHECK: call void @_ZN1BdaEPvSt11align_val_t(i8* noundef %{{.*}}, i64 noundef 32)
 void b3(B *p) { delete[] p; }
 
 struct OVERALIGNED C {
@@ -113,7 +113,7 @@ struct OVERALIGNED C {
 // CHECK-LABEL: define {{.*}} @_Z2b4l(
 // CHECK: call {{.*}} @llvm.umul.with.overflow{{.*}}i64 32
 // CHECK: call {{.*}} @llvm.uadd.with.overflow{{.*}}i64 32
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZN1CnaEmSt11align_val_t(i64 %{{.*}}, i64 32)
+// CHECK: %[[ALLOC:.*]] = call noundef i8* @_ZN1CnaEmSt11align_val_t(i64 noundef %{{.*}}, i64 noundef 32)
 // CHECK: store
 // CHECK: call void @_ZN1CC1Ev(
 //
@@ -142,8 +142,8 @@ void operator delete(void*, Q);
 void operator delete(void*, std::align_val_t, Q);
 
 // CHECK-LABEL: define {{.*}} @_Z2c0v(
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZnwmSt11align_val_t1Q(i64 512, i64 32, i32 %
-// CHECK: call void @_ZdlPvSt11align_val_t1Q(i8* %[[ALLOC]], i64 32, i32 %
+// CHECK: %[[ALLOC:.*]] = call noundef i8* @_ZnwmSt11align_val_t1Q(i64 noundef 512, i64 noundef 32, i32 %
+// CHECK: call void @_ZdlPvSt11align_val_t1Q(i8* noundef %[[ALLOC]], i64 noundef 32, i32 %
 void *c0() { return new (q) A; }
 
 
@@ -159,8 +159,8 @@ struct OVERALIGNED D {
 };
 
 // CHECK-LABEL: define {{.*}} @_Z2d0v(
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZN1DnwEmSt11align_val_t1Q(i64 32, i64 32, i32 %
-// CHECK: call void @_ZN1DdlEPvSt11align_val_t1Q(i8* %[[ALLOC]], i64 32, i32 %
+// CHECK: %[[ALLOC:.*]] = call noundef i8* @_ZN1DnwEmSt11align_val_t1Q(i64 noundef 32, i64 noundef 32, i32 %
+// CHECK: call void @_ZN1DdlEPvSt11align_val_t1Q(i8* noundef %[[ALLOC]], i64 noundef 32, i32 %
 void *d0() { return new (q) D; }
 
 
@@ -169,13 +169,13 @@ void *d0() { return new (q) D; }
 
 #ifndef UNALIGNED
 // CHECK-LABEL: define {{.*}} @_Z2e0v(
-// CHECK: %[[ALLOC:.*]] = call noalias nonnull align 4 i8* @_ZnwmSt11align_val_t(i64 512, i64 4)
-// CHECK: call void @_ZdlPvSt11align_val_t(i8* %[[ALLOC]], i64 4)
+// CHECK: %[[ALLOC:.*]] = call noalias noundef nonnull align 4 i8* @_ZnwmSt11align_val_t(i64 noundef 512, i64 noundef 4)
+// CHECK: call void @_ZdlPvSt11align_val_t(i8* noundef %[[ALLOC]], i64 noundef 4)
 void *e0() { return new (std::align_val_t(4)) A; }
 
 // CHECK-LABEL: define {{.*}} @_Z2e1v(
-// CHECK: %[[ALLOC:.*]] = call i8* @_ZN1BnwEmSt11align_val_t(i64 512, i64 4)
-// CHECK: call void @_ZN1BdlEPvSt11align_val_t(i8* %[[ALLOC]], i64 4)
+// CHECK: %[[ALLOC:.*]] = call noundef i8* @_ZN1BnwEmSt11align_val_t(i64 noundef 512, i64 noundef 4)
+// CHECK: call void @_ZN1BdlEPvSt11align_val_t(i8* noundef %[[ALLOC]], i64 noundef 4)
 void *e1() { return new (std::align_val_t(4)) B; }
 #endif
 
@@ -190,17 +190,17 @@ struct OVERALIGNED F {
 };
 
 // CHECK-LABEL: define {{.*}} @_Z2f0v(
-// CHECK: %[[ALLOC:.*]] = call i8* (i64, ...) @_ZN1FnwEmz(i64 512, i64 32)
+// CHECK: %[[ALLOC:.*]] = call noundef i8* (i64, ...) @_ZN1FnwEmz(i64 noundef 512, i64 noundef 32)
 // Non-placement allocation function, uses normal deallocation lookup which
 // cares about whether a parameter has type std::align_val_t.
-// CHECK: call void (i8*, ...) @_ZN1FdlEPvz(i8* %[[ALLOC]])
+// CHECK: call void (i8*, ...) @_ZN1FdlEPvz(i8* noundef %[[ALLOC]])
 void *f0() { return new F; }
 
 // CHECK-LABEL: define {{.*}} @_Z2f1v(
-// CHECK: %[[ALLOC:.*]] = call i8* (i64, ...) @_ZN1FnwEmz(i64 512, i64 32, i32 %
+// CHECK: %[[ALLOC:.*]] = call noundef i8* (i64, ...) @_ZN1FnwEmz(i64 noundef 512, i64 noundef 32, i32 %
 // Placement allocation function, uses placement deallocation matching, which
 // passes same arguments and therefore includes alignment.
-// CHECK: call void (i8*, ...) @_ZN1FdlEPvz(i8* %[[ALLOC]], i64 32, i32 %
+// CHECK: call void (i8*, ...) @_ZN1FdlEPvz(i8* noundef %[[ALLOC]], i64 noundef 32, i32 %
 void *f1() { return new (q) F; }
 
 struct OVERALIGNED G {
@@ -211,12 +211,12 @@ struct OVERALIGNED G {
 };
 #ifndef UNALIGNED
 // CHECK-LABEL: define {{.*}} @_Z2g0v
-// CHECK: %[[ALLOC:.*]] = call i8* (i64, i64, ...) @_ZN1GnwEmSt11align_val_tz(i64 512, i64 32)
-// CHECK: call void (i8*, i64, ...) @_ZN1GdlEPvSt11align_val_tz(i8* %[[ALLOC]], i64 32)
+// CHECK: %[[ALLOC:.*]] = call noundef i8* (i64, i64, ...) @_ZN1GnwEmSt11align_val_tz(i64 noundef 512, i64 noundef 32)
+// CHECK: call void (i8*, i64, ...) @_ZN1GdlEPvSt11align_val_tz(i8* noundef %[[ALLOC]], i64 noundef 32)
 void *g0() { return new G; }
 
 // CHECK-LABEL: define {{.*}} @_Z2g1v
-// CHECK: %[[ALLOC:.*]] = call i8* (i64, i64, ...) @_ZN1GnwEmSt11align_val_tz(i64 512, i64 32, i32 %
-// CHECK: call void (i8*, i64, ...) @_ZN1GdlEPvSt11align_val_tz(i8* %[[ALLOC]], i64 32, i32 %
+// CHECK: %[[ALLOC:.*]] = call noundef i8* (i64, i64, ...) @_ZN1GnwEmSt11align_val_tz(i64 noundef 512, i64 noundef 32, i32 %
+// CHECK: call void (i8*, i64, ...) @_ZN1GdlEPvSt11align_val_tz(i8* noundef %[[ALLOC]], i64 noundef 32, i32 %
 void *g1() { return new (q) G; }
 #endif

@@ -8,7 +8,7 @@ struct S {
 
 // CHECK-LABEL: define{{.*}} void @_Z1fv(%struct.S* noalias sret(%struct.S) align 2 %
 S f() { return S(); }
-// CHECK-LABEL: define{{.*}} void @_Z1f1S(%struct.S* %0)
+// CHECK-LABEL: define{{.*}} void @_Z1f1S(%struct.S* noundef %0)
 void f(S) { }
 
 // Non-trivial dtors, should both be passed indirectly.
@@ -21,7 +21,7 @@ public:
 // CHECK-LABEL: define{{.*}} void @_Z1gv(%class.C* noalias sret(%class.C) align 4 %
 C g() { return C(); }
 
-// CHECK-LABEL: define{{.*}} void @_Z1f1C(%class.C* %0)
+// CHECK-LABEL: define{{.*}} void @_Z1f1C(%class.C* noundef %0)
 void f(C) { }
 
 
@@ -31,7 +31,7 @@ void f(C) { }
 
 // CHECK-LABEL: define{{.*}} void @_ZThn4_N18BasicAliasAnalysis13getModRefInfoE8CallSite
 // ...
-// CHECK: %struct.CallSite* byval(%struct.CallSite) align 4 %CS)
+// CHECK: %struct.CallSite* noundef byval(%struct.CallSite) align 4 %CS)
 struct CallSite {
   unsigned Ptr;
   CallSite(unsigned XX) : Ptr(XX) {}
@@ -89,7 +89,7 @@ struct s5 { s5(); int &x; };
 s5 f5() { return s5(); }
 
 // CHECK-LABEL: define{{.*}} i32 @_Z4f6_0M2s6i(i32 %a)
-// CHECK: define{{.*}} i64 @_Z4f6_1M2s6FivE({ i32, i32 }* byval({ i32, i32 }) align 4 %0)
+// CHECK: define{{.*}} i64 @_Z4f6_1M2s6FivE({ i32, i32 }* noundef byval({ i32, i32 }) align 4 %0)
 // FIXME: It would be nice to avoid byval on the previous case.
 struct s6 {};
 typedef int s6::* s6_mdp;

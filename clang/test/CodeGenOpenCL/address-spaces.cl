@@ -72,10 +72,10 @@ int *ptr;
 // CL20AMDGCN-DAG: @ptr = {{(dso_local )?}}addrspace(1) global i32* null
 #endif
 
-// SPIR: i32* %arg
-// AMDGCN: i32 addrspace(5)* %arg
-// CL20SPIR-DAG: i32 addrspace(4)* %arg
-// CL20AMDGCN-DAG: i32* %arg
+// SPIR: i32* noundef %arg
+// AMDGCN: i32 addrspace(5)* noundef %arg
+// CL20SPIR-DAG: i32 addrspace(4)* noundef %arg
+// CL20AMDGCN-DAG: i32* noundef %arg
 void f(int *arg) {
 
   int i;
@@ -92,7 +92,7 @@ void f(int *arg) {
 
 typedef int int_td;
 typedef int *intp_td;
-// SPIR: define {{(dso_local )?}}void @{{.*}}test_typedef{{.*}}(i32 addrspace(1)* %x, i32 addrspace(2)* %y, i32* %z)
+// SPIR: define {{(dso_local )?}}void @{{.*}}test_typedef{{.*}}(i32 addrspace(1)* noundef %x, i32 addrspace(2)* noundef %y, i32* noundef %z)
 void test_typedef(global int_td *x, constant int_td *y, intp_td z) {
   *x = *y;
   *z = 0;

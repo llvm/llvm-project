@@ -482,7 +482,7 @@ void test___warn_memset_zero_len() {
 #ifdef __x86_64__
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_os_log
-// CHECK: (i8* %[[BUF:.*]], i32 %[[I:.*]], i8* %[[DATA:.*]])
+// CHECK: (i8* noundef %[[BUF:.*]], i32 noundef %[[I:.*]], i8* noundef %[[DATA:.*]])
 void test_builtin_os_log(void *buf, int i, const char *data) {
   volatile int len;
   // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
@@ -502,7 +502,7 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: %[[V4:.*]] = ptrtoint i8* %[[V3]] to i64
   // CHECK: %[[V5:.*]] = load i8*, i8** %[[DATA_ADDR]]
   // CHECK: %[[V6:.*]] = ptrtoint i8* %[[V5]] to i64
-  // CHECK: call void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49(i8* %[[V1]], i32 %[[V2]], i64 %[[V4]], i32 16, i64 %[[V6]])
+  // CHECK: call void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49(i8* noundef %[[V1]], i32 noundef %[[V2]], i64 noundef %[[V4]], i32 noundef 16, i64 noundef %[[V6]])
   __builtin_os_log_format(buf, "%d %{public}s %{private}.16P", i, data, data);
 
   // privacy annotations aren't recognized when they are preceded or followed
@@ -540,10 +540,10 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: store volatile i32 22, i32* %[[LEN]], align 4
   len = __builtin_os_log_format_buffer_size("%{mask.xyz}s", "abc");
 
-  // CHECK: call void @__os_log_helper_1_2_2_8_112_8_34(i8* {{.*}}, i64 8026488
+  // CHECK: call void @__os_log_helper_1_2_2_8_112_8_34(i8* noundef {{.*}}, i64 noundef 8026488
   __builtin_os_log_format(buf, "%{mask.xyz, public}s", "abc");
 
-  // CHECK: call void @__os_log_helper_1_3_2_8_112_4_1(i8* {{.*}}, i64 8026488
+  // CHECK: call void @__os_log_helper_1_3_2_8_112_4_1(i8* noundef {{.*}}, i64 noundef 8026488
   __builtin_os_log_format(buf, "%{ mask.xyz, private }d", 11);
 
   // Mask type is silently ignored.
@@ -555,7 +555,7 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49
-// CHECK: (i8* %[[BUFFER:.*]], i32 %[[ARG0:.*]], i64 %[[ARG1:.*]], i32 %[[ARG2:.*]], i64 %[[ARG3:.*]])
+// CHECK: (i8* noundef %[[BUFFER:.*]], i32 noundef %[[ARG0:.*]], i64 noundef %[[ARG1:.*]], i32 noundef %[[ARG2:.*]], i64 noundef %[[ARG3:.*]])
 
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
 // CHECK: %[[ARG0_ADDR:.*]] = alloca i32, align 4
@@ -606,7 +606,7 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
 // CHECK: store i64 %[[V3]], i64* %[[ARGDATACAST12]], align 1
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_os_log_wide
-// CHECK: (i8* %[[BUF:.*]], i8* %[[DATA:.*]], i32* %[[STR:.*]])
+// CHECK: (i8* noundef %[[BUF:.*]], i8* noundef %[[DATA:.*]], i32* noundef %[[STR:.*]])
 typedef int wchar_t;
 void test_builtin_os_log_wide(void *buf, const char *data, wchar_t *str) {
   volatile int len;
@@ -625,13 +625,13 @@ void test_builtin_os_log_wide(void *buf, const char *data, wchar_t *str) {
   // CHECK: %[[V1:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
   // CHECK: %[[V2:.*]] = load i32*, i32** %[[STR_ADDR]], align 8
   // CHECK: %[[V3:.*]] = ptrtoint i32* %[[V2]] to i64
-  // CHECK: call void @__os_log_helper_1_2_1_8_80(i8* %[[V1]], i64 %[[V3]])
+  // CHECK: call void @__os_log_helper_1_2_1_8_80(i8* noundef %[[V1]], i64 noundef %[[V3]])
 
   __builtin_os_log_format(buf, "%S", str);
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_1_8_80
-// CHECK: (i8* %[[BUFFER:.*]], i64 %[[ARG0:.*]])
+// CHECK: (i8* noundef %[[BUFFER:.*]], i64 noundef %[[ARG0:.*]])
 
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
 // CHECK: %[[ARG0_ADDR:.*]] = alloca i64, align 8
@@ -652,7 +652,7 @@ void test_builtin_os_log_wide(void *buf, const char *data, wchar_t *str) {
 // CHECK: store i64 %[[V0]], i64* %[[ARGDATACAST]], align 1
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_os_log_precision_width
-// CHECK: (i8* %[[BUF:.*]], i8* %[[DATA:.*]], i32 %[[PRECISION:.*]], i32 %[[WIDTH:.*]])
+// CHECK: (i8* noundef %[[BUF:.*]], i8* noundef %[[DATA:.*]], i32 noundef %[[PRECISION:.*]], i32 noundef %[[WIDTH:.*]])
 void test_builtin_os_log_precision_width(void *buf, const char *data,
                                          int precision, int width) {
   volatile int len;
@@ -674,12 +674,12 @@ void test_builtin_os_log_precision_width(void *buf, const char *data,
   // CHECK: %[[V3:.*]] = load i32, i32* %[[WIDTH_ADDR]], align 4
   // CHECK: %[[V4:.*]] = load i8*, i8** %[[DATA_ADDR]], align 8
   // CHECK: %[[V5:.*]] = ptrtoint i8* %[[V4]] to i64
-  // CHECK: call void @__os_log_helper_1_2_3_4_0_4_16_8_32(i8* %[[V1]], i32 %[[V2]], i32 %[[V3]], i64 %[[V5]])
+  // CHECK: call void @__os_log_helper_1_2_3_4_0_4_16_8_32(i8* noundef %[[V1]], i32 noundef %[[V2]], i32 noundef %[[V3]], i64 noundef %[[V5]])
   __builtin_os_log_format(buf, "Hello %*.*s World", precision, width, data);
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_3_4_0_4_16_8_32
-// CHECK: (i8* %[[BUFFER:.*]], i32 %[[ARG0:.*]], i32 %[[ARG1:.*]], i64 %[[ARG2:.*]])
+// CHECK: (i8* noundef %[[BUFFER:.*]], i32 noundef %[[ARG0:.*]], i32 noundef %[[ARG1:.*]], i64 noundef %[[ARG2:.*]])
 
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
 // CHECK: %[[ARG0_ADDR:.*]] = alloca i32, align 4
@@ -720,7 +720,7 @@ void test_builtin_os_log_precision_width(void *buf, const char *data,
 // CHECK: store i64 %[[V2]], i64* %[[ARGDATACAST8]], align 1
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_os_log_invalid
-// CHECK: (i8* %[[BUF:.*]], i32 %[[DATA:.*]])
+// CHECK: (i8* noundef %[[BUF:.*]], i32 noundef %[[DATA:.*]])
 void test_builtin_os_log_invalid(void *buf, int data) {
   volatile int len;
   // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
@@ -734,13 +734,13 @@ void test_builtin_os_log_invalid(void *buf, int data) {
 
   // CHECK: %[[V1:.*]] = load i8*, i8** %[[BUF_ADDR]], align 8
   // CHECK: %[[V2:.*]] = load i32, i32* %[[DATA_ADDR]], align 4
-  // CHECK: call void @__os_log_helper_1_0_1_4_0(i8* %[[V1]], i32 %[[V2]])
+  // CHECK: call void @__os_log_helper_1_0_1_4_0(i8* noundef %[[V1]], i32 noundef %[[V2]])
 
   __builtin_os_log_format(buf, "invalid specifier %: %d even a trailing one%", data);
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_0_1_4_0
-// CHECK: (i8* %[[BUFFER:.*]], i32 %[[ARG0:.*]])
+// CHECK: (i8* noundef %[[BUFFER:.*]], i32 noundef %[[ARG0:.*]])
 
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
 // CHECK: %[[ARG0_ADDR:.*]] = alloca i32, align 4
@@ -761,7 +761,7 @@ void test_builtin_os_log_invalid(void *buf, int data) {
 // CHECK: store i32 %[[V0]], i32* %[[ARGDATACAST]], align 1
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_os_log_percent
-// CHECK: (i8* %[[BUF:.*]], i8* %[[DATA1:.*]], i8* %[[DATA2:.*]])
+// CHECK: (i8* noundef %[[BUF:.*]], i8* noundef %[[DATA1:.*]], i8* noundef %[[DATA2:.*]])
 // Check that the %% which does not consume any argument is correctly handled
 void test_builtin_os_log_percent(void *buf, const char *data1, const char *data2) {
   volatile int len;
@@ -781,13 +781,13 @@ void test_builtin_os_log_percent(void *buf, const char *data1, const char *data2
   // CHECK: %[[V3:.*]] = ptrtoint i8* %[[V2]] to i64
   // CHECK: %[[V4:.*]] = load i8*, i8** %[[DATA2_ADDR]], align 8
   // CHECK: %[[V5:.*]] = ptrtoint i8* %[[V4]] to i64
-  // CHECK: call void @__os_log_helper_1_2_2_8_32_8_32(i8* %[[V1]], i64 %[[V3]], i64 %[[V5]])
+  // CHECK: call void @__os_log_helper_1_2_2_8_32_8_32(i8* noundef %[[V1]], i64 noundef %[[V3]], i64 noundef %[[V5]])
 
   __builtin_os_log_format(buf, "%s %% %s", data1, data2);
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_2_8_32_8_32
-// CHECK: (i8* %[[BUFFER:.*]], i64 %[[ARG0:.*]], i64 %[[ARG1:.*]])
+// CHECK: (i8* noundef %[[BUFFER:.*]], i64 noundef %[[ARG0:.*]], i64 noundef %[[ARG1:.*]])
 
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
 // CHECK: %[[ARG0_ADDR:.*]] = alloca i64, align 8
@@ -840,7 +840,7 @@ void test_builtin_os_log_errno() {
   // CHECK-NOT: @stacksave
   // CHECK: %[[BUF:.*]] = alloca [4 x i8], align 1
   // CHECK: %[[DECAY:.*]] = getelementptr inbounds [4 x i8], [4 x i8]* %[[BUF]], i64 0, i64 0
-  // CHECK: call void @__os_log_helper_1_2_1_0_96(i8* %[[DECAY]])
+  // CHECK: call void @__os_log_helper_1_2_1_0_96(i8* noundef %[[DECAY]])
   // CHECK-NOT: @stackrestore
 
   char buf[__builtin_os_log_format_buffer_size("%m")];
@@ -848,7 +848,7 @@ void test_builtin_os_log_errno() {
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_1_0_96
-// CHECK: (i8* %[[BUFFER:.*]])
+// CHECK: (i8* noundef %[[BUFFER:.*]])
 
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
 // CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
@@ -864,7 +864,7 @@ void test_builtin_os_log_errno() {
 // CHECK-NEXT: ret void
 
 // CHECK-LABEL: define{{.*}} void @test_builtin_os_log_long_double
-// CHECK: (i8* %[[BUF:.*]], x86_fp80 %[[LD:.*]])
+// CHECK: (i8* noundef %[[BUF:.*]], x86_fp80 noundef %[[LD:.*]])
 void test_builtin_os_log_long_double(void *buf, long double ld) {
   // CHECK: %[[BUF_ADDR:.*]] = alloca i8*, align 8
   // CHECK: %[[LD_ADDR:.*]] = alloca x86_fp80, align 16
@@ -881,13 +881,13 @@ void test_builtin_os_log_long_double(void *buf, long double ld) {
   // CHECK: %[[V6:.*]] = load i64, i64* %[[V5]], align 16
   // CHECK: %[[V7:.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* %[[V4]], i32 0, i32 1
   // CHECK: %[[V8:.*]] = load i64, i64* %[[V7]], align 8
-  // CHECK: call void @__os_log_helper_1_0_1_16_0(i8* %[[V0]], i64 %[[V6]], i64 %[[V8]])
+  // CHECK: call void @__os_log_helper_1_0_1_16_0(i8* noundef %[[V0]], i64 noundef %[[V6]], i64 noundef %[[V8]])
 
   __builtin_os_log_format(buf, "%Lf", ld);
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_0_1_16_0
-// CHECK: (i8* %[[BUFFER:.*]], i64 %[[ARG0_COERCE0:.*]], i64 %[[ARG0_COERCE1:.*]])
+// CHECK: (i8* noundef %[[BUFFER:.*]], i64 noundef %[[ARG0_COERCE0:.*]], i64 noundef %[[ARG0_COERCE1:.*]])
 
 // CHECK: %[[ARG0:.*]] = alloca i128, align 16
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
