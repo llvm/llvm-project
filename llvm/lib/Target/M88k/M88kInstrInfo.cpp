@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -79,6 +80,65 @@ static MachineMemOperand *getMachineMemOperand(MachineBasicBlock &MBB, int FI,
   return MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
                                  Flags, MFI.getObjectSize(FI),
                                  MFI.getObjectAlign(FI));
+}
+
+bool M88kInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
+                                          int64_t BrOffset) const {
+  assert(BranchOpc == M88k::BR || BranchOpc == M88k::BSR ||
+         BranchOpc == M88k::BB0 ||
+         BranchOpc == M88k::BB1 && "Unexpected branch opcode");
+  int Bits = (BranchOpc == M88k::BR || BranchOpc == M88k::BSR) ? 26 : 16;
+  return isIntN(Bits, BrOffset / 4);
+}
+
+MachineBasicBlock *
+M88kInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
+  assert(MI.getDesc().isBranch() && "Unexpected opcode!");
+  // The branch target is always the last operand.
+  int NumOp = MI.getNumExplicitOperands();
+  return MI.getOperand(NumOp - 1).getMBB();
+}
+
+void M88kInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                         MachineBasicBlock &NewDestBB,
+                                         MachineBasicBlock &RestoreBB,
+                                         const DebugLoc &DL, int64_t BrOffset,
+                                         RegScavenger *RS) const {
+  assert(RS && "RegScavenger required for long branching");
+  assert(MBB.empty() &&
+         "new block should be inserted for expanding unconditional branch");
+  assert(MBB.pred_size() == 1);
+
+  MachineFunction *MF = MBB.getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  // FIXME: A virtual register must be used initially, as the register
+  // scavenger won't work with empty blocks (SIInstrInfo::insertIndirectBranch
+  // uses the same workaround).
+  Register ScratchReg = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
+  auto I = MBB.end();
+
+  // Load address of destination BB.
+  BuildMI(MBB, I, DL, get(M88k::ORriu))
+      .addReg(ScratchReg, RegState::Define | RegState::Dead)
+      .addReg(M88k::R0)
+      .addMBB(&NewDestBB, M88kII::MO_ABS_HI);
+  BuildMI(MBB, I, DL, get(M88k::ORri))
+      .addReg(ScratchReg)
+      .addReg(ScratchReg)
+      .addMBB(&NewDestBB, M88kII::MO_ABS_LO);
+
+  MachineInstr *MI = BuildMI(MBB, I, DL, get(M88k::JMP)).addReg(ScratchReg);
+
+  RS->enterBasicBlockEnd(MBB);
+  unsigned Scav = RS->scavengeRegisterBackwards(M88k::GPRRCRegClass,
+                                                MI->getIterator(), false, 0);
+
+  // TODO: The case when there is no scavenged register needs special handling.
+  assert(Scav != M88k::NoRegister && "No register is scavenged!");
+  MRI.replaceRegWith(ScratchReg, Scav);
+  MRI.clearVirtRegs();
+  RS->setRegUsed(Scav);
 }
 
 unsigned M88kInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,

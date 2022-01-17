@@ -27,6 +27,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    BranchRelaxation("m88k-enable-branch-relax", cl::Hidden, cl::init(true),
+                     cl::desc("Relax out of range conditional branches"));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTarget() {
   // Register the target.
   RegisterTargetMachine<M88kTargetMachine> X(getTheM88kTarget());
@@ -150,6 +154,11 @@ TargetPassConfig *M88kTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void M88kPassConfig::addPreEmitPass() {
+  // Relax conditional branch instructions if they're otherwise out of
+  // range of their destination.
+  if (BranchRelaxation)
+    addPass(&BranchRelaxationPassID);
+
   addPass(createM88kDelaySlotFiller());
 }
 
