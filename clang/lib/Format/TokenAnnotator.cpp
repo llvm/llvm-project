@@ -1423,7 +1423,7 @@ private:
             TT_LambdaArrow, TT_NamespaceMacro, TT_OverloadedOperator,
             TT_RegexLiteral, TT_TemplateString, TT_ObjCStringLiteral,
             TT_UntouchableMacroFunc, TT_ConstraintJunctions,
-            TT_StatementAttributeLikeMacro))
+            TT_StatementAttributeLikeMacro, TT_FunctionLikeOrFreestandingMacro))
       CurrentToken->setType(TT_Unknown);
     CurrentToken->Role.reset();
     CurrentToken->MatchingParen = nullptr;

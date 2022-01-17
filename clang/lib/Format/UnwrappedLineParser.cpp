@@ -1682,6 +1682,8 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
 
       // See if the following token should start a new unwrapped line.
       StringRef Text = FormatTok->TokenText;
+
+      FormatToken *PreviousToken = FormatTok;
       nextToken();
 
       // JS doesn't have macros, and within classes colons indicate fields, not
@@ -1710,6 +1712,7 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
 
         if (FollowedByNewline && (Text.size() >= 5 || FunctionLike) &&
             tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
+          PreviousToken->setType(TT_FunctionLikeOrFreestandingMacro);
           addUnwrappedLine();
           return;
         }
