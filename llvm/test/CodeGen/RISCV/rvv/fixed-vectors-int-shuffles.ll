@@ -531,11 +531,7 @@ define <8 x i8> @widen_splat_ve3(<4 x i8> %v) {
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, mu
 ; CHECK-NEXT:    vslideup.vi v9, v8, 0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, tu, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 4
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vrgather.vi v8, v9, 3
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <4 x i8> %v, <4 x i8> undef, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
