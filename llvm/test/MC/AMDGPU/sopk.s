@@ -8,6 +8,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck -check-prefix=NOSICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck -check-prefix=NOSICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck --check-prefix=NOGFX9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefix=NOGFX10 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -109,6 +110,7 @@ s_mulk_i32 s2, 0xFFFF
 s_cbranch_i_fork s[2:3], 0x6
 // SICI: s_cbranch_i_fork s[2:3], 6 ; encoding: [0x06,0x00,0x82,0xb8]
 // VI9:  s_cbranch_i_fork s[2:3], 6 ; encoding: [0x06,0x00,0x02,0xb8]
+// NOGFX10: error: instruction not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // getreg/setreg and hwreg macro
@@ -190,12 +192,12 @@ s_getreg_b32 s2, hwreg(22)
 s_getreg_b32 s2, hwreg(23)
 // SICI:  s_getreg_b32 s2, hwreg(23) ; encoding: [0x17,0xf8,0x02,0xb9]
 // VI9:   s_getreg_b32 s2, hwreg(23) ; encoding: [0x17,0xf8,0x82,0xb8]
-// GFX10: s_getreg_b32 s2, hwreg(23) ; encoding: [0x17,0xf8,0x02,0xb9]
+// GFX10: s_getreg_b32 s2, hwreg(HW_REG_HW_ID1) ; encoding: [0x17,0xf8,0x02,0xb9]
 
 s_getreg_b32 s2, hwreg(24)
 // SICI:  s_getreg_b32 s2, hwreg(24) ; encoding: [0x18,0xf8,0x02,0xb9]
 // VI9:   s_getreg_b32 s2, hwreg(24) ; encoding: [0x18,0xf8,0x82,0xb8]
-// GFX10: s_getreg_b32 s2, hwreg(24) ; encoding: [0x18,0xf8,0x02,0xb9]
+// GFX10: s_getreg_b32 s2, hwreg(HW_REG_HW_ID2) ; encoding: [0x18,0xf8,0x02,0xb9]
 
 s_getreg_b32 s2, hwreg(25)
 // SICI:  s_getreg_b32 s2, hwreg(25) ; encoding: [0x19,0xf8,0x02,0xb9]
@@ -224,7 +226,17 @@ s_setreg_b32 0xf803, s2
 s_setreg_b32 hwreg(HW_REG_HW_ID), s2
 // SICI: s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x82,0xb9]
 // VI9:  s_setreg_b32 hwreg(HW_REG_HW_ID), s2       ; encoding: [0x04,0xf8,0x02,0xb9]
-// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID), s2 ; encoding: [0x04,0xf8,0x82,0xb9]
+// NOGFX10: error: specified hardware register is not supported on this GPU
+
+s_setreg_b32 hwreg(HW_REG_HW_ID1), s2
+// NOSICIVI: error: specified hardware register is not supported on this GPU
+// NOGFX9: error: specified hardware register is not supported on this GPU
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
+
+s_setreg_b32 hwreg(HW_REG_HW_ID2), s2
+// NOSICIVI: error: specified hardware register is not supported on this GPU
+// NOGFX9: error: specified hardware register is not supported on this GPU
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID2), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
 
 // HW register identifier, non-default offset/width
 s_setreg_b32 hwreg(HW_REG_GPR_ALLOC, 1, 31), s2
@@ -284,12 +296,12 @@ s_setreg_b32 hwreg(22), s2
 s_setreg_b32 hwreg(23), s2
 // SICI:  s_setreg_b32 hwreg(23), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
 // VI9:   s_setreg_b32 hwreg(23), s2      ; encoding: [0x17,0xf8,0x02,0xb9]
-// GFX10: s_setreg_b32 hwreg(23), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID1), s2      ; encoding: [0x17,0xf8,0x82,0xb9]
 
 s_setreg_b32 hwreg(24), s2
 // SICI:  s_setreg_b32 hwreg(24), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
 // VI9:   s_setreg_b32 hwreg(24), s2      ; encoding: [0x18,0xf8,0x02,0xb9]
-// GFX10: s_setreg_b32 hwreg(24), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
+// GFX10: s_setreg_b32 hwreg(HW_REG_HW_ID2), s2      ; encoding: [0x18,0xf8,0x82,0xb9]
 
 s_setreg_b32 hwreg(25), s2
 // SICI:  s_setreg_b32 hwreg(25), s2      ; encoding: [0x19,0xf8,0x82,0xb9]
