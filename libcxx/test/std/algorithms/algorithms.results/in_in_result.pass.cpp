@@ -54,6 +54,12 @@ static_assert(!std::is_nothrow_convertible_v<std::ranges::in_in_result<int, int>
 static_assert(std::is_convertible_v<         const std::ranges::in_in_result<int, int>&&, std::ranges::in_in_result<long, long>>);
 static_assert(!std::is_nothrow_convertible_v<const std::ranges::in_in_result<int, int>&&, std::ranges::in_in_result<long, long>>);
 
+struct NotConvertible {};
+static_assert(!std::is_convertible_v<std::ranges::in_in_result<NotConvertible, int>,
+                                     std::ranges::in_in_result<int, int>>);
+static_assert(!std::is_convertible_v<std::ranges::in_in_result<int, NotConvertible>,
+                                     std::ranges::in_in_result<int, int>>);
+
 constexpr bool test() {
   {
     std::ranges::in_in_result<int, double> res{10L, 0.};
