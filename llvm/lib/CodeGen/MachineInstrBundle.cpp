@@ -144,6 +144,10 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSet<Register, 8> UndefUseSet;
   SmallVector<MachineOperand*, 4> Defs;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    // Debug instructions have no effects to track.
+    if (MII->isDebugInstr())
+      continue;
+
     for (unsigned i = 0, e = MII->getNumOperands(); i != e; ++i) {
       MachineOperand &MO = MII->getOperand(i);
       if (!MO.isReg())
