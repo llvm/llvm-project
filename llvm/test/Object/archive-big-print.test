@@ -1,3 +1,0 @@
-## Test printing an archive created by AIX ar (Big Archive).
-# RUN: llvm-ar p %p/Inputs/aix-big-archive.a evenlen | FileCheck %s --implicit-check-not={{.}}
-# CHECK: content_of_evenlen
