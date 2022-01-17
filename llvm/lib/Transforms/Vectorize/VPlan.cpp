@@ -1352,7 +1352,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN ";
 
   if (!isStore()) {
-    getVPSingleValue()->printAsOperand(O, SlotTracker);
+    printAsOperand(O, SlotTracker);
     O << " = ";
   }
   O << Instruction::getOpcodeName(Ingredient.getOpcode()) << " ";
@@ -1375,7 +1375,7 @@ void VPCanonicalIVPHIRecipe::execute(VPTransformState &State) {
 void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
-  getVPSingleValue()->printAsOperand(O, SlotTracker);
+  printAsOperand(O, SlotTracker);
   O << " = CANONICAL-INDUCTION";
 }
 #endif
