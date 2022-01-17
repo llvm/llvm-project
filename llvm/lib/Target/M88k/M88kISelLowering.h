@@ -58,6 +58,9 @@ class M88kTargetLowering : public TargetLowering {
 public:
   explicit M88kTargetLowering(const TargetMachine &TM,
                               const M88kSubtarget &STI);
+
+  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
+                                              LLT Ty2) const override;
 };
 
 } // end namespace llvm

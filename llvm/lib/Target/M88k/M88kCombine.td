@@ -11,6 +11,18 @@
 
 include "llvm/Target/GlobalISel/Combine.td"
 
+// Combine
+//   G_AND $dst, (G_ASHR $src, offset), (2**width - 1)
+// into
+//   G_UBFX $dst, $src, offset, width
+// under certain restrictions.
+def bitfield_extract_from_and_ashr : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND):$root,
+         [{ return matchBitfieldExtractFromAndAShr(*${root}, MRI,
+                                                   ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // Like all_combines, but removed vector and fma combines.
 def m88k_combines : GICombineGroup<[trivial_combines, combines_for_extload,
     combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
@@ -27,7 +39,7 @@ def m88k_combines : GICombineGroup<[trivial_combines, combines_for_extload,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
-    and_or_disjoint_mask]>;
+    and_or_disjoint_mask, bitfield_extract_from_and_ashr]>;
 
 def M88kPreLegalizerCombinerHelper: GICombinerHelper<
   "M88kGenPreLegalizerCombinerHelper", [m88k_combines]> {
@@ -35,17 +47,6 @@ def M88kPreLegalizerCombinerHelper: GICombinerHelper<
   let StateClass = "M88kPreLegalizerCombinerHelperState";
   let AdditionalArguments = [];
 }
-
-// Lower
-//   G_AND $dst, (G_LSHR/G_ASHR $src, offset), (2**width - 1)
-// to
-//   EXTUrwo $dst, $src, width<offset>
-def andshift_to_extu_matchdata : GIDefMatchData<"std::tuple<Register, uint32_t, uint32_t>">;
-def andshift_to_extu : GICombineRule<
-  (defs root:$root, andshift_to_extu_matchdata:$matchinfo),
-  (match (wip_match_opcode G_AND):$root,
-         [{ return matchAndShiftToExtU(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyAndShiftToExtU(*${root}, MRI, ${matchinfo}); }])>;
 
 // Lower
 //   G_SHL $dst, (G_AND $src, (2**width - 1)), offset
@@ -64,7 +65,7 @@ def shiftand_to_mak : GICombineRule<
 // pseudos.
 def M88kPostLegalizerLoweringHelper
     : GICombinerHelper<"M88kGenPostLegalizerLoweringHelper",
-                       [andshift_to_extu, shiftand_to_mak]> {
+                       [shiftand_to_mak]> {
   let DisableRuleOption = "m88kpostlegalizerlowering-disable-rule";
 }
 

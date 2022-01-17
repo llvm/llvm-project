@@ -54,6 +54,8 @@ private:
   void renderHI16(MachineInstrBuilder &MIB, const MachineInstr &I,
                   int OpIdx = -1) const;
 
+  bool selectUbfx(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
   bool selectICmp(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
   bool selectCondBr(MachineInstr &I, MachineBasicBlock &MBB,
@@ -154,6 +156,35 @@ void M88kInstructionSelector::renderHI16(MachineInstrBuilder &MIB,
   uint64_t Val = I.getOperand(1).getCImm()->getZExtValue();
   Val = (Val & 0x00000000FFFF0000ULL) >> 16;
   MIB.addImm(Val);
+}
+
+bool M88kInstructionSelector::selectUbfx(MachineInstr &I,
+                                         MachineBasicBlock &MBB,
+                                         MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_UBFX ||
+         I.getOpcode() == TargetOpcode::G_SBFX && "Unexpected G code");
+
+  const unsigned NewOpc =
+      I.getOpcode() == TargetOpcode::G_UBFX ? M88k::EXTUrwo : M88k::EXTrwo;
+  auto Offset =
+      getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI, true);
+  if (!Offset)
+    return false;
+
+  auto Width =
+      getIConstantVRegValWithLookThrough(I.getOperand(3).getReg(), MRI, true);
+  if (!Width)
+    return false;
+
+  int64_t WO = Width->Value.getZExtValue() << 5 | Offset->Value.getZExtValue();
+
+  MachineInstr *MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
+                         .add(I.getOperand(0))
+                         .add(I.getOperand(1))
+                         .addImm(WO);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
 bool M88kInstructionSelector::selectICmp(MachineInstr &I,
@@ -517,6 +548,9 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return true;
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_UBFX:
+  case TargetOpcode::G_SBFX:
+    return selectUbfx(I, MBB, MRI);
   case TargetOpcode::G_BRCOND:
     return selectCondBr(I, MBB, MRI);
   case TargetOpcode::G_SEXTLOAD:

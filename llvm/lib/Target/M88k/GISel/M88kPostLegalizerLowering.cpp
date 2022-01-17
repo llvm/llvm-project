@@ -19,8 +19,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "GISel/M88kLegalizerInfo.h"
 #include "GISel/M88kGlobalISelUtils.h"
+#include "GISel/M88kLegalizerInfo.h"
 #include "M88kTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
@@ -60,54 +60,6 @@ static void replaceMI(unsigned Opc, MachineInstr &MI, MachineRegisterInfo &MRI,
                   .addImm((Width << 5) | Offset);
   constrainSelectedInstRegOperands(*Inst, *TII, *TRI, *RBI);
   MI.eraseFromParent();
-}
-
-// Match G_AND $dst, (G_LSHR/G_ASHR $src, offset), (2**width - 1)
-static bool
-matchAndShiftToExtU(MachineInstr &MI, MachineRegisterInfo &MRI,
-                    std::tuple<Register, uint32_t, uint32_t> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_AND);
-
-  Register DstReg = MI.getOperand(0).getReg();
-  if (!MRI.getType(DstReg).isScalar())
-    return false;
-
-  Register SftReg = MI.getOperand(1).getReg();
-  Register CstReg = MI.getOperand(2).getReg();
-  int64_t Mask;
-  if (!mi_match(CstReg, MRI, m_ICst(Mask))) {
-    std::swap(SftReg, CstReg);
-    if (!mi_match(CstReg, MRI, m_ICst(Mask)))
-      return false;
-  }
-
-  Register SrcReg;
-  int64_t Offset;
-  if (!mi_match(SftReg, MRI,
-                m_any_of(m_GLShr(m_Reg(SrcReg), m_ICst(Offset)),
-                         m_GAShr(m_Reg(SrcReg), m_ICst(Offset)))))
-    return false;
-
-  // Check that the mask is a shifted mask with offset 0.
-  uint64_t MaskWidth, MaskOffset;
-  if (!isShiftedMask(Mask, MaskWidth, MaskOffset) || MaskOffset != 0)
-    return false;
-
-  assert(MaskWidth >= 0 && MaskWidth < 32 && "Width out of range");
-  assert(Offset >= 0 && Offset < 32 && "Offset out of range");
-
-  MatchInfo = std::make_tuple(SrcReg, static_cast<uint32_t>(MaskWidth),
-                              static_cast<uint32_t>(Offset));
-
-  return true;
-}
-
-// Lower to EXTUrwo $dst, $src, width<offset>
-bool applyAndShiftToExtU(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         std::tuple<Register, uint32_t, uint32_t> &MatchInfo) {
-  assert(MI.getOpcode() == TargetOpcode::G_AND);
-  replaceMI(M88k::EXTUrwo, MI, MRI, MatchInfo);
-  return true;
 }
 
 // Match G_SHL $dst, (G_AND $src, (2**width - 1)), offset

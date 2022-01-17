@@ -47,7 +47,59 @@ protected:
 public:
   M88kPreLegalizerCombinerHelperState(CombinerHelper &Helper)
       : Helper(Helper) {}
+
+  bool matchBitfieldExtractFromAndAShr(
+      MachineInstr &MI, MachineRegisterInfo &MRI,
+      std::function<void(MachineIRBuilder &)> &MatchInfo) const;
 };
+
+/// Form a G_UBFX from "(a sra b) & mask", where b and mask are constants.
+/// This is similar to CombinerHelper::matchBitfieldExtractFromAnd(), but
+/// matches an arithmetic shift right instructions (instead of locigal shift
+/// right). However, it requires more reasoning about the value.
+bool M88kPreLegalizerCombinerHelperState::matchBitfieldExtractFromAndAShr(
+    MachineInstr &MI, MachineRegisterInfo &MRI,
+    std::function<void(MachineIRBuilder &)> &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT ExtractTy = Helper.getTargetLowering().getPreferredShiftAmountTy(Ty);
+  if (!Helper.getTargetLowering().isConstantUnsignedBitfieldExtractLegal(
+          TargetOpcode::G_UBFX, Ty, ExtractTy))
+    return false;
+
+  int64_t AndImm, ShrAmt;
+  Register ShiftSrc;
+  const unsigned Size = Ty.getScalarSizeInBits();
+  if (!mi_match(MI.getOperand(0).getReg(), MRI,
+                m_GAnd(m_OneNonDBGUse(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShrAmt))),
+                       m_ICst(AndImm))))
+    return false;
+
+  // The mask is a mask of the low bits iff imm & (imm+1) == 0.
+  auto MaybeMask = static_cast<uint64_t>(AndImm);
+  if (MaybeMask & (MaybeMask + 1))
+    return false;
+
+  // ShrAmt must fit within the register.
+  if (static_cast<uint64_t>(ShrAmt) >= Size)
+    return false;
+
+  uint64_t Width = APInt(Size, AndImm).countTrailingOnes();
+
+  // ShrAmt plus the width of the mask must not be greater than register,
+  // because then at most the MSB of ShiftSrc is part of the resulting value.
+  if (static_cast<uint64_t>(ShrAmt) + Width >= Size &&
+      !Helper.getKnownBits()->signBitIsZero(ShiftSrc))
+    return false;
+
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto WidthCst = B.buildConstant(ExtractTy, Width);
+    auto LSBCst = B.buildConstant(ExtractTy, ShrAmt);
+    B.buildInstr(TargetOpcode::G_UBFX, {Dst}, {ShiftSrc, LSBCst, WidthCst});
+  };
+  return true;
+}
 
 #define M88KPRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "M88kGenPreLegalizeGICombiner.inc"
@@ -65,7 +117,7 @@ class M88kPreLegalizerCombinerInfo : public CombinerInfo {
 
 public:
   M88kPreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
-                                  GISelKnownBits *KB, MachineDominatorTree *MDT)
+                               GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
@@ -78,9 +130,11 @@ public:
 };
 
 bool M88kPreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
-                                              MachineInstr &MI,
-                                              MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B, KB, MDT);
+                                           MachineInstr &MI,
+                                           MachineIRBuilder &B) const {
+  const auto *LI =
+      MI.getParent()->getParent()->getSubtarget().getLegalizerInfo();
+  CombinerHelper Helper(Observer, B, KB, MDT, LI);
   M88kGenPreLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper);
 
   if (Generated.tryCombineAll(Observer, MI, B))
@@ -128,8 +182,7 @@ namespace llvm {
 void initializeM88kPreLegalizerCombinerPass(PassRegistry &Registry);
 }
 
-M88kPreLegalizerCombiner::M88kPreLegalizerCombiner()
-    : MachineFunctionPass(ID) {
+M88kPreLegalizerCombiner::M88kPreLegalizerCombiner() : MachineFunctionPass(ID) {
   initializeM88kPreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
 }
 
@@ -149,23 +202,22 @@ bool M88kPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT = &getAnalysis<MachineDominatorTree>();
-  M88kPreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
-                                         F.hasMinSize(), KB, MDT);
+  M88kPreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(), F.hasMinSize(),
+                                      KB, MDT);
   Combiner C(PCInfo, &TPC);
   return C.combineMachineInstrs(MF, CSEInfo);
 }
 
 char M88kPreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(M88kPreLegalizerCombiner, DEBUG_TYPE,
-                      "Combine M88k machine instrs before legalization",
-                      false, false)
+                      "Combine M88k machine instrs before legalization", false,
+                      false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelKnownBitsAnalysis)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_END(M88kPreLegalizerCombiner, DEBUG_TYPE,
                     "Combine M88k machine instrs before legalization", false,
                     false)
-
 
 namespace llvm {
 FunctionPass *createM88kPreLegalizerCombiner() {

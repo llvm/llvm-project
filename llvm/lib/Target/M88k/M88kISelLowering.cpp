@@ -36,3 +36,9 @@ M88kTargetLowering::M88kTargetLowering(const TargetMachine &TM,
   setMinFunctionAlignment(Align(4));
   setPrefFunctionAlignment(Align(4));
 }
+
+bool M88kTargetLowering::isConstantUnsignedBitfieldExtractLegal(unsigned Opc,
+                                                                LLT Ty1,
+                                                                LLT Ty2) const {
+  return Ty1 == LLT::scalar(32) && Ty2 == LLT::scalar(32);
+}
