@@ -1460,9 +1460,10 @@ template <class ELFT> void SharedFile::parse() {
   }
 
   // DSOs are uniquified not by filename but by soname.
-  DenseMap<StringRef, SharedFile *>::iterator it;
+  DenseMap<CachedHashStringRef, SharedFile *>::iterator it;
   bool wasInserted;
-  std::tie(it, wasInserted) = symtab->soNames.try_emplace(soName, this);
+  std::tie(it, wasInserted) =
+      symtab->soNames.try_emplace(CachedHashStringRef(soName), this);
 
   // If a DSO appears more than once on the command line with and without
   // --as-needed, --no-as-needed takes precedence over --as-needed because a

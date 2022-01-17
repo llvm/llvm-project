@@ -271,7 +271,8 @@ class LinkerScript final {
     uint64_t tbssAddr = 0;
   };
 
-  llvm::DenseMap<StringRef, OutputSection *> nameToOutputSection;
+  llvm::DenseMap<llvm::CachedHashStringRef, OutputSection *>
+      nameToOutputSection;
 
   void addSymbol(SymbolAssignment *cmd);
   void assignSymbol(SymbolAssignment *cmd, bool inSec);

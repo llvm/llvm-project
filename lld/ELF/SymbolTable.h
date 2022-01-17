@@ -48,7 +48,7 @@ public:
   void handleDynamicList();
 
   // Set of .so files to not link the same shared object file more than once.
-  llvm::DenseMap<StringRef, SharedFile *> soNames;
+  llvm::DenseMap<llvm::CachedHashStringRef, SharedFile *> soNames;
 
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This map
