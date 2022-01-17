@@ -758,7 +758,6 @@ struct DSEState {
   SmallPtrSet<MemoryAccess *, 4> SkipStores;
   // Keep track of all of the objects that are invisible to the caller before
   // the function returns.
-  // SmallPtrSet<const Value *, 16> InvisibleToCallerBeforeRet;
   DenseMap<const Value *, bool> InvisibleToCallerBeforeRet;
   // Keep track of all of the objects that are invisible to the caller after
   // the function returns.
