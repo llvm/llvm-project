@@ -29,6 +29,8 @@ class Scope;
 
 class ProgramTree {
 public:
+  using EntryStmtList = std::list<common::Reference<const parser::EntryStmt>>;
+
   // Build the ProgramTree rooted at one of these program units.
   static ProgramTree Build(const parser::ProgramUnit &);
   static ProgramTree Build(const parser::MainProgram &);
@@ -69,12 +71,17 @@ public:
   const parser::ExecutionPart *exec() const { return exec_; }
   std::list<ProgramTree> &children() { return children_; }
   const std::list<ProgramTree> &children() const { return children_; }
+  const std::list<common::Reference<const parser::EntryStmt>> &
+  entryStmts() const {
+    return entryStmts_;
+  }
   Symbol::Flag GetSubpFlag() const;
   bool IsModule() const; // Module or Submodule
   bool HasModulePrefix() const; // in function or subroutine stmt
   Scope *scope() const { return scope_; }
   void set_scope(Scope &);
   void AddChild(ProgramTree &&);
+  void AddEntry(const parser::EntryStmt &);
 
   template <typename T>
   ProgramTree &set_stmt(const parser::Statement<T> &stmt) {
@@ -94,6 +101,7 @@ private:
   const parser::SpecificationPart &spec_;
   const parser::ExecutionPart *exec_{nullptr};
   std::list<ProgramTree> children_;
+  EntryStmtList entryStmts_;
   Scope *scope_{nullptr};
   const parser::CharBlock *endStmt_{nullptr};
   bool isSpecificationPartResolved_{false};

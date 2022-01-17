@@ -162,6 +162,17 @@ static uint32_t extractBits(uint32_t Num, unsigned Low, unsigned Size) {
   return (Num & (((1ULL << (Size + 1)) - 1) << Low)) >> Low;
 }
 
+inline Error checkAlignment(llvm::orc::ExecutorAddr loc, uint64_t v, int n,
+                            const Edge &E) {
+  if (v & (n - 1))
+    return make_error<JITLinkError>("0x" + llvm::utohexstr(loc.getValue()) +
+                                    " improper alignment for relocation " +
+                                    formatv("{0:d}", E.getKind()) + ": 0x" +
+                                    llvm::utohexstr(v) + " is not aligned to " +
+                                    Twine(n) + " bytes");
+  return Error::success();
+}
+
 static inline bool isInRangeForImmS32(int64_t Value) {
   return (Value >= std::numeric_limits<int32_t>::min() &&
           Value <= std::numeric_limits<int32_t>::max());
@@ -192,6 +203,21 @@ private:
     case R_RISCV_64: {
       int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
       *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
+      break;
+    }
+    case R_RISCV_BRANCH: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      Error AlignmentIssue = checkAlignment(FixupAddress, Value, 2, E);
+      if (AlignmentIssue) {
+        return AlignmentIssue;
+      }
+      int64_t Lo = Value & 0xFFF;
+      uint32_t Imm31_25 = extractBits(Lo, 5, 6) << 25 | extractBits(Lo, 12, 1)
+                                                            << 31;
+      uint32_t Imm11_7 = extractBits(Lo, 1, 4) << 8 | extractBits(Lo, 11, 1)
+                                                          << 7;
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
       break;
     }
     case R_RISCV_HI20: {
@@ -284,6 +310,8 @@ private:
       return EdgeKind_riscv::R_RISCV_32;
     case ELF::R_RISCV_64:
       return EdgeKind_riscv::R_RISCV_64;
+    case ELF::R_RISCV_BRANCH:
+      return EdgeKind_riscv::R_RISCV_BRANCH;
     case ELF::R_RISCV_HI20:
       return EdgeKind_riscv::R_RISCV_HI20;
     case ELF::R_RISCV_LO12_I:

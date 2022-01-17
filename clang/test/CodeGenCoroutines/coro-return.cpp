@@ -33,7 +33,7 @@ template <> struct std::coroutine_traits<void> {
 // CHECK-LABEL: f0(
 extern "C" void f0() {
   // CHECK: %__promise = alloca %"struct.std::coroutine_traits<void>::promise_type"
-  // CHECK: %call = call noalias nonnull i8* @_Znwm(
+  // CHECK: %call = call noalias noundef nonnull i8* @_Znwm(
   // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_type11return_voidEv(%"struct.std::coroutine_traits<void>::promise_type"* {{[^,]*}} %__promise)
   // CHECK: call void @_ZdlPv
   co_return;
@@ -52,8 +52,8 @@ struct std::coroutine_traits<int> {
 // CHECK-LABEL: f1(
 extern "C" int f1() {
   // CHECK: %__promise = alloca %"struct.std::coroutine_traits<int>::promise_type"
-  // CHECK: %call = call noalias nonnull i8* @_Znwm(
-  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_type12return_valueEi(%"struct.std::coroutine_traits<int>::promise_type"* {{[^,]*}} %__promise, i32 42)
+  // CHECK: %call = call noalias noundef nonnull i8* @_Znwm(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_type12return_valueEi(%"struct.std::coroutine_traits<int>::promise_type"* {{[^,]*}} %__promise, i32 noundef 42)
   // CHECK: call void @_ZdlPv
   co_return 42;
 }

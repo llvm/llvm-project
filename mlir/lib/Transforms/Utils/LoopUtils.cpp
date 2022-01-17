@@ -3143,10 +3143,9 @@ LogicalResult mlir::affineDataCopyGenerate(Block::iterator begin,
 
   // For a range of operations, a note will be emitted at the caller.
   AffineForOp forOp;
-  uint64_t sizeInKib = llvm::divideCeil(totalCopyBuffersSizeInBytes, 1024);
   if (llvm::DebugFlag && (forOp = dyn_cast<AffineForOp>(&*begin))) {
     LLVM_DEBUG(forOp.emitRemark()
-               << sizeInKib
+               << llvm::divideCeil(totalCopyBuffersSizeInBytes, 1024)
                << " KiB of copy buffers in fast memory space for this block\n");
   }
 

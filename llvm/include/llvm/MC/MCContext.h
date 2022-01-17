@@ -814,10 +814,6 @@ namespace llvm {
     void diagnose(const SMDiagnostic &SMD);
     void reportError(SMLoc L, const Twine &Msg);
     void reportWarning(SMLoc L, const Twine &Msg);
-    // Unrecoverable error has occurred. Display the best diagnostic we can
-    // and bail via exit(1). For now, most MC backend errors are unrecoverable.
-    // FIXME: We should really do something about that.
-    [[noreturn]] void reportFatalError(SMLoc L, const Twine &Msg);
 
     const MCAsmMacro *lookupMacro(StringRef Name) {
       StringMap<MCAsmMacro>::iterator I = MacroMap.find(Name);

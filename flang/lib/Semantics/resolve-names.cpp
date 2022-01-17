@@ -2796,7 +2796,7 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
   }
   auto range{specificProcs_.equal_range(&generic)};
   for (auto it{range.first}; it != range.second; ++it) {
-    auto *name{it->second.first};
+    const parser::Name *name{it->second.first};
     auto kind{it->second.second};
     const auto *symbol{FindSymbol(*name)};
     if (!symbol) {
@@ -4296,8 +4296,14 @@ bool DeclarationVisitor::Pre(const parser::DataComponentDefStmt &x) {
   if (derivedTypeInfo_.sequence) { // C740
     if (const auto *declType{GetDeclTypeSpec()}) {
       if (!declType->AsIntrinsic() && !declType->IsSequenceType()) {
-        Say("A sequence type data component must either be of an"
-            " intrinsic type or a derived sequence type"_err_en_US);
+        if (GetAttrs().test(Attr::POINTER) &&
+            context().IsEnabled(common::LanguageFeature::PointerInSeqType)) {
+          if (context().ShouldWarn(common::LanguageFeature::PointerInSeqType)) {
+            Say("A sequence type data component that is a pointer to a non-sequence type is not standard"_en_US);
+          }
+        } else {
+          Say("A sequence type data component must either be of an intrinsic type or a derived sequence type"_err_en_US);
+        }
       }
     }
   }
@@ -6909,13 +6915,21 @@ void ResolveNamesVisitor::ResolveSpecificationParts(ProgramTree &node) {
   }
 }
 
-// Add SubprogramNameDetails symbols for module and internal subprograms
+// Add SubprogramNameDetails symbols for module and internal subprograms and
+// their ENTRY statements.
 void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
   auto kind{
       node.IsModule() ? SubprogramKind::Module : SubprogramKind::Internal};
   for (auto &child : node.children()) {
     auto &symbol{MakeSymbol(child.name(), SubprogramNameDetails{kind, child})};
     symbol.set(child.GetSubpFlag());
+    for (const auto &entryStmt : child.entryStmts()) {
+      SubprogramNameDetails details{kind, child};
+      details.set_isEntryStmt();
+      auto &symbol{
+          MakeSymbol(std::get<parser::Name>(entryStmt->t), std::move(details))};
+      symbol.set(child.GetSubpFlag());
+    }
   }
 }
 
@@ -7119,7 +7133,8 @@ void ResolveSpecificationParts(
     SemanticsContext &context, const Symbol &subprogram) {
   auto originalLocation{context.location()};
   ResolveNamesVisitor visitor{context, DEREF(sharedImplicitRulesMap)};
-  ProgramTree &node{subprogram.get<SubprogramNameDetails>().node()};
+  const auto &details{subprogram.get<SubprogramNameDetails>()};
+  ProgramTree &node{details.node()};
   const Scope &moduleScope{subprogram.owner()};
   visitor.SetScope(const_cast<Scope &>(moduleScope));
   visitor.ResolveSpecificationParts(node);

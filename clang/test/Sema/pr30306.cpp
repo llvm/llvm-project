@@ -3,10 +3,10 @@
 struct A { A(int); ~A(); };
 int f(const A &);
 // CHECK: call void @_ZN1AC1Ei
-// CHECK-NEXT: call i32 @_Z1fRK1A
+// CHECK-NEXT: call noundef i32 @_Z1fRK1A
 // CHECK-NEXT: call void @_ZN1AD1Ev
 // CHECK: call void @_ZN1AC1Ei
-// CHECK-NEXT: call i32 @_Z1fRK1A
+// CHECK-NEXT: call noundef i32 @_Z1fRK1A
 // CHECK-NEXT: call void @_ZN1AD1Ev
 template<typename T> void g() {
   int a[f(3)];

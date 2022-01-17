@@ -125,6 +125,16 @@ int test_block_command5(int);
 /// \brief \c Aaa
 int test_block_command6(int);
 
+// We don't recognize comments in double quotes.
+/// "\brief \returns Aaa"
+int test_block_command7(int);
+
+// But only if they're single-line. (Doxygen treats multi-line quotes inconsistently.)
+// expected-warning@+1 {{empty paragraph passed to '\brief' command}}
+/// "\brief
+/// \returns Aaa"
+int test_block_command8(int);
+
 // expected-warning@+5 {{duplicated command '\brief'}} expected-note@+1 {{previous command '\brief' here}}
 /// \brief Aaa
 ///

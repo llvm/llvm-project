@@ -1167,8 +1167,8 @@ public:
 };
 
 #if _LIBCPP_STD_VER >= 17
-template<class T>
-    optional(T) -> optional<T>;
+template<class _Tp>
+    optional(_Tp) -> optional<_Tp>;
 #endif
 
 // Comparisons between optionals

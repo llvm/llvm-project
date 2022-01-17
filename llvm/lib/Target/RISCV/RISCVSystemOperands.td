@@ -125,6 +125,9 @@ def : SysReg<"sideleg", 0x103>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
+def : SysReg<"stimecmp", 0x14D>;
+let isRV32Only = 1 in
+def : SysReg<"stimecmph", 0x15D>;
 
 //===----------------------------------------------------------------------===//
 // Supervisor Configuration
@@ -153,6 +156,12 @@ def : SysReg<"satp", 0x180>;
 //===----------------------------------------------------------------------===//
 
 def : SysReg<"scontext", 0x5A8>;
+
+//===----------------------------------------------------------------------===//
+// Supervisor Count Overflow (defined in Sscofpmf)
+//===----------------------------------------------------------------------===//
+
+def : SysReg<"scountovf", 0xDA0>;
 
 //===----------------------------------------------------------------------===//
 // Hypervisor Trap Setup
@@ -215,6 +224,9 @@ def : SysReg<"vsepc", 0x241>;
 def : SysReg<"vscause", 0x242>;
 def : SysReg<"vstval", 0x243>;
 def : SysReg<"vsip", 0x244>;
+def : SysReg<"vstimecmp", 0x24D>;
+let isRV32Only = 1 in
+def : SysReg<"vstimecmph", 0x25D>;
 def : SysReg<"vsatp", 0x280>;
 
 //===----------------------------------------------------------------------===//
@@ -306,6 +318,12 @@ def : SysReg<"mcountinhibit", 0x320>;
 foreach i = 3...31 in
   def : SysReg<"mhpmevent"#i, !add(0x323, !sub(i, 3))>;
 
+// mhpmevent3h-mhpmevent31h at 0x723-0x73F
+foreach i = 3...31 in {
+  let isRV32Only = 1 in
+  def : SysReg<"mhpmevent"#i#"h", !add(0x723, !sub(i, 3))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Debug/ Trace Registers (shared with Debug Mode)
 //===----------------------------------------------------------------------===//
@@ -337,3 +355,20 @@ def : SysReg<"vcsr", 0x00F>;
 def : SysReg<"vl", 0xC20>;
 def : SysReg<"vtype", 0xC21>;
 def SysRegVLENB: SysReg<"vlenb", 0xC22>;
+
+//===----------------------------------------------------------------------===//
+// State Enable Extension (Smstateen)
+//===----------------------------------------------------------------------===//
+
+// sstateen0-sstateen3 at 0x10C-0x10F, mstateen0-mstateen3 at 0x30C-0x30F,
+// mstateen0h-mstateen3h at 0x31C-0x31F, hstateen0-hstateen3 at 0x60C-0x60F,
+// and hstateen0h-hstateen3h at 0x61C-0x61F.
+foreach i = 0...3 in {
+  def : SysReg<"sstateen"#i, !add(0x10C, i)>;
+  def : SysReg<"mstateen"#i, !add(0x30C, i)>;
+  let isRV32Only = 1 in
+  def : SysReg<"mstateen"#i#"h", !add(0x31C, i)>;
+  def : SysReg<"hstateen"#i, !add(0x60C, i)>;
+  let isRV32Only = 1 in
+  def : SysReg<"hstateen"#i#"h", !add(0x61C, i)>;
+}

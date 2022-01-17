@@ -2297,6 +2297,35 @@ static SDValue lowerScalarSplat(SDValue Scalar, SDValue VL, MVT VT, SDLoc DL,
   return splatSplitI64WithVL(DL, VT, Scalar, VL, DAG);
 }
 
+// Is the mask a slidedown that shifts in undefs.
+static int matchShuffleAsSlideDown(ArrayRef<int> Mask) {
+  int Size = Mask.size();
+
+  // Elements shifted in should be undef.
+  auto CheckUndefs = [&](int Shift) {
+    for (int i = Size - Shift; i != Size; ++i)
+      if (Mask[i] >= 0)
+        return false;
+    return true;
+  };
+
+  // Elements should be shifted or undef.
+  auto MatchShift = [&](int Shift) {
+    for (int i = 0; i != Size - Shift; ++i)
+       if (Mask[i] >= 0 && Mask[i] != Shift + i)
+         return false;
+    return true;
+  };
+
+  // Try all possible shifts.
+  for (int Shift = 1; Shift != Size; ++Shift)
+    if (CheckUndefs(Shift) && MatchShift(Shift))
+      return Shift;
+
+  // No match.
+  return -1;
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -2380,6 +2409,20 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                       DAG.getConstant(Lane, DL, XLenVT), TrueMask, VL);
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
+  }
+
+  // Try to match as a slidedown.
+  int SlideAmt = matchShuffleAsSlideDown(SVN->getMask());
+  if (SlideAmt >= 0) {
+    // TODO: Should we reduce the VL to account for the upper undef elements?
+    // Requires additional vsetvlis, but might be faster to execute.
+    V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
+    SDValue SlideDown =
+        DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
+                    DAG.getUNDEF(ContainerVT), V1,
+                    DAG.getConstant(SlideAmt, DL, XLenVT),
+                    TrueMask, VL);
+    return convertFromScalableVector(VT, SlideDown, DAG, Subtarget);
   }
 
   // Detect shuffles which can be re-expressed as vector selects; these are
@@ -5768,6 +5811,35 @@ SDValue RISCVTargetLowering::lowerSET_ROUNDING(SDValue Op,
                      RMValue);
 }
 
+static RISCVISD::NodeType getRISCVWOpcodeByIntr(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected Intrinsic");
+  case Intrinsic::riscv_grev:
+    return RISCVISD::GREVW;
+  case Intrinsic::riscv_gorc:
+    return RISCVISD::GORCW;
+  case Intrinsic::riscv_bcompress:
+    return RISCVISD::BCOMPRESSW;
+  case Intrinsic::riscv_bdecompress:
+    return RISCVISD::BDECOMPRESSW;
+  case Intrinsic::riscv_bfp:
+    return RISCVISD::BFPW;
+  }
+}
+
+// Converts the given intrinsic to a i64 operation with any extension.
+static SDValue customLegalizeToWOpByIntr(SDNode *N, SelectionDAG &DAG,
+                                         unsigned IntNo) {
+  SDLoc DL(N);
+  RISCVISD::NodeType WOpcode = getRISCVWOpcodeByIntr(IntNo);
+  SDValue NewOp1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+  SDValue NewOp2 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+  SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp1, NewOp2);
+  // ReplaceNodeResults requires we maintain the same type for the return value.
+  return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
+}
+
 // Returns the opcode of the target-specific SDNode that implements the 32-bit
 // form of the given Opcode.
 static RISCVISD::NodeType getRISCVWOpcode(unsigned Opcode) {
@@ -6228,6 +6300,16 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     default:
       llvm_unreachable(
           "Don't know how to custom type legalize this intrinsic!");
+    case Intrinsic::riscv_grev:
+    case Intrinsic::riscv_gorc:
+    case Intrinsic::riscv_bcompress:
+    case Intrinsic::riscv_bdecompress:
+    case Intrinsic::riscv_bfp: {
+      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+             "Unexpected custom legalisation");
+      Results.push_back(customLegalizeToWOpByIntr(N, DAG, IntNo));
+      break;
+    }
     case Intrinsic::riscv_orc_b: {
       // Lower to the GORCI encoding for orc.b with the operand extended.
       SDValue NewOp =
@@ -6239,20 +6321,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                 DAG.getConstant(7, DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
-    }
-    case Intrinsic::riscv_grev:
-    case Intrinsic::riscv_gorc: {
-      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
-      SDValue NewOp1 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue NewOp2 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      unsigned Opc =
-          IntNo == Intrinsic::riscv_grev ? RISCVISD::GREVW : RISCVISD::GORCW;
-      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp1, NewOp2);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      break;
     }
     case Intrinsic::riscv_shfl:
     case Intrinsic::riscv_unshfl: {
@@ -6271,32 +6339,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
             IntNo == Intrinsic::riscv_shfl ? RISCVISD::SHFL : RISCVISD::UNSHFL;
       }
       SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp1, NewOp2);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      break;
-    }
-    case Intrinsic::riscv_bcompress:
-    case Intrinsic::riscv_bdecompress: {
-      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
-      SDValue NewOp1 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue NewOp2 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      unsigned Opc = IntNo == Intrinsic::riscv_bcompress
-                         ? RISCVISD::BCOMPRESSW
-                         : RISCVISD::BDECOMPRESSW;
-      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp1, NewOp2);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      break;
-    }
-    case Intrinsic::riscv_bfp: {
-      assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             "Unexpected custom legalisation");
-      SDValue NewOp1 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue NewOp2 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
-      SDValue Res = DAG.getNode(RISCVISD::BFPW, DL, MVT::i64, NewOp1, NewOp2);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       break;
     }
@@ -7629,12 +7671,12 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       if (VecVT.getVectorElementType() == MemVT) {
         SDLoc DL(N);
         MVT MaskVT = MVT::getVectorVT(MVT::i1, VecVT.getVectorElementCount());
-        return DAG.getStoreVP(Store->getChain(), DL, Src, Store->getBasePtr(),
-                              DAG.getConstant(1, DL, MaskVT),
-                              DAG.getConstant(1, DL, Subtarget.getXLenVT()),
-                              Store->getPointerInfo(),
-                              Store->getOriginalAlign(),
-                              Store->getMemOperand()->getFlags());
+        return DAG.getStoreVP(
+            Store->getChain(), DL, Src, Store->getBasePtr(), Store->getOffset(),
+            DAG.getConstant(1, DL, MaskVT),
+            DAG.getConstant(1, DL, Subtarget.getXLenVT()), MemVT,
+            Store->getMemOperand(), Store->getAddressingMode(),
+            Store->isTruncatingStore(), /*IsCompress*/ false);
       }
     }
 
@@ -7922,6 +7964,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
   case RISCVISD::UNSHFLW:
   case RISCVISD::BCOMPRESSW:
   case RISCVISD::BDECOMPRESSW:
+  case RISCVISD::BFPW:
   case RISCVISD::FCVT_W_RV64:
   case RISCVISD::FCVT_WU_RV64:
   case RISCVISD::STRICT_FCVT_W_RV64:
@@ -9969,12 +10012,18 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                         .Default(RISCV::NoRegister);
     if (FReg != RISCV::NoRegister) {
       assert(RISCV::F0_F <= FReg && FReg <= RISCV::F31_F && "Unknown fp-reg");
-      if (Subtarget.hasStdExtD()) {
+      if (Subtarget.hasStdExtD() && (VT == MVT::f64 || VT == MVT::Other)) {
         unsigned RegNo = FReg - RISCV::F0_F;
         unsigned DReg = RISCV::F0_D + RegNo;
         return std::make_pair(DReg, &RISCV::FPR64RegClass);
       }
-      return std::make_pair(FReg, &RISCV::FPR32RegClass);
+      if (VT == MVT::f32 || VT == MVT::Other)
+        return std::make_pair(FReg, &RISCV::FPR32RegClass);
+      if (Subtarget.hasStdExtZfh() && VT == MVT::f16) {
+        unsigned RegNo = FReg - RISCV::F0_F;
+        unsigned HReg = RISCV::F0_H + RegNo;
+        return std::make_pair(HReg, &RISCV::FPR16RegClass);
+      }
     }
   }
 

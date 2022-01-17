@@ -3,6 +3,8 @@
 // RUN:  -DNO_INTEROP_T_DEF -o - %s
 // RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=50 -std=c++11 -o - %s
 // RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=51 -DC -x c -o - %s
+// RUN: %clang_cc1 -verify -triple x86_64-pc-windows-msvc -fms-compatibility \
+// RUN:  -fopenmp -fopenmp-version=51 -DC -DWIN -x c -o - %s
 
 #ifdef NO_INTEROP_T_DEF
 void foo_v1(float *, void *);
@@ -201,7 +203,14 @@ void foo(float *AAA, float *BBB, int *I) { return; }
 #ifdef C
 void c_variant(omp_interop_t);
 // expected-error@+3 {{function with '#pragma omp declare variant' must have a prototype when 'append_args' is used}}
-#pragma omp declare variant(foo_v1)                            \
+#pragma omp declare variant(c_variant)                         \
    append_args(interop(target)) match(construct={dispatch})
 void c_base() {}
+#ifdef WIN
+void _cdecl win_c_variant(omp_interop_t);
+// expected-error@+3 {{function with '#pragma omp declare variant' must have a prototype when 'append_args' is used}}
+#pragma omp declare variant(win_c_variant)                     \
+   append_args(interop(target)) match(construct={dispatch})
+void _cdecl win_c_base() {}
+#endif // WIN
 #endif

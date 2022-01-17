@@ -42,6 +42,8 @@ public:
   std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
 
 protected:
+  bool CheckLocalSharedCache() const override;
+
   llvm::StringRef GetDeviceSupportDirectoryName() override;
   llvm::StringRef GetPlatformName() override;
 };

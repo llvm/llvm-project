@@ -51,6 +51,6 @@ int size = sizeof(x);
 
 long double foo(long double d) { return d; }
 
-// FP64: double @_Z3fooe(double %d)
-// FP80: x86_fp80 @_Z3fooe(x86_fp80 %d)
-// FP128: fp128 @_Z3foog(fp128 %d)
+// FP64: double @_Z3fooe(double noundef %d)
+// FP80: x86_fp80 @_Z3fooe(x86_fp80 noundef %d)
+// FP128: fp128 @_Z3foog(fp128 noundef %d)

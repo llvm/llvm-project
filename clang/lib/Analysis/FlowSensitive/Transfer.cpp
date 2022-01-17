@@ -14,6 +14,7 @@
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
@@ -27,6 +28,12 @@
 
 namespace clang {
 namespace dataflow {
+
+static const Expr *skipExprWithCleanups(const Expr *E) {
+  if (auto *C = dyn_cast_or_null<ExprWithCleanups>(E))
+    return C->getSubExpr();
+  return E;
+}
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
 public:
@@ -80,32 +87,87 @@ public:
   }
 
   void VisitDeclStmt(const DeclStmt *S) {
-    // FIXME: Add support for group decls, e.g: `int a, b;`
-    if (S->isSingleDecl()) {
-      if (const auto *D = dyn_cast<VarDecl>(S->getSingleDecl())) {
-        visitVarDecl(*D);
+    // Group decls are converted into single decls in the CFG so the cast below
+    // is safe.
+    const auto &D = *cast<VarDecl>(S->getSingleDecl());
+    auto &Loc = Env.createStorageLocation(D);
+    Env.setStorageLocation(D, Loc);
+
+    const Expr *InitExpr = D.getInit();
+    if (InitExpr == nullptr) {
+      // No initializer expression - associate `Loc` with a new value.
+      Env.initValueInStorageLocation(Loc, D.getType());
+      return;
+    }
+
+    // The CFG does not contain `ParenExpr` as top-level statements in basic
+    // blocks, however sub-expressions can still be of that type.
+    InitExpr = skipExprWithCleanups(D.getInit()->IgnoreParens());
+    assert(InitExpr != nullptr);
+
+    if (D.getType()->isReferenceType()) {
+      // Initializing a reference variable - do not create a reference to
+      // reference.
+      if (auto *InitExprLoc =
+              Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
+        auto &Val =
+            Env.takeOwnership(std::make_unique<ReferenceValue>(*InitExprLoc));
+        Env.setValue(Loc, Val);
+      } else {
+        // FIXME: The initializer expression must always be assigned a value.
+        // Replace this with an assert when we have sufficient coverage of
+        // language features.
+        Env.initValueInStorageLocation(Loc, D.getType());
       }
+      return;
+    }
+
+    if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None)) {
+      Env.setValue(Loc, *InitExprVal);
+    } else if (!D.getType()->isStructureOrClassType()) {
+      // FIXME: The initializer expression must always be assigned a value.
+      // Replace this with an assert when we have sufficient coverage of
+      // language features.
+      Env.initValueInStorageLocation(Loc, D.getType());
+    } else {
+      llvm_unreachable("structs and classes must always be assigned values");
     }
   }
 
   void VisitImplicitCastExpr(const ImplicitCastExpr *S) {
-    if (S->getCastKind() == CK_LValueToRValue) {
-      // The CFG does not contain `ParenExpr` as top-level statements in basic
-      // blocks, however sub-expressions can still be of that type.
-      assert(S->getSubExpr() != nullptr);
-      const Expr *SubExpr = S->getSubExpr()->IgnoreParens();
+    // The CFG does not contain `ParenExpr` as top-level statements in basic
+    // blocks, however sub-expressions can still be of that type.
+    assert(S->getSubExpr() != nullptr);
+    const Expr *SubExpr = S->getSubExpr()->IgnoreParens();
+    assert(SubExpr != nullptr);
 
-      assert(SubExpr != nullptr);
+    switch (S->getCastKind()) {
+    case CK_LValueToRValue: {
       auto *SubExprVal = Env.getValue(*SubExpr, SkipPast::Reference);
       if (SubExprVal == nullptr)
-        return;
+        break;
 
       auto &ExprLoc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, ExprLoc);
       Env.setValue(ExprLoc, *SubExprVal);
+      break;
     }
-    // FIXME: Add support for CK_NoOp, CK_UserDefinedConversion,
-    // CK_ConstructorConversion, CK_UncheckedDerivedToBase.
+    case CK_NoOp: {
+      // FIXME: Consider making `Environment::getStorageLocation` skip noop
+      // expressions (this and other similar expressions in the file) instead of
+      // assigning them storage locations.
+      auto *SubExprLoc = Env.getStorageLocation(*SubExpr, SkipPast::None);
+      if (SubExprLoc == nullptr)
+        break;
+
+      Env.setStorageLocation(*S, *SubExprLoc);
+      break;
+    }
+    default:
+      // FIXME: Add support for CK_UserDefinedConversion,
+      // CK_ConstructorConversion, CK_UncheckedDerivedToBase.
+      break;
+    }
   }
 
   void VisitUnaryOperator(const UnaryOperator *S) {
@@ -181,55 +243,139 @@ public:
     Env.setValue(FieldLoc, *InitExprVal);
   }
 
-  // FIXME: Add support for:
-  // - CallExpr
-  // - CXXBindTemporaryExpr
-  // - CXXBoolLiteralExpr
-  // - CXXConstructExpr
-  // - CXXFunctionalCastExpr
-  // - CXXOperatorCallExpr
-  // - CXXStaticCastExpr
-  // - MaterializeTemporaryExpr
+  void VisitCXXConstructExpr(const CXXConstructExpr *S) {
+    const CXXConstructorDecl *ConstructorDecl = S->getConstructor();
+    assert(ConstructorDecl != nullptr);
 
-private:
-  void visitVarDecl(const VarDecl &D) {
-    auto &Loc = Env.createStorageLocation(D);
-    Env.setStorageLocation(D, Loc);
+    if (ConstructorDecl->isCopyOrMoveConstructor()) {
+      assert(S->getNumArgs() == 1);
 
-    const Expr *InitExpr = D.getInit();
-    if (InitExpr == nullptr) {
-      // No initializer expression - associate `Loc` with a new value.
-      Env.initValueInStorageLocation(Loc, D.getType());
-      return;
-    }
+      const Expr *Arg = S->getArg(0);
+      assert(Arg != nullptr);
 
-    if (D.getType()->isReferenceType()) {
-      // Initializing a reference variable - do not create a reference to
-      // reference.
-      if (auto *InitExprLoc =
-              Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
-        auto &Val =
-            Env.takeOwnership(std::make_unique<ReferenceValue>(*InitExprLoc));
-        Env.setValue(Loc, Val);
-      } else {
-        // FIXME: The initializer expression must always be assigned a value.
-        // Replace this with an assert when we have sufficient coverage of
-        // language features.
-        Env.initValueInStorageLocation(Loc, D.getType());
+      if (S->isElidable()) {
+        auto *ArgLoc = Env.getStorageLocation(*Arg, SkipPast::Reference);
+        if (ArgLoc == nullptr)
+          return;
+
+        Env.setStorageLocation(*S, *ArgLoc);
+      } else if (auto *ArgVal = Env.getValue(*Arg, SkipPast::Reference)) {
+        auto &Loc = Env.createStorageLocation(*S);
+        Env.setStorageLocation(*S, Loc);
+        Env.setValue(Loc, *ArgVal);
       }
       return;
     }
 
-    if (auto *InitExprVal = Env.getValue(*InitExpr, SkipPast::None)) {
-      Env.setValue(Loc, *InitExprVal);
-    } else {
-      // FIXME: The initializer expression must always be assigned a value.
-      // Replace this with an assert when we have sufficient coverage of
-      // language features.
-      Env.initValueInStorageLocation(Loc, D.getType());
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+    Env.initValueInStorageLocation(Loc, S->getType());
+  }
+
+  void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *S) {
+    if (S->getOperator() == OO_Equal) {
+      assert(S->getNumArgs() == 2);
+
+      const Expr *Arg0 = S->getArg(0);
+      assert(Arg0 != nullptr);
+
+      const Expr *Arg1 = S->getArg(1);
+      assert(Arg1 != nullptr);
+
+      // Evaluate only copy and move assignment operators.
+      auto *Arg0Type = Arg0->getType()->getUnqualifiedDesugaredType();
+      auto *Arg1Type = Arg1->getType()->getUnqualifiedDesugaredType();
+      if (Arg0Type != Arg1Type)
+        return;
+
+      auto *ObjectLoc = Env.getStorageLocation(*Arg0, SkipPast::Reference);
+      if (ObjectLoc == nullptr)
+        return;
+
+      auto *Val = Env.getValue(*Arg1, SkipPast::Reference);
+      if (Val == nullptr)
+        return;
+
+      Env.setValue(*ObjectLoc, *Val);
     }
   }
 
+  void VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {
+    if (S->getCastKind() == CK_ConstructorConversion) {
+      // The CFG does not contain `ParenExpr` as top-level statements in basic
+      // blocks, however sub-expressions can still be of that type.
+      assert(S->getSubExpr() != nullptr);
+      const Expr *SubExpr = S->getSubExpr();
+      assert(SubExpr != nullptr);
+
+      auto *SubExprLoc = Env.getStorageLocation(*SubExpr, SkipPast::None);
+      if (SubExprLoc == nullptr)
+        return;
+
+      Env.setStorageLocation(*S, *SubExprLoc);
+    }
+  }
+
+  void VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *S) {
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+    Env.initValueInStorageLocation(Loc, S->getType());
+  }
+
+  void VisitCallExpr(const CallExpr *S) {
+    if (S->isCallToStdMove()) {
+      assert(S->getNumArgs() == 1);
+
+      const Expr *Arg = S->getArg(0);
+      assert(Arg != nullptr);
+
+      auto *ArgLoc = Env.getStorageLocation(*Arg, SkipPast::None);
+      if (ArgLoc == nullptr)
+        return;
+
+      Env.setStorageLocation(*S, *ArgLoc);
+    }
+  }
+
+  void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *S) {
+    const Expr *SubExpr = S->getSubExpr();
+    assert(SubExpr != nullptr);
+
+    auto *SubExprLoc = Env.getStorageLocation(*SubExpr, SkipPast::None);
+    if (SubExprLoc == nullptr)
+      return;
+
+    Env.setStorageLocation(*S, *SubExprLoc);
+  }
+
+  void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *S) {
+    const Expr *SubExpr = S->getSubExpr();
+    assert(SubExpr != nullptr);
+
+    auto *SubExprLoc = Env.getStorageLocation(*SubExpr, SkipPast::None);
+    if (SubExprLoc == nullptr)
+      return;
+
+    Env.setStorageLocation(*S, *SubExprLoc);
+  }
+
+  void VisitCXXStaticCastExpr(const CXXStaticCastExpr *S) {
+    if (S->getCastKind() == CK_NoOp) {
+      const Expr *SubExpr = S->getSubExpr();
+      assert(SubExpr != nullptr);
+
+      auto *SubExprLoc = Env.getStorageLocation(*SubExpr, SkipPast::None);
+      if (SubExprLoc == nullptr)
+        return;
+
+      Env.setStorageLocation(*S, *SubExprLoc);
+    }
+  }
+
+  // FIXME: Add support for:
+  // - CXXBoolLiteralExpr
+
+private:
   Environment &Env;
 };
 

@@ -42,7 +42,7 @@ struct fp7 func_f7(struct fp7 x) { return x; }
 // CHECK: define{{.*}} [8 x fp128] @func_f8([8 x fp128] %x.coerce)
 struct fp8 func_f8(struct fp8 x) { return x; }
 
-// CHECK: define{{.*}} void @func_f9(%struct.fp9* noalias sret(%struct.fp9) align 16 %agg.result, %struct.fp9* byval(%struct.fp9) align 16 %x)
+// CHECK: define{{.*}} void @func_f9(%struct.fp9* noalias sret(%struct.fp9) align 16 %agg.result, %struct.fp9* noundef byval(%struct.fp9) align 16 %x)
 struct fp9 func_f9(struct fp9 x) { return x; }
 
 // CHECK: define{{.*}} [2 x fp128] @func_fab([2 x fp128] %x.coerce)
@@ -104,7 +104,7 @@ void call_fp8(void) { global_f8 = func_f8(global_f8); }
 
 // CHECK-LABEL: @call_fp9
 // CHECK: %[[TMP1:[^ ]+]] = alloca %struct.fp9, align 16
-// CHECK: call void @func_f9(%struct.fp9* sret(%struct.fp9) align 16 %[[TMP2:[^ ]+]], %struct.fp9* byval(%struct.fp9) align 16 @global_f9
+// CHECK: call void @func_f9(%struct.fp9* sret(%struct.fp9) align 16 %[[TMP2:[^ ]+]], %struct.fp9* noundef byval(%struct.fp9) align 16 @global_f9
 // CHECK: %[[TMP3:[^ ]+]] = bitcast %struct.fp9* %[[TMP2]] to i8*
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 bitcast (%struct.fp9* @global_f9 to i8*), i8* align 16 %[[TMP3]], i64 144, i1 false
 // CHECK: ret void

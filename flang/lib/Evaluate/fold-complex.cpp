@@ -78,6 +78,9 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldOperation(
   return Expr<Result>{std::move(x)};
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_COMPLEX_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeComplex>;
 } // namespace Fortran::evaluate

@@ -21,5 +21,5 @@ void call_imported_function() {
 
 // CHECK: define dso_local dllexport arm_aapcs_vfpcc void @export_implemented_function()
 
-// CHECK: declare dllimport arm_aapcs_vfpcc void @import_function(i32)
+// CHECK: declare dllimport arm_aapcs_vfpcc void @import_function(i32 noundef)
 

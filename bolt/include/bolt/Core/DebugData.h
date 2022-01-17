@@ -498,8 +498,6 @@ public:
     Patch(uint32_t O, DebugPatchKind K) : Offset(O), Kind(K) {}
     DebugPatchKind getKind() const { return Kind; }
 
-    virtual ~Patch(){};
-
     static bool classof(const Patch *Writer) {
       return Writer->getKind() == DebugPatchKind::PatchBaseClass;
     }
@@ -656,9 +654,42 @@ public:
   std::unordered_map<uint32_t, uint32_t> computeNewOffsets();
 
 private:
+  struct PatchDeleter {
+    void operator()(Patch *P) const {
+      Patch *Pp = reinterpret_cast<Patch *>(P);
+      switch (Pp->Kind) {
+      default:
+        llvm_unreachable(
+            "Not all delete instances handled for Patch derived classes");
+      case DebugPatchKind::PatchValue32:
+        delete reinterpret_cast<DebugPatch32 *>(P);
+        break;
+      case DebugPatchKind::PatchValue64to32:
+        delete reinterpret_cast<DebugPatch64to32 *>(P);
+        break;
+      case DebugPatchKind::PatchValue64:
+        delete reinterpret_cast<DebugPatch64 *>(P);
+        break;
+      case DebugPatchKind::PatchValueVariable:
+        delete reinterpret_cast<DebugPatchVariableSize *>(P);
+        break;
+      case DebugPatchKind::ReferencePatchValue:
+        delete reinterpret_cast<DebugPatchReference *>(P);
+        break;
+      case DebugPatchKind::DWARFUnitOffsetBaseLabel:
+        delete reinterpret_cast<DWARFUnitOffsetBaseLabel *>(P);
+        break;
+      case DebugPatchKind::DestinationReferenceLabel:
+        delete reinterpret_cast<DestinationReferenceLabel *>(P);
+        break;
+      }
+    }
+  };
+  using UniquePatchPtrType = std::unique_ptr<Patch, PatchDeleter>;
+
   uint64_t DWPUnitOffset{0};
   uint32_t ChangeInSize{0};
-  std::vector<std::unique_ptr<Patch>> DebugPatches;
+  std::vector<UniquePatchPtrType> DebugPatches;
   /// Mutex used for parallel processing of debug info.
   std::mutex WriterMutex;
   /// Stores fully resolved addresses of DIEs that are being referenced.

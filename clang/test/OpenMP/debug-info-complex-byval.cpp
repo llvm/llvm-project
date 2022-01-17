@@ -12,7 +12,7 @@ void a() {
 
 
 // CHECK1-LABEL: define {{[^@]+}}@_Z1av
-// CHECK1-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
+// CHECK1-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG7:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
 // CHECK1-NEXT:    [[B_CASTED:%.*]] = alloca i64, align 8
@@ -26,7 +26,7 @@ void a() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined._debug__
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], <2 x float> [[B_COERCE:%.*]]) #[[ATTR2:[0-9]+]] !dbg [[DBG16:![0-9]+]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], <2 x float> noundef [[B_COERCE:%.*]]) #[[ATTR2:[0-9]+]] !dbg [[DBG16:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[B:%.*]] = alloca { float, float }, align 4
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
@@ -42,7 +42,7 @@ void a() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
-// CHECK1-SAME: (i32* noalias [[DOTGLOBAL_TID_:%.*]], i32* noalias [[DOTBOUND_TID_:%.*]], i64 [[B:%.*]]) #[[ATTR3:[0-9]+]] !dbg [[DBG30:![0-9]+]] {
+// CHECK1-SAME: (i32* noalias noundef [[DOTGLOBAL_TID_:%.*]], i32* noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[B:%.*]]) #[[ATTR3:[0-9]+]] !dbg [[DBG30:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca i32*, align 8
 // CHECK1-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca i32*, align 8

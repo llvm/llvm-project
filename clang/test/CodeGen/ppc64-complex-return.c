@@ -13,62 +13,62 @@ _Complex __float128 foo_f128(_Complex __float128 x) {
   return x;
 }
 
-// CHECK-F128: define{{.*}} { fp128, fp128 } @foo_f128(fp128 {{[%A-Za-z0-9.]+}}, fp128 {{[%A-Za-z0-9.]+}}) [[NUW:#[0-9]+]] {
+// CHECK-F128: define{{.*}} { fp128, fp128 } @foo_f128(fp128 noundef {{[%A-Za-z0-9.]+}}, fp128 noundef {{[%A-Za-z0-9.]+}}) [[NUW:#[0-9]+]] {
 #endif
 
 _Complex float foo_float(_Complex float x) {
   return x;
 }
 
-// CHECK: define{{.*}} { float, float } @foo_float(float {{[%A-Za-z0-9.]+}}, float {{[%A-Za-z0-9.]+}}) [[NUW:#[0-9]+]] {
+// CHECK: define{{.*}} { float, float } @foo_float(float noundef {{[%A-Za-z0-9.]+}}, float noundef {{[%A-Za-z0-9.]+}}) [[NUW:#[0-9]+]] {
 
 _Complex double foo_double(_Complex double x) {
   return x;
 }
 
-// CHECK: define{{.*}} { double, double } @foo_double(double {{[%A-Za-z0-9.]+}}, double {{[%A-Za-z0-9.]+}}) [[NUW]] {
+// CHECK: define{{.*}} { double, double } @foo_double(double noundef {{[%A-Za-z0-9.]+}}, double noundef {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
 _Complex long double foo_long_double(_Complex long double x) {
   return x;
 }
 
-// CHECK: define{{.*}} { ppc_fp128, ppc_fp128 } @foo_long_double(ppc_fp128 {{[%A-Za-z0-9.]+}}, ppc_fp128 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+// CHECK: define{{.*}} { ppc_fp128, ppc_fp128 } @foo_long_double(ppc_fp128 noundef {{[%A-Za-z0-9.]+}}, ppc_fp128 noundef {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
 _Complex __ibm128 foo_ibm128(_Complex __ibm128 x) {
   return x;
 }
 
-// CHECK: define{{.*}} { ppc_fp128, ppc_fp128 } @foo_ibm128(ppc_fp128 {{[%A-Za-z0-9.]+}}, ppc_fp128 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+// CHECK: define{{.*}} { ppc_fp128, ppc_fp128 } @foo_ibm128(ppc_fp128 noundef {{[%A-Za-z0-9.]+}}, ppc_fp128 noundef {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
 _Complex int foo_int(_Complex int x) {
   return x;
 }
 
-// CHECK: define{{.*}} { i32, i32 } @foo_int(i32 {{[%A-Za-z0-9.]+}}, i32 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+// CHECK: define{{.*}} { i32, i32 } @foo_int(i32 noundef {{[%A-Za-z0-9.]+}}, i32 noundef {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
 _Complex short foo_short(_Complex short x) {
   return x;
 }
 
-// CHECK: define{{.*}} { i16, i16 } @foo_short(i16 {{[%A-Za-z0-9.]+}}, i16 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+// CHECK: define{{.*}} { i16, i16 } @foo_short(i16 noundef {{[%A-Za-z0-9.]+}}, i16 noundef {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
 _Complex signed char foo_char(_Complex signed char x) {
   return x;
 }
 
-// CHECK: define{{.*}} { i8, i8 } @foo_char(i8 {{[%A-Za-z0-9.]+}}, i8 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+// CHECK: define{{.*}} { i8, i8 } @foo_char(i8 noundef {{[%A-Za-z0-9.]+}}, i8 noundef {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
 _Complex long foo_long(_Complex long x) {
   return x;
 }
 
-// CHECK: define{{.*}} { i64, i64 } @foo_long(i64 {{[%A-Za-z0-9.]+}}, i64 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+// CHECK: define{{.*}} { i64, i64 } @foo_long(i64 noundef {{[%A-Za-z0-9.]+}}, i64 noundef {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
 _Complex long long foo_long_long(_Complex long long x) {
   return x;
 }
 
-// CHECK: define{{.*}} { i64, i64 } @foo_long_long(i64 {{[%A-Za-z0-9.]+}}, i64 {{[%A-Za-z0-9.]+}}) [[NUW]] {
+// CHECK: define{{.*}} { i64, i64 } @foo_long_long(i64 noundef {{[%A-Za-z0-9.]+}}, i64 noundef {{[%A-Za-z0-9.]+}}) [[NUW]] {
 
 float bar_float(void) {
   return crealf(foo_float(2.0f - 2.5fi));

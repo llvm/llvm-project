@@ -102,7 +102,7 @@ int explicit_maps_with_inner_lambda(int a){
   return c.foo(a);
 }
 
-// CK25: define {{.+}}[[CALL00]]([[ST]]* [[VAL:%.+]])
+// CK25: define {{.+}}[[CALL00]]([[ST]]* noundef [[VAL:%.+]])
 // CK25: store [[ST]]* [[VAL]], [[ST]]** [[VALADDR:%[^,]+]],
 // CK25: [[VAL1:%.+]] = load [[ST]]*, [[ST]]** [[VALADDR]],
 // CK25: [[VALADDR1:%.+]] = getelementptr inbounds [[CA00]], [[CA00]]* [[CA:%[^,]+]], i32 0, i32 0

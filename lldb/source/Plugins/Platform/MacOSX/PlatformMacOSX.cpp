@@ -137,17 +137,18 @@ std::vector<ArchSpec> PlatformMacOSX::GetSupportedArchitectures() {
   std::vector<ArchSpec> result;
 #if defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
   // macOS for ARM64 support both native and translated x86_64 processes
-  ARMGetSupportedArchitectures(result);
+  ARMGetSupportedArchitectures(result, llvm::Triple::MacOSX);
 
   // We can't use x86GetSupportedArchitectures() because it uses
   // the system architecture for some of its return values and also
   // has a 32bits variant.
   result.push_back(ArchSpec("x86_64-apple-macosx"));
   result.push_back(ArchSpec("x86_64-apple-ios-macabi"));
-  result.push_back(ArchSpec("arm64-apple-ios"));
-  result.push_back(ArchSpec("arm64e-apple-ios"));
+  result.push_back(ArchSpec("arm64-apple-ios-macabi"));
+  result.push_back(ArchSpec("arm64e-apple-ios-macabi"));
 #else
   x86GetSupportedArchitectures(result);
+  result.push_back(ArchSpec("x86_64-apple-ios-macabi"));
 #endif
   return result;
 }

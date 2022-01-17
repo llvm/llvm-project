@@ -314,7 +314,7 @@ inline void DoNotOptimize(Tp const& value) {
 #endif
 
 #if (defined(_WIN32) && !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)) ||   \
-    defined(__MVS__)
+    defined(__MVS__) || defined(_AIX)
 // Macros for waiving cases when we can't count allocations done within
 // the library implementation.
 //
@@ -324,6 +324,7 @@ inline void DoNotOptimize(Tp const& value) {
 // calls within the library.
 //
 // The same goes on IBM zOS.
+// The same goes on AIX.
 #define ASSERT_WITH_LIBRARY_INTERNAL_ALLOCATIONS(...) ((void)(__VA_ARGS__))
 #define TEST_SUPPORTS_LIBRARY_INTERNAL_ALLOCATIONS 0
 #else

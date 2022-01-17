@@ -838,12 +838,14 @@ def : PatGprGpr<riscv_unshfl, UNSHFL>;
 def : PatGprGpr<int_riscv_xperm_n, XPERMN>;
 def : PatGprGpr<int_riscv_xperm_b, XPERMB>;
 def : PatGprGpr<int_riscv_xperm_h, XPERMH>;
-def : PatGprGpr<int_riscv_xperm_w, XPERMW>;
 def : PatGprImm<riscv_shfl, SHFLI, shfl_uimm>;
 def : PatGprImm<riscv_unshfl, UNSHFLI, shfl_uimm>;
 def : PatGprImm<riscv_grev, GREVI, uimmlog2xlen>;
 def : PatGprImm<riscv_gorc, GORCI, uimmlog2xlen>;
 } // Predicates = [HasStdExtZbp]
+
+let Predicates = [HasStdExtZbp, IsRV64] in
+def : PatGprGpr<int_riscv_xperm_w, XPERMW>;
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
 def : Pat<(i32 (rotr (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>;

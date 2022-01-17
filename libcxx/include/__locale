@@ -511,6 +511,33 @@ public:
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_PRINT
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_XDIGIT
+#elif defined(__MVS__)
+    static const mask __regex_word = 0x8000;
+# if defined(__NATIVE_ASCII_F)`
+    typedef unsigned int mask;
+    static const mask space  = _ISSPACE_A;
+    static const mask print  = _ISPRINT_A;
+    static const mask cntrl  = _ISCNTRL_A;
+    static const mask upper  = _ISUPPER_A;
+    static const mask lower  = _ISLOWER_A;
+    static const mask alpha  = _ISALPHA_A;
+    static const mask digit  = _ISDIGIT_A;
+    static const mask punct  = _ISPUNCT_A;
+    static const mask xdigit = _ISXDIGIT_A;
+    static const mask blank  = _ISBLANK_A;
+# else
+    typedef unsigned short mask;
+    static const mask space  = __ISSPACE;
+    static const mask print  = __ISPRINT;
+    static const mask cntrl  = __ISCNTRL;
+    static const mask upper  = __ISUPPER;
+    static const mask lower  = __ISLOWER;
+    static const mask alpha  = __ISALPHA;
+    static const mask digit  = __ISDIGIT;
+    static const mask punct  = __ISPUNCT;
+    static const mask xdigit = __ISXDIGIT;
+    static const mask blank  = __ISBLANK;
+# endif
 #else
 # error unknown rune table for this platform -- do you mean to define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE?
 #endif
@@ -733,6 +760,10 @@ public:
 #if defined(__NetBSD__)
     static const short* __classic_upper_table() _NOEXCEPT;
     static const short* __classic_lower_table() _NOEXCEPT;
+#endif
+#if defined(__MVS__)
+    static const unsigned short* __classic_upper_table() _NOEXCEPT;
+    static const unsigned short* __classic_lower_table() _NOEXCEPT;
 #endif
 
 protected:

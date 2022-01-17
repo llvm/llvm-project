@@ -8,8 +8,8 @@ int f(struct A a);
 
 int g() {
   struct A a;
-  // CHECK: call i32 @f(%struct.A addrspace(5)* byval{{.*}}%a)
+  // CHECK: call i32 @f(%struct.A addrspace(5)* noundef byval{{.*}}%a)
   return f(a);
 }
 
-// CHECK: declare i32 @f(%struct.A addrspace(5)* byval{{.*}})
+// CHECK: declare i32 @f(%struct.A addrspace(5)* noundef byval{{.*}})

@@ -324,5 +324,8 @@ std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
   return std::visit([](const auto &kx) { return kx.LEN(); }, u);
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 INSTANTIATE_EXPRESSION_TEMPLATES
 } // namespace Fortran::evaluate

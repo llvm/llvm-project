@@ -3560,6 +3560,86 @@ TEST_F(FormatTest, FormatsNamespaces) {
                    "} // namespace out",
                    Style));
 
+  FormatStyle ShortInlineFunctions = getLLVMStyle();
+  ShortInlineFunctions.NamespaceIndentation = FormatStyle::NI_All;
+  ShortInlineFunctions.AllowShortFunctionsOnASingleLine =
+      FormatStyle::SFS_Inline;
+  verifyFormat("namespace {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  int some_int;\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace interface {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace interface\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  class X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  struct X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  union X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("extern \"C\" {\n"
+               "void f() {\n"
+               "  return;\n"
+               "}\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  class X {\n"
+               "    void f() { return; }\n"
+               "  } x;\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  [[nodiscard]] class X {\n"
+               "    void f() { return; }\n"
+               "  };\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  static class X {\n"
+               "    void f() { return; }\n"
+               "  } x;\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+  verifyFormat("namespace {\n"
+               "  constexpr class X {\n"
+               "    void f() { return; }\n"
+               "  } x;\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+
+  ShortInlineFunctions.IndentExternBlock = FormatStyle::IEBS_Indent;
+  verifyFormat("extern \"C\" {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "} // namespace\n",
+               ShortInlineFunctions);
+
   Style.NamespaceIndentation = FormatStyle::NI_Inner;
   EXPECT_EQ("namespace out {\n"
             "int i;\n"
@@ -3828,6 +3908,21 @@ TEST_F(FormatTest, FormatsCompactNamespaces) {
                    "int i;\n"
                    "} // namespace in\n"
                    "} // namespace mid\n"
+                   "} // namespace out",
+                   Style));
+
+  Style.CompactNamespaces = true;
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+  verifyFormat("namespace out { namespace in {\n"
+               "}} // namespace out::in",
+               Style);
+  EXPECT_EQ("namespace out { namespace in {\n"
+            "}} // namespace out::in",
+            format("namespace out {\n"
+                   "namespace in {\n"
+                   "} // namespace in\n"
                    "} // namespace out",
                    Style));
 }
@@ -18794,6 +18889,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
   CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(ReflowComments);
+  CHECK_PARSE_BOOL(RemoveBracesLLVM);
   CHECK_PARSE_BOOL(SortUsingDeclarations);
   CHECK_PARSE_BOOL(SpacesInParentheses);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
@@ -19071,6 +19167,8 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::BAS_DontAlign);
   CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
               FormatStyle::BAS_AlwaysBreak);
+  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
+              FormatStyle::BAS_BlockIndent);
   // For backward compatibility:
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket,
               FormatStyle::BAS_DontAlign);
@@ -23237,6 +23335,585 @@ TEST_F(FormatTest, ShortTemplatedArgumentLists) {
   verifyFormat("struct Y<[] { return 0; }> {};", Style);
 
   verifyFormat("struct Z : X<decltype([] { return 0; }){}> {};", Style);
+}
+
+TEST_F(FormatTest, RemoveBraces) {
+  FormatStyle Style = getLLVMStyle();
+  Style.RemoveBracesLLVM = true;
+
+  // The following eight test cases are fully-braced versions of the examples at
+  // "llvm.org/docs/CodingStandards.html#don-t-use-braces-on-simple-single-
+  // statement-bodies-of-if-else-loop-statements".
+
+  // 1. Omit the braces, since the body is simple and clearly associated with
+  // the if.
+  verifyFormat("if (isa<FunctionDecl>(D))\n"
+               "  handleFunctionDecl(D);\n"
+               "else if (isa<VarDecl>(D))\n"
+               "  handleVarDecl(D);",
+               "if (isa<FunctionDecl>(D)) {\n"
+               "  handleFunctionDecl(D);\n"
+               "} else if (isa<VarDecl>(D)) {\n"
+               "  handleVarDecl(D);\n"
+               "}",
+               Style);
+
+  // 2. Here we document the condition itself and not the body.
+  verifyFormat("if (isa<VarDecl>(D)) {\n"
+               "  // It is necessary that we explain the situation with this\n"
+               "  // surprisingly long comment, so it would be unclear\n"
+               "  // without the braces whether the following statement is in\n"
+               "  // the scope of the `if`.\n"
+               "  // Because the condition is documented, we can't really\n"
+               "  // hoist this comment that applies to the body above the\n"
+               "  // if.\n"
+               "  handleOtherDecl(D);\n"
+               "}",
+               Style);
+
+  // 3. Use braces on the outer `if` to avoid a potential dangling else
+  // situation.
+  verifyFormat("if (isa<VarDecl>(D)) {\n"
+               "  for (auto *A : D.attrs())\n"
+               "    if (shouldProcessAttr(A))\n"
+               "      handleAttr(A);\n"
+               "}",
+               "if (isa<VarDecl>(D)) {\n"
+               "  for (auto *A : D.attrs()) {\n"
+               "    if (shouldProcessAttr(A)) {\n"
+               "      handleAttr(A);\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // 4. Use braces for the `if` block to keep it uniform with the else block.
+  verifyFormat("if (isa<FunctionDecl>(D)) {\n"
+               "  handleFunctionDecl(D);\n"
+               "} else {\n"
+               "  // In this else case, it is necessary that we explain the\n"
+               "  // situation with this surprisingly long comment, so it\n"
+               "  // would be unclear without the braces whether the\n"
+               "  // following statement is in the scope of the `if`.\n"
+               "  handleOtherDecl(D);\n"
+               "}",
+               Style);
+
+  // 5. This should also omit braces.  The `for` loop contains only a single
+  // statement, so it shouldn't have braces.  The `if` also only contains a
+  // single simple statement (the for loop), so it also should omit braces.
+  verifyFormat("if (isa<FunctionDecl>(D))\n"
+               "  for (auto *A : D.attrs())\n"
+               "    handleAttr(A);",
+               "if (isa<FunctionDecl>(D)) {\n"
+               "  for (auto *A : D.attrs()) {\n"
+               "    handleAttr(A);\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // 6. Use braces for the outer `if` since the nested `for` is braced.
+  verifyFormat("if (isa<FunctionDecl>(D)) {\n"
+               "  for (auto *A : D.attrs()) {\n"
+               "    // In this for loop body, it is necessary that we explain\n"
+               "    // the situation with this surprisingly long comment,\n"
+               "    // forcing braces on the `for` block.\n"
+               "    handleAttr(A);\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // 7. Use braces on the outer block because there are more than two levels of
+  // nesting.
+  verifyFormat("if (isa<FunctionDecl>(D)) {\n"
+               "  for (auto *A : D.attrs())\n"
+               "    for (ssize_t i : llvm::seq<ssize_t>(count))\n"
+               "      handleAttrOnDecl(D, A, i);\n"
+               "}",
+               "if (isa<FunctionDecl>(D)) {\n"
+               "  for (auto *A : D.attrs()) {\n"
+               "    for (ssize_t i : llvm::seq<ssize_t>(count)) {\n"
+               "      handleAttrOnDecl(D, A, i);\n"
+               "    }\n"
+               "  }\n"
+               "}",
+               Style);
+
+  // 8. Use braces on the outer block because of a nested `if`, otherwise the
+  // compiler would warn: `add explicit braces to avoid dangling else`
+  verifyFormat("if (auto *D = dyn_cast<FunctionDecl>(D)) {\n"
+               "  if (shouldProcess(D))\n"
+               "    handleVarDecl(D);\n"
+               "  else\n"
+               "    markAsIgnored(D);\n"
+               "}",
+               "if (auto *D = dyn_cast<FunctionDecl>(D)) {\n"
+               "  if (shouldProcess(D)) {\n"
+               "    handleVarDecl(D);\n"
+               "  } else {\n"
+               "    markAsIgnored(D);\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  b; // comment\n"
+               "else if (c)\n"
+               "  d; /* comment */\n"
+               "else\n"
+               "  e;",
+               "if (a) {\n"
+               "  b; // comment\n"
+               "} else if (c) {\n"
+               "  d; /* comment */\n"
+               "} else {\n"
+               "  e;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  b;\n"
+               "  c;\n"
+               "} else if (d) {\n"
+               "  e;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "#undef NDEBUG\n"
+               "  b;\n"
+               "} else {\n"
+               "  c;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  // comment\n"
+               "} else if (b) {\n"
+               "  c;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  b;\n"
+               "} else {\n"
+               "  { c; }\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b) // comment\n"
+               "    c;\n"
+               "} else if (d) {\n"
+               "  e;\n"
+               "}",
+               "if (a) {\n"
+               "  if (b) { // comment\n"
+               "    c;\n"
+               "  }\n"
+               "} else if (d) {\n"
+               "  e;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b) {\n"
+               "    c;\n"
+               "    // comment\n"
+               "  } else if (d) {\n"
+               "    e;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b)\n"
+               "    c;\n"
+               "}",
+               "if (a) {\n"
+               "  if (b) {\n"
+               "    c;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  if (b)\n"
+               "    c;\n"
+               "  else\n"
+               "    d;\n"
+               "else\n"
+               "  e;",
+               "if (a) {\n"
+               "  if (b) {\n"
+               "    c;\n"
+               "  } else {\n"
+               "    d;\n"
+               "  }\n"
+               "} else {\n"
+               "  e;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  // comment\n"
+               "  if (b)\n"
+               "    c;\n"
+               "  else if (d)\n"
+               "    e;\n"
+               "} else {\n"
+               "  g;\n"
+               "}",
+               "if (a) {\n"
+               "  // comment\n"
+               "  if (b) {\n"
+               "    c;\n"
+               "  } else if (d) {\n"
+               "    e;\n"
+               "  }\n"
+               "} else {\n"
+               "  g;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  b;\n"
+               "else if (c)\n"
+               "  d;\n"
+               "else\n"
+               "  e;",
+               "if (a) {\n"
+               "  b;\n"
+               "} else {\n"
+               "  if (c) {\n"
+               "    d;\n"
+               "  } else {\n"
+               "    e;\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  if (b)\n"
+               "    c;\n"
+               "  else if (d)\n"
+               "    e;\n"
+               "} else {\n"
+               "  g;\n"
+               "}",
+               "if (a) {\n"
+               "  if (b)\n"
+               "    c;\n"
+               "  else {\n"
+               "    if (d)\n"
+               "      e;\n"
+               "  }\n"
+               "} else {\n"
+               "  g;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  b;\n"
+               "else if (c)\n"
+               "  while (d)\n"
+               "    e;\n"
+               "// comment",
+               "if (a)\n"
+               "{\n"
+               "  b;\n"
+               "} else if (c) {\n"
+               "  while (d) {\n"
+               "    e;\n"
+               "  }\n"
+               "}\n"
+               "// comment",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  b;\n"
+               "} else if (c) {\n"
+               "  d;\n"
+               "} else {\n"
+               "  e;\n"
+               "  g;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  b;\n"
+               "} else if (c) {\n"
+               "  d;\n"
+               "} else {\n"
+               "  e;\n"
+               "} // comment",
+               Style);
+
+  verifyFormat("int abs = [](int i) {\n"
+               "  if (i >= 0)\n"
+               "    return i;\n"
+               "  return -i;\n"
+               "};",
+               "int abs = [](int i) {\n"
+               "  if (i >= 0) {\n"
+               "    return i;\n"
+               "  }\n"
+               "  return -i;\n"
+               "};",
+               Style);
+
+  Style.ColumnLimit = 20;
+
+  verifyFormat("if (a) {\n"
+               "  b = c + // 1 -\n"
+               "      d;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a) {\n"
+               "  b = c >= 0 ? d\n"
+               "             : e;\n"
+               "}",
+               "if (a) {\n"
+               "  b = c >= 0 ? d : e;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (a)\n"
+               "  b = c > 0 ? d : e;",
+               "if (a) {\n"
+               "  b = c > 0 ? d : e;\n"
+               "}",
+               Style);
+
+  Style.ColumnLimit = 0;
+
+  verifyFormat("if (a)\n"
+               "  b234567890223456789032345678904234567890 = "
+               "c234567890223456789032345678904234567890;",
+               "if (a) {\n"
+               "  b234567890223456789032345678904234567890 = "
+               "c234567890223456789032345678904234567890;\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, AlignAfterOpenBracketBlockIndent) {
+  auto Style = getLLVMStyle();
+
+  StringRef Short = "functionCall(paramA, paramB, paramC);\n"
+                    "void functionDecl(int a, int b, int c);";
+
+  StringRef Medium = "functionCall(paramA, paramB, paramC, paramD, paramE, "
+                     "paramF, paramG, paramH, paramI);\n"
+                     "void functionDecl(int argumentA, int argumentB, int "
+                     "argumentC, int argumentD, int argumentE);";
+
+  verifyFormat(Short, Style);
+
+  StringRef NoBreak = "functionCall(paramA, paramB, paramC, paramD, paramE, "
+                      "paramF, paramG, paramH,\n"
+                      "             paramI);\n"
+                      "void functionDecl(int argumentA, int argumentB, int "
+                      "argumentC, int argumentD,\n"
+                      "                  int argumentE);";
+
+  verifyFormat(NoBreak, Medium, Style);
+  verifyFormat(NoBreak,
+               "functionCall(\n"
+               "    paramA,\n"
+               "    paramB,\n"
+               "    paramC,\n"
+               "    paramD,\n"
+               "    paramE,\n"
+               "    paramF,\n"
+               "    paramG,\n"
+               "    paramH,\n"
+               "    paramI\n"
+               ");\n"
+               "void functionDecl(\n"
+               "    int argumentA,\n"
+               "    int argumentB,\n"
+               "    int argumentC,\n"
+               "    int argumentD,\n"
+               "    int argumentE\n"
+               ");",
+               Style);
+
+  verifyFormat("outerFunctionCall(nestedFunctionCall(argument1),\n"
+               "                  nestedLongFunctionCall(argument1, "
+               "argument2, argument3,\n"
+               "                                         argument4, "
+               "argument5));",
+               Style);
+
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+
+  verifyFormat(Short, Style);
+  verifyFormat(
+      "functionCall(\n"
+      "    paramA, paramB, paramC, paramD, paramE, paramF, paramG, paramH, "
+      "paramI\n"
+      ");\n"
+      "void functionDecl(\n"
+      "    int argumentA, int argumentB, int argumentC, int argumentD, int "
+      "argumentE\n"
+      ");",
+      Medium, Style);
+
+  Style.AllowAllArgumentsOnNextLine = false;
+  Style.AllowAllParametersOfDeclarationOnNextLine = false;
+
+  verifyFormat(Short, Style);
+  verifyFormat(
+      "functionCall(\n"
+      "    paramA, paramB, paramC, paramD, paramE, paramF, paramG, paramH, "
+      "paramI\n"
+      ");\n"
+      "void functionDecl(\n"
+      "    int argumentA, int argumentB, int argumentC, int argumentD, int "
+      "argumentE\n"
+      ");",
+      Medium, Style);
+
+  Style.BinPackArguments = false;
+  Style.BinPackParameters = false;
+
+  verifyFormat(Short, Style);
+
+  verifyFormat("functionCall(\n"
+               "    paramA,\n"
+               "    paramB,\n"
+               "    paramC,\n"
+               "    paramD,\n"
+               "    paramE,\n"
+               "    paramF,\n"
+               "    paramG,\n"
+               "    paramH,\n"
+               "    paramI\n"
+               ");\n"
+               "void functionDecl(\n"
+               "    int argumentA,\n"
+               "    int argumentB,\n"
+               "    int argumentC,\n"
+               "    int argumentD,\n"
+               "    int argumentE\n"
+               ");",
+               Medium, Style);
+
+  verifyFormat("outerFunctionCall(\n"
+               "    nestedFunctionCall(argument1),\n"
+               "    nestedLongFunctionCall(\n"
+               "        argument1,\n"
+               "        argument2,\n"
+               "        argument3,\n"
+               "        argument4,\n"
+               "        argument5\n"
+               "    )\n"
+               ");",
+               Style);
+
+  verifyFormat("int a = (int)b;", Style);
+  verifyFormat("int a = (int)b;",
+               "int a = (\n"
+               "    int\n"
+               ") b;",
+               Style);
+
+  verifyFormat("return (true);", Style);
+  verifyFormat("return (true);",
+               "return (\n"
+               "    true\n"
+               ");",
+               Style);
+
+  verifyFormat("void foo();", Style);
+  verifyFormat("void foo();",
+               "void foo(\n"
+               ");",
+               Style);
+
+  verifyFormat("void foo() {}", Style);
+  verifyFormat("void foo() {}",
+               "void foo(\n"
+               ") {\n"
+               "}",
+               Style);
+
+  verifyFormat("auto string = std::string();", Style);
+  verifyFormat("auto string = std::string();",
+               "auto string = std::string(\n"
+               ");",
+               Style);
+
+  verifyFormat("void (*functionPointer)() = nullptr;", Style);
+  verifyFormat("void (*functionPointer)() = nullptr;",
+               "void (\n"
+               "    *functionPointer\n"
+               ")\n"
+               "(\n"
+               ") = nullptr;",
+               Style);
+}
+
+TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentIfStatement) {
+  auto Style = getLLVMStyle();
+
+  verifyFormat("if (foo()) {\n"
+               "  return;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (quitelongarg !=\n"
+               "    (alsolongarg - 1)) { // ABC is a very longgggggggggggg "
+               "comment\n"
+               "  return;\n"
+               "}",
+               Style);
+
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+
+  verifyFormat("if (foo()) {\n"
+               "  return;\n"
+               "}",
+               Style);
+
+  verifyFormat("if (quitelongarg !=\n"
+               "    (alsolongarg - 1)) { // ABC is a very longgggggggggggg "
+               "comment\n"
+               "  return;\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, AlignAfterOpenBracketBlockIndentForStatement) {
+  auto Style = getLLVMStyle();
+
+  verifyFormat("for (int i = 0; i < 5; ++i) {\n"
+               "  doSomething();\n"
+               "}",
+               Style);
+
+  verifyFormat("for (int myReallyLongCountVariable = 0; "
+               "myReallyLongCountVariable < count;\n"
+               "     myReallyLongCountVariable++) {\n"
+               "  doSomething();\n"
+               "}",
+               Style);
+
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+
+  verifyFormat("for (int i = 0; i < 5; ++i) {\n"
+               "  doSomething();\n"
+               "}",
+               Style);
+
+  verifyFormat("for (int myReallyLongCountVariable = 0; "
+               "myReallyLongCountVariable < count;\n"
+               "     myReallyLongCountVariable++) {\n"
+               "  doSomething();\n"
+               "}",
+               Style);
 }
 
 } // namespace

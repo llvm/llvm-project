@@ -156,7 +156,7 @@ struct i128 {
 };
 
 __attribute__((ms_abi)) struct i128 f7(struct i128 a) {
-  // WIN64: define dso_local void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* %a)
-  // FREEBSD: define{{.*}} win64cc void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* %a)
+  // WIN64: define dso_local void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* noundef %a)
+  // FREEBSD: define{{.*}} win64cc void @f7(%struct.i128* noalias sret(%struct.i128) align 8 %agg.result, %struct.i128* noundef %a)
   return a;
 }
