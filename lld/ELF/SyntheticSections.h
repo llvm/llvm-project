@@ -421,7 +421,7 @@ private:
 
   uint64_t size = 0;
 
-  llvm::DenseMap<StringRef, unsigned> stringMap;
+  llvm::DenseMap<llvm::CachedHashStringRef, unsigned> stringMap;
   SmallVector<StringRef, 0> strings;
 };
 
