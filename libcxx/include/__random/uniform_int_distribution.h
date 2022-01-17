@@ -232,6 +232,7 @@ typename uniform_int_distribution<_IntType>::result_type
 uniform_int_distribution<_IntType>::operator()(_URNG& __g, const param_type& __p)
 _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
+    static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     typedef typename conditional<sizeof(result_type) <= sizeof(uint32_t), uint32_t,
                                  typename make_unsigned<result_type>::type>::type _UIntType;
     const _UIntType _Rp = _UIntType(__p.b()) - _UIntType(__p.a()) + _UIntType(1);

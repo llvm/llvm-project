@@ -159,6 +159,7 @@ template<class _URNG>
 _IntType
 poisson_distribution<_IntType>::operator()(_URNG& __urng, const param_type& __pr)
 {
+    static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     double __tx;
     uniform_real_distribution<double> __urd;
     if (__pr.__mean_ < 10)

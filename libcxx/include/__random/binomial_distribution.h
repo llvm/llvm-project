@@ -148,6 +148,7 @@ template<class _URNG>
 _IntType
 binomial_distribution<_IntType>::operator()(_URNG& __g, const param_type& __pr)
 {
+    static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     if (__pr.__t_ == 0 || __pr.__p_ == 0)
         return 0;
     if (__pr.__p_ == 1)

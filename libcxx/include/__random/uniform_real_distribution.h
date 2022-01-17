@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__random/generate_canonical.h>
+#include <__random/is_valid.h>
 #include <iosfwd>
 #include <limits>
 #include <type_traits>
@@ -115,6 +116,7 @@ inline
 typename uniform_real_distribution<_RealType>::result_type
 uniform_real_distribution<_RealType>::operator()(_URNG& __g, const param_type& __p)
 {
+    static_assert(__libcpp_random_is_valid_urng<_URNG>::value, "");
     return (__p.b() - __p.a())
         * _VSTD::generate_canonical<_RealType, numeric_limits<_RealType>::digits>(__g)
         + __p.a();

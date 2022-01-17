@@ -14,7 +14,6 @@
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#  pragma clang include_instead(<random>)
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -39,6 +38,20 @@ template<> struct __libcpp_random_is_valid_inttype<unsigned long long> : true_ty
 template<> struct __libcpp_random_is_valid_inttype<__int128_t> : true_type {};
 template<> struct __libcpp_random_is_valid_inttype<__uint128_t> : true_type {};
 #endif // _LIBCPP_HAS_NO_INT128
+
+// [rand.req.urng]/3:
+// A class G meets the uniform random bit generator requirements if G models
+// uniform_random_bit_generator, invoke_result_t<G&> is an unsigned integer type,
+// and G provides a nested typedef-name result_type that denotes the same type
+// as invoke_result_t<G&>.
+// (In particular, reject URNGs with signed result_types; our distributions cannot
+// handle such generator types.)
+
+template<class, class = void> struct __libcpp_random_is_valid_urng : false_type {};
+template<class _Gp> struct __libcpp_random_is_valid_urng<_Gp, __enable_if_t<
+    is_unsigned<typename _Gp::result_type>::value &&
+    _IsSame<decltype(declval<_Gp&>()()), typename _Gp::result_type>::value
+> > : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
