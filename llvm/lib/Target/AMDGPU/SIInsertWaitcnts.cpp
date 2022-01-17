@@ -1382,7 +1382,6 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
   for (auto T : inst_counter_types()) {
     // Merge event flags for this counter
-    const bool OldOutOfOrder = counterOutOfOrder(T);
     const unsigned OldEvents = PendingEvents & WaitEventMaskForInst[T];
     const unsigned OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
     if (OtherEvents & ~OldEvents)
@@ -1425,7 +1424,7 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
       }
     }
 
-    if (RegStrictDom && !OldOutOfOrder)
+    if (RegStrictDom)
       StrictDom = true;
   }
 
