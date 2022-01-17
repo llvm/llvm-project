@@ -79,8 +79,8 @@ const char* const IdSymbolic[] = {
   "HW_REG_FLAT_SCR_LO",
   "HW_REG_FLAT_SCR_HI",
   "HW_REG_XNACK_MASK",
-  nullptr, // HW_ID1, no predictable values
-  nullptr, // HW_ID2, no predictable values
+  "HW_REG_HW_ID1",
+  "HW_REG_HW_ID2",
   "HW_REG_POPS_PACKER",
   nullptr,
   nullptr,
