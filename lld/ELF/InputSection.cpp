@@ -1340,9 +1340,6 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
   for (size_t off = 0, end = data().size(); off != end;) {
     size_t size = readEhRecordSize(this, off);
     pieces.emplace_back(off, this, size, getReloc(off, size, rels, relI));
-    // The empty record is the end marker.
-    if (size == 4)
-      break;
     off += size;
   }
 }
