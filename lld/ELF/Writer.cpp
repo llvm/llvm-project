@@ -1264,14 +1264,14 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   // Build a map from symbols to their priorities. Symbols that didn't
   // appear in the symbol ordering file have the lowest priority 0.
   // All explicitly mentioned symbols have negative (higher) priorities.
-  DenseMap<StringRef, SymbolOrderEntry> symbolOrder;
+  DenseMap<CachedHashStringRef, SymbolOrderEntry> symbolOrder;
   int priority = -config->symbolOrderingFile.size();
   for (StringRef s : config->symbolOrderingFile)
-    symbolOrder.insert({s, {priority++, false}});
+    symbolOrder.insert({CachedHashStringRef(s), {priority++, false}});
 
   // Build a map from sections to their priorities.
   auto addSym = [&](Symbol &sym) {
-    auto it = symbolOrder.find(sym.getName());
+    auto it = symbolOrder.find(CachedHashStringRef(sym.getName()));
     if (it == symbolOrder.end())
       return;
     SymbolOrderEntry &ent = it->second;
@@ -1299,7 +1299,7 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
   if (config->warnSymbolOrdering)
     for (auto orderEntry : symbolOrder)
       if (!orderEntry.second.present)
-        warn("symbol ordering file: no such symbol: " + orderEntry.first);
+        warn("symbol ordering file: no such symbol: " + orderEntry.first.val());
 
   return sectionOrder;
 }
@@ -1947,7 +1947,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     for (SharedFile *file : sharedFiles) {
       bool allNeededIsKnown =
           llvm::all_of(file->dtNeeded, [&](StringRef needed) {
-            return symtab->soNames.count(needed);
+            return symtab->soNames.count(CachedHashStringRef(needed));
           });
       if (!allNeededIsKnown)
         continue;
