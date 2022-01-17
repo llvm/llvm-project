@@ -2121,8 +2121,8 @@ define i65 @v_lshr_i65(i65 %value, i65 %amount) {
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, v10, v2, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v5, v11, v6, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, v1, s0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, 0, v4, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v5, v1, s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = lshr i65 %value, %amount
   ret i65 %result

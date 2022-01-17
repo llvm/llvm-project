@@ -12749,13 +12749,12 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s22, 18
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v6, s2 :: v_dual_mov_b32 v5, s51
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_3) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_writelane_b32 v40, s23, 19
 ; GFX11-NEXT:    v_dual_mov_b32 v4, s50 :: v_dual_mov_b32 v1, s47
-; GFX11-NEXT:    v_mov_b32_e32 v0, s46
-; GFX11-NEXT:    v_mov_b32_e32 v2, s48
+; GFX11-NEXT:    v_dual_mov_b32 v0, s46 :: v_dual_mov_b32 v3, s49
 ; GFX11-NEXT:    v_writelane_b32 v40, s24, 20
-; GFX11-NEXT:    v_mov_b32_e32 v3, s49
+; GFX11-NEXT:    v_mov_b32_e32 v2, s48
 ; GFX11-NEXT:    s_mov_b32 s20, s36
 ; GFX11-NEXT:    s_mov_b32 s21, s37
 ; GFX11-NEXT:    s_mov_b32 s22, s38
@@ -13211,24 +13210,23 @@ define amdgpu_gfx void @stack_12xv3i32() #0 {
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX11-NEXT:    v_mov_b32_e32 v4, 1
+; GFX11-NEXT:    v_dual_mov_b32 v4, 1 :: v_dual_mov_b32 v5, 1
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 1
-; GFX11-NEXT:    v_dual_mov_b32 v5, 1 :: v_dual_mov_b32 v6, 2
-; GFX11-NEXT:    v_dual_mov_b32 v7, 2 :: v_dual_mov_b32 v8, 2
-; GFX11-NEXT:    v_dual_mov_b32 v9, 3 :: v_dual_mov_b32 v10, 3
-; GFX11-NEXT:    v_dual_mov_b32 v11, 3 :: v_dual_mov_b32 v12, 4
-; GFX11-NEXT:    v_dual_mov_b32 v13, 4 :: v_dual_mov_b32 v14, 4
-; GFX11-NEXT:    v_dual_mov_b32 v15, 5 :: v_dual_mov_b32 v16, 5
-; GFX11-NEXT:    v_dual_mov_b32 v17, 5 :: v_dual_mov_b32 v18, 6
-; GFX11-NEXT:    v_dual_mov_b32 v19, 6 :: v_dual_mov_b32 v20, 6
-; GFX11-NEXT:    v_dual_mov_b32 v21, 7 :: v_dual_mov_b32 v22, 7
-; GFX11-NEXT:    v_dual_mov_b32 v23, 7 :: v_dual_mov_b32 v24, 8
-; GFX11-NEXT:    v_dual_mov_b32 v25, 8 :: v_dual_mov_b32 v26, 8
-; GFX11-NEXT:    v_dual_mov_b32 v27, 9 :: v_dual_mov_b32 v28, 9
-; GFX11-NEXT:    v_dual_mov_b32 v29, 9 :: v_dual_mov_b32 v30, 10
-; GFX11-NEXT:    v_mov_b32_e32 v31, 11
+; GFX11-NEXT:    v_dual_mov_b32 v6, 2 :: v_dual_mov_b32 v7, 2
+; GFX11-NEXT:    v_dual_mov_b32 v8, 2 :: v_dual_mov_b32 v9, 3
+; GFX11-NEXT:    v_dual_mov_b32 v10, 3 :: v_dual_mov_b32 v11, 3
+; GFX11-NEXT:    v_dual_mov_b32 v12, 4 :: v_dual_mov_b32 v13, 4
+; GFX11-NEXT:    v_dual_mov_b32 v14, 4 :: v_dual_mov_b32 v15, 5
+; GFX11-NEXT:    v_dual_mov_b32 v16, 5 :: v_dual_mov_b32 v17, 5
+; GFX11-NEXT:    v_dual_mov_b32 v18, 6 :: v_dual_mov_b32 v19, 6
+; GFX11-NEXT:    v_dual_mov_b32 v20, 6 :: v_dual_mov_b32 v21, 7
+; GFX11-NEXT:    v_dual_mov_b32 v22, 7 :: v_dual_mov_b32 v23, 7
+; GFX11-NEXT:    v_dual_mov_b32 v24, 8 :: v_dual_mov_b32 v25, 8
+; GFX11-NEXT:    v_dual_mov_b32 v26, 8 :: v_dual_mov_b32 v27, 9
+; GFX11-NEXT:    v_dual_mov_b32 v28, 9 :: v_dual_mov_b32 v29, 9
+; GFX11-NEXT:    v_dual_mov_b32 v30, 10 :: v_dual_mov_b32 v31, 11
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_12xv3i32@rel32@lo+4

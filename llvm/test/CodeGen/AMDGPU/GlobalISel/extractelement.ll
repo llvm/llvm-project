@@ -1880,15 +1880,15 @@ define double @dyn_extract_v8f64_v_v_offset3(<8 x double> %vec, i32 %sel) {
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v16
 ; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v5 :: v_dual_cndmask_b32 v0, v0, v4
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v16
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v6 :: v_dual_cndmask_b32 v1, v1, v7
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v7 :: v_dual_cndmask_b32 v0, v0, v6
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v16
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v8 :: v_dual_cndmask_b32 v1, v1, v9
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v9 :: v_dual_cndmask_b32 v0, v0, v8
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v16
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v10 :: v_dual_cndmask_b32 v1, v1, v11
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v11 :: v_dual_cndmask_b32 v0, v0, v10
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v16
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v12 :: v_dual_cndmask_b32 v1, v1, v13
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v13 :: v_dual_cndmask_b32 v0, v0, v12
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v16
-; GFX11-NEXT:    v_dual_cndmask_b32 v0, v0, v14 :: v_dual_cndmask_b32 v1, v1, v15
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, v1, v15 :: v_dual_cndmask_b32 v0, v0, v14
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %add = add i32 %sel, 3

@@ -82,13 +82,12 @@ define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX11-LABEL: sample_d_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    v_dual_mov_b32 v9, v2 :: v_dual_mov_b32 v10, v3
-; GFX11-NEXT:    v_mov_b32_e32 v11, 0xffff
+; GFX11-NEXT:    v_dual_mov_b32 v11, 0xffff :: v_dual_lshlrev_b32 v4, 16, v4
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX11-NEXT:    s_lshl_b32 s12, s0, 16
 ; GFX11-NEXT:    v_and_or_b32 v3, v9, v11, s12
-; GFX11-NEXT:    v_and_or_b32 v2, v0, v11, v1
 ; GFX11-NEXT:    v_and_or_b32 v4, v10, v11, v4
+; GFX11-NEXT:    v_and_or_b32 v2, v0, v11, v1
 ; GFX11-NEXT:    v_and_or_b32 v5, v5, v11, s12
 ; GFX11-NEXT:    image_sample_d_g16 v[0:3], v[2:8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

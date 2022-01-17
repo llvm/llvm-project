@@ -266,11 +266,10 @@ define amdgpu_ps double @s_div_fmas_f64(double inreg %a, double inreg %b, double
 ; GFX11_W32-LABEL: s_div_fmas_f64:
 ; GFX11_W32:       ; %bb.0:
 ; GFX11_W32-NEXT:    s_cmp_eq_u32 s6, 0
-; GFX11_W32-NEXT:    v_mov_b32_e32 v2, s4
-; GFX11_W32-NEXT:    s_cselect_b32 s6, 1, 0
 ; GFX11_W32-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11_W32-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11_W32-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
 ; GFX11_W32-NEXT:    s_and_b32 s6, 1, s6
-; GFX11_W32-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX11_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s6
 ; GFX11_W32-NEXT:    v_div_fmas_f64 v[0:1], s[0:1], v[0:1], v[2:3]
 ; GFX11_W32-NEXT:    v_readfirstlane_b32 s0, v0
@@ -809,10 +808,9 @@ define amdgpu_kernel void @test_div_fmas_f64(double addrspace(1)* %out, double %
 ; GFX11_W32-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
 ; GFX11_W32-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11_W32-NEXT:    s_and_b32 s8, 1, s8
-; GFX11_W32-NEXT:    v_mov_b32_e32 v2, s6
-; GFX11_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s8
 ; GFX11_W32-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
-; GFX11_W32-NEXT:    v_mov_b32_e32 v3, s7
+; GFX11_W32-NEXT:    v_cmp_ne_u32_e64 vcc_lo, 0, s8
+; GFX11_W32-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_mov_b32 v3, s7
 ; GFX11_W32-NEXT:    v_div_fmas_f64 v[0:1], s[2:3], v[0:1], v[2:3]
 ; GFX11_W32-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11_W32-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

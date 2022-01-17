@@ -172,6 +172,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 /// Adapts design from MacroFusion
 /// Puts valid candidate instructions back-to-back so they can easily
 /// be turned into VOPD instructions
+/// Greedily pairs instruction candidates. O(n^2) algorithm.
 struct VOPDPairingMutation : ScheduleDAGMutation {
   ShouldSchedulePredTy shouldScheduleAdjacent; // NOLINT: function pointer
 
@@ -179,7 +180,6 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       ShouldSchedulePredTy shouldScheduleAdjacent) // NOLINT: function pointer
       : shouldScheduleAdjacent(shouldScheduleAdjacent) {}
 
-  // TODO-GFX11 algorithm can be improved to get better pairing
   void apply(ScheduleDAGInstrs *DAG) override {
     const TargetInstrInfo &TII = *DAG->TII;
     const GCNSubtarget &ST = DAG->MF.getSubtarget<GCNSubtarget>();
@@ -194,7 +194,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       if (!shouldScheduleAdjacent(TII, ST, nullptr, *IMI))
         continue;
       if(!hasLessThanNumFused(*ISUI, 2))
-        break;
+        continue;
 
       for (JSUI = ISUI + 1; JSUI != DAG->SUnits.end(); ++JSUI) {
         if (JSUI->isBoundaryNode())
@@ -203,7 +203,8 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
         if (!hasLessThanNumFused(*JSUI, 2) ||
             !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
           continue;
-        fuseInstructionPair(*DAG, *ISUI, *JSUI);
+        if (fuseInstructionPair(*DAG, *ISUI, *JSUI))
+          break;
       }
     }
     LLVM_DEBUG(dbgs() << "Completed VOPDPairingMutation\n");
