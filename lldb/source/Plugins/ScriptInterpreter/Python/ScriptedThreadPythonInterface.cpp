@@ -43,7 +43,7 @@ StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                  Locker::FreeLock);
 
-  void *ret_val = LLDBSwigPythonCreateScriptedThread(
+  PythonObject ret_val = LLDBSwigPythonCreateScriptedThread(
       class_name.str().c_str(), m_interpreter.GetDictionaryName(), process_sp,
       args_impl, error_string);
 
@@ -51,7 +51,7 @@ StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
     return {};
 
   m_object_instance_sp =
-      StructuredData::GenericSP(new StructuredPythonObject(ret_val));
+      StructuredData::GenericSP(new StructuredPythonObject(std::move(ret_val)));
 
   return m_object_instance_sp;
 }

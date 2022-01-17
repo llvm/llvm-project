@@ -280,7 +280,8 @@ StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
   case PyObjectType::None:
     return StructuredData::ObjectSP();
   default:
-    return StructuredData::ObjectSP(new StructuredPythonObject(m_py_obj));
+    return StructuredData::ObjectSP(new StructuredPythonObject(
+        PythonObject(PyRefType::Borrowed, m_py_obj)));
   }
 }
 

@@ -1439,10 +1439,11 @@ ScriptInterpreterPythonImpl::CreateFrameRecognizer(const char *class_name) {
     return StructuredData::GenericSP();
 
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-  void *ret_val = LLDBSWIGPython_CreateFrameRecognizer(
+  PythonObject ret_val = LLDBSWIGPython_CreateFrameRecognizer(
       class_name, m_dictionary_name.c_str());
 
-  return StructuredData::GenericSP(new StructuredPythonObject(ret_val));
+  return StructuredData::GenericSP(
+      new StructuredPythonObject(std::move(ret_val)));
 }
 
 lldb::ValueObjectListSP ScriptInterpreterPythonImpl::GetRecognizedArguments(
@@ -1498,10 +1499,11 @@ ScriptInterpreterPythonImpl::OSPlugin_CreatePluginObject(
     return StructuredData::GenericSP();
 
   Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
-  void *ret_val = LLDBSWIGPythonCreateOSPlugin(
+  PythonObject ret_val = LLDBSWIGPythonCreateOSPlugin(
       class_name, m_dictionary_name.c_str(), process_sp);
 
-  return StructuredData::GenericSP(new StructuredPythonObject(ret_val));
+  return StructuredData::GenericSP(
+      new StructuredPythonObject(std::move(ret_val)));
 }
 
 StructuredData::DictionarySP ScriptInterpreterPythonImpl::OSPlugin_RegisterInfo(
@@ -1749,13 +1751,14 @@ StructuredData::ObjectSP ScriptInterpreterPythonImpl::CreateScriptedThreadPlan(
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  void *ret_val = LLDBSwigPythonCreateScriptedThreadPlan(
+  PythonObject ret_val = LLDBSwigPythonCreateScriptedThreadPlan(
       class_name, python_interpreter->m_dictionary_name.c_str(), args_data,
       error_str, thread_plan_sp);
   if (!ret_val)
     return {};
 
-  return StructuredData::ObjectSP(new StructuredPythonObject(ret_val));
+  return StructuredData::ObjectSP(
+      new StructuredPythonObject(std::move(ret_val)));
 }
 
 bool ScriptInterpreterPythonImpl::ScriptedThreadPlanExplainsStop(
@@ -1849,11 +1852,12 @@ ScriptInterpreterPythonImpl::CreateScriptedBreakpointResolver(
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
 
-  void *ret_val = LLDBSwigPythonCreateScriptedBreakpointResolver(
+  PythonObject ret_val = LLDBSwigPythonCreateScriptedBreakpointResolver(
       class_name, python_interpreter->m_dictionary_name.c_str(), args_data,
       bkpt_sp);
 
-  return StructuredData::GenericSP(new StructuredPythonObject(ret_val));
+  return StructuredData::GenericSP(
+      new StructuredPythonObject(std::move(ret_val)));
 }
 
 bool ScriptInterpreterPythonImpl::ScriptedBreakpointResolverSearchCallback(
@@ -1920,11 +1924,12 @@ StructuredData::GenericSP ScriptInterpreterPythonImpl::CreateScriptedStopHook(
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
 
-  void *ret_val = LLDBSwigPythonCreateScriptedStopHook(
+  PythonObject ret_val = LLDBSwigPythonCreateScriptedStopHook(
       target_sp, class_name, python_interpreter->m_dictionary_name.c_str(),
       args_data, error);
 
-  return StructuredData::GenericSP(new StructuredPythonObject(ret_val));
+  return StructuredData::GenericSP(
+      new StructuredPythonObject(std::move(ret_val)));
 }
 
 bool ScriptInterpreterPythonImpl::ScriptedStopHookHandleStop(
@@ -2015,10 +2020,11 @@ ScriptInterpreterPythonImpl::CreateSyntheticScriptedProvider(
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  void *ret_val = LLDBSwigPythonCreateSyntheticProvider(
+  PythonObject ret_val = LLDBSwigPythonCreateSyntheticProvider(
       class_name, python_interpreter->m_dictionary_name.c_str(), valobj);
 
-  return StructuredData::ObjectSP(new StructuredPythonObject(ret_val));
+  return StructuredData::ObjectSP(
+      new StructuredPythonObject(std::move(ret_val)));
 }
 
 StructuredData::GenericSP
@@ -2033,10 +2039,11 @@ ScriptInterpreterPythonImpl::CreateScriptCommandObject(const char *class_name) {
 
   Locker py_lock(this,
                  Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-  void *ret_val = LLDBSwigPythonCreateCommandObject(
+  PythonObject ret_val = LLDBSwigPythonCreateCommandObject(
       class_name, m_dictionary_name.c_str(), debugger_sp);
 
-  return StructuredData::GenericSP(new StructuredPythonObject(ret_val));
+  return StructuredData::GenericSP(
+      new StructuredPythonObject(std::move(ret_val)));
 }
 
 bool ScriptInterpreterPythonImpl::GenerateTypeScriptFunction(
@@ -2149,7 +2156,8 @@ bool ScriptInterpreterPythonImpl::GetScriptedSummary(
   if (new_callee && old_callee != new_callee) {
     Locker py_lock(this,
                    Locker::AcquireLock | Locker::InitSession | Locker::NoSTDIN);
-    callee_wrapper_sp = std::make_shared<StructuredPythonObject>(new_callee);
+    callee_wrapper_sp = std::make_shared<StructuredPythonObject>(
+        PythonObject(PyRefType::Borrowed, static_cast<PyObject *>(new_callee)));
   }
 
   return ret_val;
@@ -2802,7 +2810,8 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
             ScriptInterpreter::eScriptReturnTypeOpaqueObject, &module_pyobj,
             exc_options) &&
         module_pyobj)
-      *module_sp = std::make_shared<StructuredPythonObject>(module_pyobj);
+      *module_sp = std::make_shared<StructuredPythonObject>(PythonObject(
+          PyRefType::Owned, static_cast<PyObject *>(module_pyobj)));
   }
 
   return true;
