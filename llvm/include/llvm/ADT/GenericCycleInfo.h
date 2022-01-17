@@ -41,8 +41,8 @@
 
 namespace llvm {
 
-template <typename ContexT> class GenericCycleInfo;
-template <typename ContexT> class GenericCycleInfoCompute;
+template <typename ContextT> class GenericCycleInfo;
+template <typename ContextT> class GenericCycleInfoCompute;
 
 /// A possibly irreducible generalization of a \ref Loop.
 template <typename ContextT> class GenericCycle {
