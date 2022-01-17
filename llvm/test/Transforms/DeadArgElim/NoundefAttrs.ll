@@ -1,4 +1,4 @@
-; RUN: opt -deadargelim -S < %s | FileCheck %s
+; RUN: opt -passes=deadargelim -S < %s | FileCheck %s
 
 ; If caller is changed to pass in undef, noundef, dereferenceable and other
 ; attributes that imply immediate undefined behavior should be delete.
