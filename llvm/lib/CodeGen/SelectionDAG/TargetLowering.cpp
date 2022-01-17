@@ -1806,6 +1806,35 @@ bool TargetLowering::SimplifyDemandedBits(
   }
   case ISD::BSWAP: {
     SDValue Src = Op.getOperand(0);
+
+    // If the only bits demanded come from one byte of the bswap result,
+    // just shift the input byte into position to eliminate the bswap.
+    unsigned NLZ = DemandedBits.countLeadingZeros();
+    unsigned NTZ = DemandedBits.countTrailingZeros();
+
+    // Round NTZ down to the next byte.  If we have 11 trailing zeros, then
+    // we need all the bits down to bit 8.  Likewise, round NLZ.  If we
+    // have 14 leading zeros, round to 8.
+    NLZ &= ~7;
+    NTZ &= ~7;
+    // If we need exactly one byte, we can do this transformation.
+    if (BitWidth - NLZ - NTZ == 8) {
+      unsigned ResultBit = NTZ;
+      unsigned InputBit = BitWidth - NTZ - 8;
+
+      // Replace this with either a left or right shift to get the byte into
+      // the right place.
+      unsigned ShiftOpcode = InputBit > ResultBit ? ISD::SRL : ISD::SHL;
+      if (!TLO.LegalOperations() || isOperationLegal(ShiftOpcode, VT)) {
+        EVT ShiftAmtTy = getShiftAmountTy(VT, DL);
+        unsigned ShiftAmount =
+            InputBit > ResultBit ? InputBit - ResultBit : ResultBit - InputBit;
+        SDValue ShAmt = TLO.DAG.getConstant(ShiftAmount, dl, ShiftAmtTy);
+        SDValue NewOp = TLO.DAG.getNode(ShiftOpcode, dl, VT, Src, ShAmt);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
+
     APInt DemandedSrcBits = DemandedBits.byteSwap();
     if (SimplifyDemandedBits(Src, DemandedSrcBits, DemandedElts, Known2, TLO,
                              Depth + 1))

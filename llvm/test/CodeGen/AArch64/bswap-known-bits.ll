@@ -66,7 +66,7 @@ define i8 @demand_one_byte0(i32 %x) {
 define i32 @demand_one_byte1(i32 %x) {
 ; CHECK-LABEL: demand_one_byte1:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    rev w8, w0
+; CHECK-NEXT:    lsr w8, w0, #8
 ; CHECK-NEXT:    and w0, w8, #0xff00
 ; CHECK-NEXT:    ret
   %b = call i32 @llvm.bswap.i32(i32 %x)
@@ -77,7 +77,7 @@ define i32 @demand_one_byte1(i32 %x) {
 define i32 @demand_one_byte2(i32 %x) {
 ; CHECK-LABEL: demand_one_byte2:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    rev w8, w0
+; CHECK-NEXT:    lsl w8, w0, #8
 ; CHECK-NEXT:    orr w0, w8, #0xff00ffff
 ; CHECK-NEXT:    ret
   %b = call i32 @llvm.bswap.i32(i32 %x)
@@ -88,8 +88,7 @@ define i32 @demand_one_byte2(i32 %x) {
 define i64 @demand_one_byte3(i64 %x) {
 ; CHECK-LABEL: demand_one_byte3:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    rev x8, x0
-; CHECK-NEXT:    lsr x0, x8, #56
+; CHECK-NEXT:    and x0, x0, #0xff
 ; CHECK-NEXT:    ret
   %b = call i64 @llvm.bswap.i64(i64 %x)
   %r = lshr i64 %b, 56
@@ -99,9 +98,7 @@ define i64 @demand_one_byte3(i64 %x) {
 define void @demand_one_loaded_byte(i64* %xp, i32* %yp) {
 ; CHECK-LABEL: demand_one_loaded_byte:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    lsr x8, x8, #8
-; CHECK-NEXT:    rev w8, w8
+; CHECK-NEXT:    ldrb w8, [x0, #4]
 ; CHECK-NEXT:    strb w8, [x1]
 ; CHECK-NEXT:    ret
   %x = load i64, i64* %xp, align 8
