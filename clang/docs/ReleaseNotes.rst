@@ -300,6 +300,10 @@ clang-format
 - Option ``AllowShortEnumsOnASingleLine: false`` has been improved, it now
   correctly places the opening brace according to ``BraceWrapping.AfterEnum``.
 
+- Option ``AlignAfterOpenBracket: BlockIndent`` has been added. If set, it will
+  always break after an open bracket, if the parameters don't fit on a single
+  line. Closing brackets will be placed on a new line.
+
 - Option ``QualifierAlignment`` has been added in order to auto-arrange the
   positioning of specifiers/qualifiers
   `const` `volatile` `static` `inline` `constexpr` `restrict`
