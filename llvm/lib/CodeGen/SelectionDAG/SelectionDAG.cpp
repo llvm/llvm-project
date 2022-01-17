@@ -373,31 +373,46 @@ ISD::NodeType ISD::getVecReduceBaseOpcode(unsigned VecReduceOpcode) {
     llvm_unreachable("Expected VECREDUCE opcode");
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_SEQ_FADD:
+  case ISD::VP_REDUCE_FADD:
+  case ISD::VP_REDUCE_SEQ_FADD:
     return ISD::FADD;
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_SEQ_FMUL:
+  case ISD::VP_REDUCE_FMUL:
+  case ISD::VP_REDUCE_SEQ_FMUL:
     return ISD::FMUL;
   case ISD::VECREDUCE_ADD:
+  case ISD::VP_REDUCE_ADD:
     return ISD::ADD;
   case ISD::VECREDUCE_MUL:
+  case ISD::VP_REDUCE_MUL:
     return ISD::MUL;
   case ISD::VECREDUCE_AND:
+  case ISD::VP_REDUCE_AND:
     return ISD::AND;
   case ISD::VECREDUCE_OR:
+  case ISD::VP_REDUCE_OR:
     return ISD::OR;
   case ISD::VECREDUCE_XOR:
+  case ISD::VP_REDUCE_XOR:
     return ISD::XOR;
   case ISD::VECREDUCE_SMAX:
+  case ISD::VP_REDUCE_SMAX:
     return ISD::SMAX;
   case ISD::VECREDUCE_SMIN:
+  case ISD::VP_REDUCE_SMIN:
     return ISD::SMIN;
   case ISD::VECREDUCE_UMAX:
+  case ISD::VP_REDUCE_UMAX:
     return ISD::UMAX;
   case ISD::VECREDUCE_UMIN:
+  case ISD::VP_REDUCE_UMIN:
     return ISD::UMIN;
   case ISD::VECREDUCE_FMAX:
+  case ISD::VP_REDUCE_FMAX:
     return ISD::FMAXNUM;
   case ISD::VECREDUCE_FMIN:
+  case ISD::VP_REDUCE_FMIN:
     return ISD::FMINNUM;
   }
 }
