@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LLVMContext.h"
@@ -310,6 +311,56 @@ TEST(ValueMapperTest, mapValueLocalAsMetadata) {
   EXPECT_FALSE(VM.count(MAV));
   EXPECT_FALSE(VM.count(&A));
   EXPECT_EQ(None, VM.getMappedMD(LAM));
+
+  VM[MAV] = MAV;
+  EXPECT_EQ(MAV, ValueMapper(VM).mapValue(*MAV));
+  EXPECT_EQ(MAV, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_TRUE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+
+  VM[MAV] = &A;
+  EXPECT_EQ(&A, ValueMapper(VM).mapValue(*MAV));
+  EXPECT_EQ(&A, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_TRUE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+}
+
+TEST(ValueMapperTest, mapValueLocalInArgList) {
+  LLVMContext C;
+  FunctionType *FTy =
+      FunctionType::get(Type::getVoidTy(C), Type::getInt8Ty(C), false);
+  std::unique_ptr<Function> F(
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "F"));
+  Argument &A = *F->arg_begin();
+
+  auto *LAM = LocalAsMetadata::get(&A);
+  std::vector<ValueAsMetadata*> Elts;
+  Elts.push_back(LAM);
+  auto *ArgList = DIArgList::get(C, Elts);
+  auto *MAV = MetadataAsValue::get(C, ArgList);
+
+  // The principled answer to a LocalAsMetadata of an unmapped SSA value would
+  // be to return nullptr (regardless of RF_IgnoreMissingLocals).
+  //
+  // However, algorithms that use RemapInstruction assume that each instruction
+  // only references SSA values from previous instructions.  Arguments of
+  // such as "metadata i32 %x" don't currently successfully maintain that
+  // property.  To keep RemapInstruction from crashing we need a non-null
+  // return here, but we also shouldn't reference the unmapped local.  Use
+  // undef for uses in a DIArgList.
+  auto *N0 = UndefValue::get(Type::getInt8Ty(C));
+  auto *N0AM = ValueAsMetadata::get(N0);
+  std::vector<ValueAsMetadata*> N0Elts;
+  N0Elts.push_back(N0AM);
+  auto *N0ArgList = DIArgList::get(C, N0Elts);
+  auto *N0AV = MetadataAsValue::get(C, N0ArgList);
+  ValueToValueMapTy VM;
+  EXPECT_EQ(N0AV, ValueMapper(VM).mapValue(*MAV));
+  EXPECT_EQ(MAV, ValueMapper(VM, RF_IgnoreMissingLocals).mapValue(*MAV));
+  EXPECT_FALSE(VM.count(MAV));
+  EXPECT_FALSE(VM.count(&A));
+  EXPECT_EQ(None, VM.getMappedMD(LAM));
+  EXPECT_EQ(None, VM.getMappedMD(ArgList));
 
   VM[MAV] = MAV;
   EXPECT_EQ(MAV, ValueMapper(VM).mapValue(*MAV));
