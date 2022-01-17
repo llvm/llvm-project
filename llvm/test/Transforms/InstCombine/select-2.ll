@@ -45,7 +45,7 @@ define float @t3(float %x, float %y) {
 
 define i8 @ashr_exact_poison_constant_fold(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ashr_exact_poison_constant_fold(
-; CHECK-NEXT:    [[X_OP:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[X_OP:%.*]] = ashr exact i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i8 [[X_OP]], i8 5
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -56,7 +56,7 @@ define i8 @ashr_exact_poison_constant_fold(i1 %b, i8 %x) {
 
 define i8 @ashr_exact(i1 %b, i8 %x) {
 ; CHECK-LABEL: @ashr_exact(
-; CHECK-NEXT:    [[X_OP:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[X_OP:%.*]] = ashr exact i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i8 [[X_OP]], i8 2
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -67,7 +67,7 @@ define i8 @ashr_exact(i1 %b, i8 %x) {
 
 define i8 @shl_nsw_nuw_poison_constant_fold(i1 %b, i8 %x) {
 ; CHECK-LABEL: @shl_nsw_nuw_poison_constant_fold(
-; CHECK-NEXT:    [[X_OP:%.*]] = shl i8 16, [[X:%.*]]
+; CHECK-NEXT:    [[X_OP:%.*]] = shl nuw nsw i8 16, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i8 -128, i8 [[X_OP]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -78,7 +78,7 @@ define i8 @shl_nsw_nuw_poison_constant_fold(i1 %b, i8 %x) {
 
 define i8 @shl_nsw_nuw(i1 %b, i8 %x) {
 ; CHECK-LABEL: @shl_nsw_nuw(
-; CHECK-NEXT:    [[X_OP:%.*]] = shl i8 7, [[X:%.*]]
+; CHECK-NEXT:    [[X_OP:%.*]] = shl nuw nsw i8 7, [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i8 56, i8 [[X_OP]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -89,7 +89,7 @@ define i8 @shl_nsw_nuw(i1 %b, i8 %x) {
 
 define i8 @add_nsw_poison_constant_fold(i1 %b, i8 %x) {
 ; CHECK-LABEL: @add_nsw_poison_constant_fold(
-; CHECK-NEXT:    [[X_OP:%.*]] = add i8 [[X:%.*]], 64
+; CHECK-NEXT:    [[X_OP:%.*]] = add nsw i8 [[X:%.*]], 64
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i8 [[X_OP]], i8 -127
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -100,7 +100,7 @@ define i8 @add_nsw_poison_constant_fold(i1 %b, i8 %x) {
 
 define i8 @add_nsw(i1 %b, i8 %x) {
 ; CHECK-LABEL: @add_nsw(
-; CHECK-NEXT:    [[X_OP:%.*]] = add i8 [[X:%.*]], 64
+; CHECK-NEXT:    [[X_OP:%.*]] = add nsw i8 [[X:%.*]], 64
 ; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], i8 [[X_OP]], i8 71
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
