@@ -18,13 +18,14 @@ namespace misc {
 
 void UnconventionalAssignOperatorCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  const auto HasGoodReturnType = cxxMethodDecl(returns(lValueReferenceType(
-      pointee(unless(isConstQualified()),
-              anyOf(autoType(), hasDeclaration(equalsBoundNode("class")))))));
+  const auto HasGoodReturnType =
+      cxxMethodDecl(returns(hasCanonicalType(lValueReferenceType(pointee(
+          unless(isConstQualified()),
+          anyOf(autoType(), hasDeclaration(equalsBoundNode("class"))))))));
 
-  const auto IsSelf = qualType(
+  const auto IsSelf = qualType(hasCanonicalType(
       anyOf(hasDeclaration(equalsBoundNode("class")),
-            referenceType(pointee(hasDeclaration(equalsBoundNode("class"))))));
+            referenceType(pointee(hasDeclaration(equalsBoundNode("class")))))));
   const auto IsAssign =
       cxxMethodDecl(unless(anyOf(isDeleted(), isPrivate(), isImplicit())),
                     hasName("operator="), ofClass(recordDecl().bind("class")))
@@ -37,9 +38,9 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
       cxxMethodDecl(IsAssign, unless(HasGoodReturnType)).bind("ReturnType"),
       this);
 
-  const auto BadSelf = referenceType(
+  const auto BadSelf = qualType(hasCanonicalType(referenceType(
       anyOf(lValueReferenceType(pointee(unless(isConstQualified()))),
-            rValueReferenceType(pointee(isConstQualified()))));
+            rValueReferenceType(pointee(isConstQualified()))))));
 
   Finder->addMatcher(
       cxxMethodDecl(IsSelfAssign,
