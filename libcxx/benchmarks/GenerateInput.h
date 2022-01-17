@@ -36,10 +36,9 @@ inline char getRandomChar() {
 }
 
 template <class IntT>
-inline IntT getRandomInteger(IntT Min = 0,
-                             IntT Max = std::numeric_limits<IntT>::max()) {
-    std::uniform_int_distribution<IntT> dist(Min, Max);
-    return dist(getRandomEngine());
+inline IntT getRandomInteger(IntT Min, IntT Max) {
+    std::uniform_int_distribution<unsigned long long> dist(Min, Max);
+    return static_cast<IntT>(dist(getRandomEngine()));
 }
 
 inline std::string getRandomString(std::size_t Len) {
@@ -102,7 +101,7 @@ template <class IntT>
 std::vector<IntT> getRandomIntegerInputs(size_t N) {
     std::vector<IntT> inputs;
     for (size_t i=0; i < N; ++i) {
-        inputs.push_back(getRandomInteger<IntT>());
+        inputs.push_back(getRandomInteger<IntT>(0, std::numeric_limits<IntT>::max()));
     }
     return inputs;
 }
