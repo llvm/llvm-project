@@ -605,12 +605,12 @@ static bool canSuggestExternCForCXX(StringRef ref, StringRef def) {
 // Suggest an alternative spelling of an "undefined symbol" diagnostic. Returns
 // the suggested symbol, which is either in the symbol table, or in the same
 // file of sym.
-template <class ELFT>
 static const Symbol *getAlternativeSpelling(const Undefined &sym,
                                             std::string &pre_hint,
                                             std::string &post_hint) {
   DenseMap<StringRef, const Symbol *> map;
-  if (auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file)) {
+  if (sym.file && sym.file->kind() == InputFile::ObjKind) {
+    auto *file = cast<ELFFileBase>(sym.file);
     // If sym is a symbol defined in a discarded section, maybeReportDiscarded()
     // will give an error. Don't suggest an alternative spelling.
     if (file && sym.discardedSecIdx != 0 &&
@@ -763,8 +763,8 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
 
   if (correctSpelling) {
     std::string pre_hint = ": ", post_hint;
-    if (const Symbol *corrected = getAlternativeSpelling<ELFT>(
-            cast<Undefined>(sym), pre_hint, post_hint)) {
+    if (const Symbol *corrected =
+            getAlternativeSpelling(cast<Undefined>(sym), pre_hint, post_hint)) {
       msg += "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
       if (corrected->file)
         msg += "\n>>> defined in: " + toString(corrected->file);
