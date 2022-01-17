@@ -49,6 +49,11 @@ using LinalgLoops = SmallVector<Operation *, 4>;
 void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
                                      const LinalgTilingOptions &options);
 
+/// [DEPRECATED] Populate patterns for vectorization of all ConvN-D ops.
+void populateConvVectorizationPatterns(
+    MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,
+    ArrayRef<int64_t> tileSizes);
+
 /// Populate patterns for vectorizing low-D convolution ops. This is a step in
 /// progressive lowering for convolution ops, it assume high-D convolution ops
 /// were decomposed previously.
