@@ -81,6 +81,115 @@ static MachineMemOperand *getMachineMemOperand(MachineBasicBlock &MBB, int FI,
                                  MFI.getObjectAlign(FI));
 }
 
+unsigned M88kInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                            int &FrameIndex) const {
+  switch (MI.getOpcode()) {
+  // TODO Check which LD instructions are really selected.
+  case M88k::LDrib:
+  case M88k::LDrih:
+  case M88k::LDriw:
+  case M88k::LDrid:
+  case M88k::LDrrsb:
+  case M88k::LDrrsbu:
+  case M88k::LDrrsd:
+  case M88k::LDrrsdu:
+  case M88k::LDrrsh:
+  case M88k::LDrrshu:
+  case M88k::LDrrsw:
+  case M88k::LDrrswu:
+  case M88k::LDrrub:
+  case M88k::LDrrubu:
+  case M88k::LDrrud:
+  case M88k::LDrrudu:
+  case M88k::LDrruh:
+  case M88k::LDrruhu:
+  case M88k::LDrruw:
+  case M88k::LDrruwu:
+    if (MI.getOperand(1).isFI()) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
+    }
+    break;
+  }
+  return 0;
+}
+
+unsigned M88kInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                           int &FrameIndex) const {
+  switch (MI.getOpcode()) {
+  // TODO Check which ST instructions are really selected.
+  case M88k::STrib:
+  case M88k::STrih:
+  case M88k::STriw:
+  case M88k::STrid:
+  case M88k::STrrsb:
+  case M88k::STrrsbt:
+  case M88k::STrrsbu:
+  case M88k::STrrsbut:
+  case M88k::STrrsd:
+  case M88k::STrrsdt:
+  case M88k::STrrsdu:
+  case M88k::STrrsdut:
+  case M88k::STrrsh:
+  case M88k::STrrsht:
+  case M88k::STrrshu:
+  case M88k::STrrshut:
+  case M88k::STrrsw:
+  case M88k::STrrswt:
+  case M88k::STrrswu:
+  case M88k::STrrswut:
+  case M88k::STrrub:
+  case M88k::STrrubt:
+  case M88k::STrrubu:
+  case M88k::STrrubut:
+  case M88k::STrrud:
+  case M88k::STrrudt:
+  case M88k::STrrudu:
+  case M88k::STrrudut:
+  case M88k::STrruh:
+  case M88k::STrruht:
+  case M88k::STrruhu:
+  case M88k::STrruhut:
+  case M88k::STrruw:
+  case M88k::STrruwt:
+  case M88k::STrruwu:
+  case M88k::STrruwut:
+  case M88k::STxid:
+  case M88k::STxis:
+  case M88k::STxix:
+  case M88k::STxrd:
+  case M88k::STxrdt:
+  case M88k::STxrdu:
+  case M88k::STxrdut:
+  case M88k::STxrss:
+  case M88k::STxrsst:
+  case M88k::STxrssu:
+  case M88k::STxrssut:
+  case M88k::STxrsx:
+  case M88k::STxrsxt:
+  case M88k::STxrsxu:
+  case M88k::STxrsxut:
+  case M88k::STxrud:
+  case M88k::STxrudt:
+  case M88k::STxrudu:
+  case M88k::STxrudut:
+  case M88k::STxrus:
+  case M88k::STxrust:
+  case M88k::STxrusu:
+  case M88k::STxrusut:
+  case M88k::STxrux:
+  case M88k::STxruxt:
+  case M88k::STxruxu:
+  case M88k::STxruxut:
+    if (MI.getOperand(1).isFI()) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
+    }
+    break;
+  }
+  return 0;
+}
+
 void M88kInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         Register SrcReg, bool isKill,
@@ -116,21 +225,30 @@ void M88kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       .addMemOperand(MMO);
 }
 
+unsigned M88kInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  if (MI.isInlineAsm()) {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const char *AsmStr = MI.getOperand(0).getSymbolName();
+    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+  }
+  return MI.getDesc().getSize();
+}
+
 void M88kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                                MachineBasicBlock::iterator MBBI,
+                                const DebugLoc &DL, MCRegister DestReg,
+                                MCRegister SrcReg, bool KillSrc) const {
   // Split 64-bit GPR moves into two 64-bit moves. Add implicit uses of the
   // super register in case one of the subregs is undefined.
   if (M88k::GPR64RCRegClass.contains(DestReg, SrcReg)) {
     copyPhysReg(MBB, MBBI, DL, RI.getSubReg(DestReg, M88k::sub_hi),
                 RI.getSubReg(SrcReg, M88k::sub_hi), KillSrc);
     MachineInstrBuilder(*MBB.getParent(), std::prev(MBBI))
-      .addReg(SrcReg, RegState::Implicit);
+        .addReg(SrcReg, RegState::Implicit);
     copyPhysReg(MBB, MBBI, DL, RI.getSubReg(DestReg, M88k::sub_lo),
                 RI.getSubReg(SrcReg, M88k::sub_lo), KillSrc);
     MachineInstrBuilder(*MBB.getParent(), std::prev(MBBI))
-      .addReg(SrcReg, (getKillRegState(KillSrc) | RegState::Implicit));
+        .addReg(SrcReg, (getKillRegState(KillSrc) | RegState::Implicit));
     return;
   }
 
