@@ -211,15 +211,6 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
                                      const Instruction *CxtI = nullptr,
                                      const DominatorTree *DT = nullptr);
 
-  /// This function computes the integer multiple of Base that equals V. If
-  /// successful, it returns true and returns the multiple in Multiple. If
-  /// unsuccessful, it returns false. Also, if V can be simplified to an
-  /// integer, then the simplified V is returned in Val. Look through sext only
-  /// if LookThroughSExt=true.
-  bool ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
-                       bool LookThroughSExt = false,
-                       unsigned Depth = 0);
-
   /// Map a call instruction to an intrinsic ID.  Libcalls which have equivalent
   /// intrinsics are treated as-if they were intrinsics.
   Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
