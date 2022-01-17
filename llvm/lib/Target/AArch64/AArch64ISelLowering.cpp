@@ -7257,6 +7257,9 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
     return getSVESafeBitCast(VT, IntResult, DAG);
   }
 
+  if (!Subtarget->hasNEON())
+    return SDValue();
+
   if (SrcVT.bitsLT(VT))
     In2 = DAG.getNode(ISD::FP_EXTEND, DL, VT, In2);
   else if (SrcVT.bitsGT(VT))
