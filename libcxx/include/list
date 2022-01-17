@@ -319,9 +319,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __list_iterator() _NOEXCEPT : __ptr_(nullptr)
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__insert_i(this);
-#endif
+        _VSTD::__debug_db_insert_i(this);
     }
 
 #if _LIBCPP_DEBUG_LEVEL == 2
@@ -431,9 +429,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __list_const_iterator() _NOEXCEPT : __ptr_(nullptr)
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-        __get_db()->__insert_i(this);
-#endif
+        _VSTD::__debug_db_insert_i(this);
     }
     _LIBCPP_INLINE_VISIBILITY
     __list_const_iterator(const __list_iterator<_Tp, _VoidPtr>& __p) _NOEXCEPT
