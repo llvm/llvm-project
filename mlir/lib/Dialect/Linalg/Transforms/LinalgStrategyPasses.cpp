@@ -100,6 +100,8 @@ struct LinalgStrategyTilePass
                                              filter);
     else
       tilingPattern.add<LinalgTilingPattern>(ctx, options, filter);
+    if (anchorOpName == linalg::PadTensorOp::getOperationName())
+      populatePadTensorTilingPatterns(tilingPattern, options);
     (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
   }
 

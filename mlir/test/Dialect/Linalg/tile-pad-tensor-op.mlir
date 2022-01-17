@@ -2,6 +2,8 @@
 // RUN: FileCheck %s -check-prefix=TILE2
 // RUN: mlir-opt %s -linalg-tile="tile-sizes=0,3" -resolve-shaped-type-result-dims -cse -split-input-file | \
 // RUN: FileCheck %s -check-prefix=TILE1
+// This test only checks that tiling does not crash.
+// RUN: mlir-opt %s -linalg-tile="tile-sizes=2" -resolve-shaped-type-result-dims -cse -split-input-file
 
 //  TILE2-DAG:  #[[MAP0:.*]] = affine_map<()[s0] -> (s0 + 8)>
 //  TILE2-DAG:  #[[MAP1:.*]] = affine_map<()[s0] -> (s0 + 7)>
