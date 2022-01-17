@@ -1310,10 +1310,10 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
   if (sym.isUndefined() && symIndex != 0 &&
-      maybeReportUndefined(cast<Undefined>(sym), sec, rel.r_offset))
+      maybeReportUndefined(cast<Undefined>(sym), sec, offset))
     return;
 
-  const uint8_t *relocatedAddr = sec.data().begin() + rel.r_offset;
+  const uint8_t *relocatedAddr = sec.data().begin() + offset;
   RelExpr expr = target.getRelExpr(type, sym, relocatedAddr);
 
   // Ignore R_*_NONE and other marker relocations.
