@@ -41,6 +41,7 @@ static_library("gdb-remote") {
     "GDBRemoteCommunicationServerLLGS.cpp",
     "GDBRemoteCommunicationServerPlatform.cpp",
     "GDBRemoteRegisterContext.cpp",
+    "GDBRemoteRegisterFallback.cpp",
     "ProcessGDBRemote.cpp",
     "ProcessGDBRemoteLog.cpp",
     "ThreadGDBRemote.cpp",
