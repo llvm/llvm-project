@@ -111,7 +111,7 @@ ABI Changes
   errors involving ``std::nullptr_t`` against previously compiled binaries, this may
   be the cause. You can define the ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` macro
   to return to the previous behavior. That macro will be removed in LLVM 15. Please
-  comment `here <https://reviews.llvm.org/D109459>`_ if you are broken by this change
+  comment `on D109459 <https://reviews.llvm.org/D109459>`_ if you are broken by this change
   and need to define the macro.
 
 - On Apple platforms, ``std::random_device`` is now implemented on top of ``arc4random()``
@@ -125,7 +125,7 @@ ABI Changes
   as required by the Standard. This changes ``sizeof(std::lognormal_distribution::param_type)``.
   You can define the ``_LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION`` macro to return to the
   previous behavior. That macro will be removed in LLVM 15. Please comment
-  `here <https://llvm.org/PR52906>`_ if you are broken by this change and need to
+  `on PR52906 <https://llvm.org/PR52906>`_ if you are broken by this change and need to
   define the macro.
 
 Build System Changes
