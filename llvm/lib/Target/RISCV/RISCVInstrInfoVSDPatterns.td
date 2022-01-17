@@ -413,6 +413,41 @@ multiclass VPatWidenMulAddSDNode_VX<PatFrags extop1, PatFrags extop2, string ins
   }
 }
 
+multiclass VPatWidenBinaryFPSDNode_VV_VF<SDNode op, string instruction_name> {
+  foreach vti = AllWidenableFloatVectors in {
+    def : Pat<(op (vti.Wti.Vector (fpext_oneuse (vti.Vti.Vector vti.Vti.RegClass:$rs2))),
+                  (vti.Wti.Vector (fpext_oneuse (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
+              (!cast<Instruction>(instruction_name#"_VV_"#vti.Vti.LMul.MX)
+                 vti.Vti.RegClass:$rs2, vti.Vti.RegClass:$rs1, 
+                 vti.Vti.AVL, vti.Vti.Log2SEW)>;
+    def : Pat<(op (vti.Wti.Vector (fpext_oneuse (vti.Vti.Vector vti.Vti.RegClass:$rs2))),
+                  (vti.Wti.Vector (fpext_oneuse (vti.Vti.Vector (SplatPat vti.Vti.ScalarRegClass:$rs1))))),
+              (!cast<Instruction>(instruction_name#"_V"#vti.Vti.ScalarSuffix#"_"#vti.Vti.LMul.MX)
+                 vti.Vti.RegClass:$rs2, vti.Vti.ScalarRegClass:$rs1, 
+                 vti.Vti.AVL, vti.Vti.Log2SEW)>;
+  }
+}
+
+multiclass VPatWidenBinaryFPSDNode_WV_WF<SDNode op, string instruction_name> {
+  foreach vti = AllWidenableFloatVectors in {
+    def : Pat<(op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
+                  (vti.Wti.Vector (fpext_oneuse (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
+              (!cast<Instruction>(instruction_name#"_WV_"#vti.Vti.LMul.MX)
+                 vti.Wti.RegClass:$rs2, vti.Vti.RegClass:$rs1, 
+                 vti.Vti.AVL, vti.Vti.Log2SEW)>;
+    def : Pat<(op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
+                  (vti.Wti.Vector (fpext_oneuse (vti.Vti.Vector (SplatPat vti.Vti.ScalarRegClass:$rs1))))),
+              (!cast<Instruction>(instruction_name#"_W"#vti.Vti.ScalarSuffix#"_"#vti.Vti.LMul.MX)
+                 vti.Wti.RegClass:$rs2, vti.Vti.ScalarRegClass:$rs1, 
+                 vti.Vti.AVL, vti.Vti.Log2SEW)>;
+  }
+}
+
+multiclass VPatWidenBinaryFPSDNode_VV_VF_WV_WF<SDNode op, string instruction_name> {
+  defm : VPatWidenBinaryFPSDNode_VV_VF<op, instruction_name>;
+  defm : VPatWidenBinaryFPSDNode_WV_WF<op, instruction_name>;
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -649,6 +684,10 @@ let Predicates = [HasVInstructionsAnyF] in {
 defm : VPatBinaryFPSDNode_VV_VF<fadd, "PseudoVFADD">;
 defm : VPatBinaryFPSDNode_VV_VF<fsub, "PseudoVFSUB">;
 defm : VPatBinaryFPSDNode_R_VF<fsub, "PseudoVFRSUB">;
+
+// 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fadd, "PseudoVFWADD">;
+defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fsub, "PseudoVFWSUB">;
 
 // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm : VPatBinaryFPSDNode_VV_VF<fmul, "PseudoVFMUL">;
