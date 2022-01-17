@@ -87,6 +87,52 @@ Symbols:
         SectionOrLength:        256
         StabInfoIndex:          2
         StabSectNum:            3
+## The C_WEAKEXT symbol with a Function auxiliary entry and a CSECT auxiliary entry.
+  - Name:               .fun3
+    Value:              0x0
+    Section:            N_DEBUG
+    Type:               0x20
+    StorageClass:       C_WEAKEXT
+    NumberOfAuxEntries: 2
+    AuxEntries:
+      - Type:                 AUX_FCN
+        OffsetToExceptionTbl: 2
+        SizeOfFunction:       3
+        SymIdxOfNextBeyond:   4
+        PtrToLineNum:         5
+      - Type:                   AUX_CSECT
+        ParameterHashIndex:     11
+        TypeChkSectNum:         22
+        SymbolAlignmentAndType: 33
+        StorageMappingClass:    XMC_PR
+        SectionOrLength:        256
+        StabInfoIndex:          44
+        StabSectNum:            55
+## The C_DWARF symbol with a SECT auxiliary entry.
+  - Name:               .fun4
+    Section:            N_DEBUG
+    StorageClass:       C_DWARF
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                   AUX_SECT
+        LengthOfSectionPortion: 2
+        NumberOfRelocEnt:       3
+## The C_BLOCK symbol with a Block auxiliary entry.
+  - Name:               .fun5
+    StorageClass:       C_BLOCK
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:      AUX_SYM
+        LineNumHi: 2
+        LineNumLo: 3
+## The C_FCN symbol with a Block auxiliary entry.
+  - Name:               .fun6
+    StorageClass:       C_FCN
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:      AUX_SYM
+        LineNumHi: 2
+        LineNumLo: 3
 
 # SYMBOL32:      Symbols [
 # SYMBOL32-NEXT:   Symbol {
@@ -187,6 +233,75 @@ Symbols:
 # SYMBOL32-NEXT:       StorageMappingClass: XMC_PR (0x0)
 # SYMBOL32-NEXT:       StabInfoIndex: 0x2
 # SYMBOL32-NEXT:       StabSectNum: 0x3
+# SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 12
+# SYMBOL32-NEXT:     Name: .fun3
+# SYMBOL32-NEXT:     Value (RelocatableAddress): 0x0
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x20
+# SYMBOL32-NEXT:     StorageClass: C_WEAKEXT (0x6F)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 2
+# SYMBOL32-NEXT:     Function Auxiliary Entry {
+# SYMBOL32-NEXT:       Index: 13
+# SYMBOL32-NEXT:       OffsetToExceptionTable: 0x2
+# SYMBOL32-NEXT:       SizeOfFunction: 0x3
+# SYMBOL32-NEXT:       PointerToLineNum: 0x5
+# SYMBOL32-NEXT:       SymbolIndexOfNextBeyond: 4
+# SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:     CSECT Auxiliary Entry {
+# SYMBOL32-NEXT:       Index: 14
+# SYMBOL32-NEXT:       SectionLen: 256
+# SYMBOL32-NEXT:       ParameterHashIndex: 0xB
+# SYMBOL32-NEXT:       TypeChkSectNum: 0x16
+# SYMBOL32-NEXT:       SymbolAlignmentLog2: 4
+# SYMBOL32-NEXT:       SymbolType: XTY_SD (0x1)
+# SYMBOL32-NEXT:       StorageMappingClass: XMC_PR (0x0)
+# SYMBOL32-NEXT:       StabInfoIndex: 0x2C
+# SYMBOL32-NEXT:       StabSectNum: 0x37
+# SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 15
+# SYMBOL32-NEXT:     Name: .fun4
+# SYMBOL32-NEXT:     Value (OffsetInDWARF): 0x0
+# SYMBOL32-NEXT:     Section: N_DEBUG
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_DWARF (0x70)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 1
+# SYMBOL32-NEXT:     Sect Auxiliary Entry For DWARF {
+# SYMBOL32-NEXT:       Index: 16
+# SYMBOL32-NEXT:       LengthOfSectionPortion: 0x2
+# SYMBOL32-NEXT:       NumberOfRelocEntries: 3
+# SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 17
+# SYMBOL32-NEXT:     Name: .fun5
+# SYMBOL32-NEXT:     Value (RelocatableAddress): 0x0
+# SYMBOL32-NEXT:     Section: N_UNDEF
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_BLOCK (0x64)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 1
+# SYMBOL32-NEXT:     Block Auxiliary Entry {
+# SYMBOL32-NEXT:       Index: 18
+# SYMBOL32-NEXT:       LineNumber (High 2 Bytes): 0x2
+# SYMBOL32-NEXT:       LineNumber (Low 2 Bytes): 0x3
+# SYMBOL32-NEXT:     }
+# SYMBOL32-NEXT:   }
+# SYMBOL32-NEXT:   Symbol {
+# SYMBOL32-NEXT:     Index: 19
+# SYMBOL32-NEXT:     Name: .fun6
+# SYMBOL32-NEXT:     Value (RelocatableAddress): 0x0
+# SYMBOL32-NEXT:     Section: N_UNDEF
+# SYMBOL32-NEXT:     Type: 0x0
+# SYMBOL32-NEXT:     StorageClass: C_FCN (0x65)
+# SYMBOL32-NEXT:     NumberOfAuxEntries: 1
+# SYMBOL32-NEXT:     Block Auxiliary Entry {
+# SYMBOL32-NEXT:       Index: 20
+# SYMBOL32-NEXT:       LineNumber (High 2 Bytes): 0x2
+# SYMBOL32-NEXT:       LineNumber (Low 2 Bytes): 0x3
 # SYMBOL32-NEXT:     }
 # SYMBOL32-NEXT:   }
 # SYMBOL32-NEXT: ]
