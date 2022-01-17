@@ -1710,8 +1710,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
   if (sort) {
     const RelType relativeRel = target->relativeRel;
     auto nonRelative =
-        std::stable_partition(relocs.begin(), relocs.end(),
-                              [=](auto &r) { return r.type == relativeRel; });
+        llvm::partition(relocs, [=](auto &r) { return r.type == relativeRel; });
     parallelSort(relocs.begin(), nonRelative,
                  [&](auto &a, auto &b) { return a.r_offset < b.r_offset; });
     // Non-relative relocations are few, so don't bother with parallelSort.
