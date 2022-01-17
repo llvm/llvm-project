@@ -13,7 +13,10 @@
 // type_traits
 // common_reference
 
+#include <tuple>
 #include <type_traits>
+
+#include "test_macros.h"
 
 template <class T>
 constexpr bool has_type = requires {
@@ -22,19 +25,19 @@ constexpr bool has_type = requires {
 
 // A slightly simplified variation of std::tuple
 template <class...>
-struct Tuple {};
+struct UserTuple {};
 
 template <class, class, class>
 struct Tuple_helper {};
 template <class... Ts, class... Us>
-struct Tuple_helper<std::void_t<std::common_reference_t<Ts, Us>...>, Tuple<Ts...>, Tuple<Us...> > {
-  using type = Tuple<std::common_reference_t<Ts, Us>...>;
+struct Tuple_helper<std::void_t<std::common_reference_t<Ts, Us>...>, UserTuple<Ts...>, UserTuple<Us...> > {
+  using type = UserTuple<std::common_reference_t<Ts, Us>...>;
 };
 
 namespace std {
 template <class... Ts, class... Us, template <class> class TQual, template <class> class UQual>
-struct basic_common_reference< ::Tuple<Ts...>, ::Tuple<Us...>, TQual, UQual>
-    : ::Tuple_helper<void, Tuple<TQual<Ts>...>, Tuple<UQual<Us>...> > {};
+struct basic_common_reference< ::UserTuple<Ts...>, ::UserTuple<Us...>, TQual, UQual>
+    : ::Tuple_helper<void, UserTuple<TQual<Ts>...>, UserTuple<UQual<Us>...> > {};
 } // namespace std
 
 struct X2 {};
@@ -107,11 +110,11 @@ static_assert(std::is_same_v<std::common_reference_t<int const (&)[10], int vola
 //    -- Otherwise, if basic_common_reference<remove_cvref_t<T1>,
 //       remove_cvref_t<T2>, XREF(T1), XREF(T2)>::type is well-formed, then the
 //       member typedef type denotes that type.
-static_assert(std::is_same_v<std::common_reference_t<const Tuple<int, short>&, Tuple<int&, short volatile&>>,
-                             Tuple<const int&, const volatile short&>>);
+static_assert(std::is_same_v<std::common_reference_t<const UserTuple<int, short>&, UserTuple<int&, short volatile&>>,
+                             UserTuple<const int&, const volatile short&>>);
 
-static_assert(std::is_same_v<std::common_reference_t<volatile Tuple<int, short>&, const Tuple<int, short>&>,
-                             const volatile Tuple<int, short>&>);
+static_assert(std::is_same_v<std::common_reference_t<volatile UserTuple<int, short>&, const UserTuple<int, short>&>,
+                             const volatile UserTuple<int, short>&>);
 
 // (6.3.3)
 //    -- Otherwise, if COND_RES(T1, T2) is well-formed, then the member typedef
@@ -152,7 +155,7 @@ static_assert(std::is_same_v<std::common_reference_t<X2&, Y2 const&>, Z2>);
 
 // (6.3.5)
 //    -- Otherwise, there shall be no member type.
-static_assert(!has_type<std::common_reference<volatile Tuple<short>&, const Tuple<int, short>&> >);
+static_assert(!has_type<std::common_reference<volatile UserTuple<short>&, const UserTuple<int, short>&> >);
 
 // (6.4)
 //  -- Otherwise, if sizeof...(T) is greater than two, let T1, T2, and Rest,
@@ -168,5 +171,32 @@ static_assert(std::is_same_v<std::common_reference_t<int&&, int const&, float&>,
 // (6.4.2)
 //    -- Otherwise, there shall be no member type.
 static_assert(!has_type<std::common_reference<int, short, int, char*> >);
+
+#if TEST_STD_VER > 20
+static_assert(std::is_same_v<std::common_reference_t<std::tuple<int, int>>, std::tuple<int, int>>);
+static_assert(std::is_same_v<std::common_reference_t<std::tuple<int, long>, std::tuple<long, int>>, std::tuple<long, long>>);
+static_assert(std::is_same_v<std::common_reference_t<std::tuple<int&, const int&>, std::tuple<const int&, int>>,
+                             std::tuple<const int&, int>>);
+static_assert(std::is_same_v<std::common_reference_t<std::tuple<int&, volatile int&>, std::tuple<volatile int&, int>>,
+                             std::tuple<volatile int&, int>>);
+static_assert(std::is_same_v<std::common_reference_t<std::tuple<int&, const volatile int&>, std::tuple<const volatile int&, int>>,
+                             std::tuple<const volatile int&, int>>);
+static_assert(!has_type<std::common_reference_t<std::tuple<const int&, volatile int&>, std::tuple<volatile int&, const int&>>>);
+
+static_assert(std::is_same_v<std::common_reference_t<std::tuple<int, X2>, std::tuple<int, Y2>>, std::tuple<int, Z2>>);
+static_assert(std::is_same_v<std::common_reference_t<std::tuple<int, X2>, std::tuple<int, Y2>>, std::tuple<int, Z2>>);
+static_assert(!has_type<std::common_reference<std::tuple<int, const X2>, std::tuple<float, const Z2>>>);
+static_assert(!has_type<std::common_reference<std::tuple<int, X2>, std::tuple<float, Z2>>>);
+static_assert(!has_type<std::common_reference<std::tuple<int, X2>, int, X2>>);
+
+struct A {};
+template <template<class> class TQual, template<class> class UQual>
+struct std::basic_common_reference<A, std::tuple<B>, TQual, UQual> {
+  using type = tuple<UQual<B>>;
+};
+
+static_assert(std::is_same_v<std::common_reference_t<A, std::tuple<B>,std::tuple<D>>, std::tuple<B>>);
+
+#endif
 
 int main(int, char**) { return 0; }

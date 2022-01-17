@@ -33,7 +33,7 @@
 "`P2077R3 <https://wg21.link/P2077R3>`__","LWG","Heterogeneous erasure overloads for associative containers","October 2021","",""
 "`P2251R1 <https://wg21.link/P2251R1>`__","LWG","Require ``span`` & ``basic_string_view`` to be Trivially Copyable","October 2021","|Complete|","14.0"
 "`P2301R1 <https://wg21.link/P2301R1>`__","LWG","Add a ``pmr`` alias for ``std::stacktrace``","October 2021","",""
-"`P2321R2 <https://wg21.link/P2321R2>`__","LWG","``zip``","October 2021","",""
+"`P2321R2 <https://wg21.link/P2321R2>`__","LWG","``zip``","October 2021","|In Progress|",""
 "`P2340R1 <https://wg21.link/P2340R1>`__","LWG","Clarifying the status of the 'C headers'","October 2021","",""
 "`P2393R1 <https://wg21.link/P2393R1>`__","LWG","Cleaning up ``integer``-class types","October 2021","",""
 "`P2401R0 <https://wg21.link/P2401R0>`__","LWG","Add a conditional ``noexcept`` specification to ``std::exchange``","October 2021","|Complete|","14.0"
