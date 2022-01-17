@@ -622,6 +622,7 @@ void AutoTypeLoc::initializeLocal(ASTContext &Context, SourceLocation Loc) {
   setFoundDecl(nullptr);
   setRAngleLoc(Loc);
   setLAngleLoc(Loc);
+  setRParenLoc(Loc);
   TemplateSpecializationTypeLoc::initializeArgLocs(Context, getNumArgs(),
                                                    getTypePtr()->getArgs(),
                                                    getArgInfos(), Loc);
