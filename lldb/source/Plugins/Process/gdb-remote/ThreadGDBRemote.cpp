@@ -39,7 +39,7 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
       m_dispatch_queue_t(LLDB_INVALID_ADDRESS), m_queue_kind(eQueueKindUnknown),
       m_queue_serial_number(LLDB_INVALID_QUEUE_ID),
       m_associated_with_libdispatch_queue(eLazyBoolCalculate) {
-  Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_THREAD));
+  Log *log = GetLog(GDBRLog::Thread);
   LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2}", this, process.GetID(),
            GetID());
   // At this point we can clone reg_info for architectures supporting
@@ -54,7 +54,7 @@ ThreadGDBRemote::ThreadGDBRemote(Process &process, lldb::tid_t tid)
 
 ThreadGDBRemote::~ThreadGDBRemote() {
   ProcessSP process_sp(GetProcess());
-  Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_THREAD));
+  Log *log = GetLog(GDBRLog::Thread);
   LLDB_LOG(log, "this = {0}, pid = {1}, tid = {2}", this,
            process_sp ? process_sp->GetID() : LLDB_INVALID_PROCESS_ID, GetID());
   DestroyThread();
@@ -222,7 +222,7 @@ void ThreadGDBRemote::SetAssociatedWithLibdispatchQueue(
 StructuredData::ObjectSP ThreadGDBRemote::FetchThreadExtendedInfo() {
   StructuredData::ObjectSP object_sp;
   const lldb::user_id_t tid = GetProtocolID();
-  Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_THREAD));
+  Log *log = GetLog(GDBRLog::Thread);
   LLDB_LOGF(log, "Fetching extended information for thread %4.4" PRIx64, tid);
   ProcessSP process_sp(GetProcess());
   if (process_sp) {
@@ -236,7 +236,7 @@ StructuredData::ObjectSP ThreadGDBRemote::FetchThreadExtendedInfo() {
 void ThreadGDBRemote::WillResume(StateType resume_state) {
   int signo = GetResumeSignal();
   const lldb::user_id_t tid = GetProtocolID();
-  Log *log(GetLogIfAnyCategoriesSet(GDBR_LOG_THREAD));
+  Log *log = GetLog(GDBRLog::Thread);
   LLDB_LOGF(log, "Resuming thread: %4.4" PRIx64 " with state: %s.", tid,
             StateAsCString(resume_state));
 

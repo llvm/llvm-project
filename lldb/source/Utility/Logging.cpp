@@ -16,49 +16,74 @@
 using namespace lldb_private;
 
 static constexpr Log::Category g_categories[] = {
-  {{"api"}, {"log API calls and return values"}, LIBLLDB_LOG_API},
-  {{"ast"}, {"log AST"}, LIBLLDB_LOG_AST},
-  {{"break"}, {"log breakpoints"}, LIBLLDB_LOG_BREAKPOINTS},
-  {{"commands"}, {"log command argument parsing"}, LIBLLDB_LOG_COMMANDS},
-  {{"comm"}, {"log communication activities"}, LIBLLDB_LOG_COMMUNICATION},
-  {{"conn"}, {"log connection details"}, LIBLLDB_LOG_CONNECTION},
-  {{"demangle"}, {"log mangled names to catch demangler crashes"}, LIBLLDB_LOG_DEMANGLE},
-  {{"dyld"}, {"log shared library related activities"}, LIBLLDB_LOG_DYNAMIC_LOADER},
-  {{"event"}, {"log broadcaster, listener and event queue activities"}, LIBLLDB_LOG_EVENTS},
-  {{"expr"}, {"log expressions"}, LIBLLDB_LOG_EXPRESSIONS},
-  {{"formatters"}, {"log data formatters related activities"}, LIBLLDB_LOG_DATAFORMATTERS},
-  {{"host"}, {"log host activities"}, LIBLLDB_LOG_HOST},
-  {{"jit"}, {"log JIT events in the target"}, LIBLLDB_LOG_JIT_LOADER},
-  {{"language"}, {"log language runtime events"}, LIBLLDB_LOG_LANGUAGE},
-  {{"mmap"}, {"log mmap related activities"}, LIBLLDB_LOG_MMAP},
-  {{"module"}, {"log module activities such as when modules are created, destroyed, replaced, and more"}, LIBLLDB_LOG_MODULES},
-  {{"object"}, {"log object construction/destruction for important objects"}, LIBLLDB_LOG_OBJECT},
-  {{"os"}, {"log OperatingSystem plugin related activities"}, LIBLLDB_LOG_OS},
-  {{"platform"}, {"log platform events and activities"}, LIBLLDB_LOG_PLATFORM},
-  {{"process"}, {"log process events and activities"}, LIBLLDB_LOG_PROCESS},
-  {{"script"}, {"log events about the script interpreter"}, LIBLLDB_LOG_SCRIPT},
-  {{"state"}, {"log private and public process state changes"}, LIBLLDB_LOG_STATE},
-  {{"step"}, {"log step related activities"}, LIBLLDB_LOG_STEP},
-  {{"symbol"}, {"log symbol related issues and warnings"}, LIBLLDB_LOG_SYMBOLS},
-  {{"system-runtime"}, {"log system runtime events"}, LIBLLDB_LOG_SYSTEM_RUNTIME},
-  {{"target"}, {"log target events and activities"}, LIBLLDB_LOG_TARGET},
-  {{"temp"}, {"log internal temporary debug messages"}, LIBLLDB_LOG_TEMPORARY},
-  {{"thread"}, {"log thread events and activities"}, LIBLLDB_LOG_THREAD},
-  {{"types"}, {"log type system related activities"}, LIBLLDB_LOG_TYPES},
-  {{"unwind"}, {"log stack unwind activities"}, LIBLLDB_LOG_UNWIND},
-  {{"watch"}, {"log watchpoint related activities"}, LIBLLDB_LOG_WATCHPOINTS},
+    {{"api"}, {"log API calls and return values"}, LLDBLog::API},
+    {{"ast"}, {"log AST"}, LLDBLog::AST},
+    {{"break"}, {"log breakpoints"}, LLDBLog::Breakpoints},
+    {{"commands"}, {"log command argument parsing"}, LLDBLog::Commands},
+    {{"comm"}, {"log communication activities"}, LLDBLog::Communication},
+    {{"conn"}, {"log connection details"}, LLDBLog::Connection},
+    {{"demangle"},
+     {"log mangled names to catch demangler crashes"},
+     LLDBLog::Demangle},
+    {{"dyld"},
+     {"log shared library related activities"},
+     LLDBLog::DynamicLoader},
+    {{"event"},
+     {"log broadcaster, listener and event queue activities"},
+     LLDBLog::Events},
+    {{"expr"}, {"log expressions"}, LLDBLog::Expressions},
+    {{"formatters"},
+     {"log data formatters related activities"},
+     LLDBLog::DataFormatters},
+    {{"host"}, {"log host activities"}, LLDBLog::Host},
+    {{"jit"}, {"log JIT events in the target"}, LLDBLog::JITLoader},
+    {{"language"}, {"log language runtime events"}, LLDBLog::Language},
+    {{"mmap"}, {"log mmap related activities"}, LLDBLog::MMap},
+    {{"module"},
+     {"log module activities such as when modules are created, destroyed, "
+      "replaced, and more"},
+     LLDBLog::Modules},
+    {{"object"},
+     {"log object construction/destruction for important objects"},
+     LLDBLog::Object},
+    {{"os"}, {"log OperatingSystem plugin related activities"}, LLDBLog::OS},
+    {{"platform"}, {"log platform events and activities"}, LLDBLog::Platform},
+    {{"process"}, {"log process events and activities"}, LLDBLog::Process},
+    {{"script"}, {"log events about the script interpreter"}, LLDBLog::Script},
+    {{"state"},
+     {"log private and public process state changes"},
+     LLDBLog::State},
+    {{"step"}, {"log step related activities"}, LLDBLog::Step},
+    {{"symbol"}, {"log symbol related issues and warnings"}, LLDBLog::Symbols},
+    {{"system-runtime"}, {"log system runtime events"}, LLDBLog::SystemRuntime},
+    {{"target"}, {"log target events and activities"}, LLDBLog::Target},
+    {{"temp"}, {"log internal temporary debug messages"}, LLDBLog::Temporary},
+    {{"thread"}, {"log thread events and activities"}, LLDBLog::Thread},
+    {{"types"}, {"log type system related activities"}, LLDBLog::Types},
+    {{"unwind"}, {"log stack unwind activities"}, LLDBLog::Unwind},
+    {{"watch"}, {"log watchpoint related activities"}, LLDBLog::Watchpoints},
 };
 
-static Log::Channel g_log_channel(g_categories, LIBLLDB_LOG_DEFAULT);
+static Log::Channel g_log_channel(g_categories,
+                                  LLDBLog::Process | LLDBLog::Thread |
+                                      LLDBLog::DynamicLoader |
+                                      LLDBLog::Breakpoints |
+                                      LLDBLog::Watchpoints | LLDBLog::Step |
+                                      LLDBLog::State | LLDBLog::Symbols |
+                                      LLDBLog::Target | LLDBLog::Commands);
+
+template <> Log::Channel &lldb_private::LogChannelFor<LLDBLog>() {
+  return g_log_channel;
+}
 
 void lldb_private::InitializeLldbChannel() {
   Log::Register("lldb", g_log_channel);
 }
 
-Log *lldb_private::GetLogIfAllCategoriesSet(uint32_t mask) {
-  return g_log_channel.GetLogIfAll(mask);
+Log *lldb_private::GetLogIfAllCategoriesSet(LLDBLog mask) {
+  return GetLog(mask);
 }
 
-Log *lldb_private::GetLogIfAnyCategoriesSet(uint32_t mask) {
-  return g_log_channel.GetLogIfAny(mask);
+Log *lldb_private::GetLogIfAnyCategoriesSet(LLDBLog mask) {
+  return GetLog(mask);
 }

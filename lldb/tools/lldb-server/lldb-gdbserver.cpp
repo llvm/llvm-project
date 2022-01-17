@@ -27,6 +27,7 @@
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"

@@ -15,25 +15,29 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
 static constexpr Log::Category g_categories[] = {
-    {{"async"}, {"log asynchronous activity"}, GDBR_LOG_ASYNC},
-    {{"break"}, {"log breakpoints"}, GDBR_LOG_BREAKPOINTS},
-    {{"comm"}, {"log communication activity"}, GDBR_LOG_COMM},
-    {{"packets"}, {"log gdb remote packets"}, GDBR_LOG_PACKETS},
-    {{"memory"}, {"log memory reads and writes"}, GDBR_LOG_MEMORY},
+    {{"async"}, {"log asynchronous activity"}, GDBRLog::Async},
+    {{"break"}, {"log breakpoints"}, GDBRLog::Breakpoints},
+    {{"comm"}, {"log communication activity"}, GDBRLog::Comm},
+    {{"packets"}, {"log gdb remote packets"}, GDBRLog::Packets},
+    {{"memory"}, {"log memory reads and writes"}, GDBRLog::Memory},
     {{"data-short"},
      {"log memory bytes for memory reads and writes for short transactions "
       "only"},
-     GDBR_LOG_MEMORY_DATA_SHORT},
+     GDBRLog::MemoryDataShort},
     {{"data-long"},
      {"log memory bytes for memory reads and writes for all transactions"},
-     GDBR_LOG_MEMORY_DATA_LONG},
-    {{"process"}, {"log process events and activities"}, GDBR_LOG_PROCESS},
-    {{"step"}, {"log step related activities"}, GDBR_LOG_STEP},
-    {{"thread"}, {"log thread events and activities"}, GDBR_LOG_THREAD},
-    {{"watch"}, {"log watchpoint related activities"}, GDBR_LOG_WATCHPOINTS},
+     GDBRLog::MemoryDataLong},
+    {{"process"}, {"log process events and activities"}, GDBRLog::Process},
+    {{"step"}, {"log step related activities"}, GDBRLog::Step},
+    {{"thread"}, {"log thread events and activities"}, GDBRLog::Thread},
+    {{"watch"}, {"log watchpoint related activities"}, GDBRLog::Watchpoints},
 };
 
-Log::Channel ProcessGDBRemoteLog::g_channel(g_categories, GDBR_LOG_DEFAULT);
+static Log::Channel g_channel(g_categories, GDBRLog::Packets);
+
+template <> Log::Channel &lldb_private::LogChannelFor<GDBRLog>() {
+  return g_channel;
+}
 
 void ProcessGDBRemoteLog::Initialize() {
   static llvm::once_flag g_once_flag;

@@ -13,18 +13,20 @@ using namespace lldb_private;
 static constexpr Log::Category g_categories[] = {
     {{"comp"},
      {"log insertions of object files into DWARF debug maps"},
-     DWARF_LOG_TYPE_COMPLETION},
-    {{"info"}, {"log the parsing of .debug_info"}, DWARF_LOG_DEBUG_INFO},
-    {{"line"}, {"log the parsing of .debug_line"}, DWARF_LOG_DEBUG_LINE},
+     DWARFLog::TypeCompletion},
+    {{"info"}, {"log the parsing of .debug_info"}, DWARFLog::DebugInfo},
+    {{"line"}, {"log the parsing of .debug_line"}, DWARFLog::DebugLine},
     {{"lookups"},
      {"log any lookups that happen by name, regex, or address"},
-     DWARF_LOG_LOOKUPS},
-    {{"map"},
-     {"log struct/unions/class type completions"},
-     DWARF_LOG_DEBUG_MAP},
+     DWARFLog::Lookups},
+    {{"map"}, {"log struct/unions/class type completions"}, DWARFLog::DebugMap},
 };
 
-Log::Channel LogChannelDWARF::g_channel(g_categories, DWARF_LOG_DEFAULT);
+static Log::Channel g_channel(g_categories, DWARFLog::DebugInfo);
+
+template <> Log::Channel &lldb_private::LogChannelFor<DWARFLog>() {
+  return g_channel;
+}
 
 void LogChannelDWARF::Initialize() {
   Log::Register("dwarf", g_channel);

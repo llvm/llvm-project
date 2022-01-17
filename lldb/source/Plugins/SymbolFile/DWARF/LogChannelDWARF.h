@@ -11,25 +11,32 @@
 
 #include "lldb/Utility/Log.h"
 
-#define DWARF_LOG_DEBUG_INFO (1u << 1)
-#define DWARF_LOG_DEBUG_LINE (1u << 2)
-#define DWARF_LOG_LOOKUPS (1u << 3)
-#define DWARF_LOG_TYPE_COMPLETION (1u << 4)
-#define DWARF_LOG_DEBUG_MAP (1u << 5)
-#define DWARF_LOG_ALL (UINT32_MAX)
-#define DWARF_LOG_DEFAULT (DWARF_LOG_DEBUG_INFO)
-
 namespace lldb_private {
-class LogChannelDWARF {
-  static Log::Channel g_channel;
 
+enum class DWARFLog : Log::MaskType {
+  DebugInfo = Log::ChannelFlag<0>,
+  DebugLine = Log::ChannelFlag<1>,
+  DebugMap = Log::ChannelFlag<2>,
+  Lookups = Log::ChannelFlag<3>,
+  TypeCompletion = Log::ChannelFlag<4>,
+  LLVM_MARK_AS_BITMASK_ENUM(TypeCompletion)
+};
+#define DWARF_LOG_DEBUG_INFO ::lldb_private::DWARFLog::DebugInfo
+#define DWARF_LOG_DEBUG_LINE ::lldb_private::DWARFLog::DebugLine
+#define DWARF_LOG_LOOKUPS ::lldb_private::DWARFLog::Lookups
+#define DWARF_LOG_TYPE_COMPLETION ::lldb_private::DWARFLog::TypeCompletion
+#define DWARF_LOG_DEBUG_MAP ::lldb_private::DWARFLog::DebugMap
+
+class LogChannelDWARF {
 public:
   static void Initialize();
   static void Terminate();
 
-  static Log *GetLogIfAll(uint32_t mask) { return g_channel.GetLogIfAll(mask); }
-  static Log *GetLogIfAny(uint32_t mask) { return g_channel.GetLogIfAny(mask); }
+  static Log *GetLogIfAll(DWARFLog mask) { return GetLog(mask); }
+  static Log *GetLogIfAny(DWARFLog mask) { return GetLog(mask); }
 };
-}
+
+template <> Log::Channel &LogChannelFor<DWARFLog>();
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_LOGCHANNELDWARF_H
