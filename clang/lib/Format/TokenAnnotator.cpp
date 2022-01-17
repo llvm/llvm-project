@@ -4316,7 +4316,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.is(TT_ImplicitStringLiteral))
     return false;
 
-  if (Right.is(tok::r_paren) || Right.is(TT_TemplateCloser))
+  if (Right.is(TT_TemplateCloser))
     return false;
   if (Right.is(tok::r_square) && Right.MatchingParen &&
       Right.MatchingParen->is(TT_LambdaLSquare))
@@ -4326,6 +4326,18 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   // the l_brace, which is tracked by BreakBeforeClosingBrace.
   if (Right.is(tok::r_brace))
     return Right.MatchingParen && Right.MatchingParen->is(BK_Block);
+
+  // We only break before r_paren if we're in a block indented context.
+  if (Right.is(tok::r_paren)) {
+    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+      return Right.MatchingParen &&
+             !(Right.MatchingParen->Previous &&
+               (Right.MatchingParen->Previous->is(tok::kw_for) ||
+                Right.MatchingParen->Previous->isIf()));
+    }
+
+    return false;
+  }
 
   // Allow breaking after a trailing annotation, e.g. after a method
   // declaration.

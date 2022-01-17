@@ -5,8 +5,6 @@
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    store i32 1, i32* bitcast ([8 x i8]* @g to i32*), align 4
-; CHECK-NEXT:    store i32 2, i32* getelementptr (i32, i32* bitcast ([8 x i8]* @g to i32*), i64 1), align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 1, i32* bitcast ([8 x i8]* @g to i32*)
@@ -16,8 +14,7 @@ define void @test() {
 
 define i32 @load1() {
 ; CHECK-LABEL: @load1(
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* bitcast ([8 x i8]* @g to i32*), align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 1
 ;
   %v = load i32, i32* bitcast ([8 x i8]* @g to i32*)
   ret i32 %v
@@ -25,8 +22,7 @@ define i32 @load1() {
 
 define i32 @load2() {
 ; CHECK-LABEL: @load2(
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* getelementptr (i32, i32* bitcast ([8 x i8]* @g to i32*), i64 1), align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 2
 ;
   %v = load i32, i32* getelementptr (i32, i32* bitcast ([8 x i8]* @g to i32*), i64 1)
   ret i32 %v

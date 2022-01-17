@@ -623,6 +623,15 @@ n]] = 10; // error-ok
                   Fix(Source.range(), "ident", "change 'ide\\…' to 'ident'"))));
 }
 
+TEST(DiagnosticTest, NewLineFixMessage) {
+  Annotations Source("int a;[[]]");
+  TestTU TU = TestTU::withCode(Source.code());
+  TU.ExtraArgs = {"-Wnewline-eof"};
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      ElementsAre(WithFix((Fix(Source.range(), "\n", "insert '\\n'")))));
+}
+
 TEST(DiagnosticTest, ClangTidySuppressionCommentTrumpsWarningAsError) {
   Annotations Main(R"cpp(
     int main() {
