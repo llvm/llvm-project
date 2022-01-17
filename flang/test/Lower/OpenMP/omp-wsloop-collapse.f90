@@ -39,11 +39,17 @@ program wsloop_collapse
   do i = 1, a
      do j= 1, b
         do k = 1, c
-! CHECK:           omp.wsloop collapse(3) for (%[[VAL_9:.*]], %[[VAL_10:.*]], %[[VAL_11:.*]]) : i32 = (%[[VAL_20]], %[[VAL_23]], %[[VAL_26]]) to (%[[VAL_21]], %[[VAL_24]], %[[VAL_27]]) inclusive step (%[[VAL_22]], %[[VAL_25]], %[[VAL_28]]) {
+! CHECK:           omp.wsloop collapse(3) for (%[[ARG0:.*]], %[[ARG1:.*]], %[[ARG2:.*]]) : i32 = (%[[VAL_20]], %[[VAL_23]], %[[VAL_26]]) to (%[[VAL_21]], %[[VAL_24]], %[[VAL_27]]) inclusive step (%[[VAL_22]], %[[VAL_25]], %[[VAL_28]]) {
+! CHECK:             fir.store %[[ARG0]] to %[[STORE_IV0:.*]] : !fir.ref<i32>
+! CHECK:             fir.store %[[ARG1]] to %[[STORE_IV1:.*]] : !fir.ref<i32>
+! CHECK:             fir.store %[[ARG2]] to %[[STORE_IV2:.*]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
-! CHECK:             %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[VAL_9]] : i32
-! CHECK:             %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_10]] : i32
-! CHECK:             %[[VAL_15:.*]] = arith.addi %[[VAL_14]], %[[VAL_11]] : i32
+! CHECK:             %[[LOAD_IV0:.*]] = fir.load %[[STORE_IV0]] : !fir.ref<i32>
+! CHECK:             %[[VAL_13:.*]] = arith.addi %[[VAL_12]], %[[LOAD_IV0]] : i32
+! CHECK:             %[[LOAD_IV1:.*]] = fir.load %[[STORE_IV1]] : !fir.ref<i32>
+! CHECK:             %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[LOAD_IV1]] : i32
+! CHECK:             %[[LOAD_IV2:.*]] = fir.load %[[STORE_IV2]] : !fir.ref<i32>
+! CHECK:             %[[VAL_15:.*]] = arith.addi %[[VAL_14]], %[[LOAD_IV2]] : i32
 ! CHECK:             fir.store %[[VAL_15]] to %[[VAL_6]] : !fir.ref<i32>
 ! CHECK:             omp.yield
 ! CHECK:           }

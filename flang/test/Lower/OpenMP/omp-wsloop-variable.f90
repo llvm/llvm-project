@@ -14,18 +14,22 @@ program wsloop_variable
   integer(kind=16) :: i16, i16_lb
   real :: x
 
-!CHECK:  [[TMP0:%.*]] = arith.constant 1 : i32
-!CHECK:  [[TMP1:%.*]] = arith.constant 100 : i32
-!CHECK:  [[TMP2:%.*]] = fir.convert [[TMP0]] : (i32) -> i64
-!CHECK:  [[TMP3:%.*]] = fir.convert %{{.*}} : (i8) -> i64
-!CHECK:  [[TMP4:%.*]] = fir.convert %{{.*}} : (i16) -> i64
-!CHECK:  [[TMP5:%.*]] = fir.convert %{{.*}} : (i128) -> i64
-!CHECK:  [[TMP6:%.*]] = fir.convert [[TMP1]] : (i32) -> i64
-!CHECK:  [[TMP7:%.*]] = fir.convert %{{.*}} : (i32) -> i64
-!CHECK:  omp.wsloop collapse(2) for ([[TMP8:%.*]], [[TMP9:%.*]]) : i64 = ([[TMP2]], [[TMP5]]) to ([[TMP3]], [[TMP6]]) inclusive step ([[TMP4]], [[TMP7]]) {
-!CHECK:    [[TMP10:%.*]] = arith.addi [[TMP8]], [[TMP9]] : i64
-!CHECK:    [[TMP11:%.*]] = fir.convert [[TMP10]] : (i64) -> f32
-!CHECK:    fir.store [[TMP11]] to %{{.*}} : !fir.ref<f32>
+!CHECK:  %[[TMP0:.*]] = arith.constant 1 : i32
+!CHECK:  %[[TMP1:.*]] = arith.constant 100 : i32
+!CHECK:  %[[TMP2:.*]] = fir.convert %[[TMP0]] : (i32) -> i64
+!CHECK:  %[[TMP3:.*]] = fir.convert %{{.*}} : (i8) -> i64
+!CHECK:  %[[TMP4:.*]] = fir.convert %{{.*}} : (i16) -> i64
+!CHECK:  %[[TMP5:.*]] = fir.convert %{{.*}} : (i128) -> i64
+!CHECK:  %[[TMP6:.*]] = fir.convert %[[TMP1]] : (i32) -> i64
+!CHECK:  %[[TMP7:.*]] = fir.convert %{{.*}} : (i32) -> i64
+!CHECK:  omp.wsloop collapse(2) for (%[[ARG0:.*]], %[[ARG1:.*]]) : i64 = (%[[TMP2]], %[[TMP5]]) to (%[[TMP3]], %[[TMP6]]) inclusive step (%[[TMP4]], %[[TMP7]]) {
+!CHECK:    fir.store %[[ARG0]] to %[[STORE_IV0:.*]] : !fir.ref<i64>
+!CHECK:    fir.store %[[ARG1]] to %[[STORE_IV1:.*]] : !fir.ref<i64>
+!CHECK:    %[[LOAD_IV0:.*]] = fir.load %[[STORE_IV0]] : !fir.ref<i64>
+!CHECK:    %[[LOAD_IV1:.*]] = fir.load %[[STORE_IV1]] : !fir.ref<i64>
+!CHECK:    %[[TMP10:.*]] = arith.addi %[[LOAD_IV0]], %[[LOAD_IV1]] : i64
+!CHECK:    %[[TMP11:.*]] = fir.convert %[[TMP10]] : (i64) -> f32
+!CHECK:    fir.store %[[TMP11]] to %{{.*}} : !fir.ref<f32>
 !CHECK:    omp.yield
 !CHECK:  }
 
@@ -37,12 +41,15 @@ program wsloop_variable
   end do
   !$omp end do
 
-!CHECK:  [[TMP12:%.*]] = arith.constant 1 : i32
-!CHECK:  [[TMP13:%.*]] = fir.convert %{{.*}} : (i8) -> i32
-!CHECK:  [[TMP14:%.*]] = fir.convert %{{.*}} : (i64) -> i32
-!CHECK:  omp.wsloop for ([[TMP15:%.*]]) : i32 = ([[TMP12]]) to ([[TMP13]]) inclusive step ([[TMP14]])  {
-!CHECK:    [[TMP16:%.*]] = fir.convert [[TMP15]] : (i32) -> f32
-!CHECK:    fir.store [[TMP16]] to %{{.*}} : !fir.ref<f32>
+!CHECK:  %[[TMP12:.*]] = arith.constant 1 : i32
+!CHECK:  %[[TMP13:.*]] = fir.convert %{{.*}} : (i8) -> i32
+!CHECK:  %[[TMP14:.*]] = fir.convert %{{.*}} : (i64) -> i32
+!CHECK:  omp.wsloop for (%[[ARG0:.*]]) : i32 = (%[[TMP12]]) to (%[[TMP13]]) inclusive step (%[[TMP14]])  {
+!CHECK:    fir.store %[[ARG0]] to %[[STORE3:.*]] : !fir.ref<i32>
+!CHECK:    %[[LOAD3:.*]] = fir.load %[[STORE3]] : !fir.ref<i32>
+!CHECK:    %[[TMP16:.*]] = fir.convert %[[LOAD3]] : (i32) -> f32
+
+!CHECK:    fir.store %[[TMP16]] to %{{.*}} : !fir.ref<f32>
 !CHECK:    omp.yield
 !CHECK:  }
 
@@ -52,12 +59,14 @@ program wsloop_variable
   end do
   !$omp end do
 
-!CHECK:  [[TMP17:%.*]] = fir.convert %{{.*}} : (i8) -> i64
-!CHECK:  [[TMP18:%.*]] = fir.convert %{{.*}} : (i16) -> i64
-!CHECK:  [[TMP19:%.*]] = fir.convert %{{.*}} : (i32) -> i64
-!CHECK:  omp.wsloop for ([[TMP20:%.*]]) : i64 = ([[TMP17]]) to ([[TMP18]]) inclusive step ([[TMP19]])  {
-!CHECK:    [[TMP21:%.*]] = fir.convert [[TMP20]] : (i64) -> f32
-!CHECK:    fir.store [[TMP21]] to %{{.*}} : !fir.ref<f32>
+!CHECK:  %[[TMP17:.*]] = fir.convert %{{.*}} : (i8) -> i64
+!CHECK:  %[[TMP18:.*]] = fir.convert %{{.*}} : (i16) -> i64
+!CHECK:  %[[TMP19:.*]] = fir.convert %{{.*}} : (i32) -> i64
+!CHECK:  omp.wsloop for (%[[ARG1:.*]]) : i64 = (%[[TMP17]]) to (%[[TMP18]]) inclusive step (%[[TMP19]])  {
+!CHECK:    fir.store %[[ARG1]] to %[[STORE4:.*]] : !fir.ref<i64>
+!CHECK:    %[[LOAD4:.*]] = fir.load %[[STORE4]] : !fir.ref<i64>
+!CHECK:    %[[TMP21:.*]] = fir.convert %[[LOAD4]] : (i64) -> f32
+!CHECK:    fir.store %[[TMP21]] to %{{.*}} : !fir.ref<f32>
 !CHECK:    omp.yield
 !CHECK:  }
 
@@ -82,7 +91,8 @@ end program wsloop_variable
 !CHECK:         %[[VAL_9:.*]] = fir.load %[[VAL_3]] : !fir.ref<i16>
 !CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_8]] : (i8) -> i32
 !CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_9]] : (i16) -> i32
-!CHECK:         omp.wsloop   for  (%[[VAL_12:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_10]]) inclusive step (%[[VAL_11]]) {
+!CHECK:         omp.wsloop   for  (%[[ARG0:.*]]) : i32 = (%[[VAL_7]]) to (%[[VAL_10]]) inclusive step (%[[VAL_11]]) {
+!CHECK:           fir.store %[[ARG0]] to %[[STORE_IV:.*]] : !fir.ref<i32>
 !CHECK:           %[[VAL_13:.*]] = fir.load %[[VAL_0]] : !fir.ref<i128>
 !CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i128) -> index
 !CHECK:           %[[VAL_15:.*]] = arith.constant 100 : i32
@@ -92,7 +102,8 @@ end program wsloop_variable
 !CHECK:           %[[VAL_19:.*]] = fir.do_loop %[[VAL_20:.*]] = %[[VAL_14]] to %[[VAL_16]] step %[[VAL_18]] -> index {
 !CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (index) -> i64
 !CHECK:             fir.store %[[VAL_21]] to %[[VAL_5]] : !fir.ref<i64>
-!CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_12]] : (i32) -> i64
+!CHECK:             %[[LOAD_IV:.*]] = fir.load %[[STORE_IV]] : !fir.ref<i32>
+!CHECK:             %[[VAL_22:.*]] = fir.convert %[[LOAD_IV]] : (i32) -> i64
 !CHECK:             %[[VAL_23:.*]] = fir.load %[[VAL_5]] : !fir.ref<i64>
 !CHECK:             %[[VAL_24:.*]] = arith.addi %[[VAL_22]], %[[VAL_23]] : i64
 !CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (i64) -> f32
