@@ -1654,6 +1654,14 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
                                      {X->getType()}, {NewStartC, X}, &I));
     }
 
+    // (X * MulC) + X --> X * (MulC + 1.0)
+    Constant *MulC;
+    if (match(&I, m_c_FAdd(m_FMul(m_Value(X), m_ImmConstant(MulC)),
+                           m_Deferred(X)))) {
+      MulC = ConstantExpr::getFAdd(MulC, ConstantFP::get(I.getType(), 1.0));
+      return BinaryOperator::CreateFMulFMF(X, MulC, &I);
+    }
+
     if (Value *V = FAddCombine(Builder).simplify(&I))
       return replaceInstUsesWith(I, V);
   }

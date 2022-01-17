@@ -466,18 +466,19 @@ define float @fadd_rdx_nonzero_start_variable_op(float %x, <4 x float> %v) {
 
 define float @fadd_fmul_common_op(float %x) {
 ; CHECK-LABEL: @fadd_fmul_common_op(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], 4.300000e+01
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = fmul reassoc nsz float [[X:%.*]], 4.300000e+01
+; CHECK-NEXT:    ret float [[A]]
 ;
   %m = fmul reassoc nsz float %x, 42.0
   %a = fadd reassoc nsz float %m, %x
   ret float %a
 }
 
+; Splat constant is ok.
+
 define <2 x float> @fadd_fmul_common_op_vec(<2 x float> %x) {
 ; CHECK-LABEL: @fadd_fmul_common_op_vec(
-; CHECK-NEXT:    [[M:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], <float 4.200000e+01, float 4.200000e+01>
-; CHECK-NEXT:    [[A:%.*]] = fadd reassoc nsz <2 x float> [[M]], [[X]]
+; CHECK-NEXT:    [[A:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], <float 4.300000e+01, float 4.300000e+01>
 ; CHECK-NEXT:    ret <2 x float> [[A]]
 ;
   %m = fmul reassoc nsz <2 x float> %x, <float 42.0, float 42.0>
@@ -485,11 +486,12 @@ define <2 x float> @fadd_fmul_common_op_vec(<2 x float> %x) {
   ret <2 x float> %a
 }
 
+; Non-splat constant is ok.
+
 define <2 x float> @fadd_fmul_common_op_commute_vec(<2 x float> %px) {
 ; CHECK-LABEL: @fadd_fmul_common_op_commute_vec(
 ; CHECK-NEXT:    [[X:%.*]] = fmul <2 x float> [[PX:%.*]], [[PX]]
-; CHECK-NEXT:    [[M:%.*]] = fmul reassoc nsz <2 x float> [[X]], <float 4.200000e+01, float -4.300000e+01>
-; CHECK-NEXT:    [[A:%.*]] = fadd reassoc nsz <2 x float> [[X]], [[M]]
+; CHECK-NEXT:    [[A:%.*]] = fmul reassoc nsz <2 x float> [[X]], <float 4.300000e+01, float -4.200000e+01>
 ; CHECK-NEXT:    ret <2 x float> [[A]]
 ;
   %x = fmul <2 x float> %px, %px ; thwart complexity-based canonicalization
@@ -498,18 +500,22 @@ define <2 x float> @fadd_fmul_common_op_commute_vec(<2 x float> %px) {
   ret <2 x float> %a
 }
 
+; Extra use is ok.
+
 define float @fadd_fmul_common_op_use(float %x) {
 ; CHECK-LABEL: @fadd_fmul_common_op_use(
 ; CHECK-NEXT:    [[M:%.*]] = fmul reassoc nsz float [[X:%.*]], 4.200000e+01
 ; CHECK-NEXT:    call void @use(float [[M]])
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X]], 4.300000e+01
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = fmul reassoc nsz float [[X]], 4.300000e+01
+; CHECK-NEXT:    ret float [[A]]
 ;
   %m = fmul reassoc nsz float %x, 42.0
   call void @use(float %m)
   %a = fadd reassoc nsz float %m, %x
   ret float %a
 }
+
+; Negative test - must have 'reassoc' FMF
 
 define float @fadd_fmul_common_op_wrong_fmf(float %x) {
 ; CHECK-LABEL: @fadd_fmul_common_op_wrong_fmf(
