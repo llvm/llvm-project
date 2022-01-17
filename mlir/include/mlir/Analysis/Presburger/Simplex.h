@@ -182,9 +182,9 @@ public:
   /// Add all the constraints from the given IntegerPolyhedron.
   void intersectIntegerPolyhedron(const IntegerPolyhedron &poly);
 
-  /// Returns a rational sample point. This should not be called when Simplex is
+  /// Returns a rational sample point. Returns an empty optional if Simplex is
   /// empty.
-  SmallVector<Fraction, 8> getRationalSample() const;
+  Optional<SmallVector<Fraction, 8>> getRationalSample() const;
 
   /// Returns the current sample point if it is integral. Otherwise, returns
   /// None.
