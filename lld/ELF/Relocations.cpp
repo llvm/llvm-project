@@ -576,7 +576,7 @@ static std::string maybeReportDiscarded(Undefined &sym) {
 // them are known, so that some postprocessing on the list of undefined symbols
 // can happen before lld emits diagnostics.
 struct UndefinedDiag {
-  Symbol *sym;
+  Undefined *sym;
   struct Loc {
     InputSectionBase *sec;
     uint64_t offset;
@@ -722,7 +722,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 template <class ELFT>
 static void reportUndefinedSymbol(const UndefinedDiag &undef,
                                   bool correctSpelling) {
-  Symbol &sym = *undef.sym;
+  Undefined &sym = *undef.sym;
 
   auto visibility = [&]() -> std::string {
     switch (sym.visibility) {
@@ -737,7 +737,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     }
   };
 
-  std::string msg = maybeReportDiscarded<ELFT>(cast<Undefined>(sym));
+  std::string msg = maybeReportDiscarded<ELFT>(sym);
   if (msg.empty())
     msg = "undefined " + visibility() + "symbol: " + toString(sym);
 
@@ -764,7 +764,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
   if (correctSpelling) {
     std::string pre_hint = ": ", post_hint;
     if (const Symbol *corrected =
-            getAlternativeSpelling(cast<Undefined>(sym), pre_hint, post_hint)) {
+            getAlternativeSpelling(sym, pre_hint, post_hint)) {
       msg += "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
       if (corrected->file)
         msg += "\n>>> defined in: " + toString(corrected->file);
@@ -810,7 +810,7 @@ template <class ELFT> void elf::reportUndefinedSymbols() {
 
 // Report an undefined symbol if necessary.
 // Returns true if the undefined symbol will produce an error message.
-static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
+static bool maybeReportUndefined(Undefined &sym, InputSectionBase &sec,
                                  uint64_t offset) {
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
@@ -834,8 +834,7 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
   // PPC32 .got2 is similar but cannot be fixed. Multiple .got2 is infeasible
   // because .LC0-.LTOC is not representable if the two labels are in different
   // .got2
-  if (cast<Undefined>(sym).discardedSecIdx != 0 &&
-      (sec.name == ".got2" || sec.name == ".toc"))
+  if (sym.discardedSecIdx != 0 && (sec.name == ".got2" || sec.name == ".toc"))
     return false;
 
   bool isWarning =
@@ -1311,7 +1310,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
   if (sym.isUndefined() && symIndex != 0 &&
-      maybeReportUndefined(sym, sec, rel.r_offset))
+      maybeReportUndefined(cast<Undefined>(sym), sec, rel.r_offset))
     return;
 
   const uint8_t *relocatedAddr = sec.data().begin() + rel.r_offset;
