@@ -617,7 +617,7 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
              "Should be GlobalVariable");
       // This and only this kind of non-signed ICmpInst is to be replaced with
       // the comparing of the value of the created global init bool later in
-      // optimizeGlobalAddressOfMalloc for the global variable.
+      // optimizeGlobalAddressOfAllocation for the global variable.
     } else {
       //cerr << "NONTRAPPING USE: " << *U;
       return false;
@@ -835,9 +835,10 @@ static void ConstantPropUsersOf(Value *V, const DataLayout &DL,
 /// to actually DO the malloc.  Instead, turn the malloc into a global, and any
 /// loads of GV as uses of the new global.
 static GlobalVariable *
-OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI,
-                              uint64_t AllocSize, const DataLayout &DL,
-                              TargetLibraryInfo *TLI) {
+OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
+                                  uint64_t AllocSize, Constant *InitVal,
+                                  const DataLayout &DL,
+                                  TargetLibraryInfo *TLI) {
   LLVM_DEBUG(errs() << "PROMOTING GLOBAL: " << *GV << "  CALL = " << *CI
                     << '\n');
 
@@ -845,16 +846,25 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI,
   Type *GlobalType = ArrayType::get(Type::getInt8Ty(GV->getContext()),
                                     AllocSize);
 
-  // Create the new global variable.  The contents of the malloc'd memory is
-  // undefined, so initialize with an undef value.
+  // Create the new global variable.  The contents of the allocated memory is
+  // undefined initially, so initialize with an undef value.
   GlobalVariable *NewGV = new GlobalVariable(
       *GV->getParent(), GlobalType, false, GlobalValue::InternalLinkage,
       UndefValue::get(GlobalType), GV->getName() + ".body", nullptr,
       GV->getThreadLocalMode());
 
-  // If there are bitcast users of the malloc (which is typical, usually we have
-  // a malloc + bitcast) then replace them with uses of the new global.  Update
-  // other users to use the global as well.
+  // Initialize the global at the point of the original call.  Note that this
+  // is a different point from the initialization referred to below for the
+  // nullability handling.  Sublety: We have not proven the original global was
+  // only initialized once.  As such, we can not fold this into the initializer
+  // of the new global as may need to re-init the storage multiple times.
+  if (!isa<UndefValue>(InitVal)) {
+    IRBuilder<> Builder(CI->getNextNode());
+    // TODO: Use alignment above if align!=1
+    Builder.CreateMemSet(NewGV, InitVal, AllocSize, None);
+  }
+
+  // Update users of the allocation to use the new global instead.
   BitCastInst *TheBC = nullptr;
   while (!CI->use_empty()) {
     Instruction *User = cast<Instruction>(CI->user_back());
@@ -946,7 +956,7 @@ OptimizeGlobalAddressOfMalloc(GlobalVariable *GV, CallInst *CI,
   } else
     GV->getParent()->getGlobalList().insert(GV->getIterator(), InitBool);
 
-  // Now the GV is dead, nuke it and the malloc..
+  // Now the GV is dead, nuke it and the allocation..
   GV->eraseFromParent();
   CI->eraseFromParent();
 
@@ -1003,17 +1013,24 @@ valueIsOnlyUsedLocallyOrStoredToOneGlobal(const CallInst *CI,
   return true;
 }
 
-/// If we have a global that is only initialized with a fixed size malloc,
-/// transform the program to use global memory instead of malloc'd memory.
-/// This eliminates dynamic allocation, avoids an indirection accessing the
-/// data, and exposes the resultant global to further GlobalOpt.
-static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
-                                               AtomicOrdering Ordering,
-                                               const DataLayout &DL,
-                                               TargetLibraryInfo *TLI) {
-  // TODO: This can be generalized to calloc-like functions by using
-  // getInitialValueOfAllocation() for the global initialization.
-  assert(isMallocLikeFn(CI, TLI) && "Must be malloc-like call");
+/// If we have a global that is only initialized with a fixed size allocation
+/// try to transform the program to use global memory instead of heap
+/// allocated memory. This eliminates dynamic allocation, avoids an indirection
+/// accessing the data, and exposes the resultant global to further GlobalOpt.
+static bool tryToOptimizeStoreOfAllocationToGlobal(GlobalVariable *GV,
+                                                   CallInst *CI,
+                                                   AtomicOrdering Ordering,
+                                                   const DataLayout &DL,
+                                                   TargetLibraryInfo *TLI) {
+  if (!isAllocRemovable(CI, TLI))
+    // Must be able to remove the call when we get done..
+    return false;
+
+  Type *Int8Ty = Type::getInt8Ty(CI->getFunction()->getContext());
+  Constant *InitVal = getInitialValueOfAllocation(CI, TLI, Int8Ty);
+  if (!InitVal)
+    // Must be able to emit a memset for initialization
+    return false;
 
   uint64_t AllocSize;
   if (!getObjectSize(CI, AllocSize, DL, TLI, ObjectSizeOpts()))
@@ -1041,7 +1058,7 @@ static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
   if (!valueIsOnlyUsedLocallyOrStoredToOneGlobal(CI, GV))
     return false;
 
-  OptimizeGlobalAddressOfMalloc(GV, CI, AllocSize, DL, TLI);
+  OptimizeGlobalAddressOfAllocation(GV, CI, AllocSize, InitVal, DL, TLI);
   return true;
 }
 
@@ -1071,10 +1088,10 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
       // Optimize away any trapping uses of the loaded value.
       if (OptimizeAwayTrappingUsesOfLoads(GV, SOVC, DL, GetTLI))
         return true;
-    } else if (isMallocLikeFn(StoredOnceVal, GetTLI)) {
+    } else if (isAllocationFn(StoredOnceVal, GetTLI)) {
       if (auto *CI = dyn_cast<CallInst>(StoredOnceVal)) {
         auto *TLI = &GetTLI(*CI->getFunction());
-        if (tryToOptimizeStoreOfMallocToGlobal(GV, CI, Ordering, DL, TLI))
+        if (tryToOptimizeStoreOfAllocationToGlobal(GV, CI, Ordering, DL, TLI))
           return true;
       }
     }
