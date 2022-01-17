@@ -1,3 +1,4 @@
+// UNSUPPORTED: -zos, -aix
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs %s -verify
 // RUN: %clang_cc1 -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -I %S/Inputs -x c %s -verify
