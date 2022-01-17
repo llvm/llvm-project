@@ -71,6 +71,7 @@ enum ArchExtKind : uint64_t {
   AEK_SMEI64 =      1ULL << 39,
   AEK_HBC =         1ULL << 40,
   AEK_MOPS =        1ULL << 41,
+  AEK_PERFMON =     1ULL << 42,
 };
 
 enum class ArchKind {
