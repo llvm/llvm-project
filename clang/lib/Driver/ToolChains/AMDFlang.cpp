@@ -76,6 +76,9 @@ void AMDFlang::ConstructJob(Compilation &C, const JobAction &JA,
            "OpenMP offloading has to have targets specified.");
   }
 
+  if (IsOpenMPDevice && (Args.hasArg(options::OPT_fsyntax_only) ||
+      Args.hasArg(options::OPT_E))) return;
+
   // Check number of inputs for sanity. We need at least one input.
   assert(Inputs.size() >= 1 && "Must have at least one input.");
 
