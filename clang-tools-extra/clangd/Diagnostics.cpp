@@ -631,7 +631,10 @@ void StoreDiags::EndSourceFile() {
 /// the result is not too large and does not contain newlines.
 static void writeCodeToFixMessage(llvm::raw_ostream &OS, llvm::StringRef Code) {
   constexpr unsigned MaxLen = 50;
-
+  if (Code == "\n") {
+    OS << "\\n";
+    return;
+  }
   // Only show the first line if there are many.
   llvm::StringRef R = Code.split('\n').first;
   // Shorten the message if it's too long.
