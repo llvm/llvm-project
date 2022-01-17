@@ -62,18 +62,13 @@ define void @demand_one_loaded_byte(i64* %xp, i32* %yp) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl (%ecx), %edx
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    shldl $24, %edx, %ecx
-; X86-NEXT:    bswapl %ecx
+; X86-NEXT:    movb 4(%ecx), %cl
 ; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: demand_one_loaded_byte:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq (%rdi), %rax
-; X64-NEXT:    shrq $8, %rax
-; X64-NEXT:    bswapl %eax
+; X64-NEXT:    movb 4(%rdi), %al
 ; X64-NEXT:    movb %al, (%rsi)
 ; X64-NEXT:    retq
   %x = load i64, i64* %xp, align 8
