@@ -30,6 +30,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstdint>
@@ -211,18 +212,20 @@ class MultiVarConstantPropagationTest : public ::testing::Test {
 protected:
   template <typename Matcher>
   void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
-    test::checkDataflow<ConstantPropagationAnalysis>(
-        Code, "fun",
-        [](ASTContext &C, Environment &) {
-          return ConstantPropagationAnalysis(C);
-        },
-        [&Expectations](
-            llvm::ArrayRef<std::pair<
-                std::string,
-                DataflowAnalysisState<ConstantPropagationAnalysis::Lattice>>>
-                Results,
-            ASTContext &) { EXPECT_THAT(Results, Expectations); },
-        {"-fsyntax-only", "-std=c++17"});
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<ConstantPropagationAnalysis>(
+            Code, "fun",
+            [](ASTContext &C, Environment &) {
+              return ConstantPropagationAnalysis(C);
+            },
+            [&Expectations](
+                llvm::ArrayRef<std::pair<
+                    std::string, DataflowAnalysisState<
+                                     ConstantPropagationAnalysis::Lattice>>>
+                    Results,
+                ASTContext &) { EXPECT_THAT(Results, Expectations); },
+            {"-fsyntax-only", "-std=c++17"}),
+        llvm::Succeeded());
   }
 };
 
