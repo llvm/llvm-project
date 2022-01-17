@@ -137,6 +137,7 @@ static bool isBSDLike(object::Archive::Kind Kind) {
   case object::Archive::K_DARWIN:
   case object::Archive::K_DARWIN64:
     return true;
+  case object::Archive::K_AIXBIG:
   case object::Archive::K_COFF:
     break;
   }
@@ -199,6 +200,7 @@ static bool is64BitKind(object::Archive::Kind Kind) {
   case object::Archive::K_BSD:
   case object::Archive::K_DARWIN:
   case object::Archive::K_COFF:
+  case object::Archive::K_AIXBIG:
     return false;
   case object::Archive::K_DARWIN64:
   case object::Archive::K_GNU64:
