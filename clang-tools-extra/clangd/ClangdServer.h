@@ -165,6 +165,8 @@ public:
     bool FoldingRanges = false;
 
     FeatureModuleSet *FeatureModules = nullptr;
+    /// If true, use the dirty buffer contents when building Preambles.
+    bool UseDirtyHeaders = false;
 
     explicit operator TUScheduler::Options() const;
   };
@@ -394,6 +396,9 @@ public:
 private:
   FeatureModuleSet *FeatureModules;
   const GlobalCompilationDatabase &CDB;
+  const ThreadsafeFS &getHeaderFS() const {
+    return UseDirtyHeaders ? *DirtyFS : TFS;
+  }
   const ThreadsafeFS &TFS;
 
   Path ResourceDir;
@@ -412,6 +417,8 @@ private:
 
   // When set, provides clang-tidy options for a specific file.
   TidyProviderRef ClangTidyProvider;
+
+  bool UseDirtyHeaders = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>
