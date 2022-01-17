@@ -357,7 +357,8 @@ private:
     }
     // Try to merge a control statement block with left brace unwrapped
     if (TheLine->Last->is(tok::l_brace) && TheLine->First != TheLine->Last &&
-        TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for)) {
+        TheLine->First->isOneOf(tok::kw_if, tok::kw_while, tok::kw_for,
+                                TT_ForEachMacro)) {
       return Style.AllowShortBlocksOnASingleLine != FormatStyle::SBS_Never
                  ? tryMergeSimpleBlock(I, E, Limit)
                  : 0;
@@ -380,7 +381,7 @@ private:
                  : 0;
     } else if (I[1]->First->is(tok::l_brace) &&
                TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                       tok::kw_for)) {
+                                       tok::kw_for, TT_ForEachMacro)) {
       return (Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always)
                  ? tryMergeSimpleBlock(I, E, Limit)
@@ -495,7 +496,8 @@ private:
                  ? tryMergeSimpleControlStatement(I, E, Limit)
                  : 0;
     }
-    if (TheLine->First->isOneOf(tok::kw_for, tok::kw_while, tok::kw_do)) {
+    if (TheLine->First->isOneOf(tok::kw_for, tok::kw_while, tok::kw_do,
+                                TT_ForEachMacro)) {
       return Style.AllowShortLoopsOnASingleLine
                  ? tryMergeSimpleControlStatement(I, E, Limit)
                  : 0;
@@ -543,13 +545,14 @@ private:
     if (!Line.First->is(tok::kw_do) && !Line.First->is(tok::kw_else) &&
         !Line.Last->is(tok::kw_else) && Line.Last->isNot(tok::r_paren))
       return 0;
-    // Only merge do while if do is the only statement on the line.
+    // Only merge `do while` if `do` is the only statement on the line.
     if (Line.First->is(tok::kw_do) && !Line.Last->is(tok::kw_do))
       return 0;
     if (1 + I[1]->Last->TotalLength > Limit)
       return 0;
+    // Don't merge with loops, ifs, a single semicolon or a line comment.
     if (I[1]->First->isOneOf(tok::semi, tok::kw_if, tok::kw_for, tok::kw_while,
-                             TT_LineComment))
+                             TT_ForEachMacro, TT_LineComment))
       return 0;
     // Only inline simple if's (no nested if or else), unless specified
     if (Style.AllowShortIfStatementsOnASingleLine ==
@@ -637,8 +640,8 @@ private:
     }
     if (Line.First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while, tok::kw_do,
                             tok::kw_try, tok::kw___try, tok::kw_catch,
-                            tok::kw___finally, tok::kw_for, tok::r_brace,
-                            Keywords.kw___except)) {
+                            tok::kw___finally, tok::kw_for, TT_ForEachMacro,
+                            tok::r_brace, Keywords.kw___except)) {
       if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never)
         return 0;
       if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Empty &&
@@ -658,12 +661,14 @@ private:
           I + 2 != E && !I[2]->First->is(tok::r_brace))
         return 0;
       if (!Style.AllowShortLoopsOnASingleLine &&
-          Line.First->isOneOf(tok::kw_while, tok::kw_do, tok::kw_for) &&
+          Line.First->isOneOf(tok::kw_while, tok::kw_do, tok::kw_for,
+                              TT_ForEachMacro) &&
           !Style.BraceWrapping.AfterControlStatement &&
           !I[1]->First->is(tok::r_brace))
         return 0;
       if (!Style.AllowShortLoopsOnASingleLine &&
-          Line.First->isOneOf(tok::kw_while, tok::kw_do, tok::kw_for) &&
+          Line.First->isOneOf(tok::kw_while, tok::kw_do, tok::kw_for,
+                              TT_ForEachMacro) &&
           Style.BraceWrapping.AfterControlStatement ==
               FormatStyle::BWACS_Always &&
           I + 2 != E && !I[2]->First->is(tok::r_brace))

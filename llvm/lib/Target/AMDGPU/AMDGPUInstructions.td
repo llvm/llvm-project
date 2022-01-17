@@ -18,6 +18,7 @@ class AddressSpacesImpl {
   int Local = 3;
   int Constant = 4;
   int Private = 5;
+  int Constant32Bit = 6;
 }
 
 def AddrSpaces : AddressSpacesImpl;
@@ -410,13 +411,17 @@ class StoreHi16<SDPatternOperator op> : PatFrag <
   let IsStore = 1;
 }
 
-def LoadAddress_constant : AddressSpaceList<[  AddrSpaces.Constant ]>;
-def LoadAddress_global : AddressSpaceList<[  AddrSpaces.Global, AddrSpaces.Constant ]>;
+def LoadAddress_constant : AddressSpaceList<[ AddrSpaces.Constant,
+                                              AddrSpaces.Constant32Bit ]>;
+def LoadAddress_global : AddressSpaceList<[ AddrSpaces.Global,
+                                            AddrSpaces.Constant,
+                                            AddrSpaces.Constant32Bit ]>;
 def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global ]>;
 
-def LoadAddress_flat : AddressSpaceList<[  AddrSpaces.Flat,
-                                           AddrSpaces.Global,
-                                           AddrSpaces.Constant ]>;
+def LoadAddress_flat : AddressSpaceList<[ AddrSpaces.Flat,
+                                          AddrSpaces.Global,
+                                          AddrSpaces.Constant,
+                                          AddrSpaces.Constant32Bit ]>;
 def StoreAddress_flat : AddressSpaceList<[ AddrSpaces.Flat, AddrSpaces.Global ]>;
 
 def LoadAddress_private : AddressSpaceList<[ AddrSpaces.Private ]>;

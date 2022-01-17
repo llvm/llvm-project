@@ -46,6 +46,9 @@ bool skipUnitDimReshape(const OpResult &producer, OpOperand &consumer);
 //===----------------------------------------------------------------------===//
 using LinalgLoops = SmallVector<Operation *, 4>;
 
+void populatePadTensorTilingPatterns(RewritePatternSet &patterns,
+                                     const LinalgTilingOptions &options);
+
 /// [DEPRECATED] Populate patterns for vectorization of all ConvN-D ops.
 void populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,

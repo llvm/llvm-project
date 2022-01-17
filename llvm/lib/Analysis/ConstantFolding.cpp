@@ -399,6 +399,12 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
       } while (ElemC && DL.getTypeSizeInBits(ElemC->getType()).isZero());
       C = ElemC;
     } else {
+      // For non-byte-sized vector elements, the first element is not
+      // necessarily located at the vector base address.
+      if (auto *VT = dyn_cast<VectorType>(SrcTy))
+        if (!DL.typeSizeEqualsStoreSize(VT->getElementType()))
+          return nullptr;
+
       C = C->getAggregateElement(0u);
     }
   } while (C);

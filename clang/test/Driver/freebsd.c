@@ -205,3 +205,10 @@
 // RUN: %clang -target ppc64-unknown-freebsd13.0 -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=PPC64-MUNWIND %s
 // PPC64-MUNWIND: "-funwind-tables=2"
+
+/// -r suppresses default -l and crt*.o like -nostdlib.
+// RUN: %clang -### %s --target=aarch64-pc-freebsd11 -r \
+// RUN:   --sysroot=%S/Inputs/basic_freebsd64_tree 2>&1 | FileCheck %s --check-prefix=RELOCATABLE
+// RELOCATABLE:     "-r"
+// RELOCATABLE-NOT: "-l
+// RELOCATABLE-NOT: crt{{[^.]+}}.o

@@ -161,6 +161,15 @@ public:
   bool enableSaveRestore() const { return EnableSaveRestore; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }
+  unsigned getFLen() const {
+    if (HasStdExtD)
+      return 64;
+
+    if (HasStdExtF)
+      return 32;
+
+    return 0;
+  }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");

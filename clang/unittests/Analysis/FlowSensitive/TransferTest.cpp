@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
@@ -40,16 +41,20 @@ protected:
   template <typename Matcher>
   void runDataflow(llvm::StringRef Code, Matcher Match,
                    LangStandard::Kind Std = LangStandard::lang_cxx17) {
-    test::checkDataflow<NoopAnalysis>(
-        Code, "target",
-        [](ASTContext &C, Environment &) { return NoopAnalysis(C); },
-        [&Match](llvm::ArrayRef<
-                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                     Results,
-                 ASTContext &ASTCtx) { Match(Results, ASTCtx); },
-        {"-fsyntax-only",
-         "-std=" +
-             std::string(LangStandard::getLangStandardForKind(Std).getName())});
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<NoopAnalysis>(
+            Code, "target",
+            [](ASTContext &C, Environment &) { return NoopAnalysis(C); },
+            [&Match](
+                llvm::ArrayRef<
+                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                    Results,
+                ASTContext &ASTCtx) { Match(Results, ASTCtx); },
+            {"-fsyntax-only",
+             "-std=" +
+                 std::string(
+                     LangStandard::getLangStandardForKind(Std).getName())}),
+        llvm::Succeeded());
   }
 };
 

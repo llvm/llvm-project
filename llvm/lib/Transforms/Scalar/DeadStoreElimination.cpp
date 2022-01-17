@@ -699,17 +699,14 @@ bool isNoopIntrinsic(Instruction *I) {
 }
 
 // Check if we can ignore \p D for DSE.
-bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller,
-                const TargetLibraryInfo &TLI) {
+bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
   Instruction *DI = D->getMemoryInst();
   // Calls that only access inaccessible memory cannot read or write any memory
   // locations we consider for elimination.
   if (auto *CB = dyn_cast<CallBase>(DI))
-    if (CB->onlyAccessesInaccessibleMemory()) {
-      if (isAllocLikeFn(DI, &TLI))
-        return false;
+    if (CB->onlyAccessesInaccessibleMemory())
       return true;
-    }
+
   // We can eliminate stores to locations not visible to the caller across
   // throwing instructions.
   if (DI->mayThrow() && !DefVisibleToCaller)
@@ -761,7 +758,6 @@ struct DSEState {
   SmallPtrSet<MemoryAccess *, 4> SkipStores;
   // Keep track of all of the objects that are invisible to the caller before
   // the function returns.
-  // SmallPtrSet<const Value *, 16> InvisibleToCallerBeforeRet;
   DenseMap<const Value *, bool> InvisibleToCallerBeforeRet;
   // Keep track of all of the objects that are invisible to the caller after
   // the function returns.
@@ -1264,8 +1260,8 @@ struct DSEState {
       MemoryDef *CurrentDef = cast<MemoryDef>(Current);
       Instruction *CurrentI = CurrentDef->getMemoryInst();
 
-      if (canSkipDef(CurrentDef, !isInvisibleToCallerBeforeRet(KillingUndObj),
-                     TLI)) {
+      if (canSkipDef(CurrentDef,
+                     !isInvisibleToCallerBeforeRet(KillingUndObj))) {
         CanOptimize = false;
         continue;
       }

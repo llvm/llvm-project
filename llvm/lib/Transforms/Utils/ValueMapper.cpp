@@ -398,13 +398,17 @@ Value *Mapper::mapValue(const Value *V) {
       SmallVector<ValueAsMetadata *, 4> MappedArgs;
       for (auto *VAM : AL->getArgs()) {
         // Map both Local and Constant VAMs here; they will both ultimately
-        // be mapped via mapValue (apart from constants when we have no
-        // module level changes, which have an identity mapping).
+        // be mapped via mapValue. The exceptions are constants when we have no
+        // module level changes and locals when they have no existing mapped
+        // value and RF_IgnoreMissingLocals is set; these have identity
+        // mappings.
         if ((Flags & RF_NoModuleLevelChanges) && isa<ConstantAsMetadata>(VAM)) {
           MappedArgs.push_back(VAM);
         } else if (Value *LV = mapValue(VAM->getValue())) {
           MappedArgs.push_back(
               LV == VAM->getValue() ? VAM : ValueAsMetadata::get(LV));
+        } else if ((Flags & RF_IgnoreMissingLocals) && isa<LocalAsMetadata>(VAM)) {
+            MappedArgs.push_back(VAM);
         } else {
           // If we cannot map the value, set the argument as undef.
           MappedArgs.push_back(ValueAsMetadata::get(

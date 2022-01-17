@@ -71,7 +71,8 @@ TEST_F(ExpandAutoTypeTest, Test) {
       apply("void ns::Func() { au^to x = new ns::Class::Nested{}; }"),
       "void ns::Func() { ns::Class::Nested * x = new ns::Class::Nested{}; }");
 
-  EXPECT_UNAVAILABLE("dec^ltype(au^to) x = 10;");
+  EXPECT_EQ(apply("dec^ltype(auto) x = 10;"), "int x = 10;");
+  EXPECT_EQ(apply("decltype(au^to) x = 10;"), "int x = 10;");
   // expanding types in structured bindings is syntactically invalid.
   EXPECT_UNAVAILABLE("const ^auto &[x,y] = (int[]){1,2};");
 

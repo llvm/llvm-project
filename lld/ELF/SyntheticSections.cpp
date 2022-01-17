@@ -171,7 +171,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
   if (!ELFT::Is64Bits)
     return nullptr;
 
-  std::vector<InputSectionBase *> sections;
+  SmallVector<InputSectionBase *, 0> sections;
   for (InputSectionBase *sec : inputSections)
     if (sec->type == SHT_MIPS_OPTIONS)
       sections.push_back(sec);
@@ -228,7 +228,7 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   if (ELFT::Is64Bits)
     return nullptr;
 
-  std::vector<InputSectionBase *> sections;
+  SmallVector<InputSectionBase *, 0> sections;
   for (InputSectionBase *sec : inputSections)
     if (sec->type == SHT_MIPS_REGINFO)
       sections.push_back(sec);
@@ -496,9 +496,8 @@ static void writeCieFde(uint8_t *buf, ArrayRef<uint8_t> d) {
   memcpy(buf, d.data(), d.size());
 
   size_t aligned = alignTo(d.size(), config->wordsize);
-
-  // Zero-clear trailing padding if it exists.
-  memset(buf + d.size(), 0, aligned - d.size());
+  assert(std::all_of(buf + d.size(), buf + aligned,
+                     [](uint8_t c) { return c == 0; }));
 
   // Fix the size field. -4 since size does not include the size field itself.
   write32(buf, aligned - 4);
@@ -551,9 +550,9 @@ void EhFrameSection::finalizeContents() {
 // Returns data for .eh_frame_hdr. .eh_frame_hdr is a binary search table
 // to get an FDE from an address to which FDE is applied. This function
 // returns a list of such pairs.
-std::vector<EhFrameSection::FdeData> EhFrameSection::getFdeData() const {
+SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
   uint8_t *buf = Out::bufferStart + getParent()->offset + outSecOff;
-  std::vector<FdeData> ret;
+  SmallVector<FdeData, 0> ret;
 
   uint64_t va = getPartition().ehFrameHdr->getVA();
   for (CieRecord *rec : cieRecords) {
@@ -1239,7 +1238,7 @@ StringTableSection::StringTableSection(StringRef name, bool dynamic)
 // them with some other string that happens to be the same.
 unsigned StringTableSection::addString(StringRef s, bool hashIt) {
   if (hashIt) {
-    auto r = stringMap.insert(std::make_pair(s, this->size));
+    auto r = stringMap.try_emplace(CachedHashStringRef(s), size);
     if (!r.second)
       return r.first->second;
   }
@@ -1710,8 +1709,7 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
   if (sort) {
     const RelType relativeRel = target->relativeRel;
     auto nonRelative =
-        std::stable_partition(relocs.begin(), relocs.end(),
-                              [=](auto &r) { return r.type == relativeRel; });
+        llvm::partition(relocs, [=](auto &r) { return r.type == relativeRel; });
     parallelSort(relocs.begin(), nonRelative,
                  [&](auto &a, auto &b) { return a.r_offset < b.r_offset; });
     // Non-relative relocations are few, so don't bother with parallelSort.
@@ -2222,7 +2220,6 @@ static uint32_t getSymSectionIndex(Symbol *sym) {
 // Write the internal symbol table contents to the output symbol table.
 template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
   // The first entry is a null entry as per the ELF spec.
-  memset(buf, 0, sizeof(Elf_Sym));
   buf += sizeof(Elf_Sym);
 
   auto *eSym = reinterpret_cast<Elf_Sym *>(buf);
@@ -2399,11 +2396,6 @@ void GnuHashTableSection::finalizeContents() {
 }
 
 void GnuHashTableSection::writeTo(uint8_t *buf) {
-  // The output buffer is not guaranteed to be zero-cleared because we pre-
-  // fill executable sections with trap instructions. This is a precaution
-  // for that case, which happens only when --no-rosegment is given.
-  memset(buf, 0, size);
-
   // Write a header.
   write32(buf, nBuckets);
   write32(buf + 4, getPartition().dynSymTab->getNumSymbols() - symbols.size());
@@ -2486,8 +2478,9 @@ void GnuHashTableSection::addSymbols(SmallVectorImpl<SymbolTableEntry> &v) {
     symbols.push_back({b, ent.strTabOffset, hash, bucketIdx});
   }
 
-  llvm::stable_sort(symbols, [](const Entry &l, const Entry &r) {
-    return l.bucketIdx < r.bucketIdx;
+  llvm::sort(symbols, [](const Entry &l, const Entry &r) {
+    return std::tie(l.bucketIdx, l.strTabOffset) <
+           std::tie(r.bucketIdx, r.strTabOffset);
   });
 
   v.erase(mid, v.end());
@@ -2516,10 +2509,6 @@ void HashTableSection::finalizeContents() {
 
 void HashTableSection::writeTo(uint8_t *buf) {
   SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
-
-  // See comment in GnuHashTableSection::writeTo.
-  memset(buf, 0, size);
-
   unsigned numSymbols = symTab->getNumSymbols();
 
   uint32_t *p = reinterpret_cast<uint32_t *>(buf);
@@ -3041,8 +3030,7 @@ void EhFrameHeader::writeTo(uint8_t *buf) {
 void EhFrameHeader::write() {
   uint8_t *buf = Out::bufferStart + getParent()->offset + outSecOff;
   using FdeData = EhFrameSection::FdeData;
-
-  std::vector<FdeData> fdes = getPartition().ehFrame->getFdeData();
+  SmallVector<FdeData, 0> fdes = getPartition().ehFrame->getFdeData();
 
   buf[0] = 1;
   buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
@@ -3730,10 +3718,6 @@ static uint8_t getAbiVersion() {
 }
 
 template <typename ELFT> void elf::writeEhdr(uint8_t *buf, Partition &part) {
-  // For executable segments, the trap instructions are written before writing
-  // the header. Setting Elf header bytes to zero ensures that any unused bytes
-  // in header are zero-cleared, instead of having trap instructions.
-  memset(buf, 0, sizeof(typename ELFT::Ehdr));
   memcpy(buf, "\177ELF", 4);
 
   auto *eHdr = reinterpret_cast<typename ELFT::Ehdr *>(buf);

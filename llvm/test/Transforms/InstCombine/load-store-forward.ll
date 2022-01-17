@@ -47,7 +47,8 @@ define i17 @vec_store_load_first_odd_size(i17* %p) {
 ; CHECK-LABEL: @vec_store_load_first_odd_size(
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i17* [[P:%.*]] to <2 x i17>*
 ; CHECK-NEXT:    store <2 x i17> <i17 1, i17 2>, <2 x i17>* [[P2]], align 8
-; CHECK-NEXT:    ret i17 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i17, i17* [[P]], align 4
+; CHECK-NEXT:    ret i17 [[LOAD]]
 ;
   %p2 = bitcast i17* %p to <2 x i17>*
   store <2 x i17> <i17 1, i17 2>, <2 x i17>* %p2
