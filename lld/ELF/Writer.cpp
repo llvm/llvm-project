@@ -120,7 +120,7 @@ static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
 }
 
 void elf::copySectionsIntoPartitions() {
-  std::vector<InputSectionBase *> newSections;
+  SmallVector<InputSectionBase *, 0> newSections;
   for (unsigned part = 2; part != partitions.size() + 1; ++part) {
     for (InputSectionBase *s : inputSections) {
       if (!(s->flags & SHF_ALLOC) || !s->isLive())

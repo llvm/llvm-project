@@ -574,8 +574,9 @@ void LinkerScript::discardSynthetic(OutputSection &outCmd) {
   for (Partition &part : partitions) {
     if (!part.armExidx || !part.armExidx->isLive())
       continue;
-    std::vector<InputSectionBase *> secs(part.armExidx->exidxSections.begin(),
-                                         part.armExidx->exidxSections.end());
+    SmallVector<InputSectionBase *, 0> secs(
+        part.armExidx->exidxSections.begin(),
+        part.armExidx->exidxSections.end());
     for (SectionCommand *cmd : outCmd.commands)
       if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
         for (InputSectionBase *s : computeInputSections(isd, secs))

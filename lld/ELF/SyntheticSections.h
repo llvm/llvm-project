@@ -86,7 +86,7 @@ public:
     uint32_t fdeVARel;
   };
 
-  std::vector<FdeData> getFdeData() const;
+  SmallVector<FdeData, 0> getFdeData() const;
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
   template <class ELFT>
   void iterateFDEWithLSDA(llvm::function_ref<void(InputSection &)> fn);
