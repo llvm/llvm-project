@@ -857,12 +857,19 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
     SmallVector<Value> returnedArgs;
-    for (Value yieldVal : yieldOp.values()) {
-      auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
+    for (const auto &yieldVal : llvm::enumerate(yieldOp.values())) {
+      auto yieldArg = yieldVal.value().dyn_cast<BlockArgument>();
       if (!yieldArg || yieldArg.getOwner() != &body)
         return failure();
       unsigned argumentNumber = yieldArg.getArgNumber();
-      returnedArgs.push_back(genericOp->getOperand(argumentNumber));
+      Value returnedArg = genericOp->getOperand(argumentNumber);
+      Type resultType = genericOp->getResult(yieldVal.index()).getType();
+      // The input can have a different type than the result, e.g. a dynamic
+      // input dimension can be turned into a static output dimension.
+      if (returnedArg.getType() != resultType)
+        returnedArg = rewriter.create<tensor::CastOp>(genericOp.getLoc(),
+                                                      resultType, returnedArg);
+      returnedArgs.push_back(returnedArg);
     }
     if (returnedArgs.size() != genericOp->getNumResults())
       return failure();
