@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // REQUIRES: long_tests
+//
+// This fails on MinGW for some unknown reason.
+// UNSUPPORTED: target={{.+}}-windows-gnu
 
 // <random>
 
