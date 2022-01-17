@@ -58,9 +58,16 @@ template <typename T> struct HasTraits {
 template <typename HeadT, typename... TailTs>
 struct AreSame : conjunction<std::is_same<HeadT, TailTs>...> {};
 
-template <typename... ThunkTs, std::enable_if_t<AreSame<ThunkTs...>{}, int> = 0>
-static constexpr auto makeThunkArray(ThunkTs &&...Thunks) {
-  return make_array(std::forward<ThunkTs>(Thunks)...);
+// FIXME: Peeling off the first ThunkT in this definition is only necessary to
+// work around an MSVC compiler issue, where it complains that std::is_same is
+// not provided enough template arguments. Verify what version of MSVC no
+// longer requires this workaround so this can be simplified.
+template <typename HeadThunkT, typename... TailThunkTs,
+          std::enable_if_t<AreSame<HeadThunkT, TailThunkTs...>{}, int> = 0>
+static constexpr auto makeThunkArray(HeadThunkT &&HeadThunk,
+                                     TailThunkTs &&...TailThunks) {
+  return make_array(std::forward<HeadThunkT>(HeadThunk),
+                    std::forward<TailThunkTs>(TailThunks)...);
 }
 
 template <size_t Index, typename VisitorT, typename... VariantTs>
