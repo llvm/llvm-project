@@ -156,7 +156,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     : FeatureModules(Opts.FeatureModules), CDB(CDB), TFS(TFS),
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
-      WorkspaceRoot(Opts.WorkspaceRoot),
+      UseDirtyHeaders(Opts.UseDirtyHeaders), WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
                                           : TUScheduler::NoInvalidation),
       DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
@@ -228,7 +228,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
 
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
-  Inputs.TFS = &TFS;
+  Inputs.TFS = &getHeaderFS();
   Inputs.Contents = std::string(Contents);
   Inputs.Version = std::move(ActualVersion);
   Inputs.ForceRebuild = ForceRebuild;
@@ -368,7 +368,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
         SpecFuzzyFind->CachedReq = CachedCompletionFuzzyFindRequestByFile[File];
       }
     }
-    ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
+    ParseInputs ParseInput{IP->Command, &getHeaderFS(), IP->Contents.str()};
     // FIXME: Add traling new line if there is none at eof, workaround a crash,
     // see https://github.com/clangd/clangd/issues/332
     if (!IP->Contents.endswith("\n"))
@@ -420,7 +420,7 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
     if (!PreambleData)
       return CB(error("Failed to parse includes"));
 
-    ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
+    ParseInputs ParseInput{IP->Command, &getHeaderFS(), IP->Contents.str()};
     // FIXME: Add traling new line if there is none at eof, workaround a crash,
     // see https://github.com/clangd/clangd/issues/332
     if (!IP->Contents.endswith("\n"))
