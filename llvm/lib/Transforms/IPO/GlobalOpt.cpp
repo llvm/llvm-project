@@ -1016,7 +1016,7 @@ static bool tryToOptimizeStoreOfMallocToGlobal(GlobalVariable *GV, CallInst *CI,
   assert(isMallocLikeFn(CI, TLI) && "Must be malloc-like call");
 
   uint64_t AllocSize;
-  if (!getObjectSize(CI, AllocSize, DL, TLI, ObjectSizeOpts()) && AllocSize > 0)
+  if (!getObjectSize(CI, AllocSize, DL, TLI, ObjectSizeOpts()))
     return false;
 
   // Restrict this transformation to only working on small allocations
