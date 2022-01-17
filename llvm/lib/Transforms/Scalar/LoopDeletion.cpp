@@ -417,6 +417,7 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
         return LoopDeletionResult::Unmodified;
     }
   }
+  ++NumBackedgesBroken;
   breakLoopBackedge(L, DT, SE, LI, MSSA);
   return LoopDeletionResult::Deleted;
 }
