@@ -1,4 +1,4 @@
-//===-- M68kFrameLowering.cpp - M68k Frame Information ------*- C++ -*-===//
+//===-- M68kFrameLowering.cpp - M68k Frame Information ----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -157,7 +157,7 @@ static unsigned findDeadCallerSavedReg(MachineBasicBlock &MBB,
       MachineOperand &MO = MBBI->getOperand(i);
       if (!MO.isReg() || MO.isDef())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (!Reg)
         continue;
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
@@ -463,7 +463,7 @@ void M68kFrameLowering::emitPrologueCalleeSavedFrameMoves(
   // Calculate offsets.
   for (const auto &I : CSI) {
     int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
 
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
     BuildCFI(MBB, MBBI, DL,
@@ -485,7 +485,7 @@ void M68kFrameLowering::emitPrologue(MachineFunction &MF,
   uint64_t StackSize = MFI.getStackSize(); // Number of bytes to allocate.
   bool HasFP = hasFP(MF);
   bool NeedsDwarfCFI = MMI.hasDebugInfo() || Fn.needsUnwindTableEntry();
-  unsigned FramePtr = TRI->getFrameRegister(MF);
+  Register FramePtr = TRI->getFrameRegister(MF);
   const unsigned MachineFramePtr = FramePtr;
   unsigned BasePtr = TRI->getBaseRegister();
 
@@ -683,7 +683,7 @@ void M68kFrameLowering::emitEpilogue(MachineFunction &MF,
   DebugLoc DL;
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
-  unsigned FramePtr = TRI->getFrameRegister(MF);
+  Register FramePtr = TRI->getFrameRegister(MF);
   unsigned MachineFramePtr = FramePtr;
 
   // Get the number of bytes to allocate from the FrameInfo.
@@ -819,7 +819,7 @@ bool M68kFrameLowering::assignCalleeSavedSpillSlots(
     // Since emitPrologue and emitEpilogue will handle spilling and restoring of
     // the frame register, we can delete it from CSI list and not have to worry
     // about avoiding it later.
-    unsigned FPReg = TRI->getFrameRegister(MF);
+    Register FPReg = TRI->getFrameRegister(MF);
     for (unsigned i = 0, e = CSI.size(); i < e; ++i) {
       if (TRI->regsOverlap(CSI[i].getReg(), FPReg)) {
         CSI.erase(CSI.begin() + i);
@@ -842,7 +842,7 @@ bool M68kFrameLowering::spillCalleeSavedRegisters(
   unsigned Mask = 0;
   for (const auto &Info : CSI) {
     FI = std::max(FI, Info.getFrameIdx());
-    unsigned Reg = Info.getReg();
+    Register Reg = Info.getReg();
     unsigned Shift = MRI.getSpillRegisterOrder(Reg);
     Mask |= 1 << Shift;
   }
@@ -856,7 +856,7 @@ bool M68kFrameLowering::spillCalleeSavedRegisters(
   const MachineFunction &MF = *MBB.getParent();
   const MachineRegisterInfo &RI = MF.getRegInfo();
   for (const auto &Info : CSI) {
-    unsigned Reg = Info.getReg();
+    Register Reg = Info.getReg();
     bool IsLiveIn = RI.isLiveIn(Reg);
     if (!IsLiveIn)
       MBB.addLiveIn(Reg);
@@ -877,7 +877,7 @@ bool M68kFrameLowering::restoreCalleeSavedRegisters(
   unsigned Mask = 0;
   for (const auto &Info : CSI) {
     FI = std::max(FI, Info.getFrameIdx());
-    unsigned Reg = Info.getReg();
+    Register Reg = Info.getReg();
     unsigned Shift = MRI.getSpillRegisterOrder(Reg);
     Mask |= 1 << Shift;
   }

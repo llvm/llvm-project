@@ -29,7 +29,7 @@ test()
 
 int main(int, char**)
 {
-    test<cpp17_input_iterator<char*> >();
+    // we don't have a test iterator that is both input and default-constructible, so not testing that case
     test<forward_iterator<char*> >();
     test<bidirectional_iterator<char*> >();
     test<random_access_iterator<char*> >();

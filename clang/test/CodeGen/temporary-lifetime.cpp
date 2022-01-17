@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -std=c++11 -O1 -DWITH_DTOR -triple x86_64 -emit-llvm -o - | FileCheck -check-prefix=CHECK-DTOR %s
-// RUN: %clang_cc1 %s -std=c++11 -O1 -triple x86_64 -emit-llvm -o - | FileCheck -check-prefix=CHECK-NO-DTOR %s
+// RUN: %clang_cc1 -disable-noundef-analysis %s -std=c++11 -O1 -DWITH_DTOR -triple x86_64 -emit-llvm -o - | FileCheck -check-prefix=CHECK-DTOR %s
+// RUN: %clang_cc1 -disable-noundef-analysis %s -std=c++11 -O1 -triple x86_64 -emit-llvm -o - | FileCheck -check-prefix=CHECK-NO-DTOR %s
 
 struct A {
   A();

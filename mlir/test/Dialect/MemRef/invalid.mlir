@@ -208,6 +208,44 @@ func @memref_reinterpret_cast_offset_mismatch(%in: memref<?xf32>) {
 
 // -----
 
+func @memref_reinterpret_cast_no_map_but_offset(%in: memref<?xf32>) {
+  // expected-error @+1 {{expected result type with offset = 0 instead of 2}}
+  %out = memref.reinterpret_cast %in to offset: [2], sizes: [10], strides: [1]
+         : memref<?xf32> to memref<10xf32>
+  return
+}
+
+// -----
+
+func @memref_reinterpret_cast_no_map_but_stride(%in: memref<?xf32>) {
+  // expected-error @+1 {{expected result type with stride = 10 instead of 1 in dim = 0}}
+  %out = memref.reinterpret_cast %in to offset: [0], sizes: [10], strides: [10]
+         : memref<?xf32> to memref<10xf32>
+  return
+}
+
+// -----
+
+func @memref_reinterpret_cast_no_map_but_strides(%in: memref<?x?xf32>) {
+  // expected-error @+1 {{expected result type with stride = 42 instead of 10 in dim = 0}}
+  %out = memref.reinterpret_cast %in to
+           offset: [0], sizes: [9, 10], strides: [42, 1]
+         : memref<?x?xf32> to memref<9x10xf32>
+  return
+}
+
+// -----
+
+func @memref_reinterpret_cast_non_strided_layout(%in: memref<?x?xf32>) {
+  // expected-error @+1 {{expected result type to have strided layout but found 'memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>}}
+  %out = memref.reinterpret_cast %in to
+           offset: [0], sizes: [9, 10], strides: [42, 1]
+         : memref<?x?xf32> to memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>
+  return
+}
+
+// -----
+
 func @memref_reshape_element_type_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{element types of source and destination memref types should be the same}}

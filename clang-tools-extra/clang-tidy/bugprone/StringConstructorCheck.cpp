@@ -43,6 +43,8 @@ removeNamespaces(const std::vector<std::string> &Names) {
 StringConstructorCheck::StringConstructorCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      IsStringviewNullptrCheckEnabled(
+          Context->isCheckEnabled("bugprone-stringview-nullptr")),
       WarnOnLargeLength(Options.get("WarnOnLargeLength", true)),
       LargeLengthThreshold(Options.get("LargeLengthThreshold", 0x800000)),
       StringNames(utils::options::parseStringList(
@@ -121,17 +123,20 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
   // Check the literal string constructor with char pointer.
   // [i.e. string (const char* s);]
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               cxxConstructExpr(
-                   hasDeclaration(cxxConstructorDecl(ofClass(cxxRecordDecl(
-                       hasAnyName(removeNamespaces(StringNames)))))),
-                   hasArgument(0, expr().bind("from-ptr")),
-                   // do not match std::string(ptr, int)
-                   // match std::string(ptr, alloc)
-                   // match std::string(ptr)
-                   anyOf(hasArgument(1, unless(hasType(isInteger()))),
-                         argumentCountIs(1)))
-                   .bind("constructor")),
+      traverse(
+          TK_AsIs,
+          cxxConstructExpr(
+              hasDeclaration(cxxConstructorDecl(ofClass(anyOf(
+                  cxxRecordDecl(hasName("basic_string_view"))
+                      .bind("basic_string_view_decl"),
+                  cxxRecordDecl(hasAnyName(removeNamespaces(StringNames))))))),
+              hasArgument(0, expr().bind("from-ptr")),
+              // do not match std::string(ptr, int)
+              // match std::string(ptr, alloc)
+              // match std::string(ptr)
+              anyOf(hasArgument(1, unless(hasType(isInteger()))),
+                    argumentCountIs(1)))
+              .bind("constructor")),
       this);
 }
 
@@ -167,6 +172,12 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
         Ptr->EvaluateAsRValue(ConstPtr, Ctx) &&
         ((ConstPtr.Val.isInt() && ConstPtr.Val.getInt().isZero()) ||
          (ConstPtr.Val.isLValue() && ConstPtr.Val.isNullPointer()))) {
+      if (IsStringviewNullptrCheckEnabled &&
+          Result.Nodes.getNodeAs<CXXRecordDecl>("basic_string_view_decl")) {
+        // Filter out `basic_string_view` to avoid conflicts with
+        // `bugprone-stringview-nullptr`
+        return;
+      }
       diag(Loc, "constructing string from nullptr is undefined behaviour");
     }
   }

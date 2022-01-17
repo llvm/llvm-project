@@ -121,14 +121,15 @@ TEST_F(ConfigCompileTests, Condition) {
 }
 
 TEST_F(ConfigCompileTests, CompileCommands) {
+  Frag.CompileFlags.Compiler.emplace("tpc.exe");
   Frag.CompileFlags.Add.emplace_back("-foo");
   Frag.CompileFlags.Remove.emplace_back("--include-directory=");
   std::vector<std::string> Argv = {"clang", "-I", "bar/", "--", "a.cc"};
   EXPECT_TRUE(compileAndApply());
-  EXPECT_THAT(Conf.CompileFlags.Edits, SizeIs(2));
+  EXPECT_THAT(Conf.CompileFlags.Edits, SizeIs(3));
   for (auto &Edit : Conf.CompileFlags.Edits)
     Edit(Argv);
-  EXPECT_THAT(Argv, ElementsAre("clang", "-foo", "--", "a.cc"));
+  EXPECT_THAT(Argv, ElementsAre("tpc.exe", "-foo", "--", "a.cc"));
 }
 
 TEST_F(ConfigCompileTests, CompilationDatabase) {
@@ -276,19 +277,20 @@ TEST_F(ConfigCompileTests, DiagnosticSuppression) {
                                    "unreachable-code", "unused-variable",
                                    "typecheck_bool_condition",
                                    "unexpected_friend", "warn_alloca"));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_unreachable,
-                                            Conf.Diagnostics.Suppress));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unreachable, Conf.Diagnostics.Suppress, LangOptions()));
   // Subcategory not respected/suppressed.
-  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(diag::warn_unreachable_break,
-                                             Conf.Diagnostics.Suppress));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_unused_variable,
-                                            Conf.Diagnostics.Suppress));
+  EXPECT_FALSE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unreachable_break, Conf.Diagnostics.Suppress, LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_unused_variable, Conf.Diagnostics.Suppress, LangOptions()));
   EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_typecheck_bool_condition,
-                                            Conf.Diagnostics.Suppress));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::err_unexpected_friend,
-                                            Conf.Diagnostics.Suppress));
-  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(diag::warn_alloca,
-                                            Conf.Diagnostics.Suppress));
+                                            Conf.Diagnostics.Suppress,
+                                            LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::err_unexpected_friend, Conf.Diagnostics.Suppress, LangOptions()));
+  EXPECT_TRUE(isBuiltinDiagnosticSuppressed(
+      diag::warn_alloca, Conf.Diagnostics.Suppress, LangOptions()));
 
   Frag.Diagnostics.Suppress.emplace_back("*");
   EXPECT_TRUE(compileAndApply());

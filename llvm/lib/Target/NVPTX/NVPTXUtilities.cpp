@@ -286,8 +286,7 @@ bool getAlign(const Function &F, unsigned index, unsigned &align) {
   bool retval = findAllNVVMAnnotation(&F, "align", Vs);
   if (!retval)
     return false;
-  for (int i = 0, e = Vs.size(); i < e; i++) {
-    unsigned v = Vs[i];
+  for (unsigned v : Vs) {
     if ((v >> 16) == index) {
       align = v & 0xFFFF;
       return true;

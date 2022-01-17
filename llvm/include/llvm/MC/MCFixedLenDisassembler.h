@@ -27,7 +27,7 @@ enum DecoderOps {
   OPC_Fail              // OPC_Fail()
 };
 
-} // namespace MCDecode
+} // namespace MCD
 } // namespace llvm
 
 #endif

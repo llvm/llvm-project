@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBreakpointName.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
@@ -169,12 +169,12 @@ operator=(const SBBreakpointName &rhs) {
 
   if (!rhs.m_impl_up) {
     m_impl_up.reset();
-    return LLDB_RECORD_RESULT(*this);
+    return *this;
   }
 
   m_impl_up = std::make_unique<SBBreakpointNameImpl>(rhs.m_impl_up->GetTarget(),
                                                      rhs.m_impl_up->GetName());
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBBreakpointName::operator==(const lldb::SBBreakpointName &rhs) {
@@ -550,8 +550,8 @@ bool SBBreakpointName::GetDescription(SBStream &s) {
 
 void SBBreakpointName::SetCallback(SBBreakpointHitCallback callback,
                                    void *baton) {
-  LLDB_RECORD_DUMMY(void, SBBreakpointName, SetCallback,
-                    (lldb::SBBreakpointHitCallback, void *), callback, baton);
+  LLDB_RECORD_METHOD(void, SBBreakpointName, SetCallback,
+                     (lldb::SBBreakpointHitCallback, void *), callback, baton);
 
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
@@ -585,7 +585,7 @@ SBError SBBreakpointName::SetScriptCallbackFunction(
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name) {
     sb_error.SetErrorString("unrecognized breakpoint name");
-    return LLDB_RECORD_RESULT(sb_error);
+    return sb_error;
   }
 
   std::lock_guard<std::recursive_mutex> guard(
@@ -601,7 +601,7 @@ SBError SBBreakpointName::SetScriptCallbackFunction(
                   extra_args.m_impl_up->GetObjectSP());
   sb_error.SetError(error);
   UpdateName(*bp_name);
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError
@@ -612,7 +612,7 @@ SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text) {
   SBError sb_error;
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
-    return LLDB_RECORD_RESULT(sb_error);
+    return sb_error;
 
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
@@ -627,7 +627,7 @@ SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text) {
   if (!sb_error.Fail())
     UpdateName(*bp_name);
 
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 bool SBBreakpointName::GetAllowList() const {
@@ -691,73 +691,4 @@ lldb_private::BreakpointName *SBBreakpointName::GetBreakpointName() const
   if (!IsValid())
     return nullptr;
   return m_impl_up->GetBreakpointName();
-}
-
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBBreakpointName>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBBreakpointName, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBBreakpointName,
-                            (lldb::SBTarget &, const char *));
-  LLDB_REGISTER_CONSTRUCTOR(SBBreakpointName,
-                            (lldb::SBBreakpoint &, const char *));
-  LLDB_REGISTER_CONSTRUCTOR(SBBreakpointName,
-                            (const lldb::SBBreakpointName &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBBreakpointName &,
-      SBBreakpointName, operator=,(const lldb::SBBreakpointName &));
-  LLDB_REGISTER_METHOD(
-      bool, SBBreakpointName, operator==,(const lldb::SBBreakpointName &));
-  LLDB_REGISTER_METHOD(
-      bool, SBBreakpointName, operator!=,(const lldb::SBBreakpointName &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBBreakpointName, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBBreakpointName, operator bool, ());
-  LLDB_REGISTER_METHOD_CONST(const char *, SBBreakpointName, GetName, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetEnabled, (bool));
-  LLDB_REGISTER_METHOD(bool, SBBreakpointName, IsEnabled, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetOneShot, (bool));
-  LLDB_REGISTER_METHOD_CONST(bool, SBBreakpointName, IsOneShot, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetIgnoreCount, (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBBreakpointName, GetIgnoreCount, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetCondition, (const char *));
-  LLDB_REGISTER_METHOD(const char *, SBBreakpointName, GetCondition, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetAutoContinue, (bool));
-  LLDB_REGISTER_METHOD(bool, SBBreakpointName, GetAutoContinue, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetThreadID, (lldb::tid_t));
-  LLDB_REGISTER_METHOD(lldb::tid_t, SBBreakpointName, GetThreadID, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetThreadIndex, (uint32_t));
-  LLDB_REGISTER_METHOD_CONST(uint32_t, SBBreakpointName, GetThreadIndex, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetThreadName, (const char *));
-  LLDB_REGISTER_METHOD_CONST(const char *, SBBreakpointName, GetThreadName,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetQueueName, (const char *));
-  LLDB_REGISTER_METHOD_CONST(const char *, SBBreakpointName, GetQueueName,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetCommandLineCommands,
-                       (lldb::SBStringList &));
-  LLDB_REGISTER_METHOD(bool, SBBreakpointName, GetCommandLineCommands,
-                       (lldb::SBStringList &));
-  LLDB_REGISTER_METHOD_CONST(const char *, SBBreakpointName, GetHelpString,
-                             ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetHelpString, (const char *));
-  LLDB_REGISTER_METHOD(bool, SBBreakpointName, GetDescription,
-                       (lldb::SBStream &));
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetScriptCallbackFunction,
-                       (const char *));
-  LLDB_REGISTER_METHOD(SBError, SBBreakpointName, SetScriptCallbackFunction,
-                       (const char *, SBStructuredData &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBBreakpointName, SetScriptCallbackBody,
-                       (const char *));
-  LLDB_REGISTER_METHOD_CONST(bool, SBBreakpointName, GetAllowList, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetAllowList, (bool));
-  LLDB_REGISTER_METHOD(bool, SBBreakpointName, GetAllowDelete, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetAllowDelete, (bool));
-  LLDB_REGISTER_METHOD(bool, SBBreakpointName, GetAllowDisable, ());
-  LLDB_REGISTER_METHOD(void, SBBreakpointName, SetAllowDisable, (bool));
-}
-
-}
 }

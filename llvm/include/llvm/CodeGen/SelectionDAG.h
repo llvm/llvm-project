@@ -1350,13 +1350,9 @@ public:
   SDValue getIndexedLoadVP(SDValue OrigLoad, const SDLoc &dl, SDValue Base,
                            SDValue Offset, ISD::MemIndexedMode AM);
   SDValue getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
-                     SDValue Mask, SDValue EVL, MachinePointerInfo PtrInfo,
-                     Align Alignment, MachineMemOperand::Flags MMOFlags,
-                     const AAMDNodes &AAInfo = AAMDNodes(),
-                     bool IsCompressing = false);
-  SDValue getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
-                     SDValue Mask, SDValue EVL, MachineMemOperand *MMO,
-                     bool IsCompressing = false);
+                     SDValue Offset, SDValue Mask, SDValue EVL, EVT MemVT,
+                     MachineMemOperand *MMO, ISD::MemIndexedMode AM,
+                     bool IsTruncating = false, bool IsCompressing = false);
   SDValue getTruncStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val,
                           SDValue Ptr, SDValue Mask, SDValue EVL,
                           MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
@@ -1833,18 +1829,18 @@ public:
   unsigned ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
                               unsigned Depth = 0) const;
 
-  /// Get the minimum bit size for this Value \p Op as a signed integer.
-  /// i.e.  x == sext(trunc(x to MinSignedBits) to bitwidth(x)).
-  /// Similar to the APInt::getMinSignedBits function.
+  /// Get the upper bound on bit size for this Value \p Op as a signed integer.
+  /// i.e.  x == sext(trunc(x to MaxSignedBits) to bitwidth(x)).
+  /// Similar to the APInt::getSignificantBits function.
   /// Helper wrapper to ComputeNumSignBits.
-  unsigned ComputeMinSignedBits(SDValue Op, unsigned Depth = 0) const;
+  unsigned ComputeMaxSignificantBits(SDValue Op, unsigned Depth = 0) const;
 
-  /// Get the minimum bit size for this Value \p Op as a signed integer.
-  /// i.e.  x == sext(trunc(x to MinSignedBits) to bitwidth(x)).
-  /// Similar to the APInt::getMinSignedBits function.
+  /// Get the upper bound on bit size for this Value \p Op as a signed integer.
+  /// i.e.  x == sext(trunc(x to MaxSignedBits) to bitwidth(x)).
+  /// Similar to the APInt::getSignificantBits function.
   /// Helper wrapper to ComputeNumSignBits.
-  unsigned ComputeMinSignedBits(SDValue Op, const APInt &DemandedElts,
-                                unsigned Depth = 0) const;
+  unsigned ComputeMaxSignificantBits(SDValue Op, const APInt &DemandedElts,
+                                     unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison
   /// and, if \p PoisonOnly is false, does not have undef bits.
@@ -2000,6 +1996,9 @@ public:
     std::tie(LoVT, HiVT) = GetSplitDestVTs(N.getValueType());
     return SplitVector(N, DL, LoVT, HiVT);
   }
+
+  /// Split the explicit vector length parameter of a VP operation.
+  std::pair<SDValue, SDValue> SplitEVL(SDValue N, EVT VecVT, const SDLoc &DL);
 
   /// Split the node's operand with EXTRACT_SUBVECTOR and
   /// return the low/high part.

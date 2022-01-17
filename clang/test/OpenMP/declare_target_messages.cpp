@@ -5,11 +5,13 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-is-device -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-version=51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 
-int a, b, z; // omp5-error {{variable captured in declare target region must appear in a to clause}}
+int a, b, z; // omp5-error {{variable captured in declare target region must appear in a to clause}} // omp51-error {{variable captured in declare target region must appear in a to clause}}
 __thread int t; // expected-note {{defined as threadprivate or thread local}}
 
 #pragma omp declare target . // expected-error {{expected '(' after 'declare target'}}
@@ -18,7 +20,7 @@ __thread int t; // expected-note {{defined as threadprivate or thread local}}
 void f();
 #pragma omp end declare target shared(a) // expected-warning {{extra tokens at the end of '#pragma omp end declare target' are ignored}}
 
-#pragma omp declare target map(a) // expected-error {{expected at least one 'to' or 'link' clause}} omp45-error {{unexpected 'map' clause, only 'to' or 'link' clauses expected}} omp5-error {{unexpected 'map' clause, only 'to', 'link' or 'device_type' clauses expected}}
+#pragma omp declare target map(a) // omp45-error {{expected at least one 'to' or 'link' clause}} omp5-error {{expected at least one 'to' or 'link' clause}} omp51-error {{expected at least one 'to', 'link' or 'indirect' clause}} omp45-error {{unexpected 'map' clause, only 'to' or 'link' clauses expected}} omp5-error {{unexpected 'map' clause, only 'to', 'link' or 'device_type' clauses expected}} omp51-error {{unexpected 'map' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}}
 
 #pragma omp declare target to(foo1) // expected-error {{use of undeclared identifier 'foo1'}}
 
@@ -27,17 +29,46 @@ void f();
 #pragma omp declare target to(f) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} dev5-note {{marked as 'device_type(host)' here}}
 
 void q();
-#pragma omp declare target to(q) device_type(any) device_type(any) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-warning {{more than one 'device_type' clause is specified}}
+#pragma omp declare target to(q) device_type(any) device_type(any) device_type(host) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-warning {{more than one 'device_type' clause is specified}} // omp51-warning {{more than one 'device_type' clause is specified}}
+
+#if _OPENMP == 202011
+// omp51-error@+1 {{directive '#pragma omp declare target' cannot contain more than one 'indirect' clause}}
+#pragma omp declare target to(q) indirect(true) indirect(false)
+
+int xxx; //expected-note {{declared here}}
+// omp51-error@+2 {{expression is not an integral constant expression}}
+// omp51-note@+1 {{read of non-const variable 'xxx' is not allowed in a constant expression}}
+#pragma omp declare target to(q) indirect(xxx)
+
+constexpr bool fz() {return true;}
+// omp51-error@+1 {{unexpected 'to' clause, only 'device_type', 'indirect' clauses expected}}
+#pragma omp begin declare target to(q) indirect(fz()) device_type(nohost)
+#pragma omp end declare target
+
+// omp51-error@+1 {{unexpected 'to' clause, only 'device_type', 'indirect' clauses expected}}
+#pragma omp begin declare target indirect to(xxx)
+void bar();
+#pragma omp end declare target
+
+// omp51-error@+2 {{unexpected 'tofrom' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}}
+// omp51-error@+1 {{expected at least one 'to', 'link' or 'indirect' clause}}
+#pragma omp declare target tofrom(xxx)
+
+// omp51-error@+1 {{only 'device_type(any)' clause is allowed with indirect clause}}
+#pragma omp begin declare target device_type(host) indirect
+void bar();
+#pragma omp end declare target
+#endif  // _OPENMP
 
 void c();
 
 void func() {} // expected-note {{'func' defined here}}
 
-#pragma omp declare target link(func) allocate(a) // expected-error {{function name is not allowed in 'link' clause}} omp45-error {{unexpected 'allocate' clause, only 'to' or 'link' clauses expected}} omp5-error {{unexpected 'allocate' clause, only 'to', 'link' or 'device_type' clauses expected}}
+#pragma omp declare target link(func) allocate(a) // expected-error {{function name is not allowed in 'link' clause}} omp45-error {{unexpected 'allocate' clause, only 'to' or 'link' clauses expected}} omp5-error {{unexpected 'allocate' clause, only 'to', 'link' or 'device_type' clauses expected}} omp51-error {{unexpected 'allocate' clause, only 'to', 'link', 'device_type' or 'indirect' clauses expected}}
 
 void bar();
 void baz() {bar();}
-#pragma omp declare target(bar) // omp5-warning {{declaration marked as declare target after first use, it may lead to incorrect results}}
+#pragma omp declare target(bar) // omp5-warning {{declaration marked as declare target after first use, it may lead to incorrect results}} // omp51-warning {{declaration marked as declare target after first use, it may lead to incorrect results}}
 
 extern int b;
 
@@ -128,7 +159,7 @@ void foo(int p) {
 }
 #pragma omp declare target
 void foo1() {
-  [&](){ (void)(b+z);}(); // omp5-note {{variable 'z' is captured here}}
+  [&](){ (void)(b+z);}(); // omp5-note {{variable 'z' is captured here}} //omp51-note {{variable 'z' is captured here}}
 }
 #pragma omp end declare target
 
@@ -194,8 +225,8 @@ void any8() {any2();}
 
 int MultiDevTy;
 #pragma omp declare target to(MultiDevTy) device_type(any)    // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}}
-#pragma omp declare target to(MultiDevTy) device_type(host)   // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}}
-#pragma omp declare target to(MultiDevTy) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}}
+#pragma omp declare target to(MultiDevTy) device_type(host)   // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}} omp51-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}}
+#pragma omp declare target to(MultiDevTy) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}} // omp51-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}}
 
 // TODO: Issue an error message error {{expected '#pragma omp end declare target'}} note {{to match this '#pragma omp declare target'}}
 #pragma omp declare target

@@ -17,10 +17,9 @@ namespace __llvm_libc {
 namespace fputil {
 namespace testing {
 
-template <typename ValType>
+template <typename ValType, typename StreamType>
 cpp::EnableIfType<cpp::IsFloatingPointType<ValType>::Value, void>
-describeValue(const char *label, ValType value,
-              testutils::StreamWrapper &stream);
+describeValue(const char *label, ValType value, StreamType &stream);
 
 template <typename T, __llvm_libc::testing::TestCondition Condition>
 class FPMatcher : public __llvm_libc::testing::Matcher<T> {

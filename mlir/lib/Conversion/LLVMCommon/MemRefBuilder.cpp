@@ -51,10 +51,10 @@ MemRefDescriptor::fromStaticShape(OpBuilder &builder, Location loc,
   auto result = getStridesAndOffset(type, strides, offset);
   (void)result;
   assert(succeeded(result) && "unexpected failure in stride computation");
-  assert(!MemRefType::isDynamicStrideOrOffset(offset) &&
+  assert(!ShapedType::isDynamicStrideOrOffset(offset) &&
          "expected static offset");
   assert(!llvm::any_of(strides, [](int64_t stride) {
-    return MemRefType::isDynamicStrideOrOffset(stride);
+    return ShapedType::isDynamicStrideOrOffset(stride);
   }) && "expected static strides");
 
   auto convertedType = typeConverter.convertType(type);

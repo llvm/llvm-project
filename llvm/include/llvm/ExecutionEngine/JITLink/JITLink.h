@@ -104,10 +104,10 @@ class Addressable {
   friend class LinkGraph;
 
 protected:
-  Addressable(JITTargetAddress Address, bool IsDefined)
+  Addressable(orc::ExecutorAddr Address, bool IsDefined)
       : Address(Address), IsDefined(IsDefined), IsAbsolute(false) {}
 
-  Addressable(JITTargetAddress Address)
+  Addressable(orc::ExecutorAddr Address)
       : Address(Address), IsDefined(false), IsAbsolute(true) {
     assert(!(IsDefined && IsAbsolute) &&
            "Block cannot be both defined and absolute");
@@ -119,8 +119,8 @@ public:
   Addressable(Addressable &&) = delete;
   Addressable &operator=(Addressable &&) = default;
 
-  JITTargetAddress getAddress() const { return Address; }
-  void setAddress(JITTargetAddress Address) { this->Address = Address; }
+  orc::ExecutorAddr getAddress() const { return Address; }
+  void setAddress(orc::ExecutorAddr Address) { this->Address = Address; }
 
   /// Returns true if this is a defined addressable, in which case you
   /// can downcast this to a Block.
@@ -133,7 +133,7 @@ private:
     this->IsAbsolute = IsAbsolute;
   }
 
-  JITTargetAddress Address = 0;
+  orc::ExecutorAddr Address;
   uint64_t IsDefined : 1;
   uint64_t IsAbsolute : 1;
 
@@ -152,7 +152,7 @@ class Block : public Addressable {
 
 private:
   /// Create a zero-fill defined addressable.
-  Block(Section &Parent, JITTargetAddress Size, JITTargetAddress Address,
+  Block(Section &Parent, orc::ExecutorAddrDiff Size, orc::ExecutorAddr Address,
         uint64_t Alignment, uint64_t AlignmentOffset)
       : Addressable(Address, true), Parent(&Parent), Size(Size) {
     assert(isPowerOf2_64(Alignment) && "Alignment must be power of 2");
@@ -168,7 +168,7 @@ private:
   /// Create a defined addressable for the given content.
   /// The Content is assumed to be non-writable, and will be copied when
   /// mutations are required.
-  Block(Section &Parent, ArrayRef<char> Content, JITTargetAddress Address,
+  Block(Section &Parent, ArrayRef<char> Content, orc::ExecutorAddr Address,
         uint64_t Alignment, uint64_t AlignmentOffset)
       : Addressable(Address, true), Parent(&Parent), Data(Content.data()),
         Size(Content.size()) {
@@ -188,7 +188,7 @@ private:
   /// The standard way to achieve this is to allocate it on the Graph's
   /// allocator.
   Block(Section &Parent, MutableArrayRef<char> Content,
-        JITTargetAddress Address, uint64_t Alignment, uint64_t AlignmentOffset)
+        orc::ExecutorAddr Address, uint64_t Alignment, uint64_t AlignmentOffset)
       : Addressable(Address, true), Parent(&Parent), Data(Content.data()),
         Size(Content.size()) {
     assert(isPowerOf2_64(Alignment) && "Alignment must be power of 2");
@@ -328,7 +328,7 @@ public:
 
   /// Returns the address of the fixup for the given edge, which is equal to
   /// this block's address plus the edge's offset.
-  JITTargetAddress getFixupAddress(const Edge &E) const {
+  orc::ExecutorAddr getFixupAddress(const Edge &E) const {
     return getAddress() + E.getOffset();
   }
 
@@ -343,10 +343,15 @@ private:
   std::vector<Edge> Edges;
 };
 
-// Align a JITTargetAddress to conform with block alignment requirements.
-inline JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
+// Align an address to conform with block alignment requirements.
+inline uint64_t alignToBlock(uint64_t Addr, Block &B) {
   uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
   return Addr + Delta;
+}
+
+// Align a orc::ExecutorAddr to conform with block alignment requirements.
+inline orc::ExecutorAddr alignToBlock(orc::ExecutorAddr Addr, Block &B) {
+  return orc::ExecutorAddr(alignToBlock(Addr.getValue(), B));
 }
 
 /// Describes symbol linkage. This can be used to make resolve definition
@@ -391,8 +396,8 @@ class Symbol {
   friend class LinkGraph;
 
 private:
-  Symbol(Addressable &Base, JITTargetAddress Offset, StringRef Name,
-         JITTargetAddress Size, Linkage L, Scope S, bool IsLive,
+  Symbol(Addressable &Base, orc::ExecutorAddrDiff Offset, StringRef Name,
+         orc::ExecutorAddrDiff Size, Linkage L, Scope S, bool IsLive,
          bool IsCallable)
       : Name(Name), Base(&Base), Offset(Offset), Size(Size) {
     assert(Offset <= MaxOffset && "Offset out of range");
@@ -403,7 +408,8 @@ private:
   }
 
   static Symbol &constructCommon(void *SymStorage, Block &Base, StringRef Name,
-                                 JITTargetAddress Size, Scope S, bool IsLive) {
+                                 orc::ExecutorAddrDiff Size, Scope S,
+                                 bool IsLive) {
     assert(SymStorage && "Storage cannot be null");
     assert(!Name.empty() && "Common symbol name cannot be empty");
     assert(Base.isDefined() &&
@@ -416,7 +422,7 @@ private:
   }
 
   static Symbol &constructExternal(void *SymStorage, Addressable &Base,
-                                   StringRef Name, JITTargetAddress Size,
+                                   StringRef Name, orc::ExecutorAddrDiff Size,
                                    Linkage L) {
     assert(SymStorage && "Storage cannot be null");
     assert(!Base.isDefined() &&
@@ -428,7 +434,7 @@ private:
   }
 
   static Symbol &constructAbsolute(void *SymStorage, Addressable &Base,
-                                   StringRef Name, JITTargetAddress Size,
+                                   StringRef Name, orc::ExecutorAddrDiff Size,
                                    Linkage L, Scope S, bool IsLive) {
     assert(SymStorage && "Storage cannot be null");
     assert(!Base.isDefined() &&
@@ -439,8 +445,8 @@ private:
   }
 
   static Symbol &constructAnonDef(void *SymStorage, Block &Base,
-                                  JITTargetAddress Offset,
-                                  JITTargetAddress Size, bool IsCallable,
+                                  orc::ExecutorAddrDiff Offset,
+                                  orc::ExecutorAddrDiff Size, bool IsCallable,
                                   bool IsLive) {
     assert(SymStorage && "Storage cannot be null");
     assert((Offset + Size) <= Base.getSize() &&
@@ -452,9 +458,9 @@ private:
   }
 
   static Symbol &constructNamedDef(void *SymStorage, Block &Base,
-                                   JITTargetAddress Offset, StringRef Name,
-                                   JITTargetAddress Size, Linkage L, Scope S,
-                                   bool IsLive, bool IsCallable) {
+                                   orc::ExecutorAddrDiff Offset, StringRef Name,
+                                   orc::ExecutorAddrDiff Size, Linkage L,
+                                   Scope S, bool IsLive, bool IsCallable) {
     assert(SymStorage && "Storage cannot be null");
     assert((Offset + Size) <= Base.getSize() &&
            "Symbol extends past end of block");
@@ -552,16 +558,16 @@ public:
   }
 
   /// Returns the offset for this symbol within the underlying addressable.
-  JITTargetAddress getOffset() const { return Offset; }
+  orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
   /// Returns the address of this symbol.
-  JITTargetAddress getAddress() const { return Base->getAddress() + Offset; }
+  orc::ExecutorAddr getAddress() const { return Base->getAddress() + Offset; }
 
   /// Returns the size of this symbol.
-  JITTargetAddress getSize() const { return Size; }
+  orc::ExecutorAddrDiff getSize() const { return Size; }
 
   /// Set the size of this symbol.
-  void setSize(JITTargetAddress Size) {
+  void setSize(orc::ExecutorAddrDiff Size) {
     assert(Base && "Cannot set size for null Symbol");
     assert((Size == 0 || Base->isDefined()) &&
            "Non-zero size can only be set for defined symbols");
@@ -622,7 +628,7 @@ private:
 
   void setBlock(Block &B) { Base = &B; }
 
-  void setOffset(uint64_t NewOffset) {
+  void setOffset(orc::ExecutorAddrDiff NewOffset) {
     assert(NewOffset <= MaxOffset && "Offset out of range");
     Offset = NewOffset;
   }
@@ -637,7 +643,7 @@ private:
   uint64_t S : 2;
   uint64_t IsLive : 1;
   uint64_t IsCallable : 1;
-  JITTargetAddress Size = 0;
+  orc::ExecutorAddrDiff Size = 0;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const Symbol &A);
@@ -783,13 +789,17 @@ public:
     assert((First || !Last) && "Last can not be null if start is non-null");
     return !First;
   }
-  JITTargetAddress getStart() const {
-    return First ? First->getAddress() : 0;
+  orc::ExecutorAddr getStart() const {
+    return First ? First->getAddress() : orc::ExecutorAddr();
   }
-  JITTargetAddress getEnd() const {
-    return Last ? Last->getAddress() + Last->getSize() : 0;
+  orc::ExecutorAddr getEnd() const {
+    return Last ? Last->getAddress() + Last->getSize() : orc::ExecutorAddr();
   }
-  uint64_t getSize() const { return getEnd() - getStart(); }
+  orc::ExecutorAddrDiff getSize() const { return getEnd() - getStart(); }
+
+  orc::ExecutorAddrRange getRange() const {
+    return orc::ExecutorAddrRange(getStart(), getEnd());
+  }
 
 private:
   Block *First = nullptr;
@@ -995,7 +1005,7 @@ public:
 
   /// Create a content block.
   Block &createContentBlock(Section &Parent, ArrayRef<char> Content,
-                            uint64_t Address, uint64_t Alignment,
+                            orc::ExecutorAddr Address, uint64_t Alignment,
                             uint64_t AlignmentOffset) {
     return createBlock(Parent, Content, Address, Alignment, AlignmentOffset);
   }
@@ -1003,15 +1013,17 @@ public:
   /// Create a content block with initially mutable data.
   Block &createMutableContentBlock(Section &Parent,
                                    MutableArrayRef<char> MutableContent,
-                                   uint64_t Address, uint64_t Alignment,
+                                   orc::ExecutorAddr Address,
+                                   uint64_t Alignment,
                                    uint64_t AlignmentOffset) {
     return createBlock(Parent, MutableContent, Address, Alignment,
                        AlignmentOffset);
   }
 
   /// Create a zero-fill block.
-  Block &createZeroFillBlock(Section &Parent, uint64_t Size, uint64_t Address,
-                             uint64_t Alignment, uint64_t AlignmentOffset) {
+  Block &createZeroFillBlock(Section &Parent, orc::ExecutorAddrDiff Size,
+                             orc::ExecutorAddr Address, uint64_t Alignment,
+                             uint64_t AlignmentOffset) {
     return createBlock(Parent, Size, Address, Alignment, AlignmentOffset);
   }
 
@@ -1061,22 +1073,24 @@ public:
   /// present during lookup: Externals with strong linkage must be found or
   /// an error will be emitted. Externals with weak linkage are permitted to
   /// be undefined, in which case they are assigned a value of 0.
-  Symbol &addExternalSymbol(StringRef Name, uint64_t Size, Linkage L) {
+  Symbol &addExternalSymbol(StringRef Name, orc::ExecutorAddrDiff Size,
+                            Linkage L) {
     assert(llvm::count_if(ExternalSymbols,
                           [&](const Symbol *Sym) {
                             return Sym->getName() == Name;
                           }) == 0 &&
            "Duplicate external symbol");
-    auto &Sym =
-        Symbol::constructExternal(Allocator.Allocate<Symbol>(),
-                                  createAddressable(0, false), Name, Size, L);
+    auto &Sym = Symbol::constructExternal(
+        Allocator.Allocate<Symbol>(),
+        createAddressable(orc::ExecutorAddr(), false), Name, Size, L);
     ExternalSymbols.insert(&Sym);
     return Sym;
   }
 
   /// Add an absolute symbol.
-  Symbol &addAbsoluteSymbol(StringRef Name, JITTargetAddress Address,
-                            uint64_t Size, Linkage L, Scope S, bool IsLive) {
+  Symbol &addAbsoluteSymbol(StringRef Name, orc::ExecutorAddr Address,
+                            orc::ExecutorAddrDiff Size, Linkage L, Scope S,
+                            bool IsLive) {
     assert(llvm::count_if(AbsoluteSymbols,
                           [&](const Symbol *Sym) {
                             return Sym->getName() == Name;
@@ -1091,7 +1105,7 @@ public:
 
   /// Convenience method for adding a weak zero-fill symbol.
   Symbol &addCommonSymbol(StringRef Name, Scope S, Section &Section,
-                          JITTargetAddress Address, uint64_t Size,
+                          orc::ExecutorAddr Address, orc::ExecutorAddrDiff Size,
                           uint64_t Alignment, bool IsLive) {
     assert(llvm::count_if(defined_symbols(),
                           [&](const Symbol *Sym) {
@@ -1107,8 +1121,8 @@ public:
   }
 
   /// Add an anonymous symbol.
-  Symbol &addAnonymousSymbol(Block &Content, JITTargetAddress Offset,
-                             JITTargetAddress Size, bool IsCallable,
+  Symbol &addAnonymousSymbol(Block &Content, orc::ExecutorAddrDiff Offset,
+                             orc::ExecutorAddrDiff Size, bool IsCallable,
                              bool IsLive) {
     auto &Sym = Symbol::constructAnonDef(Allocator.Allocate<Symbol>(), Content,
                                          Offset, Size, IsCallable, IsLive);
@@ -1117,9 +1131,9 @@ public:
   }
 
   /// Add a named symbol.
-  Symbol &addDefinedSymbol(Block &Content, JITTargetAddress Offset,
-                           StringRef Name, JITTargetAddress Size, Linkage L,
-                           Scope S, bool IsCallable, bool IsLive) {
+  Symbol &addDefinedSymbol(Block &Content, orc::ExecutorAddrDiff Offset,
+                           StringRef Name, orc::ExecutorAddrDiff Size,
+                           Linkage L, Scope S, bool IsCallable, bool IsLive) {
     assert((S == Scope::Local || llvm::count_if(defined_symbols(),
                                                 [&](const Symbol *Sym) {
                                                   return Sym->getName() == Name;
@@ -1193,7 +1207,7 @@ public:
       assert(Sym.isDefined() && "Sym is not a defined symbol");
       Section &Sec = Sym.getBlock().getSection();
       Sec.removeSymbol(Sym);
-      Sym.makeExternal(createAddressable(0, false));
+      Sym.makeExternal(createAddressable(orc::ExecutorAddr(), false));
     }
     ExternalSymbols.insert(&Sym);
   }
@@ -1203,7 +1217,7 @@ public:
   ///
   /// Symbol size, linkage, scope, and callability, and liveness will be left
   /// unchanged. Symbol offset will be reset to 0.
-  void makeAbsolute(Symbol &Sym, JITTargetAddress Address) {
+  void makeAbsolute(Symbol &Sym, orc::ExecutorAddr Address) {
     assert(!Sym.isAbsolute() && "Symbol is already absolute");
     if (Sym.isExternal()) {
       assert(ExternalSymbols.count(&Sym) &&
@@ -1222,8 +1236,9 @@ public:
 
   /// Turn an absolute or external symbol into a defined one by attaching it to
   /// a block. Symbol must not already be defined.
-  void makeDefined(Symbol &Sym, Block &Content, JITTargetAddress Offset,
-                   JITTargetAddress Size, Linkage L, Scope S, bool IsLive) {
+  void makeDefined(Symbol &Sym, Block &Content, orc::ExecutorAddrDiff Offset,
+                   orc::ExecutorAddrDiff Size, Linkage L, Scope S,
+                   bool IsLive) {
     assert(!Sym.isDefined() && "Sym is already a defined symbol");
     if (Sym.isAbsolute()) {
       assert(AbsoluteSymbols.count(&Sym) &&
@@ -1255,15 +1270,15 @@ public:
   ///
   /// All other symbol attributes are unchanged.
   void transferDefinedSymbol(Symbol &Sym, Block &DestBlock,
-                             JITTargetAddress NewOffset,
-                             Optional<JITTargetAddress> ExplicitNewSize) {
+                             orc::ExecutorAddrDiff NewOffset,
+                             Optional<orc::ExecutorAddrDiff> ExplicitNewSize) {
     auto &OldSection = Sym.getBlock().getSection();
     Sym.setBlock(DestBlock);
     Sym.setOffset(NewOffset);
     if (ExplicitNewSize)
       Sym.setSize(*ExplicitNewSize);
     else {
-      JITTargetAddress RemainingBlockSize = DestBlock.getSize() - NewOffset;
+      auto RemainingBlockSize = DestBlock.getSize() - NewOffset;
       if (Sym.getSize() > RemainingBlockSize)
         Sym.setSize(RemainingBlockSize);
     }
@@ -1377,7 +1392,7 @@ public:
   ///
   /// Accessing this object after finalization will result in undefined
   /// behavior.
-  JITLinkMemoryManager::AllocActions &allocActions() { return AAs; }
+  orc::shared::AllocActions &allocActions() { return AAs; }
 
   /// Dump the graph.
   void dump(raw_ostream &OS);
@@ -1395,7 +1410,7 @@ private:
   SectionList Sections;
   ExternalSymbolSet ExternalSymbols;
   ExternalSymbolSet AbsoluteSymbols;
-  JITLinkMemoryManager::AllocActions AAs;
+  orc::shared::AllocActions AAs;
 };
 
 inline MutableArrayRef<char> Block::getMutableContent(LinkGraph &G) {
@@ -1407,14 +1422,14 @@ inline MutableArrayRef<char> Block::getMutableContent(LinkGraph &G) {
 /// Enables easy lookup of blocks by addresses.
 class BlockAddressMap {
 public:
-  using AddrToBlockMap = std::map<JITTargetAddress, Block *>;
+  using AddrToBlockMap = std::map<orc::ExecutorAddr, Block *>;
   using const_iterator = AddrToBlockMap::const_iterator;
 
   /// A block predicate that always adds all blocks.
   static bool includeAllBlocks(const Block &B) { return true; }
 
   /// A block predicate that always includes blocks with non-null addresses.
-  static bool includeNonNull(const Block &B) { return B.getAddress(); }
+  static bool includeNonNull(const Block &B) { return !!B.getAddress(); }
 
   BlockAddressMap() = default;
 
@@ -1478,7 +1493,7 @@ public:
 
   /// Returns the block starting at the given address, or nullptr if no such
   /// block exists.
-  Block *getBlockAt(JITTargetAddress Addr) const {
+  Block *getBlockAt(orc::ExecutorAddr Addr) const {
     auto I = AddrToBlock.find(Addr);
     if (I == AddrToBlock.end())
       return nullptr;
@@ -1487,7 +1502,7 @@ public:
 
   /// Returns the block covering the given address, or nullptr if no such block
   /// exists.
-  Block *getBlockCovering(JITTargetAddress Addr) const {
+  Block *getBlockCovering(orc::ExecutorAddr Addr) const {
     auto I = AddrToBlock.upper_bound(Addr);
     if (I == AddrToBlock.begin())
       return nullptr;
@@ -1504,10 +1519,11 @@ private:
         ExistingBlock.getAddress() + ExistingBlock.getSize();
     return make_error<JITLinkError>(
         "Block at " +
-        formatv("{0:x16} -- {1:x16}", NewBlock.getAddress(), NewBlockEnd) +
+        formatv("{0:x16} -- {1:x16}", NewBlock.getAddress().getValue(),
+                NewBlockEnd.getValue()) +
         " overlaps " +
-        formatv("{0:x16} -- {1:x16}", ExistingBlock.getAddress(),
-                ExistingBlockEnd));
+        formatv("{0:x16} -- {1:x16}", ExistingBlock.getAddress().getValue(),
+                ExistingBlockEnd.getValue()));
   }
 
   AddrToBlockMap AddrToBlock;
@@ -1532,7 +1548,7 @@ public:
 
   /// Returns the list of symbols that start at the given address, or nullptr if
   /// no such symbols exist.
-  const SymbolVector *getSymbolsAt(JITTargetAddress Addr) const {
+  const SymbolVector *getSymbolsAt(orc::ExecutorAddr Addr) const {
     auto I = AddrToSymbols.find(Addr);
     if (I == AddrToSymbols.end())
       return nullptr;
@@ -1540,7 +1556,7 @@ public:
   }
 
 private:
-  std::map<JITTargetAddress, SymbolVector> AddrToSymbols;
+  std::map<orc::ExecutorAddr, SymbolVector> AddrToSymbols;
 };
 
 /// A function for mutating LinkGraphs.

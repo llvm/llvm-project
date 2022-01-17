@@ -19,7 +19,7 @@ define  double @f1(double %f, i32 %pscr_value) {
 entry:
   %f.addr = alloca double, align 8
   store double %f, double* %f.addr, align 8
-  call void asm sideeffect "msr fpsr,$1", "=*X,r"(double* nonnull %f.addr, i32 %pscr_value) nounwind
+  call void asm sideeffect "msr fpsr,$1", "=*X,r"(double* elementtype(double) nonnull %f.addr, i32 %pscr_value) nounwind
   %0 = load double, double* %f.addr, align 8
   %add = fadd double %0, %0
   ret double %add
@@ -37,7 +37,7 @@ define  i32 @f2(i32 %f, i32 %pscr_value) {
 entry:
   %f.addr = alloca i32, align 4
   store i32 %f, i32* %f.addr, align 4
-  call void asm sideeffect "msr fpsr,$1", "=*X,r"(i32* nonnull %f.addr, i32 %pscr_value) nounwind
+  call void asm sideeffect "msr fpsr,$1", "=*X,r"(i32* elementtype(i32) nonnull %f.addr, i32 %pscr_value) nounwind
   %0 = load i32, i32* %f.addr, align 4
   %mul = mul i32 %0, %0
   ret i32 %mul
@@ -60,7 +60,7 @@ define  <8 x i8> @f3() {
 entry:
   %vector_res_int8x8 = alloca <8 x i8>, align 8
   %0 = getelementptr inbounds <8 x i8>, <8 x i8>* %vector_res_int8x8, i32 0, i32 0
-  call void asm sideeffect "msr fpsr,$1", "=*X,r"(<8 x i8>* nonnull %vector_res_int8x8, i32 undef) nounwind
+  call void asm sideeffect "msr fpsr,$1", "=*X,r"(<8 x i8>* elementtype(<8 x i8>) nonnull %vector_res_int8x8, i32 undef) nounwind
   %1 = load <8 x i8>, <8 x i8>* %vector_res_int8x8, align 8
   %mul = mul <8 x i8> %1, %1
   ret <8 x i8> %mul
@@ -125,17 +125,11 @@ entry:
 ;  A:
 ;   return;
 ; }
-;
-; Ideally this would give the block address of bb, but it requires us to see
-; through blockaddress, which we can't do at the moment. This might break some
-; existing use cases where a user would expect to get a block label and instead
-; gets the block address in a register. However, note that according to the
-; "no constraints" definition this behaviour is correct (although not very nice).
 
 ; CHECK-LABEL: f7
-; CHECK: bl
+; CHECK: bl .Ltmp3
 define void @f7() {
-  call void asm sideeffect "br $0", "X"( i8* blockaddress(@f7, %bb) )
+  call void asm sideeffect "bl $0", "X"( i8* blockaddress(@f7, %bb) )
   br label %bb
 bb:
   ret void
@@ -147,6 +141,6 @@ bb:
 ; CHECK: str	[[Dest]], [x0]
 define void @f8(i64 *%x) {
 entry:
-  tail call void asm sideeffect "add $0, x0, x0", "=*X"(i64 *%x)
+  tail call void asm sideeffect "add $0, x0, x0", "=*X"(i64* elementtype(i64) %x)
   ret void
 }

@@ -270,7 +270,7 @@ void vector::MultiDimReductionOp::build(OpBuilder &builder,
   result.addTypes(targetType);
 
   SmallVector<int64_t> reductionDims;
-  for (auto en : llvm::enumerate(reductionMask))
+  for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
   result.addAttribute(getReductionDimsAttrName(),
@@ -340,13 +340,13 @@ static ParseResult parseReductionOp(OpAsmParser &parser,
       parser.parseComma() || parser.parseOperandList(operandsInfo) ||
       parser.parseColonType(redType) ||
       parser.parseKeywordType("into", resType) ||
-      (operandsInfo.size() > 0 &&
+      (!operandsInfo.empty() &&
        parser.resolveOperand(operandsInfo[0], redType, result.operands)) ||
       (operandsInfo.size() > 1 &&
        parser.resolveOperand(operandsInfo[1], resType, result.operands)) ||
       parser.addTypeToList(resType, result.types))
     return failure();
-  if (operandsInfo.size() < 1 || operandsInfo.size() > 2)
+  if (operandsInfo.empty() || operandsInfo.size() > 2)
     return parser.emitError(parser.getNameLoc(),
                             "unsupported number of operands");
   return success();
@@ -546,7 +546,7 @@ static LogicalResult verifyOutputShape(
   }
 
   // Verify 'expectedResultDims'.
-  if (expectedResultDims.size() == 0) {
+  if (expectedResultDims.empty()) {
     // No batch or free dimension implies a scalar result.
     if (resType.isa<VectorType>() || accType.isa<VectorType>())
       return op.emitOpError("invalid accumulator/result vector shape");
@@ -615,7 +615,7 @@ static LogicalResult verify(ContractionOp op) {
   // that the number of map outputs equals the rank of its associated
   // vector operand.
   unsigned numIterators = op.iterator_types().getValue().size();
-  for (auto it : llvm::enumerate(op.indexing_maps())) {
+  for (const auto &it : llvm::enumerate(op.indexing_maps())) {
     auto index = it.index();
     auto map = it.value().cast<AffineMapAttr>().getValue();
     if (map.getNumSymbols() != 0)
@@ -695,7 +695,7 @@ static std::vector<std::pair<int64_t, int64_t>>
 getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
           StringRef targetIteratorTypeName, MLIRContext *context) {
   std::vector<std::pair<int64_t, int64_t>> dimMap;
-  for (auto it : llvm::enumerate(iteratorTypes)) {
+  for (const auto &it : llvm::enumerate(iteratorTypes)) {
     auto iteratorTypeName = it.value().cast<StringAttr>().getValue();
     if (iteratorTypeName != targetIteratorTypeName)
       continue;
@@ -715,7 +715,7 @@ void ContractionOp::getIterationBounds(
   auto resVectorType = getResultType().dyn_cast<VectorType>();
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMaps());
   SmallVector<int64_t, 2> iterationShape;
-  for (auto it : llvm::enumerate(iterator_types())) {
+  for (const auto &it : llvm::enumerate(iterator_types())) {
     // Search lhs/rhs map results for 'targetExpr'.
     auto targetExpr = getAffineDimExpr(it.index(), getContext());
     auto iteratorTypeName = it.value().cast<StringAttr>().getValue();
@@ -738,7 +738,7 @@ void ContractionOp::getIterationIndexMap(
     std::vector<DenseMap<int64_t, int64_t>> &iterationIndexMap) {
   unsigned numMaps = indexing_maps().getValue().size();
   iterationIndexMap.resize(numMaps);
-  for (auto it : llvm::enumerate(indexing_maps())) {
+  for (const auto &it : llvm::enumerate(indexing_maps())) {
     auto index = it.index();
     auto map = it.value().cast<AffineMapAttr>().getValue();
     for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
@@ -933,7 +933,7 @@ static LogicalResult verify(vector::ExtractOp op) {
   if (positionAttr.size() > static_cast<unsigned>(op.getVectorType().getRank()))
     return op.emitOpError(
         "expected position attribute of rank smaller than vector rank");
-  for (auto en : llvm::enumerate(positionAttr)) {
+  for (const auto &en : llvm::enumerate(positionAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 ||
         attr.getInt() >= op.getVectorType().getDimSize(en.index()))
@@ -1204,6 +1204,109 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   return extractOp.getResult();
 }
 
+/// Fold an ExtractOp from ExtractStridedSliceOp.
+static Value foldExtractFromExtractStrided(ExtractOp extractOp) {
+  auto extractStridedSliceOp =
+      extractOp.vector().getDefiningOp<vector::ExtractStridedSliceOp>();
+  if (!extractStridedSliceOp)
+    return Value();
+  // Return if 'extractStridedSliceOp' has non-unit strides.
+  if (extractStridedSliceOp.hasNonUnitStrides())
+    return Value();
+
+  // Trim offsets for dimensions fully extracted.
+  auto sliceOffsets = extractVector<int64_t>(extractStridedSliceOp.offsets());
+  while (!sliceOffsets.empty()) {
+    size_t lastOffset = sliceOffsets.size() - 1;
+    if (sliceOffsets.back() != 0 ||
+        extractStridedSliceOp.getType().getDimSize(lastOffset) !=
+            extractStridedSliceOp.getVectorType().getDimSize(lastOffset))
+      break;
+    sliceOffsets.pop_back();
+  }
+  unsigned destinationRank = 0;
+  if (auto vecType = extractOp.getType().dyn_cast<VectorType>())
+    destinationRank = vecType.getRank();
+  // The dimensions of the result need to be untouched by the
+  // extractStridedSlice op.
+  if (destinationRank >
+      extractStridedSliceOp.getVectorType().getRank() - sliceOffsets.size())
+    return Value();
+  auto extractedPos = extractVector<int64_t>(extractOp.position());
+  assert(extractedPos.size() >= sliceOffsets.size());
+  for (size_t i = 0, e = sliceOffsets.size(); i < e; i++)
+    extractedPos[i] = extractedPos[i] + sliceOffsets[i];
+  extractOp.vectorMutable().assign(extractStridedSliceOp.vector());
+  // OpBuilder is only used as a helper to build an I64ArrayAttr.
+  OpBuilder b(extractOp.getContext());
+  extractOp->setAttr(ExtractOp::getPositionAttrName(),
+                     b.getI64ArrayAttr(extractedPos));
+  return extractOp.getResult();
+}
+
+/// Fold extract_op fed from a chain of insertStridedSlice ops.
+static Value foldExtractStridedOpFromInsertChain(ExtractOp op) {
+  int64_t destinationRank = op.getType().isa<VectorType>()
+                                ? op.getType().cast<VectorType>().getRank()
+                                : 0;
+  auto insertOp = op.vector().getDefiningOp<InsertStridedSliceOp>();
+  while (insertOp) {
+    int64_t insertRankDiff = insertOp.getDestVectorType().getRank() -
+                             insertOp.getSourceVectorType().getRank();
+    if (destinationRank > insertOp.getSourceVectorType().getRank())
+      return Value();
+    auto insertOffsets = extractVector<int64_t>(insertOp.offsets());
+    auto extractOffsets = extractVector<int64_t>(op.position());
+
+    if (llvm::any_of(insertOp.strides(), [](Attribute attr) {
+          return attr.cast<IntegerAttr>().getInt() != 1;
+        }))
+      return Value();
+    bool disjoint = false;
+    SmallVector<int64_t, 4> offsetDiffs;
+    for (unsigned dim = 0, e = extractOffsets.size(); dim < e; ++dim) {
+      int64_t start = insertOffsets[dim];
+      int64_t size =
+          (dim < insertRankDiff)
+              ? 1
+              : insertOp.getSourceVectorType().getDimSize(dim - insertRankDiff);
+      int64_t end = start + size;
+      int64_t offset = extractOffsets[dim];
+      // Check if the start of the extract offset is in the interval inserted.
+      if (start <= offset && offset < end) {
+        if (dim >= insertRankDiff)
+          offsetDiffs.push_back(offset - start);
+        continue;
+      }
+      disjoint = true;
+      break;
+    }
+    // The extract element chunk overlap with the vector inserted.
+    if (!disjoint) {
+      // If any of the inner dimensions are only partially inserted we have a
+      // partial overlap.
+      int64_t srcRankDiff =
+          insertOp.getSourceVectorType().getRank() - destinationRank;
+      for (int64_t i = 0; i < destinationRank; i++) {
+        if (insertOp.getSourceVectorType().getDimSize(i + srcRankDiff) !=
+            insertOp.getDestVectorType().getDimSize(i + srcRankDiff +
+                                                    insertRankDiff))
+          return Value();
+      }
+      op.vectorMutable().assign(insertOp.source());
+      // OpBuilder is only used as a helper to build an I64ArrayAttr.
+      OpBuilder b(op.getContext());
+      op->setAttr(ExtractOp::getPositionAttrName(),
+                  b.getI64ArrayAttr(offsetDiffs));
+      return op.getResult();
+    }
+    // If the chunk extracted is disjoint from the chunk inserted, keep
+    // looking in the insert chain.
+    insertOp = insertOp.dest().getDefiningOp<InsertStridedSliceOp>();
+  }
+  return Value();
+}
+
 OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   if (position().empty())
     return vector();
@@ -1216,6 +1319,10 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute>) {
   if (auto val = foldExtractFromBroadcast(*this))
     return val;
   if (auto val = foldExtractFromShapeCast(*this))
+    return val;
+  if (auto val = foldExtractFromExtractStrided(*this))
+    return val;
+  if (auto val = foldExtractStridedOpFromInsertChain(*this))
     return val;
   return OpFoldResult();
 }
@@ -1511,7 +1618,7 @@ static LogicalResult verify(ShuffleOp op) {
     return op.emitOpError("mask length mismatch");
   // Verify all indices.
   int64_t indexSize = v1Type.getDimSize(0) + v2Type.getDimSize(0);
-  for (auto en : llvm::enumerate(maskAttr)) {
+  for (const auto &en : llvm::enumerate(maskAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 || attr.getInt() >= indexSize)
       return op.emitOpError("mask index #")
@@ -1621,7 +1728,7 @@ static LogicalResult verify(InsertOp op) {
       (positionAttr.size() != static_cast<unsigned>(destVectorType.getRank())))
     return op.emitOpError(
         "expected position attribute rank to match the dest vector rank");
-  for (auto en : llvm::enumerate(positionAttr)) {
+  for (const auto &en : llvm::enumerate(positionAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 ||
         attr.getInt() >= destVectorType.getDimSize(en.index()))
@@ -2183,9 +2290,7 @@ public:
     if (!constantMaskOp)
       return failure();
     // Return if 'extractStridedSliceOp' has non-unit strides.
-    if (llvm::any_of(extractStridedSliceOp.strides(), [](Attribute attr) {
-          return attr.cast<IntegerAttr>().getInt() != 1;
-        }))
+    if (extractStridedSliceOp.hasNonUnitStrides())
       return failure();
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
@@ -2822,7 +2927,7 @@ public:
       newIndices.push_back(getValueOrCreateConstantIndexOp(
           rewriter, extractOp.getLoc(), offset));
     }
-    for (auto it : llvm::enumerate(xferOp.indices())) {
+    for (const auto &it : llvm::enumerate(xferOp.indices())) {
       OpFoldResult offset =
           extractOp.getMixedOffsets()[it.index() + rankReduced];
       newIndices.push_back(rewriter.create<arith::AddIOp>(
@@ -3913,7 +4018,7 @@ static LogicalResult verify(vector::TransposeOp op) {
   if (rank != size)
     return op.emitOpError("transposition length mismatch: ") << size;
   SmallVector<bool, 8> seen(rank, false);
-  for (auto ta : llvm::enumerate(transpAttr)) {
+  for (const auto &ta : llvm::enumerate(transpAttr)) {
     int64_t i = ta.value().cast<IntegerAttr>().getInt();
     if (i < 0 || i >= rank)
       return op.emitOpError("transposition index out of range: ") << i;
@@ -4004,7 +4109,7 @@ static LogicalResult verify(ConstantMaskOp &op) {
   // result dimension size.
   auto resultShape = resultType.getShape();
   SmallVector<int64_t, 4> maskDimSizes;
-  for (auto it : llvm::enumerate(op.mask_dim_sizes())) {
+  for (const auto &it : llvm::enumerate(op.mask_dim_sizes())) {
     int64_t attrValue = it.value().cast<IntegerAttr>().getInt();
     if (attrValue < 0 || attrValue > resultShape[it.index()])
       return op.emitOpError(

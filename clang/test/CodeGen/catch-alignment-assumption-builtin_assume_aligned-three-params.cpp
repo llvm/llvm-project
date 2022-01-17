@@ -7,7 +7,7 @@
 // CHECK-SANITIZE-ANYRECOVER: @[[LINE_100_ALIGNMENT_ASSUMPTION:.*]] = {{.*}}, i32 100, i32 35 }, {{.*}}* @[[CHAR]] }
 
 void *caller(char **x) {
-  // CHECK:                           define{{.*}} i8* @{{.*}}(i8** %[[X:.*]])
+  // CHECK:                           define{{.*}} i8* @{{.*}}(i8** noundef %[[X:.*]])
   // CHECK-NEXT:                      entry:
   // CHECK-NEXT:                        %[[X_ADDR:.*]] = alloca i8**, align 8
   // CHECK-NEXT:                        store i8** %[[X]], i8*** %[[X_ADDR]], align 8

@@ -382,9 +382,11 @@ mlir_c_api_cc_library(
     srcs = [
         "lib/CAPI/Interfaces/Interfaces.cpp",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":IR",
         ":InferTypeOpInterface",
         "//llvm:Support",
@@ -398,15 +400,16 @@ mlir_c_api_cc_library(
         "lib/CAPI/Dialect/AsyncPasses.cpp",
     ],
     hdrs = ["include/mlir-c/Dialect/Async.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
         ":AsyncPassIncGen",
-        ":CAPIIRHeaders",
     ],
     includes = ["include"],
     deps = [
         ":Async",
         ":AsyncTransforms",
-        ":CAPIIR",
         ":Pass",
     ],
 )
@@ -420,13 +423,14 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/Linalg.h",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":LinalgPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":LinalgOps",
         ":LinalgTransforms",
         ":Pass",
@@ -441,12 +445,11 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/LLVM.h",
     ],
-    header_deps = [
-        ":CAPIIRHeaders",
+    capi_deps = [
+        ":CAPIIR",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":LLVMDialect",
     ],
 )
@@ -460,13 +463,14 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/GPU.h",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":GPUPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":GPUDialect",
         ":GPUTransforms",
         ":Pass",
@@ -482,13 +486,14 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/SparseTensor.h",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":SparseTensorPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":Pass",
         ":SparseTensor",
         ":SparseTensorTransforms",
@@ -497,16 +502,54 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
-    name = "CAPIConversion",
-    srcs = ["lib/CAPI/Conversion/Passes.cpp"],
-    hdrs = ["include/mlir-c/Conversion.h"],
+    name = "CAPIQuant",
+    srcs = [
+        "lib/CAPI/Dialect/Quant.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/Quant.h",
+    ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":QuantOps",
+    ],
+)
+
+mlir_c_api_cc_library(
+    name = "CAPIPDL",
+    srcs = [
+        "lib/CAPI/Dialect/PDL.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/PDL.h",
+    ],
     header_deps = [
         ":CAPIIRHeaders",
-        ":ConversionPassIncGen",
     ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
+        ":PDLDialect",
+        ":PDLOpsIncGen",
+        ":PDLTypesIncGen",
+    ],
+)
+
+mlir_c_api_cc_library(
+    name = "CAPIConversion",
+    srcs = ["lib/CAPI/Conversion/Passes.cpp"],
+    hdrs = ["include/mlir-c/Conversion.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    header_deps = [
+        ":ConversionPassIncGen",
+    ],
+    includes = ["include"],
+    deps = [
         ":ConversionPasses",
         ":Pass",
     ],
@@ -516,12 +559,11 @@ mlir_c_api_cc_library(
     name = "CAPIDebug",
     srcs = ["lib/CAPI/Debug/Debug.cpp"],
     hdrs = ["include/mlir-c/Debug.h"],
-    header_deps = [
-        ":CAPIIRHeaders",
+    capi_deps = [
+        ":CAPIIR",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":Support",
         "//llvm:Support",
     ],
@@ -534,13 +576,14 @@ mlir_c_api_cc_library(
         "include/mlir-c/ExecutionEngine.h",
         "include/mlir/CAPI/ExecutionEngine.h",
     ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":ExecutionEngine",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":ExecutionEngineUtils",
         ":LLVMToLLVMIRTranslation",
         "//llvm:OrcJIT",
@@ -552,13 +595,14 @@ mlir_c_api_cc_library(
     name = "CAPITransforms",
     srcs = ["lib/CAPI/Transforms/Passes.cpp"],
     hdrs = ["include/mlir-c/Transforms.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
     header_deps = [
-        ":CAPIIRHeaders",
         ":TransformsPassIncGen",
     ],
     includes = ["include"],
     deps = [
-        ":CAPIIR",
         ":Pass",
         ":Transforms",
     ],
@@ -568,13 +612,12 @@ mlir_c_api_cc_library(
     name = "CAPIRegistration",
     srcs = ["lib/CAPI/Registration/Registration.cpp"],
     hdrs = ["include/mlir-c/Registration.h"],
-    header_deps = [
-        ":CAPIIRHeaders",
+    capi_deps = [
+        ":CAPIIR",
     ],
     includes = ["include"],
     deps = [
         ":AllPassesAndDialects",
-        ":CAPIIR",
         ":LLVMToLLVMIRTranslation",
     ],
 )
@@ -629,9 +672,18 @@ cc_library(
     ],
 )
 
+# These flags are needed for pybind11 to work.
+PYBIND11_COPTS = [
+    "-fexceptions",
+    "-frtti",
+]
+
+PYBIND11_FEATURES = [
+    # Cannot use header_modules (parse_headers feature fails).
+    "-use_header_modules",
+]
+
 MLIR_PYTHON_BINDINGS_SOURCES = [
-    "lib/Bindings/Python/DialectLinalg.cpp",
-    "lib/Bindings/Python/DialectSparseTensor.cpp",
     "lib/Bindings/Python/IRAffine.cpp",
     "lib/Bindings/Python/IRAttributes.cpp",
     "lib/Bindings/Python/IRCore.cpp",
@@ -645,15 +697,8 @@ MLIR_PYTHON_BINDINGS_SOURCES = [
 cc_library(
     name = "MLIRBindingsPythonCore",
     srcs = MLIR_PYTHON_BINDINGS_SOURCES,
-    # These flags are needed for pybind11 to work.
-    copts = [
-        "-fexceptions",
-        "-frtti",
-    ],
-    features = [
-        # Cannot use header_modules (parse_headers feature fails).
-        "-use_header_modules",
-    ],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
     tags = [
         "manual",  # External dependency
         "nobuildkite",  # TODO(gcmn): Add support for this target
@@ -664,9 +709,7 @@ cc_library(
         ":CAPIGPU",
         ":CAPIIR",
         ":CAPIInterfaces",
-        ":CAPILinalg",
         ":CAPIRegistration",
-        ":CAPISparseTensor",
         ":MLIRBindingsPythonHeadersAndDeps",
         "//llvm:Support",
         "@pybind11",
@@ -677,15 +720,8 @@ cc_library(
 cc_library(
     name = "MLIRBindingsPythonCoreNoCAPI",
     srcs = MLIR_PYTHON_BINDINGS_SOURCES,
-    # These flags are needed for pybind11 to work.
-    copts = [
-        "-fexceptions",
-        "-frtti",
-    ],
-    features = [
-        # Cannot use header_modules (parse_headers feature fails).
-        "-use_header_modules",
-    ],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
     tags = [
         "manual",  # External dependency
         "nobuildkite",  # TODO(gcmn): Add support for this target
@@ -695,9 +731,7 @@ cc_library(
         ":CAPIDebugHeaders",
         ":CAPIGPUHeaders",
         ":CAPIIRHeaders",
-        ":CAPILinalgHeaders",
         ":CAPIRegistrationHeaders",
-        ":CAPISparseTensorHeaders",
         ":MLIRBindingsPythonHeaders",
         "//llvm:Support",
         "@pybind11",
@@ -719,21 +753,9 @@ cc_library(
         ":CAPIGPUObjects",
         ":CAPIIRObjects",
         ":CAPIInterfacesObjects",
-        ":CAPILinalgObjects",
         ":CAPIRegistrationObjects",
-        ":CAPISparseTensorObjects",
     ],
 )
-
-PYBIND11_COPTS = [
-    "-fexceptions",
-    "-frtti",
-]
-
-PYBIND11_FEATURES = [
-    # Cannot use header_modules (parse_headers feature fails).
-    "-use_header_modules",
-]
 
 # Dynamic library with the MLIR Python extension.
 cc_binary(
@@ -750,6 +772,63 @@ cc_binary(
     ],
     deps = [
         ":MLIRBindingsPythonCore",
+        ":MLIRBindingsPythonHeadersAndDeps",
+    ],
+)
+
+cc_binary(
+    name = "_mlirDialectsLinalg.so",
+    srcs = ["lib/Bindings/Python/DialectLinalg.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIIR",
+        ":CAPILinalg",
+        ":CAPIRegistration",
+        ":MLIRBindingsPythonHeadersAndDeps",
+    ],
+)
+
+cc_binary(
+    name = "_mlirDialectsQuant.so",
+    srcs = ["lib/Bindings/Python/DialectQuant.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIIR",
+        ":CAPIQuant",
+        ":CAPIRegistration",
+        ":MLIRBindingsPythonHeadersAndDeps",
+    ],
+)
+
+cc_binary(
+    name = "_mlirDialectsSparseTensor.so",
+    srcs = ["lib/Bindings/Python/DialectSparseTensor.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    tags = [
+        "manual",  # External dependency
+        "nobuildkite",  # TODO(gcmn): Add support for this target
+    ],
+    deps = [
+        ":CAPIIR",
+        ":CAPISparseTensor",
+        ":CAPIRegistration",
         ":MLIRBindingsPythonHeadersAndDeps",
     ],
 )
@@ -1812,7 +1891,6 @@ cc_library(
         ":SideEffectInterfaces",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorOpsIncGen",
-        ":SparseTensorUtils",
         ":StandardOps",
         "//llvm:Support",
     ],
@@ -1827,17 +1905,17 @@ cc_library(
         ":ArithmeticDialect",
         ":IR",
         ":LinalgOps",
-        ":SideEffectInterfaces",
-        ":SparseTensorAttrDefsIncGen",
-        ":SparseTensorOpsIncGen",
-        ":StandardOps",
+        ":SparseTensor",
         "//llvm:Support",
     ],
 )
 
 cc_library(
     name = "SparseTensorTransforms",
-    srcs = glob(["lib/Dialect/SparseTensor/Transforms/*.cpp"]),
+    srcs = glob([
+        "lib/Dialect/SparseTensor/Transforms/*.cpp",
+        "lib/Dialect/SparseTensor/Transforms/*.h",
+    ]),
     hdrs = [
         "include/mlir/Dialect/SparseTensor/Transforms/Passes.h",
         "include/mlir/ExecutionEngine/SparseTensorUtils.h",
@@ -6432,6 +6510,24 @@ cc_library(
 )
 
 cc_library(
+    name = "StdBufferizableOpInterfaceImpl",
+    srcs = [
+        "lib/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":BufferizableOpInterface",
+        ":IR",
+        ":StandardOps",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "TensorBufferizableOpInterfaceImpl",
     srcs = [
         "lib/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.cpp",
@@ -6690,6 +6786,7 @@ cc_library(
         ":SCFTransforms",
         ":StandardOps",
         ":StandardOpsTransforms",
+        ":StdBufferizableOpInterfaceImpl",
         ":Support",
         ":TensorBufferizableOpInterfaceImpl",
         ":TensorDialect",
@@ -6725,6 +6822,7 @@ cc_library(
         ":Pass",
         ":StandardOps",
         ":Support",
+        ":Transforms",
         "//llvm:Support",
     ],
 )
@@ -6998,13 +7096,14 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":ArithmeticDialect",
         ":Dialect",
+        ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
         ":LoopLikeInterface",
         ":Pass",
         ":QuantOps",
-        ":SideEffectInterfaces",
         ":StandardOps",
         ":TensorDialect",
         ":TosaDialectIncGen",
@@ -7448,6 +7547,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":ArithmeticDialect",
         ":IR",
         ":MathBaseIncGen",
         ":MathOpsIncGen",

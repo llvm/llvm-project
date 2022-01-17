@@ -300,9 +300,9 @@ void Argument::removeAttr(Attribute::AttrKind Kind) {
   getParent()->removeParamAttr(getArgNo(), Kind);
 }
 
-void Argument::removeAttrs(const AttrBuilder &B) {
+void Argument::removeAttrs(const AttributeMask &AM) {
   AttributeList AL = getParent()->getAttributes();
-  AL = AL.removeParamAttributes(Parent->getContext(), getArgNo(), B);
+  AL = AL.removeParamAttributes(Parent->getContext(), getArgNo(), AM);
   getParent()->setAttributes(AL);
 }
 
@@ -340,7 +340,7 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
                                           unsigned AddrSpace, const Twine &N,
                                           Module *M) {
   auto *F = new Function(Ty, Linkage, AddrSpace, N, M);
-  AttrBuilder B;
+  AttrBuilder B(F->getContext());
   if (M->getUwtable())
     B.addAttribute(Attribute::UWTable);
   switch (M->getFramePointer()) {
@@ -589,8 +589,8 @@ void Function::removeFnAttr(StringRef Kind) {
   AttributeSets = AttributeSets.removeFnAttribute(getContext(), Kind);
 }
 
-void Function::removeFnAttrs(const AttrBuilder &Attrs) {
-  AttributeSets = AttributeSets.removeFnAttributes(getContext(), Attrs);
+void Function::removeFnAttrs(const AttributeMask &AM) {
+  AttributeSets = AttributeSets.removeFnAttributes(getContext(), AM);
 }
 
 void Function::removeRetAttr(Attribute::AttrKind Kind) {
@@ -601,7 +601,7 @@ void Function::removeRetAttr(StringRef Kind) {
   AttributeSets = AttributeSets.removeRetAttribute(getContext(), Kind);
 }
 
-void Function::removeRetAttrs(const AttrBuilder &Attrs) {
+void Function::removeRetAttrs(const AttributeMask &Attrs) {
   AttributeSets = AttributeSets.removeRetAttributes(getContext(), Attrs);
 }
 
@@ -613,7 +613,7 @@ void Function::removeParamAttr(unsigned ArgNo, StringRef Kind) {
   AttributeSets = AttributeSets.removeParamAttribute(getContext(), ArgNo, Kind);
 }
 
-void Function::removeParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
+void Function::removeParamAttrs(unsigned ArgNo, const AttributeMask &Attrs) {
   AttributeSets =
       AttributeSets.removeParamAttributes(getContext(), ArgNo, Attrs);
 }

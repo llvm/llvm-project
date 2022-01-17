@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
 #include "src/unistd/write.h"
 #include "test/ErrnoSetterMatcher.h"
 #include "utils/UnitTest/Test.h"
 #include "utils/testutils/FDReader.h"
+
+#include <errno.h>
 
 TEST(LlvmLibcUniStd, WriteBasic) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;

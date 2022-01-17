@@ -111,10 +111,11 @@ mechanism, and can be invoked directly anywhere with an `OpBuilder` via
 `OpBuilder::createOrFold`.
 
 `fold` has the restriction that no new operations may be created, and only the
-root operation may be replaced. It allows for updating an operation in-place, or
-returning a set of pre-existing values (or attributes) to replace the operation
-with. This ensures that the `fold` method is a truly "local" transformation, and
-can be invoked without the need for a pattern rewriter.
+root operation may be replaced (but not erased). It allows for updating an
+operation in-place, or returning a set of pre-existing values (or attributes) to
+replace the operation with. This ensures that the `fold` method is a truly
+"local" transformation, and can be invoked without the need for a pattern
+rewriter.
 
 In [ODS](OpDefinitions.md), an operation can set the `hasFolder` bit to generate
 a declaration for the `fold` method. This method takes on a different form,

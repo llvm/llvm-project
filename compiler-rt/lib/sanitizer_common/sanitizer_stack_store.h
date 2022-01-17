@@ -97,7 +97,7 @@ class StackStore {
       Packed,
       Unpacked,
     };
-    State state GUARDED_BY(mtx_);
+    State state SANITIZER_GUARDED_BY(mtx_);
 
     uptr *Create(StackStore *store);
 
@@ -109,8 +109,8 @@ class StackStore {
     void TestOnlyUnmap(StackStore *store);
     bool Stored(uptr n);
     bool IsPacked() const;
-    void Lock() NO_THREAD_SAFETY_ANALYSIS { mtx_.Lock(); }
-    void Unlock() NO_THREAD_SAFETY_ANALYSIS { mtx_.Unlock(); }
+    void Lock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS { mtx_.Lock(); }
+    void Unlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS { mtx_.Unlock(); }
   };
 
   BlockInfo blocks_[kBlockCount] = {};

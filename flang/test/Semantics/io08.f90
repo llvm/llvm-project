@@ -189,10 +189,10 @@
   !ERROR: Expected 'G' edit descriptor '.d' value
   write(*,'(G4)')
 
-  !ERROR: Unexpected 'e' in 'G0' edit descriptor
+  !ERROR: A 'G0' edit descriptor must not have an 'e' value
   write(*,'(G0.8e)')
 
-  !ERROR: Unexpected 'e' in 'G0' edit descriptor
+  !ERROR: A 'G0' edit descriptor must not have an 'e' value
   write(*,'(G0.8e2)')
 
   !ERROR: Kind parameter '_' character in format expression

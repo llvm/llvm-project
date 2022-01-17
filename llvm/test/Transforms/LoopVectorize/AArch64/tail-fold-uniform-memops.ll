@@ -90,4 +90,4 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
-attributes #0 = { "target-features"="+neon,+sve,+v8.1a" }
+attributes #0 = { "target-features"="+neon,+sve,+v8.1a" vscale_range(2, 0) }

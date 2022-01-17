@@ -130,22 +130,25 @@ XMLNode XMLNode::GetChild() const {
 #endif
 }
 
-llvm::StringRef XMLNode::GetAttributeValue(const char *name,
-                                           const char *fail_value) const {
-  const char *attr_value = nullptr;
+std::string XMLNode::GetAttributeValue(const char *name,
+                                       const char *fail_value) const {
+  std::string attr_value;
 #if LLDB_ENABLE_LIBXML2
-
-  if (IsValid())
-    attr_value = (const char *)xmlGetProp(m_node, (const xmlChar *)name);
-  else
-    attr_value = fail_value;
+  if (IsValid()) {
+    xmlChar *value = xmlGetProp(m_node, (const xmlChar *)name);
+    if (value) {
+      attr_value = (const char *)value;
+      xmlFree(value);
+    }
+  } else {
+    if (fail_value)
+      attr_value = fail_value;
+  }
 #else
-  attr_value = fail_value;
+  if (fail_value)
+    attr_value = fail_value;
 #endif
-  if (attr_value)
-    return llvm::StringRef(attr_value);
-  else
-    return llvm::StringRef();
+  return attr_value;
 }
 
 bool XMLNode::GetAttributeValueAsUnsigned(const char *name, uint64_t &value,

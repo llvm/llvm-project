@@ -12,12 +12,15 @@
 
 #include "mlir/Dialect/SCF/Utils.h"
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/RegionUtils.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
@@ -77,51 +80,124 @@ scf::ForOp mlir::cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
   return newLoop;
 }
 
-void mlir::outlineIfOp(OpBuilder &b, scf::IfOp ifOp, FuncOp *thenFn,
-                       StringRef thenFnName, FuncOp *elseFn,
-                       StringRef elseFnName) {
-  Location loc = ifOp.getLoc();
-  MLIRContext *ctx = ifOp.getContext();
-  auto outline = [&](Region &ifOrElseRegion, StringRef funcName) {
-    assert(!funcName.empty() && "Expected function name for outlining");
-    assert(ifOrElseRegion.getBlocks().size() <= 1 &&
-           "Expected at most one block");
+/// Outline a region with a single block into a new FuncOp.
+/// Assumes the FuncOp result types is the type of the yielded operands of the
+/// single block. This constraint makes it easy to determine the result.
+/// This method also clones the `arith::ConstantIndexOp` at the start of
+/// `outlinedFuncBody` to alloc simple canonicalizations.
+// TODO: support more than single-block regions.
+// TODO: more flexible constant handling.
+FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
+                                                 Location loc, Region &region,
+                                                 StringRef funcName) {
+  assert(!funcName.empty() && "funcName cannot be empty");
+  if (!region.hasOneBlock())
+    return failure();
 
-    // Outline before current function.
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(ifOp->getParentOfType<FuncOp>());
+  Block *originalBlock = &region.front();
+  Operation *originalTerminator = originalBlock->getTerminator();
 
-    SetVector<Value> captures;
-    getUsedValuesDefinedAbove(ifOrElseRegion, captures);
+  // Outline before current function.
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(region.getParentOfType<FuncOp>());
 
-    ValueRange values(captures.getArrayRef());
-    FunctionType type =
-        FunctionType::get(ctx, values.getTypes(), ifOp.getResultTypes());
-    auto outlinedFunc = b.create<FuncOp>(loc, funcName, type);
-    b.setInsertionPointToStart(outlinedFunc.addEntryBlock());
+  SetVector<Value> captures;
+  getUsedValuesDefinedAbove(region, captures);
+
+  ValueRange outlinedValues(captures.getArrayRef());
+  SmallVector<Type> outlinedFuncArgTypes;
+  // Region's arguments are exactly the first block's arguments as per
+  // Region::getArguments().
+  // Func's arguments are cat(regions's arguments, captures arguments).
+  llvm::append_range(outlinedFuncArgTypes, region.getArgumentTypes());
+  llvm::append_range(outlinedFuncArgTypes, outlinedValues.getTypes());
+  FunctionType outlinedFuncType =
+      FunctionType::get(rewriter.getContext(), outlinedFuncArgTypes,
+                        originalTerminator->getOperandTypes());
+  auto outlinedFunc = rewriter.create<FuncOp>(loc, funcName, outlinedFuncType);
+  Block *outlinedFuncBody = outlinedFunc.addEntryBlock();
+
+  // Merge blocks while replacing the original block operands.
+  // Warning: `mergeBlocks` erases the original block, reconstruct it later.
+  int64_t numOriginalBlockArguments = originalBlock->getNumArguments();
+  auto outlinedFuncBlockArgs = outlinedFuncBody->getArguments();
+  {
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointToEnd(outlinedFuncBody);
+    rewriter.mergeBlocks(
+        originalBlock, outlinedFuncBody,
+        outlinedFuncBlockArgs.take_front(numOriginalBlockArguments));
+    // Explicitly set up a new ReturnOp terminator.
+    rewriter.setInsertionPointToEnd(outlinedFuncBody);
+    rewriter.create<ReturnOp>(loc, originalTerminator->getResultTypes(),
+                              originalTerminator->getOperands());
+  }
+
+  // Reconstruct the block that was deleted and add a
+  // terminator(call_results).
+  Block *newBlock = rewriter.createBlock(
+      &region, region.begin(),
+      TypeRange{outlinedFuncArgTypes}.take_front(numOriginalBlockArguments));
+  {
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointToEnd(newBlock);
+    SmallVector<Value> callValues;
+    llvm::append_range(callValues, newBlock->getArguments());
+    llvm::append_range(callValues, outlinedValues);
+    Operation *call = rewriter.create<CallOp>(loc, outlinedFunc, callValues);
+
+    // `originalTerminator` was moved to `outlinedFuncBody` and is still valid.
+    // Clone `originalTerminator` to take the callOp results then erase it from
+    // `outlinedFuncBody`.
     BlockAndValueMapping bvm;
-    for (auto it : llvm::zip(values, outlinedFunc.getArguments()))
-      bvm.map(std::get<0>(it), std::get<1>(it));
-    for (Operation &op : ifOrElseRegion.front().without_terminator())
-      b.clone(op, bvm);
+    bvm.map(originalTerminator->getOperands(), call->getResults());
+    rewriter.clone(*originalTerminator, bvm);
+    rewriter.eraseOp(originalTerminator);
+  }
 
-    Operation *term = ifOrElseRegion.front().getTerminator();
-    SmallVector<Value, 4> terminatorOperands;
-    for (auto op : term->getOperands())
-      terminatorOperands.push_back(bvm.lookup(op));
-    b.create<ReturnOp>(loc, term->getResultTypes(), terminatorOperands);
+  // Lastly, explicit RAUW outlinedValues, only for uses within `outlinedFunc`.
+  // Clone the `arith::ConstantIndexOp` at the start of `outlinedFuncBody`.
+  for (auto it : llvm::zip(outlinedValues, outlinedFuncBlockArgs.take_back(
+                                               outlinedValues.size()))) {
+    Value orig = std::get<0>(it);
+    Value repl = std::get<1>(it);
+    {
+      OpBuilder::InsertionGuard g(rewriter);
+      rewriter.setInsertionPointToStart(outlinedFuncBody);
+      if (Operation *cst = orig.getDefiningOp<arith::ConstantIndexOp>()) {
+        BlockAndValueMapping bvm;
+        repl = rewriter.clone(*cst, bvm)->getResult(0);
+      }
+    }
+    orig.replaceUsesWithIf(repl, [&](OpOperand &opOperand) {
+      return outlinedFunc->isProperAncestor(opOperand.getOwner());
+    });
+  }
 
-    ifOrElseRegion.front().clear();
-    b.setInsertionPointToEnd(&ifOrElseRegion.front());
-    Operation *call = b.create<CallOp>(loc, outlinedFunc, values);
-    b.create<scf::YieldOp>(loc, call->getResults());
-    return outlinedFunc;
-  };
+  return outlinedFunc;
+}
 
-  if (thenFn && !ifOp.getThenRegion().empty())
-    *thenFn = outline(ifOp.getThenRegion(), thenFnName);
-  if (elseFn && !ifOp.getElseRegion().empty())
-    *elseFn = outline(ifOp.getElseRegion(), elseFnName);
+LogicalResult mlir::outlineIfOp(RewriterBase &b, scf::IfOp ifOp, FuncOp *thenFn,
+                                StringRef thenFnName, FuncOp *elseFn,
+                                StringRef elseFnName) {
+  IRRewriter rewriter(b);
+  Location loc = ifOp.getLoc();
+  FailureOr<FuncOp> outlinedFuncOpOrFailure;
+  if (thenFn && !ifOp.getThenRegion().empty()) {
+    outlinedFuncOpOrFailure = outlineSingleBlockRegion(
+        rewriter, loc, ifOp.getThenRegion(), thenFnName);
+    if (failed(outlinedFuncOpOrFailure))
+      return failure();
+    *thenFn = *outlinedFuncOpOrFailure;
+  }
+  if (elseFn && !ifOp.getElseRegion().empty()) {
+    outlinedFuncOpOrFailure = outlineSingleBlockRegion(
+        rewriter, loc, ifOp.getElseRegion(), elseFnName);
+    if (failed(outlinedFuncOpOrFailure))
+      return failure();
+    *elseFn = *outlinedFuncOpOrFailure;
+  }
+  return success();
 }
 
 bool mlir::getInnermostParallelLoops(Operation *rootOp,

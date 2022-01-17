@@ -84,7 +84,17 @@ module {
 
 // -----
 
+// Check that unknown symbol references are OK.
 module {
-  // expected-error@+1 {{unable to resolve reference to symbol}}
+  // CHECK-NOT: func private @dead_private_function
+  func private @dead_private_function()
+
+  // CHECK: func private @live_private_function
+  func private @live_private_function()
+
+  // CHECK: "live.user"() {uses = [@live_private_function]} : () -> ()
+  "live.user"() {uses = [@live_private_function]} : () -> ()
+
+  // CHECK: "live.user"() {uses = [@unknown_symbol]} : () -> ()
   "live.user"() {uses = [@unknown_symbol]} : () -> ()
 }

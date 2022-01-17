@@ -20,10 +20,9 @@ linked section to narrow down the bug so that the person who fixes it will be
 able to find the problem more easily.
 
 Once you have a reduced test-case, go to `the LLVM Bug Tracking System
-<https://bugs.llvm.org/enter_bug.cgi>`_ and fill out the form with the
-necessary details (note that you don't need to pick a category, just use
-the "new-bugs" category if you're not sure).  The bug description should
-contain the following information:
+<https://github.com/llvm/llvm-project/issues>`_ and fill out the form with the
+necessary details (note that you don't need to pick a label, just use if you're
+not sure).  The bug description should contain the following information:
 
 * All information necessary to reproduce the problem.
 * The reduced test-case that triggers the bug.

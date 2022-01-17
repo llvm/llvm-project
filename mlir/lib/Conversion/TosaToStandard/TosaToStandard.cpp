@@ -52,6 +52,23 @@ public:
   }
 };
 
+Type matchContainerType(Type element, Type container) {
+  if (auto shapedTy = container.dyn_cast<ShapedType>())
+    return shapedTy.clone(element);
+
+  return element;
+}
+
+Attribute getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
+  if (auto shapedTy = type.dyn_cast<ShapedType>()) {
+    Type eTy = shapedTy.getElementType();
+    APInt valueInt(eTy.getIntOrFloatBitWidth(), value);
+    return DenseIntElementsAttr::get(shapedTy, valueInt);
+  }
+
+  return rewriter.getIntegerAttr(type, value);
+}
+
 // This converts the TOSA ApplyScale operator to a set of StandardOps ops,
 // using 64-bit operations to perform the necessary multiply, bias, and shift.
 // Multiple types are used to use minimal bit width operations.
@@ -65,13 +82,19 @@ public:
     Value value32 = op.value();
     Value multiplier32 = op.multiplier();
     Value shift8 = op.shift();
+
     bool doubleRound = op.double_round();
     Type inType = op.value().getType();
+    Type resultTy = op.getType();
+
+    Type i8Ty = matchContainerType(rewriter.getIntegerType(8), resultTy);
+    Type i32Ty = matchContainerType(rewriter.getI32Type(), resultTy);
+    Type i64Ty = matchContainerType(rewriter.getI64Type(), resultTy);
 
     Value one8 = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getIntegerAttr(rewriter.getIntegerType(8), 1));
+        loc, getConstantAttr(i8Ty, 1, rewriter));
     Value one64 = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getIntegerAttr(rewriter.getI64Type(), 1));
+        loc, getConstantAttr(i64Ty, 1, rewriter));
 
     Value shiftSubOne8 = rewriter.create<arith::SubIOp>(loc, shift8, one8);
 
@@ -85,23 +108,20 @@ public:
     // Note that minimal bitwidth operators are used throughout the block.
 
     Value round64 = rewriter.create<arith::ShLIOp>(
-        loc, one64,
-        rewriter.create<arith::ExtSIOp>(loc, rewriter.getI64Type(),
-                                        shiftSubOne8));
+        loc, one64, rewriter.create<arith::ExtSIOp>(loc, i64Ty, shiftSubOne8));
 
     // Double rounding is performing a round operation before the shift
     if (doubleRound) {
       Value one32 = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIntegerAttr(rewriter.getI32Type(), 1));
-      Value shift32 =
-          rewriter.create<arith::ExtSIOp>(loc, rewriter.getI32Type(), shift8);
+          loc, getConstantAttr(i32Ty, 1, rewriter));
+      Value shift32 = rewriter.create<arith::ExtSIOp>(loc, i32Ty, shift8);
       Value thirty32 = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIntegerAttr(rewriter.getI32Type(), 30));
+          loc, getConstantAttr(i32Ty, 30, rewriter));
 
       Value shiftThirty32 =
           rewriter.create<arith::ShLIOp>(loc, one32, thirty32);
-      Value shiftThirty64 = rewriter.create<arith::ExtSIOp>(
-          loc, rewriter.getI64Type(), shiftThirty32);
+      Value shiftThirty64 =
+          rewriter.create<arith::ExtSIOp>(loc, i64Ty, shiftThirty32);
 
       // Round value needs to with be added or subtracted depending on the sign
       // of the input value.
@@ -120,7 +140,7 @@ public:
 
       // We only perform double rounding if the shift value is greater than 32.
       Value thirtyTwo32 = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIntegerAttr(rewriter.getI32Type(), 32));
+          loc, getConstantAttr(i32Ty, 32, rewriter));
       Value shiftGreaterThanThirtyTwo = rewriter.create<arith::CmpIOp>(
           loc, arith::CmpIPredicate::sge, shift32, thirtyTwo32);
       round64 = rewriter.create<mlir::SelectOp>(loc, shiftGreaterThanThirtyTwo,
@@ -133,20 +153,17 @@ public:
     //
     // Note that multiply and shift need to be perform in i64 to preserve bits.
 
-    Value value64 =
-        rewriter.create<arith::ExtSIOp>(loc, rewriter.getI64Type(), value32);
-    Value multiplier64 = rewriter.create<arith::ExtSIOp>(
-        loc, rewriter.getI64Type(), multiplier32);
-    Value shift64 =
-        rewriter.create<arith::ExtSIOp>(loc, rewriter.getI64Type(), shift8);
+    Value value64 = rewriter.create<arith::ExtSIOp>(loc, i64Ty, value32);
+    Value multiplier64 =
+        rewriter.create<arith::ExtSIOp>(loc, i64Ty, multiplier32);
+    Value shift64 = rewriter.create<arith::ExtSIOp>(loc, i64Ty, shift8);
 
     // Multiply as a pair of i64 values to guarantee the end value fits.
     Value result64 = rewriter.create<arith::MulIOp>(loc, value64, multiplier64);
     result64 = rewriter.create<arith::AddIOp>(loc, result64, round64);
     result64 = rewriter.create<arith::ShRSIOp>(loc, result64, shift64);
 
-    Value result32 =
-        rewriter.create<arith::TruncIOp>(loc, rewriter.getI32Type(), result64);
+    Value result32 = rewriter.create<arith::TruncIOp>(loc, resultTy, result64);
 
     rewriter.replaceOp(op, result32);
     return success();

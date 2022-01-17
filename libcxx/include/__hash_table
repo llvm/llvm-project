@@ -2029,11 +2029,9 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
         const_iterator __p, __node_pointer __cp)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
-        "unordered container::emplace_hint(const_iterator, args...) called with an iterator not"
-        " referring to this unordered container");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+                         "unordered container::emplace_hint(const_iterator, args...) called with an iterator not"
+                         " referring to this unordered container");
     if (__p != end() && key_eq()(*__p, __cp->__value_))
     {
         __next_pointer __np = __p.__node_;
@@ -2158,11 +2156,9 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_hint_multi(
         const_iterator __p, _Args&&... __args)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
-        "unordered container::emplace_hint(const_iterator, args...) called with an iterator not"
-        " referring to this unordered container");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+                         "unordered container::emplace_hint(const_iterator, args...) called with an iterator not"
+                         " referring to this unordered container");
     __node_holder __h = __construct_node(_VSTD::forward<_Args>(__args)...);
     iterator __r = __node_insert_multi(__p, __h.get());
     __h.release();
@@ -2484,12 +2480,12 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __p)
 {
     __next_pointer __np = __p.__node_;
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+                         "unordered container erase(iterator) called with an iterator not"
+                         " referring to this container");
+    _LIBCPP_DEBUG_ASSERT(__p != end(),
+                         "unordered container erase(iterator) called with a non-dereferenceable iterator");
 #if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
-        "unordered container erase(iterator) called with an iterator not"
-        " referring to this container");
-    _LIBCPP_ASSERT(__p != end(),
-        "unordered container erase(iterator) called with a non-dereferenceable iterator");
     iterator __r(__np, this);
 #else
     iterator __r(__np);
@@ -2504,14 +2500,12 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first,
                                                 const_iterator __last)
 {
-#if _LIBCPP_DEBUG_LEVEL == 2
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
-        "unordered container::erase(iterator, iterator) called with an iterator not"
-        " referring to this container");
-    _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__last) == this,
-        "unordered container::erase(iterator, iterator) called with an iterator not"
-        " referring to this container");
-#endif
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__first) == this,
+                         "unordered container::erase(iterator, iterator) called with an iterator not"
+                         " referring to this container");
+    _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__last) == this,
+                         "unordered container::erase(iterator, iterator) called with an iterator not"
+                         " referring to this container");
     for (const_iterator __p = __first; __first != __last; __p = __first)
     {
         ++__first;

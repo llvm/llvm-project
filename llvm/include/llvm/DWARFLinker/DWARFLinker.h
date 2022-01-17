@@ -385,8 +385,8 @@ private:
         : Die(Die), Type(T), CU(CU), Flags(0), OtherInfo(OtherInfo) {}
 
     WorklistItem(unsigned AncestorIdx, CompileUnit &CU, unsigned Flags)
-        : Die(), Type(WorklistItemType::LookForParentDIEsToKeep), CU(CU),
-          Flags(Flags), AncestorIdx(AncestorIdx) {}
+        : Type(WorklistItemType::LookForParentDIEsToKeep), CU(CU), Flags(Flags),
+          AncestorIdx(AncestorIdx) {}
   };
 
   /// returns true if we need to translate strings.

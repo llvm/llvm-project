@@ -18,7 +18,21 @@ class DexUnreachable(CommandBase):
     See Commands.md for more info.
     """
 
-    def __init(self):
+    def __init__(self, *args, **kwargs):
+        if len(args) != 0:
+            raise TypeError("DexUnreachable takes no positional arguments")
+        if 'on_line' in kwargs:
+            on_line = kwargs.pop('on_line')
+            self._from_line = on_line
+            self._to_line = on_line
+        elif 'from_line' in kwargs and 'to_line' in kwargs:
+            self._from_line = kwargs.pop('from_line')
+            self._to_line = kwargs.pop('to_line')
+        elif 'from_line' in kwargs or 'to_line' in kwargs:
+            raise TypeError("Must provide both from_line and to_line to DexUnreachable")
+
+        if len(kwargs) > 0:
+            raise TypeError("Unexpected kwargs {}".format(kwargs.keys()))
         super(DexUnreachable, self).__init__()
         pass
 

@@ -2022,7 +2022,7 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
   AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                           TII.get(AdjStackUp))
-                  .addImm(NumBytes).addImm(0));
+                  .addImm(NumBytes).addImm(-1ULL));
 
   // Now the return value.
   if (RetVT != MVT::isVoid) {

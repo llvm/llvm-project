@@ -21,7 +21,6 @@
 
 namespace clang {
 
-class ASTContext;
 class NamedDecl;
 class DeclContext;
 

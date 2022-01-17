@@ -524,8 +524,9 @@ variadicMatcherDescriptor(StringRef MatcherName, SourceRange NameRange,
       }
       return {};
     }
-    InnerArgs.set_size(i + 1);
-    InnerArgsPtr[i] = new (&InnerArgs[i]) ArgT(ArgTraits::get(Value));
+    assert(InnerArgs.size() < InnerArgs.capacity());
+    InnerArgs.emplace_back(ArgTraits::get(Value));
+    InnerArgsPtr[i] = &InnerArgs[i];
   }
   return outvalueToVariantMatcher(Func(InnerArgsPtr));
 }
@@ -1166,4 +1167,4 @@ std::unique_ptr<MatcherDescriptor> makeMatcherAutoMarshall(
 } // namespace ast_matchers
 } // namespace clang
 
-#endif // LLVM_CLANG_AST_MATCHERS_DYNAMIC_MARSHALLERS_H
+#endif // LLVM_CLANG_LIB_ASTMATCHERS_DYNAMIC_MARSHALLERS_H

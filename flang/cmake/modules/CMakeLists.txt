@@ -1,4 +1,5 @@
 include(ExtendPath)
+include(FindPrefixFromConfig)
 
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
@@ -29,16 +30,7 @@ set(FLANG_CONFIG_CMAKE_DIR)
 set(FLANG_CONFIG_LLVM_CMAKE_DIR)
 
 # Generate FlangConfig.cmake for the install tree.
-set(FLANG_CONFIG_CODE "
-  # Compute the installation prefix from this LLVMConfig.cmake file location.
-  get_filename_component(FLANG_INSTALL_PREFIX \"\${CMAKE_CURRENT_LIST_FILE}\" PATH)")
-# Construct the proper number of get_filename_component(... PATH)
-# calls to compute the installation prefix.
-string(REGEX REPLACE "/" ";" _count "${FLANG_INSTALL_PACKAGE_DIR}")
-foreach(p ${_count})
-  set(FLANG_CONFIG_CODE "${FLANG_CONFIG_CODE}
-      get_filename_component(FLANG_INSTALL_PREFIX \"\${FLANG_INSTALL_PREFIX}\" PATH)")
-endforeach(p)
+find_prefix_from_config(FLANG_CONFIG_CODE FLANG_INSTALL_PREFIX "${FLANG_INSTALL_PACKAGE_DIR}")
 
 set(FLANG_CONFIG_CMAKE_DIR "\${FLANG_INSTALL_PREFIX}/${FLANG_INSTALL_PACKAGE_DIR}")
 set(FLANG_CONFIG_LLVM_CMAKE_DIR "\${FLANG_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")

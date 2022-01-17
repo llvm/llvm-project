@@ -284,7 +284,7 @@ struct Configuration {
   bool stdcallFixup = false;
 };
 
-extern Configuration *config;
+extern std::unique_ptr<Configuration> config;
 
 } // namespace coff
 } // namespace lld

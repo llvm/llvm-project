@@ -95,10 +95,10 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
         assert(GOTEntryBlock.edges_size() == 1 &&
                "GOT entry should only have one outgoing edge");
         auto &GOTTarget = GOTEntryBlock.edges().begin()->getTarget();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
-        JITTargetAddress EdgeAddr = B->getFixupAddress(E);
+        orc::ExecutorAddr TargetAddr = GOTTarget.getAddress();
+        orc::ExecutorAddr EdgeAddr = B->getFixupAddress(E);
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
-        bool TargetInRangeForImmU32 = isInRangeForImmU32(TargetAddr);
+        bool TargetInRangeForImmU32 = isInRangeForImmU32(TargetAddr.getValue());
         bool DisplacementInRangeForImmS32 = isInRangeForImmS32(Displacement);
 
         // If both of the Target and displacement is out of range, then
@@ -165,8 +165,8 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
                "GOT block should only have one outgoing edge");
 
         auto &GOTTarget = GOTBlock.edges().begin()->getTarget();
-        JITTargetAddress EdgeAddr = B->getAddress() + E.getOffset();
-        JITTargetAddress TargetAddr = GOTTarget.getAddress();
+        orc::ExecutorAddr EdgeAddr = B->getAddress() + E.getOffset();
+        orc::ExecutorAddr TargetAddr = GOTTarget.getAddress();
 
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
         if (isInRangeForImmS32(Displacement)) {

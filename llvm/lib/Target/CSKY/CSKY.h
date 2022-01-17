@@ -21,6 +21,9 @@ class CSKYTargetMachine;
 class FunctionPass;
 
 FunctionPass *createCSKYISelDag(CSKYTargetMachine &TM);
+FunctionPass *createCSKYConstantIslandPass();
+
+void initializeCSKYConstantIslandsPass(PassRegistry &);
 
 } // namespace llvm
 

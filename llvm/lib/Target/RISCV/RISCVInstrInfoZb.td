@@ -18,8 +18,10 @@
 //   Zbp - 0.93
 //   Zbr - 0.93
 //   Zbt - 0.93
-// This version is still experimental as the Bitmanip extensions haven't been
-// ratified yet.
+//
+// Zba, Zbb, Zbc, and Zbs have been ratified and are considered stable. The
+// other extensions are experimental as they have not yet been ratiied and are
+// subject to change.
 //
 //===----------------------------------------------------------------------===//
 
@@ -43,6 +45,8 @@ def riscv_shfl   : SDNode<"RISCVISD::SHFL",   SDTIntBinOp>;
 def riscv_shflw  : SDNode<"RISCVISD::SHFLW",  SDT_RISCVIntBinOpW>;
 def riscv_unshfl : SDNode<"RISCVISD::UNSHFL", SDTIntBinOp>;
 def riscv_unshflw: SDNode<"RISCVISD::UNSHFLW",SDT_RISCVIntBinOpW>;
+def riscv_bfp    : SDNode<"RISCVISD::BFP",    SDTIntBinOp>;
+def riscv_bfpw   : SDNode<"RISCVISD::BFPW",   SDT_RISCVIntBinOpW>;
 def riscv_bcompress    : SDNode<"RISCVISD::BCOMPRESS",   SDTIntBinOp>;
 def riscv_bcompressw   : SDNode<"RISCVISD::BCOMPRESSW",  SDT_RISCVIntBinOpW>;
 def riscv_bdecompress  : SDNode<"RISCVISD::BDECOMPRESS", SDTIntBinOp>;
@@ -468,7 +472,8 @@ def BMATXOR  : ALU_rr<0b0100100, 0b011, "bmatxor">, Sched<[]>;
 } // Predicates = [HasStdExtZbm, IsRV64]
 
 let Predicates = [HasStdExtZbf] in
-def BFP : ALU_rr<0b0100100, 0b111, "bfp">, Sched<[]>;
+def BFP : ALU_rr<0b0100100, 0b111, "bfp">,
+          Sched<[WriteBFP, ReadBFP, ReadBFP]>;
 
 let Predicates = [HasStdExtZbp] in {
 def SHFLI   : RVBShfl_ri<0b0000100, 0b001, OPC_OP_IMM, "shfli">, Sched<[]>;
@@ -549,7 +554,8 @@ def PACKUW : ALUW_rr<0b0100100, 0b100, "packuw">, Sched<[]>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbf, IsRV64] in
-def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">, Sched<[]>;
+def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">,
+           Sched<[WriteBFP32, ReadBFP32, ReadBFP32]>;
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -834,12 +840,14 @@ def : PatGprGpr<riscv_unshfl, UNSHFL>;
 def : PatGprGpr<int_riscv_xperm_n, XPERMN>;
 def : PatGprGpr<int_riscv_xperm_b, XPERMB>;
 def : PatGprGpr<int_riscv_xperm_h, XPERMH>;
-def : PatGprGpr<int_riscv_xperm_w, XPERMW>;
 def : PatGprImm<riscv_shfl, SHFLI, shfl_uimm>;
 def : PatGprImm<riscv_unshfl, UNSHFLI, shfl_uimm>;
 def : PatGprImm<riscv_grev, GREVI, uimmlog2xlen>;
 def : PatGprImm<riscv_gorc, GORCI, uimmlog2xlen>;
 } // Predicates = [HasStdExtZbp]
+
+let Predicates = [HasStdExtZbp, IsRV64] in
+def : PatGprGpr<int_riscv_xperm_w, XPERMW>;
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
 def : Pat<(i32 (rotr (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>;
@@ -939,10 +947,14 @@ def : Pat<(i64 (or (and GPR:$rs1, 0x00000000FFFFFFFF), (shl GPR:$rs2, (i64 32)))
 def : Pat<(i64 (or (and GPR:$rs2, 0xFFFFFFFF00000000), (srl GPR:$rs1, (i64 32)))),
           (PACKU GPR:$rs1, GPR:$rs2)>;
 }
-let Predicates = [HasStdExtZbp] in
+let Predicates = [HasStdExtZbp] in {
 def : Pat<(or (and (shl GPR:$rs2, (XLenVT 8)), 0xFFFF),
               (and GPR:$rs1, 0x00FF)),
           (PACKH GPR:$rs1, GPR:$rs2)>;
+def : Pat<(or (shl (and GPR:$rs2, 0x00FF), (XLenVT 8)),
+              (and GPR:$rs1, 0x00FF)),
+          (PACKH GPR:$rs1, GPR:$rs2)>;
+}
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV32] in
 def : Pat<(i32 (and GPR:$rs, 0xFFFF)), (ZEXTH_RV32 GPR:$rs)>;
@@ -1123,3 +1135,9 @@ let Predicates = [HasStdExtZbr, IsRV64] in {
 def : PatGpr<int_riscv_crc32_d, CRC32D>;
 def : PatGpr<int_riscv_crc32c_d, CRC32CD>;
 } // Predicates = [HasStdExtZbr, IsRV64]
+
+let Predicates = [HasStdExtZbf] in
+def : PatGprGpr<riscv_bfp, BFP>;
+
+let Predicates = [HasStdExtZbf, IsRV64] in
+def : PatGprGpr<riscv_bfpw, BFPW>;

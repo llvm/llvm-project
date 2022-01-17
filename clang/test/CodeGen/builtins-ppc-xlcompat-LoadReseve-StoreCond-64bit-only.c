@@ -10,7 +10,7 @@
 
 long test_ldarx(volatile long* a) {
   // CHECK64-LABEL: @test_ldarx
-  // CHECK64: %0 = tail call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(i64* %a)
+  // CHECK64: %0 = tail call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(i64* elementtype(i64) %a)
   // CHECK32-ERROR: error: this builtin is only available on 64-bit targets
   return __ldarx(a);
 }

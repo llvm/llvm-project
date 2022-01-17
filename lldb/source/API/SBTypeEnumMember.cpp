@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeEnumMember.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStream.h"
@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeEnumMember::SBTypeEnumMember() : m_opaque_sp() {
+SBTypeEnumMember::SBTypeEnumMember() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeEnumMember);
 }
 
@@ -31,8 +31,7 @@ SBTypeEnumMember::SBTypeEnumMember(
     const lldb::TypeEnumMemberImplSP &enum_member_sp)
     : m_opaque_sp(enum_member_sp) {}
 
-SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs)
-    : m_opaque_sp() {
+SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs) {
   LLDB_RECORD_CONSTRUCTOR(SBTypeEnumMember, (const lldb::SBTypeEnumMember &),
                           rhs);
 
@@ -46,7 +45,7 @@ SBTypeEnumMember &SBTypeEnumMember::operator=(const SBTypeEnumMember &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 bool SBTypeEnumMember::IsValid() const {
@@ -90,7 +89,7 @@ SBType SBTypeEnumMember::GetType() {
   if (m_opaque_sp.get()) {
     sb_type.SetSP(m_opaque_sp->GetIntegerType());
   }
-  return LLDB_RECORD_RESULT(sb_type);
+  return sb_type;
 }
 
 void SBTypeEnumMember::reset(TypeEnumMemberImpl *type_member_impl) {
@@ -148,7 +147,7 @@ operator=(const SBTypeEnumMemberList &rhs) {
       Append(
           const_cast<SBTypeEnumMemberList &>(rhs).GetTypeEnumMemberAtIndex(i));
   }
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 void SBTypeEnumMemberList::Append(SBTypeEnumMember enum_member) {
@@ -165,9 +164,8 @@ SBTypeEnumMemberList::GetTypeEnumMemberAtIndex(uint32_t index) {
                      GetTypeEnumMemberAtIndex, (uint32_t), index);
 
   if (m_opaque_up)
-    return LLDB_RECORD_RESULT(
-        SBTypeEnumMember(m_opaque_up->GetTypeEnumMemberAtIndex(index)));
-  return LLDB_RECORD_RESULT(SBTypeEnumMember());
+    return SBTypeEnumMember(m_opaque_up->GetTypeEnumMemberAtIndex(index));
+  return SBTypeEnumMember();
 }
 
 uint32_t SBTypeEnumMemberList::GetSize() {
@@ -195,41 +193,4 @@ bool SBTypeEnumMember::GetDescription(
     strm.PutCString("No value");
   }
   return true;
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBTypeEnumMember>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMember, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMember,
-                            (const lldb::SBTypeEnumMember &));
-  LLDB_REGISTER_METHOD(
-      lldb::SBTypeEnumMember &,
-      SBTypeEnumMember, operator=,(const lldb::SBTypeEnumMember &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMember, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMember, operator bool, ());
-  LLDB_REGISTER_METHOD(const char *, SBTypeEnumMember, GetName, ());
-  LLDB_REGISTER_METHOD(int64_t, SBTypeEnumMember, GetValueAsSigned, ());
-  LLDB_REGISTER_METHOD(uint64_t, SBTypeEnumMember, GetValueAsUnsigned, ());
-  LLDB_REGISTER_METHOD(lldb::SBType, SBTypeEnumMember, GetType, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMemberList, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBTypeEnumMemberList,
-                            (const lldb::SBTypeEnumMemberList &));
-  LLDB_REGISTER_METHOD(bool, SBTypeEnumMemberList, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBTypeEnumMemberList, operator bool, ());
-  LLDB_REGISTER_METHOD(
-      lldb::SBTypeEnumMemberList &,
-      SBTypeEnumMemberList, operator=,(const lldb::SBTypeEnumMemberList &));
-  LLDB_REGISTER_METHOD(void, SBTypeEnumMemberList, Append,
-                       (lldb::SBTypeEnumMember));
-  LLDB_REGISTER_METHOD(lldb::SBTypeEnumMember, SBTypeEnumMemberList,
-                       GetTypeEnumMemberAtIndex, (uint32_t));
-  LLDB_REGISTER_METHOD(uint32_t, SBTypeEnumMemberList, GetSize, ());
-  LLDB_REGISTER_METHOD(bool, SBTypeEnumMember, GetDescription,
-                       (lldb::SBStream &, lldb::DescriptionLevel));
-}
-
-}
 }

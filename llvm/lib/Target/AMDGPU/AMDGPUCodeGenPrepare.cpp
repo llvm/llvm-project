@@ -150,13 +150,13 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
 
   /// \returns The minimum number of bits needed to store the value of \Op as an
   /// unsigned integer. Truncating to this size and then zero-extending to
-  /// ScalarSize will not change the value.
-  unsigned numBitsUnsigned(Value *Op, unsigned ScalarSize) const;
+  /// the original will not change the value.
+  unsigned numBitsUnsigned(Value *Op) const;
 
   /// \returns The minimum number of bits needed to store the value of \Op as a
   /// signed integer. Truncating to this size and then sign-extending to
-  /// ScalarSize will not change the value.
-  unsigned numBitsSigned(Value *Op, unsigned ScalarSize) const;
+  /// the original size will not change the value.
+  unsigned numBitsSigned(Value *Op) const;
 
   /// Replace mul instructions with llvm.amdgcn.mul.u24 or llvm.amdgcn.mul.s24.
   /// SelectionDAG has an issue where an and asserting the bits are known
@@ -445,17 +445,12 @@ bool AMDGPUCodeGenPrepare::promoteUniformBitreverseToI32(
   return true;
 }
 
-unsigned AMDGPUCodeGenPrepare::numBitsUnsigned(Value *Op,
-                                               unsigned ScalarSize) const {
-  KnownBits Known = computeKnownBits(Op, *DL, 0, AC);
-  return ScalarSize - Known.countMinLeadingZeros();
+unsigned AMDGPUCodeGenPrepare::numBitsUnsigned(Value *Op) const {
+  return computeKnownBits(Op, *DL, 0, AC).countMaxActiveBits();
 }
 
-unsigned AMDGPUCodeGenPrepare::numBitsSigned(Value *Op,
-                                             unsigned ScalarSize) const {
-  // In order for this to be a signed 24-bit value, bit 23, must
-  // be a sign bit.
-  return ScalarSize - ComputeNumSignBits(Op, *DL, 0, AC) + 1;
+unsigned AMDGPUCodeGenPrepare::numBitsSigned(Value *Op) const {
+  return ComputeMaxSignificantBits(Op, *DL, 0, AC);
 }
 
 static void extractValues(IRBuilder<> &Builder,
@@ -532,12 +527,12 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
   unsigned LHSBits = 0, RHSBits = 0;
   bool IsSigned = false;
 
-  if (ST->hasMulU24() && (LHSBits = numBitsUnsigned(LHS, Size)) <= 24 &&
-      (RHSBits = numBitsUnsigned(RHS, Size)) <= 24) {
+  if (ST->hasMulU24() && (LHSBits = numBitsUnsigned(LHS)) <= 24 &&
+      (RHSBits = numBitsUnsigned(RHS)) <= 24) {
     IsSigned = false;
 
-  } else if (ST->hasMulI24() && (LHSBits = numBitsSigned(LHS, Size)) <= 24 &&
-             (RHSBits = numBitsSigned(RHS, Size)) <= 24) {
+  } else if (ST->hasMulI24() && (LHSBits = numBitsSigned(LHS)) <= 24 &&
+             (RHSBits = numBitsSigned(RHS)) <= 24) {
     IsSigned = true;
 
   } else

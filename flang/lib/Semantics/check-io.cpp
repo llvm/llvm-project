@@ -213,21 +213,41 @@ void IoChecker::Enter(const parser::Format &spec) {
               return;
             }
             auto type{expr->GetType()};
-            if (!type ||
-                (type->category() != TypeCategory::Integer &&
-                    type->category() != TypeCategory::Character) ||
-                type->kind() !=
-                    context_.defaultKinds().GetDefaultKind(type->category())) {
-              context_.Say(format.source,
-                  "Format expression must be default character or integer"_err_en_US);
-              return;
-            }
-            if (type->category() == TypeCategory::Integer) {
+            if (type && type->category() == TypeCategory::Integer &&
+                type->kind() ==
+                    context_.defaultKinds().GetDefaultKind(type->category()) &&
+                expr->Rank() == 0) {
               flags_.set(Flag::AssignFmt);
-              if (expr->Rank() != 0 || !IsVariable(*expr)) {
+              if (!IsVariable(*expr)) {
                 context_.Say(format.source,
                     "Assigned format label must be a scalar variable"_err_en_US);
               }
+              return;
+            }
+            if (type && type->category() != TypeCategory::Character &&
+                (type->category() != TypeCategory::Integer ||
+                    expr->Rank() > 0) &&
+                context_.IsEnabled(
+                    common::LanguageFeature::NonCharacterFormat)) {
+              // Legacy extension: using non-character variables, typically
+              // DATA-initialized with Hollerith, as format expressions.
+              if (context_.ShouldWarn(
+                      common::LanguageFeature::NonCharacterFormat)) {
+                context_.Say(format.source,
+                    "Non-character format expression is not standard"_en_US);
+              }
+            } else if (!type ||
+                type->kind() !=
+                    context_.defaultKinds().GetDefaultKind(type->category())) {
+              context_.Say(format.source,
+                  "Format expression must be default character or default scalar integer"_err_en_US);
+              return;
+            }
+            if (expr->Rank() > 0 &&
+                !IsSimplyContiguous(*expr, context_.foldingContext())) {
+              // The runtime APIs don't allow arbitrary descriptors for formats.
+              context_.Say(format.source,
+                  "Format expression must be a simply contiguous array if not scalar"_err_en_US);
               return;
             }
             flags_.set(Flag::CharFmt);

@@ -16,11 +16,8 @@
 namespace clang {
 
 class Stmt;
-class AnalyzerOptions;
 
 namespace ento {
-
-class CheckerManager;
 
 //===----------------------------------------------------------------------===//
 // AST Consumer Actions

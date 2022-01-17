@@ -528,10 +528,10 @@ movaps %xmm3, (%rbx)
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       movd	%mm0, (%rax)
-# CHECK-NEXT: 1.     1     2.0    0.0    0.0       movd	%mm1, (%rcx)
-# CHECK-NEXT: 2.     1     3.0    0.0    0.0       movd	%mm2, (%rdx)
-# CHECK-NEXT: 3.     1     4.0    0.0    0.0       movd	%mm3, (%rbx)
-# CHECK-NEXT:        1     2.5    0.3    0.0       <total>
+# CHECK-NEXT: 1.     1     2.0    1.0    0.0       movd	%mm1, (%rcx)
+# CHECK-NEXT: 2.     1     3.0    1.0    0.0       movd	%mm2, (%rdx)
+# CHECK-NEXT: 3.     1     4.0    1.0    0.0       movd	%mm3, (%rbx)
+# CHECK-NEXT:        1     2.5    1.0    0.0       <total>
 
 # CHECK:      [5] Code Region
 

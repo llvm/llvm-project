@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBPlatform.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
@@ -30,10 +30,7 @@ using namespace lldb_private;
 
 // PlatformConnectOptions
 struct PlatformConnectOptions {
-  PlatformConnectOptions(const char *url = nullptr)
-      : m_url(), m_rsync_options(), m_rsync_remote_path_prefix(),
-
-        m_local_cache_directory() {
+  PlatformConnectOptions(const char *url = nullptr) {
     if (url && url[0])
       m_url = url;
   }
@@ -52,7 +49,7 @@ struct PlatformConnectOptions {
 struct PlatformShellCommand {
   PlatformShellCommand(llvm::StringRef shell_interpreter,
                        llvm::StringRef shell_command)
-      : m_command(), m_working_dir(), m_status(0), m_signo(0) {
+      : m_status(0), m_signo(0) {
     if (!shell_interpreter.empty())
       m_shell = shell_interpreter.str();
 
@@ -60,8 +57,7 @@ struct PlatformShellCommand {
       m_command = shell_command.str();
   }
 
-  PlatformShellCommand(llvm::StringRef shell_command = llvm::StringRef())
-      : m_shell(), m_command(), m_working_dir() {
+  PlatformShellCommand(llvm::StringRef shell_command = llvm::StringRef()) {
     if (!shell_command.empty())
       m_command = shell_command.str();
   }
@@ -102,7 +98,7 @@ SBPlatformConnectOptions::operator=(const SBPlatformConnectOptions &rhs) {
       rhs);
 
   *m_opaque_ptr = *rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 const char *SBPlatformConnectOptions::GetURL() {
@@ -205,7 +201,7 @@ SBPlatformShellCommand::operator=(const SBPlatformShellCommand &rhs) {
       rhs);
 
   *m_opaque_ptr = *rhs.m_opaque_ptr;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBPlatformShellCommand::~SBPlatformShellCommand() { delete m_opaque_ptr; }
@@ -313,11 +309,9 @@ const char *SBPlatformShellCommand::GetOutput() {
 }
 
 // SBPlatform
-SBPlatform::SBPlatform() : m_opaque_sp() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBPlatform);
-}
+SBPlatform::SBPlatform() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBPlatform); }
 
-SBPlatform::SBPlatform(const char *platform_name) : m_opaque_sp() {
+SBPlatform::SBPlatform(const char *platform_name) {
   LLDB_RECORD_CONSTRUCTOR(SBPlatform, (const char *), platform_name);
 
   Status error;
@@ -336,7 +330,7 @@ SBPlatform &SBPlatform::operator=(const SBPlatform &rhs) {
                      SBPlatform, operator=,(const lldb::SBPlatform &), rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBPlatform::~SBPlatform() = default;
@@ -347,7 +341,7 @@ SBPlatform SBPlatform::GetHostPlatform() {
 
   SBPlatform host_platform;
   host_platform.m_opaque_sp = Platform::GetHostPlatform();
-  return LLDB_RECORD_RESULT(host_platform);
+  return host_platform;
 }
 
 bool SBPlatform::IsValid() const {
@@ -418,7 +412,7 @@ SBError SBPlatform::ConnectRemote(SBPlatformConnectOptions &connect_options) {
   } else {
     sb_error.SetErrorString("invalid platform");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 void SBPlatform::DisconnectRemote() {
@@ -530,54 +524,51 @@ SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {
   } else {
     sb_error.SetErrorString("invalid platform");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBError SBPlatform::Put(SBFileSpec &src, SBFileSpec &dst) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Put,
                      (lldb::SBFileSpec &, lldb::SBFileSpec &), src, dst);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-        if (src.Exists()) {
-          uint32_t permissions =
-              FileSystem::Instance().GetPermissions(src.ref());
-          if (permissions == 0) {
-            if (FileSystem::Instance().IsDirectory(src.ref()))
-              permissions = eFilePermissionsDirectoryDefault;
-            else
-              permissions = eFilePermissionsFileDefault;
-          }
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    if (src.Exists()) {
+      uint32_t permissions = FileSystem::Instance().GetPermissions(src.ref());
+      if (permissions == 0) {
+        if (FileSystem::Instance().IsDirectory(src.ref()))
+          permissions = eFilePermissionsDirectoryDefault;
+        else
+          permissions = eFilePermissionsFileDefault;
+      }
 
-          return platform_sp->PutFile(src.ref(), dst.ref(), permissions);
-        }
+      return platform_sp->PutFile(src.ref(), dst.ref(), permissions);
+    }
 
-        Status error;
-        error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
-                                       src.ref().GetPath().c_str());
-        return error;
-      }));
+    Status error;
+    error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
+                                   src.ref().GetPath().c_str());
+    return error;
+  });
 }
 
 SBError SBPlatform::Install(SBFileSpec &src, SBFileSpec &dst) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Install,
                      (lldb::SBFileSpec &, lldb::SBFileSpec &), src, dst);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-        if (src.Exists())
-          return platform_sp->Install(src.ref(), dst.ref());
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    if (src.Exists())
+      return platform_sp->Install(src.ref(), dst.ref());
 
-        Status error;
-        error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
-                                       src.ref().GetPath().c_str());
-        return error;
-      }));
+    Status error;
+    error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
+                                   src.ref().GetPath().c_str());
+    return error;
+  });
 }
 
 SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Run,
                      (lldb::SBPlatformShellCommand &), shell_command);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+  return ExecuteConnected(
+      [&](const lldb::PlatformSP &platform_sp) {
         const char *command = shell_command.GetCommand();
         if (!command)
           return Status("invalid shell command (empty)");
@@ -594,27 +585,25 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
             &shell_command.m_opaque_ptr->m_signo,
             &shell_command.m_opaque_ptr->m_output,
             shell_command.m_opaque_ptr->m_timeout);
-      }));
+      });
 }
 
 SBError SBPlatform::Launch(SBLaunchInfo &launch_info) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Launch, (lldb::SBLaunchInfo &),
                      launch_info);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-        ProcessLaunchInfo info = launch_info.ref();
-        Status error = platform_sp->LaunchProcess(info);
-        launch_info.set_ref(info);
-        return error;
-      }));
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    ProcessLaunchInfo info = launch_info.ref();
+    Status error = platform_sp->LaunchProcess(info);
+    launch_info.set_ref(info);
+    return error;
+  });
 }
 
 SBError SBPlatform::Kill(const lldb::pid_t pid) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Kill, (const lldb::pid_t), pid);
-  return LLDB_RECORD_RESULT(
-      ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
-        return platform_sp->KillProcess(pid);
-      }));
+  return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
+    return platform_sp->KillProcess(pid);
+  });
 }
 
 SBError SBPlatform::ExecuteConnected(
@@ -644,7 +633,7 @@ SBError SBPlatform::MakeDirectory(const char *path, uint32_t file_permissions) {
   } else {
     sb_error.SetErrorString("invalid platform");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 uint32_t SBPlatform::GetFilePermissions(const char *path) {
@@ -673,7 +662,7 @@ SBError SBPlatform::SetFilePermissions(const char *path,
   } else {
     sb_error.SetErrorString("invalid platform");
   }
-  return LLDB_RECORD_RESULT(sb_error);
+  return sb_error;
 }
 
 SBUnixSignals SBPlatform::GetUnixSignals() const {
@@ -681,9 +670,9 @@ SBUnixSignals SBPlatform::GetUnixSignals() const {
                                    GetUnixSignals);
 
   if (auto platform_sp = GetSP())
-    return LLDB_RECORD_RESULT(SBUnixSignals{platform_sp});
+    return SBUnixSignals{platform_sp};
 
-  return LLDB_RECORD_RESULT(SBUnixSignals());
+  return SBUnixSignals();
 }
 
 SBEnvironment SBPlatform::GetEnvironment() {
@@ -691,108 +680,8 @@ SBEnvironment SBPlatform::GetEnvironment() {
   PlatformSP platform_sp(GetSP());
 
   if (platform_sp) {
-    return LLDB_RECORD_RESULT(SBEnvironment(platform_sp->GetEnvironment()));
+    return SBEnvironment(platform_sp->GetEnvironment());
   }
 
-  return LLDB_RECORD_RESULT(SBEnvironment());
+  return SBEnvironment();
 }
-
-namespace lldb_private {
-namespace repro {
-
-template <> void RegisterMethods<SBPlatformConnectOptions>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBPlatformConnectOptions, (const char *));
-  LLDB_REGISTER_CONSTRUCTOR(SBPlatformConnectOptions,
-                            (const lldb::SBPlatformConnectOptions &));
-  LLDB_REGISTER_METHOD(
-      SBPlatformConnectOptions &,
-      SBPlatformConnectOptions, operator=,(
-                                    const lldb::SBPlatformConnectOptions &));
-  LLDB_REGISTER_METHOD(const char *, SBPlatformConnectOptions, GetURL, ());
-  LLDB_REGISTER_METHOD(void, SBPlatformConnectOptions, SetURL, (const char *));
-  LLDB_REGISTER_METHOD(bool, SBPlatformConnectOptions, GetRsyncEnabled, ());
-  LLDB_REGISTER_METHOD(void, SBPlatformConnectOptions, EnableRsync,
-                       (const char *, const char *, bool));
-  LLDB_REGISTER_METHOD(void, SBPlatformConnectOptions, DisableRsync, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatformConnectOptions,
-                       GetLocalCacheDirectory, ());
-  LLDB_REGISTER_METHOD(void, SBPlatformConnectOptions, SetLocalCacheDirectory,
-                       (const char *));
-}
-
-template <> void RegisterMethods<SBPlatformShellCommand>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBPlatformShellCommand, (const char *));
-  LLDB_REGISTER_CONSTRUCTOR(SBPlatformShellCommand,
-                            (const lldb::SBPlatformShellCommand &));
-  LLDB_REGISTER_METHOD(
-      SBPlatformShellCommand &,
-      SBPlatformShellCommand, operator=,(const lldb::SBPlatformShellCommand &));
-  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, Clear, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand, GetShell, ());
-  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetShell, (const char *));
-  LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand, GetCommand, ());
-  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetCommand,
-                       (const char *));
-  LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand,
-                       GetWorkingDirectory, ());
-  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetWorkingDirectory,
-                       (const char *));
-  LLDB_REGISTER_METHOD(uint32_t, SBPlatformShellCommand, GetTimeoutSeconds, ());
-  LLDB_REGISTER_METHOD(void, SBPlatformShellCommand, SetTimeoutSeconds,
-                       (uint32_t));
-  LLDB_REGISTER_METHOD(int, SBPlatformShellCommand, GetSignal, ());
-  LLDB_REGISTER_METHOD(int, SBPlatformShellCommand, GetStatus, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatformShellCommand, GetOutput, ());
-}
-
-template <> void RegisterMethods<SBPlatform>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBPlatform, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBPlatform, (const char *));
-  LLDB_REGISTER_CONSTRUCTOR(SBPlatform, (const lldb::SBPlatform &));
-  LLDB_REGISTER_CONSTRUCTOR(SBPlatformShellCommand,
-                            (const char *, const char *));
-  LLDB_REGISTER_METHOD(SBPlatform &,
-                       SBPlatform, operator=,(const lldb::SBPlatform &));
-  LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, operator bool,());
-  LLDB_REGISTER_METHOD(void, SBPlatform, Clear, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetName, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetWorkingDirectory, ());
-  LLDB_REGISTER_METHOD(bool, SBPlatform, SetWorkingDirectory, (const char *));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, ConnectRemote,
-                       (lldb::SBPlatformConnectOptions &));
-  LLDB_REGISTER_METHOD(void, SBPlatform, DisconnectRemote, ());
-  LLDB_REGISTER_METHOD(bool, SBPlatform, IsConnected, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetTriple, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetOSBuild, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetOSDescription, ());
-  LLDB_REGISTER_METHOD(const char *, SBPlatform, GetHostname, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBPlatform, GetOSMajorVersion, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBPlatform, GetOSMinorVersion, ());
-  LLDB_REGISTER_METHOD(uint32_t, SBPlatform, GetOSUpdateVersion, ());
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Get,
-                       (lldb::SBFileSpec &, lldb::SBFileSpec &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Put,
-                       (lldb::SBFileSpec &, lldb::SBFileSpec &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Install,
-                       (lldb::SBFileSpec &, lldb::SBFileSpec &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Run,
-                       (lldb::SBPlatformShellCommand &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Launch,
-                       (lldb::SBLaunchInfo &));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, Kill, (const lldb::pid_t));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, MakeDirectory,
-                       (const char *, uint32_t));
-  LLDB_REGISTER_METHOD(uint32_t, SBPlatform, GetFilePermissions,
-                       (const char *));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBPlatform, SetFilePermissions,
-                       (const char *, uint32_t));
-  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBPlatform, GetEnvironment, ());
-  LLDB_REGISTER_METHOD_CONST(lldb::SBUnixSignals, SBPlatform, GetUnixSignals,
-                             ());
-  LLDB_REGISTER_STATIC_METHOD(lldb::SBPlatform, SBPlatform, GetHostPlatform,
-                              ());
-}
-
-} // namespace repro
-} // namespace lldb_private

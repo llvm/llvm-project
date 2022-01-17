@@ -33,7 +33,33 @@ namespace llvm {
 class StringRef;
 
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
+public:
+  enum ExtZvl : unsigned {
+    NotSet = 0,
+    Zvl32b = 32,
+    Zvl64b = 64,
+    Zvl128b = 128,
+    Zvl256b = 256,
+    Zvl512b = 512,
+    Zvl1024b = 1024,
+    Zvl2048b = 2048,
+    Zvl4096b = 4096,
+    Zvl8192b = 8192,
+    Zvl16384b = 16384,
+    Zvl32768b = 32768,
+    Zvl65536b = 65536
+  };
+
+  enum RISCVProcFamilyEnum : uint8_t {
+    Others,
+    SiFive7,
+  };
+
+private:
   virtual void anchor();
+
+  RISCVProcFamilyEnum RISCVProcFamily = Others;
+
   bool HasStdExtM = false;
   bool HasStdExtA = false;
   bool HasStdExtF = false;
@@ -59,6 +85,7 @@ class RISCVSubtarget : public RISCVGenSubtargetInfo {
   bool EnableRVCHintInstrs = true;
   bool EnableSaveRestore = false;
   unsigned XLen = 32;
+  ExtZvl ZvlLen = ExtZvl::NotSet;
   MVT XLenVT = MVT::i32;
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
@@ -100,6 +127,13 @@ public:
     return &TSInfo;
   }
   bool enableMachineScheduler() const override { return true; }
+
+  /// Returns RISCV processor family.
+  /// Avoid this function! CPU specifics should be kept local to this class
+  /// and preferably modeled with SubtargetFeatures or properties in
+  /// initializeProperties().
+  RISCVProcFamilyEnum getProcFamily() const { return RISCVProcFamily; }
+
   bool hasStdExtM() const { return HasStdExtM; }
   bool hasStdExtA() const { return HasStdExtA; }
   bool hasStdExtF() const { return HasStdExtF; }
@@ -117,6 +151,7 @@ public:
   bool hasStdExtZbt() const { return HasStdExtZbt; }
   bool hasStdExtV() const { return HasStdExtV; }
   bool hasStdExtZvlsseg() const { return HasStdExtZvlsseg; }
+  bool hasStdExtZvl() const { return ZvlLen != ExtZvl::NotSet; }
   bool hasStdExtZfhmin() const { return HasStdExtZfhmin; }
   bool hasStdExtZfh() const { return HasStdExtZfh; }
   bool is64Bit() const { return HasRV64; }
@@ -126,6 +161,15 @@ public:
   bool enableSaveRestore() const { return EnableSaveRestore; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }
+  unsigned getFLen() const {
+    if (HasStdExtD)
+      return 64;
+
+    if (HasStdExtF)
+      return 32;
+
+    return 0;
+  }
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
   bool isRegisterReservedByUser(Register i) const {
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");

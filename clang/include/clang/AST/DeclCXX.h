@@ -64,7 +64,6 @@ class CXXFinalOverriderMap;
 class CXXIndirectPrimaryBaseSet;
 class CXXMethodDecl;
 class DecompositionDecl;
-class DiagnosticBuilder;
 class FriendDecl;
 class FunctionTemplateDecl;
 class IdentifierInfo;
@@ -3291,7 +3290,7 @@ class BaseUsingDecl : public NamedDecl {
 
 protected:
   BaseUsingDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName N)
-      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, 0) {}
+      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, false) {}
 
 private:
   void anchor() override;

@@ -19,7 +19,7 @@ entry:
   br i1 %0, label %return, label %bb
 
 bb:                                               ; preds = %entry
-  tail call void asm "mov $1, $0", "=*m,{cx},~{dirflag},~{fpsr},~{flags}"(i8** @msg, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i64 0, i64 0)) nounwind
+  tail call void asm "mov $1, $0", "=*m,{cx},~{dirflag},~{fpsr},~{flags}"(i8** elementtype(i8*) @msg, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str, i64 0, i64 0)) nounwind
   tail call void @llvm.trap()
   unreachable
 

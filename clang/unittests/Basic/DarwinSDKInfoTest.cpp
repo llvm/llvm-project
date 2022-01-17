@@ -13,7 +13,68 @@
 using namespace llvm;
 using namespace clang;
 
-TEST(DarwinSDKInfoTest, ParseAndTestMapping) {
+// Check the version mapping logic in DarwinSDKInfo.
+TEST(DarwinSDKInfo, VersionMapping) {
+  llvm::json::Object Obj({{"3.0", "1.0"}, {"3.1", "1.2"}});
+  Optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
+      DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj,
+                                                            VersionTuple());
+  EXPECT_TRUE(Mapping.hasValue());
+  EXPECT_EQ(Mapping->getMinimumValue(), VersionTuple(1));
+
+  // Exact mapping.
+  EXPECT_EQ(Mapping->map(VersionTuple(3), VersionTuple(0, 1), None),
+            VersionTuple(1));
+  EXPECT_EQ(Mapping->map(VersionTuple(3, 0), VersionTuple(0, 1), None),
+            VersionTuple(1));
+  EXPECT_EQ(Mapping->map(VersionTuple(3, 0, 0), VersionTuple(0, 1), None),
+            VersionTuple(1));
+  EXPECT_EQ(Mapping->map(VersionTuple(3, 1), VersionTuple(0, 1), None),
+            VersionTuple(1, 2));
+  EXPECT_EQ(Mapping->map(VersionTuple(3, 1, 0), VersionTuple(0, 1), None),
+            VersionTuple(1, 2));
+
+  // Missing mapping - fallback to major.
+  EXPECT_EQ(Mapping->map(VersionTuple(3, 0, 1), VersionTuple(0, 1), None),
+            VersionTuple(1));
+
+  // Minimum
+  EXPECT_EQ(Mapping->map(VersionTuple(2), VersionTuple(0, 1), None),
+            VersionTuple(0, 1));
+
+  // Maximum
+  EXPECT_EQ(
+      Mapping->map(VersionTuple(4), VersionTuple(0, 1), VersionTuple(100)),
+      VersionTuple(100));
+}
+
+// Check the version mapping logic in DarwinSDKInfo.
+TEST(DarwinSDKInfo, VersionMappingMissingKey) {
+  llvm::json::Object Obj({{"3.0", "1.0"}, {"5.0", "1.2"}});
+  Optional<DarwinSDKInfo::RelatedTargetVersionMapping> Mapping =
+      DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj,
+                                                            VersionTuple());
+  EXPECT_TRUE(Mapping.hasValue());
+  EXPECT_EQ(
+      Mapping->map(VersionTuple(4), VersionTuple(0, 1), VersionTuple(100)),
+      None);
+}
+
+TEST(DarwinSDKInfo, VersionMappingParseEmpty) {
+  llvm::json::Object Obj({});
+  EXPECT_FALSE(
+      DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj, VersionTuple())
+          .hasValue());
+}
+
+TEST(DarwinSDKInfo, VersionMappingParseError) {
+  llvm::json::Object Obj({{"test", "1.2"}});
+  EXPECT_FALSE(
+      DarwinSDKInfo::RelatedTargetVersionMapping::parseJSON(Obj, VersionTuple())
+          .hasValue());
+}
+
+TEST(DarwinSDKInfoTest, ParseAndTestMappingMacCatalyst) {
   llvm::json::Object Obj;
   Obj["Version"] = "11.0";
   Obj["MaximumDeploymentTarget"] = "11.99";
@@ -56,6 +117,51 @@ TEST(DarwinSDKInfoTest, ParseAndTestMapping) {
   EXPECT_EQ(*Mapping->map(VersionTuple(11, 5), VersionTuple(99, 98),
                           VersionTuple(99, 99)),
             VersionTuple(99, 99));
+}
+
+TEST(DarwinSDKInfoTest, ParseAndTestMappingIOSDerived) {
+  llvm::json::Object Obj;
+  Obj["Version"] = "15.0";
+  Obj["MaximumDeploymentTarget"] = "15.0.99";
+  llvm::json::Object VersionMap;
+  VersionMap["10.0"] = "10.0";
+  VersionMap["10.3.1"] = "10.2";
+  VersionMap["11.0"] = "11.0";
+  llvm::json::Object IOSToTvOS;
+  IOSToTvOS["iOS_tvOS"] = std::move(VersionMap);
+  Obj["VersionMap"] = std::move(IOSToTvOS);
+
+  auto SDKInfo = DarwinSDKInfo::parseDarwinSDKSettingsJSON(&Obj);
+  ASSERT_TRUE(SDKInfo);
+  EXPECT_EQ(SDKInfo->getVersion(), VersionTuple(15, 0));
+
+  // Verify that mapping is present for platforms that derive from iOS.
+  const auto *Mapping = SDKInfo->getVersionMapping(DarwinSDKInfo::OSEnvPair(
+      llvm::Triple::IOS, llvm::Triple::UnknownEnvironment, llvm::Triple::TvOS,
+      llvm::Triple::UnknownEnvironment));
+  ASSERT_TRUE(Mapping);
+
+  // Verify that the iOS versions that are present in the map are translated
+  // directly to their corresponding tvOS versions.
+  EXPECT_EQ(*Mapping->map(VersionTuple(10, 0), VersionTuple(), None),
+            VersionTuple(10, 0));
+  EXPECT_EQ(*Mapping->map(VersionTuple(10, 3, 1), VersionTuple(), None),
+            VersionTuple(10, 2));
+  EXPECT_EQ(*Mapping->map(VersionTuple(11, 0), VersionTuple(), None),
+            VersionTuple(11, 0));
+
+  // Verify that an iOS version that's not present in the map is translated
+  // like the nearest major OS version.
+  EXPECT_EQ(*Mapping->map(VersionTuple(10, 1), VersionTuple(), None),
+            VersionTuple(10, 0));
+
+  // Verify that the iOS versions that are outside of the mapped version
+  // range map to the min/max values passed to the `map` call.
+  EXPECT_EQ(*Mapping->map(VersionTuple(9, 0), VersionTuple(99, 99), None),
+            VersionTuple(99, 99));
+  EXPECT_EQ(
+      *Mapping->map(VersionTuple(13, 0), VersionTuple(), VersionTuple(99, 99)),
+      VersionTuple(99, 99));
 }
 
 TEST(DarwinSDKInfoTest, MissingKeys) {

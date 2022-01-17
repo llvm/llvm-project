@@ -302,8 +302,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
   sym.replace(Defined{sym.file, sym.getName(), sym.binding, sym.stOther,
                       sym.type, value, size, &sec});
 
-  sym.pltIndex = old.pltIndex;
-  sym.gotIndex = old.gotIndex;
+  sym.auxIdx = old.auxIdx;
   sym.verdefIndex = old.verdefIndex;
   sym.exportDynamic = true;
   sym.isUsedInRegularObj = true;
@@ -404,14 +403,89 @@ static void addCopyRelSymbol(SharedSymbol &ss) {
   }
 }
 
+// .eh_frame sections are mergeable input sections, so their input
+// offsets are not linearly mapped to output section. For each input
+// offset, we need to find a section piece containing the offset and
+// add the piece's base address to the input offset to compute the
+// output offset. That isn't cheap.
+//
+// This class is to speed up the offset computation. When we process
+// relocations, we access offsets in the monotonically increasing
+// order. So we can optimize for that access pattern.
+//
+// For sections other than .eh_frame, this class doesn't do anything.
+namespace {
+class OffsetGetter {
+public:
+  explicit OffsetGetter(InputSectionBase &sec) {
+    if (auto *eh = dyn_cast<EhInputSection>(&sec))
+      pieces = eh->pieces;
+  }
+
+  // Translates offsets in input sections to offsets in output sections.
+  // Given offset must increase monotonically. We assume that Piece is
+  // sorted by inputOff.
+  uint64_t get(uint64_t off) {
+    if (pieces.empty())
+      return off;
+
+    while (i != pieces.size() && pieces[i].inputOff + pieces[i].size <= off)
+      ++i;
+    if (i == pieces.size())
+      fatal(".eh_frame: relocation is not in any piece");
+
+    // Pieces must be contiguous, so there must be no holes in between.
+    assert(pieces[i].inputOff <= off && "Relocation not in any piece");
+
+    // Offset -1 means that the piece is dead (i.e. garbage collected).
+    if (pieces[i].outputOff == -1)
+      return -1;
+    return pieces[i].outputOff + off - pieces[i].inputOff;
+  }
+
+private:
+  ArrayRef<EhSectionPiece> pieces;
+  size_t i = 0;
+};
+
+// This class encapsulates states needed to scan relocations for one
+// InputSectionBase.
+class RelocationScanner {
+public:
+  explicit RelocationScanner(InputSectionBase &sec)
+      : sec(sec), getter(sec), config(elf::config.get()), target(*elf::target) {
+  }
+  template <class ELFT, class RelTy> void scan(ArrayRef<RelTy> rels);
+
+private:
+  InputSectionBase &sec;
+  OffsetGetter getter;
+  const Configuration *const config;
+  const TargetInfo &target;
+
+  // End of relocations, used by Mips/PPC64.
+  const void *end = nullptr;
+
+  template <class RelTy> RelType getMipsN32RelType(RelTy *&rel) const;
+  template <class ELFT, class RelTy>
+  int64_t computeMipsAddend(const RelTy &rel, RelExpr expr, bool isLocal) const;
+  template <class ELFT, class RelTy>
+  int64_t computeAddend(const RelTy &rel, RelExpr expr, bool isLocal) const;
+  bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
+                                uint64_t relOff) const;
+  void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
+                  int64_t addend) const;
+  template <class ELFT, class RelTy> void scanOne(RelTy *&i);
+};
+} // namespace
+
 // MIPS has an odd notion of "paired" relocations to calculate addends.
 // For example, if a relocation is of R_MIPS_HI16, there must be a
 // R_MIPS_LO16 relocation after that, and an addend is calculated using
 // the two relocations.
 template <class ELFT, class RelTy>
-static int64_t computeMipsAddend(const RelTy &rel, const RelTy *end,
-                                 InputSectionBase &sec, RelExpr expr,
-                                 bool isLocal) {
+int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
+                                             bool isLocal) const {
   if (expr == R_MIPS_GOTREL && isLocal)
     return sec.getFile<ELFT>()->mipsGp0;
 
@@ -430,10 +504,10 @@ static int64_t computeMipsAddend(const RelTy &rel, const RelTy *end,
 
   // To make things worse, paired relocations might not be contiguous in
   // the relocation table, so we need to do linear search. *sigh*
-  for (const RelTy *ri = &rel; ri != end; ++ri)
+  for (const RelTy *ri = &rel; ri != static_cast<const RelTy *>(end); ++ri)
     if (ri->getType(config->isMips64EL) == pairTy &&
         ri->getSymbol(config->isMips64EL) == symIndex)
-      return target->getImplicitAddend(buf + ri->r_offset, pairTy);
+      return target.getImplicitAddend(buf + ri->r_offset, pairTy);
 
   warn("can't find matching " + toString(pairTy) + " relocation for " +
        toString(type));
@@ -444,9 +518,8 @@ static int64_t computeMipsAddend(const RelTy &rel, const RelTy *end,
 // is in a relocation itself. If it is REL, we need to read it from an
 // input section.
 template <class ELFT, class RelTy>
-static int64_t computeAddend(const RelTy &rel, const RelTy *end,
-                             InputSectionBase &sec, RelExpr expr,
-                             bool isLocal) {
+int64_t RelocationScanner::computeAddend(const RelTy &rel, RelExpr expr,
+                                         bool isLocal) const {
   int64_t addend;
   RelType type = rel.getType(config->isMips64EL);
 
@@ -454,13 +527,13 @@ static int64_t computeAddend(const RelTy &rel, const RelTy *end,
     addend = getAddend<ELFT>(rel);
   } else {
     const uint8_t *buf = sec.data().data();
-    addend = target->getImplicitAddend(buf + rel.r_offset, type);
+    addend = target.getImplicitAddend(buf + rel.r_offset, type);
   }
 
   if (config->emachine == EM_PPC64 && config->isPic && type == R_PPC64_TOC)
     addend += getPPC64TocBase();
   if (config->emachine == EM_MIPS)
-    addend += computeMipsAddend<ELFT>(rel, end, sec, expr, isLocal);
+    addend += computeMipsAddend<ELFT>(rel, expr, isLocal);
 
   return addend;
 }
@@ -503,7 +576,7 @@ static std::string maybeReportDiscarded(Undefined &sym) {
 // them are known, so that some postprocessing on the list of undefined symbols
 // can happen before lld emits diagnostics.
 struct UndefinedDiag {
-  Symbol *sym;
+  Undefined *sym;
   struct Loc {
     InputSectionBase *sec;
     uint64_t offset;
@@ -532,12 +605,12 @@ static bool canSuggestExternCForCXX(StringRef ref, StringRef def) {
 // Suggest an alternative spelling of an "undefined symbol" diagnostic. Returns
 // the suggested symbol, which is either in the symbol table, or in the same
 // file of sym.
-template <class ELFT>
 static const Symbol *getAlternativeSpelling(const Undefined &sym,
                                             std::string &pre_hint,
                                             std::string &post_hint) {
   DenseMap<StringRef, const Symbol *> map;
-  if (auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file)) {
+  if (sym.file && sym.file->kind() == InputFile::ObjKind) {
+    auto *file = cast<ELFFileBase>(sym.file);
     // If sym is a symbol defined in a discarded section, maybeReportDiscarded()
     // will give an error. Don't suggest an alternative spelling.
     if (file && sym.discardedSecIdx != 0 &&
@@ -649,7 +722,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
 template <class ELFT>
 static void reportUndefinedSymbol(const UndefinedDiag &undef,
                                   bool correctSpelling) {
-  Symbol &sym = *undef.sym;
+  Undefined &sym = *undef.sym;
 
   auto visibility = [&]() -> std::string {
     switch (sym.visibility) {
@@ -664,7 +737,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     }
   };
 
-  std::string msg = maybeReportDiscarded<ELFT>(cast<Undefined>(sym));
+  std::string msg = maybeReportDiscarded<ELFT>(sym);
   if (msg.empty())
     msg = "undefined " + visibility() + "symbol: " + toString(sym);
 
@@ -690,8 +763,8 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
 
   if (correctSpelling) {
     std::string pre_hint = ": ", post_hint;
-    if (const Symbol *corrected = getAlternativeSpelling<ELFT>(
-            cast<Undefined>(sym), pre_hint, post_hint)) {
+    if (const Symbol *corrected =
+            getAlternativeSpelling(sym, pre_hint, post_hint)) {
       msg += "\n>>> did you mean" + pre_hint + toString(*corrected) + post_hint;
       if (corrected->file)
         msg += "\n>>> defined in: " + toString(corrected->file);
@@ -737,7 +810,7 @@ template <class ELFT> void elf::reportUndefinedSymbols() {
 
 // Report an undefined symbol if necessary.
 // Returns true if the undefined symbol will produce an error message.
-static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
+static bool maybeReportUndefined(Undefined &sym, InputSectionBase &sec,
                                  uint64_t offset) {
   // If versioned, issue an error (even if the symbol is weak) because we don't
   // know the defining filename which is required to construct a Verneed entry.
@@ -761,8 +834,7 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
   // PPC32 .got2 is similar but cannot be fixed. Multiple .got2 is infeasible
   // because .LC0-.LTOC is not representable if the two labels are in different
   // .got2
-  if (cast<Undefined>(sym).discardedSecIdx != 0 &&
-      (sec.name == ".got2" || sec.name == ".toc"))
+  if (sym.discardedSecIdx != 0 && (sec.name == ".got2" || sec.name == ".toc"))
     return false;
 
   bool isWarning =
@@ -777,61 +849,16 @@ static bool maybeReportUndefined(Symbol &sym, InputSectionBase &sec,
 // packs all relocations into the single relocation record. Here we emulate
 // this for the N32 ABI. Iterate over relocation with the same offset and put
 // theirs types into the single bit-set.
-template <class RelTy> static RelType getMipsN32RelType(RelTy *&rel, RelTy *end) {
+template <class RelTy>
+RelType RelocationScanner::getMipsN32RelType(RelTy *&rel) const {
   RelType type = 0;
   uint64_t offset = rel->r_offset;
 
   int n = 0;
-  while (rel != end && rel->r_offset == offset)
+  while (rel != static_cast<const RelTy *>(end) && rel->r_offset == offset)
     type |= (rel++)->getType(config->isMips64EL) << (8 * n++);
   return type;
 }
-
-// .eh_frame sections are mergeable input sections, so their input
-// offsets are not linearly mapped to output section. For each input
-// offset, we need to find a section piece containing the offset and
-// add the piece's base address to the input offset to compute the
-// output offset. That isn't cheap.
-//
-// This class is to speed up the offset computation. When we process
-// relocations, we access offsets in the monotonically increasing
-// order. So we can optimize for that access pattern.
-//
-// For sections other than .eh_frame, this class doesn't do anything.
-namespace {
-class OffsetGetter {
-public:
-  explicit OffsetGetter(InputSectionBase &sec) {
-    if (auto *eh = dyn_cast<EhInputSection>(&sec))
-      pieces = eh->pieces;
-  }
-
-  // Translates offsets in input sections to offsets in output sections.
-  // Given offset must increase monotonically. We assume that Piece is
-  // sorted by inputOff.
-  uint64_t get(uint64_t off) {
-    if (pieces.empty())
-      return off;
-
-    while (i != pieces.size() && pieces[i].inputOff + pieces[i].size <= off)
-      ++i;
-    if (i == pieces.size())
-      fatal(".eh_frame: relocation is not in any piece");
-
-    // Pieces must be contiguous, so there must be no holes in between.
-    assert(pieces[i].inputOff <= off && "Relocation not in any piece");
-
-    // Offset -1 means that the piece is dead (i.e. garbage collected).
-    if (pieces[i].outputOff == -1)
-      return -1;
-    return pieces[i].outputOff + off - pieces[i].inputOff;
-  }
-
-private:
-  ArrayRef<EhSectionPiece> pieces;
-  size_t i = 0;
-};
-} // namespace
 
 static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
                              Symbol &sym, int64_t addend, RelExpr expr,
@@ -924,8 +951,9 @@ static bool canDefineSymbolInExecutable(Symbol &sym) {
 //
 // If this function returns false, that means we need to emit a
 // dynamic relocation so that the relocation will be fixed at load-time.
-static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
-                                     InputSectionBase &s, uint64_t relOff) {
+bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
+                                                 const Symbol &sym,
+                                                 uint64_t relOff) const {
   // These expressions always compute a constant
   if (oneof<R_GOTPLT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL,
             R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC,
@@ -937,7 +965,7 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
   // These never do, except if the entire file is position dependent or if
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
-    return target->usesOnlyLowPageBits(type) || !config->isPic;
+    return target.usesOnlyLowPageBits(type) || !config->isPic;
 
   if (sym.isPreemptible)
     return false;
@@ -957,7 +985,7 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
   if (!absVal && relE)
     return true;
   if (!absVal && !relE)
-    return target->usesOnlyLowPageBits(type);
+    return target.usesOnlyLowPageBits(type);
 
   assert(absVal && relE);
 
@@ -975,7 +1003,7 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
       return true;
 
   error("relocation " + toString(type) + " cannot refer to absolute symbol: " +
-        toString(sym) + getLocation(s, sym, relOff));
+        toString(sym) + getLocation(sec, sym, relOff));
   return true;
 }
 
@@ -992,9 +1020,8 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
 // sections. Given that it is ro, we will need an extra PT_LOAD. This
 // complicates things for the dynamic linker and means we would have to reserve
 // space for the extra PT_LOAD even if we end up not using it.
-template <class ELFT>
-static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
-                            uint64_t offset, Symbol &sym, int64_t addend) {
+void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
+                                   Symbol &sym, int64_t addend) const {
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
@@ -1009,7 +1036,7 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
   // -shared matches the spirit of its -z undefs default. -pie has freedom on
   // choices, and we choose dynamic relocations to be consistent with the
   // handling of GOT-generating relocations.
-  if (isStaticLinkTimeConstant(expr, type, sym, sec, offset) ||
+  if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
       (!config->isPic && sym.isUndefWeak())) {
     sec.relocations.push_back({expr, type, offset, addend, &sym});
     return;
@@ -1017,13 +1044,13 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
 
   bool canWrite = (sec.flags & SHF_WRITE) || !config->zText;
   if (canWrite) {
-    RelType rel = target->getDynRel(type);
-    if (expr == R_GOT || (rel == target->symbolicRel && !sym.isPreemptible)) {
+    RelType rel = target.getDynRel(type);
+    if (expr == R_GOT || (rel == target.symbolicRel && !sym.isPreemptible)) {
       addRelativeReloc(sec, offset, sym, addend, expr, type);
       return;
     } else if (rel != 0) {
-      if (config->emachine == EM_MIPS && rel == target->symbolicRel)
-        rel = target->relativeRel;
+      if (config->emachine == EM_MIPS && rel == target.symbolicRel)
+        rel = target.relativeRel;
       sec.getPartition().relaDyn->addSymbolReloc(rel, sec, offset, sym, addend,
                                                  type);
 
@@ -1261,9 +1288,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
   return 0;
 }
 
-template <class ELFT, class RelTy>
-static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
-                      RelTy *end) {
+template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   const RelTy &rel = *i;
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
   Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
@@ -1271,32 +1296,32 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
 
   // Deal with MIPS oddity.
   if (config->mipsN32Abi) {
-    type = getMipsN32RelType(i, end);
+    type = getMipsN32RelType(i);
   } else {
     type = rel.getType(config->isMips64EL);
     ++i;
   }
 
   // Get an offset in an output section this relocation is applied to.
-  uint64_t offset = getOffset.get(rel.r_offset);
+  uint64_t offset = getter.get(rel.r_offset);
   if (offset == uint64_t(-1))
     return;
 
   // Error if the target symbol is undefined. Symbol index 0 may be used by
   // marker relocations, e.g. R_*_NONE and R_ARM_V4BX. Don't error on them.
   if (sym.isUndefined() && symIndex != 0 &&
-      maybeReportUndefined(sym, sec, rel.r_offset))
+      maybeReportUndefined(cast<Undefined>(sym), sec, offset))
     return;
 
-  const uint8_t *relocatedAddr = sec.data().begin() + rel.r_offset;
-  RelExpr expr = target->getRelExpr(type, sym, relocatedAddr);
+  const uint8_t *relocatedAddr = sec.data().begin() + offset;
+  RelExpr expr = target.getRelExpr(type, sym, relocatedAddr);
 
   // Ignore R_*_NONE and other marker relocations.
   if (expr == R_NONE)
     return;
 
   // Read an addend.
-  int64_t addend = computeAddend<ELFT>(rel, end, sec, expr, sym.isLocal());
+  int64_t addend = computeAddend<ELFT>(rel, expr, sym.isLocal());
 
   if (config->emachine == EM_PPC64) {
     // We can separate the small code model relocations into 2 categories:
@@ -1345,7 +1370,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
   }
 
   // Process TLS relocations, including relaxing TLS relocations. Note that
-  // R_TPREL and R_TPREL_NEG relocations are resolved in processRelocAux.
+  // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
   if (expr == R_TPREL || expr == R_TPREL_NEG) {
     if (config->shared) {
       errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
@@ -1381,7 +1406,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
             type == R_HEX_GD_PLT_B32_PCREL_X)))
       expr = fromPlt(expr);
     } else if (!isAbsoluteValue(sym)) {
-      expr = target->adjustGotPcExpr(type, addend, relocatedAddr);
+      expr = target.adjustGotPcExpr(type, addend, relocatedAddr);
     }
   }
 
@@ -1412,7 +1437,7 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     sym.hasDirectReloc = true;
   }
 
-  processRelocAux<ELFT>(sec, expr, type, offset, sym, addend);
+  processAux(expr, type, offset, sym, addend);
 }
 
 // R_PPC64_TLSGD/R_PPC64_TLSLD is required to mark `bl __tls_get_addr` for
@@ -1453,9 +1478,7 @@ static void checkPPC64TLSRelax(InputSectionBase &sec, ArrayRef<RelTy> rels) {
 }
 
 template <class ELFT, class RelTy>
-static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
-  OffsetGetter getOffset(sec);
-
+void RelocationScanner::scan(ArrayRef<RelTy> rels) {
   // Not all relocations end up in Sec.Relocations, but a lot do.
   sec.relocations.reserve(rels.size());
 
@@ -1469,8 +1492,9 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
   if (isa<EhInputSection>(sec))
     rels = sortRels(rels, storage);
 
-  for (auto i = rels.begin(), end = rels.end(); i != end;)
-    scanReloc<ELFT>(sec, getOffset, i, end);
+  end = static_cast<const void *>(rels.end());
+  for (auto i = rels.begin(); i != end;)
+    scanOne<ELFT>(i);
 
   // Sort relocations by offset for more efficient searching for
   // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
@@ -1483,11 +1507,12 @@ static void scanRelocs(InputSectionBase &sec, ArrayRef<RelTy> rels) {
 }
 
 template <class ELFT> void elf::scanRelocations(InputSectionBase &s) {
+  RelocationScanner scanner(s);
   const RelsOrRelas<ELFT> rels = s.template relsOrRelas<ELFT>();
   if (rels.areRelocsRel())
-    scanRelocs<ELFT>(s, rels.rels);
+    scanner.template scan<ELFT>(rels.rels);
   else
-    scanRelocs<ELFT>(s, rels.relas);
+    scanner.template scan<ELFT>(rels.relas);
 }
 
 static bool handleNonPreemptibleIfunc(Symbol &sym) {
@@ -1544,15 +1569,17 @@ static bool handleNonPreemptibleIfunc(Symbol &sym) {
   // may alter section/value, so create a copy of the symbol to make
   // section/value fixed.
   auto *directSym = makeDefined(cast<Defined>(sym));
+  directSym->allocateAux();
   addPltEntry(*in.iplt, *in.igotPlt, *in.relaIplt, target->iRelativeRel,
               *directSym);
-  sym.pltIndex = directSym->pltIndex;
+  sym.allocateAux();
+  symAux.back().pltIdx = symAux[directSym->auxIdx].pltIdx;
 
   if (sym.hasDirectReloc) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
     d.section = in.iplt.get();
-    d.value = sym.pltIndex * target->ipltEntrySize;
+    d.value = d.getPltIdx() * target->ipltEntrySize;
     d.size = 0;
     // It's important to set the symbol type here so that dynamic loaders
     // don't try to call the PLT as if it were an ifunc resolver.
@@ -1571,6 +1598,10 @@ void elf::postScanRelocations() {
   auto fn = [](Symbol &sym) {
     if (handleNonPreemptibleIfunc(sym))
       return;
+    if (!sym.needsDynReloc())
+      return;
+    sym.allocateAux();
+
     if (sym.needsGot)
       addGotEntry(sym);
     if (sym.needsPlt)
@@ -1584,9 +1615,10 @@ void elf::postScanRelocations() {
       } else {
         assert(sym.isFunc() && sym.needsPlt);
         if (!sym.isDefined()) {
-          replaceWithDefined(
-              sym, *in.plt,
-              target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
+          replaceWithDefined(sym, *in.plt,
+                             target->pltHeaderSize +
+                                 target->pltEntrySize * sym.getPltIdx(),
+                             0);
           sym.needsCopy = true;
           if (config->emachine == EM_PPC) {
             // PPC32 canonical PLT entries are at the beginning of .glink
@@ -1603,13 +1635,12 @@ void elf::postScanRelocations() {
     bool isLocalInExecutable = !sym.isPreemptible && !config->shared;
 
     if (sym.needsTlsDesc) {
-      in.got->addDynTlsEntry(sym);
+      in.got->addTlsDescEntry(sym);
       mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          target->tlsDescRel, *in.got, in.got->getGlobalDynOffset(sym), sym,
+          target->tlsDescRel, *in.got, in.got->getTlsDescOffset(sym), sym,
           target->tlsDescRel);
     }
-    if (sym.needsTlsGd && !sym.needsTlsDesc) {
-      // TODO Support mixed TLSDESC and TLS GD.
+    if (sym.needsTlsGd) {
       in.got->addDynTlsEntry(sym);
       uint64_t off = in.got->getGlobalDynOffset(sym);
       if (isLocalInExecutable)
@@ -1653,13 +1684,15 @@ void elf::postScanRelocations() {
     if (sym.needsTlsIe && !sym.needsTlsGdToIe)
       addTpOffsetGotEntry(sym);
   };
+
+  assert(symAux.empty());
   for (Symbol *sym : symtab->symbols())
     fn(*sym);
 
   // Local symbols may need the aforementioned non-preemptible ifunc and GOT
   // handling. They don't need regular PLT.
   for (ELFFileBase *file : objectFiles)
-    for (Symbol *sym : cast<ELFFileBase>(file)->getLocalSymbols())
+    for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
 }
 
@@ -2173,6 +2206,7 @@ void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
           for (Relocation &rel : isec->relocations)
             if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
               if (needEntry) {
+                sym->allocateAux();
                 addPltEntry(*in.plt, *in.gotPlt, *in.relaPlt, target->pltRel,
                             *sym);
                 needEntry = false;

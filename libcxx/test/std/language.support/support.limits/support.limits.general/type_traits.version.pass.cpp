@@ -34,6 +34,7 @@
     __cpp_lib_remove_cvref                         201711L [C++20]
     __cpp_lib_result_of_sfinae                     201210L [C++14]
     __cpp_lib_transformation_trait_aliases         201304L [C++14]
+    __cpp_lib_type_identity                        201806L [C++20]
     __cpp_lib_type_trait_variable_templates        201510L [C++17]
     __cpp_lib_void_t                               201411L [C++17]
 */
@@ -113,6 +114,10 @@
 
 # ifdef __cpp_lib_transformation_trait_aliases
 #   error "__cpp_lib_transformation_trait_aliases should not be defined before c++14"
+# endif
+
+# ifdef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_type_trait_variable_templates
@@ -210,6 +215,10 @@
 # endif
 # if __cpp_lib_transformation_trait_aliases != 201304L
 #   error "__cpp_lib_transformation_trait_aliases should have the value 201304L in c++14"
+# endif
+
+# ifdef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should not be defined before c++20"
 # endif
 
 # ifdef __cpp_lib_type_trait_variable_templates
@@ -325,6 +334,10 @@
 # endif
 # if __cpp_lib_transformation_trait_aliases != 201304L
 #   error "__cpp_lib_transformation_trait_aliases should have the value 201304L in c++17"
+# endif
+
+# ifdef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should not be defined before c++20"
 # endif
 
 # ifndef __cpp_lib_type_trait_variable_templates
@@ -476,6 +489,13 @@
 # endif
 # if __cpp_lib_transformation_trait_aliases != 201304L
 #   error "__cpp_lib_transformation_trait_aliases should have the value 201304L in c++20"
+# endif
+
+# ifndef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should be defined in c++20"
+# endif
+# if __cpp_lib_type_identity != 201806L
+#   error "__cpp_lib_type_identity should have the value 201806L in c++20"
 # endif
 
 # ifndef __cpp_lib_type_trait_variable_templates
@@ -630,6 +650,13 @@
 # endif
 # if __cpp_lib_transformation_trait_aliases != 201304L
 #   error "__cpp_lib_transformation_trait_aliases should have the value 201304L in c++2b"
+# endif
+
+# ifndef __cpp_lib_type_identity
+#   error "__cpp_lib_type_identity should be defined in c++2b"
+# endif
+# if __cpp_lib_type_identity != 201806L
+#   error "__cpp_lib_type_identity should have the value 201806L in c++2b"
 # endif
 
 # ifndef __cpp_lib_type_trait_variable_templates

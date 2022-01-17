@@ -106,6 +106,19 @@ TEST(LoopNestTest, PerfectLoopNest) {
     const ArrayRef<Loop*> Loops = LN.getLoops();
     EXPECT_EQ(Loops.size(), 2ull);
 
+    // Ensure that we can obtain loops by depth.
+    LoopVectorTy LoopsAtDepth1 = LN.getLoopsAtDepth(1);
+    EXPECT_EQ(LoopsAtDepth1.size(), 1u);
+    EXPECT_EQ(LoopsAtDepth1[0], &OL);
+    LoopVectorTy LoopsAtDepth2 = LN.getLoopsAtDepth(2);
+    EXPECT_EQ(LoopsAtDepth2.size(), 1u);
+    EXPECT_EQ(LoopsAtDepth2[0], IL);
+
+    // Ensure that we can obtain the loop index of a given loop, and get back
+    // the loop with that index.
+    EXPECT_EQ(LN.getLoop(LN.getLoopIndex(OL)), &OL);
+    EXPECT_EQ(LN.getLoop(LN.getLoopIndex(*IL)), IL);
+
     // Ensure the loop nest is recognized as perfect in its entirety.
     const SmallVector<LoopVectorTy, 4> &PLV = LN.getPerfectLoops(SE);
     EXPECT_EQ(PLV.size(), 1ull);

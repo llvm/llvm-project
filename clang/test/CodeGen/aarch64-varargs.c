@@ -885,7 +885,7 @@ overaligned_int128_struct_member overaligned_int128_struct_member_test() {
 }
 
 void check_start(int n, ...) {
-// CHECK-LABEL: define{{.*}} void @check_start(i32 %n, ...)
+// CHECK-LABEL: define{{.*}} void @check_start(i32 noundef %n, ...)
 
   va_list the_list;
   va_start(the_list, n);

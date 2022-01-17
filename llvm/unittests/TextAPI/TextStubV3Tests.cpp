@@ -76,14 +76,14 @@ TEST(TBDv3, ReadFile) {
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   auto Archs = AK_armv7 | AK_arm64;
-  auto Platform = PlatformKind::iOS;
+  auto Platform = PLATFORM_IOS;
   TargetList Targets;
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  UUIDs Uuids = {{Target(AK_armv7, PlatformKind::unknown),
+  UUIDs Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
                   "00000000-0000-0000-0000-000000000000"},
-                 {Target(AK_arm64, PlatformKind::unknown),
+                 {Target(AK_arm64, PLATFORM_UNKNOWN),
                   "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(Uuids, File->uuids());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -166,14 +166,14 @@ TEST(TBDv3, ReadMultipleDocuments) {
   EXPECT_EQ(File->documents().size(), 1U);
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   auto Archs = AK_armv7 | AK_arm64;
-  auto Platform = PlatformKind::iOS;
+  auto Platform = PLATFORM_IOS;
   TargetList Targets;
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  UUIDs Uuids = {{Target(AK_armv7, PlatformKind::unknown),
+  UUIDs Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
                   "00000000-0000-0000-0000-000000000000"},
-                 {Target(AK_arm64, PlatformKind::unknown),
+                 {Target(AK_arm64, PLATFORM_UNKNOWN),
                   "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(Uuids, File->uuids());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -265,7 +265,7 @@ TEST(TBDv3, WriteFile) {
   InterfaceFile File;
   TargetList Targets;
   for (auto &&arch : AK_i386 | AK_x86_64)
-    Targets.emplace_back(Target(arch, PlatformKind::macOS));
+    Targets.emplace_back(Target(arch, PLATFORM_MACOS));
   File.setPath("libfoo.dylib");
   File.setInstallName("/usr/lib/libfoo.dylib");
   File.setFileType(FileType::TBD_V3);
@@ -330,8 +330,8 @@ TEST(TBDv3, WriteMultipleDocuments) {
   InterfaceFile File;
   TargetList Targets;
   for (auto &&arch : AK_i386 | AK_x86_64) {
-    Targets.emplace_back(Target(arch, PlatformKind::macOS));
-    Targets.emplace_back(Target(arch, PlatformKind::macCatalyst));
+    Targets.emplace_back(Target(arch, PLATFORM_MACOS));
+    Targets.emplace_back(Target(arch, PLATFORM_MACCATALYST));
   }
   File.addTargets(Targets);
   File.setPath("libfoo.dylib");
@@ -356,7 +356,7 @@ TEST(TBDv3, WriteMultipleDocuments) {
 
   // Inline document
   InterfaceFile Document;
-  Targets = {Target(AK_i386, PlatformKind::macOS)};
+  Targets = {Target(AK_i386, PLATFORM_MACOS)};
   Document.addTargets(Targets);
   Document.setPath("libbar.dylib");
   Document.setInstallName("/usr/lib/libbar.dylib");
@@ -385,7 +385,7 @@ TEST(TBDv3, Platform_macOS) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv3PlatformMacOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::macOS;
+  auto Platform = PLATFORM_MACOS;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -409,7 +409,7 @@ TEST(TBDv3, Platform_iOS) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv3PlatformiOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::iOS;
+  auto Platform = PLATFORM_IOS;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -432,7 +432,7 @@ TEST(TBDv3, Platform_watchOS) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv3watchOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::watchOS;
+  auto Platform = PLATFORM_WATCHOS;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -456,7 +456,7 @@ TEST(TBDv3, Platform_tvOS) {
       TextAPIReader::get(MemoryBufferRef(TBDv3PlatformtvOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   TBDFile File = std::move(Result.get());
-  auto Platform = PlatformKind::tvOS;
+  auto Platform = PLATFORM_TVOS;
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
@@ -479,7 +479,7 @@ TEST(TBDv3, Platform_bridgeOS) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv3BridgeOS, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::bridgeOS;
+  auto Platform = PLATFORM_BRIDGEOS;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -502,7 +502,7 @@ TEST(TBDv3, Platform_macCatalyst) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv3PlatformiOSmac, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::macCatalyst;
+  auto Platform = PLATFORM_MACCATALYST;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
@@ -529,8 +529,8 @@ TEST(TBDv3, Platform_zippered) {
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
 
   PlatformSet Platforms;
-  Platforms.insert(PlatformKind::macOS);
-  Platforms.insert(PlatformKind::macCatalyst);
+  Platforms.insert(PLATFORM_MACOS);
+  Platforms.insert(PLATFORM_MACCATALYST);
   EXPECT_EQ(Platforms.size(), File->getPlatforms().size());
   for (auto Platform : File->getPlatforms())
 	    EXPECT_EQ(Platforms.count(Platform), 1U);
@@ -553,7 +553,7 @@ TEST(TBDv3, Platform_iOSSim) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv3PlatformiOSsim, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::iOSSimulator;
+  auto Platform = PLATFORM_IOSSIMULATOR;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -577,7 +577,7 @@ TEST(TBDv3, Platform_watchOSSim) {
   Expected<TBDFile> Result =
       TextAPIReader::get(MemoryBufferRef(TBDv3watchOSsim, "Test.tbd"));
   EXPECT_TRUE(!!Result);
-  auto Platform = PlatformKind::watchOSSimulator;
+  auto Platform = PLATFORM_WATCHOSSIMULATOR;
   TBDFile File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -601,7 +601,7 @@ TEST(TBDv3, Platform_tvOSSim) {
       TextAPIReader::get(MemoryBufferRef(TBDv3PlatformtvOSsim, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   TBDFile File = std::move(Result.get());
-  auto Platform = PlatformKind::tvOSSimulator;
+  auto Platform = PLATFORM_TVOSSIMULATOR;
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
@@ -625,7 +625,7 @@ TEST(TBDv3, Arch_arm64e) {
       TextAPIReader::get(MemoryBufferRef(TBDv3ArchArm64e, "Test.tbd"));
   EXPECT_TRUE(!!Result);
   TBDFile File = std::move(Result.get());
-  auto Platform = PlatformKind::iOS;
+  auto Platform = PLATFORM_IOS;
   auto Archs = AK_arm64 | AK_arm64e;
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
@@ -908,7 +908,7 @@ TEST(TBDv3, InterfaceInequality) {
   InterfaceFile FileB = std::move(*ResultB.get());
 
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addTarget(Target(AK_x86_64, PlatformKind::iOS));
+    File->addTarget(Target(AK_x86_64, PLATFORM_IOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     File->setCurrentVersion(PackedVersion(1, 2, 3));
@@ -925,22 +925,23 @@ TEST(TBDv3, InterfaceInequality) {
     File->setApplicationExtensionSafe(false);
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addParentUmbrella(Target(AK_armv7, PlatformKind::iOS), "Umbrella.dylib");
+    File->addParentUmbrella(Target(AK_armv7, PLATFORM_IOS), "Umbrella.dylib");
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addAllowableClient("ClientA", Target(AK_armv7, PlatformKind::iOS));
+    File->addAllowableClient("ClientA", Target(AK_armv7, PLATFORM_IOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     File->addReexportedLibrary("/System/Library/Frameworks/A.framework/A",
-                              Target(AK_armv7, PlatformKind::iOS));
+                               Target(AK_armv7, PLATFORM_IOS));
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
-    File->addSymbol(SymbolKind::GlobalSymbol, "_symA", {Target(AK_arm64, PlatformKind::iOS)});
+    File->addSymbol(SymbolKind::GlobalSymbol, "_symA",
+                    {Target(AK_arm64, PLATFORM_IOS)});
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     InterfaceFile Document;
-    Document.addTargets(TargetList{Target(AK_armv7, PlatformKind::iOS),
-                      Target(AK_arm64, PlatformKind::iOS)});
+    Document.addTargets(TargetList{Target(AK_armv7, PLATFORM_IOS),
+                                   Target(AK_arm64, PLATFORM_IOS)});
     Document.setInstallName("/System/Library/Frameworks/A.framework/A");
     File->addDocument(std::make_shared<InterfaceFile>(std::move(Document)));
   }));

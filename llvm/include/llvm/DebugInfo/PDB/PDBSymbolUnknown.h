@@ -24,7 +24,7 @@ public:
   void dump(PDBSymDumper &Dumper) const override;
 };
 
+} // namespace pdb
 } // namespace llvm
-}
 
 #endif // LLVM_DEBUGINFO_PDB_PDBSYMBOLUNKNOWN_H

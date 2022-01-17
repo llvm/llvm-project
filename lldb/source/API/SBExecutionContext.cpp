@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBExecutionContext.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"
@@ -19,7 +19,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBExecutionContext::SBExecutionContext() : m_exe_ctx_sp() {
+SBExecutionContext::SBExecutionContext() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBExecutionContext);
 }
 
@@ -74,7 +74,7 @@ operator=(const lldb::SBExecutionContext &rhs) {
       SBExecutionContext, operator=,(const lldb::SBExecutionContext &), rhs);
 
   m_exe_ctx_sp = rhs.m_exe_ctx_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 ExecutionContextRef *SBExecutionContext::get() const {
@@ -91,7 +91,7 @@ SBTarget SBExecutionContext::GetTarget() const {
     if (target_sp)
       sb_target.SetSP(target_sp);
   }
-  return LLDB_RECORD_RESULT(sb_target);
+  return sb_target;
 }
 
 SBProcess SBExecutionContext::GetProcess() const {
@@ -104,7 +104,7 @@ SBProcess SBExecutionContext::GetProcess() const {
     if (process_sp)
       sb_process.SetSP(process_sp);
   }
-  return LLDB_RECORD_RESULT(sb_process);
+  return sb_process;
 }
 
 SBThread SBExecutionContext::GetThread() const {
@@ -117,7 +117,7 @@ SBThread SBExecutionContext::GetThread() const {
     if (thread_sp)
       sb_thread.SetThread(thread_sp);
   }
-  return LLDB_RECORD_RESULT(sb_thread);
+  return sb_thread;
 }
 
 SBFrame SBExecutionContext::GetFrame() const {
@@ -129,34 +129,5 @@ SBFrame SBExecutionContext::GetFrame() const {
     if (frame_sp)
       sb_frame.SetFrameSP(frame_sp);
   }
-  return LLDB_RECORD_RESULT(sb_frame);
-}
-
-namespace lldb_private {
-namespace repro {
-
-template <>
-void RegisterMethods<SBExecutionContext>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext,
-                            (const lldb::SBExecutionContext &));
-  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext,
-                            (lldb::ExecutionContextRefSP));
-  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, (const lldb::SBTarget &));
-  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, (const lldb::SBProcess &));
-  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, (lldb::SBThread));
-  LLDB_REGISTER_CONSTRUCTOR(SBExecutionContext, (const lldb::SBFrame &));
-  LLDB_REGISTER_METHOD(
-      const lldb::SBExecutionContext &,
-      SBExecutionContext, operator=,(const lldb::SBExecutionContext &));
-  LLDB_REGISTER_METHOD_CONST(lldb::SBTarget, SBExecutionContext, GetTarget,
-                             ());
-  LLDB_REGISTER_METHOD_CONST(lldb::SBProcess, SBExecutionContext, GetProcess,
-                             ());
-  LLDB_REGISTER_METHOD_CONST(lldb::SBThread, SBExecutionContext, GetThread,
-                             ());
-  LLDB_REGISTER_METHOD_CONST(lldb::SBFrame, SBExecutionContext, GetFrame, ());
-}
-
-}
+  return sb_frame;
 }

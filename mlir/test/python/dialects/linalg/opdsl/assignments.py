@@ -9,17 +9,17 @@ from mlir.dialects.linalg.opdsl.lang import *
 # CHECK:  -
 # CHECK:    arg: C
 # CHECK:    value:
-# CHECK:      scalar_apply:
+# CHECK:      arith_fn:
 # CHECK:        fn_name: add
 # CHECK:        operands:
-# CHECK:          scalar_apply:
+# CHECK:          arith_fn:
 # CHECK:            fn_name: mul
 # CHECK:            operands:
-# CHECK:              symbolic_cast:
+# CHECK:              type_fn:
 # CHECK:                type_var: U
 # CHECK:                operands:
 # CHECK:                  scalar_arg: A
-# CHECK:              symbolic_cast:
+# CHECK:              type_fn:
 # CHECK:                type_var: U
 # CHECK:                operands:
 # CHECK:                  scalar_arg: B
@@ -28,7 +28,7 @@ def matmul(
     A=TensorDef(T, S.M, S.K),
     B=TensorDef(T, S.K, S.N),
     C=TensorDef(U, S.M, S.N, output=True)):
-  C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
+  C[D.m, D.n] += TypeFn.cast(U, A[D.m, D.k]) * TypeFn.cast(U, B[D.k, D.n])
 
 
 # CHECK: ---
@@ -36,29 +36,29 @@ def matmul(
 # CHECK: assignments:
 # CHECK:  -
 # CHECK:    arg: O
-# CHECK:      scalar_apply:
+# CHECK:      arith_fn:
 # CHECK:        fn_name: sub
 # CHECK:        operands:
-# CHECK:          scalar_apply:
+# CHECK:          arith_fn:
 # CHECK:            fn_name: add
 # CHECK:            operands:
-# CHECK:              symbolic_cast:
+# CHECK:              type_fn:
 # CHECK:                type_var: T
 # CHECK:                operands:
 # CHECK:                  scalar_const: '3.1415926535897931 : f64'
-# CHECK:              symbolic_cast:
+# CHECK:              type_fn:
 # CHECK:                type_var: T
 # CHECK:                operands:
 # CHECK:                  scalar_const: '42 : i64'
-# CHECK:          symbolic_cast:
+# CHECK:          type_fn:
 # CHECK:            type_var: T
 # CHECK:            operands:
 # CHECK:              scalar_const: '1.{{[0]*}}e+03 : f64'
 @linalg_structured_op
 def constants(O=TensorDef(T, S.M, S.K, output=True)):
-  pi = cast(T, const(3.1415926535897931))
-  cst42 = cast(T, const(42))
-  cst1000 = cast(T, const(1e+3))
+  pi = TypeFn.cast(T, const(3.1415926535897931))
+  cst42 = TypeFn.cast(T, const(42))
+  cst1000 = TypeFn.cast(T, const(1e+3))
   O[D.m, D.n] = pi + cst42 - cst1000
 
 
@@ -67,7 +67,7 @@ def constants(O=TensorDef(T, S.M, S.K, output=True)):
 # CHECK: assignments:
 # CHECK:  -
 # CHECK:    arg: O
-# CHECK:      scalar_apply:
+# CHECK:      arith_fn:
 # CHECK:        fn_name: add
 # CHECK:        operands:
 # CHECK:          scalar_index: 1

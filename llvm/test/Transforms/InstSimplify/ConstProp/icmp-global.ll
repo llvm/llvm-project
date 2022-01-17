@@ -65,6 +65,8 @@ define i1 @ult_constexpr_constexpr_one(i8* %x) {
 
 @g = global [2 x i32] [i32 1, i32 2]
 @g2 = global i32 0
+@g2_weak = extern_weak global i32
+@g3 = global i8 0
 
 define i1 @global_ne_null() {
 ; CHECK-LABEL: @global_ne_null(
@@ -90,8 +92,17 @@ define i1 @global_sgt_null() {
   ret i1 %cmp
 }
 
-define i1 @global_gep_ne_null() {
-; CHECK-LABEL: @global_gep_ne_null(
+; Should not fold to true, as the gep computes a null value.
+define i1 @global_out_of_bounds_gep_ne_null() {
+; CHECK-LABEL: @global_out_of_bounds_gep_ne_null(
+; CHECK-NEXT:    ret i1 icmp ne (i8* getelementptr (i8, i8* @g3, i64 sub (i64 0, i64 ptrtoint (i8* @g3 to i64))), i8* null)
+;
+  %cmp = icmp ne i8* getelementptr (i8, i8* @g3, i64 sub (i64 0, i64 ptrtoint (i8* @g3 to i64))), null
+  ret i1 %cmp
+}
+
+define i1 @global_inbounds_gep_ne_null() {
+; CHECK-LABEL: @global_inbounds_gep_ne_null(
 ; CHECK-NEXT:    ret i1 true
 ;
   %gep = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 1
@@ -117,48 +128,68 @@ define i1 @global_gep_sgt_null() {
   ret i1 %cmp
 }
 
+; @g2_weak may be null, in which case this is a zero-index GEP and the pointers
+; are equal.
 define i1 @null_gep_ne_null() {
 ; CHECK-LABEL: @null_gep_ne_null(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ne (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)), i8* null)
 ;
-  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2 to i64)
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)
   %cmp = icmp ne i8* %gep, null
   ret i1 %cmp
 }
 
 define i1 @null_gep_ugt_null() {
 ; CHECK-LABEL: @null_gep_ugt_null(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ugt (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)), i8* null)
 ;
-  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2 to i64)
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)
   %cmp = icmp ugt i8* %gep, null
   ret i1 %cmp
 }
 
 define i1 @null_gep_sgt_null() {
 ; CHECK-LABEL: @null_gep_sgt_null(
-; CHECK-NEXT:    ret i1 icmp sgt (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2 to i64)), i8* null)
+; CHECK-NEXT:    ret i1 icmp sgt (i8* getelementptr (i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)), i8* null)
 ;
-  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2 to i64)
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i32* @g2_weak to i64)
   %cmp = icmp sgt i8* %gep, null
+  ret i1 %cmp
+}
+
+define i1 @null_gep_ne_null_constant_int() {
+; CHECK-LABEL: @null_gep_ne_null_constant_int(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, i8* null, i64 1
+  %cmp = icmp ne i8* %gep, null
+  ret i1 %cmp
+}
+
+define i1 @null_gep_ugt_null_constant_int() {
+; CHECK-LABEL: @null_gep_ugt_null_constant_int(
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, i8* null, i64 1
+  %cmp = icmp ugt i8* %gep, null
   ret i1 %cmp
 }
 
 define i1 @null_gep_ne_global() {
 ; CHECK-LABEL: @null_gep_ne_global(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ne (i8* getelementptr (i8, i8* null, i64 ptrtoint (i8* @g3 to i64)), i8* @g3)
 ;
-  %gep = getelementptr [2 x i32], [2 x i32]* null, i64 ptrtoint (i32* @g2 to i64)
-  %cmp = icmp ne [2 x i32]* %gep, @g
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i8* @g3 to i64)
+  %cmp = icmp ne i8* %gep, @g3
   ret i1 %cmp
 }
 
 define i1 @null_gep_ult_global() {
 ; CHECK-LABEL: @null_gep_ult_global(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ult (i8* getelementptr (i8, i8* null, i64 ptrtoint (i8* @g3 to i64)), i8* @g3)
 ;
-  %gep = getelementptr [2 x i32], [2 x i32]* null, i64 ptrtoint (i32* @g2 to i64)
-  %cmp = icmp ult [2 x i32]* %gep, @g
+  %gep = getelementptr i8, i8* null, i64 ptrtoint (i8* @g3 to i64)
+  %cmp = icmp ult i8* %gep, @g3
   ret i1 %cmp
 }
 
@@ -198,9 +229,10 @@ define i1 @global_gep_sgt_global() {
   ret i1 %cmp
 }
 
+; This should not fold to true, as the offset is negative.
 define i1 @global_gep_ugt_global_neg_offset() {
 ; CHECK-LABEL: @global_gep_ugt_global_neg_offset(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 icmp ugt ([2 x i32]* getelementptr ([2 x i32], [2 x i32]* @g, i64 -1), [2 x i32]* @g)
 ;
   %gep = getelementptr [2 x i32], [2 x i32]* @g, i64 -1
   %cmp = icmp ugt [2 x i32]* %gep, @g
@@ -239,7 +271,7 @@ define i1 @global_gep_sgt_global_gep() {
 
 define i1 @global_gep_ugt_global_gep_complex() {
 ; CHECK-LABEL: @global_gep_ugt_global_gep_complex(
-; CHECK-NEXT:    ret i1 icmp ugt (i32* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([2 x i32]* @g to i8*), i64 2) to i32*), i32* getelementptr inbounds ([2 x i32], [2 x i32]* @g, i64 0, i64 0))
+; CHECK-NEXT:    ret i1 true
 ;
   %gep1 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 0
   %gep2 = getelementptr inbounds [2 x i32], [2 x i32]* @g, i64 0, i64 0

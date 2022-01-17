@@ -19,8 +19,8 @@ entry:
 ; CHECK: sw  $[[T3]], 0($[[T1]])
 
   %l1 = alloca i32, align 4
-  call void asm "sw $1, $0", "=*m,r"(i32* %l1, i32 %x) nounwind
-  %0 = call i32 asm "lw $0, $1", "=r,*m"(i32* %l1) nounwind
+  call void asm "sw $1, $0", "=*m,r"(i32* elementtype(i32) %l1, i32 %x) nounwind
+  %0 = call i32 asm "lw $0, $1", "=r,*m"(i32* elementtype(i32) %l1) nounwind
   store i32 %0, i32* @g1, align 4
   ret i32 %0
 }
@@ -55,13 +55,13 @@ entry:
 define void @main() {
 entry:
 ; Second word:
-  tail call void asm sideeffect "    lw    $0, ${1:D}", "r,*m,~{$11}"(i32 undef, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @b, i32 0, i32 3))
+  tail call void asm sideeffect "    lw    $0, ${1:D}", "r,*m,~{$11}"(i32 undef, i32* elementtype(i32) getelementptr inbounds ([20 x i32], [20 x i32]* @b, i32 0, i32 3))
 ; First word. Notice, no 'D':
-  tail call void asm sideeffect "    lw    $0, ${1}", "r,*m,~{$11}"(i32 undef, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @b, i32 0, i32 3))
+  tail call void asm sideeffect "    lw    $0, ${1}", "r,*m,~{$11}"(i32 undef, i32* elementtype(i32) getelementptr inbounds ([20 x i32], [20 x i32]* @b, i32 0, i32 3))
 
 ; High-order part.
-  tail call void asm sideeffect "    lw    $0, ${1:M}", "r,*m,~{$11}"(i32 undef, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @b, i32 0, i32 3))
+  tail call void asm sideeffect "    lw    $0, ${1:M}", "r,*m,~{$11}"(i32 undef, i32* elementtype(i32) getelementptr inbounds ([20 x i32], [20 x i32]* @b, i32 0, i32 3))
 ; Low-order part.
-  tail call void asm sideeffect "    lw    $0, ${1:L}", "r,*m,~{$11}"(i32 undef, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @b, i32 0, i32 3))
+  tail call void asm sideeffect "    lw    $0, ${1:L}", "r,*m,~{$11}"(i32 undef, i32* elementtype(i32) getelementptr inbounds ([20 x i32], [20 x i32]* @b, i32 0, i32 3))
   ret void
 }

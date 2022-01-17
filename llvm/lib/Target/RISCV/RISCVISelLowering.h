@@ -86,14 +86,16 @@ enum NodeType : unsigned {
   FMV_X_ANYEXTW_RV64,
   // FP to XLen int conversions. Corresponds to fcvt.l(u).s/d/h on RV64 and
   // fcvt.w(u).s/d/h on RV32. Unlike FP_TO_S/UINT these saturate out of
-  // range inputs. These are used for FP_TO_S/UINT_SAT lowering.
-  FCVT_X_RTZ,
-  FCVT_XU_RTZ,
+  // range inputs. These are used for FP_TO_S/UINT_SAT lowering. Rounding mode
+  // is passed as a TargetConstant operand using the RISCVFPRndMode enum.
+  FCVT_X,
+  FCVT_XU,
   // FP to 32 bit int conversions for RV64. These are used to keep track of the
   // result being sign extended to 64 bit. These saturate out of range inputs.
-  // Used for FP_TO_S/UINT and FP_TO_S/UINT_SAT lowering.
-  FCVT_W_RTZ_RV64,
-  FCVT_WU_RTZ_RV64,
+  // Used for FP_TO_S/UINT and FP_TO_S/UINT_SAT lowering. Rounding mode
+  // is passed as a TargetConstant operand using the RISCVFPRndMode enum.
+  FCVT_W_RV64,
+  FCVT_WU_RV64,
   // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
   // (returns (Lo, Hi)). It takes a chain operand.
   READ_CYCLE_WIDE,
@@ -118,6 +120,13 @@ enum NodeType : unsigned {
   BCOMPRESSW,
   BDECOMPRESS,
   BDECOMPRESSW,
+  // The bit field place (bfp) instruction places up to XLEN/2 LSB bits from rs2
+  // into the value in rs1. The upper bits of rs2 control the length of the bit
+  // field and target position. The layout of rs2 is chosen in a way that makes
+  // it possible to construct rs2 easily using pack[h] instructions and/or
+  // andi/lui.
+  BFP,
+  BFPW,
   // Vector Extension
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation.
@@ -284,8 +293,8 @@ enum NodeType : unsigned {
 
   // FP to 32 bit int conversions for RV64. These are used to keep track of the
   // result being sign extended to 64 bit. These saturate out of range inputs.
-  STRICT_FCVT_W_RTZ_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
-  STRICT_FCVT_WU_RTZ_RV64,
+  STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCVT_WU_RV64,
 
   // Memory opcodes start here.
   VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
@@ -317,7 +326,7 @@ public:
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
   bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
-  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
+  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT, SDValue V) const override;
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
   bool hasAndNotCompare(SDValue Y) const override;
@@ -525,6 +534,16 @@ public:
   bool isLegalElementTypeForRVV(Type *ScalarTy) const;
 
   bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const override;
+
+  SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                        SmallVectorImpl<SDNode *> &Created) const override;
+
+  unsigned getJumpTableEncoding() const override;
+
+  const MCExpr *LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
+                                          const MachineBasicBlock *MBB,
+                                          unsigned uid,
+                                          MCContext &Ctx) const override;
 
 private:
   /// RISCVCCAssignFn - This target-specific function extends the default

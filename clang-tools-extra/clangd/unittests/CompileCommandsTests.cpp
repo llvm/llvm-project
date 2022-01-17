@@ -53,6 +53,18 @@ TEST(CommandMangler, Everything) {
                                "foo.cc"));
 }
 
+TEST(CommandMangler, FilenameMismatch) {
+  auto Mangler = CommandMangler::forTests();
+  Mangler.ClangPath = testPath("clang");
+  // Our compile flags refer to foo.cc...
+  std::vector<std::string> Cmd = {"clang", "foo.cc"};
+  // but we're applying it to foo.h...
+  Mangler.adjust(Cmd, "foo.h");
+  // so transferCompileCommand should add -x c++-header to preserve semantics.
+  EXPECT_THAT(
+      Cmd, ElementsAre(testPath("clang"), "-x", "c++-header", "--", "foo.h"));
+}
+
 TEST(CommandMangler, ResourceDir) {
   auto Mangler = CommandMangler::forTests();
   Mangler.ResourceDir = testPath("fake/resources");

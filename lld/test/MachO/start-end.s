@@ -239,8 +239,8 @@
 # SEG-NOT: segment$end$__WHAT
 # SEG-NOT: segment$start$__UFLAG_SEG
 # SEG-NOT: segment$start$__UFLAG_SEG
-# SEG: segment$start$REGULAR
-# SEG: segment$end$REGULAR
+# SEG-DAG: segment$end$REGULAR
+# SEG-DAG: segment$start$REGULAR
 
 # SEG:           cmd LC_SEGMENT_64
 # SEG-NEXT:  cmdsize

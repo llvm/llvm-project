@@ -101,8 +101,8 @@ void call_msabi_hfa(void) {
 
 void call_msabi_hfa_vararg(void) {
   // COMMON-LABEL: define{{.*}} void @call_msabi_hfa_vararg()
-  // WIN64: call void ([2 x i64], i32, ...) @msabi_hfa_vararg([2 x i64] {{.*}}, i32 4, [2 x i64] {{.*}})
-  // LINUX: call win64cc void ([2 x i64], i32, ...) @msabi_hfa_vararg([2 x i64] {{.*}}, i32 4, [2 x i64] {{.*}})
+  // WIN64: call void ([2 x i64], i32, ...) @msabi_hfa_vararg([2 x i64] {{.*}}, i32 noundef 4, [2 x i64] {{.*}})
+  // LINUX: call win64cc void ([2 x i64], i32, ...) @msabi_hfa_vararg([2 x i64] {{.*}}, i32 noundef 4, [2 x i64] {{.*}})
   msabi_hfa_vararg((struct HFA){1.0f, 2.0f, 3.0f}, 4,
                    (struct HFA){5.0f, 6.0f, 7.0f});
 }

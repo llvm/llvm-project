@@ -111,6 +111,11 @@ order to find exceptional cases for your function's implementation.
 ```
   libc/test/src/math/exhaustive/CMakeLists.txt
 ```
+- The template class `LlvmLibcExhaustiveTest` located at:
+```
+  libc/test/src/math/exhaustive/exhaustive_test.h
+```
+can be inherited for conveniently parallelizing the exhaustive tests.
 
 ### Performance tests
 
@@ -164,6 +169,7 @@ implementation (which is very often glibc).
 - Build and Run exhaustive test (might take hours to run):
 ```
   $ ninja libc.test.src.math.exhaustive.<func>_test
+  $ projects/libc/test/src/math/exhaustive/libc.test.src.math.exhaustive.<func>_test
 ```
 
 - Build and Run performance test:

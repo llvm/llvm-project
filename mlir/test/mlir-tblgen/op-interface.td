@@ -3,6 +3,24 @@
 
 include "mlir/IR/OpBase.td"
 
+def ExtraShardDeclsInterface : OpInterface<"ExtraShardDeclsInterface"> {
+  let extraSharedClassDeclaration = [{
+    bool sharedMethodDeclaration() {
+      return $_op.someOtherMethod();
+    }
+  }];
+}
+
+// DECL: class ExtraShardDeclsInterface
+// DECL:      bool sharedMethodDeclaration() {
+// DECL-NEXT:   return (*this).someOtherMethod();
+// DECL-NEXT: }
+
+// DECL: struct ExtraShardDeclsInterfaceTrait
+// DECL:      bool sharedMethodDeclaration() {
+// DECL-NEXT:   return (*static_cast<ConcreteOp *>(this)).someOtherMethod();
+// DECL-NEXT: }
+
 def TestOpInterface : OpInterface<"TestOpInterface"> {
   let description = [{some op interface description}];
 

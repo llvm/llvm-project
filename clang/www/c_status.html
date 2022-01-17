@@ -72,8 +72,8 @@ compliance between releases. We implement the resolution for defect
 reports, but we do not currently track our DR status (help with
 tracking DR status is appreciated).</p>
 
-<p>The <a href="https://bugs.llvm.org/">LLVM bug tracker</a> contains a
-Clang C component that tracks known bugs with Clang's language
+<p>The <a href="https://github.com/llvm/llvm-project/issues/">LLVM bug tracker</a> uses
+the "c", "c11", "c18", and "c2x" labels to track known bugs with Clang's language
 conformance.</p>
 
 <h2 id="c89">C89 implementation status</h2>
@@ -715,11 +715,7 @@ conformance.</p>
     <tr>
       <td>Two's complement sign representation</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2412.pdf">N2412</a></td>
-      <td class="partial" align="center">
-        <details><summary>Partial</summary>
-          Lacking width macros in limits.h and stdint.h
-        </details>
-      </td>
+      <td class="unreleased" align="center">Clang 14</td>
     </tr>
     <tr>
       <td>Adding the u8 character prefix</td>

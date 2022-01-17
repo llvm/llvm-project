@@ -154,6 +154,51 @@ void CGCXXABI::setCXXABIThisValue(CodeGenFunction &CGF, llvm::Value *ThisPtr) {
   CGF.CXXABIThisValue = ThisPtr;
 }
 
+bool CGCXXABI::mayNeedDestruction(const VarDecl *VD) const {
+  if (VD->needsDestruction(getContext()))
+    return true;
+
+  // If the variable has an incomplete class type (or array thereof), it
+  // might need destruction.
+  const Type *T = VD->getType()->getBaseElementTypeUnsafe();
+  if (T->getAs<RecordType>() && T->isIncompleteType())
+    return true;
+
+  return false;
+}
+
+bool CGCXXABI::isEmittedWithConstantInitializer(
+    const VarDecl *VD, bool InspectInitForWeakDef) const {
+  VD = VD->getMostRecentDecl();
+  if (VD->hasAttr<ConstInitAttr>())
+    return true;
+
+  // All later checks examine the initializer specified on the variable. If
+  // the variable is weak, such examination would not be correct.
+  if (!InspectInitForWeakDef && (VD->isWeak() || VD->hasAttr<SelectAnyAttr>()))
+    return false;
+
+  const VarDecl *InitDecl = VD->getInitializingDeclaration();
+  if (!InitDecl)
+    return false;
+
+  // If there's no initializer to run, this is constant initialization.
+  if (!InitDecl->hasInit())
+    return true;
+
+  // If we have the only definition, we don't need a thread wrapper if we
+  // will emit the value as a constant.
+  if (isUniqueGVALinkage(getContext().GetGVALinkageForVariable(VD)))
+    return !mayNeedDestruction(VD) && InitDecl->evaluateValue();
+
+  // Otherwise, we need a thread wrapper unless we know that every
+  // translation unit will emit the value as a constant. We rely on the
+  // variable being constant-initialized in every translation unit if it's
+  // constant-initialized in any translation unit, which isn't actually
+  // guaranteed by the standard but is necessary for sanity.
+  return InitDecl->hasConstantInitialization();
+}
+
 void CGCXXABI::EmitReturnFromThunk(CodeGenFunction &CGF,
                                    RValue RV, QualType ResultType) {
   assert(!CGF.hasAggregateEvaluationKind(ResultType) &&

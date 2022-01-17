@@ -229,7 +229,26 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
                 bp.Delete()
                 break
 
-    def launch(self):
+    def _fetch_property(self, props, name):
+        num_props = props.Count
+        result = None
+        for x in range(1, num_props+1):
+            item = props.Item(x)
+            if item.Name == name:
+                return item
+        assert False, "Couldn't find property {}".format(name)
+
+    def launch(self, cmdline):
+        cmdline_str = ' '.join(cmdline)
+
+        # In a slightly baroque manner, lookup the VS project that runs when
+        # you click "run", and set its command line options to the desired
+        # command line options.
+        startup_proj_name = str(self._fetch_property(self._interface.Solution.Properties, 'StartupProject'))
+        project = self._fetch_property(self._interface.Solution, startup_proj_name)
+        ActiveConfiguration = self._fetch_property(project.Properties, 'ActiveConfiguration').Object
+        ActiveConfiguration.DebugSettings.CommandArguments = cmdline_str
+
         self._fn_go()
 
     def step(self):

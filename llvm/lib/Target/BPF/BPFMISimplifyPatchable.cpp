@@ -55,7 +55,7 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
-  bool removeLD(void);
+  bool removeLD();
   void processCandidate(MachineRegisterInfo *MRI, MachineBasicBlock &MBB,
                         MachineInstr &MI, Register &SrcReg, Register &DstReg,
                         const GlobalValue *GVal, bool IsAma);

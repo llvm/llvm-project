@@ -26,7 +26,7 @@ define i32 @test_cca(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    seta %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@cca},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@cca},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -57,7 +57,7 @@ define i32 @test_ccae(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -88,7 +88,7 @@ define i32 @test_ccb(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -119,7 +119,7 @@ define i32 @test_ccbe(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setbe %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -150,7 +150,7 @@ define i32 @test_ccc(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -181,7 +181,7 @@ define i32 @test_cce(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@cce},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@cce},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -212,7 +212,7 @@ define i32 @test_ccz(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -243,7 +243,7 @@ define i32 @test_ccg(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setg %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccg},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccg},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -274,7 +274,7 @@ define i32 @test_ccge(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -305,7 +305,7 @@ define i32 @test_ccl(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -336,7 +336,7 @@ define i32 @test_ccle(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setle %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -367,7 +367,7 @@ define i32 @test_ccna(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setbe %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccna},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccna},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -398,7 +398,7 @@ define i32 @test_ccnae(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -429,7 +429,7 @@ define i32 @test_ccnb(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -460,7 +460,7 @@ define i32 @test_ccnbe(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    seta %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -491,7 +491,7 @@ define i32 @test_ccnc(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -522,7 +522,7 @@ define i32 @test_ccne(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccne},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccne},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -553,7 +553,7 @@ define i32 @test_ccnz(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -584,7 +584,7 @@ define i32 @test_ccng(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setle %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccng},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccng},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -615,7 +615,7 @@ define i32 @test_ccnge(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -646,7 +646,7 @@ define i32 @test_ccnl(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setge %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -677,7 +677,7 @@ define i32 @test_ccnle(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setg %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -708,7 +708,7 @@ define i32 @test_ccno(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setno %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccno},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccno},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -739,7 +739,7 @@ define i32 @test_ccnp(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setnp %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccnp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccnp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -770,7 +770,7 @@ define i32 @test_ccns(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setns %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccns},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccns},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -801,7 +801,7 @@ define i32 @test_cco(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    seto %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@cco},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@cco},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -832,7 +832,7 @@ define i32 @test_ccp(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    setp %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -863,7 +863,7 @@ define i32 @test_ccs(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    sets %al
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i32 asm "cmp $2,$1", "={@ccs},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i32 asm "cmp $2,$1", "={@ccs},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i32 %cc, 0
   %rv = zext i1 %tobool to i32
   ret i32 %rv
@@ -899,7 +899,7 @@ define void @test_cca_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@cca},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@cca},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -939,7 +939,7 @@ define void @test_ccae_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -979,7 +979,7 @@ define void @test_ccb_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1019,7 +1019,7 @@ define void @test_ccbe_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1059,7 +1059,7 @@ define void @test_ccc_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1099,7 +1099,7 @@ define void @test_cce_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@cce},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@cce},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1139,7 +1139,7 @@ define void @test_ccz_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1179,7 +1179,7 @@ define void @test_ccg_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccg},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccg},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1219,7 +1219,7 @@ define void @test_ccge_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1259,7 +1259,7 @@ define void @test_ccl_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1299,7 +1299,7 @@ define void @test_ccle_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1339,7 +1339,7 @@ define void @test_ccna_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccna},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccna},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1379,7 +1379,7 @@ define void @test_ccnae_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1419,7 +1419,7 @@ define void @test_ccnb_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1459,7 +1459,7 @@ define void @test_ccnbe_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1499,7 +1499,7 @@ define void @test_ccnc_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1539,7 +1539,7 @@ define void @test_ccne_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccne},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccne},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1579,7 +1579,7 @@ define void @test_ccnz_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1619,7 +1619,7 @@ define void @test_ccng_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccng},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccng},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1659,7 +1659,7 @@ define void @test_ccnge_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1699,7 +1699,7 @@ define void @test_ccnl_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1739,7 +1739,7 @@ define void @test_ccnle_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1779,7 +1779,7 @@ define void @test_ccno_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccno},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccno},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1819,7 +1819,7 @@ define void @test_ccnp_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccnp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccnp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1859,7 +1859,7 @@ define void @test_ccns_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccns},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccns},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1899,7 +1899,7 @@ define void @test_cco_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@cco},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@cco},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1939,7 +1939,7 @@ define void @test_ccp_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 
@@ -1979,7 +1979,7 @@ define void @test_ccs_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
-  %cc = tail call i8 asm "cmp $2,$1", "={@ccs},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* %addr, i64 %nr) nounwind
+  %cc = tail call i8 asm "cmp $2,$1", "={@ccs},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(i64* elementtype(i64) %addr, i64 %nr) nounwind
   %tobool = icmp ne i8 %cc, 0
   br i1 %tobool, label %then, label %exit
 

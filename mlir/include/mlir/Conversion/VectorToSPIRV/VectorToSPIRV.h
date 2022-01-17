@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSPIRV_VECTORTOSPIRV_H
-#define MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSPIRV_VECTORTOSPIRV_H
+#ifndef MLIR_CONVERSION_VECTORTOSPIRV_VECTORTOSPIRV_H
+#define MLIR_CONVERSION_VECTORTOSPIRV_VECTORTOSPIRV_H
 
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -25,4 +25,4 @@ void populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 
 } // namespace mlir
 
-#endif // MLIR_INCLUDE_MLIR_CONVERSION_VECTORTOSPIRV_VECTORTOSPIRV_H
+#endif // MLIR_CONVERSION_VECTORTOSPIRV_VECTORTOSPIRV_H

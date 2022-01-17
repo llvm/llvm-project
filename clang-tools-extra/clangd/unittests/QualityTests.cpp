@@ -54,13 +54,6 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   auto AST = Header.build();
 
   SymbolQualitySignals Quality;
-  Quality.merge(findSymbol(Symbols, "_X"));
-  EXPECT_FALSE(Quality.Deprecated);
-  EXPECT_FALSE(Quality.ImplementationDetail);
-  EXPECT_TRUE(Quality.ReservedName);
-  EXPECT_EQ(Quality.References, SymbolQualitySignals().References);
-  EXPECT_EQ(Quality.Category, SymbolQualitySignals::Variable);
-
   Quality.merge(findSymbol(Symbols, "X_Y_Decl"));
   EXPECT_TRUE(Quality.ImplementationDetail);
 
@@ -83,6 +76,16 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   Quality = {};
   Quality.merge(CodeCompletionResult("if"));
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Keyword);
+
+  // Testing ReservedName in main file, we don't index those symbols in headers.
+  auto MainAST = TestTU::withCode("int _X;").build();
+  SymbolSlab MainSymbols = std::get<0>(indexMainDecls(MainAST));
+
+  Quality = {};
+  Quality.merge(findSymbol(MainSymbols, "_X"));
+  EXPECT_FALSE(Quality.Deprecated);
+  EXPECT_FALSE(Quality.ImplementationDetail);
+  EXPECT_TRUE(Quality.ReservedName);
 }
 
 TEST(QualityTests, SymbolRelevanceSignalExtraction) {

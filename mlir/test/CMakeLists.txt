@@ -29,6 +29,12 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   # Passed to lit.site.cfg.py.in to set up the path where to find the libraries.
   set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
+
+  # The native target may not be enabled when cross compiling, raise an error.
+  if(NOT TARGET ${LLVM_NATIVE_ARCH})
+    message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
+  endif()
+
   # Copy test data over.
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
@@ -68,13 +74,13 @@ configure_lit_site_cfg(
   )
 
 set(MLIR_TEST_DEPENDS
-  FileCheck count not
-  mlir-capi-execution-engine-test
+  FileCheck count not split-file
   mlir-capi-ir-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-sparse-tensor-test
-  mlir-cpu-runner
+  mlir-capi-quant-test
+  mlir-capi-pdl-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
@@ -82,10 +88,21 @@ set(MLIR_TEST_DEPENDS
   mlir-reduce
   mlir-tblgen
   mlir-translate
-  mlir_runner_utils
-  mlir_c_runner_utils
-  mlir_async_runtime
   )
+
+# The native target may not be enabled, in this case we won't
+# run tests that involves executing on the host: do not build
+# useless binaries.
+if(TARGET ${LLVM_NATIVE_ARCH})
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-cpu-runner
+    llc
+    mlir_async_runtime
+    mlir-capi-execution-engine-test
+    mlir_c_runner_utils
+    mlir_runner_utils
+  )
+endif()
 
 if (MLIR_INCLUDE_INTEGRATION_TESTS)
   list(APPEND MLIR_TEST_DEPENDS lli)

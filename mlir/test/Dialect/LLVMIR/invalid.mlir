@@ -1234,3 +1234,19 @@ func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
   nvvm.cp.async.shared.global %arg0, %arg1, 32
   return
 }
+
+// -----
+
+func @gep_struct_variable(%arg0: !llvm.ptr<struct<(i32)>>, %arg1: i32, %arg2: i32) {
+  // expected-error @below {{op expected index 1 indexing a struct to be constant}}
+  llvm.getelementptr %arg0[%arg1, %arg1] : (!llvm.ptr<struct<(i32)>>, i32, i32) -> !llvm.ptr<i32>
+  return
+}
+
+// -----
+
+func @gep_out_of_bounds(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, %idx: i64) {
+  // expected-error @below {{index 2 indexing a struct is out of bounds}}
+  llvm.getelementptr %ptr[%idx, 1, 3] : (!llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, i64) -> !llvm.ptr<i32>
+  return
+}

@@ -420,7 +420,7 @@ struct CodeCompletionBuilder {
         SetDoc(C.IndexResult->Documentation);
       } else if (C.SemaResult) {
         const auto DocComment = getDocComment(*ASTCtx, *C.SemaResult,
-                                              /*CommentsFromHeader=*/false);
+                                              /*CommentsFromHeaders=*/false);
         SetDoc(formatDocumentation(*SemaCCS, DocComment));
       }
     }
@@ -895,14 +895,9 @@ struct ScoredSignature {
 // part of it.
 int paramIndexForArg(const CodeCompleteConsumer::OverloadCandidate &Candidate,
                      int Arg) {
-  int NumParams = 0;
-  if (const auto *F = Candidate.getFunction()) {
-    NumParams = F->getNumParams();
-    if (F->isVariadic())
-      ++NumParams;
-  } else if (auto *T = Candidate.getFunctionType()) {
+  int NumParams = Candidate.getNumParams();
+  if (auto *T = Candidate.getFunctionType()) {
     if (auto *Proto = T->getAs<FunctionProtoType>()) {
-      NumParams = Proto->getNumParams();
       if (Proto->isVariadic())
         ++NumParams;
     }
@@ -923,7 +918,8 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates,
-                                 SourceLocation OpenParLoc) override {
+                                 SourceLocation OpenParLoc,
+                                 bool Braced) override {
     assert(!OpenParLoc.isInvalid());
     SourceManager &SrcMgr = S.getSourceManager();
     OpenParLoc = SrcMgr.getFileLoc(OpenParLoc);
@@ -964,7 +960,8 @@ public:
       }
 
       const auto *CCS = Candidate.CreateSignatureString(
-          CurrentArg, S, *Allocator, CCTUInfo, true);
+          CurrentArg, S, *Allocator, CCTUInfo,
+          /*IncludeBriefComments=*/true, Braced);
       assert(CCS && "Expected the CodeCompletionString to be non-null");
       ScoredSignatures.push_back(processOverloadCandidate(
           Candidate, *CCS,
@@ -996,8 +993,7 @@ public:
                                     const ScoredSignature &R) {
       // Ordering follows:
       // - Less number of parameters is better.
-      // - Function is better than FunctionType which is better than
-      // Function Template.
+      // - Aggregate > Function > FunctionType > FunctionTemplate
       // - High score is better.
       // - Shorter signature is better.
       // - Alphabetically smaller is better.
@@ -1009,15 +1005,22 @@ public:
                R.Quality.NumberOfOptionalParameters;
       if (L.Quality.Kind != R.Quality.Kind) {
         using OC = CodeCompleteConsumer::OverloadCandidate;
-        switch (L.Quality.Kind) {
-        case OC::CK_Function:
-          return true;
-        case OC::CK_FunctionType:
-          return R.Quality.Kind != OC::CK_Function;
-        case OC::CK_FunctionTemplate:
-          return false;
-        }
-        llvm_unreachable("Unknown overload candidate type.");
+        auto KindPriority = [&](OC::CandidateKind K) {
+          switch (K) {
+          case OC::CK_Aggregate:
+            return 1;
+          case OC::CK_Function:
+            return 2;
+          case OC::CK_FunctionType:
+            return 3;
+          case OC::CK_FunctionTemplate:
+            return 4;
+          case OC::CK_Template:
+            return 5;
+          }
+          llvm_unreachable("Unknown overload candidate type.");
+        };
+        return KindPriority(L.Quality.Kind) < KindPriority(R.Quality.Kind);
       }
       if (L.Signature.label.size() != R.Signature.label.size())
         return L.Signature.label.size() < R.Signature.label.size();
@@ -1162,24 +1165,15 @@ public:
   void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
                                  OverloadCandidate *Candidates,
                                  unsigned NumCandidates,
-                                 SourceLocation OpenParLoc) override {
+                                 SourceLocation OpenParLoc,
+                                 bool Braced) override {
     assert(CurrentArg <= (unsigned)std::numeric_limits<int>::max() &&
            "too many arguments");
 
     for (unsigned I = 0; I < NumCandidates; ++I) {
-      OverloadCandidate Candidate = Candidates[I];
-      auto *Func = Candidate.getFunction();
-      if (!Func || Func->getNumParams() <= CurrentArg)
-        continue;
-      auto *PVD = Func->getParamDecl(CurrentArg);
-      if (!PVD)
-        continue;
-      auto *Ident = PVD->getIdentifier();
-      if (!Ident)
-        continue;
-      auto Name = Ident->getName();
-      if (!Name.empty())
-        ParamNames.insert(Name.str());
+      if (const NamedDecl *ND = Candidates[I].getParamDecl(CurrentArg))
+        if (const auto *II = ND->getIdentifier())
+          ParamNames.emplace(II->getName());
     }
   }
 

@@ -32,7 +32,7 @@ entry:
   store i32 %result, i32* %result.addr, align 4
   store i8* %addr, i8** %addr.addr, align 8
   %0 = load i8*, i8** %addr.addr, align 8
-  %1 = call i32 asm sideeffect "ld${1:U}${1:X} $0,$1\0Acmpw $0,$0\0Abne- 1f\0A1: isync\0A", "=r,*m,~{memory},~{cr0}"(i8* %0) #1, !srcloc !0
+  %1 = call i32 asm sideeffect "ld${1:U}${1:X} $0,$1\0Acmpw $0,$0\0Abne- 1f\0A1: isync\0A", "=r,*m,~{memory},~{cr0}"(i8* elementtype(i8) %0) #1, !srcloc !0
   store i32 %1, i32* %result.addr, align 4
   ret void
 }

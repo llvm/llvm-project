@@ -43,7 +43,7 @@ public:
 private:
   struct Allocation {
     size_t Size = 0;
-    std::vector<tpctypes::WrapperFunctionCall> DeallocationActions;
+    std::vector<shared::WrapperFunctionCall> DeallocationActions;
   };
 
   using AllocationsMap = DenseMap<void *, Allocation>;

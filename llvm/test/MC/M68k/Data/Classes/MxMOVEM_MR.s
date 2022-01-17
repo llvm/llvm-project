@@ -13,4 +13,3 @@ movem.l	%d0, (%a1)
 ; CHECK:      movem.l  %d0-%d1, (%a1)
 ; CHECK-SAME: encoding: [0x48,0xd1,0x00,0x03]
 movem.l	%d0-%d1, (%a1)
-

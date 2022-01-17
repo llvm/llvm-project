@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TYPEERASEDDATAFLOWANALYSIS_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_TYPEERASEDDATAFLOWANALYSIS_H
 
+#include <utility>
 #include <vector>
 
 #include "clang/AST/ASTContext.h"
@@ -63,9 +64,8 @@ public:
 
   /// Applies the analysis transfer function for a given statement and
   /// type-erased lattice element.
-  virtual TypeErasedLattice transferTypeErased(const Stmt *,
-                                               const TypeErasedLattice &,
-                                               Environment &) = 0;
+  virtual void transferTypeErased(const Stmt *, TypeErasedLattice &,
+                                  Environment &) = 0;
 };
 
 /// Type-erased model of the program at a given program point.
@@ -75,6 +75,9 @@ struct TypeErasedDataflowAnalysisState {
 
   /// Model of the state of the program (store and heap).
   Environment Env;
+
+  TypeErasedDataflowAnalysisState(TypeErasedLattice Lattice, Environment Env)
+      : Lattice(std::move(Lattice)), Env(std::move(Env)) {}
 };
 
 /// Transfers the state of a basic block by evaluating each of its statements in

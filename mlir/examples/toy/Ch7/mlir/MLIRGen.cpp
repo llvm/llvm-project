@@ -112,7 +112,7 @@ private:
   llvm::StringMap<std::pair<mlir::Type, StructAST *>> structMap;
 
   /// Helper conversion for a Toy AST location to an MLIR location.
-  mlir::Location loc(Location loc) {
+  mlir::Location loc(const Location &loc) {
     return mlir::FileLineColLoc::get(builder.getStringAttr(*loc.file), loc.line,
                                      loc.col);
   }

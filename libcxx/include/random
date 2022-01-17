@@ -1715,6 +1715,7 @@ class piecewise_linear_distribution
 #include <__random/uniform_real_distribution.h>
 #include <__random/weibull_distribution.h>
 #include <initializer_list>
+#include <version>
 
 #include <algorithm>   // for backward compatibility; TODO remove it
 #include <cmath>       // for backward compatibility; TODO remove it

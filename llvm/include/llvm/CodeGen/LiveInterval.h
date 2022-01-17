@@ -724,7 +724,7 @@ namespace llvm {
       T *P;
 
     public:
-      SingleLinkedListIterator<T>(T *P) : P(P) {}
+      SingleLinkedListIterator(T *P) : P(P) {}
 
       SingleLinkedListIterator<T> &operator++() {
         P = P->Next;

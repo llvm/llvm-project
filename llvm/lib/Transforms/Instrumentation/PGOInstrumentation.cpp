@@ -877,7 +877,10 @@ populateEHOperandBundle(VPCandidateInfo &Cand,
                         DenseMap<BasicBlock *, ColorVector> &BlockColors,
                         SmallVectorImpl<OperandBundleDef> &OpBundles) {
   auto *OrigCall = dyn_cast<CallBase>(Cand.AnnotatedInst);
-  if (OrigCall && !isa<IntrinsicInst>(OrigCall)) {
+  if (!OrigCall)
+    return;
+
+  if (!isa<IntrinsicInst>(OrigCall)) {
     // The instrumentation call should belong to the same funclet as a
     // non-intrinsic call, so just copy the operand bundle, if any exists.
     Optional<OperandBundleUse> ParentFunclet =

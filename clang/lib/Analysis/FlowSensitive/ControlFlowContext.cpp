@@ -49,6 +49,7 @@ ControlFlowContext::build(const Decl *D, Stmt *S, ASTContext *C) {
   Options.AddImplicitDtors = true;
   Options.AddTemporaryDtors = true;
   Options.AddInitializers = true;
+  Options.AddCXXDefaultInitExprInCtors = true;
 
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();

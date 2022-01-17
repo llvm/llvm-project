@@ -2018,11 +2018,12 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
 }
 
 Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
-  SmallVector<Value *, 8> Ops(GEP.operands());
+  Value *PtrOp = GEP.getOperand(0);
+  SmallVector<Value *, 8> Indices(GEP.indices());
   Type *GEPType = GEP.getType();
   Type *GEPEltType = GEP.getSourceElementType();
   bool IsGEPSrcEleScalable = isa<ScalableVectorType>(GEPEltType);
-  if (Value *V = SimplifyGEPInst(GEPEltType, Ops, GEP.isInBounds(),
+  if (Value *V = SimplifyGEPInst(GEPEltType, PtrOp, Indices, GEP.isInBounds(),
                                  SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
@@ -2044,8 +2045,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // possible (decide on canonical form for pointer broadcast), 3) exploit
     // undef elements to decrease demanded bits
   }
-
-  Value *PtrOp = GEP.getOperand(0);
 
   // Eliminate unneeded casts for indices, and replace indices which displace
   // by multiples of a zero size type with zero.
@@ -2460,10 +2459,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // `setSourceElementType()` won't actually update the type of the
       // existing GEP Value. Causing issues if this Value is accessed when
       // constructing an AddrSpaceCastInst
-      Value *NGEP =
-          GEP.isInBounds()
-              ? Builder.CreateInBoundsGEP(SrcEltType, SrcOp, {Ops[1], Ops[2]})
-              : Builder.CreateGEP(SrcEltType, SrcOp, {Ops[1], Ops[2]});
+      Value *NGEP = GEP.isInBounds()
+                        ? Builder.CreateInBoundsGEP(SrcEltType, SrcOp, Indices)
+                        : Builder.CreateGEP(SrcEltType, SrcOp, Indices);
       NGEP->takeName(&GEP);
 
       // Preserve GEP address space to satisfy users
@@ -2547,8 +2545,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
             DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinSize());
         if (BasePtrOffset.ule(AllocSize)) {
           return GetElementPtrInst::CreateInBounds(
-              GEP.getSourceElementType(), PtrOp, makeArrayRef(Ops).slice(1),
-              GEP.getName());
+              GEP.getSourceElementType(), PtrOp, Indices, GEP.getName());
         }
       }
     }
@@ -2567,10 +2564,6 @@ static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo &TLI,
   if (auto *LI = dyn_cast<LoadInst>(V))
     return isa<GlobalVariable>(LI->getPointerOperand());
   // Two distinct allocations will never be equal.
-  // We rely on LookThroughBitCast in isAllocLikeFn being false, since looking
-  // through bitcasts of V can cause
-  // the result statement below to be true, even when AI and V (ex:
-  // i8* ->i32* ->i8* of AI) are the same allocations.
   return isAllocLikeFn(V, &TLI) && V != AI;
 }
 
@@ -2673,7 +2666,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
           continue;
         }
 
-        if (isReallocLikeFn(I, &TLI, true)) {
+        if (isReallocLikeFn(I, &TLI)) {
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;
@@ -2696,6 +2689,8 @@ static bool isAllocSiteRemovable(Instruction *AI,
 }
 
 Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
+  assert(isa<AllocaInst>(MI) || isAllocRemovable(&cast<CallBase>(MI), &TLI));
+
   // If we have a malloc call which is only used in any amount of comparisons to
   // null and free calls, delete the calls and replace the comparisons with true
   // or false as appropriate.
@@ -2914,7 +2909,7 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI) {
   // If we had free(realloc(...)) with no intervening uses, then eliminate the
   // realloc() entirely.
   if (CallInst *CI = dyn_cast<CallInst>(Op)) {
-    if (CI->hasOneUse() && isReallocLikeFn(CI, &TLI, true)) {
+    if (CI->hasOneUse() && isReallocLikeFn(CI, &TLI)) {
       return eraseInstFromFunction(
           *replaceInstUsesWith(*CI, CI->getOperand(0)));
     }
@@ -3723,16 +3718,61 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   return nullptr;
 }
 
+/// Check for case where the call writes to an otherwise dead alloca.  This
+/// shows up for unused out-params in idiomatic C/C++ code.   Note that this
+/// helper *only* analyzes the write; doesn't check any other legality aspect.
+static bool SoleWriteToDeadLocal(Instruction *I, TargetLibraryInfo &TLI) {
+  auto *CB = dyn_cast<CallBase>(I);
+  if (!CB)
+    // TODO: handle e.g. store to alloca here - only worth doing if we extend
+    // to allow reload along used path as described below.  Otherwise, this
+    // is simply a store to a dead allocation which will be removed.
+    return false;
+  Optional<MemoryLocation> Dest = MemoryLocation::getForDest(CB, TLI);
+  if (!Dest)
+    return false;
+  auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(Dest->Ptr));
+  if (!AI)
+    // TODO: allow malloc?
+    return false;
+  // TODO: allow memory access dominated by move point?  Note that since AI
+  // could have a reference to itself captured by the call, we would need to
+  // account for cycles in doing so.
+  SmallVector<const User *> AllocaUsers;
+  SmallPtrSet<const User *, 4> Visited;
+  auto pushUsers = [&](const Instruction &I) {
+    for (const User *U : I.users()) {
+      if (Visited.insert(U).second)
+        AllocaUsers.push_back(U);
+    }
+  };
+  pushUsers(*AI);
+  while (!AllocaUsers.empty()) {
+    auto *UserI = cast<Instruction>(AllocaUsers.pop_back_val());
+    if (isa<BitCastInst>(UserI) || isa<GetElementPtrInst>(UserI) ||
+        isa<AddrSpaceCastInst>(UserI)) {
+      pushUsers(*UserI);
+      continue;
+    }
+    if (UserI == CB)
+      continue;
+    // TODO: support lifetime.start/end here
+    return false;
+  }
+  return true;
+}
+
 /// Try to move the specified instruction from its current block into the
 /// beginning of DestBlock, which can only happen if it's safe to move the
 /// instruction past all of the instructions between it and the end of its
 /// block.
-static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
+static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock,
+                                 TargetLibraryInfo &TLI) {
   assert(I->getUniqueUndroppableUser() && "Invariants didn't hold!");
   BasicBlock *SrcBlock = I->getParent();
 
   // Cannot move control-flow-involving, volatile loads, vaarg, etc.
-  if (isa<PHINode>(I) || I->isEHPad() || I->mayHaveSideEffects() ||
+  if (isa<PHINode>(I) || I->isEHPad() || I->mayThrow() || !I->willReturn() ||
       I->isTerminator())
     return false;
 
@@ -3752,6 +3792,14 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
     if (CI->isConvergent())
       return false;
   }
+
+  // Unless we can prove that the memory write isn't visibile except on the
+  // path we're sinking to, we must bail.
+  if (I->mayWriteToMemory()) {
+    if (!SoleWriteToDeadLocal(I, TLI))
+      return false;
+  }
+
   // We can only sink load instructions if there is nothing between the load and
   // the end of block that could change the value.
   if (I->mayReadFromMemory()) {
@@ -3760,7 +3808,7 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
     // successor block.
     if (DestBlock->getUniquePredecessor() != I->getParent())
       return false;
-    for (BasicBlock::iterator Scan = I->getIterator(),
+    for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
       if (Scan->mayWriteToMemory())
@@ -3936,7 +3984,7 @@ bool InstCombinerImpl::run() {
     if (OptBB) {
       auto *UserParent = *OptBB;
       // Okay, the CFG is simple enough, try to sink this instruction.
-      if (TryToSinkInstruction(I, UserParent)) {
+      if (TryToSinkInstruction(I, UserParent, TLI)) {
         LLVM_DEBUG(dbgs() << "IC: Sink: " << *I << '\n');
         MadeIRChange = true;
         // We'll add uses of the sunk instruction below, but since

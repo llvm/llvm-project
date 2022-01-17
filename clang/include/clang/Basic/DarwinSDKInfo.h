@@ -57,6 +57,20 @@ public:
                        llvm::Triple::MacOSX, llvm::Triple::UnknownEnvironment);
     }
 
+    /// Returns the os-environment mapping pair that's used to represent the
+    /// iOS -> watchOS version mapping.
+    static inline constexpr OSEnvPair iOStoWatchOSPair() {
+      return OSEnvPair(llvm::Triple::IOS, llvm::Triple::UnknownEnvironment,
+                       llvm::Triple::WatchOS, llvm::Triple::UnknownEnvironment);
+    }
+
+    /// Returns the os-environment mapping pair that's used to represent the
+    /// iOS -> tvOS version mapping.
+    static inline constexpr OSEnvPair iOStoTvOSPair() {
+      return OSEnvPair(llvm::Triple::IOS, llvm::Triple::UnknownEnvironment,
+                       llvm::Triple::TvOS, llvm::Triple::UnknownEnvironment);
+    }
+
   private:
     StorageType Value;
 

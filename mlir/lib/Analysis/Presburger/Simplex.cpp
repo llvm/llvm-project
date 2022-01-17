@@ -124,10 +124,15 @@ unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs) {
 void SimplexBase::normalizeRow(unsigned row) {
   int64_t gcd = 0;
   for (unsigned col = 0; col < nCol; ++col) {
-    if (gcd == 1)
-      break;
     gcd = llvm::greatestCommonDivisor(gcd, std::abs(tableau(row, col)));
+    // If the gcd becomes 1 then the row is already normalized.
+    if (gcd == 1)
+      return;
   }
+
+  // Note that the gcd can never become zero since the first element of the row,
+  // the denominator, is non-zero.
+  assert(gcd != 0);
   for (unsigned col = 0; col < nCol; ++col)
     tableau(row, col) /= gcd;
 }
@@ -303,7 +308,11 @@ Optional<unsigned> SimplexBase::findPivotRow(Optional<unsigned> skipRow,
                                              Direction direction,
                                              unsigned col) const {
   Optional<unsigned> retRow;
-  int64_t retElem, retConst;
+  // Initialize these to zero in order to silence a warning about retElem and
+  // retConst being used uninitialized in the initialization of `diff` below. In
+  // reality, these are always initialized when that line is reached since these
+  // are set whenever retRow is set.
+  int64_t retElem = 0, retConst = 0;
   for (unsigned row = nRedundant; row < nRow; ++row) {
     if (skipRow && row == *skipRow)
       continue;
@@ -736,8 +745,9 @@ Simplex Simplex::makeProduct(const Simplex &a, const Simplex &b) {
   return result;
 }
 
-SmallVector<Fraction, 8> SimplexBase::getRationalSample() const {
-  assert(!empty && "This should not be called when Simplex is empty.");
+Optional<SmallVector<Fraction, 8>> SimplexBase::getRationalSample() const {
+  if (empty)
+    return {};
 
   SmallVector<Fraction, 8> sample;
   sample.reserve(var.size());
@@ -761,7 +771,9 @@ SimplexBase::getSamplePointIfIntegral() const {
   // If the tableau is empty, no sample point exists.
   if (empty)
     return {};
-  SmallVector<Fraction, 8> rationalSample = getRationalSample();
+
+  // The value will always exist since the Simplex is non-empty.
+  SmallVector<Fraction, 8> rationalSample = *getRationalSample();
   SmallVector<int64_t, 8> integerSample;
   integerSample.reserve(var.size());
   for (const Fraction &coord : rationalSample) {

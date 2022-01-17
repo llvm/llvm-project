@@ -60,7 +60,6 @@
 namespace llvm {
 
 class MCSection;
-class MCStreamer;
 class MCSymbol;
 class MCObjectStreamer;
 class raw_ostream;

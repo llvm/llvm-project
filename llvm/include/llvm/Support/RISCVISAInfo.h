@@ -61,6 +61,7 @@ public:
 
   unsigned getXLen() const { return XLen; };
   unsigned getFLen() const { return FLen; };
+  unsigned getMinVLen() const { return MinVLen; }
 
   bool hasExtension(StringRef Ext) const;
   std::string toString() const;
@@ -71,10 +72,11 @@ public:
                                    unsigned MinorVersion);
 
 private:
-  RISCVISAInfo(unsigned XLen) : XLen(XLen), FLen(0) {}
+  RISCVISAInfo(unsigned XLen) : XLen(XLen), FLen(0), MinVLen(0) {}
 
   unsigned XLen;
   unsigned FLen;
+  unsigned MinVLen;
 
   OrderedExtensionMap Exts;
 
@@ -85,6 +87,7 @@ private:
 
   void updateImplication();
   void updateFLen();
+  void updateMinVLen();
 };
 
 } // namespace llvm

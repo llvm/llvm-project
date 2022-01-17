@@ -1,0 +1,434 @@
+# RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr=+mops,+mte -disassemble < %s 2> %t | FileCheck %s --check-prefixes=CHECK-MOPS,CHECK-MTE
+# RUN: FileCheck %s --check-prefix=CHECK-INVALID < %t
+# RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr=+v8.8a,+mte -disassemble < %s 2> %t | FileCheck %s --check-prefixes=CHECK-MOPS,CHECK-MTE
+# RUN: FileCheck %s --check-prefix=CHECK-INVALID < %t
+# RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr=+mops -disassemble < %s 2> %t | FileCheck %s --check-prefix=CHECK-MOPS
+# RUN: FileCheck %s --check-prefixes=CHECK-INVALID,CHECK-NO-MTE < %t
+# RUN: not llvm-mc -triple aarch64-arm-none-eabi -mattr=+v8.8a -disassemble < %s 2> %t | FileCheck %s --check-prefix=CHECK-MOPS
+# RUN: FileCheck %s --check-prefixes=CHECK-INVALID,CHECK-NO-MTE < %t
+# RUN: not llvm-mc -triple aarch64-arm-none-eabi -disassemble < %s 2> %t
+# RUN: FileCheck %s --check-prefixes=CHECK-INVALID,CHECK-NO-MOPS,CHECK-NO-MTE < %t
+
+
+[0x40,0x04,0x01,0x19]
+[0x40,0x44,0x01,0x19]
+[0x40,0x84,0x01,0x19]
+[0x40,0xc4,0x01,0x19]
+[0x40,0x14,0x01,0x19]
+[0x40,0x54,0x01,0x19]
+[0x40,0x94,0x01,0x19]
+[0x40,0xd4,0x01,0x19]
+[0x40,0x24,0x01,0x19]
+[0x40,0x64,0x01,0x19]
+[0x40,0xa4,0x01,0x19]
+[0x40,0xe4,0x01,0x19]
+[0x40,0x34,0x01,0x19]
+[0x40,0x74,0x01,0x19]
+[0x40,0xb4,0x01,0x19]
+[0x40,0xf4,0x01,0x19]
+# CHECK-MOPS: cpyfp	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfpwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfprn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfpn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfpwt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfpwtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfpwtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfpwtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfprt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfprtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfprtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfprtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfpt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfptwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfptrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfptn	[x0]!, [x1]!, x2!
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x40,0x04,0x41,0x19]
+[0x40,0x44,0x41,0x19]
+[0x40,0x84,0x41,0x19]
+[0x40,0xc4,0x41,0x19]
+[0x40,0x14,0x41,0x19]
+[0x40,0x54,0x41,0x19]
+[0x40,0x94,0x41,0x19]
+[0x40,0xd4,0x41,0x19]
+[0x40,0x24,0x41,0x19]
+[0x40,0x64,0x41,0x19]
+[0x40,0xa4,0x41,0x19]
+[0x40,0xe4,0x41,0x19]
+[0x40,0x34,0x41,0x19]
+[0x40,0x74,0x41,0x19]
+[0x40,0xb4,0x41,0x19]
+[0x40,0xf4,0x41,0x19]
+# CHECK-MOPS: cpyfm	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmwt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmwtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmwtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmwtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmrt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmrtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmrtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmrtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfmtn	[x0]!, [x1]!, x2!
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x40,0x04,0x81,0x19]
+[0x40,0x44,0x81,0x19]
+[0x40,0x84,0x81,0x19]
+[0x40,0xc4,0x81,0x19]
+[0x40,0x14,0x81,0x19]
+[0x40,0x54,0x81,0x19]
+[0x40,0x94,0x81,0x19]
+[0x40,0xd4,0x81,0x19]
+[0x40,0x24,0x81,0x19]
+[0x40,0x64,0x81,0x19]
+[0x40,0xa4,0x81,0x19]
+[0x40,0xe4,0x81,0x19]
+[0x40,0x34,0x81,0x19]
+[0x40,0x74,0x81,0x19]
+[0x40,0xb4,0x81,0x19]
+[0x40,0xf4,0x81,0x19]
+# CHECK-MOPS: cpyfe	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfewn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfern	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfen	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfewt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfewtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfewtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfewtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfert	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfertwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfertrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfertn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfet	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfetwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfetrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyfetn	[x0]!, [x1]!, x2!
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x40,0x04,0x01,0x1d]
+[0x40,0x44,0x01,0x1d]
+[0x40,0x84,0x01,0x1d]
+[0x40,0xc4,0x01,0x1d]
+[0x40,0x14,0x01,0x1d]
+[0x40,0x54,0x01,0x1d]
+[0x40,0x94,0x01,0x1d]
+[0x40,0xd4,0x01,0x1d]
+[0x40,0x24,0x01,0x1d]
+[0x40,0x64,0x01,0x1d]
+[0x40,0xa4,0x01,0x1d]
+[0x40,0xe4,0x01,0x1d]
+[0x40,0x34,0x01,0x1d]
+[0x40,0x74,0x01,0x1d]
+[0x40,0xb4,0x01,0x1d]
+[0x40,0xf4,0x01,0x1d]
+# CHECK-MOPS: cpyp	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpypwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyprn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpypn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpypwt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpypwtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpypwtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpypwtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyprt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyprtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyprtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyprtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpypt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyptwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyptrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyptn	[x0]!, [x1]!, x2!
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x40,0x04,0x41,0x1d]
+[0x40,0x44,0x41,0x1d]
+[0x40,0x84,0x41,0x1d]
+[0x40,0xc4,0x41,0x1d]
+[0x40,0x14,0x41,0x1d]
+[0x40,0x54,0x41,0x1d]
+[0x40,0x94,0x41,0x1d]
+[0x40,0xd4,0x41,0x1d]
+[0x40,0x24,0x41,0x1d]
+[0x40,0x64,0x41,0x1d]
+[0x40,0xa4,0x41,0x1d]
+[0x40,0xe4,0x41,0x1d]
+[0x40,0x34,0x41,0x1d]
+[0x40,0x74,0x41,0x1d]
+[0x40,0xb4,0x41,0x1d]
+[0x40,0xf4,0x41,0x1d]
+# CHECK-MOPS: cpym	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymwt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymwtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymwtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymwtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymrt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymrtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymrtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymrtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpymtn	[x0]!, [x1]!, x2!
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x40,0x04,0x81,0x1d]
+[0x40,0x44,0x81,0x1d]
+[0x40,0x84,0x81,0x1d]
+[0x40,0xc4,0x81,0x1d]
+[0x40,0x14,0x81,0x1d]
+[0x40,0x54,0x81,0x1d]
+[0x40,0x94,0x81,0x1d]
+[0x40,0xd4,0x81,0x1d]
+[0x40,0x24,0x81,0x1d]
+[0x40,0x64,0x81,0x1d]
+[0x40,0xa4,0x81,0x1d]
+[0x40,0xe4,0x81,0x1d]
+[0x40,0x34,0x81,0x1d]
+[0x40,0x74,0x81,0x1d]
+[0x40,0xb4,0x81,0x1d]
+[0x40,0xf4,0x81,0x1d]
+# CHECK-MOPS: cpye	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyewn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyern	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyen	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyewt	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyewtwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyewtrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyewtn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyert	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyertwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyertrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyertn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyet	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyetwn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyetrn	[x0]!, [x1]!, x2!
+# CHECK-MOPS: cpyetn	[x0]!, [x1]!, x2!
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x20,0x04,0xc2,0x19]
+[0x20,0x14,0xc2,0x19]
+[0x20,0x24,0xc2,0x19]
+[0x20,0x34,0xc2,0x19]
+# CHECK-MOPS: setp	[x0]!, x1!, x2
+# CHECK-MOPS: setpt	[x0]!, x1!, x2
+# CHECK-MOPS: setpn	[x0]!, x1!, x2
+# CHECK-MOPS: setptn	[x0]!, x1!, x2
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x20,0x44,0xc2,0x19]
+[0x20,0x54,0xc2,0x19]
+[0x20,0x64,0xc2,0x19]
+[0x20,0x74,0xc2,0x19]
+# CHECK-MOPS: setm	[x0]!, x1!, x2
+# CHECK-MOPS: setmt	[x0]!, x1!, x2
+# CHECK-MOPS: setmn	[x0]!, x1!, x2
+# CHECK-MOPS: setmtn	[x0]!, x1!, x2
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x20,0x84,0xc2,0x19]
+[0x20,0x94,0xc2,0x19]
+[0x20,0xa4,0xc2,0x19]
+[0x20,0xb4,0xc2,0x19]
+# CHECK-MOPS: sete	[x0]!, x1!, x2
+# CHECK-MOPS: setet	[x0]!, x1!, x2
+# CHECK-MOPS: seten	[x0]!, x1!, x2
+# CHECK-MOPS: setetn	[x0]!, x1!, x2
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+# CHECK-NO-MOPS: warning: invalid instruction encoding
+
+[0x20,0x04,0xc2,0x1d]
+[0x20,0x14,0xc2,0x1d]
+[0x20,0x24,0xc2,0x1d]
+[0x20,0x34,0xc2,0x1d]
+# CHECK-MTE: setgp	[x0]!, x1!, x2
+# CHECK-MTE: setgpt [x0]!, x1!, x2
+# CHECK-MTE: setgpn	[x0]!, x1!, x2
+# CHECK-MTE: setgptn	[x0]!, x1!, x2
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+
+[0x20,0x44,0xc2,0x1d]
+[0x20,0x54,0xc2,0x1d]
+[0x20,0x64,0xc2,0x1d]
+[0x20,0x74,0xc2,0x1d]
+# CHECK-MTE: setgm	[x0]!, x1!, x2
+# CHECK-MTE: setgmt	[x0]!, x1!, x2
+# CHECK-MTE: setgmn	[x0]!, x1!, x2
+# CHECK-MTE: setgmtn	[x0]!, x1!, x2
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+
+[0x20,0x84,0xc2,0x1d]
+[0x20,0x94,0xc2,0x1d]
+[0x20,0xa4,0xc2,0x1d]
+[0x20,0xb4,0xc2,0x1d]
+# CHECK-MTE: setge	[x0]!, x1!, x2
+# CHECK-MTE: setget	[x0]!, x1!, x2
+# CHECK-MTE: setgen	[x0]!, x1!, x2
+# CHECK-MTE: setgetn	[x0]!, x1!, x2
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+# CHECK-NO-MTE: warning: invalid instruction encoding
+
+
+# Register number 31 (SP or XZR) is not allowed in address positions.
+# cpyfp
+[0x5f,0x04,0x01,0x19]
+[0x40,0x04,0x1f,0x19]
+# cpyfm
+[0x5f,0x04,0x41,0x19]
+[0x40,0x04,0x5f,0x19]
+# cpyfe
+[0x5f,0x04,0x81,0x19]
+[0x40,0x04,0x9f,0x19]
+# cpyp
+[0x5f,0x04,0x01,0x1d]
+[0x40,0x04,0x1f,0x1d]
+# cpym
+[0x5f,0x04,0x41,0x1d]
+[0x40,0x04,0x5f,0x1d]
+# cpye
+[0x5f,0x04,0x81,0x1d]
+[0x40,0x04,0x9f,0x1d]
+# setp
+[0x5f,0x04,0xc2,0x19]
+# setm
+[0x5f,0x44,0xc2,0x19]
+# sete
+[0x5f,0x84,0xc2,0x19]
+# setgp
+[0x5f,0x04,0xc2,0x1d]
+# setgm
+[0x5f,0x44,0xc2,0x1d]
+# setge
+[0x5f,0x84,0xc2,0x1d]
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding
+# CHECK-INVALID: warning: invalid instruction encoding

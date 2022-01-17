@@ -254,6 +254,9 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldOperation(
   return Expr<LOGICAL>{std::move(operation)};
 }
 
+#ifdef _MSC_VER // disable bogus warning about missing definitions
+#pragma warning(disable : 4661)
+#endif
 FOR_EACH_LOGICAL_KIND(template class ExpressionBase, )
 template class ExpressionBase<SomeLogical>;
 } // namespace Fortran::evaluate

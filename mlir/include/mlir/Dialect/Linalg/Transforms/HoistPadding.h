@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_TRANSFORMS_HOIST_PADDING_H_
-#define MLIR_DIALECT_LINALG_TRANSFORMS_HOIST_PADDING_H_
+#ifndef MLIR_DIALECT_LINALG_TRANSFORMS_HOISTPADDING_H
+#define MLIR_DIALECT_LINALG_TRANSFORMS_HOISTPADDING_H
 
 #include "mlir/Support/LogicalResult.h"
 
@@ -65,4 +65,4 @@ FailureOr<Value> hoistPaddingOnTensors(PadTensorOp opToHoist, int numLoops,
 } // namespace linalg
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_TRANSFORMS_HOIST_PADDING_H_
+#endif // MLIR_DIALECT_LINALG_TRANSFORMS_HOISTPADDING_H

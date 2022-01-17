@@ -15,6 +15,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscvtti"
 
+static cl::opt<unsigned> RVVRegisterWidthLMUL(
+    "riscv-v-register-bit-width-lmul",
+    cl::desc(
+        "The LMUL to use for getRegisterBitWidth queries. Affects LMUL used "
+        "by autovectorized code. Fractional LMULs are not supported."),
+    cl::init(1), cl::Hidden);
+
 InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                             TTI::TargetCostKind CostKind) {
   assert(Ty->isIntegerTy() &&
@@ -137,6 +144,24 @@ Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
   return BaseT::getMaxVScale();
 }
 
+TypeSize
+RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  unsigned LMUL = PowerOf2Floor(
+      std::max<unsigned>(std::min<unsigned>(RVVRegisterWidthLMUL, 8), 1));
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(ST->getXLen());
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(
+        ST->hasVInstructions() ? LMUL * ST->getMinRVVVectorSizeInBits() : 0);
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(
+        ST->hasVInstructions() ? LMUL * RISCV::RVVBitsPerBlock : 0);
+  }
+
+  llvm_unreachable("Unsupported register kind");
+}
+
 InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
@@ -172,10 +197,7 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Support explicit targets enabled for SiFive with the unrolling preferences
   // below
   bool UseDefaultPreferences = true;
-  if (ST->getTuneCPU().contains("sifive-e76") ||
-      ST->getTuneCPU().contains("sifive-s76") ||
-      ST->getTuneCPU().contains("sifive-u74") ||
-      ST->getTuneCPU().contains("sifive-7"))
+  if (ST->getProcFamily() == RISCVSubtarget::SiFive7)
     UseDefaultPreferences = false;
 
   if (UseDefaultPreferences)
@@ -252,4 +274,17 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::PeelingPreferences &PP) {
   BaseT::getPeelingPreferences(L, SE, PP);
+}
+
+InstructionCost RISCVTTIImpl::getRegUsageForType(Type *Ty) {
+  TypeSize Size = Ty->getPrimitiveSizeInBits();
+  if (Ty->isVectorTy()) {
+    if (Size.isScalable() && ST->hasVInstructions())
+      return divideCeil(Size.getKnownMinValue(), RISCV::RVVBitsPerBlock);
+
+    if (ST->useRVVForFixedLengthVectors())
+      return divideCeil(Size, ST->getMinRVVVectorSizeInBits());
+  }
+
+  return BaseT::getRegUsageForType(Ty);
 }

@@ -80,8 +80,10 @@ public:
     });
     addConversion(
         [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
-    addConversion(
-        [&](fir::RecordType derived) { return convertRecordType(derived); });
+    addConversion([&](fir::RecordType derived, SmallVectorImpl<Type> &results,
+                      ArrayRef<Type> callStack) {
+      return convertRecordType(derived, results, callStack);
+    });
     addConversion([&](fir::FieldType field) {
       // Convert to i32 because of LLVM GEP indexing restriction.
       return mlir::IntegerType::get(field.getContext(), 32);
@@ -127,16 +129,23 @@ public:
   mlir::Type indexType() { return mlir::IntegerType::get(&getContext(), 64); }
 
   // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-  mlir::Type convertRecordType(fir::RecordType derived) {
+  llvm::Optional<LogicalResult>
+  convertRecordType(fir::RecordType derived, SmallVectorImpl<Type> &results,
+                    ArrayRef<Type> callStack) {
     auto name = derived.getName();
     auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
+    if (llvm::count(callStack, derived) > 1) {
+      results.push_back(st);
+      return success();
+    }
     llvm::SmallVector<mlir::Type> members;
     for (auto mem : derived.getTypeList()) {
       members.push_back(convertType(mem.second).cast<mlir::Type>());
     }
-    if (mlir::succeeded(st.setBody(members, /*isPacked=*/false)))
-      return st;
-    return mlir::Type();
+    if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
+      return failure();
+    results.push_back(st);
+    return success();
   }
 
   // Is an extended descriptor needed given the element type of a fir.box type ?

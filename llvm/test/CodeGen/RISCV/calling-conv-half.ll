@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64IF
 ; RUN: llc -mtriple=riscv32 -mattr=+f -target-abi=ilp32f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV32-ILP32F
 ; RUN: llc -mtriple=riscv64 -mattr=+f -target-abi=lp64f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64-LP64F
-; RUN: llc -mtriple=riscv32 -mattr=+f,+experimental-zfhmin -target-abi=ilp32f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV32-ILP32ZFHMIN
-; RUN: llc -mtriple=riscv64 -mattr=+f,+experimental-zfhmin -target-abi=lp64f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64-LP64ZFHMIN
+; RUN: llc -mtriple=riscv32 -mattr=+f,+zfhmin -target-abi=ilp32f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV32-ILP32ZFHMIN
+; RUN: llc -mtriple=riscv64 -mattr=+f,+zfhmin -target-abi=lp64f -verify-machineinstrs < %s  | FileCheck %s -check-prefix=RV64-LP64ZFHMIN
 
 ; Tests passing half arguments and returns without Zfh.
 ; Covers with and without F extension and ilp32f/ilp64f
@@ -19,9 +19,8 @@ define i32 @callee_half_in_regs(i32 %a, half %b) nounwind {
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    lui a0, 16
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    slli a0, a1, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call __fixsfsi@plt
 ; RV32I-NEXT:    add a0, s0, a0
@@ -36,9 +35,8 @@ define i32 @callee_half_in_regs(i32 %a, half %b) nounwind {
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    lui a0, 16
-; RV64I-NEXT:    addiw a0, a0, -1
-; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    slli a0, a1, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call __fixsfdi@plt
 ; RV64I-NEXT:    addw a0, s0, a0
@@ -586,9 +584,8 @@ define i32 @caller_half_ret() nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call callee_half_ret@plt
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV32I-NEXT:    call __fixsfsi@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -600,9 +597,8 @@ define i32 @caller_half_ret() nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call callee_half_ret@plt
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    call __gnu_h2f_ieee@plt
 ; RV64I-NEXT:    call __fixsfdi@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload

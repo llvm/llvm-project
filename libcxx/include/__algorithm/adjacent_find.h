@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___ALGORITHM_ADJACENT_FIND_H
 #define _LIBCPP___ALGORITHM_ADJACENT_FIND_H
 
-#include <__config>
 #include <__algorithm/comp.h>
+#include <__config>
 #include <__iterator/iterator_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

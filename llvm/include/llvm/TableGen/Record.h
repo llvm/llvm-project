@@ -44,7 +44,6 @@ struct RecordContext;
 } // namespace detail
 
 class ListRecTy;
-struct MultiClass;
 class Record;
 class RecordKeeper;
 class RecordVal;

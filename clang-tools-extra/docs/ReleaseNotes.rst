@@ -67,11 +67,21 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Make the `cppcoreguidelines-pro-bounds-array-to-pointer-decay` check accept
+  string literal to pointer decay in conditional operator even if operands are
+  of the same length.
+
+- Ignore warnings from macros defined in system headers, if not using the
+  `-system-headers` flag.
+
 - Added support for globbing in `NOLINT*` expressions, to simplify suppressing
   multiple warnings in the same line.
 
 - Added support for `NOLINTBEGIN` ... `NOLINTEND` comments to suppress
   Clang-Tidy warnings over multiple lines.
+
+- Generalized the `modernize-use-default-member-init` check to handle non-default
+  constructors.
 
 New checks
 ^^^^^^^^^^
@@ -117,6 +127,10 @@ New checks
   Reports identifiers whose names are too short. Currently checks local
   variables and function parameters only.
 
+- New :doc:`misc-misleading-bidirectional <clang-tidy/checks/misc-misleading-bidirectional>` check.
+
+  Inspects string literal and comments for unterminated bidirectional Unicode
+  characters.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -148,7 +162,7 @@ Changes in existing checks
 
 - Fixed a false positive in :doc:`fuchsia-trailing-return
   <clang-tidy/checks/fuchsia-trailing-return>` for C++17 deduction guides.
-  
+
 - Fixed a false positive in :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone-throw-keyword-missing>` when creating an exception object
   using placement new

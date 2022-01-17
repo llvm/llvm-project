@@ -143,16 +143,16 @@ void MemoryMappingLayout::LoadFromCache() {
 // early in the process, when dyld is one of the only images loaded,
 // so it will be hit after only a few iterations.
 static mach_header *get_dyld_image_header() {
-  unsigned depth = 1;
-  vm_size_t size = 0;
   vm_address_t address = 0;
-  kern_return_t err = KERN_SUCCESS;
-  mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
 
   while (true) {
+    vm_size_t size = 0;
+    unsigned depth = 1;
     struct vm_region_submap_info_64 info;
-    err = vm_region_recurse_64(mach_task_self(), &address, &size, &depth,
-                               (vm_region_info_t)&info, &count);
+    mach_msg_type_number_t count = VM_REGION_SUBMAP_INFO_COUNT_64;
+    kern_return_t err =
+        vm_region_recurse_64(mach_task_self(), &address, &size, &depth,
+                             (vm_region_info_t)&info, &count);
     if (err != KERN_SUCCESS) return nullptr;
 
     if (size >= sizeof(mach_header) && info.protection & kProtectionRead) {

@@ -380,20 +380,22 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
     return std::error_code();
   }
 
-  result.reserve(PATH_MAX);
+  result.resize_for_overwrite(PATH_MAX);
 
   while (true) {
-    if (::getcwd(result.data(), result.capacity()) == nullptr) {
+    if (::getcwd(result.data(), result.size()) == nullptr) {
       // See if there was a real error.
-      if (errno != ENOMEM)
+      if (errno != ENOMEM) {
+        result.clear();
         return std::error_code(errno, std::generic_category());
+      }
       // Otherwise there just wasn't enough space.
-      result.reserve(result.capacity() * 2);
+      result.resize_for_overwrite(result.capacity() * 2);
     } else
       break;
   }
 
-  result.set_size(strlen(result.data()));
+  result.truncate(strlen(result.data()));
   return std::error_code();
 }
 
@@ -872,8 +874,13 @@ void mapped_file_region::unmapImpl() {
 
 void mapped_file_region::dontNeedImpl() {
   assert(Mode == mapped_file_region::readonly);
+#if defined(__MVS__) || defined(_AIX)
+  // If we don't have madvise, or it isn't beneficial, treat this as a no-op.
+  return;
+#else
   if (Mapping)
     ::madvise(Mapping, Size, MADV_DONTNEED);
+#endif
 }
 
 int mapped_file_region::alignment() {

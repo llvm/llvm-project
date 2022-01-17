@@ -9,12 +9,12 @@ void callee();
 // Lifetime extension for binding a reference to an rvalue
 // CHECK-LABEL: define{{.*}} void @_Z5test0v()
 void test0() {
-  // CHECK: call i8* @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK: call noundef i8* @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(
   const __strong id &ref1 = getObject();
   // CHECK: call void @_Z6calleev
   callee();
-  // CHECK: call i8* @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+  // CHECK: call noundef i8* @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(
   // CHECK-NEXT: call i8* @llvm.objc.autorelease
   const __autoreleasing id &ref2 = getObject();
@@ -84,7 +84,7 @@ void test5(__strong id &x) {
 }
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init(
-// CHECK: call i8* @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+// CHECK: call noundef i8* @_Z9getObjectv{{.*}} [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
 // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(
 const __strong id &global_ref = getObject();
 

@@ -417,7 +417,7 @@ public:
   bool isIntN(unsigned N) const { return getActiveBits() <= N; }
 
   /// Check if this APInt has an N-bits signed integer value.
-  bool isSignedIntN(unsigned N) const { return getMinSignedBits() <= N; }
+  bool isSignedIntN(unsigned N) const { return getSignificantBits() <= N; }
 
   /// Check if this APInt's value is a power of two greater than zero.
   ///
@@ -1069,8 +1069,9 @@ public:
   ///
   /// \returns true if *this < RHS when considered signed.
   bool slt(int64_t RHS) const {
-    return (!isSingleWord() && getMinSignedBits() > 64) ? isNegative()
-                                                        : getSExtValue() < RHS;
+    return (!isSingleWord() && getSignificantBits() > 64)
+               ? isNegative()
+               : getSExtValue() < RHS;
   }
 
   /// Unsigned less or equal comparison
@@ -1139,8 +1140,9 @@ public:
   ///
   /// \returns true if *this > RHS when considered signed.
   bool sgt(int64_t RHS) const {
-    return (!isSingleWord() && getMinSignedBits() > 64) ? !isNegative()
-                                                        : getSExtValue() > RHS;
+    return (!isSingleWord() && getSignificantBits() > 64)
+               ? !isNegative()
+               : getSExtValue() > RHS;
   }
 
   /// Unsigned greater or equal comparison
@@ -1450,7 +1452,12 @@ public:
   /// returns the smallest bit width that will retain the negative value. For
   /// example, -1 can be written as 0b1 or 0xFFFFFFFFFF. 0b1 is shorter and so
   /// for -1, this function will always return 1.
-  unsigned getMinSignedBits() const { return BitWidth - getNumSignBits() + 1; }
+  unsigned getSignificantBits() const {
+    return BitWidth - getNumSignBits() + 1;
+  }
+
+  /// NOTE: This is soft-deprecated.  Please use `getSignificantBits()` instead.
+  unsigned getMinSignedBits() const { return getSignificantBits(); }
 
   /// Get zero extended value
   ///
@@ -1472,7 +1479,7 @@ public:
   int64_t getSExtValue() const {
     if (isSingleWord())
       return SignExtend64(U.VAL, BitWidth);
-    assert(getMinSignedBits() <= 64 && "Too many bits for int64_t");
+    assert(getSignificantBits() <= 64 && "Too many bits for int64_t");
     return int64_t(U.pVal[0]);
   }
 

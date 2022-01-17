@@ -148,7 +148,6 @@ C Language Changes in Clang
 - Support for ``__attribute__((error("")))`` and
   ``__attribute__((warning("")))`` function attributes have been added.
 - The maximum allowed alignment has been increased from 2^29 to 2^32.
-
 - Clang now supports the ``_BitInt(N)`` family of bit-precise integer types
   from C23. This type was previously exposed as ``_ExtInt(N)``, which is now a
   deprecated alias for ``_BitInt(N)`` (so diagnostics will mention ``_BitInt``
@@ -158,6 +157,17 @@ C Language Changes in Clang
   modes. Note: the ABI for ``_BitInt(N)`` is still in the process of being
   stabilized, so this type should not yet be used in interfaces that require
   ABI stability.
+- When using ``asm goto`` with outputs whose constraint modifier is ``"+"``, we
+  now change the numbering of the labels to occur after hidden tied inputs for
+  better compatibility with GCC.  For better portability between different
+  compilers and versions, symbolic references rather than numbered references
+  should be preferred. See
+  `this thread <https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103640>` for more
+  info.
+
+- Implemented `WG14 N2412 <http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2412.pdf>`_,
+  which adds ``*_WIDTH`` macros to limits.h and stdint.h to report the bit
+  width of various integer datatypes.
 
 C++ Language Changes in Clang
 -----------------------------
@@ -243,6 +253,9 @@ Floating Point Support in Clang
   -ffp-contract=fast, whereas the (now corrected) default behavior is
   -ffp-contract=on.
   -ffp-model=precise is now exactly the default mode of the compiler.
+- -fstrict-float-cast-overflow no longer has target specific behavior. Clang
+  will saturate towards the smallest and largest representable integer values.
+  NaNs will be converted to zero.
 
 Internal API Changes
 --------------------
@@ -287,6 +300,10 @@ clang-format
 - Option ``AllowShortEnumsOnASingleLine: false`` has been improved, it now
   correctly places the opening brace according to ``BraceWrapping.AfterEnum``.
 
+- Option ``AlignAfterOpenBracket: BlockIndent`` has been added. If set, it will
+  always break after an open bracket, if the parameters don't fit on a single
+  line. Closing brackets will be placed on a new line.
+
 - Option ``QualifierAlignment`` has been added in order to auto-arrange the
   positioning of specifiers/qualifiers
   `const` `volatile` `static` `inline` `constexpr` `restrict`
@@ -297,11 +314,25 @@ clang-format
   `const` `volatile` `static` `inline` `constexpr` `restrict`
   to be controlled relative to the `type`.
 
+- Option ``RemoveBracesLLVM`` has been added to remove optional braces of
+  control statements for the LLVM style.
+
+- Option ``SeparateDefinitionBlocks`` has been added to insert or remove empty
+  lines between definition blocks including functions, classes, structs, enums,
+  and namespaces.
+
 - Add a ``Custom`` style to ``SpaceBeforeParens``, to better configure the
   space before parentheses. The custom options can be set using
   ``SpaceBeforeParensOptions``.
 
+- The command line argument `-style=<string>` has been extended so that a specific
+  format file at location <format_file_path> can be selected. This is supported
+  via the syntax: `-style=file:<format_file_path>`.
+
 - Improved C++20 Modules and Coroutines support.
+
+- Option ``AfterOverloadedOperator`` has been added in ``SpaceBeforeParensOptions``
+  to allow space between overloaded operator and opening parentheses.
 
 libclang
 --------

@@ -39,9 +39,8 @@ namespace dataflow {
 ///  must provide the following public members:
 ///   * `LatticeT initialElement()` - returns a lattice element that models the
 ///     initial state of a basic block;
-///   * `LatticeT transfer(const Stmt *, const LatticeT &, Environment &)` -
-///     applies the analysis transfer function for a given statement and lattice
-///     element.
+///   * `void transfer(const Stmt *, LatticeT &, Environment &)` - applies the
+///     analysis transfer function for a given statement and lattice element.
 ///
 ///  `LatticeT` is a bounded join-semilattice that is used by `Derived` and must
 ///  provide the following public members:
@@ -79,11 +78,10 @@ public:
     return L1 == L2;
   }
 
-  TypeErasedLattice transferTypeErased(const Stmt *Stmt,
-                                       const TypeErasedLattice &E,
-                                       Environment &Env) final {
-    const Lattice &L = llvm::any_cast<const Lattice &>(E.Value);
-    return {static_cast<Derived *>(this)->transfer(Stmt, L, Env)};
+  void transferTypeErased(const Stmt *Stmt, TypeErasedLattice &E,
+                          Environment &Env) final {
+    Lattice &L = llvm::any_cast<Lattice &>(E.Value);
+    static_cast<Derived *>(this)->transfer(Stmt, L, Env);
   }
 
 private:

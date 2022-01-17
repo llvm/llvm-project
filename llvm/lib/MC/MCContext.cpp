@@ -978,13 +978,3 @@ void MCContext::reportWarning(SMLoc Loc, const Twine &Msg) {
     });
   }
 }
-
-void MCContext::reportFatalError(SMLoc Loc, const Twine &Msg) {
-  reportError(Loc, Msg);
-
-  // If we reached here, we are failing ungracefully. Run the interrupt handlers
-  // to make sure any special cleanups get done, in particular that we remove
-  // files registered with RemoveFileOnSignal.
-  sys::RunInterruptHandlers();
-  exit(1);
-}

@@ -235,6 +235,9 @@ public:
   // Returns this op's extra class declaration code.
   StringRef getExtraClassDeclaration() const;
 
+  // Returns this op's extra class definition code.
+  StringRef getExtraClassDefinition() const;
+
   // Returns the Tablegen definition this operator was constructed from.
   // TODO: do not expose the TableGen record, this is a temporary solution to
   // OpEmitter requiring a Record because Operator does not provide enough

@@ -23,6 +23,7 @@
 
 #include <vector>
 #include <cassert>
+#include <stdexcept>
 
 #include "min_allocator.h"
 #include "test_macros.h"
@@ -39,7 +40,7 @@ make(int size, int start)
 
 template <class Vector>
 void test_get_basic(Vector& c, int start_value) {
-    const int n = c.size();
+    const int n = static_cast<int>(c.size());
     for (int i = 0; i < n; ++i)
         assert(c[i] == start_value + i);
     for (int i = 0; i < n; ++i)
@@ -47,7 +48,7 @@ void test_get_basic(Vector& c, int start_value) {
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
     try {
-        c.at(n);
+        TEST_IGNORE_NODISCARD c.at(n);
         assert(false);
     } catch (const std::out_of_range&) {}
 #endif

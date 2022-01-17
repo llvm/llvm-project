@@ -1,4 +1,4 @@
-//===-- RISCVInstrInfoFH.td - RISC-V 'FH' instructions -----*- tablegen -*-===//
+//===-- RISCVInstrInfoZfh.td - RISC-V 'Zfh' instructions ---*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the RISC-V instructions from the standard 'Zfh'
-// half-precision floating-point extension, version 0.1.
-// This version is still experimental as the 'Zfh' extension hasn't been
-// ratified yet.
+// half-precision floating-point extension, version 1.0.
 //
 //===----------------------------------------------------------------------===//
 
@@ -182,6 +180,10 @@ def : InstAlias<"fge.h $rd, $rs, $rt",
 let Predicates = [HasStdExtZfhmin] in {
 def PseudoFLH  : PseudoFloatLoad<"flh", FPR16>;
 def PseudoFSH  : PseudoStore<"fsh", FPR16>;
+let usesCustomInserter = 1 in {
+def PseudoQuietFLE_H : PseudoQuietFCMP<FPR16>;
+def PseudoQuietFLT_H : PseudoQuietFCMP<FPR16>;
+}
 } // Predicates = [HasStdExtZfhmin]
 
 //===----------------------------------------------------------------------===//
@@ -246,13 +248,34 @@ def : PatFpr16Fpr16<fminnum, FMIN_H>;
 def : PatFpr16Fpr16<fmaxnum, FMAX_H>;
 
 /// Setcc
+// FIXME: SETEQ/SETLT/SETLE imply nonans, can we pick better instructions for
+// strict versions of those.
 
-def : PatFpr16Fpr16<seteq, FEQ_H>;
-def : PatFpr16Fpr16<setoeq, FEQ_H>;
-def : PatFpr16Fpr16<setlt, FLT_H>;
-def : PatFpr16Fpr16<setolt, FLT_H>;
-def : PatFpr16Fpr16<setle, FLE_H>;
-def : PatFpr16Fpr16<setole, FLE_H>;
+// Match non-signaling FEQ_D
+def : PatSetCC<FPR16, any_fsetcc, SETEQ, FEQ_H>;
+def : PatSetCC<FPR16, any_fsetcc, SETOEQ, FEQ_H>;
+def : PatSetCC<FPR16, strict_fsetcc, SETLT, PseudoQuietFLT_H>;
+def : PatSetCC<FPR16, strict_fsetcc, SETOLT, PseudoQuietFLT_H>;
+def : PatSetCC<FPR16, strict_fsetcc, SETLE, PseudoQuietFLE_H>;
+def : PatSetCC<FPR16, strict_fsetcc, SETOLE, PseudoQuietFLE_H>;
+
+// Match signaling FEQ_H
+def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs2, SETEQ),
+          (AND (FLE_H $rs1, $rs2),
+               (FLE_H $rs2, $rs1))>;
+def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs2, SETOEQ),
+          (AND (FLE_H $rs1, $rs2),
+               (FLE_H $rs2, $rs1))>;
+// If both operands are the same, use a single FLE.
+def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs1, SETEQ),
+          (FLE_H $rs1, $rs1)>;
+def : Pat<(strict_fsetccs FPR16:$rs1, FPR16:$rs1, SETOEQ),
+          (FLE_H $rs1, $rs1)>;
+
+def : PatSetCC<FPR16, any_fsetccs, SETLT, FLT_H>;
+def : PatSetCC<FPR16, any_fsetccs, SETOLT, FLT_H>;
+def : PatSetCC<FPR16, any_fsetccs, SETLE, FLE_H>;
+def : PatSetCC<FPR16, any_fsetccs, SETOLE, FLE_H>;
 
 def Select_FPR16_Using_CC_GPR : SelectCC_rrirr<FPR16, GPR>;
 } // Predicates = [HasStdExtZfh]
@@ -283,8 +306,8 @@ def : Pat<(i32 (any_fp_to_sint FPR16:$rs1)), (FCVT_W_H $rs1, 0b001)>;
 def : Pat<(i32 (any_fp_to_uint FPR16:$rs1)), (FCVT_WU_H $rs1, 0b001)>;
 
 // Saturating float->[u]int32.
-def : Pat<(i32 (riscv_fcvt_x_rtz FPR16:$rs1)), (FCVT_W_H $rs1, 0b001)>;
-def : Pat<(i32 (riscv_fcvt_xu_rtz FPR16:$rs1)), (FCVT_WU_H $rs1, 0b001)>;
+def : Pat<(i32 (riscv_fcvt_x FPR16:$rs1, timm:$frm)), (FCVT_W_H $rs1, timm:$frm)>;
+def : Pat<(i32 (riscv_fcvt_xu FPR16:$rs1, timm:$frm)), (FCVT_WU_H $rs1, timm:$frm)>;
 
 // half->int32 with current rounding mode.
 def : Pat<(i32 (any_lrint FPR16:$rs1)), (FCVT_W_H $rs1, 0b111)>;
@@ -301,16 +324,16 @@ let Predicates = [HasStdExtZfh, IsRV64] in {
 // Use target specific isd nodes to help us remember the result is sign
 // extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be
 // duplicated if it has another user that didn't need the sign_extend.
-def : Pat<(riscv_any_fcvt_w_rtz_rv64 FPR16:$rs1),  (FCVT_W_H $rs1, 0b001)>;
-def : Pat<(riscv_any_fcvt_wu_rtz_rv64 FPR16:$rs1), (FCVT_WU_H $rs1, 0b001)>;
+def : Pat<(riscv_any_fcvt_w_rv64 FPR16:$rs1, timm:$frm),  (FCVT_W_H $rs1, timm:$frm)>;
+def : Pat<(riscv_any_fcvt_wu_rv64 FPR16:$rs1, timm:$frm), (FCVT_WU_H $rs1, timm:$frm)>;
 
 // half->[u]int64. Round-to-zero must be used.
 def : Pat<(i64 (any_fp_to_sint FPR16:$rs1)), (FCVT_L_H $rs1, 0b001)>;
 def : Pat<(i64 (any_fp_to_uint FPR16:$rs1)), (FCVT_LU_H $rs1, 0b001)>;
 
 // Saturating float->[u]int64.
-def : Pat<(i64 (riscv_fcvt_x_rtz FPR16:$rs1)), (FCVT_L_H $rs1, 0b001)>;
-def : Pat<(i64 (riscv_fcvt_xu_rtz FPR16:$rs1)), (FCVT_LU_H $rs1, 0b001)>;
+def : Pat<(i64 (riscv_fcvt_x FPR16:$rs1, timm:$frm)), (FCVT_L_H $rs1, timm:$frm)>;
+def : Pat<(i64 (riscv_fcvt_xu FPR16:$rs1, timm:$frm)), (FCVT_LU_H $rs1, timm:$frm)>;
 
 // half->int64 with current rounding mode.
 def : Pat<(i64 (any_lrint FPR16:$rs1)), (FCVT_L_H $rs1, 0b111)>;

@@ -387,7 +387,7 @@ WhileOpConversion::matchAndRewrite(scf::WhileOp whileOp, OpAdaptor adaptor,
   // the before region, which may not matching the whole op's result. Instead,
   // the scf.condition op returns values matching the whole op's results. So we
   // need to create/load/store variables according to that.
-  for (auto it : llvm::enumerate(condArgs)) {
+  for (const auto &it : llvm::enumerate(condArgs)) {
     auto res = it.value();
     auto i = it.index();
     auto pointerType =

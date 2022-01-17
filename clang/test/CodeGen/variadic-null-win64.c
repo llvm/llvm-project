@@ -15,9 +15,9 @@ void f(const char *f) {
   v(f, 1, 2, 3, NULL);
   kr(f, 1, 2, 3, 0);
 }
-// WINDOWS: define dso_local void @f(i8* %f)
-// WINDOWS: call void (i8*, ...) @v(i8* {{.*}}, i32 1, i32 2, i32 3, i64 0)
-// WINDOWS: call void bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32)*)(i8* {{.*}}, i32 1, i32 2, i32 3, i32 0)
-// LINUX: define{{.*}} void @f(i8* %f)
-// LINUX: call void (i8*, ...) @v(i8* {{.*}}, i32 1, i32 2, i32 3, i32 0)
-// LINUX: call void (i8*, i32, i32, i32, i32, ...) bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32, ...)*)(i8* {{.*}}, i32 1, i32 2, i32 3, i32 0)
+// WINDOWS: define dso_local void @f(i8* noundef %f)
+// WINDOWS: call void (i8*, ...) @v(i8* {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i64 noundef 0)
+// WINDOWS: call void bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32)*)(i8* noundef {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)
+// LINUX: define{{.*}} void @f(i8* noundef %f)
+// LINUX: call void (i8*, ...) @v(i8* {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)
+// LINUX: call void (i8*, i32, i32, i32, i32, ...) bitcast (void (...)* @kr to void (i8*, i32, i32, i32, i32, ...)*)(i8* {{.*}}, i32 noundef 1, i32 noundef 2, i32 noundef 3, i32 noundef 0)

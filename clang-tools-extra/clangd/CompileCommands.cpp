@@ -241,16 +241,38 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd,
   if (ArchOptCount < 2)
     IndicesToDrop.clear();
 
+  // In some cases people may try to reuse the command from another file, e.g.
+  //   { File: "foo.h", CommandLine: "clang foo.cpp" }.
+  // We assume the intent is to parse foo.h the same way as foo.cpp, or as if
+  // it were being included from foo.cpp.
+  //
+  // We're going to rewrite the command to refer to foo.h, and this may change
+  // its semantics (e.g. by parsing the file as C). If we do this, we should
+  // use transferCompileCommand to adjust the argv.
+  // In practice only the extension of the file matters, so do this only when
+  // it differs.
+  llvm::StringRef FileExtension = llvm::sys::path::extension(File);
+  llvm::Optional<std::string> TransferFrom;
+  auto SawInput = [&](llvm::StringRef Input) {
+    if (llvm::sys::path::extension(Input) != FileExtension)
+      TransferFrom.emplace(Input);
+  };
+
   // Strip all the inputs and `--`. We'll put the input for the requested file
   // explicitly at the end of the flags. This ensures modifications done in the
   // following steps apply in more cases (like setting -x, which only affects
   // inputs that come after it).
-  for (auto *Input : ArgList.filtered(driver::options::OPT_INPUT))
+  for (auto *Input : ArgList.filtered(driver::options::OPT_INPUT)) {
+    SawInput(Input->getValue(0));
     IndicesToDrop.push_back(Input->getIndex());
+  }
   // Anything after `--` is also treated as input, drop them as well.
   if (auto *DashDash =
           ArgList.getLastArgNoClaim(driver::options::OPT__DASH_DASH)) {
-    Cmd.resize(DashDash->getIndex() + 1); // +1 to account for Cmd[0].
+    auto DashDashIndex = DashDash->getIndex() + 1; // +1 accounts for Cmd[0]
+    for (unsigned I = DashDashIndex; I < Cmd.size(); ++I)
+      SawInput(Cmd[I]);
+    Cmd.resize(DashDashIndex);
   }
   llvm::sort(IndicesToDrop);
   llvm::for_each(llvm::reverse(IndicesToDrop),
@@ -261,6 +283,17 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd,
   // of the modifications should respect `--`.
   Cmd.push_back("--");
   Cmd.push_back(File.str());
+
+  if (TransferFrom) {
+    tooling::CompileCommand TransferCmd;
+    TransferCmd.Filename = std::move(*TransferFrom);
+    TransferCmd.CommandLine = std::move(Cmd);
+    TransferCmd = transferCompileCommand(std::move(TransferCmd), File);
+    Cmd = std::move(TransferCmd.CommandLine);
+    assert(Cmd.size() >= 2 && Cmd.back() == File &&
+           Cmd[Cmd.size() - 2] == "--" &&
+           "TransferCommand should produce a command ending in -- filename");
+  }
 
   for (auto &Edit : Config::current().CompileFlags.Edits)
     Edit(Cmd);

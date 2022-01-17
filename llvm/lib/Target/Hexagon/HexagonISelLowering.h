@@ -476,6 +476,8 @@ private:
   SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxConvertFpInt(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const;

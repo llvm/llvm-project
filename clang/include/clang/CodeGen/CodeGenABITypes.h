@@ -32,26 +32,18 @@
 namespace llvm {
 class AttrBuilder;
 class Constant;
-class DataLayout;
-class Module;
 class Function;
 class FunctionType;
 class Type;
 }
 
 namespace clang {
-class ASTContext;
 class CXXConstructorDecl;
 class CXXDestructorDecl;
 class CXXRecordDecl;
 class CXXMethodDecl;
-class CodeGenOptions;
-class CoverageSourceInfo;
-class DiagnosticsEngine;
-class HeaderSearchOptions;
 class ObjCMethodDecl;
 class ObjCProtocolDecl;
-class PreprocessorOptions;
 
 namespace CodeGen {
 class CGFunctionInfo;

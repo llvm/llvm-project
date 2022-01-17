@@ -1175,6 +1175,8 @@ duplicated.
 
 A frontend should emit exactly one `coro.id` intrinsic per coroutine.
 
+A frontend should emit function attribute `"coroutine.presplit"` for the coroutine.
+
 .. _coro.id.async:
 
 'llvm.coro.id.async' Intrinsic
@@ -1213,6 +1215,8 @@ Semantics:
 """"""""""
 
 A frontend should emit exactly one `coro.id.async` intrinsic per coroutine.
+
+A frontend should emit function attribute `"coroutine.presplit"` for the coroutine.
 
 .. _coro.id.retcon:
 
@@ -1266,6 +1270,11 @@ or throwing an exception.  It must take an integer and return a pointer.
 The sixth argument must be a reference to a global function that will
 be used to deallocate memory.  It must take a pointer and return ``void``.
 
+Semantics:
+""""""""""
+
+A frontend should emit function attribute `"coroutine.presplit"` for the coroutine.
+
 'llvm.coro.id.retcon.once' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
@@ -1286,6 +1295,11 @@ Arguments:
 As for ``llvm.core.id.retcon``, except that the return type of the
 continuation prototype must be `void` instead of matching the
 coroutine's return type.
+
+Semantics:
+""""""""""
+
+A frontend should emit function attribute `"coroutine.presplit"` for the coroutine.
 
 .. _coro.end:
 

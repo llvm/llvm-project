@@ -84,6 +84,25 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(const llvm::json::Object *Obj) {
   llvm::DenseMap<OSEnvPair::StorageType, Optional<RelatedTargetVersionMapping>>
       VersionMappings;
   if (const auto *VM = Obj->getObject("VersionMap")) {
+    // FIXME: Generalize this out beyond iOS-deriving targets.
+    // Look for ios_<targetos> version mapping for targets that derive from ios.
+    for (const auto &KV : *VM) {
+      auto Pair = StringRef(KV.getFirst()).split("_");
+      if (Pair.first.compare_insensitive("ios") == 0) {
+        llvm::Triple TT(llvm::Twine("--") + Pair.second.lower());
+        if (TT.getOS() != llvm::Triple::UnknownOS) {
+          auto Mapping = RelatedTargetVersionMapping::parseJSON(
+              *KV.getSecond().getAsObject(), *MaximumDeploymentVersion);
+          if (Mapping)
+            VersionMappings[OSEnvPair(llvm::Triple::IOS,
+                                      llvm::Triple::UnknownEnvironment,
+                                      TT.getOS(),
+                                      llvm::Triple::UnknownEnvironment)
+                                .Value] = std::move(Mapping);
+        }
+      }
+    }
+
     if (const auto *Mapping = VM->getObject("macOS_iOSMac")) {
       auto VersionMap = RelatedTargetVersionMapping::parseJSON(
           *Mapping, *MaximumDeploymentVersion);

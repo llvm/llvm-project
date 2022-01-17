@@ -459,12 +459,22 @@ ExprResult Parser::ParseBraceInitializer() {
       Actions, EnterExpressionEvaluationContext::InitList);
 
   bool InitExprsOk = true;
-  DesignatorCompletionInfo DesignatorCompletion{
-      InitExprs,
-      PreferredType.get(T.getOpenLocation()),
+  QualType LikelyType = PreferredType.get(T.getOpenLocation());
+  DesignatorCompletionInfo DesignatorCompletion{InitExprs, LikelyType};
+  bool CalledSignatureHelp = false;
+  auto RunSignatureHelp = [&] {
+    QualType PreferredType;
+    if (!LikelyType.isNull())
+      PreferredType = Actions.ProduceConstructorSignatureHelp(
+          LikelyType->getCanonicalTypeInternal(), T.getOpenLocation(),
+          InitExprs, T.getOpenLocation(), /*Braced=*/true);
+    CalledSignatureHelp = true;
+    return PreferredType;
   };
 
-  while (1) {
+  while (true) {
+    PreferredType.enterFunctionArgument(Tok.getLocation(), RunSignatureHelp);
+
     // Handle Microsoft __if_exists/if_not_exists if necessary.
     if (getLangOpts().MicrosoftExt && (Tok.is(tok::kw___if_exists) ||
         Tok.is(tok::kw___if_not_exists))) {

@@ -109,7 +109,7 @@ private:
   Expected<PairRelocInfo>
   parsePairRelocation(Block &BlockToFix, Edge::Kind SubtractorKind,
                       const MachO::relocation_info &SubRI,
-                      JITTargetAddress FixupAddress, const char *FixupContent,
+                      orc::ExecutorAddr FixupAddress, const char *FixupContent,
                       object::relocation_iterator &UnsignedRelItr,
                       object::relocation_iterator &RelEnd) {
     using namespace support;
@@ -162,7 +162,7 @@ private:
         return ToSymbolSec.takeError();
       ToSymbol = getSymbolByAddress(*ToSymbolSec, ToSymbolSec->Address);
       assert(ToSymbol && "No symbol for section");
-      FixupValue -= ToSymbol->getAddress();
+      FixupValue -= ToSymbol->getAddress().getValue();
     }
 
     MachOARM64RelocationKind DeltaKind;
@@ -195,7 +195,7 @@ private:
 
     for (auto &S : Obj.sections()) {
 
-      JITTargetAddress SectionAddress = S.getAddress();
+      orc::ExecutorAddr SectionAddress(S.getAddress());
 
       // Skip relocations virtual sections.
       if (S.isVirtual()) {
@@ -234,7 +234,8 @@ private:
           return Kind.takeError();
 
         // Find the address of the value to fix up.
-        JITTargetAddress FixupAddress = SectionAddress + (uint32_t)RI.r_address;
+        orc::ExecutorAddr FixupAddress =
+            SectionAddress + (uint32_t)RI.r_address;
         LLVM_DEBUG({
           dbgs() << "  " << NSec->SectName << " + "
                  << formatv("{0:x8}", RI.r_address) << ":\n";
@@ -249,7 +250,7 @@ private:
           BlockToFix = &SymbolToFixOrErr->getBlock();
         }
 
-        if (FixupAddress + static_cast<JITTargetAddress>(1ULL << RI.r_length) >
+        if (FixupAddress + orc::ExecutorAddrDiff(1ULL << RI.r_length) >
             BlockToFix->getAddress() + BlockToFix->getContent().size())
           return make_error<JITLinkError>(
               "Relocation content extends past end of fixup block");
@@ -290,7 +291,7 @@ private:
           });
 
           // Find the address of the value to fix up.
-          JITTargetAddress PairedFixupAddress =
+          orc::ExecutorAddr PairedFixupAddress =
               SectionAddress + (uint32_t)RI.r_address;
           if (PairedFixupAddress != FixupAddress)
             return make_error<JITLinkError>("Paired relocation points at "
@@ -324,7 +325,7 @@ private:
           Addend = *(const ulittle64_t *)FixupContent;
           break;
         case Pointer64Anon: {
-          JITTargetAddress TargetAddress = *(const ulittle64_t *)FixupContent;
+          orc::ExecutorAddr TargetAddress(*(const ulittle64_t *)FixupContent);
           auto TargetNSec = findSectionByIndex(RI.r_symbolnum - 1);
           if (!TargetNSec)
             return TargetNSec.takeError();
@@ -435,7 +436,7 @@ public:
 
   Symbol &createGOTEntry(Symbol &Target) {
     auto &GOTEntryBlock = G.createContentBlock(
-        getGOTSection(), getGOTEntryBlockContent(), 0, 8, 0);
+        getGOTSection(), getGOTEntryBlockContent(), orc::ExecutorAddr(), 8, 0);
     GOTEntryBlock.addEdge(Pointer64, 0, Target, 0);
     return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
   }
@@ -457,8 +458,8 @@ public:
   }
 
   Symbol &createPLTStub(Symbol &Target) {
-    auto &StubContentBlock =
-        G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
+    auto &StubContentBlock = G.createContentBlock(
+        getStubsSection(), getStubBlockContent(), orc::ExecutorAddr(), 1, 0);
     // Re-use GOT entries for stub targets.
     auto &GOTEntrySymbol = getGOTEntry(Target);
     StubContentBlock.addEdge(LDRLiteral19, 0, GOTEntrySymbol, 0);
@@ -474,7 +475,7 @@ public:
 private:
   Section &getGOTSection() {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", MemProt::Read);
+      GOTSection = &G.createSection("$__GOT", MemProt::Read | MemProt::Exec);
     return *GOTSection;
   }
 
@@ -545,11 +546,12 @@ private:
 
     char *BlockWorkingMem = B.getAlreadyMutableContent().data();
     char *FixupPtr = BlockWorkingMem + E.getOffset();
-    JITTargetAddress FixupAddress = B.getAddress() + E.getOffset();
+    orc::ExecutorAddr FixupAddress = B.getAddress() + E.getOffset();
 
     switch (E.getKind()) {
     case Branch26: {
-      assert((FixupAddress & 0x3) == 0 && "Branch-inst is not 32-bit aligned");
+      assert((FixupAddress.getValue() & 0x3) == 0 &&
+             "Branch-inst is not 32-bit aligned");
 
       int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
 
@@ -569,7 +571,7 @@ private:
       break;
     }
     case Pointer32: {
-      uint64_t Value = E.getTarget().getAddress() + E.getAddend();
+      uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
       if (Value > std::numeric_limits<uint32_t>::max())
         return makeTargetOutOfRangeError(G, B, E);
       *(ulittle32_t *)FixupPtr = Value;
@@ -577,7 +579,7 @@ private:
     }
     case Pointer64:
     case Pointer64Anon: {
-      uint64_t Value = E.getTarget().getAddress() + E.getAddend();
+      uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
       *(ulittle64_t *)FixupPtr = Value;
       break;
     }
@@ -587,9 +589,10 @@ private:
       assert((E.getKind() != GOTPage21 || E.getAddend() == 0) &&
              "GOTPAGE21 with non-zero addend");
       uint64_t TargetPage =
-          (E.getTarget().getAddress() + E.getAddend()) &
-            ~static_cast<uint64_t>(4096 - 1);
-      uint64_t PCPage = FixupAddress & ~static_cast<uint64_t>(4096 - 1);
+          (E.getTarget().getAddress().getValue() + E.getAddend()) &
+          ~static_cast<uint64_t>(4096 - 1);
+      uint64_t PCPage =
+          FixupAddress.getValue() & ~static_cast<uint64_t>(4096 - 1);
 
       int64_t PageDelta = TargetPage - PCPage;
       if (PageDelta < -(1 << 30) || PageDelta > ((1 << 30) - 1))
@@ -606,7 +609,7 @@ private:
     }
     case PageOffset12: {
       uint64_t TargetOffset =
-        (E.getTarget().getAddress() + E.getAddend()) & 0xfff;
+          (E.getTarget().getAddress() + E.getAddend()).getValue() & 0xfff;
 
       uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
       unsigned ImmShift = getPageOffset12Shift(RawInstr);
@@ -627,7 +630,7 @@ private:
       assert((RawInstr & 0xfffffc00) == 0xf9400000 &&
              "RawInstr isn't a 64-bit LDR immediate");
 
-      uint32_t TargetOffset = E.getTarget().getAddress() & 0xfff;
+      uint32_t TargetOffset = E.getTarget().getAddress().getValue() & 0xfff;
       assert((TargetOffset & 0x7) == 0 && "GOT entry is not 8-byte aligned");
       uint32_t EncodedImm = (TargetOffset >> 3) << 10;
       uint32_t FixedInstr = RawInstr | EncodedImm;
@@ -635,7 +638,8 @@ private:
       break;
     }
     case LDRLiteral19: {
-      assert((FixupAddress & 0x3) == 0 && "LDR is not 32-bit aligned");
+      assert((FixupAddress.getValue() & 0x3) == 0 &&
+             "LDR is not 32-bit aligned");
       assert(E.getAddend() == 0 && "LDRLiteral19 with non-zero addend");
       uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
       assert(RawInstr == 0x58000010 && "RawInstr isn't a 64-bit LDR literal");
@@ -704,6 +708,13 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     // Add compact unwind splitter pass.
     Config.PrePrunePasses.push_back(
         CompactUnwindSplitter("__LD,__compact_unwind"));
+
+    // Add eh-frame passses.
+    // FIXME: Prune eh-frames for which compact-unwind is available once
+    // we support compact-unwind registration with libunwind.
+    Config.PrePrunePasses.push_back(EHFrameSplitter("__TEXT,__eh_frame"));
+    Config.PrePrunePasses.push_back(
+        EHFrameEdgeFixer("__TEXT,__eh_frame", 8, Delta64, Delta32, NegDelta32));
 
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(

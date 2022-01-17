@@ -524,12 +524,12 @@ struct Allocator {
 
   void PrintStats() { allocator.PrintStats(); }
 
-  void ForceLock() NO_THREAD_SAFETY_ANALYSIS {
+  void ForceLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     allocator.ForceLock();
     fallback_mutex.Lock();
   }
 
-  void ForceUnlock() NO_THREAD_SAFETY_ANALYSIS {
+  void ForceUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     fallback_mutex.Unlock();
     allocator.ForceUnlock();
   }

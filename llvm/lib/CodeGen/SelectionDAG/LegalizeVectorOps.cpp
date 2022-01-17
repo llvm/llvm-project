@@ -133,6 +133,7 @@ class VectorLegalizer {
   /// Implement vselect in terms of XOR, AND, OR when blend is not
   /// supported by the target.
   SDValue ExpandVSELECT(SDNode *Node);
+  SDValue ExpandVP_SELECT(SDNode *Node);
   SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
@@ -457,6 +458,14 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
       Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   }
+
+#define BEGIN_REGISTER_VP_SDNODE(VPID, LEGALPOS, ...)                          \
+  case ISD::VPID: {                                                            \
+    EVT LegalizeVT = LEGALPOS < 0 ? Node->getValueType(-(1 + LEGALPOS))        \
+                                  : Node->getOperand(LEGALPOS).getValueType(); \
+    Action = TLI.getOperationAction(Node->getOpcode(), LegalizeVT);            \
+  } break;
+#include "llvm/IR/VPIntrinsics.def"
   }
 
   LLVM_DEBUG(dbgs() << "\nLegalizing vector op: "; Node->dump(&DAG));
@@ -717,6 +726,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     return;
   case ISD::VSELECT:
     Results.push_back(ExpandVSELECT(Node));
+    return;
+  case ISD::VP_SELECT:
+    Results.push_back(ExpandVP_SELECT(Node));
     return;
   case ISD::SELECT:
     Results.push_back(ExpandSELECT(Node));
@@ -1193,6 +1205,37 @@ SDValue VectorLegalizer::ExpandVSELECT(SDNode *Node) {
   Op2 = DAG.getNode(ISD::AND, DL, VT, Op2, NotMask);
   SDValue Val = DAG.getNode(ISD::OR, DL, VT, Op1, Op2);
   return DAG.getNode(ISD::BITCAST, DL, Node->getValueType(0), Val);
+}
+
+SDValue VectorLegalizer::ExpandVP_SELECT(SDNode *Node) {
+  // Implement VP_SELECT in terms of VP_XOR, VP_AND and VP_OR on platforms which
+  // do not support it natively.
+  SDLoc DL(Node);
+
+  SDValue Mask = Node->getOperand(0);
+  SDValue Op1 = Node->getOperand(1);
+  SDValue Op2 = Node->getOperand(2);
+  SDValue EVL = Node->getOperand(3);
+
+  EVT VT = Mask.getValueType();
+
+  // If we can't even use the basic vector operations of
+  // VP_AND,VP_OR,VP_XOR, we will have to scalarize the op.
+  if (TLI.getOperationAction(ISD::VP_AND, VT) == TargetLowering::Expand ||
+      TLI.getOperationAction(ISD::VP_XOR, VT) == TargetLowering::Expand ||
+      TLI.getOperationAction(ISD::VP_OR, VT) == TargetLowering::Expand)
+    return DAG.UnrollVectorOp(Node);
+
+  // This operation also isn't safe when the operands aren't also booleans.
+  if (Op1.getValueType().getVectorElementType() != MVT::i1)
+    return DAG.UnrollVectorOp(Node);
+
+  SDValue Ones = DAG.getAllOnesConstant(DL, VT);
+  SDValue NotMask = DAG.getNode(ISD::VP_XOR, DL, VT, Mask, Ones, Mask, EVL);
+
+  Op1 = DAG.getNode(ISD::VP_AND, DL, VT, Op1, Mask, Mask, EVL);
+  Op2 = DAG.getNode(ISD::VP_AND, DL, VT, Op2, NotMask, Mask, EVL);
+  return DAG.getNode(ISD::VP_OR, DL, VT, Op1, Op2, Mask, EVL);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,

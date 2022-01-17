@@ -301,6 +301,24 @@ module attributes {test.someAttr = #test.cmpnd_nested_outer<i <42 <1, !test.smpl
 // CHECK: test.format_cpmd_nested_attr nested <i <42 <1, !test.smpla, [5, 6]>>>
 test.format_cpmd_nested_attr nested <i <42 <1, !test.smpla, [5, 6]>>>
 
+//-----
+
+// CHECK: test.format_qual_cpmd_nested_attr nested #test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
+test.format_qual_cpmd_nested_attr nested #test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
+
+//-----
+
+// Check the `qualified` directive in the declarative assembly format.
+// CHECK: @qualifiedCompoundNestedExplicit(%arg0: !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>)
+func @qualifiedCompoundNestedExplicit(%arg0: !test.cmpnd_nested_outer<i !test.cmpnd_inner<42 <1, !test.smpla, [5, 6]>>>) -> () {
+  // Verify that the type prefix is not elided
+  // CHECK: format_qual_cpmd_nested_type %arg0 nested !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
+  test.format_qual_cpmd_nested_type %arg0 nested !test.cmpnd_nested_outer<i <42 <1, !test.smpla, [5, 6]>>>
+  return
+}
+
+//-----
+
 //===----------------------------------------------------------------------===//
 // Format custom directives
 //===----------------------------------------------------------------------===//
@@ -409,7 +427,10 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 //===----------------------------------------------------------------------===//
 
 // CHECK: test.format_infer_type
-%ignored_res7 = test.format_infer_type
+%ignored_res7a = test.format_infer_type
+
+// CHECK: test.format_infer_type2
+%ignored_res7b = test.format_infer_type2
 
 // CHECK: test.format_infer_type_all_operands_and_types(%[[I64]], %[[I32]]) : i64, i32
 %ignored_res8:2 = test.format_infer_type_all_operands_and_types(%i64, %i32) : i64, i32

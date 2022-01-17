@@ -45,10 +45,6 @@ static cl::opt<bool> DisableLoopAlignment(
   cl::desc("Do not align and prefetch loops"),
   cl::init(false));
 
-static cl::opt<bool> VGPRReserveforSGPRSpill(
-    "amdgpu-reserve-vgpr-for-sgpr-spill",
-    cl::desc("Allocates one VGPR for future SGPR Spill"), cl::init(true));
-
 static cl::opt<bool> UseDivergentRegisterIndexing(
   "amdgpu-use-divergent-register-indexing",
   cl::Hidden,
@@ -2776,6 +2772,7 @@ void SITargetLowering::passSpecialInputs(
 
   SelectionDAG &DAG = CLI.DAG;
   const SDLoc &DL = CLI.DL;
+  const Function &F = DAG.getMachineFunction().getFunction();
 
   const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const AMDGPUFunctionArgInfo &CallerArgInfo = Info.getArgInfo();
@@ -2887,11 +2884,16 @@ void SITargetLowering::passSpecialInputs(
 
   // If incoming ids are not packed we need to pack them.
   if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo->WorkItemIDX &&
-      NeedWorkItemIDX)
-    InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgX);
+      NeedWorkItemIDX) {
+    if (Subtarget->getMaxWorkitemID(F, 0) != 0) {
+      InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgX);
+    } else {
+      InputReg = DAG.getConstant(0, DL, MVT::i32);
+    }
+  }
 
   if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo->WorkItemIDY &&
-      NeedWorkItemIDY) {
+      NeedWorkItemIDY && Subtarget->getMaxWorkitemID(F, 1) != 0) {
     SDValue Y = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgY);
     Y = DAG.getNode(ISD::SHL, SL, MVT::i32, Y,
                     DAG.getShiftAmountConstant(10, MVT::i32, SL));
@@ -2900,7 +2902,7 @@ void SITargetLowering::passSpecialInputs(
   }
 
   if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo->WorkItemIDZ &&
-      NeedWorkItemIDZ) {
+      NeedWorkItemIDZ && Subtarget->getMaxWorkitemID(F, 2) != 0) {
     SDValue Z = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgZ);
     Z = DAG.getNode(ISD::SHL, SL, MVT::i32, Z,
                     DAG.getShiftAmountConstant(20, MVT::i32, SL));
@@ -5501,6 +5503,22 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                          MachineMemOperand::MOInvariant);
 }
 
+/// Return true if the value is a known valid address, such that a null check is
+/// not necessary.
+static bool isKnownNonNull(SDValue Val, SelectionDAG &DAG,
+                           const AMDGPUTargetMachine &TM, unsigned AddrSpace) {
+  if (isa<FrameIndexSDNode>(Val) || isa<GlobalAddressSDNode>(Val) ||
+      isa<BasicBlockSDNode>(Val))
+    return true;
+
+  if (auto *ConstVal = dyn_cast<ConstantSDNode>(Val))
+    return ConstVal->getSExtValue() != TM.getNullPointerValue(AddrSpace);
+
+  // TODO: Search through arithmetic, handle arguments and loads
+  // marked nonnull.
+  return false;
+}
+
 SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc SL(Op);
@@ -5508,44 +5526,51 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   SDValue Src = ASC->getOperand(0);
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
+  unsigned SrcAS = ASC->getSrcAddressSpace();
 
   const AMDGPUTargetMachine &TM =
     static_cast<const AMDGPUTargetMachine &>(getTargetMachine());
 
   // flat -> local/private
-  if (ASC->getSrcAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
+  if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     unsigned DestAS = ASC->getDestAddressSpace();
 
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
         DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
+      SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
+
+      if (isKnownNonNull(Src, DAG, TM, SrcAS))
+        return Ptr;
+
       unsigned NullVal = TM.getNullPointerValue(DestAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
       SDValue NonNull = DAG.getSetCC(SL, MVT::i1, Src, FlatNullPtr, ISD::SETNE);
-      SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
-      return DAG.getNode(ISD::SELECT, SL, MVT::i32,
-                         NonNull, Ptr, SegmentNullPtr);
+      return DAG.getNode(ISD::SELECT, SL, MVT::i32, NonNull, Ptr,
+                         SegmentNullPtr);
     }
   }
 
   // local/private -> flat
   if (ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS) {
-    unsigned SrcAS = ASC->getSrcAddressSpace();
-
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
         SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
+
+      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), SL, DAG);
+      SDValue CvtPtr =
+          DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
+      CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
+
+      if (isKnownNonNull(Src, DAG, TM, SrcAS))
+        return CvtPtr;
+
       unsigned NullVal = TM.getNullPointerValue(SrcAS);
       SDValue SegmentNullPtr = DAG.getConstant(NullVal, SL, MVT::i32);
 
       SDValue NonNull
         = DAG.getSetCC(SL, MVT::i1, Src, SegmentNullPtr, ISD::SETNE);
 
-      SDValue Aperture = getSegmentAperture(ASC->getSrcAddressSpace(), SL, DAG);
-      SDValue CvtPtr
-        = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
-
-      return DAG.getNode(ISD::SELECT, SL, MVT::i64, NonNull,
-                         DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr),
+      return DAG.getNode(ISD::SELECT, SL, MVT::i64, NonNull, CvtPtr,
                          FlatNullPtr);
     }
   }
@@ -6731,14 +6756,23 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return getPreloadedValue(DAG, *MFI, VT,
                              AMDGPUFunctionArgInfo::WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_workitem_id_x:
+    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 0) == 0)
+      return DAG.getConstant(0, DL, MVT::i32);
+
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDX);
   case Intrinsic::amdgcn_workitem_id_y:
+    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 1) == 0)
+      return DAG.getConstant(0, DL, MVT::i32);
+
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDY);
   case Intrinsic::amdgcn_workitem_id_z:
+    if (Subtarget->getMaxWorkitemID(MF.getFunction(), 2) == 0)
+      return DAG.getConstant(0, DL, MVT::i32);
+
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDZ);
@@ -8412,16 +8446,6 @@ SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   SDLoc DL(Op);
   SDValue Cond = Op.getOperand(0);
-
-  if (Subtarget->hasScalarCompareEq64() && Op->getOperand(0)->hasOneUse() &&
-      !Op->isDivergent()) {
-    if (VT == MVT::i64)
-      return Op;
-    SDValue LHS = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Op.getOperand(1));
-    SDValue RHS = DAG.getNode(ISD::BITCAST, DL, MVT::i64, Op.getOperand(2));
-    return DAG.getNode(ISD::BITCAST, DL, VT,
-                       DAG.getSelect(DL, MVT::i64, Cond, LHS, RHS));
-  }
 
   SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
   SDValue One = DAG.getConstant(1, DL, MVT::i32);
@@ -11130,7 +11154,9 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   unsigned TFEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::tfe) - 1;
   unsigned LWEIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::lwe) - 1;
   bool UsesTFC = ((int(TFEIdx) >= 0 && Node->getConstantOperandVal(TFEIdx)) ||
-                  Node->getConstantOperandVal(LWEIdx)) ? 1 : 0;
+                  Node->getConstantOperandVal(LWEIdx))
+                     ? true
+                     : false;
   unsigned TFCLane = 0;
   bool HasChain = Node->getNumValues() > 1;
 
@@ -11719,25 +11745,51 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       return std::make_pair(0U, RC);
   }
 
-  if (Constraint.size() > 1) {
-    if (Constraint[1] == 'v') {
+  if (Constraint.startswith("{") && Constraint.endswith("}")) {
+    StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
+    if (RegName.consume_front("v")) {
       RC = &AMDGPU::VGPR_32RegClass;
-    } else if (Constraint[1] == 's') {
+    } else if (RegName.consume_front("s")) {
       RC = &AMDGPU::SGPR_32RegClass;
-    } else if (Constraint[1] == 'a') {
+    } else if (RegName.consume_front("a")) {
       RC = &AMDGPU::AGPR_32RegClass;
     }
 
     if (RC) {
       uint32_t Idx;
-      bool Failed = Constraint.substr(2).getAsInteger(10, Idx);
-      if (!Failed && Idx < RC->getNumRegs())
-        return std::make_pair(RC->getRegister(Idx), RC);
+      if (RegName.consume_front("[")) {
+        uint32_t End;
+        bool Failed = RegName.consumeInteger(10, Idx);
+        Failed |= !RegName.consume_front(":");
+        Failed |= RegName.consumeInteger(10, End);
+        Failed |= !RegName.consume_back("]");
+        if (!Failed) {
+          uint32_t Width = (End - Idx + 1) * 32;
+          MCRegister Reg = RC->getRegister(Idx);
+          if (SIRegisterInfo::isVGPRClass(RC))
+            RC = TRI->getVGPRClassForBitWidth(Width);
+          else if (SIRegisterInfo::isSGPRClass(RC))
+            RC = TRI->getSGPRClassForBitWidth(Width);
+          else if (SIRegisterInfo::isAGPRClass(RC))
+            RC = TRI->getAGPRClassForBitWidth(Width);
+          if (RC) {
+            Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
+            return std::make_pair(Reg, RC);
+          }
+        }
+      } else {
+        bool Failed = RegName.getAsInteger(10, Idx);
+        if (!Failed && Idx < RC->getNumRegs())
+          return std::make_pair(RC->getRegister(Idx), RC);
+      }
     }
   }
 
-  // FIXME: Returns VS_32 for physical SGPR constraints
-  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  auto Ret = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  if (Ret.first)
+    Ret.second = TRI->getPhysRegClass(Ret.first);
+
+  return Ret;
 }
 
 static bool isImmConstraint(StringRef Constraint) {
@@ -11975,13 +12027,6 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   }
 
   TargetLoweringBase::finalizeLowering(MF);
-
-  // Allocate a VGPR for future SGPR Spill if
-  // "amdgpu-reserve-vgpr-for-sgpr-spill" option is used
-  // FIXME: We won't need this hack if we split SGPR allocation from VGPR
-  if (VGPRReserveforSGPRSpill && TRI->spillSGPRToVGPR() &&
-      !Info->VGPRReservedForSGPRSpill && !Info->isEntryFunction())
-    Info->reserveVGPRforSGPRSpills(MF);
 }
 
 void SITargetLowering::computeKnownBitsForFrameIndex(
@@ -12441,17 +12486,10 @@ bool SITargetLowering::requiresUniformRegister(MachineFunction &MF,
       for (auto &TC : TargetConstraints) {
         if (TC.Type == InlineAsm::isOutput) {
           ComputeConstraintToUse(TC, SDValue());
-          unsigned AssignedReg;
-          const TargetRegisterClass *RC;
-          std::tie(AssignedReg, RC) = getRegForInlineAsmConstraint(
-              SIRI, TC.ConstraintCode, TC.ConstraintVT);
-          if (RC) {
-            MachineRegisterInfo &MRI = MF.getRegInfo();
-            if (AssignedReg != 0 && SIRI->isSGPRReg(MRI, AssignedReg))
-              return true;
-            else if (SIRI->isSGPRClass(RC))
-              return true;
-          }
+          const TargetRegisterClass *RC = getRegForInlineAsmConstraint(
+              SIRI, TC.ConstraintCode, TC.ConstraintVT).second;
+          if (RC && SIRI->isSGPRClass(RC))
+            return true;
         }
       }
     }

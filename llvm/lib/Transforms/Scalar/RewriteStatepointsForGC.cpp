@@ -1367,13 +1367,13 @@ static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
     return AL;
 
   // Remove the readonly, readnone, and statepoint function attributes.
-  AttrBuilder FnAttrs = AL.getFnAttrs();
+  AttrBuilder FnAttrs(Ctx, AL.getFnAttrs());
   for (auto Attr : FnAttrsToStrip)
     FnAttrs.removeAttribute(Attr);
 
   for (Attribute A : AL.getFnAttrs()) {
     if (isStatepointDirectiveAttr(A))
-      FnAttrs.remove(A);
+      FnAttrs.removeAttribute(A);
   }
 
   // Just skip parameter and return attributes for now
@@ -2643,10 +2643,10 @@ static bool insertParsePoints(Function &F, DominatorTree &DT,
 // List of all parameter and return attributes which must be stripped when
 // lowering from the abstract machine model.  Note that we list attributes
 // here which aren't valid as return attributes, that is okay.
-static AttrBuilder getParamAndReturnAttributesToRemove() {
-  AttrBuilder R;
-  R.addDereferenceableAttr(1);
-  R.addDereferenceableOrNullAttr(1);
+static AttributeMask getParamAndReturnAttributesToRemove() {
+  AttributeMask R;
+  R.addAttribute(Attribute::Dereferenceable);
+  R.addAttribute(Attribute::DereferenceableOrNull);
   R.addAttribute(Attribute::ReadNone);
   R.addAttribute(Attribute::ReadOnly);
   R.addAttribute(Attribute::WriteOnly);
@@ -2668,7 +2668,7 @@ static void stripNonValidAttributesFromPrototype(Function &F) {
     return;
   }
 
-  AttrBuilder R = getParamAndReturnAttributesToRemove();
+  AttributeMask R = getParamAndReturnAttributesToRemove();
   for (Argument &A : F.args())
     if (isa<PointerType>(A.getType()))
       F.removeParamAttrs(A.getArgNo(), R);
@@ -2742,7 +2742,7 @@ static void stripNonValidDataFromBody(Function &F) {
 
     stripInvalidMetadataFromInstruction(I);
 
-    AttrBuilder R = getParamAndReturnAttributesToRemove();
+    AttributeMask R = getParamAndReturnAttributesToRemove();
     if (auto *Call = dyn_cast<CallBase>(&I)) {
       for (int i = 0, e = Call->arg_size(); i != e; i++)
         if (isa<PointerType>(Call->getArgOperand(i)->getType()))

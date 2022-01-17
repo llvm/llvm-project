@@ -98,7 +98,7 @@ Please include [libunwind] in the subject.
 Quick Links
 ===========
 * `LLVM Homepage <https://llvm.org/>`_
-* `LLVM Bugzilla <https://bugs.llvm.org/>`_
+* `LLVM bug tracker <https://github.com/llvm/llvm-project/labels/libunwind/>`_
 * `cfe-commits Mailing List`_
 * `cfe-dev Mailing List`_
 * `Browse libunwind Sources <https://github.com/llvm/llvm-project/blob/main/libunwind/>`_

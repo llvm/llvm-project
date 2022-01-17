@@ -20,10 +20,7 @@
 
 namespace llvm {
 class BitcodeModule;
-class Mangler;
 class Module;
-class GlobalValue;
-class Triple;
 
 namespace object {
 class ObjectFile;

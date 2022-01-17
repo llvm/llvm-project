@@ -61,7 +61,7 @@ public:
 };
 } // namespace
 
-const char ToolName[] = "llvm-strings";
+static StringRef ToolName;
 
 static cl::list<std::string> InputFileNames(cl::Positional,
                                             cl::desc("<input object files>"),
@@ -129,6 +129,7 @@ int main(int argc, char **argv) {
   BumpPtrAllocator A;
   StringSaver Saver(A);
   StringsOptTable Tbl;
+  ToolName = argv[0];
   opt::InputArgList Args =
       Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver,
                     [&](StringRef Msg) { reportCmdLineError(Msg); });

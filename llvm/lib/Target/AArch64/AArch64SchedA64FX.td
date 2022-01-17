@@ -1891,7 +1891,7 @@ def : InstRW<[A64FXWrite_4Cyc_GI0],
 // ASIMD duplicate, gen reg
 // ASIMD duplicate, element
 def : InstRW<[A64FXWrite_DUPGENERAL], (instregex "^DUPv")>;
-def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^CPY")>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^DUP(i8|i16|i32|i64)$")>;
 def : InstRW<[A64FXWrite_6Cyc_GI0], (instregex "^DUPv.+gpr")>;
 
 // ASIMD extract
@@ -2512,16 +2512,16 @@ def : InstRW<[A64FXWrite_1Cyc_GI24], (instrs CNTW_XPiI)>;
 def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs COMPACT_ZPZ_D, COMPACT_ZPZ_S)>;
 
 // [72]   "cpy  $Zd, $Pg/m, $Rn";
-//@@@ def : InstRW<[XXXXXX], (instrs CPY_ZPmR_B, CPY_ZPmR_D, CPY_ZPmR_H, CPY_ZPmR_S)>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs CPY_ZPmR_B, CPY_ZPmR_D, CPY_ZPmR_H, CPY_ZPmR_S)>;
 
 // [73]   "cpy  $Zd, $Pg/m, $Vn";
-//@@@ def : InstRW<[XXXXXX], (instrs CPY_ZPmV_B, CPY_ZPmV_D, CPY_ZPmV_H, CPY_ZPmV_S)>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs CPY_ZPmV_B, CPY_ZPmV_D, CPY_ZPmV_H, CPY_ZPmV_S)>;
 
 // [74]   "cpy  $Zd, $Pg/m, $imm";
-//@@@ def : InstRW<[XXXXXX], (instrs CPY_ZPmI_B, CPY_ZPmI_D, CPY_ZPmI_H, CPY_ZPmI_S)>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs CPY_ZPmI_B, CPY_ZPmI_D, CPY_ZPmI_H, CPY_ZPmI_S)>;
 
 // [75]   "cpy  $Zd, $Pg/z, $imm";
-//@@@ def : InstRW<[XXXXXX], (instrs CPY_ZPzI_B, CPY_ZPzI_D, CPY_ZPzI_H, CPY_ZPzI_S)>;
+def : InstRW<[A64FXWrite_6Cyc_GI0], (instrs CPY_ZPzI_B, CPY_ZPzI_D, CPY_ZPzI_H, CPY_ZPzI_S)>;
 
 // [76]   "ctermeq      $Rn, $Rm";
 def : InstRW<[A64FXWrite_2Cyc_GI24], (instrs CTERMEQ_WW, CTERMEQ_XX)>;

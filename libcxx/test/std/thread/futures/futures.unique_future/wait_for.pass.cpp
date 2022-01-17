@@ -9,6 +9,8 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++03
 
+// ALLOW_RETRIES: 3
+
 // <future>
 
 // class future<R>

@@ -108,8 +108,10 @@ protected:
 */
 
 #include <__config>
+#include <cstdint>
 #include <ios>
 #include <iosfwd>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

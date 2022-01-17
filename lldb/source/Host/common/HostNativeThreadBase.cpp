@@ -18,7 +18,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 HostNativeThreadBase::HostNativeThreadBase(thread_t thread)
-    : m_thread(thread), m_result(0) {}
+    : m_thread(thread), m_result(0) {} // NOLINT(modernize-use-nullptr)
 
 lldb::thread_t HostNativeThreadBase::GetSystemHandle() const {
   return m_thread;
@@ -34,7 +34,7 @@ bool HostNativeThreadBase::IsJoinable() const {
 
 void HostNativeThreadBase::Reset() {
   m_thread = LLDB_INVALID_HOST_THREAD;
-  m_result = 0;
+  m_result = 0; // NOLINT(modernize-use-nullptr)
 }
 
 bool HostNativeThreadBase::EqualsThread(lldb::thread_t thread) const {
@@ -44,7 +44,7 @@ bool HostNativeThreadBase::EqualsThread(lldb::thread_t thread) const {
 lldb::thread_t HostNativeThreadBase::Release() {
   lldb::thread_t result = m_thread;
   m_thread = LLDB_INVALID_HOST_THREAD;
-  m_result = 0;
+  m_result = 0; // NOLINT(modernize-use-nullptr)
 
   return result;
 }

@@ -77,7 +77,7 @@ entry:
 ; CHECK-NEXT: local.get $push[[S1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.store16 0($pop[[S0]]), $pop[[S1]]{{$}}
 define void @X_i16(i16 * %t) {
-  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16* %t)
+  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16* elementtype(i16) %t)
   ret void
 }
 
@@ -87,7 +87,7 @@ define void @X_i16(i16 * %t) {
 ; CHECK-NEXT: local.get $push[[S1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.store 0($pop[[S0]]), $pop[[S1]]{{$}}
 define void @X_ptr(i16 ** %t) {
-  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16** %t)
+  call void asm sideeffect "foo $0", "=*X,~{dirflag},~{fpsr},~{flags},~{memory}"(i16** elementtype(i16*) %t)
   ret void
 }
 

@@ -27,7 +27,7 @@ Reproducer::Reproducer() : VFS(vfs::getRealFileSystem()) {}
 Reproducer::~Reproducer() = default;
 
 ReproducerGenerate::ReproducerGenerate(std::error_code &EC)
-    : Root(createReproducerDir(EC)), FC() {
+    : Root(createReproducerDir(EC)) {
   if (!Root.empty())
     FC = std::make_shared<FileCollector>(Root, Root);
   VFS = FileCollector::createCollectorVFS(vfs::getRealFileSystem(), FC);

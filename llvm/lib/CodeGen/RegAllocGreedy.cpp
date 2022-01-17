@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "RegAllocGreedy.h"
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"
 #include "LiveDebugVariables.h"
@@ -135,362 +136,6 @@ static cl::opt<bool> ConsiderLocalIntervalCost(
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);
 
-namespace {
-
-class RAGreedy : public MachineFunctionPass,
-                 public RegAllocBase,
-                 private LiveRangeEdit::Delegate {
-  // Convenient shortcuts.
-  using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
-  using SmallLISet = SmallPtrSet<LiveInterval *, 4>;
-
-  // context
-  MachineFunction *MF;
-
-  // Shortcuts to some useful interface.
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  RegisterClassInfo RCI;
-
-  // analyses
-  SlotIndexes *Indexes;
-  MachineBlockFrequencyInfo *MBFI;
-  MachineDominatorTree *DomTree;
-  MachineLoopInfo *Loops;
-  MachineOptimizationRemarkEmitter *ORE;
-  EdgeBundles *Bundles;
-  SpillPlacement *SpillPlacer;
-  LiveDebugVariables *DebugVars;
-  AliasAnalysis *AA;
-
-  // state
-  std::unique_ptr<Spiller> SpillerInstance;
-  PQueue Queue;
-  std::unique_ptr<VirtRegAuxInfo> VRAI;
-  Optional<ExtraRegInfo> ExtraInfo;
-  std::unique_ptr<RegAllocEvictionAdvisor> EvictAdvisor;
-
-  // Enum CutOffStage to keep a track whether the register allocation failed
-  // because of the cutoffs encountered in last chance recoloring.
-  // Note: This is used as bitmask. New value should be next power of 2.
-  enum CutOffStage {
-    // No cutoffs encountered
-    CO_None = 0,
-
-    // lcr-max-depth cutoff encountered
-    CO_Depth = 1,
-
-    // lcr-max-interf cutoff encountered
-    CO_Interf = 2
-  };
-
-  uint8_t CutOffInfo;
-
-#ifndef NDEBUG
-  static const char *const StageName[];
-#endif
-
-  /// EvictionTrack - Keeps track of past evictions in order to optimize region
-  /// split decision.
-  class EvictionTrack {
-
-  public:
-    using EvictorInfo =
-        std::pair<Register /* evictor */, MCRegister /* physreg */>;
-    using EvicteeInfo = llvm::DenseMap<Register /* evictee */, EvictorInfo>;
-
-  private:
-    /// Each Vreg that has been evicted in the last stage of selectOrSplit will
-    /// be mapped to the evictor Vreg and the PhysReg it was evicted from.
-    EvicteeInfo Evictees;
-
-  public:
-    /// Clear all eviction information.
-    void clear() { Evictees.clear(); }
-
-    ///  Clear eviction information for the given evictee Vreg.
-    /// E.g. when Vreg get's a new allocation, the old eviction info is no
-    /// longer relevant.
-    /// \param Evictee The evictee Vreg for whom we want to clear collected
-    /// eviction info.
-    void clearEvicteeInfo(Register Evictee) { Evictees.erase(Evictee); }
-
-    /// Track new eviction.
-    /// The Evictor vreg has evicted the Evictee vreg from Physreg.
-    /// \param PhysReg The physical register Evictee was evicted from.
-    /// \param Evictor The evictor Vreg that evicted Evictee.
-    /// \param Evictee The evictee Vreg.
-    void addEviction(MCRegister PhysReg, Register Evictor, Register Evictee) {
-      Evictees[Evictee].first = Evictor;
-      Evictees[Evictee].second = PhysReg;
-    }
-
-    /// Return the Evictor Vreg which evicted Evictee Vreg from PhysReg.
-    /// \param Evictee The evictee vreg.
-    /// \return The Evictor vreg which evicted Evictee vreg from PhysReg. 0 if
-    /// nobody has evicted Evictee from PhysReg.
-    EvictorInfo getEvictor(Register Evictee) {
-      if (Evictees.count(Evictee)) {
-        return Evictees[Evictee];
-      }
-
-      return EvictorInfo(0, 0);
-    }
-  };
-
-  // Keeps track of past evictions in order to optimize region split decision.
-  EvictionTrack LastEvicted;
-
-  // splitting state.
-  std::unique_ptr<SplitAnalysis> SA;
-  std::unique_ptr<SplitEditor> SE;
-
-  /// Cached per-block interference maps
-  InterferenceCache IntfCache;
-
-  /// All basic blocks where the current register has uses.
-  SmallVector<SpillPlacement::BlockConstraint, 8> SplitConstraints;
-
-  /// Global live range splitting candidate info.
-  struct GlobalSplitCandidate {
-    // Register intended for assignment, or 0.
-    MCRegister PhysReg;
-
-    // SplitKit interval index for this candidate.
-    unsigned IntvIdx;
-
-    // Interference for PhysReg.
-    InterferenceCache::Cursor Intf;
-
-    // Bundles where this candidate should be live.
-    BitVector LiveBundles;
-    SmallVector<unsigned, 8> ActiveBlocks;
-
-    void reset(InterferenceCache &Cache, MCRegister Reg) {
-      PhysReg = Reg;
-      IntvIdx = 0;
-      Intf.setPhysReg(Cache, Reg);
-      LiveBundles.clear();
-      ActiveBlocks.clear();
-    }
-
-    // Set B[I] = C for every live bundle where B[I] was NoCand.
-    unsigned getBundles(SmallVectorImpl<unsigned> &B, unsigned C) {
-      unsigned Count = 0;
-      for (unsigned I : LiveBundles.set_bits())
-        if (B[I] == NoCand) {
-          B[I] = C;
-          Count++;
-        }
-      return Count;
-    }
-  };
-
-  /// Candidate info for each PhysReg in AllocationOrder.
-  /// This vector never shrinks, but grows to the size of the largest register
-  /// class.
-  SmallVector<GlobalSplitCandidate, 32> GlobalCand;
-
-  enum : unsigned { NoCand = ~0u };
-
-  /// Candidate map. Each edge bundle is assigned to a GlobalCand entry, or to
-  /// NoCand which indicates the stack interval.
-  SmallVector<unsigned, 32> BundleCand;
-
-  /// Callee-save register cost, calculated once per machine function.
-  BlockFrequency CSRCost;
-
-  /// Enable or not the consideration of the cost of local intervals created
-  /// by a split candidate when choosing the best split candidate.
-  bool EnableAdvancedRASplitCost;
-
-  /// Set of broken hints that may be reconciled later because of eviction.
-  SmallSetVector<LiveInterval *, 8> SetOfBrokenHints;
-
-  /// The register cost values. This list will be recreated for each Machine
-  /// Function
-  ArrayRef<uint8_t> RegCosts;
-
-public:
-  RAGreedy(const RegClassFilterFunc F = allocateAllRegClasses);
-
-  /// Return the pass name.
-  StringRef getPassName() const override { return "Greedy Register Allocator"; }
-
-  /// RAGreedy analysis usage.
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  void releaseMemory() override;
-  Spiller &spiller() override { return *SpillerInstance; }
-  void enqueueImpl(LiveInterval *LI) override;
-  LiveInterval *dequeue() override;
-  MCRegister selectOrSplit(LiveInterval &,
-                           SmallVectorImpl<Register> &) override;
-  void aboutToRemoveInterval(LiveInterval &) override;
-
-  /// Perform register allocation.
-  bool runOnMachineFunction(MachineFunction &mf) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
-  }
-
-  MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-      MachineFunctionProperties::Property::IsSSA);
-  }
-
-  static char ID;
-
-private:
-  MCRegister selectOrSplitImpl(LiveInterval &, SmallVectorImpl<Register> &,
-                               SmallVirtRegSet &, unsigned = 0);
-
-  bool LRE_CanEraseVirtReg(Register) override;
-  void LRE_WillShrinkVirtReg(Register) override;
-  void LRE_DidCloneVirtReg(Register, Register) override;
-  void enqueue(PQueue &CurQueue, LiveInterval *LI);
-  LiveInterval *dequeue(PQueue &CurQueue);
-
-  BlockFrequency calcSpillCost();
-  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency&);
-  bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
-  bool growRegion(GlobalSplitCandidate &Cand);
-  bool splitCanCauseEvictionChain(Register Evictee, GlobalSplitCandidate &Cand,
-                                  unsigned BBNumber,
-                                  const AllocationOrder &Order);
-  bool splitCanCauseLocalSpill(unsigned VirtRegToSplit,
-                               GlobalSplitCandidate &Cand, unsigned BBNumber,
-                               const AllocationOrder &Order);
-  BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
-                                     const AllocationOrder &Order,
-                                     bool *CanCauseEvictionChain);
-  bool calcCompactRegion(GlobalSplitCandidate&);
-  void splitAroundRegion(LiveRangeEdit&, ArrayRef<unsigned>);
-  void calcGapWeights(MCRegister, SmallVectorImpl<float> &);
-  bool canEvictInterferenceInRange(const LiveInterval &VirtReg,
-                                   MCRegister PhysReg, SlotIndex Start,
-                                   SlotIndex End, EvictionCost &MaxCost) const;
-  MCRegister getCheapestEvicteeWeight(const AllocationOrder &Order,
-                                      const LiveInterval &VirtReg,
-                                      SlotIndex Start, SlotIndex End,
-                                      float *BestEvictWeight) const;
-  void evictInterference(LiveInterval &, MCRegister,
-                         SmallVectorImpl<Register> &);
-  bool mayRecolorAllInterferences(MCRegister PhysReg, LiveInterval &VirtReg,
-                                  SmallLISet &RecoloringCandidates,
-                                  const SmallVirtRegSet &FixedRegisters);
-
-  MCRegister tryAssign(LiveInterval&, AllocationOrder&,
-                     SmallVectorImpl<Register>&,
-                     const SmallVirtRegSet&);
-  MCRegister tryFindEvictionCandidate(LiveInterval &, const AllocationOrder &,
-                                      uint8_t, const SmallVirtRegSet &) const;
-  MCRegister tryEvict(LiveInterval &, AllocationOrder &,
-                    SmallVectorImpl<Register> &, uint8_t,
-                    const SmallVirtRegSet &);
-  MCRegister tryRegionSplit(LiveInterval &, AllocationOrder &,
-                            SmallVectorImpl<Register> &);
-  /// Calculate cost of region splitting.
-  unsigned calculateRegionSplitCost(LiveInterval &VirtReg,
-                                    AllocationOrder &Order,
-                                    BlockFrequency &BestCost,
-                                    unsigned &NumCands, bool IgnoreCSR,
-                                    bool *CanCauseEvictionChain = nullptr);
-  /// Perform region splitting.
-  unsigned doRegionSplit(LiveInterval &VirtReg, unsigned BestCand,
-                         bool HasCompact,
-                         SmallVectorImpl<Register> &NewVRegs);
-  /// Check other options before using a callee-saved register for the first
-  /// time.
-  MCRegister tryAssignCSRFirstTime(LiveInterval &VirtReg,
-                                   AllocationOrder &Order, MCRegister PhysReg,
-                                   uint8_t &CostPerUseLimit,
-                                   SmallVectorImpl<Register> &NewVRegs);
-  void initializeCSRCost();
-  unsigned tryBlockSplit(LiveInterval&, AllocationOrder&,
-                         SmallVectorImpl<Register>&);
-  unsigned tryInstructionSplit(LiveInterval&, AllocationOrder&,
-                               SmallVectorImpl<Register>&);
-  unsigned tryLocalSplit(LiveInterval&, AllocationOrder&,
-    SmallVectorImpl<Register>&);
-  unsigned trySplit(LiveInterval&, AllocationOrder&,
-                    SmallVectorImpl<Register>&,
-                    const SmallVirtRegSet&);
-  unsigned tryLastChanceRecoloring(LiveInterval &, AllocationOrder &,
-                                   SmallVectorImpl<Register> &,
-                                   SmallVirtRegSet &, unsigned);
-  bool tryRecoloringCandidates(PQueue &, SmallVectorImpl<Register> &,
-                               SmallVirtRegSet &, unsigned);
-  void tryHintRecoloring(LiveInterval &);
-  void tryHintsRecoloring();
-
-  /// Model the information carried by one end of a copy.
-  struct HintInfo {
-    /// The frequency of the copy.
-    BlockFrequency Freq;
-    /// The virtual register or physical register.
-    Register Reg;
-    /// Its currently assigned register.
-    /// In case of a physical register Reg == PhysReg.
-    MCRegister PhysReg;
-
-    HintInfo(BlockFrequency Freq, Register Reg, MCRegister PhysReg)
-        : Freq(Freq), Reg(Reg), PhysReg(PhysReg) {}
-  };
-  using HintsInfo = SmallVector<HintInfo, 4>;
-
-  BlockFrequency getBrokenHintFreq(const HintsInfo &, MCRegister);
-  void collectHintInfo(Register, HintsInfo &);
-
-  /// Greedy RA statistic to remark.
-  struct RAGreedyStats {
-    unsigned Reloads = 0;
-    unsigned FoldedReloads = 0;
-    unsigned ZeroCostFoldedReloads = 0;
-    unsigned Spills = 0;
-    unsigned FoldedSpills = 0;
-    unsigned Copies = 0;
-    float ReloadsCost = 0.0f;
-    float FoldedReloadsCost = 0.0f;
-    float SpillsCost = 0.0f;
-    float FoldedSpillsCost = 0.0f;
-    float CopiesCost = 0.0f;
-
-    bool isEmpty() {
-      return !(Reloads || FoldedReloads || Spills || FoldedSpills ||
-               ZeroCostFoldedReloads || Copies);
-    }
-
-    void add(RAGreedyStats other) {
-      Reloads += other.Reloads;
-      FoldedReloads += other.FoldedReloads;
-      ZeroCostFoldedReloads += other.ZeroCostFoldedReloads;
-      Spills += other.Spills;
-      FoldedSpills += other.FoldedSpills;
-      Copies += other.Copies;
-      ReloadsCost += other.ReloadsCost;
-      FoldedReloadsCost += other.FoldedReloadsCost;
-      SpillsCost += other.SpillsCost;
-      FoldedSpillsCost += other.FoldedSpillsCost;
-      CopiesCost += other.CopiesCost;
-    }
-
-    void report(MachineOptimizationRemarkMissed &R);
-  };
-
-  /// Compute statistic for a basic block.
-  RAGreedyStats computeStats(MachineBasicBlock &MBB);
-
-  /// Compute and report statistic through a remark.
-  RAGreedyStats reportStats(MachineLoop *L);
-
-  /// Report the statistic for each loop.
-  void reportStats();
-};
-
-} // end anonymous namespace
-
 char RAGreedy::ID = 0;
 char &llvm::RAGreedyID = RAGreedy::ID;
 
@@ -613,7 +258,7 @@ void RAGreedy::LRE_DidCloneVirtReg(Register New, Register Old) {
   ExtraInfo->LRE_DidCloneVirtReg(New, Old);
 }
 
-void ExtraRegInfo::LRE_DidCloneVirtReg(Register New, Register Old) {
+void RAGreedy::ExtraRegInfo::LRE_DidCloneVirtReg(Register New, Register Old) {
   // Cloning a register we haven't even heard about yet?  Just ignore it.
   if (!Info.inBounds(Old))
     return;
@@ -811,7 +456,7 @@ Register RegAllocEvictionAdvisor::canReassign(LiveInterval &VirtReg,
 bool DefaultEvictionAdvisor::shouldEvict(LiveInterval &A, bool IsHint,
                                          LiveInterval &B,
                                          bool BreaksHint) const {
-  bool CanSplit = ExtraInfo->getStage(B) < RS_Spill;
+  bool CanSplit = RA.getExtraInfo().getStage(B) < RS_Spill;
 
   // Be fairly aggressive about following hints as long as the evictee can be
   // split.
@@ -861,7 +506,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   //
   // This works out so a register without a cascade number is allowed to evict
   // anything, and it can be evicted by anything.
-  unsigned Cascade = ExtraInfo->getCascadeOrCurrentNext(VirtReg.reg());
+  unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
   EvictionCost Cost;
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
@@ -883,7 +528,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
         return false;
 
       // Never evict spill products. They cannot split or spill.
-      if (ExtraInfo->getStage(*Intf) == RS_Done)
+      if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
       // Once a live range becomes small enough, it is urgent that we find a
       // register for it. This is indicated by an infinite spill weight. These
@@ -898,7 +543,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
                RegClassInfo.getNumAllocatableRegs(
                    MRI->getRegClass(Intf->reg())));
       // Only evict older cascades or live ranges without a cascade.
-      unsigned IntfCascade = ExtraInfo->getCascade(Intf->reg());
+      unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       if (Cascade <= IntfCascade) {
         if (!Urgent)
           return false;
@@ -1069,28 +714,20 @@ bool RegAllocEvictionAdvisor::isUnusedCalleeSavedReg(MCRegister PhysReg) const {
   return !Matrix->isPhysRegUsed(PhysReg);
 }
 
-MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
-    LiveInterval &VirtReg, const AllocationOrder &Order,
-    uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
-  // Keep track of the cheapest interference seen so far.
-  EvictionCost BestCost;
-  BestCost.setMax();
-  MCRegister BestPhys;
+Optional<unsigned>
+RegAllocEvictionAdvisor::getOrderLimit(const LiveInterval &VirtReg,
+                                       const AllocationOrder &Order,
+                                       unsigned CostPerUseLimit) const {
   unsigned OrderLimit = Order.getOrder().size();
 
-  // When we are just looking for a reduced cost per use, don't break any
-  // hints, and only evict smaller spill weights.
   if (CostPerUseLimit < uint8_t(~0u)) {
-    BestCost.BrokenHints = 0;
-    BestCost.MaxWeight = VirtReg.weight();
-
     // Check of any registers in RC are below CostPerUseLimit.
     const TargetRegisterClass *RC = MRI->getRegClass(VirtReg.reg());
     uint8_t MinCost = RegClassInfo.getMinCost(RC);
     if (MinCost >= CostPerUseLimit) {
       LLVM_DEBUG(dbgs() << TRI->getRegClassName(RC) << " minimum cost = "
                         << MinCost << ", no cheaper registers to be found.\n");
-      return 0;
+      return None;
     }
 
     // It is normal for register classes to have a long tail of registers with
@@ -1101,24 +738,50 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
                         << " regs.\n");
     }
   }
+  return OrderLimit;
+}
+
+bool RegAllocEvictionAdvisor::canAllocatePhysReg(unsigned CostPerUseLimit,
+                                                 MCRegister PhysReg) const {
+  if (RegCosts[PhysReg] >= CostPerUseLimit)
+    return false;
+  // The first use of a callee-saved register in a function has cost 1.
+  // Don't start using a CSR when the CostPerUseLimit is low.
+  if (CostPerUseLimit == 1 && isUnusedCalleeSavedReg(PhysReg)) {
+    LLVM_DEBUG(
+        dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
+               << printReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
+               << '\n');
+    return false;
+  }
+  return true;
+}
+
+MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
+    LiveInterval &VirtReg, const AllocationOrder &Order,
+    uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
+  // Keep track of the cheapest interference seen so far.
+  EvictionCost BestCost;
+  BestCost.setMax();
+  MCRegister BestPhys;
+  auto MaybeOrderLimit = getOrderLimit(VirtReg, Order, CostPerUseLimit);
+  if (!MaybeOrderLimit)
+    return MCRegister::NoRegister;
+  unsigned OrderLimit = *MaybeOrderLimit;
+
+  // When we are just looking for a reduced cost per use, don't break any
+  // hints, and only evict smaller spill weights.
+  if (CostPerUseLimit < uint8_t(~0u)) {
+    BestCost.BrokenHints = 0;
+    BestCost.MaxWeight = VirtReg.weight();
+  }
 
   for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
        ++I) {
     MCRegister PhysReg = *I;
     assert(PhysReg);
-    if (RegCosts[PhysReg] >= CostPerUseLimit)
-      continue;
-    // The first use of a callee-saved register in a function has cost 1.
-    // Don't start using a CSR when the CostPerUseLimit is low.
-    if (CostPerUseLimit == 1 && isUnusedCalleeSavedReg(PhysReg)) {
-      LLVM_DEBUG(
-          dbgs() << printReg(PhysReg, TRI) << " would clobber CSR "
-                 << printReg(RegClassInfo.getLastCalleeSavedAlias(PhysReg), TRI)
-                 << '\n');
-      continue;
-    }
-
-    if (!canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
+    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg) ||
+        !canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
                                          FixedRegisters))
       continue;
 
@@ -3269,8 +2932,8 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   SA.reset(new SplitAnalysis(*VRM, *LIS, *Loops));
   SE.reset(new SplitEditor(*SA, *AA, *LIS, *VRM, *DomTree, *MBFI, *VRAI));
   ExtraInfo.emplace();
-  EvictAdvisor = getAnalysis<RegAllocEvictionAdvisorAnalysis>().getAdvisor(
-      *MF, Matrix, LIS, VRM, RegClassInfo, &*ExtraInfo);
+  EvictAdvisor =
+      getAnalysis<RegAllocEvictionAdvisorAnalysis>().getAdvisor(*MF, *this);
   IntfCache.init(MF, Matrix->getLiveUnions(), Indexes, LIS, TRI);
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();

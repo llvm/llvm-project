@@ -202,23 +202,14 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
                               const DominatorTree *DT = nullptr,
                               bool UseInstrInfo = true);
 
-  /// Get the minimum bit size for this Value \p Op as a signed integer.
-  /// i.e.  x == sext(trunc(x to MinSignedBits) to bitwidth(x)).
-  /// Similar to the APInt::getMinSignedBits function.
-  unsigned ComputeMinSignedBits(const Value *Op, const DataLayout &DL,
-                                unsigned Depth = 0,
-                                AssumptionCache *AC = nullptr,
-                                const Instruction *CxtI = nullptr,
-                                const DominatorTree *DT = nullptr);
-
-  /// This function computes the integer multiple of Base that equals V. If
-  /// successful, it returns true and returns the multiple in Multiple. If
-  /// unsuccessful, it returns false. Also, if V can be simplified to an
-  /// integer, then the simplified V is returned in Val. Look through sext only
-  /// if LookThroughSExt=true.
-  bool ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
-                       bool LookThroughSExt = false,
-                       unsigned Depth = 0);
+  /// Get the upper bound on bit size for this Value \p Op as a signed integer.
+  /// i.e.  x == sext(trunc(x to MaxSignificantBits) to bitwidth(x)).
+  /// Similar to the APInt::getSignificantBits function.
+  unsigned ComputeMaxSignificantBits(const Value *Op, const DataLayout &DL,
+                                     unsigned Depth = 0,
+                                     AssumptionCache *AC = nullptr,
+                                     const Instruction *CxtI = nullptr,
+                                     const DominatorTree *DT = nullptr);
 
   /// Map a call instruction to an intrinsic ID.  Libcalls which have equivalent
   /// intrinsics are treated as-if they were intrinsics.

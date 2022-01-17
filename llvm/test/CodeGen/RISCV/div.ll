@@ -363,26 +363,26 @@ define i8 @udiv8_constant(i8 %a) nounwind {
 define i8 @udiv8_pow2(i8 %a) nounwind {
 ; RV32I-LABEL: udiv8_pow2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 248
-; RV32I-NEXT:    srli a0, a0, 3
+; RV32I-NEXT:    slli a0, a0, 24
+; RV32I-NEXT:    srli a0, a0, 27
 ; RV32I-NEXT:    ret
 ;
 ; RV32IM-LABEL: udiv8_pow2:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    andi a0, a0, 248
-; RV32IM-NEXT:    srli a0, a0, 3
+; RV32IM-NEXT:    slli a0, a0, 24
+; RV32IM-NEXT:    srli a0, a0, 27
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: udiv8_pow2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 248
-; RV64I-NEXT:    srli a0, a0, 3
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 59
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: udiv8_pow2:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    andi a0, a0, 248
-; RV64IM-NEXT:    srli a0, a0, 3
+; RV64IM-NEXT:    slli a0, a0, 56
+; RV64IM-NEXT:    srli a0, a0, 59
 ; RV64IM-NEXT:    ret
   %1 = udiv i8 %a, 8
   ret i8 %1
@@ -481,9 +481,8 @@ define i16 @udiv16_constant(i16 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
 ; RV32I-NEXT:    li a1, 5
 ; RV32I-NEXT:    call __udivsi3@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -502,9 +501,8 @@ define i16 @udiv16_constant(i16 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    li a1, 5
 ; RV64I-NEXT:    call __udivdi3@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -556,9 +554,8 @@ define i16 @udiv16_constant_lhs(i16 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    lui a1, 16
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    and a1, a0, a1
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a1, a0, 16
 ; RV32I-NEXT:    li a0, 10
 ; RV32I-NEXT:    call __udivsi3@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -567,9 +564,8 @@ define i16 @udiv16_constant_lhs(i16 %a) nounwind {
 ;
 ; RV32IM-LABEL: udiv16_constant_lhs:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    lui a1, 16
-; RV32IM-NEXT:    addi a1, a1, -1
-; RV32IM-NEXT:    and a0, a0, a1
+; RV32IM-NEXT:    slli a0, a0, 16
+; RV32IM-NEXT:    srli a0, a0, 16
 ; RV32IM-NEXT:    li a1, 10
 ; RV32IM-NEXT:    divu a0, a1, a0
 ; RV32IM-NEXT:    ret
@@ -578,9 +574,8 @@ define i16 @udiv16_constant_lhs(i16 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a1, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a1, a0, 48
 ; RV64I-NEXT:    li a0, 10
 ; RV64I-NEXT:    call __udivdi3@plt
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -589,9 +584,8 @@ define i16 @udiv16_constant_lhs(i16 %a) nounwind {
 ;
 ; RV64IM-LABEL: udiv16_constant_lhs:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    lui a1, 16
-; RV64IM-NEXT:    addiw a1, a1, -1
-; RV64IM-NEXT:    and a0, a0, a1
+; RV64IM-NEXT:    slli a0, a0, 48
+; RV64IM-NEXT:    srli a0, a0, 48
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    divuw a0, a1, a0
 ; RV64IM-NEXT:    ret

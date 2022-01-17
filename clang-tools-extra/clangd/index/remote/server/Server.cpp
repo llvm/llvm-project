@@ -395,7 +395,8 @@ void hotReload(clangd::SwapIndex &Index, llvm::StringRef IndexPath,
        "{0}, new index was modified at {1}. Attempting to reload.",
        LastStatus.getLastModificationTime(), Status->getLastModificationTime());
   LastStatus = *Status;
-  std::unique_ptr<clang::clangd::SymbolIndex> NewIndex = loadIndex(IndexPath);
+  std::unique_ptr<clang::clangd::SymbolIndex> NewIndex =
+      loadIndex(IndexPath, SymbolOrigin::Static);
   if (!NewIndex) {
     elog("Failed to load new index. Old index will be served.");
     return;
@@ -533,7 +534,8 @@ int main(int argc, char *argv[]) {
     return Status.getError().value();
   }
 
-  auto SymIndex = clang::clangd::loadIndex(IndexPath);
+  auto SymIndex =
+      clang::clangd::loadIndex(IndexPath, clang::clangd::SymbolOrigin::Static);
   if (!SymIndex) {
     llvm::errs() << "Failed to open the index.\n";
     return -1;

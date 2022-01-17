@@ -398,7 +398,8 @@ public:
   // with index `argIndex` for operator `op`.
   const_iterator findBoundSymbol(StringRef key, DagNode node,
                                  const Operator &op, int argIndex) const;
-  const_iterator findBoundSymbol(StringRef key, SymbolInfo symbolInfo) const;
+  const_iterator findBoundSymbol(StringRef key,
+                                 const SymbolInfo &symbolInfo) const;
 
   // Returns the bounds of a range that includes all the elements which
   // bind to the `key`.

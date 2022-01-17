@@ -568,7 +568,7 @@ void destroyMachOTLVMgr(void *MachOTLVMgr) {
 
 Error runWrapperFunctionCalls(std::vector<WrapperFunctionCall> WFCs) {
   for (auto &WFC : WFCs)
-    if (auto Err = WFC.runWithSPSRet())
+    if (auto Err = WFC.runWithSPSRet<void>())
       return Err;
   return Error::success();
 }
@@ -593,28 +593,22 @@ __orc_rt_macho_platform_shutdown(char *ArgData, size_t ArgSize) {
 
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
 __orc_rt_macho_register_thread_data_section(char *ArgData, size_t ArgSize) {
-  // NOTE: Does not use SPS to deserialize arg buffer, instead the arg buffer
-  // is taken to be the range of the thread data section.
-  return WrapperFunction<SPSError()>::handle(
-             nullptr, 0,
-             [&]() {
+  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddrRange R) {
                return MachOPlatformRuntimeState::get()
-                   .registerThreadDataSection(
-                       span<const char>(ArgData, ArgSize));
+                   .registerThreadDataSection(R.toSpan<const char>());
              })
       .release();
 }
 
 ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
 __orc_rt_macho_deregister_thread_data_section(char *ArgData, size_t ArgSize) {
-  // NOTE: Does not use SPS to deserialize arg buffer, instead the arg buffer
-  // is taken to be the range of the thread data section.
-  return WrapperFunction<SPSError()>::handle(
-             nullptr, 0,
-             [&]() {
+  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddrRange R) {
                return MachOPlatformRuntimeState::get()
-                   .deregisterThreadDataSection(
-                       span<const char>(ArgData, ArgSize));
+                   .deregisterThreadDataSection(R.toSpan<const char>());
              })
       .release();
 }

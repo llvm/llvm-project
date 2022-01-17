@@ -206,7 +206,7 @@ void ProfiledBinary::load() {
   decodePseudoProbe(Obj);
 
   // Load debug info of subprograms from DWARF section.
-  loadSymbolsFromDWARF(*dyn_cast<ObjectFile>(&Binary));
+  loadSymbolsFromDWARF(*cast<ObjectFile>(&Binary));
 
   // Disassemble the text sections.
   disassemble(Obj);

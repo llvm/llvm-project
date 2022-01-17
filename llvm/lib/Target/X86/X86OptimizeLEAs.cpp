@@ -610,7 +610,7 @@ MachineInstr *X86OptimizeLEAPass::replaceDebugValue(MachineInstr &MI,
   auto replaceOldReg = [OldReg, NewReg](const MachineOperand &Op) {
     if (Op.isReg() && Op.getReg() == OldReg)
       return MachineOperand::CreateReg(NewReg, false, false, false, false,
-                                       false, false, false, false, 0,
+                                       false, false, false, false, false,
                                        /*IsRenamable*/ true);
     return Op;
   };

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
@@ -444,8 +446,8 @@ OpFoldResult mlir::shape::AddOp::fold(ArrayRef<Attribute> operands) {
   if (matchPattern(getRhs(), m_Zero()))
     return getLhs();
 
-  return constFoldBinaryOp<IntegerAttr>(operands,
-                                        [](APInt a, APInt b) { return a + b; });
+  return constFoldBinaryOp<IntegerAttr>(
+      operands, [](APInt a, const APInt &b) { return std::move(a) + b; });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1667,7 +1669,7 @@ static LogicalResult verify(ReduceOp op) {
           "ReduceOp operates on an extent tensor");
   }
 
-  for (auto type : llvm::enumerate(op.getInitVals()))
+  for (const auto &type : llvm::enumerate(op.getInitVals()))
     if (block.getArgument(type.index() + 2).getType() != type.value().getType())
       return op.emitOpError()
              << "type mismatch between argument " << type.index() + 2

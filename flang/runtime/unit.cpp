@@ -299,6 +299,10 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
     recordLength.reset();
     beganReadingRecord_ = false;
   }
+  if (IsAfterEndfile()) {
+    handler.SignalError(IostatWriteAfterEndfile);
+    return false;
+  }
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
   if (positionInRecord > furthestPositionInRecord) {
     std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord, ' ',
@@ -421,7 +425,7 @@ bool ExternalFileUnit::BeginReadingRecord(IoErrorHandler &handler) {
       }
     } else if (access == Access::Sequential) {
       recordLength.reset();
-      if (endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber) {
+      if (IsAtEOF()) {
         handler.SignalEnd();
       } else {
         RUNTIME_CHECK(handler, isUnformatted.has_value());
@@ -514,10 +518,13 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
         ok = ok && Emit("\n", 1, 1, handler); // TODO: Windows CR+LF
       }
     }
+    if (IsAfterEndfile()) {
+      return false;
+    }
     CommitWrites();
     impliedEndfile_ = true;
     ++currentRecordNumber;
-    if (endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber) {
+    if (IsAtEOF()) {
       endfileRecordNumber.reset();
     }
     return ok;
@@ -529,7 +536,7 @@ void ExternalFileUnit::BackspaceRecord(IoErrorHandler &handler) {
     handler.SignalError(IostatBackspaceNonSequential,
         "BACKSPACE(UNIT=%d) on non-sequential file", unitNumber());
   } else {
-    if (endfileRecordNumber && currentRecordNumber > *endfileRecordNumber) {
+    if (IsAfterEndfile()) {
       // BACKSPACE after explicit ENDFILE
       currentRecordNumber = *endfileRecordNumber;
     } else {
@@ -580,8 +587,7 @@ void ExternalFileUnit::Endfile(IoErrorHandler &handler) {
   } else if (!mayWrite()) {
     handler.SignalError(IostatEndfileUnwritable,
         "ENDFILE(UNIT=%d) on read-only file", unitNumber());
-  } else if (endfileRecordNumber &&
-      currentRecordNumber > *endfileRecordNumber) {
+  } else if (IsAfterEndfile()) {
     // ENDFILE after ENDFILE
   } else {
     DoEndfile(handler);

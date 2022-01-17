@@ -468,7 +468,7 @@ private:
   const LangOptions &LangOpts;
   std::vector<HighlightingToken> Tokens;
   std::map<Range, llvm::SmallVector<HighlightingModifier, 1>> ExtraModifiers;
-  const HeuristicResolver *Resolver;
+  const HeuristicResolver *Resolver = nullptr;
   // returned from addToken(InvalidLoc)
   HighlightingToken InvalidHighlightingToken;
 };

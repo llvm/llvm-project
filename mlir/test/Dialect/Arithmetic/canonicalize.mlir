@@ -50,6 +50,101 @@ func @cmpi_equal_vector_operands(%arg0: vector<1x8xi64>)
 
 // -----
 
+// CHECK-LABEL: @cmpOfExtSI
+//  CHECK-NEXT:   return %arg0
+func @cmpOfExtSI(%arg0: i1) -> i1 {
+  %ext = arith.extsi %arg0 : i1 to i64
+  %c0 = arith.constant 0 : i64
+  %res = arith.cmpi ne, %ext, %c0 : i64
+  return %res : i1
+}
+
+// CHECK-LABEL: @cmpOfExtUI
+//  CHECK-NEXT:   return %arg0
+func @cmpOfExtUI(%arg0: i1) -> i1 {
+  %ext = arith.extui %arg0 : i1 to i64
+  %c0 = arith.constant 0 : i64
+  %res = arith.cmpi ne, %ext, %c0 : i64
+  return %res : i1
+}
+
+// -----
+
+// CHECK-LABEL: @extSIOfExtUI
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
+//       CHECK:   return %[[res]]
+func @extSIOfExtUI(%arg0: i1) -> i64 {
+  %ext1 = arith.extui %arg0 : i1 to i8
+  %ext2 = arith.extsi %ext1 : i8 to i64
+  return %ext2 : i64
+}
+
+// CHECK-LABEL: @extUIOfExtUI
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
+//       CHECK:   return %[[res]]
+func @extUIOfExtUI(%arg0: i1) -> i64 {
+  %ext1 = arith.extui %arg0 : i1 to i8
+  %ext2 = arith.extui %ext1 : i8 to i64
+  return %ext2 : i64
+}
+
+// CHECK-LABEL: @extSIOfExtSI
+//       CHECK:   %[[res:.+]] = arith.extsi %arg0 : i1 to i64
+//       CHECK:   return %[[res]]
+func @extSIOfExtSI(%arg0: i1) -> i64 {
+  %ext1 = arith.extsi %arg0 : i1 to i8
+  %ext2 = arith.extsi %ext1 : i8 to i64
+  return %ext2 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @andOfExtSI
+//       CHECK:  %[[comb:.+]] = arith.andi %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extsi %[[comb]] : i8 to i64
+//       CHECK:   return %[[ext]]
+func @andOfExtSI(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extsi %arg0 : i8 to i64
+  %ext1 = arith.extsi %arg1 : i8 to i64
+  %res = arith.andi %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @andOfExtUI
+//       CHECK:  %[[comb:.+]] = arith.andi %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] : i8 to i64
+//       CHECK:   return %[[ext]]
+func @andOfExtUI(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.andi %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @orOfExtSI
+//       CHECK:  %[[comb:.+]] = arith.ori %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extsi %[[comb]] : i8 to i64
+//       CHECK:   return %[[ext]]
+func @orOfExtSI(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extsi %arg0 : i8 to i64
+  %ext1 = arith.extsi %arg1 : i8 to i64
+  %res = arith.ori %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// CHECK-LABEL: @orOfExtUI
+//       CHECK:  %[[comb:.+]] = arith.ori %arg0, %arg1 : i8
+//       CHECK:  %[[ext:.+]] = arith.extui %[[comb]] : i8 to i64
+//       CHECK:   return %[[ext]]
+func @orOfExtUI(%arg0: i8, %arg1: i8) -> i64 {
+  %ext0 = arith.extui %arg0 : i8 to i64
+  %ext1 = arith.extui %arg1 : i8 to i64
+  %res = arith.ori %ext0, %ext1 : i64
+  return %res : i64
+}
+
+// -----
+
 // CHECK-LABEL: @indexCastOfSignExtend
 //       CHECK:   %[[res:.+]] = arith.index_cast %arg0 : i8 to index
 //       CHECK:   return %[[res]]
@@ -75,6 +170,15 @@ func @truncConstant(%arg0: i8) -> i16 {
   %c-2 = arith.constant -2 : i32
   %tr = arith.trunci %c-2 : i32 to i16
   return %tr : i16
+}
+
+// CHECK-LABEL: @truncTrunc
+//       CHECK:   %[[cres:.+]] = arith.trunci %arg0 : i64 to i8
+//       CHECK:   return %[[cres]]
+func @truncTrunc(%arg0: i64) -> i8 {
+  %tr1 = arith.trunci %arg0 : i64 to i32
+  %tr2 = arith.trunci %tr1 : i32 to i8
+  return %tr2 : i8
 }
 
 // CHECK-LABEL: @truncFPConstant
@@ -204,6 +308,22 @@ func @tripleSubSub3(%arg0: index) -> index {
   return %add2 : index
 }
 
+// CHECK-LABEL: @doubleAddSub1
+//  CHECK-NEXT:   return %arg0
+func @doubleAddSub1(%arg0: index, %arg1 : index) -> index {
+  %sub = arith.subi %arg0, %arg1 : index
+  %add = arith.addi %sub, %arg1 : index
+  return %add : index
+}
+
+// CHECK-LABEL: @doubleAddSub2
+//  CHECK-NEXT:   return %arg0
+func @doubleAddSub2(%arg0: index, %arg1 : index) -> index {
+  %sub = arith.subi %arg0, %arg1 : index
+  %add = arith.addi %arg1, %sub : index
+  return %add : index
+}
+
 // CHECK-LABEL: @notCmpEQ
 //       CHECK:   %[[cres:.+]] = arith.cmpi ne, %arg0, %arg1 : i8
 //       CHECK:   return %[[cres]]
@@ -312,6 +432,18 @@ func @notCmpUGE(%arg0: i8, %arg1: i8) -> i1 {
   %cmp = arith.cmpi "uge", %arg0, %arg1 : i8
   %ncmp = arith.xori %cmp, %true : i1
   return %ncmp : i1
+}
+
+// -----
+
+// CHECK-LABEL: @xorxor(
+//       CHECK-NOT: xori
+//       CHECK:   return %arg0
+func @xorxor(%cmp : i1) -> i1 {
+  %true = arith.constant true
+  %ncmp = arith.xori %cmp, %true : i1
+  %nncmp = arith.xori %ncmp, %true : i1
+  return %nncmp : i1
 }
 
 // -----
@@ -545,4 +677,31 @@ func @constant_UItoFP() -> f32 {
   %c0 = arith.constant 2 : i32
   %res = arith.sitofp %c0 : i32 to f32
   return %res : f32
+}
+
+// -----
+// CHECK-LABEL: @constant_MinMax(
+func @constant_MinMax(%arg0 : f32) -> f32 {
+  // CHECK:  %[[const:.+]] = arith.constant
+  // CHECK:  %[[min:.+]] = arith.minf %arg0, %[[const]] : f32
+  // CHECK:  %[[res:.+]] = arith.maxf %[[min]], %[[const]] : f32
+  // CHECK:   return %[[res]]
+  %const = arith.constant 0.0 : f32
+  %min = arith.minf %const, %arg0 : f32
+  %res = arith.maxf %const, %min : f32
+  return %res : f32
+}
+
+// -----
+// CHECK-LABEL: @cmpf_nan(
+func @cmpf_nan(%arg0 : f32) -> (i1, i1, i1, i1) {
+//   CHECK-DAG:   %[[T:.*]] = arith.constant true
+//   CHECK-DAG:   %[[F:.*]] = arith.constant false
+//       CHECK:   return %[[F]], %[[F]], %[[T]], %[[T]]
+  %nan = arith.constant 0x7fffffff : f32
+  %0 = arith.cmpf olt, %nan, %arg0 : f32
+  %1 = arith.cmpf olt, %arg0, %nan : f32
+  %2 = arith.cmpf ugt, %nan, %arg0 : f32
+  %3 = arith.cmpf ugt, %arg0, %nan : f32
+  return %0, %1, %2, %3 : i1, i1, i1, i1
 }

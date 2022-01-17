@@ -38,7 +38,7 @@ public:
     constexpr const T& back() const { assert(size_ >= 1); return data_[size_-1]; }
 
     constexpr iterator insert(const_iterator pos, T t) {
-        int i = (pos - data_);
+        int i = static_cast<int>(pos - data_);
         if (i != size_) {
             std::move_backward(data_ + i, data_ + size_, data_ + size_ + 1);
         }

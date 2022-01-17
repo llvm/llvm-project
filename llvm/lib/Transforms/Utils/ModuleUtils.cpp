@@ -178,66 +178,30 @@ llvm::getOrCreateSanitizerCtorAndInitFunctions(
 }
 
 void llvm::filterDeadComdatFunctions(
-    Module &M, SmallVectorImpl<Function *> &DeadComdatFunctions) {
-  // Build a map from the comdat to the number of entries in that comdat we
-  // think are dead. If this fully covers the comdat group, then the entire
-  // group is dead. If we find another entry in the comdat group though, we'll
-  // have to preserve the whole group.
-  SmallDenseMap<Comdat *, int, 16> ComdatEntriesCovered;
+    SmallVectorImpl<Function *> &DeadComdatFunctions) {
+  SmallPtrSet<Function *, 32> MaybeDeadFunctions;
+  SmallPtrSet<Comdat *, 32> MaybeDeadComdats;
   for (Function *F : DeadComdatFunctions) {
+    MaybeDeadFunctions.insert(F);
+    if (Comdat *C = F->getComdat())
+      MaybeDeadComdats.insert(C);
+  }
+
+  // Find comdats for which all users are dead now.
+  SmallPtrSet<Comdat *, 32> DeadComdats;
+  for (Comdat *C : MaybeDeadComdats) {
+    auto IsUserDead = [&](GlobalObject *GO) {
+      auto *F = dyn_cast<Function>(GO);
+      return F && MaybeDeadFunctions.contains(F);
+    };
+    if (all_of(C->getUsers(), IsUserDead))
+      DeadComdats.insert(C);
+  }
+
+  // Only keep functions which have no comdat or a dead comdat.
+  erase_if(DeadComdatFunctions, [&](Function *F) {
     Comdat *C = F->getComdat();
-    assert(C && "Expected all input GVs to be in a comdat!");
-    ComdatEntriesCovered[C] += 1;
-  }
-
-  auto CheckComdat = [&](Comdat &C) {
-    auto CI = ComdatEntriesCovered.find(&C);
-    if (CI == ComdatEntriesCovered.end())
-      return;
-
-    // If this could have been covered by a dead entry, just subtract one to
-    // account for it.
-    if (CI->second > 0) {
-      CI->second -= 1;
-      return;
-    }
-
-    // If we've already accounted for all the entries that were dead, the
-    // entire comdat is alive so remove it from the map.
-    ComdatEntriesCovered.erase(CI);
-  };
-
-  auto CheckAllComdats = [&] {
-    for (Function &F : M.functions())
-      if (Comdat *C = F.getComdat()) {
-        CheckComdat(*C);
-        if (ComdatEntriesCovered.empty())
-          return;
-      }
-    for (GlobalVariable &GV : M.globals())
-      if (Comdat *C = GV.getComdat()) {
-        CheckComdat(*C);
-        if (ComdatEntriesCovered.empty())
-          return;
-      }
-    for (GlobalAlias &GA : M.aliases())
-      if (Comdat *C = GA.getComdat()) {
-        CheckComdat(*C);
-        if (ComdatEntriesCovered.empty())
-          return;
-      }
-  };
-  CheckAllComdats();
-
-  if (ComdatEntriesCovered.empty()) {
-    DeadComdatFunctions.clear();
-    return;
-  }
-
-  // Remove the entries that were not covering.
-  erase_if(DeadComdatFunctions, [&](GlobalValue *GV) {
-    return ComdatEntriesCovered.find(GV->getComdat()) ==
-           ComdatEntriesCovered.end();
+    return C && !DeadComdats.contains(C);
   });
 }
 

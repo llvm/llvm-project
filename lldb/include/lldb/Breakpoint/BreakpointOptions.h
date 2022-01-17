@@ -43,11 +43,10 @@ public:
                      | eCondition | eAutoContinue)
   };
   struct CommandData {
-    CommandData() : user_source(), script_source() {}
+    CommandData() {}
 
     CommandData(const StringList &user_source, lldb::ScriptLanguage interp)
-        : user_source(user_source), script_source(), interpreter(interp),
-          stop_on_error(true) {}
+        : user_source(user_source), interpreter(interp), stop_on_error(true) {}
 
     virtual ~CommandData() = default;
 

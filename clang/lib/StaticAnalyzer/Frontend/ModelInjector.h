@@ -29,10 +29,7 @@
 namespace clang {
 
 class CompilerInstance;
-class ASTUnit;
-class ASTReader;
 class NamedDecl;
-class Module;
 
 namespace ento {
 class ModelInjector : public CodeInjector {

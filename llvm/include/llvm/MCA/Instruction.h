@@ -406,7 +406,7 @@ public:
   bool operator<(const CycleSegment &Other) const {
     return Begin < Other.Begin;
   }
-  CycleSegment &operator--(void) {
+  CycleSegment &operator--() {
     if (Begin)
       Begin--;
     if (End)
@@ -517,9 +517,14 @@ class InstructionBase {
   // Instruction opcode which can be used by mca::CustomBehaviour
   unsigned Opcode;
 
+  // Flags used by the LSUnit.
+  bool IsALoadBarrier;
+  bool IsAStoreBarrier;
+
 public:
   InstructionBase(const InstrDesc &D, const unsigned Opcode)
-      : Desc(D), IsOptimizableMove(false), Operands(0), Opcode(Opcode) {}
+      : Desc(D), IsOptimizableMove(false), Operands(0), Opcode(Opcode),
+        IsALoadBarrier(false), IsAStoreBarrier(false) {}
 
   SmallVectorImpl<WriteState> &getDefs() { return Defs; }
   ArrayRef<WriteState> getDefs() const { return Defs; }
@@ -530,6 +535,10 @@ public:
   unsigned getLatency() const { return Desc.MaxLatency; }
   unsigned getNumMicroOps() const { return Desc.NumMicroOps; }
   unsigned getOpcode() const { return Opcode; }
+  bool isALoadBarrier() const { return IsALoadBarrier; }
+  bool isAStoreBarrier() const { return IsAStoreBarrier; }
+  void setLoadBarrier(bool IsBarrier) { IsALoadBarrier = IsBarrier; }
+  void setStoreBarrier(bool IsBarrier) { IsAStoreBarrier = IsBarrier; }
 
   /// Return the MCAOperand which corresponds to index Idx within the original
   /// MCInst.

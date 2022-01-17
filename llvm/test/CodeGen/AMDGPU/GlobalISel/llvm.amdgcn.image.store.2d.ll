@@ -433,6 +433,55 @@ define amdgpu_ps void @image_store_v4f32_dmask_0110(<8 x i32> inreg %rsrc, i32 %
   ret void
 }
 
+define amdgpu_ps void @image_store_f32_dmask_1111(<8 x i32> inreg %rsrc, i32 inreg %s, i32 inreg %t, float %in) #0 {
+; GFX6-LABEL: image_store_f32_dmask_1111:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    v_mov_b32_e32 v1, s10
+; GFX6-NEXT:    s_mov_b32 s0, s2
+; GFX6-NEXT:    s_mov_b32 s1, s3
+; GFX6-NEXT:    s_mov_b32 s2, s4
+; GFX6-NEXT:    s_mov_b32 s3, s5
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s7
+; GFX6-NEXT:    s_mov_b32 s6, s8
+; GFX6-NEXT:    s_mov_b32 s7, s9
+; GFX6-NEXT:    v_mov_b32_e32 v2, s11
+; GFX6-NEXT:    image_store v0, v[1:2], s[0:7] dmask:0xf unorm
+; GFX6-NEXT:    s_endpgm
+;
+; GFX8-LABEL: image_store_f32_dmask_1111:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v1, s10
+; GFX8-NEXT:    s_mov_b32 s0, s2
+; GFX8-NEXT:    s_mov_b32 s1, s3
+; GFX8-NEXT:    s_mov_b32 s2, s4
+; GFX8-NEXT:    s_mov_b32 s3, s5
+; GFX8-NEXT:    s_mov_b32 s4, s6
+; GFX8-NEXT:    s_mov_b32 s5, s7
+; GFX8-NEXT:    s_mov_b32 s6, s8
+; GFX8-NEXT:    s_mov_b32 s7, s9
+; GFX8-NEXT:    v_mov_b32_e32 v2, s11
+; GFX8-NEXT:    image_store v0, v[1:2], s[0:7] dmask:0xf unorm
+; GFX8-NEXT:    s_endpgm
+;
+; GFX10-LABEL: image_store_f32_dmask_1111:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v1, s10
+; GFX10-NEXT:    v_mov_b32_e32 v2, s11
+; GFX10-NEXT:    s_mov_b32 s0, s2
+; GFX10-NEXT:    s_mov_b32 s1, s3
+; GFX10-NEXT:    s_mov_b32 s2, s4
+; GFX10-NEXT:    s_mov_b32 s3, s5
+; GFX10-NEXT:    s_mov_b32 s4, s6
+; GFX10-NEXT:    s_mov_b32 s5, s7
+; GFX10-NEXT:    s_mov_b32 s6, s8
+; GFX10-NEXT:    s_mov_b32 s7, s9
+; GFX10-NEXT:    image_store v0, v[1:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX10-NEXT:    s_endpgm
+  tail call void @llvm.amdgcn.image.store.2d.f32.i32(float %in, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.image.store.2d.f32.i32(float, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 declare void @llvm.amdgcn.image.store.2d.v2f32.i32(<2 x float>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 declare void @llvm.amdgcn.image.store.2d.v3f32.i32(<3 x float>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0

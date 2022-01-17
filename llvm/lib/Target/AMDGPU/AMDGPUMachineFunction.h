@@ -15,8 +15,6 @@
 
 namespace llvm {
 
-class GCNSubtarget;
-
 class AMDGPUMachineFunction : public MachineFunctionInfo {
   /// A map to keep track of local memory objects and their offsets within the
   /// local memory space.

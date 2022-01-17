@@ -555,11 +555,12 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
        }},
       {"signatureHelpProvider",
        llvm::json::Object{
-           {"triggerCharacters", {"(", ",", ")"}},
+           {"triggerCharacters", {"(", ")", "{", "}", "<", ">", ","}},
        }},
       {"declarationProvider", true},
       {"definitionProvider", true},
       {"implementationProvider", true},
+      {"typeDefinitionProvider", true},
       {"documentHighlightProvider", true},
       {"documentLinkProvider",
        llvm::json::Object{
@@ -576,6 +577,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"compilationDatabase",        // clangd extension
        llvm::json::Object{{"automaticReload", true}}},
       {"callHierarchyProvider", true},
+      {"clangdInlayHintsProvider", true},
   };
 
   {
@@ -607,9 +609,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   if (Opts.FoldingRanges)
     ServerCaps["foldingRangeProvider"] = true;
-
-  if (Opts.InlayHints)
-    ServerCaps["clangdInlayHintsProvider"] = true;
 
   std::vector<llvm::StringRef> Commands;
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())
@@ -1210,7 +1209,8 @@ void ClangdLSPServer::onCallHierarchyIncomingCalls(
 
 void ClangdLSPServer::onInlayHints(const InlayHintsParams &Params,
                                    Callback<std::vector<InlayHint>> Reply) {
-  Server->inlayHints(Params.textDocument.uri.file(), std::move(Reply));
+  Server->inlayHints(Params.textDocument.uri.file(), Params.range,
+                     std::move(Reply));
 }
 
 void ClangdLSPServer::applyConfiguration(
@@ -1276,6 +1276,21 @@ void ClangdLSPServer::onReference(const ReferenceParams &Params,
             Result.push_back(std::move(Ref.Loc));
         }
         return Reply(std::move(Result));
+      });
+}
+
+void ClangdLSPServer::onGoToType(const TextDocumentPositionParams &Params,
+                                 Callback<std::vector<Location>> Reply) {
+  Server->findType(
+      Params.textDocument.uri.file(), Params.position,
+      [Reply = std::move(Reply)](
+          llvm::Expected<std::vector<LocatedSymbol>> Types) mutable {
+        if (!Types)
+          return Reply(Types.takeError());
+        std::vector<Location> Response;
+        for (const LocatedSymbol &Sym : *Types)
+          Response.push_back(Sym.PreferredDeclaration);
+        return Reply(std::move(Response));
       });
 }
 
@@ -1449,6 +1464,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("textDocument/signatureHelp", this, &ClangdLSPServer::onSignatureHelp);
   Bind.method("textDocument/definition", this, &ClangdLSPServer::onGoToDefinition);
   Bind.method("textDocument/declaration", this, &ClangdLSPServer::onGoToDeclaration);
+  Bind.method("textDocument/typeDefinition", this, &ClangdLSPServer::onGoToType);
   Bind.method("textDocument/implementation", this, &ClangdLSPServer::onGoToImplementation);
   Bind.method("textDocument/references", this, &ClangdLSPServer::onReference);
   Bind.method("textDocument/switchSourceHeader", this, &ClangdLSPServer::onSwitchSourceHeader);

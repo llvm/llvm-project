@@ -79,14 +79,14 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
 
   Value index;
   if (offset != 0) // Skip if offset is zero.
-    index = MemRefType::isDynamicStrideOrOffset(offset)
+    index = ShapedType::isDynamicStrideOrOffset(offset)
                 ? memRefDescriptor.offset(rewriter, loc)
                 : createIndexConstant(rewriter, loc, offset);
 
   for (int i = 0, e = indices.size(); i < e; ++i) {
     Value increment = indices[i];
     if (strides[i] != 1) { // Skip if stride is 1.
-      Value stride = MemRefType::isDynamicStrideOrOffset(strides[i])
+      Value stride = ShapedType::isDynamicStrideOrOffset(strides[i])
                          ? memRefDescriptor.stride(rewriter, loc, i)
                          : createIndexConstant(rewriter, loc, strides[i]);
       increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
@@ -162,8 +162,8 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
   // Buffer size in bytes.
   Type elementPtrType = getElementPtrType(memRefType);
   Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
-  Value gepPtr = rewriter.create<LLVM::GEPOp>(
-      loc, elementPtrType, ArrayRef<Value>{nullPtr, runningStride});
+  Value gepPtr = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, nullPtr,
+                                              ArrayRef<Value>{runningStride});
   sizeBytes = rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
 }
 
@@ -178,8 +178,8 @@ Value ConvertToLLVMPattern::getSizeInBytes(
       LLVM::LLVMPointerType::get(typeConverter->convertType(type));
   auto nullPtr = rewriter.create<LLVM::NullOp>(loc, convertedPtrType);
   auto gep = rewriter.create<LLVM::GEPOp>(
-      loc, convertedPtrType,
-      ArrayRef<Value>{nullPtr, createIndexConstant(rewriter, loc, 1)});
+      loc, convertedPtrType, nullPtr,
+      ArrayRef<Value>{createIndexConstant(rewriter, loc, 1)});
   return rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
 }
 
@@ -213,11 +213,11 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
                              createIndexConstant(rewriter, loc, 0));
 
   // Fields 4: Sizes.
-  for (auto en : llvm::enumerate(sizes))
+  for (const auto &en : llvm::enumerate(sizes))
     memRefDescriptor.setSize(rewriter, loc, en.index(), en.value());
 
   // Field 5: Strides.
-  for (auto en : llvm::enumerate(strides))
+  for (const auto &en : llvm::enumerate(strides))
     memRefDescriptor.setStride(rewriter, loc, en.index(), en.value());
 
   return memRefDescriptor;

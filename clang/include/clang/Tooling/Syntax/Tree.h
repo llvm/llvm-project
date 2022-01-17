@@ -181,7 +181,10 @@ class Tree : public Node {
     ChildIteratorBase() = default;
     explicit ChildIteratorBase(NodeT *N) : N(N) {}
 
-    bool operator==(const DerivedT &O) const { return O.N == N; }
+    friend bool operator==(const DerivedT &LHS, const DerivedT &RHS) {
+      return LHS.N == RHS.N;
+    }
+
     NodeT &operator*() const { return *N; }
     DerivedT &operator++() {
       N = N->getNextSibling();
@@ -268,14 +271,6 @@ private:
   Node *FirstChild = nullptr;
   Node *LastChild = nullptr;
 };
-
-// Provide missing non_const == const overload.
-// iterator_facade_base requires == to be a member, but implicit conversions
-// don't work on the LHS of a member operator.
-inline bool operator==(const Tree::ConstChildIterator &A,
-                       const Tree::ConstChildIterator &B) {
-  return A.operator==(B);
-}
 
 /// A list of Elements separated or terminated by a fixed token.
 ///

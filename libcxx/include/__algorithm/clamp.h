@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___ALGORITHM_CLAMP_H
 #define _LIBCPP___ALGORITHM_CLAMP_H
 
+#include <__algorithm/comp.h>
 #include <__config>
 #include <__debug>
-#include <__algorithm/comp.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

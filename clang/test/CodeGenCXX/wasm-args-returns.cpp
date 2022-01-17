@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -O1 -triple wasm32-unknown-unknown -emit-llvm -o - %s \
+// RUN: %clang_cc1 -disable-noundef-analysis -O1 -triple wasm32-unknown-unknown -emit-llvm -o - %s \
 // RUN:   | FileCheck %s
-// RUN: %clang_cc1 -O1 -triple wasm64-unknown-unknown -emit-llvm -o - %s \
+// RUN: %clang_cc1 -disable-noundef-analysis -O1 -triple wasm64-unknown-unknown -emit-llvm -o - %s \
 // RUN:   | FileCheck %s
 
 #define concat_(x, y) x##y
@@ -30,7 +30,7 @@ struct two_fields {
   double d, e;
 };
 test(two_fields);
-// CHECK: define void @_Z7forward10two_fields(%struct.two_fields* noalias nocapture sret(%struct.two_fields) align 8 %{{.*}}, %struct.two_fields* nocapture readonly byval(%struct.two_fields) align 8 %{{.*}})
+// CHECK: define void @_Z7forward10two_fields(%struct.two_fields* noalias nocapture writeonly sret(%struct.two_fields) align 8 %{{.*}}, %struct.two_fields* nocapture readonly byval(%struct.two_fields) align 8 %{{.*}})
 //
 // CHECK: define void @_Z15test_two_fieldsv()
 // CHECK: %[[tmp:.*]] = alloca %struct.two_fields, align 8

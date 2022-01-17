@@ -39,7 +39,7 @@ public:
                   lldb::DataBufferSP &data_sp, lldb::offset_t data_offset)
       : ModuleChild(module_sp),
         m_file(), // This file can be different than the module's file spec
-        m_offset(file_offset), m_length(length), m_data() {
+        m_offset(file_offset), m_length(length) {
     if (file)
       m_file = *file;
     if (data_sp)

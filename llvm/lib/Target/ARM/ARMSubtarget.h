@@ -130,6 +130,7 @@ protected:
     ARMv9a,
     ARMv91a,
     ARMv92a,
+    ARMv93a,
   };
 
 public:
@@ -180,6 +181,7 @@ protected:
   bool HasV9_0aOps = false;
   bool HasV9_1aOps = false;
   bool HasV9_2aOps = false;
+  bool HasV9_3aOps = false;
   bool HasV8MBaselineOps = false;
   bool HasV8MMainlineOps = false;
   bool HasV8_1MMainlineOps = false;
@@ -641,6 +643,7 @@ public:
   bool hasV9_0aOps() const { return HasV9_0aOps; }
   bool hasV9_1aOps() const { return HasV9_1aOps; }
   bool hasV9_2aOps() const { return HasV9_2aOps; }
+  bool hasV9_3aOps() const { return HasV9_3aOps; }
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
   bool hasV8_1MMainlineOps() const { return HasV8_1MMainlineOps; }

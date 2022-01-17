@@ -161,19 +161,22 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
 
 /// Collect cast instructions that can be ignored in the vectorizer's cost
 /// model, given a reduction exit value and the minimal type in which the
-/// reduction can be represented.
-static void collectCastsToIgnore(Loop *TheLoop, Instruction *Exit,
-                                 Type *RecurrenceType,
-                                 SmallPtrSetImpl<Instruction *> &Casts) {
+// reduction can be represented. Also search casts to the recurrence type
+// to find the minimum width used by the recurrence.
+static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
+                              Type *RecurrenceType,
+                              SmallPtrSetImpl<Instruction *> &Casts,
+                              unsigned &MinWidthCastToRecurTy) {
 
   SmallVector<Instruction *, 8> Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
   Worklist.push_back(Exit);
+  MinWidthCastToRecurTy = -1U;
 
   while (!Worklist.empty()) {
     Instruction *Val = Worklist.pop_back_val();
     Visited.insert(Val);
-    if (auto *Cast = dyn_cast<CastInst>(Val))
+    if (auto *Cast = dyn_cast<CastInst>(Val)) {
       if (Cast->getSrcTy() == RecurrenceType) {
         // If the source type of a cast instruction is equal to the recurrence
         // type, it will be eliminated, and should be ignored in the vectorizer
@@ -181,7 +184,16 @@ static void collectCastsToIgnore(Loop *TheLoop, Instruction *Exit,
         Casts.insert(Cast);
         continue;
       }
-
+      if (Cast->getDestTy() == RecurrenceType) {
+        // The minimum width used by the recurrence is found by checking for
+        // casts on its operands. The minimum width is used by the vectorizer
+        // when finding the widest type for in-loop reductions without any
+        // loads/stores.
+        MinWidthCastToRecurTy = std::min<unsigned>(
+            MinWidthCastToRecurTy, Cast->getSrcTy()->getScalarSizeInBits());
+        continue;
+      }
+    }
     // Add all operands to the work list if they are loop-varying values that
     // we haven't yet visited.
     for (Value *O : cast<User>(Val)->operands())
@@ -265,6 +277,7 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
   // Data used for determining if the recurrence has been type-promoted.
   Type *RecurrenceType = Phi->getType();
   SmallPtrSet<Instruction *, 4> CastInsts;
+  unsigned MinWidthCastToRecurrenceType;
   Instruction *Start = Phi;
   bool IsSigned = false;
 
@@ -500,20 +513,23 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
         computeRecurrenceType(ExitInstruction, DB, AC, DT);
     if (ComputedType != RecurrenceType)
       return false;
-
-    // The recurrence expression will be represented in a narrower type. If
-    // there are any cast instructions that will be unnecessary, collect them
-    // in CastInsts. Note that the 'and' instruction was already included in
-    // this list.
-    //
-    // TODO: A better way to represent this may be to tag in some way all the
-    //       instructions that are a part of the reduction. The vectorizer cost
-    //       model could then apply the recurrence type to these instructions,
-    //       without needing a white list of instructions to ignore.
-    //       This may also be useful for the inloop reductions, if it can be
-    //       kept simple enough.
-    collectCastsToIgnore(TheLoop, ExitInstruction, RecurrenceType, CastInsts);
   }
+
+  // Collect cast instructions and the minimum width used by the recurrence.
+  // If the starting value is not the same as the phi node and the computed
+  // recurrence type is equal to the recurrence type, the recurrence expression
+  // will be represented in a narrower or wider type. If there are any cast
+  // instructions that will be unnecessary, collect them in CastsFromRecurTy.
+  // Note that the 'and' instruction was already included in this list.
+  //
+  // TODO: A better way to represent this may be to tag in some way all the
+  //       instructions that are a part of the reduction. The vectorizer cost
+  //       model could then apply the recurrence type to these instructions,
+  //       without needing a white list of instructions to ignore.
+  //       This may also be useful for the inloop reductions, if it can be
+  //       kept simple enough.
+  collectCastInstrs(TheLoop, ExitInstruction, RecurrenceType, CastInsts,
+                    MinWidthCastToRecurrenceType);
 
   // We found a reduction var if we have reached the original phi node and we
   // only have a single instruction with out-of-loop users.
@@ -524,7 +540,8 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
   // Save the description of this reduction variable.
   RecurrenceDescriptor RD(RdxStart, ExitInstruction, Kind, FMF,
                           ReduxDesc.getExactFPMathInst(), RecurrenceType,
-                          IsSigned, IsOrdered, CastInsts);
+                          IsSigned, IsOrdered, CastInsts,
+                          MinWidthCastToRecurrenceType);
   RedDes = RD;
 
   return true;

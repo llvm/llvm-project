@@ -249,3 +249,11 @@ class TestQemuLaunch(TestBase):
 
         self.assertEqual(state["program"], self.getBuildArtifact())
         self.assertEqual(state["0"], "ARG0")
+
+    def test_sysroot(self):
+        sysroot = self.getBuildArtifact("sysroot")
+        self.runCmd("platform select qemu-user --sysroot %s" % sysroot)
+        state = self._run_and_get_state()
+        self.assertEqual(state["environ"]["QEMU_LD_PREFIX"], sysroot)
+        self.assertIn("QEMU_LD_PREFIX",
+                state["environ"]["QEMU_UNSET_ENV"].split(","))

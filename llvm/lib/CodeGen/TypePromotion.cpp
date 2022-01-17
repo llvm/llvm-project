@@ -116,11 +116,11 @@ class IRPromoter {
   SmallPtrSet<Value*, 8> Promoted;
 
   void ReplaceAllUsersOfWith(Value *From, Value *To);
-  void ExtendSources(void);
-  void ConvertTruncs(void);
-  void PromoteTree(void);
-  void TruncateSinks(void);
-  void Cleanup(void);
+  void ExtendSources();
+  void ConvertTruncs();
+  void PromoteTree();
+  void TruncateSinks();
+  void Cleanup();
 
 public:
   IRPromoter(LLVMContext &C, IntegerType *Ty, unsigned Width,

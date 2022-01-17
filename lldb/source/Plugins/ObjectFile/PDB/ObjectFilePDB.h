@@ -102,4 +102,4 @@ private:
 };
 
 } // namespace lldb_private
-#endif // LLDB_PLUGINS_OBJECTFILE_PDB_OBJECTFILEPDB_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_PDB_OBJECTFILEPDB_H

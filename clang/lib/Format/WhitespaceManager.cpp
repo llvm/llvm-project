@@ -74,6 +74,12 @@ WhitespaceManager::addReplacement(const tooling::Replacement &Replacement) {
   return Replaces.add(Replacement);
 }
 
+bool WhitespaceManager::inputUsesCRLF(StringRef Text, bool DefaultToCRLF) {
+  size_t LF = Text.count('\n');
+  size_t CR = Text.count('\r') * 2;
+  return LF == CR ? DefaultToCRLF : CR > LF;
+}
+
 void WhitespaceManager::replaceWhitespaceInToken(
     const FormatToken &Tok, unsigned Offset, unsigned ReplaceChars,
     StringRef PreviousPostfix, StringRef CurrentPrefix, bool InPPDirective,
@@ -304,7 +310,7 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     unsigned PreviousNonComment = i - 1;
     while (PreviousNonComment > Start &&
            Changes[PreviousNonComment].Tok->is(tok::comment))
-      PreviousNonComment--;
+      --PreviousNonComment;
     if (i != Start && Changes[i].indentAndNestingLevel() >
                           Changes[PreviousNonComment].indentAndNestingLevel())
       ScopeStack.push_back(i);
@@ -360,6 +366,13 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
         // Continued ternary operator
         if (Changes[i].Tok->Previous &&
             Changes[i].Tok->Previous->is(TT_ConditionalExpr))
+          return true;
+
+        // Continued braced list.
+        if (ScopeStart > Start + 1 &&
+            Changes[ScopeStart - 2].Tok->isNot(tok::identifier) &&
+            Changes[ScopeStart - 1].Tok->is(tok::l_brace) &&
+            Changes[i].Tok->isNot(tok::r_brace))
           return true;
 
         return false;
@@ -1160,7 +1173,7 @@ WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
           NextNonComment = NextNonComment->getNextNonComment();
         auto j = i;
         while (Changes[j].Tok != NextNonComment && j < End)
-          j++;
+          ++j;
         if (j < End && Changes[j].NewlinesBefore == 0 &&
             Changes[j].Tok->isNot(tok::r_brace)) {
           Changes[j].NewlinesBefore = 1;

@@ -208,7 +208,7 @@ define i32 @test_memory_constraint(i32* %a) nounwind {
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK:   $w0 = COPY [[COPY1]](s32)
   ; CHECK:   RET_ReallyLR implicit $w0
-  %1 = tail call i32 asm "ldr $0, $1", "=r,*m"(i32* %a)
+  %1 = tail call i32 asm "ldr $0, $1", "=r,*m"(i32* elementtype(i32) %a)
   ret i32 %1
 }
 

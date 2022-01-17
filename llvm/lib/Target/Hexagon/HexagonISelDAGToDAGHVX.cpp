@@ -2393,6 +2393,7 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
   SDValue Base = N->getOperand(4);
   SDValue Modifier = N->getOperand(5);
   SDValue Offset = N->getOperand(6);
+  SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
   unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
@@ -2414,7 +2415,8 @@ void HexagonDAGToDAGISel::SelectV65GatherPred(SDNode *N) {
   }
 
   SDVTList VTs = CurDAG->getVTList(MVT::Other);
-  SDValue Ops[] = { Address, Predicate, Base, Modifier, Offset, Chain };
+  SDValue Ops[] = { Address, ImmOperand,
+                    Predicate, Base, Modifier, Offset, Chain };
   SDNode *Result = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
 
   MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
@@ -2430,6 +2432,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   SDValue Base = N->getOperand(3);
   SDValue Modifier = N->getOperand(4);
   SDValue Offset = N->getOperand(5);
+  SDValue ImmOperand = CurDAG->getTargetConstant(0, dl, MVT::i32);
 
   unsigned Opcode;
   unsigned IntNo = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
@@ -2451,7 +2454,7 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   }
 
   SDVTList VTs = CurDAG->getVTList(MVT::Other);
-  SDValue Ops[] = { Address, Base, Modifier, Offset, Chain };
+  SDValue Ops[] = { Address, ImmOperand, Base, Modifier, Offset, Chain };
   SDNode *Result = CurDAG->getMachineNode(Opcode, dl, VTs, Ops);
 
   MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();

@@ -487,7 +487,6 @@ const unsigned RoundingBitsPos = 22;
 } // namespace AArch64
 
 class AArch64Subtarget;
-class AArch64TargetMachine;
 
 class AArch64TargetLowering : public TargetLowering {
 public:
@@ -1137,8 +1136,16 @@ private:
   // with BITCAST used otherwise.
   SDValue getSVESafeBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) const;
 
-  bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
-                                             LLT Ty2) const override;
+  bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
+                                              LLT Ty2) const override;
+
+  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT, SDValue V) const override {
+    if (!V || SrcVT.getScalarType() == MVT::i1)
+      return false;
+    if (ConstantSDNode *C = isConstOrConstSplat(V))
+      return C->getAPIntValue().isNegative();
+    return false;
+  }
 };
 
 namespace AArch64 {

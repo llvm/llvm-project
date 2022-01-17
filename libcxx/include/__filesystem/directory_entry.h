@@ -12,17 +12,18 @@
 
 #include <__availability>
 #include <__config>
-#include <__filesystem/path.h>
-#include <__filesystem/file_time_type.h>
-#include <__filesystem/filesystem_error.h>
-#include <__filesystem/file_status.h>
-#include <__filesystem/file_type.h>
-#include <__filesystem/operations.h>
-#include <__filesystem/perms.h>
 #include <__errc>
+#include <__filesystem/file_status.h>
+#include <__filesystem/file_time_type.h>
+#include <__filesystem/file_type.h>
+#include <__filesystem/filesystem_error.h>
+#include <__filesystem/operations.h>
+#include <__filesystem/path.h>
+#include <__filesystem/perms.h>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <iosfwd>
 #include <system_error>
 
 _LIBCPP_PUSH_MACROS
@@ -237,6 +238,12 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   bool operator>=(directory_entry const& __rhs) const noexcept {
     return __p_ >= __rhs.__p_;
+  }
+
+  template <class _CharT, class _Traits>
+  _LIBCPP_INLINE_VISIBILITY
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const directory_entry& __d) {
+    return __os << __d.path();
   }
 
 private:

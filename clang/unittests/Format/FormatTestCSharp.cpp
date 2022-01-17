@@ -1518,5 +1518,32 @@ TEST_F(FormatTestCSharp, EmptyShortBlock) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, ShortFunctions) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
+  Style.NamespaceIndentation = FormatStyle::NI_All;
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
+  verifyFormat("interface Interface {\n"
+               "  void f() { return; }\n"
+               "};",
+               Style);
+  verifyFormat("public interface Interface {\n"
+               "  void f() { return; }\n"
+               "};",
+               Style);
+  verifyFormat("namespace {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "};",
+               Style);
+  // "union" is not a keyword in C#.
+  verifyFormat("namespace union {\n"
+               "  void f() {\n"
+               "    return;\n"
+               "  }\n"
+               "};",
+               Style);
+}
+
 } // namespace format
 } // end namespace clang

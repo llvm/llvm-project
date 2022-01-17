@@ -121,6 +121,16 @@ void test(int x) {
   foo->func(x);
 }
 
+void AccessIncompleteClass() {
+  struct Forward;
+  Forward* ptr;
+  // CHECK:      CallExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT: `-CXXDependentScopeMemberExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT:   `-RecoveryExpr {{.*}} '<dependent type>' contains-errors
+  // CHECK-NEXT:     `-DeclRefExpr {{.*}} 'Forward *'
+  ptr->method();
+}
+
 struct Foo2 {
   double func();
   class ForwardClass;
@@ -350,4 +360,44 @@ void CtorInitializer() {
     // CHECK-NEXT: | `-ParenListExpr
     // CHECK-NEXT: |   `-RecoveryExpr {{.*}} '<dependent type>'
   };
+}
+
+float *brokenReturn() {
+  // CHECK:      FunctionDecl {{.*}} brokenReturn
+  return 42;
+  // CHECK:      ReturnStmt
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} 'float *'
+  // CHECK-NEXT:   `-IntegerLiteral {{.*}} 'int' 42
+}
+
+// Return deduction treats the first, second *and* third differently!
+auto *brokenDeducedReturn(int *x, float *y, double *z) {
+  // CHECK:      FunctionDecl {{.*}} invalid brokenDeducedReturn
+  if (x) return x;
+  // CHECK:      ReturnStmt
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} <LValueToRValue>
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'x' 'int *'
+  if (y) return y;
+  // CHECK:      ReturnStmt
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} 'int *'
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'y' 'float *'
+  if (z) return z;
+  // CHECK:      ReturnStmt
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} 'int *'
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'z' 'double *'
+  return x;
+  // Unfortunate: we wrap a valid return in RecoveryExpr.
+  // This is to avoid running deduction again after it failed once.
+  // CHECK:      ReturnStmt
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} 'int *'
+  // CHECK-NEXT:   `-DeclRefExpr {{.*}} 'x' 'int *'
+}
+
+void returnInitListFromVoid() {
+  // CHECK:      FunctionDecl {{.*}} returnInitListFromVoid
+  return {7,8};
+  // CHECK:      ReturnStmt
+  // CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+  // CHECK-NEXT:   |-IntegerLiteral {{.*}} 'int' 7
+  // CHECK-NEXT:   `-IntegerLiteral {{.*}} 'int' 8
 }

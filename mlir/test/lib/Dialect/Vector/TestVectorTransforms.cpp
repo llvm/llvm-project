@@ -31,7 +31,8 @@ namespace {
 struct TestVectorToVectorLowering
     : public PassWrapper<TestVectorToVectorLowering, FunctionPass> {
   TestVectorToVectorLowering() = default;
-  TestVectorToVectorLowering(const TestVectorToVectorLowering &pass) {}
+  TestVectorToVectorLowering(const TestVectorToVectorLowering &pass)
+      : PassWrapper(pass) {}
   StringRef getArgument() const final {
     return "test-vector-to-vector-lowering";
   }
@@ -110,7 +111,8 @@ struct TestVectorContractionLowering
            "dialect";
   }
   TestVectorContractionLowering() = default;
-  TestVectorContractionLowering(const TestVectorContractionLowering &pass) {}
+  TestVectorContractionLowering(const TestVectorContractionLowering &pass)
+      : PassWrapper(pass) {}
 
   Option<bool> lowerToFlatMatrix{
       *this, "vector-lower-matrix-intrinsics",
@@ -182,7 +184,8 @@ struct TestVectorTransposeLowering
            "dialect";
   }
   TestVectorTransposeLowering() = default;
-  TestVectorTransposeLowering(const TestVectorTransposeLowering &pass) {}
+  TestVectorTransposeLowering(const TestVectorTransposeLowering &pass)
+      : PassWrapper(pass) {}
 
   Option<bool> lowerToEltwise{
       *this, "eltwise",
@@ -253,7 +256,8 @@ struct TestVectorUnrollingPatterns
            "dialect";
   }
   TestVectorUnrollingPatterns() = default;
-  TestVectorUnrollingPatterns(const TestVectorUnrollingPatterns &pass) {}
+  TestVectorUnrollingPatterns(const TestVectorUnrollingPatterns &pass)
+      : PassWrapper(pass) {}
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
@@ -312,7 +316,8 @@ struct TestVectorDistributePatterns
            "dialect";
   }
   TestVectorDistributePatterns() = default;
-  TestVectorDistributePatterns(const TestVectorDistributePatterns &pass) {}
+  TestVectorDistributePatterns(const TestVectorDistributePatterns &pass)
+      : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<VectorDialect>();
     registry.insert<AffineDialect>();
@@ -365,7 +370,8 @@ struct TestVectorToLoopPatterns
     return "Test lowering patterns to break up a vector op into a for loop";
   }
   TestVectorToLoopPatterns() = default;
-  TestVectorToLoopPatterns(const TestVectorToLoopPatterns &pass) {}
+  TestVectorToLoopPatterns(const TestVectorToLoopPatterns &pass)
+      : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<VectorDialect>();
     registry.insert<AffineDialect>();
@@ -385,9 +391,7 @@ struct TestVectorToLoopPatterns
           type.getNumElements() % multiplicity != 0)
         return mlir::WalkResult::advance();
       auto filterAlloc = [](Operation *op) {
-        if (isa<arith::ConstantOp, memref::AllocOp, CallOp>(op))
-          return false;
-        return true;
+        return !isa<arith::ConstantOp, memref::AllocOp, CallOp>(op);
       };
       auto dependentOps = getSlice(op, filterAlloc);
       // Create a loop and move instructions from the Op slice into the loop.
@@ -456,7 +460,8 @@ struct TestVectorTransferFullPartialSplitPatterns
   }
   TestVectorTransferFullPartialSplitPatterns() = default;
   TestVectorTransferFullPartialSplitPatterns(
-      const TestVectorTransferFullPartialSplitPatterns &pass) {}
+      const TestVectorTransferFullPartialSplitPatterns &pass)
+      : PassWrapper(pass) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
@@ -514,7 +519,8 @@ struct TestVectorMultiReductionLoweringPatterns
                          FunctionPass> {
   TestVectorMultiReductionLoweringPatterns() = default;
   TestVectorMultiReductionLoweringPatterns(
-      const TestVectorMultiReductionLoweringPatterns &pass) {}
+      const TestVectorMultiReductionLoweringPatterns &pass)
+      : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
   }
@@ -544,7 +550,7 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
                          FunctionPass> {
   TestVectorTransferCollapseInnerMostContiguousDims() = default;
   TestVectorTransferCollapseInnerMostContiguousDims(
-      const TestVectorTransferCollapseInnerMostContiguousDims &pass) {}
+      const TestVectorTransferCollapseInnerMostContiguousDims &pass) = default;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, AffineDialect>();

@@ -81,6 +81,9 @@ public:
     bool CollectMainFileSymbols = true;
     /// Collect references to main-file symbols.
     bool CollectMainFileRefs = false;
+    /// Collect symbols with reserved names, like __Vector_base.
+    /// This does not currently affect macros (many like _WIN32 are important!)
+    bool CollectReserved = false;
     /// If set to true, SymbolCollector will collect doc for all symbols.
     /// Note that documents of symbols being indexed for completion will always
     /// be collected regardless of this option.

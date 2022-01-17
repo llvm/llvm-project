@@ -14,7 +14,7 @@
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/LoopAnalysis.h"
-#include "mlir/Analysis/PresburgerSet.h"
+#include "mlir/Analysis/Presburger/PresburgerSet.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
@@ -151,7 +151,7 @@ void ComputationSliceState::dump() const {
 /// if both the src and the dst loops don't have the same bounds. Returns
 /// llvm::None if none of the above can be proven.
 Optional<bool> ComputationSliceState::isSliceMaximalFastCheck() const {
-  assert(lbs.size() == ubs.size() && lbs.size() && ivs.size() &&
+  assert(lbs.size() == ubs.size() && !lbs.empty() && !ivs.empty() &&
          "Unexpected number of lbs, ubs and ivs in slice");
 
   for (unsigned i = 0, end = lbs.size(); i < end; ++i) {
@@ -564,7 +564,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   for (auto id : ids) {
     AffineForOp iv;
     if ((iv = getForInductionVarOwner(id)) &&
-        llvm::is_contained(enclosingIVs, iv) == false) {
+        !llvm::is_contained(enclosingIVs, iv)) {
       cst.projectOut(id);
     }
   }
@@ -817,9 +817,9 @@ mlir::computeSliceUnion(ArrayRef<Operation *> opsA, ArrayRef<Operation *> opsB,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolIds() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (auto i : opsA) {
+  for (auto *i : opsA) {
     MemRefAccess srcAccess(i);
-    for (auto j : opsB) {
+    for (auto *j : opsB) {
       MemRefAccess dstAccess(j);
       if (srcAccess.memref != dstAccess.memref)
         continue;

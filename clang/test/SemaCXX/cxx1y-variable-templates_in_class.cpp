@@ -394,6 +394,18 @@ namespace dependent_static_var_template {
     template<int = 0> static int n; // expected-note {{here}}
   }
   int &t = B::template n; // expected-error {{use of variable template 'n' requires template arguments}}
+
+  struct C {
+    template <class T> static T G;
+  };
+  template<class T> T C::G = T(6);
+
+  template <class T> T F() {
+    C c;
+    return c.G<T>;
+  }
+
+  int cf() { return F<int>(); }
 }
 
 #ifndef PRECXX11

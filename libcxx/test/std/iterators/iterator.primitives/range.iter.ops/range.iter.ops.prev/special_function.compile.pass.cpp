@@ -13,85 +13,11 @@
 
 #include <iterator>
 
-#include "test_iterators.h"
-#include "test_standard_function.h"
+#include "is_niebloid.h"
+#include "test_macros.h"
 
-static_assert(is_function_like<decltype(std::ranges::prev)>());
-
-namespace std::ranges {
-class fake_bidirectional_iterator {
-public:
-  using value_type = int;
-  using difference_type = std::ptrdiff_t;
-  using iterator_category = std::bidirectional_iterator_tag;
-
-  fake_bidirectional_iterator() = default;
-
-  value_type operator*() const;
-  fake_bidirectional_iterator& operator++();
-  fake_bidirectional_iterator operator++(int);
-  fake_bidirectional_iterator& operator--();
-  fake_bidirectional_iterator operator--(int);
-
-  bool operator==(fake_bidirectional_iterator const&) const = default;
-};
-} // namespace std::ranges
-
-// The function templates defined in [range.iter.ops] are not found by argument-dependent name lookup ([basic.lookup.argdep]).
-template <class I, class... Args>
-constexpr bool unqualified_lookup_works = requires(I i, Args... args) {
-  prev(i, args...);
-};
-
-static_assert(!unqualified_lookup_works<std::ranges::fake_bidirectional_iterator>);
-static_assert(!unqualified_lookup_works<std::ranges::fake_bidirectional_iterator, std::ptrdiff_t>);
-static_assert(!unqualified_lookup_works<std::ranges::fake_bidirectional_iterator, std::ptrdiff_t,
-                                        std::ranges::fake_bidirectional_iterator>);
-
-namespace test {
-template <class>
-class bidirectional_iterator {
-public:
-  using value_type = int;
-  using difference_type = std::ptrdiff_t;
-  using iterator_category = std::bidirectional_iterator_tag;
-
-  bidirectional_iterator() = default;
-
-  value_type operator*() const;
-  bidirectional_iterator& operator++();
-  bidirectional_iterator operator++(int);
-  bidirectional_iterator& operator--();
-  bidirectional_iterator operator--(int);
-
-  bool operator==(bidirectional_iterator const&) const = default;
-};
-
-template <class I>
-void prev(bidirectional_iterator<I>) {
-  static_assert(std::same_as<I, I*>);
-}
-
-template <class I>
-void prev(bidirectional_iterator<I>, std::ptrdiff_t) {
-  static_assert(std::same_as<I, I*>);
-}
-
-template <class I>
-void prev(bidirectional_iterator<I>, std::ptrdiff_t, bidirectional_iterator<I>) {
-  static_assert(std::same_as<I, I*>);
-}
-} // namespace test
-
-// TODO(varconst): simply check that `prev` is a variable and not a function.
-// When found by unqualified ([basic.lookup.unqual]) name lookup for the postfix-expression in a
-// function call ([expr.call]), they inhibit argument-dependent name lookup.
-void adl_inhibition() {
-  test::bidirectional_iterator<int*> x;
-
-  using std::ranges::prev;
-
-  (void)prev(x);
-  (void)prev(x, 5);
-  (void)prev(x, 6, x);
-}
+// Because this is a variable and not a function, it's guaranteed that ADL won't be used. However,
+// implementations are allowed to use a different mechanism to achieve this effect, so this check is
+// libc++-specific.
+LIBCPP_STATIC_ASSERT(std::is_class_v<decltype(std::ranges::prev)>);
+LIBCPP_STATIC_ASSERT(is_niebloid<decltype(std::ranges::prev)>());

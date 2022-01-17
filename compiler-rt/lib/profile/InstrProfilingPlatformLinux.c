@@ -43,8 +43,8 @@ extern __llvm_profile_data PROF_DATA_START COMPILER_RT_VISIBILITY
     COMPILER_RT_WEAK;
 extern __llvm_profile_data PROF_DATA_STOP COMPILER_RT_VISIBILITY
     COMPILER_RT_WEAK;
-extern uint64_t PROF_CNTS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
-extern uint64_t PROF_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern char PROF_CNTS_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
+extern char PROF_CNTS_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern uint32_t PROF_ORDERFILE_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_NAME_START COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
 extern char PROF_NAME_STOP COMPILER_RT_VISIBILITY COMPILER_RT_WEAK;
@@ -65,10 +65,10 @@ COMPILER_RT_VISIBILITY const char *__llvm_profile_begin_names(void) {
 COMPILER_RT_VISIBILITY const char *__llvm_profile_end_names(void) {
   return &PROF_NAME_STOP;
 }
-COMPILER_RT_VISIBILITY uint64_t *__llvm_profile_begin_counters(void) {
+COMPILER_RT_VISIBILITY char *__llvm_profile_begin_counters(void) {
   return &PROF_CNTS_START;
 }
-COMPILER_RT_VISIBILITY uint64_t *__llvm_profile_end_counters(void) {
+COMPILER_RT_VISIBILITY char *__llvm_profile_end_counters(void) {
   return &PROF_CNTS_STOP;
 }
 COMPILER_RT_VISIBILITY uint32_t *__llvm_profile_begin_orderfile(void) {

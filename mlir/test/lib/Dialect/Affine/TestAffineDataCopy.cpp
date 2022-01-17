@@ -34,7 +34,7 @@ struct TestAffineDataCopy
     return "Tests affine data copy utility functions.";
   }
   TestAffineDataCopy() = default;
-  TestAffineDataCopy(const TestAffineDataCopy &pass){};
+  TestAffineDataCopy(const TestAffineDataCopy &pass) : PassWrapper(pass){};
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
@@ -59,7 +59,7 @@ void TestAffineDataCopy::runOnFunction() {
   // Gather all AffineForOps by loop depth.
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
   gatherLoops(getFunction(), depthToLoops);
-  assert(depthToLoops.size() && "Loop nest not found");
+  assert(!depthToLoops.empty() && "Loop nest not found");
 
   // Only support tests with a single loop nest and a single innermost loop
   // for now.
@@ -90,12 +90,16 @@ void TestAffineDataCopy::runOnFunction() {
                                    /*fastMemCapacityBytes=*/32 * 1024 * 1024UL};
   DenseSet<Operation *> copyNests;
   if (clMemRefFilter) {
-    affineDataCopyGenerate(loopNest, copyOptions, load.getMemRef(), copyNests);
+    if (failed(affineDataCopyGenerate(loopNest, copyOptions, load.getMemRef(),
+                                      copyNests)))
+      return;
   } else if (clTestGenerateCopyForMemRegion) {
     CopyGenerateResult result;
     MemRefRegion region(loopNest.getLoc());
-    (void)region.compute(load, /*loopDepth=*/0);
-    (void)generateCopyForMemRegion(region, loopNest, copyOptions, result);
+    if (failed(region.compute(load, /*loopDepth=*/0)))
+      return;
+    if (failed(generateCopyForMemRegion(region, loopNest, copyOptions, result)))
+      return;
   }
 
   // Promote any single iteration loops in the copy nests and simplify

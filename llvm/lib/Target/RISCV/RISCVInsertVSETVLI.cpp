@@ -473,21 +473,15 @@ static bool isScalarMoveInstr(const MachineInstr &MI) {
   case RISCV::PseudoVFMV_S_F16_M8:
   case RISCV::PseudoVFMV_S_F16_MF2:
   case RISCV::PseudoVFMV_S_F16_MF4:
-  case RISCV::PseudoVFMV_S_F16_MF8:
   case RISCV::PseudoVFMV_S_F32_M1:
   case RISCV::PseudoVFMV_S_F32_M2:
   case RISCV::PseudoVFMV_S_F32_M4:
   case RISCV::PseudoVFMV_S_F32_M8:
   case RISCV::PseudoVFMV_S_F32_MF2:
-  case RISCV::PseudoVFMV_S_F32_MF4:
-  case RISCV::PseudoVFMV_S_F32_MF8:
   case RISCV::PseudoVFMV_S_F64_M1:
   case RISCV::PseudoVFMV_S_F64_M2:
   case RISCV::PseudoVFMV_S_F64_M4:
   case RISCV::PseudoVFMV_S_F64_M8:
-  case RISCV::PseudoVFMV_S_F64_MF2:
-  case RISCV::PseudoVFMV_S_F64_MF4:
-  case RISCV::PseudoVFMV_S_F64_MF8:
     return true;
   }
 }

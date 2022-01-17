@@ -72,9 +72,13 @@ def V_MF2 : LMULInfo<0b111, 4, VR, VR,          VR,          VR,/*NoVReg*/VR, "M
 
 // Used to iterate over all possible LMULs.
 defvar MxList = [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
+// For floating point which don't need MF8.
+defvar MxListF = [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
 
 // Used for widening and narrowing instructions as it doesn't contain M8.
 defvar MxListW = [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4];
+// For floating point which don't need MF8.
+defvar MxListFW = [V_MF4, V_MF2, V_M1, V_M2, V_M4];
 
 // Use for zext/sext.vf2
 defvar MxListVF2 = [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
@@ -85,26 +89,27 @@ defvar MxListVF4 = [V_MF2, V_M1, V_M2, V_M4, V_M8];
 // Use for zext/sext.vf8
 defvar MxListVF8 = [V_M1, V_M2, V_M4, V_M8];
 
-class FPR_Info<RegisterClass regclass, string fx> {
-  RegisterClass fprclass = regclass;
-  string FX = fx;
-}
-
-def SCALAR_F16 : FPR_Info<FPR16, "F16">;
-def SCALAR_F32 : FPR_Info<FPR32, "F32">;
-def SCALAR_F64 : FPR_Info<FPR64, "F64">;
-
-defvar FPList = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
-
-// Used for widening instructions. It excludes F64.
-defvar FPListW = [SCALAR_F16, SCALAR_F32];
-
 class MxSet<int eew> {
   list<LMULInfo> m = !cond(!eq(eew, 8) : [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8],
                            !eq(eew, 16) : [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8],
                            !eq(eew, 32) : [V_MF2, V_M1, V_M2, V_M4, V_M8],
                            !eq(eew, 64) : [V_M1, V_M2, V_M4, V_M8]);
 }
+
+class FPR_Info<RegisterClass regclass, string fx, list<LMULInfo> mxlist> {
+  RegisterClass fprclass = regclass;
+  string FX = fx;
+  list<LMULInfo> MxList = mxlist;
+}
+
+def SCALAR_F16 : FPR_Info<FPR16, "F16", MxSet<16>.m>;
+def SCALAR_F32 : FPR_Info<FPR32, "F32", MxSet<32>.m>;
+def SCALAR_F64 : FPR_Info<FPR64, "F64", MxSet<64>.m>;
+
+defvar FPList = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
+
+// Used for widening instructions. It excludes F64.
+defvar FPListW = [SCALAR_F16, SCALAR_F32];
 
 class NFSet<LMULInfo m> {
   list<int> L = !cond(!eq(m.value, V_M8.value): [],
@@ -227,25 +232,25 @@ defset list<VTypeInfo> AllVectors = {
 
     defset list<GroupVTypeInfo> GroupFloatVectors = {
       def VF16M2: GroupVTypeInfo<vfloat16m2_t, vfloat16m1_t, vbool8_t, 16,
-                                  VRM2, V_M2, f16, FPR16>;
+                                 VRM2, V_M2, f16, FPR16>;
       def VF16M4: GroupVTypeInfo<vfloat16m4_t, vfloat16m1_t, vbool4_t, 16,
-                                  VRM4, V_M4, f16, FPR16>;
+                                 VRM4, V_M4, f16, FPR16>;
       def VF16M8: GroupVTypeInfo<vfloat16m8_t, vfloat16m1_t, vbool2_t, 16,
-                                  VRM8, V_M8, f16, FPR16>;
+                                 VRM8, V_M8, f16, FPR16>;
 
       def VF32M2: GroupVTypeInfo<vfloat32m2_t, vfloat32m1_t, vbool16_t, 32,
-                                  VRM2, V_M2, f32, FPR32>;
+                                 VRM2, V_M2, f32, FPR32>;
       def VF32M4: GroupVTypeInfo<vfloat32m4_t, vfloat32m1_t, vbool8_t,  32,
-                                  VRM4, V_M4, f32, FPR32>;
+                                 VRM4, V_M4, f32, FPR32>;
       def VF32M8: GroupVTypeInfo<vfloat32m8_t, vfloat32m1_t, vbool4_t,  32,
-                                  VRM8, V_M8, f32, FPR32>;
+                                 VRM8, V_M8, f32, FPR32>;
 
       def VF64M2: GroupVTypeInfo<vfloat64m2_t, vfloat64m1_t, vbool32_t, 64,
-                                  VRM2, V_M2, f64, FPR64>;
+                                 VRM2, V_M2, f64, FPR64>;
       def VF64M4: GroupVTypeInfo<vfloat64m4_t, vfloat64m1_t, vbool16_t, 64,
-                                  VRM4, V_M4, f64, FPR64>;
+                                 VRM4, V_M4, f64, FPR64>;
       def VF64M8: GroupVTypeInfo<vfloat64m8_t, vfloat64m1_t, vbool8_t,  64,
-                                  VRM8, V_M8, f64, FPR64>;
+                                 VRM8, V_M8, f64, FPR64>;
     }
   }
 }
@@ -1591,6 +1596,12 @@ multiclass VPseudoBinaryV_VV<string Constraint = ""> {
     defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
 }
 
+// Similar to VPseudoBinaryV_VV, but uses MxListF.
+multiclass VPseudoBinaryFV_VV<string Constraint = ""> {
+  foreach m = MxListF in
+    defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
+}
+
 multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
   foreach m = MxList in {
     foreach sew = EEWList in {
@@ -1619,15 +1630,15 @@ multiclass VPseudoVSLD1_VX<string Constraint = ""> {
 }
 
 multiclass VPseudoBinaryV_VF<string Constraint = ""> {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       defm "_V" # f.FX : VPseudoBinary<m.vrclass, m.vrclass,
                                        f.fprclass, m, Constraint>;
 }
 
 multiclass VPseudoVSLD1_VF<string Constraint = ""> {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       defm "_V" # f.FX :
         VPseudoBinary<m.vrclass, m.vrclass, f.fprclass, m, Constraint>,
         Sched<[WriteVFSlide1F, ReadVFSlideV, ReadVFSlideF, ReadVMask]>;
@@ -1653,8 +1664,8 @@ multiclass VPseudoVALU_MM {
 // * The destination EEW is greater than the source EEW, the source EMUL is
 //   at least 1, and the overlap is in the highest-numbered part of the
 //   destination register group is legal. Otherwise, it is illegal.
-multiclass VPseudoBinaryW_VV {
-  foreach m = MxListW in
+multiclass VPseudoBinaryW_VV<list<LMULInfo> mxlist = MxListW> {
+  foreach m = mxlist in
     defm _VV : VPseudoBinary<m.wvrclass, m.vrclass, m.vrclass, m,
                              "@earlyclobber $rd">;
 }
@@ -1666,15 +1677,15 @@ multiclass VPseudoBinaryW_VX {
 }
 
 multiclass VPseudoBinaryW_VF {
-  foreach m = MxListW in
-    foreach f = FPListW in
+  foreach f = FPListW in
+    foreach m = f.MxList in
       defm "_V" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
                                        f.fprclass, m,
                                        "@earlyclobber $rd">;
 }
 
-multiclass VPseudoBinaryW_WV {
-  foreach m = MxListW in {
+multiclass VPseudoBinaryW_WV<list<LMULInfo> mxlist = MxListW> {
+  foreach m = mxlist in {
     defm _WV : VPseudoBinary<m.wvrclass, m.wvrclass, m.vrclass, m,
                              "@earlyclobber $rd">;
     defm _WV : VPseudoTiedBinary<m.wvrclass, m.vrclass, m,
@@ -1688,8 +1699,8 @@ multiclass VPseudoBinaryW_WX {
 }
 
 multiclass VPseudoBinaryW_WF {
-  foreach m = MxListW in
-    foreach f = FPListW in
+  foreach f = FPListW in
+    foreach m = f.MxList in
       defm "_W" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
                                        f.fprclass, m>;
 }
@@ -1741,8 +1752,8 @@ multiclass VPseudoBinaryV_XM<bit CarryOut = 0, bit CarryIn = 1,
 }
 
 multiclass VPseudoVMRG_FM {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       def "_V" # f.FX # "M_" # m.MX :
         VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
                              m.vrclass, f.fprclass, m, /*CarryIn=*/1, "">,
@@ -1773,8 +1784,8 @@ multiclass VPseudoUnaryVMV_V_X_I {
 }
 
 multiclass VPseudoVMV_F {
-  foreach m = MxList in {
-    foreach f = FPList in {
+  foreach f = FPList in {
+    foreach m = f.MxList in {
       let VLMul = m.value in {
         def "_" # f.FX # "_" # m.MX :
           VPseudoUnaryNoDummyMask<m.vrclass, f.fprclass>,
@@ -1785,7 +1796,7 @@ multiclass VPseudoVMV_F {
 }
 
 multiclass VPseudoVCLS_V {
-  foreach m = MxList in {
+  foreach m = MxListF in {
     let VLMul = m.value in {
       def "_V_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
                          Sched<[WriteVFClassV, ReadVFClassV, ReadVMask]>;
@@ -1796,7 +1807,7 @@ multiclass VPseudoVCLS_V {
 }
 
 multiclass VPseudoVSQR_V {
-  foreach m = MxList in {
+  foreach m = MxListF in {
     let VLMul = m.value in {
       def "_V_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
                          Sched<[WriteVFSqrtV, ReadVFSqrtV, ReadVMask]>;
@@ -1807,7 +1818,7 @@ multiclass VPseudoVSQR_V {
 }
 
 multiclass VPseudoVRCP_V {
-  foreach m = MxList in {
+  foreach m = MxListF in {
     let VLMul = m.value in {
       def "_V_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
                          Sched<[WriteVFRecpV, ReadVFRecpV, ReadVMask]>;
@@ -1870,8 +1881,8 @@ multiclass PseudoVEXT_VF8 {
 //  lowest-numbered part of the source register group".
 // With LMUL<=1 the source and dest occupy a single register so any overlap
 // is in the lowest-numbered part.
-multiclass VPseudoBinaryM_VV {
-  foreach m = MxList in
+multiclass VPseudoBinaryM_VV<list<LMULInfo> mxlist = MxList> {
+  foreach m = mxlist in
     defm _VV : VPseudoBinaryM<VR, m.vrclass, m.vrclass, m,
                               !if(!ge(m.octuple, 16), "@earlyclobber $rd", "")>;
 }
@@ -1884,8 +1895,8 @@ multiclass VPseudoBinaryM_VX {
 }
 
 multiclass VPseudoBinaryM_VF {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       defm "_V" # f.FX :
         VPseudoBinaryM<VR, m.vrclass, f.fprclass, m,
                        !if(!ge(m.octuple, 16), "@earlyclobber $rd", "")>;
@@ -1986,14 +1997,14 @@ multiclass VPseudoVDIV_VV_VX {
 }
 
 multiclass VPseudoVFMUL_VV_VF {
-  defm "" : VPseudoBinaryV_VV,
+  defm "" : VPseudoBinaryFV_VV,
             Sched<[WriteVFMulV, ReadVFMulV, ReadVFMulV, ReadVMask]>;
   defm "" : VPseudoBinaryV_VF,
             Sched<[WriteVFMulF, ReadVFMulV, ReadVFMulF, ReadVMask]>;
 }
 
 multiclass VPseudoVFDIV_VV_VF {
-  defm "" : VPseudoBinaryV_VV,
+  defm "" : VPseudoBinaryFV_VV,
             Sched<[WriteVFDivV, ReadVFDivV, ReadVFDivV, ReadVMask]>;
   defm "" : VPseudoBinaryV_VF,
             Sched<[WriteVFDivF, ReadVFDivV, ReadVFDivF, ReadVMask]>;
@@ -2012,21 +2023,21 @@ multiclass VPseudoVALU_VV_VX {
 }
 
 multiclass VPseudoVSGNJ_VV_VF {
-  defm "" : VPseudoBinaryV_VV,
+  defm "" : VPseudoBinaryFV_VV,
             Sched<[WriteVFSgnjV, ReadVFSgnjV, ReadVFSgnjV, ReadVMask]>;
   defm "" : VPseudoBinaryV_VF,
             Sched<[WriteVFSgnjF, ReadVFSgnjV, ReadVFSgnjF, ReadVMask]>;
 }
 
 multiclass VPseudoVMAX_VV_VF {
-  defm "" : VPseudoBinaryV_VV,
+  defm "" : VPseudoBinaryFV_VV,
             Sched<[WriteVFCmpV, ReadVFCmpV, ReadVFCmpV, ReadVMask]>;
   defm "" : VPseudoBinaryV_VF,
             Sched<[WriteVFCmpF, ReadVFCmpV, ReadVFCmpF, ReadVMask]>;
 }
 
 multiclass VPseudoVALU_VV_VF {
-  defm "" : VPseudoBinaryV_VV,
+  defm "" : VPseudoBinaryFV_VV,
             Sched<[WriteVFALUV, ReadVFALUV, ReadVFALUV, ReadVMask]>;
   defm "" : VPseudoBinaryV_VF,
             Sched<[WriteVFALUF, ReadVFALUV, ReadVFALUF, ReadVMask]>;
@@ -2059,15 +2070,10 @@ multiclass VPseudoVWMUL_VV_VX {
 }
 
 multiclass VPseudoVWMUL_VV_VF {
-  defm "" : VPseudoBinaryW_VV,
+  defm "" : VPseudoBinaryW_VV<MxListFW>,
             Sched<[WriteVFWMulV, ReadVFWMulV, ReadVFWMulV, ReadVMask]>;
   defm "" : VPseudoBinaryW_VF,
             Sched<[WriteVFWMulF, ReadVFWMulV, ReadVFWMulF, ReadVMask]>;
-}
-
-multiclass VPseudoBinaryW_VV_VF {
-  defm "" : VPseudoBinaryW_VV;
-  defm "" : VPseudoBinaryW_VF;
 }
 
 multiclass VPseudoVWALU_WV_WX {
@@ -2078,14 +2084,14 @@ multiclass VPseudoVWALU_WV_WX {
 }
 
 multiclass VPseudoVFWALU_VV_VF {
-  defm "" : VPseudoBinaryW_VV,
+  defm "" : VPseudoBinaryW_VV<MxListFW>,
             Sched<[WriteVFWALUV, ReadVFWALUV, ReadVFWALUV, ReadVMask]>;
   defm "" : VPseudoBinaryW_VF,
             Sched<[WriteVFWALUF, ReadVFWALUV, ReadVFWALUF, ReadVMask]>;
 }
 
 multiclass VPseudoVFWALU_WV_WF {
-  defm "" : VPseudoBinaryW_WV,
+  defm "" : VPseudoBinaryW_WV<MxListFW>,
             Sched<[WriteVFWALUV, ReadVFWALUV, ReadVFWALUV, ReadVMask]>;
   defm "" : VPseudoBinaryW_WF,
             Sched<[WriteVFWALUF, ReadVFWALUV, ReadVFWALUF, ReadVMask]>;
@@ -2190,8 +2196,9 @@ multiclass VPseudoTernaryWithPolicy<VReg RetClass,
   }
 }
 
-multiclass VPseudoTernaryV_VV_AAXA<string Constraint = ""> {
-  foreach m = MxList in {
+multiclass VPseudoTernaryV_VV_AAXA<string Constraint = "",
+                                   list<LMULInfo> mxlist = MxList> {
+  foreach m = mxlist in {
     defm _VV : VPseudoTernaryWithPolicy<m.vrclass, m.vrclass, m.vrclass, m,
                                         Constraint, /*Commutable*/1>;
   }
@@ -2209,16 +2216,16 @@ multiclass VPseudoTernaryV_VX_AAXA<string Constraint = ""> {
 }
 
 multiclass VPseudoTernaryV_VF_AAXA<string Constraint = ""> {
-  foreach m = MxList in
-    foreach f = FPList in
+  foreach f = FPList in
+    foreach m = f.MxList in
       defm "_V" # f.FX : VPseudoTernaryWithPolicy<m.vrclass, f.fprclass,
                                                   m.vrclass, m, Constraint,
                                                   /*Commutable*/1>;
 }
 
-multiclass VPseudoTernaryW_VV {
+multiclass VPseudoTernaryW_VV<list<LMULInfo> mxlist = MxListW> {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in
+  foreach m = mxlist in
     defm _VV : VPseudoTernaryWithPolicy<m.wvrclass, m.vrclass, m.vrclass, m,
                                         constraint>;
 }
@@ -2232,8 +2239,8 @@ multiclass VPseudoTernaryW_VX {
 
 multiclass VPseudoTernaryW_VF {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in
-    foreach f = FPListW in
+  foreach f = FPListW in
+    foreach m = f.MxList in
       defm "_V" # f.FX : VPseudoTernaryWithPolicy<m.wvrclass, f.fprclass,
                                                   m.vrclass, m, constraint>;
 }
@@ -2251,7 +2258,7 @@ multiclass VPseudoVMAC_VV_VX_AAXA<string Constraint = ""> {
 }
 
 multiclass VPseudoVMAC_VV_VF_AAXA<string Constraint = ""> {
-  defm "" : VPseudoTernaryV_VV_AAXA<Constraint>,
+  defm "" : VPseudoTernaryV_VV_AAXA<Constraint, MxListF>,
             Sched<[WriteVFMulAddV, ReadVFMulAddV, ReadVFMulAddV, ReadVFMulAddV, ReadVMask]>;
   defm "" : VPseudoTernaryV_VF_AAXA<Constraint>,
             Sched<[WriteVFMulAddF, ReadVFMulAddV, ReadVFMulAddV, ReadVFMulAddF, ReadVMask]>;
@@ -2277,7 +2284,7 @@ multiclass VPseudoVWMAC_VX {
 }
 
 multiclass VPseudoVWMAC_VV_VF {
-  defm "" : VPseudoTernaryW_VV,
+  defm "" : VPseudoTernaryW_VV<MxListFW>,
             Sched<[WriteVFWMulAddV, ReadVFWMulAddV, ReadVFWMulAddV, ReadVFWMulAddV, ReadVMask]>;
   defm "" : VPseudoTernaryW_VF,
             Sched<[WriteVFWMulAddF, ReadVFWMulAddV, ReadVFWMulAddV, ReadVFWMulAddF, ReadVMask]>;
@@ -2300,7 +2307,7 @@ multiclass VPseudoVCMPM_VV_VX {
 }
 
 multiclass VPseudoVCMPM_VV_VF {
-  defm "" : VPseudoBinaryM_VV,
+  defm "" : VPseudoBinaryM_VV<MxListF>,
             Sched<[WriteVFCmpV, ReadVFCmpV, ReadVFCmpV, ReadVMask]>;
   defm "" : VPseudoBinaryM_VF,
             Sched<[WriteVFCmpF, ReadVFCmpV, ReadVFCmpF, ReadVMask]>;
@@ -2333,21 +2340,21 @@ multiclass VPseudoVWRED_VS {
 }
 
 multiclass VPseudoVFRED_VS {
-  foreach m = MxList in {
+  foreach m = MxListF in {
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
                Sched<[WriteVFRedV, ReadVFRedV, ReadVFRedV, ReadVFRedV, ReadVMask]>;
   }
 }
 
 multiclass VPseudoVFREDO_VS {
-  foreach m = MxList in {
+  foreach m = MxListF in {
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
                Sched<[WriteVFRedOV, ReadVFRedOV, ReadVFRedOV, ReadVFRedOV, ReadVMask]>;
   }
 }
 
 multiclass VPseudoVFWRED_VS {
-  foreach m = MxList in {
+  foreach m = MxListF in {
     defm _VS : VPseudoTernary<V_M1.vrclass, m.vrclass, V_M1.vrclass, m>,
                Sched<[WriteVFWRedV, ReadVFWRedV, ReadVFWRedV, ReadVFWRedV, ReadVMask]>;
   }
@@ -2365,13 +2372,13 @@ multiclass VPseudoConversion<VReg RetClass,
 }
 
 multiclass VPseudoVCVTI_V {
-  foreach m = MxList in
+  foreach m = MxListF in
     defm _V : VPseudoConversion<m.vrclass, m.vrclass, m>,
               Sched<[WriteVFCvtFToIV, ReadVFCvtFToIV, ReadVMask]>;
 }
 
 multiclass VPseudoVCVTF_V {
-  foreach m = MxList in
+  foreach m = MxListF in
     defm _V : VPseudoConversion<m.vrclass, m.vrclass, m>,
               Sched<[WriteVFCvtIToFV, ReadVFCvtIToFV, ReadVMask]>;
 }
@@ -2384,7 +2391,7 @@ multiclass VPseudoConversionW_V {
 
 multiclass VPseudoVWCVTI_V {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in
+  foreach m = MxListFW in
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>,
               Sched<[WriteVFWCvtFToIV, ReadVFWCvtFToIV, ReadVMask]>;
 }
@@ -2398,7 +2405,7 @@ multiclass VPseudoVWCVTF_V {
 
 multiclass VPseudoVWCVTD_V {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in
+  foreach m = MxListFW in
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>,
               Sched<[WriteVFWCvtFToFV, ReadVFWCvtFToFV, ReadVMask]>;
 }
@@ -2412,14 +2419,14 @@ multiclass VPseudoVNCVTI_W {
 
 multiclass VPseudoVNCVTF_W {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in
+  foreach m = MxListFW in
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>,
               Sched<[WriteVFNCvtIToFV, ReadVFNCvtIToFV, ReadVMask]>;
 }
 
 multiclass VPseudoVNCVTD_W {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in
+  foreach m = MxListFW in
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>,
               Sched<[WriteVFNCvtFToFV, ReadVFNCvtFToFV, ReadVMask]>;
 }
@@ -3693,43 +3700,24 @@ multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
   }
 }
 
-multiclass VPatCompare_VI<string intrinsic, string inst> {
+multiclass VPatCompare_VI<string intrinsic, string inst,
+                          ImmLeaf ImmType = simm5_plus1> {
   foreach vti = AllIntegerVectors in {
     defvar Intr = !cast<Intrinsic>(intrinsic);
     defvar Pseudo = !cast<Instruction>(inst#"_VI_"#vti.LMul.MX);
     def : Pat<(vti.Mask (Intr (vti.Vector vti.RegClass:$rs1),
-                              (vti.Scalar simm5_plus1:$rs2),
+                              (vti.Scalar ImmType:$rs2),
                               VLOpFrag)),
-              (Pseudo vti.RegClass:$rs1, (DecImm simm5_plus1:$rs2),
+              (Pseudo vti.RegClass:$rs1, (DecImm ImmType:$rs2),
                       GPR:$vl, vti.Log2SEW)>;
     defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
     defvar PseudoMask = !cast<Instruction>(inst#"_VI_"#vti.LMul.MX#"_MASK");
     def : Pat<(vti.Mask (IntrMask (vti.Mask VR:$merge),
                                   (vti.Vector vti.RegClass:$rs1),
-                                  (vti.Scalar simm5_plus1:$rs2),
+                                  (vti.Scalar ImmType:$rs2),
                                   (vti.Mask V0),
                                   VLOpFrag)),
-              (PseudoMask VR:$merge, vti.RegClass:$rs1, (DecImm simm5_plus1:$rs2),
-                          (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
-  }
-}
-
-multiclass VPatCompareUnsignedZero<string intrinsic, string inst> {
-  foreach vti = AllIntegerVectors in {
-    defvar Intr = !cast<Intrinsic>(intrinsic);
-    defvar Pseudo = !cast<Instruction>(inst#"_VV_"#vti.LMul.MX);
-    def : Pat<(vti.Mask (Intr (vti.Vector vti.RegClass:$rs1),
-                              (vti.Scalar 0), VLOpFrag)),
-              (Pseudo vti.RegClass:$rs1, vti.RegClass:$rs1,
-                      GPR:$vl, vti.Log2SEW)>;
-    defvar IntrMask = !cast<Intrinsic>(intrinsic # "_mask");
-    defvar PseudoMask = !cast<Instruction>(inst#"_VV_"#vti.LMul.MX#"_MASK");
-    def : Pat<(vti.Mask (IntrMask (vti.Mask VR:$merge),
-                                  (vti.Vector vti.RegClass:$rs1),
-                                  (vti.Scalar 0),
-                                  (vti.Mask V0),
-                                  VLOpFrag)),
-              (PseudoMask VR:$merge, vti.RegClass:$rs1, vti.RegClass:$rs1,
+              (PseudoMask VR:$merge, vti.RegClass:$rs1, (DecImm ImmType:$rs2),
                           (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
   }
 }
@@ -3797,9 +3785,9 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0, Defs = [VL, VTYPE] in {
 // the when we aren't using one of the special X0 encodings. Otherwise it could
 // be accidentally be made X0 by MachineIR optimizations. To satisfy the
 // verifier, we also need a GPRX0 instruction for the special encodings.
-def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPRNoX0:$rs1, VTypeIOp:$vtypei), []>;
-def PseudoVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins GPRX0:$rs1, VTypeIOp:$vtypei), []>;
-def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp:$vtypei), []>;
+def PseudoVSETVLI : Pseudo<(outs GPR:$rd), (ins GPRNoX0:$rs1, VTypeIOp11:$vtypei), []>;
+def PseudoVSETVLIX0 : Pseudo<(outs GPR:$rd), (ins GPRX0:$rs1, VTypeIOp11:$vtypei), []>;
+def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp10:$vtypei), []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4362,8 +4350,8 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 
 let Predicates = [HasVInstructionsAnyF] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
-  foreach m = MxList in {
-    foreach f = FPList in {
+  foreach f = FPList in {
+    foreach m = f.MxList in {
       let VLMul = m.value in {
         let HasSEWOp = 1, BaseInstr = VFMV_F_S in
         def "PseudoVFMV_" # f.FX # "_S_" # m.MX :
@@ -4514,16 +4502,10 @@ defm : VPatBinarySwappedM_VV<"int_riscv_vmsge", "PseudoVMSLE", AllIntegerVectors
 // avoids the user needing to know that there is no vmslt(u).vi instruction.
 // Similar for vmsge(u).vx intrinsics using vmslt(u).vi.
 defm : VPatCompare_VI<"int_riscv_vmslt", "PseudoVMSLE">;
-defm : VPatCompare_VI<"int_riscv_vmsltu", "PseudoVMSLEU">;
-// Special cases to avoid matching vmsltu.vi 0 (always false) to
-// vmsleu.vi -1 (always true). Instead match to vmsne.vv.
-defm : VPatCompareUnsignedZero<"int_riscv_vmsltu", "PseudoVMSNE">;
+defm : VPatCompare_VI<"int_riscv_vmsltu", "PseudoVMSLEU", simm5_plus1_nonzero>;
 
 defm : VPatCompare_VI<"int_riscv_vmsge", "PseudoVMSGT">;
-defm : VPatCompare_VI<"int_riscv_vmsgeu", "PseudoVMSGTU">;
-// Special cases to avoid matching vmsgeu.vi 0 (always true) to
-// vmsgtu.vi -1 (always false). Instead match to vmsne.vv.
-defm : VPatCompareUnsignedZero<"int_riscv_vmsgeu", "PseudoVMSEQ">;
+defm : VPatCompare_VI<"int_riscv_vmsgeu", "PseudoVMSGTU", simm5_plus1_nonzero>;
 
 //===----------------------------------------------------------------------===//
 // 12.9. Vector Integer Min/Max Instructions

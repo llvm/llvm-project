@@ -362,7 +362,7 @@ llvm::Error repro::Finalize(Loader *loader) {
 
   FileSpec mapping =
       reproducer_root.CopyByAppendingPathComponent(FileProvider::Info::file);
-  if (auto ec = collector.copyFiles(/*stop_on_error=*/false))
+  if (auto ec = collector.copyFiles(/*StopOnError=*/false))
     return errorCodeToError(ec);
   collector.writeMapping(mapping.GetPath());
 

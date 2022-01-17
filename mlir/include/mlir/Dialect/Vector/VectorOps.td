@@ -865,6 +865,11 @@ def Vector_InsertStridedSliceOp :
     VectorType getDestVectorType() {
       return dest().getType().cast<VectorType>();
     }
+    bool hasNonUnitStrides() { 
+      return llvm::any_of(strides(), [](Attribute attr) {
+        return attr.cast<IntegerAttr>().getInt() != 1;
+      });
+    }
   }];
 
   let hasFolder = 1;
@@ -1120,6 +1125,11 @@ def Vector_ExtractStridedSliceOp :
     static StringRef getStridesAttrName() { return "strides"; }
     VectorType getVectorType(){ return vector().getType().cast<VectorType>(); }
     void getOffsets(SmallVectorImpl<int64_t> &results);
+    bool hasNonUnitStrides() { 
+      return llvm::any_of(strides(), [](Attribute attr) {
+        return attr.cast<IntegerAttr>().getInt() != 1;
+      });
+    }
   }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -2083,7 +2093,7 @@ def Vector_TypeCastOp :
     Example:
 
     ```mlir
-    %A  = alloc() : memref<5x4x3xf32>
+    %A  = memref.alloc() : memref<5x4x3xf32>
     %VA = vector.type_cast %A : memref<5x4x3xf32> to memref<vector<5x4x3xf32>>
     ```
   }];

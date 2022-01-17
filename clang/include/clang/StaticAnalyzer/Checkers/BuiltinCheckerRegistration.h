@@ -17,13 +17,9 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 
 namespace clang {
-
-class LangOptions;
-
 namespace ento {
 
 class CheckerManager;
-class CheckerRegistry;
 
 #define GET_CHECKERS
 #define CHECKER(FULLNAME, CLASS, HELPTEXT, DOC_URI, IS_HIDDEN)                 \

@@ -61,7 +61,7 @@ static_assert(test(std::weak_order, 1, 2));
 static_assert(test(std::ranges::begin, a));
 static_assert(test(std::ranges::end, a));
 static_assert(test(std::ranges::cbegin, a));
-//static_assert(test(std::ranges::cdata, a));
+static_assert(test(std::ranges::cdata, a));
 static_assert(test(std::ranges::cend, a));
 //static_assert(test(std::ranges::crbegin, a));
 //static_assert(test(std::ranges::crend, a));

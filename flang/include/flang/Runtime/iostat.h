@@ -55,6 +55,7 @@ enum Iostat {
   IostatBackspaceNonSequential,
   IostatBackspaceAtFirstRecord,
   IostatRewindNonSequential,
+  IostatWriteAfterEndfile,
 };
 
 const char *IostatErrorString(int);

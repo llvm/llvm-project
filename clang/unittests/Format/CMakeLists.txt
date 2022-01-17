@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_unittest(FormatTests
   CleanupTest.cpp
+  DefinitionBlockSeparatorTest.cpp
   FormatTest.cpp
   FormatTestComments.cpp
   FormatTestCSharp.cpp

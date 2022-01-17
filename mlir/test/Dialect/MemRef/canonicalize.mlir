@@ -151,7 +151,7 @@ func @multiple_reducing_dims_all_dynamic(%arg0 : memref<?x?x?xf32, offset: ?, st
 //       CHECK:   return %[[SIZE]] : index
 func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
   %c0 = arith.constant 0 : index
-  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [0] : memref<?xi8> to memref<?xi8>
+  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [1] : memref<?xi8> to memref<?xi8>
   %1 = memref.dim %0, %c0 : memref<?xi8>
   return %1 : index
 }
@@ -510,3 +510,28 @@ func @atomicrmw_cast_fold(%arg0 : f32, %arg1 : memref<4xf32>, %c : index) {
 
 // CHECK-LABEL: func @atomicrmw_cast_fold
 // CHECK-NEXT: memref.atomic_rmw addf %arg0, %arg1[%arg2] : (f32, memref<4xf32>) -> f32
+
+// -----
+
+#map = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+func @copy_of_cast(%m1: memref<?xf32>, %m2: memref<*xf32>) {
+  %casted1 = memref.cast %m1 : memref<?xf32> to memref<?xf32, #map>
+  %casted2 = memref.cast %m2 : memref<*xf32> to memref<?xf32, #map>
+  memref.copy %casted1, %casted2 : memref<?xf32, #map> to memref<?xf32, #map>
+  return
+}
+
+// CHECK-LABEL: func @copy_of_cast(
+//  CHECK-SAME:     %[[m1:.*]]: memref<?xf32>, %[[m2:.*]]: memref<*xf32>
+//       CHECK:   %[[casted2:.*]] = memref.cast %[[m2]]
+//       CHECK:   memref.copy %[[m1]], %[[casted2]]
+
+// -----
+
+func @self_copy(%m1: memref<?xf32>) {
+  memref.copy %m1, %m1 : memref<?xf32> to memref<?xf32>
+  return
+}
+
+// CHECK-LABEL: func @self_copy
+//  CHECK-NEXT:   return

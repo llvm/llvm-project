@@ -6,7 +6,7 @@ define void @m(i32 *%p) nounwind {
 entry:
   ; CHECK-LABEL: m:
 
-  call void asm sideeffect "lw $$1, $0", "*m,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 0))
+  call void asm sideeffect "lw $$1, $0", "*m,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 0))
 
   ; CHECK: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; CHECK: #APP
@@ -20,7 +20,7 @@ define void @m_offset_4(i32 *%p) nounwind {
 entry:
   ; CHECK-LABEL: m_offset_4:
 
-  call void asm sideeffect "lw $$1, $0", "*m,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 1))
+  call void asm sideeffect "lw $$1, $0", "*m,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 1))
 
   ; CHECK: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; CHECK: #APP
@@ -34,7 +34,7 @@ define void @m_offset_32764(i32 *%p) nounwind {
 entry:
   ; CHECK-LABEL: m_offset_32764:
 
-  call void asm sideeffect "lw $$1, $0", "*m,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 8191))
+  call void asm sideeffect "lw $$1, $0", "*m,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 8191))
 
   ; CHECK-DAG: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; CHECK: #APP
@@ -48,7 +48,7 @@ define void @m_offset_32768(i32 *%p) nounwind {
 entry:
   ; CHECK-LABEL: m_offset_32768:
 
-  call void asm sideeffect "lw $$1, $0", "*m,~{$1}"(i32* getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 8192))
+  call void asm sideeffect "lw $$1, $0", "*m,~{$1}"(i32* elementtype(i32) getelementptr inbounds ([8193 x i32], [8193 x i32]* @data, i32 0, i32 8192))
 
   ; CHECK-DAG: lw $[[BASEPTR:[0-9]+]], %got(data)(
   ; CHECK-DAG: ori $[[T0:[0-9]+]], $zero, 32768

@@ -34,7 +34,7 @@ ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
 }
 
 ALWAYS_INLINE ScudoTSD *
-getTSDAndLock(bool *UnlockRequired) NO_THREAD_SAFETY_ANALYSIS {
+getTSDAndLock(bool *UnlockRequired) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   if (UNLIKELY(ScudoThreadState != ThreadInitialized)) {
     FallbackTSD.lock();
     *UnlockRequired = true;

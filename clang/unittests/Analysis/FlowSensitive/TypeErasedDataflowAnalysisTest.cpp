@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NoopAnalysis.h"
 #include "TestingSupport.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Tooling/Tooling.h"
@@ -27,6 +29,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+
+namespace {
 
 using namespace clang;
 using namespace dataflow;
@@ -50,7 +54,8 @@ public:
         ControlFlowContext::build(nullptr, Body, Result.Context));
 
     AnalysisT Analysis(*Result.Context);
-    Environment Env;
+    DataflowAnalysisContext DACtx;
+    Environment Env(DACtx);
     BlockStates = runDataflowAnalysis(CFCtx, Analysis, Env);
   }
 
@@ -74,27 +79,6 @@ runAnalysis(llvm::StringRef Code) {
 
   return Callback.BlockStates;
 }
-
-class NoopLattice {
-public:
-  bool operator==(const NoopLattice &) const { return true; }
-
-  LatticeJoinEffect join(const NoopLattice &) {
-    return LatticeJoinEffect::Unchanged;
-  }
-};
-
-class NoopAnalysis : public DataflowAnalysis<NoopAnalysis, NoopLattice> {
-public:
-  NoopAnalysis(ASTContext &Context)
-      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context) {}
-
-  static NoopLattice initialElement() { return {}; }
-
-  NoopLattice transfer(const Stmt *S, const NoopLattice &E, Environment &Env) {
-    return {};
-  }
-};
 
 TEST(DataflowAnalysisTest, NoopAnalysis) {
   auto BlockStates = runAnalysis<NoopAnalysis>(R"(
@@ -129,9 +113,8 @@ public:
 
   static NonConvergingLattice initialElement() { return {0}; }
 
-  NonConvergingLattice transfer(const Stmt *S, const NonConvergingLattice &E,
-                                Environment &Env) {
-    return {E.State + 1};
+  void transfer(const Stmt *S, NonConvergingLattice &E, Environment &Env) {
+    ++E.State;
   }
 };
 
@@ -181,15 +164,12 @@ public:
 
   static FunctionCallLattice initialElement() { return {}; }
 
-  FunctionCallLattice transfer(const Stmt *S, const FunctionCallLattice &E,
-                               Environment &Env) {
-    FunctionCallLattice R = E;
+  void transfer(const Stmt *S, FunctionCallLattice &E, Environment &Env) {
     if (auto *C = dyn_cast<CallExpr>(S)) {
       if (auto *F = dyn_cast<FunctionDecl>(C->getCalleeDecl())) {
-        R.CalledFunctions.insert(F->getNameInfo().getAsString());
+        E.CalledFunctions.insert(F->getNameInfo().getAsString());
       }
     }
-    return R;
   }
 };
 
@@ -314,3 +294,5 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
                                       UnorderedElementsAre("baz", "foo"))))));
   // FIXME: Called functions at point `p` should contain only "foo".
 }
+
+} // namespace

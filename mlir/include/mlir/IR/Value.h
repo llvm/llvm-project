@@ -83,9 +83,7 @@ protected:
 /// an Operation(in the case of an OpResult).
 class Value {
 public:
-  Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
-  Value(const Value &) = default;
-  Value &operator=(const Value &) = default;
+  constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
 
   template <typename U>
   bool isa() const {

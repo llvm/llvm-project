@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_SUPPORT_LOGICAL_RESULT_H
-#define MLIR_SUPPORT_LOGICAL_RESULT_H
+#ifndef MLIR_SUPPORT_LOGICALRESULT_H
+#define MLIR_SUPPORT_LOGICALRESULT_H
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Optional.h"
@@ -100,4 +100,4 @@ private:
 
 } // namespace mlir
 
-#endif // MLIR_SUPPORT_LOGICAL_RESULT_H
+#endif // MLIR_SUPPORT_LOGICALRESULT_H

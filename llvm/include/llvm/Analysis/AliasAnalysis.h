@@ -678,7 +678,7 @@ public:
 
   /// Checks if functions with the specified behavior are known to only write
   /// memory (or not access memory at all).
-  static bool doesNotReadMemory(FunctionModRefBehavior MRB) {
+  static bool onlyWritesMemory(FunctionModRefBehavior MRB) {
     return !isRefSet(createModRefInfo(MRB));
   }
 

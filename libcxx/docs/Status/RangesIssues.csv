@@ -29,5 +29,5 @@
 `P2281R1 <https://wg21.link/P2281R1>`__,Clarifying range adaptor objects,,
 `P2367R0 <https://wg21.link/P2367R0>`__,Remove misuses of list-initialization from Clause 24,,
 
-`P2415 <https://wg21.link/P2415>`__,"What is a ``view``",,
+`P2415 <https://wg21.link/P2415>`__,"What is a ``view``",|Complete|,14.0
 `P2432 <https://wg21.link/P2432>`__,"Fix ``istream_view``",,

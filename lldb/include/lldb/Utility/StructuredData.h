@@ -351,10 +351,9 @@ public:
 
   class Dictionary : public Object {
   public:
-    Dictionary() : Object(lldb::eStructuredDataTypeDictionary), m_dict() {}
+    Dictionary() : Object(lldb::eStructuredDataTypeDictionary) {}
 
-    Dictionary(ObjectSP obj_sp)
-        : Object(lldb::eStructuredDataTypeDictionary), m_dict() {
+    Dictionary(ObjectSP obj_sp) : Object(lldb::eStructuredDataTypeDictionary) {
       if (!obj_sp || obj_sp->GetType() != lldb::eStructuredDataTypeDictionary) {
         SetType(lldb::eStructuredDataTypeInvalid);
         return;

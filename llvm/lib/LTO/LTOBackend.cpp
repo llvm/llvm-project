@@ -229,8 +229,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     PGOOpt = PGOOptions("", "", "", PGOOptions::NoAction,
                         PGOOptions::NoCSAction, true);
   }
-  if (TM)
-    TM->setPGOOption(PGOOpt);
+  TM->setPGOOption(PGOOpt);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -415,6 +414,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
   legacy::PassManager CodeGenPasses;
+  TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
+  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   CodeGenPasses.add(
       createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
   if (Conf.PreCodeGenPassesHook)

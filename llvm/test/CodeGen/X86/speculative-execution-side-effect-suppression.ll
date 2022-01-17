@@ -218,7 +218,7 @@ define dso_local i32 (i32*)* @_Z3bazv() {
 entry:
   %p = alloca i32 (i32*)*, align 8
   store i32 (i32*)* @_Z3barPi, i32 (i32*)** %p, align 8
-  call void asm sideeffect "", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32 (i32*)** %p, i32 (i32*)** %p) #3, !srcloc !2
+  call void asm sideeffect "", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32 (i32*)** elementtype(i32 (i32*)*) %p, i32 (i32*)** elementtype(i32 (i32*)*) %p) #3, !srcloc !2
   %0 = load i32 (i32*)*, i32 (i32*)** %p, align 8
   ret i32 (i32*)* %0
 }

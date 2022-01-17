@@ -114,6 +114,11 @@ ABI Changes
   comment `here <https://reviews.llvm.org/D109459>`_ if you are broken by this change
   and need to define the macro.
 
+- On Apple platforms, ``std::random_device`` is now implemented on top of ``arc4random()``
+  instead of reading from ``/dev/urandom``. Any implementation-defined token used when
+  constructing a ``std::random_device`` will now be ignored instead of interpreted as a
+  file to read entropy from.
+
 Build System Changes
 --------------------
 

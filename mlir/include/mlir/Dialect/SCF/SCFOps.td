@@ -309,11 +309,6 @@ def ForOp : SCF_Op<"for",
     /// induction variable. LoopOp only has one region, so 0 is the only valid
     /// value for `index`.
     OperandRange getSuccessorEntryOperands(unsigned index);
-
-    /// Returns the number of invocations of the body block if the loop bounds
-    /// are constants. Returns `kUnknownNumRegionInvocations` otherwise.
-    void getNumRegionInvocations(ArrayRef<Attribute> operands,
-                                 SmallVectorImpl<int64_t> &countPerRegion);
   }];
 
   let hasCanonicalizer = 1;
@@ -404,14 +399,8 @@ def IfOp : SCF_Op<"if",
     YieldOp thenYield();
     Block* elseBlock();
     YieldOp elseYield();
-
-    /// If the condition is a constant, returns 1 for the executed block and 0
-    /// for the other. Otherwise, returns `kUnknownNumRegionInvocations` for
-    /// both successors.
-    void getNumRegionInvocations(ArrayRef<Attribute> operands,
-                                 SmallVectorImpl<int64_t> &countPerRegion);
   }];
-
+  let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
@@ -686,6 +675,8 @@ def WhileOp : SCF_Op<"while",
   let extraClassDeclaration = [{
     OperandRange getSuccessorEntryOperands(unsigned index);
     ConditionOp getConditionOp();
+    YieldOp getYieldOp();
+    Block::BlockArgListType getBeforeArguments();
     Block::BlockArgListType getAfterArguments();
   }];
 

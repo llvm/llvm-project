@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-b,experimental-zbb < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple riscv32 -mattr=+zbb < %s 2>&1 | FileCheck %s
 
 # Too many operands
 clz t0, t1, t2 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction

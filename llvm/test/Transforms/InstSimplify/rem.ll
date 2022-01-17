@@ -183,6 +183,33 @@ define i32 @not_urem_dividend_known_smaller_than_constant_divisor(i32 %x) {
   ret i32 %r
 }
 
+define i8 @urem_dividend_known_smaller_than_constant_divisor2(i1 %b) {
+; CHECK-LABEL: @urem_dividend_known_smaller_than_constant_divisor2(
+; CHECK-NEXT:    [[T0:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[T0]], 12
+; CHECK-NEXT:    ret i8 [[XOR]]
+;
+  %t0 = zext i1 %b to i8
+  %xor = xor i8 %t0, 12
+  %r = urem i8 %xor, 14
+  ret i8 %r
+}
+
+; negative test - dividend can equal 13
+
+define i8 @not_urem_dividend_known_smaller_than_constant_divisor2(i1 %b) {
+; CHECK-LABEL: @not_urem_dividend_known_smaller_than_constant_divisor2(
+; CHECK-NEXT:    [[T0:%.*]] = zext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[T0]], 12
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[XOR]], 13
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %t0 = zext i1 %b to i8
+  %xor = xor i8 %t0, 12
+  %r = urem i8 %xor, 13
+  ret i8 %r
+}
+
 define i32 @urem_constant_dividend_known_smaller_than_divisor(i32 %x) {
 ; CHECK-LABEL: @urem_constant_dividend_known_smaller_than_divisor(
 ; CHECK-NEXT:    ret i32 250

@@ -3,6 +3,10 @@
 ; RUN:   | FileCheck -check-prefix=RV32F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64F %s
+; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV32F %s
+; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64F %s
 
 @gf = external global float
 

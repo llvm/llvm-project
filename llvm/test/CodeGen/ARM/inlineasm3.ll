@@ -10,7 +10,7 @@ entry:
 ; CHECK: vmov.32 d30[0],
 ; CHECK: vmov q8, q15
   %tmp = alloca %struct.int32x4_t, align 16
-  call void asm sideeffect "vmov.I64 q15, #0\0Avmov.32 d30[0], $1\0Avmov ${0:q}, q15\0A", "=*w,r,~{d31},~{d30}"(%struct.int32x4_t* %tmp, i32 8192) nounwind
+  call void asm sideeffect "vmov.I64 q15, #0\0Avmov.32 d30[0], $1\0Avmov ${0:q}, q15\0A", "=*w,r,~{d31},~{d30}"(%struct.int32x4_t* elementtype(%struct.int32x4_t) %tmp, i32 8192) nounwind
   ret void
 }
 
@@ -48,7 +48,7 @@ ret i32 0
 @k.2126 = internal unnamed_addr global float 1.000000e+00
 define i32 @t4() nounwind {
 entry:
-call void asm sideeffect "flds s15, $0 \0A", "*^Uv,~{s15}"(float* @k.2126) nounwind
+call void asm sideeffect "flds s15, $0 \0A", "*^Uv,~{s15}"(float* elementtype(float) @k.2126) nounwind
 ret i32 0
 }
 
@@ -56,7 +56,7 @@ ret i32 0
 
 define i32 @t5() nounwind {
 entry:
-call void asm sideeffect "flds s15, $0 \0A", "*^Uvm,~{s15}"(float* @k.2126) nounwind
+call void asm sideeffect "flds s15, $0 \0A", "*^Uvm,~{s15}"(float* elementtype(float) @k.2126) nounwind
 ret i32 0
 }
 
@@ -108,7 +108,7 @@ entry:
 ; CHECK: str r1, [r0]
   %f.addr = alloca i8*, align 4
   store i8* %f, i8** %f.addr, align 4
-  call void asm "str $1, $0", "=*Q,r"(i8** %f.addr, i32 %g) nounwind
+  call void asm "str $1, $0", "=*Q,r"(i8** elementtype(i8*) %f.addr, i32 %g) nounwind
   ret void
 }
 
@@ -129,6 +129,6 @@ define i32 @fn1() local_unnamed_addr nounwind {
 entry:
 ; CHECK: mov [[addr:r[0-9]+]], #5
 ; CHECK: ldrh {{.*}}[[addr]]
-  %0 = tail call i32 asm "ldrh  $0, $1", "=r,*Q"(i8* inttoptr (i32 5 to i8*)) nounwind
+  %0 = tail call i32 asm "ldrh  $0, $1", "=r,*Q"(i8* elementtype(i8) inttoptr (i32 5 to i8*)) nounwind
   ret i32 %0
 }

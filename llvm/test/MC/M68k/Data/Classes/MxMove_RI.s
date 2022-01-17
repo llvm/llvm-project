@@ -9,4 +9,3 @@ move.l	#42, %a1
 ; CHECK:      move.l  #-1, %a1
 ; CHECK-SAME: encoding: [0x22,0x7c,0xff,0xff,0xff,0xff]
 move.l	#-1, %a1
-

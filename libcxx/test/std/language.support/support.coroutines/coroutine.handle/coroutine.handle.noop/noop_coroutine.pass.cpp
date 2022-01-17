@@ -69,7 +69,7 @@ int main(int, char**)
   assert(base);
   assert(base.done() == false);
 
-  h.promise();
+  TEST_IGNORE_NODISCARD h.promise();
   assert(h.address() == base.address());
   assert(h == base);
   assert(h.address() != nullptr);

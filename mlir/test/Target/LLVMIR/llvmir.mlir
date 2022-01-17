@@ -907,6 +907,13 @@ llvm.func @vector_splat_1d() -> vector<4xf32> {
   llvm.return %0 : vector<4xf32>
 }
 
+// CHECK-LABEL: @vector_splat_1d_scalable
+llvm.func @vector_splat_1d_scalable() -> vector<[4]xf32> {
+  // CHECK: ret <vscale x 4 x float> zeroinitializer
+  %0 = llvm.mlir.constant(dense<0.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
+  llvm.return %0 : vector<[4]xf32>
+}
+
 // CHECK-LABEL: @vector_splat_2d
 llvm.func @vector_splat_2d() -> !llvm.array<4 x vector<16 x f32>> {
   // CHECK: ret [4 x <16 x float>] zeroinitializer
@@ -926,6 +933,13 @@ llvm.func @vector_splat_nonzero() -> vector<4xf32> {
   // CHECK: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
   %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
   llvm.return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: @vector_splat_nonzero_scalable
+llvm.func @vector_splat_nonzero_scalable() -> vector<[4]xf32> {
+  // CHECK: ret <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i32 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+  %0 = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
+  llvm.return %0 : vector<[4]xf32>
 }
 
 // CHECK-LABEL: @ops
@@ -973,6 +987,16 @@ llvm.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32) -> !llvm.struct<(
   %19 = llvm.fneg %arg0 : f32
 
   llvm.return %10 : !llvm.struct<(f32, i32)>
+}
+
+// CHECK-LABEL: @gep
+llvm.func @gep(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, %idx: i64,
+               %ptr2: !llvm.ptr<struct<(array<10xf32>)>>) {
+  // CHECK: = getelementptr { i32, { i32, float } }, { i32, { i32, float } }* %{{.*}}, i64 %{{.*}}, i32 1, i32 0
+  llvm.getelementptr %ptr[%idx, 1, 0] : (!llvm.ptr<struct<(i32, struct<(i32, f32)>)>>, i64) -> !llvm.ptr<i32>
+  // CHECK: = getelementptr { [10 x float] }, { [10 x float] }* %{{.*}}, i64 %{{.*}}, i32 0, i64 %{{.*}}
+  llvm.getelementptr %ptr2[%idx, 0, %idx] : (!llvm.ptr<struct<(array<10xf32>)>>, i64, i64) -> !llvm.ptr<f32>
+  llvm.return
 }
 
 //
@@ -1296,6 +1320,64 @@ llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personali
   %8 = llvm.invoke @bar(%6) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>) -> !llvm.ptr<i8>
 }
 
+// -----
+
+llvm.func @foo() -> i8
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @invoke_result
+// CHECK-SAME: %[[a0:[0-9]+]]
+llvm.func @invoke_result(%arg0 : !llvm.ptr<i8>) attributes { personality = @__gxx_personality_v0 } {
+// CHECK: %[[a1:[0-9]+]] = invoke i8 @foo()
+// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
+    %0 = llvm.invoke @foo() to ^bb1 unwind ^bb2 : () -> i8
+
+// CHECK: [[normal]]:
+// CHECK-NEXT: store i8 %[[a1]], i8* %[[a0]]
+// CHECK-NEXT: ret void
+^bb1:
+    llvm.store %0, %arg0 : !llvm.ptr<i8>
+    llvm.return
+
+// CHECK: [[unwind]]:
+// CHECK-NEXT: landingpad { i8*, i32 }
+// CHECK-NEXT: cleanup
+// CHECK-NEXT: ret void
+^bb2:
+    %7 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
+    llvm.return
+}
+
+// -----
+
+llvm.func @foo()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @invoke_phis
+llvm.func @invoke_phis() -> i32 attributes { personality = @__gxx_personality_v0 } {
+// CHECK: invoke void @foo()
+// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
+    %0 = llvm.mlir.constant(0 : i32) : i32
+    llvm.invoke @foo() to ^bb1(%0 : i32) unwind ^bb2 : () -> ()
+
+// CHECK: [[normal]]:
+// CHECK-NEXT: %[[a1:[0-9]+]] = phi i32 [ 1, %[[unwind]] ], [ 0, %0 ]
+// CHECK-NEXT: ret i32 %[[a1]]
+^bb1(%1 : i32):
+    llvm.return %1 : i32
+
+// CHECK: [[unwind]]:
+// CHECK-NEXT: landingpad { i8*, i32 }
+// CHECK-NEXT: cleanup
+// CHECK-NEXT: br label %[[normal]]
+^bb2:
+    %2 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
+    %3 = llvm.mlir.constant(1 : i32) : i32
+    llvm.br ^bb1(%3 : i32)
+}
+
+// -----
+
 // CHECK-LABEL: @callFreezeOp
 llvm.func @callFreezeOp(%x : i32) {
   // CHECK: freeze i32 %{{[0-9]+}}
@@ -1376,7 +1458,7 @@ llvm.mlir.global linkonce @take_self_address() : !llvm.struct<(i32, !llvm.ptr<i3
   %z32 = llvm.mlir.constant(0 : i32) : i32
   %0 = llvm.mlir.undef : !llvm.struct<(i32, !llvm.ptr<i32>)>
   %1 = llvm.mlir.addressof @take_self_address : !llvm.ptr<!llvm.struct<(i32, !llvm.ptr<i32>)>>
-  %2 = llvm.getelementptr %1[%z32, %z32] : (!llvm.ptr<!llvm.struct<(i32, !llvm.ptr<i32>)>>, i32, i32) -> !llvm.ptr<i32>
+  %2 = llvm.getelementptr %1[%z32, 0] : (!llvm.ptr<!llvm.struct<(i32, !llvm.ptr<i32>)>>, i32) -> !llvm.ptr<i32>
   %3 = llvm.insertvalue %z32, %0[0 : i32] : !llvm.struct<(i32, !llvm.ptr<i32>)>
   %4 = llvm.insertvalue %2, %3[1 : i32] : !llvm.struct<(i32, !llvm.ptr<i32>)>
   llvm.return %4 : !llvm.struct<(i32, !llvm.ptr<i32>)>
@@ -1684,3 +1766,99 @@ module {
 // CHECK-DAG: ![[SCOPES13]] = !{![[SCOPE1]], ![[SCOPE3]]}
 // CHECK-DAG: ![[SCOPES23]] = !{![[SCOPE2]], ![[SCOPE3]]}
 
+
+// -----
+
+// It is okay to have repeated successors if they have no arguments.
+
+// CHECK-LABEL: @duplicate_block_in_switch
+// CHECK-SAME: float %[[FIRST:.*]],
+// CHECK-SAME: float %[[SECOND:.*]])
+// CHECK:   switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
+// CHECK:     i32 105, label %[[DUPLICATE:.*]]
+// CHECK:     i32 108, label %[[BLOCK:.*]]
+// CHECK:     i32 106, label %[[DUPLICATE]]
+// CHECK:   ]
+
+// CHECK: [[DEFAULT]]:
+// CHECK:   phi float [ %[[FIRST]], %{{.*}} ]
+// CHECK:   call void @bar
+
+// CHECK: [[DUPLICATE]]:
+// CHECK:   call void @baz
+
+// CHECK: [[BLOCK]]:
+// CHECK:   phi float [ %[[SECOND]], %{{.*}} ]
+// CHECK:   call void @qux
+
+llvm.func @duplicate_block_in_switch(%cond : i32, %arg1: f32, %arg2: f32) {
+  llvm.switch %cond : i32, ^bb1(%arg1: f32) [
+    105: ^bb2,
+    108: ^bb3(%arg2: f32),
+    106: ^bb2
+  ]
+
+^bb1(%arg3: f32):
+  llvm.call @bar(%arg3): (f32) -> ()
+  llvm.return
+
+^bb2:
+  llvm.call @baz() : () -> ()
+  llvm.return
+
+^bb3(%arg4: f32):
+  llvm.call @qux(%arg4) : (f32) -> ()
+  llvm.return
+}
+
+// If there are repeated successors with arguments, a new block must be created
+// for repeated successors to ensure PHI can disambiguate values based on the
+// predecessor they come from.
+
+// CHECK-LABEL: @duplicate_block_with_args_in_switch
+// CHECK-SAME: float %[[FIRST:.*]],
+// CHECK-SAME: float %[[SECOND:.*]])
+// CHECK:   switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
+// CHECK:     i32 106, label %[[DUPLICATE:.*]]
+// CHECK:     i32 105, label %[[BLOCK:.*]]
+// CHECK:     i32 108, label %[[DEDUPLICATED:.*]]
+// CHECK:   ]
+
+// CHECK: [[DEFAULT]]:
+// CHECK:   phi float [ %[[FIRST]], %{{.*}} ]
+// CHECK:   call void @bar
+
+// CHECK: [[BLOCK]]:
+// CHECK:   call void @baz
+
+// CHECK: [[DUPLICATE]]:
+// CHECK:   phi float [ %[[PHI:.*]], %[[DEDUPLICATED]] ], [ %[[FIRST]], %{{.*}} ]
+// CHECK:   call void @qux
+
+// CHECK: [[DEDUPLICATED]]:
+// CHECK:   %[[PHI]] = phi float [ %[[SECOND]], %{{.*}} ]
+// CHECK:   br label %[[DUPLICATE]]
+
+llvm.func @duplicate_block_with_args_in_switch(%cond : i32, %arg1: f32, %arg2: f32) {
+  llvm.switch %cond : i32, ^bb1(%arg1: f32) [
+    106: ^bb3(%arg1: f32),
+    105: ^bb2,
+    108: ^bb3(%arg2: f32)
+  ]
+
+^bb1(%arg3: f32):
+  llvm.call @bar(%arg3): (f32) -> ()
+  llvm.return
+
+^bb2:
+  llvm.call @baz() : () -> ()
+  llvm.return
+
+^bb3(%arg4: f32):
+  llvm.call @qux(%arg4) : (f32) -> ()
+  llvm.return
+}
+
+llvm.func @bar(f32)
+llvm.func @baz()
+llvm.func @qux(f32)

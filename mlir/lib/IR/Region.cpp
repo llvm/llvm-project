@@ -92,7 +92,7 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
     // argument to the cloned block.
     for (auto arg : block.getArguments())
       if (!mapper.contains(arg))
-        mapper.map(arg, newBlock->addArgument(arg.getType()));
+        mapper.map(arg, newBlock->addArgument(arg.getType(), arg.getLoc()));
 
     // Clone and remap the operations within this block.
     for (auto &op : block)

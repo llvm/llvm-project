@@ -171,7 +171,7 @@ YAMLRemarkParser::YAMLRemarkParser(StringRef Buf)
 
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf,
                                    Optional<ParsedStringTable> StrTab)
-    : RemarkParser{Format::YAML}, StrTab(std::move(StrTab)), LastErrorMessage(),
+    : RemarkParser{Format::YAML}, StrTab(std::move(StrTab)),
       SM(setupSM(LastErrorMessage)), Stream(Buf, SM), YAMLIt(Stream.begin()) {}
 
 Error YAMLRemarkParser::error(StringRef Message, yaml::Node &Node) {

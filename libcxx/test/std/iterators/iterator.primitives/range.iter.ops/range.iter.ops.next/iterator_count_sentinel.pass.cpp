@@ -12,55 +12,38 @@
 // ranges::next(it, n, bound)
 
 #include <iterator>
+
 #include <cassert>
+#include <concepts>
+#include <utility>
 
 #include "test_iterators.h"
 
-template <std::input_or_output_iterator It>
-constexpr void check(It it, std::ptrdiff_t n, It last) {
-  {
-    It result = std::ranges::next(it, n, last);
-    assert(result == last);
-  }
+template <typename It>
+constexpr void check(int* first, int* last, std::iter_difference_t<It> n, int* expected) {
+  It it(first);
+  auto sent = sentinel_wrapper(It(last));
 
-  // Count the number of operations
-  {
-    stride_counting_iterator<It> strided_it(it);
-    stride_counting_iterator<It> strided_last(last);
-    stride_counting_iterator<It> result = std::ranges::next(strided_it, n, strided_last);
-    assert(result == strided_last);
-    if constexpr (std::random_access_iterator<It>) {
-      if (n == 0 || n >= (last - it)) {
-        assert(result.stride_count() == 0); // uses the assign-from-sentinel codepath
-      } else {
-        assert(result.stride_count() == 1); // uses += exactly once
-      }
-    } else {
-      std::ptrdiff_t const abs_n = n < 0 ? -n : n;
-      assert(result.stride_count() == abs_n);
-      assert(result.stride_displacement() == n);
-    }
-  }
+  std::same_as<It> auto result = std::ranges::next(std::move(it), n, sent);
+  assert(base(result) == expected);
 }
 
 constexpr bool test() {
   int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  check(cpp17_input_iterator(&range[0]), 1, cpp17_input_iterator(&range[1]));
-  check(forward_iterator(&range[0]), 2, forward_iterator(&range[2]));
-  check(bidirectional_iterator(&range[2]), 6, bidirectional_iterator(&range[8]));
-  check(random_access_iterator(&range[3]), 2, random_access_iterator(&range[5]));
-  check(contiguous_iterator(&range[0]), 5, contiguous_iterator(&range[5]));
+  for (int size = 0; size != 10; ++size) {
+    for (int n = 0; n != 20; ++n) {
+      int* expected = n > size ? range + size : range + n;
+      check<cpp17_input_iterator<int*>>(  range, range+size, n, expected);
+      check<cpp20_input_iterator<int*>>(  range, range+size, n, expected);
+      check<forward_iterator<int*>>(      range, range+size, n, expected);
+      check<bidirectional_iterator<int*>>(range, range+size, n, expected);
+      check<random_access_iterator<int*>>(range, range+size, n, expected);
+      check<contiguous_iterator<int*>>(   range, range+size, n, expected);
+      check<int*>(                        range, range+size, n, expected);
+    }
+  }
 
-  check(cpp17_input_iterator(&range[0]), 0, cpp17_input_iterator(&range[0]));
-  check(forward_iterator(&range[0]), 0, forward_iterator(&range[0]));
-  check(bidirectional_iterator(&range[2]), 0, bidirectional_iterator(&range[2]));
-  check(random_access_iterator(&range[3]), 0, random_access_iterator(&range[3]));
-  check(contiguous_iterator(&range[0]), 0, contiguous_iterator(&range[0]));
-
-  check(bidirectional_iterator(&range[6]), -1, bidirectional_iterator(&range[5]));
-  check(random_access_iterator(&range[7]), -2, random_access_iterator(&range[5]));
-  check(contiguous_iterator(&range[8]), -3, contiguous_iterator(&range[5]));
   return true;
 }
 

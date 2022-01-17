@@ -114,6 +114,10 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     Features.push_back("+sme-f64");
   if (Extensions & AArch64::AEK_SMEI64)
     Features.push_back("+sme-i64");
+  if (Extensions & AArch64::AEK_HBC)
+    Features.push_back("+hbc");
+  if (Extensions & AArch64::AEK_MOPS)
+    Features.push_back("+mops");
 
   return true;
 }
@@ -144,6 +148,8 @@ bool AArch64::getArchFeatures(AArch64::ArchKind AK,
     Features.push_back("+v9.1a");
   if (AK == AArch64::ArchKind::ARMV9_2A)
     Features.push_back("+v9.2a");
+  if (AK == AArch64::ArchKind::ARMV9_3A)
+    Features.push_back("+v9.3a");
   if(AK == AArch64::ArchKind::ARMV8R)
     Features.push_back("+v8r");
 

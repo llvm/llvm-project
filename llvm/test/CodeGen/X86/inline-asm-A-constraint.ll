@@ -12,7 +12,7 @@ entry:
   %conv = trunc i128 %shr to i64
   %conv1 = trunc i128 %0 to i64
   %1 = load i128, i128* %src, align 16, !tbaa !1
-  %2 = tail call i128 asm sideeffect "lock; cmpxchg16b $1", "=A,=*m,{cx},{bx},0,*m,~{dirflag},~{fpsr},~{flags}"(i8* %ptr, i64 %conv, i64 %conv1, i128 %1, i8* %ptr) #1, !srcloc !5
+  %2 = tail call i128 asm sideeffect "lock; cmpxchg16b $1", "=A,=*m,{cx},{bx},0,*m,~{dirflag},~{fpsr},~{flags}"(i8* elementtype(i8) %ptr, i64 %conv, i64 %conv1, i128 %1, i8* elementtype(i8) %ptr) #1, !srcloc !5
   %retval.sroa.0.0.extract.trunc = trunc i128 %2 to i64
   %retval.sroa.2.0.extract.shift = lshr i128 %2, 64
   %retval.sroa.2.0.extract.trunc = trunc i128 %retval.sroa.2.0.extract.shift to i64

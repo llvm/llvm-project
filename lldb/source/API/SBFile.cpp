@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBFile.h"
-#include "SBReproducerPrivate.h"
+#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBError.h"
 #include "lldb/Host/File.h"
 
@@ -32,7 +32,7 @@ SBFile &SBFile ::operator=(const SBFile &rhs) {
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
-  return LLDB_RECORD_RESULT(*this);
+  return *this;
 }
 
 SBFile::SBFile() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFile); }
@@ -69,7 +69,7 @@ SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
     error.SetError(status);
     *bytes_read = num_bytes;
   }
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
@@ -87,7 +87,7 @@ SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
     error.SetError(status);
     *bytes_written = num_bytes;
   }
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBError SBFile::Flush() {
@@ -100,7 +100,7 @@ SBError SBFile::Flush() {
     Status status = m_opaque_sp->Flush();
     error.SetError(status);
   }
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 bool SBFile::IsValid() const {
@@ -115,7 +115,7 @@ SBError SBFile::Close() {
     Status status = m_opaque_sp->Close();
     error.SetError(status);
   }
-  return LLDB_RECORD_RESULT(error);
+  return error;
 }
 
 SBFile::operator bool() const {
@@ -130,29 +130,5 @@ bool SBFile::operator!() const {
 
 FileSP SBFile::GetFile() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(FileSP, SBFile, GetFile);
-  return LLDB_RECORD_RESULT(m_opaque_sp);
+  return m_opaque_sp;
 }
-
-namespace lldb_private {
-namespace repro {
-
-template <> void RegisterMethods<SBFile>(Registry &R) {
-  LLDB_REGISTER_CONSTRUCTOR(SBFile, ());
-  LLDB_REGISTER_CONSTRUCTOR(SBFile, (FileSP));
-  LLDB_REGISTER_CONSTRUCTOR(SBFile, (const SBFile&));
-  LLDB_REGISTER_CONSTRUCTOR(SBFile, (FILE *, bool));
-  LLDB_REGISTER_CONSTRUCTOR(SBFile, (int, const char *, bool));
-  LLDB_REGISTER_METHOD(SBFile&, SBFile, operator=,(const SBFile&));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBFile, Flush, ());
-  LLDB_REGISTER_METHOD(lldb::SBError, SBFile, Read,
-                       (uint8_t *, size_t, size_t *));
-  LLDB_REGISTER_METHOD(lldb::SBError, SBFile, Write,
-                       (const uint8_t *, size_t, size_t *));
-  LLDB_REGISTER_METHOD_CONST(bool, SBFile, IsValid, ());
-  LLDB_REGISTER_METHOD_CONST(bool, SBFile, operator bool,());
-  LLDB_REGISTER_METHOD_CONST(bool, SBFile, operator!,());
-  LLDB_REGISTER_METHOD_CONST(FileSP, SBFile, GetFile, ());
-  LLDB_REGISTER_METHOD(lldb::SBError, SBFile, Close, ());
-}
-} // namespace repro
-} // namespace lldb_private

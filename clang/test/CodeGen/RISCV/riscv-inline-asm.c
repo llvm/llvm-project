@@ -40,8 +40,8 @@ void test_f() {
 }
 
 void test_A(int *p) {
-// CHECK-LABEL: define{{.*}} void @test_A(i32* %p)
-// CHECK: call void asm sideeffect "", "*A"(i32* %p)
+// CHECK-LABEL: define{{.*}} void @test_A(i32* noundef %p)
+// CHECK: call void asm sideeffect "", "*A"(i32* elementtype(i32) %p)
   asm volatile("" :: "A"(*p));
 }
 

@@ -58,20 +58,9 @@ public:
   bool supportsScalableVectors() const { return ST->hasVInstructions(); }
   Optional<unsigned> getMaxVScale() const;
 
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    switch (K) {
-    case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::getFixed(ST->getXLen());
-    case TargetTransformInfo::RGK_FixedWidthVector:
-      return TypeSize::getFixed(
-          ST->hasVInstructions() ? ST->getMinRVVVectorSizeInBits() : 0);
-    case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::getScalable(
-          ST->hasVInstructions() ? RISCV::RVVBitsPerBlock : 0);
-    }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
 
-    llvm_unreachable("Unsupported register kind");
-  }
+  InstructionCost getRegUsageForType(Type *Ty);
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
@@ -81,7 +70,7 @@ public:
                              TTI::PeelingPreferences &PP);
 
   unsigned getMinVectorRegisterBitWidth() const {
-    return ST->hasVInstructions() ? ST->getMinRVVVectorSizeInBits() : 0;
+    return ST->useRVVForFixedLengthVectors() ? 16 : 0;
   }
 
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
@@ -188,6 +177,20 @@ public:
     // If the loop will not be vectorized, don't interleave the loop.
     // Let regular unroll to unroll the loop.
     return VF == 1 ? 1 : ST->getMaxInterleaveFactor();
+  }
+
+  // TODO: We should define RISC-V's own register classes.
+  //       e.g. register class for FPR.
+  unsigned getNumberOfRegisters(unsigned ClassID) const {
+    bool Vector = (ClassID == 1);
+    if (Vector) {
+      if (ST->hasVInstructions())
+        return 32;
+      return 0;
+    }
+    // 31 = 32 GPR - x0 (zero register)
+    // FIXME: Should we exclude fixed registers like SP, TP or GP?
+    return 31;
   }
 };
 

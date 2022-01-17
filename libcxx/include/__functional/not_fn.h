@@ -11,8 +11,8 @@
 #define _LIBCPP___FUNCTIONAL_NOT_FN_H
 
 #include <__config>
-#include <__functional/perfect_forward.h>
 #include <__functional/invoke.h>
+#include <__functional/perfect_forward.h>
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

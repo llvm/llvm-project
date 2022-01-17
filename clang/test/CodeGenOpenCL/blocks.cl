@@ -9,8 +9,8 @@
 // AMDGCN: @__block_literal_global = internal addrspace(1) constant { i32, i32, i8* } { i32 16, i32 8, i8* bitcast (void (i8*, i8 addrspace(3)*)* @block_A_block_invoke to i8*) }
 // COMMON-NOT: .str
 
-// SPIR-LABEL: define internal {{.*}}void @block_A_block_invoke(i8 addrspace(4)* %.block_descriptor, i8 addrspace(3)* %a)
-// AMDGCN-LABEL: define internal {{.*}}void @block_A_block_invoke(i8* %.block_descriptor, i8 addrspace(3)* %a)
+// SPIR-LABEL: define internal {{.*}}void @block_A_block_invoke(i8 addrspace(4)* noundef %.block_descriptor, i8 addrspace(3)* noundef %a)
+// AMDGCN-LABEL: define internal {{.*}}void @block_A_block_invoke(i8* noundef %.block_descriptor, i8 addrspace(3)* noundef %a)
 void (^block_A)(local void *) = ^(local void *a) {
   return;
 };
@@ -40,7 +40,7 @@ void foo(){
   // SPIR: store %struct.__opencl_block_literal_generic addrspace(4)* %[[blk_gen_ptr]], %struct.__opencl_block_literal_generic addrspace(4)** %[[block_B:.*]],
   // SPIR: %[[block_literal:.*]] = load %struct.__opencl_block_literal_generic addrspace(4)*, %struct.__opencl_block_literal_generic addrspace(4)** %[[block_B]]
   // SPIR: %[[blk_gen_ptr:.*]] = bitcast %struct.__opencl_block_literal_generic addrspace(4)* %[[block_literal]] to i8 addrspace(4)*
-  // SPIR: call {{.*}}i32 @__foo_block_invoke(i8 addrspace(4)* %[[blk_gen_ptr]])
+  // SPIR: call {{.*}}i32 @__foo_block_invoke(i8 addrspace(4)* noundef %[[blk_gen_ptr]])
   // AMDGCN: %[[block_invoke:.*]] = getelementptr inbounds <{ i32, i32, i8*, i32 }>, <{ i32, i32, i8*, i32 }> addrspace(5)* %[[block:.*]], i32 0, i32 2
   // AMDGCN: store i8* bitcast (i32 (i8*)* @__foo_block_invoke to i8*), i8* addrspace(5)* %[[block_invoke]]
   // AMDGCN: %[[block_captured:.*]] = getelementptr inbounds <{ i32, i32, i8*, i32 }>, <{ i32, i32, i8*, i32 }> addrspace(5)* %[[block]], i32 0, i32 3
@@ -51,7 +51,7 @@ void foo(){
   // AMDGCN: store %struct.__opencl_block_literal_generic* %[[blk_gen_ptr]], %struct.__opencl_block_literal_generic* addrspace(5)* %[[block_B:.*]],
   // AMDGCN: %[[block_literal:.*]] = load %struct.__opencl_block_literal_generic*, %struct.__opencl_block_literal_generic* addrspace(5)* %[[block_B]]
   // AMDGCN: %[[blk_gen_ptr:.*]] = bitcast %struct.__opencl_block_literal_generic* %[[block_literal]] to i8*
-  // AMDGCN: call {{.*}}i32 @__foo_block_invoke(i8* %[[blk_gen_ptr]])
+  // AMDGCN: call {{.*}}i32 @__foo_block_invoke(i8* noundef %[[blk_gen_ptr]])
 
   int (^ block_B)(void) = ^{
     return i;
@@ -59,11 +59,11 @@ void foo(){
   block_B();
 }
 
-// SPIR-LABEL: define internal {{.*}}i32 @__foo_block_invoke(i8 addrspace(4)* %.block_descriptor)
+// SPIR-LABEL: define internal {{.*}}i32 @__foo_block_invoke(i8 addrspace(4)* noundef %.block_descriptor)
 // SPIR:  %[[block:.*]] = bitcast i8 addrspace(4)* %.block_descriptor to <{ i32, i32, i8 addrspace(4)*, i32 }> addrspace(4)*
 // SPIR:  %[[block_capture_addr:.*]] = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 }>, <{ i32, i32, i8 addrspace(4)*, i32 }> addrspace(4)* %[[block]], i32 0, i32 3
 // SPIR:  %[[block_capture:.*]] = load i32, i32 addrspace(4)* %[[block_capture_addr]]
-// AMDGCN-LABEL: define internal {{.*}}i32 @__foo_block_invoke(i8* %.block_descriptor)
+// AMDGCN-LABEL: define internal {{.*}}i32 @__foo_block_invoke(i8* noundef %.block_descriptor)
 // AMDGCN:  %[[block:.*]] = bitcast i8* %.block_descriptor to <{ i32, i32, i8*, i32 }>*
 // AMDGCN:  %[[block_capture_addr:.*]] = getelementptr inbounds <{ i32, i32, i8*, i32 }>, <{ i32, i32, i8*, i32 }>* %[[block]], i32 0, i32 3
 // AMDGCN:  %[[block_capture:.*]] = load i32, i32* %[[block_capture_addr]]

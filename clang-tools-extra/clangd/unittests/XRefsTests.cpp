@@ -38,10 +38,12 @@ namespace clangd {
 namespace {
 
 using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Matcher;
+using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 using ::testing::UnorderedPointwise;
@@ -1779,6 +1781,69 @@ TEST(FindImplementations, CaptureDefintion) {
       UnorderedElementsAre(Sym("Foo", Code.range("Decl"), Code.range("Def")),
                            Sym("Foo", Code.range("Child2"), llvm::None)))
       << Test;
+}
+
+TEST(FindType, All) {
+  Annotations HeaderA(R"cpp(
+    struct [[Target]] { operator int() const; };
+    struct Aggregate { Target a, b; };
+    Target t;
+
+    template <typename T> class smart_ptr {
+      T& operator*();
+      T* operator->();
+      T* get();
+    };
+  )cpp");
+  auto TU = TestTU::withHeaderCode(HeaderA.code());
+  for (const llvm::StringRef Case : {
+           "str^uct Target;",
+           "T^arget x;",
+           "Target ^x;",
+           "a^uto x = Target{};",
+           "namespace m { Target tgt; } auto x = m^::tgt;",
+           "Target funcCall(); auto x = ^funcCall();",
+           "Aggregate a = { {}, ^{} };",
+           "Aggregate a = { ^.a=t, };",
+           "struct X { Target a; X() : ^a() {} };",
+           "^using T = Target; ^T foo();",
+           "^template <int> Target foo();",
+           "void x() { try {} ^catch(Target e) {} }",
+           "void x() { ^throw t; }",
+           "int x() { ^return t; }",
+           "void x() { ^switch(t) {} }",
+           "void x() { ^delete (Target*)nullptr; }",
+           "Target& ^tref = t;",
+           "void x() { ^if (t) {} }",
+           "void x() { ^while (t) {} }",
+           "void x() { ^do { } while (t); }",
+           "^auto x = []() { return t; };",
+           "Target* ^tptr = &t;",
+           "Target ^tarray[3];",
+       }) {
+    Annotations A(Case);
+    TU.Code = A.code().str();
+    ParsedAST AST = TU.build();
+
+    ASSERT_GT(A.points().size(), 0u) << Case;
+    for (auto Pos : A.points())
+      EXPECT_THAT(findType(AST, Pos),
+                  ElementsAre(Sym("Target", HeaderA.range(), HeaderA.range())))
+          << Case;
+  }
+
+  // FIXME: We'd like these cases to work. Fix them and move above.
+  for (const llvm::StringRef Case : {
+           "smart_ptr<Target> ^tsmart;",
+       }) {
+    Annotations A(Case);
+    TU.Code = A.code().str();
+    ParsedAST AST = TU.build();
+
+    EXPECT_THAT(findType(AST, A.point()),
+                Not(Contains(Sym("Target", HeaderA.range(), HeaderA.range()))))
+        << Case;
+  }
 }
 
 void checkFindRefs(llvm::StringRef Test, bool UseIndex = false) {

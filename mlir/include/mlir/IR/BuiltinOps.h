@@ -58,7 +58,7 @@ struct PointerLikeTypeTraits<mlir::FuncOp> {
   static inline mlir::FuncOp getFromVoidPointer(void *p) {
     return mlir::FuncOp::getFromOpaquePointer(p);
   }
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int numLowBitsAvailable = 3;
 };
 
 /// Allow stealing the low bits of ModuleOp.
@@ -71,7 +71,7 @@ public:
   static inline mlir::ModuleOp getFromVoidPointer(void *p) {
     return mlir::ModuleOp::getFromOpaquePointer(p);
   }
-  static constexpr int NumLowBitsAvailable = 3;
+  static constexpr int numLowBitsAvailable = 3;
 };
 } // namespace llvm
 

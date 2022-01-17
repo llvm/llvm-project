@@ -97,3 +97,21 @@ add_mlir_upstream_c_api_library(MLIRCAPITensor
   MLIRCAPIIR
   MLIRTensor
 )
+
+add_mlir_upstream_c_api_library(MLIRCAPIQuant
+  Quant.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRQuant
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPIPDL
+  PDL.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRPDL
+)

@@ -10,7 +10,7 @@
 define void @weighting_filter() nounwind ssp {
 entry:
 ; CHECK: leaq _gsm_H.1466(%rip),%rax;
-  call void asm sideeffect "leaq $0,%rax;\0A", "*X,~{dirflag},~{fpsr},~{flags},~{memory},~{rax}"(%union..0anon* bitcast (%0* @gsm_H.1466 to %union..0anon*)) nounwind
+  call void asm sideeffect "leaq $0,%rax;\0A", "*X,~{dirflag},~{fpsr},~{flags},~{memory},~{rax}"(%union..0anon* elementtype(%union..0anon) bitcast (%0* @gsm_H.1466 to %union..0anon*)) nounwind
   br label %return
 
 return:                                           ; preds = %entry
