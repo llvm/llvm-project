@@ -73,6 +73,19 @@ public:
     void swap(tuple&) noexcept(AND(swap(declval<T&>(), declval<T&>())...));               // constexpr in C++20
 };
 
+
+template<class... TTypes, class... UTypes, template<class> class TQual, template<class> class UQual> // since C++23
+  requires requires { typename tuple<common_reference_t<TQual<TTypes>, UQual<UTypes>>...>; }
+struct basic_common_reference<tuple<TTypes...>, tuple<UTypes...>, TQual, UQual> {
+  using type = tuple<common_reference_t<TQual<TTypes>, UQual<UTypes>>...>;
+};
+
+template<class... TTypes, class... UTypes>                                // since C++23
+  requires requires { typename tuple<common_type_t<TTypes, UTypes>...>; }
+struct common_type<tuple<TTypes...>, tuple<UTypes...>> {
+  using type = tuple<common_type_t<TTypes, UTypes>...>;
+};
+
 template <class ...T>
 tuple(T...) -> tuple<T...>;                                         // since C++17
 template <class T1, class T2>
@@ -1103,7 +1116,21 @@ public:
     void swap(tuple&) _NOEXCEPT {}
 };
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 20
+template <class... _TTypes, class... _UTypes, template<class> class _TQual, template<class> class _UQual>
+    requires requires { typename tuple<common_reference_t<_TQual<_TTypes>, _UQual<_UTypes>>...>; }
+struct basic_common_reference<tuple<_TTypes...>, tuple<_UTypes...>, _TQual, _UQual> {
+    using type = tuple<common_reference_t<_TQual<_TTypes>, _UQual<_UTypes>>...>;
+};
+
+template <class... _TTypes, class... _UTypes>
+    requires requires { typename tuple<common_type_t<_TTypes, _UTypes>...>; }
+struct common_type<tuple<_TTypes...>, tuple<_UTypes...>> {
+    using type = tuple<common_type_t<_TTypes, _UTypes>...>;
+};
+#endif
+
+#if _LIBCPP_STD_VER > 14
 template <class ..._Tp>
 tuple(_Tp...) -> tuple<_Tp...>;
 template <class _Tp1, class _Tp2>
