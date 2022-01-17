@@ -96,7 +96,8 @@ public:
     const Expr *InitExpr = D.getInit();
     if (InitExpr == nullptr) {
       // No initializer expression - associate `Loc` with a new value.
-      Env.initValueInStorageLocation(Loc, D.getType());
+      if (Value *Val = Env.createValue(D.getType()))
+        Env.setValue(Loc, *Val);
       return;
     }
 
@@ -117,7 +118,8 @@ public:
         // FIXME: The initializer expression must always be assigned a value.
         // Replace this with an assert when we have sufficient coverage of
         // language features.
-        Env.initValueInStorageLocation(Loc, D.getType());
+        if (Value *Val = Env.createValue(D.getType()))
+          Env.setValue(Loc, *Val);
       }
       return;
     }
@@ -128,7 +130,8 @@ public:
       // FIXME: The initializer expression must always be assigned a value.
       // Replace this with an assert when we have sufficient coverage of
       // language features.
-      Env.initValueInStorageLocation(Loc, D.getType());
+      if (Value *Val = Env.createValue(D.getType()))
+        Env.setValue(Loc, *Val);
     } else {
       llvm_unreachable("structs and classes must always be assigned values");
     }
@@ -269,7 +272,8 @@ public:
 
     auto &Loc = Env.createStorageLocation(*S);
     Env.setStorageLocation(*S, Loc);
-    Env.initValueInStorageLocation(Loc, S->getType());
+    if (Value *Val = Env.createValue(S->getType()))
+      Env.setValue(Loc, *Val);
   }
 
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *S) {
@@ -319,7 +323,8 @@ public:
   void VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *S) {
     auto &Loc = Env.createStorageLocation(*S);
     Env.setStorageLocation(*S, Loc);
-    Env.initValueInStorageLocation(Loc, S->getType());
+    if (Value *Val = Env.createValue(S->getType()))
+      Env.setValue(Loc, *Val);
   }
 
   void VisitCallExpr(const CallExpr *S) {
