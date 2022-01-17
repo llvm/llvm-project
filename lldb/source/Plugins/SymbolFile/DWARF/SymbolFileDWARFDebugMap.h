@@ -143,8 +143,8 @@ public:
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   uint64_t GetDebugInfoSize() override;
-  lldb_private::StatsDuration GetDebugInfoParseTime() override;
-  lldb_private::StatsDuration GetDebugInfoIndexTime() override;
+  lldb_private::StatsDuration::Duration GetDebugInfoParseTime() override;
+  lldb_private::StatsDuration::Duration GetDebugInfoIndexTime() override;
 
 protected:
   enum { kHaveInitializedOSOs = (1 << 0), kNumFlags };

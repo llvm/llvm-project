@@ -1047,11 +1047,11 @@ protected:
   /// We store a symbol table parse time duration here because we might have
   /// an object file and a symbol file which both have symbol tables. The parse
   /// time for the symbol tables can be aggregated here.
-  StatsDuration m_symtab_parse_time{0.0};
+  StatsDuration m_symtab_parse_time;
   /// We store a symbol named index time duration here because we might have
   /// an object file and a symbol file which both have symbol tables. The parse
   /// time for the symbol tables can be aggregated here.
-  StatsDuration m_symtab_index_time{0.0};
+  StatsDuration m_symtab_index_time;
 
   /// Resolve a file or load virtual address.
   ///

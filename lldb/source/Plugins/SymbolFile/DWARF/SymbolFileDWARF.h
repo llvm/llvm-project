@@ -319,10 +319,10 @@ public:
   /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
   static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
-  lldb_private::StatsDuration GetDebugInfoParseTime() override {
+  lldb_private::StatsDuration::Duration GetDebugInfoParseTime() override {
     return m_parse_time;
   }
-  lldb_private::StatsDuration GetDebugInfoIndexTime() override;
+  lldb_private::StatsDuration::Duration GetDebugInfoIndexTime() override;
 
   lldb_private::StatsDuration &GetDebugInfoParseTimeRef() {
     return m_parse_time;
@@ -559,7 +559,7 @@ protected:
   /// Try to filter out this debug info by comparing it to the lowest code
   /// address in the module.
   lldb::addr_t m_first_code_address = LLDB_INVALID_ADDRESS;
-  lldb_private::StatsDuration m_parse_time{0.0};
+  lldb_private::StatsDuration m_parse_time;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARF_H
