@@ -171,7 +171,7 @@ MipsOptionsSection<ELFT> *MipsOptionsSection<ELFT>::create() {
   if (!ELFT::Is64Bits)
     return nullptr;
 
-  std::vector<InputSectionBase *> sections;
+  SmallVector<InputSectionBase *, 0> sections;
   for (InputSectionBase *sec : inputSections)
     if (sec->type == SHT_MIPS_OPTIONS)
       sections.push_back(sec);
@@ -228,7 +228,7 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
   if (ELFT::Is64Bits)
     return nullptr;
 
-  std::vector<InputSectionBase *> sections;
+  SmallVector<InputSectionBase *, 0> sections;
   for (InputSectionBase *sec : inputSections)
     if (sec->type == SHT_MIPS_REGINFO)
       sections.push_back(sec);
@@ -550,9 +550,9 @@ void EhFrameSection::finalizeContents() {
 // Returns data for .eh_frame_hdr. .eh_frame_hdr is a binary search table
 // to get an FDE from an address to which FDE is applied. This function
 // returns a list of such pairs.
-std::vector<EhFrameSection::FdeData> EhFrameSection::getFdeData() const {
+SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
   uint8_t *buf = Out::bufferStart + getParent()->offset + outSecOff;
-  std::vector<FdeData> ret;
+  SmallVector<FdeData, 0> ret;
 
   uint64_t va = getPartition().ehFrameHdr->getVA();
   for (CieRecord *rec : cieRecords) {
@@ -3030,8 +3030,7 @@ void EhFrameHeader::writeTo(uint8_t *buf) {
 void EhFrameHeader::write() {
   uint8_t *buf = Out::bufferStart + getParent()->offset + outSecOff;
   using FdeData = EhFrameSection::FdeData;
-
-  std::vector<FdeData> fdes = getPartition().ehFrame->getFdeData();
+  SmallVector<FdeData, 0> fdes = getPartition().ehFrame->getFdeData();
 
   buf[0] = 1;
   buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
