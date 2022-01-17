@@ -1198,6 +1198,29 @@ TEST(RenameTest, MainFileReferencesOnly) {
             expectedResult(Code, NewName));
 }
 
+TEST(RenameTest, NoRenameOnSymbolsFromSystemHeaders) {
+  // filter out references not from main file.
+  llvm::StringRef Test =
+      R"cpp(
+        #include <system>
+        SystemSym^bol abc;
+        )cpp";
+
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  TU.AdditionalFiles["system"] = R"cpp(
+    class SystemSymbol {};
+    )cpp";
+  TU.ExtraArgs = {"-isystem", testRoot()};
+  auto AST = TU.build();
+  llvm::StringRef NewName = "abcde";
+
+  auto Results = rename({Code.point(), NewName, AST, testPath(TU.Filename)});
+  EXPECT_FALSE(Results) << "expected rename returned an error: " << Code.code();
+  auto ActualMessage = llvm::toString(Results.takeError());
+  EXPECT_THAT(ActualMessage, testing::HasSubstr("not a supported kind"));
+}
+
 TEST(RenameTest, ProtobufSymbolIsExcluded) {
   Annotations Code("Prot^obuf buf;");
   auto TU = TestTU::withCode(Code.code());
