@@ -2398,11 +2398,6 @@ void GnuHashTableSection::finalizeContents() {
 }
 
 void GnuHashTableSection::writeTo(uint8_t *buf) {
-  // The output buffer is not guaranteed to be zero-cleared because we pre-
-  // fill executable sections with trap instructions. This is a precaution
-  // for that case, which happens only when --no-rosegment is given.
-  memset(buf, 0, size);
-
   // Write a header.
   write32(buf, nBuckets);
   write32(buf + 4, getPartition().dynSymTab->getNumSymbols() - symbols.size());
@@ -2515,10 +2510,6 @@ void HashTableSection::finalizeContents() {
 
 void HashTableSection::writeTo(uint8_t *buf) {
   SymbolTableBaseSection *symTab = getPartition().dynSymTab.get();
-
-  // See comment in GnuHashTableSection::writeTo.
-  memset(buf, 0, size);
-
   unsigned numSymbols = symTab->getNumSymbols();
 
   uint32_t *p = reinterpret_cast<uint32_t *>(buf);
