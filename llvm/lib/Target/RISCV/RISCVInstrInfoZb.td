@@ -472,7 +472,8 @@ def BMATXOR  : ALU_rr<0b0100100, 0b011, "bmatxor">, Sched<[]>;
 } // Predicates = [HasStdExtZbm, IsRV64]
 
 let Predicates = [HasStdExtZbf] in
-def BFP : ALU_rr<0b0100100, 0b111, "bfp">, Sched<[]>;
+def BFP : ALU_rr<0b0100100, 0b111, "bfp">,
+          Sched<[WriteBFP, ReadBFP, ReadBFP]>;
 
 let Predicates = [HasStdExtZbp] in {
 def SHFLI   : RVBShfl_ri<0b0000100, 0b001, OPC_OP_IMM, "shfli">, Sched<[]>;
@@ -553,7 +554,8 @@ def PACKUW : ALUW_rr<0b0100100, 0b100, "packuw">, Sched<[]>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbf, IsRV64] in
-def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">, Sched<[]>;
+def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">,
+           Sched<[WriteBFP32, ReadBFP32, ReadBFP32]>;
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in

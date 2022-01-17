@@ -26,6 +26,10 @@ def WriteCPOP32      : SchedWrite;
 def WriteREV8        : SchedWrite;
 def WriteORCB        : SchedWrite;
 
+// Zbf extension
+def WriteBFP         : SchedWrite; // BFP
+def WriteBFP32       : SchedWrite; // BFPW
+
 /// Define scheduler resources associated with use operands.
 
 // Zba extension
@@ -45,6 +49,10 @@ def ReadCPOP        : SchedRead;
 def ReadCPOP32      : SchedRead;
 def ReadREV8        : SchedRead;
 def ReadORCB        : SchedRead;
+
+// Zbf extension
+def ReadBFP         : SchedRead; // BFP
+def ReadBFP32       : SchedRead; // BFPW
 
 /// Define default scheduler resources for B.
 
@@ -85,5 +93,15 @@ def : ReadAdvance<ReadCPOP, 0>;
 def : ReadAdvance<ReadCPOP32, 0>;
 def : ReadAdvance<ReadREV8, 0>;
 def : ReadAdvance<ReadORCB, 0>;
+}
+}
+
+multiclass UnsupportedSchedZbf {
+let Unsupported = true in {
+def : WriteRes<WriteBFP, []>;
+def : WriteRes<WriteBFP32, []>;
+
+def : ReadAdvance<ReadBFP, 0>;
+def : ReadAdvance<ReadBFP32, 0>;
 }
 }
