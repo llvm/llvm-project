@@ -2474,6 +2474,26 @@ TEST(CompletionTest, OverridesNonIdentName) {
   )cpp");
 }
 
+TEST(CompletionTest, NoCrashOnMissingNewLineAtEOF) {
+  auto FooCpp = testPath("foo.cpp");
+
+  MockCompilationDatabase CDB;
+  MockFS FS;
+  Annotations F("#pragma ^ // no new line");
+  FS.Files[FooCpp] = F.code().str();
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
+  runAddDocument(Server, FooCpp, F.code());
+  // Run completion outside the file range.
+  EXPECT_THAT(cantFail(runCodeComplete(Server, FooCpp, F.point(),
+                                       clangd::CodeCompleteOptions()))
+                  .Completions,
+              IsEmpty());
+  EXPECT_THAT(cantFail(runSignatureHelp(Server, FooCpp, F.point(),
+                                        MarkupKind::PlainText))
+                  .signatures,
+              IsEmpty());
+}
+
 TEST(GuessCompletionPrefix, Filters) {
   for (llvm::StringRef Case : {
            "[[scope::]][[ident]]^",

@@ -369,6 +369,10 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       }
     }
     ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
+    // FIXME: Add traling new line if there is none at eof, workaround a crash,
+    // see https://github.com/clangd/clangd/issues/332
+    if (!IP->Contents.endswith("\n"))
+      ParseInput.Contents.append("\n");
     ParseInput.Index = Index;
 
     CodeCompleteOpts.MainFileSignals = IP->Signals;
@@ -417,6 +421,10 @@ void ClangdServer::signatureHelp(PathRef File, Position Pos,
       return CB(error("Failed to parse includes"));
 
     ParseInputs ParseInput{IP->Command, &TFS, IP->Contents.str()};
+    // FIXME: Add traling new line if there is none at eof, workaround a crash,
+    // see https://github.com/clangd/clangd/issues/332
+    if (!IP->Contents.endswith("\n"))
+      ParseInput.Contents.append("\n");
     ParseInput.Index = Index;
     CB(clangd::signatureHelp(File, Pos, *PreambleData, ParseInput,
                              DocumentationFormat));
