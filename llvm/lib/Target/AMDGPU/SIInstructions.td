@@ -180,15 +180,13 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
 // restoring it after we're done.
 let Defs = [SCC] in {
 def V_SET_INACTIVE_B32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VGPR_32: $src, VSrc_b32:$inactive),
+  (ins VSrc_b32: $src, VSrc_b32:$inactive),
   [(set i32:$vdst, (int_amdgcn_set_inactive i32:$src, i32:$inactive))]> {
-  let Constraints = "$src = $vdst";
 }
 
 def V_SET_INACTIVE_B64 : VPseudoInstSI <(outs VReg_64:$vdst),
-  (ins VReg_64: $src, VSrc_b64:$inactive),
+  (ins VSrc_b64: $src, VSrc_b64:$inactive),
   [(set i64:$vdst, (int_amdgcn_set_inactive i64:$src, i64:$inactive))]> {
-  let Constraints = "$src = $vdst";
 }
 } // End Defs = [SCC]
 

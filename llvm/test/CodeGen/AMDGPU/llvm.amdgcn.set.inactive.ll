@@ -28,9 +28,9 @@ define amdgpu_kernel void @set_inactive_64(i64 addrspace(1)* %out, i64 %in) {
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    s_mov_b32 s4, s0
 ; GCN-NEXT:    s_mov_b32 s5, s1
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    s_not_b64 exec, exec
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0

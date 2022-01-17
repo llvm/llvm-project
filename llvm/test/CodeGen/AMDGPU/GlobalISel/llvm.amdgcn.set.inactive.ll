@@ -44,14 +44,14 @@ define amdgpu_kernel void @set_inactive_scc(i32 addrspace(1)* %out, i32 %in, <4 
 ; GCN-LABEL: set_inactive_scc:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0x2c
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_buffer_load_dword s3, s[4:7], 0x0
+; GCN-NEXT:    s_buffer_load_dword s2, s[4:7], 0x0
+; GCN-NEXT:    s_load_dword s3, s[0:1], 0x2c
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_lg_u32 s3, 56
+; GCN-NEXT:    s_cmp_lg_u32 s2, 56
 ; GCN-NEXT:    s_cselect_b32 s2, 1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, s3
 ; GCN-NEXT:    s_not_b64 exec, exec
 ; GCN-NEXT:    v_mov_b32_e32 v0, 42
 ; GCN-NEXT:    s_not_b64 exec, exec
