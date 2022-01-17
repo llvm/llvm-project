@@ -70,6 +70,10 @@ RUN apt-get install -y clang-format-$LLVM_LATEST_VERSION
 RUN ln -s /usr/bin/clang-format-$LLVM_LATEST_VERSION /usr/bin/clang-format && [ -e $(readlink /usr/bin/clang-format) ]
 RUN ln -s /usr/bin/git-clang-format-$LLVM_LATEST_VERSION /usr/bin/git-clang-format && [ -e $(readlink /usr/bin/git-clang-format) ]
 
+# Install clang-tidy
+RUN apt-get install -y clang-tidy-$LLVM_LATEST_VERSION
+RUN ln -s /usr/bin/clang-tidy-$LLVM_LATEST_VERSION /usr/bin/clang-tidy && [ -e $(readlink /usr/bin/clang-tidy) ]
+
 # Install the most recent GCC
 ENV GCC_LATEST_VERSION=11
 RUN add-apt-repository ppa:ubuntu-toolchain-r/test
