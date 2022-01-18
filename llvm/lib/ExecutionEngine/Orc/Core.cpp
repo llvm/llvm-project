@@ -1933,8 +1933,13 @@ Error ExecutionSession::removeJITDylib(JITDylib &JD) {
     JDs.erase(I);
   });
 
-  // Clear the JITDylib.
+  // Clear the JITDylib. Hold on to any error while we clean up the
+  // JITDylib members below.
   auto Err = JD.clear();
+
+  // Notify the platform of the teardown.
+  if (P)
+    Err = joinErrors(std::move(Err), P->teardownJITDylib(JD));
 
   // Set JD to closed state. Clear remaining data structures.
   runSessionLocked([&] {

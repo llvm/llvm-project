@@ -7,6 +7,7 @@ include "mlir/IR/OpBase.td"
 def Test_Dialect : Dialect {
   let name = "TestDialect";
   let cppNamespace = "::test";
+  let useDefaultTypePrinterParser = 0;
 }
 
 class TestAttr<string name> : AttrDef<Test_Dialect, name>;

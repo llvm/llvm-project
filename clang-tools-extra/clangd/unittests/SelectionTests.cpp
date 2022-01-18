@@ -516,6 +516,13 @@ TEST(SelectionTest, CommonAncestor) {
         enum Bar : [[Fo^o]];
       )cpp",
        "TypedefTypeLoc"},
+
+      // lambda captured var-decl
+      {R"cpp(
+        void test(int bar) {
+          auto l = [^[[foo = bar]]] { };
+        })cpp",
+       "VarDecl"},
   };
 
   for (const Case &C : Cases) {

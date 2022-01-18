@@ -93,7 +93,7 @@ declare i7 @llvm.fshl.i7(i7, i7, i7)
 define i7 @fshl_i7_const_fold() {
 ; CHECK-LABEL: fshl_i7_const_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #-61
+; CHECK-NEXT:    mov w0, #67
 ; CHECK-NEXT:    ret
   %f = call i7 @llvm.fshl.i7(i7 112, i7 127, i7 2)
   ret i7 %f
@@ -102,7 +102,7 @@ define i7 @fshl_i7_const_fold() {
 define i8 @fshl_i8_const_fold_overshift_1() {
 ; CHECK-LABEL: fshl_i8_const_fold_overshift_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #-128
+; CHECK-NEXT:    mov w0, #128
 ; CHECK-NEXT:    ret
   %f = call i8 @llvm.fshl.i8(i8 255, i8 0, i8 15)
   ret i8 %f
@@ -164,7 +164,7 @@ define i64 @fshl_i64_const_overshift(i64 %x, i64 %y) {
 define i8 @fshl_i8_const_fold() {
 ; CHECK-LABEL: fshl_i8_const_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #-128
+; CHECK-NEXT:    mov w0, #128
 ; CHECK-NEXT:    ret
   %f = call i8 @llvm.fshl.i8(i8 255, i8 0, i8 7)
   ret i8 %f
@@ -241,7 +241,7 @@ define i7 @fshr_i7_const_fold() {
 define i8 @fshr_i8_const_fold_overshift_1() {
 ; CHECK-LABEL: fshr_i8_const_fold_overshift_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #-2
+; CHECK-NEXT:    mov w0, #254
 ; CHECK-NEXT:    ret
   %f = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 15)
   ret i8 %f
@@ -250,7 +250,7 @@ define i8 @fshr_i8_const_fold_overshift_1() {
 define i8 @fshr_i8_const_fold_overshift_2() {
 ; CHECK-LABEL: fshr_i8_const_fold_overshift_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #-31
+; CHECK-NEXT:    mov w0, #225
 ; CHECK-NEXT:    ret
   %f = call i8 @llvm.fshr.i8(i8 15, i8 15, i8 11)
   ret i8 %f
@@ -259,7 +259,7 @@ define i8 @fshr_i8_const_fold_overshift_2() {
 define i8 @fshr_i8_const_fold_overshift_3() {
 ; CHECK-LABEL: fshr_i8_const_fold_overshift_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #-1
+; CHECK-NEXT:    mov w0, #255
 ; CHECK-NEXT:    ret
   %f = call i8 @llvm.fshr.i8(i8 0, i8 255, i8 8)
   ret i8 %f
@@ -303,7 +303,7 @@ define i64 @fshr_i64_const_overshift(i64 %x, i64 %y) {
 define i8 @fshr_i8_const_fold() {
 ; CHECK-LABEL: fshr_i8_const_fold:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, #-2
+; CHECK-NEXT:    mov w0, #254
 ; CHECK-NEXT:    ret
   %f = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 7)
   ret i8 %f

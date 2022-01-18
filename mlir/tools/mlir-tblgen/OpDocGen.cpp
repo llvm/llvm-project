@@ -143,7 +143,7 @@ static void emitOpTraitsDoc(const Operator &op, raw_ostream &os) {
   }
 }
 
-static void emitOpDoc(Operator op, raw_ostream &os) {
+static void emitOpDoc(const Operator &op, raw_ostream &os) {
   os << llvm::formatv("### `{0}` ({1})\n", op.getOperationName(),
                       op.getQualCppClassName());
 

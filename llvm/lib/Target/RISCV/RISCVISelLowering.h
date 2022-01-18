@@ -326,7 +326,7 @@ public:
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
   bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
-  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT, SDValue V) const override;
+  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
   bool hasAndNotCompare(SDValue Y) const override;
@@ -670,6 +670,15 @@ namespace RISCVVIntrinsicsTable {
 struct RISCVVIntrinsicInfo {
   unsigned IntrinsicID;
   uint8_t SplatOperand;
+  uint8_t VLOperand;
+  bool hasSplatOperand() const {
+    // 0xF is not valid. See NoSplatOperand in IntrinsicsRISCV.td.
+    return SplatOperand != 0xF;
+  }
+  bool hasVLOperand() const {
+    // 0x1F is not valid. See NoVLOperand in IntrinsicsRISCV.td.
+    return VLOperand != 0x1F;
+  }
 };
 
 using namespace RISCV;

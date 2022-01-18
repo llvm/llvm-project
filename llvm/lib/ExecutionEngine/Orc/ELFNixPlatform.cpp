@@ -155,6 +155,10 @@ Error ELFNixPlatform::setupJITDylib(JITDylib &JD) {
       std::make_unique<DSOHandleMaterializationUnit>(*this, DSOHandleSymbol));
 }
 
+Error ELFNixPlatform::teardownJITDylib(JITDylib &JD) {
+  return Error::success();
+}
+
 Error ELFNixPlatform::notifyAdding(ResourceTracker &RT,
                                    const MaterializationUnit &MU) {
   auto &JD = RT.getJITDylib();

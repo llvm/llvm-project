@@ -164,18 +164,8 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
 // to be good candidates for modification.
 bool isExcluded(const NamedDecl &RenameDecl) {
   const auto &SM = RenameDecl.getASTContext().getSourceManager();
-  if (SM.isInSystemHeader(RenameDecl.getLocation()))
-    return true;
-  if (isProtoFile(RenameDecl.getLocation(), SM))
-    return true;
-  // FIXME: Remove this std symbol list, as they should be covered by the
-  // above isInSystemHeader check.
-  static const auto *StdSymbols = new llvm::DenseSet<llvm::StringRef>({
-#define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name},
-#include "StdSymbolMap.inc"
-#undef SYMBOL
-  });
-  return StdSymbols->count(printQualifiedName(RenameDecl));
+  return SM.isInSystemHeader(RenameDecl.getLocation()) ||
+         isProtoFile(RenameDecl.getLocation(), SM);
 }
 
 enum class ReasonToReject {
