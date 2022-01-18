@@ -12,8 +12,6 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 #include <iomanip>
 #include <ostream>
 #include <cassert>
@@ -62,7 +60,11 @@ int main(int, char**)
         std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, false);
+#if defined(_WIN32)
+        assert(sb.str() == "($1,234,567.89)");
+#else
         assert(sb.str() == "-$1,234,567.89");
+#endif
     }
     {
         testbuf<char> sb;
@@ -71,7 +73,11 @@ int main(int, char**)
         std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, true);
+#if defined(_WIN32)
+        assert(sb.str() == "(USD1,234,567.89)");
+#else
         assert(sb.str() == "-USD 1,234,567.89");
+#endif
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
@@ -81,7 +87,11 @@ int main(int, char**)
         std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, false);
+#if defined(_WIN32)
+        assert(sb.str() == L"($1,234,567.89)");
+#else
         assert(sb.str() == L"-$1,234,567.89");
+#endif
     }
     {
         testbuf<wchar_t> sb;
@@ -90,7 +100,11 @@ int main(int, char**)
         std::showbase(os);
         long double x = -123456789;
         os << std::put_money(x, true);
+#if defined(_WIN32)
+        assert(sb.str() == L"(USD1,234,567.89)");
+#else
         assert(sb.str() == L"-USD 1,234,567.89");
+#endif
     }
 #endif
 
