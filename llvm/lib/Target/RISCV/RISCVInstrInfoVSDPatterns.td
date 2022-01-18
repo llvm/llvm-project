@@ -694,6 +694,9 @@ defm : VPatBinaryFPSDNode_VV_VF<fmul, "PseudoVFMUL">;
 defm : VPatBinaryFPSDNode_VV_VF<fdiv, "PseudoVFDIV">;
 defm : VPatBinaryFPSDNode_R_VF<fdiv, "PseudoVFRDIV">;
 
+// 14.5. Vector Widening Floating-Point Multiply Instructions
+defm : VPatWidenBinaryFPSDNode_VV_VF<fmul, "PseudoVFWMUL">;
+
 // 14.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
 foreach fvti = AllFloatVectors in {
   // NOTE: We choose VFMADD because it has the most commuting freedom. So it
