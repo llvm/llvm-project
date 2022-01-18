@@ -18,4 +18,4 @@ CHECK-READELF: FUNC    LOCAL  DEFAULT   {{.*}} main.cold.{{.*}}
 
 RUN: cat %t.fdata | FileCheck --check-prefix=EXCEPTIONS-FDATA %s
 # Check that the printf "catch" ran exactly 10 times
-EXCEPTIONS-FDATA: 1 main 90 1 _Znwm@PLT 0 0 10
+EXCEPTIONS-FDATA: 1 main {{.*}} 1 _Znwm@PLT 0 0 10
