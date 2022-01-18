@@ -151,7 +151,7 @@ public:
   };
 
   static bool findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
-                      uintptr_t sectionLength, pint_t fdeHint, FDE_Info *fdeInfo,
+                      size_t sectionLength, pint_t fdeHint, FDE_Info *fdeInfo,
                       CIE_Info *cieInfo);
   static const char *decodeFDE(A &addressSpace, pint_t fdeStart,
                                FDE_Info *fdeInfo, CIE_Info *cieInfo,
@@ -230,11 +230,11 @@ const char *CFI_Parser<A>::decodeFDE(A &addressSpace, pint_t fdeStart,
 /// Scan an eh_frame section to find an FDE for a pc
 template <typename A>
 bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
-                            uintptr_t sectionLength, pint_t fdeHint,
+                            size_t sectionLength, pint_t fdeHint,
                             FDE_Info *fdeInfo, CIE_Info *cieInfo) {
   //fprintf(stderr, "findFDE(0x%llX)\n", (long long)pc);
   pint_t p = (fdeHint != 0) ? fdeHint : ehSectionStart;
-  const pint_t ehSectionEnd = (sectionLength == UINTPTR_MAX)
+  const pint_t ehSectionEnd = (sectionLength == SIZE_MAX)
                                   ? static_cast<pint_t>(-1)
                                   : (ehSectionStart + sectionLength);
   while (p < ehSectionEnd) {
