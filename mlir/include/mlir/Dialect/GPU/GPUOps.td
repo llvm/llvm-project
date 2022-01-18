@@ -678,7 +678,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let regions = (region AnyRegion:$body);
   let verifier = [{ return ::verifyAllReduce(*this); }];
   let assemblyFormat = [{ custom<AllReduceOperation>($op) $value $body attr-dict
-                          `:` functional-type(operands, results)" }];
+                          `:` functional-type(operands, results) }];
 }
 
 def GPU_ShuffleOpXor  : I32EnumAttrCase<"XOR",  0, "xor">;
