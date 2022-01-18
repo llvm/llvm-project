@@ -795,6 +795,13 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
   }
 }
 
+static ConstantRange getConstantRangeOrFull(const ValueLatticeElement &Val,
+                                            Type *Ty, const DataLayout &DL) {
+  if (Val.isConstantRange())
+    return Val.getConstantRange();
+  return ConstantRange::getFull(DL.getTypeSizeInBits(Ty));
+}
+
 Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
     SelectInst *SI, BasicBlock *BB) {
   // Recurse on our inputs if needed
@@ -810,9 +817,11 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
     return None;
   ValueLatticeElement &FalseVal = *OptFalseVal;
 
-  if (TrueVal.isConstantRange() && FalseVal.isConstantRange()) {
-    const ConstantRange &TrueCR = TrueVal.getConstantRange();
-    const ConstantRange &FalseCR = FalseVal.getConstantRange();
+  if (TrueVal.isConstantRange() || FalseVal.isConstantRange()) {
+    const ConstantRange &TrueCR =
+        getConstantRangeOrFull(TrueVal, SI->getType(), DL);
+    const ConstantRange &FalseCR =
+        getConstantRangeOrFull(FalseVal, SI->getType(), DL);
     Value *LHS = nullptr;
     Value *RHS = nullptr;
     SelectPatternResult SPR = matchSelectPattern(SI, LHS, RHS);
@@ -879,13 +888,7 @@ Optional<ConstantRange> LazyValueInfoImpl::getRangeFor(Value *V,
   Optional<ValueLatticeElement> OptVal = getBlockValue(V, BB, CxtI);
   if (!OptVal)
     return None;
-
-  ValueLatticeElement &Val = *OptVal;
-  if (Val.isConstantRange())
-    return Val.getConstantRange();
-
-  const unsigned OperandBitWidth = DL.getTypeSizeInBits(V->getType());
-  return ConstantRange::getFull(OperandBitWidth);
+  return getConstantRangeOrFull(*OptVal, V->getType(), DL);
 }
 
 Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueCast(
