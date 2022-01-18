@@ -954,7 +954,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
-    -O2
+    -O3
+    -frounding-math
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(
@@ -1002,7 +1004,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
-    -O2
+    -O3
+    -frounding-math
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_HYPOT_H
 
 #include "BasicOperations.h"
+#include "FEnvImpl.h"
 #include "FPBits.h"
 #include "src/__support/CPP/TypeTraits.h"
 
@@ -143,11 +144,22 @@ static inline T hypot(T x, T y) {
   if ((x_bits.get_unbiased_exponent() >=
        y_bits.get_unbiased_exponent() + MantissaWidth<T>::VALUE + 2) ||
       (y == 0)) {
+    // Check if the rounding mode is FE_UPWARD, will need -frounding-math so
+    // that the compiler does not optimize it away.
+    if ((y != 0) && (0x1p0f + 0x1p-24f != 0x1p0f)) {
+      UIntType out_bits = FPBits_t(abs(x)).uintval();
+      return T(FPBits_t(++out_bits));
+    }
     return abs(x);
   } else if ((y_bits.get_unbiased_exponent() >=
               x_bits.get_unbiased_exponent() + MantissaWidth<T>::VALUE + 2) ||
              (x == 0)) {
-    y_bits.set_sign(0);
+    // Check if the rounding mode is FE_UPWARD, will need -frounding-math so
+    // that the compiler does not optimize it away.
+    if ((x != 0) && (0x1p0f + 0x1p-24f != 0x1p0f)) {
+      UIntType out_bits = FPBits_t(abs(y)).uintval();
+      return T(FPBits_t(++out_bits));
+    }
     return abs(y);
   }
 
@@ -250,8 +262,16 @@ static inline T hypot(T x, T y) {
   y_new >>= 1;
 
   // Round to the nearest, tie to even.
-  if (round_bit && (lsb || sticky_bits || (r != 0))) {
-    ++y_new;
+  switch (get_round()) {
+  case FE_TONEAREST:
+    // Round to nearest, ties to even
+    if (round_bit && (lsb || sticky_bits || (r != 0)))
+      ++y_new;
+    break;
+  case FE_UPWARD:
+    if (round_bit || sticky_bits || (r != 0))
+      ++y_new;
+    break;
   }
 
   if (y_new >= (ONE >> 1)) {

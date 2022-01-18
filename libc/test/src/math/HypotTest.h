@@ -10,7 +10,6 @@
 #define LLVM_LIBC_TEST_SRC_MATH_HYPOTTEST_H
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/Hypot.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/FPMatcher.h"
 #include "utils/UnitTest/Test.h"
@@ -62,9 +61,9 @@ public:
             y = -y;
           }
 
-          T result = func(x, y);
           mpfr::BinaryInput<T> input{x, y};
-          ASSERT_MPFR_MATCH(mpfr::Operation::Hypot, input, result, 0.5);
+          ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
+                                         func(x, y), 0.5);
         }
       }
     }
@@ -85,10 +84,17 @@ public:
           y = -y;
         }
 
-        T result = func(x, y);
         mpfr::BinaryInput<T> input{x, y};
-        ASSERT_MPFR_MATCH(mpfr::Operation::Hypot, input, result, 0.5);
+        ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
+                                       func(x, y), 0.5);
       }
+    }
+  }
+
+  void test_input_list(Func func, int n, const mpfr::BinaryInput<T> *inputs) {
+    for (int i = 0; i < n; ++i) {
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, inputs[i],
+                                     func(inputs[i].x, inputs[i].y), 0.5);
     }
   }
 };

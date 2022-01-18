@@ -406,6 +406,7 @@ add_diff_binary(
     libc.src.math.hypotf
   COMPILE_OPTIONS
     -fno-builtin
+    -Wno-c++17-extensions
 )
 
 add_diff_binary(
@@ -417,4 +418,5 @@ add_diff_binary(
     libc.src.math.hypot
   COMPILE_OPTIONS
     -fno-builtin
+    -Wno-c++17-extensions
 )
