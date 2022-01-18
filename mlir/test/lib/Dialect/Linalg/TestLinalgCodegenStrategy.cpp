@@ -55,9 +55,9 @@ struct TestLinalgCodegenStrategy
 
   void runOnFunction() override;
 
-  void runStrategy(LinalgTilingAndFusionOptions tilingAndFusionOptions,
-                   LinalgTilingOptions tilingOptions,
-                   LinalgTilingOptions registerTilingOptions,
+  void runStrategy(const LinalgTilingAndFusionOptions &tilingAndFusionOptions,
+                   const LinalgTilingOptions &tilingOptions,
+                   const LinalgTilingOptions &registerTilingOptions,
                    LinalgPaddingOptions paddingOptions,
                    vector::VectorContractLowering vectorContractLowering,
                    vector::VectorTransferSplit vectorTransferSplit);
@@ -168,9 +168,9 @@ struct TestLinalgCodegenStrategy
 };
 
 void TestLinalgCodegenStrategy::runStrategy(
-    LinalgTilingAndFusionOptions tilingAndFusionOptions,
-    LinalgTilingOptions tilingOptions,
-    LinalgTilingOptions registerTilingOptions,
+    const LinalgTilingAndFusionOptions &tilingAndFusionOptions,
+    const LinalgTilingOptions &tilingOptions,
+    const LinalgTilingOptions &registerTilingOptions,
     LinalgPaddingOptions paddingOptions,
     vector::VectorContractLowering vectorContractLowering,
     vector::VectorTransferSplit vectorTransferSplit) {
