@@ -824,7 +824,7 @@ void DIEDwarfExprAST::lower(DIEDwarfExprAST::Node *OpNode) {
 }
 
 void DIEDwarfExprAST::lowerDIOpArg(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpArg is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode) {
@@ -835,7 +835,7 @@ void DIEDwarfExprAST::lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode) {
   ConstantData *LiteralValue = Element.get<DIOp::Constant>().getLiteralValue();
   if (!ConstantInt::classof(LiteralValue)) {
     // FIXME(KZHURAVL): Support ConstantFP?
-    llvm_unreachable("DIEDwarfExprAST::lowerDIOpConstant only supports ConstantInt");
+    IsImplemented = false;
   }
 
   ConstantInt *IntLiteralValue = dyn_cast<ConstantInt>(LiteralValue);
@@ -854,7 +854,7 @@ void DIEDwarfExprAST::lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode) {
 }
 
 void DIEDwarfExprAST::lowerDIOpPushLane(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpPushLane is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode) {
@@ -875,15 +875,15 @@ void DIEDwarfExprAST::lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode) {
 }
 
 void DIEDwarfExprAST::lowerDIOpTypeObject(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpTypeObject is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerDIOpAddrOf(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpAddrOf is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerDIOpConvert(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpConvert is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode) {
@@ -895,7 +895,7 @@ void DIEDwarfExprAST::lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode) {
   Type *ResultType = OpNode->getChildren()[0]->getResultType();
   if (!ResultType->isPointerTy()) {
     // FIXME(KZHURAVL): Support non pointer types?
-    llvm_unreachable("DIEDwarfExprAST::lowerDIOpDeref only supports PointerType");
+    IsImplemented = false;
   }
 
   PointerType *PointerResultType = dyn_cast<PointerType>(ResultType);
@@ -918,11 +918,11 @@ void DIEDwarfExprAST::lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode) {
 }
 
 void DIEDwarfExprAST::lowerDIOpExtend(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpExtend is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerDIOpRead(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpRead is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerDIOpReinterpret(DIEDwarfExprAST::Node *OpNode) {
@@ -985,11 +985,11 @@ void DIEDwarfExprAST::lowerDIOpSub(DIEDwarfExprAST::Node *OpNode) {
 }
 
 void DIEDwarfExprAST::lowerDIOpSelect(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpSelect is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerDIOpComposite(DIEDwarfExprAST::Node *OpNode) {
-  llvm_unreachable("DIEDwarfExprAST::lowerDIOpComposite is not supported");
+  IsImplemented = false;
 }
 
 void DIEDwarfExprAST::lowerBitOrByteOffset(DIEDwarfExprAST::Node *OpNode) {

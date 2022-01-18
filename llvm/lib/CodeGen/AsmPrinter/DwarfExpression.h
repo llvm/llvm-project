@@ -497,6 +497,13 @@ private:
   DIELoc &OutDIE;
   std::unique_ptr<DIEDwarfExprAST::Node> Root;
 
+  // FIXME(KZHURAVL): This is a temporary boolean variable that indicates
+  // whether the lowering of this expression is supported or not. If the
+  // lowering is supported, then a valid DIE is returned, otherwise an empty
+  // DIE is returned (which indicates that there is no debug information
+  // available).
+  bool IsImplemented = true;
+
   void buildDIExprAST(const DIExpr &Expr);
   void traverseAndLower(DIEDwarfExprAST::Node *OpNode);
   void lower(DIEDwarfExprAST::Node *OpNode);
@@ -546,7 +553,7 @@ public:
 
   DIELoc *finalize() {
     traverseAndLower(Root.get());
-    return &OutDIE;
+    return IsImplemented ? &OutDIE : nullptr;
   }
 };
 

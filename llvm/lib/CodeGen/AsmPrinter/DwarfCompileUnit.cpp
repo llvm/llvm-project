@@ -849,10 +849,14 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
   // Check if it is a heterogeneous dwarf.
   if (const auto *NDV = dyn_cast<NewDbgVariable>(&DV)) {
     for (auto &Lifetime : NDV->getLifetimes()) {
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      DIELoc *ActualLoc = new (DIEValueAllocator) DIELoc;
+      // FIXME(KZHURAVL): Remove EmptyLoc once we implement full lowering
+      // support.
+      DIELoc *EmptyLoc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExprAST ExprAST(*Asm, *Asm->MF->getSubtarget().getRegisterInfo(),
-                              *Lifetime->getLocation(), *this, *Loc);
-      addBlock(*VariableDie, dwarf::DW_AT_location, ExprAST.finalize());
+                              *Lifetime->getLocation(), *this, *ActualLoc);
+      addBlock(*VariableDie, dwarf::DW_AT_location, ExprAST.finalize() ?
+                                                    ActualLoc : EmptyLoc);
     }
     return VariableDie;
   }
