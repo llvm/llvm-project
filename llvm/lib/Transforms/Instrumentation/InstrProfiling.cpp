@@ -445,24 +445,19 @@ llvm::createInstrProfilingLegacyPass(const InstrProfOptions &Options,
   return new InstrProfilingLegacyPass(Options, IsCS);
 }
 
-static InstrProfIncrementInst *castToIncrementInst(Instruction *Instr) {
-  InstrProfIncrementInst *Inc = dyn_cast<InstrProfIncrementInstStep>(Instr);
-  if (Inc)
-    return Inc;
-  return dyn_cast<InstrProfIncrementInst>(Instr);
-}
-
 bool InstrProfiling::lowerIntrinsics(Function *F) {
   bool MadeChange = false;
   PromotionCandidates.clear();
   for (BasicBlock &BB : *F) {
     for (Instruction &Instr : llvm::make_early_inc_range(BB)) {
-      InstrProfIncrementInst *Inc = castToIncrementInst(&Instr);
-      if (Inc) {
-        lowerIncrement(Inc);
+      if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(&Instr)) {
+        lowerIncrement(IPIS);
         MadeChange = true;
-      } else if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
-        lowerValueProfileInst(Ind);
+      } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(&Instr)) {
+        lowerIncrement(IPI);
+        MadeChange = true;
+      } else if (auto *IPVP = dyn_cast<InstrProfValueProfileInst>(&Instr)) {
+        lowerValueProfileInst(IPVP);
         MadeChange = true;
       }
     }
@@ -539,19 +534,14 @@ static bool needsRuntimeHookUnconditionally(const Triple &TT) {
 
 /// Check if the module contains uses of any profiling intrinsics.
 static bool containsProfilingIntrinsics(Module &M) {
-  if (auto *F = M.getFunction(
-          Intrinsic::getName(llvm::Intrinsic::instrprof_increment)))
-    if (!F->use_empty())
-      return true;
-  if (auto *F = M.getFunction(
-          Intrinsic::getName(llvm::Intrinsic::instrprof_increment_step)))
-    if (!F->use_empty())
-      return true;
-  if (auto *F = M.getFunction(
-          Intrinsic::getName(llvm::Intrinsic::instrprof_value_profile)))
-    if (!F->use_empty())
-      return true;
-  return false;
+  auto containsIntrinsic = [&](int ID) {
+    if (auto *F = M.getFunction(Intrinsic::getName(ID)))
+      return !F->use_empty();
+    return false;
+  };
+  return containsIntrinsic(llvm::Intrinsic::instrprof_increment) ||
+         containsIntrinsic(llvm::Intrinsic::instrprof_increment_step) ||
+         containsIntrinsic(llvm::Intrinsic::instrprof_value_profile);
 }
 
 bool InstrProfiling::run(
@@ -770,7 +760,7 @@ void InstrProfiling::lowerCoverageData(GlobalVariable *CoverageNamesVar) {
 }
 
 /// Get the name of a profiling variable for a particular function.
-static std::string getVarName(InstrProfIncrementInst *Inc, StringRef Prefix,
+static std::string getVarName(InstrProfInstBase *Inc, StringRef Prefix,
                               bool &Renamed) {
   StringRef NamePrefix = getInstrProfNameVarPrefix();
   StringRef Name = Inc->getName()->getName().substr(NamePrefix.size());
@@ -859,7 +849,7 @@ static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
 }
 
 GlobalVariable *
-InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
+InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
   auto &PD = ProfileDataMap[NamePtr];
   if (PD.RegionCounters)
