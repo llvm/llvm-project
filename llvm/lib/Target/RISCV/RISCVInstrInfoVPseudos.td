@@ -419,7 +419,7 @@ def RISCVVPseudosTable : GenericTable {
 def RISCVVIntrinsicsTable : GenericTable {
   let FilterClass = "RISCVVIntrinsic";
   let CppTypeName = "RISCVVIntrinsicInfo";
-  let Fields = ["IntrinsicID", "SplatOperand"];
+  let Fields = ["IntrinsicID", "SplatOperand", "VLOperand"];
   let PrimaryKey = ["IntrinsicID"];
   let PrimaryKeyName = "getRISCVVIntrinsicInfo";
 }

@@ -4203,8 +4203,7 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
   // We need to convert the scalar to a splat vector.
   // FIXME: Can we implicitly truncate the scalar if it is known to
   // be sign extended?
-  // VL should be the last operand.
-  SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
+  SDValue VL = Op.getOperand(II->VLOperand + 1 + HasChain);
   assert(VL.getValueType() == XLenVT);
   ScalarOp = splatSplitI64WithVL(DL, VT, ScalarOp, VL, DAG);
   return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);

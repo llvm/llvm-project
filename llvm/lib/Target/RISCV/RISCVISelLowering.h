@@ -670,9 +670,14 @@ namespace RISCVVIntrinsicsTable {
 struct RISCVVIntrinsicInfo {
   unsigned IntrinsicID;
   uint8_t SplatOperand;
+  uint8_t VLOperand;
   bool hasSplatOperand() const {
     // 0xF is not valid. See NoSplatOperand in IntrinsicsRISCV.td.
     return SplatOperand != 0xF;
+  }
+  bool hasVLOperand() const {
+    // 0x1F is not valid. See NoVLOperand in IntrinsicsRISCV.td.
+    return VLOperand != 0x1F;
   }
 };
 
