@@ -191,10 +191,6 @@ std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>
 runTypeErasedDataflowAnalysis(const ControlFlowContext &CFCtx,
                               TypeErasedDataflowAnalysis &Analysis,
                               const Environment &InitEnv) {
-  // FIXME: Consider enforcing that `Cfg` meets the requirements that
-  // are specified in the header. This could be done by remembering
-  // what options were used to build `Cfg` and asserting on them here.
-
   PostOrderCFGView POV(&CFCtx.getCFG());
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
