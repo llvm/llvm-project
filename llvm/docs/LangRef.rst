@@ -1633,9 +1633,15 @@ example:
     on all the hot functions.
 ``inaccessiblememonly``
     This attribute indicates that the function may only access memory that
-    is not accessible by the module being compiled. This is a weaker form
-    of ``readnone``. If the function reads or writes other memory, the
-    behavior is undefined.
+    is not accessible by the module being compiled before return from the
+    function. This is a weaker form of ``readnone``. If the function reads
+    or writes other memory, the behavior is undefined.
+
+    For clarity, note that such functions are allowed to return new memory
+    which is ``noalias`` with respect to memory already accessible from
+    the module.  That is, a function can be both ``inaccessiblememonly`` and
+    have a ``noalias`` return which introduces a new, potentially initialized,
+    allocation.
 ``inaccessiblemem_or_argmemonly``
     This attribute indicates that the function may only access memory that is
     either not accessible by the module being compiled, or is pointed to
