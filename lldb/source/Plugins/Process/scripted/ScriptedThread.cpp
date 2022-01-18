@@ -28,51 +28,59 @@ void ScriptedThread::CheckInterpreterAndScriptObject() const {
   lldbassert(GetInterface() && "Invalid Scripted Thread Interface.");
 }
 
-ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error,
-                               StructuredData::Generic *script_object)
-    : Thread(process, LLDB_INVALID_THREAD_ID), m_scripted_process(process),
-      m_scripted_thread_interface_sp(
-          m_scripted_process.GetInterface().CreateScriptedThreadInterface()) {
-  if (!process.IsValid()) {
-    error.SetErrorString("Invalid scripted process");
-    return;
-  }
+llvm::Expected<std::shared_ptr<ScriptedThread>>
+ScriptedThread::Create(ScriptedProcess &process,
+                       StructuredData::Generic *script_object) {
+  if (!process.IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Invalid scripted process.");
 
   process.CheckInterpreterAndScriptObject();
 
-  auto scripted_thread_interface = GetInterface();
-  if (!scripted_thread_interface) {
-    error.SetErrorString("Failed to get scripted thread interface.");
-    return;
-  }
+  auto scripted_thread_interface =
+      process.GetInterface().CreateScriptedThreadInterface();
+  if (!scripted_thread_interface)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to create scripted thread interface.");
 
-  llvm::Optional<std::string> class_name =
-      process.GetInterface().GetScriptedThreadPluginName();
-  if (!class_name || class_name->empty()) {
-    error.SetErrorString("Failed to get scripted thread class name.");
-    return;
+  llvm::StringRef thread_class_name;
+  if (!script_object) {
+    llvm::Optional<std::string> class_name =
+        process.GetInterface().GetScriptedThreadPluginName();
+    if (!class_name || class_name->empty())
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Failed to get scripted thread class name.");
+    thread_class_name = *class_name;
   }
 
   ExecutionContext exe_ctx(process);
+  StructuredData::GenericSP owned_script_object_sp =
+      scripted_thread_interface->CreatePluginObject(
+          thread_class_name, exe_ctx,
+          process.m_scripted_process_info.GetArgsSP(), script_object);
 
-  m_script_object_sp = scripted_thread_interface->CreatePluginObject(
-      class_name->c_str(), exe_ctx, process.m_scripted_process_info.GetArgsSP(),
-      script_object);
-
-  if (!m_script_object_sp) {
-    error.SetErrorString("Failed to create script object");
-    return;
-  }
-
-  if (!m_script_object_sp->IsValid()) {
-    m_script_object_sp = nullptr;
-    error.SetErrorString("Created script object is invalid");
-    return;
-  }
+  if (!owned_script_object_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to create script object.");
+  if (!owned_script_object_sp->IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Created script object is invalid.");
 
   lldb::tid_t tid = scripted_thread_interface->GetThreadID();
-  SetID(tid);
+
+  return std::make_shared<ScriptedThread>(process, scripted_thread_interface,
+                                          tid, owned_script_object_sp);
 }
+
+ScriptedThread::ScriptedThread(ScriptedProcess &process,
+                               ScriptedThreadInterfaceSP interface_sp,
+                               lldb::tid_t tid,
+                               StructuredData::GenericSP script_object_sp)
+    : Thread(process, tid), m_scripted_process(process),
+      m_scripted_thread_interface_sp(interface_sp),
+      m_script_object_sp(script_object_sp) {}
 
 ScriptedThread::~ScriptedThread() { DestroyThread(); }
 

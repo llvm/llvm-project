@@ -1244,7 +1244,7 @@ protected:
                                          // the stop info was checked against
                                          // the stop info override
   const uint32_t m_index_id; ///< A unique 1 based index assigned to each thread
-                             ///for easy UI/command line access.
+                             /// for easy UI/command line access.
   lldb::RegisterContextSP m_reg_context_sp; ///< The register context for this
                                             ///thread's current register state.
   lldb::StateType m_state;                  ///< The state of our process.
