@@ -102,6 +102,34 @@ def : Pat<(relaxed_load<atomic_load_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
           (LDURXi GPR64sp:$Rn, simm9:$offset)>;
 
+// FP 32-bit loads
+def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_32> (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm,
+                                                       ro_Wextend32:$extend))))),
+          (LDRSroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend32:$extend)>;
+def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_32> (ro_Xindexed32 GPR64sp:$Rn, GPR64:$Rm,
+                                                       ro_Xextend32:$extend))))),
+          (LDRSroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend32:$extend)>;
+def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_32> (am_indexed32 GPR64sp:$Rn,
+                                                      uimm12s8:$offset))))),
+          (LDRSui GPR64sp:$Rn, uimm12s8:$offset)>;
+def : Pat<(f32 (bitconvert (i32 (relaxed_load<atomic_load_32>
+               (am_unscaled32 GPR64sp:$Rn, simm9:$offset))))),
+          (LDURSi GPR64sp:$Rn, simm9:$offset)>;
+
+// FP 64-bit loads
+def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64> (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
+                                                       ro_Wextend64:$extend))))),
+          (LDRDroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend)>;
+def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64> (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
+                                                       ro_Xextend64:$extend))))),
+          (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)>;
+def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64> (am_indexed64 GPR64sp:$Rn,
+                                                      uimm12s8:$offset))))),
+          (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
+def : Pat<(f64 (bitconvert (i64 (relaxed_load<atomic_load_64>
+               (am_unscaled64 GPR64sp:$Rn, simm9:$offset))))),
+          (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+
 //===----------------------------------
 // Atomic stores
 //===----------------------------------
@@ -195,6 +223,38 @@ def : Pat<(relaxed_store<atomic_store_64>
 def : Pat<(relaxed_store<atomic_store_64>
                (am_unscaled64 GPR64sp:$Rn, simm9:$offset), GPR64:$val),
           (STURXi GPR64:$val, GPR64sp:$Rn, simm9:$offset)>;
+
+// FP 32-bit stores
+def : Pat<(relaxed_store<atomic_store_32> (ro_Windexed32 GPR64sp:$Rn, GPR32:$Rm,
+                                                         ro_Wextend32:$extend),
+                                          (i32 (bitconvert (f32 FPR32Op:$val)))),
+          (STRSroW FPR32Op:$val, GPR64sp:$Rn, GPR32:$Rm, ro_Wextend32:$extend)>;
+def : Pat<(relaxed_store<atomic_store_32> (ro_Xindexed32 GPR64sp:$Rn, GPR64:$Rm,
+                                                         ro_Xextend32:$extend),
+                                          (i32 (bitconvert (f32 FPR32Op:$val)))),
+          (STRSroX FPR32Op:$val, GPR64sp:$Rn, GPR64:$Rm, ro_Xextend32:$extend)>;
+def : Pat<(relaxed_store<atomic_store_32>
+              (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset), (i32 (bitconvert (f32 FPR32Op:$val)))),
+          (STRSui FPR32Op:$val, GPR64sp:$Rn, uimm12s4:$offset)>;
+def : Pat<(relaxed_store<atomic_store_32>
+               (am_unscaled32 GPR64sp:$Rn, simm9:$offset), (i32 (bitconvert (f32 FPR32Op:$val)))),
+          (STURSi FPR32Op:$val, GPR64sp:$Rn, simm9:$offset)>;
+
+// FP 64-bit stores
+def : Pat<(relaxed_store<atomic_store_64> (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
+                                                         ro_Wextend64:$extend),
+                                          (i64 (bitconvert (f64 FPR64Op:$val)))),
+          (STRDroW FPR64Op:$val, GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend)>;
+def : Pat<(relaxed_store<atomic_store_64> (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
+                                                         ro_Xextend64:$extend),
+                                          (i64 (bitconvert (f64 FPR64Op:$val)))),
+          (STRDroX FPR64Op:$val, GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend)>;
+def : Pat<(relaxed_store<atomic_store_64>
+              (am_indexed64 GPR64sp:$Rn, uimm12s4:$offset), (i64 (bitconvert (f64 FPR64Op:$val)))),
+          (STRDui FPR64Op:$val, GPR64sp:$Rn, uimm12s4:$offset)>;
+def : Pat<(relaxed_store<atomic_store_64>
+               (am_unscaled64 GPR64sp:$Rn, simm9:$offset), (i64 (bitconvert (f64 FPR64Op:$val)))),
+          (STURDi FPR64Op:$val, GPR64sp:$Rn, simm9:$offset)>;
 
 //===----------------------------------
 // Low-level exclusive operations
