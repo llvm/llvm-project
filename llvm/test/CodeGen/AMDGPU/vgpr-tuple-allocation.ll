@@ -175,7 +175,6 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX11-NEXT:    s_addc_u32 s1, s1, extern_func@gotpcrel32@hi+12
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -376,23 +375,19 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX11-NEXT:    s_mov_b32 s36, 0
 ; GFX11-NEXT:    v_dual_mov_b32 v41, v16 :: v_dual_mov_b32 v42, v15
 ; GFX11-NEXT:    v_dual_mov_b32 v43, v14 :: v_dual_mov_b32 v44, v13
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_writelane_b32 v40, s37, 1
 ; GFX11-NEXT:    s_mov_b32 s37, s36
 ; GFX11-NEXT:    v_mov_b32_e32 v45, v12
 ; GFX11-NEXT:    v_writelane_b32 v40, s38, 2
 ; GFX11-NEXT:    s_mov_b32 s38, s36
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_writelane_b32 v40, s39, 3
 ; GFX11-NEXT:    s_mov_b32 s39, s36
 ; GFX11-NEXT:    v_writelane_b32 v40, s40, 4
 ; GFX11-NEXT:    s_mov_b32 s40, s36
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_writelane_b32 v40, s41, 5
 ; GFX11-NEXT:    s_mov_b32 s41, s36
 ; GFX11-NEXT:    v_writelane_b32 v40, s42, 6
 ; GFX11-NEXT:    s_mov_b32 s42, s36
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_writelane_b32 v40, s43, 7
 ; GFX11-NEXT:    s_mov_b32 s43, s36
 ; GFX11-NEXT:    image_gather4_c_b_cl v[0:3], v[12:16], s[36:43], s[0:3] dmask:0x1 dim:SQ_RSRC_IMG_2D
@@ -401,7 +396,6 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX11-NEXT:    s_addc_u32 s1, s1, extern_func@gotpcrel32@hi+12
 ; GFX11-NEXT:    v_writelane_b32 v40, s30, 8
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 9
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off

@@ -849,9 +849,9 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1132-NEXT:    s_or_saveexec_b32 s4, -1
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1132-NEXT:    v_writelane_b32 v3, s5, 16
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s4
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1132-NEXT:    s_mov_b32 s4, s6
 ; GFX1132-NEXT:    s_mov_b32 s6, -1
@@ -2423,9 +2423,9 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1132-NEXT:    s_or_saveexec_b32 s4, -1
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1132-NEXT:    v_writelane_b32 v3, s5, 16
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s4
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1132-NEXT:    s_mov_b32 s4, s6
 ; GFX1132-NEXT:    s_mov_b32 s6, -1
