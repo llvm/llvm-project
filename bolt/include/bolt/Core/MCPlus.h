@@ -65,6 +65,7 @@ public:
     kJumpTable,           /// Jump Table.
     kTailCall,            /// Tail call.
     kConditionalTailCall, /// CTC.
+    kOffset,              /// Offset in the function.
     kGeneric              /// First generic annotation.
   };
 

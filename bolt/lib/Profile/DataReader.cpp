@@ -721,7 +721,7 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
     const MCInst *LastInstr = ToBB->getLastNonPseudoInstr();
     if (LastInstr) {
       const uint32_t LastInstrOffset =
-          BC.MIB->getAnnotationWithDefault<uint32_t>(*LastInstr, "Offset");
+          BC.MIB->getOffsetWithDefault(*LastInstr, 0);
 
       // With old .fdata we are getting FT branches for "jcc,jmp" sequences.
       if (To == LastInstrOffset && BC.MIB->isUnconditionalBranch(*LastInstr))
