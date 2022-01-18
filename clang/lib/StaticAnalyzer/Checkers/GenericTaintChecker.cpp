@@ -469,7 +469,7 @@ void GenericTaintRuleParser::consumeRulesFromConfig(const Config &C,
   llvm::SmallVector<const char *, 2> CallDescParts{NameParts.size()};
   llvm::transform(NameParts, CallDescParts.begin(),
                   [](SmallString<32> &S) { return S.c_str(); });
-  Rules.emplace_back(CallDescParts, std::move(Rule));
+  Rules.emplace_back(CallDescription(CallDescParts), std::move(Rule));
 }
 
 void GenericTaintRuleParser::parseConfig(const std::string &Option,
