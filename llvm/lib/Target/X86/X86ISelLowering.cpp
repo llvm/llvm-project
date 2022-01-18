@@ -12177,12 +12177,13 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
   return SDValue();
 }
 
-/// Check whether a compaction lowering can be done by dropping even
-/// elements and compute how many times even elements must be dropped.
+/// Check whether a compaction lowering can be done by dropping even/odd
+/// elements and compute how many times even/odd elements must be dropped.
 ///
 /// This handles shuffles which take every Nth element where N is a power of
 /// two. Example shuffle masks:
 ///
+/// (even)
 ///  N = 1:  0,  2,  4,  6,  8, 10, 12, 14,  0,  2,  4,  6,  8, 10, 12, 14
 ///  N = 1:  0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
 ///  N = 2:  0,  4,  8, 12,  0,  4,  8, 12,  0,  4,  8, 12,  0,  4,  8, 12
@@ -12190,16 +12191,20 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
 ///  N = 3:  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8,  0,  8
 ///  N = 3:  0,  8, 16, 24,  0,  8, 16, 24,  0,  8, 16, 24,  0,  8, 16, 24
 ///
+/// (odd)
+///  N = 1:  1,  3,  5,  7,  9, 11, 13, 15,  0,  2,  4,  6,  8, 10, 12, 14
+///  N = 1:  1,  3,  5,  7,  9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31
+///
 /// Any of these lanes can of course be undef.
 ///
 /// This routine only supports N <= 3.
 /// FIXME: Evaluate whether either AVX or AVX-512 have any opportunities here
 /// for larger N.
 ///
-/// \returns N above, or the number of times even elements must be dropped if
-/// there is such a number. Otherwise returns zero.
-static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
-                                          bool IsSingleInput) {
+/// \returns N above, or the number of times even/odd elements must be dropped
+/// if there is such a number. Otherwise returns zero.
+static int canLowerByDroppingElements(ArrayRef<int> Mask, bool MatchEven,
+                                      bool IsSingleInput) {
   // The modulus for the shuffle vector entries is based on whether this is
   // a single input or not.
   int ShuffleModulus = Mask.size() * (IsSingleInput ? 1 : 2);
@@ -12207,6 +12212,7 @@ static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
          "We should only be called with masks with a power-of-2 size!");
 
   uint64_t ModMask = (uint64_t)ShuffleModulus - 1;
+  int Offset = MatchEven ? 0 : 1;
 
   // We track whether the input is viable for all power-of-2 strides 2^1, 2^2,
   // and 2^3 simultaneously. This is because we may have ambiguity with
@@ -12225,7 +12231,7 @@ static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
         uint64_t N = j + 1;
 
         // The shuffle mask must be equal to (i * 2^N) % M.
-        if ((uint64_t)Mask[i] == (((uint64_t)i << N) & ModMask))
+        if ((uint64_t)(Mask[i] - Offset) == (((uint64_t)i << N) & ModMask))
           IsAnyViable = true;
         else
           ViableForN[j] = false;
@@ -15739,7 +15745,7 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // Attempt to lower using compaction, SSE41 is necessary for PACKUSDW.
   // We could use SIGN_EXTEND_INREG+PACKSSDW for older targets but this seems to
   // be slower than a PSHUFLW+PSHUFHW+PSHUFD chain.
-  int NumEvenDrops = canLowerByDroppingEvenElements(Mask, false);
+  int NumEvenDrops = canLowerByDroppingElements(Mask, true, false);
   if ((NumEvenDrops == 1 || NumEvenDrops == 2) && Subtarget.hasSSE41() &&
       !Subtarget.hasVLX()) {
     // Check if this is part of a 256-bit vector truncation.
@@ -15771,6 +15777,20 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v8i16, Result, Result);
     }
     return Result;
+  }
+
+  // When compacting odd (upper) elements, use PACKSS pre-SSE41.
+  int NumOddDrops = canLowerByDroppingElements(Mask, false, false);
+  if (NumOddDrops == 1) {
+    bool HasSSE41 = Subtarget.hasSSE41();
+    V1 = DAG.getNode(HasSSE41 ? X86ISD::VSRLI : X86ISD::VSRAI, DL, MVT::v4i32,
+                     DAG.getBitcast(MVT::v4i32, V1),
+                     DAG.getTargetConstant(16, DL, MVT::i8));
+    V2 = DAG.getNode(HasSSE41 ? X86ISD::VSRLI : X86ISD::VSRAI, DL, MVT::v4i32,
+                     DAG.getBitcast(MVT::v4i32, V2),
+                     DAG.getTargetConstant(16, DL, MVT::i8));
+    return DAG.getNode(HasSSE41 ? X86ISD::PACKUS : X86ISD::PACKSS, DL,
+                       MVT::v8i16, V1, V2);
   }
 
   // Try to lower by permuting the inputs into an unpack instruction.
@@ -16039,7 +16059,7 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Check for compaction patterns.
   bool IsSingleInput = V2.isUndef();
-  int NumEvenDrops = canLowerByDroppingEvenElements(Mask, IsSingleInput);
+  int NumEvenDrops = canLowerByDroppingElements(Mask, true, IsSingleInput);
 
   // Check for SSSE3 which lets us lower all v16i8 shuffles much more directly
   // with PSHUFB. It is important to do this before we attempt to generate any
@@ -16148,6 +16168,19 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       Result = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Result, Result);
     }
     return Result;
+  }
+
+  int NumOddDrops = canLowerByDroppingElements(Mask, false, IsSingleInput);
+  if (NumOddDrops == 1) {
+    V1 = DAG.getNode(X86ISD::VSRLI, DL, MVT::v8i16,
+                     DAG.getBitcast(MVT::v8i16, V1),
+                     DAG.getTargetConstant(8, DL, MVT::i8));
+    if (!IsSingleInput)
+      V2 = DAG.getNode(X86ISD::VSRLI, DL, MVT::v8i16,
+                       DAG.getBitcast(MVT::v8i16, V2),
+                       DAG.getTargetConstant(8, DL, MVT::i8));
+    return DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, V1,
+                       IsSingleInput ? V1 : V2);
   }
 
   // Handle multi-input cases by blending/unpacking single-input shuffles.
