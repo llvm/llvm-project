@@ -287,9 +287,9 @@ static void print(OpAsmPrinter &p, AssumingOp op) {
   bool yieldsResults = !op.getResults().empty();
 
   p << " " << op.getWitness();
-  if (yieldsResults) {
+  if (yieldsResults)
     p << " -> (" << op.getResultTypes() << ")";
-  }
+  p << ' ';
   p.printRegion(op.getDoRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/yieldsResults);
@@ -1114,6 +1114,7 @@ void print(OpAsmPrinter &p, FunctionLibraryOp op) {
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(
       op->getAttrs(), {SymbolTable::getSymbolAttrName(), "mapping"});
+  p << ' ';
   p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
   p << " mapping ";
@@ -1711,6 +1712,7 @@ static void print(OpAsmPrinter &p, ReduceOp op) {
   p << '(' << op.getShape() << ", " << op.getInitVals()
     << ") : " << op.getShape().getType();
   p.printOptionalArrowTypeList(op.getResultTypes());
+  p << ' ';
   p.printRegion(op.getRegion());
   p.printOptionalAttrDict(op->getAttrs());
 }

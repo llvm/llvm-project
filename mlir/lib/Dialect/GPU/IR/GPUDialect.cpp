@@ -475,6 +475,7 @@ static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
     p << ' ' << op.getDynamicSharedMemorySizeKeyword() << ' '
       << op.dynamicSharedMemorySize();
 
+  p << ' ';
   p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(op->getAttrs());
 }
@@ -881,6 +882,7 @@ static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
       p, op.getOperation(), type.getNumInputs(), type.getNumResults(),
       {op.getNumWorkgroupAttributionsAttrName(),
        GPUDialect::getKernelFuncAttrName()});
+  p << ' ';
   p.printRegion(op.getBody(), /*printEntryBlockArgs=*/false);
 }
 
@@ -1005,6 +1007,7 @@ static void print(OpAsmPrinter &p, GPUModuleOp op) {
   p.printSymbolName(op.getName());
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {SymbolTable::getSymbolAttrName()});
+  p << ' ';
   p.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
 }

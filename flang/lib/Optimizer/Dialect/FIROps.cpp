@@ -994,9 +994,11 @@ static void print(mlir::OpAsmPrinter &p, fir::DispatchTableOp &op) {
   p << " @" << tableName;
 
   Region &body = op.getOperation()->getRegion(0);
-  if (!body.empty())
+  if (!body.empty()) {
+    p << ' ';
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/false);
+  }
 }
 
 static mlir::LogicalResult verify(fir::DispatchTableOp &op) {
@@ -1220,10 +1222,12 @@ static void print(mlir::OpAsmPrinter &p, fir::GlobalOp &op) {
     p << " constant";
   p << " : ";
   p.printType(op.getType());
-  if (op.hasInitializationBody())
+  if (op.hasInitializationBody()) {
+    p << ' ';
     p.printRegion(op.getOperation()->getRegion(0),
                   /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
+  }
 }
 
 void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
@@ -1709,6 +1713,7 @@ static void print(mlir::OpAsmPrinter &p, fir::IterWhileOp op) {
   }
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {op.getFinalValueAttrNameStr()});
+  p << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 }
@@ -2003,6 +2008,7 @@ static void print(mlir::OpAsmPrinter &p, fir::DoLoopOp op) {
   }
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {"unordered", "finalValue"});
+  p << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
 }
@@ -3122,13 +3128,14 @@ static void print(mlir::OpAsmPrinter &p, fir::IfOp op) {
     p << " -> (" << op.getResultTypes() << ')';
     printBlockTerminators = true;
   }
+  p << ' ';
   p.printRegion(op.thenRegion(), /*printEntryBlockArgs=*/false,
                 printBlockTerminators);
 
   // Print the 'else' regions if it exists and has a block.
   auto &otherReg = op.elseRegion();
   if (!otherReg.empty()) {
-    p << " else";
+    p << " else ";
     p.printRegion(otherReg, /*printEntryBlockArgs=*/false,
                   printBlockTerminators);
   }

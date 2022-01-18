@@ -542,7 +542,7 @@ func @tiled_loop_incorrent_iterator_types_count(%A: memref<192x192xf32>,
   %c0 = arith.constant 0 : index
   %c192 = arith.constant 192 : index
   // expected-error @+1 {{expected iterator types array attribute size = 1 to match the number of loops = 2}}
-  %0 = "linalg.tiled_loop"(%c0, %c0, %c192, %c192, %c24, %c24, %A, %B, %C_tensor, %C) ( {
+  %0 = "linalg.tiled_loop"(%c0, %c0, %c192, %c192, %c24, %c24, %A, %B, %C_tensor, %C) ({
     ^bb0(%arg4: index, %arg5: index, %A_: memref<192x192xf32>,
          %B_: memref<192x192xf32>, %CT_: tensor<192x192xf32>,
          %C_: memref<192x192xf32>):
@@ -567,7 +567,7 @@ func @tiled_loop_incorrent_block_arg_type(%A: memref<192xf32>) {
   %c192 = arith.constant 192 : index
   %c24 = arith.constant 24 : index
   // expected-error @+1 {{expected output arg 0 with type = 'memref<192xf32>' to match region arg 1 type = 'memref<100xf32>'}}
-  "linalg.tiled_loop"(%c0, %c192, %c24, %A) ( {
+  "linalg.tiled_loop"(%c0, %c192, %c24, %A) ({
     ^bb0(%arg4: index, %A_: memref<100xf32>):
       call @foo(%A_) : (memref<100xf32>)-> ()
       linalg.yield

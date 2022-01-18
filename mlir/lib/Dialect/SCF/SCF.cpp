@@ -118,6 +118,7 @@ static ParseResult parseExecuteRegionOp(OpAsmParser &parser,
 static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
   p.printOptionalArrowTypeList(op.getResultTypes());
 
+  p << ' ';
   p.printRegion(op.getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
@@ -347,6 +348,7 @@ static void print(OpAsmPrinter &p, ForOp op) {
                           " iter_args");
   if (!op.getIterOperands().empty())
     p << " -> (" << op.getIterOperands().getTypes() << ')';
+  p << ' ';
   p.printRegion(op.getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.hasIterOperands());
@@ -1110,6 +1112,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
     // Print yield explicitly if the op defines values.
     printBlockTerminators = true;
   }
+  p << ' ';
   p.printRegion(op.getThenRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
@@ -1117,7 +1120,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = op.getElseRegion();
   if (!elseRegion.empty()) {
-    p << " else";
+    p << " else ";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/printBlockTerminators);
@@ -1844,6 +1847,7 @@ static void print(OpAsmPrinter &p, ParallelOp op) {
   if (!op.getInitVals().empty())
     p << " init (" << op.getInitVals() << ")";
   p.printOptionalArrowTypeList(op.getResultTypes());
+  p << ' ';
   p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
       op->getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
@@ -2100,7 +2104,7 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
 
 static void print(OpAsmPrinter &p, ReduceOp op) {
   p << "(" << op.getOperand() << ") ";
-  p << " : " << op.getOperand().getType();
+  p << " : " << op.getOperand().getType() << ' ';
   p.printRegion(op.getReductionOperator());
 }
 
@@ -2215,8 +2219,9 @@ static void print(OpAsmPrinter &p, scf::WhileOp op) {
                           op.getInits(), " ");
   p << " : ";
   p.printFunctionalType(op.getInits().getTypes(), op.getResults().getTypes());
+  p << ' ';
   p.printRegion(op.getBefore(), /*printEntryBlockArgs=*/false);
-  p << " do";
+  p << " do ";
   p.printRegion(op.getAfter());
   p.printOptionalAttrDictWithKeyword(op->getAttrs());
 }

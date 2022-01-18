@@ -1130,7 +1130,7 @@ func @while_test(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
   %0 = "tosa.add"(%arg0, %arg0) : (tensor<i32>, tensor<i32>) -> tensor<*xi32>
 
   // CHECK:      "tosa.while_loop"
-  %1 = "tosa.while_loop"(%0) ( {
+  %1 = "tosa.while_loop"(%0) ({
 
   // CHECK:      ^bb0
   // CHECK-SAME: tensor<i32>
@@ -1168,7 +1168,7 @@ func @while_test(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
 // CHECK-LABEL: @while_test
 func @while_test(%arg0 : tensor<i32>, %arg1 : tensor<1xi32>) -> () {
   // CHECK:      "tosa.while_loop"
-  %1:2 = "tosa.while_loop"(%arg0, %arg1) ( {
+  %1:2 = "tosa.while_loop"(%arg0, %arg1) ({
 
   // CHECK:      ^bb0
   // CHECK-SAME: tensor<i32>
