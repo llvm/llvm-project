@@ -7,4 +7,4 @@ _dl_relocate_static_pie
 _fini
 _init
 _start
-main
+ main
