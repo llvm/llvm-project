@@ -16,6 +16,7 @@
 #include "ResourceScriptToken.h"
 #include "ResourceVisitor.h"
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace llvm {
@@ -768,10 +769,10 @@ class VersionInfoValue : public VersionInfoStmt {
 public:
   StringRef Key;
   std::vector<IntOrString> Values;
-  std::vector<bool> HasPrecedingComma;
+  BitVector HasPrecedingComma;
 
   VersionInfoValue(StringRef InfoKey, std::vector<IntOrString> &&Vals,
-                   std::vector<bool> &&CommasBeforeVals)
+                   BitVector &&CommasBeforeVals)
       : Key(InfoKey), Values(std::move(Vals)),
         HasPrecedingComma(std::move(CommasBeforeVals)) {}
   raw_ostream &log(raw_ostream &) const override;

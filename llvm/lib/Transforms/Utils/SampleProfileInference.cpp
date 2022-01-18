@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
 #include <set>
@@ -309,7 +310,7 @@ public:
 private:
   void joinIsolatedComponents() {
     // Find blocks that are reachable from the source
-    auto Visited = std::vector<bool>(NumBlocks(), false);
+    auto Visited = BitVector(NumBlocks(), false);
     findReachable(Func.Entry, Visited);
 
     // Iterate over all non-reachable blocks and adjust their weights
@@ -334,7 +335,7 @@ private:
 
   /// Run BFS from a given block along the jumps with a positive flow and mark
   /// all reachable blocks.
-  void findReachable(uint64_t Src, std::vector<bool> &Visited) {
+  void findReachable(uint64_t Src, BitVector &Visited) {
     if (Visited[Src])
       return;
     std::queue<uint64_t> Queue;
@@ -488,7 +489,7 @@ private:
                            std::vector<FlowBlock *> &UnknownSuccs) {
     // Run BFS from SrcBlock and make sure all paths are going through unknown
     // blocks and end at a non-unknown DstBlock
-    auto Visited = std::vector<bool>(NumBlocks(), false);
+    auto Visited = BitVector(NumBlocks(), false);
     std::queue<uint64_t> Queue;
     DstBlock = nullptr;
 
@@ -800,7 +801,7 @@ void verifyWeights(const FlowFunction &Func) {
 
   // Run BFS from the source along edges with positive flow
   std::queue<uint64_t> Queue;
-  auto Visited = std::vector<bool>(NumBlocks, false);
+  auto Visited = BitVector(NumBlocks, false);
   Queue.push(Func.Entry);
   Visited[Func.Entry] = true;
   while (!Queue.empty()) {
