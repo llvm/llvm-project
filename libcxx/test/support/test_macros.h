@@ -77,7 +77,7 @@
 #  define TEST_COMPILER_APPLE_CLANG
 # endif
 #elif defined(_MSC_VER)
-# define TEST_COMPILER_C1XX
+# define TEST_COMPILER_MSVC
 #elif defined(__GNUC__)
 # define TEST_COMPILER_GCC
 #endif
