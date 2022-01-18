@@ -248,6 +248,21 @@ define signext i8 @vpreduce_xor_nxv2i8(i8 signext %s, <vscale x 2 x i8> %v, <vsc
   ret i8 %r
 }
 
+declare i8 @llvm.vp.reduce.smax.nxv3i8(i8, <vscale x 3 x i8>, <vscale x 3 x i1>, i32)
+
+define signext i8 @vpreduce_smax_nxv3i8(i8 signext %s, <vscale x 3 x i8> %v, <vscale x 3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_smax_nxv3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, mu
+; CHECK-NEXT:    vredmax.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    ret
+  %r = call i8 @llvm.vp.reduce.smax.nxv3i8(i8 %s, <vscale x 3 x i8> %v, <vscale x 3 x i1> %m, i32 %evl)
+  ret i8 %r
+}
+
 declare i8 @llvm.vp.reduce.add.nxv4i8(i8, <vscale x 4 x i8>, <vscale x 4 x i1>, i32)
 
 define signext i8 @vpreduce_add_nxv4i8(i8 signext %s, <vscale x 4 x i8> %v, <vscale x 4 x i1> %m, i32 zeroext %evl) {
@@ -1144,10 +1159,10 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV32-NEXT:    slli a3, a3, 1
 ; RV32-NEXT:    vmv.s.x v25, a0
 ; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    bltu a1, a3, .LBB66_2
+; RV32-NEXT:    bltu a1, a3, .LBB67_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a3
-; RV32-NEXT:  .LBB66_2:
+; RV32-NEXT:  .LBB67_2:
 ; RV32-NEXT:    li a4, 0
 ; RV32-NEXT:    vsetvli a5, zero, e8, mf2, ta, mu
 ; RV32-NEXT:    vslidedown.vx v24, v0, a2
@@ -1157,10 +1172,10 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
 ; RV32-NEXT:    sub a0, a1, a3
 ; RV32-NEXT:    vmv.s.x v8, a2
-; RV32-NEXT:    bltu a1, a0, .LBB66_4
+; RV32-NEXT:    bltu a1, a0, .LBB67_4
 ; RV32-NEXT:  # %bb.3:
 ; RV32-NEXT:    mv a4, a0
-; RV32-NEXT:  .LBB66_4:
+; RV32-NEXT:  .LBB67_4:
 ; RV32-NEXT:    vsetvli zero, a4, e32, m8, tu, mu
 ; RV32-NEXT:    vmv1r.v v0, v24
 ; RV32-NEXT:    vredmaxu.vs v8, v16, v8, v0.t
@@ -1175,10 +1190,10 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV64-NEXT:    slli a0, a3, 1
 ; RV64-NEXT:    srli a3, a4, 32
 ; RV64-NEXT:    mv a4, a1
-; RV64-NEXT:    bltu a1, a0, .LBB66_2
+; RV64-NEXT:    bltu a1, a0, .LBB67_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a4, a0
-; RV64-NEXT:  .LBB66_2:
+; RV64-NEXT:  .LBB67_2:
 ; RV64-NEXT:    li a5, 0
 ; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, mu
 ; RV64-NEXT:    vslidedown.vx v24, v0, a6
@@ -1190,10 +1205,10 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
 ; RV64-NEXT:    sub a0, a1, a0
 ; RV64-NEXT:    vmv.s.x v8, a2
-; RV64-NEXT:    bltu a1, a0, .LBB66_4
+; RV64-NEXT:    bltu a1, a0, .LBB67_4
 ; RV64-NEXT:  # %bb.3:
 ; RV64-NEXT:    mv a5, a0
-; RV64-NEXT:  .LBB66_4:
+; RV64-NEXT:  .LBB67_4:
 ; RV64-NEXT:    vsetvli zero, a5, e32, m8, tu, mu
 ; RV64-NEXT:    vmv1r.v v0, v24
 ; RV64-NEXT:    vredmaxu.vs v8, v16, v8, v0.t

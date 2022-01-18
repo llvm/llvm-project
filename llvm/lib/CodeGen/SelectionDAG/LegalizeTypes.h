@@ -905,6 +905,23 @@ private:
   }
   void SetWidenedVector(SDValue Op, SDValue Result);
 
+  /// Given a mask Mask, returns the larger vector into which Mask was widened.
+  SDValue GetWidenedMask(SDValue Mask, ElementCount EC) {
+    // For VP operations, we must also widen the mask. Note that the mask type
+    // may not actually need widening, leading it be split along with the VP
+    // operation.
+    // FIXME: This could lead to an infinite split/widen loop. We only handle
+    // the case where the mask needs widening to an identically-sized type as
+    // the vector inputs.
+    assert(getTypeAction(Mask.getValueType()) ==
+               TargetLowering::TypeWidenVector &&
+           "Unable to widen binary VP op");
+    Mask = GetWidenedVector(Mask);
+    assert(Mask.getValueType().getVectorElementCount() == EC &&
+           "Unable to widen binary VP op");
+    return Mask;
+  }
+
   // Widen Vector Result Promotion.
   void WidenVectorResult(SDNode *N, unsigned ResNo);
   SDValue WidenVecRes_MERGE_VALUES(SDNode* N, unsigned ResNo);
@@ -964,6 +981,7 @@ private:
   SDValue WidenVecOp_FCOPYSIGN(SDNode *N);
   SDValue WidenVecOp_VECREDUCE(SDNode *N);
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);
+  SDValue WidenVecOp_VP_REDUCE(SDNode *N);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.

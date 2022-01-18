@@ -210,6 +210,34 @@ define double @vpreduce_ord_fadd_v2f64(double %s, <2 x double> %v, <2 x i1> %m, 
   ret double %r
 }
 
+declare double @llvm.vp.reduce.fadd.v3f64(double, <3 x double>, <3 x i1>, i32)
+
+define double @vpreduce_fadd_v3f64(double %s, <3 x double> %v, <3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fadd_v3f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
+; CHECK-NEXT:    vfredusum.vs v10, v8, v10, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v10
+; CHECK-NEXT:    ret
+  %r = call reassoc double @llvm.vp.reduce.fadd.v3f64(double %s, <3 x double> %v, <3 x i1> %m, i32 %evl)
+  ret double %r
+}
+
+define double @vpreduce_ord_fadd_v3f64(double %s, <3 x double> %v, <3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_ord_fadd_v3f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vfmv.s.f v10, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
+; CHECK-NEXT:    vfredosum.vs v10, v8, v10, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v10
+; CHECK-NEXT:    ret
+  %r = call double @llvm.vp.reduce.fadd.v3f64(double %s, <3 x double> %v, <3 x i1> %m, i32 %evl)
+  ret double %r
+}
+
 declare double @llvm.vp.reduce.fadd.v4f64(double, <4 x double>, <4 x i1>, i32)
 
 define double @vpreduce_fadd_v4f64(double %s, <4 x double> %v, <4 x i1> %m, i32 zeroext %evl) {
