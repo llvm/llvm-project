@@ -739,15 +739,8 @@ static bool constantIsDead(const Constant *C, bool RemoveDeadUsers) {
       ++I;
   }
 
-  if (RemoveDeadUsers) {
-    // If C is only used by metadata, it should not be preserved but should
-    // have its uses replaced.
-    if (C->isUsedByMetadata()) {
-      const_cast<Constant *>(C)->replaceAllUsesWith(
-          UndefValue::get(C->getType()));
-    }
+  if (RemoveDeadUsers)
     const_cast<Constant *>(C)->destroyConstant();
-  }
 
   return true;
 }
