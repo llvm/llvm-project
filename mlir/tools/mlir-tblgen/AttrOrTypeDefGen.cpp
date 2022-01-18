@@ -52,15 +52,15 @@ static void collectAllDefs(StringRef selectedDialect,
   if (selectedDialect.empty()) {
     // If a dialect was not specified, ensure that all found defs belong to the
     // same dialect.
-    if (!llvm::is_splat(
-            llvm::map_range(defs, [](auto def) { return def.getDialect(); }))) {
+    if (!llvm::is_splat(llvm::map_range(
+            defs, [](const auto &def) { return def.getDialect(); }))) {
       llvm::PrintFatalError("defs belonging to more than one dialect. Must "
                             "select one via '--(attr|type)defs-dialect'");
     }
     resultDefs.assign(defs.begin(), defs.end());
   } else {
     // Otherwise, generate the defs that belong to the selected dialect.
-    auto dialectDefs = llvm::make_filter_range(defs, [&](auto def) {
+    auto dialectDefs = llvm::make_filter_range(defs, [&](const auto &def) {
       return def.getDialect().getName().equals(selectedDialect);
     });
     resultDefs.assign(dialectDefs.begin(), dialectDefs.end());
