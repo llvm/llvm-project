@@ -14,11 +14,11 @@
 #ifndef OPENMP_OPS
 #define OPENMP_OPS
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Dialect/OpenMP/OmpCommon.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.td"
 
@@ -26,7 +26,11 @@ def OpenMP_Dialect : Dialect {
   let name = "omp";
   let cppNamespace = "::mlir::omp";
   let dependentDialects = ["::mlir::LLVM::LLVMDialect"];
+  let useDefaultAttributePrinterParser = 1;
 }
+
+// OmpCommon requires definition of OpenACC_Dialect.
+include "mlir/Dialect/OpenMP/OmpCommon.td"
 
 class OpenMP_Op<string mnemonic, list<OpTrait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;
@@ -60,18 +64,21 @@ def OpenMP_PointerLikeType : Type<
 //===----------------------------------------------------------------------===//
 
 // Possible values for the default clause
-def ClauseDefaultPrivate : StrEnumAttrCase<"defprivate">;
-def ClauseDefaultFirstPrivate : StrEnumAttrCase<"deffirstprivate">;
-def ClauseDefaultShared : StrEnumAttrCase<"defshared">;
-def ClauseDefaultNone : StrEnumAttrCase<"defnone">;
+def ClauseDefaultPrivate      : I32EnumAttrCase<"defprivate",      0>;
+def ClauseDefaultFirstPrivate : I32EnumAttrCase<"deffirstprivate", 1>;
+def ClauseDefaultShared       : I32EnumAttrCase<"defshared",       2>;
+def ClauseDefaultNone         : I32EnumAttrCase<"defnone",         3>;
 
-def ClauseDefault : StrEnumAttr<
+def ClauseDefault : I32EnumAttr<
     "ClauseDefault",
     "default clause",
     [ClauseDefaultPrivate, ClauseDefaultFirstPrivate, ClauseDefaultShared,
      ClauseDefaultNone]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::omp";
 }
+def ClauseDefaultAttr : EnumAttr<OpenMP_Dialect, ClauseDefault,
+                                 "clause_default">;
 
 def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
                  DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>]> {
@@ -105,14 +112,14 @@ def ParallelOp : OpenMP_Op<"parallel", [AttrSizedOperandSegments,
 
   let arguments = (ins Optional<AnyType>:$if_expr_var,
              Optional<AnyType>:$num_threads_var,
-             OptionalAttr<ClauseDefault>:$default_val,
+             OptionalAttr<ClauseDefaultAttr>:$default_val,
              Variadic<AnyType>:$private_vars,
              Variadic<AnyType>:$firstprivate_vars,
              Variadic<AnyType>:$shared_vars,
              Variadic<AnyType>:$copyin_vars,
              Variadic<AnyType>:$allocate_vars,
              Variadic<AnyType>:$allocators_vars,
-             OptionalAttr<ProcBindKind>:$proc_bind_val);
+             OptionalAttr<ProcBindKindAttr>:$proc_bind_val);
 
   let regions = (region AnyRegion:$region);
 
@@ -136,19 +143,20 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
   let assemblyFormat = "attr-dict";
 }
 
-def OMP_SCHEDULE_MOD_None : StrEnumAttrCase<"none", 0>;
-def OMP_SCHEDULE_MOD_Monotonic : StrEnumAttrCase<"monotonic", 1>;
-def OMP_SCHEDULE_MOD_Nonmonotonic : StrEnumAttrCase<"nonmonotonic", 2>;
-def OMP_SCHEDULE_MOD_SIMD : StrEnumAttrCase<"simd", 3>;
+def OMP_ScheduleModNone         : I32EnumAttrCase<"none", 0>;
+def OMP_ScheduleModMonotonic    : I32EnumAttrCase<"monotonic", 1>;
+def OMP_ScheduleModNonmonotonic : I32EnumAttrCase<"nonmonotonic", 2>;
+def OMP_ScheduleModSIMD         : I32EnumAttrCase<"simd", 3>;
 
-def ScheduleModifier : StrEnumAttr<"ScheduleModifier", "OpenMP Schedule Modifier",
-                                         [OMP_SCHEDULE_MOD_None,
-                                          OMP_SCHEDULE_MOD_Monotonic,
-                                          OMP_SCHEDULE_MOD_Nonmonotonic,
-                                          OMP_SCHEDULE_MOD_SIMD]>
-{
-    let cppNamespace = "::mlir::omp";
+def ScheduleModifier
+    : I32EnumAttr<"ScheduleModifier", "OpenMP Schedule Modifier",
+                  [OMP_ScheduleModNone, OMP_ScheduleModMonotonic,
+                   OMP_ScheduleModNonmonotonic, OMP_ScheduleModSIMD]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::omp";
 }
+def ScheduleModifierAttr : EnumAttr<OpenMP_Dialect, ScheduleModifier,
+                                    "sched_mod">;
 
 //===----------------------------------------------------------------------===//
 // 2.8.1 Sections Construct
@@ -288,14 +296,14 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              Variadic<AnyType>:$linear_step_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
-             OptionalAttr<ScheduleKind>:$schedule_val,
+             OptionalAttr<ScheduleKindAttr>:$schedule_val,
              Optional<AnyType>:$schedule_chunk_var,
-             OptionalAttr<ScheduleModifier>:$schedule_modifier,
+             OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
              UnitAttr:$nowait,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
-             OptionalAttr<OrderKind>:$order_val,
+             OptionalAttr<OrderKindAttr>:$order_val,
              UnitAttr:$inclusive);
 
   let skipDefaultBuilders = 1;
@@ -487,14 +495,18 @@ def BarrierOp : OpenMP_Op<"barrier"> {
 // [5.1] 2.19.9 ordered Construct
 //===----------------------------------------------------------------------===//
 
-def ClauseDependSource : StrEnumAttrCase<"dependsource">;
-def ClauseDependSink : StrEnumAttrCase<"dependsink">;
+def ClauseDependSource : I32EnumAttrCase<"dependsource", 0>;
+def ClauseDependSink   : I32EnumAttrCase<"dependsink",   1>;
 
-def ClauseDepend : StrEnumAttr<
+def ClauseDepend : I32EnumAttr<
     "ClauseDepend",
     "depend clause",
     [ClauseDependSource, ClauseDependSink]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::omp";
+}
+def ClauseDependAttr : EnumAttr<OpenMP_Dialect, ClauseDepend, "clause_depend"> {
+  let assemblyFormat = "`(` $value `)`";
 }
 
 def OrderedOp : OpenMP_Op<"ordered"> {
@@ -516,12 +528,12 @@ def OrderedOp : OpenMP_Op<"ordered"> {
     clauses exist in one ORDERED directive.
   }];
 
-  let arguments = (ins OptionalAttr<ClauseDepend>:$depend_type_val,
+  let arguments = (ins OptionalAttr<ClauseDependAttr>:$depend_type_val,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
              Variadic<AnyType>:$depend_vec_vars);
 
   let assemblyFormat = [{
-    ( `depend_type` `(` $depend_type_val^ `)` )?
+    ( `depend_type` `` $depend_type_val^ )?
     ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
     attr-dict
   }];
@@ -596,7 +608,7 @@ def AtomicReadOp : OpenMP_Op<"atomic.read"> {
   let arguments = (ins OpenMP_PointerLikeType:$x,
                        OpenMP_PointerLikeType:$v,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
-                       OptionalAttr<MemoryOrderKind>:$memory_order);
+                       OptionalAttr<MemoryOrderKindAttr>:$memory_order);
   let parser = [{ return parseAtomicReadOp(parser, result); }];
   let printer = [{ return printAtomicReadOp(p, *this); }];
   let verifier = [{ return verifyAtomicReadOp(*this); }];
@@ -625,7 +637,7 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
   let arguments = (ins OpenMP_PointerLikeType:$address,
                        AnyType:$value,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
-                       OptionalAttr<MemoryOrderKind>:$memory_order);
+                       OptionalAttr<MemoryOrderKindAttr>:$memory_order);
   let parser = [{ return parseAtomicWriteOp(parser, result); }];
   let printer = [{ return printAtomicWriteOp(p, *this); }];
   let verifier = [{ return verifyAtomicWriteOp(*this); }];
@@ -690,7 +702,7 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update"> {
                        UnitAttr:$isXBinopExpr,
                        AtomicBinOpKindAttr:$binop,
                        DefaultValuedAttr<I64Attr, "0">:$hint,
-                       OptionalAttr<MemoryOrderKind>:$memory_order);
+                       OptionalAttr<MemoryOrderKindAttr>:$memory_order);
   let parser = [{ return parseAtomicUpdateOp(parser, result); }];
   let printer = [{ return printAtomicUpdateOp(p, *this); }];
   let verifier = [{ return verifyAtomicUpdateOp(*this); }];

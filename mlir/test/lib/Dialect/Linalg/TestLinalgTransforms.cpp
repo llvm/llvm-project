@@ -370,12 +370,11 @@ static SmallVector<ProcInfo, 2>
 getGpuProcIds(OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges) {
   size_t count = std::min<size_t>(3, parallelLoopRanges.size());
   SmallVector<ProcInfo, 2> procInfo(count);
-  const char *xyz[] = {"x", "y", "z"};
   Type indexType = b.getIndexType();
   for (unsigned i = 0; i < count; ++i) {
-    procInfo[count - 1 - i] = {
-        b.create<IdOp>(loc, indexType, b.getStringAttr(xyz[i])),
-        b.create<NProcsOp>(loc, indexType, b.getStringAttr(xyz[i]))};
+    gpu::Dimension dim = *gpu::symbolizeDimension(i);
+    procInfo[count - 1 - i] = {b.create<IdOp>(loc, indexType, dim),
+                               b.create<NProcsOp>(loc, indexType, dim)};
   }
   return procInfo;
 }

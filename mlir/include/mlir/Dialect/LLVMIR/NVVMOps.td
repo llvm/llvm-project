@@ -13,6 +13,7 @@
 #ifndef NVVMIR_OPS
 #define NVVMIR_OPS
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -34,6 +35,8 @@ def NVVM_Dialect : Dialect {
     /// functions.
     static StringRef getKernelFuncAttrName() { return "nvvm.kernel"; }
   }];
+
+  let useDefaultAttributePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -100,20 +103,18 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   let assemblyFormat = "attr-dict";
 }
 
-def ShflKindBfly : StrEnumAttrCase<"bfly">;
-def ShflKindUp : StrEnumAttrCase<"up">;
-def ShflKindDown : StrEnumAttrCase<"down">;
-def ShflKindIdx : StrEnumAttrCase<"idx">;
+def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
+def ShflKindUp   : I32EnumAttrCase<"up", 1>;
+def ShflKindDown : I32EnumAttrCase<"down", 2>;
+def ShflKindIdx  : I32EnumAttrCase<"idx", 3>;
 
 /// Enum attribute of the different shuffle kinds.
-def ShflKind : StrEnumAttr<"ShflKind", "NVVM shuffle kind",
+def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
   [ShflKindBfly, ShflKindUp, ShflKindDown, ShflKindIdx]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
-  let storageType = "mlir::StringAttr";
-  let returnType = "NVVM::ShflKind";
-  let convertFromStorage = "*symbolizeEnum<NVVM::ShflKind>($_self.getValue())";
-  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
 }
+def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
 def NVVM_ShflOp :
   NVVM_Op<"shfl.sync">,
@@ -122,7 +123,7 @@ def NVVM_ShflOp :
                  LLVM_Type:$val,
                  I32:$offset,
                  I32:$mask_and_clamp,
-                 ShflKind:$kind,
+                 ShflKindAttr:$kind,
                  OptionalAttr<UnitAttr>:$return_value_and_is_valid)> {
   string llvmBuilder = [{
       auto intId = getShflIntrinsicId(
@@ -420,52 +421,52 @@ class MMA_MMA_INTR<string opName> {
   string id = !foldl("", f, acc, el, acc # "\n" # el);
 }
 
-def MMALayoutRow : StrEnumAttrCase<"row">;
-def MMALayoutCol : StrEnumAttrCase<"col">;
+def MMALayoutRow : I32EnumAttrCase<"row", 0>;
+def MMALayoutCol : I32EnumAttrCase<"col", 1>;
 
 /// Enum attribute of the different matrix layout.
-def MMALayout : StrEnumAttr<"MMALayout", "NVVM MMA layout",
+def MMALayout : I32EnumAttr<"MMALayout", "NVVM MMA layout",
   [MMALayoutRow, MMALayoutCol]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
-  let storageType = "mlir::StringAttr";
-  let returnType = "NVVM::MMALayout";
-  let convertFromStorage = "*symbolizeEnum<NVVM::MMALayout>($_self.getValue())";
-  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+def MMALayoutAttr : EnumAttr<NVVM_Dialect, MMALayout, "mma_layout"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
-def MMATypeF16 : StrEnumAttrCase<"f16">;
-def MMATypeF32 : StrEnumAttrCase<"f32">;
-def MMATypeTF32 : StrEnumAttrCase<"tf32">;
+def MMATypeF16  : I32EnumAttrCase<"f16", 0>;
+def MMATypeF32  : I32EnumAttrCase<"f32", 1>;
+def MMATypeTF32 : I32EnumAttrCase<"tf32", 2>;
 
 /// Enum attribute of the different matrix types.
-def MMATypes : StrEnumAttr<"MMATypes", "NVVM MMA types",
+def MMATypes : I32EnumAttr<"MMATypes", "NVVM MMA types",
   [MMATypeF16, MMATypeF32, MMATypeTF32]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
-  let storageType = "mlir::StringAttr";
-  let returnType = "NVVM::MMATypes";
-  let convertFromStorage = "*symbolizeEnum<NVVM::MMATypes>($_self.getValue())";
-  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+def MMATypesAttr : EnumAttr<NVVM_Dialect, MMATypes, "mma_type"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
-def MMAFragA : StrEnumAttrCase<"a">;
-def MMAFragB : StrEnumAttrCase<"b">;
-def MMAFragC : StrEnumAttrCase<"c">;
+def MMAFragA : I32EnumAttrCase<"a", 0>;
+def MMAFragB : I32EnumAttrCase<"b", 1>;
+def MMAFragC : I32EnumAttrCase<"c", 2>;
 
 /// Enum attribute of the different frag types.
-def MMAFragAttr : StrEnumAttr<"MMAFrag", "NVVM MMA frag type",
+def MMAFrag: I32EnumAttr<"MMAFrag", "NVVM MMA frag type",
   [MMAFragA, MMAFragB, MMAFragC]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
-  let storageType = "mlir::StringAttr";
-  let returnType = "NVVM::MMAFrag";
-  let convertFromStorage = "*symbolizeEnum<NVVM::MMAFrag>($_self.getValue())";
-  let constBuilderCall = "$_builder.getStringAttr(stringifyEnum($0))";
+}
+def MMAFragAttr : EnumAttr<NVVM_Dialect, MMAFrag, "mma_frag"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
   Results<(outs LLVM_AnyStruct:$res)>,
   Arguments<(ins LLVM_AnyPointer: $ptr, I32: $stride, I32Attr:$m,
-             I32Attr:$n, I32Attr:$k, MMALayout:$layout, MMATypes:$eltype,
-             MMAFragAttr:$frag)> {
+             I32Attr:$n, I32Attr:$k, MMALayoutAttr:$layout,
+             MMATypesAttr:$eltype, MMAFragAttr:$frag)> {
 
   let summary = "Warp synchronous matrix load";
 
@@ -542,8 +543,8 @@ def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
 
 def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
   Arguments<(ins LLVM_AnyPointer: $ptr,
-             I32Attr:$m, I32Attr:$n, I32Attr:$k, MMALayout:$layout,
-             MMATypes:$eltype, Variadic<LLVM_Type>:$args, I32: $stride)>{
+             I32Attr:$m, I32Attr:$n, I32Attr:$k, MMALayoutAttr:$layout,
+             MMATypesAttr:$eltype, Variadic<LLVM_Type>:$args, I32: $stride)>{
   let summary = "Warp synchronous matrix store";
 
   let extraClassDeclaration =
@@ -598,9 +599,9 @@ def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
 // Base class for all the variants of WMMA mmaOps that may be defined.
 def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
   Results<(outs LLVM_AnyStruct:$res)>,
-  Arguments<(ins I32Attr:$m, I32Attr:$n, I32Attr:$k, MMALayout:$layoutA,
-            MMALayout:$layoutB, MMATypes:$eltypeA, MMATypes:$eltypeB,
-            Variadic<LLVM_Type>:$args)>{
+  Arguments<(ins I32Attr:$m, I32Attr:$n, I32Attr:$k, MMALayoutAttr:$layoutA,
+             MMALayoutAttr:$layoutB, MMATypesAttr:$eltypeA,
+             MMATypesAttr:$eltypeB, Variadic<LLVM_Type>:$args)>{
   let summary = "Warp synchronous matrix-multiply accumulate using tensor cores.";
 
   let extraClassDeclaration =

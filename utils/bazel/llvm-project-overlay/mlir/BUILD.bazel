@@ -3002,6 +3002,14 @@ gentbl_cc_library(
             ["-gen-enum-defs"],
             "include/mlir/Dialect/GPU/GPUOpsEnums.cpp.inc",
         ),
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/GPU/GPUOpsAttributes.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/GPU/GPUOpsAttributes.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/GPU/GPUOps.td",
@@ -3540,6 +3548,20 @@ gentbl_cc_library(
         (
             ["-gen-enum-defs"],
             "include/mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=nvvm",
+            ],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=nvvm",
+            ],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -5884,7 +5906,10 @@ gentbl_cc_library(
     strip_include_prefix = "include",
     tbl_outs = [
         (
-            ["-gen-directive-decl"],
+            [
+                "-gen-directive-decl",
+                "-directives-dialect=OpenACC",
+            ],
             "include/mlir/Dialect/OpenACC/AccCommon.td",
         ),
     ],
@@ -5938,6 +5963,20 @@ gentbl_cc_library(
             "include/mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc",
         ),
         (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=acc",
+            ],
+            "include/mlir/Dialect/OpenACC/OpenACCOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=acc",
+            ],
+            "include/mlir/Dialect/OpenACC/OpenACCOpsAttributes.cpp.inc",
+        ),
+        (
             ["-gen-op-doc"],
             "g3doc/Dialects/OpenACC/OpenACCOps.md",
         ),
@@ -5978,7 +6017,10 @@ gentbl_cc_library(
     strip_include_prefix = "include",
     tbl_outs = [
         (
-            ["-gen-directive-decl"],
+            [
+                "-gen-directive-decl",
+                "-directives-dialect=OpenMP",
+            ],
             "include/mlir/Dialect/OpenMP/OmpCommon.td",
         ),
     ],
@@ -6044,6 +6086,20 @@ gentbl_cc_library(
         (
             ["-gen-type-interface-defs"],
             "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=omp",
+            ],
+            "include/mlir/Dialect/OpenMP/OpenMPOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=omp",
+            ],
+            "include/mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc",
         ),
         (
             ["-gen-op-doc"],

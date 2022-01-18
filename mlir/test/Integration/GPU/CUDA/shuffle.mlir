@@ -23,7 +23,7 @@ func @main() {
     %val = arith.sitofp %t0 : i32 to f32
     %width = arith.index_cast %block_x : index to i32
     %offset = arith.constant 4 : i32
-    %shfl, %valid = gpu.shuffle %val, %offset, %width xor : f32
+    %shfl, %valid = gpu.shuffle xor %val, %offset, %width : f32
     cond_br %valid, ^bb1(%shfl : f32), ^bb0
   ^bb0:
     %m1 = arith.constant -1.0 : f32

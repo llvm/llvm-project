@@ -11,43 +11,43 @@ gpu.module @test_module {
 
     // CHECK: rocdl.workitem.id.x : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
+    %tIdX = gpu.thread_id x
     // CHECK: rocdl.workitem.id.y : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %tIdY = "gpu.thread_id"() {dimension = "y"} : () -> (index)
+    %tIdY = gpu.thread_id y
     // CHECK: rocdl.workitem.id.z : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %tIdZ = "gpu.thread_id"() {dimension = "z"} : () -> (index)
+    %tIdZ = gpu.thread_id z
 
     // CHECK: rocdl.workgroup.dim.x : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %bDimX = "gpu.block_dim"() {dimension = "x"} : () -> (index)
+    %bDimX = gpu.block_dim x
     // CHECK: rocdl.workgroup.dim.y : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %bDimY = "gpu.block_dim"() {dimension = "y"} : () -> (index)
+    %bDimY = gpu.block_dim y
     // CHECK: rocdl.workgroup.dim.z : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %bDimZ = "gpu.block_dim"() {dimension = "z"} : () -> (index)
+    %bDimZ = gpu.block_dim z
 
     // CHECK: rocdl.workgroup.id.x : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %bIdX = "gpu.block_id"() {dimension = "x"} : () -> (index)
+    %bIdX = gpu.block_id x
     // CHECK: rocdl.workgroup.id.y : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %bIdY = "gpu.block_id"() {dimension = "y"} : () -> (index)
+    %bIdY = gpu.block_id y
     // CHECK: rocdl.workgroup.id.z : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %bIdZ = "gpu.block_id"() {dimension = "z"} : () -> (index)
+    %bIdZ = gpu.block_id z
 
     // CHECK: rocdl.grid.dim.x : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %gDimX = "gpu.grid_dim"() {dimension = "x"} : () -> (index)
+    %gDimX = gpu.grid_dim x
     // CHECK: rocdl.grid.dim.y : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %gDimY = "gpu.grid_dim"() {dimension = "y"} : () -> (index)
+    %gDimY = gpu.grid_dim y
     // CHECK: rocdl.grid.dim.z : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
-    %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
+    %gDimZ = gpu.grid_dim z
 
     std.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
                %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ

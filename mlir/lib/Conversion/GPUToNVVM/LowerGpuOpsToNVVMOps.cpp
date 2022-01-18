@@ -40,15 +40,15 @@ using namespace mlir;
 namespace {
 
 /// Convert gpu dialect shfl mode enum to the equivalent nvvm one.
-static NVVM::ShflKind convertShflKind(gpu::ShuffleModeAttr mode) {
+static NVVM::ShflKind convertShflKind(gpu::ShuffleMode mode) {
   switch (mode) {
-  case gpu::ShuffleModeAttr::XOR:
+  case gpu::ShuffleMode::XOR:
     return NVVM::ShflKind::bfly;
-  case gpu::ShuffleModeAttr::UP:
+  case gpu::ShuffleMode::UP:
     return NVVM::ShflKind::up;
-  case gpu::ShuffleModeAttr::DOWN:
+  case gpu::ShuffleMode::DOWN:
     return NVVM::ShflKind::down;
-  case gpu::ShuffleModeAttr::IDX:
+  case gpu::ShuffleMode::IDX:
     return NVVM::ShflKind::idx;
   }
   llvm_unreachable("unknown shuffle mode");

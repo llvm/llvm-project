@@ -19,21 +19,20 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-template <char dim>
+template <gpu::Dimension Dim>
 static linalg::ProcInfo getGpuBlockInfo(OpBuilder &b, Location loc) {
-  std::string d(1, dim);
-  StringAttr attr = b.getStringAttr(d);
-
   Type indexType = b.getIndexType();
-  ProcInfo procInfo = {b.create<gpu::BlockIdOp>(loc, indexType, attr),
-                       b.create<gpu::GridDimOp>(loc, indexType, attr)};
+  ProcInfo procInfo = {b.create<gpu::BlockIdOp>(loc, indexType, Dim),
+                       b.create<gpu::GridDimOp>(loc, indexType, Dim)};
   return procInfo;
 }
 
 static LinalgLoopDistributionOptions getDistributionOptions() {
   LinalgLoopDistributionOptions opts;
-  opts.procInfoMap.insert(std::make_pair("block_x", getGpuBlockInfo<'x'>));
-  opts.procInfoMap.insert(std::make_pair("block_y", getGpuBlockInfo<'y'>));
+  opts.procInfoMap.insert(
+      std::make_pair("block_x", getGpuBlockInfo<gpu::Dimension::x>));
+  opts.procInfoMap.insert(
+      std::make_pair("block_y", getGpuBlockInfo<gpu::Dimension::y>));
   return opts;
 }
 

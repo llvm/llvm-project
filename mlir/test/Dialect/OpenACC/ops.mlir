@@ -376,9 +376,9 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf3
   acc.parallel private(%a: memref<10xf32>, %c: memref<10x10xf32>) firstprivate(%b: memref<10xf32>) {
   }
   acc.parallel {
-  } attributes {defaultAttr = "none"}
+  } attributes {defaultAttr = #acc<"defaultvalue none">}
   acc.parallel {
-  } attributes {defaultAttr = "present"}
+  } attributes {defaultAttr = #acc<"defaultvalue present">}
   acc.parallel {
   } attributes {asyncAttr}
   acc.parallel {
@@ -441,9 +441,9 @@ func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf3
 // CHECK:      acc.parallel private([[ARGA]]: memref<10xf32>, [[ARGC]]: memref<10x10xf32>) firstprivate([[ARGB]]: memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {defaultAttr = "none"}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<"defaultvalue none">}
 // CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {defaultAttr = "present"}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<"defaultvalue present">}
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {asyncAttr}
 // CHECK:      acc.parallel {
@@ -482,11 +482,11 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
   acc.data copyin(%b: memref<10xf32>) copyout(%c: memref<10x10xf32>) present(%a: memref<10xf32>) {
   }
   acc.data present(%a : memref<10xf32>) {
-  } attributes { defaultAttr = "none" }
+  } attributes { defaultAttr = #acc<"defaultvalue none"> }
   acc.data present(%a : memref<10xf32>) {
-  } attributes { defaultAttr = "present" }
+  } attributes { defaultAttr = #acc<"defaultvalue present"> }
   acc.data {
-  } attributes { defaultAttr = "none" }
+  } attributes { defaultAttr = #acc<"defaultvalue none"> }
   return
 }
 
@@ -519,11 +519,11 @@ func @testdataop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10xf32>) 
 // CHECK:      acc.data copyin([[ARGB]] : memref<10xf32>) copyout([[ARGC]] : memref<10x10xf32>) present([[ARGA]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK:      acc.data present([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: } attributes {defaultAttr = "none"}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<"defaultvalue none">}
 // CHECK:      acc.data present([[ARGA]] : memref<10xf32>) {
-// CHECK-NEXT: } attributes {defaultAttr = "present"}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<"defaultvalue present">}
 // CHECK:      acc.data {
-// CHECK-NEXT: } attributes {defaultAttr = "none"}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<"defaultvalue none">}
 
 // -----
 

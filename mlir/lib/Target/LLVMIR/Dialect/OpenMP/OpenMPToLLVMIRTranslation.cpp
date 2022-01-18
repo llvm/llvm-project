@@ -186,9 +186,23 @@ static void convertOmpOpRegions(
   moduleTranslation.forgetMapping(region);
 }
 
+/// Convert ProcBindKind from MLIR-generated enum to LLVM enum.
+static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
+  switch (kind) {
+  case omp::ClauseProcBindKind::close:
+    return llvm::omp::ProcBindKind::OMP_PROC_BIND_close;
+  case omp::ClauseProcBindKind::master:
+    return llvm::omp::ProcBindKind::OMP_PROC_BIND_master;
+  case omp::ClauseProcBindKind::primary:
+    return llvm::omp::ProcBindKind::OMP_PROC_BIND_primary;
+  case omp::ClauseProcBindKind::spread:
+    return llvm::omp::ProcBindKind::OMP_PROC_BIND_spread;
+  }
+}
+
 /// Converts the OpenMP parallel operation to LLVM IR.
 static LogicalResult
-convertOmpParallel(Operation &opInst, llvm::IRBuilderBase &builder,
+convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   // TODO: support error propagation in OpenMPIRBuilder and use it instead of
@@ -203,10 +217,9 @@ convertOmpParallel(Operation &opInst, llvm::IRBuilderBase &builder,
         moduleTranslation, allocaIP);
 
     // ParallelOp has only one region associated with it.
-    auto &region = cast<omp::ParallelOp>(opInst).getRegion();
-    convertOmpOpRegions(region, "omp.par.region", *codeGenIP.getBlock(),
-                        continuationBlock, builder, moduleTranslation,
-                        bodyGenStatus);
+    convertOmpOpRegions(opInst.getRegion(), "omp.par.region",
+                        *codeGenIP.getBlock(), continuationBlock, builder,
+                        moduleTranslation, bodyGenStatus);
   };
 
   // TODO: Perform appropriate actions according to the data-sharing
@@ -225,14 +238,14 @@ convertOmpParallel(Operation &opInst, llvm::IRBuilderBase &builder,
   auto finiCB = [&](InsertPointTy codeGenIP) {};
 
   llvm::Value *ifCond = nullptr;
-  if (auto ifExprVar = cast<omp::ParallelOp>(opInst).if_expr_var())
+  if (auto ifExprVar = opInst.if_expr_var())
     ifCond = moduleTranslation.lookupValue(ifExprVar);
   llvm::Value *numThreads = nullptr;
-  if (auto numThreadsVar = cast<omp::ParallelOp>(opInst).num_threads_var())
+  if (auto numThreadsVar = opInst.num_threads_var())
     numThreads = moduleTranslation.lookupValue(numThreadsVar);
-  llvm::omp::ProcBindKind pbKind = llvm::omp::OMP_PROC_BIND_default;
-  if (auto bind = cast<omp::ParallelOp>(opInst).proc_bind_val())
-    pbKind = llvm::omp::getProcBindKind(bind.getValue());
+  auto pbKind = llvm::omp::OMP_PROC_BIND_default;
+  if (auto bind = opInst.proc_bind_val())
+    pbKind = getProcBindKind(*bind);
   // TODO: Is the Parallel construct cancellable?
   bool isCancellable = false;
 
@@ -486,8 +499,7 @@ convertOmpOrdered(Operation &opInst, llvm::IRBuilderBase &builder,
                   LLVM::ModuleTranslation &moduleTranslation) {
   auto orderedOp = cast<omp::OrderedOp>(opInst);
 
-  omp::ClauseDepend dependType =
-      *omp::symbolizeClauseDepend(orderedOp.depend_type_valAttr().getValue());
+  omp::ClauseDepend dependType = *orderedOp.depend_type_val();
   bool isDependSource = dependType == omp::ClauseDepend::dependsource;
   unsigned numLoops = orderedOp.num_loops_val().getValue();
   SmallVector<llvm::Value *> vecValues =
@@ -628,10 +640,8 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   // Static is the default.
-  omp::ClauseScheduleKind schedule = omp::ClauseScheduleKind::Static;
-  if (loop.schedule_val().hasValue())
-    schedule =
-        *omp::symbolizeClauseScheduleKind(loop.schedule_val().getValue());
+  auto schedule =
+      loop.schedule_val().getValueOr(omp::ClauseScheduleKind::Static);
 
   // Find the loop configuration.
   llvm::Value *step = moduleTranslation.lookupValue(loop.step()[0]);
@@ -788,10 +798,8 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
       break;
     }
 
-    if (loop.schedule_modifier().hasValue()) {
-      omp::ScheduleModifier modifier =
-          *omp::symbolizeScheduleModifier(loop.schedule_modifier().getValue());
-      switch (modifier) {
+    if (Optional<omp::ScheduleModifier> modifier = loop.schedule_modifier()) {
+      switch (*modifier) {
       case omp::ScheduleModifier::monotonic:
         schedType |= llvm::omp::OMPScheduleType::ModifierMonotonic;
         break;
@@ -861,17 +869,23 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
 }
 
 // Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
-llvm::AtomicOrdering convertAtomicOrdering(Optional<StringRef> aoAttr) {
-  if (!aoAttr.hasValue())
+llvm::AtomicOrdering
+convertAtomicOrdering(Optional<omp::ClauseMemoryOrderKind> ao) {
+  if (!ao)
     return llvm::AtomicOrdering::Monotonic; // Default Memory Ordering
 
-  return StringSwitch<llvm::AtomicOrdering>(aoAttr.getValue())
-      .Case("seq_cst", llvm::AtomicOrdering::SequentiallyConsistent)
-      .Case("acq_rel", llvm::AtomicOrdering::AcquireRelease)
-      .Case("acquire", llvm::AtomicOrdering::Acquire)
-      .Case("release", llvm::AtomicOrdering::Release)
-      .Case("relaxed", llvm::AtomicOrdering::Monotonic)
-      .Default(llvm::AtomicOrdering::Monotonic);
+  switch (*ao) {
+  case omp::ClauseMemoryOrderKind::seq_cst:
+    return llvm::AtomicOrdering::SequentiallyConsistent;
+  case omp::ClauseMemoryOrderKind::acq_rel:
+    return llvm::AtomicOrdering::AcquireRelease;
+  case omp::ClauseMemoryOrderKind::acquire:
+    return llvm::AtomicOrdering::Acquire;
+  case omp::ClauseMemoryOrderKind::release:
+    return llvm::AtomicOrdering::Release;
+  case omp::ClauseMemoryOrderKind::relaxed:
+    return llvm::AtomicOrdering::Monotonic;
+  }
 }
 
 // Convert omp.atomic.read operation to LLVM IR.
@@ -1021,8 +1035,8 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
         ompBuilder->createFlush(builder.saveIP());
         return success();
       })
-      .Case([&](omp::ParallelOp) {
-        return convertOmpParallel(*op, builder, moduleTranslation);
+      .Case([&](omp::ParallelOp op) {
+        return convertOmpParallel(op, builder, moduleTranslation);
       })
       .Case([&](omp::ReductionOp reductionOp) {
         return convertOmpReductionOp(reductionOp, builder, moduleTranslation);

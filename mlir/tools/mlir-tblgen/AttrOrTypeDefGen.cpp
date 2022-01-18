@@ -743,7 +743,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
     if (parseResult.hasValue())
       return attr;
   }
-  parser.emitError(typeLoc) << "unknown  attribute `"
+  parser.emitError(typeLoc) << "unknown attribute `"
       << attrTag << "` in dialect `" << getNamespace() << "`";
   return {{};
 }

@@ -14,8 +14,10 @@
 #include "mlir/TableGen/GenInfo.h"
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/DirectiveEmitter.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
 using llvm::Clause;
@@ -39,7 +41,14 @@ using llvm::RecordKeeper;
 // Clause record in OMP.td. This name can be used to specify the type of the
 // OpenMP operation's operand. The allowedClauseValues field provides the list
 // of ClauseValues which are part of the enumeration.
-static bool emitDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
+static bool emitDecls(const RecordKeeper &recordKeeper, llvm::StringRef dialect,
+                      raw_ostream &os) {
+  // A dialect must be selected for the generated attributes.
+  if (dialect.empty()) {
+    llvm::PrintFatalError("a dialect must be selected for the directives via "
+                          "'--directives-dialect'");
+  }
+
   const auto &directiveLanguages =
       recordKeeper.getAllDerivedDefinitions("DirectiveLanguage");
   assert(!directiveLanguages.empty() && "DirectiveLanguage missing.");
@@ -56,18 +65,19 @@ static bool emitDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
     assert(!enumName.empty() && "enumClauseValue field not set.");
 
     std::vector<std::string> cvDefs;
-    for (const auto &cv : clauseVals) {
-      ClauseVal cval{cv};
+    for (const auto &it : llvm::enumerate(clauseVals)) {
+      ClauseVal cval{it.value()};
       if (!cval.isUserVisible())
         continue;
 
       const auto name = cval.getFormattedName();
       std::string cvDef{(enumName + llvm::Twine(name)).str()};
-      os << "def " << cvDef << " : StrEnumAttrCase<\"" << name << "\">;\n";
+      os << "def " << cvDef << " : I32EnumAttrCase<\"" << name << "\", "
+         << it.index() << ">;\n";
       cvDefs.push_back(cvDef);
     }
 
-    os << "def " << enumName << ": StrEnumAttr<\n";
+    os << "def " << enumName << ": I32EnumAttr<\n";
     os << "  \"Clause" << enumName << "\",\n";
     os << "  \"" << enumName << " Clause\",\n";
     os << "  [";
@@ -79,15 +89,27 @@ static bool emitDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
     os << "]> {\n";
     os << "    let cppNamespace = \"::mlir::"
        << directiveLanguages[0]->getValueAsString("cppNamespace") << "\";\n";
+    os << "    let genSpecializedAttr = 0;\n";
     os << "}\n";
+    llvm::SmallString<16> mnemonic;
+    llvm::transform(enumName, std::back_inserter(mnemonic), llvm::toLower);
+    os << "def " << enumName << "Attr : EnumAttr<" << dialect << "_Dialect, "
+       << enumName << ", \"" << mnemonic << "\">;\n";
   }
   return false;
 }
+
+static llvm::cl::OptionCategory
+    directiveGenCat("Options for gen-directive-decl");
+static llvm::cl::opt<std::string>
+    dialect("directives-dialect",
+            llvm::cl::desc("Generate directives for this dialect"),
+            llvm::cl::cat(directiveGenCat), llvm::cl::CommaSeparated);
 
 // Registers the generator to mlir-tblgen.
 static mlir::GenRegistration genDirectiveDecls(
     "gen-directive-decl",
     "Generate declarations for directives (OpenMP/OpenACC etc.)",
     [](const RecordKeeper &records, raw_ostream &os) {
-      return emitDecls(records, os);
+      return emitDecls(records, dialect, os);
     });
