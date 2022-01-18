@@ -616,7 +616,7 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   if (!adrpRel.sym || adrpRel.sym != ldrRel.sym || !adrpRel.sym->isDefined() ||
       adrpRel.sym->isPreemptible || adrpRel.sym->isGnuIFunc())
     return false;
-  // Check if the addends of the both instructions are zero.
+  // Check if the addends of the both relocations are zero.
   if (adrpRel.addend != 0 || ldrRel.addend != 0)
     return false;
   uint32_t adrpInstr = read32le(buf + adrpRel.offset);
