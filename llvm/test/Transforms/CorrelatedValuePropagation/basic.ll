@@ -1131,14 +1131,12 @@ define void @trunc_icmp_ule(i32 %x, i1* %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[T]], 5
 ; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 5
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[X]], 5
 ; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
-; CHECK-NEXT:    [[C4:%.*]] = icmp ult i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    [[C1_2:%.*]] = icmp uge i32 [[X]], 5
@@ -1184,14 +1182,12 @@ define void @trunc_icmp_eq(i32 %x, i1* %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[T]], 5
 ; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 true, i1* [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 5
 ; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[X]], 5
 ; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
-; CHECK-NEXT:    [[C4:%.*]] = icmp ult i32 [[X]], 5
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 false, i1* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    [[C1_2:%.*]] = icmp uge i32 [[X]], 5
