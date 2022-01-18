@@ -203,6 +203,8 @@ Error MachOPlatform::setupJITDylib(JITDylib &JD) {
       *this, MachOHeaderStartSymbol));
 }
 
+Error MachOPlatform::teardownJITDylib(JITDylib &JD) { return Error::success(); }
+
 Error MachOPlatform::notifyAdding(ResourceTracker &RT,
                                   const MaterializationUnit &MU) {
   auto &JD = RT.getJITDylib();
