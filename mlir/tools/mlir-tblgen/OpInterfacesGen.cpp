@@ -84,12 +84,12 @@ protected:
   InterfaceGenerator(std::vector<llvm::Record *> &&defs, raw_ostream &os)
       : defs(std::move(defs)), os(os) {}
 
-  void emitConceptDecl(Interface &interface);
-  void emitModelDecl(Interface &interface);
-  void emitModelMethodsDef(Interface &interface);
-  void emitTraitDecl(Interface &interface, StringRef interfaceName,
+  void emitConceptDecl(const Interface &interface);
+  void emitModelDecl(const Interface &interface);
+  void emitModelMethodsDef(const Interface &interface);
+  void emitTraitDecl(const Interface &interface, StringRef interfaceName,
                      StringRef interfaceTraitsName);
-  void emitInterfaceDecl(Interface interface);
+  void emitInterfaceDecl(const Interface &interface);
 
   /// The set of interface records to emit.
   std::vector<llvm::Record *> defs;
@@ -200,7 +200,7 @@ bool InterfaceGenerator::emitInterfaceDefs() {
 // GEN: Interface declarations
 //===----------------------------------------------------------------------===//
 
-void InterfaceGenerator::emitConceptDecl(Interface &interface) {
+void InterfaceGenerator::emitConceptDecl(const Interface &interface) {
   os << "  struct Concept {\n";
 
   // Insert each of the pure virtual concept methods.
@@ -220,7 +220,7 @@ void InterfaceGenerator::emitConceptDecl(Interface &interface) {
   os << "  };\n";
 }
 
-void InterfaceGenerator::emitModelDecl(Interface &interface) {
+void InterfaceGenerator::emitModelDecl(const Interface &interface) {
   // Emit the basic model and the fallback model.
   for (const char *modelClass : {"Model", "FallbackModel"}) {
     os << "  template<typename " << valueTemplate << ">\n";
@@ -280,7 +280,7 @@ void InterfaceGenerator::emitModelDecl(Interface &interface) {
   os << "  };\n";
 }
 
-void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
+void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
   for (auto &method : interface.getMethods()) {
     os << "template<typename " << valueTemplate << ">\n";
     emitCPPType(method.getReturnType(), os);
@@ -378,7 +378,7 @@ void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
   }
 }
 
-void InterfaceGenerator::emitTraitDecl(Interface &interface,
+void InterfaceGenerator::emitTraitDecl(const Interface &interface,
                                        StringRef interfaceName,
                                        StringRef interfaceTraitsName) {
   os << llvm::formatv("  template <typename {3}>\n"
@@ -425,7 +425,7 @@ void InterfaceGenerator::emitTraitDecl(Interface &interface,
   os << "  };\n";
 }
 
-void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
+void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   llvm::SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
   for (StringRef ns : namespaces)
