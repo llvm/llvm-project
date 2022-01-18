@@ -7273,25 +7273,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue(N, 0);
     break;
   }
-  case RISCVISD::FSL:
-  case RISCVISD::FSR: {
-    // Only the lower log2(Bitwidth)+1 bits of the the shift amount are read.
-    unsigned BitWidth = N->getOperand(2).getValueSizeInBits();
-    assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
-    if (SimplifyDemandedLowBitsHelper(2, Log2_32(BitWidth) + 1))
-      return SDValue(N, 0);
-    break;
-  }
-  case RISCVISD::FSLW:
-  case RISCVISD::FSRW: {
-    // Only the lower 32 bits of Values and lower 6 bits of shift amount are
-    // read.
-    if (SimplifyDemandedLowBitsHelper(0, 32) ||
-        SimplifyDemandedLowBitsHelper(1, 32) ||
-        SimplifyDemandedLowBitsHelper(2, 6))
-      return SDValue(N, 0);
-    break;
-  }
   case RISCVISD::GREV:
   case RISCVISD::GORC: {
     // Only the lower log2(Bitwidth) bits of the the shift amount are read.
