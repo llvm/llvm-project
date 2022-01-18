@@ -1083,9 +1083,15 @@ static void updateAsyncFuncPointerContextSize(coro::Shape &Shape) {
   Shape.AsyncLowering.AsyncFuncPointer->setInitializer(NewFuncPtrStruct);
 }
 
-static void replaceFrameSize(coro::Shape &Shape) {
+static void replaceFrameSizeAndAlignment(coro::Shape &Shape) {
   if (Shape.ABI == coro::ABI::Async)
     updateAsyncFuncPointerContextSize(Shape);
+
+  for (CoroAlignInst *CA : Shape.CoroAligns) {
+    CA->replaceAllUsesWith(
+        ConstantInt::get(CA->getType(), Shape.FrameAlign.value()));
+    CA->eraseFromParent();
+  }
 
   if (Shape.CoroSizes.empty())
     return;
@@ -1884,7 +1890,7 @@ static coro::Shape splitCoroutine(Function &F,
 
   simplifySuspendPoints(Shape);
   buildCoroutineFrame(F, Shape);
-  replaceFrameSize(Shape);
+  replaceFrameSizeAndAlignment(Shape);
 
   // If there are no suspend points, no split required, just remove
   // the allocation and deallocation blocks, they are not needed.
