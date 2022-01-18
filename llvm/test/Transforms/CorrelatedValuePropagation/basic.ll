@@ -1653,8 +1653,7 @@ define void @select_assume(i32 %a, i32 %b, i1 %c, i1* %p) {
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i32 [[A]], i32 [[B]]
 ; CHECK-NEXT:    [[C3:%.*]] = icmp ult i32 [[S]], 19
 ; CHECK-NEXT:    store i1 [[C3]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[C4:%.*]] = icmp ult i32 [[S]], 20
-; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    store i1 true, i1* [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %c1 = icmp ult i32 %a, 10
