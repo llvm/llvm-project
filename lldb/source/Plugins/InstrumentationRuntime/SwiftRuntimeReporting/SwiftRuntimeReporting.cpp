@@ -53,10 +53,6 @@ void SwiftRuntimeReporting::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString SwiftRuntimeReporting::GetPluginNameStatic() {
-  return ConstString("SwiftRuntimeReporting");
-}
-
 lldb::InstrumentationRuntimeType SwiftRuntimeReporting::GetTypeStatic() {
   return eInstrumentationRuntimeTypeSwiftRuntimeReporting;
 }

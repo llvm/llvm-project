@@ -26,14 +26,14 @@ namespace lldb_private {
     static void Initialize();
     
     static void Terminate();
-    
-    static lldb_private::ConstString GetPluginNameStatic();
-    
+
+    static llvm::StringRef GetPluginNameStatic() {
+      return "SwiftRuntimeReporting";
+    }
+
     static lldb::InstrumentationRuntimeType GetTypeStatic();
 
-    llvm::StringRef GetPluginName() override {
-      return GetPluginNameStatic().GetStringRef();
-    }
+    llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
     virtual lldb::InstrumentationRuntimeType GetType() { return GetTypeStatic(); }
     

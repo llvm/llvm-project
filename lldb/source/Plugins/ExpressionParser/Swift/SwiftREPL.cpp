@@ -282,8 +282,8 @@ void SwiftREPL::Initialize() {
   SwiftASTContext::Initialize();
   LanguageSet swift;
   swift.Insert(lldb::eLanguageTypeSwift);
-  PluginManager::RegisterPlugin(ConstString("swift"), "The Swift REPL",
-                                &CreateInstance, swift);
+  PluginManager::RegisterPlugin("swift", "The Swift REPL", &CreateInstance,
+                                swift);
 }
 
 void SwiftREPL::Terminate() {

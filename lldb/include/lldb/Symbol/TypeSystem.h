@@ -80,11 +80,13 @@ public:
                                            Module *module);
 
   static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Target *target);
+
+  // BEGIN SWIFT
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
                                            Target *target,
                                            const char *compiler_options);
-
-  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
-                                           Target *target);
+  // END SWIFT
 
   // Free up any resources associated with this TypeSystem.  Done before
   // removing all the TypeSystems from the TypeSystemMap.
@@ -557,15 +559,21 @@ public:
   // callback to keep iterating, false to stop iterating.
   void ForEach(std::function<bool(TypeSystem *)> const &callback);
 
-  void RemoveTypeSystemsForLanguage(lldb::LanguageType language);
-
   llvm::Expected<TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language, Module *module,
                            bool can_create);
 
   llvm::Expected<TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
+                           bool can_create);
+
+  // BEGIN SWIFT
+  llvm::Expected<TypeSystem &>
+  GetTypeSystemForLanguage(lldb::LanguageType language, Target *target,
                            bool can_create, const char *compiler_options);
+
+  void RemoveTypeSystemsForLanguage(lldb::LanguageType language);
+  // END SWIFT
 
 protected:
   typedef std::map<lldb::LanguageType, lldb::TypeSystemSP> collection;

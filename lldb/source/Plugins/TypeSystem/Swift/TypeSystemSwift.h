@@ -99,10 +99,8 @@ public:
   /// \{
   static void Initialize();
   static void Terminate();
-  llvm::StringRef GetPluginName() override {
-    return GetPluginNameStatic().GetStringRef();
-  }
-  static ConstString GetPluginNameStatic();
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+  static llvm::StringRef GetPluginNameStatic() { return "swift"; }
   /// \}
 
   class LanguageFlags {

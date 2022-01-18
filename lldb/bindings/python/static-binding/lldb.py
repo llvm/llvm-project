@@ -4254,6 +4254,10 @@ class SBDebugger(object):
         r"""GetErrorFileHandle(SBDebugger self) -> lldb::FileSP"""
         return _lldb.SBDebugger_GetErrorFileHandle(self)
 
+    def SetInputString(self, data):
+        r"""SetInputString(SBDebugger self, char const * data) -> SBError"""
+        return _lldb.SBDebugger_SetInputString(self, data)
+
     def SetInputFile(self, *args):
         r"""
         SetInputFile(SBDebugger self, SBFile file) -> SBError
@@ -4596,6 +4600,10 @@ class SBDebugger(object):
     def GetSyntheticForType(self, arg2):
         r"""GetSyntheticForType(SBDebugger self, SBTypeNameSpecifier arg2) -> SBTypeSynthetic"""
         return _lldb.SBDebugger_GetSyntheticForType(self, arg2)
+
+    def GetScriptInterpreterInfo(self, arg2):
+        r"""GetScriptInterpreterInfo(SBDebugger self, lldb::ScriptLanguage arg2) -> SBStructuredData"""
+        return _lldb.SBDebugger_GetScriptInterpreterInfo(self, arg2)
 
     def __str__(self):
         r"""__str__(SBDebugger self) -> std::string"""
@@ -10516,6 +10524,10 @@ class SBTarget(object):
         """
         return _lldb.SBTarget_GetCodeByteSize(self)
 
+    def GetMaximumNumberOfChildrenToDisplay(self):
+        r"""GetMaximumNumberOfChildrenToDisplay(SBTarget self) -> uint32_t"""
+        return _lldb.SBTarget_GetMaximumNumberOfChildrenToDisplay(self)
+
     def SetSectionLoadAddress(self, section, section_base_addr):
         r"""SetSectionLoadAddress(SBTarget self, SBSection section, lldb::addr_t section_base_addr) -> SBError"""
         return _lldb.SBTarget_SetSectionLoadAddress(self, section, section_base_addr)
@@ -12875,27 +12887,19 @@ class SBType(object):
     def IsTypeComplete(self):
         r"""
         IsTypeComplete(SBType self) -> bool
-        Returns the `BasicType` value that is most appropriate to this type.
-
-            Returns `eBasicTypeInvalid` if no appropriate `BasicType` was found or this
-            type is invalid. See the `BasicType` documentation for the language-specific m
-            aning of each `BasicType` value.
-
-            **Overload behaviour:** When called with a `BasicType` parameter, the
-            following behaviour applies:
-
-            Returns the `SBType` that represents the passed `BasicType` value. Returns
-            an invalid `SBType` if no fitting `SBType` could be created.
+        Returns true if the type is completely defined.
 
             Language-specific behaviour:
 
-            * C: Returns the respective builtin type. Note that some types
-              (e.g. ``__uint128_t``) might even be successfully created even if they are
-              not available on the target platform. C++ and Objective-C specific types
-              might also be created even if the target program is not written in C++ or
-              Objective-C.
-            * C++: Same as in C.
-            * Objective-C: Same as in C.
+            * C: Returns false for struct types that were only forward declared in the
+              type's `SBTarget`/`SBModule`. Otherwise returns true.
+            * C++: Returns false for template/non-template struct/class types and
+              scoped enums that were only forward declared inside the type's
+              `SBTarget`/`SBModule`. Otherwise returns true.
+            * Objective-C: Follows the same behavior as C for struct types. Objective-C
+              classes are considered complete unless they were only forward declared via
+              ``@class ClassName`` in the type's `SBTarget`/`SBModule`. Otherwise
+              returns true.
 
         """
         return _lldb.SBType_IsTypeComplete(self)
@@ -14629,6 +14633,10 @@ class SBValue(object):
     def SetData(self, data, error):
         r"""SetData(SBValue self, SBData data, SBError error) -> bool"""
         return _lldb.SBValue_SetData(self, data, error)
+
+    def Clone(self, new_name):
+        r"""Clone(SBValue self, char const * new_name) -> SBValue"""
+        return _lldb.SBValue_Clone(self, new_name)
 
     def GetLoadAddress(self):
         r"""GetLoadAddress(SBValue self) -> lldb::addr_t"""
