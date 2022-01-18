@@ -78,7 +78,7 @@ private:
     assert(Index < 256 && "annotation index max value exceeded");
     assert((Value == (Value << 8) >> 8) && "annotation value out of range");
 
-    Value &= 0xffffffffffffff;
+    Value &= 0xff'ffff'ffff'ffff;
     Value |= (int64_t)Index << 56;
 
     return Value;
@@ -91,7 +91,7 @@ private:
 
   /// Extract annotation value from immediate operand value.
   static int64_t extractAnnotationValue(int64_t ImmValue) {
-    ImmValue &= 0xffffffffffffff;
+    ImmValue &= 0xff'ffff'ffff'ffff;
     return (ImmValue << 8) >> 8;
   }
 
