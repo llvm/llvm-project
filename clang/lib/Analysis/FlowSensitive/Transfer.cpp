@@ -174,19 +174,45 @@ public:
   }
 
   void VisitUnaryOperator(const UnaryOperator *S) {
-    if (S->getOpcode() == UO_Deref) {
-      assert(S->getSubExpr() != nullptr);
+    // The CFG does not contain `ParenExpr` as top-level statements in basic
+    // blocks, however sub-expressions can still be of that type.
+    assert(S->getSubExpr() != nullptr);
+    const Expr *SubExpr = S->getSubExpr()->IgnoreParens();
+    assert(SubExpr != nullptr);
+
+    switch (S->getOpcode()) {
+    case UO_Deref: {
       const auto *SubExprVal = cast_or_null<PointerValue>(
-          Env.getValue(*S->getSubExpr(), SkipPast::Reference));
+          Env.getValue(*SubExpr, SkipPast::Reference));
       if (SubExprVal == nullptr)
-        return;
+        break;
 
       auto &Loc = Env.createStorageLocation(*S);
       Env.setStorageLocation(*S, Loc);
       Env.setValue(Loc, Env.takeOwnership(std::make_unique<ReferenceValue>(
                             SubExprVal->getPointeeLoc())));
+      break;
     }
-    // FIXME: Add support for UO_AddrOf, UO_LNot.
+    case UO_AddrOf: {
+      // Do not form a pointer to a reference. If `SubExpr` is assigned a
+      // `ReferenceValue` then form a value that points to the location of its
+      // pointee.
+      StorageLocation *PointeeLoc =
+          Env.getStorageLocation(*SubExpr, SkipPast::Reference);
+      if (PointeeLoc == nullptr)
+        break;
+
+      auto &PointerLoc = Env.createStorageLocation(*S);
+      auto &PointerVal =
+          Env.takeOwnership(std::make_unique<PointerValue>(*PointeeLoc));
+      Env.setStorageLocation(*S, PointerLoc);
+      Env.setValue(PointerLoc, PointerVal);
+      break;
+    }
+    default:
+      // FIXME: Add support for UO_LNot.
+      break;
+    }
   }
 
   void VisitCXXThisExpr(const CXXThisExpr *S) {
