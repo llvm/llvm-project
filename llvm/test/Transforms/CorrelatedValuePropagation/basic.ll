@@ -1125,6 +1125,112 @@ entry:
   ret i1 %cmp
 }
 
+define void @trunc_icmp_ule(i32 %x, i1* %p) {
+; CHECK-LABEL: @trunc_icmp_ule(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[T]], 5
+; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp ult i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    [[C1_2:%.*]] = icmp uge i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C1_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C2_2:%.*]] = icmp ugt i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C2_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3_2:%.*]] = icmp ule i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C3_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C4_2:%.*]] = icmp ult i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C4_2]], i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %t = trunc i32 %x to i8
+  %c = icmp uge i8 %t, 5
+  br i1 %c, label %true, label %false
+
+true:
+  %c1 = icmp uge i32 %x, 5
+  store i1 %c1, i1* %p
+  %c2 = icmp ugt i32 %x, 5
+  store i1 %c2, i1* %p
+  %c3 = icmp ule i32 %x, 5
+  store i1 %c3, i1* %p
+  %c4 = icmp ult i32 %x, 5
+  store i1 %c4, i1* %p
+  ret void
+
+false:
+  %c1.2 = icmp uge i32 %x, 5
+  store i1 %c1.2, i1* %p
+  %c2.2 = icmp ugt i32 %x, 5
+  store i1 %c2.2, i1* %p
+  %c3.2 = icmp ule i32 %x, 5
+  store i1 %c3.2, i1* %p
+  %c4.2 = icmp ult i32 %x, 5
+  store i1 %c4.2, i1* %p
+  ret void
+}
+
+define void @trunc_icmp_eq(i32 %x, i1* %p) {
+; CHECK-LABEL: @trunc_icmp_eq(
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[T]], 5
+; CHECK-NEXT:    br i1 [[C]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C1]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp ule i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C3]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp ult i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    [[C1_2:%.*]] = icmp uge i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C1_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C2_2:%.*]] = icmp ugt i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C2_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C3_2:%.*]] = icmp ule i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C3_2]], i1* [[P]], align 1
+; CHECK-NEXT:    [[C4_2:%.*]] = icmp ult i32 [[X]], 5
+; CHECK-NEXT:    store i1 [[C4_2]], i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %t = trunc i32 %x to i8
+  %c = icmp eq i8 %t, 5
+  br i1 %c, label %true, label %false
+
+true:
+  %c1 = icmp uge i32 %x, 5
+  store i1 %c1, i1* %p
+  %c2 = icmp ugt i32 %x, 5
+  store i1 %c2, i1* %p
+  %c3 = icmp ule i32 %x, 5
+  store i1 %c3, i1* %p
+  %c4 = icmp ult i32 %x, 5
+  store i1 %c4, i1* %p
+  ret void
+
+false:
+  %c1.2 = icmp uge i32 %x, 5
+  store i1 %c1.2, i1* %p
+  %c2.2 = icmp ugt i32 %x, 5
+  store i1 %c2.2, i1* %p
+  %c3.2 = icmp ule i32 %x, 5
+  store i1 %c3.2, i1* %p
+  %c4.2 = icmp ult i32 %x, 5
+  store i1 %c4.2, i1* %p
+  ret void
+}
+
 ; TODO: missed optimization
 ; Make sure we exercise non-integer inputs to unary operators (i.e. crash check).
 define i1 @bitcast_unknown(float %a) {
