@@ -339,10 +339,14 @@ def ROR   : ALU_rr<0b0110000, 0b101, "ror">,
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbs] in {
-def BCLR : ALU_rr<0b0100100, 0b001, "bclr">, Sched<[]>;
-def BSET : ALU_rr<0b0010100, 0b001, "bset">, Sched<[]>;
-def BINV : ALU_rr<0b0110100, 0b001, "binv">, Sched<[]>;
-def BEXT : ALU_rr<0b0100100, 0b101, "bext">, Sched<[]>;
+def BCLR : ALU_rr<0b0100100, 0b001, "bclr">,
+           Sched<[WriteSingleBit, ReadSingleBit, ReadSingleBit]>;
+def BSET : ALU_rr<0b0010100, 0b001, "bset">,
+           Sched<[WriteSingleBit, ReadSingleBit, ReadSingleBit]>;
+def BINV : ALU_rr<0b0110100, 0b001, "binv">,
+           Sched<[WriteSingleBit, ReadSingleBit, ReadSingleBit]>;
+def BEXT : ALU_rr<0b0100100, 0b101, "bext">,
+           Sched<[WriteSingleBit, ReadSingleBit, ReadSingleBit]>;
 } // Predicates = [HasStdExtZbs]
 
 let Predicates = [HasStdExtZbp] in {
@@ -361,10 +365,14 @@ def RORI  : RVBShift_ri<0b01100, 0b101, OPC_OP_IMM, "rori">,
             Sched<[WriteRotateImm, ReadRotateImm]>;
 
 let Predicates = [HasStdExtZbs] in {
-def BCLRI : RVBShift_ri<0b01001, 0b001, OPC_OP_IMM, "bclri">, Sched<[]>;
-def BSETI : RVBShift_ri<0b00101, 0b001, OPC_OP_IMM, "bseti">, Sched<[]>;
-def BINVI : RVBShift_ri<0b01101, 0b001, OPC_OP_IMM, "binvi">, Sched<[]>;
-def BEXTI : RVBShift_ri<0b01001, 0b101, OPC_OP_IMM, "bexti">, Sched<[]>;
+def BCLRI : RVBShift_ri<0b01001, 0b001, OPC_OP_IMM, "bclri">,
+            Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
+def BSETI : RVBShift_ri<0b00101, 0b001, OPC_OP_IMM, "bseti">,
+            Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
+def BINVI : RVBShift_ri<0b01101, 0b001, OPC_OP_IMM, "binvi">,
+            Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
+def BEXTI : RVBShift_ri<0b01001, 0b101, OPC_OP_IMM, "bexti">,
+            Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 } // Predicates = [HasStdExtZbs]
 
 let Predicates = [HasStdExtZbp] in {
@@ -432,9 +440,12 @@ def CRC32CD : RVBUnary<0b0110000, 0b11011, 0b001, OPC_OP_IMM, "crc32c.d">,
               Sched<[]>;
 
 let Predicates = [HasStdExtZbc] in {
-def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul">, Sched<[]>;
-def CLMULR : ALU_rr<0b0000101, 0b010, "clmulr">, Sched<[]>;
-def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh">, Sched<[]>;
+def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul">,
+             Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
+def CLMULR : ALU_rr<0b0000101, 0b010, "clmulr">,
+             Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
+def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh">,
+             Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 } // Predicates = [HasStdExtZbc]
 
 let Predicates = [HasStdExtZbb] in {

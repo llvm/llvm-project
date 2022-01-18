@@ -26,6 +26,13 @@ def WriteCPOP32      : SchedWrite;
 def WriteREV8        : SchedWrite;
 def WriteORCB        : SchedWrite;
 
+// Zbc extension
+def WriteCLMUL       : SchedWrite; // CLMUL/CLMULR/CLMULH
+
+// Zbs extension
+def WriteSingleBit   : SchedWrite; // BCLR/BSET/BINV/BEXT
+def WriteSingleBitImm: SchedWrite; // BCLRI/BSETI/BINVI/BEXTI
+
 // Zbf extension
 def WriteBFP         : SchedWrite; // BFP
 def WriteBFP32       : SchedWrite; // BFPW
@@ -49,6 +56,13 @@ def ReadCPOP        : SchedRead;
 def ReadCPOP32      : SchedRead;
 def ReadREV8        : SchedRead;
 def ReadORCB        : SchedRead;
+
+// Zbc extension
+def ReadCLMUL       : SchedRead; // CLMUL/CLMULR/CLMULH
+
+// Zbs extension
+def ReadSingleBit   : SchedRead; // BCLR/BSET/BINV/BEXT
+def ReadSingleBitImm: SchedRead; // BCLRI/BSETI/BINVI/BEXTI
 
 // Zbf extension
 def ReadBFP         : SchedRead; // BFP
@@ -93,6 +107,24 @@ def : ReadAdvance<ReadCPOP, 0>;
 def : ReadAdvance<ReadCPOP32, 0>;
 def : ReadAdvance<ReadREV8, 0>;
 def : ReadAdvance<ReadORCB, 0>;
+}
+}
+
+multiclass UnsupportedSchedZbc {
+let Unsupported = true in {
+def : WriteRes<WriteCLMUL, []>;
+
+def : ReadAdvance<ReadCLMUL, 0>;
+}
+}
+
+multiclass UnsupportedSchedZbs {
+let Unsupported = true in {
+def : WriteRes<WriteSingleBit, []>;
+def : WriteRes<WriteSingleBitImm, []>;
+
+def : ReadAdvance<ReadSingleBit, 0>;
+def : ReadAdvance<ReadSingleBitImm, 0>;
 }
 }
 
