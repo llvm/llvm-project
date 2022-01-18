@@ -1046,6 +1046,11 @@ def anyext_oneuse : PatFrag<(ops node:$A), (anyext node:$A), [{
   return N->hasOneUse();
 }]>;
 
+def fpext_oneuse : PatFrag<(ops node:$A),
+                           (any_fpextend node:$A), [{
+  return N->hasOneUse();
+}]>;
+
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;

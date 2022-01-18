@@ -299,7 +299,7 @@ void StaticVerifierFunctionEmitter::collectConstraint(ConstraintMap &map,
 
 void StaticVerifierFunctionEmitter::collectOpConstraints(
     ArrayRef<Record *> opDefs) {
-  const auto collectTypeConstraints = [&](Operator::value_range values) {
+  const auto collectTypeConstraints = [&](Operator::const_value_range values) {
     for (const NamedTypeConstraint &value : values)
       if (value.hasPredicate())
         collectConstraint(typeConstraints, "type", value.constraint);

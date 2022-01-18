@@ -56,6 +56,7 @@
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -89,6 +90,8 @@ private:
   unsigned OrTermrOpc;
   unsigned OrSaveExecOpc;
   unsigned Exec;
+
+  bool EnableOptimizeEndCf = false;
 
   bool hasKill(const MachineBasicBlock *Begin, const MachineBasicBlock *End);
 
@@ -579,7 +582,7 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
 void SILowerControlFlow::optimizeEndCf() {
   // If the only instruction immediately following this END_CF is an another
   // END_CF in the only successor we can avoid emitting exec mask restore here.
-  if (!RemoveRedundantEndcf)
+  if (!EnableOptimizeEndCf)
     return;
 
   for (MachineInstr *MI : reverse(LoweredEndCf)) {
@@ -807,6 +810,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
+  EnableOptimizeEndCf =
+      RemoveRedundantEndcf && MF.getTarget().getOptLevel() > CodeGenOpt::None;
 
   // This doesn't actually need LiveIntervals, but we can preserve them.
   LIS = getAnalysisIfAvailable<LiveIntervals>();

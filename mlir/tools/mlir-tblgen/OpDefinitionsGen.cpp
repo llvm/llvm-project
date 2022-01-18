@@ -396,7 +396,8 @@ private:
 
   // Generates verify statements for operands and results in the operation.
   // The generated code will be attached to `body`.
-  void genOperandResultVerifier(MethodBody &body, Operator::value_range values,
+  void genOperandResultVerifier(MethodBody &body,
+                                Operator::const_value_range values,
                                 StringRef valueKind);
 
   // Generates verify statements for regions in the operation.
@@ -2246,7 +2247,7 @@ void OpEmitter::genVerifier() {
 }
 
 void OpEmitter::genOperandResultVerifier(MethodBody &body,
-                                         Operator::value_range values,
+                                         Operator::const_value_range values,
                                          StringRef valueKind) {
   // Check that an optional value is at most 1 element.
   //
