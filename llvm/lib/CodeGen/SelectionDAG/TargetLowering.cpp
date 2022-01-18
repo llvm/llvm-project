@@ -1869,12 +1869,8 @@ bool TargetLowering::SimplifyDemandedBits(
       if (!AlreadySignExtended) {
         // Compute the correct shift amount type, which must be getShiftAmountTy
         // for scalar types after legalization.
-        EVT ShiftAmtTy = VT;
-        if (TLO.LegalTypes() && !ShiftAmtTy.isVector())
-          ShiftAmtTy = getShiftAmountTy(ShiftAmtTy, DL);
-
-        SDValue ShiftAmt =
-            TLO.DAG.getConstant(BitWidth - ExVTBits, dl, ShiftAmtTy);
+        SDValue ShiftAmt = TLO.DAG.getConstant(BitWidth - ExVTBits, dl,
+                                               getShiftAmountTy(VT, DL));
         return TLO.CombineTo(Op,
                              TLO.DAG.getNode(ISD::SHL, dl, VT, Op0, ShiftAmt));
       }
