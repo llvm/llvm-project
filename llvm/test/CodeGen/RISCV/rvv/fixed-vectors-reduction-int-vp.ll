@@ -126,6 +126,22 @@ define signext i8 @vpreduce_xor_v2i8(i8 signext %s, <2 x i8> %v, <2 x i1> %m, i3
   ret i8 %r
 }
 
+declare i8 @llvm.vp.reduce.umin.v3i8(i8, <3 x i8>, <3 x i1>, i32)
+
+define signext i8 @vpreduce_umin_v3i8(i8 signext %s, <3 x i8> %v, <3 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_umin_v3i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, tu, mu
+; CHECK-NEXT:    vredminu.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vmv.x.s a0, v9
+; CHECK-NEXT:    ret
+  %r = call i8 @llvm.vp.reduce.umin.v3i8(i8 %s, <3 x i8> %v, <3 x i1> %m, i32 %evl)
+  ret i8 %r
+}
+
 declare i8 @llvm.vp.reduce.add.v4i8(i8, <4 x i8>, <4 x i1>, i32)
 
 define signext i8 @vpreduce_add_v4i8(i8 signext %s, <4 x i8> %v, <4 x i1> %m, i32 zeroext %evl) {
@@ -831,17 +847,17 @@ define signext i32 @vpreduce_xor_v64i32(i32 signext %s, <64 x i32> %v, <64 x i1>
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a3, a1, -32
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    bltu a1, a3, .LBB48_2
+; CHECK-NEXT:    bltu a1, a3, .LBB49_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:  .LBB48_2:
+; CHECK-NEXT:  .LBB49_2:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    li a3, 32
 ; CHECK-NEXT:    vslidedown.vi v24, v0, 4
-; CHECK-NEXT:    bltu a1, a3, .LBB48_4
+; CHECK-NEXT:    bltu a1, a3, .LBB49_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:  .LBB48_4:
+; CHECK-NEXT:  .LBB49_4:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
 ; CHECK-NEXT:    vmv.s.x v25, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, mu

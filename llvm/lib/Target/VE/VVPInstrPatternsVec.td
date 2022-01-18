@@ -20,8 +20,22 @@ include "VVPInstrInfo.td"
 multiclass Binary_rv<SDPatternOperator OpNode,
     ValueType ScalarVT, ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
-  // Masked with select, broadcast.
-  // TODO
+  // Masked with passthru, broadcast.
+  def : Pat<(vvp_select
+                (OpNode
+                    (any_broadcast ScalarVT:$sx),
+                    DataVT:$vy,
+                    (MaskVT srcvalue),
+                    (i32 srcvalue)),
+                DataVT:$vfalse,
+                MaskVT:$mask,
+                i32:$pivot),
+            (!cast<Instruction>(OpBaseName#"rvml_v")
+                ScalarVT:$sx,
+                $vy,
+                $mask,
+                $pivot,
+                $vfalse)>;
 
   // Unmasked, broadcast.
   def : Pat<(OpNode
@@ -42,8 +56,22 @@ multiclass Binary_rv<SDPatternOperator OpNode,
 multiclass Binary_vr<SDPatternOperator OpNode,
     ValueType ScalarVT, ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
-  // Masked with select, broadcast.
-  // TODO
+  // Masked with passthru, broadcast.
+  def : Pat<(vvp_select
+                (OpNode
+                    DataVT:$vx,
+                    (any_broadcast ScalarVT:$sy),
+                    (MaskVT srcvalue),
+                    (i32 srcvalue)),
+                DataVT:$vfalse,
+                MaskVT:$mask,
+                i32:$pivot),
+            (!cast<Instruction>(OpBaseName#"vrml_v")
+                $vx,
+                ScalarVT:$sy,
+                $mask,
+                $pivot,
+                $vfalse)>;
 
   // Unmasked, broadcast.
   def : Pat<(OpNode
@@ -64,6 +92,23 @@ multiclass Binary_vr<SDPatternOperator OpNode,
 multiclass Binary_vv<SDPatternOperator OpNode,
     ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
+  // Masked with passthru, broadcast.
+  def : Pat<(vvp_select
+                (OpNode
+                    DataVT:$vx,
+                    DataVT:$vy,
+                    (MaskVT srcvalue),
+                    (i32 srcvalue)),
+                DataVT:$vfalse,
+                MaskVT:$mask,
+                i32:$pivot),
+            (!cast<Instruction>(OpBaseName#"vvml_v")
+                $vx,
+                $vy,
+                $mask,
+                $pivot,
+                $vfalse)>;
+
   // Masked with select.
   // TODO
 
