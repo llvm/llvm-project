@@ -2554,6 +2554,11 @@ static bool IsCPUDispatchCPUSpecificMultiVersion(const Expr *E) {
 bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
                                 bool ForceComplain,
                                 bool (*IsPlausibleResult)(QualType)) {
+  if (isSFINAEContext()) {
+    // If this is a SFINAE context, don't try anything that might trigger ADL
+    // prematurely.
+    return false;
+  }
   SourceLocation Loc = E.get()->getExprLoc();
   SourceRange Range = E.get()->getSourceRange();
 

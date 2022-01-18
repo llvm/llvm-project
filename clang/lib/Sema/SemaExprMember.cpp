@@ -1645,6 +1645,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
           << BaseType << int(IsArrow) << BaseExpr.get()->getSourceRange()
           << FixItHint::CreateReplacement(OpLoc, "->");
 
+      if (S.isSFINAEContext())
+        return ExprError();
+
       // Recurse as an -> access.
       IsArrow = true;
       return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS,
