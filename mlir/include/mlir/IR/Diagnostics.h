@@ -431,8 +431,9 @@ public:
   }
 
   /// Emit a diagnostic using the registered issue handler if present, or with
-  /// the default behavior if not.
-  void emit(Diagnostic diag);
+  /// the default behavior if not. The diagnostic instance is consumed in the
+  /// process.
+  void emit(Diagnostic &&diag);
 
 private:
   friend class MLIRContextImpl;
