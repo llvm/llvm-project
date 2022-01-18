@@ -1074,6 +1074,10 @@ public:
   /// Return true if the builder has an alignment attribute.
   bool hasAlignmentAttr() const;
 
+  /// Return Attribute with the given Kind. The returned attribute will be
+  /// invalid if the Kind is not present in the builder.
+  Attribute getAttribute(StringRef Kind) const;
+
   /// Return raw (possibly packed/encoded) value of integer attribute or 0 if
   /// not set.
   uint64_t getRawIntAttr(Attribute::AttrKind Kind) const;

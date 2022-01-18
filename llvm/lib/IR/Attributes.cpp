@@ -1791,9 +1791,15 @@ bool AttrBuilder::overlaps(const AttributeMask &AM) const {
   return false;
 }
 
-bool AttrBuilder::contains(StringRef A) const {
+Attribute AttrBuilder::getAttribute(StringRef A) const {
   auto It = lower_bound(TargetDepAttrs, A, StringAttributeComparator());
-  return It != TargetDepAttrs.end() && It->hasAttribute(A);
+  if (It != TargetDepAttrs.end() && It->hasAttribute(A))
+    return *It;
+  return {};
+}
+
+bool AttrBuilder::contains(StringRef A) const {
+  return getAttribute(A).isValid();
 }
 
 bool AttrBuilder::hasAttributes() const {
