@@ -906,16 +906,11 @@ def : Pat<(riscv_fsl GPR:$rs1, GPR:$rs3, GPR:$rs2),
           (FSL GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 def : Pat<(riscv_fsr GPR:$rs1, GPR:$rs3, GPR:$rs2),
           (FSR GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-
-// fshl and fshr concatenate their operands in the same order. fsr and fsl
-// instruction use different orders. fshl will return its first operand for
-// shift of zero, fshr will return its second operand. fsl and fsr both return
-// $rs1 so the patterns need to have different operand orders.
-def : Pat<(fshr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(riscv_fsr GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt)>;
-// We can use FSRI for fshl by immediate if we subtract the immediate from
+// We can use FSRI for FSL by immediate if we subtract the immediate from
 // XLen and swap the operands.
-def : Pat<(fshl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(riscv_fsl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
 } // Predicates = [HasStdExtZbt]
 

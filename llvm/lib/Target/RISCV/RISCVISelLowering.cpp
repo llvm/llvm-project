@@ -2792,8 +2792,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     MVT VT = Op.getSimpleValueType();
     assert(VT == Subtarget.getXLenVT() && "Unexpected custom legalization");
     SDLoc DL(Op);
-    if (Op.getOperand(2).getOpcode() == ISD::Constant)
-      return Op;
     // FSL/FSR take a log2(XLen)+1 bit shift amount but XLenVT FSHL/FSHR only
     // use log(XLen) bits. Mask the shift amount accordingly to prevent
     // accidentally setting the extra bit.
