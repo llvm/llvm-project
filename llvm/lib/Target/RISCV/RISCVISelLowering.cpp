@@ -4151,10 +4151,10 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
 
   const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
       RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
-  if (!II || !II->SplatOperand)
+  if (!II || !II->hasSplatOperand())
     return SDValue();
 
-  unsigned SplatOp = II->SplatOperand + HasChain;
+  unsigned SplatOp = II->SplatOperand + 1 + HasChain;
   assert(SplatOp < Op.getNumOperands());
 
   SmallVector<SDValue, 8> Operands(Op->op_begin(), Op->op_end());
@@ -4184,7 +4184,7 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
   // that a widening operation never uses SEW=64.
   // NOTE: If this fails the below assert, we can probably just find the
   // element count from any operand or result and use it to construct the VT.
-  assert(II->SplatOperand > 1 && "Unexpected splat operand!");
+  assert(II->SplatOperand > 0 && "Unexpected splat operand!");
   MVT VT = Op.getOperand(SplatOp - 1).getSimpleValueType();
 
   // The more complex case is when the scalar is larger than XLenVT.
