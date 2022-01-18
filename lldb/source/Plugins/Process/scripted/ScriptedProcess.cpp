@@ -164,9 +164,6 @@ Status ScriptedProcess::DoLaunch(Module *exe_module,
 
   SetPrivateState(eStateStopped);
 
-  UpdateThreadListIfNeeded();
-  GetThreadList();
-
   return {};
 }
 
@@ -304,19 +301,55 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
             .str(),
         error);
 
-  lldb::ThreadSP thread_sp;
-  thread_sp = std::make_shared<ScriptedThread>(*this, error);
+  StructuredData::DictionarySP thread_info_sp = GetInterface().GetThreadsInfo();
 
-  if (!thread_sp || error.Fail())
-    return GetInterface().ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
-                                                 error.AsCString(), error);
-
-  RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
-  if (!reg_ctx_sp)
+  if (!thread_info_sp)
     return GetInterface().ErrorWithMessage<bool>(
-        LLVM_PRETTY_FUNCTION, "Invalid Register Context", error);
+        LLVM_PRETTY_FUNCTION,
+        "Couldn't fetch thread list from Scripted Process.", error);
 
-  new_thread_list.AddThread(thread_sp);
+  auto create_scripted_thread =
+      [this, &old_thread_list, &error,
+       &new_thread_list](ConstString key, StructuredData::Object *val) -> bool {
+    if (!val)
+      return GetInterface().ErrorWithMessage<bool>(
+          LLVM_PRETTY_FUNCTION, "Invalid thread info object", error);
+
+    lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
+    if (!llvm::to_integer(key.AsCString(), tid))
+      return GetInterface().ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
+                                                   "Invalid thread id", error);
+
+    if (ThreadSP thread_sp =
+            old_thread_list.FindThreadByID(tid, false /*=can_update*/)) {
+      // If the thread was already in the old_thread_list,
+      // just add it back to the new_thread_list.
+      new_thread_list.AddThread(thread_sp);
+      return true;
+    }
+
+    lldb::ThreadSP thread_sp =
+        std::make_shared<ScriptedThread>(*this, error, val->GetAsGeneric());
+
+    if (!thread_sp || error.Fail())
+      return GetInterface().ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
+                                                   error.AsCString(), error);
+
+    RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+    if (!reg_ctx_sp)
+      return GetInterface().ErrorWithMessage<bool>(
+          LLVM_PRETTY_FUNCTION,
+          llvm::Twine("Invalid Register Context for thread " +
+                      llvm::Twine(key.AsCString()))
+              .str(),
+          error);
+
+    new_thread_list.AddThread(thread_sp);
+
+    return true;
+  };
+
+  thread_info_sp->ForEach(create_scripted_thread);
 
   return new_thread_list.GetSize(false) > 0;
 }

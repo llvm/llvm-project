@@ -70,7 +70,7 @@ class ScriptedProcess:
             tid (int): Thread ID to look for in the scripted process.
 
         Returns:
-            Dict: The thread represented as a dictionary, withr the
+            Dict: The thread represented as a dictionary, with the
                 tid thread ID. None if tid doesn't match any of the scripted
                 process threads.
         """
@@ -212,11 +212,12 @@ class ScriptedThread:
         self.target = None
         self.process = None
         self.args = None
-        if isinstance(process, lldb.SBProcess) and process.IsValid():
-            self.process = process
-            self.target = process.GetTarget()
+        if isinstance(process, ScriptedProcess):
+            self.target = process.target
+            self.process = self.target.GetProcess()
 
         self.id = None
+        self.idx = None
         self.name = None
         self.queue = None
         self.state = None

@@ -27,7 +27,8 @@ public:
 
   virtual StructuredData::GenericSP
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp) = 0;
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) = 0;
 
   template <typename Ret>
   Ret ErrorWithMessage(llvm::StringRef caller_name, llvm::StringRef error_msg,

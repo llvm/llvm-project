@@ -25,7 +25,8 @@ public:
   StructuredData::GenericSP
   CreatePluginObject(const llvm::StringRef class_name,
                      ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp) override;
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) override;
 
   Status Launch() override;
 
