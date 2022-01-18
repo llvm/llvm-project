@@ -287,7 +287,7 @@ public:
     };
 
     // Map of the preferred location for each value.
-    std::map<ValueIDNum, LocIdx> ValueToLoc;
+    DenseMap<ValueIDNum, LocIdx> ValueToLoc;
     ActiveMLocs.reserve(VLocs.size());
     ActiveVLocs.reserve(VLocs.size());
 
