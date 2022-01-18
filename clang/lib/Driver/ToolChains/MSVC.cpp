@@ -1333,6 +1333,15 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
         AddSystemIncludeWithSubfolder(DriverArgs, CC1Args, WindowsSDKDir,
                                       "Include", windowsSDKIncludeVersion,
                                       "winrt");
+        if (major >= 10) {
+          llvm::VersionTuple Tuple;
+          if (!Tuple.tryParse(windowsSDKIncludeVersion) &&
+              Tuple.getSubminor().getValueOr(0) >= 17134) {
+            AddSystemIncludeWithSubfolder(DriverArgs, CC1Args, WindowsSDKDir,
+                                          "Include", windowsSDKIncludeVersion,
+                                          "cppwinrt");
+          }
+        }
       } else {
         AddSystemIncludeWithSubfolder(DriverArgs, CC1Args, WindowsSDKDir,
                                       "Include");

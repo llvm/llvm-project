@@ -118,6 +118,8 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
     Features.push_back("+hbc");
   if (Extensions & AArch64::AEK_MOPS)
     Features.push_back("+mops");
+  if (Extensions & AArch64::AEK_PERFMON)
+    Features.push_back("+perfmon");
 
   return true;
 }

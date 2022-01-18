@@ -97,6 +97,18 @@ API Changes
   from all modes. Their symbols are still provided by the dynamic library for the benefit of
   existing compiled code. All of these functions have always behaved as no-ops.
 
+- ``std::filesystem::path::iterator``, which (in our implementation) stashes
+  a ``path`` value inside itself similar to ``istream_iterator``, now sets its
+  ``reference`` type to ``path`` and its ``iterator_category`` to ``input_iterator_tag``,
+  so that it is a conforming input iterator in C++17 and a conforming
+  ``std::bidirectional_iterator`` in C++20. Before this release, it had set its
+  ``reference`` type to ``const path&`` and its ``iterator_category`` to
+  ``bidirectional_iterator_tag``, making it a non-conforming bidirectional iterator.
+  After this change, ``for`` loops of the form ``for (auto& c : path)`` must be rewritten
+  as either ``for (auto&& c : path)`` or ``for (const auto& c : path)``.
+  ``std::reverse_iterator<path::iterator>`` is no longer rejected.
+
+
 ABI Changes
 -----------
 
@@ -111,13 +123,22 @@ ABI Changes
   errors involving ``std::nullptr_t`` against previously compiled binaries, this may
   be the cause. You can define the ``_LIBCPP_ABI_USE_CXX03_NULLPTR_EMULATION`` macro
   to return to the previous behavior. That macro will be removed in LLVM 15. Please
-  comment `here <https://reviews.llvm.org/D109459>`_ if you are broken by this change
+  comment `on D109459 <https://reviews.llvm.org/D109459>`_ if you are broken by this change
   and need to define the macro.
 
 - On Apple platforms, ``std::random_device`` is now implemented on top of ``arc4random()``
   instead of reading from ``/dev/urandom``. Any implementation-defined token used when
   constructing a ``std::random_device`` will now be ignored instead of interpreted as a
   file to read entropy from.
+
+- ``std::lognormal_distribution::param_type`` used to store a data member of type
+  ``std::normal_distribution``; now this member is stored in the ``lognormal_distribution``
+  class itself, and the ``param_type`` stores only the mean and standard deviation,
+  as required by the Standard. This changes ``sizeof(std::lognormal_distribution::param_type)``.
+  You can define the ``_LIBCPP_ABI_OLD_LOGNORMAL_DISTRIBUTION`` macro to return to the
+  previous behavior. That macro will be removed in LLVM 15. Please comment
+  `on PR52906 <https://llvm.org/PR52906>`_ if you are broken by this change and need to
+  define the macro.
 
 Build System Changes
 --------------------

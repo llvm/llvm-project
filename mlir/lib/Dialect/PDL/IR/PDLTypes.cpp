@@ -53,15 +53,6 @@ static Type parsePDLType(AsmParser &parser) {
   return Type();
 }
 
-Type PDLDialect::parseType(DialectAsmParser &parser) const {
-  return parsePDLType(parser);
-}
-
-void PDLDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  if (failed(generatedTypePrinter(type, printer)))
-    llvm_unreachable("unknown 'pdl' type");
-}
-
 //===----------------------------------------------------------------------===//
 // PDL Types
 //===----------------------------------------------------------------------===//

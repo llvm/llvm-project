@@ -1309,6 +1309,10 @@ public:
   /// __dso_handle).
   virtual Error setupJITDylib(JITDylib &JD) = 0;
 
+  /// This method will be called outside the session lock each time a JITDylib
+  /// is removed to allow the Platform to remove any JITDylib-specific data.
+  virtual Error teardownJITDylib(JITDylib &JD) = 0;
+
   /// This method will be called under the ExecutionSession lock each time a
   /// MaterializationUnit is added to a JITDylib.
   virtual Error notifyAdding(ResourceTracker &RT,
@@ -1327,8 +1331,7 @@ public:
                     const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
 
   /// Performs an async lookup for the the given symbols in each of the given
-  /// JITDylibs, calling the given handler with the compound result map once
-  /// all lookups have completed.
+  /// JITDylibs, calling the given handler once all lookups have completed.
   static void
   lookupInitSymbolsAsync(unique_function<void(Error)> OnComplete,
                          ExecutionSession &ES,

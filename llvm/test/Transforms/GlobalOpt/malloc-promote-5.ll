@@ -7,11 +7,7 @@
 define signext i32 @f() local_unnamed_addr {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 4)
-; CHECK-NEXT:    [[B:%.*]] = bitcast i8* [[CALL]] to i32*
-; CHECK-NEXT:    store i32* [[B]], i32** @g, align 8
-; CHECK-NEXT:    [[B2:%.*]] = bitcast i8* [[CALL]] to i16*
-; CHECK-NEXT:    store i16 -1, i16* [[B2]], align 2
+; CHECK-NEXT:    store i16 -1, i16* bitcast ([4 x i8]* @g.body to i16*), align 2
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -28,14 +24,11 @@ define signext i32 @main() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call signext i32 @f()
 ; CHECK-NEXT:    call void @f1()
-; CHECK-NEXT:    [[V0:%.*]] = load i32*, i32** @g, align 8
-; CHECK-NEXT:    store i32 1, i32* [[V0]], align 4
+; CHECK-NEXT:    store i32 1, i32* bitcast ([4 x i8]* @g.body to i32*), align 4
 ; CHECK-NEXT:    call void @f1()
-; CHECK-NEXT:    [[V1:%.*]] = load i8*, i8** bitcast (i32** @g to i8**), align 8
-; CHECK-NEXT:    store i8 2, i8* [[V1]], align 4
+; CHECK-NEXT:    store i8 2, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @g.body, i32 0, i32 0), align 4
 ; CHECK-NEXT:    call void @f1()
-; CHECK-NEXT:    [[V2:%.*]] = load i32*, i32** @g, align 8
-; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[V2]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* bitcast ([4 x i8]* @g.body to i32*), align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
