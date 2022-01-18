@@ -513,6 +513,12 @@ uint32_t SBPlatform::GetOSUpdateVersion() {
   return version.getSubminor().getValueOr(UINT32_MAX);
 }
 
+void SBPlatform::SetSDKRoot(const char *sysroot) {
+  LLDB_RECORD_METHOD(void, SBPlatform, SetSDKRoot, (const char *), sysroot);
+  if (PlatformSP platform_sp = GetSP())
+    platform_sp->SetSDKRootDirectory(ConstString(sysroot));
+}
+
 SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {
   LLDB_RECORD_METHOD(lldb::SBError, SBPlatform, Get,
                      (lldb::SBFileSpec &, lldb::SBFileSpec &), src, dst);

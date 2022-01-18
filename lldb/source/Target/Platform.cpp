@@ -428,6 +428,9 @@ void Platform::GetStatus(Stream &strm) {
     strm.Printf(" Connected: %s\n", is_connected ? "yes" : "no");
   }
 
+  if (GetSDKRootDirectory()) {
+    strm.Format("   Sysroot: {0}\n", GetSDKRootDirectory());
+  }
   if (GetWorkingDirectory()) {
     strm.Printf("WorkingDir: %s\n", GetWorkingDirectory().GetCString());
   }
