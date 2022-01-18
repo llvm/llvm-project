@@ -1887,7 +1887,12 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   UnfilledBitsInLastUnit = 0;
   LastBitfieldStorageUnitSize = 0;
 
-  bool FieldPacked = Packed || D->hasAttr<PackedAttr>();
+  llvm::Triple Target = Context.getTargetInfo().getTriple();
+  bool FieldPacked = (Packed && (!FieldClass || FieldClass->isPOD() ||
+                                 Context.getLangOpts().getClangABICompat() <=
+                                     LangOptions::ClangABI::Ver13 ||
+                                 Target.isPS4() || Target.isOSDarwin())) ||
+                     D->hasAttr<PackedAttr>();
 
   AlignRequirementKind AlignRequirement = AlignRequirementKind::None;
   CharUnits FieldSize;

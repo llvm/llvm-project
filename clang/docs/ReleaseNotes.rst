@@ -236,6 +236,12 @@ ABI Changes in Clang
   is still in the process of being stabilized, so this type should not yet be
   used in interfaces that require ABI stability.
 
+- GCC doesn't pack non-POD members in packed structs unless the packed
+  attribute is also specified on the member. Clang historically did perform
+  such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
+  You can switch back to the old ABI behavior with the flag:
+  ``-fclang-abi-compat=13.0``.
+
 OpenMP Support in Clang
 -----------------------
 
