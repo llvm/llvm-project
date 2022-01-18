@@ -897,6 +897,14 @@ def int_aarch64_stgp  : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_i64_ty, llv
     [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>]>;
 }
 
+//===----------------------------------------------------------------------===//
+// Memory Operations (MOPS) Intrinsics
+let TargetPrefix = "aarch64" in {
+  // Sizes are chosen to correspond to the llvm.memset intrinsic: ptr, i8, i64
+  def int_aarch64_mops_memset_tag : DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i8_ty, llvm_i64_ty],
+      [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>, WriteOnly<ArgIndex<0>>]>;
+}
+
 // Transactional Memory Extension (TME) Intrinsics
 let TargetPrefix = "aarch64" in {
 def int_aarch64_tstart  : GCCBuiltin<"__builtin_arm_tstart">,

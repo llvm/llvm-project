@@ -62,6 +62,9 @@ BUILTIN(__builtin_arm_ldg, "v*v*", "t")
 BUILTIN(__builtin_arm_stg, "vv*", "t")
 BUILTIN(__builtin_arm_subp, "Uiv*v*", "t")
 
+// Memory Operations
+BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "")
+
 // Memory barrier
 BUILTIN(__builtin_arm_dmb, "vUi", "nc")
 BUILTIN(__builtin_arm_dsb, "vUi", "nc")
