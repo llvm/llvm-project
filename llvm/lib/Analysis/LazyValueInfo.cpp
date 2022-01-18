@@ -1132,14 +1132,16 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
   }
 
   // If (X urem Modulus) >= C, then X >= C.
+  // If trunc X >= C, then X >= C.
   // TODO: An upper bound could be computed as well.
-  if (match(LHS, m_URem(m_Specific(Val), m_Value())) &&
+  if (match(LHS, m_CombineOr(m_URem(m_Specific(Val), m_Value()),
+                             m_Trunc(m_Specific(Val)))) &&
       match(RHS, m_APInt(C))) {
     // Use the icmp region so we don't have to deal with different predicates.
     ConstantRange CR = ConstantRange::makeExactICmpRegion(EdgePred, *C);
     if (!CR.isEmptySet())
       return ValueLatticeElement::getRange(ConstantRange::getNonEmpty(
-          CR.getUnsignedMin(), APInt(BitWidth, 0)));
+          CR.getUnsignedMin().zextOrSelf(BitWidth), APInt(BitWidth, 0)));
   }
 
   return ValueLatticeElement::getOverdefined();
