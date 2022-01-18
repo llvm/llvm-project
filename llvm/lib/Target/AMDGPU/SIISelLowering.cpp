@@ -6941,9 +6941,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                 DAG.getConstant(1, SL, MVT::i32));
     return DAG.getSetCC(SL, MVT::i1, SrcHi, Aperture, ISD::SETEQ);
   }
-  case Intrinsic::amdgcn_alignbit:
-    return DAG.getNode(ISD::FSHR, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_perm:
     return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
