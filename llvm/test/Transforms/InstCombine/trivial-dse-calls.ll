@@ -253,7 +253,6 @@ define void @test_readnone() {
 
 define void @test_readnone_with_deopt() {
 ; CHECK-LABEL: @test_readnone_with_deopt(
-; CHECK-NEXT:    call void @removable_readnone() [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;
   call void @removable_readnone() [ "deopt"() ]
