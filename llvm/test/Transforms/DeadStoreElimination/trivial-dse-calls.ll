@@ -193,6 +193,20 @@ define i32 @test_neg_captured_before() {
   ret i32 %res
 }
 
+; Callee might be dead, but op bundle has unknown semantics and thus isn't.
+define void @test_new_op_bundle() {
+; CHECK-LABEL: @test_new_op_bundle(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
+; CHECK-NEXT:    call void @f(i8* nocapture writeonly [[BITCAST]]) #[[ATTR1]] [ "unknown"(i8* [[BITCAST]]) ]
+; CHECK-NEXT:    ret void
+;
+  %a = alloca i32, align 4
+  %bitcast = bitcast i32* %a to i8*
+  call void @f(i8* writeonly nocapture %bitcast) argmemonly nounwind willreturn ["unknown" (i8* %bitcast)]
+  ret void
+}
+
 ; Show that reading from unrelated memory is okay
 define void @test_unreleated_read() {
 ; CHECK-LABEL: @test_unreleated_read(

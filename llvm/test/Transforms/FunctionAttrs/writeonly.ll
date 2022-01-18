@@ -100,6 +100,12 @@ define void @direct3(i8* %p) {
   ret void
 }
 
+; CHECK: define void @direct3b(i8* %p)
+define void @direct3b(i8* %p) {
+  call void @direct3_callee(i8* %p) ["may-read-and-capture"(i8* %p)]
+  ret void
+}
+
 ; CHECK: define void @fptr_test1(i8* %p, void (i8*)* nocapture readonly %f)
 define void @fptr_test1(i8* %p, void (i8*)* %f) {
   call void %f(i8* %p)
