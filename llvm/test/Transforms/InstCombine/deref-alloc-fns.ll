@@ -134,7 +134,7 @@ define noalias i8* @memalign_unknown_align(i64 %align) {
 
 define noalias i8* @malloc_constant_size2() {
 ; CHECK-LABEL: @malloc_constant_size2(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(80) i8* @malloc(i64 40)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) i8* @malloc(i64 40)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call noalias dereferenceable_or_null(80) i8* @malloc(i64 40)
