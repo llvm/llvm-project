@@ -410,16 +410,15 @@ private:
   void fromCOO(const std::vector<Element<V>> &elements, uint64_t lo,
                uint64_t hi, uint64_t d) {
     // Once dimensions are exhausted, insert the numerical values.
-    assert(d <= getRank());
+    assert(d <= getRank() && hi <= elements.size());
     if (d == getRank()) {
-      assert(lo < hi && hi <= elements.size());
+      assert(lo < hi);
       values.push_back(elements[lo].value);
       return;
     }
     // Visit all elements in this interval.
     uint64_t full = 0;
-    while (lo < hi) {
-      assert(lo < elements.size() && hi <= elements.size());
+    while (lo < hi) { // If `hi` is unchanged, then `lo < elements.size()`.
       // Find segment in interval with same index elements in this dimension.
       uint64_t i = elements[lo].indices[d];
       uint64_t seg = lo + 1;
