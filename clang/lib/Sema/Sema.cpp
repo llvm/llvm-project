@@ -2556,32 +2556,36 @@ bool Sema::tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
                                 bool (*IsPlausibleResult)(QualType)) {
   SourceLocation Loc = E.get()->getExprLoc();
   SourceRange Range = E.get()->getSourceRange();
-
-  QualType ZeroArgCallTy;
   UnresolvedSet<4> Overloads;
-  if (tryExprAsCall(*E.get(), ZeroArgCallTy, Overloads) &&
-      !ZeroArgCallTy.isNull() &&
-      (!IsPlausibleResult || IsPlausibleResult(ZeroArgCallTy))) {
-    // At this point, we know E is potentially callable with 0
-    // arguments and that it returns something of a reasonable type,
-    // so we can emit a fixit and carry on pretending that E was
-    // actually a CallExpr.
-    SourceLocation ParenInsertionLoc = getLocForEndOfToken(Range.getEnd());
-    bool IsMV = IsCPUDispatchCPUSpecificMultiVersion(E.get());
-    Diag(Loc, PD) << /*zero-arg*/ 1 << IsMV << Range
-                  << (IsCallableWithAppend(E.get())
-                          ? FixItHint::CreateInsertion(ParenInsertionLoc, "()")
-                          : FixItHint());
-    if (!IsMV)
-      notePlausibleOverloads(*this, Loc, Overloads, IsPlausibleResult);
 
-    // FIXME: Try this before emitting the fixit, and suppress diagnostics
-    // while doing so.
-    E = BuildCallExpr(nullptr, E.get(), Range.getEnd(), None,
-                      Range.getEnd().getLocWithOffset(1));
-    return true;
+  // If this is a SFINAE context, don't try anything that might trigger ADL
+  // prematurely.
+  if (!isSFINAEContext()) {
+    QualType ZeroArgCallTy;
+    if (tryExprAsCall(*E.get(), ZeroArgCallTy, Overloads) &&
+        !ZeroArgCallTy.isNull() &&
+        (!IsPlausibleResult || IsPlausibleResult(ZeroArgCallTy))) {
+      // At this point, we know E is potentially callable with 0
+      // arguments and that it returns something of a reasonable type,
+      // so we can emit a fixit and carry on pretending that E was
+      // actually a CallExpr.
+      SourceLocation ParenInsertionLoc = getLocForEndOfToken(Range.getEnd());
+      bool IsMV = IsCPUDispatchCPUSpecificMultiVersion(E.get());
+      Diag(Loc, PD) << /*zero-arg*/ 1 << IsMV << Range
+                    << (IsCallableWithAppend(E.get())
+                            ? FixItHint::CreateInsertion(ParenInsertionLoc,
+                                                         "()")
+                            : FixItHint());
+      if (!IsMV)
+        notePlausibleOverloads(*this, Loc, Overloads, IsPlausibleResult);
+
+      // FIXME: Try this before emitting the fixit, and suppress diagnostics
+      // while doing so.
+      E = BuildCallExpr(nullptr, E.get(), Range.getEnd(), None,
+                        Range.getEnd().getLocWithOffset(1));
+      return true;
+    }
   }
-
   if (!ForceComplain) return false;
 
   bool IsMV = IsCPUDispatchCPUSpecificMultiVersion(E.get());
