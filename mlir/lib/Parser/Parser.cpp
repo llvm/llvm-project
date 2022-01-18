@@ -476,10 +476,14 @@ private:
   /// their first reference, to allow checking for use of undefined values.
   DenseMap<Value, SMLoc> forwardRefPlaceholders;
 
-  /// A set of operations whose locations reference aliases that have yet to
-  /// be resolved.
-  SmallVector<std::pair<OpOrArgument, Token>, 8>
-      opsAndArgumentsWithDeferredLocs;
+  /// Deffered locations: when parsing `loc(#loc42)` we add an entry to this
+  /// map. After parsing the definition `#loc42 = ...` we'll patch back users
+  /// of this location.
+  struct DeferredLocInfo {
+    SMLoc loc;
+    StringRef identifier;
+  };
+  std::vector<DeferredLocInfo> deferredLocsReferences;
 
   /// The builder used when creating parsed operation instances.
   OpBuilder opBuilder;
@@ -537,23 +541,36 @@ ParseResult OperationParser::finalize() {
 
   // Resolve the locations of any deferred operations.
   auto &attributeAliases = state.symbols.attributeAliasDefinitions;
-  for (std::pair<OpOrArgument, Token> &it : opsAndArgumentsWithDeferredLocs) {
-    llvm::SMLoc tokLoc = it.second.getLoc();
-    StringRef identifier = it.second.getSpelling().drop_front();
-    Attribute attr = attributeAliases.lookup(identifier);
+  auto locID = TypeID::get<DeferredLocInfo *>();
+  auto resolveLocation = [&](auto &opOrArgument) -> LogicalResult {
+    auto fwdLoc = opOrArgument.getLoc().template dyn_cast<OpaqueLoc>();
+    if (!fwdLoc || fwdLoc.getUnderlyingTypeID() != locID)
+      return success();
+    auto locInfo = deferredLocsReferences[fwdLoc.getUnderlyingLocation()];
+    Attribute attr = attributeAliases.lookup(locInfo.identifier);
     if (!attr)
-      return emitError(tokLoc) << "operation location alias was never defined";
-
-    LocationAttr locAttr = attr.dyn_cast<LocationAttr>();
+      return emitError(locInfo.loc)
+             << "operation location alias was never defined";
+    auto locAttr = attr.dyn_cast<LocationAttr>();
     if (!locAttr)
-      return emitError(tokLoc)
+      return emitError(locInfo.loc)
              << "expected location, but found '" << attr << "'";
-    auto opOrArgument = it.first;
-    if (auto *op = opOrArgument.dyn_cast<Operation *>())
-      op->setLoc(locAttr);
-    else
-      opOrArgument.get<BlockArgument>().setLoc(locAttr);
-  }
+    opOrArgument.setLoc(locAttr);
+    return success();
+  };
+
+  auto walkRes = topLevelOp->walk([&](Operation *op) {
+    if (failed(resolveLocation(*op)))
+      return WalkResult::interrupt();
+    for (Region &region : op->getRegions())
+      for (Block &block : region.getBlocks())
+        for (BlockArgument arg : block.getArguments())
+          if (failed(resolveLocation(arg)))
+            return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  if (walkRes.wasInterrupted())
+    return failure();
 
   // Pop the top level name scope.
   if (failed(popSSANameScope()))
@@ -1731,7 +1748,12 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
                << "expected location, but found '" << attr << "'";
     } else {
       // Otherwise, remember this operation and resolve its location later.
-      opsAndArgumentsWithDeferredLocs.emplace_back(opOrArgument, tok);
+      // In the meantime, use a special OpaqueLoc as a marker.
+      directLoc = OpaqueLoc::get(deferredLocsReferences.size(),
+                                 TypeID::get<DeferredLocInfo *>(),
+                                 UnknownLoc::get(getContext()));
+      deferredLocsReferences.push_back(
+          DeferredLocInfo{tok.getLoc(), identifier});
     }
 
     // Otherwise, we parse the location directly.
@@ -1742,12 +1764,10 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (parseToken(Token::r_paren, "expected ')' in location"))
     return failure();
 
-  if (directLoc) {
-    if (auto *op = opOrArgument.dyn_cast<Operation *>())
-      op->setLoc(directLoc);
-    else
-      opOrArgument.get<BlockArgument>().setLoc(directLoc);
-  }
+  if (auto *op = opOrArgument.dyn_cast<Operation *>())
+    op->setLoc(directLoc);
+  else
+    opOrArgument.get<BlockArgument>().setLoc(directLoc);
   return success();
 }
 
