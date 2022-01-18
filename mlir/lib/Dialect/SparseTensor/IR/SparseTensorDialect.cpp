@@ -346,22 +346,3 @@ void SparseTensorDialect::initialize() {
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc"
-
-Attribute SparseTensorDialect::parseAttribute(DialectAsmParser &parser,
-                                              Type type) const {
-  StringRef attrTag;
-  if (failed(parser.parseKeyword(&attrTag)))
-    return Attribute();
-  Attribute attr;
-  auto parseResult = generatedAttributeParser(parser, attrTag, type, attr);
-  if (parseResult.hasValue())
-    return attr;
-  parser.emitError(parser.getNameLoc(), "unknown sparse tensor attribute");
-  return Attribute();
-}
-
-void SparseTensorDialect::printAttribute(Attribute attr,
-                                         DialectAsmPrinter &printer) const {
-  if (succeeded(generatedAttributePrinter(attr, printer)))
-    return;
-}

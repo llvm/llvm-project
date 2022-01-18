@@ -346,22 +346,3 @@ Type ValueType::parse(mlir::AsmParser &parser) {
   }
   return ValueType::get(ty);
 }
-
-/// Print a type registered to this dialect.
-void AsyncDialect::printType(Type type, DialectAsmPrinter &os) const {
-  if (failed(generatedTypePrinter(type, os)))
-    llvm_unreachable("unexpected 'async' type kind");
-}
-
-/// Parse a type registered to this dialect.
-Type AsyncDialect::parseType(DialectAsmParser &parser) const {
-  StringRef typeTag;
-  if (parser.parseKeyword(&typeTag))
-    return Type();
-  Type genType;
-  auto parseResult = generatedTypeParser(parser, typeTag, genType);
-  if (parseResult.hasValue())
-    return genType;
-  parser.emitError(parser.getNameLoc(), "unknown async type: ") << typeTag;
-  return {};
-}

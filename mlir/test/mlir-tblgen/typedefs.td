@@ -34,7 +34,6 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
-// DEF-NOT: TestDialect
     let name = "TestDialect";
     let cppNamespace = "::test";
 }
