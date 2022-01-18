@@ -1786,14 +1786,11 @@ struct DSEState {
       auto *CB = cast<CallBase>(DefUO);
       auto *InitC = getInitialValueOfAllocation(CB, &TLI,
                                                 StoredConstant->getType());
-      if (InitC && InitC == StoredConstant) {
-        auto *UnderlyingDef = cast<MemoryDef>(MSSA.getMemoryAccess(CB));
-        // If UnderlyingDef is the clobbering access of Def, no instructions
-        // between them can modify the memory location.
-        auto *ClobberDef =
-          MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def);
-        return UnderlyingDef == ClobberDef;
-      }
+      // If the clobbering access is LiveOnEntry, no instructions between them
+      // can modify the memory location.
+      if (InitC && InitC == StoredConstant)
+        return MSSA.isLiveOnEntryDef(
+            MSSA.getSkipSelfWalker()->getClobberingMemoryAccess(Def));
     }
 
     if (!Store)
