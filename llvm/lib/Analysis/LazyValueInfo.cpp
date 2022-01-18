@@ -828,7 +828,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
     // Is this a min specifically of our two inputs?  (Avoid the risk of
     // ValueTracking getting smarter looking back past our immediate inputs.)
     if (SelectPatternResult::isMinOrMax(SPR.Flavor) &&
-        LHS == SI->getTrueValue() && RHS == SI->getFalseValue()) {
+        ((LHS == SI->getTrueValue() && RHS == SI->getFalseValue()) ||
+         (RHS == SI->getTrueValue() && LHS == SI->getFalseValue()))) {
       ConstantRange ResultCR = [&]() {
         switch (SPR.Flavor) {
         default:

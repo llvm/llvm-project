@@ -665,8 +665,7 @@ define i1 @umin_rhs_overdefined_lhs_range(i32 %a, i32 %b) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], [[B]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[SEL]], 42
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume = icmp ult i32 %b, 42
   call void @llvm.assume(i1 %assume)
