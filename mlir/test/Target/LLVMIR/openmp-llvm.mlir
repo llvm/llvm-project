@@ -892,3 +892,19 @@ llvm.func @omp_sections_with_clauses() -> () {
   }
   llvm.return
 }
+
+// -----
+
+// Check that translation doesn't crash in presence of repeated successor
+// blocks with different arguments within OpenMP operations: LLVM cannot
+// represent this and a dummy block will be introduced for forwarding. The
+// introduction mechanism itself is tested elsewhere.
+// CHECK-LABEL: @repeated_successor
+llvm.func @repeated_successor(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: i1) {
+  omp.wsloop (%arg4) : i64 = (%arg0) to (%arg1) step (%arg2)  {
+    llvm.cond_br %arg3, ^bb1(%arg0 : i64), ^bb1(%arg1 : i64)
+  ^bb1(%0: i64):  // 2 preds: ^bb0, ^bb0
+    omp.yield
+  }
+  llvm.return
+}
