@@ -13,13 +13,14 @@ define dso_local void @PR35765() {
 ; CHECK-NEXT:    addb $-118, %cl
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    movzwl s2(%rip), %ecx
-; CHECK-NEXT:    notl %ecx
-; CHECK-NEXT:    orl x(%rip), %ecx
-; CHECK-NEXT:    orl $63488, %ecx # imm = 0xF800
-; CHECK-NEXT:    movzwl %cx, %ecx
-; CHECK-NEXT:    xorl %eax, %ecx
-; CHECK-NEXT:    movslq %ecx, %rax
+; CHECK-NEXT:    movzwl x(%rip), %ecx
+; CHECK-NEXT:    movzwl s2(%rip), %edx
+; CHECK-NEXT:    notl %edx
+; CHECK-NEXT:    orl $63488, %edx # imm = 0xF800
+; CHECK-NEXT:    movzwl %dx, %edx
+; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    xorl %eax, %edx
+; CHECK-NEXT:    movslq %edx, %rax
 ; CHECK-NEXT:    movq %rax, ll(%rip)
 ; CHECK-NEXT:    retq
 entry:
