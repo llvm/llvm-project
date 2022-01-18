@@ -1228,10 +1228,9 @@ static bool EvaluateHasIncludeCommon(Token &Tok,
     return false;
 
   // Search include directories.
-  const DirectoryLookup *CurDir;
   Optional<FileEntryRef> File =
       PP.LookupFile(FilenameLoc, Filename, isAngled, LookupFrom, LookupFromFile,
-                    CurDir, nullptr, nullptr, nullptr, nullptr, nullptr);
+                    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
   if (PPCallbacks *Callbacks = PP.getPPCallbacks()) {
     SrcMgr::CharacteristicKind FileType = SrcMgr::C_User;

@@ -831,12 +831,15 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
 /// search is needed. Microsoft mode will pass all \#including files.
 Optional<FileEntryRef> HeaderSearch::LookupFile(
     StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
-    const DirectoryLookup *FromDir, const DirectoryLookup *&CurDir,
+    const DirectoryLookup *FromDir, const DirectoryLookup **CurDirArg,
     ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
     SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
     Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
     bool *IsMapped, bool *IsFrameworkFound, bool SkipCache,
     bool BuildSystemModule) {
+  const DirectoryLookup *CurDirLocal = nullptr;
+  const DirectoryLookup *&CurDir = CurDirArg ? *CurDirArg : CurDirLocal;
+
   if (IsMapped)
     *IsMapped = false;
 
@@ -1083,7 +1086,7 @@ Optional<FileEntryRef> HeaderSearch::LookupFile(
       ScratchFilename += Filename;
 
       Optional<FileEntryRef> File = LookupFile(
-          ScratchFilename, IncludeLoc, /*isAngled=*/true, FromDir, CurDir,
+          ScratchFilename, IncludeLoc, /*isAngled=*/true, FromDir, &CurDir,
           Includers.front(), SearchPath, RelativePath, RequestingModule,
           SuggestedModule, IsMapped, /*IsFrameworkFound=*/nullptr);
 

@@ -408,7 +408,7 @@ public:
   /// found.
   Optional<FileEntryRef> LookupFile(
       StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
-      const DirectoryLookup *FromDir, const DirectoryLookup *&CurDir,
+      const DirectoryLookup *FromDir, const DirectoryLookup **CurDir,
       ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,

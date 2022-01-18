@@ -238,10 +238,9 @@ TEST_F(HeaderSearchTest, HeaderMapFrameworkLookup) {
       /*User=*/None, /*Group=*/None, llvm::sys::fs::file_type::regular_file);
 
   bool IsMapped = false;
-  const DirectoryLookup *CurDir = nullptr;
   auto FoundFile = Search.LookupFile(
       "Foo/Foo.h", SourceLocation(), /*isAngled=*/true, /*FromDir=*/nullptr,
-      CurDir, /*Includers=*/{}, /*SearchPath=*/nullptr,
+      /*CurDir=*/nullptr, /*Includers=*/{}, /*SearchPath=*/nullptr,
       /*RelativePath=*/nullptr, /*RequestingModule=*/nullptr,
       /*SuggestedModule=*/nullptr, &IsMapped,
       /*IsFrameworkFound=*/nullptr);
