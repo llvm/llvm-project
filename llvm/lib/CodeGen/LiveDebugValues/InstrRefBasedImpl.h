@@ -1082,7 +1082,9 @@ template <> struct DenseMapInfo<ValueIDNum> {
     return ValueIDNum::TombstoneValue;
   }
 
-  static unsigned getHashValue(const ValueIDNum &Val) { return Val.asU64(); }
+  static unsigned getHashValue(const ValueIDNum &Val) {
+    return hash_value(Val.asU64());
+  }
 
   static bool isEqual(const ValueIDNum &A, const ValueIDNum &B) {
     return A == B;
