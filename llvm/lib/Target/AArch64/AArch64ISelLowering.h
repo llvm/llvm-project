@@ -1138,14 +1138,6 @@ private:
 
   bool isConstantUnsignedBitfieldExtractLegal(unsigned Opc, LLT Ty1,
                                               LLT Ty2) const override;
-
-  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT, SDValue V) const override {
-    if (!V || SrcVT.getScalarType() == MVT::i1)
-      return false;
-    if (ConstantSDNode *C = isConstOrConstSplat(V))
-      return C->getAPIntValue().isNegative();
-    return false;
-  }
 };
 
 namespace AArch64 {
