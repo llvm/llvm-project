@@ -3552,9 +3552,11 @@ void __kmp_reap_task_teams(void) {
 void __kmp_wait_to_unref_task_teams(void) {
   kmp_info_t *thread;
   kmp_uint32 spins;
+  kmp_uint64 time;
   int done;
 
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
 
   for (;;) {
     done = TRUE;
@@ -3604,7 +3606,7 @@ void __kmp_wait_to_unref_task_teams(void) {
     }
 
     // If oversubscribed or have waited a bit, yield.
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
   }
 }
 
