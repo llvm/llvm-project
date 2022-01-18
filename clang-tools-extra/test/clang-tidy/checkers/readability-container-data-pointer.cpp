@@ -109,3 +109,38 @@ void m(const std::vector<T> &v) {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
   // CHECK-FIXES: {{^  }}return v.data();{{$}}
 }
+
+template <typename T>
+struct container_without_data {
+  using size_type = size_t;
+  T &operator[](size_type);
+  const T &operator[](size_type) const;
+};
+
+template <typename T>
+const T *n(const container_without_data<T> &c) {
+  // c has no "data" member function, so there should not be a warning here:
+  return &c[0];
+}
+
+const int *o(const std::vector<std::vector<std::vector<int>>> &v, const size_t idx1, const size_t idx2) {
+  return &v[idx1][idx2][0];
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES: {{^  }}return v[idx1][idx2].data();{{$}}
+}
+
+std::vector<int> &select(std::vector<int> &u, std::vector<int> &v) {
+  return v;
+}
+
+int *p(std::vector<int> &v1, std::vector<int> &v2) {
+  return &select(*&v1, v2)[0];
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES: {{^  }}return select(*&v1, v2).data();{{$}}
+}
+
+int *q(std::vector<int> ***v) {
+  return &(***v)[0];
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES: {{^  }}return (**v)->data();{{$}}
+}

@@ -16,6 +16,13 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace readability {
+
+constexpr llvm::StringLiteral ContainerExprName = "container-expr";
+constexpr llvm::StringLiteral DerefContainerExprName = "deref-container-expr";
+constexpr llvm::StringLiteral AddrOfContainerExprName =
+    "addr-of-container-expr";
+constexpr llvm::StringLiteral AddressOfName = "address-of";
+
 ContainerDataPointerCheck::ContainerDataPointerCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
@@ -38,69 +45,63 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
   const auto Container =
       qualType(anyOf(NonTemplateContainerType, TemplateContainerType));
 
+  const auto ContainerExpr = anyOf(
+      unaryOperator(
+          hasOperatorName("*"),
+          hasUnaryOperand(
+              expr(hasType(pointsTo(Container))).bind(DerefContainerExprName)))
+          .bind(ContainerExprName),
+      unaryOperator(hasOperatorName("&"),
+                    hasUnaryOperand(expr(anyOf(hasType(Container),
+                                               hasType(references(Container))))
+                                        .bind(AddrOfContainerExprName)))
+          .bind(ContainerExprName),
+      expr(anyOf(hasType(Container), hasType(pointsTo(Container)),
+                 hasType(references(Container))))
+          .bind(ContainerExprName));
+
+  const auto Zero = integerLiteral(equals(0));
+
+  const auto SubscriptOperator = callee(cxxMethodDecl(hasName("operator[]")));
+
   Finder->addMatcher(
       unaryOperator(
           unless(isExpansionInSystemHeader()), hasOperatorName("&"),
-          hasUnaryOperand(anyOf(
-              ignoringParenImpCasts(
-                  cxxOperatorCallExpr(
-                      callee(cxxMethodDecl(hasName("operator[]"))
-                                 .bind("operator[]")),
-                      argumentCountIs(2),
-                      hasArgument(
-                          0,
-                          anyOf(ignoringParenImpCasts(
-                                    declRefExpr(
-                                        to(varDecl(anyOf(
-                                            hasType(Container),
-                                            hasType(references(Container))))))
-                                        .bind("var")),
-                                ignoringParenImpCasts(hasDescendant(
-                                    declRefExpr(
-                                        to(varDecl(anyOf(
-                                            hasType(Container),
-                                            hasType(pointsTo(Container)),
-                                            hasType(references(Container))))))
-                                        .bind("var"))))),
-                      hasArgument(1,
-                                  ignoringParenImpCasts(
-                                      integerLiteral(equals(0)).bind("zero"))))
-                      .bind("operator-call")),
-              ignoringParenImpCasts(
-                  cxxMemberCallExpr(
-                      hasDescendant(
-                          declRefExpr(to(varDecl(anyOf(
-                                          hasType(Container),
-                                          hasType(references(Container))))))
-                              .bind("var")),
-                      argumentCountIs(1),
-                      hasArgument(0,
-                                  ignoringParenImpCasts(
-                                      integerLiteral(equals(0)).bind("zero"))))
-                      .bind("member-call")),
-              ignoringParenImpCasts(
-                  arraySubscriptExpr(
-                      hasLHS(ignoringParenImpCasts(
-                          declRefExpr(to(varDecl(anyOf(
-                                          hasType(Container),
-                                          hasType(references(Container))))))
-                              .bind("var"))),
-                      hasRHS(ignoringParenImpCasts(
-                          integerLiteral(equals(0)).bind("zero"))))
-                      .bind("array-subscript")))))
-          .bind("address-of"),
+          hasUnaryOperand(expr(
+              anyOf(cxxOperatorCallExpr(SubscriptOperator, argumentCountIs(2),
+                                        hasArgument(0, ContainerExpr),
+                                        hasArgument(1, Zero)),
+                    cxxMemberCallExpr(SubscriptOperator, on(ContainerExpr),
+                                      argumentCountIs(1), hasArgument(0, Zero)),
+                    arraySubscriptExpr(hasLHS(ContainerExpr), hasRHS(Zero))))))
+          .bind(AddressOfName),
       this);
 }
 
 void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *UO = Result.Nodes.getNodeAs<UnaryOperator>("address-of");
-  const auto *DRE = Result.Nodes.getNodeAs<DeclRefExpr>("var");
+  const auto *UO = Result.Nodes.getNodeAs<UnaryOperator>(AddressOfName);
+  const auto *CE = Result.Nodes.getNodeAs<Expr>(ContainerExprName);
+  const auto *DCE = Result.Nodes.getNodeAs<Expr>(DerefContainerExprName);
+  const auto *ACE = Result.Nodes.getNodeAs<Expr>(AddrOfContainerExprName);
 
-  std::string ReplacementText;
-  ReplacementText = std::string(Lexer::getSourceText(
-      CharSourceRange::getTokenRange(DRE->getSourceRange()),
-      *Result.SourceManager, getLangOpts()));
-  if (DRE->getType()->isPointerType())
+  if (!UO || !CE)
+    return;
+
+  if (DCE && !CE->getType()->isPointerType())
+    CE = DCE;
+  else if (ACE)
+    CE = ACE;
+
+  SourceRange SrcRange = CE->getSourceRange();
+
+  std::string ReplacementText{
+      Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
+                           *Result.SourceManager, getLangOpts())};
+
+  if (!isa<DeclRefExpr, ArraySubscriptExpr, CXXOperatorCallExpr, CallExpr>(CE))
+    ReplacementText = "(" + ReplacementText + ")";
+
+  if (CE->getType()->isPointerType())
     ReplacementText += "->data()";
   else
     ReplacementText += ".data()";
