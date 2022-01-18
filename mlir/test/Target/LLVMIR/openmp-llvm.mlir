@@ -368,7 +368,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
   %1 = llvm.mlir.constant(10 : index) : i64
   %2 = llvm.mlir.constant(1 : index) : i64
   omp.parallel {
-    "omp.wsloop"(%1, %0, %2) ( {
+    "omp.wsloop"(%1, %0, %2) ({
     ^bb0(%arg1: i64):
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right functions are called.
@@ -393,7 +393,7 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
   %1 = llvm.mlir.constant(10 : index) : i64
   %2 = llvm.mlir.constant(1 : index) : i64
   // CHECK: store i64 31, i64* %{{.*}}upperbound
-  "omp.wsloop"(%1, %0, %2) ( {
+  "omp.wsloop"(%1, %0, %2) ({
   ^bb0(%arg1: i64):
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
@@ -411,7 +411,7 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
   %1 = llvm.mlir.constant(10 : index) : i64
   %2 = llvm.mlir.constant(1 : index) : i64
   // CHECK: store i64 32, i64* %{{.*}}upperbound
-  "omp.wsloop"(%1, %0, %2) ( {
+  "omp.wsloop"(%1, %0, %2) ({
   ^bb0(%arg1: i64):
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>

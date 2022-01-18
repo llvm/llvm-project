@@ -1578,6 +1578,7 @@ static void print(OpAsmPrinter &p, AffineForOp op) {
     printBlockTerminators = true;
   }
 
+  p << ' ';
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false, printBlockTerminators);
   p.printOptionalAttrDict(op->getAttrs(),
@@ -2142,6 +2143,7 @@ static void print(OpAsmPrinter &p, AffineIfOp op) {
   printDimAndSymbolList(op.operand_begin(), op.operand_end(),
                         conditionAttr.getValue().getNumDims(), p);
   p.printOptionalArrowTypeList(op.getResultTypes());
+  p << ' ';
   p.printRegion(op.thenRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.getNumResults());
@@ -2149,7 +2151,7 @@ static void print(OpAsmPrinter &p, AffineIfOp op) {
   // Print the 'else' regions if it has any blocks.
   auto &elseRegion = op.elseRegion();
   if (!elseRegion.empty()) {
-    p << " else";
+    p << " else ";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/op.getNumResults());
@@ -3157,6 +3159,7 @@ static void print(OpAsmPrinter &p, AffineParallelOp op) {
     p << ") -> (" << op.getResultTypes() << ")";
   }
 
+  p << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.getNumResults());
   p.printOptionalAttrDict(

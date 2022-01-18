@@ -156,7 +156,7 @@ func @generic_atomic_rmw_wrong_arg_type(%I: memref<10xf32>, %i : index) {
 
 func @generic_atomic_rmw_result_type_mismatch(%I: memref<10xf32>, %i : index) {
  // expected-error@+1 {{failed to verify that result type matches element type of memref}}
- %0 = "std.generic_atomic_rmw"(%I, %i) ( {
+ %0 = "std.generic_atomic_rmw"(%I, %i) ({
     ^bb0(%old_value: f32):
       %c1 = arith.constant 1.0 : f32
       atomic_yield %c1 : f32

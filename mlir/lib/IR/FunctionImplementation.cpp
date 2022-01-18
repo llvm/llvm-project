@@ -371,7 +371,9 @@ void mlir::function_like_impl::printFunctionLikeOp(OpAsmPrinter &p,
                           {visibilityAttrName});
   // Print the body if this is not an external function.
   Region &body = op->getRegion(0);
-  if (!body.empty())
+  if (!body.empty()) {
+    p << ' ';
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
+  }
 }

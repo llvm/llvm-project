@@ -650,8 +650,10 @@ static void print(OpAsmPrinter &p, GenericOp op) {
   }
 
   // Print region.
-  if (!op.region().empty())
+  if (!op.region().empty()) {
+    p << ' ';
     p.printRegion(op.region());
+  }
 
   // Print results.
   printNamedStructuredOpResults(p, op.result_tensors().getTypes());
@@ -1805,11 +1807,12 @@ static void print(OpAsmPrinter &p, TiledLoopOp op) {
         return attr.cast<StringAttr>().getValue() !=
                getParallelIteratorTypeName();
       }))
-    p << " iterators" << op.iterator_types() << "";
+    p << " iterators" << op.iterator_types();
 
   if (op.distribution_types().hasValue())
-    p << " distribution" << op.distribution_types().getValue() << "";
+    p << " distribution" << op.distribution_types().getValue();
 
+  p << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
       op->getAttrs(), /*elidedAttrs=*/{TiledLoopOp::getOperandSegmentSizeAttr(),

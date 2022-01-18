@@ -122,7 +122,7 @@ static ParseResult parseForEachOp(OpAsmParser &parser, OperationState &result) {
 
 static void print(OpAsmPrinter &p, ForEachOp op) {
   BlockArgument arg = op.getLoopVariable();
-  p << ' ' << arg << " : " << arg.getType() << " in " << op.values();
+  p << ' ' << arg << " : " << arg.getType() << " in " << op.values() << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(op->getAttrs());
   p << " -> ";

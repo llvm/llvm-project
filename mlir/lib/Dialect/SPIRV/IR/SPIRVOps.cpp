@@ -2004,9 +2004,11 @@ static void print(spirv::FuncOp fnOp, OpAsmPrinter &printer) {
 
   // Print the body if this is not an external function.
   Region &body = fnOp.body();
-  if (!body.empty())
+  if (!body.empty()) {
+    printer << ' ';
     printer.printRegion(body, /*printEntryBlockArgs=*/false,
                         /*printBlockTerminators=*/true);
+  }
 }
 
 LogicalResult spirv::FuncOp::verifyType() {
@@ -2485,6 +2487,7 @@ static void print(spirv::LoopOp loopOp, OpAsmPrinter &printer) {
   auto control = loopOp.loop_control();
   if (control != spirv::LoopControl::None)
     printer << " control(" << spirv::stringifyLoopControl(control) << ")";
+  printer << ' ';
   printer.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);
 }
@@ -2726,6 +2729,7 @@ static void print(spirv::ModuleOp moduleOp, OpAsmPrinter &printer) {
   }
 
   printer.printOptionalAttrDictWithKeyword(moduleOp->getAttrs(), elidedAttrs);
+  printer << ' ';
   printer.printRegion(moduleOp.getRegion());
 }
 
@@ -2875,6 +2879,7 @@ static void print(spirv::SelectionOp selectionOp, OpAsmPrinter &printer) {
   auto control = selectionOp.selection_control();
   if (control != spirv::SelectionControl::None)
     printer << " control(" << spirv::stringifySelectionControl(control) << ")";
+  printer << ' ';
   printer.printRegion(op->getRegion(0), /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);
 }

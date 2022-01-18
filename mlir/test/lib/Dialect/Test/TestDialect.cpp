@@ -603,6 +603,7 @@ static void print(OpAsmPrinter &p, IsolatedRegionOp op) {
   p << "test.isolated_region ";
   p.printOperand(op.getOperand());
   p.shadowRegionArgs(op.getRegion(), op.getOperand());
+  p << ' ';
   p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
 }
 

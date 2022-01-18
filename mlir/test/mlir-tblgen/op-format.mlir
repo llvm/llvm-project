@@ -161,7 +161,7 @@ test.format_multiple_variadic_operands (%i64, %i64, %i64), (%i64, %i32 : i64, i3
 // Format successors
 //===----------------------------------------------------------------------===//
 
-"foo.successor_test_region"() ( {
+"foo.successor_test_region"() ({
   ^bb0:
     // CHECK: test.format_successor_a_op ^bb1 {attr}
     test.format_successor_a_op ^bb1 {attr}

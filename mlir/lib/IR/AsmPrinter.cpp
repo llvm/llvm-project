@@ -2716,7 +2716,7 @@ void OperationPrinter::printSuccessorAndUseList(Block *successor,
 void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
                                    bool printBlockTerminators,
                                    bool printEmptyBlock) {
-  os << " {" << newLine;
+  os << "{" << newLine;
   if (!region.empty()) {
     auto restoreDefaultDialect =
         llvm::make_scope_exit([&]() { defaultDialectStack.pop_back(); });

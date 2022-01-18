@@ -864,7 +864,7 @@ func @verbose_if(%N: index) {
 // CHECK-LABEL: func @terminator_with_regions
 func @terminator_with_regions() {
   // Combine successors and regions in the same operation.
-  // CHECK: "region"()[^bb1] ( {
+  // CHECK: "region"()[^bb1] ({
   // CHECK: }) : () -> ()
   "region"()[^bb2] ({}) : () -> ()
 ^bb2:
@@ -1132,7 +1132,7 @@ func @special_float_values_in_tensors() {
 
 // CHECK-LABEL: func @op_with_region_args
 func @op_with_region_args() {
-  // CHECK: "test.polyfor"() ( {
+  // CHECK: "test.polyfor"() ({
   // CHECK-NEXT: ^bb{{.*}}(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
   test.polyfor %i, %j, %k {
     "foo"() : () -> ()
@@ -1399,7 +1399,7 @@ test.graph_region {
 // CHECK: test.graph_region {
 test.graph_region {
 // CHECK:   [[VAL1:%.*]] = "op1"([[VAL3:%.*]]) : (i32) -> i32
-// CHECK:   [[VAL2:%.*]] = "test.ssacfg_region"([[VAL1]], [[VAL2]], [[VAL3]], [[VAL4:%.*]]) ( {
+// CHECK:   [[VAL2:%.*]] = "test.ssacfg_region"([[VAL1]], [[VAL2]], [[VAL3]], [[VAL4:%.*]]) ({
 // CHECK:     [[VAL5:%.*]] = "op2"([[VAL1]], [[VAL2]], [[VAL3]], [[VAL4]]) : (i32, i32, i32, i32) -> i32
 // CHECK:   }) : (i32, i32, i32, i32) -> i32
 // CHECK:   [[VAL3]] = "op2"([[VAL1]], [[VAL4]]) : (i32, i32) -> i32
@@ -1413,10 +1413,10 @@ test.graph_region {
   %4 = "op3"(%1) : (i32) -> (i32)
 }
 
-// CHECK: "unregistered_func_might_have_graph_region"() ( {
+// CHECK: "unregistered_func_might_have_graph_region"() ({
 // CHECK: [[VAL1:%.*]] = "foo"([[VAL1]], [[VAL2:%.*]]) : (i64, i64) -> i64
 // CHECK: [[VAL2]] = "bar"([[VAL1]])
-"unregistered_func_might_have_graph_region"() ( {
+"unregistered_func_might_have_graph_region"() ({
   %1 = "foo"(%1, %2) : (i64, i64) -> i64
   %2 = "bar"(%1) : (i64) -> i64
   "unregistered_terminator"() : () -> ()

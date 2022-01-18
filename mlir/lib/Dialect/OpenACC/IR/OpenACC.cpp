@@ -469,6 +469,7 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
   printOperandList(op.gangFirstPrivateOperands(),
                    ParallelOp::getFirstPrivateKeyword(), printer);
 
+  printer << ' ';
   printer.printRegion(op.region(),
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);
@@ -649,6 +650,7 @@ static void print(OpAsmPrinter &printer, LoopOp &op) {
   if (op.getNumResults() > 0)
     printer << " -> (" << op.getResultTypes() << ")";
 
+  printer << ' ';
   printer.printRegion(op.region(),
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/true);

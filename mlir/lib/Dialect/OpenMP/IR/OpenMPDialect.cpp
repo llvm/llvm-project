@@ -189,6 +189,7 @@ static void printParallelOp(OpAsmPrinter &p, ParallelOp op) {
   if (auto bind = op.proc_bind_val())
     p << "proc_bind(" << bind << ") ";
 
+  p << ' ';
   p.printRegion(op.getRegion());
 }
 
@@ -960,8 +961,9 @@ static void printSectionsOp(OpAsmPrinter &p, SectionsOp op) {
     printAllocateAndAllocator(p, op.allocate_vars(), op.allocators_vars());
 
   if (op.nowait())
-    p << "nowait ";
+    p << "nowait";
 
+  p << ' ';
   p.printRegion(op.region());
 }
 
@@ -1094,6 +1096,7 @@ static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
   if (!op.reduction_vars().empty())
     printReductionVarList(p, op.reductions(), op.reduction_vars());
 
+  p << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
 }
 

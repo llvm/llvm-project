@@ -1198,9 +1198,9 @@ func @assumingOp(
 
 func @noRegionBranchOpInterface() {
 // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
-  %0 = "test.bar"() ( {
+  %0 = "test.bar"() ({
 // expected-error@+1 {{All operations with attached regions need to implement the RegionBranchOpInterface.}}
-    %1 = "test.bar"() ( {
+    %1 = "test.bar"() ({
       "test.yield"() : () -> ()
     }) : () -> (i32)
     "test.yield"() : () -> ()
