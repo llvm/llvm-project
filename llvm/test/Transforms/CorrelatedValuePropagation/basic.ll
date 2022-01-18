@@ -1644,6 +1644,31 @@ exit:
   ret i1 false
 }
 
+define void @select_assume(i32 %a, i32 %b, i1 %c, i1* %p) {
+; CHECK-LABEL: @select_assume(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 [[A:%.*]], 10
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C1]])
+; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[B:%.*]], 20
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C2]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    [[C3:%.*]] = icmp ult i32 [[S]], 19
+; CHECK-NEXT:    store i1 [[C3]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp ult i32 [[S]], 20
+; CHECK-NEXT:    store i1 [[C4]], i1* [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %c1 = icmp ult i32 %a, 10
+  call void @llvm.assume(i1 %c1)
+  %c2 = icmp ult i32 %b, 20
+  call void @llvm.assume(i1 %c2)
+  %s = select i1 %c, i32 %a, i32 %b
+  %c3 = icmp ult i32 %s, 19
+  store i1 %c3, i1* %p
+  %c4 = icmp ult i32 %s, 20
+  store i1 %c4, i1* %p
+  ret void
+}
+
 
 declare i32 @llvm.uadd.sat.i32(i32, i32)
 declare i32 @llvm.usub.sat.i32(i32, i32)
