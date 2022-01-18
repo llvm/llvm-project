@@ -428,20 +428,22 @@ template <> struct MDNodeKeyImpl<DIStringType> {
   MDString *Name;
   Metadata *StringLength;
   Metadata *StringLengthExp;
+  Metadata *StringLocationExp;
   uint64_t SizeInBits;
   uint32_t AlignInBits;
   unsigned Encoding;
 
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *StringLength,
-                Metadata *StringLengthExp, uint64_t SizeInBits,
-                uint32_t AlignInBits, unsigned Encoding)
+                Metadata *StringLengthExp, Metadata *StringLocationExp,
+                uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding)
       : Tag(Tag), Name(Name), StringLength(StringLength),
-        StringLengthExp(StringLengthExp), SizeInBits(SizeInBits),
-        AlignInBits(AlignInBits), Encoding(Encoding) {}
+        StringLengthExp(StringLengthExp), StringLocationExp(StringLocationExp),
+        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding) {}
   MDNodeKeyImpl(const DIStringType *N)
       : Tag(N->getTag()), Name(N->getRawName()),
         StringLength(N->getRawStringLength()),
         StringLengthExp(N->getRawStringLengthExp()),
+        StringLocationExp(N->getRawStringLocationExp()),
         SizeInBits(N->getSizeInBits()), AlignInBits(N->getAlignInBits()),
         Encoding(N->getEncoding()) {}
 

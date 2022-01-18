@@ -742,6 +742,16 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
     addUInt(Buffer, dwarf::DW_AT_byte_size, None, Size);
   }
 
+  if (DIExpression *Expr = STy->getStringLocationExp()) {
+    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+    DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
+    // This is to describe the memory location of the
+    // string, so lock it down as such.
+    DwarfExpr.setMemoryLocationKind();
+    DwarfExpr.addExpression(Expr);
+    addBlock(Buffer, dwarf::DW_AT_data_location, DwarfExpr.finalize());
+  }
+
   if (STy->getEncoding()) {
     // For eventual Unicode support.
     addUInt(Buffer, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,

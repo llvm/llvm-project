@@ -852,42 +852,48 @@ class DIStringType : public DIType {
 
   static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
                                StringRef Name, Metadata *StringLength,
-                               Metadata *StrLenExp, uint64_t SizeInBits,
-                               uint32_t AlignInBits, unsigned Encoding,
-                               StorageType Storage, bool ShouldCreate = true) {
+                               Metadata *StrLenExp, Metadata *StrLocationExp,
+                               uint64_t SizeInBits, uint32_t AlignInBits,
+                               unsigned Encoding, StorageType Storage,
+                               bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
-                   StringLength, StrLenExp, SizeInBits, AlignInBits, Encoding,
-                   Storage, ShouldCreate);
+                   StringLength, StrLenExp, StrLocationExp, SizeInBits,
+                   AlignInBits, Encoding, Storage, ShouldCreate);
   }
   static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
                                MDString *Name, Metadata *StringLength,
-                               Metadata *StrLenExp, uint64_t SizeInBits,
-                               uint32_t AlignInBits, unsigned Encoding,
-                               StorageType Storage, bool ShouldCreate = true);
+                               Metadata *StrLenExp, Metadata *StrLocationExp,
+                               uint64_t SizeInBits, uint32_t AlignInBits,
+                               unsigned Encoding, StorageType Storage,
+                               bool ShouldCreate = true);
 
   TempDIStringType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
                         getRawStringLength(), getRawStringLengthExp(),
-                        getSizeInBits(), getAlignInBits(), getEncoding());
+                        getRawStringLocationExp(), getSizeInBits(),
+                        getAlignInBits(), getEncoding());
   }
 
 public:
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
                      uint32_t AlignInBits),
-                    (Tag, Name, nullptr, nullptr, SizeInBits, AlignInBits, 0))
+                    (Tag, Name, nullptr, nullptr, nullptr, SizeInBits,
+                     AlignInBits, 0))
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, MDString *Name, Metadata *StringLength,
-                     Metadata *StringLengthExp, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding),
-                    (Tag, Name, StringLength, StringLengthExp, SizeInBits,
-                     AlignInBits, Encoding))
+                     Metadata *StringLengthExp, Metadata *StringLocationExp,
+                     uint64_t SizeInBits, uint32_t AlignInBits,
+                     unsigned Encoding),
+                    (Tag, Name, StringLength, StringLengthExp,
+                     StringLocationExp, SizeInBits, AlignInBits, Encoding))
   DEFINE_MDNODE_GET(DIStringType,
                     (unsigned Tag, StringRef Name, Metadata *StringLength,
-                     Metadata *StringLengthExp, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding),
-                    (Tag, Name, StringLength, StringLengthExp, SizeInBits,
-                     AlignInBits, Encoding))
+                     Metadata *StringLengthExp, Metadata *StringLocationExp,
+                     uint64_t SizeInBits, uint32_t AlignInBits,
+                     unsigned Encoding),
+                    (Tag, Name, StringLength, StringLengthExp,
+                     StringLocationExp, SizeInBits, AlignInBits, Encoding))
 
   TempDIStringType clone() const { return cloneImpl(); }
 
@@ -903,11 +909,17 @@ public:
     return cast_or_null<DIExpression>(getRawStringLengthExp());
   }
 
+  DIExpression *getStringLocationExp() const {
+    return cast_or_null<DIExpression>(getRawStringLocationExp());
+  }
+
   unsigned getEncoding() const { return Encoding; }
 
   Metadata *getRawStringLength() const { return getOperand(3); }
 
   Metadata *getRawStringLengthExp() const { return getOperand(4); }
+
+  Metadata *getRawStringLocationExp() const { return getOperand(5); }
 };
 
 /// Derived types.

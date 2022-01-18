@@ -1986,6 +1986,8 @@ static void writeDIStringType(raw_ostream &Out, const DIStringType *N,
   Printer.printString("name", N->getName());
   Printer.printMetadata("stringLength", N->getRawStringLength());
   Printer.printMetadata("stringLengthExpression", N->getRawStringLengthExp());
+  Printer.printMetadata("stringLocationExpression",
+                        N->getRawStringLocationExp());
   Printer.printInt("size", N->getSizeInBits());
   Printer.printInt("align", N->getAlignInBits());
   Printer.printDwarfEnum("encoding", N->getEncoding(),
