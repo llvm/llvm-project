@@ -2806,31 +2806,28 @@ void InstrRefBasedLDV::emitLocations(
     }
   }
 
-  // We have to insert DBG_VALUEs in a consistent order, otherwise they appeaer
-  // in DWARF in different orders. Use the order that they appear when walking
-  // through each block / each instruction, stored in AllVarsNumbering.
-  auto OrderDbgValues = [&](const MachineInstr *A,
-                            const MachineInstr *B) -> bool {
-    DebugVariable VarA(A->getDebugVariable(), A->getDebugExpression(),
-                       A->getDebugLoc()->getInlinedAt());
-    DebugVariable VarB(B->getDebugVariable(), B->getDebugExpression(),
-                       B->getDebugLoc()->getInlinedAt());
-    return AllVarsNumbering.find(VarA)->second <
-           AllVarsNumbering.find(VarB)->second;
-  };
-
   // Go through all the transfers recorded in the TransferTracker -- this is
   // both the live-ins to a block, and any movements of values that happen
   // in the middle.
-  for (auto &P : TTracker->Transfers) {
-    // Sort them according to appearance order.
-    llvm::sort(P.Insts, OrderDbgValues);
+  for (const auto &P : TTracker->Transfers) {
+    // We have to insert DBG_VALUEs in a consistent order, otherwise they
+    // appear in DWARF in different orders. Use the order that they appear
+    // when walking through each block / each instruction, stored in
+    // AllVarsNumbering.
+    SmallVector<std::pair<unsigned, MachineInstr *>> Insts;
+    for (MachineInstr *MI : P.Insts) {
+      DebugVariable Var(MI->getDebugVariable(), MI->getDebugExpression(),
+                        MI->getDebugLoc()->getInlinedAt());
+      Insts.emplace_back(AllVarsNumbering.find(Var)->second, MI);
+    }
+    llvm::sort(Insts,
+               [](const auto &A, const auto &B) { return A.first < B.first; });
+
     // Insert either before or after the designated point...
     if (P.MBB) {
       MachineBasicBlock &MBB = *P.MBB;
-      for (auto *MI : P.Insts) {
-        MBB.insert(P.Pos, MI);
-      }
+      for (const auto &Pair : Insts)
+        MBB.insert(P.Pos, Pair.second);
     } else {
       // Terminators, like tail calls, can clobber things. Don't try and place
       // transfers after them.
@@ -2838,9 +2835,8 @@ void InstrRefBasedLDV::emitLocations(
         continue;
 
       MachineBasicBlock &MBB = *P.Pos->getParent();
-      for (auto *MI : P.Insts) {
-        MBB.insertAfterBundle(P.Pos, MI);
-      }
+      for (const auto &Pair : Insts)
+        MBB.insertAfterBundle(P.Pos, Pair.second);
     }
   }
 }
