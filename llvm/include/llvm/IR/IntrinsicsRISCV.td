@@ -120,12 +120,14 @@ let TargetPrefix = "riscv" in {
 //===----------------------------------------------------------------------===//
 // Vectors
 
+// The intrinsic does not have any operand that must be extended.
+defvar NoSplatOperand = 0xF;
+
 class RISCVVIntrinsic {
   // These intrinsics may accept illegal integer values in their llvm_any_ty
-  // operand, so they have to be extended. If set to zero then the intrinsic
-  // does not have any operand that must be extended.
+  // operand, so they have to be extended.
   Intrinsic IntrinsicID = !cast<Intrinsic>(NAME);
-  bits<4> SplatOperand = 0;
+  bits<4> SplatOperand = NoSplatOperand;
 }
 
 let TargetPrefix = "riscv" in {
@@ -344,7 +346,7 @@ let TargetPrefix = "riscv" in {
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_any_ty, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   // For destination vector type is the same as first source vector (with mask).
   // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl, ta)
@@ -354,7 +356,7 @@ let TargetPrefix = "riscv" in {
                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
                     LLVMMatchType<2>],
                    [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 3;
+    let SplatOperand = 2;
   }
   // For destination vector type is the same as first source vector. The
   // second source operand must match the destination type or be an XLen scalar.
@@ -378,7 +380,7 @@ let TargetPrefix = "riscv" in {
         : Intrinsic<[llvm_anyvector_ty],
                     [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   // For destination vector type is NOT the same as first source vector (with mask).
   // Input: (maskedoff, vector_in, vector_in/scalar_in, mask, vl, ta)
@@ -388,7 +390,7 @@ let TargetPrefix = "riscv" in {
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
                      LLVMMatchType<3>],
                     [ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 3;
+    let SplatOperand = 2;
   }
   // For destination vector type is NOT the same as first source vector. The
   // second source operand must match the destination type or be an XLen scalar.
@@ -414,7 +416,7 @@ let TargetPrefix = "riscv" in {
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                      llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   // For binary operations with mask type output and V0 as input.
   // Output: (mask type output)
@@ -425,7 +427,7 @@ let TargetPrefix = "riscv" in {
                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                     llvm_anyint_ty],
                    [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   // For binary operations with mask type output.
   // Output: (mask type output)
@@ -434,7 +436,7 @@ let TargetPrefix = "riscv" in {
         : Intrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                     [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   // For binary operations with mask type output without mask.
   // Output: (mask type output)
@@ -443,7 +445,7 @@ let TargetPrefix = "riscv" in {
         : Intrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                     [llvm_anyvector_ty, llvm_any_ty, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   // For binary operations with mask type output with mask.
   // Output: (mask type output)
@@ -454,7 +456,7 @@ let TargetPrefix = "riscv" in {
                      llvm_anyvector_ty, llvm_any_ty,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 3;
+    let SplatOperand = 2;
   }
   // For FP classify operations.
   // Output: (bit mask type output)
@@ -478,7 +480,7 @@ let TargetPrefix = "riscv" in {
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_any_ty, llvm_anyint_ty],
                     [IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   // For Saturating binary operations with mask.
   // The destination vector type is the same as first source vector.
@@ -489,7 +491,7 @@ let TargetPrefix = "riscv" in {
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
                      LLVMMatchType<2>],
                     [ImmArg<ArgIndex<5>>, IntrNoMem, IntrHasSideEffects]>, RISCVVIntrinsic {
-    let SplatOperand = 3;
+    let SplatOperand = 2;
   }
   // For Saturating binary operations.
   // The destination vector type is the same as first source vector.
@@ -542,28 +544,28 @@ let TargetPrefix = "riscv" in {
                     [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
                      llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   class RISCVTernaryAAXAMask
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
                      LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   class RISCVTernaryWideNoMask
         : Intrinsic< [llvm_anyvector_ty],
                      [LLVMMatchType<0>, llvm_any_ty, llvm_anyvector_ty,
                       llvm_anyint_ty],
                      [IntrNoMem] >, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   class RISCVTernaryWideMask
         : Intrinsic< [llvm_anyvector_ty],
                      [LLVMMatchType<0>, llvm_any_ty, llvm_anyvector_ty,
                       LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty],
                      [IntrNoMem]>, RISCVVIntrinsic {
-    let SplatOperand = 2;
+    let SplatOperand = 1;
   }
   // For Reduction ternary operations.
   // For destination vector type is the same as first and third source vector.
