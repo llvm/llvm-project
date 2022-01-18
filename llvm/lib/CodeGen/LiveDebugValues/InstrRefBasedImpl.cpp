@@ -251,9 +251,10 @@ public:
   /// creates DBG_VALUEs and puts them in #Transfers, then prepares the other
   /// object fields to track variable locations as we step through the block.
   /// FIXME: could just examine mloctracker instead of passing in \p mlocs?
-  void loadInlocs(MachineBasicBlock &MBB, ValueIDNum *MLocs,
-                  SmallVectorImpl<std::pair<DebugVariable, DbgValue>> &VLocs,
-                  unsigned NumLocs) {
+  void
+  loadInlocs(MachineBasicBlock &MBB, ValueIDNum *MLocs,
+             const SmallVectorImpl<std::pair<DebugVariable, DbgValue>> &VLocs,
+             unsigned NumLocs) {
     ActiveMLocs.clear();
     ActiveVLocs.clear();
     VarLocs.clear();
@@ -303,7 +304,7 @@ public:
     }
 
     // Now map variables to their picked LocIdxes.
-    for (auto Var : VLocs) {
+    for (const auto &Var : VLocs) {
       if (Var.second.Kind == DbgValue::Const) {
         PendingDbgValues.push_back(
             emitMOLoc(*Var.second.MO, Var.first, Var.second.Properties));
@@ -418,7 +419,8 @@ public:
     return Reg != SP && Reg != FP;
   }
 
-  bool recoverAsEntryValue(const DebugVariable &Var, DbgValueProperties &Prop,
+  bool recoverAsEntryValue(const DebugVariable &Var,
+                           const DbgValueProperties &Prop,
                            const ValueIDNum &Num) {
     // Is this variable location a candidate to be an entry value. First,
     // should we be trying this at all?
