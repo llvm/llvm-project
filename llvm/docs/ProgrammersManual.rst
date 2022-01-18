@@ -585,7 +585,7 @@ semantics.  For example:
       // On error, return the Error value.
       return Err;
     // On success, use MB.
-    return processContent(MB->getBuffer());
+    return processBuffer(MB->getBuffer());
   }
 
 This third form works with any type that can be assigned to from ``T&&``. This
