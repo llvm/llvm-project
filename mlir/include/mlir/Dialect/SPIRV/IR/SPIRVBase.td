@@ -15,6 +15,7 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_BASE
 #define MLIR_DIALECT_SPIRV_IR_BASE
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVAvailability.td"
 
@@ -97,17 +98,15 @@ class SPV_I32EnumAttr<string name, string description,
   let cppNamespace = "::mlir::spirv";
 }
 
-// Wrapper over base StrEnumAttr to set common fields.
-class SPV_StrEnumAttr<string name, string description,
-                      list<StrEnumAttrCase> cases> :
-    StrEnumAttr<name, description, cases> {
-  let predicate = And<[
-    StrAttr.predicate,
-    CPred<"::mlir::spirv::symbolize" # name # "("
-          "$_self.cast<StringAttr>().getValue()).hasValue()">,
-  ]>;
+// Wrapper over base I32EnumAttr to set common fields.
+class SPV_Enum<string name, string description, list<I32EnumAttrCase> cases>
+    : I32EnumAttr<name, description, cases> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::spirv";
 }
+class SPV_EnumAttr<string name, string description, string mnemonic,
+                      list<I32EnumAttrCase> cases> :
+    EnumAttr<SPIRV_Dialect, SPV_Enum<name, description, cases>, mnemonic>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V availability definitions
@@ -147,7 +146,7 @@ class MaxVersion<I32EnumAttrCase max> : MaxVersionBase<
   }];
 }
 
-class Extension<list<StrEnumAttrCase> extensions> : Availability {
+class Extension<list<I32EnumAttrCase> extensions> : Availability {
   let cppNamespace = "::mlir::spirv";
   let interfaceName = "QueryExtensionInterface";
   let interfaceDescription = [{
@@ -263,31 +262,31 @@ def QueryCapabilityInterface : SPIRVOpInterface<"QueryCapabilityInterface"> {
 // SPIR-V target GPU vendor and device definitions
 //===----------------------------------------------------------------------===//
 
-def SPV_DT_CPU           : StrEnumAttrCase<"CPU">;
-def SPV_DT_DiscreteGPU   : StrEnumAttrCase<"DiscreteGPU">;
-def SPV_DT_IntegratedGPU : StrEnumAttrCase<"IntegratedGPU">;
+def SPV_DT_CPU           : I32EnumAttrCase<"CPU", 0>;
+def SPV_DT_DiscreteGPU   : I32EnumAttrCase<"DiscreteGPU", 1>;
+def SPV_DT_IntegratedGPU : I32EnumAttrCase<"IntegratedGPU", 2>;
 // An accelerator other than GPU or CPU
-def SPV_DT_Other         : StrEnumAttrCase<"Other">;
+def SPV_DT_Other         : I32EnumAttrCase<"Other", 3>;
 // Information missing.
-def SPV_DT_Unknown       : StrEnumAttrCase<"Unknown">;
+def SPV_DT_Unknown       : I32EnumAttrCase<"Unknown", 4>;
 
-def SPV_DeviceTypeAttr : SPV_StrEnumAttr<
-  "DeviceType", "valid SPIR-V device types", [
+def SPV_DeviceTypeAttr : SPV_EnumAttr<
+  "DeviceType", "valid SPIR-V device types", "device_type", [
     SPV_DT_Other, SPV_DT_IntegratedGPU, SPV_DT_DiscreteGPU,
     SPV_DT_CPU, SPV_DT_Unknown
   ]>;
 
-def SPV_V_AMD         : StrEnumAttrCase<"AMD">;
-def SPV_V_ARM         : StrEnumAttrCase<"ARM">;
-def SPV_V_Imagination : StrEnumAttrCase<"Imagination">;
-def SPV_V_Intel       : StrEnumAttrCase<"Intel">;
-def SPV_V_NVIDIA      : StrEnumAttrCase<"NVIDIA">;
-def SPV_V_Qualcomm    : StrEnumAttrCase<"Qualcomm">;
-def SPV_V_SwiftShader : StrEnumAttrCase<"SwiftShader">;
-def SPV_V_Unknown     : StrEnumAttrCase<"Unknown">;
+def SPV_V_AMD         : I32EnumAttrCase<"AMD", 0>;
+def SPV_V_ARM         : I32EnumAttrCase<"ARM", 1>;
+def SPV_V_Imagination : I32EnumAttrCase<"Imagination", 2>;
+def SPV_V_Intel       : I32EnumAttrCase<"Intel", 3>;
+def SPV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 4>;
+def SPV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 5>;
+def SPV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 6>;
+def SPV_V_Unknown     : I32EnumAttrCase<"Unknown", 7>;
 
-def SPV_VendorAttr : SPV_StrEnumAttr<
-  "Vendor", "recognized SPIR-V vendor strings", [
+def SPV_VendorAttr : SPV_EnumAttr<
+  "Vendor", "recognized SPIR-V vendor strings", "vendor", [
     SPV_V_AMD, SPV_V_ARM, SPV_V_Imagination, SPV_V_Intel,
     SPV_V_NVIDIA, SPV_V_Qualcomm, SPV_V_SwiftShader,
     SPV_V_Unknown
@@ -299,105 +298,105 @@ def SPV_VendorAttr : SPV_StrEnumAttr<
 
 // Extensions known to the SPIR-V dialect.
 // https://github.com/KhronosGroup/SPIRV-Registry has the full list.
-def SPV_KHR_16bit_storage                    : StrEnumAttrCase<"SPV_KHR_16bit_storage">;
-def SPV_KHR_8bit_storage                     : StrEnumAttrCase<"SPV_KHR_8bit_storage">;
-def SPV_KHR_device_group                     : StrEnumAttrCase<"SPV_KHR_device_group">;
-def SPV_KHR_float_controls                   : StrEnumAttrCase<"SPV_KHR_float_controls">;
-def SPV_KHR_physical_storage_buffer          : StrEnumAttrCase<"SPV_KHR_physical_storage_buffer">;
-def SPV_KHR_multiview                        : StrEnumAttrCase<"SPV_KHR_multiview">;
-def SPV_KHR_no_integer_wrap_decoration       : StrEnumAttrCase<"SPV_KHR_no_integer_wrap_decoration">;
-def SPV_KHR_post_depth_coverage              : StrEnumAttrCase<"SPV_KHR_post_depth_coverage">;
-def SPV_KHR_shader_atomic_counter_ops        : StrEnumAttrCase<"SPV_KHR_shader_atomic_counter_ops">;
-def SPV_KHR_shader_ballot                    : StrEnumAttrCase<"SPV_KHR_shader_ballot">;
-def SPV_KHR_shader_clock                     : StrEnumAttrCase<"SPV_KHR_shader_clock">;
-def SPV_KHR_shader_draw_parameters           : StrEnumAttrCase<"SPV_KHR_shader_draw_parameters">;
-def SPV_KHR_storage_buffer_storage_class     : StrEnumAttrCase<"SPV_KHR_storage_buffer_storage_class">;
-def SPV_KHR_subgroup_vote                    : StrEnumAttrCase<"SPV_KHR_subgroup_vote">;
-def SPV_KHR_variable_pointers                : StrEnumAttrCase<"SPV_KHR_variable_pointers">;
-def SPV_KHR_vulkan_memory_model              : StrEnumAttrCase<"SPV_KHR_vulkan_memory_model">;
-def SPV_KHR_expect_assume                    : StrEnumAttrCase<"SPV_KHR_expect_assume">;
-def SPV_KHR_integer_dot_product              : StrEnumAttrCase<"SPV_KHR_integer_dot_product">;
-def SPV_KHR_bit_instructions                 : StrEnumAttrCase<"SPV_KHR_bit_instructions">;
-def SPV_KHR_fragment_shading_rate            : StrEnumAttrCase<"SPV_KHR_fragment_shading_rate">;
-def SPV_KHR_workgroup_memory_explicit_layout : StrEnumAttrCase<"SPV_KHR_workgroup_memory_explicit_layout">;
-def SPV_KHR_ray_query                        : StrEnumAttrCase<"SPV_KHR_ray_query">;
-def SPV_KHR_ray_tracing                      : StrEnumAttrCase<"SPV_KHR_ray_tracing">;
-def SPV_KHR_subgroup_uniform_control_flow    : StrEnumAttrCase<"SPV_KHR_subgroup_uniform_control_flow">;
-def SPV_KHR_linkonce_odr                     : StrEnumAttrCase<"SPV_KHR_linkonce_odr">;
+def SPV_KHR_16bit_storage                    : I32EnumAttrCase<"SPV_KHR_16bit_storage", 0>;
+def SPV_KHR_8bit_storage                     : I32EnumAttrCase<"SPV_KHR_8bit_storage", 1>;
+def SPV_KHR_device_group                     : I32EnumAttrCase<"SPV_KHR_device_group", 2>;
+def SPV_KHR_float_controls                   : I32EnumAttrCase<"SPV_KHR_float_controls", 3>;
+def SPV_KHR_physical_storage_buffer          : I32EnumAttrCase<"SPV_KHR_physical_storage_buffer", 4>;
+def SPV_KHR_multiview                        : I32EnumAttrCase<"SPV_KHR_multiview", 5>;
+def SPV_KHR_no_integer_wrap_decoration       : I32EnumAttrCase<"SPV_KHR_no_integer_wrap_decoration", 6>;
+def SPV_KHR_post_depth_coverage              : I32EnumAttrCase<"SPV_KHR_post_depth_coverage", 7>;
+def SPV_KHR_shader_atomic_counter_ops        : I32EnumAttrCase<"SPV_KHR_shader_atomic_counter_ops", 8>;
+def SPV_KHR_shader_ballot                    : I32EnumAttrCase<"SPV_KHR_shader_ballot", 9>;
+def SPV_KHR_shader_clock                     : I32EnumAttrCase<"SPV_KHR_shader_clock", 10>;
+def SPV_KHR_shader_draw_parameters           : I32EnumAttrCase<"SPV_KHR_shader_draw_parameters", 11>;
+def SPV_KHR_storage_buffer_storage_class     : I32EnumAttrCase<"SPV_KHR_storage_buffer_storage_class", 12>;
+def SPV_KHR_subgroup_vote                    : I32EnumAttrCase<"SPV_KHR_subgroup_vote", 13>;
+def SPV_KHR_variable_pointers                : I32EnumAttrCase<"SPV_KHR_variable_pointers", 14>;
+def SPV_KHR_vulkan_memory_model              : I32EnumAttrCase<"SPV_KHR_vulkan_memory_model", 15>;
+def SPV_KHR_expect_assume                    : I32EnumAttrCase<"SPV_KHR_expect_assume", 16>;
+def SPV_KHR_integer_dot_product              : I32EnumAttrCase<"SPV_KHR_integer_dot_product", 17>;
+def SPV_KHR_bit_instructions                 : I32EnumAttrCase<"SPV_KHR_bit_instructions", 18>;
+def SPV_KHR_fragment_shading_rate            : I32EnumAttrCase<"SPV_KHR_fragment_shading_rate", 19>;
+def SPV_KHR_workgroup_memory_explicit_layout : I32EnumAttrCase<"SPV_KHR_workgroup_memory_explicit_layout", 20>;
+def SPV_KHR_ray_query                        : I32EnumAttrCase<"SPV_KHR_ray_query", 21>;
+def SPV_KHR_ray_tracing                      : I32EnumAttrCase<"SPV_KHR_ray_tracing", 22>;
+def SPV_KHR_subgroup_uniform_control_flow    : I32EnumAttrCase<"SPV_KHR_subgroup_uniform_control_flow", 23>;
+def SPV_KHR_linkonce_odr                     : I32EnumAttrCase<"SPV_KHR_linkonce_odr", 24>;
 
-def SPV_EXT_demote_to_helper_invocation  : StrEnumAttrCase<"SPV_EXT_demote_to_helper_invocation">;
-def SPV_EXT_descriptor_indexing          : StrEnumAttrCase<"SPV_EXT_descriptor_indexing">;
-def SPV_EXT_fragment_fully_covered       : StrEnumAttrCase<"SPV_EXT_fragment_fully_covered">;
-def SPV_EXT_fragment_invocation_density  : StrEnumAttrCase<"SPV_EXT_fragment_invocation_density">;
-def SPV_EXT_fragment_shader_interlock    : StrEnumAttrCase<"SPV_EXT_fragment_shader_interlock">;
-def SPV_EXT_physical_storage_buffer      : StrEnumAttrCase<"SPV_EXT_physical_storage_buffer">;
-def SPV_EXT_shader_stencil_export        : StrEnumAttrCase<"SPV_EXT_shader_stencil_export">;
-def SPV_EXT_shader_viewport_index_layer  : StrEnumAttrCase<"SPV_EXT_shader_viewport_index_layer">;
-def SPV_EXT_shader_atomic_float_add      : StrEnumAttrCase<"SPV_EXT_shader_atomic_float_add">;
-def SPV_EXT_shader_atomic_float_min_max  : StrEnumAttrCase<"SPV_EXT_shader_atomic_float_min_max">;
-def SPV_EXT_shader_image_int64           : StrEnumAttrCase<"SPV_EXT_shader_image_int64">;
-def SPV_EXT_shader_atomic_float16_add    : StrEnumAttrCase<"SPV_EXT_shader_atomic_float16_add">;
+def SPV_EXT_demote_to_helper_invocation  : I32EnumAttrCase<"SPV_EXT_demote_to_helper_invocation", 25>;
+def SPV_EXT_descriptor_indexing          : I32EnumAttrCase<"SPV_EXT_descriptor_indexing", 26>;
+def SPV_EXT_fragment_fully_covered       : I32EnumAttrCase<"SPV_EXT_fragment_fully_covered", 27>;
+def SPV_EXT_fragment_invocation_density  : I32EnumAttrCase<"SPV_EXT_fragment_invocation_density", 28>;
+def SPV_EXT_fragment_shader_interlock    : I32EnumAttrCase<"SPV_EXT_fragment_shader_interlock", 29>;
+def SPV_EXT_physical_storage_buffer      : I32EnumAttrCase<"SPV_EXT_physical_storage_buffer", 30>;
+def SPV_EXT_shader_stencil_export        : I32EnumAttrCase<"SPV_EXT_shader_stencil_export", 31>;
+def SPV_EXT_shader_viewport_index_layer  : I32EnumAttrCase<"SPV_EXT_shader_viewport_index_layer", 32>;
+def SPV_EXT_shader_atomic_float_add      : I32EnumAttrCase<"SPV_EXT_shader_atomic_float_add", 33>;
+def SPV_EXT_shader_atomic_float_min_max  : I32EnumAttrCase<"SPV_EXT_shader_atomic_float_min_max", 34>;
+def SPV_EXT_shader_image_int64           : I32EnumAttrCase<"SPV_EXT_shader_image_int64", 35>;
+def SPV_EXT_shader_atomic_float16_add    : I32EnumAttrCase<"SPV_EXT_shader_atomic_float16_add", 36>;
 
-def SPV_AMD_gpu_shader_half_float_fetch      : StrEnumAttrCase<"SPV_AMD_gpu_shader_half_float_fetch">;
-def SPV_AMD_shader_ballot                    : StrEnumAttrCase<"SPV_AMD_shader_ballot">;
-def SPV_AMD_shader_explicit_vertex_parameter : StrEnumAttrCase<"SPV_AMD_shader_explicit_vertex_parameter">;
-def SPV_AMD_shader_fragment_mask             : StrEnumAttrCase<"SPV_AMD_shader_fragment_mask">;
-def SPV_AMD_shader_image_load_store_lod      : StrEnumAttrCase<"SPV_AMD_shader_image_load_store_lod">;
-def SPV_AMD_texture_gather_bias_lod          : StrEnumAttrCase<"SPV_AMD_texture_gather_bias_lod">;
+def SPV_AMD_gpu_shader_half_float_fetch      : I32EnumAttrCase<"SPV_AMD_gpu_shader_half_float_fetch", 37>;
+def SPV_AMD_shader_ballot                    : I32EnumAttrCase<"SPV_AMD_shader_ballot", 38>;
+def SPV_AMD_shader_explicit_vertex_parameter : I32EnumAttrCase<"SPV_AMD_shader_explicit_vertex_parameter", 39>;
+def SPV_AMD_shader_fragment_mask             : I32EnumAttrCase<"SPV_AMD_shader_fragment_mask", 40>;
+def SPV_AMD_shader_image_load_store_lod      : I32EnumAttrCase<"SPV_AMD_shader_image_load_store_lod", 41>;
+def SPV_AMD_texture_gather_bias_lod          : I32EnumAttrCase<"SPV_AMD_texture_gather_bias_lod", 42>;
 
-def SPV_GOOGLE_decorate_string           : StrEnumAttrCase<"SPV_GOOGLE_decorate_string">;
-def SPV_GOOGLE_hlsl_functionality1       : StrEnumAttrCase<"SPV_GOOGLE_hlsl_functionality1">;
-def SPV_GOOGLE_user_type                 : StrEnumAttrCase<"SPV_GOOGLE_user_type">;
+def SPV_GOOGLE_decorate_string           : I32EnumAttrCase<"SPV_GOOGLE_decorate_string", 43>;
+def SPV_GOOGLE_hlsl_functionality1       : I32EnumAttrCase<"SPV_GOOGLE_hlsl_functionality1", 44>;
+def SPV_GOOGLE_user_type                 : I32EnumAttrCase<"SPV_GOOGLE_user_type", 45>;
 
-def SPV_INTEL_device_side_avc_motion_estimation  : StrEnumAttrCase<"SPV_INTEL_device_side_avc_motion_estimation">;
-def SPV_INTEL_media_block_io                     : StrEnumAttrCase<"SPV_INTEL_media_block_io">;
-def SPV_INTEL_shader_integer_functions2          : StrEnumAttrCase<"SPV_INTEL_shader_integer_functions2">;
-def SPV_INTEL_subgroups                          : StrEnumAttrCase<"SPV_INTEL_subgroups">;
-def SPV_INTEL_float_controls2                    : StrEnumAttrCase<"SPV_INTEL_float_controls2">;
-def SPV_INTEL_function_pointers                  : StrEnumAttrCase<"SPV_INTEL_function_pointers">;
-def SPV_INTEL_inline_assembly                    : StrEnumAttrCase<"SPV_INTEL_inline_assembly">;
-def SPV_INTEL_vector_compute                     : StrEnumAttrCase<"SPV_INTEL_vector_compute">;
-def SPV_INTEL_variable_length_array              : StrEnumAttrCase<"SPV_INTEL_variable_length_array">;
-def SPV_INTEL_fpga_memory_attributes             : StrEnumAttrCase<"SPV_INTEL_fpga_memory_attributes">;
-def SPV_INTEL_arbitrary_precision_integers       : StrEnumAttrCase<"SPV_INTEL_arbitrary_precision_integers">;
-def SPV_INTEL_arbitrary_precision_floating_point : StrEnumAttrCase<"SPV_INTEL_arbitrary_precision_floating_point">;
-def SPV_INTEL_unstructured_loop_controls         : StrEnumAttrCase<"SPV_INTEL_unstructured_loop_controls">;
-def SPV_INTEL_fpga_loop_controls                 : StrEnumAttrCase<"SPV_INTEL_fpga_loop_controls">;
-def SPV_INTEL_kernel_attributes                  : StrEnumAttrCase<"SPV_INTEL_kernel_attributes">;
-def SPV_INTEL_fpga_memory_accesses               : StrEnumAttrCase<"SPV_INTEL_fpga_memory_accesses">;
-def SPV_INTEL_fpga_cluster_attributes            : StrEnumAttrCase<"SPV_INTEL_fpga_cluster_attributes">;
-def SPV_INTEL_loop_fuse                          : StrEnumAttrCase<"SPV_INTEL_loop_fuse">;
-def SPV_INTEL_fpga_buffer_location               : StrEnumAttrCase<"SPV_INTEL_fpga_buffer_location">;
-def SPV_INTEL_arbitrary_precision_fixed_point    : StrEnumAttrCase<"SPV_INTEL_arbitrary_precision_fixed_point">;
-def SPV_INTEL_usm_storage_classes                : StrEnumAttrCase<"SPV_INTEL_usm_storage_classes">;
-def SPV_INTEL_io_pipes                           : StrEnumAttrCase<"SPV_INTEL_io_pipes">;
-def SPV_INTEL_blocking_pipes                     : StrEnumAttrCase<"SPV_INTEL_blocking_pipes">;
-def SPV_INTEL_fpga_reg                           : StrEnumAttrCase<"SPV_INTEL_fpga_reg">;
-def SPV_INTEL_long_constant_composite            : StrEnumAttrCase<"SPV_INTEL_long_constant_composite">;
-def SPV_INTEL_optnone                            : StrEnumAttrCase<"SPV_INTEL_optnone">;
-def SPV_INTEL_debug_module                       : StrEnumAttrCase<"SPV_INTEL_debug_module">;
-def SPV_INTEL_fp_fast_math_mode                  : StrEnumAttrCase<"SPV_INTEL_fp_fast_math_mode">;
+def SPV_INTEL_device_side_avc_motion_estimation  : I32EnumAttrCase<"SPV_INTEL_device_side_avc_motion_estimation", 46>;
+def SPV_INTEL_media_block_io                     : I32EnumAttrCase<"SPV_INTEL_media_block_io", 47>;
+def SPV_INTEL_shader_integer_functions2          : I32EnumAttrCase<"SPV_INTEL_shader_integer_functions2", 48>;
+def SPV_INTEL_subgroups                          : I32EnumAttrCase<"SPV_INTEL_subgroups", 49>;
+def SPV_INTEL_float_controls2                    : I32EnumAttrCase<"SPV_INTEL_float_controls2", 50>;
+def SPV_INTEL_function_pointers                  : I32EnumAttrCase<"SPV_INTEL_function_pointers", 51>;
+def SPV_INTEL_inline_assembly                    : I32EnumAttrCase<"SPV_INTEL_inline_assembly", 52>;
+def SPV_INTEL_vector_compute                     : I32EnumAttrCase<"SPV_INTEL_vector_compute", 53>;
+def SPV_INTEL_variable_length_array              : I32EnumAttrCase<"SPV_INTEL_variable_length_array", 54>;
+def SPV_INTEL_fpga_memory_attributes             : I32EnumAttrCase<"SPV_INTEL_fpga_memory_attributes", 55>;
+def SPV_INTEL_arbitrary_precision_integers       : I32EnumAttrCase<"SPV_INTEL_arbitrary_precision_integers", 56>;
+def SPV_INTEL_arbitrary_precision_floating_point : I32EnumAttrCase<"SPV_INTEL_arbitrary_precision_floating_point", 57>;
+def SPV_INTEL_unstructured_loop_controls         : I32EnumAttrCase<"SPV_INTEL_unstructured_loop_controls", 58>;
+def SPV_INTEL_fpga_loop_controls                 : I32EnumAttrCase<"SPV_INTEL_fpga_loop_controls", 59>;
+def SPV_INTEL_kernel_attributes                  : I32EnumAttrCase<"SPV_INTEL_kernel_attributes", 60>;
+def SPV_INTEL_fpga_memory_accesses               : I32EnumAttrCase<"SPV_INTEL_fpga_memory_accesses", 61>;
+def SPV_INTEL_fpga_cluster_attributes            : I32EnumAttrCase<"SPV_INTEL_fpga_cluster_attributes", 62>;
+def SPV_INTEL_loop_fuse                          : I32EnumAttrCase<"SPV_INTEL_loop_fuse", 63>;
+def SPV_INTEL_fpga_buffer_location               : I32EnumAttrCase<"SPV_INTEL_fpga_buffer_location", 64>;
+def SPV_INTEL_arbitrary_precision_fixed_point    : I32EnumAttrCase<"SPV_INTEL_arbitrary_precision_fixed_point", 65>;
+def SPV_INTEL_usm_storage_classes                : I32EnumAttrCase<"SPV_INTEL_usm_storage_classes", 66>;
+def SPV_INTEL_io_pipes                           : I32EnumAttrCase<"SPV_INTEL_io_pipes", 67>;
+def SPV_INTEL_blocking_pipes                     : I32EnumAttrCase<"SPV_INTEL_blocking_pipes", 68>;
+def SPV_INTEL_fpga_reg                           : I32EnumAttrCase<"SPV_INTEL_fpga_reg", 69>;
+def SPV_INTEL_long_constant_composite            : I32EnumAttrCase<"SPV_INTEL_long_constant_composite", 70>;
+def SPV_INTEL_optnone                            : I32EnumAttrCase<"SPV_INTEL_optnone", 71>;
+def SPV_INTEL_debug_module                       : I32EnumAttrCase<"SPV_INTEL_debug_module", 72>;
+def SPV_INTEL_fp_fast_math_mode                  : I32EnumAttrCase<"SPV_INTEL_fp_fast_math_mode", 73>;
 
-def SPV_NV_compute_shader_derivatives    : StrEnumAttrCase<"SPV_NV_compute_shader_derivatives">;
-def SPV_NV_cooperative_matrix            : StrEnumAttrCase<"SPV_NV_cooperative_matrix">;
-def SPV_NV_fragment_shader_barycentric   : StrEnumAttrCase<"SPV_NV_fragment_shader_barycentric">;
-def SPV_NV_geometry_shader_passthrough   : StrEnumAttrCase<"SPV_NV_geometry_shader_passthrough">;
-def SPV_NV_mesh_shader                   : StrEnumAttrCase<"SPV_NV_mesh_shader">;
-def SPV_NV_ray_tracing                   : StrEnumAttrCase<"SPV_NV_ray_tracing">;
-def SPV_NV_sample_mask_override_coverage : StrEnumAttrCase<"SPV_NV_sample_mask_override_coverage">;
-def SPV_NV_shader_image_footprint        : StrEnumAttrCase<"SPV_NV_shader_image_footprint">;
-def SPV_NV_shader_sm_builtins            : StrEnumAttrCase<"SPV_NV_shader_sm_builtins">;
-def SPV_NV_shader_subgroup_partitioned   : StrEnumAttrCase<"SPV_NV_shader_subgroup_partitioned">;
-def SPV_NV_shading_rate                  : StrEnumAttrCase<"SPV_NV_shading_rate">;
-def SPV_NV_stereo_view_rendering         : StrEnumAttrCase<"SPV_NV_stereo_view_rendering">;
-def SPV_NV_viewport_array2               : StrEnumAttrCase<"SPV_NV_viewport_array2">;
-def SPV_NV_bindless_texture              : StrEnumAttrCase<"SPV_NV_bindless_texture">;
-def SPV_NV_ray_tracing_motion_blur       : StrEnumAttrCase<"SPV_NV_ray_tracing_motion_blur">;
+def SPV_NV_compute_shader_derivatives    : I32EnumAttrCase<"SPV_NV_compute_shader_derivatives", 74>;
+def SPV_NV_cooperative_matrix            : I32EnumAttrCase<"SPV_NV_cooperative_matrix", 75>;
+def SPV_NV_fragment_shader_barycentric   : I32EnumAttrCase<"SPV_NV_fragment_shader_barycentric", 76>;
+def SPV_NV_geometry_shader_passthrough   : I32EnumAttrCase<"SPV_NV_geometry_shader_passthrough", 77>;
+def SPV_NV_mesh_shader                   : I32EnumAttrCase<"SPV_NV_mesh_shader", 78>;
+def SPV_NV_ray_tracing                   : I32EnumAttrCase<"SPV_NV_ray_tracing", 79>;
+def SPV_NV_sample_mask_override_coverage : I32EnumAttrCase<"SPV_NV_sample_mask_override_coverage", 80>;
+def SPV_NV_shader_image_footprint        : I32EnumAttrCase<"SPV_NV_shader_image_footprint", 81>;
+def SPV_NV_shader_sm_builtins            : I32EnumAttrCase<"SPV_NV_shader_sm_builtins", 82>;
+def SPV_NV_shader_subgroup_partitioned   : I32EnumAttrCase<"SPV_NV_shader_subgroup_partitioned", 83>;
+def SPV_NV_shading_rate                  : I32EnumAttrCase<"SPV_NV_shading_rate", 84>;
+def SPV_NV_stereo_view_rendering         : I32EnumAttrCase<"SPV_NV_stereo_view_rendering", 85>;
+def SPV_NV_viewport_array2               : I32EnumAttrCase<"SPV_NV_viewport_array2", 86>;
+def SPV_NV_bindless_texture              : I32EnumAttrCase<"SPV_NV_bindless_texture", 87>;
+def SPV_NV_ray_tracing_motion_blur       : I32EnumAttrCase<"SPV_NV_ray_tracing_motion_blur", 88>;
 
-def SPV_NVX_multiview_per_view_attributes : StrEnumAttrCase<"SPV_NVX_multiview_per_view_attributes">;
+def SPV_NVX_multiview_per_view_attributes : I32EnumAttrCase<"SPV_NVX_multiview_per_view_attributes", 89>;
 
 def SPV_ExtensionAttr :
-    SPV_StrEnumAttr<"Extension", "supported SPIR-V extensions", [
+    SPV_EnumAttr<"Extension", "supported SPIR-V extensions", "ext", [
       SPV_KHR_16bit_storage, SPV_KHR_8bit_storage, SPV_KHR_device_group,
       SPV_KHR_float_controls, SPV_KHR_physical_storage_buffer, SPV_KHR_multiview,
       SPV_KHR_no_integer_wrap_decoration, SPV_KHR_post_depth_coverage,

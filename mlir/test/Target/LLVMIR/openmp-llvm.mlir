@@ -663,14 +663,14 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
     // CHECK: [[TMP2:%.*]] = getelementptr inbounds [1 x i64], [1 x i64]* [[ADDR]], i64 0, i64 0
     // CHECK: [[OMP_THREAD2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
     // CHECK: call void @__kmpc_doacross_wait(%struct.ident_t* @[[GLOB3]], i32 [[OMP_THREAD2]], i64* [[TMP2]])
-    omp.ordered depend_type("dependsink") depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
+    omp.ordered depend_type(dependsink) depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
 
     // CHECK: [[TMP3:%.*]] = getelementptr inbounds [1 x i64], [1 x i64]* [[ADDR3]], i64 0, i64 0
     // CHECK: store i64 [[ARG0]], i64* [[TMP3]], align 8
     // CHECK: [[TMP4:%.*]] = getelementptr inbounds [1 x i64], [1 x i64]* [[ADDR3]], i64 0, i64 0
     // CHECK: [[OMP_THREAD4:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB5:[0-9]+]])
     // CHECK: call void @__kmpc_doacross_post(%struct.ident_t* @[[GLOB5]], i32 [[OMP_THREAD4]], i64* [[TMP4]])
-    omp.ordered depend_type("dependsource") depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
+    omp.ordered depend_type(dependsource) depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
 
     omp.yield
   }
@@ -690,7 +690,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
     // CHECK: [[TMP10:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[ADDR7]], i64 0, i64 0
     // CHECK: [[OMP_THREAD8:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB7]])
     // CHECK: call void @__kmpc_doacross_wait(%struct.ident_t* @[[GLOB7]], i32 [[OMP_THREAD8]], i64* [[TMP10]])
-    omp.ordered depend_type("dependsink") depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {num_loops_val = 2 : i64}
+    omp.ordered depend_type(dependsink) depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {num_loops_val = 2 : i64}
 
     // CHECK: [[TMP11:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[ADDR9]], i64 0, i64 0
     // CHECK: store i64 [[ARG0]], i64* [[TMP11]], align 8
@@ -699,7 +699,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
     // CHECK: [[TMP13:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[ADDR9]], i64 0, i64 0
     // CHECK: [[OMP_THREAD10:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB9:[0-9]+]])
     // CHECK: call void @__kmpc_doacross_post(%struct.ident_t* @[[GLOB9]], i32 [[OMP_THREAD10]], i64* [[TMP13]])
-    omp.ordered depend_type("dependsource") depend_vec(%arg3, %arg4 : i64, i64) {num_loops_val = 2 : i64}
+    omp.ordered depend_type(dependsource) depend_vec(%arg3, %arg4 : i64, i64) {num_loops_val = 2 : i64}
 
     omp.yield
   }

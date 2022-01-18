@@ -124,6 +124,10 @@ void GPUDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"
       >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/GPU/GPUOpsAttributes.cpp.inc"
+      >();
   addInterfaces<GPUInlinerInterface>();
 }
 
@@ -293,54 +297,36 @@ static LogicalResult verifyAllReduce(gpu::AllReduceOp allReduce) {
     if (yieldCount == 0)
       return allReduce.emitError("expected gpu.yield op in region");
   } else {
-    StringRef opName = *allReduce.op();
-    if ((opName == "and" || opName == "or" || opName == "xor") &&
+    gpu::AllReduceOperation opName = *allReduce.op();
+    if ((opName == gpu::AllReduceOperation::AND ||
+         opName == gpu::AllReduceOperation::OR ||
+         opName == gpu::AllReduceOperation::XOR) &&
         !allReduce.getType().isa<IntegerType>()) {
       return allReduce.emitError()
-             << '`' << opName << '`'
+             << '`' << gpu::stringifyAllReduceOperation(opName) << '`'
              << " accumulator is only compatible with Integer type";
     }
   }
   return success();
 }
 
-static LogicalResult verifyShuffleOp(gpu::ShuffleOp shuffleOp) {
-  auto type = shuffleOp.value().getType();
-  if (shuffleOp.result().getType() != type) {
-    return shuffleOp.emitOpError()
-           << "requires the same type for value operand and result";
-  }
-  if (!type.isSignlessIntOrFloat() || type.getIntOrFloatBitWidth() != 32) {
-    return shuffleOp.emitOpError()
-           << "requires value operand type to be f32 or i32";
+// TODO: Support optional custom attributes (without dialect prefix).
+static ParseResult parseAllReduceOperation(AsmParser &parser,
+                                           AllReduceOperationAttr &attr) {
+  StringRef enumStr;
+  if (!parser.parseOptionalKeyword(&enumStr)) {
+    Optional<AllReduceOperation> op = gpu::symbolizeAllReduceOperation(enumStr);
+    if (!op)
+      return parser.emitError(parser.getCurrentLocation(), "invalid op kind");
+    attr = AllReduceOperationAttr::get(parser.getContext(), *op);
   }
   return success();
 }
 
-static void printShuffleOp(OpAsmPrinter &p, ShuffleOp op) {
-  p << ' ' << op.getOperands() << ' ' << stringifyEnum(op.mode()) << " : "
-    << op.value().getType();
-}
-
-static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &state) {
-  SmallVector<OpAsmParser::OperandType, 3> operandInfo;
-  if (parser.parseOperandList(operandInfo, 3))
-    return failure();
-
-  StringRef mode;
-  if (parser.parseKeyword(&mode))
-    return failure();
-  state.addAttribute("mode", parser.getBuilder().getStringAttr(mode));
-
-  Type valueType;
-  Type int32Type = parser.getBuilder().getIntegerType(32);
-  Type int1Type = parser.getBuilder().getI1Type();
-  if (parser.parseColonType(valueType) ||
-      parser.resolveOperands(operandInfo, {valueType, int32Type, int32Type},
-                             parser.getCurrentLocation(), state.operands) ||
-      parser.addTypesToList({valueType, int1Type}, state.types))
-    return failure();
-  return success();
+static void printAllReduceOperation(AsmPrinter &printer, Operation *op,
+                                    AllReduceOperationAttr attr) {
+  if (attr)
+    attr.print(printer);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1205,6 +1191,9 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"
 #include "mlir/Dialect/GPU/GPUOpsEnums.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/GPU/GPUOpsAttributes.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/GPUOps.cpp.inc"

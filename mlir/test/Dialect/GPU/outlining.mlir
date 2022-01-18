@@ -41,18 +41,18 @@ func @launch() {
 // CHECK-LABEL: gpu.module @launch_kernel
 // CHECK-NEXT: gpu.func @launch_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
-// CHECK-NEXT: %[[BID:.*]] = "gpu.block_id"() {dimension = "x"} : () -> index
-// CHECK-NEXT: = "gpu.block_id"() {dimension = "y"} : () -> index
-// CHECK-NEXT: = "gpu.block_id"() {dimension = "z"} : () -> index
-// CHECK-NEXT: %[[TID:.*]] = "gpu.thread_id"() {dimension = "x"} : () -> index
-// CHECK-NEXT: = "gpu.thread_id"() {dimension = "y"} : () -> index
-// CHECK-NEXT: = "gpu.thread_id"() {dimension = "z"} : () -> index
-// CHECK-NEXT: = "gpu.grid_dim"() {dimension = "x"} : () -> index
-// CHECK-NEXT: = "gpu.grid_dim"() {dimension = "y"} : () -> index
-// CHECK-NEXT: = "gpu.grid_dim"() {dimension = "z"} : () -> index
-// CHECK-NEXT: %[[BDIM:.*]] = "gpu.block_dim"() {dimension = "x"} : () -> index
-// CHECK-NEXT: = "gpu.block_dim"() {dimension = "y"} : () -> index
-// CHECK-NEXT: = "gpu.block_dim"() {dimension = "z"} : () -> index
+// CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
+// CHECK-NEXT: = gpu.block_id y
+// CHECK-NEXT: = gpu.block_id z
+// CHECK-NEXT: %[[TID:.*]] = gpu.thread_id x
+// CHECK-NEXT: = gpu.thread_id y
+// CHECK-NEXT: = gpu.thread_id z
+// CHECK-NEXT: = gpu.grid_dim x
+// CHECK-NEXT: = gpu.grid_dim y
+// CHECK-NEXT: = gpu.grid_dim z
+// CHECK-NEXT: %[[BDIM:.*]] = gpu.block_dim x
+// CHECK-NEXT: = gpu.block_dim y
+// CHECK-NEXT: = gpu.block_dim z
 // CHECK-NEXT: br ^[[BLOCK:.*]]
 // CHECK-NEXT: ^[[BLOCK]]:
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
