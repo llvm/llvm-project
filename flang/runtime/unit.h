@@ -183,7 +183,7 @@ private:
       ChildListIoStatementState<Direction::Output>,
       ChildListIoStatementState<Direction::Input>,
       ChildUnformattedIoStatementState<Direction::Output>,
-      ChildUnformattedIoStatementState<Direction::Input>>
+      ChildUnformattedIoStatementState<Direction::Input>, InquireUnitState>
       u_;
   std::optional<IoStatementState> io_;
 };
