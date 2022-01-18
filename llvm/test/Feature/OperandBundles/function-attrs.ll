@@ -24,11 +24,10 @@ define void @test_1(i32* %x) {
   ret void
 }
 
-; FIXME: We are incorectly inferring writeonly on the function
 define void @test_2(i32* %x) {
 ; FunctionAttrs must not infer writeonly
 
-; CHECK-LABEL: define void @test_2(i32* %x) #2 {
+; CHECK-LABEL: define void @test_2(i32* %x) {
  entry:
  ; CHECK: call void @f_writeonly() [ "foo"(i32* %x) ]
   call void @f_writeonly() [ "foo"(i32* %x) ]
