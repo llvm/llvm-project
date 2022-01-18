@@ -92,6 +92,17 @@ ScriptedProcessPythonInterface::GetMemoryRegionContainingAddress(
   return mem_region;
 }
 
+StructuredData::DictionarySP ScriptedProcessPythonInterface::GetThreadsInfo() {
+  Status error;
+  StructuredData::DictionarySP dict =
+      Dispatch<StructuredData::DictionarySP>("get_threads_info", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+    return {};
+
+  return dict;
+}
+
 StructuredData::DictionarySP
 ScriptedProcessPythonInterface::GetThreadWithID(lldb::tid_t tid) {
   Status error;
