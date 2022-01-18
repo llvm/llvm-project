@@ -7004,7 +7004,7 @@ bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
   // matching the argument extension instead.
   Instruction::CastOps ExtType = Instruction::ZExt;
   // Some targets prefer SExt over ZExt.
-  if (TLI->isSExtCheaperThanZExt(OldVT, RegType, SDValue()))
+  if (TLI->isSExtCheaperThanZExt(OldVT, RegType))
     ExtType = Instruction::SExt;
 
   if (auto *Arg = dyn_cast<Argument>(Cond)) {

@@ -880,21 +880,6 @@ TEST(RenameTest, Renameable) {
         void f(X x) {x+^+;})cpp",
           "no symbol", HeaderFile},
 
-      {R"cpp(// disallow rename on excluded symbols (e.g. std symbols)
-         namespace std {
-         class str^ing {};
-         }
-       )cpp",
-       "not a supported kind", !HeaderFile},
-      {R"cpp(// disallow rename on excluded symbols (e.g. std symbols)
-         namespace std {
-         inline namespace __u {
-         class str^ing {};
-         }
-         }
-       )cpp",
-       "not a supported kind", !HeaderFile},
-
       {R"cpp(// disallow rename on non-normal identifiers.
          @interface Foo {}
          -(int) fo^o:(int)x; // Token is an identifier, but declaration name isn't a simple identifier.
@@ -1199,11 +1184,14 @@ TEST(RenameTest, MainFileReferencesOnly) {
 }
 
 TEST(RenameTest, NoRenameOnSymbolsFromSystemHeaders) {
-  // filter out references not from main file.
   llvm::StringRef Test =
       R"cpp(
+        #include <cstdlib>
         #include <system>
+
         SystemSym^bol abc;
+
+        void foo() { at^oi("9000"); }
         )cpp";
 
   Annotations Code(Test);
@@ -1211,14 +1199,22 @@ TEST(RenameTest, NoRenameOnSymbolsFromSystemHeaders) {
   TU.AdditionalFiles["system"] = R"cpp(
     class SystemSymbol {};
     )cpp";
+  TU.AdditionalFiles["cstdlib"] = R"cpp(
+    int atoi(const char *str);
+    )cpp";
   TU.ExtraArgs = {"-isystem", testRoot()};
   auto AST = TU.build();
   llvm::StringRef NewName = "abcde";
 
-  auto Results = rename({Code.point(), NewName, AST, testPath(TU.Filename)});
-  EXPECT_FALSE(Results) << "expected rename returned an error: " << Code.code();
-  auto ActualMessage = llvm::toString(Results.takeError());
-  EXPECT_THAT(ActualMessage, testing::HasSubstr("not a supported kind"));
+  // Clangd will not allow renaming symbols from the system headers for
+  // correctness.
+  for (auto &Point : Code.points()) {
+    auto Results = rename({Point, NewName, AST, testPath(TU.Filename)});
+    EXPECT_FALSE(Results) << "expected rename returned an error: "
+                          << Code.code();
+    auto ActualMessage = llvm::toString(Results.takeError());
+    EXPECT_THAT(ActualMessage, testing::HasSubstr("not a supported kind"));
+  }
 }
 
 TEST(RenameTest, ProtobufSymbolIsExcluded) {

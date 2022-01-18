@@ -80,23 +80,23 @@ bool lldb_private::LLDBSwigPythonCallTypeScript(
   return false;
 }
 
-void *lldb_private::LLDBSwigPythonCreateSyntheticProvider(
+python::PythonObject lldb_private::LLDBSwigPythonCreateSyntheticProvider(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::ValueObjectSP &valobj_sp) {
-  return nullptr;
+  return python::PythonObject();
 }
 
-void *lldb_private::LLDBSwigPythonCreateCommandObject(
+python::PythonObject lldb_private::LLDBSwigPythonCreateCommandObject(
     const char *python_class_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger_sp) {
-  return nullptr;
+  return python::PythonObject();
 }
 
-void *lldb_private::LLDBSwigPythonCreateScriptedThreadPlan(
+python::PythonObject lldb_private::LLDBSwigPythonCreateScriptedThreadPlan(
     const char *python_class_name, const char *session_dictionary_name,
     const StructuredDataImpl &args_data, std::string &error_string,
     const lldb::ThreadPlanSP &thread_plan_sp) {
-  return nullptr;
+  return python::PythonObject();
 }
 
 bool lldb_private::LLDBSWIGPythonCallThreadPlan(void *implementor,
@@ -106,10 +106,11 @@ bool lldb_private::LLDBSWIGPythonCallThreadPlan(void *implementor,
   return false;
 }
 
-void *lldb_private::LLDBSwigPythonCreateScriptedBreakpointResolver(
+python::PythonObject
+lldb_private::LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name, const char *session_dictionary_name,
     const StructuredDataImpl &args, const lldb::BreakpointSP &bkpt_sp) {
-  return nullptr;
+  return python::PythonObject();
 }
 
 unsigned int lldb_private::LLDBSwigPythonCallBreakpointResolver(
@@ -191,30 +192,30 @@ bool lldb_private::LLDBSwigPythonCallModuleInit(
   return false;
 }
 
-void *
+python::PythonObject
 lldb_private::LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
                                            const char *session_dictionary_name,
                                            const lldb::ProcessSP &process_sp) {
-  return nullptr;
+  return python::PythonObject();
 }
 
-void *lldb_private::LLDBSwigPythonCreateScriptedProcess(
+python::PythonObject lldb_private::LLDBSwigPythonCreateScriptedProcess(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::TargetSP &target_sp, const StructuredDataImpl &args_impl,
     std::string &error_string) {
-  return nullptr;
+  return python::PythonObject();
 }
 
-void *lldb_private::LLDBSwigPythonCreateScriptedThread(
+python::PythonObject lldb_private::LLDBSwigPythonCreateScriptedThread(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::ProcessSP &process_sp, const StructuredDataImpl &args_impl,
     std::string &error_string) {
-  return nullptr;
+  return python::PythonObject();
 }
 
-void *lldb_private::LLDBSWIGPython_CreateFrameRecognizer(
+python::PythonObject lldb_private::LLDBSWIGPython_CreateFrameRecognizer(
     const char *python_class_name, const char *session_dictionary_name) {
-  return nullptr;
+  return python::PythonObject();
 }
 
 PyObject *lldb_private::LLDBSwigPython_GetRecognizedArguments(
@@ -257,11 +258,11 @@ void *lldb_private::LLDBSWIGPython_GetDynamicSetting(
   return nullptr;
 }
 
-void *lldb_private::LLDBSwigPythonCreateScriptedStopHook(
+python::PythonObject lldb_private::LLDBSwigPythonCreateScriptedStopHook(
     lldb::TargetSP target_sp, const char *python_class_name,
     const char *session_dictionary_name, const StructuredDataImpl &args_impl,
     Status &error) {
-  return nullptr;
+  return python::PythonObject();
 }
 
 bool lldb_private::LLDBSwigPythonStopHookCallHandleStop(

@@ -49,7 +49,8 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
       assert(ParamDecl != nullptr);
       auto &ParamLoc = createStorageLocation(*ParamDecl);
       setStorageLocation(*ParamDecl, ParamLoc);
-      initValueInStorageLocation(ParamLoc, ParamDecl->getType());
+      if (Value *ParamVal = createValue(ParamDecl->getType()))
+        setValue(ParamLoc, *ParamVal);
     }
   }
 
@@ -60,7 +61,8 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
       if (!ThisPointeeType->isUnionType()) {
         auto &ThisPointeeLoc = createStorageLocation(ThisPointeeType);
         DACtx.setThisPointeeStorageLocation(ThisPointeeLoc);
-        initValueInStorageLocation(ThisPointeeLoc, ThisPointeeType);
+        if (Value *ThisPointeeVal = createValue(ThisPointeeType))
+          setValue(ThisPointeeLoc, *ThisPointeeVal);
       }
     }
   }
@@ -189,21 +191,17 @@ Value *Environment::getValue(const Expr &E, SkipPast SP) const {
   return getValue(*Loc);
 }
 
-Value *Environment::initValueInStorageLocation(const StorageLocation &Loc,
-                                               QualType Type) {
+Value *Environment::createValue(QualType Type) {
   llvm::DenseSet<QualType> Visited;
-  return initValueInStorageLocationUnlessSelfReferential(Loc, Type, Visited);
+  return createValueUnlessSelfReferential(Type, Visited);
 }
 
-Value *Environment::initValueInStorageLocationUnlessSelfReferential(
-    const StorageLocation &Loc, QualType Type,
-    llvm::DenseSet<QualType> &Visited) {
+Value *Environment::createValueUnlessSelfReferential(
+    QualType Type, llvm::DenseSet<QualType> &Visited) {
   assert(!Type.isNull());
 
   if (Type->isIntegerType()) {
-    auto &Val = takeOwnership(std::make_unique<IntegerValue>());
-    setValue(Loc, Val);
-    return &Val;
+    return &takeOwnership(std::make_unique<IntegerValue>());
   }
 
   if (Type->isReferenceType()) {
@@ -212,14 +210,15 @@ Value *Environment::initValueInStorageLocationUnlessSelfReferential(
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
       Visited.insert(PointeeType.getCanonicalType());
-      initValueInStorageLocationUnlessSelfReferential(PointeeLoc, PointeeType,
-                                                      Visited);
+      Value *PointeeVal =
+          createValueUnlessSelfReferential(PointeeType, Visited);
       Visited.erase(PointeeType.getCanonicalType());
+
+      if (PointeeVal != nullptr)
+        setValue(PointeeLoc, *PointeeVal);
     }
 
-    auto &Val = takeOwnership(std::make_unique<ReferenceValue>(PointeeLoc));
-    setValue(Loc, Val);
-    return &Val;
+    return &takeOwnership(std::make_unique<ReferenceValue>(PointeeLoc));
   }
 
   if (Type->isPointerType()) {
@@ -228,19 +227,18 @@ Value *Environment::initValueInStorageLocationUnlessSelfReferential(
 
     if (!Visited.contains(PointeeType.getCanonicalType())) {
       Visited.insert(PointeeType.getCanonicalType());
-      initValueInStorageLocationUnlessSelfReferential(PointeeLoc, PointeeType,
-                                                      Visited);
+      Value *PointeeVal =
+          createValueUnlessSelfReferential(PointeeType, Visited);
       Visited.erase(PointeeType.getCanonicalType());
+
+      if (PointeeVal != nullptr)
+        setValue(PointeeLoc, *PointeeVal);
     }
 
-    auto &Val = takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
-    setValue(Loc, Val);
-    return &Val;
+    return &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
   }
 
   if (Type->isStructureOrClassType()) {
-    auto *AggregateLoc = cast<AggregateStorageLocation>(&Loc);
-
     // FIXME: Initialize only fields that are accessed in the context that is
     // being analyzed.
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
@@ -253,15 +251,12 @@ Value *Environment::initValueInStorageLocationUnlessSelfReferential(
 
       Visited.insert(FieldType.getCanonicalType());
       FieldValues.insert(
-          {Field, initValueInStorageLocationUnlessSelfReferential(
-                      AggregateLoc->getChild(*Field), FieldType, Visited)});
+          {Field, createValueUnlessSelfReferential(FieldType, Visited)});
       Visited.erase(FieldType.getCanonicalType());
     }
 
-    auto &Val =
-        takeOwnership(std::make_unique<StructValue>(std::move(FieldValues)));
-    setValue(Loc, Val);
-    return &Val;
+    return &takeOwnership(
+        std::make_unique<StructValue>(std::move(FieldValues)));
   }
 
   return nullptr;

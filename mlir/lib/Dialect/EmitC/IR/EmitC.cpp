@@ -180,26 +180,6 @@ Attribute emitc::OpaqueAttr::parse(AsmParser &parser, Type type) {
   return get(parser.getContext(), value);
 }
 
-Attribute EmitCDialect::parseAttribute(DialectAsmParser &parser,
-                                       Type type) const {
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
-  StringRef mnemonic;
-  if (parser.parseKeyword(&mnemonic))
-    return Attribute();
-  Attribute genAttr;
-  OptionalParseResult parseResult =
-      generatedAttributeParser(parser, mnemonic, type, genAttr);
-  if (parseResult.hasValue())
-    return genAttr;
-  parser.emitError(typeLoc, "unknown attribute in EmitC dialect");
-  return Attribute();
-}
-
-void EmitCDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
-  if (failed(generatedAttributePrinter(attr, os)))
-    llvm_unreachable("unexpected 'EmitC' attribute kind");
-}
-
 void emitc::OpaqueAttr::print(AsmPrinter &printer) const {
   printer << "<\"";
   llvm::printEscapedString(getValue(), printer.getStream());
