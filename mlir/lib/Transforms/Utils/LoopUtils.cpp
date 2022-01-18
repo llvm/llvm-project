@@ -12,10 +12,10 @@
 
 #include "mlir/Transforms/LoopUtils.h"
 
-#include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"

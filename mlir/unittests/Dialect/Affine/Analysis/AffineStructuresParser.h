@@ -14,7 +14,7 @@
 #ifndef MLIR_UNITTEST_ANALYSIS_AFFINESTRUCTURESPARSER_H
 #define MLIR_UNITTEST_ANALYSIS_AFFINESTRUCTURESPARSER_H
 
-#include "mlir/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Support/LogicalResult.h"
 
 namespace mlir {

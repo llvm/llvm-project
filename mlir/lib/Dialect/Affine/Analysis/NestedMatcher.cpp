@@ -8,7 +8,7 @@
 
 #include <utility>
 
-#include "mlir/Analysis/NestedMatcher.h"
+#include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 

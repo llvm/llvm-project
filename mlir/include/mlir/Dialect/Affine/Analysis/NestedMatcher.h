@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_NESTEDMATCHER_H
-#define MLIR_ANALYSIS_NESTEDMATCHER_H
+#ifndef MLIR_DIALECT_AFFINE_ANALYSIS_NESTEDMATCHER_H
+#define MLIR_DIALECT_AFFINE_ANALYSIS_NESTEDMATCHER_H
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
@@ -198,4 +198,4 @@ bool isLoadOrStore(Operation &op);
 } // namespace matcher
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_NESTEDMATCHER_H
+#endif // MLIR_DIALECT_AFFINE_ANALYSIS_NESTEDMATCHER_H

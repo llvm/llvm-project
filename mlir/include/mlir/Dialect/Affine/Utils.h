@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_AFFINE_UTILS_H
 #define MLIR_DIALECT_AFFINE_UTILS_H
 
-#include "mlir/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 
 namespace mlir {
 

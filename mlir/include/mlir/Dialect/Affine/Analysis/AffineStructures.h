@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_AFFINESTRUCTURES_H
-#define MLIR_ANALYSIS_AFFINESTRUCTURES_H
+#ifndef MLIR_DIALECT_AFFINE_ANALYSIS_AFFINESTRUCTURES_H
+#define MLIR_DIALECT_AFFINE_ANALYSIS_AFFINESTRUCTURES_H
 
 #include "mlir/Analysis/Presburger/IntegerPolyhedron.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
@@ -694,4 +694,4 @@ LogicalResult getRelationFromMap(const AffineValueMap &map,
 
 } // namespace mlir.
 
-#endif // MLIR_ANALYSIS_AFFINESTRUCTURES_H
+#endif // MLIR_DIALECT_AFFINE_ANALYSIS_AFFINESTRUCTURES_H
