@@ -1,5 +1,6 @@
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --no-gc-sections --experimental-pic -pie -o %t.wasm %t.o
+; RUN: obj2yaml %t.wasm | FileCheck %s
 
 target triple = "wasm32-unknown-emscripten"
 
@@ -32,7 +33,7 @@ define void @_start() {
 
 declare void @external_func()
 
-;      CHECK: Sections:
+; CHECK:      Sections:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            dylink.0
 ; CHECK-NEXT:     MemorySize:      16
@@ -43,6 +44,14 @@ declare void @external_func()
 
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
+; CHECK-NEXT:      - Module:          env
+; CHECK-NEXT:        Field:           __indirect_function_table
+; CHECK-NEXT:        Kind:            TABLE
+; CHECK-NEXT:        Table:
+; CHECK-NEXT:          Index:           0
+; CHECK-NEXT:          ElemType:        FUNCREF
+; CHECK-NEXT:          Limits:
+; CHECK-NEXT:            Minimum:         0x1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL
@@ -58,26 +67,20 @@ declare void @external_func()
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   false
-; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Table:
-; CHECK-NEXT:           Index:           0
-; CHECK-NEXT:           ElemType:        FUNCREF
-; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Minimum:         0x1
 
 ; CHECK:        - Type:            START
-; CHECK-NEXT:     StartFunction:   2
+; CHECK-NEXT:     StartFunction:   3
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            __wasm_call_ctors
+; CHECK-NEXT:         Name:            external_func
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Name:            __wasm_apply_data_relocs
+; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Name:            __wasm_apply_data_relocs
+; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            __wasm_apply_global_relocs
 
 
