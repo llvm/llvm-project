@@ -37,13 +37,34 @@ def _memoizeExpensiveOperation(extractCacheKey):
   We pickle the cache key to make sure we store an immutable representation
   of it. If we stored an object and the object was referenced elsewhere, it
   could be changed from under our feet, which would break the cache.
+
+  We also store the cache for a given function persistently across invocations
+  of Lit. This dramatically speeds up the configuration of the test suite when
+  invoking Lit repeatedly, which is important for developer workflow. However,
+  with the current implementation that does not synchronize updates to the
+  persistent cache, this also means that one should not call a memoized
+  operation from multiple threads. This should normally not be a problem
+  since Lit configuration is single-threaded.
   """
   def decorator(function):
-    cache = {}
-    def f(*args, **kwargs):
-      cacheKey = pickle.dumps(extractCacheKey(*args, **kwargs))
+    def f(config, *args, **kwargs):
+      cacheRoot = os.path.join(config.test_exec_root, '__config_cache__')
+      persistentCache = os.path.join(cacheRoot, function.__name__)
+      if not os.path.exists(cacheRoot):
+        os.makedirs(cacheRoot)
+
+      cache = {}
+      # Load a cache from a previous Lit invocation if there is one.
+      if os.path.exists(persistentCache):
+        with open(persistentCache, 'rb') as cacheFile:
+          cache = pickle.load(cacheFile)
+
+      cacheKey = pickle.dumps(extractCacheKey(config, *args, **kwargs))
       if cacheKey not in cache:
-        cache[cacheKey] = function(*args, **kwargs)
+        cache[cacheKey] = function(config, *args, **kwargs)
+        # Update the persistent cache so it knows about the new key
+        with open(persistentCache, 'wb') as cacheFile:
+          pickle.dump(cache, cacheFile)
       return cache[cacheKey]
     return f
   return decorator
