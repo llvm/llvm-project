@@ -1476,7 +1476,7 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
 /// as `int I = 3`.
 static bool TemplateParameterAllowsValue(NamedDecl *param,
                                          const TemplateArgument &value) {
-  if (auto *type_param = llvm::dyn_cast<TemplateTypeParmDecl>(param)) {
+  if (llvm::isa<TemplateTypeParmDecl>(param)) {
     // Compare the argument kind, i.e. ensure that <typename> != <int>.
     if (value.getKind() != TemplateArgument::Type)
       return false;
