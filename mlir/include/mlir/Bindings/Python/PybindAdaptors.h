@@ -291,29 +291,6 @@ public:
   py::object get_class() const { return thisClass; }
 
 protected:
-  /// Defers to the constructor of the superClass the configuration of the
-  /// pybind11 object from the given arguments. Pybind11 has a special handling
-  /// for constructors such that they don't accept a "self" reference, unlike
-  /// Python "__init__" calls. Therefore, one cannot just call the "__init__" of
-  /// the parent class, which would require access to "self". Instead, create an
-  /// instance of the superclass and take its instance pointer to the base C++
-  /// object to populate the instance pointer of the constructed object. Since
-  /// we only deal with _pure_ subclasses, this should be sufficient as derived
-  /// classes cannot have more data fields.
-  template <typename... Args>
-  static void deferToSuperclassConstructor(py::detail::value_and_holder &vh,
-                                           py::object superClass,
-                                           Args &&...args) {
-    py::object super = superClass(std::forward<Args>(args)...);
-    py::detail::type_info *ti =
-        py::detail::get_type_info((PyTypeObject *)superClass.ptr());
-    auto *instance = reinterpret_cast<py::detail::instance *>(super.ptr());
-
-    // Take ownership of the value pointer from the base class.
-    vh.value_ptr() = instance->get_value_and_holder(ti, true).value_ptr();
-    super.release();
-  }
-
   py::object superClass;
   py::object thisClass;
 };
@@ -343,16 +320,12 @@ public:
     // Casting constructor. Note that defining an __init__ method is special
     // and not yet generalized on pure_subclass (it requires a somewhat
     // different cpp_function and other requirements on chaining to super
-    // __init__ make it more awkward to do generally). It is marked as
-    // `is_new_style_constructor` to suppress the deprecation warning from
-    // pybind11 related to placement-new since we are not doing any allocation
-    // here but relying on the superclass constructor that does "new-style"
-    // allocation for pybind11.
+    // __init__ make it more awkward to do generally).
     std::string captureTypeName(
         typeClassName); // As string in case if typeClassName is not static.
     py::cpp_function initCf(
-        [superClass, isaFunction, captureTypeName](
-            py::detail::value_and_holder &vh, py::object otherType) {
+        [superClass, isaFunction, captureTypeName](py::object self,
+                                                   py::object otherType) {
           MlirAttribute rawAttribute = py::cast<MlirAttribute>(otherType);
           if (!isaFunction(rawAttribute)) {
             auto origRepr = py::repr(otherType).cast<std::string>();
@@ -361,12 +334,9 @@ public:
                  " (from " + origRepr + ")")
                     .str());
           }
-          pure_subclass::deferToSuperclassConstructor(vh, superClass,
-                                                      otherType);
+          superClass.attr("__init__")(self, otherType);
         },
-        py::name("__init__"), py::arg("cast_from_type"),
-        py::is_method(scope.attr(typeClassName)),
-        py::detail::is_new_style_constructor(),
+        py::arg("cast_from_type"), py::is_method(py::none()),
         "Casts the passed type to this specific sub-type.");
     thisClass.attr("__init__") = initCf;
 
@@ -401,16 +371,12 @@ public:
     // Casting constructor. Note that defining an __init__ method is special
     // and not yet generalized on pure_subclass (it requires a somewhat
     // different cpp_function and other requirements on chaining to super
-    // __init__ make it more awkward to do generally). It is marked as
-    // `is_new_style_constructor` to suppress the deprecation warning from
-    // pybind11 related to placement-new since we are not doing any allocation
-    // here but relying on the superclass constructor that does "new-style"
-    // allocation for pybind11.
+    // __init__ make it more awkward to do generally).
     std::string captureTypeName(
         typeClassName); // As string in case if typeClassName is not static.
     py::cpp_function initCf(
-        [superClass, isaFunction, captureTypeName](
-            py::detail::value_and_holder &vh, py::object otherType) {
+        [superClass, isaFunction, captureTypeName](py::object self,
+                                                   py::object otherType) {
           MlirType rawType = py::cast<MlirType>(otherType);
           if (!isaFunction(rawType)) {
             auto origRepr = py::repr(otherType).cast<std::string>();
@@ -419,12 +385,9 @@ public:
                                          origRepr + ")")
                                             .str());
           }
-          pure_subclass::deferToSuperclassConstructor(vh, superClass,
-                                                      otherType);
+          superClass.attr("__init__")(self, otherType);
         },
-        py::name("__init__"), py::arg("cast_from_type"),
-        py::is_method(scope.attr(typeClassName)),
-        py::detail::is_new_style_constructor(),
+        py::arg("cast_from_type"), py::is_method(py::none()),
         "Casts the passed type to this specific sub-type.");
     thisClass.attr("__init__") = initCf;
 
