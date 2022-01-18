@@ -145,6 +145,11 @@ bool ScriptedThread::CalculateStopInfo() {
   StructuredData::DictionarySP dict_sp = GetInterface()->GetStopReason();
 
   Status error;
+  if (!dict_sp)
+    return GetInterface()->ErrorWithMessage<bool>(
+        LLVM_PRETTY_FUNCTION, "Failed to get scripted thread stop info.", error,
+        LIBLLDB_LOG_THREAD);
+
   lldb::StopInfoSP stop_info_sp;
   lldb::StopReason stop_reason_type;
 
@@ -158,12 +163,12 @@ bool ScriptedThread::CalculateStopInfo() {
   if (!dict_sp->GetValueForKeyAsDictionary("data", data_dict))
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
-        "Couldn't find value for key 'type' in stop reason dictionary.", error,
+        "Couldn't find value for key 'data' in stop reason dictionary.", error,
         LIBLLDB_LOG_THREAD);
 
   switch (stop_reason_type) {
   case lldb::eStopReasonNone:
-    break;
+    return true;
   case lldb::eStopReasonBreakpoint: {
     lldb::break_id_t break_id;
     data_dict->GetValueForKeyAsInteger("break_id", break_id,
@@ -180,6 +185,13 @@ bool ScriptedThread::CalculateStopInfo() {
     stop_info_sp =
         StopInfo::CreateStopReasonWithSignal(*this, signal, description.data());
   } break;
+  case lldb::eStopReasonException: {
+    llvm::StringRef description;
+    data_dict->GetValueForKeyAsString("desc", description);
+
+    stop_info_sp =
+        StopInfo::CreateStopReasonWithException(*this, description.data());
+  } break;
   default:
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
@@ -188,6 +200,9 @@ bool ScriptedThread::CalculateStopInfo() {
             .str(),
         error, LIBLLDB_LOG_THREAD);
   }
+
+  if (!stop_info_sp)
+    return false;
 
   SetStopInfo(stop_info_sp);
   return true;

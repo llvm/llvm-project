@@ -117,9 +117,21 @@ class StackCoreScriptedThread(ScriptedThread):
         return StackCoreScriptedThread.__name__ + ".thread-" + str(self.id)
 
     def get_stop_reason(self) -> Dict[str, Any]:
-        return { "type": lldb.eStopReasonSignal, "data": {
-            "signal": signal.SIGINT
-        } }
+        stop_reason = { "type": lldb.eStopReasonInvalid, "data": {  }}
+
+        if self.corefile_thread and self.corefile_thread.IsValid:
+            stop_reason["type"] = self.corefile_thread.GetStopReason()
+
+            if self.corefile_thread.GetStopReasonDataCount() > 0:
+                if stop_reason["type"] == lldb.eStopReasonBreakpoint:
+                    stop_reason["data"]["break_id"] = self.corefile_thread.GetStopReasonDataAtIndex(0)
+                    stop_reason["data"]["break_loc_id"] = self.corefile_thread.GetStopReasonDataAtIndex(1)
+                elif stop_reason["type"] == lldb.eStopReasonSignal:
+                    stop_reason["data"]["signal"] = signal.SIGINT
+                elif stop_reason["type"] == lldb.eStopReasonException:
+                    stop_reason["data"]["desc"] = self.corefile_thread.GetStopDescription(100)
+
+        return stop_reason
 
     def get_stackframes(self):
         class ScriptedStackFrame:
