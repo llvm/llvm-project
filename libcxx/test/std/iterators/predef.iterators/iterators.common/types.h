@@ -157,30 +157,6 @@ public:
     }
 };
 
-template <class It>
-class non_const_deref_iterator
-{
-    It it_;
-
-public:
-    typedef          std::input_iterator_tag                   iterator_category;
-    typedef typename std::iterator_traits<It>::value_type      value_type;
-    typedef typename std::iterator_traits<It>::difference_type difference_type;
-    typedef It                                                 pointer;
-    typedef typename std::iterator_traits<It>::reference       reference;
-
-    constexpr It base() const {return it_;}
-
-    non_const_deref_iterator() = default;
-    explicit constexpr non_const_deref_iterator(It it) : it_(it) {}
-
-    constexpr reference operator*() {return *it_;} // Note: non-const.
-
-    constexpr non_const_deref_iterator& operator++() {++it_; return *this;}
-    constexpr non_const_deref_iterator operator++(int)
-        {non_const_deref_iterator tmp(*this); ++(*this); return tmp;}
-};
-
 template<class T>
 struct sentinel_type {
   T base;
