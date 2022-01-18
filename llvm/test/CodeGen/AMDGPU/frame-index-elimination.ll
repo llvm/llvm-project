@@ -156,18 +156,18 @@ define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 } addrspace(5)* b
 
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr_nonentry_block:
 
+; GCN: s_and_saveexec_b64
+
+; CI: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4 glc{{$}}
+; GFX9-MUBUF:   buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4 glc{{$}}
+; GFX9-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, s32 offset:4 glc{{$}}
+
 ; CI: v_lshr_b32_e64 [[SHIFT:v[0-9]+]], s32, 6
+; CI: v_add_i32_e32 [[GEP:v[0-9]+]], vcc, 4, [[SHIFT]]
 
 ; GFX9-MUBUF:   v_lshrrev_b32_e64 [[SP:v[0-9]+]], 6, s32
 ; GFX9-FLATSCR: v_mov_b32_e32 [[SP:v[0-9]+]], s32
 
-; GCN: s_and_saveexec_b64
-
-; CI: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4 glc{{$}}
-; CI: v_add_i32_e32 [[GEP:v[0-9]+]], vcc, 4, [[SHIFT]]
-
-; GFX9-MUBUF:   buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4 glc{{$}}
-; GFX9-FLATSCR: scratch_load_dword v{{[0-9]+}}, off, s32 offset:4 glc{{$}}
 ; GFX9: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SP]]
 
 ; GCN: ds_write_b32 v{{[0-9]+}}, [[GEP]]

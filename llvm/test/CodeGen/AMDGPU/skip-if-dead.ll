@@ -1373,7 +1373,6 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; SI-LABEL: complex_loop:
 ; SI:       ; %bb.0: ; %.entry
 ; SI-NEXT:    s_cmp_lt_i32 s0, 1
-; SI-NEXT:    v_mov_b32_e32 v2, -1
 ; SI-NEXT:    s_cbranch_scc1 .LBB15_7
 ; SI-NEXT:  ; %bb.1: ; %.lr.ph
 ; SI-NEXT:    s_mov_b64 s[2:3], exec
@@ -1405,7 +1404,10 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; SI-NEXT:    s_branch .LBB15_2
 ; SI-NEXT:  .LBB15_6: ; %Flow
 ; SI-NEXT:    s_or_b64 exec, exec, s[0:1]
-; SI-NEXT:  .LBB15_7: ; %._crit_edge
+; SI-NEXT:    exp mrt0 v2, v2, v0, v0 done vm
+; SI-NEXT:    s_endpgm
+; SI-NEXT:  .LBB15_7:
+; SI-NEXT:    v_mov_b32_e32 v2, -1
 ; SI-NEXT:    exp mrt0 v2, v2, v0, v0 done vm
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB15_8:
@@ -1415,7 +1417,6 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ;
 ; GFX10-WAVE64-LABEL: complex_loop:
 ; GFX10-WAVE64:       ; %bb.0: ; %.entry
-; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX10-WAVE64-NEXT:    s_cmp_lt_i32 s0, 1
 ; GFX10-WAVE64-NEXT:    s_cbranch_scc1 .LBB15_7
 ; GFX10-WAVE64-NEXT:  ; %bb.1: ; %.lr.ph
@@ -1448,7 +1449,10 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX10-WAVE64-NEXT:    s_branch .LBB15_2
 ; GFX10-WAVE64-NEXT:  .LBB15_6: ; %Flow
 ; GFX10-WAVE64-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX10-WAVE64-NEXT:  .LBB15_7: ; %._crit_edge
+; GFX10-WAVE64-NEXT:    exp mrt0 v2, v2, v0, v0 done vm
+; GFX10-WAVE64-NEXT:    s_endpgm
+; GFX10-WAVE64-NEXT:  .LBB15_7:
+; GFX10-WAVE64-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX10-WAVE64-NEXT:    exp mrt0 v2, v2, v0, v0 done vm
 ; GFX10-WAVE64-NEXT:    s_endpgm
 ; GFX10-WAVE64-NEXT:  .LBB15_8:
@@ -1458,7 +1462,6 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ;
 ; GFX10-WAVE32-LABEL: complex_loop:
 ; GFX10-WAVE32:       ; %bb.0: ; %.entry
-; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX10-WAVE32-NEXT:    s_cmp_lt_i32 s0, 1
 ; GFX10-WAVE32-NEXT:    s_cbranch_scc1 .LBB15_7
 ; GFX10-WAVE32-NEXT:  ; %bb.1: ; %.lr.ph
@@ -1491,7 +1494,10 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX10-WAVE32-NEXT:    s_branch .LBB15_2
 ; GFX10-WAVE32-NEXT:  .LBB15_6: ; %Flow
 ; GFX10-WAVE32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX10-WAVE32-NEXT:  .LBB15_7: ; %._crit_edge
+; GFX10-WAVE32-NEXT:    exp mrt0 v2, v2, v0, v0 done vm
+; GFX10-WAVE32-NEXT:    s_endpgm
+; GFX10-WAVE32-NEXT:  .LBB15_7:
+; GFX10-WAVE32-NEXT:    v_mov_b32_e32 v2, -1
 ; GFX10-WAVE32-NEXT:    exp mrt0 v2, v2, v0, v0 done vm
 ; GFX10-WAVE32-NEXT:    s_endpgm
 ; GFX10-WAVE32-NEXT:  .LBB15_8:
