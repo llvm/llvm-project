@@ -8362,6 +8362,27 @@ let Predicates = [HasMOPS, HasMTE] in {
   }
 }
 
+let Predicates = [HasMOPS], Defs = [NZCV], Size = 12, mayStore = 1 in {
+  let mayLoad = 1 in {
+    def MOPSMemoryCopyPseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64common:$Rs_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64common:$Rs, GPR64:$Rn),
+                                      [], "$Rd = $Rd_wb,$Rs = $Rs_wb,$Rn = $Rn_wb">, Sched<[]>;
+    def MOPSMemoryMovePseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64common:$Rs_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64common:$Rs, GPR64:$Rn),
+                                      [], "$Rd = $Rd_wb,$Rs = $Rs_wb,$Rn = $Rn_wb">, Sched<[]>;
+  }
+  let mayLoad = 0 in {
+    def MOPSMemorySetPseudo  : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
+                                      (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                                      [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
+  }
+}
+let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, mayStore = 1 in {
+  def MOPSMemorySetTaggingPseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
+                                          (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
+                                          [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
+}
+
 let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in
 def StoreSwiftAsyncContext
       : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),

@@ -130,6 +130,10 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case AArch64::JumpTableDest32:
   case AArch64::JumpTableDest16:
   case AArch64::JumpTableDest8:
+  case AArch64::MOPSMemoryCopyPseudo:
+  case AArch64::MOPSMemoryMovePseudo:
+  case AArch64::MOPSMemorySetPseudo:
+  case AArch64::MOPSMemorySetTaggingPseudo:
     NumBytes = 12;
     break;
   case AArch64::SPACE:

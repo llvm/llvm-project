@@ -192,6 +192,7 @@ private:
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectReduction(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
 
   unsigned emitConstantPoolEntry(const Constant *CPVal,
@@ -3424,6 +3425,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_VECREDUCE_FADD:
   case TargetOpcode::G_VECREDUCE_ADD:
     return selectReduction(I, MRI);
+  case TargetOpcode::G_MEMCPY:
+  case TargetOpcode::G_MEMCPY_INLINE:
+  case TargetOpcode::G_MEMMOVE:
+  case TargetOpcode::G_MEMSET:
+    assert(STI.hasMOPS() && "Shouldn't get here without +mops feature");
+    return selectMOPS(I, MRI);
   }
 
   return false;
@@ -3479,6 +3486,64 @@ bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
   return false;
+}
+
+bool AArch64InstructionSelector::selectMOPS(MachineInstr &GI,
+                                            MachineRegisterInfo &MRI) {
+  unsigned Mopcode;
+  switch (GI.getOpcode()) {
+  case TargetOpcode::G_MEMCPY:
+  case TargetOpcode::G_MEMCPY_INLINE:
+    Mopcode = AArch64::MOPSMemoryCopyPseudo;
+    break;
+  case TargetOpcode::G_MEMMOVE:
+    Mopcode = AArch64::MOPSMemoryMovePseudo;
+    break;
+  case TargetOpcode::G_MEMSET:
+    // For tagged memset see llvm.aarch64.mops.memset.tag
+    Mopcode = AArch64::MOPSMemorySetPseudo;
+    break;
+  }
+
+  auto &DstPtr = GI.getOperand(0);
+  auto &SrcOrVal = GI.getOperand(1);
+  auto &Size = GI.getOperand(2);
+
+  // Create copies of the registers that can be clobbered.
+  const Register DstPtrCopy = MRI.cloneVirtualRegister(DstPtr.getReg());
+  const Register SrcValCopy = MRI.cloneVirtualRegister(SrcOrVal.getReg());
+  const Register SizeCopy = MRI.cloneVirtualRegister(Size.getReg());
+
+  const bool IsSet = Mopcode == AArch64::MOPSMemorySetPseudo;
+  const auto &SrcValRegClass =
+      IsSet ? AArch64::GPR64RegClass : AArch64::GPR64commonRegClass;
+
+  // Constrain to specific registers
+  RBI.constrainGenericRegister(DstPtrCopy, AArch64::GPR64commonRegClass, MRI);
+  RBI.constrainGenericRegister(SrcValCopy, SrcValRegClass, MRI);
+  RBI.constrainGenericRegister(SizeCopy, AArch64::GPR64RegClass, MRI);
+
+  MIB.buildCopy(DstPtrCopy, DstPtr);
+  MIB.buildCopy(SrcValCopy, SrcOrVal);
+  MIB.buildCopy(SizeCopy, Size);
+
+  // New instruction uses the copied registers because it must update them.
+  // The defs are not used since they don't exist in G_MEM*. They are still
+  // tied.
+  // Note: order of operands is different from G_MEMSET, G_MEMCPY, G_MEMMOVE
+  Register DefDstPtr = MRI.createVirtualRegister(&AArch64::GPR64commonRegClass);
+  Register DefSize = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  if (IsSet) {
+    MIB.buildInstr(Mopcode, {DefDstPtr, DefSize},
+                   {DstPtrCopy, SizeCopy, SrcValCopy});
+  } else {
+    Register DefSrcPtr = MRI.createVirtualRegister(&SrcValRegClass);
+    MIB.buildInstr(Mopcode, {DefDstPtr, DefSrcPtr, DefSize},
+                   {DstPtrCopy, SrcValCopy, SizeCopy});
+  }
+
+  GI.eraseFromParent();
+  return true;
 }
 
 bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
@@ -5373,6 +5438,36 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     auto Store = MIB.buildInstr(Opc, {}, {Tuple, Ptr});
     Store.cloneMemRefs(I);
     constrainSelectedInstRegOperands(*Store, TII, TRI, RBI);
+    break;
+  }
+  case Intrinsic::aarch64_mops_memset_tag: {
+    // Transform
+    //    %dst:gpr(p0) = \
+    //      G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.mops.memset.tag),
+    //      \ %dst:gpr(p0), %val:gpr(s64), %n:gpr(s64)
+    // where %dst is updated, into
+    //    %Rd:GPR64common, %Rn:GPR64) = \
+    //      MOPSMemorySetTaggingPseudo \
+    //      %Rd:GPR64common, %Rn:GPR64, %Rm:GPR64
+    // where Rd and Rn are tied.
+    // It is expected that %val has been extended to s64 in legalization.
+    // Note that the order of the size/value operands are swapped.
+
+    Register DstDef = I.getOperand(0).getReg();
+    // I.getOperand(1) is the intrinsic function
+    Register DstUse = I.getOperand(2).getReg();
+    Register ValUse = I.getOperand(3).getReg();
+    Register SizeUse = I.getOperand(4).getReg();
+
+    // MOPSMemorySetTaggingPseudo has two defs; the intrinsic call has only one.
+    // Therefore an additional virtual register is requried for the updated size
+    // operand. This value is not accessible via the semantics of the intrinsic.
+    Register SizeDef = MRI.createGenericVirtualRegister(LLT::scalar(64));
+
+    auto Memset = MIB.buildInstr(AArch64::MOPSMemorySetTaggingPseudo,
+                                 {DstDef, SizeDef}, {DstUse, SizeUse, ValUse});
+    Memset.cloneMemRefs(I);
+    constrainSelectedInstRegOperands(*Memset, TII, TRI, RBI);
     break;
   }
   }
