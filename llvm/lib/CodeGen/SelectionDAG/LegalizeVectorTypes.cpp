@@ -3445,20 +3445,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_Binary(SDNode *N) {
   assert(N->getNumOperands() == 4 && "Unexpected number of operands!");
   assert(N->isVPOpcode() && "Expected VP opcode");
 
-  // For VP operations, we must also widen the mask. Note that the mask type
-  // may not actually need widening, leading it be split along with the VP
-  // operation.
-  // FIXME: This could lead to an infinite split/widen loop. We only handle the
-  // case where the mask needs widening to an identically-sized type as the
-  // vector inputs.
-  SDValue Mask = N->getOperand(2);
-  assert(getTypeAction(Mask.getValueType()) ==
-             TargetLowering::TypeWidenVector &&
-         "Unable to widen binary VP op");
-  Mask = GetWidenedVector(Mask);
-  assert(Mask.getValueType().getVectorElementCount() ==
-             WidenVT.getVectorElementCount() &&
-         "Unable to widen binary VP op");
+  SDValue Mask =
+      GetWidenedMask(N->getOperand(2), WidenVT.getVectorElementCount());
   return DAG.getNode(N->getOpcode(), dl, WidenVT,
                      {InOp1, InOp2, Mask, N->getOperand(3)}, N->getFlags());
 }
@@ -4978,6 +4966,23 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_SEQ_FMUL:
     Res = WidenVecOp_VECREDUCE_SEQ(N);
     break;
+  case ISD::VP_REDUCE_FADD:
+  case ISD::VP_REDUCE_SEQ_FADD:
+  case ISD::VP_REDUCE_FMUL:
+  case ISD::VP_REDUCE_SEQ_FMUL:
+  case ISD::VP_REDUCE_ADD:
+  case ISD::VP_REDUCE_MUL:
+  case ISD::VP_REDUCE_AND:
+  case ISD::VP_REDUCE_OR:
+  case ISD::VP_REDUCE_XOR:
+  case ISD::VP_REDUCE_SMAX:
+  case ISD::VP_REDUCE_SMIN:
+  case ISD::VP_REDUCE_UMAX:
+  case ISD::VP_REDUCE_UMIN:
+  case ISD::VP_REDUCE_FMAX:
+  case ISD::VP_REDUCE_FMIN:
+    Res = WidenVecOp_VP_REDUCE(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -5569,6 +5574,19 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
                      DAG.getVectorIdxConstant(Idx, dl));
 
   return DAG.getNode(Opc, dl, N->getValueType(0), AccOp, Op, Flags);
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VP_REDUCE(SDNode *N) {
+  assert(N->isVPOpcode() && "Expected VP opcode");
+
+  SDLoc dl(N);
+  SDValue Op = GetWidenedVector(N->getOperand(1));
+  SDValue Mask = GetWidenedMask(N->getOperand(2),
+                                Op.getValueType().getVectorElementCount());
+
+  return DAG.getNode(N->getOpcode(), dl, N->getValueType(0),
+                     {N->getOperand(0), Op, Mask, N->getOperand(3)},
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
