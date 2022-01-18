@@ -209,7 +209,7 @@ namespace detail {
 struct DiagnosticEngineImpl {
   /// Emit a diagnostic using the registered issue handle if present, or with
   /// the default behavior if not.
-  void emit(Diagnostic diag);
+  void emit(Diagnostic &&diag);
 
   /// A mutex to ensure that diagnostics emission is thread-safe.
   llvm::sys::SmartMutex<true> mutex;
@@ -228,7 +228,7 @@ struct DiagnosticEngineImpl {
 
 /// Emit a diagnostic using the registered issue handle if present, or with
 /// the default behavior if not.
-void DiagnosticEngineImpl::emit(Diagnostic diag) {
+void DiagnosticEngineImpl::emit(Diagnostic &&diag) {
   llvm::sys::SmartScopedLock<true> lock(mutex);
 
   // Try to process the given diagnostic on one of the registered handlers.
@@ -277,7 +277,7 @@ void DiagnosticEngine::eraseHandler(HandlerID handlerID) {
 
 /// Emit a diagnostic using the registered issue handler if present, or with
 /// the default behavior if not.
-void DiagnosticEngine::emit(Diagnostic diag) {
+void DiagnosticEngine::emit(Diagnostic &&diag) {
   assert(diag.getSeverity() != DiagnosticSeverity::Note &&
          "notes should not be emitted directly");
   impl->emit(std::move(diag));
@@ -869,13 +869,13 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
       return;
 
     // Emit the diagnostics back to the context.
-    emitDiagnostics([&](Diagnostic diag) {
+    emitDiagnostics([&](Diagnostic &diag) {
       return context->getDiagEngine().emit(std::move(diag));
     });
   }
 
   /// Utility method to emit any held diagnostics.
-  void emitDiagnostics(llvm::function_ref<void(Diagnostic)> emitFn) const {
+  void emitDiagnostics(llvm::function_ref<void(Diagnostic &)> emitFn) const {
     // Stable sort all of the diagnostics that were emitted. This creates a
     // deterministic ordering for the diagnostics based upon which order id they
     // were emitted for.
@@ -883,7 +883,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
     // Emit each diagnostic to the context again.
     for (ThreadDiagnostic &diag : diagnostics)
-      emitFn(std::move(diag.diag));
+      emitFn(diag.diag);
   }
 
   /// Set the order id for the current thread.
