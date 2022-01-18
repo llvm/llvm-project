@@ -8333,23 +8333,33 @@ let Predicates = [HasLS64] in {
 }
 
 let Predicates = [HasMOPS] in {
-  defm CPYFP : MOPSMemoryCopyInsns<0b00, "cpyfp">;
-  defm CPYFM : MOPSMemoryCopyInsns<0b01, "cpyfm">;
-  defm CPYFE : MOPSMemoryCopyInsns<0b10, "cpyfe">;
+  let Defs = [NZCV] in {
+    defm CPYFP : MOPSMemoryCopyInsns<0b00, "cpyfp">;
 
-  defm CPYP : MOPSMemoryMoveInsns<0b00, "cpyp">;
-  defm CPYM : MOPSMemoryMoveInsns<0b01, "cpym">;
-  defm CPYE : MOPSMemoryMoveInsns<0b10, "cpye">;
+    defm CPYP : MOPSMemoryMoveInsns<0b00, "cpyp">;
 
-  defm SETP : MOPSMemorySetInsns<0b00, "setp">;
-  defm SETM : MOPSMemorySetInsns<0b01, "setm">;
-  defm SETE : MOPSMemorySetInsns<0b10, "sete">;
+    defm SETP : MOPSMemorySetInsns<0b00, "setp">;
+  }
+  let Uses = [NZCV] in {
+    defm CPYFM : MOPSMemoryCopyInsns<0b01, "cpyfm">;
+    defm CPYFE : MOPSMemoryCopyInsns<0b10, "cpyfe">;
+
+    defm CPYM : MOPSMemoryMoveInsns<0b01, "cpym">;
+    defm CPYE : MOPSMemoryMoveInsns<0b10, "cpye">;
+
+    defm SETM : MOPSMemorySetInsns<0b01, "setm">;
+    defm SETE : MOPSMemorySetInsns<0b10, "sete">;
+  }
 }
 let Predicates = [HasMOPS, HasMTE] in {
-  defm SETGP     : MOPSMemorySetTaggingInsns<0b00, "setgp">;
-  defm SETGM     : MOPSMemorySetTaggingInsns<0b01, "setgm">;
-  // Can't use SETGE because it's a reserved name in TargetSelectionDAG.td
-  defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
+  let Defs = [NZCV] in {
+    defm SETGP     : MOPSMemorySetTaggingInsns<0b00, "setgp">;
+  }
+  let Uses = [NZCV] in {
+    defm SETGM     : MOPSMemorySetTaggingInsns<0b01, "setgm">;
+    // Can't use SETGE because it's a reserved name in TargetSelectionDAG.td
+    defm MOPSSETGE : MOPSMemorySetTaggingInsns<0b10, "setge">;
+  }
 }
 
 let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in
