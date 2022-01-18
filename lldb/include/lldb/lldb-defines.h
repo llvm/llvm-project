@@ -11,18 +11,6 @@
 
 #include "lldb/lldb-types.h"
 
-#if defined(_WIN32)
-#if defined(EXPORT_LIBLLDB)
-#define LLDB_API __declspec(dllexport)
-#elif defined(IMPORT_LIBLLDB)
-#define LLDB_API __declspec(dllimport)
-#else
-#define LLDB_API
-#endif
-#else // defined (_WIN32)
-#define LLDB_API
-#endif
-
 #if !defined(INT32_MAX)
 #define INT32_MAX 2147483647
 #endif
