@@ -30,7 +30,7 @@ test(U u)
     const std::move_iterator<U> r2(u);
     std::move_iterator<It> r1(It(nullptr));
     std::move_iterator<It>& rr = (r1 = r2);
-    assert(r1.base() == u);
+    assert(base(r1.base()) == base(u));
     assert(&rr == &r1);
 }
 
