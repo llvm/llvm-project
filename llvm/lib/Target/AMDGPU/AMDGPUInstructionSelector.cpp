@@ -1102,7 +1102,18 @@ bool AMDGPUInstructionSelector::selectIntrinsicIcmp(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   Register SrcReg = I.getOperand(2).getReg();
   unsigned Size = RBI.getSizeInBits(SrcReg, *MRI, TRI);
+
   auto Pred = static_cast<CmpInst::Predicate>(I.getOperand(4).getImm());
+  if (!ICmpInst::isIntPredicate(static_cast<ICmpInst::Predicate>(Pred))) {
+    MachineInstr *ICmp =
+        BuildMI(*BB, &I, DL, TII.get(AMDGPU::IMPLICIT_DEF), Dst);
+
+    if (!RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
+                                      *TRI.getBoolRC(), *MRI))
+      return false;
+    I.eraseFromParent();
+    return true;
+  }
 
   int Opcode = getV_CMPOpcode(Pred, Size);
   if (Opcode == -1)
