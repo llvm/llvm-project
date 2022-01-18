@@ -1755,6 +1755,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":BufferizationDialect",
@@ -2127,6 +2128,25 @@ cc_library(
 )
 
 cc_library(
+    name = "AffineAnalysis",
+    srcs = glob([
+        "lib/Dialect/Affine/Analysis/*.cpp",
+        "lib/Dialect/Affine/Analysis/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Dialect/Affine/Analysis/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Affine",
+        ":Analysis",
+        ":ArithmeticDialect",
+        ":IR",
+        ":StandardOps",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "AffineUtils",
     srcs = glob(
         [
@@ -2138,6 +2158,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":IR",
         ":MemRefDialect",
@@ -2172,6 +2193,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffinePassIncGen",
         ":AffineUtils",
         ":Analysis",
@@ -2692,6 +2714,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffineUtils",
         ":Analysis",
         ":ArithmeticDialect",
@@ -4375,6 +4398,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":ControlFlowInterfaces",
@@ -4577,6 +4601,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AllocationOpInterface",
         ":Analysis",
         ":ArithmeticDialect",
@@ -4698,6 +4723,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"],
     includes = ["include"],
     deps = [
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":ConversionPassIncGen",
@@ -6817,6 +6843,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffineBufferizableOpInterfaceImpl",
         ":AffineUtils",
         ":Analysis",
