@@ -25,12 +25,18 @@
 # VISIBLE-NOT: T _undefined
 # VISIBLE-NOT: T _unused
 
-# RUN: %lld %t/test.a %t/main.o -o %t/all-load -all_load
+# RUN: %lld %t/test.a %t/main.o -o %t/all-load -noall_load -all_load
 # RUN: llvm-nm %t/all-load | FileCheck %s --check-prefix ALL-LOAD
 # ALL-LOAD: T _bar
 # ALL-LOAD: T _boo
 # ALL-LOAD: T _main
 # ALL-LOAD: T _unused
+
+# RUN: %lld %t/test.a %t/main.o -o %t/no-all-load -all_load -noall_load
+# RUN: llvm-nm %t/no-all-load | FileCheck %s --check-prefix NO-ALL-LOAD
+# RUN: %lld %t/test.a %t/main.o -o %t/no-all-load-only -noall_load
+# RUN: llvm-nm %t/no-all-load-only | FileCheck %s --check-prefix NO-ALL-LOAD
+# NO-ALL-LOAD-NOT: T _unused
 
 ## Multiple archives defining the same symbols aren't an issue, due to lazy
 ## loading

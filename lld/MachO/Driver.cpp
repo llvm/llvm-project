@@ -1290,7 +1290,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
-  config->allLoad = args.hasArg(OPT_all_load);
+  config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
       OPT_application_extension, OPT_no_application_extension, false);
