@@ -239,19 +239,7 @@ public:
 
   ~PythonObject() { Reset(); }
 
-  void Reset() {
-    if (m_py_obj && Py_IsInitialized()) {
-      if (_Py_IsFinalizing()) {
-        // Leak m_py_obj rather than crashing the process.
-        // https://docs.python.org/3/c-api/init.html#c.PyGILState_Ensure
-      } else {
-        PyGILState_STATE state = PyGILState_Ensure();
-        Py_DECREF(m_py_obj);
-        PyGILState_Release(state);
-      }
-    }
-    m_py_obj = nullptr;
-  }
+  void Reset();
 
   void Dump() const {
     if (m_py_obj)
