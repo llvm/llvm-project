@@ -517,6 +517,12 @@ public:
   void unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop, int32_t Factor,
                          CanonicalLoopInfo **UnrolledCLI);
 
+  /// Add metadata to simd-ize a loop.
+  ///
+  /// \param DL   Debug location for instructions added by unrolling.
+  /// \param Loop The loop to simd-ize.
+  void applySimd(DebugLoc DL, CanonicalLoopInfo *Loop);
+
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
