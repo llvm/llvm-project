@@ -19,9 +19,11 @@ namespace linalg {
 namespace comprehensive_bufferize {
 namespace scf_ext {
 
-/// Equivalence analysis for scf.for. Raise an error if iter_args are not
-/// equivalent to their corresponding loop yield values.
-struct AssertDestinationPassingStyle : public PostAnalysisStep {
+/// Assert that yielded values of an scf.for op are aliasing their corresponding
+/// bbArgs. This is required because the i-th OpResult of an scf.for op is
+/// currently assumed to alias with the i-th iter_arg (in the absence of
+/// conflicts).
+struct AssertScfForAliasingProperties : public PostAnalysisStep {
   LogicalResult run(Operation *op, BufferizationState &state,
                     BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override;

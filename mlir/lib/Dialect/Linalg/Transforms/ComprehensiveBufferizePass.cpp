@@ -95,8 +95,8 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
         linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
   }
 
-  if (!allowReturnMemref)
-    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+  // Only certain scf.for ops are supported by the analysis.
+  options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);

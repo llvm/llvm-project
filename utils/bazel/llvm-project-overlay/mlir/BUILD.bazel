@@ -6898,6 +6898,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",

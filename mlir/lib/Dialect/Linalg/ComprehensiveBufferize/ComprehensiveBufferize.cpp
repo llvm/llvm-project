@@ -54,6 +54,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -559,6 +560,76 @@ annotateOpsWithBufferizationMarkers(Operation *op,
   });
 }
 
+/// Assert that IR is in destination-passing style. I.e., every value that is
+/// returned or yielded from a block is:
+/// * aliasing a bbArg of that block or a parent block, or
+/// * aliasing an OpResult of a op in a parent block.
+///
+/// Example:
+/// ```
+/// %0 = "some_op" : tensor<?xf32>
+/// %1 = scf.if %c -> (tensor<?xf32>) {
+///   scf.yield %0 : tensor<?xf32>
+/// } else {
+///   %t = linalg.init_tensor : tensor<?xf32>
+///   scf.yield %t : tensor<?xf32>
+/// }
+/// ```
+/// In the above example, the first scf.yield op satifies destination-passing
+/// style because the yielded value %0 is defined in the parent block. The
+/// second scf.yield op does not satisfy destination-passing style because the
+/// yielded value %t is defined in the same block as the scf.yield op.
+// TODO: The current implementation checks for equivalent values instead of
+// aliasing values, which is stricter than needed. We can currently not check
+// for aliasing values because the analysis is a maybe-alias analysis and we
+// need a must-alias analysis here.
+struct AssertDestinationPassingStyle : public PostAnalysisStep {
+  LogicalResult run(Operation *op, BufferizationState &state,
+                    BufferizationAliasInfo &aliasInfo,
+                    SmallVector<Operation *> &newOps) override {
+    LogicalResult status = success();
+    DominanceInfo domInfo(op);
+    op->walk([&](Operation *returnOp) {
+      if (!isRegionReturnLike(returnOp))
+        return WalkResult::advance();
+
+      for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
+        Value returnVal = returnValOperand.get();
+        // Skip non-tensor values.
+        if (!returnVal.getType().isa<TensorType>())
+          continue;
+
+        bool foundEquivValue = false;
+        aliasInfo.applyOnEquivalenceClass(returnVal, [&](Value equivVal) {
+          if (auto bbArg = equivVal.dyn_cast<BlockArgument>()) {
+            Operation *definingOp = bbArg.getOwner()->getParentOp();
+            if (definingOp->isProperAncestor(returnOp))
+              foundEquivValue = true;
+            return;
+          }
+
+          Operation *definingOp = equivVal.getDefiningOp();
+          if (definingOp->getBlock()->findAncestorOpInBlock(
+                  *returnOp->getParentOp()))
+            // Skip ops that happen after `returnOp` and parent ops.
+            if (happensBefore(definingOp, returnOp, domInfo))
+              foundEquivValue = true;
+        });
+
+        if (!foundEquivValue)
+          status =
+              returnOp->emitError()
+              << "operand #" << returnValOperand.getOperandNumber()
+              << " of ReturnLike op does not satisfy destination passing style";
+      }
+
+      return WalkResult::advance();
+    });
+
+    return status;
+  }
+};
+
 /// Rewrite pattern that bufferizes bufferizable ops.
 struct BufferizationPattern
     : public OpInterfaceRewritePattern<BufferizableOpInterface> {
@@ -641,6 +712,13 @@ mlir::linalg::comprehensive_bufferize::analyzeOp(Operation *op,
     if (failed(inPlaceAnalysis(newOps, aliasInfo, state, domInfo)))
       return failure();
     equivalenceAnalysis(newOps, aliasInfo, state);
+  }
+
+  if (!options.allowReturnMemref) {
+    SmallVector<Operation *> newOps;
+    if (failed(
+            AssertDestinationPassingStyle().run(op, state, aliasInfo, newOps)))
+      return failure();
   }
 
   // Annotate operations if we only want to report the analysis.
