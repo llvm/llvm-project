@@ -8,10 +8,6 @@ if (LLDB_ENABLE_SWIFT_SUPPORT)
 endif()
 ## END SWIFT
 
-if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  add_definitions( -DEXPORT_LIBLLDB )
-endif()
-
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
 if(LLDB_BUILD_FRAMEWORK)
@@ -191,6 +187,7 @@ set_target_properties(liblldb
   VERSION ${LLDB_VERSION}
 )
 
+target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   if (NOT LLDB_EXPORT_ALL_SYMBOLS)
     # If we're not exporting all symbols, we'll want to explicitly set
