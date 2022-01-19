@@ -643,12 +643,52 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
-      this->sections[i] = createInputSection(i, sec, shstrtab);
+    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA) {
+      // Find a relocation target section and associate this section with that.
+      // Target may have been discarded if it is in a different section group
+      // and the group is discarded, even though it's a violation of the spec.
+      // We handle that situation gracefully by discarding dangling relocation
+      // sections.
+      const uint32_t info = sec.sh_info;
+      InputSectionBase *s = getRelocTarget(i, sec, info);
+      if (!s)
+        continue;
+
+      // ELF spec allows mergeable sections with relocations, but they are rare,
+      // and it is in practice hard to merge such sections by contents, because
+      // applying relocations at end of linking changes section contents. So, we
+      // simply handle such sections as non-mergeable ones. Degrading like this
+      // is acceptable because section merging is optional.
+      if (auto *ms = dyn_cast<MergeInputSection>(s)) {
+        s = make<InputSection>(ms->file, ms->flags, ms->type, ms->alignment,
+                               ms->data(), ms->name);
+        sections[info] = s;
+      }
+
+      if (s->relSecIdx != 0)
+        error(
+            toString(s) +
+            ": multiple relocation sections to one section are not supported");
+      s->relSecIdx = i;
+
+      // Relocation sections are usually removed from the output, so return
+      // `nullptr` for the normal case. However, if -r or --emit-relocs is
+      // specified, we need to copy them to the output. (Some post link analysis
+      // tools specify --emit-relocs to obtain the information.)
+      if (config->copyRelocs) {
+        auto *isec = make<InputSection>(
+            *this, sec, check(obj.getSectionName(sec, shstrtab)));
+        // If the relocated section is discarded (due to /DISCARD/ or
+        // --gc-sections), the relocation section should be discarded as well.
+        s->dependentSections.push_back(isec);
+        sections[i] = isec;
+      }
+      continue;
+    }
 
     // A SHF_LINK_ORDER section with sh_link=0 is handled as if it did not have
     // the flag.
-    if (!(sec.sh_flags & SHF_LINK_ORDER) || !sec.sh_link)
+    if (!sec.sh_link || !(sec.sh_flags & SHF_LINK_ORDER))
       continue;
 
     InputSectionBase *linkSec = nullptr;
@@ -828,9 +868,9 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
 }
 
 template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, StringRef name,
-                                                const Elf_Shdr &sec) {
-  uint32_t info = sec.sh_info;
+InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx,
+                                                const Elf_Shdr &sec,
+                                                uint32_t info) {
   if (info < this->sections.size()) {
     InputSectionBase *target = this->sections[info];
 
@@ -844,16 +884,9 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, StringRef name,
       return target;
   }
 
-  error(toString(this) + Twine(": relocation section ") + name + " (index " +
-        Twine(idx) + ") has invalid sh_info (" + Twine(info) + ")");
+  error(toString(this) + Twine(": relocation section (index ") + Twine(idx) +
+        ") has invalid sh_info (" + Twine(info) + ")");
   return nullptr;
-}
-
-// Create a regular InputSection class that has the same contents
-// as a given section.
-static InputSection *toRegularSection(MergeInputSection *sec) {
-  return make<InputSection>(sec->file, sec->flags, sec->type, sec->alignment,
-                            sec->data(), sec->name);
 }
 
 template <class ELFT>
@@ -908,10 +941,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     }
   }
 
-  switch (sec.sh_type) {
-  case SHT_LLVM_DEPENDENT_LIBRARIES: {
-    if (config->relocatable)
-      break;
+  if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !config->relocatable) {
     ArrayRef<char> data =
         CHECK(this->getObj().template getSectionContentsAsArray<char>(sec), this);
     if (!data.empty() && data.back() != '\0') {
@@ -926,45 +956,6 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
       d += s.size() + 1;
     }
     return &InputSection::discarded;
-  }
-  case SHT_RELA:
-  case SHT_REL: {
-    // Find a relocation target section and associate this section with that.
-    // Target may have been discarded if it is in a different section group
-    // and the group is discarded, even though it's a violation of the
-    // spec. We handle that situation gracefully by discarding dangling
-    // relocation sections.
-    InputSectionBase *target = getRelocTarget(idx, name, sec);
-    if (!target)
-      return nullptr;
-
-    // ELF spec allows mergeable sections with relocations, but they are
-    // rare, and it is in practice hard to merge such sections by contents,
-    // because applying relocations at end of linking changes section
-    // contents. So, we simply handle such sections as non-mergeable ones.
-    // Degrading like this is acceptable because section merging is optional.
-    if (auto *ms = dyn_cast<MergeInputSection>(target)) {
-      target = toRegularSection(ms);
-      this->sections[sec.sh_info] = target;
-    }
-
-    if (target->relSecIdx != 0)
-      fatal(toString(this) +
-            ": multiple relocation sections to one section are not supported");
-    target->relSecIdx = idx;
-
-    // Relocation sections are usually removed from the output, so return
-    // `nullptr` for the normal case. However, if -r or --emit-relocs is
-    // specified, we need to copy them to the output. (Some post link analysis
-    // tools specify --emit-relocs to obtain the information.)
-    if (!config->copyRelocs)
-      return nullptr;
-    InputSection *relocSec = make<InputSection>(*this, sec, name);
-    // If the relocated section is discarded (due to /DISCARD/ or
-    // --gc-sections), the relocation section should be discarded as well.
-    target->dependentSections.push_back(relocSec);
-    return relocSec;
-  }
   }
 
   if (name.startswith(".n")) {
