@@ -1,12 +1,16 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-include(GNUInstallDirs)
-
 # If we are not building as a part of LLVM, build LLD as an
 # standalone project, using LLVM as an external library:
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lld)
+  set(LLD_BUILT_STANDALONE TRUE)
+endif()
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
+if(LLD_BUILT_STANDALONE)
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
   # Rely on llvm-config.
@@ -140,8 +144,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(LLVM_HAVE_LIBXAR)
     set(XAR_LIB xar)
   endif()
-
-  set(LLD_BUILT_STANDALONE TRUE)
 endif() # standalone
 
 set(LLD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})

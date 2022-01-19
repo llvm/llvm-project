@@ -7,8 +7,6 @@
 #===----------------------------------------------------------------------===##
 cmake_minimum_required(VERSION 3.13.4)
 
-include(GNUInstallDirs)
-
 set(PARALLELSTL_VERSION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/include/pstl/internal/pstl_config.h")
 file(STRINGS "${PARALLELSTL_VERSION_FILE}" PARALLELSTL_VERSION_SOURCE REGEX "#define _PSTL_VERSION .*$")
 string(REGEX REPLACE "#define _PSTL_VERSION (.*)$" "\\1" PARALLELSTL_VERSION_SOURCE "${PARALLELSTL_VERSION_SOURCE}")
@@ -17,6 +15,9 @@ math(EXPR VERSION_MINOR "((${PARALLELSTL_VERSION_SOURCE} % 1000) / 10)")
 math(EXPR VERSION_PATCH "(${PARALLELSTL_VERSION_SOURCE} % 10)")
 
 project(ParallelSTL VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH} LANGUAGES CXX)
+
+# Must go below project(..)
+include(GNUInstallDirs)
 
 set(PSTL_PARALLEL_BACKEND "serial" CACHE STRING "Threading backend to use. Valid choices are 'serial', 'omp', and 'tbb'. The default is 'serial'.")
 set(PSTL_HIDE_FROM_ABI_PER_TU OFF CACHE BOOL "Whether to constrain ABI-unstable symbols to each translation unit (basically, mark them with C's static keyword).")
