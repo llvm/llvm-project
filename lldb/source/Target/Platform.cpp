@@ -2003,3 +2003,7 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
 
   return 0;
 }
+
+CompilerType Platform::GetSiginfoType(const llvm::Triple& triple) {
+  return CompilerType();
+}
