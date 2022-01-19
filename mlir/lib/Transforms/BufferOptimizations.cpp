@@ -364,10 +364,10 @@ public:
 /// blocks.
 struct BufferHoistingPass : BufferHoistingBase<BufferHoistingPass> {
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     // Hoist all allocations into dominator blocks.
     BufferAllocationHoisting<BufferAllocationHoistingState> optimizer(
-        getFunction());
+        getOperation());
     optimizer.hoist();
   }
 };
@@ -375,10 +375,10 @@ struct BufferHoistingPass : BufferHoistingBase<BufferHoistingPass> {
 /// The buffer loop hoisting pass that hoists allocation nodes out of loops.
 struct BufferLoopHoistingPass : BufferLoopHoistingBase<BufferLoopHoistingPass> {
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     // Hoist all allocations out of loops.
     BufferAllocationHoisting<BufferAllocationLoopHoistingState> optimizer(
-        getFunction());
+        getOperation());
     optimizer.hoist();
   }
 };
@@ -410,9 +410,9 @@ public:
     return success();
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     // Move all allocation nodes and convert candidates into allocas.
-    BufferPlacementPromotion optimizer(getFunction());
+    BufferPlacementPromotion optimizer(getOperation());
     optimizer.promote(isSmallAlloc);
   }
 

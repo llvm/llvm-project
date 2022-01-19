@@ -54,7 +54,7 @@ struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
     this->unrollFull = unrollFull;
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   /// Unroll this for op. Returns failure if nothing was done.
   LogicalResult runOnAffineForOp(AffineForOp forOp);
@@ -82,7 +82,11 @@ static void gatherInnermostLoops(FuncOp f,
   });
 }
 
-void LoopUnroll::runOnFunction() {
+void LoopUnroll::runOnOperation() {
+  FuncOp func = getOperation();
+  if (func.isExternal())
+    return;
+
   if (unrollFull && unrollFullThreshold.hasValue()) {
     // Store short loops as we walk.
     SmallVector<AffineForOp, 4> loops;
@@ -90,7 +94,7 @@ void LoopUnroll::runOnFunction() {
     // Gathers all loops with trip count <= minTripCount. Do a post order walk
     // so that loops are gathered from innermost to outermost (or else unrolling
     // an outer one may delete gathered inner ones).
-    getFunction().walk([&](AffineForOp forOp) {
+    getOperation().walk([&](AffineForOp forOp) {
       Optional<uint64_t> tripCount = getConstantTripCount(forOp);
       if (tripCount.hasValue() && tripCount.getValue() <= unrollFullThreshold)
         loops.push_back(forOp);
@@ -101,7 +105,6 @@ void LoopUnroll::runOnFunction() {
   }
 
   // If the call back is provided, we will recurse until no loops are found.
-  FuncOp func = getFunction();
   SmallVector<AffineForOp, 4> loops;
   for (unsigned i = 0; i < numRepetitions || getUnrollFactor; i++) {
     loops.clear();

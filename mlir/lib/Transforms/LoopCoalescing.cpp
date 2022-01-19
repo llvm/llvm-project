@@ -83,8 +83,8 @@ struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
     }
   }
 
-  void runOnFunction() override {
-    FuncOp func = getFunction();
+  void runOnOperation() override {
+    FuncOp func = getOperation();
     func.walk([&](Operation *op) {
       if (auto scfForOp = dyn_cast<scf::ForOp>(op))
         walkLoop(scfForOp);

@@ -31,7 +31,6 @@ struct OpSpecificAnalysis {
 };
 
 /// Simple pass to annotate a FuncOp with the results of analysis.
-/// Note: not using FunctionPass as it skip external functions.
 struct AnnotateFunctionPass
     : public PassWrapper<AnnotateFunctionPass, OperationPass<FuncOp>> {
   void runOnOperation() override {

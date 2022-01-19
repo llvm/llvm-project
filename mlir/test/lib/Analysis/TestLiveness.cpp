@@ -19,13 +19,14 @@ using namespace mlir;
 
 namespace {
 
-struct TestLivenessPass : public PassWrapper<TestLivenessPass, FunctionPass> {
+struct TestLivenessPass
+    : public PassWrapper<TestLivenessPass, OperationPass<FuncOp>> {
   StringRef getArgument() const final { return "test-print-liveness"; }
   StringRef getDescription() const final {
     return "Print the contents of a constructed liveness information.";
   }
-  void runOnFunction() override {
-    llvm::errs() << "Testing : " << getFunction().getName() << "\n";
+  void runOnOperation() override {
+    llvm::errs() << "Testing : " << getOperation().getName() << "\n";
     getAnalysis<Liveness>().print(llvm::errs());
   }
 };

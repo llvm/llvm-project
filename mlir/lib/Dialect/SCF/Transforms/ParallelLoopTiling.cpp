@@ -195,9 +195,9 @@ struct ParallelLoopTiling
     this->noMinMaxBounds = noMinMaxBounds;
   }
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     SmallVector<ParallelOp, 2> innermostPloops;
-    getInnermostParallelLoops(getFunction().getOperation(), innermostPloops);
+    getInnermostParallelLoops(getOperation().getOperation(), innermostPloops);
     for (ParallelOp ploop : innermostPloops) {
       // FIXME: Add reduction support.
       if (ploop.getNumReductions() == 0)

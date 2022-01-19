@@ -837,7 +837,7 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
 namespace {
 struct ConvertArithmeticToSPIRVPass
     : public ConvertArithmeticToSPIRVBase<ConvertArithmeticToSPIRVPass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     auto module = getOperation()->getParentOfType<ModuleOp>();
     auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
     auto target = SPIRVConversionTarget::get(targetAttr);

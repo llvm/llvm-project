@@ -198,7 +198,7 @@ struct BufferizeRankOp : public OpConversionPattern<tensor::RankOp> {
 };
 
 struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     auto *context = &getContext();
     bufferization::BufferizeTypeConverter typeConverter;
 
@@ -214,8 +214,8 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
 
     RewritePatternSet patterns(context);
     populateTensorBufferizePatterns(typeConverter, patterns);
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };
