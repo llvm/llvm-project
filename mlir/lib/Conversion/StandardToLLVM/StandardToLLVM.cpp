@@ -812,9 +812,9 @@ struct GenericAtomicRMWOpLowering
 
     // Split the block into initial, loop, and ending parts.
     auto *initBlock = rewriter.getInsertionBlock();
-    auto *loopBlock =
-        rewriter.createBlock(initBlock->getParent(),
-                             std::next(Region::iterator(initBlock)), valueType);
+    auto *loopBlock = rewriter.createBlock(
+        initBlock->getParent(), std::next(Region::iterator(initBlock)),
+        valueType, loc);
     auto *endBlock = rewriter.createBlock(
         loopBlock->getParent(), std::next(Region::iterator(loopBlock)));
 

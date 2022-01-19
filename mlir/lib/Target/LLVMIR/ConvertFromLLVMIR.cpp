@@ -647,7 +647,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Type type = processType(inst->getType());
     if (!type)
       return failure();
-    v = b.getInsertionBlock()->addArgument(type);
+    v = b.getInsertionBlock()->addArgument(
+        type, processDebugLoc(inst->getDebugLoc(), inst));
     return success();
   }
   case llvm::Instruction::Call: {
@@ -822,9 +823,10 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
   currentEntryBlock = blockList[0];
 
   // Add function arguments to the entry block.
-  for (const auto &kv : llvm::enumerate(f->args()))
-    instMap[&kv.value()] =
-        blockList[0]->addArgument(functionType.getParamType(kv.index()));
+  for (const auto &kv : llvm::enumerate(f->args())) {
+    instMap[&kv.value()] = blockList[0]->addArgument(
+        functionType.getParamType(kv.index()), fop.getLoc());
+  }
 
   for (auto bbs : llvm::zip(*f, blockList)) {
     if (failed(processBasicBlock(&std::get<0>(bbs), std::get<1>(bbs))))

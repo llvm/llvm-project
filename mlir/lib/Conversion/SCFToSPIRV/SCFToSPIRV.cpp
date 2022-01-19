@@ -177,10 +177,11 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, OpAdaptor adaptor,
   loopOp.body().getBlocks().insert(getBlockIt(loopOp.body(), 1), header);
 
   // Create the new induction variable to use.
+  Value adapLowerBound = adaptor.getLowerBound();
   BlockArgument newIndVar =
-      header->addArgument(adaptor.getLowerBound().getType());
+      header->addArgument(adapLowerBound.getType(), adapLowerBound.getLoc());
   for (Value arg : adaptor.getInitArgs())
-    header->addArgument(arg.getType());
+    header->addArgument(arg.getType(), arg.getLoc());
   Block *body = forOp.getBody();
 
   // Apply signature conversion to the body of the forOp. It has a single block,

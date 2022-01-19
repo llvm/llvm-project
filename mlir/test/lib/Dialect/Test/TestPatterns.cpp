@@ -297,7 +297,8 @@ struct TestRegionRewriteUndo : public RewritePattern {
     newRegion.addRegion();
     auto *regionOp = rewriter.createOperation(newRegion);
     auto *entryBlock = rewriter.createBlock(&regionOp->getRegion(0));
-    entryBlock->addArgument(rewriter.getIntegerType(64));
+    entryBlock->addArgument(rewriter.getIntegerType(64),
+                            rewriter.getUnknownLoc());
 
     // Add an explicitly illegal operation to ensure the conversion fails.
     rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getIntegerType(32));
@@ -318,8 +319,9 @@ struct TestCreateBlock : public RewritePattern {
                                 PatternRewriter &rewriter) const final {
     Region &region = *op->getParentRegion();
     Type i32Type = rewriter.getIntegerType(32);
-    rewriter.createBlock(&region, region.end(), {i32Type, i32Type});
-    rewriter.create<TerminatorOp>(op->getLoc());
+    Location loc = op->getLoc();
+    rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
+    rewriter.create<TerminatorOp>(loc);
     rewriter.replaceOp(op, {});
     return success();
   }
@@ -335,10 +337,11 @@ struct TestCreateIllegalBlock : public RewritePattern {
                                 PatternRewriter &rewriter) const final {
     Region &region = *op->getParentRegion();
     Type i32Type = rewriter.getIntegerType(32);
-    rewriter.createBlock(&region, region.end(), {i32Type, i32Type});
+    Location loc = op->getLoc();
+    rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
     // Create an illegal op to ensure the conversion fails.
-    rewriter.create<ILLegalOpF>(op->getLoc(), i32Type);
-    rewriter.create<TerminatorOp>(op->getLoc());
+    rewriter.create<ILLegalOpF>(loc, i32Type);
+    rewriter.create<TerminatorOp>(loc);
     rewriter.replaceOp(op, {});
     return success();
   }

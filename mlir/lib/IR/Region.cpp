@@ -33,14 +33,13 @@ Location Region::getLoc() {
   return container->getLoc();
 }
 
-/// Return a range containing the types of the arguments for this region.
 auto Region::getArgumentTypes() -> ValueTypeRange<BlockArgListType> {
   return ValueTypeRange<BlockArgListType>(getArguments());
 }
 
-/// Add one argument to the argument list for each type specified in the list.
-iterator_range<Region::args_iterator> Region::addArguments(TypeRange types) {
-  return front().addArguments(types);
+iterator_range<Region::args_iterator>
+Region::addArguments(TypeRange types, ArrayRef<Location> locs) {
+  return front().addArguments(types, locs);
 }
 
 Region *Region::getParentRegion() {

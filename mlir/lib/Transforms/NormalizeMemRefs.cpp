@@ -332,6 +332,8 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
   OpBuilder b(funcOp);
 
   FunctionType functionType = funcOp.getType();
+  SmallVector<Location> functionArgLocs(llvm::map_range(
+      funcOp.getArguments(), [](BlockArgument arg) { return arg.getLoc(); }));
   SmallVector<Type, 8> inputTypes;
   // Walk over each argument of a function to perform memref normalization (if
   for (unsigned argIndex :
@@ -356,8 +358,8 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
     }
 
     // Insert a new temporary argument with the new memref type.
-    BlockArgument newMemRef =
-        funcOp.front().insertArgument(argIndex, newMemRefType);
+    BlockArgument newMemRef = funcOp.front().insertArgument(
+        argIndex, newMemRefType, functionArgLocs[argIndex]);
     BlockArgument oldMemRef = funcOp.getArgument(argIndex + 1);
     AffineMap layoutMap = memrefType.getLayout().getAffineMap();
     // Replace all uses of the old memref.

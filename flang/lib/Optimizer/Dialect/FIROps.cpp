@@ -1534,9 +1534,11 @@ void fir::IterWhileOp::build(mlir::OpBuilder &builder,
     result.addTypes(v.getType());
   mlir::Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new Block{});
-  bodyRegion->front().addArgument(builder.getIndexType());
-  bodyRegion->front().addArgument(iterate.getType());
-  bodyRegion->front().addArguments(iterArgs.getTypes());
+  bodyRegion->front().addArgument(builder.getIndexType(), result.location);
+  bodyRegion->front().addArgument(iterate.getType(), result.location);
+  bodyRegion->front().addArguments(
+      iterArgs.getTypes(),
+      SmallVector<Location>(iterArgs.size(), result.location));
   result.addAttributes(attributes);
 }
 
@@ -1854,8 +1856,10 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
   bodyRegion->push_back(new Block{});
   if (iterArgs.empty() && !finalCountValue)
     DoLoopOp::ensureTerminator(*bodyRegion, builder, result.location);
-  bodyRegion->front().addArgument(builder.getIndexType());
-  bodyRegion->front().addArguments(iterArgs.getTypes());
+  bodyRegion->front().addArgument(builder.getIndexType(), result.location);
+  bodyRegion->front().addArguments(
+      iterArgs.getTypes(),
+      SmallVector<Location>(iterArgs.size(), result.location));
   if (unordered)
     result.addAttribute(unorderedAttrName(result.name), builder.getUnitAttr());
   result.addAttributes(attributes);

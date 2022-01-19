@@ -252,7 +252,9 @@ private:
           executeOp.operandsMutable().append(asyncTokens);
           SmallVector<Type, 1> tokenTypes(
               asyncTokens.size(), builder.getType<gpu::AsyncTokenType>());
-          copy(executeOp.getBody()->addArguments(tokenTypes),
+          SmallVector<Location, 1> tokenLocs(asyncTokens.size(),
+                                             executeOp.getLoc());
+          copy(executeOp.getBody()->addArguments(tokenTypes, tokenLocs),
                std::back_inserter(tokens));
         });
 

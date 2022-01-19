@@ -368,15 +368,14 @@ public:
   /// region is isolated from those above.
   ParseResult parseRegion(Region &region,
                           ArrayRef<std::pair<SSAUseInfo, Type>> entryArguments,
-                          ArrayRef<Optional<Location>> argLocations = {},
+                          ArrayRef<Location> argLocations,
                           bool isIsolatedNameScope = false);
 
   /// Parse a region body into 'region'.
   ParseResult
   parseRegionBody(Region &region, llvm::SMLoc startLoc,
                   ArrayRef<std::pair<SSAUseInfo, Type>> entryArguments,
-                  ArrayRef<Optional<Location>> argLocations,
-                  bool isIsolatedNameScope);
+                  ArrayRef<Location> argLocations, bool isIsolatedNameScope);
 
   //===--------------------------------------------------------------------===//
   // Block Parsing
@@ -1055,7 +1054,8 @@ ParseResult OperationParser::parseGenericOperationAfterOpName(
       do {
         // Create temporary regions with the top level region as parent.
         result.regions.emplace_back(new Region(topLevelOp));
-        if (parseRegion(*result.regions.back(), /*entryArguments=*/{}))
+        if (parseRegion(*result.regions.back(), /*entryArguments=*/{},
+                        /*argLocations=*/{}))
           return failure();
       } while (consumeIf(Token::comma));
       if (parseToken(Token::r_paren, "expected ')' to end region list"))
@@ -1451,7 +1451,7 @@ public:
   /// effectively defines the SSA values of `arguments` and assigns their type.
   ParseResult parseRegion(Region &region, ArrayRef<OperandType> arguments,
                           ArrayRef<Type> argTypes,
-                          ArrayRef<Optional<Location>> argLocations,
+                          ArrayRef<Location> argLocations,
                           bool enableNameShadowing) override {
     assert(arguments.size() == argTypes.size() &&
            "mismatching number of arguments and types");
@@ -1477,11 +1477,11 @@ public:
   }
 
   /// Parses a region if present.
-  OptionalParseResult
-  parseOptionalRegion(Region &region, ArrayRef<OperandType> arguments,
-                      ArrayRef<Type> argTypes,
-                      ArrayRef<Optional<Location>> argLocations,
-                      bool enableNameShadowing) override {
+  OptionalParseResult parseOptionalRegion(Region &region,
+                                          ArrayRef<OperandType> arguments,
+                                          ArrayRef<Type> argTypes,
+                                          ArrayRef<Location> argLocations,
+                                          bool enableNameShadowing) override {
     if (parser.getToken().isNot(Token::l_brace))
       return llvm::None;
     return parseRegion(region, arguments, argTypes, argLocations,
@@ -1823,7 +1823,7 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
 ParseResult OperationParser::parseRegion(
     Region &region,
     ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
-    ArrayRef<Optional<Location>> argLocations, bool isIsolatedNameScope) {
+    ArrayRef<Location> argLocations, bool isIsolatedNameScope) {
   // Parse the '{'.
   Token lBraceTok = getToken();
   if (parseToken(Token::l_brace, "expected '{' to begin a region"))
@@ -1851,7 +1851,7 @@ ParseResult OperationParser::parseRegion(
 ParseResult OperationParser::parseRegionBody(
     Region &region, llvm::SMLoc startLoc,
     ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
-    ArrayRef<Optional<Location>> argLocations, bool isIsolatedNameScope) {
+    ArrayRef<Location> argLocations, bool isIsolatedNameScope) {
   assert(argLocations.empty() || argLocations.size() == entryArguments.size());
   auto currentPt = opBuilder.saveInsertionPoint();
 
@@ -1886,11 +1886,11 @@ ParseResult OperationParser::parseRegionBody(
                    .attachNote(getEncodedSourceLocation(*defLoc))
                << "previously referenced here";
       }
-      Location loc =
-          (!argLocations.empty() && argLocations[argIndex])
-              ? *argLocations[argIndex]
-              : getEncodedSourceLocation(placeholderArgPair.first.loc);
-      BlockArgument arg = block->addArgument(placeholderArgPair.second, loc);
+      BlockArgument arg = block->addArgument(
+          placeholderArgPair.second,
+          argLocations.empty()
+              ? getEncodedSourceLocation(placeholderArgPair.first.loc)
+              : argLocations[argIndex]);
 
       // Add a definition of this arg to the assembly state if provided.
       if (state.asmState)

@@ -81,9 +81,11 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   MlirType memrefType =
       mlirTypeParseGet(ctx, mlirStringRefCreateFromCString("memref<?xf32>"));
   MlirType funcBodyArgTypes[] = {memrefType, memrefType};
+  MlirLocation funcBodyArgLocs[] = {location, location};
   MlirRegion funcBodyRegion = mlirRegionCreate();
-  MlirBlock funcBody = mlirBlockCreate(
-      sizeof(funcBodyArgTypes) / sizeof(MlirType), funcBodyArgTypes);
+  MlirBlock funcBody =
+      mlirBlockCreate(sizeof(funcBodyArgTypes) / sizeof(MlirType),
+                      funcBodyArgTypes, funcBodyArgLocs);
   mlirRegionAppendOwnedBlock(funcBodyRegion, funcBody);
 
   MlirAttribute funcTypeAttr = mlirAttributeParseGet(
@@ -130,8 +132,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
   mlirBlockAppendOwnedOperation(funcBody, dim);
 
   MlirRegion loopBodyRegion = mlirRegionCreate();
-  MlirBlock loopBody = mlirBlockCreate(0, NULL);
-  mlirBlockAddArgument(loopBody, indexType);
+  MlirBlock loopBody = mlirBlockCreate(0, NULL, NULL);
+  mlirBlockAddArgument(loopBody, indexType, location);
   mlirRegionAppendOwnedBlock(loopBodyRegion, loopBody);
 
   MlirAttribute indexOneLiteral =
@@ -507,10 +509,10 @@ static void buildWithInsertionsAndPrint(MlirContext ctx) {
   MlirType i2 = mlirIntegerTypeGet(ctx, 2);
   MlirType i3 = mlirIntegerTypeGet(ctx, 3);
   MlirType i4 = mlirIntegerTypeGet(ctx, 4);
-  MlirBlock block1 = mlirBlockCreate(1, &i1);
-  MlirBlock block2 = mlirBlockCreate(1, &i2);
-  MlirBlock block3 = mlirBlockCreate(1, &i3);
-  MlirBlock block4 = mlirBlockCreate(1, &i4);
+  MlirBlock block1 = mlirBlockCreate(1, &i1, &loc);
+  MlirBlock block2 = mlirBlockCreate(1, &i2, &loc);
+  MlirBlock block3 = mlirBlockCreate(1, &i3, &loc);
+  MlirBlock block4 = mlirBlockCreate(1, &i4, &loc);
   // Insert blocks so as to obtain the 1-2-3-4 order,
   mlirRegionInsertOwnedBlockBefore(region, nullBlock, block3);
   mlirRegionInsertOwnedBlockBefore(region, block3, block2);
@@ -1549,7 +1551,7 @@ static int testBackreferences() {
   MlirOperationState opState =
       mlirOperationStateGet(mlirStringRefCreateFromCString("invalid.op"), loc);
   MlirRegion region = mlirRegionCreate();
-  MlirBlock block = mlirBlockCreate(0, NULL);
+  MlirBlock block = mlirBlockCreate(0, NULL, NULL);
   mlirRegionAppendOwnedBlock(region, block);
   mlirOperationStateAddOwnedRegions(&opState, 1, &region);
   MlirOperation op = mlirOperationCreate(&opState);

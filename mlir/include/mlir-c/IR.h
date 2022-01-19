@@ -531,7 +531,8 @@ MLIR_CAPI_EXPORTED MlirRegion mlirRegionGetNextInOperation(MlirRegion region);
 /// Creates a new empty block with the given argument types and transfers
 /// ownership to the caller.
 MLIR_CAPI_EXPORTED MlirBlock mlirBlockCreate(intptr_t nArgs,
-                                             MlirType const *args);
+                                             MlirType const *args,
+                                             MlirLocation const *locs);
 
 /// Takes a block owned by the caller and destroys it.
 MLIR_CAPI_EXPORTED void mlirBlockDestroy(MlirBlock block);
@@ -590,7 +591,8 @@ MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumArguments(MlirBlock block);
 /// Appends an argument of the specified type to the block. Returns the newly
 /// added argument.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
-                                                  MlirType type);
+                                                  MlirType type,
+                                                  MlirLocation loc);
 
 /// Returns `pos`-th argument of the block.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockGetArgument(MlirBlock block,

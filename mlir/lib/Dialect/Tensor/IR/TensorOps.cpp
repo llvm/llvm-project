@@ -495,8 +495,9 @@ void GenerateOp::build(
   Region *bodyRegion = result.regions.front().get();
   auto rank = resultTy.cast<RankedTensorType>().getRank();
   SmallVector<Type, 2> argumentTypes(rank, b.getIndexType());
+  SmallVector<Location, 2> argumentLocs(rank, result.location);
   Block *bodyBlock =
-      b.createBlock(bodyRegion, bodyRegion->end(), argumentTypes);
+      b.createBlock(bodyRegion, bodyRegion->end(), argumentTypes, argumentLocs);
   bodyBuilder(b, result.location, bodyBlock->getArguments());
 }
 

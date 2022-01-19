@@ -545,7 +545,8 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
 
       getOperation()->insertOperands(getNumControlOperands() + numInputs,
                                      operand);
-      getBody()->insertArgument(numLoops + numInputs, operand.getType());
+      getBody()->insertArgument(numLoops + numInputs, operand.getType(), 
+                                getLoc());
       getOperation()->setAttr(
           TiledLoopOp::getOperandSegmentSizeAttr(),
           builder.getI32VectorAttr(
@@ -562,7 +563,7 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
       getOperation()->insertOperands(
           getNumControlOperands() + numInputs + numOutputs, operand);
       getBody()->insertArgument(numLoops + numInputs + numOutputs,
-                                operand.getType());
+                                operand.getType(), getLoc());
       getOperation()->setAttr(
           TiledLoopOp::getOperandSegmentSizeAttr(),
           builder.getI32VectorAttr(

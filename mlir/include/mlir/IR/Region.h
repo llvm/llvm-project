@@ -82,6 +82,7 @@ public:
     return empty() ? BlockArgListType() : front().getArguments();
   }
 
+  /// Returns the argument types of the first block within the region.
   ValueTypeRange<BlockArgListType> getArgumentTypes();
 
   using args_iterator = BlockArgListType::iterator;
@@ -94,21 +95,26 @@ public:
   bool args_empty() { return getArguments().empty(); }
 
   /// Add one value to the argument list.
-  BlockArgument addArgument(Type type) { return front().addArgument(type); }
+  BlockArgument addArgument(Type type, Location loc) {
+    return front().addArgument(type, loc);
+  }
 
   /// Insert one value to the position in the argument list indicated by the
   /// given iterator. The existing arguments are shifted. The block is expected
   /// not to have predecessors.
-  BlockArgument insertArgument(args_iterator it, Type type) {
-    return front().insertArgument(it, type);
+  BlockArgument insertArgument(args_iterator it, Type type, Location loc) {
+    return front().insertArgument(it, type, loc);
   }
 
   /// Add one argument to the argument list for each type specified in the list.
-  iterator_range<args_iterator> addArguments(TypeRange types);
+  /// `locs` contains the locations for each of the new arguments, and must be
+  /// of equal size to `types`.
+  iterator_range<args_iterator> addArguments(TypeRange types,
+                                             ArrayRef<Location> locs);
 
   /// Add one value to the argument list at the specified position.
-  BlockArgument insertArgument(unsigned index, Type type) {
-    return front().insertArgument(index, type);
+  BlockArgument insertArgument(unsigned index, Type type, Location loc) {
+    return front().insertArgument(index, type, loc);
   }
 
   /// Erase the argument at 'index' and remove it from the argument list.

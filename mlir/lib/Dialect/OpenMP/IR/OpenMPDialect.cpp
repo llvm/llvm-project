@@ -1291,7 +1291,8 @@ void WsLoopOp::build(OpBuilder &builder, OperationState &result,
     OpBuilder::InsertionGuard guard(builder);
     unsigned numIVs = steps.size();
     SmallVector<Type, 8> argTypes(numIVs, steps.getType().front());
-    builder.createBlock(bodyRegion, {}, argTypes);
+    SmallVector<Location, 8> argLocs(numIVs, result.location);
+    builder.createBlock(bodyRegion, {}, argTypes, argLocs);
   }
 }
 

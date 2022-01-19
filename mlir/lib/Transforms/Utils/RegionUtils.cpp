@@ -601,8 +601,11 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
         newArguments[i][it.index()] = operand.get();
 
         // Update the operand and insert an argument if this is the leader.
-        if (i == 0)
-          operand.set(leaderBlock->addArgument(operand.get().getType()));
+        if (i == 0) {
+          Value operandVal = operand.get();
+          operand.set(leaderBlock->addArgument(operandVal.getType(),
+                                               operandVal.getLoc()));
+        }
       }
     }
     // Update the predecessors for each of the blocks.

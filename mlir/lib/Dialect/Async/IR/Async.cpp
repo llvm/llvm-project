@@ -107,7 +107,8 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   for (Value operand : operands) {
     auto valueType = operand.getType().dyn_cast<ValueType>();
     bodyBlock.addArgument(valueType ? valueType.getValueType()
-                                    : operand.getType());
+                                    : operand.getType(),
+                          operand.getLoc());
   }
 
   // Create the default terminator if the builder is not provided and if the

@@ -628,7 +628,8 @@ SymbolRefAttr PatternLowering::generateRewriter(
     Position *inputPos = valueToPosition.lookup(oldValue);
     assert(inputPos && "expected value to be a pattern input");
     usedMatchValues.push_back(inputPos);
-    return newValue = rewriterFunc.front().addArgument(oldValue.getType());
+    return newValue = rewriterFunc.front().addArgument(oldValue.getType(),
+                                                       oldValue.getLoc());
   };
 
   // If this is a custom rewriter, simply dispatch to the registered rewrite

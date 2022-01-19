@@ -246,7 +246,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
     /// Adds a new block argument that corresponds to buffers located in
     /// workgroup memory.
-    BlockArgument addWorkgroupAttribution(Type type);
+    BlockArgument addWorkgroupAttribution(Type type, Location loc);
 
     /// Returns the number of buffers located in the private memory.
     unsigned getNumPrivateAttributions() {
@@ -267,7 +267,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
     /// Adds a new block argument that corresponds to buffers located in
     /// private memory.
-    BlockArgument addPrivateAttribution(Type type);
+    BlockArgument addPrivateAttribution(Type type, Location loc);
 
     /// Returns the name of the attribute containing the number of buffers
     /// located in the workgroup memory.

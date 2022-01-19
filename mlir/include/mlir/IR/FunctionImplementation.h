@@ -60,7 +60,7 @@ ParseResult parseFunctionArgumentList(
     OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
-    SmallVectorImpl<Optional<Location>> &argLocations, bool &isVariadic);
+    SmallVectorImpl<Location> &argLocations, bool &isVariadic);
 
 /// Parses a function signature using `parser`. The `allowVariadic` argument
 /// indicates whether functions with variadic arguments are supported. The
@@ -71,7 +71,7 @@ parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
                        SmallVectorImpl<OpAsmParser::OperandType> &argNames,
                        SmallVectorImpl<Type> &argTypes,
                        SmallVectorImpl<NamedAttrList> &argAttrs,
-                       SmallVectorImpl<Optional<Location>> &argLocations,
+                       SmallVectorImpl<Location> &argLocations,
                        bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
                        SmallVectorImpl<NamedAttrList> &resultAttrs);
 
