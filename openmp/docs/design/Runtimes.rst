@@ -683,6 +683,7 @@ variables is defined below.
     * ``LIBOMPTARGET_HEAP_SIZE=<Num>``
     * ``LIBOMPTARGET_STACK_SIZE=<Num>``
     * ``LIBOMPTARGET_SHARED_MEMORY_SIZE=<Num>``
+    * ``LIBOMPTARGET_MAP_FORCE_ATOMIC=[TRUE/FALSE] (default TRUE)``
 
 LIBOMPTARGET_DEBUG
 """"""""""""""""""
@@ -1002,6 +1003,23 @@ runtime call.
    :maxdepth: 1
 
    Offloading
+
+
+LIBOMPTARGET_MAP_FORCE_ATOMIC
+"""""""""""""""""""""""""""""
+
+The OpenMP standard guarantees that map clauses are atomic. However, the this
+can have a drastic performance impact. Users that do not require atomic map
+clauses can disable them to potentially recover lost performance. As a
+consequence, users have to guarantee themselves that no two map clauses will
+concurrently map the same memory. If the memory is already mapped and the
+map clauses will only modify the reference counter from a non-zero count to
+another non-zero count, concurrent map clauses are supported regardless of
+this option. To disable forced atomic map clauses use "false"/"FALSE" as the
+value of the ``LIBOMPTARGET_MAP_FORCE_ATOMIC`` environment variable.
+The default behavior of LLVM 14 is to force atomic maps clauses, prior versions
+of LLVM did not.
+
 
 LLVM/OpenMP Target Host Runtime Plugins (``libomptarget.rtl.XXXX``)
 -------------------------------------------------------------------
