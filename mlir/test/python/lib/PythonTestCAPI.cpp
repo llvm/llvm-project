@@ -9,6 +9,23 @@
 #include "PythonTestCAPI.h"
 #include "PythonTestDialect.h"
 #include "mlir/CAPI/Registration.h"
+#include "mlir/CAPI/Wrap.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(PythonTest, python_test,
                                       python_test::PythonTestDialect)
+
+bool mlirAttributeIsAPythonTestTestAttribute(MlirAttribute attr) {
+  return unwrap(attr).isa<python_test::TestAttrAttr>();
+}
+
+MlirAttribute mlirPythonTestTestAttributeGet(MlirContext context) {
+  return wrap(python_test::TestAttrAttr::get(unwrap(context)));
+}
+
+bool mlirTypeIsAPythonTestTestType(MlirType type) {
+  return unwrap(type).isa<python_test::TestTypeType>();
+}
+
+MlirType mlirPythonTestTestTypeGet(MlirContext context) {
+  return wrap(python_test::TestTypeType::get(unwrap(context)));
+}
