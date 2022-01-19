@@ -22,7 +22,6 @@ using namespace lldb_private;
 class TestScriptInterpreterPython : public ScriptInterpreterPythonImpl {
 public:
   using ScriptInterpreterPythonImpl::Initialize;
-  using ScriptInterpreterPythonImpl::InitializePrivate;
 };
 
 void PythonTestSuite::SetUp() {
@@ -31,7 +30,6 @@ void PythonTestSuite::SetUp() {
   // ScriptInterpreterPython::Initialize() depends on HostInfo being
   // initializedso it can compute the python directory etc.
   TestScriptInterpreterPython::Initialize();
-  TestScriptInterpreterPython::InitializePrivate();
 
   // Although we don't care about concurrency for the purposes of running
   // this test suite, Python requires the GIL to be locked even for
