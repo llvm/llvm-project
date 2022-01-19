@@ -1788,4 +1788,44 @@ TEST_F(TransferTest, DerefDependentPtr) {
       });
 }
 
+TEST_F(TransferTest, VarDeclInitAssignConditionalOperator) {
+  std::string Code = R"(
+    struct A {};
+
+    void target(A Foo, A Bar, bool Cond) {
+      A Baz = Cond ?  Foo : Bar;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+        ASSERT_THAT(BazDecl, NotNull());
+
+        const auto *FooVal =
+            cast<StructValue>(Env.getValue(*FooDecl, SkipPast::None));
+        const auto *BarVal =
+            cast<StructValue>(Env.getValue(*BarDecl, SkipPast::None));
+
+        const auto *BazVal =
+            dyn_cast<StructValue>(Env.getValue(*BazDecl, SkipPast::None));
+        ASSERT_THAT(BazVal, NotNull());
+
+        EXPECT_NE(BazVal, FooVal);
+        EXPECT_NE(BazVal, BarVal);
+      });
+}
+
 } // namespace
