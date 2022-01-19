@@ -111,8 +111,8 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
   // Caller of the function.
   Optional<SymbolTable::UseRange> symbolUses = funcOp.getSymbolUses(moduleOp);
   for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
-    // TODO: Extend this for ops that are FunctionLike. This would require
-    // creating an OpInterface for FunctionLike ops.
+    // TODO: Extend this for ops that are FunctionOpInterface. This would
+    // require creating an OpInterface for FunctionOpInterface ops.
     FuncOp parentFuncOp = symbolUse.getUser()->getParentOfType<FuncOp>();
     for (FuncOp &funcOp : normalizableFuncs) {
       if (parentFuncOp == funcOp) {
@@ -297,8 +297,8 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
       // TODO: Further optimization - Check if the memref is indeed part of
       // ReturnOp at the parentFuncOp and only then updation of signature is
       // required.
-      // TODO: Extend this for ops that are FunctionLike. This would require
-      // creating an OpInterface for FunctionLike ops.
+      // TODO: Extend this for ops that are FunctionOpInterface. This would
+      // require creating an OpInterface for FunctionOpInterface ops.
       FuncOp parentFuncOp = newCallOp->getParentOfType<FuncOp>();
       funcOpsToUpdate.insert(parentFuncOp);
     }

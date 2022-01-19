@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/BitVector.h"
 
@@ -15,9 +15,9 @@ using namespace mlir;
 /// Helper to call a callback once on each index in the range
 /// [0, `totalIndices`), *except* for the indices given in `indices`.
 /// `indices` is allowed to have duplicates and can be in any order.
-inline void iterateIndicesExcept(unsigned totalIndices,
-                                 ArrayRef<unsigned> indices,
-                                 function_ref<void(unsigned)> callback) {
+inline static void iterateIndicesExcept(unsigned totalIndices,
+                                        ArrayRef<unsigned> indices,
+                                        function_ref<void(unsigned)> callback) {
   llvm::BitVector skipIndices(totalIndices);
   for (unsigned i : indices)
     skipIndices.set(i);
@@ -28,6 +28,12 @@ inline void iterateIndicesExcept(unsigned totalIndices,
 }
 
 //===----------------------------------------------------------------------===//
+// Tablegen Interface Definitions
+//===----------------------------------------------------------------------===//
+
+#include "mlir/IR/FunctionOpInterfaces.cpp.inc"
+
+//===----------------------------------------------------------------------===//
 // Function Arguments and Results.
 //===----------------------------------------------------------------------===//
 
@@ -35,23 +41,24 @@ static bool isEmptyAttrDict(Attribute attr) {
   return attr.cast<DictionaryAttr>().empty();
 }
 
-DictionaryAttr mlir::function_like_impl::getArgAttrDict(Operation *op,
-                                                        unsigned index) {
+DictionaryAttr mlir::function_interface_impl::getArgAttrDict(Operation *op,
+                                                             unsigned index) {
   ArrayAttr attrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName());
   DictionaryAttr argAttrs =
       attrs ? attrs[index].cast<DictionaryAttr>() : DictionaryAttr();
   return argAttrs;
 }
 
-DictionaryAttr mlir::function_like_impl::getResultAttrDict(Operation *op,
-                                                           unsigned index) {
+DictionaryAttr
+mlir::function_interface_impl::getResultAttrDict(Operation *op,
+                                                 unsigned index) {
   ArrayAttr attrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName());
   DictionaryAttr resAttrs =
       attrs ? attrs[index].cast<DictionaryAttr>() : DictionaryAttr();
   return resAttrs;
 }
 
-void mlir::function_like_impl::detail::setArgResAttrDict(
+void mlir::function_interface_impl::detail::setArgResAttrDict(
     Operation *op, StringRef attrName, unsigned numTotalIndices, unsigned index,
     DictionaryAttr attrs) {
   ArrayAttr allAttrs = op->getAttrOfType<ArrayAttr>(attrName);
@@ -95,12 +102,12 @@ static void setAllArgResAttrDicts(Operation *op, StringRef attrName,
     op->setAttr(attrName, ArrayAttr::get(op->getContext(), attrs));
 }
 
-void mlir::function_like_impl::setAllArgAttrDicts(
+void mlir::function_interface_impl::setAllArgAttrDicts(
     Operation *op, ArrayRef<DictionaryAttr> attrs) {
   setAllArgAttrDicts(op, ArrayRef<Attribute>(attrs.data(), attrs.size()));
 }
-void mlir::function_like_impl::setAllArgAttrDicts(Operation *op,
-                                                  ArrayRef<Attribute> attrs) {
+void mlir::function_interface_impl::setAllArgAttrDicts(
+    Operation *op, ArrayRef<Attribute> attrs) {
   auto wrappedAttrs = llvm::map_range(attrs, [op](Attribute attr) -> Attribute {
     return !attr ? DictionaryAttr::get(op->getContext()) : attr;
   });
@@ -108,11 +115,11 @@ void mlir::function_like_impl::setAllArgAttrDicts(Operation *op,
                         llvm::to_vector<8>(wrappedAttrs));
 }
 
-void mlir::function_like_impl::setAllResultAttrDicts(
+void mlir::function_interface_impl::setAllResultAttrDicts(
     Operation *op, ArrayRef<DictionaryAttr> attrs) {
   setAllResultAttrDicts(op, ArrayRef<Attribute>(attrs.data(), attrs.size()));
 }
-void mlir::function_like_impl::setAllResultAttrDicts(
+void mlir::function_interface_impl::setAllResultAttrDicts(
     Operation *op, ArrayRef<Attribute> attrs) {
   auto wrappedAttrs = llvm::map_range(attrs, [op](Attribute attr) -> Attribute {
     return !attr ? DictionaryAttr::get(op->getContext()) : attr;
@@ -121,7 +128,7 @@ void mlir::function_like_impl::setAllResultAttrDicts(
                         llvm::to_vector<8>(wrappedAttrs));
 }
 
-void mlir::function_like_impl::insertFunctionArguments(
+void mlir::function_interface_impl::insertFunctionArguments(
     Operation *op, ArrayRef<unsigned> argIndices, TypeRange argTypes,
     ArrayRef<DictionaryAttr> argAttrs, ArrayRef<Optional<Location>> argLocs,
     unsigned originalNumArgs, Type newType) {
@@ -168,7 +175,7 @@ void mlir::function_like_impl::insertFunctionArguments(
                          argLocs.empty() ? Optional<Location>{} : argLocs[i]);
 }
 
-void mlir::function_like_impl::insertFunctionResults(
+void mlir::function_interface_impl::insertFunctionResults(
     Operation *op, ArrayRef<unsigned> resultIndices, TypeRange resultTypes,
     ArrayRef<DictionaryAttr> resultAttrs, unsigned originalNumResults,
     Type newType) {
@@ -210,7 +217,7 @@ void mlir::function_like_impl::insertFunctionResults(
   op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
 }
 
-void mlir::function_like_impl::eraseFunctionArguments(
+void mlir::function_interface_impl::eraseFunctionArguments(
     Operation *op, ArrayRef<unsigned> argIndices, unsigned originalNumArgs,
     Type newType) {
   // There are 3 things that need to be updated:
@@ -234,7 +241,7 @@ void mlir::function_like_impl::eraseFunctionArguments(
   entry.eraseArguments(argIndices);
 }
 
-void mlir::function_like_impl::eraseFunctionResults(
+void mlir::function_interface_impl::eraseFunctionResults(
     Operation *op, ArrayRef<unsigned> resultIndices,
     unsigned originalNumResults, Type newType) {
   // There are 2 things that need to be updated:
@@ -255,22 +262,48 @@ void mlir::function_like_impl::eraseFunctionResults(
   op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
 }
 
+TypeRange mlir::function_interface_impl::insertTypesInto(
+    TypeRange oldTypes, ArrayRef<unsigned> indices, TypeRange newTypes,
+    SmallVectorImpl<Type> &storage) {
+  assert(indices.size() == newTypes.size() &&
+         "mismatch between indice and type count");
+  if (indices.empty())
+    return oldTypes;
+
+  auto fromIt = oldTypes.begin();
+  for (auto it : llvm::zip(indices, newTypes)) {
+    const auto toIt = oldTypes.begin() + std::get<0>(it);
+    storage.append(fromIt, toIt);
+    storage.push_back(std::get<1>(it));
+    fromIt = toIt;
+  }
+  storage.append(fromIt, oldTypes.end());
+  return storage;
+}
+
+TypeRange
+mlir::function_interface_impl::filterTypesOut(TypeRange types,
+                                              ArrayRef<unsigned> indices,
+                                              SmallVectorImpl<Type> &storage) {
+  if (indices.empty())
+    return types;
+  iterateIndicesExcept(types.size(), indices,
+                       [&](unsigned i) { storage.emplace_back(types[i]); });
+  return storage;
+}
+
 //===----------------------------------------------------------------------===//
 // Function type signature.
 //===----------------------------------------------------------------------===//
 
-FunctionType mlir::function_like_impl::getFunctionType(Operation *op) {
-  assert(op->hasTrait<OpTrait::FunctionLike>());
-  return op->getAttrOfType<TypeAttr>(getTypeAttrName())
-      .getValue()
-      .cast<FunctionType>();
-}
-
-void mlir::function_like_impl::setFunctionType(Operation *op,
-                                               FunctionType newType) {
-  assert(op->hasTrait<OpTrait::FunctionLike>());
-  FunctionType oldType = getFunctionType(op);
+void mlir::function_interface_impl::setFunctionType(Operation *op,
+                                                    Type newType) {
+  FunctionOpInterface funcOp = cast<FunctionOpInterface>(op);
+  unsigned oldNumArgs = funcOp.getNumArguments();
+  unsigned oldNumResults = funcOp.getNumResults();
   op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
+  unsigned newNumArgs = funcOp.getNumArguments();
+  unsigned newNumResults = funcOp.getNumResults();
 
   // Functor used to update the argument and result attributes of the function.
   auto updateAttrFn = [&](StringRef attrName, unsigned oldCount,
@@ -298,21 +331,10 @@ void mlir::function_like_impl::setFunctionType(Operation *op,
   };
 
   // Update the argument and result attributes.
-  updateAttrFn(function_like_impl::getArgDictAttrName(), oldType.getNumInputs(),
-               newType.getNumInputs(), [&](Operation *op, auto &&attrs) {
-                 setAllArgAttrDicts(op, attrs);
-               });
   updateAttrFn(
-      function_like_impl::getResultDictAttrName(), oldType.getNumResults(),
-      newType.getNumResults(),
+      getArgDictAttrName(), oldNumArgs, newNumArgs,
+      [&](Operation *op, auto &&attrs) { setAllArgAttrDicts(op, attrs); });
+  updateAttrFn(
+      getResultDictAttrName(), oldNumResults, newNumResults,
       [&](Operation *op, auto &&attrs) { setAllResultAttrDicts(op, attrs); });
-}
-
-//===----------------------------------------------------------------------===//
-// Function body.
-//===----------------------------------------------------------------------===//
-
-Region &mlir::function_like_impl::getFunctionBody(Operation *op) {
-  assert(op->hasTrait<OpTrait::FunctionLike>());
-  return op->getRegion(0);
 }

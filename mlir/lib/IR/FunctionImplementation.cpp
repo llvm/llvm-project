@@ -8,12 +8,12 @@
 
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/SymbolTable.h"
 
 using namespace mlir;
 
-ParseResult mlir::function_like_impl::parseFunctionArgumentList(
+ParseResult mlir::function_interface_impl::parseFunctionArgumentList(
     OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
@@ -128,11 +128,7 @@ parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
   return parser.parseRParen();
 }
 
-/// Parses a function signature using `parser`. The `allowVariadic` argument
-/// indicates whether functions with variadic arguments are supported. The
-/// trailing arguments are populated by this function with names, types and
-/// attributes of the arguments and those of the results.
-ParseResult mlir::function_like_impl::parseFunctionSignature(
+ParseResult mlir::function_interface_impl::parseFunctionSignature(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
@@ -159,16 +155,18 @@ static void addArgAndResultAttrsImpl(Builder &builder, OperationState &result,
   // Add the attributes to the function arguments.
   if (!argAttrs.empty() && llvm::any_of(argAttrs, nonEmptyAttrsFn)) {
     ArrayAttr attrDicts = builder.getArrayAttr(buildAttrArrayFn(argAttrs));
-    result.addAttribute(function_like_impl::getArgDictAttrName(), attrDicts);
+    result.addAttribute(function_interface_impl::getArgDictAttrName(),
+                        attrDicts);
   }
   // Add the attributes to the function results.
   if (!resultAttrs.empty() && llvm::any_of(resultAttrs, nonEmptyAttrsFn)) {
     ArrayAttr attrDicts = builder.getArrayAttr(buildAttrArrayFn(resultAttrs));
-    result.addAttribute(function_like_impl::getResultDictAttrName(), attrDicts);
+    result.addAttribute(function_interface_impl::getResultDictAttrName(),
+                        attrDicts);
   }
 }
 
-void mlir::function_like_impl::addArgAndResultAttrs(
+void mlir::function_interface_impl::addArgAndResultAttrs(
     Builder &builder, OperationState &result, ArrayRef<DictionaryAttr> argAttrs,
     ArrayRef<DictionaryAttr> resultAttrs) {
   auto buildFn = [](ArrayRef<DictionaryAttr> attrs) {
@@ -176,7 +174,7 @@ void mlir::function_like_impl::addArgAndResultAttrs(
   };
   addArgAndResultAttrsImpl(builder, result, argAttrs, resultAttrs, buildFn);
 }
-void mlir::function_like_impl::addArgAndResultAttrs(
+void mlir::function_interface_impl::addArgAndResultAttrs(
     Builder &builder, OperationState &result, ArrayRef<NamedAttrList> argAttrs,
     ArrayRef<NamedAttrList> resultAttrs) {
   MLIRContext *context = builder.getContext();
@@ -189,9 +187,7 @@ void mlir::function_like_impl::addArgAndResultAttrs(
   addArgAndResultAttrsImpl(builder, result, argAttrs, resultAttrs, buildFn);
 }
 
-/// Parser implementation for function-like operations.  Uses `funcTypeBuilder`
-/// to construct the custom function type given lists of input and output types.
-ParseResult mlir::function_like_impl::parseFunctionLikeOp(
+ParseResult mlir::function_interface_impl::parseFunctionOp(
     OpAsmParser &parser, OperationState &result, bool allowVariadic,
     FuncTypeBuilder funcTypeBuilder) {
   SmallVector<OpAsmParser::OperandType, 4> entryArgs;
@@ -290,9 +286,7 @@ static void printFunctionResultList(OpAsmPrinter &p, ArrayRef<Type> types,
     os << ')';
 }
 
-/// Print the signature of the function-like operation `op`.  Assumes `op` has
-/// the FunctionLike trait and passed the verification.
-void mlir::function_like_impl::printFunctionSignature(
+void mlir::function_interface_impl::printFunctionSignature(
     OpAsmPrinter &p, Operation *op, ArrayRef<Type> argTypes, bool isVariadic,
     ArrayRef<Type> resultTypes) {
   Region &body = op->getRegion(0);
@@ -331,12 +325,7 @@ void mlir::function_like_impl::printFunctionSignature(
   }
 }
 
-/// Prints the list of function prefixed with the "attributes" keyword. The
-/// attributes with names listed in "elided" as well as those used by the
-/// function-like operation internally are not printed. Nothing is printed
-/// if all attributes are elided. Assumes `op` has the `FunctionLike` trait and
-/// passed the verification.
-void mlir::function_like_impl::printFunctionAttributes(
+void mlir::function_interface_impl::printFunctionAttributes(
     OpAsmPrinter &p, Operation *op, unsigned numInputs, unsigned numResults,
     ArrayRef<StringRef> elided) {
   // Print out function attributes, if present.
@@ -348,13 +337,9 @@ void mlir::function_like_impl::printFunctionAttributes(
   p.printOptionalAttrDictWithKeyword(op->getAttrs(), ignoredAttrs);
 }
 
-/// Printer implementation for function-like operations.  Accepts lists of
-/// argument and result types to use while printing.
-void mlir::function_like_impl::printFunctionLikeOp(OpAsmPrinter &p,
-                                                   Operation *op,
-                                                   ArrayRef<Type> argTypes,
-                                                   bool isVariadic,
-                                                   ArrayRef<Type> resultTypes) {
+void mlir::function_interface_impl::printFunctionOp(
+    OpAsmPrinter &p, Operation *op, ArrayRef<Type> argTypes, bool isVariadic,
+    ArrayRef<Type> resultTypes) {
   // Print the operation and the function name.
   auto funcName =
       op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())

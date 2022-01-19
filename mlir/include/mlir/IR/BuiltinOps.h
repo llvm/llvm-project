@@ -13,7 +13,7 @@
 #ifndef MLIR_IR_BUILTINOPS_H_
 #define MLIR_IR_BUILTINOPS_H_
 
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OwningOpRef.h"
 #include "mlir/IR/RegionKindInterface.h"
