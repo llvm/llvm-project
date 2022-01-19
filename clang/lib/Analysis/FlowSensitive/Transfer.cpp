@@ -404,6 +404,16 @@ public:
     }
   }
 
+  void VisitConditionalOperator(const ConditionalOperator *S) {
+    // FIXME: Revisit this once flow conditions are added to the framework. For
+    // `a = b ? c : d` we can add `b => a == c && !b => a == d` to the flow
+    // condition.
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+    if (Value *Val = Env.createValue(S->getType()))
+      Env.setValue(Loc, *Val);
+  }
+
   // FIXME: Add support for:
   // - CXXBoolLiteralExpr
 
