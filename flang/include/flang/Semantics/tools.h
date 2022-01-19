@@ -96,7 +96,8 @@ bool IsPointerDummy(const Symbol &);
 bool IsBindCProcedure(const Symbol &);
 bool IsBindCProcedure(const Scope &);
 bool IsProcName(const Symbol &); // proc-name
-bool IsFunctionResultWithSameNameAsFunction(const Symbol &);
+// Returns a pointer to the function's symbol when true, else null
+const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &);
 bool IsOrContainsEventOrLockComponent(const Symbol &);
 bool CanBeTypeBoundProc(const Symbol *);
 // Does a non-PARAMETER symbol have explicit initialization with =value or
