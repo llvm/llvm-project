@@ -1,5 +1,5 @@
 # The service providing the commit statuses to GitHub.
-status = ["buildbot/yk-buildbot-build-script-hw"]
+status = ["buildbot/buildbot-build-script"]
 
 # Allow four hours for builds + tests.
 timeout_sec = 14400
