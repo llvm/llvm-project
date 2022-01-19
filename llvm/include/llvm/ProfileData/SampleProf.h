@@ -195,19 +195,21 @@ enum class SecProfSummaryFlags : uint32_t {
   /// The common profile is usually merged from profiles collected
   /// from running other targets.
   SecFlagPartial = (1 << 0),
-  /// SecFlagContext means this is context-sensitive profile for
+  /// SecFlagContext means this is context-sensitive flat profile for
   /// CSSPGO
   SecFlagFullContext = (1 << 1),
   /// SecFlagFSDiscriminator means this profile uses flow-sensitive
   /// discriminators.
-  SecFlagFSDiscriminator = (1 << 2)
+  SecFlagFSDiscriminator = (1 << 2),
+  /// SecFlagIsCSNested means this is context-sensitive nested profile for
+  /// CSSPGO
+  SecFlagIsCSNested = (1 << 4),
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
   SecFlagInvalid = 0,
   SecFlagIsProbeBased = (1 << 0),
   SecFlagHasAttribute = (1 << 1),
-  SecFlagIsCSNested = (1 << 2),
 };
 
 enum class SecFuncOffsetFlags : uint32_t {
