@@ -44,6 +44,8 @@ add_object_library(
     libc.include.errno
     libc.include.math
     libc.src.errno.__errno_location
+  COMPILE_OPTIONS
+    -Wno-c++17-extensions
 )
 
 add_object_library(
@@ -54,6 +56,8 @@ add_object_library(
     sincosf_data.cpp
   DEPENDS
     .math_utils
+  COMPILE_OPTIONS
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(

@@ -16,9 +16,9 @@
 namespace __llvm_libc {
 
 // 2PI * 2^-64.
-static const double pi63 = as_double(0x3c1921fb54442d18);
+static constexpr double pi63 = 0x1.921fb54442d18p-62;
 // PI / 4.
-static const double pio4 = as_double(0x3fe921fb54442d18);
+static constexpr double pio4 = 0x1.921fb54442d18p-1;
 
 // The constants and polynomials for sine and cosine.
 typedef struct {
