@@ -555,7 +555,7 @@ def testOperationPrint():
   print(bytes_value)
 
   # Test get_asm with options.
-  # CHECK: value = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>
+  # CHECK: value = opaque<"elided_large_const", "0xDEADBEEF"> : tensor<4xi32>
   # CHECK: "std.return"(%arg0) : (i32) -> () -:4:7
   module.operation.print(
       large_elements_limit=2,
