@@ -325,8 +325,8 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT:  1      0     0.17                        vpxorq	%zmm19, %zmm19, %zmm21
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    143
-# CHECK-NEXT: Max number of mappings used:         47
+# CHECK-NEXT: Total number of mappings created:    40
+# CHECK-NEXT: Max number of mappings used:         25
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - ICXDivider
@@ -611,12 +611,12 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT: [0,116]   .    .    .    .   D------R   pxor	%xmm2, %xmm2
 # CHECK-NEXT: [0,117]   .    .    .    .   D------R   vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT: [0,118]   .    .    .    .   D------R   vpxor	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: [0,119]   .    .    .    .   D===E--R   vpxord	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,120]   .    .    .    .    D==E--R   vpxorq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: [0,121]   .    .    .    .    D==E--R   vpxord	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,122]   .    .    .    .    D==E--R   vpxorq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: [0,123]   .    .    .    .    D==E--R   vpxord	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: [0,124]   .    .    .    .    D==E--R   vpxorq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,119]   .    .    .    .   D------R   vpxord	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,120]   .    .    .    .    D-----R   vpxorq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: [0,121]   .    .    .    .    D-----R   vpxord	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,122]   .    .    .    .    D-----R   vpxorq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: [0,123]   .    .    .    .    D-----R   vpxord	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: [0,124]   .    .    .    .    D-----R   vpxorq	%zmm19, %zmm19, %zmm19
 # CHECK-NEXT: [0,125]   .    .    .    .    D-----R   vxorps	%xmm4, %xmm4, %xmm5
 # CHECK-NEXT: [0,126]   .    .    .    .    .D----R   vxorpd	%xmm1, %xmm1, %xmm3
 # CHECK-NEXT: [0,127]   .    .    .    .    .D----R   vxorps	%ymm4, %ymm4, %ymm5
@@ -625,11 +625,11 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT: [0,130]   .    .    .    .    .D----R   vxorpd	%zmm1, %zmm1, %zmm3
 # CHECK-NEXT: [0,131]   .    .    .    .    .D----R   vpxor	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [0,132]   .    .    .    .    . D---R   vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: [0,133]   .    .    .    .    . DE--R   vpxord	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,134]   .    .    .    .    . DE--R   vpxorq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: [0,135]   .    .    .    .    . DE--R   vpxord	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,136]   .    .    .    .    . DE--R   vpxorq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: [0,137]   .    .    .    .    . DE--R   vpxord	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: [0,133]   .    .    .    .    . D---R   vpxord	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,134]   .    .    .    .    . D---R   vpxorq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: [0,135]   .    .    .    .    . D---R   vpxord	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,136]   .    .    .    .    . D---R   vpxorq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: [0,137]   .    .    .    .    . D---R   vpxord	%zmm19, %zmm19, %zmm21
 # CHECK-NEXT: [0,138]   .    .    .    .    .  D--R   vpxorq	%zmm19, %zmm19, %zmm21
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -758,12 +758,12 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT: 116.   1     0.0    0.0    6.0       pxor	%xmm2, %xmm2
 # CHECK-NEXT: 117.   1     0.0    0.0    6.0       vpxor	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT: 118.   1     0.0    0.0    6.0       vpxor	%ymm3, %ymm3, %ymm3
-# CHECK-NEXT: 119.   1     4.0    0.0    2.0       vpxord	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 120.   1     3.0    0.0    2.0       vpxorq	%xmm19, %xmm19, %xmm19
-# CHECK-NEXT: 121.   1     3.0    0.0    2.0       vpxord	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 122.   1     3.0    0.0    2.0       vpxorq	%ymm19, %ymm19, %ymm19
-# CHECK-NEXT: 123.   1     3.0    0.0    2.0       vpxord	%zmm19, %zmm19, %zmm19
-# CHECK-NEXT: 124.   1     3.0    0.0    2.0       vpxorq	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 119.   1     0.0    0.0    6.0       vpxord	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 120.   1     0.0    0.0    5.0       vpxorq	%xmm19, %xmm19, %xmm19
+# CHECK-NEXT: 121.   1     0.0    0.0    5.0       vpxord	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 122.   1     0.0    0.0    5.0       vpxorq	%ymm19, %ymm19, %ymm19
+# CHECK-NEXT: 123.   1     0.0    0.0    5.0       vpxord	%zmm19, %zmm19, %zmm19
+# CHECK-NEXT: 124.   1     0.0    0.0    5.0       vpxorq	%zmm19, %zmm19, %zmm19
 # CHECK-NEXT: 125.   1     0.0    0.0    5.0       vxorps	%xmm4, %xmm4, %xmm5
 # CHECK-NEXT: 126.   1     0.0    0.0    4.0       vxorpd	%xmm1, %xmm1, %xmm3
 # CHECK-NEXT: 127.   1     0.0    0.0    4.0       vxorps	%ymm4, %ymm4, %ymm5
@@ -772,10 +772,10 @@ vpxorq  %zmm19, %zmm19, %zmm21
 # CHECK-NEXT: 130.   1     0.0    0.0    4.0       vxorpd	%zmm1, %zmm1, %zmm3
 # CHECK-NEXT: 131.   1     0.0    0.0    4.0       vpxor	%xmm3, %xmm3, %xmm5
 # CHECK-NEXT: 132.   1     0.0    0.0    3.0       vpxor	%ymm3, %ymm3, %ymm5
-# CHECK-NEXT: 133.   1     1.0    0.0    2.0       vpxord	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 134.   1     1.0    0.0    2.0       vpxorq	%xmm19, %xmm19, %xmm21
-# CHECK-NEXT: 135.   1     1.0    0.0    2.0       vpxord	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 136.   1     1.0    0.0    2.0       vpxorq	%ymm19, %ymm19, %ymm21
-# CHECK-NEXT: 137.   1     1.0    0.0    2.0       vpxord	%zmm19, %zmm19, %zmm21
+# CHECK-NEXT: 133.   1     0.0    0.0    3.0       vpxord	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 134.   1     0.0    0.0    3.0       vpxorq	%xmm19, %xmm19, %xmm21
+# CHECK-NEXT: 135.   1     0.0    0.0    3.0       vpxord	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 136.   1     0.0    0.0    3.0       vpxorq	%ymm19, %ymm19, %ymm21
+# CHECK-NEXT: 137.   1     0.0    0.0    3.0       vpxord	%zmm19, %zmm19, %zmm21
 # CHECK-NEXT: 138.   1     0.0    0.0    2.0       vpxorq	%zmm19, %zmm19, %zmm21
-# CHECK-NEXT:        1     1.1    0.2    1.8       <total>
+# CHECK-NEXT:        1     0.9    0.2    2.0       <total>

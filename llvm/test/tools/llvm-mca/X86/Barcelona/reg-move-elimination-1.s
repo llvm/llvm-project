@@ -32,8 +32,8 @@ addps %xmm1, %xmm1
 # CHECK-NEXT:  1      3     1.00                        addps	%xmm1, %xmm1
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    9
-# CHECK-NEXT: Max number of mappings used:         8
+# CHECK-NEXT: Total number of mappings created:    6
+# CHECK-NEXT: Max number of mappings used:         6
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider

@@ -103,7 +103,7 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT:  1      1     0.50                        pxor	%xmm2, %xmm2
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    40
+# CHECK-NEXT: Total number of mappings created:    35
 # CHECK-NEXT: Max number of mappings used:         18
 
 # CHECK:      Resources:
@@ -123,8 +123,8 @@ pxor   %xmm2, %xmm2
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -     1.00    -     subl	%eax, %eax
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     subq	%rax, %rax
-# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     xorl	%eax, %eax
+# CHECK-NEXT:  -      -      -      -      -      -     1.00    -     subq	%rax, %rax
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     xorl	%eax, %eax
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     xorq	%rax, %rax
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     pcmpgtb	%mm2, %mm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pcmpgtd	%mm2, %mm2
@@ -150,8 +150,8 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     psubusb	%xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     psubusw	%xmm2, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     andnps	%xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     andnpd	%xmm1, %xmm1
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pandn	%mm2, %mm2
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     andnpd	%xmm1, %xmm1
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     pandn	%mm2, %mm2
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     pandn	%xmm2, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     vpandn	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -     xorps	%xmm0, %xmm0
@@ -165,9 +165,9 @@ pxor   %xmm2, %xmm2
 
 # CHECK:      [0,0]     DeER .    .    .    .    .  .   subl	%eax, %eax
 # CHECK-NEXT: [0,1]     D=eER.    .    .    .    .  .   subq	%rax, %rax
-# CHECK-NEXT: [0,2]     .D=eER    .    .    .    .  .   xorl	%eax, %eax
-# CHECK-NEXT: [0,3]     .D==eER   .    .    .    .  .   xorq	%rax, %rax
-# CHECK-NEXT: [0,4]     . DeE-R   .    .    .    .  .   pcmpgtb	%mm2, %mm2
+# CHECK-NEXT: [0,2]     .DeER.    .    .    .    .  .   xorl	%eax, %eax
+# CHECK-NEXT: [0,3]     .D=eER    .    .    .    .  .   xorq	%rax, %rax
+# CHECK-NEXT: [0,4]     . DeER    .    .    .    .  .   pcmpgtb	%mm2, %mm2
 # CHECK-NEXT: [0,5]     . D=eER   .    .    .    .  .   pcmpgtd	%mm2, %mm2
 # CHECK-NEXT: [0,6]     .  D=eER  .    .    .    .  .   pcmpgtw	%mm2, %mm2
 # CHECK-NEXT: [0,7]     .  DeE-R  .    .    .    .  .   pcmpgtb	%xmm2, %xmm2
@@ -209,9 +209,9 @@ pxor   %xmm2, %xmm2
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       subl	%eax, %eax
 # CHECK-NEXT: 1.     1     2.0    0.0    0.0       subq	%rax, %rax
-# CHECK-NEXT: 2.     1     2.0    0.0    0.0       xorl	%eax, %eax
-# CHECK-NEXT: 3.     1     3.0    0.0    0.0       xorq	%rax, %rax
-# CHECK-NEXT: 4.     1     1.0    1.0    1.0       pcmpgtb	%mm2, %mm2
+# CHECK-NEXT: 2.     1     1.0    1.0    0.0       xorl	%eax, %eax
+# CHECK-NEXT: 3.     1     2.0    0.0    0.0       xorq	%rax, %rax
+# CHECK-NEXT: 4.     1     1.0    1.0    0.0       pcmpgtb	%mm2, %mm2
 # CHECK-NEXT: 5.     1     2.0    0.0    0.0       pcmpgtd	%mm2, %mm2
 # CHECK-NEXT: 6.     1     2.0    0.0    0.0       pcmpgtw	%mm2, %mm2
 # CHECK-NEXT: 7.     1     1.0    1.0    1.0       pcmpgtb	%xmm2, %xmm2
@@ -239,8 +239,8 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT: 29.    1     7.0    1.0    0.0       pandn	%mm2, %mm2
 # CHECK-NEXT: 30.    1     7.0    1.0    0.0       pandn	%xmm2, %xmm2
 # CHECK-NEXT: 31.    1     7.0    7.0    0.0       vpandn	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT: 32.    1     7.0    2.0    0.0       xorps	%xmm0, %xmm0
-# CHECK-NEXT: 33.    1     7.0    1.0    0.0       xorpd	%xmm1, %xmm1
+# CHECK-NEXT: 32.    1     7.0    7.0    0.0       xorps	%xmm0, %xmm0
+# CHECK-NEXT: 33.    1     7.0    7.0    0.0       xorpd	%xmm1, %xmm1
 # CHECK-NEXT: 34.    1     7.0    2.0    0.0       pxor	%mm2, %mm2
-# CHECK-NEXT: 35.    1     7.0    1.0    0.0       pxor	%xmm2, %xmm2
-# CHECK-NEXT:        1     4.4    1.1    0.5       <total>
+# CHECK-NEXT: 35.    1     7.0    7.0    0.0       pxor	%xmm2, %xmm2
+# CHECK-NEXT:        1     4.3    1.6    0.5       <total>
