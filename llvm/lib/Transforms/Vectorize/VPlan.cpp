@@ -871,6 +871,16 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     VPValue *VPV = new VPValue(CanonicalIVStartValue);
     addExternalDef(VPV);
     auto *IV = getCanonicalIV();
+    assert(all_of(IV->users(),
+                  [](const VPUser *U) {
+                    auto *VPI = cast<VPInstruction>(U);
+                    return VPI->getOpcode() ==
+                               VPInstruction::CanonicalIVIncrement ||
+                           VPI->getOpcode() ==
+                               VPInstruction::CanonicalIVIncrementNUW;
+                  }) &&
+           "the canonical IV should only be used by its increments when "
+           "resetting the start value");
     IV->setOperand(0, VPV);
   }
 }

@@ -836,6 +836,16 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC;
   }
 
+  /// Extra classof implementations to allow directly casting from VPUser ->
+  /// VPInstruction.
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && R->getVPDefID() == VPRecipeBase::VPInstructionSC;
+  }
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPInstructionSC;
+  }
+
   unsigned getOpcode() const { return Opcode; }
 
   /// Generate the instruction.
