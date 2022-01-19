@@ -19,6 +19,9 @@
 # RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC2 -ObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
 
+# RUN: %lld -lSystem %t/test.o -o %t/test --start-lib %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/wrong-arch.o --end-lib -ObjC
+# RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
+
 # OBJC:       Sections:
 # OBJC-NEXT:  Idx Name            Size   VMA  Type
 # OBJC-NEXT:    0 __text          {{.*}}      TEXT
@@ -27,8 +30,8 @@
 # OBJC-NEXT:    3 has_objc_symbol {{.*}}      DATA
 # OBJC-EMPTY:
 # OBJC-NEXT:  SYMBOL TABLE:
-# OBJC-NEXT:  g     F __TEXT,__text _main
-# OBJC-NEXT:  g     F __TEXT,__text _OBJC_CLASS_$_MyObject
+# OBJC-DAG:   g     F __TEXT,__text _main
+# OBJC-DAG:   g     F __TEXT,__text _OBJC_CLASS_$_MyObject
 
 # RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=NO-OBJC
@@ -57,6 +60,11 @@
 # RUN: not %lld -dylib %t/refs-dup.o %t/refs-objc.o -o %t/refs-dup -L%t \
 # RUN:   -lHasSomeObjC 2>&1 | FileCheck %s --check-prefix=DUP-ERROR
 # DUP-ERROR: error: duplicate symbol: _has_dup
+
+## TODO: Load has-objc-symbol.o prior to symbol resolution to match the archive behavior.
+# RUN: not %lld -dylib %t/refs-dup.o %t/refs-objc.o -o %t/refs-dup --start-lib %t/no-objc.o \
+# RUN:   %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/wrong-arch.o --end-lib \
+# RUN:   -ObjC  --check-prefix=DUP-FROM-OBJC
 
 #--- has-objc-symbol.s
 .globl _OBJC_CLASS_$_MyObject, _has_dup

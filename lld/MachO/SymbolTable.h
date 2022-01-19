@@ -53,6 +53,7 @@ public:
 
   Symbol *addLazyArchive(StringRef name, ArchiveFile *file,
                          const llvm::object::Archive::Symbol &sym);
+  Symbol *addLazyObject(StringRef name, InputFile &file);
 
   Defined *addSynthetic(StringRef name, InputSection *, uint64_t value,
                         bool isPrivateExtern, bool includeInSymtab,

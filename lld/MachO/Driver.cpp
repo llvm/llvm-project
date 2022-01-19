@@ -249,7 +249,8 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
 static DenseMap<StringRef, ArchiveFile *> loadedArchives;
 
 static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
-                          bool isExplicit = true, bool isBundleLoader = false) {
+                          bool isLazy = false, bool isExplicit = true,
+                          bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -319,7 +320,7 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     break;
   }
   case file_magic::macho_object:
-    newFile = make<ObjFile>(mbref, getModTime(path), "");
+    newFile = make<ObjFile>(mbref, getModTime(path), "", isLazy);
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
@@ -331,7 +332,7 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     }
     break;
   case file_magic::bitcode:
-    newFile = make<BitcodeFile>(mbref, "", 0);
+    newFile = make<BitcodeFile>(mbref, "", 0, isLazy);
     break;
   case file_magic::macho_executable:
   case file_magic::macho_bundle:
@@ -346,9 +347,20 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     error(path + ": unhandled file type");
   }
   if (newFile && !isa<DylibFile>(newFile)) {
+    if ((isa<ObjFile>(newFile) || isa<BitcodeFile>(newFile)) && newFile->lazy &&
+        config->forceLoadObjC) {
+      for (Symbol *sym : newFile->symbols)
+        if (sym && sym->getName().startswith(objc::klass)) {
+          extract(*newFile, "-ObjC");
+          break;
+        }
+      if (newFile->lazy && hasObjCSection(mbref))
+        extract(*newFile, "-ObjC");
+    }
+
     // printArchiveMemberLoad() prints both .a and .o names, so no need to
-    // print the .a name here.
-    if (config->printEachFile && magic != file_magic::archive)
+    // print the .a name here. Similarly skip lazy files.
+    if (config->printEachFile && magic != file_magic::archive && !isLazy)
       message(toString(newFile));
     inputFiles.insert(newFile);
   }
@@ -360,7 +372,7 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoadArchive, isExplicit))) {
+            addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -380,7 +392,7 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
                          ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findFramework(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoadArchive, isExplicit))) {
+            addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -425,13 +437,13 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   }
 }
 
-static void addFileList(StringRef path) {
+static void addFileList(StringRef path, bool isLazy) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), ForceLoad::Default);
+    addFile(rerootPath(path), ForceLoad::Default, isLazy);
 }
 
 // An order file has one entry per line, in the following format:
@@ -545,7 +557,8 @@ static void compileBitcodeFiles() {
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
     if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
-      lto->add(*bitcodeFile);
+      if (!file->lazy)
+        lto->add(*bitcodeFile);
 
   for (ObjFile *file : lto->compile())
     inputFiles.insert(file);
@@ -962,6 +975,7 @@ static void createFiles(const InputArgList &args) {
   TimeTraceScope timeScope("Load input files");
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
+  bool isLazy = false;
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -969,7 +983,7 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), ForceLoad::Default);
+      addFile(rerootPath(arg->getValue()), ForceLoad::Default, isLazy);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
@@ -989,7 +1003,7 @@ static void createFiles(const InputArgList &args) {
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
-      addFileList(arg->getValue());
+      addFileList(arg->getValue(), isLazy);
       break;
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), ForceLoad::Yes);
@@ -1010,6 +1024,16 @@ static void createFiles(const InputArgList &args) {
                    opt.getID() == OPT_weak_framework,
                    opt.getID() == OPT_reexport_framework, /*isExplicit=*/true,
                    ForceLoad::Default);
+      break;
+    case OPT_start_lib:
+      if (isLazy)
+        error("nested --start-lib");
+      isLazy = true;
+      break;
+    case OPT_end_lib:
+      if (!isLazy)
+        error("stray --end-lib");
+      isLazy = false;
       break;
     default:
       break;
@@ -1247,7 +1271,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
-    addFile(arg->getValue(), ForceLoad::Default, /*isExplicit=*/false,
+    addFile(arg->getValue(), ForceLoad::Default, /*isLazy=*/false,
+            /*isExplicit=*/false,
             /*isBundleLoader=*/true);
   }
   if (const Arg *arg = args.getLastArg(OPT_umbrella)) {

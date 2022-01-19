@@ -38,6 +38,7 @@ public:
     CommonKind,
     DylibKind,
     LazyArchiveKind,
+    LazyObjectKind,
   };
 
   virtual ~Symbol() {}
@@ -51,6 +52,9 @@ public:
   }
 
   bool isLive() const { return used; }
+  bool isLazy() const {
+    return symbolKind == LazyArchiveKind || symbolKind == LazyObjectKind;
+  }
 
   virtual uint64_t getVA() const { return 0; }
 
@@ -294,12 +298,25 @@ private:
   const llvm::object::Archive::Symbol sym;
 };
 
+// A defined symbol in an ObjFile/BitcodeFile surrounded by --start-lib and
+// --end-lib.
+class LazyObject : public Symbol {
+public:
+  LazyObject(InputFile &file, StringRef name)
+      : Symbol(LazyObjectKind, name, &file) {
+    isUsedInRegularObj = false;
+  }
+
+  static bool classof(const Symbol *s) { return s->kind() == LazyObjectKind; }
+};
+
 union SymbolUnion {
   alignas(Defined) char a[sizeof(Defined)];
   alignas(Undefined) char b[sizeof(Undefined)];
   alignas(CommonSymbol) char c[sizeof(CommonSymbol)];
   alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
   alignas(LazyArchive) char e[sizeof(LazyArchive)];
+  alignas(LazyObject) char f[sizeof(LazyObject)];
 };
 
 template <typename T, typename... ArgT>
