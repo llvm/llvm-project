@@ -104,7 +104,7 @@ void TestComprehensiveFunctionBufferize::runOnOperation() {
   auto options = std::make_unique<BufferizationOptions>();
 
   if (!allowReturnMemref)
-    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+    options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();
 
   options->allowReturnMemref = allowReturnMemref;
   options->allowUnknownOps = allowUnknownOps;

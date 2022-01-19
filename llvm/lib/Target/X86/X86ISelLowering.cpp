@@ -29822,8 +29822,9 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     SDValue AmtMask = DAG.getConstant(EltSizeInBits - 1, DL, VT);
     SDValue AmtMod = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
 
+    unsigned NumElts = VT.getVectorNumElements();
     MVT ExtSVT = MVT::getIntegerVT(2 * EltSizeInBits);
-    MVT ExtVT = MVT::getVectorVT(ExtSVT, VT.getVectorNumElements() / 2);
+    MVT ExtVT = MVT::getVectorVT(ExtSVT, NumElts / 2);
 
     // Split 256-bit integers on XOP/pre-AVX2 targets.
     // Split 512-bit integers on non 512-bit BWI targets.
@@ -29846,6 +29847,46 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
                                DAG);
       Hi = getTargetVShiftNode(ShiftX86Opc, DL, ExtVT, Hi, ScalarAmt, Subtarget,
                                DAG);
+      return getPack(DAG, Subtarget, DL, VT, Lo, Hi, !IsFSHR);
+    }
+
+    unsigned ShiftOpc = IsFSHR ? ISD::SRL : ISD::SHL;
+
+    MVT WideSVT = MVT::getIntegerVT(
+        std::min<unsigned>(EltSizeInBits * 2, Subtarget.hasBWI() ? 16 : 32));
+    MVT WideVT = MVT::getVectorVT(WideSVT, NumElts);
+
+    // If per-element shifts are legal, fallback to generic expansion.
+    if (supportedVectorVarShift(VT, Subtarget, ShiftOpc))
+      return SDValue();
+
+    // Attempt to fold as:
+    // fshl(x,y,z) -> (((aext(x) << bw) | zext(y)) << (z & (bw-1))) >> bw.
+    // fshr(x,y,z) -> (((aext(x) << bw) | zext(y)) >> (z & (bw-1))).
+    if (supportedVectorVarShift(WideVT, Subtarget, ShiftOpc) &&
+        supportedVectorShiftWithImm(WideVT, Subtarget, ShiftOpc)) {
+      Op0 = DAG.getNode(ISD::ANY_EXTEND, DL, WideVT, Op0);
+      Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, Op1);
+      AmtMod = DAG.getNode(ISD::ZERO_EXTEND, DL, WideVT, AmtMod);
+      Op0 = getTargetVShiftByConstNode(X86ISD::VSHLI, DL, WideVT, Op0,
+                                       EltSizeInBits, DAG);
+      SDValue Res = DAG.getNode(ISD::OR, DL, WideVT, Op0, Op1);
+      Res = DAG.getNode(ShiftOpc, DL, WideVT, Res, AmtMod);
+      if (!IsFSHR)
+        Res = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, WideVT, Res,
+                                         EltSizeInBits, DAG);
+      return DAG.getNode(ISD::TRUNCATE, DL, VT, Res);
+    }
+
+    // Attempt to fold per-element (ExtVT) shift as unpack(y,x) << zext(z)
+    if (supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc)) {
+      SDValue Z = DAG.getConstant(0, DL, VT);
+      SDValue RLo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, Op1, Op0));
+      SDValue RHi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, Op1, Op0));
+      SDValue ALo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, AmtMod, Z));
+      SDValue AHi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, AmtMod, Z));
+      SDValue Lo = DAG.getNode(ShiftOpc, DL, ExtVT, RLo, ALo);
+      SDValue Hi = DAG.getNode(ShiftOpc, DL, ExtVT, RHi, AHi);
       return getPack(DAG, Subtarget, DL, VT, Lo, Hi, !IsFSHR);
     }
 

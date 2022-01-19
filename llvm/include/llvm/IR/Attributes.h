@@ -1048,7 +1048,8 @@ public:
       return removeAttribute(A.getKindAsEnum());
   }
 
-  /// Add the attributes from the builder.
+  /// Add the attributes from the builder. Attributes in the passed builder
+  /// overwrite attributes in this builder if they have the same key.
   AttrBuilder &merge(const AttrBuilder &B);
 
   /// Remove the attributes from the builder.

@@ -38,34 +38,6 @@ struct BufferizationOptions;
 class BufferizationState;
 struct PostAnalysisStep;
 
-/// Callback functions that are used to allocate/deallocate/copy memory buffers.
-/// Comprehensive Bufferize provides default implementations of these functions.
-// TODO: Could be replaced with a "bufferization strategy" object with virtual
-// functions in the future.
-struct AllocationCallbacks {
-  using AllocationFn = std::function<FailureOr<Value>(
-      OpBuilder &, Location, MemRefType, ArrayRef<Value>)>;
-  using DeallocationFn = std::function<void(OpBuilder &, Location, Value)>;
-  using MemCpyFn = std::function<void(OpBuilder &, Location, Value, Value)>;
-
-  AllocationCallbacks(AllocationFn allocFn, DeallocationFn deallocFn,
-                      MemCpyFn copyFn)
-      : allocationFn(std::move(allocFn)), deallocationFn(std::move(deallocFn)),
-        memCpyFn(std::move(copyFn)) {}
-
-  /// A function that allocates memory.
-  AllocationFn allocationFn;
-
-  /// A function that deallocated memory. Must be allocated by `allocationFn`.
-  DeallocationFn deallocationFn;
-
-  /// A function that copies memory between two allocations.
-  MemCpyFn memCpyFn;
-};
-
-/// Return default allocation callbacks.
-std::unique_ptr<AllocationCallbacks> defaultAllocationCallbacks();
-
 /// PostAnalysisSteps can be registered with `BufferizationOptions` and are
 /// executed after the analysis, but before bufferization. They can be used to
 /// implement custom dialect-specific optimizations.
@@ -84,6 +56,13 @@ using PostAnalysisStepList = std::vector<std::unique_ptr<PostAnalysisStep>>;
 
 /// Options for ComprehensiveBufferize.
 struct BufferizationOptions {
+  using AllocationFn = std::function<FailureOr<Value>(
+      OpBuilder &, Location, MemRefType, ArrayRef<Value>)>;
+  using DeallocationFn =
+      std::function<LogicalResult(OpBuilder &, Location, Value)>;
+  using MemCpyFn =
+      std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
+
   BufferizationOptions();
 
   // BufferizationOptions cannot be copied.
@@ -126,7 +105,9 @@ struct BufferizationOptions {
   BufferizableOpInterface dynCastBufferizableOp(Value value) const;
 
   /// Helper functions for allocation, deallocation, memory copying.
-  std::unique_ptr<AllocationCallbacks> allocationFns;
+  Optional<AllocationFn> allocationFn;
+  Optional<DeallocationFn> deallocationFn;
+  Optional<MemCpyFn> memCpyFn;
 
   /// Specifies whether returning newly allocated memrefs should be allowed.
   /// Otherwise, a pass failure is triggered.
@@ -362,24 +343,6 @@ public:
   /// is returned regardless of whether it is a memory write or not.
   SetVector<Value> findLastPrecedingWrite(Value value) const;
 
-  /// Creates a memref allocation.
-  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                               ArrayRef<Value> dynShape) const;
-
-  /// Creates a memref allocation for the given shaped value. This function may
-  /// perform additional optimizations such as buffer allocation hoisting. If
-  /// `createDealloc`, a deallocation op is inserted at the point where the
-  /// allocation goes out of scope.
-  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
-                               bool deallocMemref) const;
-
-  /// Creates a memref deallocation. The given memref buffer must have been
-  /// allocated using `createAlloc`.
-  void createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer) const;
-
-  /// Creates a memcpy between two given buffers.
-  void createMemCpy(OpBuilder &b, Location loc, Value from, Value to) const;
-
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpOperand &opOperand) const;
 
@@ -457,6 +420,28 @@ UnrankedMemRefType getUnrankedMemRefType(Type elementType,
 /// canonicalize away once bufferization is finished.
 MemRefType getDynamicMemRefType(RankedTensorType tensorType,
                                 unsigned addressSpace = 0);
+
+/// Creates a memref allocation.
+FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                             ArrayRef<Value> dynShape,
+                             const BufferizationOptions &options);
+
+/// Creates a memref allocation for the given shaped value. This function may
+/// perform additional optimizations such as buffer allocation hoisting. If
+/// `createDealloc`, a deallocation op is inserted at the point where the
+/// allocation goes out of scope.
+FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
+                             bool deallocMemref,
+                             const BufferizationOptions &options);
+
+/// Creates a memref deallocation. The given memref buffer must have been
+/// allocated using `createAlloc`.
+LogicalResult createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
+                            const BufferizationOptions &options);
+
+/// Creates a memcpy between two given buffers.
+LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from, Value to,
+                           const BufferizationOptions &options);
 
 } // namespace comprehensive_bufferize
 } // namespace linalg

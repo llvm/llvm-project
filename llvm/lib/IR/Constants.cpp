@@ -1495,28 +1495,6 @@ bool ConstantExpr::isCompare() const {
   return getOpcode() == Instruction::ICmp || getOpcode() == Instruction::FCmp;
 }
 
-bool ConstantExpr::isGEPWithNoNotionalOverIndexing() const {
-  if (getOpcode() != Instruction::GetElementPtr) return false;
-
-  gep_type_iterator GEPI = gep_type_begin(this), E = gep_type_end(this);
-  User::const_op_iterator OI = std::next(this->op_begin());
-
-  // The remaining indices may be compile-time known integers within the bounds
-  // of the corresponding notional static array types.
-  for (; GEPI != E; ++GEPI, ++OI) {
-    if (isa<UndefValue>(*OI))
-      continue;
-    auto *CI = dyn_cast<ConstantInt>(*OI);
-    if (!CI || (GEPI.isBoundedSequential() &&
-                (CI->getValue().getActiveBits() > 64 ||
-                 CI->getZExtValue() >= GEPI.getSequentialNumElements())))
-      return false;
-  }
-
-  // All the indices checked out.
-  return true;
-}
-
 bool ConstantExpr::hasIndices() const {
   return getOpcode() == Instruction::ExtractValue ||
          getOpcode() == Instruction::InsertValue;

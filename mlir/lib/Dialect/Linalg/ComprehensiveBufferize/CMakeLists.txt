@@ -96,6 +96,7 @@ add_mlir_dialect_library(MLIRComprehensiveBufferize
 
   LINK_LIBS PUBLIC
   MLIRBufferizableOpInterface
+  MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRef

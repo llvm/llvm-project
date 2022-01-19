@@ -77,9 +77,10 @@ static FailureOr<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
 void LinalgComprehensiveModuleBufferize::runOnOperation() {
   auto options = std::make_unique<BufferizationOptions>();
   if (useAlloca) {
-    options->allocationFns->allocationFn = allocationFnUsingAlloca;
-    options->allocationFns->deallocationFn = [](OpBuilder &b, Location loc,
-                                                Value v) {};
+    options->allocationFn = allocationFnUsingAlloca;
+    options->deallocationFn = [](OpBuilder &b, Location loc, Value v) {
+      return success();
+    };
   }
 
   options->allowReturnMemref = allowReturnMemref;
@@ -95,8 +96,8 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
         linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
   }
 
-  if (!allowReturnMemref)
-    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+  // Only certain scf.for ops are supported by the analysis.
+  options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);
