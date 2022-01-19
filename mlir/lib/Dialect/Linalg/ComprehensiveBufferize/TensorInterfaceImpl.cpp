@@ -158,8 +158,8 @@ struct ExtractSliceOpInterface
     Value alloc;
     if (!inplace) {
       FailureOr<Value> allocOrFailure =
-          state.createAlloc(rewriter, loc, extractSliceOp.result(),
-                            state.getOptions().createDeallocs);
+          createAlloc(rewriter, loc, extractSliceOp.result(),
+                      state.getOptions().createDeallocs, state.getOptions());
       if (failed(allocOrFailure))
         return failure();
       alloc = *allocOrFailure;
@@ -191,7 +191,9 @@ struct ExtractSliceOpInterface
     if (!inplace) {
       // Do not copy if the copied data is never read.
       if (state.isValueRead(extractSliceOp.result()))
-        state.createMemCpy(rewriter, extractSliceOp.getLoc(), subView, alloc);
+        if (failed(createMemCpy(rewriter, extractSliceOp.getLoc(), subView,
+                                alloc, state.getOptions())))
+          return failure();
       subView = alloc;
     }
 
@@ -461,7 +463,9 @@ struct InsertSliceOpInterface
     // tensor.extract_slice, the copy operation will eventually fold away.
     Value srcMemref =
         *state.getBuffer(rewriter, insertSliceOp->getOpOperand(0) /*source*/);
-    state.createMemCpy(rewriter, loc, srcMemref, subView);
+    if (failed(createMemCpy(rewriter, loc, srcMemref, subView,
+                            state.getOptions())))
+      return failure();
 
     replaceOpWithBufferizedValues(rewriter, op, *dstMemref);
     return success();

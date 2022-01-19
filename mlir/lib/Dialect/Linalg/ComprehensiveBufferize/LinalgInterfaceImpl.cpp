@@ -221,9 +221,9 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    FailureOr<Value> alloc = state.createAlloc(
-        rewriter, initTensorOp->getLoc(), initTensorOp.result(),
-        state.getOptions().createDeallocs);
+    FailureOr<Value> alloc =
+        createAlloc(rewriter, initTensorOp->getLoc(), initTensorOp.result(),
+                    state.getOptions().createDeallocs, state.getOptions());
     if (failed(alloc))
       return failure();
     replaceOpWithBufferizedValues(rewriter, op, *alloc);
@@ -367,7 +367,9 @@ struct TiledLoopOpInterface
       Value output = std::get<1>(it);
       Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
           newTerminator.getLoc(), output.getType(), std::get<0>(it));
-      state.createMemCpy(rewriter, newTerminator.getLoc(), toMemrefOp, output);
+      if (failed(createMemCpy(rewriter, newTerminator.getLoc(), toMemrefOp,
+                              output, state.getOptions())))
+        return failure();
     }
 
     // Erase old terminator.
