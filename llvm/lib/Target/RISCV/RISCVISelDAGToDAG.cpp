@@ -48,15 +48,16 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
        I != E;) {
     SDNode *N = &*I++; // Preincrement iterator to avoid invalidation issues.
 
-    // Convert integer SPLAT_VECTOR to VMV_V_X_VL to reduce isel burden.
-    if (N->getOpcode() == ISD::SPLAT_VECTOR &&
-        N->getSimpleValueType(0).isInteger()) {
+    // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
+    // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
+    if (N->getOpcode() == ISD::SPLAT_VECTOR) {
       MVT VT = N->getSimpleValueType(0);
+      unsigned Opc =
+          VT.isInteger() ? RISCVISD::VMV_V_X_VL : RISCVISD::VFMV_V_F_VL;
       SDLoc DL(N);
       SDValue VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, DL,
                                              Subtarget->getXLenVT());
-      SDValue Result =
-          CurDAG->getNode(RISCVISD::VMV_V_X_VL, DL, VT, N->getOperand(0), VL);
+      SDValue Result = CurDAG->getNode(Opc, DL, VT, N->getOperand(0), VL);
 
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
