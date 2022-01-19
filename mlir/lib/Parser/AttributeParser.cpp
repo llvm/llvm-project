@@ -833,6 +833,7 @@ Attribute Parser::parseDenseElementsAttr(Type attrType) {
 
 /// Parse an opaque elements attribute.
 Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
+  llvm::SMLoc loc = getToken().getLoc();
   consumeToken(Token::kw_opaque);
   if (parseToken(Token::less, "expected '<' after 'opaque'"))
     return nullptr;
@@ -857,7 +858,8 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
   std::string data;
   if (parseElementAttrHexValues(*this, hexTok, data))
     return nullptr;
-  return OpaqueElementsAttr::get(builder.getStringAttr(name), type, data);
+  return getChecked<OpaqueElementsAttr>(loc, builder.getStringAttr(name), type,
+                                        data);
 }
 
 /// Shaped type for elements attribute.
