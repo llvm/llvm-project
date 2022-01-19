@@ -2,7 +2,6 @@
 
 // fails with error message 'Unable to generate target entries' on amdgcn
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-newRTL
 
 #include <stdio.h>
 #include <omp.h>
