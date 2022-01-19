@@ -70,6 +70,23 @@
 // CHECK-NO-NANS-NO-FAST-MATH: "-cc1"
 // CHECK-NO-NANS-NO-FAST-MATH-NOT: "-menable-no-nans"
 //
+// RUN: %clang -### -ffast-math -fno-approx-func -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH-NO-APPROX-FUNC %s
+// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-cc1"
+// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-menable-no-infs"
+// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-menable-no-nans"
+// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-fno-signed-zeros"
+// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-mreassociate"
+// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-freciprocal-math"
+// CHECK-FAST-MATH-NO-APPROX-FUNC:     "-ffp-contract=fast"
+// CHECK-FAST-MATH-NO-APPROX-FUNC-NOT: "-ffast-math"
+// CHECK-FAST-MATH-NO-APPROX-FUNC-NOT: "-fapprox-func"
+//
+// RUN: %clang -### -fno-approx-func -ffast-math -c %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NO-APPROX-FUNC-FAST-MATH %s
+// CHECK-NO-APPROX-FUNC-FAST-MATH: "-cc1"
+// CHECK-NO-APPROX-FUNC-FAST-MATH: "-ffast-math"
+//
 // RUN: %clang -### -fapprox-func -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-APPROX-FUNC %s
 // CHECK-APPROX-FUNC: "-cc1"
@@ -130,14 +147,14 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
 //
 // RUN: %clang -### -fno-math-errno -fassociative-math -freciprocal-math \
-// RUN:     -fno-signed-zeros -fno-trapping-math -c %s 2>&1 \
+// RUN:     -fno-signed-zeros -fno-trapping-math -fapprox-func -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-UNSAFE-MATH %s
 // CHECK-UNSAFE-MATH: "-cc1"
 // CHECK-UNSAFE-MATH: "-menable-unsafe-fp-math"
 // CHECK-UNSAFE-MATH: "-mreassociate"
 //
 // RUN: %clang -### -fno-fast-math -fno-math-errno -fassociative-math -freciprocal-math \
-// RUN:     -fno-signed-zeros -fno-trapping-math -c %s 2>&1 \
+// RUN:     -fno-signed-zeros -fno-trapping-math -fapprox-func -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-FAST-MATH-UNSAFE-MATH %s
 // CHECK-NO-FAST-MATH-UNSAFE-MATH: "-cc1"
 // CHECK-NO-FAST-MATH-UNSAFE-MATH: "-menable-unsafe-fp-math"
@@ -178,7 +195,7 @@
 // RUN:     -fno-math-errno -ffp-contract=fast -fno-rounding-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
 // RUN: %clang -### -fno-honor-infinities -fno-honor-nans -fno-math-errno \
-// RUN:     -fassociative-math -freciprocal-math -fno-signed-zeros \
+// RUN:     -fassociative-math -freciprocal-math -fno-signed-zeros -fapprox-func \
 // RUN:     -fno-trapping-math -ffp-contract=fast -fno-rounding-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FAST-MATH %s
 // CHECK-FAST-MATH: "-cc1"
