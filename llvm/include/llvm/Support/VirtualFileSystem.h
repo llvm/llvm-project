@@ -547,6 +547,9 @@ class RedirectingFileSystemParser;
 /// }
 /// \endverbatim
 ///
+/// The roots may be absolute or relative. If relative they will be made
+/// absolute against the current working directory.
+///
 /// All configuration options are optional.
 ///   'case-sensitive': <boolean, default=(true for Posix, false for Windows)>
 ///   'use-external-names': <boolean, default=true>
