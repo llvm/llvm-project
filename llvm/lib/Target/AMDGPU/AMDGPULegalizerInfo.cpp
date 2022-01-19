@@ -5181,8 +5181,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_struct_buffer_atomic_inc:
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
-  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
-  case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_buffer_atomic_fmin:
@@ -5190,6 +5188,22 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_buffer_atomic_fmax:
   case Intrinsic::amdgcn_struct_buffer_atomic_fmax:
     return legalizeBufferAtomic(MI, B, IntrID);
+  case Intrinsic::amdgcn_raw_buffer_atomic_fadd:
+  case Intrinsic::amdgcn_struct_buffer_atomic_fadd: {
+    Register DstReg = MI.getOperand(0).getReg();
+    if (!MRI.use_empty(DstReg) && !ST.hasGFX90AInsts()) {
+      Function &F = B.getMF().getFunction();
+      DiagnosticInfoUnsupported NoFpRet(
+          F, "return versions of fp atomics not supported", B.getDebugLoc(),
+          DS_Error);
+      F.getContext().diagnose(NoFpRet);
+      B.buildUndef(DstReg);
+      MI.eraseFromParent();
+      return true;
+    }
+
+    return legalizeBufferAtomic(MI, B, IntrID);
+  }
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:
