@@ -2955,20 +2955,6 @@ gentbl_cc_library(
     strip_include_prefix = "include",
     tbl_outs = [
         (
-            [
-                "-gen-dialect-decls",
-                "-dialect=gpu",
-            ],
-            "include/mlir/Dialect/GPU/GPUOpsDialect.h.inc",
-        ),
-        (
-            [
-                "-gen-dialect-defs",
-                "-dialect=gpu",
-            ],
-            "include/mlir/Dialect/GPU/GPUOpsDialect.cpp.inc",
-        ),
-        (
             ["-gen-op-interface-decls"],
             "include/mlir/Dialect/GPU/GPUOpInterfaces.h.inc",
         ),
@@ -2986,6 +2972,20 @@ gentbl_cc_library(
     name = "GPUOpsIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=gpu",
+            ],
+            "include/mlir/Dialect/GPU/GPUOpsDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=gpu",
+            ],
+            "include/mlir/Dialect/GPU/GPUOpsDialect.cpp.inc",
+        ),
         (
             ["-gen-op-decls"],
             "include/mlir/Dialect/GPU/GPUOps.h.inc",
