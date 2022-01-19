@@ -1022,6 +1022,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
                          LLVMContext::MD_invariant_group,
                          LLVMContext::MD_access_group};
   combineMetadata(C, cpyLoad, KnownIDs, true);
+  if (cpyLoad != cpyStore)
+    combineMetadata(C, cpyStore, KnownIDs, true);
 
   ++NumCallSlot;
   return true;

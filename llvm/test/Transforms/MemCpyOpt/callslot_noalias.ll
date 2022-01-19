@@ -3,11 +3,12 @@
 
 declare void @func(i8* %dst)
 
-; TODO: The noalias metadata on the call is currently incorrect.
+; The noalias metadata from the call, the load and the store should be merged,
+; so that no metadata is left on the call.
 define i8 @test(i8* dereferenceable(1) noalias %dst) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @func(i8* nocapture [[DST:%.*]]) #[[ATTR0:[0-9]+]], !noalias !0
+; CHECK-NEXT:    call void @func(i8* nocapture [[DST:%.*]]) #[[ATTR0:[0-9]+]]{{$}}
 ; CHECK-NEXT:    [[V2:%.*]] = load i8, i8* [[DST]], align 1, !alias.scope !0
 ; CHECK-NEXT:    ret i8 [[V2]]
 ;
