@@ -226,7 +226,10 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/IR/BuiltinOps.td",
-    deps = [":BuiltinDialectTdFiles"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":FunctionInterfacesTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -262,7 +265,36 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/IR/BuiltinTypeInterfaces.td",
-    deps = [":BuiltinDialectTdFiles"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+    ],
+)
+
+td_library(
+    name = "FunctionInterfacesTdFiles",
+    srcs = ["include/mlir/IR/FunctionInterfaces.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FunctionInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/IR/FunctionOpInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/IR/FunctionOpInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/IR/FunctionInterfaces.td",
+    deps = [
+        ":OpBaseTdFiles",
+    ],
 )
 
 cc_library(
@@ -293,6 +325,7 @@ cc_library(
         ":CallOpInterfacesIncGen",
         ":CastOpInterfacesIncGen",
         ":DataLayoutInterfacesIncGen",
+        ":FunctionInterfacesIncGen",
         ":InferTypeOpInterfaceIncGen",
         ":OpAsmInterfaceIncGen",
         ":RegionKindInterfaceIncGen",
@@ -2941,6 +2974,7 @@ td_library(
     deps = [
         ":DLTIDialectTdFiles",
         ":DataLayoutInterfacesTdFiles",
+        ":FunctionInterfacesTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -3157,6 +3191,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
+        ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -3830,6 +3865,7 @@ td_library(
     deps = [
         ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -6898,7 +6934,6 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
-        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
