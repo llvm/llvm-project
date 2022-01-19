@@ -252,15 +252,13 @@ static bool hasReadAfterWriteInterference(
 
       // No conflict if the op interface says so.
       if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp))
-        if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state,
-                                            aliasInfo))
+        if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state))
           continue;
 
       if (conflictingWritingOp != readingOp)
         if (auto bufferizableOp =
                 options.dynCastBufferizableOp(conflictingWritingOp))
-          if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state,
-                                              aliasInfo))
+          if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state))
             continue;
 
       // Ops are not conflicting if they are in mutually exclusive regions.
@@ -496,7 +494,7 @@ static void equivalenceAnalysis(SmallVector<Operation *> &ops,
           for (OpOperand *opOperand :
                bufferizableOp.getAliasingOpOperand(opResult, state))
             if (state.isInPlace(*opOperand))
-              if (bufferizableOp.bufferRelation(opResult, aliasInfo, state) ==
+              if (bufferizableOp.bufferRelation(opResult, state) ==
                   BufferRelation::Equivalent)
                 aliasInfo.unionEquivalenceClasses(opResult, opOperand->get());
 }
@@ -687,12 +685,12 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
   return success();
 }
 
-LogicalResult
-mlir::linalg::comprehensive_bufferize::analyzeOp(Operation *op,
-                                                 BufferizationState &state) {
+LogicalResult mlir::linalg::comprehensive_bufferize::analyzeOp(
+    Operation *op, AnalysisBufferizationState &state) {
   DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
-  const BufferizationOptions &options = state.getOptions();
+  const auto &options =
+      static_cast<const AnalysisBufferizationOptions &>(state.getOptions());
 
   if (failed(checkAliasInfoConsistency(op, domInfo, state, aliasInfo)))
     return failure();
@@ -740,8 +738,8 @@ LogicalResult mlir::linalg::comprehensive_bufferize::bufferizeOp(
 }
 
 LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
-    Operation *op, std::unique_ptr<BufferizationOptions> options) {
-  BufferizationState state(op, *options);
+    Operation *op, std::unique_ptr<AnalysisBufferizationOptions> options) {
+  AnalysisBufferizationState state(op, *options);
   if (failed(analyzeOp(op, state)))
     return failure();
   if (options->testAnalysisOnly)

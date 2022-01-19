@@ -288,8 +288,13 @@ llvm::SetVector<Value> mlir::linalg::comprehensive_bufferize::
 }
 
 mlir::linalg::comprehensive_bufferize::BufferizationState::BufferizationState(
-    Operation *op, const BufferizationOptions &options)
-    : aliasInfo(op), options(options) {
+    const BufferizationOptions &options)
+    : options(options) {}
+
+mlir::linalg::comprehensive_bufferize::AnalysisBufferizationState::
+    AnalysisBufferizationState(Operation *op,
+                               const AnalysisBufferizationOptions &options)
+    : BufferizationState(options), aliasInfo(op) {
   // Set up alias sets for OpResults that must bufferize in-place. This should
   // be done before making any other bufferization decisions.
   op->walk([&](BufferizableOpInterface bufferizableOp) {
@@ -353,7 +358,7 @@ mlir::linalg::comprehensive_bufferize::BufferizationState::getBuffer(
   Value operand = opOperand.get();
   Value operandBuffer = lookupBuffer(rewriter, operand);
 
-  if (forceInPlace || aliasInfo.isInPlace(opOperand))
+  if (forceInPlace || isInPlace(opOperand))
     return operandBuffer;
 
   // Bufferizing out-of-place: Allocate a new buffer.
@@ -597,9 +602,14 @@ bool mlir::linalg::comprehensive_bufferize::isFunctionArgument(Value value) {
   return isa<FuncOp>(bbArg.getOwner()->getParentOp());
 }
 
-bool mlir::linalg::comprehensive_bufferize::BufferizationState::isInPlace(
-    OpOperand &opOperand) const {
+bool mlir::linalg::comprehensive_bufferize::AnalysisBufferizationState::
+    isInPlace(OpOperand &opOperand) const {
   return aliasInfo.isInPlace(opOperand);
+}
+
+bool mlir::linalg::comprehensive_bufferize::AnalysisBufferizationState::
+    areEquivalentBufferizedValues(Value v1, Value v2) const {
+  return aliasInfo.areEquivalentBufferizedValues(v1, v2);
 }
 
 MemRefType mlir::linalg::comprehensive_bufferize::getContiguousMemRefType(

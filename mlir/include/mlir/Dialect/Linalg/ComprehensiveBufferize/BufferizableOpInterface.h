@@ -68,14 +68,6 @@ struct BufferizationOptions {
   // BufferizationOptions cannot be copied.
   BufferizationOptions(const BufferizationOptions &other) = delete;
 
-  /// Register a "post analysis" step. Such steps are executed after the
-  /// analysis, but before bufferization.
-  template <typename Step, typename... Args>
-  void addPostAnalysisStep(Args... args) {
-    postAnalysisSteps.emplace_back(
-        std::make_unique<Step>(std::forward<Args>(args)...));
-  }
-
   /// Return `true` if the op is allowed to be bufferized.
   bool isOpAllowed(Operation *op) const {
     if (!dialectFilter.hasValue())
@@ -134,9 +126,6 @@ struct BufferizationOptions {
   /// For debugging only. Should be used together with `testAnalysisOnly`.
   bool printConflicts = false;
 
-  /// Registered post analysis steps.
-  PostAnalysisStepList postAnalysisSteps;
-
   /// Only bufferize ops from dialects that are allowed-listed by the filter.
   /// All other ops are ignored. This option controls the scope of partial
   /// bufferization.
@@ -155,6 +144,25 @@ private:
       dialectFilter.emplace();
     dialectFilter->insert(DialectT::getDialectNamespace());
   }
+};
+
+/// Options for analysis-enabled bufferization.
+struct AnalysisBufferizationOptions : public BufferizationOptions {
+  AnalysisBufferizationOptions() = default;
+
+  // AnalysisBufferizationOptions cannot be copied.
+  AnalysisBufferizationOptions(const AnalysisBufferizationOptions &) = delete;
+
+  /// Register a "post analysis" step. Such steps are executed after the
+  /// analysis, but before bufferization.
+  template <typename Step, typename... Args>
+  void addPostAnalysisStep(Args... args) {
+    postAnalysisSteps.emplace_back(
+        std::make_unique<Step>(std::forward<Args>(args)...));
+  }
+
+  /// Registered post analysis steps.
+  PostAnalysisStepList postAnalysisSteps;
 };
 
 /// Specify fine-grain relationship between buffers to enable more analysis.
@@ -196,11 +204,6 @@ public:
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const {
     return equivalentInfo.isEquivalent(v1, v2);
-  }
-
-  /// Return true if `v1` and `v2` bufferize to aliasing buffers.
-  bool areAliasingBufferizedValues(Value v1, Value v2) const {
-    return aliasInfo.isEquivalent(v1, v2);
   }
 
   /// Union the alias sets of `v1` and `v2`.
@@ -276,11 +279,6 @@ struct DialectBufferizationState {
 /// tensor values and memref buffers.
 class BufferizationState {
 public:
-  BufferizationState(Operation *op, const BufferizationOptions &options);
-
-  // BufferizationState should be passed as a reference.
-  BufferizationState(const BufferizationState &) = delete;
-
   /// Determine which OpOperand* will alias with `result` if the op is
   /// bufferized in place. Return an empty vector if the op is not bufferizable.
   SmallVector<OpOperand *> getAliasingOpOperand(OpResult result) const;
@@ -344,7 +342,10 @@ public:
   SetVector<Value> findLastPrecedingWrite(Value value) const;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
-  bool isInPlace(OpOperand &opOperand) const;
+  virtual bool isInPlace(OpOperand &opOperand) const = 0;
+
+  /// Return true if `v1` and `v2` bufferize to equivalent buffers.
+  virtual bool areEquivalentBufferizedValues(Value v1, Value v2) const = 0;
 
   /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place
@@ -374,19 +375,47 @@ public:
   /// Return a reference to the BufferizationOptions.
   const BufferizationOptions &getOptions() const { return options; }
 
-  /// Return a reference to the BufferizationAliasInfo.
-  BufferizationAliasInfo &getAliasInfo() { return aliasInfo; }
+protected:
+  BufferizationState(const BufferizationOptions &options);
+
+  // BufferizationState should be passed as a reference.
+  BufferizationState(const BufferizationState &) = delete;
+
+  ~BufferizationState() = default;
 
 private:
-  /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
-  /// functions and `runComprehensiveBufferize` may access this object.
-  BufferizationAliasInfo aliasInfo;
-
   /// Dialect-specific bufferization state.
   DenseMap<StringRef, std::unique_ptr<DialectBufferizationState>> dialectState;
 
   /// A reference to current bufferization options.
   const BufferizationOptions &options;
+};
+
+/// State for analysis-enabled bufferization. This class keeps track of alias
+/// (via BufferizationAliasInfo) to decide if tensor OpOperands should bufferize
+/// in-place.
+class AnalysisBufferizationState : public BufferizationState {
+public:
+  AnalysisBufferizationState(Operation *op,
+                             const AnalysisBufferizationOptions &options);
+
+  AnalysisBufferizationState(const AnalysisBufferizationState &) = delete;
+
+  virtual ~AnalysisBufferizationState() = default;
+
+  /// Return a reference to the BufferizationAliasInfo.
+  BufferizationAliasInfo &getAliasInfo() { return aliasInfo; }
+
+  /// Return `true` if the given OpResult has been decided to bufferize inplace.
+  bool isInPlace(OpOperand &opOperand) const override;
+
+  /// Return true if `v1` and `v2` bufferize to equivalent buffers.
+  bool areEquivalentBufferizedValues(Value v1, Value v2) const override;
+
+private:
+  /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
+  /// functions and `runComprehensiveBufferize` may access this object.
+  BufferizationAliasInfo aliasInfo;
 };
 
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
@@ -483,7 +512,6 @@ struct AllocationHoistingBarrierOnly
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo,
                                 const BufferizationState &state) const {
     return BufferRelation::None;
   }

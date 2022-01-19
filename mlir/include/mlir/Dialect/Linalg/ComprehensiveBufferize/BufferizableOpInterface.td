@@ -183,7 +183,6 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"BufferRelation",
         /*methodName=*/"bufferRelation",
         /*args=*/(ins "OpResult":$opResult,
-                      "const BufferizationAliasInfo &":$aliasInfo,
                       "const BufferizationState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
@@ -284,8 +283,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodName=*/"isNotConflicting",
         /*args=*/(ins "OpOperand *":$uRead,
                       "OpOperand *":$uWrite,
-                      "const BufferizationState &":$state,
-                      "const BufferizationAliasInfo &":$aliasInfo),
+                      "const BufferizationState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return false;

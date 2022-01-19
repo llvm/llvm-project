@@ -124,7 +124,6 @@ struct ExecuteRegionOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo,
                                 const BufferizationState &state) const {
     return BufferRelation::Equivalent;
   }
@@ -247,7 +246,6 @@ struct IfOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo,
                                 const BufferizationState &state) const {
     // IfOp results are equivalent to their corresponding yield values if both
     // yield values are equivalent to each other.
@@ -255,7 +253,7 @@ struct IfOpInterface
     SmallVector<OpOperand *> yieldValues =
         bufferizableOp.getAliasingOpOperand(opResult, state);
     assert(yieldValues.size() == 2 && "expected 2 yield values");
-    bool equivalentYields = aliasInfo.areEquivalentBufferizedValues(
+    bool equivalentYields = state.areEquivalentBufferizedValues(
         yieldValues[0]->get(), yieldValues[1]->get());
     return equivalentYields ? BufferRelation::Equivalent : BufferRelation::None;
   }
@@ -291,7 +289,6 @@ struct ForOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo,
                                 const BufferizationState &state) const {
     // ForOp results are equivalent to their corresponding init_args if the
     // corresponding iter_args and yield values are equivalent.
@@ -299,7 +296,7 @@ struct ForOpInterface
     OpOperand &forOperand = forOp.getOpOperandForResult(opResult);
     auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
     auto yieldOp = cast<scf::YieldOp>(&forOp.getLoopBody().front().back());
-    bool equivalentYield = aliasInfo.areEquivalentBufferizedValues(
+    bool equivalentYield = state.areEquivalentBufferizedValues(
         bbArg, yieldOp->getOperand(opResult.getResultNumber()));
     return equivalentYield ? BufferRelation::Equivalent : BufferRelation::None;
   }
@@ -408,7 +405,9 @@ mlir::linalg::comprehensive_bufferize::scf_ext::AssertScfForAliasingProperties::
       OpOperand &forOperand = forOp.getOpOperandForResult(
           forOp->getResult(operand.getOperandNumber()));
       auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-      if (!aliasInfo.areAliasingBufferizedValues(operand.get(), bbArg)) {
+      // Note: This is overly strict. We should check for aliasing bufferized
+      // values. But we don't have a "must-alias" analysis yet.
+      if (!aliasInfo.areEquivalentBufferizedValues(operand.get(), bbArg)) {
         // TODO: this could get resolved with copies but it can also turn into
         // swaps so we need to be careful about order of copies.
         status =
