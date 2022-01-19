@@ -46,7 +46,7 @@ int main(int, char**)
         assert(m.c_encoding() == (i == 7 ? 0 : i));
     }
 
-// TODO - sys_days and local_days ctor tests
+    // TODO - sys_days and local_days ctor tests
 
-  return 0;
+    return 0;
 }

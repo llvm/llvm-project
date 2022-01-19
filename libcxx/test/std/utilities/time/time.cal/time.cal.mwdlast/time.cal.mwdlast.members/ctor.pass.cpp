@@ -39,23 +39,23 @@ int main(int, char**)
 
     ASSERT_NOEXCEPT(month_weekday_last{January, weekday_last{Tuesday}});
 
-//  bad month
+    //  bad month
     constexpr month_weekday_last mwdl1{month{}, weekday_last{Tuesday}};
     static_assert( mwdl1.month() == month{},                      "");
     static_assert( mwdl1.weekday_last() == weekday_last{Tuesday}, "");
     static_assert(!mwdl1.ok(),                                    "");
 
-//  bad weekday_last
+    //  bad weekday_last
     constexpr month_weekday_last mwdl2{January, weekday_last{weekday{16}}};
     static_assert( mwdl2.month() == January,                          "");
     static_assert( mwdl2.weekday_last() == weekday_last{weekday{16}}, "");
     static_assert(!mwdl2.ok(),                                        "");
 
-//  Good month and weekday_last
+    //  Good month and weekday_last
     constexpr month_weekday_last mwdl3{January, weekday_last{weekday{4}}};
     static_assert( mwdl3.month() == January,                         "");
     static_assert( mwdl3.weekday_last() == weekday_last{weekday{4}}, "");
     static_assert( mwdl3.ok(),                                       "");
 
-  return 0;
+    return 0;
 }

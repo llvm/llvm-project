@@ -36,10 +36,10 @@ constexpr bool testConstexpr()
 {
     M m{1};
     Ms offset{4};
-    if (m + offset != M{5}) return false;
-    if (offset + m != M{5}) return false;
-//  Check the example
-    if (M{2} + Ms{11} != M{1}) return false;
+    assert(m + offset == M{5});
+    assert(offset + m == M{5});
+    //  Check the example
+    assert(M{2} + Ms{11} == M{1});
     return true;
 }
 
@@ -69,5 +69,5 @@ int main(int, char**)
         assert(static_cast<unsigned>(m2) == exp);
     }
 
-  return 0;
+    return 0;
 }

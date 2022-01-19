@@ -108,6 +108,9 @@ API Changes
   as either ``for (auto&& c : path)`` or ``for (const auto& c : path)``.
   ``std::reverse_iterator<path::iterator>`` is no longer rejected.
 
+- Removed the nonstandard default constructor from ``std::chrono::month_weekday``.
+  You must now explicitly initialize with a ``chrono::month`` and
+  ``chrono::weekday_indexed`` instead of "meh, whenever".
 
 ABI Changes
 -----------

@@ -31,12 +31,13 @@ constexpr bool testConstexpr()
     {
     M m{5};
     Ms offset{3};
-    if (m - offset != M{2}) return false;
-    if (m - M{2} != offset) return false;
+    assert(m - offset == M{2});
+    assert(m - M{2} == offset);
     }
 
-//  Check the example
-    if (M{1} - M{2} != Ms{11}) return false;
+    //  Check the example
+    assert(M{1} - M{2} == Ms{11});
+
     return true;
 }
 
@@ -51,18 +52,18 @@ int main(int, char**)
     ASSERT_SAME_TYPE(month , decltype(std::declval<month>() - std::declval<months>()));
     ASSERT_SAME_TYPE(months, decltype(std::declval<month>() - std::declval<month> ()));
 
-static_assert(testConstexpr<month, months>(), "");
+    static_assert(testConstexpr<month, months>(), "");
 
     month m{6};
     for (unsigned i = 1; i <= 12; ++i)
     {
         month m1   = m - months{i};
-//      months off = m - month {i};
+        // months off = m - month {i};
         int exp = 6 - i;
         if (exp < 1)
             exp += 12;
         assert(static_cast<unsigned>(m1) == static_cast<unsigned>(exp));
-//          assert(off.count()               == static_cast<unsigned>(exp));
+        // assert(off.count()            == static_cast<unsigned>(exp));
     }
 
   return 0;

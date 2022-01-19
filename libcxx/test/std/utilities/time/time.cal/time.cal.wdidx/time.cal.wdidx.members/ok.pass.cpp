@@ -43,8 +43,8 @@ int main(int, char**)
         assert(!wdi.ok());
     }
 
-//  Not a valid weekday
+    //  Not a valid weekday
     assert(!(weekday_indexed(weekday{9U}, 1).ok()));
 
-  return 0;
+    return 0;
 }

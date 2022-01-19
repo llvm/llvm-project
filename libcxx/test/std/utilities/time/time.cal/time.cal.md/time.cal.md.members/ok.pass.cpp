@@ -48,7 +48,7 @@ int main(int, char**)
         assert(!(month_day{month{i}, day{32}}.ok()));
     }
 
-//  If the month is not ok, all the days are bad
+    //  If the month is not ok, all the days are bad
     for (unsigned i = 1; i <= 35; ++i)
         assert(!(month_day{month{13}, day{i}}.ok()));
 

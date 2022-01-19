@@ -540,7 +540,6 @@ private:
     chrono::month __m;
     chrono::weekday_indexed __wdi;
 public:
-    month_weekday() = default;
     constexpr month_weekday(const chrono::month& __mval, const chrono::weekday_indexed& __wdival) noexcept
         : __m{__mval}, __wdi{__wdival} {}
     inline constexpr chrono::month                     month() const noexcept { return __m; }

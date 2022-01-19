@@ -34,11 +34,6 @@
 //     static_assert(mdl.month() == February);
 // --end example]
 
-
-
-
-
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>
@@ -57,7 +52,7 @@ int main(int, char**)
     ASSERT_SAME_TYPE(month_day_last, decltype(last/February));
     ASSERT_SAME_TYPE(month_day_last, decltype(February/last));
 
-//  Run the example
+    //  Run the example
     {
     constexpr auto mdl = February/std::chrono::last;
     static_assert(mdl.month() == February, "");
@@ -104,5 +99,5 @@ int main(int, char**)
     }
 
 
-  return 0;
+    return 0;
 }
