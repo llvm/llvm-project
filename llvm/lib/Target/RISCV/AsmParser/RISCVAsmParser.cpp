@@ -1912,8 +1912,10 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   Operands.push_back(RISCVOperand::createToken(Name, NameLoc, isRV64()));
 
   // If there are no more operands, then finish
-  if (getLexer().is(AsmToken::EndOfStatement))
+  if (getLexer().is(AsmToken::EndOfStatement)) {
+    getParser().Lex(); // Consume the EndOfStatement.
     return false;
+  }
 
   // Parse first operand
   if (parseOperand(Operands, Name))
