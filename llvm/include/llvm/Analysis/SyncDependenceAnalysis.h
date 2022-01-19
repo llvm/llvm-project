@@ -20,6 +20,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include <map>
 #include <memory>
 #include <unordered_map>
 

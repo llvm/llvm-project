@@ -103,8 +103,8 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT:  1      0     0.25                        pxor	%xmm2, %xmm2
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    39
-# CHECK-NEXT: Max number of mappings used:         30
+# CHECK-NEXT: Total number of mappings created:    20
+# CHECK-NEXT: Max number of mappings used:         19
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider
@@ -193,10 +193,10 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT: [0,28]    .    . D==eE------------------------R .   andnpd	%xmm1, %xmm1
 # CHECK-NEXT: [0,29]    .    . D===========================eER.   pandn	%mm2, %mm2
 # CHECK-NEXT: [0,30]    .    . D==eE-------------------------R.   pandn	%xmm2, %xmm2
-# CHECK-NEXT: [0,31]    .    . D==E--------------------------R.   xorps	%xmm0, %xmm0
-# CHECK-NEXT: [0,32]    .    .  D==E-------------------------R.   xorpd	%xmm1, %xmm1
+# CHECK-NEXT: [0,31]    .    . D-----------------------------R.   xorps	%xmm0, %xmm0
+# CHECK-NEXT: [0,32]    .    .  D----------------------------R.   xorpd	%xmm1, %xmm1
 # CHECK-NEXT: [0,33]    .    .  D===========================eER   pxor	%mm2, %mm2
-# CHECK-NEXT: [0,34]    .    .  D==E--------------------------R   pxor	%xmm2, %xmm2
+# CHECK-NEXT: [0,34]    .    .  D-----------------------------R   pxor	%xmm2, %xmm2
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -236,8 +236,8 @@ pxor   %xmm2, %xmm2
 # CHECK-NEXT: 28.    1     3.0    3.0    24.0      andnpd	%xmm1, %xmm1
 # CHECK-NEXT: 29.    1     28.0   0.0    0.0       pandn	%mm2, %mm2
 # CHECK-NEXT: 30.    1     3.0    0.0    25.0      pandn	%xmm2, %xmm2
-# CHECK-NEXT: 31.    1     3.0    0.0    26.0      xorps	%xmm0, %xmm0
-# CHECK-NEXT: 32.    1     3.0    0.0    25.0      xorpd	%xmm1, %xmm1
+# CHECK-NEXT: 31.    1     0.0    0.0    29.0      xorps	%xmm0, %xmm0
+# CHECK-NEXT: 32.    1     0.0    0.0    28.0      xorpd	%xmm1, %xmm1
 # CHECK-NEXT: 33.    1     28.0   0.0    0.0       pxor	%mm2, %mm2
-# CHECK-NEXT: 34.    1     3.0    0.0    26.0      pxor	%xmm2, %xmm2
-# CHECK-NEXT:        1     6.7    0.2    10.3      <total>
+# CHECK-NEXT: 34.    1     0.0    0.0    29.0      pxor	%xmm2, %xmm2
+# CHECK-NEXT:        1     6.5    0.2    10.5      <total>
