@@ -31,10 +31,10 @@ define i16 @atomic_load_cmp_swap16(i16* %foo) {
 ; CHECK-NEXT: cli
 ; CHECK-NEXT: ld [[RR1:r[0-9]+]], [[RD:(X|Y|Z)]]
 ; CHECK-NEXT: ldd [[RR2:r[0-9]+]], [[RD]]+1
-; CHECK-NEXT: add [[RR1]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: adc [[RR2]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: st [[RD]], [[RR1]]
-; CHECK-NEXT: std [[RD]]+1, [[A:r[0-9]+]]
+; CHECK-NEXT: add [[TMP1:r[0-9]+]], [[RR1]]
+; CHECK-NEXT: adc [[TMP2:r[0-9]+]], [[RR2]]
+; CHECK-NEXT: st [[RD]], [[TMP1]]
+; CHECK-NEXT: std [[RD]]+1, [[TMP2]]
 ; CHECK-NEXT: out 63, r0
 define i16 @atomic_load_add16(i16* %foo) {
   %val = atomicrmw add i16* %foo, i16 13 seq_cst
@@ -46,10 +46,11 @@ define i16 @atomic_load_add16(i16* %foo) {
 ; CHECK-NEXT: cli
 ; CHECK-NEXT: ld [[RR1:r[0-9]+]], [[RD:(X|Y|Z)]]
 ; CHECK-NEXT: ldd [[RR2:r[0-9]+]], [[RD]]+1
-; CHECK-NEXT: sub [[RR1]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: sbc [[RR2]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: st [[RD]], [[RR1]]
-; CHECK-NEXT: std [[RD]]+1, [[A:r[0-9]+]]
+; CHECK-NEXT: movw
+; CHECK-NEXT: sub [[TMP1:r[0-9]+]], [[IN1:r[0-9]+]]
+; CHECK-NEXT: sbc [[TMP2:r[0-9]+]], [[IN2:r[0-9]+]]
+; CHECK-NEXT: st [[RD]], [[TMP1]]
+; CHECK-NEXT: std [[RD]]+1, [[TMP2]]
 ; CHECK-NEXT: out 63, r0
 define i16 @atomic_load_sub16(i16* %foo) {
   %val = atomicrmw sub i16* %foo, i16 13 seq_cst
@@ -61,10 +62,10 @@ define i16 @atomic_load_sub16(i16* %foo) {
 ; CHECK-NEXT: cli
 ; CHECK-NEXT: ld [[RR1:r[0-9]+]], [[RD:(X|Y|Z)]]
 ; CHECK-NEXT: ldd [[RR2:r[0-9]+]], [[RD]]+1
-; CHECK-NEXT: and [[RR1]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: and [[RR2]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: st [[RD]], [[RR1]]
-; CHECK-NEXT: std [[RD]]+1, [[A:r[0-9]+]]
+; CHECK-NEXT: and [[TMP1:r[0-9]+]], [[RR1]]
+; CHECK-NEXT: and [[TMP2:r[0-9]+]], [[RR2]]
+; CHECK-NEXT: st [[RD]], [[TMP1]]
+; CHECK-NEXT: std [[RD]]+1, [[TMP2]]
 ; CHECK-NEXT: out 63, r0
 define i16 @atomic_load_and16(i16* %foo) {
   %val = atomicrmw and i16* %foo, i16 13 seq_cst
@@ -76,10 +77,10 @@ define i16 @atomic_load_and16(i16* %foo) {
 ; CHECK-NEXT: cli
 ; CHECK-NEXT: ld [[RR1:r[0-9]+]], [[RD:(X|Y|Z)]]
 ; CHECK-NEXT: ldd [[RR2:r[0-9]+]], [[RD]]+1
-; CHECK-NEXT: or [[RR1]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: or [[RR2]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: st [[RD]], [[RR1]]
-; CHECK-NEXT: std [[RD]]+1, [[A:r[0-9]+]]
+; CHECK-NEXT: or [[TMP1:r[0-9]+]], [[RR1]]
+; CHECK-NEXT: or [[TMP2:r[0-9]+]], [[RR2]]
+; CHECK-NEXT: st [[RD]], [[TMP1]]
+; CHECK-NEXT: std [[RD]]+1, [[TMP2]]
 ; CHECK-NEXT: out 63, r0
 define i16 @atomic_load_or16(i16* %foo) {
   %val = atomicrmw or i16* %foo, i16 13 seq_cst
@@ -91,10 +92,10 @@ define i16 @atomic_load_or16(i16* %foo) {
 ; CHECK-NEXT: cli
 ; CHECK-NEXT: ld [[RR1:r[0-9]+]], [[RD:(X|Y|Z)]]
 ; CHECK-NEXT: ldd [[RR2:r[0-9]+]], [[RD]]+1
-; CHECK-NEXT: eor [[RR1]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: eor [[RR2]], [[TMP:r[0-9]+]]
-; CHECK-NEXT: st [[RD]], [[RR1]]
-; CHECK-NEXT: std [[RD]]+1, [[A:r[0-9]+]]
+; CHECK-NEXT: eor [[TMP1:r[0-9]+]], [[RR1]]
+; CHECK-NEXT: eor [[TMP2:r[0-9]+]], [[RR2]]
+; CHECK-NEXT: st [[RD]], [[TMP1]]
+; CHECK-NEXT: std [[RD]]+1, [[TMP2]]
 ; CHECK-NEXT: out 63, r0
 define i16 @atomic_load_xor16(i16* %foo) {
   %val = atomicrmw xor i16* %foo, i16 13 seq_cst
