@@ -487,7 +487,8 @@ public:
       // That is not done yet.
       if (ConvertOp == 0)
         return true;
-      return !DestTy.isVector() && OpTy.isVector();
+      return !DestTy.isVector() && OpTy.isVector() &&
+             DestTy == OpTy.getElementType();
     case TargetOpcode::G_CONCAT_VECTORS: {
       if (ConvertOp == 0)
         return true;
