@@ -47,6 +47,5 @@ executable("lldb") {
     "Platform.cpp",
   ]
 
-  # XXX if win -DIMPORT_LIBLLDB
   # XXX LLDB_BUILD_FRAMEWORK rpath stuff
 }
