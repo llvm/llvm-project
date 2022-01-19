@@ -1181,11 +1181,6 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
   std::vector<Relocation *> morestackCalls;
 
   for (Relocation &rel : relocations) {
-    // Local symbols can't possibly be cross-calls, and should have been
-    // resolved long before this line.
-    if (rel.sym->isLocal())
-      continue;
-
     // Ignore calls into the split-stack api.
     if (rel.sym->getName().startswith("__morestack")) {
       if (rel.sym->getName().equals("__morestack"))
