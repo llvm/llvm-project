@@ -163,7 +163,7 @@ struct AAICVTracker;
 struct OMPInformationCache : public InformationCache {
   OMPInformationCache(Module &M, AnalysisGetter &AG,
                       BumpPtrAllocator &Allocator, SetVector<Function *> &CGSCC,
-                      SmallPtrSetImpl<Kernel> &Kernels)
+                      KernelSet &Kernels)
       : InformationCache(M, AG, Allocator, &CGSCC), OMPBuilder(M),
         Kernels(Kernels) {
 
@@ -478,7 +478,7 @@ struct OMPInformationCache : public InformationCache {
   }
 
   /// Collection of known kernels (\see Kernel) in the module.
-  SmallPtrSetImpl<Kernel> &Kernels;
+  KernelSet &Kernels;
 
   /// Collection of known OpenMP runtime functions..
   DenseSet<const Function *> RTLFunctions;
