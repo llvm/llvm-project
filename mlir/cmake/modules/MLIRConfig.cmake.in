@@ -22,7 +22,12 @@ set_property(GLOBAL PROPERTY MLIR_CONVERSION_LIBS "@MLIR_CONVERSION_LIBS@")
 set_property(GLOBAL PROPERTY MLIR_TRANSLATION_LIBS "@MLIR_TRANSLATION_LIBS@")
 
 # Provide all our library targets to users.
-@MLIR_CONFIG_INCLUDE_EXPORTS@
+# More specifically, configure MLIR so that it can be directly included in a top
+# level CMakeLists.txt, but also so that it can be imported via `find_package`.
+# This is based on how LLVM handles exports.
+if(NOT TARGET MLIRSupport)
+  @MLIR_CONFIG_INCLUDE_EXPORTS@
+endif()
 
 # By creating these targets here, subprojects that depend on MLIR's
 # tablegen-generated headers can always depend on these targets whether building
