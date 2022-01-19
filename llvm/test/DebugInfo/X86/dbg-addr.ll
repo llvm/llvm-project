@@ -1,11 +1,11 @@
 ;; Run twice -- once with DBG_VALUEs, once with instruction referencing.
 ; RUN: llc %s -o %t.s -experimental-debug-variable-locations=false
 ; RUN: llvm-mc -triple x86_64--linux %t.s -filetype=obj -o %t.o
-; RUN: FileCheck < %t.s %s
+; RUN: FileCheck -input-file=%t.s %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=DWARF
 ; RUN: llc %s -o %t.s -experimental-debug-variable-locations=true
 ; RUN: llvm-mc -triple x86_64--linux %t.s -filetype=obj -o %t.o
-; RUN: FileCheck < %t.s %s
+; RUN: FileCheck -input-file=%t.s %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=DWARF
 
 
@@ -20,6 +20,19 @@
 ; DWARF-NEXT:              DW_AT_location (DW_OP_fbreg +0)
 ; DWARF-NEXT:              DW_AT_name ("o")
 
+; Make sure that in the second case, we properly get a validity range in the
+; dwarf for the value. This ensures that we can use this technique to invalidate
+; variables.
+
+; CHECK-LABEL: test_dbg_addr_and_dbg_val_undef
+; CHECK: #DEBUG_VALUE: test_dbg_addr_and_dbg_val_undef:second_o <- [$rsp+0]
+; CHECK: #DEBUG_VALUE: test_dbg_addr_and_dbg_val_undef:second_o <- undef
+; CHECK-NOT: #DEBUG_VALUE:
+
+; DWARF: DW_TAG_variable
+; DWARF-NEXT:              DW_AT_location (0x{{[0-9a-z][0-9a-z]*}}:
+; DWARF-NEXT:                 [0x{{[0-9a-z][0-9a-z]*}}, 0x{{[0-9a-z][0-9a-z]*}}): DW_OP_breg7 RSP+0)
+; DWARF-NEXT:              DW_AT_name ("second_o")
 
 ; ModuleID = 't.c'
 source_filename = "t.c"
@@ -37,8 +50,18 @@ entry:
   ret void, !dbg !18
 }
 
+define void @test_dbg_addr_and_dbg_val_undef() #0 !dbg !117 {
+entry:
+  %o = alloca %struct.Foo, align 4
+  call void @llvm.dbg.addr(metadata %struct.Foo* %o, metadata !1110, metadata !1115), !dbg !1116
+  call void @escape_foo(%struct.Foo* %o), !dbg !1117
+  call void @llvm.dbg.value(metadata %struct.Foo* undef, metadata !1110, metadata !1115), !dbg !1116
+  ret void, !dbg !1118
+}
+
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.addr(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 declare void @escape_foo(%struct.Foo*)
 
@@ -68,3 +91,16 @@ attributes #1 = { nounwind readnone speculatable }
 !16 = !DILocation(line: 4, column: 14, scope: !7)
 !17 = !DILocation(line: 5, column: 3, scope: !7)
 !18 = !DILocation(line: 6, column: 1, scope: !7)
+
+!117 = distinct !DISubprogram(name: "test_dbg_addr_and_dbg_val_undef", scope: !1, file: !1, line: 3, type: !118, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!118 = !DISubroutineType(types: !119)
+!119 = !{null}
+!1110 = !DILocalVariable(name: "second_o", scope: !117, file: !1, line: 4, type: !1111)
+!1111 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Foo", file: !1, line: 1, size: 32, elements: !1112)
+!1112 = !{!1113}
+!1113 = !DIDerivedType(tag: DW_TAG_member, name: "x", scope: !1111, file: !1, line: 1, baseType: !1114, size: 32)
+!1114 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!1115 = !DIExpression()
+!1116 = !DILocation(line: 4, column: 14, scope: !117)
+!1117 = !DILocation(line: 5, column: 3, scope: !117)
+!1118 = !DILocation(line: 6, column: 1, scope: !117)
