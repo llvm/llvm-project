@@ -929,10 +929,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_CTPOP)
     .legalFor({{S32, S32}, {S32, S64}})
     .clampScalar(0, S32, S32)
+    .widenScalarToNextPow2(1, 32)
     .clampScalar(1, S32, S64)
     .scalarize(0)
-    .widenScalarToNextPow2(0, 32)
-    .widenScalarToNextPow2(1, 32);
+    .widenScalarToNextPow2(0, 32);
+
 
   // The hardware instructions return a different result on 0 than the generic
   // instructions expect. The hardware produces -1, but these produce the
