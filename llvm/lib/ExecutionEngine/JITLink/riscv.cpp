@@ -38,6 +38,22 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "R_RISCV_PCREL_LO12_S";
   case R_RISCV_CALL:
     return "R_RISCV_CALL";
+  case R_RISCV_ADD64:
+    return "R_RISCV_ADD64";
+  case R_RISCV_ADD32:
+    return "R_RISCV_ADD32";
+  case R_RISCV_ADD16:
+    return "R_RISCV_ADD16";
+  case R_RISCV_ADD8:
+    return "R_RISCV_ADD8";
+  case R_RISCV_SUB64:
+    return "R_RISCV_SUB64";
+  case R_RISCV_SUB32:
+    return "R_RISCV_SUB32";
+  case R_RISCV_SUB16:
+    return "R_RISCV_SUB16";
+  case R_RISCV_SUB8:
+    return "R_RISCV_SUB8";
   }
   return getGenericEdgeKindName(K);
 }
