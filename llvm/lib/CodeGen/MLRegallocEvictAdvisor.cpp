@@ -92,13 +92,12 @@ public:
 };
 
 char RegAllocScoring::ID = 0;
-FunctionPass *llvm::createRegAllocScoringPass() {
-  return new RegAllocScoring();
-}
+FunctionPass *createRegAllocScoringPass() { return new RegAllocScoring(); }
+
+} // namespace llvm
 
 INITIALIZE_PASS(RegAllocScoring, "regallocscoringpass",
                 "Register Allocation Scoring Pass", false, false)
-} // namespace llvm
 
 // ===================================
 // Common ML Advisor declarations
