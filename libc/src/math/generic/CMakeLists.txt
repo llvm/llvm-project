@@ -70,6 +70,9 @@ add_entrypoint_object(
     .sincosf_utils
     libc.include.math
     libc.src.errno.__errno_location
+  COMPILE_OPTIONS
+    -O3
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(
@@ -85,6 +88,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O3
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(
@@ -97,6 +101,9 @@ add_entrypoint_object(
     .sincosf_utils
     libc.include.math
     libc.src.errno.__errno_location
+  COMPILE_OPTIONS
+    -O3
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(
