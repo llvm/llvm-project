@@ -101,7 +101,7 @@ struct TestComprehensiveFunctionBufferize
 } // namespace
 
 void TestComprehensiveFunctionBufferize::runOnOperation() {
-  auto options = std::make_unique<BufferizationOptions>();
+  auto options = std::make_unique<AnalysisBufferizationOptions>();
 
   if (!allowReturnMemref)
     options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();

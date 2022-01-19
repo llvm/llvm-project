@@ -75,7 +75,7 @@ static FailureOr<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
 }
 
 void LinalgComprehensiveModuleBufferize::runOnOperation() {
-  auto options = std::make_unique<BufferizationOptions>();
+  auto options = std::make_unique<AnalysisBufferizationOptions>();
   if (useAlloca) {
     options->allocationFn = allocationFnUsingAlloca;
     options->deallocationFn = [](OpBuilder &b, Location loc, Value v) {
