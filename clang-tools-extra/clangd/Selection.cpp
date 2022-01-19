@@ -548,7 +548,6 @@ std::string printNodeToString(const DynTypedNode &N, const PrintingPolicy &PP) {
   std::string S;
   llvm::raw_string_ostream OS(S);
   printNodeKind(OS, N);
-  OS << " ";
   return std::move(OS.str());
 }
 #endif
@@ -778,8 +777,8 @@ private:
                      [](const Attr *A) { return !A->isImplicit(); }))
       return false;
     if (!SelChecker.mayHit(S)) {
-      dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
-      dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
+      dlog("{2}skip: {0} {1}", printNodeToString(N, PrintPolicy),
+           S.printToString(SM), indent());
       return true;
     }
     return false;
@@ -798,7 +797,8 @@ private:
   // Performs early hit detection for some nodes (on the earlySourceRange).
   void push(DynTypedNode Node) {
     SourceRange Early = earlySourceRange(Node);
-    dlog("{1}push: {0}", printNodeToString(Node, PrintPolicy), indent());
+    dlog("{2}push: {0} {1}", printNodeToString(Node, PrintPolicy),
+         Node.getSourceRange().printToString(SM), indent());
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
