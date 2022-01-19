@@ -797,7 +797,7 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
       if (Kind == tok::kw___stdcall || Kind == tok::kw___cdecl ||
           Kind == tok::kw___fastcall || Kind == tok::kw___thiscall ||
           Kind == tok::kw___regcall || Kind == tok::kw___vectorcall) {
-        if (Tok.is(tok::r_paren)) {
+        if (Tok.is(tok::r_paren) && NextToken().is(tok::l_paren)) {
           ConsumeParen();
         }
       }
@@ -3375,7 +3375,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
           NextToken().isOneOf(tok::kw___stdcall, tok::kw___cdecl,
                               tok::kw___fastcall, tok::kw___thiscall,
                               tok::kw___regcall, tok::kw___vectorcall)) {
-        ConsumeParen();
+        const Token &NextNextToken = PP.LookAhead(1);
+        if (NextNextToken.is(tok::r_paren)) {
+          const Token &NextToken2 = PP.LookAhead(2);
+          if (NextToken2.is(tok::l_paren)) {
+            ConsumeParen();
+          }
+        }
       }
       continue;
     }
