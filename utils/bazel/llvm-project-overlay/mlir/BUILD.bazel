@@ -860,8 +860,8 @@ cc_binary(
     ],
     deps = [
         ":CAPIIR",
-        ":CAPISparseTensor",
         ":CAPIRegistration",
+        ":CAPISparseTensor",
         ":MLIRBindingsPythonHeadersAndDeps",
     ],
 )
@@ -6793,11 +6793,11 @@ cc_library(
 cc_library(
     name = "LinalgOps",
     srcs = [
-        "lib/Dialect/Linalg/IR/LinalgOps.cpp",
         "lib/Dialect/Linalg/IR/LinalgDialect.cpp",
+        "lib/Dialect/Linalg/IR/LinalgOps.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Linalg/IR/Linalg.h"
+        "include/mlir/Dialect/Linalg/IR/Linalg.h",
     ],
     includes = ["include"],
     deps = [
@@ -6934,6 +6934,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
