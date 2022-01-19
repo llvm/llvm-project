@@ -195,7 +195,7 @@ void AArch64StackTaggingPreRA::uncheckUsesOf(unsigned TaggedReg, int FI) {
 
 void AArch64StackTaggingPreRA::uncheckLoadsAndStores() {
   for (auto *I : ReTags) {
-    unsigned TaggedReg = I->getOperand(0).getReg();
+    Register TaggedReg = I->getOperand(0).getReg();
     int FI = I->getOperand(1).getIndex();
     uncheckUsesOf(TaggedReg, FI);
   }

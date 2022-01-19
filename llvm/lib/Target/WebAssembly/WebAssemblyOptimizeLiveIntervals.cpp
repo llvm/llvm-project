@@ -82,7 +82,7 @@ bool WebAssemblyOptimizeLiveIntervals::runOnMachineFunction(
   // Split multiple-VN LiveIntervals into multiple LiveIntervals.
   SmallVector<LiveInterval *, 4> SplitLIs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = Register::index2VirtReg(I);
+    Register Reg = Register::index2VirtReg(I);
     auto &TRI = *MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
 
     if (MRI.reg_nodbg_empty(Reg))

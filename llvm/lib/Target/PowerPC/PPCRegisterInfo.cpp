@@ -423,7 +423,7 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
       continue;
 
     int FrIdx = Info[i].getFrameIdx();
-    unsigned Reg = Info[i].getReg();
+    Register Reg = Info[i].getReg();
 
     const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
     unsigned Opcode = InstrInfo->getStoreOpcodeForSpill(RC);

@@ -95,7 +95,7 @@ bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(
   // TODO: This is fairly heavy-handed; find a better approach.
   //
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = Register::index2VirtReg(I);
+    Register Reg = Register::index2VirtReg(I);
 
     // Skip unused registers.
     if (MRI.use_nodbg_empty(Reg))

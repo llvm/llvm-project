@@ -1139,7 +1139,7 @@ AArch64LoadStoreOpt::promoteLoadFromStore(MachineBasicBlock::iterator LoadI,
                                ? getLdStOffsetOp(*StoreI).getImm()
                                : getLdStOffsetOp(*StoreI).getImm() * StoreSize;
     int Width = LoadSize * 8;
-    unsigned DestReg =
+    Register DestReg =
         IsStoreXReg ? Register(TRI->getMatchingSuperReg(
                           LdRt, AArch64::sub_32, &AArch64::GPR64RegClass))
                     : LdRt;

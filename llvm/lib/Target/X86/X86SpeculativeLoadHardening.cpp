@@ -1139,7 +1139,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
     // branch back to itself. We can do this here because at this point, every
     // predecessor of this block has an available value. This is basically just
     // automating the construction of a PHI node for this target.
-    unsigned TargetReg = TargetAddrSSA.GetValueInMiddleOfBlock(&MBB);
+    Register TargetReg = TargetAddrSSA.GetValueInMiddleOfBlock(&MBB);
 
     // Insert a comparison of the incoming target register with this block's
     // address. This also requires us to mark the block as having its address
@@ -1642,7 +1642,7 @@ void X86SpeculativeLoadHardeningPass::hardenLoadAddr(
     return;
 
   // Compute the current predicate state.
-  unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
+  Register StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
 
   auto InsertPt = MI.getIterator();
 
@@ -1913,7 +1913,7 @@ unsigned X86SpeculativeLoadHardeningPass::hardenValueInRegister(
 
   auto *RC = MRI->getRegClass(Reg);
   int Bytes = TRI->getRegSizeInBits(*RC) / 8;
-  unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
+  Register StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
   assert((Bytes == 1 || Bytes == 2 || Bytes == 4 || Bytes == 8) &&
          "Unknown register size");
 
@@ -2078,7 +2078,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
 
   // First, we transfer the predicate state into the called function by merging
   // it into the stack pointer. This will kill the current def of the state.
-  unsigned StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
+  Register StateReg = PS->SSA.GetValueAtEndOfBlock(&MBB);
   mergePredStateIntoSP(MBB, InsertPt, Loc, StateReg);
 
   // If this call is also a return, it is a tail call and we don't need anything

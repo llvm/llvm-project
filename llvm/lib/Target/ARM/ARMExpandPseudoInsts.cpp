@@ -1144,7 +1144,7 @@ static bool determineFPRegsToClear(const MachineInstr &MI,
     if (!Op.isReg())
       continue;
 
-    unsigned Reg = Op.getReg();
+    Register Reg = Op.getReg();
     if (Op.isDef()) {
       if ((Reg >= ARM::Q0 && Reg <= ARM::Q7) ||
           (Reg >= ARM::D0 && Reg <= ARM::D15) ||
@@ -1356,7 +1356,7 @@ void ARMExpandPseudo::CMSESaveClearFPRegsV8(
   std::vector<unsigned> NonclearedFPRegs;
   for (const MachineOperand &Op : MBBI->operands()) {
     if (Op.isReg() && Op.isUse()) {
-      unsigned Reg = Op.getReg();
+      Register Reg = Op.getReg();
       assert(!ARM::DPRRegClass.contains(Reg) ||
              ARM::DPR_VFP2RegClass.contains(Reg));
       assert(!ARM::QPRRegClass.contains(Reg));
@@ -1543,7 +1543,7 @@ void ARMExpandPseudo::CMSERestoreFPRegsV8(
   std::vector<unsigned> NonclearedFPRegs;
   for (const MachineOperand &Op : MBBI->operands()) {
     if (Op.isReg() && Op.isDef()) {
-      unsigned Reg = Op.getReg();
+      Register Reg = Op.getReg();
       assert(!ARM::DPRRegClass.contains(Reg) ||
              ARM::DPR_VFP2RegClass.contains(Reg));
       assert(!ARM::QPRRegClass.contains(Reg));
@@ -1663,7 +1663,7 @@ static bool definesOrUsesFPReg(const MachineInstr &MI) {
   for (const MachineOperand &Op : MI.operands()) {
     if (!Op.isReg())
       continue;
-    unsigned Reg = Op.getReg();
+    Register Reg = Op.getReg();
     if ((Reg >= ARM::Q0 && Reg <= ARM::Q7) ||
         (Reg >= ARM::D0 && Reg <= ARM::D15) ||
         (Reg >= ARM::S0 && Reg <= ARM::S31))
@@ -2201,7 +2201,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     }
     case ARM::tBLXNS_CALL: {
       DebugLoc DL = MBBI->getDebugLoc();
-      unsigned JumpReg = MBBI->getOperand(0).getReg();
+      Register JumpReg = MBBI->getOperand(0).getReg();
 
       // Figure out which registers are live at the point immediately before the
       // call. When we indiscriminately push a set of registers, the live

@@ -443,7 +443,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   uint64_t FalseLanes = MI.getDesc().TSFlags & AArch64::FalseLanesMask;
   bool FalseZero = FalseLanes == AArch64::FalseLanesZero;
 
-  unsigned DstReg = MI.getOperand(0).getReg();
+  Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
 
   if (DType == AArch64::DestructiveBinary)
@@ -989,7 +989,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                    .addReg(DstReg, RegState::Kill)
                    .addReg(DstReg, DstFlags | RegState::Implicit);
       } else {
-        unsigned DstReg = MI.getOperand(0).getReg();
+        Register DstReg = MI.getOperand(0).getReg();
         MIB2 = BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
                    .add(MI.getOperand(0))
                    .addUse(DstReg, RegState::Kill);

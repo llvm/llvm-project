@@ -337,7 +337,7 @@ void MipsAsmPrinter::printSavedRegsBitmask() {
   unsigned CSFPRegsSize = 0;
 
   for (const auto &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     unsigned RegNum = TRI->getEncodingValue(Reg);
 
     // If it's a floating point register, set the FPU Bitmask.

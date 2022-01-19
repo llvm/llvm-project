@@ -89,7 +89,7 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
   // Start the numbering for locals after the arg regs
   unsigned CurReg = MFI.getParams().size();
   for (unsigned VRegIdx = 0; VRegIdx < NumVRegs; ++VRegIdx) {
-    unsigned VReg = Register::index2VirtReg(VRegIdx);
+    Register VReg = Register::index2VirtReg(VRegIdx);
     // Skip unused registers.
     if (MRI.use_empty(VReg))
       continue;
