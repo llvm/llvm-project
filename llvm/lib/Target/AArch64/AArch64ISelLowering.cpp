@@ -1331,6 +1331,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i16, Custom);
 
+    // NEON doesn't support integer divides, but SVE does
+    for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
+                    MVT::v4i32, MVT::v1i64, MVT::v2i64}) {
+      setOperationAction(ISD::SDIV, VT, Custom);
+      setOperationAction(ISD::UDIV, VT, Custom);
+    }
+
     // NOTE: Currently this has to happen after computeRegisterProperties rather
     // than the preferred option of combining it with the addRegisterClass call.
     if (Subtarget->useSVEForFixedLengthVectors()) {
@@ -1363,26 +1370,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MULHS, MVT::v2i64, Custom);
       setOperationAction(ISD::MULHU, MVT::v1i64, Custom);
       setOperationAction(ISD::MULHU, MVT::v2i64, Custom);
-      setOperationAction(ISD::SDIV, MVT::v8i8, Custom);
-      setOperationAction(ISD::SDIV, MVT::v16i8, Custom);
-      setOperationAction(ISD::SDIV, MVT::v4i16, Custom);
-      setOperationAction(ISD::SDIV, MVT::v8i16, Custom);
-      setOperationAction(ISD::SDIV, MVT::v2i32, Custom);
-      setOperationAction(ISD::SDIV, MVT::v4i32, Custom);
-      setOperationAction(ISD::SDIV, MVT::v1i64, Custom);
-      setOperationAction(ISD::SDIV, MVT::v2i64, Custom);
       setOperationAction(ISD::SMAX, MVT::v1i64, Custom);
       setOperationAction(ISD::SMAX, MVT::v2i64, Custom);
       setOperationAction(ISD::SMIN, MVT::v1i64, Custom);
       setOperationAction(ISD::SMIN, MVT::v2i64, Custom);
-      setOperationAction(ISD::UDIV, MVT::v8i8, Custom);
-      setOperationAction(ISD::UDIV, MVT::v16i8, Custom);
-      setOperationAction(ISD::UDIV, MVT::v4i16, Custom);
-      setOperationAction(ISD::UDIV, MVT::v8i16, Custom);
-      setOperationAction(ISD::UDIV, MVT::v2i32, Custom);
-      setOperationAction(ISD::UDIV, MVT::v4i32, Custom);
-      setOperationAction(ISD::UDIV, MVT::v1i64, Custom);
-      setOperationAction(ISD::UDIV, MVT::v2i64, Custom);
       setOperationAction(ISD::UMAX, MVT::v1i64, Custom);
       setOperationAction(ISD::UMAX, MVT::v2i64, Custom);
       setOperationAction(ISD::UMIN, MVT::v1i64, Custom);
@@ -3956,7 +3947,7 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   bool OverrideNEON = VT == MVT::v2i64 || VT == MVT::v1i64;
 
   if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT, OverrideNEON))
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED, OverrideNEON);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
 
   // Multiplications are only custom-lowered for 128-bit vectors so that
   // VMULL can be detected.  Otherwise v2i64 multiplications are not legal.
@@ -5157,11 +5148,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::MUL:
     return LowerMUL(Op, DAG);
   case ISD::MULHS:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::MULHS_PRED,
-                               /*OverrideNEON=*/true);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::MULHS_PRED);
   case ISD::MULHU:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::MULHU_PRED,
-                               /*OverrideNEON=*/true);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::MULHU_PRED);
   case ISD::INTRINSIC_W_CHAIN:
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
@@ -5252,8 +5241,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::BSWAP:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::BSWAP_MERGE_PASSTHRU);
   case ISD::CTLZ:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTLZ_MERGE_PASSTHRU,
-                               /*OverrideNEON=*/true);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTLZ_MERGE_PASSTHRU);
   case ISD::CTTZ:
     return LowerCTTZ(Op, DAG);
   case ISD::VECTOR_SPLICE:
@@ -7514,17 +7502,13 @@ SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
     default:
       llvm_unreachable("Wrong instruction");
     case ISD::SMAX:
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_PRED,
-                                 /*OverrideNEON=*/true);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMAX_PRED);
     case ISD::SMIN:
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED,
-                                 /*OverrideNEON=*/true);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::SMIN_PRED);
     case ISD::UMAX:
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_PRED,
-                                 /*OverrideNEON=*/true);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMAX_PRED);
     case ISD::UMIN:
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_PRED,
-                                 /*OverrideNEON=*/true);
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::UMIN_PRED);
     }
   }
 
@@ -7540,8 +7524,7 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
 
   if (VT.isScalableVector() ||
       useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::BITREVERSE_MERGE_PASSTHRU,
-                               true);
+    return LowerToPredicatedOp(Op, DAG, AArch64ISD::BITREVERSE_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
   SDValue REVB;
@@ -11189,7 +11172,7 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
 
-  if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true))
+  if (VT.isFixedLengthVector() && Subtarget->hasSVE())
     return LowerFixedLengthVectorIntDivideToSVE(Op, DAG);
 
   assert(VT.isScalableVector() && "Expected a scalable vector.");
@@ -19224,7 +19207,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
 
   // Scalable vector i32/i64 DIV is supported.
   if (EltVT == MVT::i32 || EltVT == MVT::i64)
-    return LowerToPredicatedOp(Op, DAG, PredOpcode, /*OverrideNEON=*/true);
+    return LowerToPredicatedOp(Op, DAG, PredOpcode);
 
   // Scalable vector i8/i16 DIV is not supported. Promote it to i32.
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
@@ -19379,13 +19362,14 @@ SDValue AArch64TargetLowering::LowerFixedLengthInsertVectorElt(
 // NOTE: The results for inactive lanes are undefined.
 SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
                                                    SelectionDAG &DAG,
-                                                   unsigned NewOp,
-                                                   bool OverrideNEON) const {
+                                                   unsigned NewOp) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   auto Pg = getPredicateForVector(DAG, DL, VT);
 
-  if (useSVEForFixedLengthVectorVT(VT, OverrideNEON)) {
+  if (VT.isFixedLengthVector()) {
+    assert(VT.getFixedSizeInBits() <= Subtarget->getMinSVEVectorSizeInBits() &&
+           "Cannot use SVE to lower fixed length predicated op!");
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
 
     // Create list of operands by converting existing ones to scalable types.
@@ -19403,7 +19387,8 @@ SDValue AArch64TargetLowering::LowerToPredicatedOp(SDValue Op,
         continue;
       }
 
-      assert(useSVEForFixedLengthVectorVT(V.getValueType(), OverrideNEON) &&
+      assert(V.getValueType().getFixedSizeInBits() <=
+                 Subtarget->getMinSVEVectorSizeInBits() &&
              "Only fixed length vectors are supported!");
       Operands.push_back(convertToScalableVector(DAG, ContainerVT, V));
     }
