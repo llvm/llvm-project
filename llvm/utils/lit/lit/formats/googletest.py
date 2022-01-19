@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -53,11 +54,12 @@ class GoogleTest(TestFormat):
             yield 'failed_to_discover_tests_from_gtest'
             return
 
+        upstream_prefix = re.compile('Running main\(\) from .*gtest_main\.cc')
         nested_tests = []
         for ln in output.splitlines(False):  # Don't keep newlines.
             ln = lit.util.to_string(ln)
 
-            if 'Running main() from gtest_main.cc' in ln:
+            if upstream_prefix.fullmatch(ln):
                 # Upstream googletest prints this to stdout prior to running
                 # tests. LLVM removed that print statement in r61540, but we
                 # handle it here in case upstream googletest is being used.
