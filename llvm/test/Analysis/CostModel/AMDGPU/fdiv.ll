@@ -165,7 +165,7 @@ define amdgpu_kernel void @fdiv_f16_f32ieee() #0 {
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f16 = fdiv <4 x half> undef, undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f16 = fdiv <5 x half> undef, undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v16f16 = fdiv <16 x half> undef, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %v17f16 = fdiv <17 x half> undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %v17f16 = fdiv <17 x half> undef, undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; NOFP16-SIZE-LABEL: 'fdiv_f16_f32ieee'
@@ -185,7 +185,7 @@ define amdgpu_kernel void @fdiv_f16_f32ieee() #0 {
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v4f16 = fdiv <4 x half> undef, undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v5f16 = fdiv <5 x half> undef, undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v16f16 = fdiv <16 x half> undef, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v17f16 = fdiv <17 x half> undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %v17f16 = fdiv <17 x half> undef, undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = fdiv half undef, undef
@@ -216,7 +216,7 @@ define amdgpu_kernel void @fdiv_f16_f32ftzdaz() #1 {
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v4f16 = fdiv <4 x half> undef, undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f16 = fdiv <5 x half> undef, undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v16f16 = fdiv <16 x half> undef, undef
-; FP16-NEXT:  Cost Model: Found an estimated cost of 480 for instruction: %v17f16 = fdiv <17 x half> undef, undef
+; FP16-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %v17f16 = fdiv <17 x half> undef, undef
 ; FP16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; NOFP16-SIZE-LABEL: 'fdiv_f16_f32ftzdaz'
@@ -236,7 +236,7 @@ define amdgpu_kernel void @fdiv_f16_f32ftzdaz() #1 {
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v4f16 = fdiv <4 x half> undef, undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v5f16 = fdiv <5 x half> undef, undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v16f16 = fdiv <16 x half> undef, undef
-; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v17f16 = fdiv <17 x half> undef, undef
+; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %v17f16 = fdiv <17 x half> undef, undef
 ; FP16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f16 = fdiv half undef, undef

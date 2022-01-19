@@ -741,27 +741,27 @@ body: |
     ; GFX7-LABEL: name: load_flat_v8s16
     ; GFX7: liveins: $vgpr0_vgpr1
     ; GFX7-NEXT: {{  $}}
-    ; GFX7-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX7-NEXT: [[LOAD:%[0-9]+]]:vreg_128(<8 x s16>) = G_LOAD [[COPY]](p1) :: (load (<8 x s16>), align 4)
-    ; GFX7-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[LOAD]](<8 x s16>)
+    ; GFX7-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX7-NEXT: [[FLAT_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = FLAT_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec, implicit $flat_scr :: (load (<8 x s16>), align 4)
+    ; GFX7-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[FLAT_LOAD_DWORDX4_]]
     ; GFX8-LABEL: name: load_flat_v8s16
     ; GFX8: liveins: $vgpr0_vgpr1
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[LOAD:%[0-9]+]]:vreg_128(<8 x s16>) = G_LOAD [[COPY]](p1) :: (load (<8 x s16>), align 4)
-    ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[LOAD]](<8 x s16>)
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[FLAT_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = FLAT_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec, implicit $flat_scr :: (load (<8 x s16>), align 4)
+    ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[FLAT_LOAD_DWORDX4_]]
     ; GFX9-LABEL: name: load_flat_v8s16
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX9-NEXT: [[LOAD:%[0-9]+]]:vreg_128(<8 x s16>) = G_LOAD [[COPY]](p1) :: (load (<8 x s16>), align 4)
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[LOAD]](<8 x s16>)
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[FLAT_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = FLAT_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec, implicit $flat_scr :: (load (<8 x s16>), align 4)
+    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[FLAT_LOAD_DWORDX4_]]
     ; GFX10-LABEL: name: load_flat_v8s16
     ; GFX10: liveins: $vgpr0_vgpr1
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GFX10-NEXT: [[LOAD:%[0-9]+]]:vreg_128(<8 x s16>) = G_LOAD [[COPY]](p1) :: (load (<8 x s16>), align 4)
-    ; GFX10-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[LOAD]](<8 x s16>)
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX10-NEXT: [[FLAT_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = FLAT_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec, implicit $flat_scr :: (load (<8 x s16>), align 4)
+    ; GFX10-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[FLAT_LOAD_DWORDX4_]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(<8 x  s16>) = G_LOAD %0 :: (load (<8 x s16>), align 4, addrspace 0)
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
