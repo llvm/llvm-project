@@ -715,12 +715,12 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}test_wwm2:
-; GFX1032: v_cmp_gt_u32_e32 vcc_lo, 32, v{{[0-9]+}}
+; GFX1032: v_cmp_gt_u32_e32 vcc_lo, 16, v{{[0-9]+}}
 ; GFX1032: s_and_saveexec_b32 [[SAVE1:s[0-9]+]], vcc_lo
 ; GFX1032: s_or_saveexec_b32 [[SAVE2:s[0-9]+]], -1
 ; GFX1032: s_mov_b32 exec_lo, [[SAVE2]]
 ; GFX1032: s_or_b32 exec_lo, exec_lo, [[SAVE1]]
-; GFX1064: v_cmp_gt_u32_e32 vcc, 32, v{{[0-9]+}}
+; GFX1064: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GFX1064: s_and_saveexec_b64 [[SAVE1:s\[[0-9:]+\]]], vcc{{$}}
 ; GFX1064: s_or_saveexec_b64 [[SAVE2:s\[[0-9:]+\]]], -1
 ; GFX1064: s_mov_b64 exec, [[SAVE2]]
@@ -730,7 +730,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -758,12 +758,12 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}test_strict_wwm2:
-; GFX1032: v_cmp_gt_u32_e32 vcc_lo, 32, v{{[0-9]+}}
+; GFX1032: v_cmp_gt_u32_e32 vcc_lo, 16, v{{[0-9]+}}
 ; GFX1032: s_and_saveexec_b32 [[SAVE1:s[0-9]+]], vcc_lo
 ; GFX1032: s_or_saveexec_b32 [[SAVE2:s[0-9]+]], -1
 ; GFX1032: s_mov_b32 exec_lo, [[SAVE2]]
 ; GFX1032: s_or_b32 exec_lo, exec_lo, [[SAVE1]]
-; GFX1064: v_cmp_gt_u32_e32 vcc, 32, v{{[0-9]+}}
+; GFX1064: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GFX1064: s_and_saveexec_b64 [[SAVE1:s\[[0-9:]+\]]], vcc{{$}}
 ; GFX1064: s_or_saveexec_b64 [[SAVE2:s\[[0-9:]+\]]], -1
 ; GFX1064: s_mov_b64 exec, [[SAVE2]]
@@ -773,7 +773,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
