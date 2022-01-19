@@ -83,3 +83,12 @@ paciasp
 .arch_extension flagm
 cfinv
 // CHECK: cfinv
+
+.arch_extension hbc
+lbl:
+    bc.eq lbl
+// CHECK: bc.eq lbl
+
+.arch_extension mops
+cpyfp [x0]!, [x1]!, x2!
+// CHECK: cpyfp [x0]!, [x1]!, x2!

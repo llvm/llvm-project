@@ -1,5 +1,5 @@
 // RUN: not llvm-mc -triple aarch64 \
-// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm \
+// RUN: -mattr=+crc,+sm4,+sha3,+sha2,+aes,+fp,+neon,+ras,+lse,+predres,+ccdp,+mte,+tlb-rmi,+pan-rwv,+ccpp,+rcpc,+ls64,+flagm,+hbc,+mops \
 // RUN: -filetype asm -o - %s 2>&1 | FileCheck %s
 
 .arch_extension axp64
@@ -131,3 +131,18 @@ cfinv
 cfinv
 // CHECK: [[@LINE-1]]:1: error: instruction requires: flagm
 // CHECK-NEXT: cfinv
+
+lbl:
+bc.eq lbl
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: hbc
+.arch_extension nohbc
+bc.eq lbl
+// CHECK: [[@LINE-1]]:1: error: instruction requires: hbc
+// CHECK-NEXT: bc.eq lbl
+
+cpyfp [x0]!, [x1]!, x2!
+// CHECK-NOT: [[@LINE-1]]:1: error: instruction requires: mops
+.arch_extension nomops
+cpyfp [x0]!, [x1]!, x2!
+// CHECK: [[@LINE-1]]:1: error: instruction requires: mops
+// CHECK-NEXT: cpyfp [x0]!, [x1]!, x2!
