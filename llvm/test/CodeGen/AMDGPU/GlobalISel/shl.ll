@@ -2082,6 +2082,24 @@ define i65 @v_shl_i65(i65 %value, i65 %amount) {
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shl_i65:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_sub_nc_u32_e32 v6, 64, v3
+; GFX11-NEXT:    v_lshlrev_b64 v[4:5], v3, v[2:3]
+; GFX11-NEXT:    v_subrev_nc_u32_e32 v8, 64, v3
+; GFX11-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 64, v3
+; GFX11-NEXT:    v_lshrrev_b64 v[5:6], v6, v[0:1]
+; GFX11-NEXT:    v_lshlrev_b64 v[6:7], v3, v[0:1]
+; GFX11-NEXT:    v_lshlrev_b64 v[8:9], v8, v[0:1]
+; GFX11-NEXT:    v_or_b32_e32 v1, v5, v4
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v6, vcc_lo
+; GFX11-NEXT:    v_dual_cndmask_b32 v4, v8, v1 :: v_dual_cndmask_b32 v1, 0, v7
+; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v3
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc_lo
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = shl i65 %value, %amount
   ret i65 %result
 }
@@ -2123,6 +2141,15 @@ define i65 @v_shl_i65_33(i65 %value) {
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_shl_i65_33:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 1, v0
+; GFX11-NEXT:    v_lshrrev_b64 v[2:3], 31, v[0:1]
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, v4
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = shl i65 %value, 33
   ret i65 %result
 }
@@ -2167,6 +2194,26 @@ define amdgpu_ps i65 @s_shl_i65(i65 inreg %value, i65 inreg %amount) {
 ; GFX10-NEXT:    s_cmp_lg_u32 s12, 0
 ; GFX10-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_shl_i65:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_sub_i32 s10, s3, 64
+; GFX11-NEXT:    s_sub_i32 s4, 64, s3
+; GFX11-NEXT:    s_cmp_lt_u32 s3, 64
+; GFX11-NEXT:    s_cselect_b32 s11, 1, 0
+; GFX11-NEXT:    s_cmp_eq_u32 s3, 0
+; GFX11-NEXT:    s_cselect_b32 s12, 1, 0
+; GFX11-NEXT:    s_lshr_b64 s[4:5], s[0:1], s4
+; GFX11-NEXT:    s_lshl_b64 s[6:7], s[2:3], s3
+; GFX11-NEXT:    s_lshl_b64 s[8:9], s[0:1], s3
+; GFX11-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]
+; GFX11-NEXT:    s_lshl_b64 s[6:7], s[0:1], s10
+; GFX11-NEXT:    s_cmp_lg_u32 s11, 0
+; GFX11-NEXT:    s_cselect_b64 s[0:1], s[8:9], 0
+; GFX11-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[6:7]
+; GFX11-NEXT:    s_cmp_lg_u32 s12, 0
+; GFX11-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
+; GFX11-NEXT:    ; return to shader part epilog
   %result = shl i65 %value, %amount
   ret i65 %result
 }
@@ -2192,6 +2239,16 @@ define amdgpu_ps i65 @s_shl_i65_33(i65 inreg %value) {
 ; GFX10-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_shl_i65_33:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s4, 0
+; GFX11-NEXT:    s_lshl_b32 s5, s2, 1
+; GFX11-NEXT:    s_lshr_b64 s[2:3], s[0:1], 31
+; GFX11-NEXT:    s_lshl_b32 s1, s0, 1
+; GFX11-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
+; GFX11-NEXT:    s_mov_b32 s0, 0
+; GFX11-NEXT:    ; return to shader part epilog
   %result = shl i65 %value, 33
   ret i65 %result
 }

@@ -713,7 +713,7 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB8_4
 ; GFX11-NEXT:  ; %bb.3: ; %bb
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
-; GFX11-NEXT:    global_store_b32 v[0:1], v8, off
+; GFX11-NEXT:    global_store_b32 v[0:1], v8, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    v_mov_b32_e64 v9, -2
@@ -1096,7 +1096,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX11-NEXT:  ; %bb.2: ; %bb
 ; GFX11-NEXT:    ; in Loop: Header=BB10_1 Depth=1
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
-; GFX11-NEXT:    global_load_b32 v0, v[0:1], off glc
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX11-NEXT:    s_and_b64 vcc, exec, vcc
@@ -1104,7 +1104,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX11-NEXT:  .LBB10_3: ; %Flow1
 ; GFX11-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 8
-; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB10_4:
@@ -1252,7 +1252,7 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 ; GFX11-NEXT:  ; %bb.2: ; %bb8
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 4.0
-; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX11-NEXT:    global_store_b32 v[0:1], v1, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB11_3: ; %phibb
 ; GFX11-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
@@ -1260,7 +1260,7 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 ; GFX11-NEXT:    s_cbranch_vccz .LBB11_5
 ; GFX11-NEXT:  ; %bb.4: ; %bb10
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 9
-; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB11_5: ; %end
 ; GFX11-NEXT:    s_endpgm
@@ -1555,7 +1555,7 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ; GFX11-NEXT:    s_cbranch_execz .LBB13_5
 ; GFX11-NEXT:  ; %bb.4: ; %bb8
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 9
-; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB13_5: ; %UnifiedReturnBlock
 ; GFX11-NEXT:    s_endpgm

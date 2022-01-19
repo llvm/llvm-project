@@ -1066,13 +1066,13 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v13, v13, v0, s0
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v14, v14, v1, s0
 ; MOVREL_GFX11-NEXT:    v_dual_cndmask_b32 v15, v15, v0 :: v_dual_cndmask_b32 v16, v16, v1
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[3:6], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[3:6], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[7:10], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[7:10], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[11:14], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[11:14], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[15:18], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[15:18], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1277,13 +1277,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v12, v12, s19, s0
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v13, v13, s18, vcc_lo
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v14, v14, s19, vcc_lo
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[1:4], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[1:4], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[5:8], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[5:8], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[9:12], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[9:12], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[13:16], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[13:16], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
@@ -1426,13 +1426,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_s(<8 x double> inreg %vec, do
 ; MOVREL_GFX11-NEXT:    v_mov_b32_e32 v3, s1
 ; MOVREL_GFX11-NEXT:    v_movreld_b32_e32 v2, v0
 ; MOVREL_GFX11-NEXT:    v_movreld_b32_e32 v3, v1
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[2:5], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[6:9], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[10:13], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[10:13], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[14:17], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[14:17], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
@@ -1486,13 +1486,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_s(<8 x double> %vec, double i
 ; MOVREL_GFX11-NEXT:    s_lshl_b32 m0, s4, 1
 ; MOVREL_GFX11-NEXT:    v_movreld_b32_e32 v0, s2
 ; MOVREL_GFX11-NEXT:    v_movreld_b32_e32 v1, s3
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
@@ -1691,13 +1691,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_v(<8 x double> inreg %vec, do
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v13, v13, v0, s0
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v14, v14, v1, s0
 ; MOVREL_GFX11-NEXT:    v_dual_cndmask_b32 v15, v15, v0 :: v_dual_cndmask_b32 v16, v16, v1
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[3:6], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[3:6], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[7:10], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[7:10], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[11:14], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[11:14], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[15:18], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[15:18], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
@@ -1814,13 +1814,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_v(<8 x double> %vec, double i
 ; MOVREL_GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v16
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v14, v14, s2, vcc_lo
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v15, v15, s3, vcc_lo
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
@@ -1874,13 +1874,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_s(<8 x double> %vec, double %
 ; MOVREL_GFX11-NEXT:    s_lshl_b32 m0, s2, 1
 ; MOVREL_GFX11-NEXT:    v_movreld_b32_e32 v0, v16
 ; MOVREL_GFX11-NEXT:    v_movreld_b32_e32 v1, v17
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
@@ -1994,13 +1994,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v(<8 x double> %vec, double %
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v14, v14, v16, s5
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v13, v13, v17, s6
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s5
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
@@ -2634,13 +2634,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 ; MOVREL_GFX11-NEXT:    v_dual_mov_b32 v10, s10 :: v_dual_mov_b32 v11, s11
 ; MOVREL_GFX11-NEXT:    v_dual_mov_b32 v12, s12 :: v_dual_mov_b32 v13, s13
 ; MOVREL_GFX11-NEXT:    v_dual_mov_b32 v14, s14 :: v_dual_mov_b32 v15, s15
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
@@ -2759,13 +2759,13 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v14, v14, v16, s5
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v13, v13, v17, s6
 ; MOVREL_GFX11-NEXT:    v_cndmask_b32_e64 v15, v15, v17, s5
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[0:3], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[4:7], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[8:11], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off
+; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
