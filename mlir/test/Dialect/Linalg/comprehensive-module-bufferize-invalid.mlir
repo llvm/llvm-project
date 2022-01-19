@@ -159,8 +159,8 @@ func @mini_test_case1() -> tensor<10x20xf32> {
 
 // -----
 
+// expected-error @+1 {{memref return type is unsupported}}
 func @main() -> tensor<4xi32> {
-  // expected-error @+1 {{scf.execute_region with tensor result not supported}}
   %r = scf.execute_region -> tensor<4xi32> {
     %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
     scf.yield %A: tensor<4xi32>

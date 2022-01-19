@@ -44,6 +44,7 @@ struct ExecuteRegionOpInterface
     auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
     size_t resultNum = std::distance(op->getOpResults().begin(),
                                      llvm::find(op->getOpResults(), opResult));
+    // TODO: Support multiple blocks.
     assert(executeRegionOp.getRegion().getBlocks().size() == 1 &&
            "expected exactly 1 block");
     auto yieldOp = dyn_cast<scf::YieldOp>(
@@ -66,13 +67,59 @@ struct ExecuteRegionOpInterface
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationState &state) const {
-    // TODO: Add bufferization support when needed. scf.execute_region should be
-    // bufferized similar to scf.if.
-    bool hasTensorReturnType = any_of(
-        op->getResultTypes(), [](Type t) { return t.isa<TensorType>(); });
-    if (hasTensorReturnType)
-      return op->emitError(
-          "scf.execute_region with tensor result not supported");
+    auto executeRegionOp = cast<scf::ExecuteRegionOp>(op);
+
+    // Compute new result types.
+    SmallVector<Type> newResultTypes;
+    for (Type type : executeRegionOp->getResultTypes()) {
+      if (auto rankedTensorType = type.dyn_cast<RankedTensorType>()) {
+        newResultTypes.push_back(getDynamicMemRefType(rankedTensorType));
+      } else if (auto tensorType = type.dyn_cast<TensorType>()) {
+        newResultTypes.push_back(
+            getUnrankedMemRefType(tensorType.getElementType()));
+      } else {
+        newResultTypes.push_back(type);
+      }
+    }
+
+    // Create new op and move over region.
+    auto newOp =
+        rewriter.create<scf::ExecuteRegionOp>(op->getLoc(), newResultTypes);
+    newOp.getRegion().takeBody(executeRegionOp.getRegion());
+
+    // Update terminator.
+    assert(newOp.getRegion().getBlocks().size() == 1 &&
+           "only 1 block supported");
+    Block *newBlock = &newOp.getRegion().front();
+    auto yieldOp = cast<scf::YieldOp>(newBlock->getTerminator());
+    rewriter.setInsertionPoint(yieldOp);
+    SmallVector<Value> newYieldValues;
+    for (auto it : llvm::enumerate(yieldOp.getResults())) {
+      Value val = it.value();
+      if (val.getType().isa<TensorType>()) {
+        newYieldValues.push_back(rewriter.create<bufferization::ToMemrefOp>(
+            yieldOp.getLoc(), newResultTypes[it.index()], val));
+      } else {
+        newYieldValues.push_back(val);
+      }
+    }
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(yieldOp, newYieldValues);
+
+    // Update all uses of the old op.
+    rewriter.setInsertionPointAfter(newOp);
+    SmallVector<Value> newResults;
+    for (auto it : llvm::enumerate(executeRegionOp->getResultTypes())) {
+      if (it.value().isa<TensorType>()) {
+        newResults.push_back(rewriter.create<bufferization::ToTensorOp>(
+            executeRegionOp.getLoc(), newOp->getResult(it.index())));
+      } else {
+        newResults.push_back(newOp->getResult(it.index()));
+      }
+    }
+
+    // Replace old op.
+    rewriter.replaceOp(executeRegionOp, newResults);
+
     return success();
   }
 
