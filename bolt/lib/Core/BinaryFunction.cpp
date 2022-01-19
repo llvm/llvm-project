@@ -2031,7 +2031,8 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
       assert(PrevInstr && "no previous instruction for a fall through");
       if (MIB->isUnconditionalBranch(Instr) &&
           !MIB->isUnconditionalBranch(*PrevInstr) &&
-          !MIB->getConditionalTailCall(*PrevInstr)) {
+          !MIB->getConditionalTailCall(*PrevInstr) &&
+          !MIB->isReturn(*PrevInstr)) {
         // Temporarily restore inserter basic block.
         InsertBB = PrevBB;
       } else {

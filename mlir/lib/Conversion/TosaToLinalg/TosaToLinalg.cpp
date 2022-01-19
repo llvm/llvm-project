@@ -830,19 +830,22 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
   Value input = op->getOperand(0);
 
   llvm::SmallVector<int64_t> reduceShape;
+  SmallVector<Value> dynDims;
   for (unsigned i = 0; i < inputTy.getRank(); i++) {
-    if (axis != i)
+    if (axis != i) {
       reduceShape.push_back(inputTy.getDimSize(i));
+      if (inputTy.isDynamicDim(i))
+        dynDims.push_back(rewriter.create<tensor::DimOp>(loc, input, i));
+    }
   }
 
   Type reduceTy = RankedTensorType::get(reduceShape, resultTy.getElementType());
 
   // First fill the output buffer with the init value.
-  auto initTensor =
-      rewriter
-          .create<linalg::InitTensorOp>(loc, ArrayRef<Value>({}), reduceShape,
-                                        resultTy.getElementType())
-          .result();
+  auto initTensor = rewriter
+                        .create<linalg::InitTensorOp>(loc, dynDims, reduceShape,
+                                                      resultTy.getElementType())
+                        .result();
 
   auto fillValueAttr = createInitialValueForReduceOp(op, elementTy, rewriter);
   if (!fillValueAttr)

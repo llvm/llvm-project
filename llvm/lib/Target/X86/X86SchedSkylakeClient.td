@@ -1903,4 +1903,40 @@ def SKLSETA_SETBErm :  SchedWriteVariant<[
 def : InstRW<[SKLSETA_SETBErr], (instrs SETCCr)>;
 def : InstRW<[SKLSETA_SETBErm], (instrs SETCCm)>;
 
+///////////////////////////////////////////////////////////////////////////////
+// Dependency breaking instructions.
+///////////////////////////////////////////////////////////////////////////////
+
+def : IsZeroIdiomFunction<[
+  // GPR Zero-idioms.
+  DepBreakingClass<[ SUB32rr, SUB64rr, XOR32rr, XOR64rr ], ZeroIdiomPredicate>,
+
+  // SSE Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    XORPSrr, XORPDrr,
+
+    // int variants.
+    PXORrr,
+    PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+    PCMPGTBrr, PCMPGTDrr, PCMPGTQrr, PCMPGTWrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX Zero-idioms.
+  DepBreakingClass<[
+    // xmm fp variants.
+    VXORPSrr, VXORPDrr,
+
+    // xmm int variants.
+    VPXORrr,
+    VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+    VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr,
+
+    // ymm variants.
+    VXORPSYrr, VXORPDYrr, VPXORYrr,
+    VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+    VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr
+  ], ZeroIdiomPredicate>,
+]>;
+
 } // SchedModel

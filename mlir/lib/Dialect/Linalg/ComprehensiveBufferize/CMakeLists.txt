@@ -48,6 +48,7 @@ add_mlir_dialect_library(MLIRLinalgBufferizableOpInterfaceImpl
 
   LINK_LIBS PUBLIC
   MLIRBufferizableOpInterface
+  MLIRComprehensiveBufferize
   MLIRIR
   MLIRLinalg
   MLIRTensor
@@ -58,6 +59,7 @@ add_mlir_dialect_library(MLIRSCFBufferizableOpInterfaceImpl
 
   LINK_LIBS PUBLIC
   MLIRBufferizableOpInterface
+  MLIRComprehensiveBufferize
   MLIRIR
   MLIRSCF
 )
@@ -96,6 +98,7 @@ add_mlir_dialect_library(MLIRComprehensiveBufferize
 
   LINK_LIBS PUBLIC
   MLIRBufferizableOpInterface
+  MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRef

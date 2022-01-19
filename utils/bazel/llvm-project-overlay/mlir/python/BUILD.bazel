@@ -10,7 +10,6 @@
 
 load("//mlir:tblgen.bzl", "gentbl_filegroup", "td_library")
 
-
 package(
     default_visibility = [
         "//visibility:public",
@@ -90,6 +89,7 @@ td_library(
     ],
     deps = [
         "//mlir:BuiltinDialectTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
         "//mlir:OpBaseTdFiles",
     ],
 )

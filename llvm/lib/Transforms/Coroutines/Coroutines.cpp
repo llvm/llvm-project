@@ -123,6 +123,7 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
 static bool isCoroutineIntrinsicName(StringRef Name) {
   // NOTE: Must be sorted!
   static const char *const CoroIntrinsics[] = {
+      "llvm.coro.align",
       "llvm.coro.alloc",
       "llvm.coro.async.context.alloc",
       "llvm.coro.async.context.dealloc",
@@ -267,6 +268,9 @@ void coro::Shape::buildFrom(Function &F) {
         continue;
       case Intrinsic::coro_size:
         CoroSizes.push_back(cast<CoroSizeInst>(II));
+        break;
+      case Intrinsic::coro_align:
+        CoroAligns.push_back(cast<CoroAlignInst>(II));
         break;
       case Intrinsic::coro_frame:
         CoroFrames.push_back(cast<CoroFrameInst>(II));

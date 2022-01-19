@@ -44,6 +44,10 @@
   define amdgpu_kernel void @subregs16bit() {
     ret void
   }
+
+  define amdgpu_kernel void @waitcnt_backedge() {
+    ret void
+  }
 ...
 ---
 
@@ -331,4 +335,36 @@ body: |
       $vgpr0 = FLAT_LOAD_USHORT killed $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
       $vgpr1 = FLAT_LOAD_USHORT killed $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
       V_NOP_e32 implicit $exec, implicit $vgpr0_lo16, implicit $vgpr1_lo16
+...
+
+---
+# Waitcnt required before the use of $sgpr10_sgpr11, as the S_LOAD also writes
+# to $sgpr10_sgpr11, and can occur first in the program running order.
+
+# CHECK-LABEL: name: waitcnt_backedge
+# CHECK: S_WAITCNT
+# CHECK: $sgpr10_sgpr11 = S_CSELECT_B64
+# CHECK: $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM
+
+
+name: waitcnt_backedge
+body: |
+  bb.0:
+    renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 32, 0 :: (load (s128) from `i32 addrspace(4)* undef`, addrspace 4)
+
+  bb.4:
+    renamable $sgpr10_sgpr11 = S_CSELECT_B64 -1, 0, implicit killed $scc
+    renamable $vgpr1 = BUFFER_LOAD_DWORD_OFFEN killed renamable $vgpr5, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    renamable $sgpr10_sgpr11 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 0, 0 :: (load (s64) from `i32 addrspace(4)* undef`, align 4, addrspace 4)
+    S_CBRANCH_SCC0 %bb.9, implicit killed $scc
+
+  bb.9:
+    renamable $vgpr1 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed $sgpr14_sgpr15, implicit $exec
+    S_CBRANCH_SCC0 %bb.14, implicit killed $scc
+
+  bb.10:
+    S_BRANCH %bb.4
+
+  bb.14:
+    S_ENDPGM 0
 ...

@@ -406,7 +406,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   // TODO: Sort the locals for better compression.
   MFI.setNumLocals(CurLocal - MFI.getParams().size());
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
-    unsigned Reg = Register::index2VirtReg(I);
+    Register Reg = Register::index2VirtReg(I);
     auto RL = Reg2Local.find(Reg);
     if (RL == Reg2Local.end() || RL->second < MFI.getParams().size())
       continue;

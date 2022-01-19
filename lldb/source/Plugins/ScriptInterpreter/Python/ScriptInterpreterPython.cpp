@@ -85,8 +85,6 @@ static ScriptInterpreterPythonImpl *GetPythonInterpreter(Debugger &debugger) {
   return static_cast<ScriptInterpreterPythonImpl *>(script_interpreter);
 }
 
-static bool g_initialized = false;
-
 namespace {
 
 // Initializing Python is not a straightforward process.  We cannot control
@@ -219,6 +217,28 @@ private:
   PyGILState_STATE m_gil_state = PyGILState_UNLOCKED;
   bool m_was_already_initialized = false;
 };
+
+#if LLDB_USE_PYTHON_SET_INTERRUPT
+/// Saves the current signal handler for the specified signal and restores
+/// it at the end of the current scope.
+struct RestoreSignalHandlerScope {
+  /// The signal handler.
+  struct sigaction m_prev_handler;
+  int m_signal_code;
+  RestoreSignalHandlerScope(int signal_code) : m_signal_code(signal_code) {
+    // Initialize sigaction to their default state.
+    std::memset(&m_prev_handler, 0, sizeof(m_prev_handler));
+    // Don't install a new handler, just read back the old one.
+    struct sigaction *new_handler = nullptr;
+    int signal_err = ::sigaction(m_signal_code, new_handler, &m_prev_handler);
+    lldbassert(signal_err == 0 && "sigaction failed to read handler");
+  }
+  ~RestoreSignalHandlerScope() {
+    int signal_err = ::sigaction(m_signal_code, &m_prev_handler, nullptr);
+    lldbassert(signal_err == 0 && "sigaction failed to restore old handler");
+  }
+};
+#endif
 } // namespace
 
 void ScriptInterpreterPython::ComputePythonDirForApple(
@@ -333,12 +353,12 @@ llvm::StringRef ScriptInterpreterPython::GetPluginDescriptionStatic() {
 
 void ScriptInterpreterPython::Initialize() {
   static llvm::once_flag g_once_flag;
-
   llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(),
                                   lldb::eScriptLanguagePython,
                                   ScriptInterpreterPythonImpl::CreateInstance);
+    ScriptInterpreterPythonImpl::Initialize();
   });
 }
 
@@ -415,8 +435,6 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_active_io_handler(eIOHandlerNone), m_session_is_active(false),
       m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
       m_command_thread_state(nullptr) {
-  InitializePrivate();
-
   m_scripted_process_interface_up =
       std::make_unique<ScriptedProcessPythonInterface>(*this);
 
@@ -3151,36 +3169,7 @@ ScriptInterpreterPythonImpl::AcquireInterpreterLock() {
   return py_lock;
 }
 
-#if LLDB_USE_PYTHON_SET_INTERRUPT
-namespace {
-/// Saves the current signal handler for the specified signal and restores
-/// it at the end of the current scope.
-struct RestoreSignalHandlerScope {
-  /// The signal handler.
-  struct sigaction m_prev_handler;
-  int m_signal_code;
-  RestoreSignalHandlerScope(int signal_code) : m_signal_code(signal_code) {
-    // Initialize sigaction to their default state.
-    std::memset(&m_prev_handler, 0, sizeof(m_prev_handler));
-    // Don't install a new handler, just read back the old one.
-    struct sigaction *new_handler = nullptr;
-    int signal_err = ::sigaction(m_signal_code, new_handler, &m_prev_handler);
-    lldbassert(signal_err == 0 && "sigaction failed to read handler");
-  }
-  ~RestoreSignalHandlerScope() {
-    int signal_err = ::sigaction(m_signal_code, &m_prev_handler, nullptr);
-    lldbassert(signal_err == 0 && "sigaction failed to restore old handler");
-  }
-};
-} // namespace
-#endif
-
-void ScriptInterpreterPythonImpl::InitializePrivate() {
-  if (g_initialized)
-    return;
-
-  g_initialized = true;
-
+void ScriptInterpreterPythonImpl::Initialize() {
   LLDB_SCOPED_TIMER();
 
   // RAII-based initialization which correctly handles multiple-initialization,

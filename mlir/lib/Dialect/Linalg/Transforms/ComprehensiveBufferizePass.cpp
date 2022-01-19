@@ -39,6 +39,10 @@ struct LinalgComprehensiveModuleBufferize
   LinalgComprehensiveModuleBufferize(
       const LinalgComprehensiveModuleBufferize &p) = default;
 
+  LinalgComprehensiveModuleBufferize(bool linalgCopy) {
+    this->useLinalgCopy = linalgCopy;
+  }
+
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -74,20 +78,51 @@ static FailureOr<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
   return allocated;
 }
 
+/// Create a linalg::GenericOp version of an n-D copy that can further tile,
+/// lower to loops or vectorize, unlike the current implementation of
+/// memref::CopyOp.
+/// Do not depend on linalg::CopyOp that is getting deprecated.
+static LogicalResult createLinalgCopyOp(OpBuilder &b, Location loc, Value from,
+                                        Value to) {
+  auto memrefTypeFrom = from.getType().cast<MemRefType>();
+  auto memrefTypeTo = to.getType().cast<MemRefType>();
+  if (!memrefTypeFrom || !memrefTypeTo ||
+      memrefTypeFrom.getRank() != memrefTypeTo.getRank())
+    return failure();
+  AffineMap id =
+      AffineMap::getMultiDimIdentityMap(memrefTypeTo.getRank(), b.getContext());
+  SmallVector<StringRef> iteratorTypes(memrefTypeTo.getRank(),
+                                       getParallelIteratorTypeName());
+  b.create<linalg::GenericOp>(loc,
+                              /*inputs=*/from,
+                              /*outputs=*/to,
+                              /*indexingMaps=*/llvm::makeArrayRef({id, id}),
+                              /*iteratorTypes=*/iteratorTypes,
+                              [](OpBuilder &b, Location loc, ValueRange args) {
+                                b.create<linalg::YieldOp>(loc, args.front());
+                              });
+  return success();
+}
+
 void LinalgComprehensiveModuleBufferize::runOnOperation() {
-  auto options = std::make_unique<BufferizationOptions>();
+  auto options = std::make_unique<AnalysisBufferizationOptions>();
   if (useAlloca) {
-    options->allocationFns->allocationFn = allocationFnUsingAlloca;
-    options->allocationFns->deallocationFn = [](OpBuilder &b, Location loc,
-                                                Value v) {};
+    options->allocationFn = allocationFnUsingAlloca;
+    options->deallocationFn = [](OpBuilder &b, Location loc, Value v) {
+      return success();
+    };
   }
+  // TODO: atm memref::CopyOp can be 200x slower than linalg::GenericOp.
+  // Once this perf bug is fixed more systematically, we can revisit.
+  if (useLinalgCopy)
+    options->memCpyFn = createLinalgCopyOp;
 
   options->allowReturnMemref = allowReturnMemref;
   options->allowUnknownOps = allowUnknownOps;
   options->analysisFuzzerSeed = analysisFuzzerSeed;
-  options->testAnalysisOnly = testAnalysisOnly;
-  options->printConflicts = printConflicts;
   options->createDeallocs = createDeallocs;
+  options->printConflicts = printConflicts;
+  options->testAnalysisOnly = testAnalysisOnly;
 
   // Enable InitTensorOp elimination.
   if (initTensorElimination) {
@@ -95,8 +130,8 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
         linalg_ext::InsertSliceAnchoredInitTensorEliminationStep>();
   }
 
-  if (!allowReturnMemref)
-    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+  // Only certain scf.for ops are supported by the analysis.
+  options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();
 
   ModuleOp moduleOp = getOperation();
   applyEnablingTransformations(moduleOp);
@@ -118,4 +153,9 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
 
 std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass() {
   return std::make_unique<LinalgComprehensiveModuleBufferize>();
+}
+
+std::unique_ptr<Pass>
+mlir::createLinalgComprehensiveModuleBufferizePass(bool useLinalgCopy) {
+  return std::make_unique<LinalgComprehensiveModuleBufferize>(useLinalgCopy);
 }

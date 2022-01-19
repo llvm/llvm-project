@@ -197,7 +197,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
                                llvm::None));
   for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.getName() == function_like_impl::getTypeAttrName() ||
+    if (namedAttr.getName() == FunctionOpInterface::getTypeAttrName() ||
         namedAttr.getName() == SymbolTable::getSymbolAttrName())
       continue;
     newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());

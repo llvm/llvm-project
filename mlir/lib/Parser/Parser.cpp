@@ -547,18 +547,18 @@ ParseResult OperationParser::finalize() {
   // Resolve the locations of any deferred operations.
   auto &attributeAliases = state.symbols.attributeAliasDefinitions;
   auto locID = TypeID::get<DeferredLocInfo *>();
-  auto resolveLocation = [&](auto &opOrArgument) -> LogicalResult {
+  auto resolveLocation = [&, this](auto &opOrArgument) -> LogicalResult {
     auto fwdLoc = opOrArgument.getLoc().template dyn_cast<OpaqueLoc>();
     if (!fwdLoc || fwdLoc.getUnderlyingTypeID() != locID)
       return success();
     auto locInfo = deferredLocsReferences[fwdLoc.getUnderlyingLocation()];
     Attribute attr = attributeAliases.lookup(locInfo.identifier);
     if (!attr)
-      return emitError(locInfo.loc)
+      return this->emitError(locInfo.loc)
              << "operation location alias was never defined";
     auto locAttr = attr.dyn_cast<LocationAttr>();
     if (!locAttr)
-      return emitError(locInfo.loc)
+      return this->emitError(locInfo.loc)
              << "expected location, but found '" << attr << "'";
     opOrArgument.setLoc(locAttr);
     return success();

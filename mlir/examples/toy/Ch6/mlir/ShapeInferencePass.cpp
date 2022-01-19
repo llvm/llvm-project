@@ -28,7 +28,7 @@ using namespace toy;
 #include "toy/ShapeInferenceOpInterfaces.cpp.inc"
 
 namespace {
-/// The ShapeInferencePass is a FunctionPass that performs intra-procedural
+/// The ShapeInferencePass is a pass that performs intra-procedural
 /// shape inference.
 ///
 ///    Algorithm:
@@ -45,10 +45,10 @@ namespace {
 ///   3) If the worklist is empty, the algorithm succeeded.
 ///
 class ShapeInferencePass
-    : public mlir::PassWrapper<ShapeInferencePass, FunctionPass> {
+    : public mlir::PassWrapper<ShapeInferencePass, OperationPass<FuncOp>> {
 public:
-  void runOnFunction() override {
-    auto f = getFunction();
+  void runOnOperation() override {
+    auto f = getOperation();
 
     // Populate the worklist with the operations that need shape inference:
     // these are operations that return a dynamic shape.

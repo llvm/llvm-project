@@ -126,6 +126,16 @@ declare_mlir_python_sources(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/PDLOps.td
+  SOURCES
+    dialects/pdl.py
+    dialects/_pdl_ops_ext.py
+    _mlir_libs/_mlir/dialects/pdl.pyi
+  DIALECT_NAME pdl)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/SCFOps.td
   SOURCES
     dialects/scf.py
@@ -241,6 +251,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPIQuant
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
+  MODULE_NAME _mlirDialectsPDL
+  ADD_TO_PARENT MLIRPythonSources.Dialects.pdl
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectPDL.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPIPDL
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind

@@ -62,7 +62,6 @@ struct SelectOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo,
                                 const BufferizationState &state) const {
     return BufferRelation::None;
   }

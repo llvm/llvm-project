@@ -5381,7 +5381,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         llvm_unreachable("RegVT not supported by FORMAL_ARGUMENTS Lowering");
 
       // Transform the arguments in physical registers into virtual ones.
-      unsigned Reg = MF.addLiveIn(VA.getLocReg(), RC);
+      Register Reg = MF.addLiveIn(VA.getLocReg(), RC);
       ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
       // If this is an 8, 16 or 32-bit value, it is really passed promoted
@@ -5543,7 +5543,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
       // Conservatively forward X8, since it might be used for aggregate return.
       if (!CCInfo.isAllocated(AArch64::X8)) {
-        unsigned X8VReg = MF.addLiveIn(AArch64::X8, &AArch64::GPR64RegClass);
+        Register X8VReg = MF.addLiveIn(AArch64::X8, &AArch64::GPR64RegClass);
         Forwards.push_back(ForwardedRegister(X8VReg, AArch64::X8, MVT::i64));
       }
     }
@@ -5627,7 +5627,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
     SDValue FIN = DAG.getFrameIndex(GPRIdx, PtrVT);
 
     for (unsigned i = FirstVariadicGPR; i < NumGPRArgRegs; ++i) {
-      unsigned VReg = MF.addLiveIn(GPRArgRegs[i], &AArch64::GPR64RegClass);
+      Register VReg = MF.addLiveIn(GPRArgRegs[i], &AArch64::GPR64RegClass);
       SDValue Val = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i64);
       SDValue Store =
           DAG.getStore(Val.getValue(1), DL, Val, FIN,
@@ -5657,7 +5657,7 @@ void AArch64TargetLowering::saveVarArgRegisters(CCState &CCInfo,
       SDValue FIN = DAG.getFrameIndex(FPRIdx, PtrVT);
 
       for (unsigned i = FirstVariadicFPR; i < NumFPRArgRegs; ++i) {
-        unsigned VReg = MF.addLiveIn(FPRArgRegs[i], &AArch64::FPR128RegClass);
+        Register VReg = MF.addLiveIn(FPRArgRegs[i], &AArch64::FPR128RegClass);
         SDValue Val = DAG.getCopyFromReg(Chain, DL, VReg, MVT::f128);
 
         SDValue Store = DAG.getStore(Val.getValue(1), DL, Val, FIN,
@@ -8258,7 +8258,7 @@ SDValue AArch64TargetLowering::LowerRETURNADDR(SDValue Op,
   } else {
     // Return LR, which contains the return address. Mark it an implicit
     // live-in.
-    unsigned Reg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
+    Register Reg = MF.addLiveIn(AArch64::LR, &AArch64::GPR64RegClass);
     ReturnAddress = DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
   }
 
@@ -15316,6 +15316,40 @@ static SDValue performIntrinsicCombine(SDNode *N,
   return SDValue();
 }
 
+static bool isCheapToExtend(const SDValue &N) {
+  unsigned OC = N->getOpcode();
+  return OC == ISD::LOAD || OC == ISD::MLOAD ||
+         ISD::isConstantSplatVectorAllZeros(N.getNode());
+}
+
+static SDValue
+performSignExtendSetCCCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                              SelectionDAG &DAG) {
+  // If we have (sext (setcc A B)) and A and B are cheap to extend,
+  // we can move the sext into the arguments and have the same result. For
+  // example, if A and B are both loads, we can make those extending loads and
+  // avoid an extra instruction. This pattern appears often in VLS code
+  // generation where the inputs to the setcc have a different size to the
+  // instruction that wants to use the result of the setcc.
+  assert(N->getOpcode() == ISD::SIGN_EXTEND &&
+         N->getOperand(0)->getOpcode() == ISD::SETCC);
+  const SDValue SetCC = N->getOperand(0);
+
+  if (isCheapToExtend(SetCC.getOperand(0)) &&
+      isCheapToExtend(SetCC.getOperand(1))) {
+    const SDValue Ext1 = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N),
+                                     N->getValueType(0), SetCC.getOperand(0));
+    const SDValue Ext2 = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N),
+                                     N->getValueType(0), SetCC.getOperand(1));
+
+    return DAG.getSetCC(
+        SDLoc(SetCC), N->getValueType(0), Ext1, Ext2,
+        cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get());
+  }
+
+  return SDValue();
+}
+
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -15334,6 +15368,11 @@ static SDValue performExtendCombine(SDNode *N,
 
     return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), NewABD);
   }
+
+  if (N->getOpcode() == ISD::SIGN_EXTEND &&
+      N->getOperand(0)->getOpcode() == ISD::SETCC)
+    return performSignExtendSetCCCombine(N, DCI, DAG);
+
   return SDValue();
 }
 

@@ -64,6 +64,8 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToAffineLoopsPass();
 /// on SSA use-def chains starting from function operands that are annotated
 /// with the 'inplaceable' attribute.
 std::unique_ptr<Pass> createLinalgComprehensiveModuleBufferizePass();
+std::unique_ptr<Pass>
+createLinalgComprehensiveModuleBufferizePass(bool useLinalgCopy);
 
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.

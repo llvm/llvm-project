@@ -73,6 +73,10 @@ def thinlto_cache_policy: Joined<["--"], "thinlto-cache-policy=">,
     Group<grp_lld>;
 def O : JoinedOrSeparate<["-"], "O">,
     HelpText<"Optimize output file size">;
+def start_lib: Flag<["--"], "start-lib">,
+    HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
+def end_lib: Flag<["--"], "end-lib">,
+    HelpText<"End a grouping of objects that should be treated as if they were together in an archive">;
 def no_warn_dylib_install_name: Joined<["--"], "no-warn-dylib-install-name">,
     HelpText<"Do not warn on -install-name if -dylib is not passed (default)">,
     Group<grp_lld>;

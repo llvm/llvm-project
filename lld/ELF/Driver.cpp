@@ -235,23 +235,22 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     std::unique_ptr<Archive> file =
         CHECK(Archive::create(mbref), path + ": failed to parse archive");
 
-    // If an archive file has no symbol table, it is likely that a user
-    // is attempting LTO and using a default ar command that doesn't
-    // understand the LLVM bitcode file. It is a pretty common error, so
-    // we'll handle it as if it had a symbol table.
+    // If an archive file has no symbol table, it may be intentional (used as a
+    // group of lazy object files where the symbol table is not useful), or the
+    // user is attempting LTO and using a default ar command that doesn't
+    // understand the LLVM bitcode file. Treat the archive as a group of lazy
+    // object files.
     if (!file->isEmpty() && !file->hasSymbolTable()) {
-      // Check if all members are bitcode files. If not, ignore, which is the
-      // default action without the LTO hack described above.
       for (const std::pair<MemoryBufferRef, uint64_t> &p :
-           getArchiveMembers(mbref))
-        if (identify_magic(p.first.getBuffer()) != file_magic::bitcode) {
-          error(path + ": archive has no index; run ranlib to add one");
-          return;
-        }
-
-      for (const std::pair<MemoryBufferRef, uint64_t> &p :
-           getArchiveMembers(mbref))
-        files.push_back(createLazyFile(p.first, path, p.second));
+           getArchiveMembers(mbref)) {
+        auto magic = identify_magic(p.first.getBuffer());
+        if (magic == file_magic::bitcode ||
+            magic == file_magic::elf_relocatable)
+          files.push_back(createLazyFile(p.first, path, p.second));
+        else
+          error(path + ": archive member '" + p.first.getBufferIdentifier() +
+                "' is neither ET_REL nor LLVM bitcode");
+      }
       return;
     }
 

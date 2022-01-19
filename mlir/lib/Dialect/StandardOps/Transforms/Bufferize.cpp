@@ -49,7 +49,7 @@ void mlir::populateStdBufferizePatterns(
 
 namespace {
 struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     auto *context = &getContext();
     bufferization::BufferizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
@@ -66,8 +66,8 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
       return typeConverter.isLegal(op.getType()) ||
              !op.getCondition().getType().isa<IntegerType>();
     });
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

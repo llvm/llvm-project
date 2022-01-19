@@ -17,6 +17,7 @@ include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/GPU/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/EnumAttr.td"
+include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -145,9 +146,10 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [NoSideEffect]>,
   let verifier = [{ return success(); }];
 }
 
-def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
-                                    AutomaticAllocationScope, FunctionLike,
-                                    IsolatedFromAbove, Symbol]> {
+def GPU_GPUFuncOp : GPU_Op<"func", [
+    HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
+    IsolatedFromAbove, Symbol
+  ]> {
   let summary = "Function executable on a GPU";
 
   let description = [{
@@ -273,19 +275,24 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
       return "workgroup_attributions";
     }
 
-    // FunctionLike trait needs access to the functions below.
-    friend class OpTrait::FunctionLike<GPUFuncOp>;
+    /// Returns the type of this function.
+    /// FIXME: We should drive this via the ODS `type` param.
+    FunctionType getType() { 
+      return getTypeAttr().getValue().cast<FunctionType>();
+    }
 
-    /// Hooks for the input/output type enumeration in FunctionLike .
-    unsigned getNumFuncArguments() { return getType().getNumInputs(); }
-    unsigned getNumFuncResults() { return getType().getNumResults(); }
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
+
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() { return getType().getResults(); }
 
     /// Returns the keywords used in the custom syntax for this Op.
     static StringRef getWorkgroupKeyword() { return "workgroup"; }
     static StringRef getPrivateKeyword() { return "private"; }
     static StringRef getKernelKeyword() { return "kernel"; }
 
-    /// Hook for FunctionLike verifier.
+    /// Hook for FunctionOpInterface verifier.
     LogicalResult verifyType();
 
     /// Verifies the body of the function.

@@ -36,4 +36,4 @@ def ArgCC_AVR_Vararg : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CSR_Normal : CalleeSavedRegs<(add R29, R28, (sequence "R%u", 17, 2))>;
-def CSR_Interrupts : CalleeSavedRegs<(add(sequence "R%u", 31, 0))>;
+def CSR_Interrupts : CalleeSavedRegs<(add(sequence "R%u", 31, 2))>;

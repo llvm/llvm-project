@@ -85,6 +85,7 @@ Using Clang Tools
    ClangNvlinkWrapper
    ClangOffloadWrapper
    ClangOffloadBundler
+   ClangOffloadWrapper
 
 Design Documents
 ================

@@ -68,13 +68,13 @@ namespace {
 
 struct LinalgGeneralizationPass
     : public LinalgGeneralizationBase<LinalgGeneralizationPass> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 } // namespace
 
-void LinalgGeneralizationPass::runOnFunction() {
-  FuncOp func = getFunction();
+void LinalgGeneralizationPass::runOnOperation() {
+  FuncOp func = getOperation();
   RewritePatternSet patterns(&getContext());
   populateLinalgNamedOpsGeneralizationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(func.getBody(), std::move(patterns));

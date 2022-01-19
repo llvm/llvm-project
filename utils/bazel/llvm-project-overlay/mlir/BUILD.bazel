@@ -226,7 +226,10 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/IR/BuiltinOps.td",
-    deps = [":BuiltinDialectTdFiles"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":FunctionInterfacesTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -262,7 +265,36 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/IR/BuiltinTypeInterfaces.td",
-    deps = [":BuiltinDialectTdFiles"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+    ],
+)
+
+td_library(
+    name = "FunctionInterfacesTdFiles",
+    srcs = ["include/mlir/IR/FunctionInterfaces.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FunctionInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/IR/FunctionOpInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/IR/FunctionOpInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/IR/FunctionInterfaces.td",
+    deps = [
+        ":OpBaseTdFiles",
+    ],
 )
 
 cc_library(
@@ -293,6 +325,7 @@ cc_library(
         ":CallOpInterfacesIncGen",
         ":CastOpInterfacesIncGen",
         ":DataLayoutInterfacesIncGen",
+        ":FunctionInterfacesIncGen",
         ":InferTypeOpInterfaceIncGen",
         ":OpAsmInterfaceIncGen",
         ":RegionKindInterfaceIncGen",
@@ -827,8 +860,8 @@ cc_binary(
     ],
     deps = [
         ":CAPIIR",
-        ":CAPISparseTensor",
         ":CAPIRegistration",
+        ":CAPISparseTensor",
         ":MLIRBindingsPythonHeadersAndDeps",
     ],
 )
@@ -1755,6 +1788,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":BufferizationDialect",
@@ -2127,6 +2161,25 @@ cc_library(
 )
 
 cc_library(
+    name = "AffineAnalysis",
+    srcs = glob([
+        "lib/Dialect/Affine/Analysis/*.cpp",
+        "lib/Dialect/Affine/Analysis/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Dialect/Affine/Analysis/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Affine",
+        ":Analysis",
+        ":ArithmeticDialect",
+        ":IR",
+        ":StandardOps",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "AffineUtils",
     srcs = glob(
         [
@@ -2138,6 +2191,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":IR",
         ":MemRefDialect",
@@ -2172,6 +2226,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffinePassIncGen",
         ":AffineUtils",
         ":Analysis",
@@ -2692,6 +2747,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffineUtils",
         ":Analysis",
         ":ArithmeticDialect",
@@ -2918,6 +2974,7 @@ td_library(
     deps = [
         ":DLTIDialectTdFiles",
         ":DataLayoutInterfacesTdFiles",
+        ":FunctionInterfacesTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -3134,6 +3191,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
+        ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -3807,6 +3865,7 @@ td_library(
     deps = [
         ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -4375,6 +4434,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":ControlFlowInterfaces",
@@ -4577,6 +4637,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AllocationOpInterface",
         ":Analysis",
         ":ArithmeticDialect",
@@ -4698,6 +4759,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"],
     includes = ["include"],
     deps = [
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":ConversionPassIncGen",
@@ -6539,6 +6601,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
+        ":ComprehensiveBufferize",
         ":IR",
         ":LinalgOps",
         ":LinalgStructuredOpsIncGen",
@@ -6558,6 +6621,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
+        ":ComprehensiveBufferize",
         ":IR",
         ":SCFDialect",
         ":Support",
@@ -6731,11 +6795,11 @@ cc_library(
 cc_library(
     name = "LinalgOps",
     srcs = [
-        "lib/Dialect/Linalg/IR/LinalgOps.cpp",
         "lib/Dialect/Linalg/IR/LinalgDialect.cpp",
+        "lib/Dialect/Linalg/IR/LinalgOps.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Linalg/IR/Linalg.h"
+        "include/mlir/Dialect/Linalg/IR/Linalg.h",
     ],
     includes = ["include"],
     deps = [
@@ -6817,6 +6881,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffineBufferizableOpInterfaceImpl",
         ":AffineUtils",
         ":Analysis",
@@ -6871,6 +6936,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",

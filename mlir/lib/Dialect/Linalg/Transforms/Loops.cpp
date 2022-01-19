@@ -381,8 +381,8 @@ struct LowerToAffineLoops
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
   }
-  void runOnFunction() override {
-    lowerLinalgToLoopsImpl<AffineForOp>(getFunction());
+  void runOnOperation() override {
+    lowerLinalgToLoopsImpl<AffineForOp>(getOperation());
   }
 };
 
@@ -390,25 +390,25 @@ struct LowerToLoops : public LinalgLowerToLoopsBase<LowerToLoops> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, scf::SCFDialect>();
   }
-  void runOnFunction() override {
-    lowerLinalgToLoopsImpl<scf::ForOp>(getFunction());
+  void runOnOperation() override {
+    lowerLinalgToLoopsImpl<scf::ForOp>(getOperation());
   }
 };
 
 struct LowerToParallelLoops
     : public LinalgLowerToParallelLoopsBase<LowerToParallelLoops> {
-  void runOnFunction() override {
-    lowerLinalgToLoopsImpl<scf::ParallelOp>(getFunction());
+  void runOnOperation() override {
+    lowerLinalgToLoopsImpl<scf::ParallelOp>(getOperation());
   }
 };
 
 struct LowerTiledLoopsToSCF
     : public LinalgLowerTiledLoopsToSCFBase<LowerTiledLoopsToSCF> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
     populateTiledLoopToSCFPattern(patterns);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
 } // namespace

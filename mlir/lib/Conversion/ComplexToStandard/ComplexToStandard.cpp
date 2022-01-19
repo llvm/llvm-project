@@ -637,11 +637,11 @@ void mlir::populateComplexToStandardConversionPatterns(
 namespace {
 struct ConvertComplexToStandardPass
     : public ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
-void ConvertComplexToStandardPass::runOnFunction() {
-  auto function = getFunction();
+void ConvertComplexToStandardPass::runOnOperation() {
+  auto function = getOperation();
 
   // Convert to the Standard dialect using the converter defined above.
   RewritePatternSet patterns(&getContext());
