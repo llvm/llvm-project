@@ -141,8 +141,10 @@ public:
   }
 
   /// Allocate space at the specified alignment.
-  LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_RETURNS_NOALIAS void *
-  Allocate(size_t Size, Align Alignment) {
+  // This method is *not* marked noalias, because
+  // SpecificBumpPtrAllocator::DestroyAll() loops over all allocations, and
+  // that loop is not based on the Allocate() return value.
+  LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size, Align Alignment) {
     // Keep track of how many bytes we've allocated.
     BytesAllocated += Size;
 
@@ -198,7 +200,7 @@ public:
     return AlignedPtr;
   }
 
-  inline LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_RETURNS_NOALIAS void *
+  inline LLVM_ATTRIBUTE_RETURNS_NONNULL void *
   Allocate(size_t Size, size_t Alignment) {
     assert(Alignment > 0 && "0-byte alignment is not allowed. Use 1 instead.");
     return Allocate(Size, Align(Alignment));
