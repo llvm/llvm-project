@@ -46,7 +46,7 @@ struct DynamicScheduleTracker {
 #pragma omp declare target
 
 // TODO: This variable is a hack inherited from the old runtime.
-uint64_t SHARED(Cnt);
+static uint64_t SHARED(Cnt);
 
 template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
   ////////////////////////////////////////////////////////////////////////////////
@@ -443,7 +443,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 
 // TODO: This is a stopgap. We probably want to expand the dispatch API to take
 //       an DST pointer which can then be allocated properly without malloc.
-DynamicScheduleTracker *THREAD_LOCAL(ThreadDSTPtr);
+static DynamicScheduleTracker *THREAD_LOCAL(ThreadDSTPtr);
 
 // Create a new DST, link the current one, and define the new as current.
 static DynamicScheduleTracker *pushDST() {

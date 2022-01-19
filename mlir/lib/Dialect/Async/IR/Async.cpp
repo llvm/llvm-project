@@ -144,6 +144,7 @@ static void print(OpAsmPrinter &p, ExecuteOp op) {
   p.printOptionalArrowTypeList(llvm::drop_begin(op.getResultTypes()));
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {kOperandSegmentSizesAttr});
+  p << ' ';
   p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
 }
 

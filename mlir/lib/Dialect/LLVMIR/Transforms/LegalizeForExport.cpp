@@ -15,7 +15,14 @@
 
 using namespace mlir;
 
+/// If the given block has the same successor with different arguments,
+/// introduce dummy successor blocks so that all successors of the given block
+/// are different.
 static void ensureDistinctSuccessors(Block &bb) {
+  // Early exit if the block cannot have successors.
+  if (bb.empty() || !bb.back().mightHaveTrait<OpTrait::IsTerminator>())
+    return;
+
   auto *terminator = bb.getTerminator();
 
   // Find repeated successors with arguments.
@@ -49,9 +56,11 @@ static void ensureDistinctSuccessors(Block &bb) {
 }
 
 void mlir::LLVM::ensureDistinctSuccessors(Operation *op) {
-  op->walk([](LLVMFuncOp f) {
-    for (auto &bb : f) {
-      ::ensureDistinctSuccessors(bb);
+  op->walk([](Operation *nested) {
+    for (Region &region : llvm::make_early_inc_range(nested->getRegions())) {
+      for (Block &block : llvm::make_early_inc_range(region)) {
+        ::ensureDistinctSuccessors(block);
+      }
     }
   });
 }

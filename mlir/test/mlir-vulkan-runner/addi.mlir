@@ -9,9 +9,9 @@ module attributes {
   gpu.module @kernels {
     gpu.func @kernel_addi(%arg0 : memref<8xi32>, %arg1 : memref<8x8xi32>, %arg2 : memref<8x8x8xi32>)
       kernel attributes { spv.entry_point_abi = {local_size = dense<[1, 1, 1]>: vector<3xi32>}} {
-      %x = "gpu.block_id"() {dimension = "x"} : () -> index
-      %y = "gpu.block_id"() {dimension = "y"} : () -> index
-      %z = "gpu.block_id"() {dimension = "z"} : () -> index
+      %x = gpu.block_id x
+      %y = gpu.block_id y
+      %z = gpu.block_id z
       %0 = memref.load %arg0[%x] : memref<8xi32>
       %1 = memref.load %arg1[%y, %x] : memref<8x8xi32>
       %2 = arith.addi %0, %1 : i32

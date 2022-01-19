@@ -727,6 +727,13 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name == "arm.cde.vcx3qa.predicated.v2i64.v4i1")
       return true;
 
+    if (Name == "amdgcn.alignbit") {
+      // Target specific intrinsic became redundant
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
+                                        {F->getReturnType()});
+      return true;
+    }
+
     break;
   }
 

@@ -433,7 +433,7 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   Function *FnAssume = Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume);
 
   std::vector<Argument *> ShuffledArgs;
-  std::vector<bool> HasArg;
+  BitVector HasArg;
   for (auto &Arg : F->args()) {
     ShuffledArgs.push_back(&Arg);
     HasArg.push_back(false);

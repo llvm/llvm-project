@@ -901,21 +901,16 @@ def : Pat<(select GPR:$rs2, GPR:$rs1, GPR:$rs3),
           (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 } // Predicates = [HasStdExtZbt]
 
-// fshl and fshr concatenate their operands in the same order. fsr and fsl
-// instruction use different orders. fshl will return its first operand for
-// shift of zero, fshr will return its second operand. fsl and fsr both return
-// $rs1 so the patterns need to have different operand orders.
 let Predicates = [HasStdExtZbt] in {
 def : Pat<(riscv_fsl GPR:$rs1, GPR:$rs3, GPR:$rs2),
           (FSL GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(riscv_fsr GPR:$rs3, GPR:$rs1, GPR:$rs2),
+def : Pat<(riscv_fsr GPR:$rs1, GPR:$rs3, GPR:$rs2),
           (FSR GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-
-def : Pat<(fshr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(riscv_fsr GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt)>;
-// We can use FSRI for fshl by immediate if we subtract the immediate from
+// We can use FSRI for FSL by immediate if we subtract the immediate from
 // XLen and swap the operands.
-def : Pat<(fshl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(riscv_fsl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
 } // Predicates = [HasStdExtZbt]
 
@@ -1090,10 +1085,12 @@ def : PatGprImm<riscv_gorcw, GORCIW, uimm5>;
 let Predicates = [HasStdExtZbt, IsRV64] in {
 def : Pat<(riscv_fslw GPR:$rs1, GPR:$rs3, GPR:$rs2),
           (FSLW GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(riscv_fsrw GPR:$rs3, GPR:$rs1, GPR:$rs2),
+def : Pat<(riscv_fsrw GPR:$rs1, GPR:$rs3, GPR:$rs2),
           (FSRW GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
-def : Pat<(riscv_fsrw GPR:$rs3, GPR:$rs1, uimm5:$shamt),
+def : Pat<(riscv_fsrw GPR:$rs1, GPR:$rs3, uimm5:$shamt),
           (FSRIW GPR:$rs1, GPR:$rs3, uimm5:$shamt)>;
+// We can use FSRIW for FSLW by immediate if we subtract the immediate from
+// 32 and swap the operands.
 def : Pat<(riscv_fslw GPR:$rs3, GPR:$rs1, uimm5:$shamt),
           (FSRIW GPR:$rs1, GPR:$rs3, (ImmSubFrom32 uimm5:$shamt))>;
 } // Predicates = [HasStdExtZbt, IsRV64]

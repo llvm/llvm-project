@@ -341,6 +341,11 @@ public:
   ///
   ParseResult parseTrailingLocationSpecifier(OpOrArgument opOrArgument);
 
+  /// Parse a location alias, that is a sequence looking like: #loc42
+  /// The alias may have already be defined or may be defined later, in which
+  /// case an OpaqueLoc is used a placeholder.
+  ParseResult parseLocationAlias(LocationAttr &loc);
+
   /// This is the structure of a result specifier in the assembly syntax,
   /// including the name, number of results, and location.
   using ResultRecord = std::tuple<StringRef, unsigned, SMLoc>;
@@ -476,10 +481,14 @@ private:
   /// their first reference, to allow checking for use of undefined values.
   DenseMap<Value, SMLoc> forwardRefPlaceholders;
 
-  /// A set of operations whose locations reference aliases that have yet to
-  /// be resolved.
-  SmallVector<std::pair<OpOrArgument, Token>, 8>
-      opsAndArgumentsWithDeferredLocs;
+  /// Deffered locations: when parsing `loc(#loc42)` we add an entry to this
+  /// map. After parsing the definition `#loc42 = ...` we'll patch back users
+  /// of this location.
+  struct DeferredLocInfo {
+    SMLoc loc;
+    StringRef identifier;
+  };
+  std::vector<DeferredLocInfo> deferredLocsReferences;
 
   /// The builder used when creating parsed operation instances.
   OpBuilder opBuilder;
@@ -537,23 +546,36 @@ ParseResult OperationParser::finalize() {
 
   // Resolve the locations of any deferred operations.
   auto &attributeAliases = state.symbols.attributeAliasDefinitions;
-  for (std::pair<OpOrArgument, Token> &it : opsAndArgumentsWithDeferredLocs) {
-    llvm::SMLoc tokLoc = it.second.getLoc();
-    StringRef identifier = it.second.getSpelling().drop_front();
-    Attribute attr = attributeAliases.lookup(identifier);
+  auto locID = TypeID::get<DeferredLocInfo *>();
+  auto resolveLocation = [&](auto &opOrArgument) -> LogicalResult {
+    auto fwdLoc = opOrArgument.getLoc().template dyn_cast<OpaqueLoc>();
+    if (!fwdLoc || fwdLoc.getUnderlyingTypeID() != locID)
+      return success();
+    auto locInfo = deferredLocsReferences[fwdLoc.getUnderlyingLocation()];
+    Attribute attr = attributeAliases.lookup(locInfo.identifier);
     if (!attr)
-      return emitError(tokLoc) << "operation location alias was never defined";
-
-    LocationAttr locAttr = attr.dyn_cast<LocationAttr>();
+      return emitError(locInfo.loc)
+             << "operation location alias was never defined";
+    auto locAttr = attr.dyn_cast<LocationAttr>();
     if (!locAttr)
-      return emitError(tokLoc)
+      return emitError(locInfo.loc)
              << "expected location, but found '" << attr << "'";
-    auto opOrArgument = it.first;
-    if (auto *op = opOrArgument.dyn_cast<Operation *>())
-      op->setLoc(locAttr);
-    else
-      opOrArgument.get<BlockArgument>().setLoc(locAttr);
-  }
+    opOrArgument.setLoc(locAttr);
+    return success();
+  };
+
+  auto walkRes = topLevelOp->walk([&](Operation *op) {
+    if (failed(resolveLocation(*op)))
+      return WalkResult::interrupt();
+    for (Region &region : op->getRegions())
+      for (Block &block : region.getBlocks())
+        for (BlockArgument arg : block.getArguments())
+          if (failed(resolveLocation(arg)))
+            return WalkResult::interrupt();
+    return WalkResult::advance();
+  });
+  if (walkRes.wasInterrupted())
+    return failure();
 
   // Pop the top level name scope.
   if (failed(popSSANameScope()))
@@ -1575,6 +1597,34 @@ public:
     return parser.parseCommaSeparatedListUntil(Token::r_paren, parseElt);
   }
 
+  /// Parse a loc(...) specifier if present, filling in result if so.
+  ParseResult
+  parseOptionalLocationSpecifier(Optional<Location> &result) override {
+    // If there is a 'loc' we parse a trailing location.
+    if (!parser.consumeIf(Token::kw_loc))
+      return success();
+    LocationAttr directLoc;
+    if (parser.parseToken(Token::l_paren, "expected '(' in location"))
+      return failure();
+
+    Token tok = parser.getToken();
+
+    // Check to see if we are parsing a location alias.
+    // Otherwise, we parse the location directly.
+    if (tok.is(Token::hash_identifier)) {
+      if (parser.parseLocationAlias(directLoc))
+        return failure();
+    } else if (parser.parseLocationInstance(directLoc)) {
+      return failure();
+    }
+
+    if (parser.parseToken(Token::r_paren, "expected ')' in location"))
+      return failure();
+
+    result = directLoc;
+    return success();
+  }
+
 private:
   /// Information about the result name specifiers.
   ArrayRef<OperationParser::ResultRecord> resultIDs;
@@ -1702,6 +1752,33 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
   return op;
 }
 
+ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
+  Token tok = getToken();
+  consumeToken(Token::hash_identifier);
+  StringRef identifier = tok.getSpelling().drop_front();
+  if (identifier.contains('.')) {
+    return emitError(tok.getLoc())
+           << "expected location, but found dialect attribute: '#" << identifier
+           << "'";
+  }
+
+  // If this alias can be resolved, do it now.
+  Attribute attr = state.symbols.attributeAliasDefinitions.lookup(identifier);
+  if (attr) {
+    if (!(loc = attr.dyn_cast<LocationAttr>()))
+      return emitError(tok.getLoc())
+             << "expected location, but found '" << attr << "'";
+  } else {
+    // Otherwise, remember this operation and resolve its location later.
+    // In the meantime, use a special OpaqueLoc as a marker.
+    loc = OpaqueLoc::get(deferredLocsReferences.size(),
+                         TypeID::get<DeferredLocInfo *>(),
+                         UnknownLoc::get(getContext()));
+    deferredLocsReferences.push_back(DeferredLocInfo{tok.getLoc(), identifier});
+  }
+  return success();
+}
+
 ParseResult
 OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   // If there is a 'loc' we parse a trailing location.
@@ -1712,29 +1789,11 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   Token tok = getToken();
 
   // Check to see if we are parsing a location alias.
+  // Otherwise, we parse the location directly.
   LocationAttr directLoc;
   if (tok.is(Token::hash_identifier)) {
-    consumeToken();
-
-    StringRef identifier = tok.getSpelling().drop_front();
-    if (identifier.contains('.')) {
-      return emitError(tok.getLoc())
-             << "expected location, but found dialect attribute: '#"
-             << identifier << "'";
-    }
-
-    // If this alias can be resolved, do it now.
-    Attribute attr = state.symbols.attributeAliasDefinitions.lookup(identifier);
-    if (attr) {
-      if (!(directLoc = attr.dyn_cast<LocationAttr>()))
-        return emitError(tok.getLoc())
-               << "expected location, but found '" << attr << "'";
-    } else {
-      // Otherwise, remember this operation and resolve its location later.
-      opsAndArgumentsWithDeferredLocs.emplace_back(opOrArgument, tok);
-    }
-
-    // Otherwise, we parse the location directly.
+    if (parseLocationAlias(directLoc))
+      return failure();
   } else if (parseLocationInstance(directLoc)) {
     return failure();
   }
@@ -1742,12 +1801,10 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
   if (parseToken(Token::r_paren, "expected ')' in location"))
     return failure();
 
-  if (directLoc) {
-    if (auto *op = opOrArgument.dyn_cast<Operation *>())
-      op->setLoc(directLoc);
-    else
-      opOrArgument.get<BlockArgument>().setLoc(directLoc);
-  }
+  if (auto *op = opOrArgument.dyn_cast<Operation *>())
+    op->setLoc(directLoc);
+  else
+    opOrArgument.get<BlockArgument>().setLoc(directLoc);
   return success();
 }
 

@@ -225,6 +225,67 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
+static bool HandleSubstring(
+    IoStatementState &io, Descriptor &desc, const char *name) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  auto pair{desc.type().GetCategoryAndKind()};
+  if (!pair || pair->first != TypeCategory::Character) {
+    handler.SignalError("Substring reference to non-character item '%s'", name);
+    return false;
+  }
+  int kind{pair->second};
+  SubscriptValue chars{static_cast<SubscriptValue>(desc.ElementBytes()) / kind};
+  // Allow for blanks in substring bounds; they're nonstandard, but not
+  // ambiguous within the parentheses.
+  io.HandleRelativePosition(1); // skip '('
+  std::optional<SubscriptValue> lower, upper;
+  std::optional<char32_t> ch{io.GetNextNonBlank()};
+  if (ch) {
+    if (*ch == ':') {
+      lower = 1;
+    } else {
+      lower = GetSubscriptValue(io);
+      ch = io.GetNextNonBlank();
+    }
+  }
+  if (ch && ch == ':') {
+    io.HandleRelativePosition(1);
+    ch = io.GetNextNonBlank();
+    if (ch) {
+      if (*ch == ')') {
+        upper = chars;
+      } else {
+        upper = GetSubscriptValue(io);
+        ch = io.GetNextNonBlank();
+      }
+    }
+  }
+  if (ch && *ch == ')') {
+    io.HandleRelativePosition(1);
+    if (lower && upper) {
+      if (*lower > *upper) {
+        // An empty substring, whatever the values are
+        desc.raw().elem_len = 0;
+        return true;
+      }
+      if (*lower >= 1 || *upper <= chars) {
+        // Offset the base address & adjust the element byte length
+        desc.raw().elem_len = (*upper - *lower + 1) * kind;
+        desc.set_base_addr(reinterpret_cast<void *>(
+            reinterpret_cast<char *>(desc.raw().base_addr) +
+            kind * (*lower - 1)));
+        return true;
+      }
+    }
+    handler.SignalError(
+        "Bad substring bounds for NAMELIST input group item '%s'", name);
+  } else {
+    handler.SignalError(
+        "Bad substring (missing ')') for NAMELIST input group item '%s'", name);
+  }
+  return false;
+}
+
 static bool HandleComponent(IoStatementState &io, Descriptor &desc,
     const Descriptor &source, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
@@ -319,19 +380,36 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     StaticDescriptor<maxRank, true, 16> staticDesc[2];
     int whichStaticDesc{0};
     next = io.GetCurrentChar();
+    bool hadSubscripts{false};
+    bool hadSubstring{false};
     if (next && (*next == '(' || *next == '%')) {
       do {
         Descriptor &mutableDescriptor{staticDesc[whichStaticDesc].descriptor()};
         whichStaticDesc ^= 1;
         if (*next == '(') {
-          if (!(HandleSubscripts(
-                  io, mutableDescriptor, *useDescriptor, name))) {
+          if (!hadSubstring && (hadSubscripts || useDescriptor->rank() == 0)) {
+            mutableDescriptor = *useDescriptor;
+            mutableDescriptor.raw().attribute = CFI_attribute_pointer;
+            if (!HandleSubstring(io, mutableDescriptor, name)) {
+              return false;
+            }
+            hadSubstring = true;
+          } else if (hadSubscripts) {
+            handler.SignalError("Multiple sets of subscripts for item '%s' in "
+                                "NAMELIST group '%s'",
+                name, group.groupName);
+            return false;
+          } else if (!HandleSubscripts(
+                         io, mutableDescriptor, *useDescriptor, name)) {
             return false;
           }
+          hadSubscripts = true;
         } else {
           if (!HandleComponent(io, mutableDescriptor, *useDescriptor, name)) {
             return false;
           }
+          hadSubscripts = false;
+          hadSubstring = false;
         }
         useDescriptor = &mutableDescriptor;
         next = io.GetCurrentChar();

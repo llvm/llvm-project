@@ -914,7 +914,7 @@ bool DataAggregator::recordTrace(
       const MCInst *Instr = BB->getLastNonPseudoInstr();
       uint64_t Offset = 0;
       if (Instr)
-        Offset = BC.MIB->getAnnotationWithDefault<uint32_t>(*Instr, "Offset");
+        Offset = BC.MIB->getOffsetWithDefault(*Instr, 0);
       else
         Offset = BB->getOffset();
 

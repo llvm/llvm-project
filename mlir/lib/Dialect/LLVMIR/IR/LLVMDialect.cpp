@@ -1661,8 +1661,10 @@ static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
   p << " : " << op.getType();
 
   Region &initializer = op.getInitializerRegion();
-  if (!initializer.empty())
+  if (!initializer.empty()) {
+    p << ' ';
     p.printRegion(initializer, /*printEntryBlockArgs=*/false);
+  }
 }
 
 // Parses one of the keywords provided in the list `keywords` and returns the
@@ -2092,9 +2094,11 @@ static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
 
   // Print the body if this is not an external function.
   Region &body = op.getBody();
-  if (!body.empty())
+  if (!body.empty()) {
+    p << ' ';
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
+  }
 }
 
 // Hook for OpTrait::FunctionLike, called after verifying that the 'type'

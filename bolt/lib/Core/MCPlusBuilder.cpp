@@ -228,6 +228,33 @@ bool MCPlusBuilder::unsetConditionalTailCall(MCInst &Inst) {
   return true;
 }
 
+Optional<uint32_t> MCPlusBuilder::getOffset(const MCInst &Inst) const {
+  Optional<int64_t> Value = getAnnotationOpValue(Inst, MCAnnotation::kOffset);
+  if (!Value)
+    return NoneType();
+  return static_cast<uint32_t>(*Value);
+}
+
+uint32_t MCPlusBuilder::getOffsetWithDefault(const MCInst &Inst,
+                                             uint32_t Default) const {
+  if (Optional<uint32_t> Offset = getOffset(Inst))
+    return *Offset;
+  return Default;
+}
+
+bool MCPlusBuilder::setOffset(MCInst &Inst, uint32_t Offset,
+                              AllocatorIdTy AllocatorId) {
+  setAnnotationOpValue(Inst, MCAnnotation::kOffset, Offset, AllocatorId);
+  return true;
+}
+
+bool MCPlusBuilder::clearOffset(MCInst &Inst) {
+  if (!hasAnnotation(Inst, MCAnnotation::kOffset))
+    return false;
+  removeAnnotation(Inst, MCAnnotation::kOffset);
+  return true;
+}
+
 bool MCPlusBuilder::hasAnnotation(const MCInst &Inst, unsigned Index) const {
   const MCInst *AnnotationInst = getAnnotationInst(Inst);
   if (!AnnotationInst)

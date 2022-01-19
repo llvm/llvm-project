@@ -1132,10 +1132,28 @@ A ``#include`` directive which finds a file relative to the current
 directory is treated as including a system header if the including file
 is treated as a system header.
 
+Controlling Deprecation Diagnostics in Clang-Provided C Runtime Headers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang is responsible for providing some of the C runtime headers that cannot be
+provided by a platform CRT, such as implementation limits or when compiling in
+freestanding mode. Define the ``_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS`` macro
+prior to including such a C runtime header to disable the deprecation warnings.
+Note that the C Standard Library headers are allowed to transitively include
+other standard library headers (see 7.1.2p5), and so the most appropriate use
+of this macro is to set it within the build system using ``-D`` or before any
+include directives in the translation unit.
+
+.. code-block:: c
+
+  #define _CLANG_DISABLE_CRT_DEPRECATION_WARNINGS
+  #include <stdint.h>    // Clang CRT deprecation warnings are disabled.
+  #include <stdatomic.h> // Clang CRT deprecation warnings are disabled.
+
 .. _diagnostics_enable_everything:
 
 Enabling All Diagnostics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 In addition to the traditional ``-W`` flags, one can enable **all** diagnostics
 by passing :option:`-Weverything`. This works as expected with

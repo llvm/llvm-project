@@ -24,6 +24,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
@@ -260,7 +261,7 @@ public:
         });
     auto Sel = llvm::makeArrayRef(SelFirst, SelLimit);
     // Find which of these are preprocessed to nothing and should be ignored.
-    std::vector<bool> PPIgnored(Sel.size(), false);
+    llvm::BitVector PPIgnored(Sel.size(), false);
     for (const syntax::TokenBuffer::Expansion &X :
          Buf.expansionsOverlapping(Sel)) {
       if (X.Expanded.empty()) {

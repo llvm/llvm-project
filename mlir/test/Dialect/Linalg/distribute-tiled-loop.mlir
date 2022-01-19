@@ -25,13 +25,13 @@ func @distribute_for_gpu(%A: tensor<64x64xf32>,
 // CHECK-LABEL: func @distribute_for_gpu
 // CHECK:  %[[C64:.*]] = arith.constant 64 : index
 
-// CHECK-DAG:  %[[GPU_BLOCK_X:.*]] = "gpu.block_id"() {dimension = "x"}
-// CHECK-DAG:  %[[GPU_GRID_DIM_X:.*]] = "gpu.grid_dim"() {dimension = "x"}
+// CHECK-DAG:  %[[GPU_BLOCK_X:.*]] = gpu.block_id x
+// CHECK-DAG:  %[[GPU_GRID_DIM_X:.*]] = gpu.grid_dim x
 // CHECK-DAG:  %[[LB_I:.*]] = affine.apply #[[$MAP0]](){{\[}}%[[GPU_BLOCK_X]]]
 // CHECK-DAG:  %[[STEP_I:.*]] = affine.apply #[[$MAP0]](){{\[}}%[[GPU_GRID_DIM_X]]]
 
-// CHECK-DAG:  %[[GPU_BLOCK_Y:.*]] = "gpu.block_id"() {dimension = "y"}
-// CHECK-DAG:  %[[GPU_GRID_DIM_Y:.*]] = "gpu.grid_dim"() {dimension = "y"}
+// CHECK-DAG:  %[[GPU_BLOCK_Y:.*]] = gpu.block_id y
+// CHECK-DAG:  %[[GPU_GRID_DIM_Y:.*]] = gpu.grid_dim y
 // CHECK-DAG:  %[[LB_J:.*]] = affine.apply #[[$MAP1]](){{\[}}%[[GPU_BLOCK_Y]]]
 // CHECK-DAG:  %[[STEP_J:.*]] = affine.apply #[[$MAP1]](){{\[}}%[[GPU_GRID_DIM_Y]]]
 

@@ -15,15 +15,20 @@
 //   operator<=>(const tuple<TTypes...>& t, const tuple<UTypes...>& u);
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, libcpp-no-concepts
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
+
+#include "test_macros.h"
+
+#if defined(TEST_COMPILER_CLANG) || defined(TEST_COMPILER_GCC)
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#elif defined(TEST_COMPILER_MSVC)
+#pragma warning(disable: 4242 4244) // Various truncation warnings
+#endif
 
 #include <cassert>
 #include <compare>
 #include <limits>
 #include <tuple>
 #include <type_traits> // std::is_constant_evaluated
-
-#include "test_macros.h"
 
 // A custom three-way result type
 struct CustomEquality {

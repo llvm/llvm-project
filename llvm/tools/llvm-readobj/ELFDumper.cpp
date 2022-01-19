@@ -17,6 +17,7 @@
 #include "StackMapPrinter.h"
 #include "llvm-readobj.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -3905,7 +3906,7 @@ void GNUELFDumper<ELFT>::printHashTableSymbols(const Elf_Hash &SysVHash) {
   for (uint32_t Buc = 0; Buc < SysVHash.nbucket; Buc++) {
     if (Buckets[Buc] == ELF::STN_UNDEF)
       continue;
-    std::vector<bool> Visited(SysVHash.nchain);
+    BitVector Visited(SysVHash.nchain);
     for (uint32_t Ch = Buckets[Buc]; Ch < SysVHash.nchain; Ch = Chains[Ch]) {
       if (Ch == ELF::STN_UNDEF)
         break;
@@ -4653,7 +4654,7 @@ void GNUELFDumper<ELFT>::printHashHistogram(const Elf_Hash &HashTable) {
   // Go over all buckets and and note chain lengths of each bucket (total
   // unique chain lengths).
   for (size_t B = 0; B < NBucket; B++) {
-    std::vector<bool> Visited(NChain);
+    BitVector Visited(NChain);
     for (size_t C = Buckets[B]; C < NChain; C = Chains[C]) {
       if (C == ELF::STN_UNDEF)
         break;
