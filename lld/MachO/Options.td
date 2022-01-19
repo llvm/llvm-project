@@ -227,6 +227,9 @@ def F : JoinedOrSeparate<["-"], "F">,
 def all_load : Flag<["-"], "all_load">,
     HelpText<"Load all members of all static archive libraries">,
     Group<grp_libs>;
+def noall_load : Flag<["-"], "noall_load">,
+    HelpText<"Don't load all static members from archives, this is the default, this negates -all_load">,
+    Group<grp_libs>;
 def ObjC : Flag<["-"], "ObjC">,
     HelpText<"Load all members of static archives that are an Objective-C class or category.">,
     Group<grp_libs>;
@@ -991,10 +994,6 @@ def single_module : Flag<["-"], "single_module">,
     Group<grp_deprecated>;
 def no_dead_strip_inits_and_terms : Flag<["-"], "no_dead_strip_inits_and_terms">,
     HelpText<"Unnecessary option: initialization and termination are roots of the dead strip graph, so never dead stripped">,
-    Flags<[HelpHidden]>,
-    Group<grp_deprecated>;
-def noall_load : Flag<["-"], "noall_load">,
-    HelpText<"Unnecessary option: this is already the default">,
     Flags<[HelpHidden]>,
     Group<grp_deprecated>;
 
