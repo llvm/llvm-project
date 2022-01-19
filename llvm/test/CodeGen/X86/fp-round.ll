@@ -41,7 +41,7 @@ define half @round_f16(half %h) {
 ; AVX1-NEXT:    callq ___extendhfsf2
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX1-NEXT:    vorps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vorps %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    callq ___truncsfhf2
@@ -94,7 +94,7 @@ define float @round_f32(float %x) {
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX1-NEXT:    vorps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vorps %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -130,7 +130,7 @@ define double @round_f64(double %x) {
 ; AVX1-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
 ; AVX1-NEXT:    ## xmm2 = mem[0,0]
-; AVX1-NEXT:    vorpd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vorpd %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -521,11 +521,11 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
 ; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm3
 ; AVX1-NEXT:    vmovaps {{.*#+}} ymm4 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
-; AVX1-NEXT:    vorps %ymm3, %ymm4, %ymm3
+; AVX1-NEXT:    vorps %ymm4, %ymm3, %ymm3
 ; AVX1-NEXT:    vaddps %ymm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vroundps $11, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm2
-; AVX1-NEXT:    vorps %ymm2, %ymm4, %ymm2
+; AVX1-NEXT:    vorps %ymm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vaddps %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vroundps $11, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
@@ -620,11 +620,11 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
 ; AVX1-NEXT:    vmovapd {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX1-NEXT:    vandpd %ymm2, %ymm0, %ymm3
 ; AVX1-NEXT:    vmovapd {{.*#+}} ymm4 = [4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1,4.9999999999999994E-1]
-; AVX1-NEXT:    vorpd %ymm3, %ymm4, %ymm3
+; AVX1-NEXT:    vorpd %ymm4, %ymm3, %ymm3
 ; AVX1-NEXT:    vaddpd %ymm3, %ymm0, %ymm0
 ; AVX1-NEXT:    vroundpd $11, %ymm0, %ymm0
 ; AVX1-NEXT:    vandpd %ymm2, %ymm1, %ymm2
-; AVX1-NEXT:    vorpd %ymm2, %ymm4, %ymm2
+; AVX1-NEXT:    vorpd %ymm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
 ; AVX1-NEXT:    vroundpd $11, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
