@@ -82,7 +82,7 @@ define void @sink_splat_sub(i32* nocapture %a, i32 signext %x) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vadd.vx v8, v8, a1
+; CHECK-NEXT:    vsub.vx v8, v8, a1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a2, a2, -4
 ; CHECK-NEXT:    addi a0, a0, 16
@@ -99,7 +99,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %0 = getelementptr inbounds i32, i32* %a, i64 %index
   %1 = bitcast i32* %0 to <4 x i32>*
   %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = add <4 x i32> %wide.load, %broadcast.splat
+  %2 = sub <4 x i32> %wide.load, %broadcast.splat
   %3 = bitcast i32* %0 to <4 x i32>*
   store <4 x i32> %2, <4 x i32>* %3, align 4
   %index.next = add nuw i64 %index, 4
