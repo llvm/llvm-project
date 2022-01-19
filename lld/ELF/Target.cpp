@@ -107,7 +107,7 @@ template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
       continue;
     }
     if (isecLoc <= loc && loc < isecLoc + isec->getSize()) {
-      auto objLoc = isec->template getLocation<ELFT>(loc - isecLoc);
+      std::string objLoc = isec->getLocation(loc - isecLoc);
       // Return object file location and source file location.
       // TODO: Refactor getSrcMsg not to take a variable.
       Undefined dummy(nullptr, "", STB_LOCAL, 0, 0);
