@@ -1196,13 +1196,6 @@ public:
   /// and the getIndices() method may be used.
   bool hasIndices() const;
 
-  /// Return true if this is a getelementptr expression and all
-  /// the index operands are compile-time known integers within the
-  /// corresponding notional static array extents. Note that this is
-  /// not equivalant to, a subset of, or a superset of the "inbounds"
-  /// property.
-  bool isGEPWithNoNotionalOverIndexing() const;
-
   /// Select constant expr
   ///
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
