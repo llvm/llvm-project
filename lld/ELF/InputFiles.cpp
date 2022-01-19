@@ -552,7 +552,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
 
   std::vector<ArrayRef<Elf_Word>> selectedGroups;
 
-  for (size_t i = 0, e = objSections.size(); i < e; ++i) {
+  for (size_t i = 0; i != size; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
@@ -638,7 +638,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
   //    such cases, the relocation section would attempt to reference a target
   //    section that has not yet been created. For simplicity, delay creation of
   //    relocation sections until now.
-  for (size_t i = 0, e = objSections.size(); i < e; ++i) {
+  for (size_t i = 0; i != size; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
@@ -652,7 +652,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       continue;
 
     InputSectionBase *linkSec = nullptr;
-    if (sec.sh_link < this->sections.size())
+    if (sec.sh_link < size)
       linkSec = this->sections[sec.sh_link];
     if (!linkSec)
       fatal(toString(this) + ": invalid sh_link index: " + Twine(sec.sh_link));
