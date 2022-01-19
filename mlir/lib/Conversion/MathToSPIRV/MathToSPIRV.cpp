@@ -64,35 +64,36 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns) {
 
   // GLSL patterns
-  patterns.add<
-      Log1pOpPattern<spirv::GLSLLogOp>,
-      spirv::UnaryAndBinaryOpPattern<math::AbsOp, spirv::GLSLFAbsOp>,
-      spirv::UnaryAndBinaryOpPattern<math::CeilOp, spirv::GLSLCeilOp>,
-      spirv::UnaryAndBinaryOpPattern<math::CosOp, spirv::GLSLCosOp>,
-      spirv::UnaryAndBinaryOpPattern<math::ExpOp, spirv::GLSLExpOp>,
-      spirv::UnaryAndBinaryOpPattern<math::FloorOp, spirv::GLSLFloorOp>,
-      spirv::UnaryAndBinaryOpPattern<math::LogOp, spirv::GLSLLogOp>,
-      spirv::UnaryAndBinaryOpPattern<math::PowFOp, spirv::GLSLPowOp>,
-      spirv::UnaryAndBinaryOpPattern<math::RsqrtOp, spirv::GLSLInverseSqrtOp>,
-      spirv::UnaryAndBinaryOpPattern<math::SinOp, spirv::GLSLSinOp>,
-      spirv::UnaryAndBinaryOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
-      spirv::UnaryAndBinaryOpPattern<math::TanhOp, spirv::GLSLTanhOp>>(
-      typeConverter, patterns.getContext());
+  patterns
+      .add<Log1pOpPattern<spirv::GLSLLogOp>,
+           spirv::ElementwiseOpPattern<math::AbsOp, spirv::GLSLFAbsOp>,
+           spirv::ElementwiseOpPattern<math::CeilOp, spirv::GLSLCeilOp>,
+           spirv::ElementwiseOpPattern<math::CosOp, spirv::GLSLCosOp>,
+           spirv::ElementwiseOpPattern<math::ExpOp, spirv::GLSLExpOp>,
+           spirv::ElementwiseOpPattern<math::FloorOp, spirv::GLSLFloorOp>,
+           spirv::ElementwiseOpPattern<math::LogOp, spirv::GLSLLogOp>,
+           spirv::ElementwiseOpPattern<math::PowFOp, spirv::GLSLPowOp>,
+           spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::GLSLInverseSqrtOp>,
+           spirv::ElementwiseOpPattern<math::SinOp, spirv::GLSLSinOp>,
+           spirv::ElementwiseOpPattern<math::SqrtOp, spirv::GLSLSqrtOp>,
+           spirv::ElementwiseOpPattern<math::TanhOp, spirv::GLSLTanhOp>,
+           spirv::ElementwiseOpPattern<math::FmaOp, spirv::GLSLFmaOp>>(
+          typeConverter, patterns.getContext());
 
   // OpenCL patterns
   patterns.add<Log1pOpPattern<spirv::OCLLogOp>,
-               spirv::UnaryAndBinaryOpPattern<math::AbsOp, spirv::OCLFAbsOp>,
-               spirv::UnaryAndBinaryOpPattern<math::CeilOp, spirv::OCLCeilOp>,
-               spirv::UnaryAndBinaryOpPattern<math::CosOp, spirv::OCLCosOp>,
-               spirv::UnaryAndBinaryOpPattern<math::ErfOp, spirv::OCLErfOp>,
-               spirv::UnaryAndBinaryOpPattern<math::ExpOp, spirv::OCLExpOp>,
-               spirv::UnaryAndBinaryOpPattern<math::FloorOp, spirv::OCLFloorOp>,
-               spirv::UnaryAndBinaryOpPattern<math::LogOp, spirv::OCLLogOp>,
-               spirv::UnaryAndBinaryOpPattern<math::PowFOp, spirv::OCLPowOp>,
-               spirv::UnaryAndBinaryOpPattern<math::RsqrtOp, spirv::OCLRsqrtOp>,
-               spirv::UnaryAndBinaryOpPattern<math::SinOp, spirv::OCLSinOp>,
-               spirv::UnaryAndBinaryOpPattern<math::SqrtOp, spirv::OCLSqrtOp>,
-               spirv::UnaryAndBinaryOpPattern<math::TanhOp, spirv::OCLTanhOp>>(
+               spirv::ElementwiseOpPattern<math::AbsOp, spirv::OCLFAbsOp>,
+               spirv::ElementwiseOpPattern<math::CeilOp, spirv::OCLCeilOp>,
+               spirv::ElementwiseOpPattern<math::CosOp, spirv::OCLCosOp>,
+               spirv::ElementwiseOpPattern<math::ErfOp, spirv::OCLErfOp>,
+               spirv::ElementwiseOpPattern<math::ExpOp, spirv::OCLExpOp>,
+               spirv::ElementwiseOpPattern<math::FloorOp, spirv::OCLFloorOp>,
+               spirv::ElementwiseOpPattern<math::LogOp, spirv::OCLLogOp>,
+               spirv::ElementwiseOpPattern<math::PowFOp, spirv::OCLPowOp>,
+               spirv::ElementwiseOpPattern<math::RsqrtOp, spirv::OCLRsqrtOp>,
+               spirv::ElementwiseOpPattern<math::SinOp, spirv::OCLSinOp>,
+               spirv::ElementwiseOpPattern<math::SqrtOp, spirv::OCLSqrtOp>,
+               spirv::ElementwiseOpPattern<math::TanhOp, spirv::OCLTanhOp>>(
       typeConverter, patterns.getContext());
 }
 
