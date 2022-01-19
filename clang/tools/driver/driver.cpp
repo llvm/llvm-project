@@ -374,6 +374,14 @@ int main(int Argc, const char **Argv) {
   if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
     MarkEOLs = false;
   llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Args, MarkEOLs);
+  // [MSVC Compatibility]
+  for (auto Arg : Args) {
+    if (std::string(Arg).find("--target=x86_64-pc-windows") !=
+        std::string::npos) {
+      Args.push_back("-mssse3");
+      break;
+    }
+  }
 
   // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
   // file.
