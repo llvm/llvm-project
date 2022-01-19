@@ -182,7 +182,6 @@ public:
 
     switch (S->getOpcode()) {
     case UO_Deref: {
-      // Skip past a reference to handle dereference of a dependent pointer.
       const auto *SubExprVal = cast_or_null<PointerValue>(
           Env.getValue(*SubExpr, SkipPast::Reference));
       if (SubExprVal == nullptr)
