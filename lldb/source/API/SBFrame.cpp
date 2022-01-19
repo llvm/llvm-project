@@ -1174,7 +1174,7 @@ lldb::SBStructuredData SBFrame::GetLanguageSpecificData() const {
   if (process && frame)
     if (auto *runtime = process->GetLanguageRuntime(frame->GuessLanguage()))
       if (auto *data = runtime->GetLanguageSpecificData(*frame))
-        return {data};
+        return SBStructuredData(*data);
 
   return {};
 }
