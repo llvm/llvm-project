@@ -11,12 +11,12 @@ movdqu %xmm5, %xmm0
 
 # CHECK:      Iterations:        3
 # CHECK-NEXT: Instructions:      21
-# CHECK-NEXT: Total Cycles:      21
+# CHECK-NEXT: Total Cycles:      17
 # CHECK-NEXT: Total uOps:        21
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.00
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: uOps Per Cycle:    1.24
+# CHECK-NEXT: IPC:               1.24
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -37,8 +37,8 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT:  1      1     0.33                        movdqu	%xmm5, %xmm0
 
 # CHECK:      Register File statistics:
-# CHECK-NEXT: Total number of mappings created:    21
-# CHECK-NEXT: Max number of mappings used:         17
+# CHECK-NEXT: Total number of mappings created:    18
+# CHECK-NEXT: Max number of mappings used:         15
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SBDivider
@@ -65,30 +65,30 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -     movdqu	%xmm5, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     0123456789
-# CHECK-NEXT: Index     0123456789          0
+# CHECK-NEXT:                     0123456
+# CHECK-NEXT: Index     0123456789
 
-# CHECK:      [0,0]     DR   .    .    .    .   vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [0,1]     DeER .    .    .    .   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [0,2]     D=eER.    .    .    .   movups	%xmm1, %xmm2
-# CHECK-NEXT: [0,3]     D==eER    .    .    .   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [0,4]     .D==eER   .    .    .   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [0,5]     .D===eER  .    .    .   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [0,6]     .D====eER .    .    .   movdqu	%xmm5, %xmm0
-# CHECK-NEXT: [1,0]     .D=====ER .    .    .   vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [1,1]     . D====eER.    .    .   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [1,2]     . D=====eER    .    .   movups	%xmm1, %xmm2
-# CHECK-NEXT: [1,3]     . D======eER   .    .   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [1,4]     . D=======eER  .    .   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [1,5]     .  D=======eER .    .   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [1,6]     .  D========eER.    .   movdqu	%xmm5, %xmm0
-# CHECK-NEXT: [2,0]     .  D=========ER.    .   vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: [2,1]     .  D=========eER    .   movaps	%xmm0, %xmm1
-# CHECK-NEXT: [2,2]     .   D=========eER   .   movups	%xmm1, %xmm2
-# CHECK-NEXT: [2,3]     .   D==========eER  .   movapd	%xmm2, %xmm3
-# CHECK-NEXT: [2,4]     .   D===========eER .   movupd	%xmm3, %xmm4
-# CHECK-NEXT: [2,5]     .   D============eER.   movdqa	%xmm4, %xmm5
-# CHECK-NEXT: [2,6]     .    D============eER   movdqu	%xmm5, %xmm0
+# CHECK:      [0,0]     DR   .    .    ..   vxorps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [0,1]     DeER .    .    ..   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [0,2]     D=eER.    .    ..   movups	%xmm1, %xmm2
+# CHECK-NEXT: [0,3]     D==eER    .    ..   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [0,4]     .D==eER   .    ..   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [0,5]     .D===eER  .    ..   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [0,6]     .D====eER .    ..   movdqu	%xmm5, %xmm0
+# CHECK-NEXT: [1,0]     .D------R .    ..   vxorps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [1,1]     . D==eE-R .    ..   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [1,2]     . D===eER .    ..   movups	%xmm1, %xmm2
+# CHECK-NEXT: [1,3]     . D====eER.    ..   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [1,4]     . D=====eER    ..   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [1,5]     .  D=====eER   ..   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [1,6]     .  D======eER  ..   movdqu	%xmm5, %xmm0
+# CHECK-NEXT: [2,0]     .  D--------R  ..   vxorps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: [2,1]     .  D=====eE-R  ..   movaps	%xmm0, %xmm1
+# CHECK-NEXT: [2,2]     .   D=====eER  ..   movups	%xmm1, %xmm2
+# CHECK-NEXT: [2,3]     .   D======eER ..   movapd	%xmm2, %xmm3
+# CHECK-NEXT: [2,4]     .   D=======eER..   movupd	%xmm3, %xmm4
+# CHECK-NEXT: [2,5]     .   D========eER.   movdqa	%xmm4, %xmm5
+# CHECK-NEXT: [2,6]     .    D========eER   movdqu	%xmm5, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -97,11 +97,11 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     5.3    0.0    0.0       vxorps	%xmm0, %xmm0, %xmm0
-# CHECK-NEXT: 1.     3     5.3    0.3    0.0       movaps	%xmm0, %xmm1
-# CHECK-NEXT: 2.     3     6.0    0.0    0.0       movups	%xmm1, %xmm2
-# CHECK-NEXT: 3.     3     7.0    0.0    0.0       movapd	%xmm2, %xmm3
-# CHECK-NEXT: 4.     3     7.7    0.0    0.0       movupd	%xmm3, %xmm4
-# CHECK-NEXT: 5.     3     8.3    0.0    0.0       movdqa	%xmm4, %xmm5
-# CHECK-NEXT: 6.     3     9.0    0.0    0.0       movdqu	%xmm5, %xmm0
-# CHECK-NEXT:        3     7.0    0.0    0.0       <total>
+# CHECK-NEXT: 0.     3     0.0    0.0    4.7       vxorps	%xmm0, %xmm0, %xmm0
+# CHECK-NEXT: 1.     3     3.3    3.3    0.7       movaps	%xmm0, %xmm1
+# CHECK-NEXT: 2.     3     4.0    0.0    0.0       movups	%xmm1, %xmm2
+# CHECK-NEXT: 3.     3     5.0    0.0    0.0       movapd	%xmm2, %xmm3
+# CHECK-NEXT: 4.     3     5.7    0.0    0.0       movupd	%xmm3, %xmm4
+# CHECK-NEXT: 5.     3     6.3    0.0    0.0       movdqa	%xmm4, %xmm5
+# CHECK-NEXT: 6.     3     7.0    0.0    0.0       movdqu	%xmm5, %xmm0
+# CHECK-NEXT:        3     4.5    0.5    0.8       <total>
