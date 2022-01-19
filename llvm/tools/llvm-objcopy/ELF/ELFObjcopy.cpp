@@ -227,6 +227,41 @@ static Error replaceDebugSections(
   return Obj.replaceSections(FromTo);
 }
 
+static bool isAArch64MappingSymbol(const Symbol &Sym) {
+  if (Sym.Binding != STB_LOCAL || Sym.Type != STT_NOTYPE ||
+      Sym.getShndx() == SHN_UNDEF)
+    return false;
+  StringRef Name = Sym.Name;
+  if (!Name.consume_front("$x") && !Name.consume_front("$d"))
+    return false;
+  return Name.empty() || Name.startswith(".");
+}
+
+static bool isArmMappingSymbol(const Symbol &Sym) {
+  if (Sym.Binding != STB_LOCAL || Sym.Type != STT_NOTYPE ||
+      Sym.getShndx() == SHN_UNDEF)
+    return false;
+  StringRef Name = Sym.Name;
+  if (!Name.consume_front("$a") && !Name.consume_front("$d") &&
+      !Name.consume_front("$t"))
+    return false;
+  return Name.empty() || Name.startswith(".");
+}
+
+// Check if the symbol should be preserved because it is required by ABI.
+static bool isRequiredByABISymbol(const Object &Obj, const Symbol &Sym) {
+  switch (Obj.Machine) {
+  case EM_AARCH64:
+    // Mapping symbols should be preserved for a relocatable object file.
+    return Obj.isRelocatable() && isAArch64MappingSymbol(Sym);
+  case EM_ARM:
+    // Mapping symbols should be preserved for a relocatable object file.
+    return Obj.isRelocatable() && isArmMappingSymbol(Sym);
+  default:
+    return false;
+  }
+}
+
 static bool isUnneededSymbol(const Symbol &Sym) {
   return !Sym.Referenced &&
          (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&
@@ -297,20 +332,23 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
         (ELFConfig.KeepFileSymbols && Sym.Type == STT_FILE))
       return false;
 
-    if ((Config.DiscardMode == DiscardType::All ||
-         (Config.DiscardMode == DiscardType::Locals &&
-          StringRef(Sym.Name).startswith(".L"))) &&
-        Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
-        Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
+    if (Config.SymbolsToRemove.matches(Sym.Name))
       return true;
 
     if (Config.StripAll || Config.StripAllGNU)
       return true;
 
+    if (isRequiredByABISymbol(Obj, Sym))
+      return false;
+
     if (Config.StripDebug && Sym.Type == STT_FILE)
       return true;
 
-    if (Config.SymbolsToRemove.matches(Sym.Name))
+    if ((Config.DiscardMode == DiscardType::All ||
+         (Config.DiscardMode == DiscardType::Locals &&
+          StringRef(Sym.Name).startswith(".L"))) &&
+        Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
+        Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
       return true;
 
     if ((Config.StripUnneeded ||
