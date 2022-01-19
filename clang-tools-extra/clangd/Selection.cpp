@@ -794,13 +794,16 @@ private:
   }
 
   // Pushes a node onto the ancestor stack. Pairs with pop().
+  // Performs early hit detection for some nodes (on the earlySourceRange).
   void push(DynTypedNode Node) {
+    SourceRange Early = earlySourceRange(Node);
     dlog("{1}push: {0}", printNodeToString(Node, PrintPolicy), indent());
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
     Nodes.back().Selected = NoTokens;
     Stack.push(&Nodes.back());
+    claimRange(Early, Nodes.back().Selected);
   }
 
   // Pops a node off the ancestor stack, and finalizes it. Pairs with push().
@@ -820,6 +823,26 @@ private:
       Nodes.pop_back();
     }
     Stack.pop();
+  }
+
+  // Returns the range of tokens that this node will claim directly, and
+  // is not available to the node's children.
+  // Usually empty, but sometimes children cover tokens but shouldn't own them.
+  SourceRange earlySourceRange(const DynTypedNode &N) {
+    if (const Decl *D = N.get<Decl>()) {
+      // We want the name in the var-decl to be claimed by the decl itself and
+      // not by any children. Ususally, we don't need this, because source
+      // ranges of children are not overlapped with their parent's.
+      // An exception is lambda captured var decl, where AutoTypeLoc is
+      // overlapped with the name loc.
+      //    auto fun = [bar = foo]() { ... }
+      //                ~~~~~~~~~   VarDecl
+      //                ~~~         |- AutoTypeLoc
+      if (const auto *DD = llvm::dyn_cast<VarDecl>(D))
+        return DD->getLocation();
+    }
+
+    return SourceRange();
   }
 
   // Claim tokens for N, after processing its children.
