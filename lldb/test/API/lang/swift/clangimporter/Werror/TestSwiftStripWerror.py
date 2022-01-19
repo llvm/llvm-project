@@ -35,7 +35,6 @@ class TestSwiftWerror(TestBase):
             self.assertFalse("-Werror" in line)
             if "-DCONFLICT" in line:
                 sanity += 1
-        # We see it twice in the expression context and once in a Module context.
-        #  -DCONFLICT=0
-        #  -DCONFLICT=1
-        self.assertEqual(sanity, 2+1)
+        # We see -DCONFLICT twice in the expression context and once in each of
+        # the two Module contexts.
+        self.assertEqual(sanity, 2+2)
