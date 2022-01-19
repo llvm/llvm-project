@@ -633,6 +633,7 @@ public:
     case Intrinsic::coro_end:
     case Intrinsic::coro_frame:
     case Intrinsic::coro_size:
+    case Intrinsic::coro_align:
     case Intrinsic::coro_suspend:
     case Intrinsic::coro_subfn_addr:
       // These intrinsics don't actually represent code after lowering.
