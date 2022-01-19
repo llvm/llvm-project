@@ -16266,6 +16266,34 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
   verifyFormat("int oneTwoThree = 123; // comment\n"
                "int oneTwo      = 12;  // comment",
                Alignment);
+  verifyFormat("int f()         = default;\n"
+               "int &operator() = default;\n"
+               "int &operator=() {",
+               Alignment);
+  verifyFormat("int f()         = default; // comment\n"
+               "int &operator() = default; // comment\n"
+               "int &operator=() {",
+               Alignment);
+  verifyFormat("int f()         = default;\n"
+               "int &operator() = default;\n"
+               "int &operator==() {",
+               Alignment);
+  verifyFormat("int f()         = default;\n"
+               "int &operator() = default;\n"
+               "int &operator<=() {",
+               Alignment);
+  verifyFormat("int f()         = default;\n"
+               "int &operator() = default;\n"
+               "int &operator!=() {",
+               Alignment);
+  verifyFormat("int f()         = default;\n"
+               "int &operator() = default;\n"
+               "int &operator=();",
+               Alignment);
+  verifyFormat("/* long long padding */ int f() = default;\n"
+               "int &operator()                 = default;\n"
+               "int &operator/**/ =();",
+               Alignment);
 
   // Bug 25167
   /* Uncomment when fixed
