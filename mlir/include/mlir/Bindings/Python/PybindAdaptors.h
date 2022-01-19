@@ -249,7 +249,7 @@ public:
   template <typename Func, typename... Extra>
   pure_subclass &def(const char *name, Func &&f, const Extra &... extra) {
     py::cpp_function cf(
-        std::forward<Func>(f), py::name(name), py::is_method(py::none()),
+        std::forward<Func>(f), py::name(name), py::is_method(thisClass),
         py::sibling(py::getattr(thisClass, name, py::none())), extra...);
     thisClass.attr(cf.name()) = cf;
     return *this;
@@ -259,7 +259,7 @@ public:
   pure_subclass &def_property_readonly(const char *name, Func &&f,
                                        const Extra &... extra) {
     py::cpp_function cf(
-        std::forward<Func>(f), py::name(name), py::is_method(py::none()),
+        std::forward<Func>(f), py::name(name), py::is_method(thisClass),
         py::sibling(py::getattr(thisClass, name, py::none())), extra...);
     auto builtinProperty =
         py::reinterpret_borrow<py::object>((PyObject *)&PyProperty_Type);
