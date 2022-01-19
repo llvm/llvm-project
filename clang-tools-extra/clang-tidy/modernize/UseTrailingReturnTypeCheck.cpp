@@ -285,31 +285,6 @@ SourceRange UseTrailingReturnTypeCheck::findReturnTypeAndCVSourceRange(
     return {};
   }
 
-  // If the return type is a constrained 'auto', we need to include the token
-  // after the concept. Unfortunately, the source range of an AutoTypeLoc, if it
-  // is constrained, does not include the 'auto'.
-  // FIXME: fix the AutoTypeLoc location in clang.
-  auto ATL = ReturnLoc.getAs<AutoTypeLoc>();
-  if (ATL && ATL.isConstrained() && !ATL.isDecltypeAuto()) {
-    SourceLocation End =
-        expandIfMacroId(ReturnLoc.getSourceRange().getEnd(), SM);
-    SourceLocation BeginNameF = expandIfMacroId(F.getLocation(), SM);
-
-    // Extend the ReturnTypeRange until the last token before the function
-    // name.
-    std::pair<FileID, unsigned> Loc = SM.getDecomposedLoc(End);
-    StringRef File = SM.getBufferData(Loc.first);
-    const char *TokenBegin = File.data() + Loc.second;
-    Lexer Lexer(SM.getLocForStartOfFile(Loc.first), LangOpts, File.begin(),
-                TokenBegin, File.end());
-    Token T;
-    SourceLocation LastTLoc = End;
-    while (!Lexer.LexFromRawLexer(T) &&
-           SM.isBeforeInTranslationUnit(T.getLocation(), BeginNameF)) {
-      LastTLoc = T.getLocation();
-    }
-    ReturnTypeRange.setEnd(LastTLoc);
-  }
 
   // If the return type has no local qualifiers, it's source range is accurate.
   if (!hasAnyNestedLocalQualifiers(F.getReturnType()))
