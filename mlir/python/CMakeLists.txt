@@ -123,14 +123,15 @@ declare_mlir_python_sources(
     dialects/quant.py
     _mlir_libs/_mlir/dialects/quant.pyi)
 
-declare_mlir_python_sources(
-  MLIRPythonSources.Dialects.pdl
+declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/PDLOps.td
   SOURCES
     dialects/pdl.py
     dialects/_pdl_ops_ext.py
-    _mlir_libs/_mlir/dialects/pdl.pyi)
+    _mlir_libs/_mlir/dialects/pdl.pyi
+  DIALECT_NAME pdl)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
