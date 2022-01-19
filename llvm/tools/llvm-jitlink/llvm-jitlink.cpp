@@ -231,7 +231,8 @@ LLVM_ATTRIBUTE_USED void linkComponents() {
 static bool UseTestResultOverride = false;
 static int64_t TestResultOverride = 0;
 
-extern "C" void llvm_jitlink_setTestResultOverride(int64_t Value) {
+extern "C" LLVM_ATTRIBUTE_USED void
+llvm_jitlink_setTestResultOverride(int64_t Value) {
   TestResultOverride = Value;
   UseTestResultOverride = true;
 }

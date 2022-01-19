@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
@@ -41,12 +41,13 @@ static llvm::cl::opt<bool> clTestLoopFusionTransformation(
 
 namespace {
 
-struct TestLoopFusion : public PassWrapper<TestLoopFusion, FunctionPass> {
+struct TestLoopFusion
+    : public PassWrapper<TestLoopFusion, OperationPass<FuncOp>> {
   StringRef getArgument() const final { return "test-loop-fusion"; }
   StringRef getDescription() const final {
     return "Tests loop fusion utility functions.";
   }
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 } // namespace
@@ -175,14 +176,14 @@ static bool iterateLoops(ArrayRef<SmallVector<AffineForOp, 2>> depthToLoops,
   return changed;
 }
 
-void TestLoopFusion::runOnFunction() {
+void TestLoopFusion::runOnOperation() {
   std::vector<SmallVector<AffineForOp, 2>> depthToLoops;
   if (clTestLoopFusionTransformation) {
     // Run loop fusion until a fixed point is reached.
     do {
       depthToLoops.clear();
       // Gather all AffineForOps by loop depth.
-      gatherLoops(getFunction(), depthToLoops);
+      gatherLoops(getOperation(), depthToLoops);
 
       // Try to fuse all combinations of src/dst loop nests in 'depthToLoops'.
     } while (iterateLoops(depthToLoops, testLoopFusionTransformation,
@@ -191,7 +192,7 @@ void TestLoopFusion::runOnFunction() {
   }
 
   // Gather all AffineForOps by loop depth.
-  gatherLoops(getFunction(), depthToLoops);
+  gatherLoops(getOperation(), depthToLoops);
 
   // Run tests on all combinations of src/dst loop nests in 'depthToLoops'.
   if (clTestDependenceCheck)

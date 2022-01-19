@@ -8,7 +8,7 @@
 
 #include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
 
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -240,7 +240,7 @@ getAllocEffectFor(Value value, Optional<MemoryEffects::EffectInstance> &effect,
   // freed on all paths within the region, or is just not captured by anything.
   // For now assume allocation scope to the function scope (we don't care if
   // pointer escape outside function).
-  allocScopeOp = op->getParentWithTrait<OpTrait::FunctionLike>();
+  allocScopeOp = op->getParentOfType<FunctionOpInterface>();
   return success();
 }
 

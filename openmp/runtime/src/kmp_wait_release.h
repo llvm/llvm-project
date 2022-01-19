@@ -377,6 +377,7 @@ __kmp_wait_template(kmp_info_t *this_thr,
 #else
   kmp_uint32 hibernate;
 #endif
+  kmp_uint64 time;
 
   KMP_FSYNC_SPIN_INIT(spin, NULL);
   if (flag->done_check()) {
@@ -476,6 +477,7 @@ final_spin=FALSE)
 #endif
 
   KMP_INIT_YIELD(spins); // Setup for waiting
+  KMP_INIT_BACKOFF(time);
 
   if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME ||
       __kmp_pause_status == kmp_soft_paused) {
@@ -563,7 +565,7 @@ final_spin=FALSE)
 
     // If we are oversubscribed, or have waited a bit (and
     // KMP_LIBRARY=throughput), then yield
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
 
 #if KMP_STATS_ENABLED
     // Check if thread has been signalled to idle state

@@ -1397,21 +1397,26 @@ void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
   unsigned Vmcnt, Expcnt, Lgkmcnt;
   decodeWaitcnt(ISA, SImm16, Vmcnt, Expcnt, Lgkmcnt);
 
+  bool IsDefaultVmcnt = Vmcnt == getVmcntBitMask(ISA);
+  bool IsDefaultExpcnt = Expcnt == getExpcntBitMask(ISA);
+  bool IsDefaultLgkmcnt = Lgkmcnt == getLgkmcntBitMask(ISA);
+  bool PrintAll = IsDefaultVmcnt && IsDefaultExpcnt && IsDefaultLgkmcnt;
+
   bool NeedSpace = false;
 
-  if (Vmcnt != getVmcntBitMask(ISA)) {
+  if (!IsDefaultVmcnt || PrintAll) {
     O << "vmcnt(" << Vmcnt << ')';
     NeedSpace = true;
   }
 
-  if (Expcnt != getExpcntBitMask(ISA)) {
+  if (!IsDefaultExpcnt || PrintAll) {
     if (NeedSpace)
       O << ' ';
     O << "expcnt(" << Expcnt << ')';
     NeedSpace = true;
   }
 
-  if (Lgkmcnt != getLgkmcntBitMask(ISA)) {
+  if (!IsDefaultLgkmcnt || PrintAll) {
     if (NeedSpace)
       O << ' ';
     O << "lgkmcnt(" << Lgkmcnt << ')';

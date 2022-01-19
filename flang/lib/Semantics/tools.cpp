@@ -1345,13 +1345,15 @@ const Symbol *FindImmediateComponent(const DerivedTypeSpec &type,
   return nullptr;
 }
 
-bool IsFunctionResultWithSameNameAsFunction(const Symbol &symbol) {
+const Symbol *IsFunctionResultWithSameNameAsFunction(const Symbol &symbol) {
   if (IsFunctionResult(symbol)) {
     if (const Symbol * function{symbol.owner().symbol()}) {
-      return symbol.name() == function->name();
+      if (symbol.name() == function->name()) {
+        return function;
+      }
     }
   }
-  return false;
+  return nullptr;
 }
 
 void LabelEnforce::Post(const parser::GotoStmt &gotoStmt) {

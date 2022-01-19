@@ -314,11 +314,11 @@ class Dialect {
 
   // If this dialect should use default generated attribute parser boilerplate:
   // it'll dispatch the parsing to every individual attributes directly.
-  bit useDefaultAttributePrinterParser = 0;
+  bit useDefaultAttributePrinterParser = 1;
 
   // If this dialect should use default generated type parser boilerplate:
   // it'll dispatch the parsing to every individual types directly.
-  bit useDefaultTypePrinterParser = 0;
+  bit useDefaultTypePrinterParser = 1;
 
   // If this dialect overrides the hook for canonicalization patterns.
   bit hasCanonicalizer = 0;
@@ -2044,8 +2044,6 @@ def Idempotent  : NativeOpTrait<"IsIdempotent">;
 def Involution  : NativeOpTrait<"IsInvolution">;
 // Op behaves like a constant.
 def ConstantLike : NativeOpTrait<"ConstantLike">;
-// Op behaves like a function.
-def FunctionLike : NativeOpTrait<"FunctionLike">;
 // Op is isolated from above.
 def IsolatedFromAbove : NativeOpTrait<"IsIsolatedFromAbove">;
 // Op results are float or vectors/tensors thereof.

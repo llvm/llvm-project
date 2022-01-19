@@ -1406,7 +1406,7 @@ add_instruction:
 
     // Record offset of the instruction for profile matching.
     if (BC.keepOffsetForInstruction(Instruction))
-      MIB->addAnnotation(Instruction, "Offset", static_cast<uint32_t>(Offset));
+      MIB->setOffset(Instruction, static_cast<uint32_t>(Offset));
 
     if (BC.MIB->isNoop(Instruction)) {
       // NOTE: disassembly loses the correct size information for noops.
@@ -1989,9 +1989,8 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
         break;
       }
     }
-    if (LastNonNop && !MIB->hasAnnotation(*LastNonNop, "Offset"))
-      MIB->addAnnotation(*LastNonNop, "Offset", static_cast<uint32_t>(Offset),
-                         AllocatorId);
+    if (LastNonNop && !MIB->getOffset(*LastNonNop))
+      MIB->setOffset(*LastNonNop, static_cast<uint32_t>(Offset), AllocatorId);
   };
 
   for (auto I = Instructions.begin(), E = Instructions.end(); I != E; ++I) {
@@ -2014,9 +2013,8 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     bool IsLKMarker = BC.LKMarkers.count(InstrInputAddr);
     // Mark all nops with Offset for profile tracking purposes.
     if (MIB->isNoop(Instr) || IsLKMarker) {
-      if (!MIB->hasAnnotation(Instr, "Offset"))
-        MIB->addAnnotation(Instr, "Offset", static_cast<uint32_t>(Offset),
-                           AllocatorId);
+      if (!MIB->getOffset(Instr))
+        MIB->setOffset(Instr, static_cast<uint32_t>(Offset), AllocatorId);
       if (IsSDTMarker || IsLKMarker)
         HasSDTMarker = true;
       else
@@ -2216,7 +2214,7 @@ void BinaryFunction::postProcessCFG() {
   if (!requiresAddressTranslation() && !opts::Instrument) {
     for (BinaryBasicBlock *BB : layout())
       for (MCInst &Inst : *BB)
-        BC.MIB->removeAnnotation(Inst, "Offset");
+        BC.MIB->clearOffset(Inst);
   }
 
   assert((!isSimple() || validateCFG()) &&
@@ -2233,8 +2231,7 @@ void BinaryFunction::calculateMacroOpFusionStats() {
 
     // Check offset of the second instruction.
     // FIXME: arch-specific.
-    const uint32_t Offset =
-        BC.MIB->getAnnotationWithDefault<uint32_t>(*std::next(II), "Offset", 0);
+    const uint32_t Offset = BC.MIB->getOffsetWithDefault(*std::next(II), 0);
     if (!Offset || (getAddress() + Offset) % 64)
       continue;
 
@@ -4325,8 +4322,7 @@ MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
 
     for (MCInst &Inst : *BB) {
       constexpr uint32_t InvalidOffset = std::numeric_limits<uint32_t>::max();
-      if (Offset == BC.MIB->getAnnotationWithDefault<uint32_t>(Inst, "Offset",
-                                                               InvalidOffset))
+      if (Offset == BC.MIB->getOffsetWithDefault(Inst, InvalidOffset))
         return &Inst;
     }
 

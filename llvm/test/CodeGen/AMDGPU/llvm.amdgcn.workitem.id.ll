@@ -63,10 +63,9 @@ define amdgpu_kernel void @test_workitem_id_z(i32 addrspace(1)* %out) #1 {
   ret void
 }
 
-; FIXME: Should be able to avoid enabling in kernel inputs
 ; FIXME: Packed tid should avoid the and
 ; ALL-LABEL: {{^}}test_reqd_workgroup_size_x_only:
-; CO-V2: enable_vgpr_workitem_id = 2
+; CO-V2: enable_vgpr_workitem_id = 0
 
 ; ALL-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
 ; UNPACKED-DAG: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
@@ -87,7 +86,7 @@ define amdgpu_kernel void @test_reqd_workgroup_size_x_only(i32* %out) !reqd_work
 }
 
 ; ALL-LABEL: {{^}}test_reqd_workgroup_size_y_only:
-; CO-V2: enable_vgpr_workitem_id = 2
+; CO-V2: enable_vgpr_workitem_id = 1
 
 ; ALL: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
 ; ALL: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]

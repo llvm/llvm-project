@@ -67,7 +67,7 @@ define i32 @test_neg_read_after() {
 ; CHECK-LABEL: @test_neg_read_after(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -83,7 +83,7 @@ define void @test_neg_infinite_loop() {
 ; CHECK-LABEL: @test_neg_infinite_loop(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -96,7 +96,7 @@ define void @test_neg_throw() {
 ; CHECK-LABEL: @test_neg_throw(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -109,7 +109,7 @@ define void @test_neg_extra_write() {
 ; CHECK-LABEL: @test_neg_extra_write(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -126,7 +126,7 @@ define void @test_neg_unmodeled_write() {
 ; CHECK-NEXT:    [[A2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast i32* [[A2]] to i8*
-; CHECK-NEXT:    call void @f2(i8* nocapture nonnull writeonly [[BITCAST]], i8* nonnull [[BITCAST2]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @f2(i8* nocapture nonnull writeonly [[BITCAST]], i8* nonnull [[BITCAST2]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32, align 4
@@ -143,7 +143,7 @@ define i32 @test_neg_captured_by_call() {
 ; CHECK-NEXT:    [[A2:%.*]] = alloca i8*, align 8
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast i8** [[A2]] to i8*
-; CHECK-NEXT:    call void @f2(i8* nonnull writeonly [[BITCAST]], i8* nonnull [[BITCAST2]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @f2(i8* nonnull writeonly [[BITCAST]], i8* nonnull [[BITCAST2]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8** [[A2]] to i32**
 ; CHECK-NEXT:    [[A_COPY_CAST1:%.*]] = load i32*, i32** [[TMP1]], align 8
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[A_COPY_CAST1]], align 4
@@ -164,7 +164,7 @@ define i32 @test_neg_captured_before() {
 ; CHECK-LABEL: @test_neg_captured_before(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @f(i8* nocapture nonnull writeonly [[BITCAST]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -214,7 +214,7 @@ define i8 @test_neg_unrelated_capture_used_via_return() {
 ; CHECK-NEXT:    [[A2:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32* [[A]] to i8*
 ; CHECK-NEXT:    [[BITCAST2:%.*]] = bitcast i32* [[A2]] to i8*
-; CHECK-NEXT:    [[CAPTURE:%.*]] = call i8* @f3(i8* nocapture nonnull writeonly [[BITCAST]], i8* nonnull readonly [[BITCAST2]]) #[[ATTR1]]
+; CHECK-NEXT:    [[CAPTURE:%.*]] = call i8* @f3(i8* nocapture nonnull writeonly [[BITCAST]], i8* nonnull readonly [[BITCAST2]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[CAPTURE]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
@@ -239,3 +239,38 @@ define void @test_self_read() {
   ret void
 }
 
+
+declare void @removable_readnone() readnone nounwind willreturn
+declare void @removable_ro() readonly nounwind willreturn
+
+define void @test_readnone() {
+; CHECK-LABEL: @test_readnone(
+; CHECK-NEXT:    ret void
+;
+  call void @removable_readnone()
+  ret void
+}
+
+define void @test_readnone_with_deopt() {
+; CHECK-LABEL: @test_readnone_with_deopt(
+; CHECK-NEXT:    ret void
+;
+  call void @removable_readnone() [ "deopt"() ]
+  ret void
+}
+
+define void @test_readonly() {
+; CHECK-LABEL: @test_readonly(
+; CHECK-NEXT:    ret void
+;
+  call void @removable_ro()
+  ret void
+}
+
+define void @test_readonly_with_deopt() {
+; CHECK-LABEL: @test_readonly_with_deopt(
+; CHECK-NEXT:    ret void
+;
+  call void @removable_ro() [ "deopt"() ]
+  ret void
+}

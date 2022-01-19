@@ -39,6 +39,15 @@ def SDTFPBinOpVVP : SDTypeProfile<1, 4, [      // vvp_fadd, etc.
   IsVLVT<4>
 ]>;
 
+// Select(OnTrue, OnFalse, SelMask, vl)
+def SDTSelectVVP : SDTypeProfile<1, 4, [       // vp_select, vp_merge
+  SDTCisVec<0>,
+  SDTCisSameNumEltsAs<0, 3>,
+  SDTCisSameAs<0, 1>,
+  SDTCisSameAs<1, 2>,
+  IsVLVT<4>
+]>;
+
 // Binary operator commutative pattern.
 class vvp_commutative<SDNode RootOp> :
   PatFrags<
@@ -79,3 +88,5 @@ def c_vvp_fmul  : vvp_commutative<vvp_fmul>;
 def vvp_fdiv    : SDNode<"VEISD::VVP_FDIV",  SDTFPBinOpVVP>;
 
 // } Binary Operators
+
+def vvp_select : SDNode<"VEISD::VVP_SELECT", SDTSelectVVP>;

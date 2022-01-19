@@ -278,20 +278,19 @@ Defined *InputSectionBase::getEnclosingFunction(uint64_t offset) {
 }
 
 // Returns an object file location string. Used to construct an error message.
-template <class ELFT>
 std::string InputSectionBase::getLocation(uint64_t offset) {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
   // We don't have file for synthetic sections.
-  if (getFile<ELFT>() == nullptr)
+  if (file == nullptr)
     return (config->outputFile + ":(" + secAndOffset).str();
 
-  std::string file = toString(getFile<ELFT>());
+  std::string filename = toString(file);
   if (Defined *d = getEnclosingFunction(offset))
-    return file + ":(function " + toString(*d) + ": " + secAndOffset;
+    return filename + ":(function " + toString(*d) + ": " + secAndOffset;
 
-  return file + ":(" + secAndOffset;
+  return filename + ":(" + secAndOffset;
 }
 
 // This function is intended to be used for constructing an error message.
@@ -948,7 +947,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       continue;
     }
 
-    std::string msg = getLocation<ELFT>(offset) + ": has non-ABS relocation " +
+    std::string msg = getLocation(offset) + ": has non-ABS relocation " +
                       toString(type) + " against symbol '" + toString(sym) +
                       "'";
     if (expr != R_PC && expr != R_ARM_PCA) {
@@ -1323,28 +1322,47 @@ static unsigned getReloc(IntTy begin, IntTy size, const ArrayRef<RelTy> &rels,
 // This function splits an input section into records and returns them.
 template <class ELFT> void EhInputSection::split() {
   const RelsOrRelas<ELFT> rels = relsOrRelas<ELFT>();
-  if (rels.areRelocsRel())
-    split<ELFT>(rels.rels);
-  else
-    split<ELFT>(rels.relas);
+  // getReloc expects the relocations to be sorted by r_offset. See the comment
+  // in scanRelocs.
+  if (rels.areRelocsRel()) {
+    SmallVector<typename ELFT::Rel, 0> storage;
+    split<ELFT>(sortRels(rels.rels, storage));
+  } else {
+    SmallVector<typename ELFT::Rela, 0> storage;
+    split<ELFT>(sortRels(rels.relas, storage));
+  }
 }
 
 template <class ELFT, class RelTy>
 void EhInputSection::split(ArrayRef<RelTy> rels) {
-  // getReloc expects the relocations to be sorted by r_offset. See the comment
-  // in scanRelocs.
-  SmallVector<RelTy, 0> storage;
-  rels = sortRels(rels, storage);
-
+  ArrayRef<uint8_t> d = rawData;
+  const char *msg = nullptr;
   unsigned relI = 0;
-  for (size_t off = 0, end = data().size(); off != end;) {
-    size_t size = readEhRecordSize(this, off);
-    pieces.emplace_back(off, this, size, getReloc(off, size, rels, relI));
-    // The empty record is the end marker.
-    if (size == 4)
+  while (!d.empty()) {
+    if (d.size() < 4) {
+      msg = "CIE/FDE too small";
       break;
-    off += size;
+    }
+    uint64_t size = endian::read32<ELFT::TargetEndianness>(d.data());
+    // If it is 0xFFFFFFFF, the next 8 bytes contain the size instead,
+    // but we do not support that format yet.
+    if (size == UINT32_MAX) {
+      msg = "CIE/FDE too large";
+      break;
+    }
+    size += 4;
+    if (size > d.size()) {
+      msg = "CIE/FDE ends past the end of the section";
+      break;
+    }
+
+    uint64_t off = d.data() - rawData.data();
+    pieces.emplace_back(off, this, size, getReloc(off, size, rels, relI));
+    d = d.slice(size);
   }
+  if (msg)
+    errorOrWarn("corrupted .eh_frame: " + Twine(msg) + "\n>>> defined in " +
+                getObjMsg(d.data() - rawData.data()));
 }
 
 static size_t findNull(StringRef s, size_t entSize) {
@@ -1453,11 +1471,6 @@ template InputSection::InputSection(ObjFile<ELF64LE> &, const ELF64LE::Shdr &,
                                     StringRef);
 template InputSection::InputSection(ObjFile<ELF64BE> &, const ELF64BE::Shdr &,
                                     StringRef);
-
-template std::string InputSectionBase::getLocation<ELF32LE>(uint64_t);
-template std::string InputSectionBase::getLocation<ELF32BE>(uint64_t);
-template std::string InputSectionBase::getLocation<ELF64LE>(uint64_t);
-template std::string InputSectionBase::getLocation<ELF64BE>(uint64_t);
 
 template void InputSection::writeTo<ELF32LE>(uint8_t *);
 template void InputSection::writeTo<ELF32BE>(uint8_t *);

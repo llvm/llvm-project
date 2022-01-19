@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/APFloat.h"
@@ -152,19 +153,8 @@ ArrayRef<Type> FunctionType::getResults() const {
   return getImpl()->getResults();
 }
 
-/// Helper to call a callback once on each index in the range
-/// [0, `totalIndices`), *except* for the indices given in `indices`.
-/// `indices` is allowed to have duplicates and can be in any order.
-inline void iterateIndicesExcept(unsigned totalIndices,
-                                 ArrayRef<unsigned> indices,
-                                 function_ref<void(unsigned)> callback) {
-  llvm::BitVector skipIndices(totalIndices);
-  for (unsigned i : indices)
-    skipIndices.set(i);
-
-  for (unsigned i = 0; i < totalIndices; ++i)
-    if (!skipIndices.test(i))
-      callback(i);
+FunctionType FunctionType::clone(TypeRange inputs, TypeRange results) const {
+  return get(getContext(), inputs, results);
 }
 
 /// Returns a new function type with the specified arguments and results
@@ -172,65 +162,24 @@ inline void iterateIndicesExcept(unsigned totalIndices,
 FunctionType FunctionType::getWithArgsAndResults(
     ArrayRef<unsigned> argIndices, TypeRange argTypes,
     ArrayRef<unsigned> resultIndices, TypeRange resultTypes) {
-  assert(argIndices.size() == argTypes.size());
-  assert(resultIndices.size() == resultTypes.size());
-
-  ArrayRef<Type> newInputTypes = getInputs();
-  SmallVector<Type, 4> newInputTypesBuffer;
-  if (!argIndices.empty()) {
-    const auto *fromIt = newInputTypes.begin();
-    for (auto it : llvm::zip(argIndices, argTypes)) {
-      const auto *toIt = newInputTypes.begin() + std::get<0>(it);
-      newInputTypesBuffer.append(fromIt, toIt);
-      newInputTypesBuffer.push_back(std::get<1>(it));
-      fromIt = toIt;
-    }
-    newInputTypesBuffer.append(fromIt, newInputTypes.end());
-    newInputTypes = newInputTypesBuffer;
-  }
-
-  ArrayRef<Type> newResultTypes = getResults();
-  SmallVector<Type, 4> newResultTypesBuffer;
-  if (!resultIndices.empty()) {
-    const auto *fromIt = newResultTypes.begin();
-    for (auto it : llvm::zip(resultIndices, resultTypes)) {
-      const auto *toIt = newResultTypes.begin() + std::get<0>(it);
-      newResultTypesBuffer.append(fromIt, toIt);
-      newResultTypesBuffer.push_back(std::get<1>(it));
-      fromIt = toIt;
-    }
-    newResultTypesBuffer.append(fromIt, newResultTypes.end());
-    newResultTypes = newResultTypesBuffer;
-  }
-
-  return FunctionType::get(getContext(), newInputTypes, newResultTypes);
+  SmallVector<Type> argStorage, resultStorage;
+  TypeRange newArgTypes = function_interface_impl::insertTypesInto(
+      getInputs(), argIndices, argTypes, argStorage);
+  TypeRange newResultTypes = function_interface_impl::insertTypesInto(
+      getResults(), resultIndices, resultTypes, resultStorage);
+  return clone(newArgTypes, newResultTypes);
 }
 
 /// Returns a new function type without the specified arguments and results.
 FunctionType
 FunctionType::getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
                                        ArrayRef<unsigned> resultIndices) {
-  ArrayRef<Type> newInputTypes = getInputs();
-  SmallVector<Type, 4> newInputTypesBuffer;
-  if (!argIndices.empty()) {
-    unsigned originalNumArgs = getNumInputs();
-    iterateIndicesExcept(originalNumArgs, argIndices, [&](unsigned i) {
-      newInputTypesBuffer.emplace_back(getInput(i));
-    });
-    newInputTypes = newInputTypesBuffer;
-  }
-
-  ArrayRef<Type> newResultTypes = getResults();
-  SmallVector<Type, 4> newResultTypesBuffer;
-  if (!resultIndices.empty()) {
-    unsigned originalNumResults = getNumResults();
-    iterateIndicesExcept(originalNumResults, resultIndices, [&](unsigned i) {
-      newResultTypesBuffer.emplace_back(getResult(i));
-    });
-    newResultTypes = newResultTypesBuffer;
-  }
-
-  return get(getContext(), newInputTypes, newResultTypes);
+  SmallVector<Type> argStorage, resultStorage;
+  TypeRange newArgTypes = function_interface_impl::filterTypesOut(
+      getInputs(), argIndices, argStorage);
+  TypeRange newResultTypes = function_interface_impl::filterTypesOut(
+      getResults(), resultIndices, resultStorage);
+  return clone(newArgTypes, newResultTypes);
 }
 
 void FunctionType::walkImmediateSubElements(

@@ -2074,6 +2074,12 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
   if (GV->isThreadLocal())
     return 0;
 
+  // If the global has the toc-data attribute then fallback to DAG-ISEL.
+  if (TM.getTargetTriple().isOSAIX())
+    if (const GlobalVariable *Var = dyn_cast_or_null<GlobalVariable>(GV))
+      if (Var->hasAttribute("toc-data"))
+        return false;
+
   PPCFuncInfo->setUsesTOCBasePtr();
   // For small code model, generate a simple TOC load.
   if (CModel == CodeModel::Small)

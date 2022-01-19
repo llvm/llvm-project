@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -43,8 +43,9 @@ using namespace mlir::linalg;
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X)
 
-static FailureOr<Operation *>
-vectorizeConvolution(OpBuilder &b, ConvolutionOpInterface convOp);
+/// Try to vectorize `convOp` as a convolution.
+static FailureOr<Operation *> vectorizeConvolution(OpBuilder &b,
+                                                   LinalgOp convOp);
 
 /// Return the unique instance of OpType in `block` if it is indeed unique.
 /// Return null if none or more than 1 instances exist.
@@ -636,13 +637,12 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter,
   SmallVector<Value> results;
   // TODO: isaConvolutionOpInterface that can also infer from generic
   // features. Will require stride/dilation attributes inference.
-  if (auto convOp = dyn_cast<ConvolutionOpInterface>(linalgOp.getOperation())) {
-    LDBG("Vectorize as a conv: " << linalgOp);
-    FailureOr<Operation *> convOr = vectorizeConvolution(rewriter, convOp);
-    if (failed(convOr))
-      return failure();
+  FailureOr<Operation *> convOr = vectorizeConvolution(rewriter, linalgOp);
+  if (succeeded(convOr)) {
     llvm::append_range(results, (*convOr)->getResults());
   } else {
+    if (failed(vectorizeLinalgOpPrecondition(linalgOp)))
+      return failure();
     LDBG("Vectorize generic by broadcasting to a common shape: " << linalgOp);
     if (failed(vectorizeAsLinalgGeneric(rewriter, linalgOp, results)))
       return failure();
@@ -1098,134 +1098,6 @@ void mlir::linalg::populatePadTensorOpVectorizationPatterns(
       patterns.getContext(), baseBenefit.getBenefit() + 1);
 }
 
-// TODO: cleanup all the convolution vectorization patterns.
-template <class ConvOp, int N>
-LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
-    ConvOp op, PatternRewriter &rewriter) const {
-  Location loc = op.getLoc();
-  MLIRContext *context = op.getContext();
-
-  OpOperand *input = op.getInputOperand(0);
-  OpOperand *kernel = op.getInputOperand(1);
-  OpOperand *output = op.getOutputOperand(0);
-  ArrayRef<int64_t> inShape = op.getShape(input);
-  ArrayRef<int64_t> kShape = op.getShape(kernel);
-
-  if (llvm::any_of(inShape, ShapedType::isDynamic) ||
-      llvm::any_of(kShape, ShapedType::isDynamic))
-    return failure();
-
-  SmallVector<AffineExpr, 4> mapping;
-  SmallVector<int64_t, 4> vectorDims;
-  // Fail to apply when the size of not vectorized dimension is not 1.
-  for (unsigned i = 0; i < N; i++) {
-    if (!mask[i] && (inShape[i] != 1 || kShape[i] != 1))
-      return failure();
-
-    if (mask[i] && inShape[i] != kShape[i])
-      return failure();
-
-    if (mask[i]) {
-      mapping.push_back(getAffineDimExpr(i, context));
-      vectorDims.push_back(inShape[i]);
-    }
-  }
-
-  int64_t rank = op.getRank(input);
-  int64_t numDims = mapping.size();
-  Type elemType = getElementTypeOrSelf(input->get());
-
-  auto map = AffineMap::get(rank, 0, mapping, context);
-  SmallVector<Value, 4> zeros(rank,
-                              rewriter.create<arith::ConstantIndexOp>(loc, 0));
-  auto vecType = VectorType::get(vectorDims, elemType);
-
-  auto inputVec = rewriter.create<vector::TransferReadOp>(
-      loc, vecType, input->get(), zeros, map);
-  auto kernelVec = rewriter.create<vector::TransferReadOp>(
-      loc, vecType, kernel->get(), zeros, map);
-
-  auto acc = rewriter.create<arith::ConstantOp>(loc, elemType,
-                                                rewriter.getZeroAttr(elemType));
-
-  std::array<AffineMap, 3> indexingMaps{
-      AffineMap::getMultiDimIdentityMap(numDims, context),
-      AffineMap::getMultiDimIdentityMap(numDims, context),
-      AffineMap::get(numDims, 0, {}, context)};
-
-  std::vector<StringRef> iteratorTypes(numDims, "reduction");
-
-  auto result = rewriter.create<vector::ContractionOp>(
-      loc, inputVec, kernelVec, acc,
-      rewriter.getAffineMapArrayAttr(indexingMaps),
-      rewriter.getStrArrayAttr(iteratorTypes));
-
-  rewriter.create<memref::StoreOp>(loc, result, output->get(),
-                                   ValueRange(zeros));
-  rewriter.eraseOp(op);
-  return success();
-}
-
-/// Inserts tiling, promotion and vectorization pattern for ConvOp
-/// conversion into corresponding pattern lists.
-template <typename ConvOp, unsigned N>
-static void populateVectorizationPatterns(
-    RewritePatternSet &tilingPatterns, RewritePatternSet &promotionPatterns,
-    RewritePatternSet &vectorizationPatterns, ArrayRef<int64_t> tileSizes) {
-  auto *context = tilingPatterns.getContext();
-  if (tileSizes.size() < N)
-    return;
-
-  constexpr static StringRef kTiledMarker = "TILED";
-  constexpr static StringRef kPromotedMarker = "PROMOTED";
-  tilingPatterns.add<LinalgTilingPattern>(
-      ConvOp::getOperationName(), context,
-      LinalgTilingOptions().setTileSizes(tileSizes),
-      LinalgTransformationFilter(ArrayRef<StringAttr>{},
-                                 StringAttr::get(context, kTiledMarker)));
-
-  promotionPatterns.add<LinalgPromotionPattern<ConvOp>>(
-      context, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
-      LinalgTransformationFilter(StringAttr::get(context, kTiledMarker),
-                                 StringAttr::get(context, kPromotedMarker)));
-
-  SmallVector<bool, 4> mask(N);
-  int offset = tileSizes.size() - N;
-  std::transform(tileSizes.begin() + offset, tileSizes.end(), mask.begin(),
-                 [](int64_t i) -> bool { return i > 1; });
-
-  vectorizationPatterns.add<ConvOpVectorization<ConvOp, N>>(context, mask);
-}
-
-void mlir::linalg::populateConvVectorizationPatterns(
-    MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,
-    ArrayRef<int64_t> tileSizes) {
-  RewritePatternSet tiling(context);
-  RewritePatternSet promotion(context);
-  RewritePatternSet vectorization(context);
-  populateVectorizationPatterns<Conv1DOp, 1>(tiling, promotion, vectorization,
-                                             tileSizes);
-
-  populateVectorizationPatterns<Conv2DOp, 2>(tiling, promotion, vectorization,
-                                             tileSizes);
-
-  populateVectorizationPatterns<Conv3DOp, 3>(tiling, promotion, vectorization,
-                                             tileSizes);
-
-  populateVectorizationPatterns<Conv1DNwcWcfOp, 3>(tiling, promotion,
-                                                   vectorization, tileSizes);
-
-  populateVectorizationPatterns<Conv2DNhwcHwcfOp, 4>(tiling, promotion,
-                                                     vectorization, tileSizes);
-
-  populateVectorizationPatterns<Conv3DNdhwcDhwcfOp, 5>(
-      tiling, promotion, vectorization, tileSizes);
-
-  patterns.push_back(std::move(tiling));
-  patterns.push_back(std::move(promotion));
-  patterns.push_back(std::move(vectorization));
-}
-
 //----------------------------------------------------------------------------//
 // Forwarding patterns
 //----------------------------------------------------------------------------//
@@ -1415,6 +1287,22 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
 //===----------------------------------------------------------------------===//
 // Convolution vectorization patterns
 //===----------------------------------------------------------------------===//
+
+template <int N>
+static void bindShapeDims(ShapedType shapedType) {}
+
+template <int N, typename IntTy, typename... IntTy2>
+static void bindShapeDims(ShapedType shapedType, IntTy &val, IntTy2 &...vals) {
+  val = shapedType.getShape()[N];
+  bindShapeDims<N + 1, IntTy2 &...>(shapedType, vals...);
+}
+
+/// Bind a pack of int& to the leading dimensions of shapedType.getShape().
+template <typename... IntTy>
+static void bindShapeDims(ShapedType shapedType, IntTy &...vals) {
+  bindShapeDims<0>(shapedType, vals...);
+}
+
 namespace {
 /// Generate a vector implementation for either:
 /// ```
@@ -1482,11 +1370,11 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     if (!valid)
       return failure();
 
-    int nSize = lhsShapedType.getShape()[0];
-    int wSize = resShapedType.getShape()[1];
-    int cSize = lhsShapedType.getShape()[2];
-    int kwSize = rhsShapedType.getShape()[0];
-    int fSize = rhsShapedType.getShape()[2];
+    int64_t nSize, wSize, cSize, kwSize, fSize;
+    // kernel{kw, c, f}
+    bindShapeDims(rhsShapedType, kwSize, cSize, fSize);
+    // out{n, w, f}
+    bindShapeDims(resShapedType, nSize, wSize);
 
     vector::TransferWriteOp write;
     Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
@@ -1526,30 +1414,28 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     //===------------------------------------------------------------------===//
     // Unroll along kw and read slices of lhs and rhs.
     SmallVector<Value> lhsVals, rhsVals, resVals;
+    // Extract lhs slice of size {n, wSizeStep, c} @ [0, sw * w + dw * kw, 0].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
-      // Extract rhs slice of size {c, f} @ [kw].
-      rhsVals.push_back(builder.create<vector::ExtractOp>(
-          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
-
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        // Extract lhs slice of size {n, wSizeStep, c}
-        //   @ [0, sw * w + dw * kw, 0].
         lhsVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
             loc, lhs,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
             /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
-
-        // This does not depend on kw.
-        if (kw == 0) {
-          // Extract res slice: {n, wSizeStep, f} @ [0, w, 0].
-          resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
-              loc, res,
-              /*offsets=*/ArrayRef<int64_t>{0, w, 0},
-              /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, fSize},
-              /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
-        }
       }
+    }
+    // Extract rhs slice of size {c, f} @ [kw].
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      rhsVals.push_back(builder.create<vector::ExtractOp>(
+          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
+    }
+    // Extract res slice: {n, wSizeStep, f} @ [0, w, 0].
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
+          loc, res,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+          /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, fSize},
+          /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
     }
 
     auto linearIndex = [&](int64_t kw, int64_t w) {
@@ -1604,14 +1490,15 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
-  FailureOr<Operation *> dilatedConv() {
+  FailureOr<Operation *> depthwiseConv() {
     if (!valid)
       return failure();
 
-    int nSize = lhsShapedType.getShape()[0];
-    int wSize = resShapedType.getShape()[1];
-    int cSize = lhsShapedType.getShape()[2];
-    int kwSize = rhsShapedType.getShape()[0];
+    int64_t nSize, wSize, cSize, kwSize;
+    // kernel{kw, c}
+    bindShapeDims(rhsShapedType, kwSize, cSize);
+    // out{n, w, c}
+    bindShapeDims(resShapedType, nSize, wSize);
 
     vector::TransferWriteOp write;
     Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
@@ -1650,30 +1537,29 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     //===------------------------------------------------------------------===//
     // Unroll along kw and read slices of lhs and rhs.
     SmallVector<Value> lhsVals, rhsVals, resVals;
+    // Extract lhs slice of size {n, wSizeStep, c}
+    //   @ [0, sw * w + dw * kw, 0].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
-      // Extract rhs slice of size {c} @ [kw].
-      rhsVals.push_back(builder.create<vector::ExtractOp>(
-          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
-
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        // Extract lhs slice of size {n, wSizeStep, c}
-        //   @ [0, sw * w + dw * kw, 0].
         lhsVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
             loc, lhs,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
             /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
-
-        // This does not depend on kw.
-        if (kw == 0) {
-          // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
-          resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
-              loc, res,
-              /*offsets=*/ArrayRef<int64_t>{0, w, 0},
-              /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
-              /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
-        }
       }
+    }
+    // Extract rhs slice of size {c} @ [kw].
+    for (int64_t kw = 0; kw < kwSize; ++kw) {
+      rhsVals.push_back(builder.create<vector::ExtractOp>(
+          loc, rhs, /*offsets=*/ArrayRef<int64_t>{kw}));
+    }
+    // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
+    for (int64_t w = 0; w < wSize; w += wSizeStep) {
+      resVals.push_back(builder.create<vector::ExtractStridedSliceOp>(
+          loc, res,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0},
+          /*sizes=*/ArrayRef<int64_t>{nSize, wSizeStep, cSize},
+          /*strides=*/ArrayRef<int64_t>{1, 1, 1}));
     }
 
     auto linearIndex = [&](int64_t kw, int64_t w) {
@@ -1683,7 +1569,7 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        resVals[w] = dilatedConv1dSliceAsFma(
+        resVals[w] = depthwiseConv1dSliceAsFma(
             builder, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw], resVals[w]);
       }
     }
@@ -1708,8 +1594,8 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   }
 
   /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to fma.
-  Value dilatedConv1dSliceAsFma(OpBuilder &b, Location loc, Value lhs,
-                                Value rhs, Value res) {
+  Value depthwiseConv1dSliceAsFma(OpBuilder &b, Location loc, Value lhs,
+                                  Value rhs, Value res) {
     Value bcast = builder.create<vector::BroadcastOp>(loc, res.getType(), rhs);
     return b.create<vector::FMAOp>(loc, lhs, bcast, res);
   }
@@ -1742,7 +1628,7 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c},
                 /*resIndex*/ {n, w, c}}))
-      return dilatedConv();
+      return depthwiseConv();
     return failure();
   }
 
@@ -1754,40 +1640,39 @@ private:
 };
 } // namespace
 
-/// Helper function to vectorize a `linalgOp` with convolution semantics.
+/// Helper function to vectorize a LinalgOp with convolution semantics.
 // TODO: extend the generic vectorization to support windows and drop this.
-static FailureOr<Operation *>
-vectorizeConvolution(OpBuilder &b, ConvolutionOpInterface convOp) {
-  // TODO: these are legitimately part of ConvolutionOpInterface.
-  auto strides = convOp->getAttrOfType<DenseIntElementsAttr>("strides");
-  auto dilations = convOp->getAttrOfType<DenseIntElementsAttr>("dilations");
+static FailureOr<Operation *> vectorizeConvolution(OpBuilder &b, LinalgOp op) {
+  // The ConvolutionOpInterface gives us guarantees of existence for
+  // strides/dilations. However, we do not need to rely on those, we can simply
+  // use them if present, otherwise use the default and let the generic conv.
+  // matcher in the ConvGenerator succeed or fail.
+  auto strides = op->getAttrOfType<DenseIntElementsAttr>("strides");
+  auto dilations = op->getAttrOfType<DenseIntElementsAttr>("dilations");
   auto stride = strides ? *strides.getValues<uint64_t>().begin() : 1;
   auto dilation = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
-  LinalgOp linalgOp = cast<LinalgOp>(convOp.getOperation());
-  Conv1DNwcGenerator e(b, linalgOp, stride, dilation);
+  Conv1DNwcGenerator e(b, op, stride, dilation);
   auto res = e.generateConv();
   if (succeeded(res))
     return res;
   return e.generateDilatedConv();
 }
 
-struct VectorizeConvolution
-    : public OpInterfaceRewritePattern<ConvolutionOpInterface> {
+struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
   using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
 
-  LogicalResult matchAndRewrite(ConvolutionOpInterface convOp,
+  LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
-    FailureOr<Operation *> resultOrFail =
-        vectorizeConvolution(rewriter, convOp);
+    FailureOr<Operation *> resultOrFail = vectorizeConvolution(rewriter, op);
     if (failed(resultOrFail))
       return failure();
     Operation *newOp = *resultOrFail;
     if (newOp->getNumResults() == 0) {
-      rewriter.eraseOp(convOp.getOperation());
+      rewriter.eraseOp(op.getOperation());
       return success();
     }
     assert(newOp->getNumResults() == 1 && "expected single result");
-    rewriter.replaceOp(convOp.getOperation(), newOp->getResult(0));
+    rewriter.replaceOp(op.getOperation(), newOp->getResult(0));
     return success();
   }
 };

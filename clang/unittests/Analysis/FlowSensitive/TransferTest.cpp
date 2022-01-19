@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
@@ -40,16 +41,20 @@ protected:
   template <typename Matcher>
   void runDataflow(llvm::StringRef Code, Matcher Match,
                    LangStandard::Kind Std = LangStandard::lang_cxx17) {
-    test::checkDataflow<NoopAnalysis>(
-        Code, "target",
-        [](ASTContext &C, Environment &) { return NoopAnalysis(C); },
-        [&Match](llvm::ArrayRef<
-                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
-                     Results,
-                 ASTContext &ASTCtx) { Match(Results, ASTCtx); },
-        {"-fsyntax-only",
-         "-std=" +
-             std::string(LangStandard::getLangStandardForKind(Std).getName())});
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<NoopAnalysis>(
+            Code, "target",
+            [](ASTContext &C, Environment &) { return NoopAnalysis(C); },
+            [&Match](
+                llvm::ArrayRef<
+                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                    Results,
+                ASTContext &ASTCtx) { Match(Results, ASTCtx); },
+            {"-fsyntax-only",
+             "-std=" +
+                 std::string(
+                     LangStandard::getLangStandardForKind(Std).getName())}),
+        llvm::Succeeded());
   }
 };
 
@@ -1691,6 +1696,65 @@ TEST_F(TransferTest, StaticCast) {
                 const auto *BarVal =
                     cast<IntegerValue>(Env.getValue(*BarDecl, SkipPast::None));
                 EXPECT_EQ(FooVal, BarVal);
+              });
+}
+
+TEST_F(TransferTest, AddrOfValue) {
+  std::string Code = R"(
+    void target() {
+      int Foo;
+      int *Bar = &Foo;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *FooLoc = cast<ScalarStorageLocation>(
+                    Env.getStorageLocation(*FooDecl, SkipPast::None));
+                const auto *BarVal =
+                    cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
+                EXPECT_EQ(&BarVal->getPointeeLoc(), FooLoc);
+              });
+}
+
+TEST_F(TransferTest, AddrOfReference) {
+  std::string Code = R"(
+    void target(int *Foo) {
+      int *Bar = &(*Foo);
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *FooVal =
+                    cast<PointerValue>(Env.getValue(*FooDecl, SkipPast::None));
+                const auto *BarVal =
+                    cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
+                EXPECT_EQ(&BarVal->getPointeeLoc(), &FooVal->getPointeeLoc());
               });
 }
 

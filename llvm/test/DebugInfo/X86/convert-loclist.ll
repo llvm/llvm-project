@@ -19,6 +19,16 @@
 ; extra bytes would be emitted into the output assembly in no
 ; particular/intentional section - so let's check they don't show up at all:
 ; ASM-NOT: .asciz  "\200\200\200"
+; ASM:      .byte   10                              # Loc expr size
+; ASM-NEXT: .byte   17                              # DW_OP_consts
+; ASM-NEXT: .byte   7                               # 7
+; ASM-NEXT: .byte   48                              # DW_OP_lit0
+; ASM-NEXT: .byte   34                              # DW_OP_plus
+; ASM-NEXT: .byte   168                             # DW_OP_convert
+; ASM-NEXT: .asciz  "\232\200\200"                  #
+; ASM-NEXT: .byte   159                             # DW_OP_stack_value
+; ASM-NEXT: .byte   0                               # DW_LLE_end_of_list
+; ASM-NOT: .asciz  "\200\200\200"
 
 ; CHECK: 0x{{0*}}[[TYPE:.*]]: DW_TAG_base_type
 ; CHECK-NEXT:                   DW_AT_name ("DW_ATE_unsigned_32")

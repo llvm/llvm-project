@@ -152,11 +152,7 @@ define void @insert_v4i32_undef_v2i32_0(<4 x i32>* %vp, <2 x i32>* %svp) {
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v9, 0
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
-; CHECK-NEXT:    vslideup.vi v9, v8, 0
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, <2 x i32>* %svp
   %v = call <4 x i32> @llvm.experimental.vector.insert.v2i32.v4i32(<4 x i32> undef, <2 x i32> %sv, i64 0)

@@ -179,6 +179,27 @@ func @remove_no_op(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?x?x?xf32>)
 
 // -----
 
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+func @remove_no_op_mismatched_types(%arg0 : tensor<?x?x?xf32>)
+  -> tensor<1x2x3xf32> {
+  %out = linalg.init_tensor [1, 2, 3] : tensor<1x2x3xf32>
+  %g = linalg.generic {
+    indexing_maps = [#map, #map],
+    iterator_types = ["parallel", "parallel", "parallel"]
+  } ins(%arg0 : tensor<?x?x?xf32>)
+    outs(%out : tensor<1x2x3xf32>) {
+  ^bb0(%arg2 : f32, %arg3 : f32):
+    linalg.yield %arg2 : f32
+  } -> (tensor<1x2x3xf32>)
+  return %g : tensor<1x2x3xf32>
+}
+// CHECK-LABEL: func @remove_no_op_mismatched_types
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
+//       CHECK:     %[[CAST:.*]] = tensor.cast %[[ARG0]] : tensor<?x?x?xf32> to tensor<1x2x3xf32>
+//       CHECK:     return %[[CAST]]
+
+// -----
+
 #map = affine_map<(d0, d1) -> (d0, d1)>
 func @keep_not_noop(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32> {
   %c0 = arith.constant 0 : index

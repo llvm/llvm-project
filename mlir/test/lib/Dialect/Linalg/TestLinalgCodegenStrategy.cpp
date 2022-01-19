@@ -29,7 +29,7 @@ using namespace mlir::linalg;
 
 namespace {
 struct TestLinalgCodegenStrategy
-    : public PassWrapper<TestLinalgCodegenStrategy, FunctionPass> {
+    : public PassWrapper<TestLinalgCodegenStrategy, OperationPass<FuncOp>> {
   StringRef getArgument() const final { return "test-linalg-codegen-strategy"; }
   StringRef getDescription() const final {
     return "Test Linalg Codegen Strategy.";
@@ -53,11 +53,11 @@ struct TestLinalgCodegenStrategy
   template <typename LinalgNamedOp>
   void applyStrategyToNamedLinalgOp();
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
-  void runStrategy(LinalgTilingAndFusionOptions tilingAndFusionOptions,
-                   LinalgTilingOptions tilingOptions,
-                   LinalgTilingOptions registerTilingOptions,
+  void runStrategy(const LinalgTilingAndFusionOptions &tilingAndFusionOptions,
+                   const LinalgTilingOptions &tilingOptions,
+                   const LinalgTilingOptions &registerTilingOptions,
                    LinalgPaddingOptions paddingOptions,
                    vector::VectorContractLowering vectorContractLowering,
                    vector::VectorTransferSplit vectorTransferSplit);
@@ -168,9 +168,9 @@ struct TestLinalgCodegenStrategy
 };
 
 void TestLinalgCodegenStrategy::runStrategy(
-    LinalgTilingAndFusionOptions tilingAndFusionOptions,
-    LinalgTilingOptions tilingOptions,
-    LinalgTilingOptions registerTilingOptions,
+    const LinalgTilingAndFusionOptions &tilingAndFusionOptions,
+    const LinalgTilingOptions &tilingOptions,
+    const LinalgTilingOptions &registerTilingOptions,
     LinalgPaddingOptions paddingOptions,
     vector::VectorContractLowering vectorContractLowering,
     vector::VectorTransferSplit vectorTransferSplit) {
@@ -208,7 +208,7 @@ void TestLinalgCodegenStrategy::runStrategy(
               .enableContractionLowering()
               .enableTransferToSCFConversion());
   // Created a nested OpPassManager and run.
-  FuncOp funcOp = getFunction();
+  FuncOp funcOp = getOperation();
   OpPassManager dynamicPM("builtin.func");
   strategy.configurePassPipeline(dynamicPM, funcOp.getContext(), runEnablePass);
   if (failed(runPipeline(dynamicPM, funcOp)))
@@ -225,8 +225,8 @@ static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
 }
 
 /// Apply transformations specified as patterns.
-void TestLinalgCodegenStrategy::runOnFunction() {
-  if (!anchorFuncOpName.empty() && anchorFuncOpName != getFunction().getName())
+void TestLinalgCodegenStrategy::runOnOperation() {
+  if (!anchorFuncOpName.empty() && anchorFuncOpName != getOperation().getName())
     return;
 
   LinalgTilingAndFusionOptions tilingAndFusionOptions;

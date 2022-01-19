@@ -14,7 +14,7 @@ add_mlir_library(MLIRIR
   Dialect.cpp
   Dominance.cpp
   FunctionImplementation.cpp
-  FunctionSupport.cpp
+  FunctionInterfaces.cpp
   IntegerSet.cpp
   Location.cpp
   MLIRContext.cpp

@@ -416,11 +416,11 @@ struct __num_get
                   unsigned& __dc, _CharT __thousands_sep, const string& __grouping,
                   unsigned* __g, unsigned*& __g_end, const _CharT* __atoms);
 private:
-    template<typename T>
-    const T* __do_widen_p(ios_base& __iob, T* __atoms) const
+    template<typename _Tp>
+    const _Tp* __do_widen_p(ios_base& __iob, _Tp* __atoms) const
     {
       locale __loc = __iob.getloc();
-      use_facet<ctype<T> >(__loc).widen(__src, __src + 26, __atoms);
+      use_facet<ctype<_Tp> >(__loc).widen(__src, __src + 26, __atoms);
       return __atoms;
     }
 

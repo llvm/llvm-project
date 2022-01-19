@@ -2911,13 +2911,21 @@ void SITargetLowering::passSpecialInputs(
   }
 
   if (!InputReg && (NeedWorkItemIDX || NeedWorkItemIDY || NeedWorkItemIDZ)) {
-    // Workitem ids are already packed, any of present incoming arguments
-    // will carry all required fields.
-    ArgDescriptor IncomingArg = ArgDescriptor::createArg(
-      IncomingArgX ? *IncomingArgX :
-      IncomingArgY ? *IncomingArgY :
-                     *IncomingArgZ, ~0u);
-    InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, IncomingArg);
+    if (!IncomingArgX && !IncomingArgY && !IncomingArgZ) {
+      // We're in a situation where the outgoing function requires the workitem
+      // ID, but the calling function does not have it (e.g a graphics function
+      // calling a C calling convention function). This is illegal, but we need
+      // to produce something.
+      InputReg = DAG.getUNDEF(MVT::i32);
+    } else {
+      // Workitem ids are already packed, any of present incoming arguments
+      // will carry all required fields.
+      ArgDescriptor IncomingArg = ArgDescriptor::createArg(
+        IncomingArgX ? *IncomingArgX :
+        IncomingArgY ? *IncomingArgY :
+        *IncomingArgZ, ~0u);
+      InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, IncomingArg);
+    }
   }
 
   if (OutgoingArg->isRegister()) {
@@ -6933,9 +6941,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                 DAG.getConstant(1, SL, MVT::i32));
     return DAG.getSetCC(SL, MVT::i1, SrcHi, Aperture, ISD::SETEQ);
   }
-  case Intrinsic::amdgcn_alignbit:
-    return DAG.getNode(ISD::FSHR, DL, VT,
-                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_perm:
     return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));

@@ -195,7 +195,7 @@ static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
 
 static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
   p << ' ' << op.getMemref() << "[" << op.getIndices()
-    << "] : " << op.getMemref().getType();
+    << "] : " << op.getMemref().getType() << ' ';
   p.printRegion(op.getRegion());
   p.printOptionalAttrDict(op->getAttrs());
 }

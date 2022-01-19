@@ -12,8 +12,8 @@ module attributes {
   gpu.module @kernels {
     gpu.func @kernel_add(%arg0 : memref<16384xf32>, %arg1 : memref<16384xf32>, %arg2 : memref<16384xf32>)
       kernel attributes { spv.entry_point_abi = {local_size = dense<[128, 1, 1]>: vector<3xi32> }} {
-      %bid = "gpu.block_id"() {dimension = "x"} : () -> index
-      %tid = "gpu.thread_id"() {dimension = "x"} : () -> index
+      %bid = gpu.block_id x
+      %tid = gpu.thread_id x
       %cst = arith.constant 128 : index
       %b = arith.muli %bid, %cst : index
       %0 = arith.addi %b, %tid : index

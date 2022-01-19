@@ -15,15 +15,15 @@ using namespace test;
 
 namespace {
 struct TestRecursiveTypesPass
-    : public PassWrapper<TestRecursiveTypesPass, FunctionPass> {
+    : public PassWrapper<TestRecursiveTypesPass, OperationPass<FuncOp>> {
   LogicalResult createIRWithTypes();
 
   StringRef getArgument() const final { return "test-recursive-types"; }
   StringRef getDescription() const final {
     return "Test support for recursive types";
   }
-  void runOnFunction() override {
-    FuncOp func = getFunction();
+  void runOnOperation() override {
+    FuncOp func = getOperation();
 
     // Just make sure recursive types are printed and parsed.
     if (func.getName() == "roundtrip")
@@ -45,7 +45,7 @@ struct TestRecursiveTypesPass
 
 LogicalResult TestRecursiveTypesPass::createIRWithTypes() {
   MLIRContext *ctx = &getContext();
-  FuncOp func = getFunction();
+  FuncOp func = getOperation();
   auto type = TestRecursiveType::get(ctx, "some_long_and_unique_name");
   if (failed(type.setBody(type)))
     return func.emitError("expected to be able to set the type body");

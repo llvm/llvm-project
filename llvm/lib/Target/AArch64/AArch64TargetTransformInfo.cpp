@@ -416,11 +416,75 @@ static Optional<Instruction *> processPhiNode(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, NPN);
 }
 
+// (from_svbool (binop (to_svbool pred) (svbool_t _) (svbool_t _))))
+// => (binop (pred) (from_svbool _) (from_svbool _))
+//
+// The above transformation eliminates a `to_svbool` in the predicate
+// operand of bitwise operation `binop` by narrowing the vector width of
+// the operation. For example, it would convert a `<vscale x 16 x i1>
+// and` into a `<vscale x 4 x i1> and`. This is profitable because
+// to_svbool must zero the new lanes during widening, whereas
+// from_svbool is free.
+static Optional<Instruction *> tryCombineFromSVBoolBinOp(InstCombiner &IC,
+                                                         IntrinsicInst &II) {
+  auto BinOp = dyn_cast<IntrinsicInst>(II.getOperand(0));
+  if (!BinOp)
+    return None;
+
+  auto IntrinsicID = BinOp->getIntrinsicID();
+  switch (IntrinsicID) {
+  case Intrinsic::aarch64_sve_and_z:
+  case Intrinsic::aarch64_sve_bic_z:
+  case Intrinsic::aarch64_sve_eor_z:
+  case Intrinsic::aarch64_sve_nand_z:
+  case Intrinsic::aarch64_sve_nor_z:
+  case Intrinsic::aarch64_sve_orn_z:
+  case Intrinsic::aarch64_sve_orr_z:
+    break;
+  default:
+    return None;
+  }
+
+  auto BinOpPred = BinOp->getOperand(0);
+  auto BinOpOp1 = BinOp->getOperand(1);
+  auto BinOpOp2 = BinOp->getOperand(2);
+
+  auto PredIntr = dyn_cast<IntrinsicInst>(BinOpPred);
+  if (!PredIntr ||
+      PredIntr->getIntrinsicID() != Intrinsic::aarch64_sve_convert_to_svbool)
+    return None;
+
+  auto PredOp = PredIntr->getOperand(0);
+  auto PredOpTy = cast<VectorType>(PredOp->getType());
+  if (PredOpTy != II.getType())
+    return None;
+
+  IRBuilder<> Builder(II.getContext());
+  Builder.SetInsertPoint(&II);
+
+  SmallVector<Value *> NarrowedBinOpArgs = {PredOp};
+  auto NarrowBinOpOp1 = Builder.CreateIntrinsic(
+      Intrinsic::aarch64_sve_convert_from_svbool, {PredOpTy}, {BinOpOp1});
+  NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
+  if (BinOpOp1 == BinOpOp2)
+    NarrowedBinOpArgs.push_back(NarrowBinOpOp1);
+  else
+    NarrowedBinOpArgs.push_back(Builder.CreateIntrinsic(
+        Intrinsic::aarch64_sve_convert_from_svbool, {PredOpTy}, {BinOpOp2}));
+
+  auto NarrowedBinOp =
+      Builder.CreateIntrinsic(IntrinsicID, {PredOpTy}, NarrowedBinOpArgs);
+  return IC.replaceInstUsesWith(II, NarrowedBinOp);
+}
+
 static Optional<Instruction *> instCombineConvertFromSVBool(InstCombiner &IC,
                                                             IntrinsicInst &II) {
   // If the reinterpret instruction operand is a PHI Node
   if (isa<PHINode>(II.getArgOperand(0)))
     return processPhiNode(IC, II);
+
+  if (auto BinOpCombine = tryCombineFromSVBoolBinOp(IC, II))
+    return BinOpCombine;
 
   SmallVector<Instruction *, 32> CandidatesForRemoval;
   Value *Cursor = II.getOperand(0), *EarliestReplacement = nullptr;

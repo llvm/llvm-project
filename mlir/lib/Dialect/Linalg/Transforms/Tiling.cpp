@@ -354,7 +354,9 @@ static LogicalResult tilePadTensorOp(RewriterBase &builder, PadTensorOp op,
   int64_t rank = op.getResultType().getRank();
   SmallVector<Value> tileSizes =
       options.tileSizeComputationFunction(builder, op);
-  assert(static_cast<int64_t>(tileSizes.size()) == rank);
+  // Normalize untiled padding dimensions to 0.
+  Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  tileSizes.append(rank - tileSizes.size(), zero);
   // Compute lower and upper bounds of the loop nest.
   SmallVector<Range> ranges = op.getIterationDomain(builder);
   SmallVector<Value> lbs, dims, allDims, steps;
@@ -490,6 +492,12 @@ static void insertTilingPatterns(RewritePatternSet &patterns,
   patterns.add<PadTensorOpTilingPattern>(ctx, options);
 }
 
+void mlir::linalg::populatePadTensorTilingPatterns(
+    RewritePatternSet &patterns, const LinalgTilingOptions &options) {
+  auto *ctx = patterns.getContext();
+  patterns.add<PadTensorOpTilingPattern>(ctx, options);
+}
+
 static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
   MLIRContext *ctx = funcOp.getContext();
   RewritePatternSet patterns(ctx);
@@ -511,8 +519,8 @@ struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
         distributionTypes, [](StringRef ref) { return ref.str(); }));
   }
 
-  void runOnFunction() override {
-    FuncOp funcOp = getFunction();
+  void runOnOperation() override {
+    FuncOp funcOp = getOperation();
     LinalgTilingLoopType type =
         llvm::StringSwitch<LinalgTilingLoopType>(loopType)
             .Case("for", LinalgTilingLoopType::Loops)

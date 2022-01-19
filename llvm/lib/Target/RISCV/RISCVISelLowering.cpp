@@ -1198,8 +1198,7 @@ bool RISCVTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return TargetLowering::isZExtFree(Val, VT2);
 }
 
-bool RISCVTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT,
-                                                SDValue V) const {
+bool RISCVTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
@@ -2793,15 +2792,25 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     MVT VT = Op.getSimpleValueType();
     assert(VT == Subtarget.getXLenVT() && "Unexpected custom legalization");
     SDLoc DL(Op);
-    if (Op.getOperand(2).getOpcode() == ISD::Constant)
-      return Op;
     // FSL/FSR take a log2(XLen)+1 bit shift amount but XLenVT FSHL/FSHR only
-    // use log(XLen) bits. Mask the shift amount accordingly.
+    // use log(XLen) bits. Mask the shift amount accordingly to prevent
+    // accidentally setting the extra bit.
     unsigned ShAmtWidth = Subtarget.getXLen() - 1;
     SDValue ShAmt = DAG.getNode(ISD::AND, DL, VT, Op.getOperand(2),
                                 DAG.getConstant(ShAmtWidth, DL, VT));
-    unsigned Opc = Op.getOpcode() == ISD::FSHL ? RISCVISD::FSL : RISCVISD::FSR;
-    return DAG.getNode(Opc, DL, VT, Op.getOperand(0), Op.getOperand(1), ShAmt);
+    // fshl and fshr concatenate their operands in the same order. fsr and fsl
+    // instruction use different orders. fshl will return its first operand for
+    // shift of zero, fshr will return its second operand. fsl and fsr both
+    // return rs1 so the ISD nodes need to have different operand orders.
+    // Shift amount is in rs2.
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+    unsigned Opc = RISCVISD::FSL;
+    if (Op.getOpcode() == ISD::FSHR) {
+      std::swap(Op0, Op1);
+      Opc = RISCVISD::FSR;
+    }
+    return DAG.getNode(Opc, DL, VT, Op0, Op1, ShAmt);
   }
   case ISD::TRUNCATE: {
     SDLoc DL(Op);
@@ -3165,9 +3174,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     unsigned NumOpElts =
         Op.getOperand(0).getSimpleValueType().getVectorMinNumElements();
     SDValue Vec = DAG.getUNDEF(VT);
-    for (const auto &OpIdx : enumerate(Op->ops()))
-      Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Vec, OpIdx.value(),
+    for (const auto &OpIdx : enumerate(Op->ops())) {
+      SDValue SubVec = OpIdx.value();
+      // Don't insert undef subvectors.
+      if (SubVec.isUndef())
+        continue;
+      Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Vec, SubVec,
                         DAG.getIntPtrConstant(OpIdx.index() * NumOpElts, DL));
+    }
     return Vec;
   }
   case ISD::LOAD:
@@ -4146,10 +4160,10 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
 
   const RISCVVIntrinsicsTable::RISCVVIntrinsicInfo *II =
       RISCVVIntrinsicsTable::getRISCVVIntrinsicInfo(IntNo);
-  if (!II || !II->SplatOperand)
+  if (!II || !II->hasSplatOperand())
     return SDValue();
 
-  unsigned SplatOp = II->SplatOperand + HasChain;
+  unsigned SplatOp = II->SplatOperand + 1 + HasChain;
   assert(SplatOp < Op.getNumOperands());
 
   SmallVector<SDValue, 8> Operands(Op->op_begin(), Op->op_end());
@@ -4179,7 +4193,7 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
   // that a widening operation never uses SEW=64.
   // NOTE: If this fails the below assert, we can probably just find the
   // element count from any operand or result and use it to construct the VT.
-  assert(II->SplatOperand > 1 && "Unexpected splat operand!");
+  assert(II->SplatOperand > 0 && "Unexpected splat operand!");
   MVT VT = Op.getOperand(SplatOp - 1).getSimpleValueType();
 
   // The more complex case is when the scalar is larger than XLenVT.
@@ -4198,8 +4212,7 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
   // We need to convert the scalar to a splat vector.
   // FIXME: Can we implicitly truncate the scalar if it is known to
   // be sign extended?
-  // VL should be the last operand.
-  SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
+  SDValue VL = Op.getOperand(II->VLOperand + 1 + HasChain);
   assert(VL.getValueType() == XLenVT);
   ScalarOp = splatSplitI64WithVL(DL, VT, ScalarOp, VL, DAG);
   return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
@@ -4825,7 +4838,7 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
   // register size. Therefore we must slide the vector group up the full
   // amount.
   if (SubVecVT.isFixedLengthVector()) {
-    if (OrigIdx == 0 && Vec.isUndef())
+    if (OrigIdx == 0 && Vec.isUndef() && !VecVT.isFixedLengthVector())
       return Op;
     MVT ContainerVT = VecVT;
     if (VecVT.isFixedLengthVector()) {
@@ -4835,6 +4848,10 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     SubVec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ContainerVT,
                          DAG.getUNDEF(ContainerVT), SubVec,
                          DAG.getConstant(0, DL, XLenVT));
+    if (OrigIdx == 0 && Vec.isUndef() && VecVT.isFixedLengthVector()) {
+      SubVec = convertFromScalableVector(VecVT, SubVec, DAG, Subtarget);
+      return DAG.getBitcast(Op.getValueType(), SubVec);
+    }
     SDValue Mask =
         getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget).first;
     // Set the vector length to only the number of elements we care about. Note
@@ -6225,15 +6242,23 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     SDValue NewOp1 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-    SDValue NewOp2 =
+    SDValue NewShAmt =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
     // FSLW/FSRW take a 6 bit shift amount but i32 FSHL/FSHR only use 5 bits.
-    // Mask the shift amount to 5 bits.
-    NewOp2 = DAG.getNode(ISD::AND, DL, MVT::i64, NewOp2,
-                         DAG.getConstant(0x1f, DL, MVT::i64));
-    unsigned Opc =
-        N->getOpcode() == ISD::FSHL ? RISCVISD::FSLW : RISCVISD::FSRW;
-    SDValue NewOp = DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1, NewOp2);
+    // Mask the shift amount to 5 bits to prevent accidentally setting bit 5.
+    NewShAmt = DAG.getNode(ISD::AND, DL, MVT::i64, NewShAmt,
+                           DAG.getConstant(0x1f, DL, MVT::i64));
+    // fshl and fshr concatenate their operands in the same order. fsrw and fslw
+    // instruction use different orders. fshl will return its first operand for
+    // shift of zero, fshr will return its second operand. fsl and fsr both
+    // return rs1 so the ISD nodes need to have different operand orders.
+    // Shift amount is in rs2.
+    unsigned Opc = RISCVISD::FSLW;
+    if (N->getOpcode() == ISD::FSHR) {
+      std::swap(NewOp0, NewOp1);
+      Opc = RISCVISD::FSRW;
+    }
+    SDValue NewOp = DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1, NewShAmt);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, NewOp));
     break;
   }
@@ -7263,25 +7288,6 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::CTZW: {
     // Only the lower 32 bits of the first operand are read
     if (SimplifyDemandedLowBitsHelper(0, 32))
-      return SDValue(N, 0);
-    break;
-  }
-  case RISCVISD::FSL:
-  case RISCVISD::FSR: {
-    // Only the lower log2(Bitwidth)+1 bits of the the shift amount are read.
-    unsigned BitWidth = N->getOperand(2).getValueSizeInBits();
-    assert(isPowerOf2_32(BitWidth) && "Unexpected bit width");
-    if (SimplifyDemandedLowBitsHelper(2, Log2_32(BitWidth) + 1))
-      return SDValue(N, 0);
-    break;
-  }
-  case RISCVISD::FSLW:
-  case RISCVISD::FSRW: {
-    // Only the lower 32 bits of Values and lower 6 bits of shift amount are
-    // read.
-    if (SimplifyDemandedLowBitsHelper(0, 32) ||
-        SimplifyDemandedLowBitsHelper(1, 32) ||
-        SimplifyDemandedLowBitsHelper(2, 6))
       return SDValue(N, 0);
     break;
   }

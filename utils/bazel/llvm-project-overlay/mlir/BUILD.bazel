@@ -1755,6 +1755,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":BufferizationDialect",
@@ -2127,6 +2128,25 @@ cc_library(
 )
 
 cc_library(
+    name = "AffineAnalysis",
+    srcs = glob([
+        "lib/Dialect/Affine/Analysis/*.cpp",
+        "lib/Dialect/Affine/Analysis/*.h",
+    ]),
+    hdrs = glob(["include/mlir/Dialect/Affine/Analysis/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Affine",
+        ":Analysis",
+        ":ArithmeticDialect",
+        ":IR",
+        ":StandardOps",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "AffineUtils",
     srcs = glob(
         [
@@ -2138,6 +2158,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":IR",
         ":MemRefDialect",
@@ -2172,6 +2193,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffinePassIncGen",
         ":AffineUtils",
         ":Analysis",
@@ -2692,6 +2714,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffineUtils",
         ":Analysis",
         ":ArithmeticDialect",
@@ -2955,20 +2978,6 @@ gentbl_cc_library(
     strip_include_prefix = "include",
     tbl_outs = [
         (
-            [
-                "-gen-dialect-decls",
-                "-dialect=gpu",
-            ],
-            "include/mlir/Dialect/GPU/GPUOpsDialect.h.inc",
-        ),
-        (
-            [
-                "-gen-dialect-defs",
-                "-dialect=gpu",
-            ],
-            "include/mlir/Dialect/GPU/GPUOpsDialect.cpp.inc",
-        ),
-        (
             ["-gen-op-interface-decls"],
             "include/mlir/Dialect/GPU/GPUOpInterfaces.h.inc",
         ),
@@ -2987,6 +2996,20 @@ gentbl_cc_library(
     strip_include_prefix = "include",
     tbl_outs = [
         (
+            [
+                "-gen-dialect-decls",
+                "-dialect=gpu",
+            ],
+            "include/mlir/Dialect/GPU/GPUOpsDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=gpu",
+            ],
+            "include/mlir/Dialect/GPU/GPUOpsDialect.cpp.inc",
+        ),
+        (
             ["-gen-op-decls"],
             "include/mlir/Dialect/GPU/GPUOps.h.inc",
         ),
@@ -3001,6 +3024,14 @@ gentbl_cc_library(
         (
             ["-gen-enum-defs"],
             "include/mlir/Dialect/GPU/GPUOpsEnums.cpp.inc",
+        ),
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/GPU/GPUOpsAttributes.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/GPU/GPUOpsAttributes.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -3540,6 +3571,20 @@ gentbl_cc_library(
         (
             ["-gen-enum-defs"],
             "include/mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=nvvm",
+            ],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=nvvm",
+            ],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -4353,6 +4398,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":ControlFlowInterfaces",
@@ -4555,6 +4601,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AllocationOpInterface",
         ":Analysis",
         ":ArithmeticDialect",
@@ -4676,6 +4723,7 @@ cc_library(
     hdrs = ["include/mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"],
     includes = ["include"],
     deps = [
+        ":AffineAnalysis",
         ":Analysis",
         ":ArithmeticDialect",
         ":ConversionPassIncGen",
@@ -5884,7 +5932,10 @@ gentbl_cc_library(
     strip_include_prefix = "include",
     tbl_outs = [
         (
-            ["-gen-directive-decl"],
+            [
+                "-gen-directive-decl",
+                "-directives-dialect=OpenACC",
+            ],
             "include/mlir/Dialect/OpenACC/AccCommon.td",
         ),
     ],
@@ -5938,6 +5989,20 @@ gentbl_cc_library(
             "include/mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc",
         ),
         (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=acc",
+            ],
+            "include/mlir/Dialect/OpenACC/OpenACCOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=acc",
+            ],
+            "include/mlir/Dialect/OpenACC/OpenACCOpsAttributes.cpp.inc",
+        ),
+        (
             ["-gen-op-doc"],
             "g3doc/Dialects/OpenACC/OpenACCOps.md",
         ),
@@ -5978,7 +6043,10 @@ gentbl_cc_library(
     strip_include_prefix = "include",
     tbl_outs = [
         (
-            ["-gen-directive-decl"],
+            [
+                "-gen-directive-decl",
+                "-directives-dialect=OpenMP",
+            ],
             "include/mlir/Dialect/OpenMP/OmpCommon.td",
         ),
     ],
@@ -6044,6 +6112,20 @@ gentbl_cc_library(
         (
             ["-gen-type-interface-defs"],
             "include/mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=omp",
+            ],
+            "include/mlir/Dialect/OpenMP/OpenMPOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=omp",
+            ],
+            "include/mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc",
         ),
         (
             ["-gen-op-doc"],
@@ -6761,6 +6843,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineAnalysis",
         ":AffineBufferizableOpInterfaceImpl",
         ":AffineUtils",
         ":Analysis",

@@ -98,8 +98,8 @@ struct FinalizingBufferizePass
   using FinalizingBufferizeBase<
       FinalizingBufferizePass>::FinalizingBufferizeBase;
 
-  void runOnFunction() override {
-    auto func = getFunction();
+  void runOnOperation() override {
+    auto func = getOperation();
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
@@ -125,7 +125,7 @@ struct FinalizingBufferizePass
 };
 } // namespace
 
-std::unique_ptr<FunctionPass>
+std::unique_ptr<OperationPass<FuncOp>>
 mlir::bufferization::createFinalizingBufferizePass() {
   return std::make_unique<FinalizingBufferizePass>();
 }

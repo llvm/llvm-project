@@ -129,6 +129,11 @@ MLInlineAdvisor::MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
         FunctionLevels[&CG.get(*F)] = Level;
     }
   }
+  for (auto KVP : FunctionLevels) {
+    AllNodes.insert(KVP.first);
+    EdgeCount += getLocalCalls(KVP.first->getFunction());
+  }
+  NodeCount = AllNodes.size();
 }
 
 unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
@@ -138,16 +143,56 @@ unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
 void MLInlineAdvisor::onPassEntry() {
   // Function passes executed between InlinerPass runs may have changed the
   // module-wide features.
-  if (!Invalid)
-    return;
-  NodeCount = 0;
-  EdgeCount = 0;
-  for (auto &F : M)
-    if (!F.isDeclaration()) {
-      ++NodeCount;
-      EdgeCount += getLocalCalls(F);
+  // The cgscc pass manager rules are such that:
+  // - if a pass leads to merging SCCs, then the pipeline is restarted on the
+  // merged SCC
+  // - if a pass leads to splitting the SCC, then we continue with one of the
+  // splits
+  // This means that the NodesInLastSCC is a superset (not strict) of the nodes
+  // that subsequent passes would have processed
+  // - in addition, if new Nodes were created by a pass (e.g. CoroSplit),
+  // they'd be adjacent to Nodes in the last SCC. So we just need to check the
+  // boundary of Nodes in NodesInLastSCC for Nodes we haven't seen. We don't
+  // care about the nature of the Edge (call or ref).
+  NodeCount -= static_cast<int64_t>(NodesInLastSCC.size());
+  while (!NodesInLastSCC.empty()) {
+    const auto *N = NodesInLastSCC.front();
+    NodesInLastSCC.pop_front();
+    // The Function wrapped by N could have been deleted since we last saw it.
+    if (N->isDead()) {
+      assert(!N->getFunction().isDeclaration());
+      continue;
     }
-  Invalid = false;
+    ++NodeCount;
+    EdgeCount += getLocalCalls(N->getFunction());
+    for (const auto &E : *(*N)) {
+      const auto *AdjNode = &E.getNode();
+      assert(!AdjNode->isDead() && !AdjNode->getFunction().isDeclaration());
+      auto I = AllNodes.insert(AdjNode);
+      if (I.second)
+        NodesInLastSCC.push_back(AdjNode);
+    }
+  }
+
+  EdgeCount -= EdgesOfLastSeenNodes;
+  EdgesOfLastSeenNodes = 0;
+}
+
+void MLInlineAdvisor::onPassExit(LazyCallGraph::SCC *LastSCC) {
+  if (!LastSCC)
+    return;
+  // Keep track of the nodes and edges we last saw. Then, in onPassEntry,
+  // we update the node count and edge count from the subset of these nodes that
+  // survived.
+  assert(NodesInLastSCC.empty());
+  assert(NodeCount >= LastSCC->size());
+  EdgesOfLastSeenNodes = 0;
+  for (const auto &N : *LastSCC) {
+    assert(!N.isDead());
+    EdgesOfLastSeenNodes += getLocalCalls(N.getFunction());
+    NodesInLastSCC.push_back(&N);
+  }
+  assert(EdgeCount >= EdgesOfLastSeenNodes);
 }
 
 int64_t MLInlineAdvisor::getLocalCalls(Function &F) {

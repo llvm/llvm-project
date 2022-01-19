@@ -13,7 +13,7 @@
 # RUN: not llvm-objdump --macho --archive-headers %t.libbogus1b.a 2>&1 | \
 # RUN:   FileCheck -check-prefix=BOGUS1 -DVAL=10% -DOFFSET=68 -DFILE=%t.libbogus1b.a %s
 
-# BOGUS1: '[[FILE]]': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '[[VAL]]' for archive member header at offset [[OFFSET]])
+# BOGUS1: '[[FILE]]': truncated or malformed archive (characters in size field in archive member header are not all decimal numbers: '[[VAL]]' for the archive member header at offset [[OFFSET]])
 
 --- !Arch
 Members:
@@ -128,7 +128,7 @@ Members:
 # RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %t.libbogus10.a 2>&1 | FileCheck -check-prefix=BOGUS10 -DFILE=%t.libbogus10.a %s 
 
-# BOGUS10: [[FILE]](hello.c): truncated or malformed archive (characters in UID field in archive header are not all decimal numbers: '~97&' for the archive member header at offset 8)
+# BOGUS10: [[FILE]](hello.c): truncated or malformed archive (characters in UID field in archive member header are not all decimal numbers: '~97&' for the archive member header at offset 8)
 
 --- !Arch
 Members:
@@ -141,20 +141,20 @@ Members:
 # RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %t.libbogus11.a 2>&1 | FileCheck -check-prefix=BOGUS11 -DFILE=%t.libbogus11.a %s 
 
-# BOGUS11: [[FILE]](hello.c): truncated or malformed archive (characters in GID field in archive header are not all decimal numbers: '#55!' for the archive member header at offset 8)
+# BOGUS11: [[FILE]](hello.c): truncated or malformed archive (characters in GID field in archive member header are not all decimal numbers: '#55!' for the archive member header at offset 8)
 
 --- !Arch
 Members:
   - Name: hello.c
     GID:  '#55!'
 
-## Check we report an error when the characters in the AccessMode field of a member header are not all decimal numbers.
+## Check we report an error when the characters in the AccessMode field of a member header are not all octal numbers.
 
 # RUN: yaml2obj --docnum=12 %s -o %t.libbogus12.a
 # RUN: not llvm-objdump --macho --archive-headers \
 # RUN:   %t.libbogus12.a 2>&1 | FileCheck -check-prefix=BOGUS12 -DFILE=%t.libbogus12.a %s 
 
-# BOGUS12: [[FILE]](hello.c): truncated or malformed archive (characters in AccessMode field in archive header are not all decimal numbers: 'Feed' for the archive member header at offset 8)
+# BOGUS12: [[FILE]](hello.c): truncated or malformed archive (characters in AccessMode field in archive member header are not all octal numbers: 'Feed' for the archive member header at offset 8)
 
 --- !Arch
 Members:
@@ -177,4 +177,6 @@ Members:
 # RUN: not llvm-ar tv %t.libbogus13.a 2>&1 | \
 # RUN:   FileCheck -check-prefix=BOGUS13B %s 
 
-# BOGUS13B: error: truncated or malformed archive (characters in LastModified field in archive header are not all decimal numbers: '1foobar273' for the archive member header at offset 8)
+# BOGUS13B: error: truncated or malformed archive (characters in LastModified field in archive member header are not all decimal numbers: '1foobar273' for the archive member header at offset 8)
+
+## TODO: add testing for AIX Big archive.

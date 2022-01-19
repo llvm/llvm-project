@@ -367,6 +367,7 @@ module std [system] {
 
     module __chrono {
       module calendar              { private header "__chrono/calendar.h" }
+      module convert_to_timespec   { private header "__chrono/convert_to_timespec.h" }
       module duration              { private header "__chrono/duration.h" }
       module file_clock            { private header "__chrono/file_clock.h" }
       module high_resolution_clock { private header "__chrono/high_resolution_clock.h" }
@@ -902,7 +903,8 @@ module std [system] {
     export *
 
     module __thread {
-      module poll_with_backoff { private header "__thread/poll_with_backoff.h" }
+      module poll_with_backoff    { private header "__thread/poll_with_backoff.h" }
+      module timed_backoff_policy { private header "__thread/timed_backoff_policy.h" }
     }
   }
   module tuple {
@@ -989,7 +991,7 @@ module std [system] {
   module __function_like     { private header "__function_like.h"   export * }
   module __hash_table        {         header "__hash_table"        export * }
   module __locale            { private header "__locale"            export * }
-  module __mbstate           { private header "__mbstate_t.h"       export * }
+  module __mbstate_t         { private header "__mbstate_t.h"       export * }
   module __mutex_base        { private header "__mutex_base"        export * }
   module __node_handle       { private header "__node_handle"       export * }
   module __nullptr           {         header "__nullptr"           export * }

@@ -66,12 +66,12 @@ struct GpuAllReduceRewriter {
     rewriter.setInsertionPoint(reduceOp);
 
     // Compute linear invocation index and workgroup size.
-    Value dimX = getDimOp<gpu::BlockDimOp>("x");
-    Value dimY = getDimOp<gpu::BlockDimOp>("y");
-    Value dimZ = getDimOp<gpu::BlockDimOp>("z");
-    Value tidX = getDimOp<gpu::ThreadIdOp>("x");
-    Value tidY = getDimOp<gpu::ThreadIdOp>("y");
-    Value tidZ = getDimOp<gpu::ThreadIdOp>("z");
+    Value dimX = getDimOp<gpu::BlockDimOp>(gpu::Dimension::x);
+    Value dimY = getDimOp<gpu::BlockDimOp>(gpu::Dimension::y);
+    Value dimZ = getDimOp<gpu::BlockDimOp>(gpu::Dimension::z);
+    Value tidX = getDimOp<gpu::ThreadIdOp>(gpu::Dimension::x);
+    Value tidY = getDimOp<gpu::ThreadIdOp>(gpu::Dimension::y);
+    Value tidZ = getDimOp<gpu::ThreadIdOp>(gpu::Dimension::z);
     Value tmp1 = create<arith::MulIOp>(int32Type, tidZ, dimY);
     Value tmp2 = create<arith::AddIOp>(int32Type, tmp1, tidY);
     Value tmp3 = create<arith::MulIOp>(int32Type, tmp2, dimX);
@@ -150,8 +150,8 @@ private:
 
   // Creates dimension op of type T, with the result casted to int32.
   template <typename T>
-  Value getDimOp(StringRef dimension) {
-    Value dim = create<T>(indexType, rewriter.getStringAttr(dimension));
+  Value getDimOp(gpu::Dimension dimension) {
+    Value dim = create<T>(indexType, dimension);
     return create<arith::IndexCastOp>(int32Type, dim);
   }
 
@@ -212,38 +212,34 @@ private:
   }
 
   /// Returns an accumulator factory that creates an op specified by opName.
-  AccumulatorFactory getFactory(StringRef opName) {
+  AccumulatorFactory getFactory(gpu::AllReduceOperation opName) {
     bool isFloatingPoint = valueType.isa<FloatType>();
-    if (opName == "add")
+    switch (opName) {
+    case gpu::AllReduceOperation::ADD:
       return isFloatingPoint ? getFactory<arith::AddFOp>()
                              : getFactory<arith::AddIOp>();
-    if (opName == "mul")
+    case gpu::AllReduceOperation::MUL:
       return isFloatingPoint ? getFactory<arith::MulFOp>()
                              : getFactory<arith::MulIOp>();
-    if (opName == "and") {
+    case gpu::AllReduceOperation::AND:
       return getFactory<arith::AndIOp>();
-    }
-    if (opName == "or") {
+    case gpu::AllReduceOperation::OR:
       return getFactory<arith::OrIOp>();
-    }
-    if (opName == "xor") {
+    case gpu::AllReduceOperation::XOR:
       return getFactory<arith::XOrIOp>();
-    }
-    if (opName == "max") {
+    case gpu::AllReduceOperation::MAX:
       return isFloatingPoint
                  ? getCmpFactory<arith::CmpFOp, arith::CmpFPredicate,
                                  arith::CmpFPredicate::UGT>()
                  : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
                                  arith::CmpIPredicate::ugt>();
-    }
-    if (opName == "min") {
+    case gpu::AllReduceOperation::MIN:
       return isFloatingPoint
                  ? getCmpFactory<arith::CmpFOp, arith::CmpFPredicate,
                                  arith::CmpFPredicate::ULT>()
                  : getCmpFactory<arith::CmpIOp, arith::CmpIPredicate,
                                  arith::CmpIPredicate::ult>();
     }
-    return AccumulatorFactory();
   }
 
   /// Returns an accumulator factory that creates an op of type T.
@@ -328,7 +324,6 @@ private:
     Value isPartialSubgroup = create<arith::CmpIOp>(arith::CmpIPredicate::slt,
                                                     activeWidth, subgroupSize);
     std::array<Type, 2> shuffleType = {valueType, rewriter.getI1Type()};
-    auto xorAttr = rewriter.getStringAttr("xor");
 
     createIf(
         isPartialSubgroup,
@@ -340,8 +335,8 @@ private:
           // in the first lane.
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
             Value offset = create<arith::ConstantIntOp>(i, int32Type);
-            auto shuffleOp = create<gpu::ShuffleOp>(shuffleType, value, offset,
-                                                    activeWidth, xorAttr);
+            auto shuffleOp = create<gpu::ShuffleOp>(
+                shuffleType, value, offset, activeWidth, gpu::ShuffleMode::XOR);
             // Skip the accumulation if the shuffle op read from a lane outside
             // of the active range.
             createIf(
@@ -362,8 +357,9 @@ private:
           Value value = operand;
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
             Value offset = create<arith::ConstantIntOp>(i, int32Type);
-            auto shuffleOp = create<gpu::ShuffleOp>(shuffleType, value, offset,
-                                                    subgroupSize, xorAttr);
+            auto shuffleOp =
+                create<gpu::ShuffleOp>(shuffleType, value, offset, subgroupSize,
+                                       gpu::ShuffleMode::XOR);
             value = accumFactory(value, shuffleOp.getResult(0));
           }
           return SmallVector<Value, 1>{value};

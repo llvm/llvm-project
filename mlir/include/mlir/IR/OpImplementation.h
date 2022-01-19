@@ -850,10 +850,6 @@ public:
                                               StringRef attrName,
                                               NamedAttrList &attrs) = 0;
 
-  /// Parse a loc(...) specifier if present, filling in result if so.
-  virtual ParseResult
-  parseOptionalLocationSpecifier(Optional<Location> &result) = 0;
-
   //===--------------------------------------------------------------------===//
   // Type Parsing
   //===--------------------------------------------------------------------===//
@@ -1040,6 +1036,13 @@ class OpAsmParser : public AsmParser {
 public:
   using AsmParser::AsmParser;
   ~OpAsmParser() override;
+
+  /// Parse a loc(...) specifier if present, filling in result if so.
+  /// Location for BlockArgument and Operation may be deferred with an alias, in
+  /// which case an OpaqueLoc is set and will be resolved when parsing
+  /// completes.
+  virtual ParseResult
+  parseOptionalLocationSpecifier(Optional<Location> &result) = 0;
 
   /// Return the name of the specified result in the specified syntax, as well
   /// as the sub-element in the name.  It returns an empty string and ~0U for

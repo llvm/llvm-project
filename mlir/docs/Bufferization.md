@@ -163,7 +163,7 @@ void mlir::populateTensorBufferizePatterns(
 }
 
 struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
@@ -174,7 +174,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
     target.addLegalDialect<StandardOpsDialect>();
 
     if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+            applyPartialConversion(getOperation(), target, std::move(patterns))))
       signalPassFailure();
   }
 };

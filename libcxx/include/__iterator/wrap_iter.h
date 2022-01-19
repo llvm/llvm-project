@@ -43,10 +43,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 __wrap_iter() _NOEXCEPT
                 : __i()
     {
-#if _LIBCPP_DEBUG_LEVEL == 2
-      if (!__libcpp_is_constant_evaluated())
-        __get_db()->__insert_i(this);
-#endif
+        _VSTD::__debug_db_insert_i(this);
     }
     template <class _Up> _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
         __wrap_iter(const __wrap_iter<_Up>& __u,

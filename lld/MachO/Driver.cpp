@@ -1281,8 +1281,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->icfLevel = getICFLevel(args);
-  config->dedupLiterals = args.hasArg(OPT_deduplicate_literals) ||
-                          config->icfLevel != ICFLevel::none;
+  config->dedupLiterals =
+      args.hasFlag(OPT_deduplicate_literals, OPT_icf_eq, false) ||
+      config->icfLevel != ICFLevel::none;
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
   config->callGraphProfileSort = args.hasFlag(

@@ -253,34 +253,6 @@ Note: Not all ops that are "elementwise" in some abstract sense satisfy this
 trait. In particular, broadcasting behavior is not allowed. See the comments on
 `OpTrait::ElementwiseMappable` for the precise requirements.
 
-### Function-Like
-
-*   `OpTrait::FunctionLike`
-
-This trait provides APIs for operations that behave like functions. In
-particular:
-
--   Ops must be symbols, i.e. also have the `Symbol` trait;
--   Ops have a single region with multiple blocks that corresponds to the body
-    of the function;
--   An op with a single empty region corresponds to an external function;
--   arguments of the first block of the region are treated as function
-    arguments;
--   they can have argument and result attributes that are stored in dictionary
-    attributes on the operation itself.
-
-This trait provides limited type support for the declared or defined functions.
-The convenience function `getTypeAttrName()` returns the name of an attribute
-that can be used to store the function type. In addition, this trait provides
-`getType` and `setType` helpers to store a `FunctionType` in the attribute named
-by `getTypeAttrName()`.
-
-In general, this trait assumes concrete ops use `FunctionType` under the hood.
-If this is not the case, in order to use the function type support, concrete ops
-must define the following methods, using the same name, to hide the ones defined
-for `FunctionType`: `addBodyBlock`, `getType`, `getTypeWithoutArgsAndResults`
-and `setType`.
-
 ### HasParent
 
 *   `OpTrait::HasParent<typename ParentOpType>` -- `HasParent<string op>` or

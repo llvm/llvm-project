@@ -28,39 +28,39 @@ module attributes {gpu.container_module} {
 
   gpu.module @kernels {
     gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) kernel {
-      %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
-      %tIdY = "gpu.thread_id"() {dimension = "y"} : () -> (index)
-      %tIdZ = "gpu.thread_id"() {dimension = "z"} : () -> (index)
+      %tIdX = gpu.thread_id x
+      %tIdY = gpu.thread_id y
+      %tIdZ = gpu.thread_id z
 
-      %bDimX = "gpu.block_dim"() {dimension = "x"} : () -> (index)
-      %bDimY = "gpu.block_dim"() {dimension = "y"} : () -> (index)
-      %bDimZ = "gpu.block_dim"() {dimension = "z"} : () -> (index)
+      %bDimX = gpu.block_dim x
+      %bDimY = gpu.block_dim y
+      %bDimZ = gpu.block_dim z
 
-      %bIdX = "gpu.block_id"() {dimension = "x"} : () -> (index)
-      %bIdY = "gpu.block_id"() {dimension = "y"} : () -> (index)
-      %bIdZ = "gpu.block_id"() {dimension = "z"} : () -> (index)
+      %bIdX = gpu.block_id x
+      %bIdY = gpu.block_id y
+      %bIdZ = gpu.block_id z
 
-      %gDimX = "gpu.grid_dim"() {dimension = "x"} : () -> (index)
-      %gDimY = "gpu.grid_dim"() {dimension = "y"} : () -> (index)
-      %gDimZ = "gpu.grid_dim"() {dimension = "z"} : () -> (index)
+      %gDimX = gpu.grid_dim x
+      %gDimY = gpu.grid_dim y
+      %gDimZ = gpu.grid_dim z
 
       %sgId = gpu.subgroup_id : index
       %numSg = gpu.num_subgroups : index
       %SgSi = gpu.subgroup_size : index
 
       %one = arith.constant 1.0 : f32
-      %sum = "gpu.all_reduce"(%one) ({}) {op = "add"} : (f32) -> (f32)
+      %sum = gpu.all_reduce add %one {} : (f32) -> (f32)
 
       %width = arith.constant 7 : i32
       %offset = arith.constant 3 : i32
-      // CHECK: gpu.shuffle %{{.*}}, %{{.*}}, %{{.*}} xor : f32
-      %shfl, %pred = gpu.shuffle %arg0, %offset, %width xor : f32
-      // CHECK: gpu.shuffle %{{.*}}, %{{.*}}, %{{.*}} up : f32
-      %shfl1, %pred1 = gpu.shuffle %arg0, %offset, %width up : f32
-      // CHECK: gpu.shuffle %{{.*}}, %{{.*}}, %{{.*}} down : f32
-      %shfl2, %pred2 = gpu.shuffle %arg0, %offset, %width down : f32
-      // CHECK: gpu.shuffle %{{.*}}, %{{.*}}, %{{.*}} idx : f32
-      %shfl3, %pred3 = gpu.shuffle %arg0, %offset, %width idx : f32
+      // CHECK: gpu.shuffle xor %{{.*}}, %{{.*}}, %{{.*}} : f32
+      %shfl, %pred = gpu.shuffle xor %arg0, %offset, %width : f32
+      // CHECK: gpu.shuffle up %{{.*}}, %{{.*}}, %{{.*}} : f32
+      %shfl1, %pred1 = gpu.shuffle up %arg0, %offset, %width : f32
+      // CHECK: gpu.shuffle down %{{.*}}, %{{.*}}, %{{.*}} : f32
+      %shfl2, %pred2 = gpu.shuffle down %arg0, %offset, %width : f32
+      // CHECK: gpu.shuffle idx %{{.*}}, %{{.*}}, %{{.*}} : f32
+      %shfl3, %pred3 = gpu.shuffle idx %arg0, %offset, %width : f32
 
       "gpu.barrier"() : () -> ()
 
@@ -155,7 +155,7 @@ module attributes {gpu.container_module} {
 
   gpu.module @explicit_attributions {
     // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32, {{.*}}: memref<?xf32>) workgroup({{.*}}: memref<5xf32, 3>) private({{.*}}: memref<5xf32, 5>)
-    "gpu.func"() ( {
+    "gpu.func"() ({
     ^bb0(%arg0: f32, %arg1: memref<?xf32>, %arg2: memref<5xf32, 3>, %arg3: memref<5xf32, 5>):
       "gpu.return"() : () -> ()
     } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 1: i64} : () -> ()
@@ -234,10 +234,10 @@ module attributes {gpu.container_module} {
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
     // CHECK: gpu.subgroup_mma_load_matrix %[[wg]][%[[i]], %[[i]]] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
     %1 = gpu.subgroup_mma_constant_matrix %cst : !gpu.mma_matrix<16x16xf32, "COp">
-    // CHECK: gpu.subgroup_mma_elementwise %{{.*}}, %{{.*}} {operation = "ADDF"} : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
-    %2 = gpu.subgroup_mma_elementwise %1, %1 {operation = "ADDF"} : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
-    // CHECK: gpu.subgroup_mma_elementwise %{{.*}}, %{{.*}} {operation = "MAXF"} : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
-    %3 = gpu.subgroup_mma_elementwise %2, %1 {operation = "MAXF"} : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
+    // CHECK: gpu.subgroup_mma_elementwise addf %{{.*}}, %{{.*}} : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
+    %2 = gpu.subgroup_mma_elementwise addf %1, %1 : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
+    // CHECK: gpu.subgroup_mma_elementwise maxf %{{.*}}, %{{.*}} : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
+    %3 = gpu.subgroup_mma_elementwise maxf %2, %1 : (!gpu.mma_matrix<16x16xf32, "COp">, !gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
     return
   }
 }

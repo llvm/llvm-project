@@ -24415,12 +24415,12 @@ void test11()
 
 void test12()
 {
-    output_iterator<char*> iter;
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);
 #if defined(__APPLE__) && defined(__x86_64__)
 // This test is failing on FreeBSD, possibly due to different representations
 // of the floating point numbers.
+    output_iterator<char*> iter;
     const my_facet f(1);
     char str[200];
     {
@@ -26221,7 +26221,6 @@ int main(int, char**)
     test10();
     test11();
     test12();
-    output_iterator<char*> iter;
     std::locale lc = std::locale::classic();
     std::locale lg(lc, new my_numpunct);
     const my_facet f(1);

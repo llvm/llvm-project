@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "VECustomDAG.h"
 #include "VEISelLowering.h"
 #include "MCTargetDesc/VEMCExpr.h"
 #include "VEInstrBuilder.h"
@@ -1640,18 +1641,18 @@ static SDValue getSplatValue(SDNode *N) {
 
 SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                             SelectionDAG &DAG) const {
-  SDLoc DL(Op);
+  VECustomDAG CDAG(DAG, Op);
   unsigned NumEls = Op.getValueType().getVectorNumElements();
   MVT ElemVT = Op.getSimpleValueType().getVectorElementType();
 
   // If there is just one element, expand to INSERT_VECTOR_ELT.
   unsigned UniqueIdx;
   if (getUniqueInsertion(Op.getNode(), UniqueIdx)) {
-    SDValue AccuV = DAG.getUNDEF(Op.getValueType());
+    SDValue AccuV = CDAG.getUNDEF(Op.getValueType());
     auto ElemV = Op->getOperand(UniqueIdx);
-    SDValue IdxV = DAG.getConstant(UniqueIdx, DL, MVT::i64);
-    return DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, Op.getValueType(), AccuV,
-                       ElemV, IdxV);
+    SDValue IdxV = CDAG.getConstant(UniqueIdx, MVT::i64);
+    return CDAG.getNode(ISD::INSERT_VECTOR_ELT, Op.getValueType(),
+                        {AccuV, ElemV, IdxV});
   }
 
   // Else emit a broadcast.
@@ -1659,9 +1660,9 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
     // lower to VEC_BROADCAST
     MVT LegalResVT = MVT::getVectorVT(ElemVT, 256);
 
-    auto AVL = DAG.getConstant(NumEls, DL, MVT::i32);
-    return DAG.getNode(VEISD::VEC_BROADCAST, DL, LegalResVT, Op.getOperand(0),
-                       AVL);
+    auto AVL = CDAG.getConstant(NumEls, MVT::i32);
+    return CDAG.getNode(VEISD::VEC_BROADCAST, LegalResVT,
+                        {Op.getOperand(0), AVL});
   }
 
   // Expand
@@ -1720,7 +1721,7 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::EXTRACT_VECTOR_ELT:
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
 
-#define ADD_BINARY_VVP_OP(VVP_NAME, VP_NAME, ISD_NAME) case ISD::ISD_NAME:
+#define ADD_VVP_OP(VVP_NAME, ISD_NAME) case ISD::ISD_NAME:
 #include "VVPNodes.def"
     return lowerToVVP(Op, DAG);
   }
@@ -2691,7 +2692,7 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
   const bool FromVP = ISD::isVPOpcode(Opcode);
 
   // The representative and legalized vector type of this operation.
-  SDLoc DL(Op);
+  VECustomDAG CDAG(DAG, Op);
   MVT MaskVT = MVT::v256i1; // TODO: packed mode.
   EVT OpVecVT = Op.getValueType();
   EVT LegalVecVT = getTypeToTransformTo(*DAG.getContext(), OpVecVT);
@@ -2708,10 +2709,10 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
 
   } else {
     // Materialize the VL parameter.
-    AVL = DAG.getConstant(OpVecVT.getVectorNumElements(), DL, MVT::i32);
-    SDValue ConstTrue = DAG.getConstant(1, DL, MVT::i32);
-    Mask = DAG.getNode(VEISD::VEC_BROADCAST, DL, MaskVT,
-                       ConstTrue); // emit a VEISD::VEC_BROADCAST here.
+    AVL = CDAG.getConstant(OpVecVT.getVectorNumElements(), MVT::i32);
+    SDValue ConstTrue = CDAG.getConstant(1, MVT::i32);
+    Mask = CDAG.getNode(VEISD::VEC_BROADCAST, MaskVT,
+                        ConstTrue); // emit a VEISD::VEC_BROADCAST here.
   }
 
   // Categories we are interested in.
@@ -2727,8 +2728,13 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
 
   if (IsBinaryOp) {
     assert(LegalVecVT.isSimple());
-    return DAG.getNode(VVPOpcode, DL, LegalVecVT, Op->getOperand(0),
-                       Op->getOperand(1), Mask, AVL);
+    return CDAG.getNode(VVPOpcode, LegalVecVT,
+                        {Op->getOperand(0), Op->getOperand(1), Mask, AVL});
+  } else if (VVPOpcode == VEISD::VVP_SELECT) {
+    auto Mask = Op->getOperand(0);
+    auto OnTrue = Op->getOperand(1);
+    auto OnFalse = Op->getOperand(2);
+    return CDAG.getNode(VVPOpcode, LegalVecVT, {OnTrue, OnFalse, Mask, AVL});
   }
   llvm_unreachable("lowerToVVP called for unexpected SDNode.");
 }
