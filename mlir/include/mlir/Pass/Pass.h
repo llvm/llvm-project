@@ -383,7 +383,11 @@ protected:
 ///   - A 'void runOnFunction()' method.
 ///   - A 'StringRef getName() const' method.
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
-class FunctionPass : public OperationPass<FuncOp> {
+class [[deprecated(
+    "Use OperationPass<FuncOp> instead: See "
+    "https://llvm.discourse.group/t/"
+    "functionpass-deprecated-in-favor-of-operationpass-funcop")]] FunctionPass
+    : public OperationPass<FuncOp> {
 public:
   using OperationPass<FuncOp>::OperationPass;
 
