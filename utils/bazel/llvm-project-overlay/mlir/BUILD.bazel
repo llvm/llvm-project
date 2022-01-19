@@ -6601,6 +6601,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
+        ":ComprehensiveBufferize",
         ":IR",
         ":LinalgOps",
         ":LinalgStructuredOpsIncGen",
@@ -6620,6 +6621,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
+        ":ComprehensiveBufferize",
         ":IR",
         ":SCFDialect",
         ":Support",

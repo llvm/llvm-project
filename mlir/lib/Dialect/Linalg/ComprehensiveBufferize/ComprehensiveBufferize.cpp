@@ -99,6 +99,129 @@ static void setInPlaceOpOperand(OpOperand &opOperand, bool inPlace) {
 }
 
 //===----------------------------------------------------------------------===//
+// BufferizationAliasInfo
+//===----------------------------------------------------------------------===//
+
+BufferizationAliasInfo::BufferizationAliasInfo(Operation *rootOp) {
+  rootOp->walk([&](Operation *op) {
+    for (Value v : op->getResults())
+      if (v.getType().isa<TensorType>())
+        createAliasInfoEntry(v);
+    for (Region &r : op->getRegions())
+      for (Block &b : r.getBlocks())
+        for (auto bbArg : b.getArguments())
+          if (bbArg.getType().isa<TensorType>())
+            createAliasInfoEntry(bbArg);
+  });
+}
+
+/// Add a new entry for `v` in the `aliasInfo` and `equivalentInfo`. In the
+/// beginning the alias and equivalence sets only contain `v` itself.
+void BufferizationAliasInfo::createAliasInfoEntry(Value v) {
+  aliasInfo.insert(v);
+  equivalentInfo.insert(v);
+}
+
+/// Insert an info entry for `newValue` and merge its alias set with that of
+/// `alias`.
+void BufferizationAliasInfo::insertNewBufferAlias(Value newValue, Value alias) {
+  createAliasInfoEntry(newValue);
+  aliasInfo.unionSets(newValue, alias);
+}
+
+/// Insert an info entry for `newValue` and merge its alias set with that of
+/// `alias`. Additionally, merge their equivalence classes.
+void BufferizationAliasInfo::insertNewBufferEquivalence(Value newValue,
+                                                        Value alias) {
+  insertNewBufferAlias(newValue, alias);
+  equivalentInfo.unionSets(newValue, alias);
+}
+
+/// Return `true` if a value was marked as in-place bufferized.
+bool BufferizationAliasInfo::isInPlace(OpOperand &operand) const {
+  return inplaceBufferized.contains(&operand);
+}
+
+/// Set the inPlace bufferization spec to true.
+void BufferizationAliasInfo::bufferizeInPlace(OpOperand &operand,
+                                              BufferizationState &state) {
+  markInPlace(operand);
+  if (OpResult result = state.getAliasingOpResult(operand))
+    aliasInfo.unionSets(result, operand.get());
+}
+
+/// Set the inPlace bufferization spec to false.
+void BufferizationAliasInfo::bufferizeOutOfPlace(OpOperand &operand) {
+  assert(!inplaceBufferized.contains(&operand) &&
+         "OpOperand was already decided to bufferize inplace");
+}
+
+/// Apply `fun` to all the members of the equivalence class of `v`.
+void BufferizationAliasInfo::applyOnEquivalenceClass(
+    Value v, function_ref<void(Value)> fun) const {
+  auto leaderIt = equivalentInfo.findLeader(v);
+  for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
+       ++mit) {
+    fun(*mit);
+  }
+}
+
+/// Apply `fun` to all aliases of `v`.
+void BufferizationAliasInfo::applyOnAliases(
+    Value v, function_ref<void(Value)> fun) const {
+  auto leaderIt = aliasInfo.findLeader(v);
+  for (auto mit = leaderIt, meit = aliasInfo.member_end(); mit != meit; ++mit) {
+    fun(*mit);
+  }
+}
+
+BufferizationAliasInfo::EquivalenceClassRangeType
+BufferizationAliasInfo::getAliases(Value v) const {
+  DenseSet<Value> res;
+  auto it = aliasInfo.findValue(aliasInfo.getLeaderValue(v));
+  for (auto mit = aliasInfo.member_begin(it), meit = aliasInfo.member_end();
+       mit != meit; ++mit) {
+    res.insert(static_cast<Value>(*mit));
+  }
+  return BufferizationAliasInfo::EquivalenceClassRangeType(
+      aliasInfo.member_begin(it), aliasInfo.member_end());
+}
+
+//===----------------------------------------------------------------------===//
+// AnalysisBufferizationState
+//===----------------------------------------------------------------------===//
+
+AnalysisBufferizationState::AnalysisBufferizationState(
+    Operation *op, const AnalysisBufferizationOptions &options)
+    : BufferizationState(options), aliasInfo(op) {
+  // Set up alias sets for OpResults that must bufferize in-place. This should
+  // be done before making any other bufferization decisions.
+  op->walk([&](BufferizableOpInterface bufferizableOp) {
+    if (!options.isOpAllowed(bufferizableOp))
+      return WalkResult::skip();
+    for (OpOperand &opOperand : bufferizableOp->getOpOperands()) {
+      if (opOperand.get().getType().isa<TensorType>())
+        if (bufferizableOp.mustBufferizeInPlace(opOperand, *this)) {
+          if (OpResult opResult =
+                  bufferizableOp.getAliasingOpResult(opOperand, *this))
+            aliasInfo.unionAliasSets(opOperand.get(), opResult);
+          aliasInfo.markInPlace(opOperand);
+        }
+    }
+    return WalkResult::advance();
+  });
+}
+
+bool AnalysisBufferizationState::isInPlace(OpOperand &opOperand) const {
+  return aliasInfo.isInPlace(opOperand);
+}
+
+bool AnalysisBufferizationState::areEquivalentBufferizedValues(Value v1,
+                                                               Value v2) const {
+  return aliasInfo.areEquivalentBufferizedValues(v1, v2);
+}
+
+//===----------------------------------------------------------------------===//
 // Bufferization-specific alias analysis.
 //===----------------------------------------------------------------------===//
 
