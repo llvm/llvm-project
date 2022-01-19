@@ -1124,7 +1124,7 @@ public:
   /// is responsible for ensuring that they do not do so.
   static std::vector<JITDylibSP> getDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
 
-  /// Returns the given JITDylibs and all of their transitive dependensies in
+  /// Returns the given JITDylibs and all of their transitive dependencies in
   /// reverse DFS order (based on linkage relationships). Each JITDylib will
   /// appear only once.
   ///
