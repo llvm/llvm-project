@@ -446,6 +446,59 @@ func @main() {
 
 // -----
 
+// CHECK-LABEL: func @execute_region_test(
+//  CHECK-SAME:     %[[m1:.*]]: memref<?xf32
+func @execute_region_test(%t1 : tensor<?xf32> {linalg.inplaceable = "true"})
+    -> (f32, tensor<?xf32>, f32)
+{
+  %f1 = arith.constant 0.0 : f32
+  %f2 = arith.constant 1.0 : f32
+  %idx = arith.constant 7 : index
+
+  // scf.execute_region is canonicalized away after bufferization. So just the
+  // memref.store is left over.
+
+  // CHECK: memref.store %{{.*}}, %[[m1]][%{{.*}}]
+  %0, %1, %2 = scf.execute_region -> (f32, tensor<?xf32>, f32) {
+    %t2 = tensor.insert %f2 into %t1[%idx] : tensor<?xf32>
+    scf.yield %f1, %t2, %f2 : f32, tensor<?xf32>, f32
+  }
+
+  // CHECK: return %{{.*}}, %{{.*}} : f32, f32
+  return %0, %1, %2 : f32, tensor<?xf32>, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @execute_region_with_conflict(
+//  CHECK-SAME:     %[[m1:.*]]: memref<?xf32
+func @execute_region_with_conflict(%t1 : tensor<?xf32> {linalg.inplaceable = "true"})
+    -> (f32, tensor<?xf32>, f32)
+{
+  %f1 = arith.constant 0.0 : f32
+  %idx = arith.constant 7 : index
+
+  // scf.execute_region is canonicalized away after bufferization. So just the
+  // memref.store is left over.
+
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
+  // CHECK: memref.copy %[[m1]], %[[alloc]]
+  // CHECK: memref.store %{{.*}}, %[[alloc]][%{{.*}}]
+  %0, %1, %2 = scf.execute_region -> (f32, tensor<?xf32>, f32) {
+    %t2 = tensor.insert %f1 into %t1[%idx] : tensor<?xf32>
+    scf.yield %f1, %t2, %f1 : f32, tensor<?xf32>, f32
+  }
+
+  // CHECK: %[[load:.*]] = memref.load %[[m1]]
+  %3 = tensor.extract %t1[%idx] : tensor<?xf32>
+
+  // CHECK: return %{{.*}}, %[[casted]], %[[load]] : f32, memref<?xf32, #{{.*}}>, f32
+  return %0, %1, %3 : f32, tensor<?xf32>, f32
+}
+
+// -----
+
 //      CHECK: #[[$DYN_1D_MAP:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
 //      CHECK:  func private @some_external_func(memref<?xf32, #[[$DYN_1D_MAP]]>)
