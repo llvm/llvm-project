@@ -581,10 +581,10 @@ public:
 class AffineDialectPromotion
     : public AffineDialectPromotionBase<AffineDialectPromotion> {
 public:
-  void runOnFunction() override {
+  void runOnOperation() override {
 
     auto *context = &getContext();
-    auto function = getFunction();
+    auto function = getOperation();
     markAllAnalysesPreserved();
     auto functionAnalysis = AffineFunctionAnalysis(function);
     mlir::OwningRewritePatternList patterns(context);
