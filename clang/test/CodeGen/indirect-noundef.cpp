@@ -3,7 +3,6 @@
 
 // no-sanitize-memory-param-retval does NOT conflict with enable-noundef-analysis
 // RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -fno-sanitize-memory-param-retval -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple x86_64-unknown-unknown -O0 -emit-llvm -fno-sanitize-memory-param-retval -o - %s | FileCheck %s
 
 union u1 {
   int val;
