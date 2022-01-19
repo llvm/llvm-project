@@ -255,14 +255,13 @@ struct TestLinalgGreedyFusion
     patterns.add<ExtractSliceOfPadTensorSwapPattern>(context);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+    OpPassManager pm(FuncOp::getOperationName());
+    pm.addPass(createLoopInvariantCodeMotionPass());
+    pm.addPass(createCanonicalizerPass());
+    pm.addPass(createCSEPass());
     do {
       (void)applyPatternsAndFoldGreedily(getOperation(), frozenPatterns);
-      PassManager pm(context);
-      pm.addPass(createLoopInvariantCodeMotionPass());
-      pm.addPass(createCanonicalizerPass());
-      pm.addPass(createCSEPass());
-      LogicalResult res = pm.run(getOperation()->getParentOfType<ModuleOp>());
-      if (failed(res))
+      if (failed(runPipeline(pm, getOperation())))
         this->signalPassFailure();
     } while (succeeded(fuseLinalgOpsGreedily(getOperation())));
   }

@@ -212,6 +212,10 @@ public:
     addExtension(std::make_unique<Extension>(std::move(extensionFn)));
   }
 
+  /// Returns true if the current registry is a subset of 'rhs', i.e. if 'rhs'
+  /// contains all of the components of this registry.
+  bool isSubsetOf(const DialectRegistry &rhs) const;
+
 private:
   MapTy registry;
   std::vector<std::unique_ptr<DialectExtensionBase>> extensions;
