@@ -775,7 +775,9 @@ void Parser::ParseMicrosoftDeclSpecs(ParsedAttributes &Attrs,
 void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
   // Treat these like attributes
   while (true) {
-    switch (Tok.getKind()) {
+    // [MSVC Compatibility]
+    auto Kind = Tok.getKind();
+    switch (Kind) {
     case tok::kw___fastcall:
     case tok::kw___stdcall:
     case tok::kw___thiscall:
@@ -791,6 +793,14 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
       SourceLocation AttrNameLoc = ConsumeToken();
       attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
                    ParsedAttr::AS_Keyword);
+      // [MSVC Compatibility]
+      if (Kind == tok::kw___stdcall || Kind == tok::kw___cdecl ||
+          Kind == tok::kw___fastcall || Kind == tok::kw___thiscall ||
+          Kind == tok::kw___regcall || Kind == tok::kw___vectorcall) {
+        if (Tok.is(tok::r_paren)) {
+          ConsumeParen();
+        }
+      }
       break;
     }
     default:
@@ -3360,7 +3370,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
 
       DS.SetRangeEnd(Tok.getAnnotationEndLoc());
       ConsumeAnnotationToken(); // The typename
-
+      //[MSVC Compatibility]
+      if (Tok.is(tok::l_paren) &&
+          NextToken().isOneOf(tok::kw___stdcall, tok::kw___cdecl,
+                              tok::kw___fastcall, tok::kw___thiscall,
+                              tok::kw___regcall, tok::kw___vectorcall)) {
+        ConsumeParen();
+      }
       continue;
     }
 
