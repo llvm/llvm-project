@@ -43,32 +43,32 @@ void Print(const MemInfoBlock &M, const u64 id, bool print_terse) {
   u64 p;
 
   if (print_terse) {
-    p = M.total_size * 100 / M.alloc_count;
-    Printf("MIB:%llu/%u/%llu.%02llu/%u/%u/", id, M.alloc_count, p / 100,
-           p % 100, M.min_size, M.max_size);
-    p = M.total_access_count * 100 / M.alloc_count;
-    Printf("%llu.%02llu/%llu/%llu/", p / 100, p % 100, M.min_access_count,
-           M.max_access_count);
-    p = M.total_lifetime * 100 / M.alloc_count;
-    Printf("%llu.%02llu/%u/%u/", p / 100, p % 100, M.min_lifetime,
-           M.max_lifetime);
-    Printf("%u/%u/%u/%u\n", M.num_migrated_cpu, M.num_lifetime_overlaps,
-           M.num_same_alloc_cpu, M.num_same_dealloc_cpu);
+    p = M.TotalSize * 100 / M.AllocCount;
+    Printf("MIB:%llu/%u/%llu.%02llu/%u/%u/", id, M.AllocCount, p / 100, p % 100,
+           M.MinSize, M.MaxSize);
+    p = M.TotalAccessCount * 100 / M.AllocCount;
+    Printf("%llu.%02llu/%llu/%llu/", p / 100, p % 100, M.MinAccessCount,
+           M.MaxAccessCount);
+    p = M.TotalLifetime * 100 / M.AllocCount;
+    Printf("%llu.%02llu/%u/%u/", p / 100, p % 100, M.MinLifetime,
+           M.MaxLifetime);
+    Printf("%u/%u/%u/%u\n", M.NumMigratedCpu, M.NumLifetimeOverlaps,
+           M.NumSameAllocCpu, M.NumSameDeallocCpu);
   } else {
-    p = M.total_size * 100 / M.alloc_count;
+    p = M.TotalSize * 100 / M.AllocCount;
     Printf("Memory allocation stack id = %llu\n", id);
     Printf("\talloc_count %u, size (ave/min/max) %llu.%02llu / %u / %u\n",
-           M.alloc_count, p / 100, p % 100, M.min_size, M.max_size);
-    p = M.total_access_count * 100 / M.alloc_count;
+           M.AllocCount, p / 100, p % 100, M.MinSize, M.MaxSize);
+    p = M.TotalAccessCount * 100 / M.AllocCount;
     Printf("\taccess_count (ave/min/max): %llu.%02llu / %llu / %llu\n", p / 100,
-           p % 100, M.min_access_count, M.max_access_count);
-    p = M.total_lifetime * 100 / M.alloc_count;
+           p % 100, M.MinAccessCount, M.MaxAccessCount);
+    p = M.TotalLifetime * 100 / M.AllocCount;
     Printf("\tlifetime (ave/min/max): %llu.%02llu / %u / %u\n", p / 100,
-           p % 100, M.min_lifetime, M.max_lifetime);
+           p % 100, M.MinLifetime, M.MaxLifetime);
     Printf("\tnum migrated: %u, num lifetime overlaps: %u, num same alloc "
            "cpu: %u, num same dealloc_cpu: %u\n",
-           M.num_migrated_cpu, M.num_lifetime_overlaps, M.num_same_alloc_cpu,
-           M.num_same_dealloc_cpu);
+           M.NumMigratedCpu, M.NumLifetimeOverlaps, M.NumSameAllocCpu,
+           M.NumSameDeallocCpu);
   }
 }
 } // namespace
