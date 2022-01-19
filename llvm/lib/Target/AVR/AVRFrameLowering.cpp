@@ -248,7 +248,7 @@ bool AVRFrameLowering::spillCalleeSavedRegisters(
   AVRMachineFunctionInfo *AVRFI = MF.getInfo<AVRMachineFunctionInfo>();
 
   for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     bool IsNotLiveIn = !MBB.isLiveIn(Reg);
 
     assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
@@ -286,7 +286,7 @@ bool AVRFrameLowering::restoreCalleeSavedRegisters(
   const TargetInstrInfo &TII = *STI.getInstrInfo();
 
   for (const CalleeSavedInfo &CCSI : CSI) {
-    unsigned Reg = CCSI.getReg();
+    Register Reg = CCSI.getReg();
 
     assert(TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(Reg)) == 8 &&
            "Invalid register size");
