@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSourceManager.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTarget.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/Core/Debugger.h"
@@ -71,21 +71,19 @@ using namespace lldb;
 using namespace lldb_private;
 
 SBSourceManager::SBSourceManager(const SBDebugger &debugger) {
-  LLDB_RECORD_CONSTRUCTOR(SBSourceManager, (const lldb::SBDebugger &),
-                          debugger);
+  LLDB_INSTRUMENT_VA(this, debugger);
 
   m_opaque_up = std::make_unique<SourceManagerImpl>(debugger.get_sp());
 }
 
 SBSourceManager::SBSourceManager(const SBTarget &target) {
-  LLDB_RECORD_CONSTRUCTOR(SBSourceManager, (const lldb::SBTarget &), target);
+  LLDB_INSTRUMENT_VA(this, target);
 
   m_opaque_up = std::make_unique<SourceManagerImpl>(target.GetSP());
 }
 
 SBSourceManager::SBSourceManager(const SBSourceManager &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBSourceManager, (const lldb::SBSourceManager &),
-                          rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (&rhs == this)
     return;
@@ -95,9 +93,7 @@ SBSourceManager::SBSourceManager(const SBSourceManager &rhs) {
 
 const lldb::SBSourceManager &SBSourceManager::
 operator=(const lldb::SBSourceManager &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBSourceManager &,
-                     SBSourceManager, operator=,(const lldb::SBSourceManager &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_up = std::make_unique<SourceManagerImpl>(*(rhs.m_opaque_up.get()));
   return *this;
@@ -108,10 +104,7 @@ SBSourceManager::~SBSourceManager() = default;
 size_t SBSourceManager::DisplaySourceLinesWithLineNumbers(
     const SBFileSpec &file, uint32_t line, uint32_t context_before,
     uint32_t context_after, const char *current_line_cstr, SBStream &s) {
-  LLDB_RECORD_METHOD(size_t, SBSourceManager, DisplaySourceLinesWithLineNumbers,
-                     (const lldb::SBFileSpec &, uint32_t, uint32_t, uint32_t,
-                      const char *, lldb::SBStream &),
-                     file, line, context_before, context_after,
+  LLDB_INSTRUMENT_VA(this, file, line, context_before, context_after,
                      current_line_cstr, s);
 
   const uint32_t column = 0;
@@ -124,11 +117,8 @@ size_t SBSourceManager::DisplaySourceLinesWithLineNumbersAndColumn(
     const SBFileSpec &file, uint32_t line, uint32_t column,
     uint32_t context_before, uint32_t context_after,
     const char *current_line_cstr, SBStream &s) {
-  LLDB_RECORD_METHOD(
-      size_t, SBSourceManager, DisplaySourceLinesWithLineNumbersAndColumn,
-      (const lldb::SBFileSpec &, uint32_t, uint32_t, uint32_t, uint32_t,
-       const char *, lldb::SBStream &),
-      file, line, column, context_before, context_after, current_line_cstr, s);
+  LLDB_INSTRUMENT_VA(this, file, line, column, context_before, context_after,
+                     current_line_cstr, s);
 
   if (m_opaque_up == nullptr)
     return 0;

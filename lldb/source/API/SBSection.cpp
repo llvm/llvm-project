@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSection.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Core/Module.h"
@@ -15,15 +14,16 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBSection::SBSection() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBSection); }
+SBSection::SBSection() { LLDB_INSTRUMENT_VA(this); }
 
 SBSection::SBSection(const SBSection &rhs) : m_opaque_wp(rhs.m_opaque_wp) {
-  LLDB_RECORD_CONSTRUCTOR(SBSection, (const lldb::SBSection &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBSection::SBSection(const lldb::SectionSP &section_sp) {
@@ -34,8 +34,7 @@ SBSection::SBSection(const lldb::SectionSP &section_sp) {
 }
 
 const SBSection &SBSection::operator=(const SBSection &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBSection &,
-                     SBSection, operator=,(const lldb::SBSection &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_wp = rhs.m_opaque_wp;
   return *this;
@@ -44,18 +43,18 @@ const SBSection &SBSection::operator=(const SBSection &rhs) {
 SBSection::~SBSection() = default;
 
 bool SBSection::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSection, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBSection::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBSection, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   return section_sp && section_sp->GetModule().get() != nullptr;
 }
 
 const char *SBSection::GetName() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBSection, GetName);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   if (section_sp)
@@ -64,7 +63,7 @@ const char *SBSection::GetName() {
 }
 
 lldb::SBSection SBSection::GetParent() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBSection, SBSection, GetParent);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::SBSection sb_section;
   SectionSP section_sp(GetSP());
@@ -77,8 +76,7 @@ lldb::SBSection SBSection::GetParent() {
 }
 
 lldb::SBSection SBSection::FindSubSection(const char *sect_name) {
-  LLDB_RECORD_METHOD(lldb::SBSection, SBSection, FindSubSection, (const char *),
-                     sect_name);
+  LLDB_INSTRUMENT_VA(this, sect_name);
 
   lldb::SBSection sb_section;
   if (sect_name) {
@@ -93,7 +91,7 @@ lldb::SBSection SBSection::FindSubSection(const char *sect_name) {
 }
 
 size_t SBSection::GetNumSubSections() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBSection, GetNumSubSections);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   if (section_sp)
@@ -102,8 +100,7 @@ size_t SBSection::GetNumSubSections() {
 }
 
 lldb::SBSection SBSection::GetSubSectionAtIndex(size_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBSection, SBSection, GetSubSectionAtIndex, (size_t),
-                     idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   lldb::SBSection sb_section;
   SectionSP section_sp(GetSP());
@@ -119,7 +116,7 @@ void SBSection::SetSP(const lldb::SectionSP &section_sp) {
 }
 
 lldb::addr_t SBSection::GetFileAddress() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::addr_t, SBSection, GetFileAddress);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::addr_t file_addr = LLDB_INVALID_ADDRESS;
   SectionSP section_sp(GetSP());
@@ -129,8 +126,7 @@ lldb::addr_t SBSection::GetFileAddress() {
 }
 
 lldb::addr_t SBSection::GetLoadAddress(lldb::SBTarget &sb_target) {
-  LLDB_RECORD_METHOD(lldb::addr_t, SBSection, GetLoadAddress,
-                     (lldb::SBTarget &), sb_target);
+  LLDB_INSTRUMENT_VA(this, sb_target);
 
   TargetSP target_sp(sb_target.GetSP());
   if (target_sp) {
@@ -142,7 +138,7 @@ lldb::addr_t SBSection::GetLoadAddress(lldb::SBTarget &sb_target) {
 }
 
 lldb::addr_t SBSection::GetByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::addr_t, SBSection, GetByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   if (section_sp)
@@ -151,7 +147,7 @@ lldb::addr_t SBSection::GetByteSize() {
 }
 
 uint64_t SBSection::GetFileOffset() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint64_t, SBSection, GetFileOffset);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   if (section_sp) {
@@ -166,7 +162,7 @@ uint64_t SBSection::GetFileOffset() {
 }
 
 uint64_t SBSection::GetFileByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint64_t, SBSection, GetFileByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   if (section_sp)
@@ -175,14 +171,13 @@ uint64_t SBSection::GetFileByteSize() {
 }
 
 SBData SBSection::GetSectionData() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBData, SBSection, GetSectionData);
+  LLDB_INSTRUMENT_VA(this);
 
   return GetSectionData(0, UINT64_MAX);
 }
 
 SBData SBSection::GetSectionData(uint64_t offset, uint64_t size) {
-  LLDB_RECORD_METHOD(lldb::SBData, SBSection, GetSectionData,
-                     (uint64_t, uint64_t), offset, size);
+  LLDB_INSTRUMENT_VA(this, offset, size);
 
   SBData sb_data;
   SectionSP section_sp(GetSP());
@@ -221,7 +216,7 @@ SBData SBSection::GetSectionData(uint64_t offset, uint64_t size) {
 }
 
 SectionType SBSection::GetSectionType() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SectionType, SBSection, GetSectionType);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   if (section_sp.get())
@@ -230,7 +225,7 @@ SectionType SBSection::GetSectionType() {
 }
 
 uint32_t SBSection::GetPermissions() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBSection, GetPermissions);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   if (section_sp)
@@ -239,7 +234,7 @@ uint32_t SBSection::GetPermissions() const {
 }
 
 uint32_t SBSection::GetTargetByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBSection, GetTargetByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   SectionSP section_sp(GetSP());
   if (section_sp.get())
@@ -248,8 +243,7 @@ uint32_t SBSection::GetTargetByteSize() {
 }
 
 bool SBSection::operator==(const SBSection &rhs) {
-  LLDB_RECORD_METHOD(bool, SBSection, operator==,(const lldb::SBSection &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   SectionSP lhs_section_sp(GetSP());
   SectionSP rhs_section_sp(rhs.GetSP());
@@ -259,8 +253,7 @@ bool SBSection::operator==(const SBSection &rhs) {
 }
 
 bool SBSection::operator!=(const SBSection &rhs) {
-  LLDB_RECORD_METHOD(bool, SBSection, operator!=,(const lldb::SBSection &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   SectionSP lhs_section_sp(GetSP());
   SectionSP rhs_section_sp(rhs.GetSP());
@@ -268,8 +261,7 @@ bool SBSection::operator!=(const SBSection &rhs) {
 }
 
 bool SBSection::GetDescription(SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBSection, GetDescription, (lldb::SBStream &),
-                     description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   Stream &strm = description.ref();
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
@@ -20,20 +20,19 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTrace::SBTrace() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTrace); }
+SBTrace::SBTrace() { LLDB_INSTRUMENT_VA(this); }
 
 SBTrace::SBTrace(const lldb::TraceSP &trace_sp) : m_opaque_sp(trace_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBTrace, (const lldb::TraceSP &), trace_sp);
+  LLDB_INSTRUMENT_VA(this, trace_sp);
 }
 
 const char *SBTrace::GetStartConfigurationHelp() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTrace, GetStartConfigurationHelp);
+  LLDB_INSTRUMENT_VA(this);
   return m_opaque_sp ? m_opaque_sp->GetStartConfigurationHelp() : nullptr;
 }
 
 SBError SBTrace::Start(const SBStructuredData &configuration) {
-  LLDB_RECORD_METHOD(SBError, SBTrace, Start, (const SBStructuredData &),
-                     configuration);
+  LLDB_INSTRUMENT_VA(this, configuration);
   SBError error;
   if (!m_opaque_sp)
     error.SetErrorString("error: invalid trace");
@@ -45,9 +44,7 @@ SBError SBTrace::Start(const SBStructuredData &configuration) {
 
 SBError SBTrace::Start(const SBThread &thread,
                        const SBStructuredData &configuration) {
-  LLDB_RECORD_METHOD(SBError, SBTrace, Start,
-                     (const SBThread &, const SBStructuredData &), thread,
-                     configuration);
+  LLDB_INSTRUMENT_VA(this, thread, configuration);
 
   SBError error;
   if (!m_opaque_sp)
@@ -63,7 +60,7 @@ SBError SBTrace::Start(const SBThread &thread,
 }
 
 SBError SBTrace::Stop() {
-  LLDB_RECORD_METHOD_NO_ARGS(SBError, SBTrace, Stop);
+  LLDB_INSTRUMENT_VA(this);
   SBError error;
   if (!m_opaque_sp)
     error.SetErrorString("error: invalid trace");
@@ -73,7 +70,7 @@ SBError SBTrace::Stop() {
 }
 
 SBError SBTrace::Stop(const SBThread &thread) {
-  LLDB_RECORD_METHOD(SBError, SBTrace, Stop, (const SBThread &), thread);
+  LLDB_INSTRUMENT_VA(this, thread);
   SBError error;
   if (!m_opaque_sp)
     error.SetErrorString("error: invalid trace");
@@ -83,11 +80,11 @@ SBError SBTrace::Stop(const SBThread &thread) {
 }
 
 bool SBTrace::IsValid() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTrace, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 
 SBTrace::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTrace, operator bool);
+  LLDB_INSTRUMENT_VA(this);
   return (bool)m_opaque_sp;
 }

@@ -8,7 +8,6 @@
 
 #include "lldb/lldb-forward.h"
 
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBQueueItem.h"
 #include "lldb/API/SBThread.h"
@@ -16,47 +15,46 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/QueueItem.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 // Constructors
-SBQueueItem::SBQueueItem() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBQueueItem); }
+SBQueueItem::SBQueueItem() { LLDB_INSTRUMENT_VA(this); }
 
 SBQueueItem::SBQueueItem(const QueueItemSP &queue_item_sp)
     : m_queue_item_sp(queue_item_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBQueueItem, (const lldb::QueueItemSP &),
-                          queue_item_sp);
+  LLDB_INSTRUMENT_VA(this, queue_item_sp);
 }
 
 // Destructor
 SBQueueItem::~SBQueueItem() { m_queue_item_sp.reset(); }
 
 bool SBQueueItem::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueueItem, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBQueueItem::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueueItem, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_queue_item_sp.get() != nullptr;
 }
 
 void SBQueueItem::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBQueueItem, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_queue_item_sp.reset();
 }
 
 void SBQueueItem::SetQueueItem(const QueueItemSP &queue_item_sp) {
-  LLDB_RECORD_METHOD(void, SBQueueItem, SetQueueItem,
-                     (const lldb::QueueItemSP &), queue_item_sp);
+  LLDB_INSTRUMENT_VA(this, queue_item_sp);
 
   m_queue_item_sp = queue_item_sp;
 }
 
 lldb::QueueItemKind SBQueueItem::GetKind() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::QueueItemKind, SBQueueItem, GetKind);
+  LLDB_INSTRUMENT_VA(this);
 
   QueueItemKind result = eQueueItemKindUnknown;
   if (m_queue_item_sp) {
@@ -66,7 +64,7 @@ lldb::QueueItemKind SBQueueItem::GetKind() const {
 }
 
 void SBQueueItem::SetKind(lldb::QueueItemKind kind) {
-  LLDB_RECORD_METHOD(void, SBQueueItem, SetKind, (lldb::QueueItemKind), kind);
+  LLDB_INSTRUMENT_VA(this, kind);
 
   if (m_queue_item_sp) {
     m_queue_item_sp->SetKind(kind);
@@ -74,7 +72,7 @@ void SBQueueItem::SetKind(lldb::QueueItemKind kind) {
 }
 
 SBAddress SBQueueItem::GetAddress() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBAddress, SBQueueItem, GetAddress);
+  LLDB_INSTRUMENT_VA(this);
 
   SBAddress result;
   if (m_queue_item_sp) {
@@ -84,7 +82,7 @@ SBAddress SBQueueItem::GetAddress() const {
 }
 
 void SBQueueItem::SetAddress(SBAddress addr) {
-  LLDB_RECORD_METHOD(void, SBQueueItem, SetAddress, (lldb::SBAddress), addr);
+  LLDB_INSTRUMENT_VA(this, addr);
 
   if (m_queue_item_sp) {
     m_queue_item_sp->SetAddress(addr.ref());
@@ -92,8 +90,7 @@ void SBQueueItem::SetAddress(SBAddress addr) {
 }
 
 SBThread SBQueueItem::GetExtendedBacktraceThread(const char *type) {
-  LLDB_RECORD_METHOD(lldb::SBThread, SBQueueItem, GetExtendedBacktraceThread,
-                     (const char *), type);
+  LLDB_INSTRUMENT_VA(this, type);
 
   SBThread result;
   if (m_queue_item_sp) {

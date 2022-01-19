@@ -7,22 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBEnvironment.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Environment.h"
+#include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 SBEnvironment::SBEnvironment() : m_opaque_up(new Environment()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBEnvironment);
+  LLDB_INSTRUMENT_VA(this);
 }
 
 SBEnvironment::SBEnvironment(const SBEnvironment &rhs)
     : m_opaque_up(clone(rhs.m_opaque_up)) {
-  LLDB_RECORD_CONSTRUCTOR(SBEnvironment, (const lldb::SBEnvironment &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBEnvironment::SBEnvironment(Environment rhs)
@@ -31,9 +31,7 @@ SBEnvironment::SBEnvironment(Environment rhs)
 SBEnvironment::~SBEnvironment() = default;
 
 const SBEnvironment &SBEnvironment::operator=(const SBEnvironment &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBEnvironment &,
-                     SBEnvironment, operator=,(const lldb::SBEnvironment &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
@@ -41,13 +39,13 @@ const SBEnvironment &SBEnvironment::operator=(const SBEnvironment &rhs) {
 }
 
 size_t SBEnvironment::GetNumValues() {
-  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBEnvironment, GetNumValues);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->size();
 }
 
 const char *SBEnvironment::Get(const char *name) {
-  LLDB_RECORD_METHOD(const char *, SBEnvironment, Get, (const char *), name);
+  LLDB_INSTRUMENT_VA(this, name);
 
   auto entry = m_opaque_up->find(name);
   if (entry == m_opaque_up->end()) {
@@ -57,8 +55,7 @@ const char *SBEnvironment::Get(const char *name) {
 }
 
 const char *SBEnvironment::GetNameAtIndex(size_t index) {
-  LLDB_RECORD_METHOD(const char *, SBEnvironment, GetNameAtIndex, (size_t),
-                     index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (index >= GetNumValues())
     return nullptr;
@@ -67,8 +64,7 @@ const char *SBEnvironment::GetNameAtIndex(size_t index) {
 }
 
 const char *SBEnvironment::GetValueAtIndex(size_t index) {
-  LLDB_RECORD_METHOD(const char *, SBEnvironment, GetValueAtIndex, (size_t),
-                     index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (index >= GetNumValues())
     return nullptr;
@@ -77,9 +73,7 @@ const char *SBEnvironment::GetValueAtIndex(size_t index) {
 }
 
 bool SBEnvironment::Set(const char *name, const char *value, bool overwrite) {
-  LLDB_RECORD_METHOD(bool, SBEnvironment, Set,
-                     (const char *, const char *, bool), name, value,
-                     overwrite);
+  LLDB_INSTRUMENT_VA(this, name, value, overwrite);
 
   if (overwrite) {
     m_opaque_up->insert_or_assign(name, std::string(value));
@@ -89,13 +83,13 @@ bool SBEnvironment::Set(const char *name, const char *value, bool overwrite) {
 }
 
 bool SBEnvironment::Unset(const char *name) {
-  LLDB_RECORD_METHOD(bool, SBEnvironment, Unset, (const char *), name);
+  LLDB_INSTRUMENT_VA(this, name);
 
   return m_opaque_up->erase(name);
 }
 
 SBStringList SBEnvironment::GetEntries() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBStringList, SBEnvironment, GetEntries);
+  LLDB_INSTRUMENT_VA(this);
 
   SBStringList entries;
   for (const auto &KV : *m_opaque_up) {
@@ -105,16 +99,14 @@ SBStringList SBEnvironment::GetEntries() {
 }
 
 void SBEnvironment::PutEntry(const char *name_and_value) {
-  LLDB_RECORD_METHOD(void, SBEnvironment, PutEntry, (const char *),
-                     name_and_value);
+  LLDB_INSTRUMENT_VA(this, name_and_value);
 
   auto split = llvm::StringRef(name_and_value).split('=');
   m_opaque_up->insert_or_assign(split.first.str(), split.second.str());
 }
 
 void SBEnvironment::SetEntries(const SBStringList &entries, bool append) {
-  LLDB_RECORD_METHOD(void, SBEnvironment, SetEntries,
-                     (const lldb::SBStringList &, bool), entries, append);
+  LLDB_INSTRUMENT_VA(this, entries, append);
 
   if (!append)
     m_opaque_up->clear();
@@ -124,7 +116,7 @@ void SBEnvironment::SetEntries(const SBStringList &entries, bool append) {
 }
 
 void SBEnvironment::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBEnvironment, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_up->clear();
 }

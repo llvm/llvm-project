@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBFile.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBError.h"
 #include "lldb/Host/File.h"
+#include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -19,33 +19,31 @@ SBFile::~SBFile() = default;
 SBFile::SBFile(FileSP file_sp) : m_opaque_sp(file_sp) {
   // We have no way to capture the incoming FileSP as the class isn't
   // instrumented, so pretend that it's always null.
-  LLDB_RECORD_CONSTRUCTOR(SBFile, (lldb::FileSP), nullptr);
+  LLDB_INSTRUMENT_VA(this, file_sp);
 }
 
 SBFile::SBFile(const SBFile &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBFile, (const lldb::SBFile&), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBFile &SBFile ::operator=(const SBFile &rhs) {
-  LLDB_RECORD_METHOD(lldb::SBFile &,
-                     SBFile, operator=,(const lldb::SBFile &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
   return *this;
 }
 
-SBFile::SBFile() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFile); }
+SBFile::SBFile() { LLDB_INSTRUMENT_VA(this); }
 
 SBFile::SBFile(FILE *file, bool transfer_ownership) {
-  LLDB_RECORD_CONSTRUCTOR(SBFile, (FILE *, bool), file, transfer_ownership);
+  LLDB_INSTRUMENT_VA(this, file, transfer_ownership);
 
   m_opaque_sp = std::make_shared<NativeFile>(file, transfer_ownership);
 }
 
 SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {
-  LLDB_RECORD_CONSTRUCTOR(SBFile, (int, const char *, bool), fd, mode,
-                          transfer_owndership);
+  LLDB_INSTRUMENT_VA(this, fd, mode, transfer_owndership);
 
   auto options = File::GetOptionsFromMode(mode);
   if (!options) {
@@ -57,8 +55,7 @@ SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {
 }
 
 SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBFile, Read, (uint8_t *, size_t, size_t *),
-                     buf, num_bytes, bytes_read);
+  LLDB_INSTRUMENT_VA(this, buf, num_bytes, bytes_read);
 
   SBError error;
   if (!m_opaque_sp) {
@@ -74,9 +71,7 @@ SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
 
 SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
                       size_t *bytes_written) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBFile, Write,
-                     (const uint8_t *, size_t, size_t *), buf, num_bytes,
-                     bytes_written);
+  LLDB_INSTRUMENT_VA(this, buf, num_bytes, bytes_written);
 
   SBError error;
   if (!m_opaque_sp) {
@@ -91,7 +86,7 @@ SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
 }
 
 SBError SBFile::Flush() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBFile, Flush);
+  LLDB_INSTRUMENT_VA(this);
 
   SBError error;
   if (!m_opaque_sp) {
@@ -104,12 +99,12 @@ SBError SBFile::Flush() {
 }
 
 bool SBFile::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFile, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return m_opaque_sp && m_opaque_sp->IsValid();
 }
 
 SBError SBFile::Close() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBFile, Close);
+  LLDB_INSTRUMENT_VA(this);
   SBError error;
   if (m_opaque_sp) {
     Status status = m_opaque_sp->Close();
@@ -119,16 +114,16 @@ SBError SBFile::Close() {
 }
 
 SBFile::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFile, operator bool);
+  LLDB_INSTRUMENT_VA(this);
   return IsValid();
 }
 
 bool SBFile::operator!() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFile, operator!);
+  LLDB_INSTRUMENT_VA(this);
   return !IsValid();
 }
 
 FileSP SBFile::GetFile() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(FileSP, SBFile, GetFile);
+  LLDB_INSTRUMENT_VA(this);
   return m_opaque_sp;
 }

@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBError.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
 
 #include <cstdarg>
@@ -17,10 +17,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBError::SBError() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBError); }
+SBError::SBError() { LLDB_INSTRUMENT_VA(this); }
 
 SBError::SBError(const SBError &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBError, (const lldb::SBError &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
 }
@@ -28,8 +28,7 @@ SBError::SBError(const SBError &rhs) {
 SBError::~SBError() = default;
 
 const SBError &SBError::operator=(const SBError &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBError &,
-                     SBError, operator=,(const lldb::SBError &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
@@ -37,7 +36,7 @@ const SBError &SBError::operator=(const SBError &rhs) {
 }
 
 const char *SBError::GetCString() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBError, GetCString);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_up)
     return m_opaque_up->AsCString();
@@ -45,14 +44,14 @@ const char *SBError::GetCString() const {
 }
 
 void SBError::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBError, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_up)
     m_opaque_up->Clear();
 }
 
 bool SBError::Fail() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, Fail);
+  LLDB_INSTRUMENT_VA(this);
 
   bool ret_value = false;
   if (m_opaque_up)
@@ -63,7 +62,7 @@ bool SBError::Fail() const {
 }
 
 bool SBError::Success() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, Success);
+  LLDB_INSTRUMENT_VA(this);
 
   bool ret_value = true;
   if (m_opaque_up)
@@ -73,8 +72,7 @@ bool SBError::Success() const {
 }
 
 uint32_t SBError::GetError() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBError, GetError);
-
+  LLDB_INSTRUMENT_VA(this);
 
   uint32_t err = 0;
   if (m_opaque_up)
@@ -85,7 +83,7 @@ uint32_t SBError::GetError() const {
 }
 
 ErrorType SBError::GetType() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::ErrorType, SBError, GetType);
+  LLDB_INSTRUMENT_VA(this);
 
   ErrorType err_type = eErrorTypeInvalid;
   if (m_opaque_up)
@@ -95,8 +93,7 @@ ErrorType SBError::GetType() const {
 }
 
 void SBError::SetError(uint32_t err, ErrorType type) {
-  LLDB_RECORD_METHOD(void, SBError, SetError, (uint32_t, lldb::ErrorType), err,
-                     type);
+  LLDB_INSTRUMENT_VA(this, err, type);
 
   CreateIfNeeded();
   m_opaque_up->SetError(err, type);
@@ -108,21 +105,21 @@ void SBError::SetError(const Status &lldb_error) {
 }
 
 void SBError::SetErrorToErrno() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBError, SetErrorToErrno);
+  LLDB_INSTRUMENT_VA(this);
 
   CreateIfNeeded();
   m_opaque_up->SetErrorToErrno();
 }
 
 void SBError::SetErrorToGenericError() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBError, SetErrorToGenericError);
+  LLDB_INSTRUMENT_VA(this);
 
   CreateIfNeeded();
   m_opaque_up->SetErrorToGenericError();
 }
 
 void SBError::SetErrorString(const char *err_str) {
-  LLDB_RECORD_METHOD(void, SBError, SetErrorString, (const char *), err_str);
+  LLDB_INSTRUMENT_VA(this, err_str);
 
   CreateIfNeeded();
   m_opaque_up->SetErrorString(err_str);
@@ -138,11 +135,11 @@ int SBError::SetErrorStringWithFormat(const char *format, ...) {
 }
 
 bool SBError::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBError::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up != nullptr;
 }
@@ -167,8 +164,7 @@ const lldb_private::Status &SBError::operator*() const {
 }
 
 bool SBError::GetDescription(SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBError, GetDescription, (lldb::SBStream &),
-                     description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   if (m_opaque_up) {
     if (m_opaque_up->Success())

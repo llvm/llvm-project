@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBStructuredData.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
@@ -25,41 +25,36 @@ using namespace lldb_private;
 #pragma mark SBStructuredData
 
 SBStructuredData::SBStructuredData() : m_impl_up(new StructuredDataImpl()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBStructuredData);
+  LLDB_INSTRUMENT_VA(this);
 }
 
 SBStructuredData::SBStructuredData(const lldb::SBStructuredData &rhs)
     : m_impl_up(new StructuredDataImpl(*rhs.m_impl_up)) {
-  LLDB_RECORD_CONSTRUCTOR(SBStructuredData, (const lldb::SBStructuredData &),
-                          rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBStructuredData::SBStructuredData(const lldb::EventSP &event_sp)
     : m_impl_up(new StructuredDataImpl(event_sp)) {
-  LLDB_RECORD_CONSTRUCTOR(SBStructuredData, (const lldb::EventSP &), event_sp);
+  LLDB_INSTRUMENT_VA(this, event_sp);
 }
 
 SBStructuredData::SBStructuredData(const lldb_private::StructuredDataImpl &impl)
     : m_impl_up(new StructuredDataImpl(impl)) {
-  LLDB_RECORD_CONSTRUCTOR(SBStructuredData,
-                          (const lldb_private::StructuredDataImpl &), impl);
+  LLDB_INSTRUMENT_VA(this, impl);
 }
 
 SBStructuredData::~SBStructuredData() = default;
 
 SBStructuredData &SBStructuredData::
 operator=(const lldb::SBStructuredData &rhs) {
-  LLDB_RECORD_METHOD(
-      lldb::SBStructuredData &,
-      SBStructuredData, operator=,(const lldb::SBStructuredData &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   *m_impl_up = *rhs.m_impl_up;
   return *this;
 }
 
 lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBStructuredData, SetFromJSON,
-                     (lldb::SBStream &), stream);
+  LLDB_INSTRUMENT_VA(this, stream);
 
   lldb::SBError error;
   std::string json_str(stream.GetData());
@@ -73,33 +68,31 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
 }
 
 lldb::SBError SBStructuredData::SetFromJSON(const char *json) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBStructuredData, SetFromJSON,
-                     (const char *), json);
+  LLDB_INSTRUMENT_VA(this, json);
   lldb::SBStream s;
   s.Print(json);
   return SetFromJSON(s);
 }
 
 bool SBStructuredData::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStructuredData, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 
 SBStructuredData::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStructuredData, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_impl_up->IsValid();
 }
 
 void SBStructuredData::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBStructuredData, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_impl_up->Clear();
 }
 
 SBError SBStructuredData::GetAsJSON(lldb::SBStream &stream) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBError, SBStructuredData, GetAsJSON,
-                           (lldb::SBStream &), stream);
+  LLDB_INSTRUMENT_VA(this, stream);
 
   SBError error;
   error.SetError(m_impl_up->GetAsJSON(stream.ref()));
@@ -107,8 +100,7 @@ SBError SBStructuredData::GetAsJSON(lldb::SBStream &stream) const {
 }
 
 lldb::SBError SBStructuredData::GetDescription(lldb::SBStream &stream) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBError, SBStructuredData, GetDescription,
-                           (lldb::SBStream &), stream);
+  LLDB_INSTRUMENT_VA(this, stream);
 
   Status error = m_impl_up->GetDescription(stream.ref());
   SBError sb_error;
@@ -117,21 +109,19 @@ lldb::SBError SBStructuredData::GetDescription(lldb::SBStream &stream) const {
 }
 
 StructuredDataType SBStructuredData::GetType() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::StructuredDataType, SBStructuredData,
-                                   GetType);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_impl_up->GetType();
 }
 
 size_t SBStructuredData::GetSize() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(size_t, SBStructuredData, GetSize);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_impl_up->GetSize();
 }
 
 bool SBStructuredData::GetKeys(lldb::SBStringList &keys) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBStructuredData, GetKeys,
-                           (lldb::SBStringList &), keys);
+  LLDB_INSTRUMENT_VA(this, keys);
 
   if (GetType() != eStructuredDataTypeDictionary)
     return false;
@@ -157,8 +147,7 @@ bool SBStructuredData::GetKeys(lldb::SBStringList &keys) const {
 }
 
 lldb::SBStructuredData SBStructuredData::GetValueForKey(const char *key) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBStructuredData, SBStructuredData,
-                           GetValueForKey, (const char *), key);
+  LLDB_INSTRUMENT_VA(this, key);
 
   SBStructuredData result;
   result.m_impl_up->SetObjectSP(m_impl_up->GetValueForKey(key));
@@ -166,8 +155,7 @@ lldb::SBStructuredData SBStructuredData::GetValueForKey(const char *key) const {
 }
 
 lldb::SBStructuredData SBStructuredData::GetItemAtIndex(size_t idx) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBStructuredData, SBStructuredData,
-                           GetItemAtIndex, (size_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBStructuredData result;
   result.m_impl_up->SetObjectSP(m_impl_up->GetItemAtIndex(idx));
@@ -175,29 +163,25 @@ lldb::SBStructuredData SBStructuredData::GetItemAtIndex(size_t idx) const {
 }
 
 uint64_t SBStructuredData::GetIntegerValue(uint64_t fail_value) const {
-  LLDB_RECORD_METHOD_CONST(uint64_t, SBStructuredData, GetIntegerValue,
-                           (uint64_t), fail_value);
+  LLDB_INSTRUMENT_VA(this, fail_value);
 
   return m_impl_up->GetIntegerValue(fail_value);
 }
 
 double SBStructuredData::GetFloatValue(double fail_value) const {
-  LLDB_RECORD_METHOD_CONST(double, SBStructuredData, GetFloatValue, (double),
-                           fail_value);
+  LLDB_INSTRUMENT_VA(this, fail_value);
 
   return m_impl_up->GetFloatValue(fail_value);
 }
 
 bool SBStructuredData::GetBooleanValue(bool fail_value) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBStructuredData, GetBooleanValue, (bool),
-                           fail_value);
+  LLDB_INSTRUMENT_VA(this, fail_value);
 
   return m_impl_up->GetBooleanValue(fail_value);
 }
 
 size_t SBStructuredData::GetStringValue(char *dst, size_t dst_len) const {
-  LLDB_RECORD_METHOD_CONST(size_t, SBStructuredData, GetStringValue,
-                           (char *, size_t), dst, "", dst_len);
+  LLDB_INSTRUMENT_VA(this, dst, dst_len);
 
   return m_impl_up->GetStringValue(dst, dst_len);
 }

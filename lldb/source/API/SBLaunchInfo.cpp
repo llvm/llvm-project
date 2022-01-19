@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBLaunchInfo.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
@@ -40,7 +40,7 @@ private:
 
 SBLaunchInfo::SBLaunchInfo(const char **argv)
     : m_opaque_sp(new SBLaunchInfoImpl()) {
-  LLDB_RECORD_CONSTRUCTOR(SBLaunchInfo, (const char **), argv);
+  LLDB_INSTRUMENT_VA(this, argv);
 
   m_opaque_sp->GetFlags().Reset(eLaunchFlagDebug | eLaunchFlagDisableASLR);
   if (argv && argv[0])
@@ -48,14 +48,13 @@ SBLaunchInfo::SBLaunchInfo(const char **argv)
 }
 
 SBLaunchInfo::SBLaunchInfo(const SBLaunchInfo &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
 }
 
 SBLaunchInfo &SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
-  LLDB_RECORD_METHOD(SBLaunchInfo &,
-                     SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
   return *this;
@@ -72,90 +71,86 @@ void SBLaunchInfo::set_ref(const ProcessLaunchInfo &info) {
 }
 
 lldb::pid_t SBLaunchInfo::GetProcessID() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::pid_t, SBLaunchInfo, GetProcessID);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetProcessID();
 }
 
 uint32_t SBLaunchInfo::GetUserID() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBLaunchInfo, GetUserID);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetUserID();
 }
 
 uint32_t SBLaunchInfo::GetGroupID() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBLaunchInfo, GetGroupID);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetGroupID();
 }
 
 bool SBLaunchInfo::UserIDIsValid() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBLaunchInfo, UserIDIsValid);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->UserIDIsValid();
 }
 
 bool SBLaunchInfo::GroupIDIsValid() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBLaunchInfo, GroupIDIsValid);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GroupIDIsValid();
 }
 
 void SBLaunchInfo::SetUserID(uint32_t uid) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetUserID, (uint32_t), uid);
+  LLDB_INSTRUMENT_VA(this, uid);
 
   m_opaque_sp->SetUserID(uid);
 }
 
 void SBLaunchInfo::SetGroupID(uint32_t gid) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetGroupID, (uint32_t), gid);
+  LLDB_INSTRUMENT_VA(this, gid);
 
   m_opaque_sp->SetGroupID(gid);
 }
 
 SBFileSpec SBLaunchInfo::GetExecutableFile() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBLaunchInfo, GetExecutableFile);
+  LLDB_INSTRUMENT_VA(this);
 
   return SBFileSpec(m_opaque_sp->GetExecutableFile());
 }
 
 void SBLaunchInfo::SetExecutableFile(SBFileSpec exe_file,
                                      bool add_as_first_arg) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetExecutableFile,
-                     (lldb::SBFileSpec, bool), exe_file, add_as_first_arg);
+  LLDB_INSTRUMENT_VA(this, exe_file, add_as_first_arg);
 
   m_opaque_sp->SetExecutableFile(exe_file.ref(), add_as_first_arg);
 }
 
 SBListener SBLaunchInfo::GetListener() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBListener, SBLaunchInfo, GetListener);
+  LLDB_INSTRUMENT_VA(this);
 
   return SBListener(m_opaque_sp->GetListener());
 }
 
 void SBLaunchInfo::SetListener(SBListener &listener) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetListener, (lldb::SBListener &),
-                     listener);
+  LLDB_INSTRUMENT_VA(this, listener);
 
   m_opaque_sp->SetListener(listener.GetSP());
 }
 
 uint32_t SBLaunchInfo::GetNumArguments() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBLaunchInfo, GetNumArguments);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetArguments().GetArgumentCount();
 }
 
 const char *SBLaunchInfo::GetArgumentAtIndex(uint32_t idx) {
-  LLDB_RECORD_METHOD(const char *, SBLaunchInfo, GetArgumentAtIndex, (uint32_t),
-                     idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   return m_opaque_sp->GetArguments().GetArgumentAtIndex(idx);
 }
 
 void SBLaunchInfo::SetArguments(const char **argv, bool append) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetArguments, (const char **, bool),
-                     argv, append);
+  LLDB_INSTRUMENT_VA(this, argv, append);
 
   if (append) {
     if (argv)
@@ -169,14 +164,13 @@ void SBLaunchInfo::SetArguments(const char **argv, bool append) {
 }
 
 uint32_t SBLaunchInfo::GetNumEnvironmentEntries() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBLaunchInfo, GetNumEnvironmentEntries);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetEnvironment().size();
 }
 
 const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
-  LLDB_RECORD_METHOD(const char *, SBLaunchInfo, GetEnvironmentEntryAtIndex,
-                     (uint32_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   if (idx > GetNumEnvironmentEntries())
     return nullptr;
@@ -184,14 +178,12 @@ const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
 }
 
 void SBLaunchInfo::SetEnvironmentEntries(const char **envp, bool append) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetEnvironmentEntries,
-                     (const char **, bool), envp, append);
+  LLDB_INSTRUMENT_VA(this, envp, append);
   SetEnvironment(SBEnvironment(Environment(envp)), append);
 }
 
 void SBLaunchInfo::SetEnvironment(const SBEnvironment &env, bool append) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetEnvironment,
-                     (const lldb::SBEnvironment &, bool), env, append);
+  LLDB_INSTRUMENT_VA(this, env, append);
   Environment &refEnv = env.ref();
   if (append) {
     for (auto &KV : refEnv)
@@ -202,57 +194,54 @@ void SBLaunchInfo::SetEnvironment(const SBEnvironment &env, bool append) {
 }
 
 SBEnvironment SBLaunchInfo::GetEnvironment() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBLaunchInfo, GetEnvironment);
+  LLDB_INSTRUMENT_VA(this);
   return SBEnvironment(Environment(m_opaque_sp->GetEnvironment()));
 }
 
 void SBLaunchInfo::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBLaunchInfo, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_sp->Clear();
 }
 
 const char *SBLaunchInfo::GetWorkingDirectory() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBLaunchInfo,
-                                   GetWorkingDirectory);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetWorkingDirectory().GetCString();
 }
 
 void SBLaunchInfo::SetWorkingDirectory(const char *working_dir) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetWorkingDirectory, (const char *),
-                     working_dir);
+  LLDB_INSTRUMENT_VA(this, working_dir);
 
   m_opaque_sp->SetWorkingDirectory(FileSpec(working_dir));
 }
 
 uint32_t SBLaunchInfo::GetLaunchFlags() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBLaunchInfo, GetLaunchFlags);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetFlags().Get();
 }
 
 void SBLaunchInfo::SetLaunchFlags(uint32_t flags) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetLaunchFlags, (uint32_t), flags);
+  LLDB_INSTRUMENT_VA(this, flags);
 
   m_opaque_sp->GetFlags().Reset(flags);
 }
 
 const char *SBLaunchInfo::GetProcessPluginName() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBLaunchInfo, GetProcessPluginName);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetProcessPluginName();
 }
 
 void SBLaunchInfo::SetProcessPluginName(const char *plugin_name) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetProcessPluginName, (const char *),
-                     plugin_name);
+  LLDB_INSTRUMENT_VA(this, plugin_name);
 
   return m_opaque_sp->SetProcessPluginName(plugin_name);
 }
 
 const char *SBLaunchInfo::GetShell() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBLaunchInfo, GetShell);
+  LLDB_INSTRUMENT_VA(this);
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
@@ -261,93 +250,86 @@ const char *SBLaunchInfo::GetShell() {
 }
 
 void SBLaunchInfo::SetShell(const char *path) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetShell, (const char *), path);
+  LLDB_INSTRUMENT_VA(this, path);
 
   m_opaque_sp->SetShell(FileSpec(path));
 }
 
 bool SBLaunchInfo::GetShellExpandArguments() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBLaunchInfo, GetShellExpandArguments);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetShellExpandArguments();
 }
 
 void SBLaunchInfo::SetShellExpandArguments(bool expand) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetShellExpandArguments, (bool),
-                     expand);
+  LLDB_INSTRUMENT_VA(this, expand);
 
   m_opaque_sp->SetShellExpandArguments(expand);
 }
 
 uint32_t SBLaunchInfo::GetResumeCount() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBLaunchInfo, GetResumeCount);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetResumeCount();
 }
 
 void SBLaunchInfo::SetResumeCount(uint32_t c) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetResumeCount, (uint32_t), c);
+  LLDB_INSTRUMENT_VA(this, c);
 
   m_opaque_sp->SetResumeCount(c);
 }
 
 bool SBLaunchInfo::AddCloseFileAction(int fd) {
-  LLDB_RECORD_METHOD(bool, SBLaunchInfo, AddCloseFileAction, (int), fd);
+  LLDB_INSTRUMENT_VA(this, fd);
 
   return m_opaque_sp->AppendCloseFileAction(fd);
 }
 
 bool SBLaunchInfo::AddDuplicateFileAction(int fd, int dup_fd) {
-  LLDB_RECORD_METHOD(bool, SBLaunchInfo, AddDuplicateFileAction, (int, int), fd,
-                     dup_fd);
+  LLDB_INSTRUMENT_VA(this, fd, dup_fd);
 
   return m_opaque_sp->AppendDuplicateFileAction(fd, dup_fd);
 }
 
 bool SBLaunchInfo::AddOpenFileAction(int fd, const char *path, bool read,
                                      bool write) {
-  LLDB_RECORD_METHOD(bool, SBLaunchInfo, AddOpenFileAction,
-                     (int, const char *, bool, bool), fd, path, read, write);
+  LLDB_INSTRUMENT_VA(this, fd, path, read, write);
 
   return m_opaque_sp->AppendOpenFileAction(fd, FileSpec(path), read, write);
 }
 
 bool SBLaunchInfo::AddSuppressFileAction(int fd, bool read, bool write) {
-  LLDB_RECORD_METHOD(bool, SBLaunchInfo, AddSuppressFileAction,
-                     (int, bool, bool), fd, read, write);
+  LLDB_INSTRUMENT_VA(this, fd, read, write);
 
   return m_opaque_sp->AppendSuppressFileAction(fd, read, write);
 }
 
 void SBLaunchInfo::SetLaunchEventData(const char *data) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetLaunchEventData, (const char *),
-                     data);
+  LLDB_INSTRUMENT_VA(this, data);
 
   m_opaque_sp->SetLaunchEventData(data);
 }
 
 const char *SBLaunchInfo::GetLaunchEventData() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBLaunchInfo,
-                                   GetLaunchEventData);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetLaunchEventData();
 }
 
 void SBLaunchInfo::SetDetachOnError(bool enable) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetDetachOnError, (bool), enable);
+  LLDB_INSTRUMENT_VA(this, enable);
 
   m_opaque_sp->SetDetachOnError(enable);
 }
 
 bool SBLaunchInfo::GetDetachOnError() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBLaunchInfo, GetDetachOnError);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetDetachOnError();
 }
 
 const char *SBLaunchInfo::GetScriptedProcessClassName() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBLaunchInfo,
-                                   GetScriptedProcessClassName);
+  LLDB_INSTRUMENT_VA(this);
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
@@ -356,15 +338,13 @@ const char *SBLaunchInfo::GetScriptedProcessClassName() const {
 }
 
 void SBLaunchInfo::SetScriptedProcessClassName(const char *class_name) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetScriptedProcessClassName,
-                     (const char *), class_name);
+  LLDB_INSTRUMENT_VA(this, class_name);
 
   m_opaque_sp->SetScriptedProcessClassName(class_name);
 }
 
 lldb::SBStructuredData SBLaunchInfo::GetScriptedProcessDictionary() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBStructuredData, SBLaunchInfo,
-                                   GetScriptedProcessDictionary);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb_private::StructuredData::DictionarySP dict_sp =
       m_opaque_sp->GetScriptedProcessDictionarySP();
@@ -376,8 +356,7 @@ lldb::SBStructuredData SBLaunchInfo::GetScriptedProcessDictionary() const {
 }
 
 void SBLaunchInfo::SetScriptedProcessDictionary(lldb::SBStructuredData dict) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, SetScriptedProcessDictionary,
-                     (lldb::SBStructuredData), dict);
+  LLDB_INSTRUMENT_VA(this, dict);
   if (!dict.IsValid() || !dict.m_impl_up)
     return;
 

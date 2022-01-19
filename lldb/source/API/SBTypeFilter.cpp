@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeFilter.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBStream.h"
 
@@ -16,32 +16,32 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeFilter::SBTypeFilter() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeFilter); }
+SBTypeFilter::SBTypeFilter() { LLDB_INSTRUMENT_VA(this); }
 
 SBTypeFilter::SBTypeFilter(uint32_t options)
     : m_opaque_sp(TypeFilterImplSP(new TypeFilterImpl(options))) {
-  LLDB_RECORD_CONSTRUCTOR(SBTypeFilter, (uint32_t), options);
+  LLDB_INSTRUMENT_VA(this, options);
 }
 
 SBTypeFilter::SBTypeFilter(const lldb::SBTypeFilter &rhs)
     : m_opaque_sp(rhs.m_opaque_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBTypeFilter, (const lldb::SBTypeFilter &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBTypeFilter::~SBTypeFilter() = default;
 
 bool SBTypeFilter::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFilter, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBTypeFilter::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeFilter, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp.get() != nullptr;
 }
 
 uint32_t SBTypeFilter::GetOptions() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeFilter, GetOptions);
+  LLDB_INSTRUMENT_VA(this);
 
   if (IsValid())
     return m_opaque_sp->GetOptions();
@@ -49,7 +49,7 @@ uint32_t SBTypeFilter::GetOptions() {
 }
 
 void SBTypeFilter::SetOptions(uint32_t value) {
-  LLDB_RECORD_METHOD(void, SBTypeFilter, SetOptions, (uint32_t), value);
+  LLDB_INSTRUMENT_VA(this, value);
 
   if (CopyOnWrite_Impl())
     m_opaque_sp->SetOptions(value);
@@ -57,9 +57,7 @@ void SBTypeFilter::SetOptions(uint32_t value) {
 
 bool SBTypeFilter::GetDescription(lldb::SBStream &description,
                                   lldb::DescriptionLevel description_level) {
-  LLDB_RECORD_METHOD(bool, SBTypeFilter, GetDescription,
-                     (lldb::SBStream &, lldb::DescriptionLevel), description,
-                     description_level);
+  LLDB_INSTRUMENT_VA(this, description, description_level);
 
   if (!IsValid())
     return false;
@@ -70,15 +68,14 @@ bool SBTypeFilter::GetDescription(lldb::SBStream &description,
 }
 
 void SBTypeFilter::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBTypeFilter, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   if (CopyOnWrite_Impl())
     m_opaque_sp->Clear();
 }
 
 uint32_t SBTypeFilter::GetNumberOfExpressionPaths() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeFilter,
-                             GetNumberOfExpressionPaths);
+  LLDB_INSTRUMENT_VA(this);
 
   if (IsValid())
     return m_opaque_sp->GetCount();
@@ -86,8 +83,7 @@ uint32_t SBTypeFilter::GetNumberOfExpressionPaths() {
 }
 
 const char *SBTypeFilter::GetExpressionPathAtIndex(uint32_t i) {
-  LLDB_RECORD_METHOD(const char *, SBTypeFilter, GetExpressionPathAtIndex,
-                     (uint32_t), i);
+  LLDB_INSTRUMENT_VA(this, i);
 
   if (IsValid()) {
     const char *item = m_opaque_sp->GetExpressionPathAtIndex(i);
@@ -99,8 +95,7 @@ const char *SBTypeFilter::GetExpressionPathAtIndex(uint32_t i) {
 }
 
 bool SBTypeFilter::ReplaceExpressionPathAtIndex(uint32_t i, const char *item) {
-  LLDB_RECORD_METHOD(bool, SBTypeFilter, ReplaceExpressionPathAtIndex,
-                     (uint32_t, const char *), i, item);
+  LLDB_INSTRUMENT_VA(this, i, item);
 
   if (CopyOnWrite_Impl())
     return m_opaque_sp->SetExpressionPathAtIndex(i, item);
@@ -109,16 +104,14 @@ bool SBTypeFilter::ReplaceExpressionPathAtIndex(uint32_t i, const char *item) {
 }
 
 void SBTypeFilter::AppendExpressionPath(const char *item) {
-  LLDB_RECORD_METHOD(void, SBTypeFilter, AppendExpressionPath, (const char *),
-                     item);
+  LLDB_INSTRUMENT_VA(this, item);
 
   if (CopyOnWrite_Impl())
     m_opaque_sp->AddExpressionPath(item);
 }
 
 lldb::SBTypeFilter &SBTypeFilter::operator=(const lldb::SBTypeFilter &rhs) {
-  LLDB_RECORD_METHOD(lldb::SBTypeFilter &,
-                     SBTypeFilter, operator=,(const lldb::SBTypeFilter &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
@@ -127,8 +120,7 @@ lldb::SBTypeFilter &SBTypeFilter::operator=(const lldb::SBTypeFilter &rhs) {
 }
 
 bool SBTypeFilter::operator==(lldb::SBTypeFilter &rhs) {
-  LLDB_RECORD_METHOD(bool, SBTypeFilter, operator==,(lldb::SBTypeFilter &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
     return !rhs.IsValid();
@@ -137,8 +129,7 @@ bool SBTypeFilter::operator==(lldb::SBTypeFilter &rhs) {
 }
 
 bool SBTypeFilter::IsEqualTo(lldb::SBTypeFilter &rhs) {
-  LLDB_RECORD_METHOD(bool, SBTypeFilter, IsEqualTo, (lldb::SBTypeFilter &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
     return !rhs.IsValid();
@@ -155,8 +146,7 @@ bool SBTypeFilter::IsEqualTo(lldb::SBTypeFilter &rhs) {
 }
 
 bool SBTypeFilter::operator!=(lldb::SBTypeFilter &rhs) {
-  LLDB_RECORD_METHOD(bool, SBTypeFilter, operator!=,(lldb::SBTypeFilter &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
     return !rhs.IsValid();

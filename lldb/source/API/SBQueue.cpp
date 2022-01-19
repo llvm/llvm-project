@@ -8,8 +8,8 @@
 
 #include <cinttypes>
 
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBQueue.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBQueueItem.h"
@@ -215,17 +215,15 @@ private:
 };
 }
 
-SBQueue::SBQueue() : m_opaque_sp(new QueueImpl()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBQueue);
-}
+SBQueue::SBQueue() : m_opaque_sp(new QueueImpl()) { LLDB_INSTRUMENT_VA(this); }
 
 SBQueue::SBQueue(const QueueSP &queue_sp)
     : m_opaque_sp(new QueueImpl(queue_sp)) {
-  LLDB_RECORD_CONSTRUCTOR(SBQueue, (const lldb::QueueSP &), queue_sp);
+  LLDB_INSTRUMENT_VA(this, queue_sp);
 }
 
 SBQueue::SBQueue(const SBQueue &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBQueue, (const lldb::SBQueue &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (&rhs == this)
     return;
@@ -234,8 +232,7 @@ SBQueue::SBQueue(const SBQueue &rhs) {
 }
 
 const lldb::SBQueue &SBQueue::operator=(const lldb::SBQueue &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBQueue &,
-                     SBQueue, operator=,(const lldb::SBQueue &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
   return *this;
@@ -244,17 +241,17 @@ const lldb::SBQueue &SBQueue::operator=(const lldb::SBQueue &rhs) {
 SBQueue::~SBQueue() = default;
 
 bool SBQueue::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueue, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBQueue::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueue, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->IsValid();
 }
 
 void SBQueue::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBQueue, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_sp->Clear();
 }
@@ -264,65 +261,63 @@ void SBQueue::SetQueue(const QueueSP &queue_sp) {
 }
 
 lldb::queue_id_t SBQueue::GetQueueID() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::queue_id_t, SBQueue, GetQueueID);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetQueueID();
 }
 
 uint32_t SBQueue::GetIndexID() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBQueue, GetIndexID);
+  LLDB_INSTRUMENT_VA(this);
 
   uint32_t index_id = m_opaque_sp->GetIndexID();
   return index_id;
 }
 
 const char *SBQueue::GetName() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBQueue, GetName);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetName();
 }
 
 uint32_t SBQueue::GetNumThreads() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBQueue, GetNumThreads);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetNumThreads();
 }
 
 SBThread SBQueue::GetThreadAtIndex(uint32_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBThread, SBQueue, GetThreadAtIndex, (uint32_t),
-                     idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBThread th = m_opaque_sp->GetThreadAtIndex(idx);
   return th;
 }
 
 uint32_t SBQueue::GetNumPendingItems() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBQueue, GetNumPendingItems);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetNumPendingItems();
 }
 
 SBQueueItem SBQueue::GetPendingItemAtIndex(uint32_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBQueueItem, SBQueue, GetPendingItemAtIndex,
-                     (uint32_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   return m_opaque_sp->GetPendingItemAtIndex(idx);
 }
 
 uint32_t SBQueue::GetNumRunningItems() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBQueue, GetNumRunningItems);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetNumRunningItems();
 }
 
 SBProcess SBQueue::GetProcess() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBProcess, SBQueue, GetProcess);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetProcess();
 }
 
 lldb::QueueKind SBQueue::GetKind() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::QueueKind, SBQueue, GetKind);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp->GetKind();
 }

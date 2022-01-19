@@ -49,7 +49,7 @@ add_lldb_library(lldbUtility
   RegisterValue.cpp
   RegularExpression.cpp
   Reproducer.cpp
-  ReproducerInstrumentation.cpp
+  Instrumentation.cpp
   ReproducerProvider.cpp
   Scalar.cpp
   SelectHelper.cpp
