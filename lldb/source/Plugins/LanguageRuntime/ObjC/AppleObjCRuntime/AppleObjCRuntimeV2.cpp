@@ -671,7 +671,7 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
   static const ConstString g_objc_copyRealizedClassList(
       "_ZL33objc_copyRealizedClassList_nolockPj");
   m_has_objc_copyRealizedClassList = HasSymbol(g_objc_copyRealizedClassList);
-
+  WarnIfNoExpandedSharedCache();
   RegisterObjCExceptionRecognizer(process);
 }
 
@@ -2352,6 +2352,32 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
       m_noclasses_warning_emitted = true;
       break;
     }
+  }
+}
+
+void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
+  if (!m_objc_module_sp)
+    return;
+
+  ObjectFile *object_file = m_objc_module_sp->GetObjectFile();
+  if (!object_file)
+    return;
+
+  if (!object_file->IsInMemory())
+    return;
+
+  Target &target = GetProcess()->GetTarget();
+  Debugger &debugger = target.GetDebugger();
+  if (auto stream = debugger.GetAsyncOutputStream()) {
+    const char *msg = "read from the shared cache";
+    if (PlatformSP platform_sp = target.GetPlatform())
+      msg = platform_sp->IsHost()
+                ? "read from the host's in-memory shared cache"
+                : "find the on-disk shared cache for this device";
+    stream->Printf("warning: libobjc.A.dylib is being read from process "
+                   "memory. This indicates that LLDB could not %s. This will "
+                   "likely reduce debugging performance.\n",
+                   msg);
   }
 }
 
