@@ -42,15 +42,15 @@ static inline uint32_t top12_bits(double x) { return as_uint64_bits(x) >> 52; }
 template <typename T> struct XFlowValues;
 
 template <> struct XFlowValues<float> {
-  static const float overflow_value;
-  static const float underflow_value;
-  static const float may_underflow_value;
+  static const float OVERFLOW_VALUE;
+  static const float UNDERFLOW_VALUE;
+  static const float MAY_UNDERFLOW_VALUE;
 };
 
 template <> struct XFlowValues<double> {
-  static const double overflow_value;
-  static const double underflow_value;
-  static const double may_underflow_value;
+  static const double OVERFLOW_VALUE;
+  static const double UNDERFLOW_VALUE;
+  static const double MAY_UNDERFLOW_VALUE;
 };
 
 template <typename T> static inline T with_errno(T x, int err) {
@@ -86,16 +86,16 @@ T xflow(uint32_t sign, T y) {
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0> T overflow(uint32_t sign) {
-  return xflow(sign, XFlowValues<T>::overflow_value);
+  return xflow(sign, XFlowValues<T>::OVERFLOW_VALUE);
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0> T underflow(uint32_t sign) {
-  return xflow(sign, XFlowValues<T>::underflow_value);
+  return xflow(sign, XFlowValues<T>::UNDERFLOW_VALUE);
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0>
 T may_underflow(uint32_t sign) {
-  return xflow(sign, XFlowValues<T>::may_underflow_value);
+  return xflow(sign, XFlowValues<T>::MAY_UNDERFLOW_VALUE);
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0>

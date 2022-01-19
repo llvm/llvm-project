@@ -10,12 +10,12 @@
 
 namespace __llvm_libc {
 
-constexpr float XFlowValues<float>::overflow_value = 0x1p97f;
-constexpr float XFlowValues<float>::underflow_value = 0x1p-95f;
-constexpr float XFlowValues<float>::may_underflow_value = 0x1.4p-75f;
+constexpr float XFlowValues<float>::OVERFLOW_VALUE = 0x1p97f;
+constexpr float XFlowValues<float>::UNDERFLOW_VALUE = 0x1p-95f;
+constexpr float XFlowValues<float>::MAY_UNDERFLOW_VALUE = 0x1.4p-75f;
 
-constexpr double XFlowValues<double>::overflow_value = 0x1p769;
-constexpr double XFlowValues<double>::underflow_value = 0x1p-767;
-constexpr double XFlowValues<double>::may_underflow_value = 0x1.8p-538;
+constexpr double XFlowValues<double>::OVERFLOW_VALUE = 0x1p769;
+constexpr double XFlowValues<double>::UNDERFLOW_VALUE = 0x1p-767;
+constexpr double XFlowValues<double>::MAY_UNDERFLOW_VALUE = 0x1.8p-538;
 
 } // namespace __llvm_libc
