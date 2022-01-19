@@ -67,7 +67,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "FuncOp"> {
           args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]} %arg1, %1 {
-        ^bb0(%arg3: f32, %arg4: f32):  // no predecessors
+        ^bb0(%arg3: f32, %arg4: f32):
           %4 = exp %arg3 : f32
           linalg.yield %4 : f32
         }: memref<2xf32>, memref<2xf32>

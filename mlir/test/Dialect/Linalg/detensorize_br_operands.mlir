@@ -11,7 +11,7 @@ func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
     {indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>], iterator_types = []}
     ins(%arg0_t : tensor<i1>)
     outs(%2 : tensor<i8>) {
-  ^bb0(%arg2: i1, %arg3: i8):  // no predecessors
+  ^bb0(%arg2: i1, %arg3: i8):  
     %10 = arith.extui %arg2 : i1 to i8
     linalg.yield %10 : i8
   } -> tensor<i8>
@@ -24,7 +24,7 @@ func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
     {indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>, affine_map<() -> ()>], iterator_types = []}
     ins(%arg1_t, %cst : tensor<i32>, tensor<i32>)
     outs(%6 : tensor<i32>) {
-  ^bb0(%arg2: i32, %arg3: i32, %arg4: i32):  // no predecessors
+  ^bb0(%arg2: i32, %arg3: i32, %arg4: i32):  
     %10 = arith.addi %arg2, %arg3 : i32
     linalg.yield %10 : i32
   } -> tensor<i32>

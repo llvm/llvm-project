@@ -202,7 +202,7 @@ func @compose_padding(%arg0: tensor<64x64xf32>,
   //      MATMUL:  %[[T3:.*]] = linalg.fill(%{{.*}}, %[[T2]]
   %0 = tensor.extract_slice %arg0[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  // no predecessors
+    ^bb0(%arg3: index, %arg4: index):  
       linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<64x64xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
@@ -234,7 +234,7 @@ func @different_padding_values(%arg0: tensor<64x64xf32>,
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0] [%size, %size] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  // no predecessors
+    ^bb0(%arg3: index, %arg4: index):  
       linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<64x64xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
@@ -259,7 +259,7 @@ func @different_padding_dynamic_sizes(%arg0: tensor<64x64xf32>,
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0] [%iv0, %iv0] [1, 1] : tensor<64x64xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  // no predecessors
+    ^bb0(%arg3: index, %arg4: index):  
       linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<64x64xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
@@ -284,7 +284,7 @@ func @different_padding_dynamic_rank(%arg0: tensor<64x64x1xf32>,
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0, 0] [%size, %size, 1] [1, 1, 1] : tensor<64x64x1xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  // no predecessors
+    ^bb0(%arg3: index, %arg4: index):  
       linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<64x64xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<64x64xf32> -> tensor<64x64xf32>
@@ -309,7 +309,7 @@ func @different_padding_static_sizes(%arg0: tensor<62x62xf32>,
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0] [%size, %size] [1, 1] : tensor<62x62xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[0, 0] high[%iv0, %iv0]  {
-    ^bb0(%arg3: index, %arg4: index):  // no predecessors
+    ^bb0(%arg3: index, %arg4: index):  
       linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<62x62xf32>
   %2 = linalg.fill(%cst, %1) : f32, tensor<62x62xf32> -> tensor<62x62xf32>

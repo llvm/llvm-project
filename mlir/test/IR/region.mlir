@@ -79,7 +79,7 @@ func @named_region_has_wrong_number_of_blocks() {
 // Region with single block and not terminator.
 // CHECK: unregistered_without_terminator
 "test.unregistered_without_terminator"() ({
-  ^bb0:  // no predecessors
+  ^bb0:
 }) : () -> ()
 
 // -----

@@ -361,7 +361,7 @@ def testOperationWithRegion():
     op1 = Operation.create("custom.op1", regions=1)
     block = op1.regions[0].blocks.append(i32, i32)
     # CHECK: "custom.op1"() ({
-    # CHECK: ^bb0(%arg0: si32, %arg1: si32):  // no predecessors
+    # CHECK: ^bb0(%arg0: si32, %arg1: si32):
     # CHECK:   "custom.terminator"() : () -> ()
     # CHECK: }) : () -> ()
     terminator = Operation.create("custom.terminator")

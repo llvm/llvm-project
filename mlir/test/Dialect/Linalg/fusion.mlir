@@ -504,7 +504,7 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
       ins(%A, %A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
                   memref<?x?xf32, offset: 0, strides: [?, ?]>)
      outs(%B : memref<?x?xf32, offset: 0, strides: [?, ?]>) {
-  ^bb0(%E: f32, %arg5: f32, %arg6: f32):   // no predecessors
+  ^bb0(%E: f32, %arg5: f32, %arg6: f32):   
     %2 = arith.addf %E, %arg5 : f32
     linalg.yield %2 : f32
   }
@@ -525,7 +525,7 @@ func @pointwise(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
         ins(%4, %5: memref<?x?xf32, offset: ?, strides: [?, ?]>,
                     memref<?x?xf32, offset: ?, strides: [?, ?]>)
        outs(%6 : memref<?x?xf32, offset: ?, strides: [?, ?]>) {
-      ^bb0(%arg6: f32, %arg7: f32, %arg8: f32):       // no predecessors
+      ^bb0(%arg6: f32, %arg7: f32, %arg8: f32):       
         %7 = arith.mulf %arg6, %arg7 : f32
         linalg.yield %7 : f32
       }
@@ -562,7 +562,7 @@ func @pointwise_no_view(%M: index, %N: index) {
   linalg.generic #pointwise_2d_trait
     ins(%A, %A : memref<?x?xf32>, memref<?x?xf32>)
    outs(%B : memref<?x?xf32>) {
-  ^bb0(%e: f32, %arg5: f32, %arg6: f32):   // no predecessors
+  ^bb0(%e: f32, %arg5: f32, %arg6: f32):   
     %2 = arith.addf %e, %arg5 : f32
     linalg.yield %2 : f32
   }
@@ -583,7 +583,7 @@ func @pointwise_no_view(%M: index, %N: index) {
         ins(%4, %5: memref<?x?xf32, offset: ?, strides: [?, ?]>,
                     memref<?x?xf32, offset: ?, strides: [?, ?]>)
        outs(%6 : memref<?x?xf32, offset: ?, strides: [?, ?]>) {
-      ^bb0(%arg6: f32, %arg7: f32, %arg8: f32):       // no predecessors
+      ^bb0(%arg6: f32, %arg7: f32, %arg8: f32):       
         %7 = arith.mulf %arg6, %arg7 : f32
         linalg.yield %7 : f32
       }
@@ -618,7 +618,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
     iterator_types = ["parallel", "parallel"]}
     ins(%arg1 : memref<100xf32>)
    outs(%0 : memref<100x10xf32>) {
-      ^bb0(%arg3: f32, %arg4: f32): // no predecessors
+      ^bb0(%arg3: f32, %arg4: f32): 
         linalg.yield %arg3 : f32
       }
   %1 = memref.alloc() {temp = true} : memref<100x10xf32>
@@ -627,7 +627,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
     iterator_types = ["parallel", "parallel"]}
     ins(%arg0, %0: memref<100x10xf32>, memref<100x10xf32>)
    outs(%1 : memref<100x10xf32>) {
-      ^bb0(%arg3: f32, %arg4: f32, %arg5: f32): // no predecessors
+      ^bb0(%arg3: f32, %arg4: f32, %arg5: f32): 
         %2 = arith.subf %arg3, %arg4 : f32
         linalg.yield %2 : f32
       }
@@ -647,7 +647,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
         iterator_types = ["parallel", "parallel"]}
         ins(%6 : memref<?x?xf32, #map2>)
        outs(%7 : memref<?x?xf32, #map2>) {
-          ^bb0(%arg3: f32, %arg4: f32):     // no predecessors
+          ^bb0(%arg3: f32, %arg4: f32):     
             %8 = math.exp %arg3 : f32
             linalg.yield %8 : f32
           }

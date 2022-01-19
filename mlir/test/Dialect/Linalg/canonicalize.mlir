@@ -297,7 +297,7 @@ func @dead_linalg_tensor(%arg0 : tensor<7x7xi32>, %arg1 : tensor<7x7xf32>,
     linalg.yield %3 : i32
   } -> tensor<7x7xi32>
   %3 = linalg.pad_tensor %arg2 low[%c0, %c0] high[%high, %high] {
-        ^bb0(%arg9: index, %arg10: index):  // no predecessors
+        ^bb0(%arg9: index, %arg10: index):  
           linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<2x4xf32>
   return
@@ -354,7 +354,7 @@ func @pad_tensor_after_cast_different_shape(%arg0: tensor<?x64x?x?xf32>)
   %cst = arith.constant 0.000000e+00 : f32
   %dynamic = tensor.cast %arg0 : tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
   %padded = linalg.pad_tensor %dynamic low[0, 0, 1, 1] high[0, 0, 1, 1]  {
-    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  // no predecessors
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  
     linalg.yield %cst: f32
   } : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32>
   return %padded: tensor<?x?x?x?xf32>
@@ -378,7 +378,7 @@ func @pad_tensor_after_cast_same_shape(%arg0: tensor<?x64x?x?xf32>, %padding : i
   %cst = arith.constant 0.000000e+00 : f32
   %dynamic = tensor.cast %arg0 : tensor<?x64x?x?xf32> to tensor<?x?x?x?xf32>
   %padded = linalg.pad_tensor %dynamic low[0, %padding, 1, 1] high[0, %padding, 1, 1]  {
-    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  // no predecessors
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  
     linalg.yield %cst: f32
   } : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32>
   return %padded: tensor<?x?x?x?xf32>
@@ -395,7 +395,7 @@ func @pad_tensor_of_cast(%t: tensor<8x?xf32>, %s: index) -> tensor<8x32xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.cast %t : tensor<8x?xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[%c0, %c0] high[%c0, %s]  {
-  ^bb0(%arg9: index, %arg10: index):  // no predecessors
+  ^bb0(%arg9: index, %arg10: index):  
     linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<8x32xf32>
   return %1 : tensor<8x32xf32>
@@ -584,7 +584,7 @@ func @tensor_pad_cast_fold(%arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
   %cst = arith.constant 0.0 : f32
   %0 = tensor.cast %arg0 : tensor<4x4xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[%c0, %c0] high[%c0, %c0]  {
-    ^bb0(%arg1: index, %arg2: index):  // no predecessors
+    ^bb0(%arg1: index, %arg2: index):  
       linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<4x4xf32>
   return %1 : tensor<4x4xf32>
@@ -603,7 +603,7 @@ func @fold_pad_tensor_source_cast(%arg0: tensor<4x?xf32>) -> tensor<4x4xf32> {
   %cst = arith.constant 0.0 : f32
   %0 = tensor.cast %arg0 : tensor<4x?xf32> to tensor<?x?xf32>
   %1 = linalg.pad_tensor %0 low[0, 0] high[0, 1]  {
-    ^bb0(%arg1: index, %arg2: index):  // no predecessors
+    ^bb0(%arg1: index, %arg2: index):  
       linalg.yield %cst : f32
   } : tensor<?x?xf32> to tensor<4x4xf32>
   return %1 : tensor<4x4xf32>

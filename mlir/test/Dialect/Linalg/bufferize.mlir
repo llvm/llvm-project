@@ -278,7 +278,7 @@ func @pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1: index) -> tens
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
   %out = linalg.pad_tensor %arg0 low[%c0, %c0, %arg1, %c0] high[%c0, %c0, %c0, %arg1]  {
-  ^bb0(%gen_arg1: index, %gen_arg2: index, %gen_arg3: index, %gen_arg4: index):  // no predecessors
+  ^bb0(%gen_arg1: index, %gen_arg2: index, %gen_arg3: index, %gen_arg4: index):  
     linalg.yield %cst : f32
   } : tensor<4x?x2x?xf32> to tensor<4x?x?x?xf32>
   return %out : tensor<4x?x?x?xf32>
