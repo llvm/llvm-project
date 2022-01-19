@@ -26,9 +26,7 @@ Examples:
   #define DLLEXPORTS __declspec(dllimport)
   #endif
 
-results in the following warnings:
-
-.. code-block:: c++
+results in the following warnings::
 
   4 warnings generated.
   test.cpp:1:9: warning: macro 'C' used to declare a constant; consider using a 'constexpr' constant [cppcoreguidelines-macro-usage]
