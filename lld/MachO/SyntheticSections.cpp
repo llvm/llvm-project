@@ -1283,7 +1283,10 @@ void BitcodeBundleSection::finalize() {
   using namespace llvm::sys::fs;
   CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   xar_t xar(xar_open(xarPath.data(), O_RDWR));
+#pragma clang diagnostic pop
   if (!xar)
     fatal("failed to open XAR temporary file at " + xarPath);
   CHECK_EC(xar_opt_set(xar, XAR_OPT_COMPRESSION, XAR_OPT_VAL_NONE));
