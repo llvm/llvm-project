@@ -670,11 +670,13 @@ parseLaunchFuncOperands(OpAsmParser &parser,
                         SmallVectorImpl<Type> &argTypes) {
   if (parser.parseOptionalKeyword("args"))
     return success();
-  SmallVector<NamedAttrList, 4> argAttrs;
+  SmallVector<NamedAttrList> argAttrs;
+  SmallVector<Optional<Location>> argLocations;
   bool isVariadic = false;
   return function_interface_impl::parseFunctionArgumentList(
       parser, /*allowAttributes=*/false,
-      /*allowVariadic=*/false, argNames, argTypes, argAttrs, isVariadic);
+      /*allowVariadic=*/false, argNames, argTypes, argAttrs, argLocations,
+      isVariadic);
 }
 
 static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
@@ -776,11 +778,12 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
 ///                 (`->` function-result-list)? memory-attribution `kernel`?
 ///                 function-attributes? region
 static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> entryArgs;
-  SmallVector<NamedAttrList, 1> argAttrs;
-  SmallVector<NamedAttrList, 1> resultAttrs;
-  SmallVector<Type, 8> argTypes;
-  SmallVector<Type, 4> resultTypes;
+  SmallVector<OpAsmParser::OperandType> entryArgs;
+  SmallVector<NamedAttrList> argAttrs;
+  SmallVector<NamedAttrList> resultAttrs;
+  SmallVector<Type> argTypes;
+  SmallVector<Type> resultTypes;
+  SmallVector<Optional<Location>> argLocations;
   bool isVariadic;
 
   // Parse the function name.
@@ -792,7 +795,7 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
   auto signatureLocation = parser.getCurrentLocation();
   if (failed(function_interface_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
-          isVariadic, resultTypes, resultAttrs)))
+          argLocations, isVariadic, resultTypes, resultAttrs)))
     return failure();
 
   if (entryArgs.empty() && !argTypes.empty())

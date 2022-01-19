@@ -54,23 +54,24 @@ using FuncTypeBuilder = function_ref<Type(
 
 /// Parses function arguments using `parser`. The `allowVariadic` argument
 /// indicates whether functions with variadic arguments are supported. The
-/// trailing arguments are populated by this function with names, types and
-/// attributes of the arguments.
+/// trailing arguments are populated by this function with names, types,
+/// attributes and locations of the arguments.
 ParseResult parseFunctionArgumentList(
     OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
-    bool &isVariadic);
+    SmallVectorImpl<Optional<Location>> &argLocations, bool &isVariadic);
 
 /// Parses a function signature using `parser`. The `allowVariadic` argument
 /// indicates whether functions with variadic arguments are supported. The
-/// trailing arguments are populated by this function with names, types and
-/// attributes of the arguments and those of the results.
+/// trailing arguments are populated by this function with names, types,
+/// attributes and locations of the arguments and those of the results.
 ParseResult
 parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
                        SmallVectorImpl<OpAsmParser::OperandType> &argNames,
                        SmallVectorImpl<Type> &argTypes,
                        SmallVectorImpl<NamedAttrList> &argAttrs,
+                       SmallVectorImpl<Optional<Location>> &argLocations,
                        bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
                        SmallVectorImpl<NamedAttrList> &resultAttrs);
 

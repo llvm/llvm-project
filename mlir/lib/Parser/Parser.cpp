@@ -363,16 +363,19 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Parse a region into 'region' with the provided entry block arguments.
-  /// 'isIsolatedNameScope' indicates if the naming scope of this region is
-  /// isolated from those above.
+  /// If non-empty, 'argLocations' contains an optional locations for each
+  /// argument. 'isIsolatedNameScope' indicates if the naming scope of this
+  /// region is isolated from those above.
   ParseResult parseRegion(Region &region,
                           ArrayRef<std::pair<SSAUseInfo, Type>> entryArguments,
+                          ArrayRef<Optional<Location>> argLocations = {},
                           bool isIsolatedNameScope = false);
 
   /// Parse a region body into 'region'.
   ParseResult
   parseRegionBody(Region &region, llvm::SMLoc startLoc,
                   ArrayRef<std::pair<SSAUseInfo, Type>> entryArguments,
+                  ArrayRef<Optional<Location>> argLocations,
                   bool isIsolatedNameScope);
 
   //===--------------------------------------------------------------------===//
@@ -1448,6 +1451,7 @@ public:
   /// effectively defines the SSA values of `arguments` and assigns their type.
   ParseResult parseRegion(Region &region, ArrayRef<OperandType> arguments,
                           ArrayRef<Type> argTypes,
+                          ArrayRef<Optional<Location>> argLocations,
                           bool enableNameShadowing) override {
     assert(arguments.size() == argTypes.size() &&
            "mismatching number of arguments and types");
@@ -1466,19 +1470,22 @@ public:
     (void)isIsolatedFromAbove;
     assert((!enableNameShadowing || isIsolatedFromAbove) &&
            "name shadowing is only allowed on isolated regions");
-    if (parser.parseRegion(region, regionArguments, enableNameShadowing))
+    if (parser.parseRegion(region, regionArguments, argLocations,
+                           enableNameShadowing))
       return failure();
     return success();
   }
 
   /// Parses a region if present.
-  OptionalParseResult parseOptionalRegion(Region &region,
-                                          ArrayRef<OperandType> arguments,
-                                          ArrayRef<Type> argTypes,
-                                          bool enableNameShadowing) override {
+  OptionalParseResult
+  parseOptionalRegion(Region &region, ArrayRef<OperandType> arguments,
+                      ArrayRef<Type> argTypes,
+                      ArrayRef<Optional<Location>> argLocations,
+                      bool enableNameShadowing) override {
     if (parser.getToken().isNot(Token::l_brace))
       return llvm::None;
-    return parseRegion(region, arguments, argTypes, enableNameShadowing);
+    return parseRegion(region, arguments, argTypes, argLocations,
+                       enableNameShadowing);
   }
 
   /// Parses a region if present. If the region is present, a new region is
@@ -1491,7 +1498,8 @@ public:
     if (parser.getToken().isNot(Token::l_brace))
       return llvm::None;
     std::unique_ptr<Region> newRegion = std::make_unique<Region>();
-    if (parseRegion(*newRegion, arguments, argTypes, enableNameShadowing))
+    if (parseRegion(*newRegion, arguments, argTypes, /*argLocations=*/{},
+                    enableNameShadowing))
       return failure();
 
     region = std::move(newRegion);
@@ -1815,7 +1823,7 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
 ParseResult OperationParser::parseRegion(
     Region &region,
     ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
-    bool isIsolatedNameScope) {
+    ArrayRef<Optional<Location>> argLocations, bool isIsolatedNameScope) {
   // Parse the '{'.
   Token lBraceTok = getToken();
   if (parseToken(Token::l_brace, "expected '{' to begin a region"))
@@ -1827,7 +1835,7 @@ ParseResult OperationParser::parseRegion(
 
   // Parse the region body.
   if ((!entryArguments.empty() || getToken().isNot(Token::r_brace)) &&
-      parseRegionBody(region, lBraceTok.getLoc(), entryArguments,
+      parseRegionBody(region, lBraceTok.getLoc(), entryArguments, argLocations,
                       isIsolatedNameScope)) {
     return failure();
   }
@@ -1843,7 +1851,8 @@ ParseResult OperationParser::parseRegion(
 ParseResult OperationParser::parseRegionBody(
     Region &region, llvm::SMLoc startLoc,
     ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
-    bool isIsolatedNameScope) {
+    ArrayRef<Optional<Location>> argLocations, bool isIsolatedNameScope) {
+  assert(argLocations.empty() || argLocations.size() == entryArguments.size());
   auto currentPt = opBuilder.saveInsertionPoint();
 
   // Push a new named value scope.
@@ -1865,7 +1874,9 @@ ParseResult OperationParser::parseRegionBody(
     if (getToken().is(Token::caret_identifier))
       return emitError("invalid block name in region with named arguments");
 
-    for (auto &placeholderArgPair : entryArguments) {
+    for (const auto &it : llvm::enumerate(entryArguments)) {
+      size_t argIndex = it.index();
+      auto &placeholderArgPair = it.value();
       auto &argInfo = placeholderArgPair.first;
 
       // Ensure that the argument was not already defined.
@@ -1875,7 +1886,10 @@ ParseResult OperationParser::parseRegionBody(
                    .attachNote(getEncodedSourceLocation(*defLoc))
                << "previously referenced here";
       }
-      auto loc = getEncodedSourceLocation(placeholderArgPair.first.loc);
+      Location loc =
+          (!argLocations.empty() && argLocations[argIndex])
+              ? *argLocations[argIndex]
+              : getEncodedSourceLocation(placeholderArgPair.first.loc);
       BlockArgument arg = block->addArgument(placeholderArgPair.second, loc);
 
       // Add a definition of this arg to the assembly state if provided.
