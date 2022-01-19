@@ -92,20 +92,15 @@ private:
   mutable SVals CollectedSVals;
 };
 
+static void expectSameSignAndBitWidth(QualType ExpectedTy, QualType ActualTy,
+                                      const ASTContext &Context) {
+  EXPECT_EQ(ExpectedTy->isUnsignedIntegerType(),
+            ActualTy->isUnsignedIntegerType());
+  EXPECT_EQ(Context.getTypeSize(ExpectedTy), Context.getTypeSize(ActualTy));
+}
+
 // Fixture class for parameterized SValTest
-class SValTest : public testing::TestWithParam<TestClangConfig> {
-protected:
-  // FIXME: The tests "GetConstType" and "GetLocAsIntType" infer the type of
-  // integrals based on their bitwidth. This is not a reliable method on
-  // platforms where different integrals have the same width.
-  bool skipTest(StringRef TestName) {
-    std::string target = GetParam().Target;
-    return (target == "powerpc-ibm-aix" || target == "i686-apple-darwin9" ||
-            target == "wasm32-unknown-unknown" ||
-            target == "wasm64-unknown-unknown") &&
-           (TestName == "GetConstType" || TestName == "GetLocAsIntType");
-  }
-};
+class SValTest : public testing::TestWithParam<TestClangConfig> {};
 
 // SVAL_TEST is a combined way of providing a short code snippet and
 // to test some programmatic predicates on symbolic values produced by the
@@ -152,14 +147,8 @@ protected:
   }                                                                            \
                                                                                \
   TEST_P(SValTest, NAME) {                                                     \
-    if (skipTest(#NAME)) {                                                     \
-      std::string target = GetParam().Target;                                  \
-      GTEST_SKIP() << "certain integrals have the same bitwidth on "           \
-                   << target;                                                  \
-      return;                                                                  \
-    }                                                                          \
-    runCheckerOnCodeWithArgs<add##NAME##SValCollector>(                        \
-        CODE, GetParam().getCommandLineArgs());                                \
+    EXPECT_TRUE(runCheckerOnCodeWithArgs<add##NAME##SValCollector>(            \
+        CODE, GetParam().getCommandLineArgs()));                               \
   }                                                                            \
   void NAME##SValCollector::test(ExprEngine &Engine,                           \
                                  const ASTContext &Context) const
@@ -179,27 +168,30 @@ void foo() {
 
   SVal Y = getByName("y");
   ASSERT_FALSE(Y.getType(Context).isNull());
-  EXPECT_EQ(Context.getUIntPtrType(), Y.getType(Context));
+  expectSameSignAndBitWidth(Context.getUIntPtrType(), Y.getType(Context),
+                            Context);
 }
 
 SVAL_TEST(GetLocAsIntType, R"(
 void foo(int *x) {
-  long int a = (long int)x;
-  unsigned b = (long unsigned)&a;
-  int c = (long int)nullptr;
+  long int a = (long long int)x;
+  unsigned b = (long long unsigned)&a;
+  int c = (long long int)nullptr;
 })") {
   SVal A = getByName("a");
   ASSERT_FALSE(A.getType(Context).isNull());
+
   // TODO: Turn it into signed long
-  EXPECT_EQ(Context.getUIntPtrType(), A.getType(Context));
+  expectSameSignAndBitWidth(Context.UnsignedLongTy, A.getType(Context),
+                            Context);
 
   SVal B = getByName("b");
   ASSERT_FALSE(B.getType(Context).isNull());
-  EXPECT_EQ(Context.UnsignedIntTy, B.getType(Context));
+  expectSameSignAndBitWidth(Context.UnsignedIntTy, B.getType(Context), Context);
 
   SVal C = getByName("c");
   ASSERT_FALSE(C.getType(Context).isNull());
-  EXPECT_EQ(Context.IntTy, C.getType(Context));
+  expectSameSignAndBitWidth(Context.IntTy, C.getType(Context), Context);
 }
 
 SVAL_TEST(GetSymExprType, R"(
