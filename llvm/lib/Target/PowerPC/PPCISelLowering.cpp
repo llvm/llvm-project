@@ -11178,13 +11178,17 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
-  case ISD::FP_TO_UINT:
+  case ISD::FP_TO_UINT: {
     // LowerFP_TO_INT() can only handle f32 and f64.
     if (N->getOperand(N->isStrictFPOpcode() ? 1 : 0).getValueType() ==
         MVT::ppcf128)
       return;
-    Results.push_back(LowerFP_TO_INT(SDValue(N, 0), DAG, dl));
+    SDValue LoweredValue = LowerFP_TO_INT(SDValue(N, 0), DAG, dl);
+    Results.push_back(LoweredValue);
+    if (N->isStrictFPOpcode())
+      Results.push_back(LoweredValue.getValue(1));
     return;
+  }
   case ISD::TRUNCATE: {
     if (!N->getValueType(0).isVector())
       return;
