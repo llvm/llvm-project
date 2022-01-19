@@ -160,7 +160,8 @@ def main():
                                                     prefixes,
                                                     func_dict, func, False,
                                                     args.function_signature,
-                                                    global_vars_seen_dict))
+                                                    global_vars_seen_dict,
+                                                    is_filtered=builder.is_filtered()))
     else:
       # "Normal" mode.
       for input_line_info in ti.iterlines(output_lines):
@@ -178,7 +179,8 @@ def main():
           # Print out the various check lines here.
           common.add_ir_checks(output_lines, ';', prefix_list, func_dict,
                                func_name, args.preserve_names, args.function_signature,
-                               global_vars_seen_dict)
+                               global_vars_seen_dict,
+                               is_filtered=builder.is_filtered())
           is_in_function_start = False
 
         m = common.IR_FUNCTION_RE.match(input_line)

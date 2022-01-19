@@ -111,6 +111,7 @@ def main():
         run_list=run_list,
         flags=type('', (object,), {
             'verbose': ti.args.verbose,
+            'filters': ti.args.filters,
             'function_signature': False,
             'check_attributes': False,
             'replace_value_regex': []}),
@@ -161,7 +162,8 @@ def main():
                                lambda my_output_lines, prefixes, func:
                                asm.add_asm_checks(my_output_lines,
                                                   check_indent + ';',
-                                                  prefixes, func_dict, func))
+                                                  prefixes, func_dict, func,
+                                                  is_filtered=builder.is_filtered()))
     else:
       for input_info in ti.iterlines(output_lines):
         input_line = input_info.line
@@ -176,7 +178,9 @@ def main():
               continue
 
           # Print out the various check lines here.
-          asm.add_asm_checks(output_lines, check_indent + ';', run_list, func_dict, func_name)
+          asm.add_asm_checks(output_lines, check_indent + ';', run_list,
+                             func_dict, func_name,
+                             is_filtered=builder.is_filtered())
           is_in_function_start = False
 
         if is_in_function:
