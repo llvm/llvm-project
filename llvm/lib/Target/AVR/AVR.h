@@ -28,7 +28,6 @@ FunctionPass *createAVRISelDag(AVRTargetMachine &TM,
 FunctionPass *createAVRExpandPseudoPass();
 FunctionPass *createAVRFrameAnalyzerPass();
 FunctionPass *createAVRRelaxMemPass();
-FunctionPass *createAVRDynAllocaSRPass();
 FunctionPass *createAVRBranchSelectionPass();
 
 void initializeAVRShiftExpandPass(PassRegistry &);
