@@ -21,6 +21,9 @@ group("default") {
       "//libcxxabi",
     ]
   }
+  if (current_os == "linux" || current_os == "win") {
+    deps += [ "//compiler-rt/test/asan" ]
+  }
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]
   }

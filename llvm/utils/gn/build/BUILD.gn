@@ -440,12 +440,22 @@ config("clang_code") {
 config("crt_code") {
   include_dirs = [ "//compiler-rt/lib" ]
   cflags = [
-    "-fPIC",
-    "-funwind-tables",
-    "-gline-tables-only",
-    "-fvisibility=hidden",
     "-fno-builtin",
+    "-gline-tables-only",
   ]
+  if (current_os != "win") {
+    cflags += [
+      "-fPIC",
+      "-funwind-tables",
+      "-fvisibility=hidden",
+    ]
+  } else {
+    cflags += [
+      # Disable thread safe initialization for static locals. ASan shouldn't need it.
+      # Thread safe initialization assumes that the CRT has already been initialized, but ASan initializes before the CRT.
+      "/Zc:threadSafeInit-",
+    ]
+  }
   if (is_clang) {
     cflags += [
       "-Werror=thread-safety",
