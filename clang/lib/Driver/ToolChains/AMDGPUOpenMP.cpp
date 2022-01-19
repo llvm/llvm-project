@@ -285,10 +285,22 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  if (DeviceOffloadKind != Action::OFK_OpenMP) {
-    for (Arg *A : Args) {
-      DAL->append(A);
+  if (DeviceOffloadKind == Action::OFK_OpenMP) {
+    for (Arg *A : Args)
+      if (!llvm::is_contained(*DAL, A))
+        DAL->append(A);
+
+    std::string Arch = DAL->getLastArgValue(options::OPT_march_EQ).str();
+    if (Arch.empty()) {
+      checkSystemForAMDGPU(Args, *this, Arch);
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
     }
+
+    return DAL;
+  }
+
+  for (Arg *A : Args) {
+    DAL->append(A);
   }
 
   if (!BoundArch.empty()) {
