@@ -87,7 +87,7 @@ public:
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t); // for r* in list I/O
-  std::optional<DataEdit> GetNextDataEdit(int = 1);
+  std::optional<DataEdit> GetNextDataEdit(int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   bool BeginReadingRecord();
   void FinishReadingRecord();
@@ -287,7 +287,8 @@ struct IoStatementBase : public IoErrorHandler {
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
-  std::optional<DataEdit> GetNextDataEdit(IoStatementState &, int = 1);
+  std::optional<DataEdit> GetNextDataEdit(
+      IoStatementState &, int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const;
   bool BeginReadingRecord();
   void FinishReadingRecord();
