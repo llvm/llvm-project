@@ -79,7 +79,7 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     unsigned sliceOffset() { return shiftOffset() + shift().size(); }
     unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
     unsigned substrOffset() {
-       return subcomponentOffset() + subcomponent().size();
+      return subcomponentOffset() + subcomponent().size();
     }
     unsigned lenParamOffset() { return substrOffset() + substr().size(); }
   }];
