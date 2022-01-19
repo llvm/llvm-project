@@ -646,10 +646,20 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   // Find the loop configuration.
   llvm::Value *step = moduleTranslation.lookupValue(loop.step()[0]);
   llvm::Type *ivType = step->getType();
-  llvm::Value *chunk =
-      loop.schedule_chunk_var()
-          ? moduleTranslation.lookupValue(loop.schedule_chunk_var())
-          : llvm::ConstantInt::get(ivType, 1);
+  llvm::Value *chunk = nullptr;
+  if (loop.schedule_chunk_var()) {
+    llvm::Value *chunkVar =
+        moduleTranslation.lookupValue(loop.schedule_chunk_var());
+    llvm::Type *chunkVarType = chunkVar->getType();
+    assert(chunkVarType->isIntegerTy() &&
+           "chunk size must be one integer expression");
+    if (chunkVarType->getIntegerBitWidth() < ivType->getIntegerBitWidth())
+      chunk = builder.CreateSExt(chunkVar, ivType);
+    else if (chunkVarType->getIntegerBitWidth() > ivType->getIntegerBitWidth())
+      chunk = builder.CreateTrunc(chunkVar, ivType);
+    else
+      chunk = chunkVar;
+  }
 
   SmallVector<omp::ReductionDeclareOp> reductionDecls;
   collectReductionDecls(loop, reductionDecls);
