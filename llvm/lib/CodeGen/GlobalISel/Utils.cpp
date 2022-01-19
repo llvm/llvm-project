@@ -596,11 +596,12 @@ Register llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
                                        const Register Op2,
                                        const MachineRegisterInfo &MRI,
                                        MachineIRBuilder &MIB) {
-  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
-  if (!SrcVec1)
-    return Register();
   auto *SrcVec2 = getOpcodeDef<GBuildVector>(Op2, MRI);
   if (!SrcVec2)
+    return Register();
+
+  auto *SrcVec1 = getOpcodeDef<GBuildVector>(Op1, MRI);
+  if (!SrcVec1)
     return Register();
 
   const LLT EltTy = MRI.getType(SrcVec1->getSourceReg(0));
