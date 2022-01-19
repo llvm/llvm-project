@@ -46,6 +46,7 @@ protected:
 };
 
 const char archive[] = "!<arch>\x0A";
+const char big_archive[] = "<bigaf>\x0A";
 const char bitcode[] = "\xde\xc0\x17\x0b";
 const char coff_object[] = "\x00\x00......";
 const char coff_bigobj[] =
@@ -96,6 +97,7 @@ TEST_F(MagicTest, Magic) {
   } types[] = {
 #define DEFINE(magic) {#magic, magic, sizeof(magic), file_magic::magic}
       DEFINE(archive),
+      {"big_archive", big_archive, sizeof(big_archive), file_magic::archive},
       DEFINE(bitcode),
       DEFINE(coff_object),
       {"coff_bigobj", coff_bigobj, sizeof(coff_bigobj),
