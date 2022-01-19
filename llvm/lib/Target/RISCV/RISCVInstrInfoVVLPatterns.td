@@ -602,6 +602,47 @@ multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
   }
 }
 
+multiclass VPatBinarySDNodeExt_V_WV<SDNode op, PatFrags extop, string instruction_name> {
+  foreach vti = AllWidenableIntVectors in {
+    def : Pat<
+      (vti.Vti.Vector 
+        (riscv_trunc_vector_vl
+          (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
+              (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
+          (riscv_vmset_vl VLMax),
+          VLMax)),
+      (!cast<Instruction>(instruction_name#"_WV_"#vti.Vti.LMul.MX)
+        vti.Wti.RegClass:$rs2, vti.Vti.RegClass:$rs1,
+        vti.Vti.AVL, vti.Vti.Log2SEW)>;
+  }
+}
+
+multiclass VPatBinarySDNodeExt_V_WX<SDNode op, PatFrags extop, string instruction_name> {
+  foreach vti = AllWidenableIntVectors in {
+    def : Pat<
+      (vti.Vti.Vector 
+        (riscv_trunc_vector_vl
+          (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
+              (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1))))),
+          (riscv_vmset_vl VLMax),
+          VLMax)),
+      (!cast<Instruction>(instruction_name#"_WX_"#vti.Vti.LMul.MX)
+        vti.Wti.RegClass:$rs2, GPR:$rs1,
+        vti.Vti.AVL, vti.Vti.Log2SEW)>;
+  }
+}
+
+
+multiclass VPatBinarySDNode_V_WV<SDNode op, string instruction_name> {
+  defm : VPatBinarySDNodeExt_V_WV<op, sext_oneuse, instruction_name>;
+  defm : VPatBinarySDNodeExt_V_WV<op, zext_oneuse, instruction_name>;
+}
+
+multiclass VPatBinarySDNode_V_WX<SDNode op, string instruction_name> {
+  defm : VPatBinarySDNodeExt_V_WX<op, sext_oneuse, instruction_name>;
+  defm : VPatBinarySDNodeExt_V_WX<op, zext_oneuse, instruction_name>;
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -696,6 +737,11 @@ foreach vti = AllIntegerVectors in {
 }
 
 // 12.7. Vector Narrowing Integer Right Shift Instructions
+defm : VPatBinarySDNode_V_WV<srl, "PseudoVNSRL">;
+defm : VPatBinarySDNode_V_WX<srl, "PseudoVNSRL">;
+defm : VPatBinarySDNode_V_WV<sra, "PseudoVNSRA">;
+defm : VPatBinarySDNode_V_WX<sra, "PseudoVNSRA">;
+
 foreach vtiTowti = AllWidenableIntVectors in {
   defvar vti = vtiTowti.Vti;
   defvar wti = vtiTowti.Wti;
