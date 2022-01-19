@@ -278,20 +278,19 @@ Defined *InputSectionBase::getEnclosingFunction(uint64_t offset) {
 }
 
 // Returns an object file location string. Used to construct an error message.
-template <class ELFT>
 std::string InputSectionBase::getLocation(uint64_t offset) {
   std::string secAndOffset =
       (name + "+0x" + Twine::utohexstr(offset) + ")").str();
 
   // We don't have file for synthetic sections.
-  if (getFile<ELFT>() == nullptr)
+  if (file == nullptr)
     return (config->outputFile + ":(" + secAndOffset).str();
 
-  std::string file = toString(getFile<ELFT>());
+  std::string filename = toString(file);
   if (Defined *d = getEnclosingFunction(offset))
-    return file + ":(function " + toString(*d) + ": " + secAndOffset;
+    return filename + ":(function " + toString(*d) + ": " + secAndOffset;
 
-  return file + ":(" + secAndOffset;
+  return filename + ":(" + secAndOffset;
 }
 
 // This function is intended to be used for constructing an error message.
@@ -948,7 +947,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       continue;
     }
 
-    std::string msg = getLocation<ELFT>(offset) + ": has non-ABS relocation " +
+    std::string msg = getLocation(offset) + ": has non-ABS relocation " +
                       toString(type) + " against symbol '" + toString(sym) +
                       "'";
     if (expr != R_PC && expr != R_ARM_PCA) {
@@ -1472,11 +1471,6 @@ template InputSection::InputSection(ObjFile<ELF64LE> &, const ELF64LE::Shdr &,
                                     StringRef);
 template InputSection::InputSection(ObjFile<ELF64BE> &, const ELF64BE::Shdr &,
                                     StringRef);
-
-template std::string InputSectionBase::getLocation<ELF32LE>(uint64_t);
-template std::string InputSectionBase::getLocation<ELF32BE>(uint64_t);
-template std::string InputSectionBase::getLocation<ELF64LE>(uint64_t);
-template std::string InputSectionBase::getLocation<ELF64BE>(uint64_t);
 
 template void InputSection::writeTo<ELF32LE>(uint8_t *);
 template void InputSection::writeTo<ELF32BE>(uint8_t *);
