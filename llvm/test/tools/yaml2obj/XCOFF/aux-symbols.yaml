@@ -530,7 +530,7 @@ Symbols:
 # RUN: not yaml2obj %s --docnum=6 -o %t8 2>&1 | FileCheck %s \
 # RUN:   --check-prefix=AUXCOUNT
 
-# AUXCOUNT: yaml2obj: error: specified NumberOfAuxEntries 1 is less than the actual number of auxiliary entries 2
+# AUXCOUNT: error: specified NumberOfAuxEntries 1 is less than the actual number of auxiliary entries 2
 
 --- !XCOFF
 FileHeader:
