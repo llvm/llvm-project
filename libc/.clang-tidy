@@ -18,6 +18,8 @@ CheckOptions:
     value:           lower_case
   - key:             readability-identifier-naming.FunctionIgnoredRegexp
     value:           "^_[A-Za-z0-9_]+$"
+  - key:             readability-identifier-naming.GlobalConstantCase
+    value:           UPPER_CASE
   - key:             readability-identifier-naming.ConstexprVariableCase
     value:           UPPER_CASE
   - key:             readability-identifier-naming.GetConfigPerFile
