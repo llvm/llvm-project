@@ -3364,22 +3364,19 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-; FIXME: vfrdiv.vf doesn't match against masked instructions
-
 define void @sink_splat_vp_frdiv(float* nocapture %a, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_frdiv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a1
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v8, ft0
 ; CHECK-NEXT:    li a1, 1024
 ; CHECK-NEXT:  .LBB56_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
-; CHECK-NEXT:    vfdiv.vv v9, v8, v9, v0.t
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vfrdiv.vf v8, v8, ft0, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a1, a1, -4
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    bnez a1, .LBB56_1
@@ -3490,22 +3487,19 @@ for.cond.cleanup:                                 ; preds = %vector.body
 
 declare <4 x float> @llvm.vp.frsub.v4i32(<4 x float>, <4 x float>, <4 x i1>, i32)
 
-; FIXME: vfrsub.vf doesn't match against masked instructions
-
 define void @sink_splat_vp_frsub(float* nocapture %a, float %x, <4 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: sink_splat_vp_frsub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    fmv.w.x ft0, a1
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vfmv.v.f v8, ft0
 ; CHECK-NEXT:    li a1, 1024
 ; CHECK-NEXT:  .LBB59_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
-; CHECK-NEXT:    vfsub.vv v9, v8, v9, v0.t
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vfrsub.vf v8, v8, ft0, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a1, a1, -4
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    bnez a1, .LBB59_1

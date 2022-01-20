@@ -404,7 +404,7 @@ multiclass VPatBinaryFPVL_VV_VF<SDNode vop, string instruction_name> {
 }
 
 multiclass VPatBinaryFPVL_R_VF<SDNode vop, string instruction_name> {
-  foreach fvti = AllFloatVectors in
+  foreach fvti = AllFloatVectors in {
     def : Pat<(fvti.Vector (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
                                 fvti.RegClass:$rs1,
                                 (fvti.Mask true_mask),
@@ -412,6 +412,15 @@ multiclass VPatBinaryFPVL_R_VF<SDNode vop, string instruction_name> {
               (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
                            fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
                            GPR:$vl, fvti.Log2SEW)>;
+    def : Pat<(fvti.Vector (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
+                                fvti.RegClass:$rs1,
+                                (fvti.Mask V0),
+                                VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK")
+                           (fvti.Vector (IMPLICIT_DEF)),
+                           fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
+                           (fvti.Mask V0), GPR:$vl, fvti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
 }
 
 multiclass VPatIntegerSetCCVL_VV<VTypeInfo vti, string instruction_name,
