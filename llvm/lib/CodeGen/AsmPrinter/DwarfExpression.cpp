@@ -785,7 +785,7 @@ void DIEDwarfExprAST::buildDIExprAST(const DIExpr &Expr) {
 }
 
 void DIEDwarfExprAST::traverseAndLower(DIEDwarfExprAST::Node *OpNode) {
-  if (!OpNode) {
+  if (!OpNode || !IsImplemented) {
     return;
   }
 
@@ -793,6 +793,9 @@ void DIEDwarfExprAST::traverseAndLower(DIEDwarfExprAST::Node *OpNode) {
     // FIXME(KZHURAVL): Do this iteratively, otherwise we may hit stack size
     // problems.
     traverseAndLower(ChildOpNode.get());
+    if (!IsImplemented) {
+      return;
+    }
   }
 
   lower(OpNode);
@@ -836,6 +839,7 @@ void DIEDwarfExprAST::lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode) {
   if (!ConstantInt::classof(LiteralValue)) {
     // FIXME(KZHURAVL): Support ConstantFP?
     IsImplemented = false;
+    return;
   }
 
   ConstantInt *IntLiteralValue = dyn_cast<ConstantInt>(LiteralValue);
@@ -896,6 +900,7 @@ void DIEDwarfExprAST::lowerDIOpDeref(DIEDwarfExprAST::Node *OpNode) {
   if (!ResultType->isPointerTy()) {
     // FIXME(KZHURAVL): Support non pointer types?
     IsImplemented = false;
+    return;
   }
 
   PointerType *PointerResultType = dyn_cast<PointerType>(ResultType);
