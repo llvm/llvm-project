@@ -509,8 +509,35 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
     BuildMI(MBB, InsPt, DL, TII->get(Opcode), Exec)
     .addReg(Exec)
     .add(MI.getOperand(0));
-  if (LV)
-    LV->replaceKillInstruction(MI.getOperand(0).getReg(), MI, *NewMI);
+  if (LV) {
+    LV->replaceKillInstruction(DataReg, MI, *NewMI);
+
+    if (SplitBB != &MBB) {
+      // Track the set of registers defined in the split block so we don't
+      // accidentally add the original block to AliveBlocks.
+      DenseSet<Register> SplitDefs;
+      for (MachineInstr &X : *SplitBB) {
+        for (MachineOperand &Op : X.operands()) {
+          if (Op.isReg() && Op.isDef() && Op.getReg().isVirtual())
+            SplitDefs.insert(Op.getReg());
+        }
+      }
+
+      for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
+        Register Reg = Register::index2VirtReg(i);
+        LiveVariables::VarInfo &VI = LV->getVarInfo(Reg);
+
+        if (VI.AliveBlocks.test(MBB.getNumber()))
+          VI.AliveBlocks.set(SplitBB->getNumber());
+        else {
+          for (MachineInstr *Kill : VI.Kills) {
+            if (Kill->getParent() == SplitBB && !SplitDefs.contains(Reg))
+              VI.AliveBlocks.set(MBB.getNumber());
+          }
+        }
+      }
+    }
+  }
 
   LoweredEndCf.insert(NewMI);
 
