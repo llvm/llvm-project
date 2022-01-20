@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <numeric>
 #include <vector>
 
@@ -254,25 +255,28 @@ public:
     bool allDense = true;
     uint64_t sz = 1;
     for (uint64_t r = 0; r < rank; r++) {
+      assert(sizes[r] > 0 && "Dimension size zero has trivial storage");
       sz *= sizes[r];
       if (sparsity[r] == DimLevelType::kCompressed) {
         pointers[r].reserve(sz + 1);
         indices[r].reserve(sz);
         sz = 1;
         allDense = false;
+        // Prepare the pointer structure.  We cannot use `addPointer`
+        // here, because `isCompressedDim` won't work until after this
+        // preparation has been done.
+        pointers[r].push_back(0);
       } else {
         assert(sparsity[r] == DimLevelType::kDense &&
                "singleton not yet supported");
       }
     }
-    // Prepare sparse pointer structures for all dimensions.
-    for (uint64_t r = 0; r < rank; r++)
-      if (sparsity[r] == DimLevelType::kCompressed)
-        pointers[r].push_back(0);
     // Then assign contents from coordinate scheme tensor if provided.
     if (tensor) {
-      // Lexicographically sort the tensor, to ensure precondition of `fromCOO`.
+      // Ensure both preconditions of `fromCOO`.
+      assert(tensor->getSizes() == sizes && "Tensor size mismatch");
       tensor->sort();
+      // Now actually insert the `elements`.
       const std::vector<Element<V>> &elements = tensor->getElements();
       uint64_t nnz = elements.size();
       values.reserve(nnz);
@@ -403,10 +407,33 @@ public:
   }
 
 private:
+  /// Appends the next free position of `indices[d]` to `pointers[d]`.
+  /// Thus, when called after inserting the last element of a segment,
+  /// it will append the position where the next segment begins.
+  inline void addPointer(uint64_t d) {
+    assert(isCompressedDim(d)); // Entails `d < getRank()`.
+    uint64_t p = indices[d].size();
+    assert(p <= std::numeric_limits<P>::max() &&
+           "Pointer value is too large for the P-type");
+    pointers[d].push_back(p); // Here is where we convert to `P`.
+  }
+
+  /// Appends the given index to `indices[d]`.
+  inline void addIndex(uint64_t d, uint64_t i) {
+    assert(isCompressedDim(d)); // Entails `d < getRank()`.
+    assert(i <= std::numeric_limits<I>::max() &&
+           "Index value is too large for the I-type");
+    indices[d].push_back(i); // Here is where we convert to `I`.
+  }
+
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
   /// tensor in coordinate scheme. This method prepares the pointers and
   /// indices arrays under the given per-dimension dense/sparse annotations.
-  /// Precondition: the `elements` must be lexicographically sorted.
+  ///
+  /// Preconditions:
+  /// (1) the `elements` must be lexicographically sorted.
+  /// (2) the indices of every element are valid for `sizes` (equal rank
+  ///     and pointwise less-than).
   void fromCOO(const std::vector<Element<V>> &elements, uint64_t lo,
                uint64_t hi, uint64_t d) {
     // Once dimensions are exhausted, insert the numerical values.
@@ -426,7 +453,7 @@ private:
         seg++;
       // Handle segment in interval for sparse or dense dimension.
       if (isCompressedDim(d)) {
-        indices[d].push_back(i);
+        addIndex(d, i);
       } else {
         // For dense storage we must fill in all the zero values between
         // the previous element (when last we ran this for-loop) and the
@@ -441,7 +468,7 @@ private:
     }
     // Finalize the sparse pointer structure at this dimension.
     if (isCompressedDim(d)) {
-      pointers[d].push_back(indices[d].size());
+      addPointer(d);
     } else {
       // For dense storage we must fill in all the zero values after
       // the last element.
@@ -479,7 +506,7 @@ private:
     if (d == getRank()) {
       values.push_back(0);
     } else if (isCompressedDim(d)) {
-      pointers[d].push_back(indices[d].size());
+      addPointer(d);
     } else {
       for (uint64_t full = 0, sz = sizes[d]; full < sz; full++)
         endDim(d + 1);
@@ -493,7 +520,7 @@ private:
     for (uint64_t i = 0; i < rank - diff; i++) {
       uint64_t d = rank - i - 1;
       if (isCompressedDim(d)) {
-        pointers[d].push_back(indices[d].size());
+        addPointer(d);
       } else {
         for (uint64_t full = idx[d] + 1, sz = sizes[d]; full < sz; full++)
           endDim(d + 1);
@@ -508,7 +535,7 @@ private:
     for (uint64_t d = diff; d < rank; d++) {
       uint64_t i = cursor[d];
       if (isCompressedDim(d)) {
-        indices[d].push_back(i);
+        addIndex(d, i);
       } else {
         for (uint64_t full = top; full < i; full++)
           endDim(d + 1);
@@ -532,6 +559,7 @@ private:
 
   /// Returns true if dimension is compressed.
   inline bool isCompressedDim(uint64_t d) const {
+    assert(d < getRank());
     return (!pointers[d].empty());
   }
 
