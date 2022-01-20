@@ -310,13 +310,13 @@ define i32 @positive_biggerLshr_shlnuw_multiuse(i32 %x) {
   ret i32 %ret
 }
 
-; NOTE: creates one extra instruction, but this seems intentional.
+; negative test - don't create extra instructions
+
 define i32 @positive_biggerShl_multiuse_extrainstr(i32 %x) {
 ; CHECK-LABEL: @positive_biggerShl_multiuse_extrainstr(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], 10
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[X]], 5
-; CHECK-NEXT:    [[RET:%.*]] = and i32 [[TMP1]], 134217696
+; CHECK-NEXT:    [[RET:%.*]] = lshr exact i32 [[T0]], 5
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %t0 = shl i32 %x, 10
@@ -325,13 +325,13 @@ define i32 @positive_biggerShl_multiuse_extrainstr(i32 %x) {
   ret i32 %ret
 }
 
-; NOTE: creates one extra instruction, but this seems intentional.
+; negative test - don't create extra instructions
+
 define i32 @positive_biggerLshr_multiuse_extrainstr(i32 %x) {
 ; CHECK-LABEL: @positive_biggerLshr_multiuse_extrainstr(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], 5
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X]], 5
-; CHECK-NEXT:    [[RET:%.*]] = and i32 [[TMP1]], 4194303
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[T0]], 10
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %t0 = shl i32 %x, 5

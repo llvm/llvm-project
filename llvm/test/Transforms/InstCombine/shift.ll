@@ -650,7 +650,7 @@ define i8 @test39(i32 %a0) {
 ; CHECK-NEXT:    [[I49:%.*]] = shl i8 [[I4]], 6
 ; CHECK-NEXT:    [[I50:%.*]] = and i8 [[I49]], 64
 ; CHECK-NEXT:    [[I51:%.*]] = xor i8 [[I50]], [[I5]]
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i8 [[I4]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr exact i8 [[I5]], 3
 ; CHECK-NEXT:    [[I54:%.*]] = and i8 [[TMP0]], 16
 ; CHECK-NEXT:    [[I551:%.*]] = or i8 [[I54]], [[I51]]
 ; CHECK-NEXT:    ret i8 [[I551]]
