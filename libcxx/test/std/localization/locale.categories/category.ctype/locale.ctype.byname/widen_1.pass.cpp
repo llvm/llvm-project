@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: locale.en_US.UTF-8
-// XFAIL: LIBCXX-WINDOWS-FIXME
 // XFAIL: LIBCXX-AIX-FIXME
 // XFAIL: libcpp-has-no-wide-characters
 
@@ -58,7 +57,7 @@ int main(int, char**)
             assert(f.widen('.') == L'.');
             assert(f.widen('a') == L'a');
             assert(f.widen('1') == L'1');
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(_WIN32)
             assert(f.widen(char(-5)) == L'\u00fb');
 #else
             assert(f.widen(char(-5)) == wchar_t(-1));

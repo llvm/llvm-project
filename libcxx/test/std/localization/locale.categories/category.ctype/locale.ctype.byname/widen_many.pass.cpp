@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: locale.en_US.UTF-8
-// XFAIL: LIBCXX-WINDOWS-FIXME
 // XFAIL: LIBCXX-AIX-FIXME
 // XFAIL: libcpp-has-no-wide-characters
 
@@ -35,7 +34,7 @@ int main(int, char**)
             typedef std::ctype_byname<wchar_t> F;
             std::locale ll(l, new F(LOCALE_en_US_UTF_8));
             F const& f = std::use_facet<F>(ll);
-            std::string in(" A\x07.a1\x85");
+            std::string in(" A\x07.a1\xfb");
             std::vector<wchar_t> v(in.size());
 
             assert(f.widen(&in[0], in.data() + in.size(), v.data()) == in.data() + in.size());
@@ -54,7 +53,7 @@ int main(int, char**)
             typedef std::ctype_byname<wchar_t> F;
             std::locale ll(l, new F("C"));
             const F& f = std::use_facet<F>(ll);
-            std::string in(" A\x07.a1\x85");
+            std::string in(" A\x07.a1\xfb");
             std::vector<wchar_t> v(in.size());
 
             assert(f.widen(&in[0], in.data() + in.size(), v.data()) == in.data() + in.size());
@@ -64,8 +63,8 @@ int main(int, char**)
             assert(v[3] == L'.');
             assert(v[4] == L'a');
             assert(v[5] == L'1');
-#if defined(__APPLE__) || defined(__FreeBSD__)
-            assert(v[6] == L'\x85');
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(_WIN32)
+            assert(v[6] == L'\xfb');
 #else
             assert(v[6] == wchar_t(-1));
 #endif
