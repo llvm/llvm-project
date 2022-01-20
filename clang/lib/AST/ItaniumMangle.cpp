@@ -659,8 +659,7 @@ bool ItaniumMangleContextImpl::isUniqueInternalLinkageDecl(
 }
 
 bool ItaniumMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
-  if (FD) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     LanguageLinkage L = FD->getLanguageLinkage();
     // Overloadable functions need mangling.
     if (FD->hasAttr<OverloadableAttr>())
@@ -696,21 +695,24 @@ bool ItaniumMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
   if (!getASTContext().getLangOpts().CPlusPlus)
     return false;
 
-  const VarDecl *VD = dyn_cast<VarDecl>(D);
-  if (VD && !isa<DecompositionDecl>(D)) {
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    // Decompositions are mangled.
+    if (isa<DecompositionDecl>(VD))
+      return true;
+
     // C variables are not mangled.
     if (VD->isExternC())
       return false;
 
-    // Variables at global scope with non-internal linkage are not mangled
+    // Variables at global scope with non-internal linkage are not mangled.
     const DeclContext *DC = getEffectiveDeclContext(D);
     // Check for extern variable declared locally.
     if (DC->isFunctionOrMethod() && D->hasLinkage())
-      while (!DC->isNamespace() && !DC->isTranslationUnit())
+      while (!DC->isFileContext())
         DC = getEffectiveParentContext(DC);
     if (DC->isTranslationUnit() && D->getFormalLinkage() != InternalLinkage &&
         !CXXNameMangler::shouldHaveAbiTags(*this, VD) &&
-        !isa<VarTemplateSpecializationDecl>(D))
+        !isa<VarTemplateSpecializationDecl>(VD))
       return false;
   }
 
@@ -5889,9 +5891,11 @@ void CXXNameMangler::mangleTemplateParameter(unsigned Depth, unsigned Index) {
 }
 
 void CXXNameMangler::mangleSeqID(unsigned SeqID) {
-  if (SeqID == 1)
+  if (SeqID == 0) {
+    // Nothing.
+  } else if (SeqID == 1) {
     Out << '0';
-  else if (SeqID > 1) {
+  } else {
     SeqID--;
 
     // <seq-id> is encoded in base-36, using digits and upper case letters.
