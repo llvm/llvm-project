@@ -1828,4 +1828,41 @@ TEST_F(TransferTest, VarDeclInitAssignConditionalOperator) {
       });
 }
 
+TEST_F(TransferTest, VarDeclInDoWhile) {
+  std::string Code = R"(
+    void target(int *Foo) {
+      do {
+        int Bar = *Foo;
+      } while (true);
+      (void)0;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *FooVal =
+                    cast<PointerValue>(Env.getValue(*FooDecl, SkipPast::None));
+                const auto *FooPointeeVal =
+                    cast<IntegerValue>(Env.getValue(FooVal->getPointeeLoc()));
+
+                const auto *BarVal = dyn_cast_or_null<IntegerValue>(
+                    Env.getValue(*BarDecl, SkipPast::None));
+                ASSERT_THAT(BarVal, NotNull());
+
+                EXPECT_EQ(BarVal, FooPointeeVal);
+              });
+}
+
 } // namespace
