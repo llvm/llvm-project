@@ -7491,113 +7491,111 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
 
   while (!WorkList.empty()) {
     ScheduleData *SD = WorkList.pop_back_val();
-
-    ScheduleData *BundleMember = SD;
-    while (BundleMember) {
+    for (ScheduleData *BundleMember = SD; BundleMember;
+         BundleMember = BundleMember->NextInBundle) {
       assert(isInSchedulingRegion(BundleMember));
-      if (!BundleMember->hasValidDependencies()) {
+      if (BundleMember->hasValidDependencies())
+        continue;
 
-        LLVM_DEBUG(dbgs() << "SLP:       update deps of " << *BundleMember
-                          << "\n");
-        BundleMember->Dependencies = 0;
-        BundleMember->resetUnscheduledDeps();
+      LLVM_DEBUG(dbgs() << "SLP:       update deps of " << *BundleMember
+                 << "\n");
+      BundleMember->Dependencies = 0;
+      BundleMember->resetUnscheduledDeps();
 
-        // Handle def-use chain dependencies.
-        if (BundleMember->OpValue != BundleMember->Inst) {
-          ScheduleData *UseSD = getScheduleData(BundleMember->Inst);
-          if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
-            BundleMember->Dependencies++;
-            ScheduleData *DestBundle = UseSD->FirstInBundle;
-            if (!DestBundle->IsScheduled)
-              BundleMember->incrementUnscheduledDeps(1);
-            if (!DestBundle->hasValidDependencies())
-              WorkList.push_back(DestBundle);
-          }
-        } else {
-          for (User *U : BundleMember->Inst->users()) {
-            if (isa<Instruction>(U)) {
-              ScheduleData *UseSD = getScheduleData(U);
-              if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
-                BundleMember->Dependencies++;
-                ScheduleData *DestBundle = UseSD->FirstInBundle;
-                if (!DestBundle->IsScheduled)
-                  BundleMember->incrementUnscheduledDeps(1);
-                if (!DestBundle->hasValidDependencies())
-                  WorkList.push_back(DestBundle);
-              }
-            } else {
-              // I'm not sure if this can ever happen. But we need to be safe.
-              // This lets the instruction/bundle never be scheduled and
-              // eventually disable vectorization.
-              BundleMember->Dependencies++;
-              BundleMember->incrementUnscheduledDeps(1);
-            }
-          }
+      // Handle def-use chain dependencies.
+      if (BundleMember->OpValue != BundleMember->Inst) {
+        ScheduleData *UseSD = getScheduleData(BundleMember->Inst);
+        if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
+          BundleMember->Dependencies++;
+          ScheduleData *DestBundle = UseSD->FirstInBundle;
+          if (!DestBundle->IsScheduled)
+            BundleMember->incrementUnscheduledDeps(1);
+          if (!DestBundle->hasValidDependencies())
+            WorkList.push_back(DestBundle);
         }
-
-        // Handle the memory dependencies.
-        ScheduleData *DepDest = BundleMember->NextLoadStore;
-        if (DepDest) {
-          Instruction *SrcInst = BundleMember->Inst;
-          assert(SrcInst->mayReadOrWriteMemory() &&
-                 "NextLoadStore list for non memory effecting bundle?");
-          MemoryLocation SrcLoc = getLocation(SrcInst, SLP->AA);
-          bool SrcMayWrite = BundleMember->Inst->mayWriteToMemory();
-          unsigned numAliased = 0;
-          unsigned DistToSrc = 1;
-
-          while (DepDest) {
-            assert(isInSchedulingRegion(DepDest));
-
-            // We have two limits to reduce the complexity:
-            // 1) AliasedCheckLimit: It's a small limit to reduce calls to
-            //    SLP->isAliased (which is the expensive part in this loop).
-            // 2) MaxMemDepDistance: It's for very large blocks and it aborts
-            //    the whole loop (even if the loop is fast, it's quadratic).
-            //    It's important for the loop break condition (see below) to
-            //    check this limit even between two read-only instructions.
-            if (DistToSrc >= MaxMemDepDistance ||
-                    ((SrcMayWrite || DepDest->Inst->mayWriteToMemory()) &&
-                     (numAliased >= AliasedCheckLimit ||
-                      SLP->isAliased(SrcLoc, SrcInst, DepDest->Inst)))) {
-
-              // We increment the counter only if the locations are aliased
-              // (instead of counting all alias checks). This gives a better
-              // balance between reduced runtime and accurate dependencies.
-              numAliased++;
-
-              DepDest->MemoryDependencies.push_back(BundleMember);
+      } else {
+        for (User *U : BundleMember->Inst->users()) {
+          if (isa<Instruction>(U)) {
+            ScheduleData *UseSD = getScheduleData(U);
+            if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
               BundleMember->Dependencies++;
-              ScheduleData *DestBundle = DepDest->FirstInBundle;
-              if (!DestBundle->IsScheduled) {
+              ScheduleData *DestBundle = UseSD->FirstInBundle;
+              if (!DestBundle->IsScheduled)
                 BundleMember->incrementUnscheduledDeps(1);
-              }
-              if (!DestBundle->hasValidDependencies()) {
+              if (!DestBundle->hasValidDependencies())
                 WorkList.push_back(DestBundle);
-              }
             }
-            DepDest = DepDest->NextLoadStore;
-
-            // Example, explaining the loop break condition: Let's assume our
-            // starting instruction is i0 and MaxMemDepDistance = 3.
-            //
-            //                      +--------v--v--v
-            //             i0,i1,i2,i3,i4,i5,i6,i7,i8
-            //             +--------^--^--^
-            //
-            // MaxMemDepDistance let us stop alias-checking at i3 and we add
-            // dependencies from i0 to i3,i4,.. (even if they are not aliased).
-            // Previously we already added dependencies from i3 to i6,i7,i8
-            // (because of MaxMemDepDistance). As we added a dependency from
-            // i0 to i3, we have transitive dependencies from i0 to i6,i7,i8
-            // and we can abort this loop at i6.
-            if (DistToSrc >= 2 * MaxMemDepDistance)
-              break;
-            DistToSrc++;
+          } else {
+            // I'm not sure if this can ever happen. But we need to be safe.
+            // This lets the instruction/bundle never be scheduled and
+            // eventually disable vectorization.
+            BundleMember->Dependencies++;
+            BundleMember->incrementUnscheduledDeps(1);
           }
         }
       }
-      BundleMember = BundleMember->NextInBundle;
+
+      // Handle the memory dependencies (if any).
+      ScheduleData *DepDest = BundleMember->NextLoadStore;
+      if (!DepDest)
+        continue;
+      Instruction *SrcInst = BundleMember->Inst;
+      assert(SrcInst->mayReadOrWriteMemory() &&
+             "NextLoadStore list for non memory effecting bundle?");
+      MemoryLocation SrcLoc = getLocation(SrcInst, SLP->AA);
+      bool SrcMayWrite = BundleMember->Inst->mayWriteToMemory();
+      unsigned numAliased = 0;
+      unsigned DistToSrc = 1;
+
+      while (DepDest) {
+        assert(isInSchedulingRegion(DepDest));
+
+        // We have two limits to reduce the complexity:
+        // 1) AliasedCheckLimit: It's a small limit to reduce calls to
+        //    SLP->isAliased (which is the expensive part in this loop).
+        // 2) MaxMemDepDistance: It's for very large blocks and it aborts
+        //    the whole loop (even if the loop is fast, it's quadratic).
+        //    It's important for the loop break condition (see below) to
+        //    check this limit even between two read-only instructions.
+        if (DistToSrc >= MaxMemDepDistance ||
+            ((SrcMayWrite || DepDest->Inst->mayWriteToMemory()) &&
+             (numAliased >= AliasedCheckLimit ||
+              SLP->isAliased(SrcLoc, SrcInst, DepDest->Inst)))) {
+
+          // We increment the counter only if the locations are aliased
+          // (instead of counting all alias checks). This gives a better
+          // balance between reduced runtime and accurate dependencies.
+          numAliased++;
+
+          DepDest->MemoryDependencies.push_back(BundleMember);
+          BundleMember->Dependencies++;
+          ScheduleData *DestBundle = DepDest->FirstInBundle;
+          if (!DestBundle->IsScheduled) {
+            BundleMember->incrementUnscheduledDeps(1);
+          }
+          if (!DestBundle->hasValidDependencies()) {
+            WorkList.push_back(DestBundle);
+          }
+        }
+        DepDest = DepDest->NextLoadStore;
+
+        // Example, explaining the loop break condition: Let's assume our
+        // starting instruction is i0 and MaxMemDepDistance = 3.
+        //
+        //                      +--------v--v--v
+        //             i0,i1,i2,i3,i4,i5,i6,i7,i8
+        //             +--------^--^--^
+        //
+        // MaxMemDepDistance let us stop alias-checking at i3 and we add
+        // dependencies from i0 to i3,i4,.. (even if they are not aliased).
+        // Previously we already added dependencies from i3 to i6,i7,i8
+        // (because of MaxMemDepDistance). As we added a dependency from
+        // i0 to i3, we have transitive dependencies from i0 to i6,i7,i8
+        // and we can abort this loop at i6.
+        if (DistToSrc >= 2 * MaxMemDepDistance)
+          break;
+        DistToSrc++;
+      }
     }
     if (InsertInReadyList && SD->isReady()) {
       ReadyInsts.push_back(SD);
