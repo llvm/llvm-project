@@ -1,9 +1,6 @@
 add_subdirectory(Utils)
 
 add_mlir_library(MLIRTransforms
-  BufferOptimizations.cpp
-  BufferResultsToOutParams.cpp
-  BufferUtils.cpp
   Canonicalizer.cpp
   ControlFlowSink.cpp
   CSE.cpp
@@ -31,7 +28,6 @@ add_mlir_library(MLIRTransforms
   LINK_LIBS PUBLIC
   MLIRAffine
   MLIRAnalysis
-  MLIRBufferization
   MLIRCopyOpInterface
   MLIRLoopLikeInterface
   MLIRMemRef

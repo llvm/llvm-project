@@ -11,13 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_BUFFERUTILS_H
-#define MLIR_TRANSFORMS_BUFFERUTILS_H
+#ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERUTILS_H
+#define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERUTILS_H
 
 #include "mlir/Analysis/BufferViewFlowAnalysis.h"
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
@@ -25,6 +24,11 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
+namespace memref {
+class GlobalOp;
+} // namespace memref
+
+namespace bufferization {
 
 /// A simple analysis that detects allocation operations.
 class BufferPlacementAllocs {
@@ -117,10 +121,6 @@ protected:
   Liveness liveness;
 };
 
-namespace memref {
-class GlobalOp;
-} // namespace memref
-
 // Support class to create global ops for tensor-valued constants in the
 // program. Globals are created lazily at the top of the `moduleOp` with pretty
 // names. Duplicates are avoided.
@@ -137,6 +137,7 @@ private:
   // dependence to the memref dialect for this.
   DenseMap<Attribute, Operation *> globals;
 };
+} // namespace bufferization
 } // namespace mlir
 
-#endif // MLIR_TRANSFORMS_BUFFERUTILS_H
+#endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERUTILS_H

@@ -33,30 +33,6 @@ enum FusionMode { Greedy, ProducerConsumer, Sibling };
 // Passes
 //===----------------------------------------------------------------------===//
 
-/// Creates a pass that moves allocations upwards to reduce the number of
-/// required copies that are inserted during the BufferDeallocation pass.
-std::unique_ptr<Pass> createBufferHoistingPass();
-
-/// Creates a pass that moves allocations upwards out of loops. This avoids
-/// reallocations inside of loops.
-std::unique_ptr<Pass> createBufferLoopHoistingPass();
-
-/// Creates a pass that promotes heap-based allocations to stack-based ones.
-/// Only buffers smaller than the provided size are promoted.
-/// Dynamic shaped buffers are promoted up to the given rank.
-std::unique_ptr<Pass>
-createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
-                                unsigned bitwidthOfIndexType = 64,
-                                unsigned maxRankOfAllocatedMemRef = 1);
-
-/// Creates a pass that promotes heap-based allocations to stack-based ones.
-/// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.
-std::unique_ptr<Pass>
-createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
-
-/// Creates a pass that converts memref function results to out-params.
-std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
-
 /// Creates an instance of the Canonicalizer pass, configured with default
 /// settings (which can be overridden by pass options on the command line).
 std::unique_ptr<Pass> createCanonicalizerPass();

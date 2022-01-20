@@ -12,14 +12,15 @@
 // convert heap-based allocations to stack-based allocations, if possible.
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/BufferUtils.h"
-#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
+using namespace mlir::bufferization;
 
 /// Returns true if the given operation implements a known high-level region-
 /// based control-flow interface.
@@ -422,23 +423,22 @@ private:
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::createBufferHoistingPass() {
+std::unique_ptr<Pass> mlir::bufferization::createBufferHoistingPass() {
   return std::make_unique<BufferHoistingPass>();
 }
 
-std::unique_ptr<Pass> mlir::createBufferLoopHoistingPass() {
+std::unique_ptr<Pass> mlir::bufferization::createBufferLoopHoistingPass() {
   return std::make_unique<BufferLoopHoistingPass>();
 }
 
-std::unique_ptr<Pass>
-mlir::createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
-                                      unsigned bitwidthOfIndexType,
-                                      unsigned maxRankOfAllocatedMemRef) {
+std::unique_ptr<Pass> mlir::bufferization::createPromoteBuffersToStackPass(
+    unsigned maxAllocSizeInBytes, unsigned bitwidthOfIndexType,
+    unsigned maxRankOfAllocatedMemRef) {
   return std::make_unique<PromoteBuffersToStackPass>(
       maxAllocSizeInBytes, bitwidthOfIndexType, maxRankOfAllocatedMemRef);
 }
 
-std::unique_ptr<Pass>
-mlir::createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc) {
+std::unique_ptr<Pass> mlir::bufferization::createPromoteBuffersToStackPass(
+    std::function<bool(Value)> isSmallAlloc) {
   return std::make_unique<PromoteBuffersToStackPass>(std::move(isSmallAlloc));
 }
