@@ -141,6 +141,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`bugprone-macro-condition
+  <clang-tidy/checks/bugprone/macro-condition>` check.
+
+  Warns about inconsistent macro usage in preprocessor conditions.
+
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
