@@ -1790,6 +1790,35 @@ TEST_P(ASTMatchersTest, IsNoThrow_CXX11) {
   EXPECT_TRUE(matches("void f() noexcept;", functionProtoType(isNoThrow())));
 }
 
+TEST_P(ASTMatchersTest, IsConsteval) {
+  if (!GetParam().isCXX20OrLater())
+    return;
+
+  EXPECT_TRUE(matches("consteval int bar();",
+                      functionDecl(hasName("bar"), isConsteval())));
+  EXPECT_TRUE(notMatches("constexpr int bar();",
+                         functionDecl(hasName("bar"), isConsteval())));
+  EXPECT_TRUE(
+      notMatches("int bar();", functionDecl(hasName("bar"), isConsteval())));
+}
+
+TEST_P(ASTMatchersTest, IsConsteval_MatchesIfConsteval) {
+  if (!GetParam().isCXX20OrLater())
+    return;
+
+  EXPECT_TRUE(matches("void baz() { if consteval {} }", ifStmt(isConsteval())));
+  EXPECT_TRUE(
+      matches("void baz() { if ! consteval {} }", ifStmt(isConsteval())));
+  EXPECT_TRUE(matches("void baz() { if ! consteval {} else {} }",
+                      ifStmt(isConsteval())));
+  EXPECT_TRUE(
+      matches("void baz() { if not consteval {} }", ifStmt(isConsteval())));
+  EXPECT_TRUE(notMatches("void baz() { if constexpr(1 > 0) {} }",
+                         ifStmt(isConsteval())));
+  EXPECT_TRUE(
+      notMatches("void baz() { if (1 > 0) {} }", ifStmt(isConsteval())));
+}
+
 TEST_P(ASTMatchersTest, IsConstexpr) {
   if (!GetParam().isCXX11OrLater()) {
     return;
