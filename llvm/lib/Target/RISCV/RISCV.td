@@ -166,43 +166,34 @@ def FeatureStdExtZve32x
                        "'Zve32x' (Vector Extensions for Embedded Processors "
                        "with maximal 32 EEW)",
                        [FeatureStdExtZvl32b]>;
-def HasStdExtZve32x : Predicate<"SubTarget->hasStdExtZve32x()">,
-                                 AssemblerPredicate<(all_of FeatureStdExtZve32x),
-                                 "'Zve32x' (Vector Extensions for Embedded Processors "
-                                 "with maximal 32 EEW)">;
 
 def FeatureStdExtZve32f
     : SubtargetFeature<"experimental-zve32f", "HasStdExtZve32f", "true",
                        "'Zve32f' (Vector Extensions for Embedded Processors "
                        "with maximal 32 EEW and F extension)",
                        [FeatureStdExtZve32x]>;
-def HasStdExtZve32f : Predicate<"SubTarget->hasStdExtZve32f()">;
 
 def FeatureStdExtZve64x
     : SubtargetFeature<"experimental-zve64x", "HasStdExtZve64x", "true",
                        "'Zve64x' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW)", [FeatureStdExtZve32x, FeatureStdExtZvl64b]>;
-def HasStdExtZve64x : Predicate<"SubTarget->hasStdExtZve64x()">;
 
 def FeatureStdExtZve64f
     : SubtargetFeature<"experimental-zve64f", "HasStdExtZve64f", "true",
                        "'Zve64f' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW and F extension)",
                        [FeatureStdExtZve32f, FeatureStdExtZve64x]>;
-def HasStdExtZve64f : Predicate<"SubTarget->hasStdExtZve64f()">;
 
 def FeatureStdExtZve64d
     : SubtargetFeature<"experimental-zve64d", "HasStdExtZve64d", "true",
                        "'Zve64d' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW, F and D extension)",
                        [FeatureStdExtZve64f]>;
-def HasStdExtZve64d : Predicate<"SubTarget->hasStdExtZve64d()">;
 
 def FeatureStdExtV
     : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
                        "'V' (Vector Extension for Application Processors)",
                        [FeatureStdExtZvl128b, FeatureStdExtZve64d, FeatureStdExtF, FeatureStdExtD]>;
-def HasStdExtV : Predicate<"Subtarget->hasStdExtV()">;
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
       AssemblerPredicate<
