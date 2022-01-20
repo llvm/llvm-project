@@ -20,11 +20,17 @@ namespace Fortran::runtime::io {
 // NAMELIST input, plus a byte for NUL termination.
 static constexpr std::size_t nameBufferSize{201};
 
+static inline char32_t GetComma(IoStatementState &io) {
+  return io.mutableModes().editingFlags & decimalComma ? char32_t{';'}
+                                                       : char32_t{','};
+}
+
 bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
   ConnectionState &connection{io.GetConnectionState()};
   connection.modes.inNamelist = true;
+  char comma{static_cast<char>(GetComma(io))};
   // Internal functions to advance records and convert case
   const auto EmitWithAdvance{[&](char ch) -> bool {
     return (!connection.NeedAdvance(1) || io.AdvanceRecord()) &&
@@ -51,7 +57,7 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   for (std::size_t j{0}; j < group.items; ++j) {
     // [,]ITEM=...
     const NamelistGroup::Item &item{group.item[j]};
-    if (!(EmitWithAdvance(j == 0 ? ' ' : ',') && EmitUpperCase(item.name) &&
+    if (!(EmitWithAdvance(j == 0 ? ' ' : comma) && EmitUpperCase(item.name) &&
             EmitWithAdvance('=') &&
             descr::DescriptorIO<Direction::Output>(io, item.descriptor))) {
       return false;
@@ -137,6 +143,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   std::size_t contiguousStride{source.ElementBytes()};
   bool ok{true};
   std::optional<char32_t> ch{io.GetNextNonBlank()};
+  char32_t comma{GetComma(io)};
   for (; ch && *ch != ')'; ++j) {
     SubscriptValue dimLower{0}, dimUpper{0}, dimStride{0};
     if (j < maxRank && j < source.rank()) {
@@ -197,7 +204,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
       dimUpper = dimLower;
       dimStride = 0;
     }
-    if (ch && *ch == ',') {
+    if (ch && *ch == comma) {
       io.HandleRelativePosition(1);
       ch = io.GetNextNonBlank();
     }
@@ -358,6 +365,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   std::optional<char32_t> next;
   char name[nameBufferSize];
   RUNTIME_CHECK(handler, group.groupName != nullptr);
+  char32_t comma{GetComma(io)};
   while (true) {
     next = io.GetNextNonBlank();
     while (next && *next != '&') {
@@ -391,7 +399,8 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
     if (!GetLowerCaseName(io, name, sizeof name)) {
       handler.SignalError(
-          "NAMELIST input group '%s' was not terminated", group.groupName);
+          "NAMELIST input group '%s' was not terminated at '%c'",
+          group.groupName, static_cast<char>(*next));
       return false;
     }
     std::size_t itemIndex{0};
@@ -461,7 +470,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       return false;
     }
     next = io.GetNextNonBlank();
-    if (next && *next == ',') {
+    if (next && *next == comma) {
       io.HandleRelativePosition(1);
     }
   }

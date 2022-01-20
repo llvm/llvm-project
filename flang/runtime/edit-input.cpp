@@ -48,6 +48,10 @@ static bool EditBOZInput(IoStatementState &io, const DataEdit &edit, void *n,
   return true;
 }
 
+static inline char32_t GetDecimalPoint(const DataEdit &edit) {
+  return edit.modes.editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
+}
+
 // Prepares input from a field, and consumes the sign, if any.
 // Returns true if there's a '-' sign.
 static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
@@ -59,7 +63,7 @@ static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
     if (negative || *next == '+') {
       io.GotChar();
       io.SkipSpaces(remaining);
-      next = io.NextInField(remaining);
+      next = io.NextInField(remaining, GetDecimalPoint(edit));
     }
   }
   return negative;
@@ -154,7 +158,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     Put('0');
     return got;
   }
-  char32_t decimal = edit.modes.editingFlags & decimalComma ? ',' : '.';
+  char32_t decimal{GetDecimalPoint(edit)};
   char32_t first{*next >= 'a' && *next <= 'z' ? *next + 'A' - 'a' : *next};
   if (first == 'N' || first == 'I') {
     // NaN or infinity - convert to upper case
@@ -179,7 +183,7 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
     Put('.'); // input field is normalized to a fraction
     auto start{got};
     bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
-    for (; next; next = io.NextInField(remaining)) {
+    for (; next; next = io.NextInField(remaining, decimal)) {
       char32_t ch{*next};
       if (ch == ' ' || ch == '\t') {
         if (bzMode) {

@@ -274,4 +274,35 @@ TEST(NamelistTests, Skip) {
   EXPECT_EQ(got, expect);
 }
 
+// Tests DECIMAL=COMMA mode
+TEST(NamelistTests, Comma) {
+  OwningPtr<Descriptor> scDesc{
+      MakeArray<TypeCategory::Complex, static_cast<int>(sizeof(float))>(
+          std::vector<int>{2}, std::vector<std::complex<float>>{{}, {}})};
+  const NamelistGroup::Item items[]{{"z", *scDesc}};
+  const NamelistGroup group{"nml", 1, items};
+  static char t1[]{"&nml z=(-1,0;2,0);(-3,0;0,5)/"};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char},
+      /*elementBytes=*/std::strlen(t1), t1, 0, nullptr, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetDecimal)(inCookie, "COMMA", 5));
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist input with skipping";
+  char out[30];
+  internalDesc.Establish(TypeCode{CFI_type_char}, /*elementBytes=*/sizeof out,
+      out, 0, nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetDecimal)(outCookie, "COMMA", 5));
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{out, sizeof out};
+  static const std::string expect{"&NML Z= (-1,;2,) (-3,;,5)/    "};
+  EXPECT_EQ(got, expect);
+}
+
 // TODO: Internal NAMELIST error tests
