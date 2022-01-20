@@ -426,7 +426,10 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
   TypeList types;
   if (!prefer_clang_types) {
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
-    if (auto *M = GetModule())
+    // First check if this type has already been parsed from DWARF.
+    if (auto cached = m_swift_type_map.Lookup(mangled.AsCString()))
+      types.Insert(cached);
+    else if (auto *M = GetModule())
       M->FindTypes({mangled}, false, 1, searched_symbol_files, types);
     else if (TargetSP target_sp = GetSwiftASTContext()
                                       ? GetSwiftASTContext()->GetTarget().lock()
@@ -1326,6 +1329,10 @@ DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
 
 TypeSP TypeSystemSwiftTypeRef::LookupTypeInModule(
     lldb::opaque_compiler_type_t opaque_type) {
+  // First check if this type has already been parsed from DWARF.
+  if (auto cached = m_swift_type_map.Lookup(AsMangledName(opaque_type)))
+    return cached;
+
   auto *M = GetModule();
   if (!M)
     return {};
