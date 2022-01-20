@@ -292,17 +292,18 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     }
   }
 
-  // Sort by target count, number of indices in case of jump table,  and
-  // mispredicts. We prioritize targets with high count, small number of
-  // indices and high mispredicts
+  // Sort by target count, number of indices in case of jump table, and
+  // mispredicts. We prioritize targets with high count, small number of indices
+  // and high mispredicts. Break ties by selecting targets with lower addresses.
   std::stable_sort(Targets.begin(), Targets.end(),
                    [](const Callsite &A, const Callsite &B) {
                      if (A.Branches != B.Branches)
                        return A.Branches > B.Branches;
-                     else if (A.JTIndices.size() != B.JTIndices.size())
+                     if (A.JTIndices.size() != B.JTIndices.size())
                        return A.JTIndices.size() < B.JTIndices.size();
-                     else
+                     if (A.Mispreds != B.Mispreds)
                        return A.Mispreds > B.Mispreds;
+                     return A.To.Addr < B.To.Addr;
                    });
 
   // Remove non-symbol targets
