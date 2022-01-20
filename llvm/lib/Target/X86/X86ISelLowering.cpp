@@ -10079,13 +10079,18 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
   if (IsSubAdd)
     return SDValue();
 
-  // Do not generate X86ISD::ADDSUB node for 512-bit types even though
-  // the ADDSUB idiom has been successfully recognized. There are no known
-  // X86 targets with 512-bit ADDSUB instructions!
-  // 512-bit ADDSUB idiom recognition was needed only as part of FMADDSUB idiom
-  // recognition.
-  if (VT.is512BitVector())
-    return SDValue();
+  // There are no known X86 targets with 512-bit ADDSUB instructions!
+  // Convert to blend(fsub,fadd).
+  if (VT.is512BitVector()) {
+    SmallVector<int> Mask;
+    for (int I = 0, E = VT.getVectorNumElements(); I != E; I += 2) {
+        Mask.push_back(I);
+        Mask.push_back(I + E + 1);
+    }
+    SDValue Sub = DAG.getNode(ISD::FSUB, DL, VT, Opnd0, Opnd1);
+    SDValue Add = DAG.getNode(ISD::FADD, DL, VT, Opnd0, Opnd1);
+    return DAG.getVectorShuffle(VT, DL, Sub, Add, Mask);
+  }
 
   return DAG.getNode(X86ISD::ADDSUB, DL, VT, Opnd0, Opnd1);
 }
