@@ -48,6 +48,8 @@ public:
     return nullptr;
   }
 
+  Value *FoldAnd(Value *LHS, Value *RHS) const override { return nullptr; }
+
   Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
 
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
@@ -147,10 +149,6 @@ public:
     if (!isExact)
       return BinaryOperator::CreateAShr(LHS, RHS);
     return BinaryOperator::CreateExactAShr(LHS, RHS);
-  }
-
-  Instruction *CreateAnd(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateAnd(LHS, RHS);
   }
 
   Instruction *CreateXor(Constant *LHS, Constant *RHS) const override {

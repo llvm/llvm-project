@@ -25,7 +25,7 @@
 ; Check that without the option `-polly-allow-dereference-of-all-function-parameters`
 ; we do generate the runtime check.
 ; CODE-RTC: polly.preload.cond:                               ; preds = %polly.preload.begin
-; CODE-RTC-NEXT: br i1 %{{[a-zA-Z0-9]*}}, label %polly.preload.exec, label %polly.preload.merge
+; CODE-RTC-NEXT: br i1 %{{[a-zA-Z0-9\.]*}}, label %polly.preload.exec, label %polly.preload.merge
 
 ; Check that we don't generate a runtime check because we treat all
 ; parameters as dereferencable.

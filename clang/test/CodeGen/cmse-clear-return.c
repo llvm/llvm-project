@@ -229,8 +229,10 @@ typedef struct __attribute__((packed)) T14 {
 T14 t14;
 __attribute__((cmse_nonsecure_entry)) T14 f14() { return t14; }
 // CHECK: define {{.*}} @f14()
-// CHECK: %[[R:.*]] = load
-// CHECK: ret i32 %[[R]]
+// CHECK: [[R:%.*]] = load
+// CHECK-LE-NOPT-NEXT: [[AND:%.+]] = and i32 [[R]], -1
+// CHECK-BE-NOPT-NEXT: [[AND:%.+]] = and i32 [[R]], -1
+// CHECK_NEXT: ret i32 [[AND]]
 
 // LE: 1111..11 1111..11 11111111 11111111 0xfffff3f3/-3085
 // BE: 11..1111 11..1111 11111111 11111111 0xcfcfffff/-808452097

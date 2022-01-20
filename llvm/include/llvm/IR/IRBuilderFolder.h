@@ -33,6 +33,9 @@ public:
   //===--------------------------------------------------------------------===//
   virtual Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
                          bool HasNSW = false) const = 0;
+
+  virtual Value *FoldAnd(Value *LHS, Value *RHS) const = 0;
+
   virtual Value *FoldOr(Value *LHS, Value *RHS) const = 0;
 
   virtual Value *FoldICmp(CmpInst::Predicate P, Value *LHS,
@@ -68,7 +71,6 @@ public:
                             bool isExact = false) const = 0;
   virtual Value *CreateAShr(Constant *LHS, Constant *RHS,
                             bool isExact = false) const = 0;
-  virtual Value *CreateAnd(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateXor(Constant *LHS, Constant *RHS) const = 0;
   virtual Value *CreateBinOp(Instruction::BinaryOps Opc,
                              Constant *LHS, Constant *RHS) const = 0;

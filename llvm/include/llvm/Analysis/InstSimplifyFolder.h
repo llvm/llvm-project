@@ -52,6 +52,10 @@ public:
     return SimplifyAddInst(LHS, RHS, HasNUW, HasNSW, SQ);
   }
 
+  Value *FoldAnd(Value *LHS, Value *RHS) const override {
+    return SimplifyAndInst(LHS, RHS, SQ);
+  }
+
   Value *FoldOr(Value *LHS, Value *RHS) const override {
     return SimplifyOrInst(LHS, RHS, SQ);
   }
@@ -121,9 +125,6 @@ public:
   Value *CreateAShr(Constant *LHS, Constant *RHS,
                     bool isExact = false) const override {
     return ConstFolder.CreateAShr(LHS, RHS, isExact);
-  }
-  Value *CreateAnd(Constant *LHS, Constant *RHS) const override {
-    return ConstFolder.CreateAnd(LHS, RHS);
   }
   Value *CreateXor(Constant *LHS, Constant *RHS) const override {
     return ConstFolder.CreateXor(LHS, RHS);

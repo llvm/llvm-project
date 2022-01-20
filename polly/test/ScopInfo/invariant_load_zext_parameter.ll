@@ -25,10 +25,11 @@
 ; CODEGEN-NEXT:   store i32 %polly.access.I0.load, i32* %loadI1a.preload.s2a
 ; CODEGEN-NEXT:   %0 = sext i32 %polly.access.I0.load to i64
 ; CODEGEN-NEXT:   %1 = icmp eq i64 %0, 0
+; CODEGEN-NEXT:   %polly.preload.cond.result = and i1 %1, true
 ; CODEGEN-NEXT:   br label %polly.preload.cond
 ;
 ; CODEGEN:      polly.preload.cond:
-; CODEGEN-NEXT:   br i1 %1, label %polly.preload.exec, label %polly.preload.merge
+; CODEGEN-NEXT:   br i1 %polly.preload.cond.result, label %polly.preload.exec, label %polly.preload.merge
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
