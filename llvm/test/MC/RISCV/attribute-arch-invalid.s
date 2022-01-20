@@ -26,5 +26,5 @@
 .attribute arch, "rv32izbt"
 # CHECK: error: invalid arch name 'rv32izbt', experimental extension requires explicit version number `zbt`
 
-.attribute arch, "rv32ivzvlsseg"
-# CHECK: error: invalid arch name 'rv32ivzvlsseg', experimental extension requires explicit version number `v`
+.attribute arch, "rv32iv"
+# CHECK: error: invalid arch name 'rv32iv', experimental extension requires explicit version number `v`

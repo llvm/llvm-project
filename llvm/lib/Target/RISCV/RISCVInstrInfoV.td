@@ -1461,7 +1461,7 @@ foreach n = [2, 4, 8] in {
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 } // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtZvlsseg] in {
+let Predicates = [HasVInstructions] in {
   foreach nf=2-8 in {
     foreach eew = [8, 16, 32] in {
       defvar w = !cast<RISCVWidth>("LSWidth"#eew);
@@ -1494,9 +1494,9 @@ let Predicates = [HasStdExtZvlsseg] in {
                              "vsoxseg"#nf#"ei"#eew#".v">;
     }
   }
-} // Predicates = [HasStdExtZvlsseg]
+} // Predicates = [HasVInstructions]
 
-let Predicates = [HasStdExtZvlsseg, HasVInstructionsI64] in {
+let Predicates = [HasVInstructionsI64] in {
   foreach nf=2-8 in {
     // Vector Unit-strided Segment Instructions
     def VLSEG#nf#E64_V :
@@ -1512,8 +1512,8 @@ let Predicates = [HasStdExtZvlsseg, HasVInstructionsI64] in {
     def VSSSEG#nf#E64_V :
       VStridedSegmentStore<!add(nf, -1), LSWidth64, "vssseg"#nf#"e64.v">;
   }
-} // Predicates = [HasStdExtZvlsseg, HasVInstructionsI64]
-let Predicates = [HasStdExtZvlsseg, HasVInstructionsI64, IsRV64] in {
+} // Predicates = [HasVInstructionsI64]
+let Predicates = [HasVInstructionsI64, IsRV64] in {
   foreach nf=2-8 in {
     // Vector Indexed Segment Instructions
     def VLUXSEG#nf#EI64_V :
@@ -1529,6 +1529,6 @@ let Predicates = [HasStdExtZvlsseg, HasVInstructionsI64, IsRV64] in {
       VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, LSWidth64,
                            "vsoxseg"#nf#"ei64.v">;
   }
-} // Predicates = [HasStdExtZvlsseg, HasVInstructionsI64, IsRV64]
+} // Predicates = [HasVInstructionsI64, IsRV64]
 
 include "RISCVInstrInfoVPseudos.td"

@@ -30,8 +30,8 @@
 //
 // - ElBits is the size of one element in bits (SEW).
 //
-// - NF is the number of fields (NFIELDS) used in the Zvlsseg instructions
-//   (TODO).
+// - NF is the number of fields (NFIELDS) used in the Load/Store Segment
+//   instructions (TODO).
 //
 // - IsSigned is true for vectors of signed integer elements and
 //   for vectors of floating-point elements.

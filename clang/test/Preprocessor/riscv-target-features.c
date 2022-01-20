@@ -31,7 +31,6 @@
 // CHECK-NOT: __riscv_zfh
 // CHECK-NOT: __riscv_v
 // CHECK-NOT: __riscv_vector
-// CHECK-NOT: __riscv_zvlsseg
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-M-EXT %s
@@ -220,7 +219,6 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-V-EXT %s
 // CHECK-V-EXT: __riscv_v 10000{{$}}
 // CHECK-V-EXT: __riscv_vector 1
-// CHECK-V-EXT: __riscv_zvlsseg 10000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
 // RUN: -march=rv32izfhmin1p0 -x c -E -dM %s \

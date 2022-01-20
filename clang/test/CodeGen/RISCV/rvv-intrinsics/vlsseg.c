@@ -2,7 +2,7 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-feature +d \
 // RUN:   -target-feature +zfh -target-feature +experimental-v \
-// RUN:   -target-feature +experimental-zvlsseg -disable-O0-optnone -emit-llvm %s \
+// RUN:   -disable-O0-optnone -emit-llvm %s \
 // RUN:   -o - | opt -S -mem2reg | FileCheck --check-prefix=CHECK-RV64 %s
 
 #include <riscv_vector.h>

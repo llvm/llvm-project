@@ -416,25 +416,6 @@
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-V-GOODVERS %s
 // RV32-EXPERIMENTAL-V-GOODVERS: "-target-feature" "+experimental-v"
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10_zvlsseg -### %s -c 2>&1 | \
-// RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVLSSEG-NOFLAG %s
-// RV32-EXPERIMENTAL-ZVLSSEG-NOFLAG: error: invalid arch name 'rv32iv0p10_zvlsseg'
-// RV32-EXPERIMENTAL-ZVLSSEG-NOFLAG: requires '-menable-experimental-extensions'
-
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10_zvlsseg -menable-experimental-extensions -### %s -c 2>&1 | \
-// RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVLSSEG-NOVERS %s
-// RV32-EXPERIMENTAL-ZVLSSEG-NOVERS: error: invalid arch name 'rv32iv0p10_zvlsseg'
-// RV32-EXPERIMENTAL-ZVLSSEG-NOVERS: experimental extension requires explicit version number
-
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10_zvlsseg0p1 -menable-experimental-extensions -### %s -c 2>&1 | \
-// RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVLSSEG-BADVERS %s
-// RV32-EXPERIMENTAL-ZVLSSEG-BADVERS: error: invalid arch name 'rv32iv0p10_zvlsseg0p1'
-// RV32-EXPERIMENTAL-ZVLSSEG-BADVERS: unsupported version number 0.1 for experimental extension 'zvlsseg'
-
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10_zvlsseg0p10 -menable-experimental-extensions -### %s -c 2>&1 | \
-// RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVLSSEG-GOODVERS %s
-// RV32-EXPERIMENTAL-ZVLSSEG-GOODVERS: "-target-feature" "+experimental-zvlsseg"
-
 // RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10_zvl32b0p10 -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVL-NOFLAG %s
 // RV32-EXPERIMENTAL-ZVL-NOFLAG: error: invalid arch name 'rv32iv0p10_zvl32b0p10'
