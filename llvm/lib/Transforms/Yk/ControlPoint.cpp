@@ -47,14 +47,14 @@
 #include "llvm/Transforms/Yk/ControlPoint.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include <llvm/IR/Dominators.h>
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/Verifier.h>
 
 #define DEBUG_TYPE "yk-control-point"
 #define JIT_STATE_PREFIX "jit-state: "
