@@ -37,10 +37,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBUNWIND_STANDALONE_B
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
-  # Add the CMake module path of libcxx so we can reuse HandleOutOfTreeLLVM.cmake
-  set(LIBUNWIND_LIBCXX_CMAKE_PATH "${LIBUNWIND_LIBCXX_PATH}/cmake/Modules")
-  list(APPEND CMAKE_MODULE_PATH "${LIBUNWIND_LIBCXX_CMAKE_PATH}")
-
   # In a standalone build, we don't have llvm to automatically generate the
   # llvm-lit script for us.  So we need to provide an explicit directory that
   # the configurator should write the script into.

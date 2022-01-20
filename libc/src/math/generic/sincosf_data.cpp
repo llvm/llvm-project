@@ -15,7 +15,7 @@ namespace __llvm_libc {
 
 // The constants and polynomials for sine and cosine.  The 2nd entry
 // computes -cos (x) rather than cos (x) to get negation for free.
-constexpr sincos_t __SINCOSF_TABLE[2] = {
+constexpr sincos_t SINCOSF_TABLE[2] = {
     {{1.0, -1.0, -1.0, 1.0},
      0x1.45f306dc9c883p+23,
      0x1.921fb54442d18p+0,
@@ -42,7 +42,7 @@ constexpr sincos_t __SINCOSF_TABLE[2] = {
 
 // Table with 4/PI to 192 bit precision.  To avoid unaligned accesses
 // only 8 new bits are added per entry, making the table 4 times larger.
-constexpr uint32_t __INV_PIO4[24] = {
+constexpr uint32_t INV_PIO4[24] = {
     0xa2,       0xa2f9,     0xa2f983,   0xa2f9836e, 0xf9836e4e, 0x836e4e44,
     0x6e4e4415, 0x4e441529, 0x441529fc, 0x1529fc27, 0x29fc2757, 0xfc2757d1,
     0x2757d1f5, 0x57d1f534, 0xd1f534dd, 0xf534ddc0, 0x34ddc0db, 0xddc0db62,
