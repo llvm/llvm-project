@@ -97,6 +97,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-macro-condition
+  <clang-tidy/checks/bugprone/macro-condition>` check.
+
+  Warns about inconsistent macro usage in preprocessor conditions.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
