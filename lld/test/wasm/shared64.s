@@ -1,6 +1,7 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-unknown -o %t.o %s
 # RUN: wasm-ld -mwasm64 --experimental-pic -shared -o %t.wasm %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
+# RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DIS
 
 .functype func_external () -> ()
 
@@ -212,16 +213,46 @@ get_local_func_address:
 # CHECK-NEXT:         Functions:       [ 3, 2 ]
 
 # check the generated code in __wasm_call_ctors and __wasm_apply_data_relocs functions
-# TODO(sbc): Disassemble and verify instructions.
 
-# CHECK:        - Type:            CODE
-# CHECK-NEXT:     Functions:
-# CHECK-NEXT:       - Index:           0
-# CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            10010B
-# CHECK-NEXT:       - Index:           1
-# CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            230142047C23053702002301420C7C230242017C370200230142147C230141006A360200230142187C2306370200230142207C230741046A3602000B
+# DIS:      <__wasm_call_ctors>:
+# DIS-EMPTY:
+# DIS-NEXT:                 call    1
+# DIS-NEXT:                 end
+
+# DIS:      <__wasm_apply_data_relocs>:
+# DIS-EMPTY:
+# DIS-NEXT:                 global.get      1
+# DIS-NEXT:                 i64.const       4
+# DIS-NEXT:                 i64.add
+# DIS-NEXT:                 global.get      5
+# DIS-NEXT:                 i64.store       0:p2align=2
+# DIS-NEXT:                 global.get      1
+# DIS-NEXT:                 i64.const       12
+# DIS-NEXT:                 i64.add
+# DIS-NEXT:                 global.get      2
+# DIS-NEXT:                 i64.const       1
+# DIS-NEXT:                 i64.add
+# DIS-NEXT:                 i64.store       0:p2align=2
+# DIS-NEXT:                 global.get      1
+# DIS-NEXT:                 i64.const       20
+# DIS-NEXT:                 i64.add
+# DIS-NEXT:                 global.get      1
+# DIS-NEXT:                 i32.const       0
+# DIS-NEXT:                 i32.add
+# DIS-NEXT:                 i32.store       0
+# DIS-NEXT:                 global.get      1
+# DIS-NEXT:                 i64.const       24
+# DIS-NEXT:                 i64.add
+# DIS-NEXT:                 global.get      6
+# DIS-NEXT:                 i64.store       0:p2align=2
+# DIS-NEXT:                 global.get      1
+# DIS-NEXT:                 i64.const       32
+# DIS-NEXT:                 i64.add
+# DIS-NEXT:                 global.get      7
+# DIS-NEXT:                 i32.const       4
+# DIS-NEXT:                 i32.add
+# DIS-NEXT:                 i32.store       0
+# DIS-NEXT:                 end
 
 # check the data segment initialized with __memory_base global as offset
 
