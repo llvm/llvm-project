@@ -13,6 +13,39 @@ func @create_vector_mask_to_constant_mask() -> (vector<4x3xi1>) {
 
 // -----
 
+// CHECK-LABEL: create_vector_mask_to_constant_mask_truncation
+func @create_vector_mask_to_constant_mask_truncation() -> (vector<4x3xi1>) {
+  %c2 = arith.constant 2 : index
+  %c5 = arith.constant 5 : index
+  // CHECK: vector.constant_mask [4, 2] : vector<4x3xi1>
+  %0 = vector.create_mask %c5, %c2 : vector<4x3xi1>
+  return %0 : vector<4x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: create_vector_mask_to_constant_mask_truncation_neg
+func @create_vector_mask_to_constant_mask_truncation_neg() -> (vector<4x3xi1>) {
+  %cneg2 = arith.constant -2 : index
+  %c5 = arith.constant 5 : index
+  // CHECK: vector.constant_mask [0, 0] : vector<4x3xi1>
+  %0 = vector.create_mask %c5, %cneg2 : vector<4x3xi1>
+  return %0 : vector<4x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: create_vector_mask_to_constant_mask_truncation_zero
+func @create_vector_mask_to_constant_mask_truncation_zero() -> (vector<4x3xi1>) {
+  %c2 = arith.constant 2 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.constant_mask [0, 0] : vector<4x3xi1>
+  %0 = vector.create_mask %c0, %c2 : vector<4x3xi1>
+  return %0 : vector<4x3xi1>
+}
+
+// -----
+
 func @extract_strided_slice_of_constant_mask() -> (vector<2x2xi1>) {
   %0 = vector.constant_mask [2, 2] : vector<4x3xi1>
   %1 = vector.extract_strided_slice %0
