@@ -133,8 +133,7 @@ define <2 x i32> @mul_bool_vec_commute(<2 x i32> %px, <2 x i1> %y) {
 
 define i32 @mul_sext_bool(i1 %x) {
 ; CHECK-LABEL: @mul_sext_bool(
-; CHECK-NEXT:    [[S:%.*]] = sext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[S]], 42
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X:%.*]], i32 -42, i32 0
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %s = sext i1 %x to i32
@@ -146,7 +145,7 @@ define i32 @mul_sext_bool_use(i1 %x) {
 ; CHECK-LABEL: @mul_sext_bool_use(
 ; CHECK-NEXT:    [[S:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[S]])
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[S]], 42
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X]], i32 -42, i32 0
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %s = sext i1 %x to i32
@@ -157,8 +156,7 @@ define i32 @mul_sext_bool_use(i1 %x) {
 
 define <2 x i8> @mul_sext_bool_vec(<2 x i1> %x) {
 ; CHECK-LABEL: @mul_sext_bool_vec(
-; CHECK-NEXT:    [[S:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[M:%.*]] = mul <2 x i8> [[S]], <i8 42, i8 -128>
+; CHECK-NEXT:    [[M:%.*]] = select <2 x i1> [[X:%.*]], <2 x i8> <i8 -42, i8 -128>, <2 x i8> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i8> [[M]]
 ;
   %s = sext <2 x i1> %x to <2 x i8>
