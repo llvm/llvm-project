@@ -292,7 +292,7 @@ private:
           }
           return Error::success();
         }))
-      return Err;
+      return std::move(Err);
 
     LLVM_DEBUG({
       dbgs() << "JITDylib init order is [ ";
