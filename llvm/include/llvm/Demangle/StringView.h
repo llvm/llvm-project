@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEMANGLE_STRINGVIEW_H
-#define LLVM_DEMANGLE_STRINGVIEW_H
+#ifndef DEMANGLE_STRINGVIEW_H
+#define DEMANGLE_STRINGVIEW_H
 
 #include "DemangleConfig.h"
 #include <algorithm>

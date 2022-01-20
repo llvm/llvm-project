@@ -310,7 +310,7 @@ public:
       printRight(OB);
   }
 
-  // Print the "left" side of this Node into OutputString.
+  // Print the "left" side of this Node into OutputBuffer.
   virtual void printLeft(OutputBuffer &) const = 0;
 
   // Print the "right". This distinction is necessary to represent C++ types
@@ -1210,7 +1210,8 @@ public:
 class ParameterPack final : public Node {
   NodeArray Data;
 
-  // Setup OutputString for a pack expansion unless we're already expanding one.
+  // Setup OutputBuffer for a pack expansion, unless we're already expanding
+  // one.
   void initializePackExpansion(OutputBuffer &OB) const {
     if (OB.CurrentPackMax == std::numeric_limits<unsigned>::max()) {
       OB.CurrentPackMax = static_cast<unsigned>(Data.size());
@@ -2473,7 +2474,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
 
   char consume() { return First != Last ? *First++ : '\0'; }
 
-  char look(unsigned Lookahead = 0) {
+  char look(unsigned Lookahead = 0) const {
     if (static_cast<size_t>(Last - First) <= Lookahead)
       return '\0';
     return First[Lookahead];
@@ -5437,7 +5438,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSubstitution() {
   if (!consumeIf('S'))
     return nullptr;
 
-  if (std::islower(look())) {
+  if (look() >= 'a' && look() <= 'z') {
     Node *SpecialSub;
     switch (look()) {
     case 'a':
