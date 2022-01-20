@@ -1208,20 +1208,23 @@ public:
 
   /// Parses a region. Any parsed blocks are appended to 'region' and must be
   /// moved to the op regions after the op is created. The first block of the
-  /// region takes 'arguments' of types 'argTypes'. If 'enableNameShadowing' is
-  /// set to true, the argument names are allowed to shadow the names of other
-  /// existing SSA values defined above the region scope. 'enableNameShadowing'
-  /// can only be set to true for regions attached to operations that are
-  /// 'IsolatedFromAbove.
-  virtual ParseResult parseRegion(Region &region,
-                                  ArrayRef<OperandType> arguments = {},
-                                  ArrayRef<Type> argTypes = {},
-                                  bool enableNameShadowing = false) = 0;
+  /// region takes 'arguments' of types 'argTypes'. If `argLocations` is
+  /// non-empty it contains an optional location to be attached to each
+  /// argument. If 'enableNameShadowing' is set to true, the argument names are
+  /// allowed to shadow the names of other existing SSA values defined above the
+  /// region scope. 'enableNameShadowing' can only be set to true for regions
+  /// attached to operations that are 'IsolatedFromAbove'.
+  virtual ParseResult
+  parseRegion(Region &region, ArrayRef<OperandType> arguments = {},
+              ArrayRef<Type> argTypes = {},
+              ArrayRef<Optional<Location>> argLocations = {},
+              bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present.
   virtual OptionalParseResult
   parseOptionalRegion(Region &region, ArrayRef<OperandType> arguments = {},
                       ArrayRef<Type> argTypes = {},
+                      ArrayRef<Optional<Location>> argLocations = {},
                       bool enableNameShadowing = false) = 0;
 
   /// Parses a region if present. If the region is present, a new region is

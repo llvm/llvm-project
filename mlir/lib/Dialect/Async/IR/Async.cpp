@@ -220,6 +220,7 @@ static ParseResult parseExecuteOp(OpAsmParser &parser, OperationState &result) {
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, /*arguments=*/{unwrappedArgs},
                          /*argTypes=*/{unwrappedTypes},
+                         /*argLocations=*/{},
                          /*enableNameShadowing=*/false))
     return failure();
 

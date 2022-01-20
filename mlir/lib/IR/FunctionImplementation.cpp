@@ -17,7 +17,7 @@ ParseResult mlir::function_interface_impl::parseFunctionArgumentList(
     OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
-    bool &isVariadic) {
+    SmallVectorImpl<Optional<Location>> &argLocations, bool &isVariadic) {
   if (parser.parseLParen())
     return failure();
 
@@ -60,11 +60,12 @@ ParseResult mlir::function_interface_impl::parseFunctionArgumentList(
       return parser.emitError(loc, "expected arguments without attributes");
     argAttrs.push_back(attrs);
 
-    // Parse a location if specified.  TODO: Don't drop it on the floor.
+    // Parse a location if specified.
     Optional<Location> explicitLoc;
     if (!argument.name.empty() &&
         parser.parseOptionalLocationSpecifier(explicitLoc))
       return failure();
+    argLocations.push_back(explicitLoc);
 
     return success();
   };
@@ -132,11 +133,12 @@ ParseResult mlir::function_interface_impl::parseFunctionSignature(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
-    bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
+    SmallVectorImpl<Optional<Location>> &argLocations, bool &isVariadic,
+    SmallVectorImpl<Type> &resultTypes,
     SmallVectorImpl<NamedAttrList> &resultAttrs) {
   bool allowArgAttrs = true;
   if (parseFunctionArgumentList(parser, allowArgAttrs, allowVariadic, argNames,
-                                argTypes, argAttrs, isVariadic))
+                                argTypes, argAttrs, argLocations, isVariadic))
     return failure();
   if (succeeded(parser.parseOptionalArrow()))
     return parseFunctionResultList(parser, resultTypes, resultAttrs);
@@ -190,11 +192,12 @@ void mlir::function_interface_impl::addArgAndResultAttrs(
 ParseResult mlir::function_interface_impl::parseFunctionOp(
     OpAsmParser &parser, OperationState &result, bool allowVariadic,
     FuncTypeBuilder funcTypeBuilder) {
-  SmallVector<OpAsmParser::OperandType, 4> entryArgs;
-  SmallVector<NamedAttrList, 4> argAttrs;
-  SmallVector<NamedAttrList, 4> resultAttrs;
-  SmallVector<Type, 4> argTypes;
-  SmallVector<Type, 4> resultTypes;
+  SmallVector<OpAsmParser::OperandType> entryArgs;
+  SmallVector<NamedAttrList> argAttrs;
+  SmallVector<NamedAttrList> resultAttrs;
+  SmallVector<Type> argTypes;
+  SmallVector<Type> resultTypes;
+  SmallVector<Optional<Location>> argLocations;
   auto &builder = parser.getBuilder();
 
   // Parse visibility.
@@ -210,7 +213,8 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
   llvm::SMLoc signatureLocation = parser.getCurrentLocation();
   bool isVariadic = false;
   if (parseFunctionSignature(parser, allowVariadic, entryArgs, argTypes,
-                             argAttrs, isVariadic, resultTypes, resultAttrs))
+                             argAttrs, argLocations, isVariadic, resultTypes,
+                             resultAttrs))
     return failure();
 
   std::string errorMessage;
@@ -253,6 +257,7 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
   llvm::SMLoc loc = parser.getCurrentLocation();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes,
+      entryArgs.empty() ? ArrayRef<Optional<Location>>() : argLocations,
       /*enableNameShadowing=*/false);
   if (parseResult.hasValue()) {
     if (failed(*parseResult))
