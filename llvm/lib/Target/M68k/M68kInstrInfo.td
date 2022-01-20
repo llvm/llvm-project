@@ -137,7 +137,7 @@ def MxSMul : SDNode<"M68kISD::SMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_2BiArithCCROut, [SDNPCommutative]>;
 
 def MxCmp     : SDNode<"M68kISD::CMP", MxSDT_CmpTest>;
-def MxBt      : SDNode<"M68kISD::BT",  MxSDT_CmpTest>;
+def MxBtst    : SDNode<"M68kISD::BTST", MxSDT_CmpTest>;
 
 def MxCmov    : SDNode<"M68kISD::CMOV",        MxSDT_Cmov>;
 def MxBrCond  : SDNode<"M68kISD::BRCOND",      MxSDT_BrCond, [SDNPHasChain]>;
