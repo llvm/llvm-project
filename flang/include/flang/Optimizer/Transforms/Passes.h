@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_TRANSFORMS_PASSES_H
-#define OPTIMIZER_TRANSFORMS_PASSES_H
+#ifndef FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
+#define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -46,4 +46,4 @@ bool canLegallyInline(mlir::Operation *op, mlir::Region *reg,
 
 } // namespace fir
 
-#endif // OPTIMIZER_TRANSFORMS_PASSES_H
+#endif // FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
