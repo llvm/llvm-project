@@ -429,11 +429,18 @@ bool FormatTokenLexer::tryMergeLessLess() {
   if (Tokens.size() < 3)
     return false;
 
-  bool FourthTokenIsLess = false;
-  if (Tokens.size() > 3)
-    FourthTokenIsLess = (Tokens.end() - 4)[0]->is(tok::less);
-
   auto First = Tokens.end() - 3;
+  bool FourthTokenIsLess = false;
+
+  if (Tokens.size() > 3) {
+    auto Fourth = (Tokens.end() - 4)[0];
+    FourthTokenIsLess = Fourth->is(tok::less);
+
+    // Do not remove a whitespace between the two "<" e.g. "operator< <>".
+    if (First[2]->is(tok::greater) && Fourth->is(tok::kw_operator))
+      return false;
+  }
+
   if (First[2]->is(tok::less) || First[1]->isNot(tok::less) ||
       First[0]->isNot(tok::less) || FourthTokenIsLess)
     return false;
