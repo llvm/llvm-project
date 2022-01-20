@@ -430,23 +430,20 @@ bool FormatTokenLexer::tryMergeLessLess() {
     return false;
 
   auto First = Tokens.end() - 3;
-  bool FourthTokenIsLess = false;
-
-  if (Tokens.size() > 3) {
-    auto Fourth = (Tokens.end() - 4)[0];
-    FourthTokenIsLess = Fourth->is(tok::less);
-
-    // Do not remove a whitespace between the two "<" e.g. "operator< <>".
-    if (First[2]->is(tok::greater) && Fourth->is(tok::kw_operator))
-      return false;
-  }
-
-  if (First[2]->is(tok::less) || First[1]->isNot(tok::less) ||
-      First[0]->isNot(tok::less) || FourthTokenIsLess)
+  if (First[0]->isNot(tok::less) || First[1]->isNot(tok::less))
     return false;
 
   // Only merge if there currently is no whitespace between the two "<".
   if (First[1]->hasWhitespaceBefore())
+    return false;
+
+  auto X = Tokens.size() > 3 ? First[-1] : nullptr;
+  auto Y = First[2];
+  if ((X && X->is(tok::less)) || Y->is(tok::less))
+    return false;
+
+  // Do not remove a whitespace between the two "<" e.g. "operator< <>".
+  if (X && X->is(tok::kw_operator) && Y->is(tok::greater))
     return false;
 
   First[0]->Tok.setKind(tok::lessless);
