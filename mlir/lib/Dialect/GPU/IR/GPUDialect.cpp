@@ -731,12 +731,12 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
   Block *entryBlock = new Block;
 
   // TODO: Allow passing in proper locations here.
-  for (Type type : type.getInputs())
-    entryBlock->addArgument(type, result.location);
-  for (Type type : workgroupAttributions)
-    entryBlock->addArgument(type, result.location);
-  for (Type type : privateAttributions)
-    entryBlock->addArgument(type, result.location);
+  for (Type argTy : type.getInputs())
+    entryBlock->addArgument(argTy, result.location);
+  for (Type argTy : workgroupAttributions)
+    entryBlock->addArgument(argTy, result.location);
+  for (Type argTy : privateAttributions)
+    entryBlock->addArgument(argTy, result.location);
 
   body->getBlocks().push_back(entryBlock);
 }
