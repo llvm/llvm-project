@@ -729,6 +729,16 @@ static sys::fs::UniqueID getDirectoryID(sys::fs::UniqueID Parent,
   return getUniqueID(llvm::hash_combine(Parent.getFile(), Name));
 }
 
+Status detail::NewInMemoryNodeInfo::makeStatus() const {
+  UniqueID UID =
+      (Type == sys::fs::file_type::directory_file)
+          ? getDirectoryID(DirUID, Name)
+          : getFileID(DirUID, Name, Buffer ? Buffer->getBuffer() : "");
+
+  return Status(Path, UID, llvm::sys::toTimePoint(ModificationTime), User,
+                Group, Buffer ? Buffer->getBufferSize() : 0, Type, Perms);
+}
+
 InMemoryFileSystem::InMemoryFileSystem(bool UseNormalizedPaths)
     : Root(new detail::InMemoryDirectory(
           Status("", getDirectoryID(llvm::sys::fs::UniqueID(), ""),
@@ -749,7 +759,7 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
                                  Optional<uint32_t> Group,
                                  Optional<llvm::sys::fs::file_type> Type,
                                  Optional<llvm::sys::fs::perms> Perms,
-                                 const detail::InMemoryFile *HardLinkTarget) {
+                                 MakeNodeFn MakeNode) {
   SmallString<128> Path;
   P.toVector(Path);
 
@@ -770,7 +780,6 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
   const auto ResolvedGroup = Group.getValueOr(0);
   const auto ResolvedType = Type.getValueOr(sys::fs::file_type::regular_file);
   const auto ResolvedPerms = Perms.getValueOr(sys::fs::all_all);
-  assert(!(HardLinkTarget && Buffer) && "HardLink cannot have a buffer");
   // Any intermediate directories we create should be accessible by
   // the owner, even if Perms says otherwise for the final path.
   const auto NewDirectoryPerms = ResolvedPerms | sys::fs::owner_all;
@@ -781,27 +790,10 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
     if (!Node) {
       if (I == E) {
         // End of the path.
-        std::unique_ptr<detail::InMemoryNode> Child;
-        if (HardLinkTarget)
-          Child.reset(new detail::InMemoryHardLink(P.str(), *HardLinkTarget));
-        else {
-          // Create a new file or directory.
-          Status Stat(
-              P.str(),
-              (ResolvedType == sys::fs::file_type::directory_file)
-                  ? getDirectoryID(Dir->getUniqueID(), Name)
-                  : getFileID(Dir->getUniqueID(), Name, Buffer->getBuffer()),
-              llvm::sys::toTimePoint(ModificationTime), ResolvedUser,
-              ResolvedGroup, Buffer->getBufferSize(), ResolvedType,
-              ResolvedPerms);
-          if (ResolvedType == sys::fs::file_type::directory_file) {
-            Child.reset(new detail::InMemoryDirectory(std::move(Stat)));
-          } else {
-            Child.reset(
-                new detail::InMemoryFile(std::move(Stat), std::move(Buffer)));
-          }
-        }
-        Dir->addChild(Name, std::move(Child));
+        Dir->addChild(
+            Name, MakeNode({Dir->getUniqueID(), Path, Name, ModificationTime,
+                            std::move(Buffer), ResolvedUser, ResolvedGroup,
+                            ResolvedType, ResolvedPerms}));
         return true;
       }
 
@@ -845,7 +837,15 @@ bool InMemoryFileSystem::addFile(const Twine &P, time_t ModificationTime,
                                  Optional<llvm::sys::fs::file_type> Type,
                                  Optional<llvm::sys::fs::perms> Perms) {
   return addFile(P, ModificationTime, std::move(Buffer), User, Group, Type,
-                 Perms, /*HardLinkTarget=*/nullptr);
+                 Perms,
+                 [](detail::NewInMemoryNodeInfo NNI)
+                     -> std::unique_ptr<detail::InMemoryNode> {
+                   Status Stat = NNI.makeStatus();
+                   if (Stat.getType() == sys::fs::file_type::directory_file)
+                     return std::make_unique<detail::InMemoryDirectory>(Stat);
+                   return std::make_unique<detail::InMemoryFile>(
+                       Stat, std::move(NNI.Buffer));
+                 });
 }
 
 bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
@@ -856,7 +856,15 @@ bool InMemoryFileSystem::addFileNoOwn(const Twine &P, time_t ModificationTime,
                                       Optional<llvm::sys::fs::perms> Perms) {
   return addFile(P, ModificationTime, llvm::MemoryBuffer::getMemBuffer(Buffer),
                  std::move(User), std::move(Group), std::move(Type),
-                 std::move(Perms));
+                 std::move(Perms),
+                 [](detail::NewInMemoryNodeInfo NNI)
+                     -> std::unique_ptr<detail::InMemoryNode> {
+                   Status Stat = NNI.makeStatus();
+                   if (Stat.getType() == sys::fs::file_type::directory_file)
+                     return std::make_unique<detail::InMemoryDirectory>(Stat);
+                   return std::make_unique<detail::InMemoryFile>(
+                       Stat, std::move(NNI.Buffer));
+                 });
 }
 
 static ErrorOr<const detail::InMemoryNode *>
@@ -911,8 +919,11 @@ bool InMemoryFileSystem::addHardLink(const Twine &FromPath,
   // before. Resolved ToPath must be a File.
   if (!ToNode || FromNode || !isa<detail::InMemoryFile>(*ToNode))
     return false;
-  return this->addFile(FromPath, 0, nullptr, None, None, None, None,
-                       cast<detail::InMemoryFile>(*ToNode));
+  return addFile(FromPath, 0, nullptr, None, None, None, None,
+                 [&](detail::NewInMemoryNodeInfo NNI) {
+                   return std::make_unique<detail::InMemoryHardLink>(
+                       NNI.Path.str(), *cast<detail::InMemoryFile>(*ToNode));
+                 });
 }
 
 llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
