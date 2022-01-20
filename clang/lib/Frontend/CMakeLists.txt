@@ -20,6 +20,7 @@ add_clang_library(clangFrontend
   DependencyFile.cpp
   DependencyGraph.cpp
   DiagnosticRenderer.cpp
+  ExtractAPIConsumer.cpp
   FrontendAction.cpp
   FrontendActions.cpp
   FrontendOptions.cpp
