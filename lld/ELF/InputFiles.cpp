@@ -1067,7 +1067,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeSymbols() {
       sourceFile = CHECK(eSym.getName(stringTable), this);
     if (LLVM_UNLIKELY(stringTable.size() <= eSym.st_name))
       fatal(toString(this) + ": invalid symbol name offset");
-    StringRefZ name = stringTable.data() + eSym.st_name;
+    StringRef name(stringTable.data() + eSym.st_name);
 
     symbols[i] = reinterpret_cast<Symbol *>(locals + i);
     if (eSym.st_shndx == SHN_UNDEF || sec == &InputSection::discarded)
