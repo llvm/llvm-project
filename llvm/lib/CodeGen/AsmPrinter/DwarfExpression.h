@@ -492,9 +492,16 @@ private:
   };
 
   const AsmPrinter &AP;
-  const TargetRegisterInfo &TRI;
+  // An `Optional<const TargetRegisterInfo&>` where `nullptr` represents `None`.
+  // Only present when in a function context.
+  const TargetRegisterInfo *TRI;
   DwarfCompileUnit &CU;
   DIELoc &OutDIE;
+  const DILifetime &Lifetime;
+  // An `Optional<const DenseMap<_, _>&>` where `nullptr` represents `None`.
+  // Only present and applicable as part of an optimization for DIFragments
+  // which refer to global variable fragments.
+  const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap;
   std::unique_ptr<DIEDwarfExprAST::Node> Root;
 
   // FIXME(KZHURAVL): This is a temporary boolean variable that indicates
@@ -504,9 +511,15 @@ private:
   // available).
   bool IsImplemented = true;
 
-  void buildDIExprAST(const DIExpr &Expr);
+  void buildDIExprAST();
   void traverseAndLower(DIEDwarfExprAST::Node *OpNode);
   void lower(DIEDwarfExprAST::Node *OpNode);
+  /// Attempt to perform the optimization of inlining the expression of a global
+  /// value DIFragment, referenced through a DIOpArg.
+  ///
+  /// \returns true if the optimization was performed successfully, false if it
+  /// is not applicable.
+  bool tryInlineArgObject(DIObject *ArgObject);
   void lowerDIOpArg(DIEDwarfExprAST::Node *OpNode);
   void lowerDIOpConstant(DIEDwarfExprAST::Node *OpNode);
   void lowerDIOpPushLane(DIEDwarfExprAST::Node *OpNode);
@@ -544,10 +557,13 @@ private:
   void emitDwarfUnsigned(uint64_t UnsignedValue);
 
 public:
-  DIEDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo &TRI,
-                  const DIExpr &Expr, DwarfCompileUnit &CU, DIELoc &DIE)
-      : AP(AP), TRI(TRI), CU(CU), OutDIE(DIE) {
-    buildDIExprAST(Expr);
+  DIEDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo *TRI,
+                  DwarfCompileUnit &CU, DIELoc &DIE, const DILifetime &Lifetime,
+                  const DenseMap<DIFragment *, const GlobalVariable *>
+                      *GVFragmentMap = nullptr)
+      : AP(AP), TRI(TRI), CU(CU), OutDIE(DIE), Lifetime(Lifetime),
+        GVFragmentMap(GVFragmentMap) {
+    buildDIExprAST();
   }
   DIEDwarfExprAST(const DIEDwarfExprAST &) = delete;
 

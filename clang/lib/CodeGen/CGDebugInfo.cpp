@@ -5504,7 +5504,7 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     DBuilder.createComputedLifetime(DGV, ExprBuilder.intoExpr(), LifetimeArgs);
 
     // Attach metadata to GlobalVariable.
-    Var->addDebugInfo(Fragment);
+    Var->setDbgDef(Fragment);
   }
 
   GV.reset(DGV);

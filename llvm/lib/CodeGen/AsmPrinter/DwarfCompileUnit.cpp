@@ -201,6 +201,74 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
   return VariableDIE;
 }
 
+DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
+    const DILifetime &Lifetime,
+    const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap) {
+
+  const DIGlobalVariable *GV = dyn_cast<DIGlobalVariable>(Lifetime.getObject());
+
+  // Check for pre-existence.
+  if (DIE *Die = getDIE(GV))
+    return Die;
+
+  assert(GV);
+
+  auto *GVContext = GV->getScope();
+  const DIType *GTy = GV->getType();
+
+  auto *CB = GVContext ? dyn_cast<DICommonBlock>(GVContext) : nullptr;
+  DIE *ContextDIE = CB ? getOrCreateCommonBlock(CB, Lifetime, GVFragmentMap)
+                       : getOrCreateContextDIE(GVContext);
+
+  // Add to map.
+  DIE *VariableDIE = &createAndAddDIE(GV->getTag(), *ContextDIE, GV);
+  DIScope *DeclContext;
+  if (auto *SDMDecl = GV->getStaticDataMemberDeclaration()) {
+    DeclContext = SDMDecl->getScope();
+    assert(SDMDecl->isStaticMember() && "Expected static member decl");
+    assert(GV->isDefinition());
+    // We need the declaration DIE that is in the static member's class.
+    DIE *VariableSpecDIE = getOrCreateStaticMemberDIE(SDMDecl);
+    addDIEEntry(*VariableDIE, dwarf::DW_AT_specification, *VariableSpecDIE);
+    // If the global variable's type is different from the one in the class
+    // member type, assume that it's more specific and also emit it.
+    if (GTy != SDMDecl->getBaseType())
+      addType(*VariableDIE, GTy);
+  } else {
+    DeclContext = GV->getScope();
+    // Add name and type.
+    addString(*VariableDIE, dwarf::DW_AT_name, GV->getDisplayName());
+    if (GTy)
+      addType(*VariableDIE, GTy);
+
+    // Add scoping info.
+    if (!GV->isLocalToUnit())
+      addFlag(*VariableDIE, dwarf::DW_AT_external);
+
+    // Add line number info.
+    addSourceLine(*VariableDIE, GV);
+  }
+
+  if (!GV->isDefinition())
+    addFlag(*VariableDIE, dwarf::DW_AT_declaration);
+  else
+    addGlobalName(GV->getName(), *VariableDIE, DeclContext);
+
+  addAnnotation(*VariableDIE, GV->getAnnotations());
+
+  if (uint32_t AlignInBytes = GV->getAlignInBytes())
+    addUInt(*VariableDIE, dwarf::DW_AT_alignment, dwarf::DW_FORM_udata,
+            AlignInBytes);
+
+  if (MDTuple *TP = GV->getTemplateParams())
+    addTemplateParams(*VariableDIE, DINodeArray(TP));
+
+  // Add location.
+  addLocationAttribute(VariableDIE, GV, Lifetime, GVFragmentMap);
+
+  return VariableDIE;
+}
+
 void DwarfCompileUnit::addLocationAttribute(
     DIE *VariableDIE, const DIGlobalVariable *GV, ArrayRef<GlobalExpr> GlobalExprs) {
   bool addToAccelTable = false;
@@ -369,6 +437,33 @@ void DwarfCompileUnit::addLocationAttribute(
   }
 }
 
+void DwarfCompileUnit::addLocationAttribute(
+    DIE *VariableDIE, const DIGlobalVariable *GV, const DILifetime &Lifetime,
+    const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap) {
+  // FIXME: Determine when this is appropriate, considering the existing
+  // implementation.
+  bool AddToAccelTable = true;
+  DIELoc *ActualLoc = new (DIEValueAllocator) DIELoc;
+  DIELoc *EmptyLoc = new (DIEValueAllocator) DIELoc;
+  DIEDwarfExprAST ExprAST(*Asm, nullptr, *this, *ActualLoc, Lifetime,
+                          &GVFragmentMap);
+  addBlock(*VariableDIE, dwarf::DW_AT_location,
+           ExprAST.finalize() ? ActualLoc : EmptyLoc);
+
+  if (DD->useAllLinkageNames())
+    addLinkageName(*VariableDIE, GV->getLinkageName());
+
+  if (AddToAccelTable) {
+    DD->addAccelName(*CUNode, GV->getName(), *VariableDIE);
+
+    // If the linkage name is different than the name, go ahead and output
+    // that as well into the name table.
+    if (GV->getLinkageName() != "" && GV->getName() != GV->getLinkageName() &&
+        DD->useAllLinkageNames())
+      DD->addAccelName(*CUNode, GV->getLinkageName(), *VariableDIE);
+  }
+}
+
 DIE *DwarfCompileUnit::getOrCreateCommonBlock(
     const DICommonBlock *CB, ArrayRef<GlobalExpr> GlobalExprs) {
   // Check for pre-existence.
@@ -383,6 +478,24 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
     addSourceLine(NDie, CB->getLineNo(), CB->getFile());
   if (DIGlobalVariable *V = CB->getDecl())
     getCU().addLocationAttribute(&NDie, V, GlobalExprs);
+  return &NDie;
+}
+
+DIE *DwarfCompileUnit::getOrCreateCommonBlock(
+    const DICommonBlock *CB, const DILifetime &Lifetime,
+    const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap) {
+  // Check for pre-existence.
+  if (DIE *NDie = getDIE(CB))
+    return NDie;
+  DIE *ContextDIE = getOrCreateContextDIE(CB->getScope());
+  DIE &NDie = createAndAddDIE(dwarf::DW_TAG_common_block, *ContextDIE, CB);
+  StringRef Name = CB->getName().empty() ? "_BLNK_" : CB->getName();
+  addString(NDie, dwarf::DW_AT_name, Name);
+  addGlobalName(Name, NDie, CB->getScope());
+  if (CB->getFile())
+    addSourceLine(NDie, CB->getLineNo(), CB->getFile());
+  if (DIGlobalVariable *V = CB->getDecl())
+    getCU().addLocationAttribute(&NDie, V, Lifetime, GVFragmentMap);
   return &NDie;
 }
 
@@ -858,8 +971,8 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
       // FIXME(KZHURAVL): Remove EmptyLoc once we implement full lowering
       // support.
       DIELoc *EmptyLoc = new (DIEValueAllocator) DIELoc;
-      DIEDwarfExprAST ExprAST(*Asm, *Asm->MF->getSubtarget().getRegisterInfo(),
-                              *Lifetime->getLocation(), *this, *ActualLoc);
+      DIEDwarfExprAST ExprAST(*Asm, Asm->MF->getSubtarget().getRegisterInfo(),
+                              *this, *ActualLoc, *Lifetime);
       addBlock(*VariableDie, dwarf::DW_AT_location, ExprAST.finalize() ?
                                                     ActualLoc : EmptyLoc);
     }

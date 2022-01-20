@@ -4075,8 +4075,8 @@ public:
   DIExpr *getLocation() const { return cast<DIExpr>(getRawLocation()); }
   void setLocation(DIExpr *E) { setOperand(1, E); }
   class ArgObjectIterator
-      : public llvm::iterator_facade_base<ArgObjectIterator,
-                                          std::input_iterator_tag, DIObject> {
+      : public llvm::iterator_facade_base<
+            ArgObjectIterator, std::random_access_iterator_tag, DIObject> {
     friend DILifetime;
     MDNode::op_iterator I;
     explicit ArgObjectIterator(MDNode::op_iterator I) : I(I) {}
@@ -4086,12 +4086,18 @@ public:
     ArgObjectIterator(const ArgObjectIterator &) = default;
     bool operator==(const ArgObjectIterator &R) const { return R.I == I; }
     DIObject *operator*() const { return cast<DIObject>(*I); }
-    ArgObjectIterator &operator++() {
-      ++I;
-      return *static_cast<ArgObjectIterator *>(this);
+    friend iterator_facade_base::difference_type
+    operator-(ArgObjectIterator LHS, ArgObjectIterator RHS) {
+      return LHS.I - RHS.I;
     }
-    using iterator_facade_base<ArgObjectIterator, std::input_iterator_tag,
-                               DIObject>::operator++;
+    ArgObjectIterator &operator+=(iterator_facade_base::difference_type D) {
+      I += D;
+      return *this;
+    }
+    ArgObjectIterator &operator-=(iterator_facade_base::difference_type D) {
+      I -= D;
+      return *this;
+    }
   };
   using ArgObjectRange = iterator_range<ArgObjectIterator>;
   ArgObjectIterator argObjectsBegin() const {

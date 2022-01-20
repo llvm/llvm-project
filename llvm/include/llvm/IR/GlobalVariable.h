@@ -193,16 +193,10 @@ public:
   void getDebugInfo(SmallVectorImpl<DIGlobalVariable *> &GVs) const;
 
   /// Attach a DIFragment.
-  void addDebugInfo(DIFragment *F);
+  void setDbgDef(DIFragment *F);
 
-  /// Fill the vector with all debug info attachements.
-  void getDebugInfo(SmallVectorImpl<DIFragment *> &Fs) const;
-
-  /// Attach a DILifetime.
-  void addDebugInfo(DILifetime *LT);
-
-  /// Fill the vector with all debug info attachements.
-  void getDebugInfo(SmallVectorImpl<DILifetime *> &LTs) const;
+  /// Retrieve the attached DIFragment.
+  DIFragment *getDbgDef() const;
 
   /// Add attribute to this global.
   void addAttribute(Attribute::AttrKind Kind) {

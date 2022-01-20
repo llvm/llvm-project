@@ -321,6 +321,11 @@ Global Variable
 The definition of “global variable” is the one from the :ref:`globalvars` with
 the following addition.
 
+.. TODO::
+
+   Should this explicitly state that only zero or one such ``dbg.def``
+   attachment is well formed?
+
 The optional ``dbg.def`` metadata attachment can be used to specify a
 ``DIFragment`` termed a global variable fragment. The location description of a
 global variable fragment is a memory location description for a pointer to the
