@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MacroToEnumCheck.h"
+#include "../utils/LexerUtils.h"
 #include "IntegralLiteralExpressionMatcher.h"
 
 #include "clang/AST/ASTContext.h"
@@ -18,6 +19,8 @@
 #include <string>
 
 namespace clang::tidy::modernize {
+
+using utils::lexer::getTokenName;
 
 static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
                             StringRef Text) {
@@ -70,11 +73,6 @@ static bool hasOnlyComments(SourceLocation Loc, const LangOptions &Options,
   }
 
   return true;
-}
-
-static StringRef getTokenName(const Token &Tok) {
-  return Tok.is(tok::raw_identifier) ? Tok.getRawIdentifier()
-                                     : Tok.getIdentifierInfo()->getName();
 }
 
 namespace {
@@ -258,17 +256,9 @@ void MacroToEnumCallbacks::conditionStart(const SourceLocation &Loc) {
 }
 
 void MacroToEnumCallbacks::checkCondition(SourceRange Range) {
-  const CharSourceRange CharRange = Lexer::makeFileCharRange(
-      CharSourceRange::getTokenRange(Range), SM, LangOpts);
-  std::string Text = Lexer::getSourceText(CharRange, SM, LangOpts).str();
-  Lexer Lex(CharRange.getBegin(), LangOpts, Text.data(), Text.data(),
-            Text.data() + Text.size());
-  Token Tok;
-  bool End = false;
-  while (!End) {
-    End = Lex.LexFromRawLexer(Tok);
-    if (Tok.is(tok::raw_identifier) &&
-        Tok.getRawIdentifier().str() != "defined")
+  for (const Token &Tok : utils::lexer::getRawTokens(
+           CharSourceRange::getTokenRange(Range), SM, LangOpts)) {
+    if (Tok.is(tok::raw_identifier) && getTokenName(Tok) != "defined")
       checkName(Tok);
   }
 }

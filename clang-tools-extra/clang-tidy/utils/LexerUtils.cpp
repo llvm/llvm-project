@@ -14,6 +14,46 @@
 
 namespace clang::tidy::utils::lexer {
 
+StringRef getTokenName(const Token &Tok) {
+  if (Tok.is(tok::raw_identifier))
+    return Tok.getRawIdentifier();
+  if (const IdentifierInfo *Info = Tok.getIdentifierInfo())
+    return Info->getName();
+  return {};
+}
+
+std::vector<Token> getRawTokens(CharSourceRange Range, const SourceManager &SM,
+                                const LangOptions &LangOpts) {
+  if (Range.isInvalid())
+    return {};
+
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (FileRange.isInvalid())
+    return {};
+
+  bool Invalid = false;
+  const StringRef Text =
+      Lexer::getSourceText(FileRange, SM, LangOpts, &Invalid);
+  if (Invalid || Text.empty())
+    return {};
+
+  const auto [File, BeginOffset] = SM.getDecomposedLoc(FileRange.getBegin());
+  const StringRef Buffer = SM.getBufferData(File, &Invalid);
+  if (Invalid || BeginOffset + Text.size() > Buffer.size())
+    return {};
+
+  Lexer RawLexer(SM.getLocForStartOfFile(File), LangOpts, Buffer.begin(),
+                 Buffer.begin() + BeginOffset, Buffer.end());
+  const size_t EndOffset = BeginOffset + Text.size();
+  std::vector<Token> Tokens;
+  Token Tok;
+  while (!RawLexer.LexFromRawLexer(Tok) && Tok.isNot(tok::eof) &&
+         SM.getFileOffset(Tok.getLocation()) < EndOffset)
+    Tokens.push_back(Tok);
+  return Tokens;
+}
+
 std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments) {
