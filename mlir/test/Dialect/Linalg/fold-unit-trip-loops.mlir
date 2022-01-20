@@ -97,7 +97,7 @@ func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>, %shape: tensor<5xf3
   %0 = linalg.generic #trait
        ins(%arg0 : tensor<1x5xf32>)
       outs(%shape : tensor<5xf32>) {
-    ^bb0(%arg2: f32, %arg3: f32):     // no predecessors
+    ^bb0(%arg2: f32, %arg3: f32):     
       linalg.yield %arg2 : f32
   } -> tensor<5xf32>
   return %0 : tensor<5xf32>

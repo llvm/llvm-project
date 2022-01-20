@@ -2653,7 +2653,8 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
     if (!block->getParent()) {
       os << "  // block is not in a region!";
     } else if (block->hasNoPredecessors()) {
-      os << "  // no predecessors";
+      if (!block->isEntryBlock())
+        os << "  // no predecessors";
     } else if (auto *pred = block->getSinglePredecessor()) {
       os << "  // pred: ";
       printBlockName(pred);

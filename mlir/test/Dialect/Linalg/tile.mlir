@@ -318,7 +318,7 @@ func @pointwise(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memre
   linalg.generic #pointwise_2d_trait
     ins(%arg0, %arg1 : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>)
     outs(%arg2 : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
-  ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):   // no predecessors
+  ^bb0(%arg4: f32, %arg5: f32, %arg6: f32):   
     %4 = arith.addf %arg4, %arg5 : f32
     linalg.yield %4 : f32
   }

@@ -554,7 +554,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
 /// Canonicalizes the pattern of the form
 ///
 /// %tensor = tensor.generate %x {
-///   ^bb0(%arg0: index):  // no predecessors
+///   ^bb0(%arg0: index):
 ///   <computation>
 ///   yield %1 : index
 /// } : tensor<?xindex>
