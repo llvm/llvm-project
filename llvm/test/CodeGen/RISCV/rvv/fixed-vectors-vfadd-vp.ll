@@ -252,6 +252,20 @@ define <2 x float> @vfadd_vf_v2f32(<2 x float> %va, float %b, <2 x i1> %m, i32 z
   ret <2 x float> %v
 }
 
+define <2 x float> @vfadd_vf_v2f32_commute(<2 x float> %va, float %b, <2 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vfadd_vf_v2f32_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vfmv.v.f v9, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vfadd.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <2 x float> undef, float %b, i32 0
+  %vb = shufflevector <2 x float> %elt.head, <2 x float> undef, <2 x i32> zeroinitializer
+  %v = call <2 x float> @llvm.vp.fadd.v2f32(<2 x float> %vb, <2 x float> %va, <2 x i1> %m, i32 %evl)
+  ret <2 x float> %v
+}
+
 define <2 x float> @vfadd_vf_v2f32_unmasked(<2 x float> %va, float %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vfadd_vf_v2f32_unmasked:
 ; CHECK:       # %bb.0:
@@ -263,6 +277,20 @@ define <2 x float> @vfadd_vf_v2f32_unmasked(<2 x float> %va, float %b, i32 zeroe
   %head = insertelement <2 x i1> undef, i1 true, i32 0
   %m = shufflevector <2 x i1> %head, <2 x i1> undef, <2 x i32> zeroinitializer
   %v = call <2 x float> @llvm.vp.fadd.v2f32(<2 x float> %va, <2 x float> %vb, <2 x i1> %m, i32 %evl)
+  ret <2 x float> %v
+}
+
+define <2 x float> @vfadd_vf_v2f32_unmasked_commute(<2 x float> %va, float %b, i32 zeroext %evl) {
+; CHECK-LABEL: vfadd_vf_v2f32_unmasked_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vfadd.vf v8, v8, fa0
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <2 x float> undef, float %b, i32 0
+  %vb = shufflevector <2 x float> %elt.head, <2 x float> undef, <2 x i32> zeroinitializer
+  %head = insertelement <2 x i1> undef, i1 true, i32 0
+  %m = shufflevector <2 x i1> %head, <2 x i1> undef, <2 x i32> zeroinitializer
+  %v = call <2 x float> @llvm.vp.fadd.v2f32(<2 x float> %vb, <2 x float> %va, <2 x i1> %m, i32 %evl)
   ret <2 x float> %v
 }
 
