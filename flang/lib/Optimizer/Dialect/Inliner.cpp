@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRDialect.h"
-#include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
 
 static llvm::cl::opt<bool>
@@ -18,7 +15,11 @@ static llvm::cl::opt<bool>
                        llvm::cl::init(false));
 
 /// Should we inline the callable `op` into region `reg`?
-bool fir::canLegallyInline(mlir::Operation *op, mlir::Region *reg,
-                           mlir::BlockAndValueMapping &map) {
+bool fir::canLegallyInline(mlir::Operation *, mlir::Region *, bool,
+                           mlir::BlockAndValueMapping &) {
+  return aggressivelyInline;
+}
+
+bool fir::canLegallyInline(mlir::Operation *, mlir::Operation *, bool) {
   return aggressivelyInline;
 }
