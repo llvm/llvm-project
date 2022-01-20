@@ -147,7 +147,7 @@
 
 #if defined(__cpp_lib_is_constant_evaluated) && __cpp_lib_is_constant_evaluated >= 201811L
 # define TEST_IS_CONSTANT_EVALUATED std::is_constant_evaluated()
-#elif __has_builtin(__builtin_is_constant_evaluated)
+#elif TEST_HAS_BUILTIN(__builtin_is_constant_evaluated)
 # define TEST_IS_CONSTANT_EVALUATED __builtin_is_constant_evaluated()
 #else
 # define TEST_IS_CONSTANT_EVALUATED false
