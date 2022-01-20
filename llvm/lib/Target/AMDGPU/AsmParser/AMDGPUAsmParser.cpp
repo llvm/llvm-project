@@ -1129,7 +1129,8 @@ class KernelScopeInfo {
     if (i >= SgprIndexUnusedMin) {
       SgprIndexUnusedMin = ++i;
       if (Ctx) {
-        MCSymbol * const Sym = Ctx->getOrCreateSymbol(Twine(".kernel.sgpr_count"));
+        MCSymbol* const Sym =
+          Ctx->getOrCreateSymbol(Twine(".kernel.sgpr_count"));
         Sym->setVariableValue(MCConstantExpr::create(SgprIndexUnusedMin, *Ctx));
       }
     }
@@ -1139,7 +1140,8 @@ class KernelScopeInfo {
     if (i >= VgprIndexUnusedMin) {
       VgprIndexUnusedMin = ++i;
       if (Ctx) {
-        MCSymbol * const Sym = Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
+        MCSymbol* const Sym =
+          Ctx->getOrCreateSymbol(Twine(".kernel.vgpr_count"));
         Sym->setVariableValue(MCConstantExpr::create(VgprIndexUnusedMin, *Ctx));
       }
     }
