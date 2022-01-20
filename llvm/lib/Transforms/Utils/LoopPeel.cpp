@@ -370,7 +370,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     return;
 
   // Only try to peel innermost loops by default.
-  // The constraint can be relaxed by the target in TTI.getUnrollingPreferences
+  // The constraint can be relaxed by the target in TTI.getPeelingPreferences
   // or by the flag -unroll-allow-loop-nests-peeling.
   if (!PP.AllowLoopNestsPeeling && !L->isInnermost())
     return;
@@ -407,8 +407,8 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     SmallDenseMap<PHINode *, Optional<unsigned> > IterationsToInvariance;
     // Now go through all Phis to calculate their the number of iterations they
     // need to become invariants.
-    // Start the max computation with the UP.PeelCount value set by the target
-    // in TTI.getUnrollingPreferences or by the flag -unroll-peel-count.
+    // Start the max computation with the PP.PeelCount value set by the target
+    // in TTI.getPeelingPreferences or by the flag -unroll-peel-count.
     unsigned DesiredPeelCount = TargetPeelCount;
     BasicBlock *BackEdge = L->getLoopLatch();
     assert(BackEdge && "Loop is not in simplified form?");
