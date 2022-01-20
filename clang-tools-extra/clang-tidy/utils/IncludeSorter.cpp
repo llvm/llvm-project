@@ -84,15 +84,14 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
   if ((Style == IncludeSorter::IS_Google) ||
       (Style == IncludeSorter::IS_Google_ObjC)) {
     std::pair<StringRef, StringRef> Parts = CanonicalInclude.split("/public/");
-    std::string AltCanonicalInclude =
-        Parts.first.str() + "/internal/" + Parts.second.str();
-    std::string ProtoCanonicalInclude =
-        Parts.first.str() + "/proto/" + Parts.second.str();
-
-    // Determine the kind of this inclusion.
-    if (CanonicalFile.equals(AltCanonicalInclude) ||
-        CanonicalFile.equals(ProtoCanonicalInclude)) {
-      return IncludeSorter::IK_MainTUInclude;
+    StringRef FileCopy = CanonicalFile;
+    if (FileCopy.consume_front(Parts.first) &&
+        FileCopy.consume_back(Parts.second)) {
+      // Determine the kind of this inclusion.
+      if (FileCopy.equals("/internal/") ||
+          FileCopy.equals("/proto/")) {
+        return IncludeSorter::IK_MainTUInclude;
+      }
     }
   }
   if (Style == IncludeSorter::IS_Google_ObjC) {
