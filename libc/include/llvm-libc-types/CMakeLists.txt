@@ -1,0 +1,5 @@
+add_header(double_t HDR double_t.h)
+add_header(float_t HDR float_t.h)
+add_header(off_t HDR off_t.h)
+add_header(size_t HDR size_t.h)
+add_header(ssize_t HDR ssize_t.h)
