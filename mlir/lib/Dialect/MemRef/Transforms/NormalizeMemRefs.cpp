@@ -14,7 +14,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Transforms/Passes.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
@@ -43,7 +43,8 @@ struct NormalizeMemRefs : public NormalizeMemRefsBase<NormalizeMemRefs> {
 
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createNormalizeMemRefsPass() {
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::memref::createNormalizeMemRefsPass() {
   return std::make_unique<NormalizeMemRefs>();
 }
 

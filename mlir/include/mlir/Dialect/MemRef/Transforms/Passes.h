@@ -55,6 +55,10 @@ void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
 /// load/store ops into `patterns`.
 std::unique_ptr<Pass> createFoldSubViewOpsPass();
 
+/// Creates an interprocedural pass to normalize memrefs to have a trivial
+/// (identity) layout map.
+std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
+
 /// Creates an operation pass to resolve `memref.dim` operations with values
 /// that are defined by operations that implement the
 /// `ReifyRankedShapeTypeShapeOpInterface`, in terms of shapes of its input

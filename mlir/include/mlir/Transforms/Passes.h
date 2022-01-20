@@ -113,10 +113,6 @@ std::unique_ptr<Pass> createSCCPPass();
 /// pass may *only* be scheduled on an operation that defines a SymbolTable.
 std::unique_ptr<Pass> createSymbolDCEPass();
 
-/// Creates an interprocedural pass to normalize memrefs to have a trivial
-/// (identity) layout map.
-std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
-
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
