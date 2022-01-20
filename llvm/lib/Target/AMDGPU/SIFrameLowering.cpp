@@ -1195,7 +1195,8 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
           }
         } else if (TII->isStoreToStackSlot(MI, FrameIndex) ||
                    TII->isLoadFromStackSlot(MI, FrameIndex))
-          NonVGPRSpillFIs.set(FrameIndex);
+          if (!MFI.isFixedObjectIndex(FrameIndex))
+            NonVGPRSpillFIs.set(FrameIndex);
       }
     }
 
