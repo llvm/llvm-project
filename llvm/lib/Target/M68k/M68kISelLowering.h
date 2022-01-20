@@ -43,7 +43,7 @@ enum NodeType {
   CMP,
 
   /// M68k bit-test instructions.
-  BT,
+  BTST,
 
   /// M68k Select
   SELECT,
@@ -204,8 +204,8 @@ private:
                            const CCValAssign &VA, ISD::ArgFlagsTy Flags) const;
 
   SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerToBT(SDValue And, ISD::CondCode CC, const SDLoc &DL,
-                    SelectionDAG &DAG) const;
+  SDValue LowerToBTST(SDValue And, ISD::CondCode CC, const SDLoc &DL,
+                      SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
