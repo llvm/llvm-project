@@ -92,7 +92,7 @@ public:
       return It->second;
     };
     for (const auto &Spec : Specs) {
-      assert(Spec.Sequence.size() < Rule::MaxElements);
+      assert(Spec.Sequence.size() <= Rule::MaxElements);
       Symbols.clear();
       for (const RuleSpec::Element &Elt : Spec.Sequence)
         Symbols.push_back(Lookup(Elt.Symbol));
