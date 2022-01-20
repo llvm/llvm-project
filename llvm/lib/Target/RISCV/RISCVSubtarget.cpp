@@ -199,8 +199,9 @@ unsigned RISCVSubtarget::getMaxELENForFixedLengthVectors() const {
   assert(RVVVectorELENMax <= 64 && RVVVectorELENMax >= 8 &&
          isPowerOf2_32(RVVVectorELENMax) &&
          "V extension requires a ELEN to be a power of 2 between 8 and 64!");
+  unsigned ELEN = hasVInstructionsI64() ? 64 : 32;
   return PowerOf2Floor(
-      std::max<unsigned>(std::min<unsigned>(RVVVectorELENMax, 64), 8));
+      std::max<unsigned>(std::min<unsigned>(RVVVectorELENMax, ELEN), 8));
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
