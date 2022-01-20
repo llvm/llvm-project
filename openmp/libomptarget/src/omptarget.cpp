@@ -572,7 +572,7 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
       }
 
       if (UpdateDevPtr) {
-        Pointer_TPR.MapTableEntry->lock();
+        HostDataToTargetTy::LockGuard LG(*Pointer_TPR.MapTableEntry);
         Device.ShadowMtx.unlock();
 
         DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n",
@@ -584,30 +584,12 @@ int targetDataBegin(ident_t *loc, DeviceTy &Device, int32_t arg_num,
         int Ret = Device.submitData(PointerTgtPtrBegin, &TgtPtrBase,
                                     sizeof(void *), AsyncInfo);
         if (Ret != OFFLOAD_SUCCESS) {
-          Pointer_TPR.MapTableEntry->unlock();
           REPORT("Copying data to device failed.\n");
           return OFFLOAD_FAIL;
         }
-        void *Event = Pointer_TPR.MapTableEntry->getEvent();
-        bool NeedNewEvent = Event == nullptr;
-        if (NeedNewEvent && Device.createEvent(&Event) != OFFLOAD_SUCCESS) {
-          Pointer_TPR.MapTableEntry->unlock();
-          REPORT("Failed to create event.\n");
+        if (Pointer_TPR.MapTableEntry->addEventIfNecessary(Device, AsyncInfo) !=
+            OFFLOAD_SUCCESS)
           return OFFLOAD_FAIL;
-        }
-        // We cannot assume the event should not be nullptr because we don't
-        // know if the target support event. But if a target doesn't,
-        // recordEvent should always return success.
-        Ret = Device.recordEvent(Event, AsyncInfo);
-        if (Ret != OFFLOAD_SUCCESS) {
-          Pointer_TPR.MapTableEntry->unlock();
-          REPORT("Failed to set dependence on event " DPxMOD "\n",
-                 DPxPTR(Event));
-          return OFFLOAD_FAIL;
-        }
-        if (NeedNewEvent)
-          Pointer_TPR.MapTableEntry->setEvent(Event);
-        Pointer_TPR.MapTableEntry->unlock();
       } else
         Device.ShadowMtx.unlock();
     }

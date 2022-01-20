@@ -126,6 +126,10 @@ public:
   /// Get the event bound to this data map.
   void *getEvent() const { return States->Event; }
 
+  /// Add a new event, if necessary.
+  /// Returns OFFLOAD_FAIL if something went wrong, OFFLOAD_SUCCESS otherwise.
+  int addEventIfNecessary(DeviceTy &Device, AsyncInfoTy &AsyncInfo) const;
+
   /// Set the event bound to this data map.
   void setEvent(void *Event) const { States->Event = Event; }
 
@@ -192,6 +196,18 @@ public:
     return ThisRefCount == 1;
   }
 
+  /// Helper to make sure the entry is locked in a scope.
+  /// TODO: We should generalize this and use it for all our objects that use
+  /// lock/unlock methods.
+  struct LockGuard {
+    const HostDataToTargetTy &Entry;
+
+  public:
+    LockGuard(const HostDataToTargetTy &Entry) : Entry(Entry) { Entry.lock(); }
+    ~LockGuard() { Entry.unlock(); }
+  };
+
+private:
   void lock() const { States->UpdateMtx.lock(); }
 
   void unlock() const { States->UpdateMtx.unlock(); }
@@ -396,6 +412,9 @@ extern bool device_is_ready(int device_num);
 
 /// Struct for the data required to handle plugins
 struct PluginManager {
+  PluginManager(bool UseEventsForAtomicTransfers)
+      : UseEventsForAtomicTransfers(UseEventsForAtomicTransfers) {}
+
   /// RTLs identified on the host
   RTLsTy RTLs;
 
@@ -416,6 +435,10 @@ struct PluginManager {
   // Store target policy (disabled, mandatory, default)
   kmp_target_offload_kind_t TargetOffloadPolicy = tgt_default;
   std::mutex TargetOffloadMtx; ///< For TargetOffloadPolicy
+
+  /// Flag to indicate if we use events to ensure the atomicity of
+  /// map clauses or not. Can be modified with an environment variable.
+  const bool UseEventsForAtomicTransfers;
 };
 
 extern PluginManager *PM;
