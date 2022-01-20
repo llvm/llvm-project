@@ -3966,12 +3966,11 @@ bool InstCombinerImpl::run() {
       // predecessor, so that we don't have to split the critical edge.
       // Another option where we can sink is a block that ends with a
       // terminator that does not pass control to other block (such as
-      // return or unreachable). In this case:
+      // return or unreachable or resume). In this case:
       //   - I dominates the User (by SSA form);
       //   - the User will be executed at most once.
       // So sinking I down to User is always profitable or neutral.
-      if (UserParent->getUniquePredecessor() == BB ||
-          (isa<ReturnInst>(Term) || isa<UnreachableInst>(Term))) {
+      if (UserParent->getUniquePredecessor() == BB || succ_empty(Term)) {
         assert(DT.dominates(BB, UserParent) && "Dominance relation broken?");
         return UserParent;
       }
