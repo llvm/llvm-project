@@ -136,6 +136,16 @@ Windows Support
   or pass ``/permissive`` to disable C++ operator names altogether. See
   `PR42427 <https://llvm.org/pr42427>` for more info.
 
+- Add support for MSVC-compatible ``/hotpatch`` flag in clang-cl, and equivalent
+  -cc1 flag ``-fms-hotpatch``. Along with the linker flag ``/functionpadmin``
+  this creates executable images suitable for runtime code patching. This flag
+  is only required for x86/x64 targets; ARM/ARM64 simply needs the linker
+  ``/functionpadmin``.
+
+  With this addition, clang-cl can be used in live code patching scenarios,
+  along with tools such as Live++ or Recode. Microsoft Edit and Continue isn't
+  currently supported.
+
 C Language Changes in Clang
 ---------------------------
 

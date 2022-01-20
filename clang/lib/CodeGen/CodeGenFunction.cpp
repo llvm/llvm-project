@@ -882,6 +882,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (Offset)
       Fn->addFnAttr("patchable-function-prefix", std::to_string(Offset));
   }
+  // Instruct that functions for COFF/CodeView targets should start with a
+  // patchable instruction, but only on x86/x64. Don't forward this to ARM/ARM64
+  // backends as they don't need it -- instructions on these architectures are
+  // always atomically patchable at runtime.
+  if (CGM.getCodeGenOpts().HotPatch &&
+      getContext().getTargetInfo().getTriple().isX86())
+    Fn->addFnAttr("patchable-function", "prologue-short-redirect");
 
   // Add no-jump-tables value.
   if (CGM.getCodeGenOpts().NoUseJumpTables)

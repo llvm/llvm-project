@@ -118,6 +118,9 @@
 // RUN: %clang_cl /Gw /Gw- -### -- %s 2>&1 | FileCheck -check-prefix=Gw_ %s
 // Gw_-NOT: -fdata-sections
 
+// RUN: %clang_cl /hotpatch -### -- %s 2>&1 | FileCheck -check-prefix=hotpatch %s
+// hotpatch: -fms-hotpatch
+
 // RUN: %clang_cl /Imyincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_I %s
 // RUN: %clang_cl /I myincludedir -### -- %s 2>&1 | FileCheck -check-prefix=SLASH_I %s
 // SLASH_I: "-I" "myincludedir"
@@ -483,7 +486,6 @@
 // RUN:     /GZ \
 // RUN:     /H \
 // RUN:     /homeparams \
-// RUN:     /hotpatch \
 // RUN:     /JMC \
 // RUN:     /kernel \
 // RUN:     /LN \

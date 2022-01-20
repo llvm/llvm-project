@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple aarch64 -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -fpatchable-function-entry=1 -o - | FileCheck --check-prefixes=CHECK,OPT %s
+// RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -fms-hotpatch -o - | FileCheck --check-prefixes=HOTPATCH %s
 
 // CHECK: define{{.*}} void @f0() #0
 __attribute__((patchable_function_entry(0))) void f0() {}
@@ -34,3 +35,7 @@ void f() {}
 // CHECK: attributes #2 = { {{.*}} "patchable-function-entry"="0" "patchable-function-prefix"="4"
 // CHECK: attributes #3 = { {{.*}} "patchable-function-entry"="3" "patchable-function-prefix"="2"
 // OPT:   attributes #4 = { {{.*}} "patchable-function-entry"="1"
+// HOTPATCH: attributes #0 = { {{.*}} "patchable-function"="prologue-short-redirect"
+// HOTPATCH: attributes #1 = { {{.*}} "patchable-function"="prologue-short-redirect"
+// HOTPATCH: attributes #2 = { {{.*}} "patchable-function"="prologue-short-redirect"
+// HOTPATCH: attributes #3 = { {{.*}} "patchable-function"="prologue-short-redirect"

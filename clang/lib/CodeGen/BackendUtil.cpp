@@ -645,6 +645,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.CommandLineArgs = CodeGenOpts.CommandLineArgs;
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;
   Options.ObjectFilenameForDebug = CodeGenOpts.ObjectFilenameForDebug;
+  Options.Hotpatch = CodeGenOpts.HotPatch;
 
   return true;
 }

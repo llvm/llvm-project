@@ -846,6 +846,12 @@ void CodeViewDebug::emitCompilerInformation() {
   if (MMI->getModule()->getProfileSummary(/*IsCS*/ false) != nullptr) {
     Flags |= static_cast<uint32_t>(CompileSym3Flags::PGO);
   }
+  using ArchType = llvm::Triple::ArchType;
+  ArchType Arch = Triple(MMI->getModule()->getTargetTriple()).getArch();
+  if (Asm->TM.Options.Hotpatch || Arch == ArchType::thumb ||
+      Arch == ArchType::aarch64) {
+    Flags |= static_cast<uint32_t>(CompileSym3Flags::HotPatch);
+  }
 
   OS.AddComment("Flags and language");
   OS.emitInt32(Flags);
