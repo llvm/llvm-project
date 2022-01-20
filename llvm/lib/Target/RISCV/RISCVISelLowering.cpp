@@ -2328,6 +2328,48 @@ static int matchShuffleAsSlideDown(ArrayRef<int> Mask) {
   return -1;
 }
 
+static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, bool &SwapSources,
+                                const RISCVSubtarget &Subtarget) {
+  // We need to be able to widen elements to the next larger integer type.
+  if (VT.getScalarSizeInBits() >= Subtarget.getMaxELENForFixedLengthVectors())
+    return false;
+
+  int Size = Mask.size();
+  assert(Size == (int)VT.getVectorNumElements() && "Unexpected mask size");
+
+  int Srcs[] = {-1, -1};
+  for (int i = 0; i != Size; ++i) {
+    // Ignore undef elements.
+    if (Mask[i] < 0)
+      continue;
+
+    // Is this an even or odd element.
+    int Pol = i % 2;
+
+    // Ensure we consistently use the same source for this element polarity.
+    int Src = Mask[i] / Size;
+    if (Srcs[Pol] < 0)
+      Srcs[Pol] = Src;
+    if (Srcs[Pol] != Src)
+      return false;
+
+    // Make sure the element within the source is appropriate for this element
+    // in the destination.
+    int Elt = Mask[i] % Size;
+    if (Elt != i / 2)
+      return false;
+  }
+
+  // We need to find a source for each polarity and they can't be the same.
+  if (Srcs[0] < 0 || Srcs[1] < 0 || Srcs[0] == Srcs[1])
+    return false;
+
+  // Swap the sources if the second source was in the even polarity.
+  SwapSources = Srcs[0] > Srcs[1];
+
+  return true;
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -2413,8 +2455,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     }
   }
 
+  ArrayRef<int> Mask = SVN->getMask();
+
   // Try to match as a slidedown.
-  int SlideAmt = matchShuffleAsSlideDown(SVN->getMask());
+  int SlideAmt = matchShuffleAsSlideDown(Mask);
   if (SlideAmt >= 0) {
     // TODO: Should we reduce the VL to account for the upper undef elements?
     // Requires additional vsetvlis, but might be faster to execute.
@@ -2427,10 +2471,81 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return convertFromScalableVector(VT, SlideDown, DAG, Subtarget);
   }
 
+  // Detect an interleave shuffle and lower to
+  // (vmaccu.vx (vwaddu.vx lohalf(V1), lohalf(V2)), lohalf(V2), (2^eltbits - 1))
+  bool SwapSources;
+  if (isInterleaveShuffle(Mask, VT, SwapSources, Subtarget)) {
+    // Swap sources if needed.
+    if (SwapSources)
+      std::swap(V1, V2);
+
+    // Extract the lower half of the vectors.
+    MVT HalfVT = VT.getHalfNumVectorElementsVT();
+    V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V1,
+                     DAG.getConstant(0, DL, XLenVT));
+    V2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, V2,
+                     DAG.getConstant(0, DL, XLenVT));
+
+    // Double the element width and halve the number of elements in an int type.
+    unsigned EltBits = VT.getScalarSizeInBits();
+    MVT WideIntEltVT = MVT::getIntegerVT(EltBits * 2);
+    MVT WideIntVT =
+        MVT::getVectorVT(WideIntEltVT, VT.getVectorNumElements() / 2);
+    // Convert this to a scalable vector. We need to base this on the
+    // destination size to ensure there's always a type with a smaller LMUL.
+    MVT WideIntContainerVT =
+        getContainerForFixedLengthVector(DAG, WideIntVT, Subtarget);
+
+    // Convert sources to scalable vectors with the same element count as the
+    // larger type.
+    MVT HalfContainerVT = MVT::getVectorVT(
+        VT.getVectorElementType(), WideIntContainerVT.getVectorElementCount());
+    V1 = convertToScalableVector(HalfContainerVT, V1, DAG, Subtarget);
+    V2 = convertToScalableVector(HalfContainerVT, V2, DAG, Subtarget);
+
+    // Cast sources to integer.
+    MVT IntEltVT = MVT::getIntegerVT(EltBits);
+    MVT IntHalfVT =
+        MVT::getVectorVT(IntEltVT, HalfContainerVT.getVectorElementCount());
+    V1 = DAG.getBitcast(IntHalfVT, V1);
+    V2 = DAG.getBitcast(IntHalfVT, V2);
+
+    // Freeze V2 since we use it twice and we need to be sure that the add and
+    // multiply see the same value.
+    V2 = DAG.getNode(ISD::FREEZE, DL, IntHalfVT, V2);
+
+    // Recreate TrueMask using the widened type's element count.
+    MVT MaskVT =
+        MVT::getVectorVT(MVT::i1, HalfContainerVT.getVectorElementCount());
+    TrueMask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
+
+    // Widen V1 and V2 with 0s and add one copy of V2 to V1.
+    SDValue Add = DAG.getNode(RISCVISD::VWADDU_VL, DL, WideIntContainerVT, V1,
+                              V2, TrueMask, VL);
+    // Create 2^eltbits - 1 copies of V2 by multiplying by the largest integer.
+    SDValue Multiplier = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntHalfVT,
+                                     DAG.getAllOnesConstant(DL, XLenVT));
+    SDValue WidenMul = DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT,
+                                   V2, Multiplier, TrueMask, VL);
+    // Add the new copies to our previous addition giving us 2^eltbits copies of
+    // V2. This is equivalent to shifting V2 left by eltbits. This should
+    // combine with the vwmulu.vv above to form vwmaccu.vv.
+    Add = DAG.getNode(RISCVISD::ADD_VL, DL, WideIntContainerVT, Add, WidenMul,
+                      TrueMask, VL);
+    // Cast back to ContainerVT. We need to re-create a new ContainerVT in case
+    // WideIntContainerVT is a larger fractional LMUL than implied by the fixed
+    // vector VT.
+    ContainerVT =
+        MVT::getVectorVT(VT.getVectorElementType(),
+                         WideIntContainerVT.getVectorElementCount() * 2);
+    Add = DAG.getBitcast(ContainerVT, Add);
+    return convertFromScalableVector(VT, Add, DAG, Subtarget);
+  }
+
   // Detect shuffles which can be re-expressed as vector selects; these are
   // shuffles in which each element in the destination is taken from an element
   // at the corresponding index in either source vectors.
-  bool IsSelect = all_of(enumerate(SVN->getMask()), [&](const auto &MaskIdx) {
+  bool IsSelect = all_of(enumerate(Mask), [&](const auto &MaskIdx) {
     int MaskIndex = MaskIdx.value();
     return MaskIndex < 0 || MaskIdx.index() == (unsigned)MaskIndex % NumElts;
   });
@@ -2456,7 +2571,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // Now construct the mask that will be used by the vselect or blended
   // vrgather operation. For vrgathers, construct the appropriate indices into
   // each vector.
-  for (int MaskIndex : SVN->getMask()) {
+  for (int MaskIndex : Mask) {
     bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ InvertMask;
     MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     if (!IsSelect) {
@@ -9941,6 +10056,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FP_ROUND_VL)
   NODE_NAME_CASE(VWMUL_VL)
   NODE_NAME_CASE(VWMULU_VL)
+  NODE_NAME_CASE(VWADDU_VL)
   NODE_NAME_CASE(SETCC_VL)
   NODE_NAME_CASE(VSELECT_VL)
   NODE_NAME_CASE(VMAND_VL)

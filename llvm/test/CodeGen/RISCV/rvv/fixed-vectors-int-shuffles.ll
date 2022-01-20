@@ -314,16 +314,13 @@ define <8 x i64> @vrgather_shuffle_vx_v8i64(<8 x i64> %x) {
 define <4 x i8> @interleave_shuffles(<4 x i8> %x) {
 ; CHECK-LABEL: interleave_shuffles:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e8, mf4, ta, mu
-; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vrgather.vi v9, v8, 1
-; CHECK-NEXT:    li a1, 10
-; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsrl.vi v10, v8, 1
-; CHECK-NEXT:    vmv.v.x v8, a0
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrgather.vi v9, v8, 0
+; CHECK-NEXT:    vrgather.vi v10, v8, 1
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf8, ta, mu
+; CHECK-NEXT:    vwaddu.vv v8, v9, v10
+; CHECK-NEXT:    li a0, -1
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v10
 ; CHECK-NEXT:    ret
   %y = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %z = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
