@@ -58,6 +58,11 @@ Improvements to Clang's diagnostics
   release being diagnosed against). These new groups are automatically implied
   when passing ``-Wc++N-extensions``. Resolves PR33518.
 
+- Support ``-Wdeclaration-after-statement`` with C99 and later standards, and
+  not just C89, matching GCC's behaviour. A notable usecase is supporting style
+  guides that forbid mixing declarations and code, but want to move to newer C
+  standards.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
