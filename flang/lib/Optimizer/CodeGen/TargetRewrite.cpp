@@ -76,9 +76,8 @@ public:
     mlir::OpBuilder rewriter(&context);
 
     auto mod = getModule();
-    if (!forcedTargetTriple.empty()) {
+    if (!forcedTargetTriple.empty())
       setTargetTriple(mod, forcedTargetTriple);
-    }
 
     auto specifics = CodeGenSpecifics::get(getOperation().getContext(),
                                            getTargetTriple(getOperation()),
