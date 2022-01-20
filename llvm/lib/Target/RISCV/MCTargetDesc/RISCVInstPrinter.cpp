@@ -146,7 +146,7 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
   if ((FenceArg & RISCVFenceField::W) != 0)
     O << 'w';
   if (FenceArg == 0)
-    O << "unknown";
+    O << "0";
 }
 
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
