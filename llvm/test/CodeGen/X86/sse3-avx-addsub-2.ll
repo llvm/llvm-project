@@ -519,14 +519,14 @@ define <16 x float> @test17(<16 x float> %A, <16 x float> %B) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm4, %xmm0
 ; SSE-NEXT:    addsubps %xmm5, %xmm1
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    movaps %xmm1, %xmm3
+; SSE-NEXT:    addsubps %xmm6, %xmm2
+; SSE-NEXT:    addsubps %xmm7, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test17:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddsubps %ymm2, %ymm0, %ymm0
-; AVX1-NEXT:    vmovaps %ymm0, %ymm1
+; AVX1-NEXT:    vaddsubps %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: test17:
@@ -543,9 +543,39 @@ define <16 x float> @test17(<16 x float> %A, <16 x float> %B) {
 ; AVX512-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; AVX512-NEXT:    vpermilps {{.*#+}} xmm4 = xmm1[3,3,3,3]
 ; AVX512-NEXT:    vaddss %xmm4, %xmm3, %xmm3
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm3[0]
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm8 = xmm2[0,1,2],xmm3[0]
+; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX512-NEXT:    vsubss %xmm4, %xmm3, %xmm5
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm3[1,0]
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm7 = xmm4[1,0]
+; AVX512-NEXT:    vsubss %xmm7, %xmm6, %xmm6
+; AVX512-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm3[1,1,3,3]
+; AVX512-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm4[1,1,3,3]
+; AVX512-NEXT:    vaddss %xmm2, %xmm7, %xmm2
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm5[0],xmm2[0],xmm5[2,3]
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm6[0],xmm2[3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,3,3,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[3,3,3,3]
+; AVX512-NEXT:    vaddss %xmm4, %xmm3, %xmm3
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm9 = xmm2[0,1,2],xmm3[0]
+; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
+; AVX512-NEXT:    vextractf32x4 $2, %zmm1, %xmm4
+; AVX512-NEXT:    vsubss %xmm4, %xmm2, %xmm5
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm2[1,0]
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm7 = xmm4[1,0]
+; AVX512-NEXT:    vsubss %xmm7, %xmm6, %xmm6
+; AVX512-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm2[1,1,3,3]
+; AVX512-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm4[1,1,3,3]
+; AVX512-NEXT:    vaddss %xmm3, %xmm7, %xmm3
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm3 = xmm5[0],xmm3[0],xmm5[2,3]
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm6[0],xmm3[3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,3,3,3]
+; AVX512-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[3,3,3,3]
+; AVX512-NEXT:    vaddss %xmm4, %xmm2, %xmm2
+; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm2[0]
+; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vextractf32x4 $3, %zmm1, %xmm1
 ; AVX512-NEXT:    vsubss %xmm1, %xmm0, %xmm3
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm0[1,0]
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
@@ -560,7 +590,8 @@ define <16 x float> @test17(<16 x float> %A, <16 x float> %B) {
 ; AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm3[0,1,2],xmm0[0]
 ; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; AVX512-NEXT:    vinsertf128 $1, %xmm9, %ymm8, %ymm1
+; AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %1 = extractelement <16 x float> %A, i32 0
   %2 = extractelement <16 x float> %B, i32 0
@@ -588,28 +619,28 @@ define <16 x float> @test17(<16 x float> %A, <16 x float> %B) {
   %add4 = fadd float %15, %16
   %17 = extractelement <16 x float> %A, i32 8
   %18 = extractelement <16 x float> %B, i32 8
-  %sub5 = fsub float %1, %2
+  %sub5 = fsub float %17, %18
   %19 = extractelement <16 x float> %A, i32 10
   %20 = extractelement <16 x float> %B, i32 10
-  %sub6 = fsub float %3, %4
+  %sub6 = fsub float %19, %20
   %21 = extractelement <16 x float> %A, i32 9
   %22 = extractelement <16 x float> %B, i32 9
-  %add5 = fadd float %5, %6
+  %add5 = fadd float %21, %22
   %23 = extractelement <16 x float> %A, i32 11
   %24 = extractelement <16 x float> %B, i32 11
-  %add6 = fadd float %7, %8
+  %add6 = fadd float %23, %24
   %25 = extractelement <16 x float> %A, i32 12
   %26 = extractelement <16 x float> %B, i32 12
-  %sub7 = fsub float %9, %10
+  %sub7 = fsub float %25, %26
   %27 = extractelement <16 x float> %A, i32 14
   %28 = extractelement <16 x float> %B, i32 14
-  %sub8 = fsub float %11, %12
+  %sub8 = fsub float %27, %28
   %29 = extractelement <16 x float> %A, i32 13
   %30 = extractelement <16 x float> %B, i32 13
-  %add7 = fadd float %13, %14
+  %add7 = fadd float %29, %30
   %31 = extractelement <16 x float> %A, i32 15
   %32 = extractelement <16 x float> %B, i32 15
-  %add8 = fadd float %15, %16
+  %add8 = fadd float %31, %32
   %vecinsert1 = insertelement <16 x float> undef, float %add, i32 1
   %vecinsert2 = insertelement <16 x float> %vecinsert1, float %add2, i32 3
   %vecinsert3 = insertelement <16 x float> %vecinsert2, float %sub, i32 0
