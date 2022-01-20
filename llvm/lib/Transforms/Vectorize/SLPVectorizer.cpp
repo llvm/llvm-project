@@ -7539,6 +7539,8 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         ScheduleData *DepDest = BundleMember->NextLoadStore;
         if (DepDest) {
           Instruction *SrcInst = BundleMember->Inst;
+          assert(SrcInst->mayReadOrWriteMemory() &&
+                 "NextLoadStore list for non memory effecting bundle?");
           MemoryLocation SrcLoc = getLocation(SrcInst, SLP->AA);
           bool SrcMayWrite = BundleMember->Inst->mayWriteToMemory();
           unsigned numAliased = 0;
