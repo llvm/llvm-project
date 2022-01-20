@@ -7515,22 +7515,16 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       } else {
         for (User *U : BundleMember->Inst->users()) {
-          if (isa<Instruction>(U)) {
-            ScheduleData *UseSD = getScheduleData(U);
-            if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
-              BundleMember->Dependencies++;
-              ScheduleData *DestBundle = UseSD->FirstInBundle;
-              if (!DestBundle->IsScheduled)
-                BundleMember->incrementUnscheduledDeps(1);
-              if (!DestBundle->hasValidDependencies())
-                WorkList.push_back(DestBundle);
-            }
-          } else {
-            // I'm not sure if this can ever happen. But we need to be safe.
-            // This lets the instruction/bundle never be scheduled and
-            // eventually disable vectorization.
+          assert(isa<Instruction>(U) &&
+                 "user of instruction must be instruction");
+          ScheduleData *UseSD = getScheduleData(U);
+          if (UseSD && isInSchedulingRegion(UseSD->FirstInBundle)) {
             BundleMember->Dependencies++;
-            BundleMember->incrementUnscheduledDeps(1);
+            ScheduleData *DestBundle = UseSD->FirstInBundle;
+            if (!DestBundle->IsScheduled)
+              BundleMember->incrementUnscheduledDeps(1);
+            if (!DestBundle->hasValidDependencies())
+              WorkList.push_back(DestBundle);
           }
         }
       }
