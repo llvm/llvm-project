@@ -42,7 +42,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "ml-regalloc"
-
+#ifdef LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL
+#define LLVM_HAVE_TF_AOT
+#endif
 // Generated header in release (AOT) mode
 #if defined LLVM_HAVE_TF_AOT
 #include "RegallocEvictModel.h"
