@@ -1524,7 +1524,7 @@ char
 ctype_byname<wchar_t>::do_narrow(char_type c, char dfault) const
 {
     int r = __libcpp_wctob_l(c, __l);
-    return r != static_cast<int>(WEOF) ? static_cast<char>(r) : dfault;
+    return (r != EOF) ? static_cast<char>(r) : dfault;
 }
 
 const wchar_t*
@@ -1533,7 +1533,7 @@ ctype_byname<wchar_t>::do_narrow(const char_type* low, const char_type* high, ch
     for (; low != high; ++low, ++dest)
     {
         int r = __libcpp_wctob_l(*low, __l);
-        *dest = r != static_cast<int>(WEOF) ? static_cast<char>(r) : dfault;
+        *dest = (r != EOF) ? static_cast<char>(r) : dfault;
     }
     return low;
 }
