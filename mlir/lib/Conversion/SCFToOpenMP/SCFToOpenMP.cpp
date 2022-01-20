@@ -188,7 +188,7 @@ static omp::ReductionDeclareOp createDecl(PatternRewriter &builder,
 
   Type type = reduce.getOperand().getType();
   builder.createBlock(&decl.initializerRegion(), decl.initializerRegion().end(),
-                      {type});
+                      {type}, {reduce.getOperand().getLoc()});
   builder.setInsertionPointToEnd(&decl.initializerRegion().back());
   Value init =
       builder.create<LLVM::ConstantOp>(reduce.getLoc(), type, initValue);
@@ -214,8 +214,10 @@ static omp::ReductionDeclareOp addAtomicRMW(OpBuilder &builder,
   OpBuilder::InsertionGuard guard(builder);
   Type type = reduce.getOperand().getType();
   Type ptrType = LLVM::LLVMPointerType::get(type);
+  Location reduceOperandLoc = reduce.getOperand().getLoc();
   builder.createBlock(&decl.atomicReductionRegion(),
-                      decl.atomicReductionRegion().end(), {ptrType, ptrType});
+                      decl.atomicReductionRegion().end(), {ptrType, ptrType},
+                      {reduceOperandLoc, reduceOperandLoc});
   Block *atomicBlock = &decl.atomicReductionRegion().back();
   builder.setInsertionPointToEnd(atomicBlock);
   Value loaded = builder.create<LLVM::LoadOp>(reduce.getLoc(),

@@ -1947,7 +1947,7 @@ static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &state) {
   SmallVector<NamedAttrList> resultAttrs;
   SmallVector<Type> argTypes;
   SmallVector<Type> resultTypes;
-  SmallVector<Optional<Location>> argLocations;
+  SmallVector<Location> argLocations;
   auto &builder = parser.getBuilder();
 
   // Parse the name as a symbol.

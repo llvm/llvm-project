@@ -150,8 +150,7 @@ void mlir::promoteToWorkgroupMemory(GPUFuncOp op, unsigned arg) {
   int workgroupMemoryAddressSpace = gpu::GPUDialect::getWorkgroupAddressSpace();
   auto bufferType = MemRefType::get(type.getShape(), type.getElementType(), {},
                                     workgroupMemoryAddressSpace);
-
-  Value attribution = op.addWorkgroupAttribution(bufferType);
+  Value attribution = op.addWorkgroupAttribution(bufferType, value.getLoc());
 
   // Replace the uses first since only the original uses are currently present.
   // Then insert the copies.

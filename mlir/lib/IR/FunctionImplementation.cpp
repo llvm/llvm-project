@@ -17,7 +17,7 @@ ParseResult mlir::function_interface_impl::parseFunctionArgumentList(
     OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
-    SmallVectorImpl<Optional<Location>> &argLocations, bool &isVariadic) {
+    SmallVectorImpl<Location> &argLocations, bool &isVariadic) {
   if (parser.parseLParen())
     return failure();
 
@@ -65,7 +65,9 @@ ParseResult mlir::function_interface_impl::parseFunctionArgumentList(
     if (!argument.name.empty() &&
         parser.parseOptionalLocationSpecifier(explicitLoc))
       return failure();
-    argLocations.push_back(explicitLoc);
+    if (!explicitLoc)
+      explicitLoc = parser.getEncodedSourceLoc(loc);
+    argLocations.push_back(*explicitLoc);
 
     return success();
   };
@@ -133,7 +135,7 @@ ParseResult mlir::function_interface_impl::parseFunctionSignature(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::OperandType> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
-    SmallVectorImpl<Optional<Location>> &argLocations, bool &isVariadic,
+    SmallVectorImpl<Location> &argLocations, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
     SmallVectorImpl<NamedAttrList> &resultAttrs) {
   bool allowArgAttrs = true;
@@ -197,7 +199,7 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
   SmallVector<NamedAttrList> resultAttrs;
   SmallVector<Type> argTypes;
   SmallVector<Type> resultTypes;
-  SmallVector<Optional<Location>> argLocations;
+  SmallVector<Location> argLocations;
   auto &builder = parser.getBuilder();
 
   // Parse visibility.
@@ -257,7 +259,7 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
   llvm::SMLoc loc = parser.getCurrentLocation();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, entryArgs, entryArgs.empty() ? ArrayRef<Type>() : argTypes,
-      entryArgs.empty() ? ArrayRef<Optional<Location>>() : argLocations,
+      entryArgs.empty() ? ArrayRef<Location>() : argLocations,
       /*enableNameShadowing=*/false);
   if (parseResult.hasValue()) {
     if (failed(*parseResult))

@@ -1204,8 +1204,10 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen,
   assert(types.size() == operands.size());
   Location loc = op.getLoc();
   scf::WhileOp whileOp = rewriter.create<scf::WhileOp>(loc, types, operands);
-  Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types);
-  Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, types);
+
+  SmallVector<Location> locs(types.size(), loc);
+  Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types, locs);
+  Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, types, locs);
 
   // Build the "before" region, which effectively consists
   // of a conjunction of "i < upper" tests on all induction.

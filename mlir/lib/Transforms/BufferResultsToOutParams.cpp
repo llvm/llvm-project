@@ -50,8 +50,9 @@ static void updateFuncOp(FuncOp func,
   // Add the new arguments to the entry block if the function is not external.
   if (func.isExternal())
     return;
-  auto newArgs = func.front().addArguments(erasedResultTypes);
-  appendedEntryArgs.append(newArgs.begin(), newArgs.end());
+  Location loc = func.getLoc();
+  for (Type type : erasedResultTypes)
+    appendedEntryArgs.push_back(func.front().addArgument(type, loc));
 }
 
 // Updates all ReturnOps in the scope of the given FuncOp by either keeping them

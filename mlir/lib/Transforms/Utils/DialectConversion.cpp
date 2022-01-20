@@ -763,7 +763,11 @@ Block *ArgConverter::applySignatureConversion(
   Block *newBlock = block->splitBlock(block->begin());
   block->replaceAllUsesWith(newBlock);
 
-  SmallVector<Value, 4> newArgRange(newBlock->addArguments(convertedTypes));
+  // FIXME: We should map the new arguments to proper locations.
+  SmallVector<Location> newLocs(convertedTypes.size(),
+                                rewriter.getUnknownLoc());
+  SmallVector<Value, 4> newArgRange(
+      newBlock->addArguments(convertedTypes, newLocs));
   ArrayRef<Value> newArgs(newArgRange);
 
   // Remap each of the original arguments as determined by the signature
