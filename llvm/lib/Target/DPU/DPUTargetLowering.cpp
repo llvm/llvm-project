@@ -1271,7 +1271,8 @@ static bool canUseMulX(SDValue firstOperand, SDValue secondOperand,
                        MVT::SimpleValueType initialType,
                        MVT::SimpleValueType resultType, unsigned int mulSS,
                        unsigned int mulSU, unsigned int mulUU,
-                       SelectionDAG &DAG, SDLoc dl, SDValue &MulXNode) {
+                       SelectionDAG &DAG, SDLoc dl, EVT returnType,
+                       SDValue &MulXNode) {
   bool firstArgumentIsSigned, secondArgumentIsSigned;
   SDValue realFirstArgument, realSecondArgument;
   unsigned int opCode;
@@ -1283,6 +1284,17 @@ static bool canUseMulX(SDValue firstOperand, SDValue secondOperand,
                          realSecondArgument)) {
     Ops[0] = realFirstArgument;
     Ops[1] = realSecondArgument;
+
+    if (realFirstArgument.getValueType() != MVT::i32) {
+      Ops[0] = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, realFirstArgument);
+    } else {
+      Ops[0] = realFirstArgument;
+    }
+    if (realSecondArgument.getValueType() != MVT::i32) {
+      Ops[1] = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, realSecondArgument);
+    } else {
+      Ops[1] = realSecondArgument;
+    }
 
     if (firstArgumentIsSigned) {
       if (secondArgumentIsSigned) {
@@ -1312,6 +1324,11 @@ static bool canUseMulX(SDValue firstOperand, SDValue secondOperand,
     SDValue assertOps[] = {MulNode, valueType};
 
     MulXNode = DAG.getNode(assertOpCode, dl, VTs, assertOps);
+    if (returnType == MVT::i32) {
+      MulXNode = DAG.getNode(assertOpCode, dl, VTs, assertOps);
+    } else {
+      MulXNode = DAG.getNode(ISD::TRUNCATE, dl, returnType, assertOps);
+    }
 
     return true;
   }
@@ -1437,6 +1454,7 @@ static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG,
    * We can still try to optimize small multiplications, and multiplications by
    * a constant.
    */
+  auto returnType = Op.getValueType();
   SDValue firstOperand = Op.getOperand(0);
   SDValue secondOperand = Op.getOperand(1);
   SDValue LoweredMultiplication;
@@ -1454,16 +1472,18 @@ static SDValue PerformMULCombine(SDValue Op, SelectionDAG &DAG,
   unsigned int nrOfInstructions = UINT_MAX;
   unsigned int nrOfInstructionsWithConstant;
 
-  bool canUseOptimizedMultiplication = canUseMulX(
-      firstOperand, secondOperand, MVT::i8, MVT::i16, DPUISD::MUL8_SS,
-      DPUISD::MUL8_SU, DPUISD::MUL8_UU, DAG, dl, LoweredMultiplication);
+  bool canUseOptimizedMultiplication =
+      canUseMulX(firstOperand, secondOperand, MVT::i8, MVT::i16,
+                 DPUISD::MUL8_SS, DPUISD::MUL8_SU, DPUISD::MUL8_UU, DAG, dl,
+                 returnType, LoweredMultiplication);
 
   if (canUseOptimizedMultiplication) {
     nrOfInstructions = nrOfInstructionsForMul8;
   } else if (optLevel != CodeGenOpt::None) {
-    canUseOptimizedMultiplication = canUseMulX(
-        firstOperand, secondOperand, MVT::i16, MVT::i32, DPUISD::MUL16_SS,
-        DPUISD::MUL16_SU, DPUISD::MUL16_UU, DAG, dl, LoweredMultiplication);
+    canUseOptimizedMultiplication =
+        canUseMulX(firstOperand, secondOperand, MVT::i16, MVT::i32,
+                   DPUISD::MUL16_SS, DPUISD::MUL16_SU, DPUISD::MUL16_UU, DAG,
+                   dl, returnType, LoweredMultiplication);
 
     if (canUseOptimizedMultiplication) {
       nrOfInstructions = nrOfInstructionsForMul16;
