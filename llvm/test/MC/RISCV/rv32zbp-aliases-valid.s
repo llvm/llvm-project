@@ -39,7 +39,7 @@ rev4.b x5, x6
 # CHECK-S-OBJ: rev2.b t0, t1
 rev2.b x5, x6
 
-# CHECK-S-OBJ-NOALIAS: grevi t0, t1, 7
+# CHECK-S-OBJ-NOALIAS: brev8 t0, t1
 # CHECK-S-OBJ: rev.b t0, t1
 rev.b x5, x6
 
@@ -150,14 +150,6 @@ zip2 x5, x6
 # CHECK-S-OBJ-NOALIAS: unshfli t0, t1, 14
 # CHECK-S-OBJ: unzip2 t0, t1
 unzip2 x5, x6
-
-# CHECK-S-OBJ-NOALIAS: shfli t0, t1, 15
-# CHECK-S-OBJ: zip t0, t1
-zip x5, x6
-
-# CHECK-S-OBJ-NOALIAS: unshfli t0, t1, 15
-# CHECK-S-OBJ: unzip t0, t1
-unzip x5, x6
 
 # CHECK-S-OBJ-NOALIAS: gorci t0, t1, 1
 # CHECK-S-OBJ: orc.p t0, t1

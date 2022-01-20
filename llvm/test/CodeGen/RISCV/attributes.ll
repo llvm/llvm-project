@@ -19,6 +19,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zbt %s -o - | FileCheck --check-prefix=RV32ZBT %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-v %s -o - | FileCheck --check-prefix=RV32V %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb,+zfh,+experimental-v,+f %s -o - | FileCheck --check-prefix=RV32COMBINED %s
+; RUN: llc -mtriple=riscv32 -mattr=+zbkb %s -o - | FileCheck --check-prefix=RV32ZBKB %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m %s -o - | FileCheck --check-prefix=RV64M %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a %s -o - | FileCheck --check-prefix=RV64A %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f %s -o - | FileCheck --check-prefix=RV64F %s
@@ -38,6 +39,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zbt %s -o - | FileCheck --check-prefix=RV64ZBT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-v %s -o - | FileCheck --check-prefix=RV64V %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb,+zfh,+experimental-v,+f %s -o - | FileCheck --check-prefix=RV64COMBINED %s
+; RUN: llc -mtriple=riscv64 -mattr=+zbkb %s -o - | FileCheck --check-prefix=RV64ZBKB %s
 
 
 ; RV32M: .attribute 5, "rv32i2p0_m2p0"
@@ -59,6 +61,7 @@
 ; RV32ZBT: .attribute 5, "rv32i2p0_zbt0p93"
 ; RV32V: .attribute 5, "rv32i2p0_f2p0_d2p0_v0p10_zve32f0p10_zve32x0p10_zve64d0p10_zve64f0p10_zve64x0p10_zvl128b0p10_zvl32b0p10_zvl64b0p10"
 ; RV32COMBINED: .attribute 5, "rv32i2p0_f2p0_d2p0_v0p10_zfh1p0_zfhmin1p0_zbb1p0_zve32f0p10_zve32x0p10_zve64d0p10_zve64f0p10_zve64x0p10_zvl128b0p10_zvl32b0p10_zvl64b0p10"
+; RV32ZBKB: .attribute 5, "rv32i2p0_zbkb1p0"
 
 ; RV64M: .attribute 5, "rv64i2p0_m2p0"
 ; RV64A: .attribute 5, "rv64i2p0_a2p0"
@@ -79,6 +82,7 @@
 ; RV64ZBT: .attribute 5, "rv64i2p0_zbt0p93"
 ; RV64V: .attribute 5, "rv64i2p0_f2p0_d2p0_v0p10_zve32f0p10_zve32x0p10_zve64d0p10_zve64f0p10_zve64x0p10_zvl128b0p10_zvl32b0p10_zvl64b0p10"
 ; RV64COMBINED: .attribute 5, "rv64i2p0_f2p0_d2p0_v0p10_zfh1p0_zfhmin1p0_zbb1p0_zve32f0p10_zve32x0p10_zve64d0p10_zve64f0p10_zve64x0p10_zvl128b0p10_zvl32b0p10_zvl64b0p10"
+; RV64ZBKB: .attribute 5, "rv64i2p0_zbkb1p0"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1

@@ -143,6 +143,26 @@ def HasStdExtZbbOrZbp
                                    "'Zbb' (Base 'B' Instructions) or "
                                    "'Zbp' (Permutation 'B' Instructions)">;
 
+def FeatureStdExtZbkb
+    : SubtargetFeature<"zbkb", "HasStdExtZbkb", "true",
+                       "'Zbkb' (Bitmanip instructions for Cryptography)">;
+def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZbkb),
+                             "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
+def HasStdExtZbpOrZbkb
+    : Predicate<"Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkb()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbp, FeatureStdExtZbkb),
+                                   "'Zbp' (Permutation 'B' Instructions) or "
+                                   "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
+def HasStdExtZbbOrZbpOrZbkb
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkb()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbp, FeatureStdExtZbkb),
+                                   "'Zbb' (Base 'B' Instructions) or "
+                                   "'Zbp' (Permutation 'B' Instructions) or "
+                                   "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
                        "Disable RVC Hint Instructions.">;
