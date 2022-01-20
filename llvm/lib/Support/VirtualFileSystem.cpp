@@ -574,6 +574,11 @@ public:
   }
   virtual ~InMemoryNode() = default;
 
+  /// Return the \p Status for this node. \p RequestedName should be the name
+  /// through which the caller referred to this node. It will override
+  /// \p Status::Name in the return value, to mimic the behavior of \p RealFile.
+  virtual Status getStatus(const Twine &RequestedName) const = 0;
+
   /// Get the filename of this node (the name without the directory part).
   StringRef getFileName() const { return FileName; }
   InMemoryNodeKind getKind() const { return Kind; }
@@ -589,10 +594,7 @@ public:
       : InMemoryNode(Stat.getName(), IME_File), Stat(std::move(Stat)),
         Buffer(std::move(Buffer)) {}
 
-  /// Return the \p Status for this node. \p RequestedName should be the name
-  /// through which the caller referred to this node. It will override
-  /// \p Status::Name in the return value, to mimic the behavior of \p RealFile.
-  Status getStatus(const Twine &RequestedName) const {
+  Status getStatus(const Twine &RequestedName) const override {
     return Status::copyWithNewName(Stat, RequestedName);
   }
   llvm::MemoryBuffer *getBuffer() const { return Buffer.get(); }
@@ -615,6 +617,10 @@ public:
   InMemoryHardLink(StringRef Path, const InMemoryFile &ResolvedFile)
       : InMemoryNode(Path, IME_HardLink), ResolvedFile(ResolvedFile) {}
   const InMemoryFile &getResolvedFile() const { return ResolvedFile; }
+
+  Status getStatus(const Twine &RequestedName) const override {
+    return ResolvedFile.getStatus(RequestedName);
+  }
 
   std::string toString(unsigned Indent) const override {
     return std::string(Indent, ' ') + "HardLink to -> " +
@@ -668,7 +674,7 @@ public:
   /// Return the \p Status for this node. \p RequestedName should be the name
   /// through which the caller referred to this node. It will override
   /// \p Status::Name in the return value, to mimic the behavior of \p RealFile.
-  Status getStatus(const Twine &RequestedName) const {
+  Status getStatus(const Twine &RequestedName) const override {
     return Status::copyWithNewName(Stat, RequestedName);
   }
 
@@ -704,17 +710,6 @@ public:
   }
 };
 
-namespace {
-Status getNodeStatus(const InMemoryNode *Node, const Twine &RequestedName) {
-  if (auto Dir = dyn_cast<detail::InMemoryDirectory>(Node))
-    return Dir->getStatus(RequestedName);
-  if (auto File = dyn_cast<detail::InMemoryFile>(Node))
-    return File->getStatus(RequestedName);
-  if (auto Link = dyn_cast<detail::InMemoryHardLink>(Node))
-    return Link->getResolvedFile().getStatus(RequestedName);
-  llvm_unreachable("Unknown node type");
-}
-} // namespace
 } // namespace detail
 
 // The UniqueID of in-memory files is derived from path and content.
@@ -923,7 +918,7 @@ bool InMemoryFileSystem::addHardLink(const Twine &FromPath,
 llvm::ErrorOr<Status> InMemoryFileSystem::status(const Twine &Path) {
   auto Node = lookupInMemoryNode(*this, Root.get(), Path);
   if (Node)
-    return detail::getNodeStatus(*Node, Path);
+    return (*Node)->getStatus(Path);
   return Node.getError();
 }
 
