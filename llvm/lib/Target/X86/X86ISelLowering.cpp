@@ -52619,6 +52619,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       LLVM_FALLTHROUGH;
     case X86ISD::VSRAI:
+    case X86ISD::VSHL:
+    case X86ISD::VSRL:
+    case X86ISD::VSRA:
       if (((VT.is256BitVector() && Subtarget.hasInt256()) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
             (EltSizeInBits >= 32 || Subtarget.useBWIRegs()))) &&
