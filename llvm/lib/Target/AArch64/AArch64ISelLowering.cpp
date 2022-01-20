@@ -1832,6 +1832,28 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known = KnownBits::commonBits(Known, Known2);
     break;
   }
+  case AArch64ISD::BICi: {
+    // Compute the bit cleared value.
+    uint64_t Mask =
+        ~(Op->getConstantOperandVal(1) << Op->getConstantOperandVal(2));
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known &= KnownBits::makeConstant(APInt(Known.getBitWidth(), Mask));
+    break;
+  }
+  case AArch64ISD::VLSHR: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known2 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+    Known = KnownBits::lshr(Known, Known2);
+    break;
+  }
+  case AArch64ISD::VASHR: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known2 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+    Known = KnownBits::ashr(Known, Known2);
+    break;
+  }
   case AArch64ISD::LOADgot:
   case AArch64ISD::ADDlow: {
     if (!Subtarget->isTargetILP32())
@@ -15316,40 +15338,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   return SDValue();
 }
 
-static bool isCheapToExtend(const SDValue &N) {
-  unsigned OC = N->getOpcode();
-  return OC == ISD::LOAD || OC == ISD::MLOAD ||
-         ISD::isConstantSplatVectorAllZeros(N.getNode());
-}
-
-static SDValue
-performSignExtendSetCCCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                              SelectionDAG &DAG) {
-  // If we have (sext (setcc A B)) and A and B are cheap to extend,
-  // we can move the sext into the arguments and have the same result. For
-  // example, if A and B are both loads, we can make those extending loads and
-  // avoid an extra instruction. This pattern appears often in VLS code
-  // generation where the inputs to the setcc have a different size to the
-  // instruction that wants to use the result of the setcc.
-  assert(N->getOpcode() == ISD::SIGN_EXTEND &&
-         N->getOperand(0)->getOpcode() == ISD::SETCC);
-  const SDValue SetCC = N->getOperand(0);
-
-  if (isCheapToExtend(SetCC.getOperand(0)) &&
-      isCheapToExtend(SetCC.getOperand(1))) {
-    const SDValue Ext1 = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N),
-                                     N->getValueType(0), SetCC.getOperand(0));
-    const SDValue Ext2 = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N),
-                                     N->getValueType(0), SetCC.getOperand(1));
-
-    return DAG.getSetCC(
-        SDLoc(SetCC), N->getValueType(0), Ext1, Ext2,
-        cast<CondCodeSDNode>(SetCC->getOperand(2).getNode())->get());
-  }
-
-  return SDValue();
-}
-
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -15368,11 +15356,6 @@ static SDValue performExtendCombine(SDNode *N,
 
     return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), NewABD);
   }
-
-  if (N->getOpcode() == ISD::SIGN_EXTEND &&
-      N->getOperand(0)->getOpcode() == ISD::SETCC)
-    return performSignExtendSetCCCombine(N, DCI, DAG);
-
   return SDValue();
 }
 

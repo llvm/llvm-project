@@ -42,20 +42,6 @@ class SharedSymbol;
 class Symbol;
 class Undefined;
 
-// This is a StringRef-like container that doesn't run strlen().
-//
-// ELF string tables contain a lot of null-terminated strings. Most of them
-// are not necessary for the linker because they are names of local symbols,
-// and the linker doesn't use local symbol names for name resolution. So, we
-// use this class to represents strings read from string tables.
-struct StringRefZ {
-  StringRefZ(const char *s) : data(s), size(-1) {}
-  StringRefZ(StringRef s) : data(s.data()), size(s.size()) {}
-
-  const char *data;
-  const uint32_t size;
-};
-
 // Some index properties of a symbol are stored separately in this auxiliary
 // struct to decrease sizeof(SymbolUnion) in the majority of cases.
 struct SymbolAux {
@@ -87,7 +73,8 @@ public:
 
 protected:
   const char *nameData;
-  mutable uint32_t nameSize;
+  // 32-bit size saves space.
+  uint32_t nameSize;
 
 public:
   // A symAux index used to access GOT/PLT entry indexes. This is allocated in
@@ -179,11 +166,7 @@ public:
   // all input files have been added.
   bool isUndefWeak() const { return isWeak() && isUndefined(); }
 
-  StringRef getName() const {
-    if (nameSize == (uint32_t)-1)
-      nameSize = strlen(nameData);
-    return {nameData, nameSize};
-  }
+  StringRef getName() const { return {nameData, nameSize}; }
 
   void setName(StringRef s) {
     nameData = s.data();
@@ -196,10 +179,7 @@ public:
   //
   // For @@, the name has been truncated by insert(). For @, the name has been
   // truncated by Symbol::parseSymbolVersion().
-  const char *getVersionSuffix() const {
-    (void)getName();
-    return nameData + nameSize;
-  }
+  const char *getVersionSuffix() const { return nameData + nameSize; }
 
   uint32_t getGotIdx() const {
     return auxIdx == uint32_t(-1) ? uint32_t(-1) : symAux[auxIdx].gotIdx;
@@ -266,10 +246,11 @@ private:
   inline size_t getSymbolSize() const;
 
 protected:
-  Symbol(Kind k, InputFile *file, StringRefZ name, uint8_t binding,
+  Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
-      : file(file), nameData(name.data), nameSize(name.size), binding(binding),
-        type(type), stOther(stOther), symbolKind(k), visibility(stOther & 3),
+      : file(file), nameData(name.data()), nameSize(name.size()),
+        binding(binding), type(type), stOther(stOther), symbolKind(k),
+        visibility(stOther & 3),
         isUsedInRegularObj(!file || file->kind() == InputFile::ObjKind),
         exportDynamic(isExportDynamic(k, visibility)), inDynamicList(false),
         canInline(false), referenced(false), traced(false),
@@ -348,7 +329,7 @@ public:
 // Represents a symbol that is defined in the current output file.
 class Defined : public Symbol {
 public:
-  Defined(InputFile *file, StringRefZ name, uint8_t binding, uint8_t stOther,
+  Defined(InputFile *file, StringRef name, uint8_t binding, uint8_t stOther,
           uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {}
@@ -383,7 +364,7 @@ public:
 // section. (Therefore, the later passes don't see any CommonSymbols.)
 class CommonSymbol : public Symbol {
 public:
-  CommonSymbol(InputFile *file, StringRefZ name, uint8_t binding,
+  CommonSymbol(InputFile *file, StringRef name, uint8_t binding,
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {}
@@ -396,7 +377,7 @@ public:
 
 class Undefined : public Symbol {
 public:
-  Undefined(InputFile *file, StringRefZ name, uint8_t binding, uint8_t stOther,
+  Undefined(InputFile *file, StringRef name, uint8_t binding, uint8_t stOther,
             uint8_t type, uint32_t discardedSecIdx = 0)
       : Symbol(UndefinedKind, file, name, binding, stOther, type),
         discardedSecIdx(discardedSecIdx) {}

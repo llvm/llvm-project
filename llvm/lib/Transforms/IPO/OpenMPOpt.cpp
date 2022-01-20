@@ -2183,7 +2183,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
       };
 
       auto CallCheck = [&](Instruction &I) {
-        Optional<Value *> ReplVal = getValueForCall(A, &I, ICV);
+        Optional<Value *> ReplVal = getValueForCall(A, I, ICV);
         if (ReplVal.hasValue() &&
             ValuesMap.insert(std::make_pair(&I, *ReplVal)).second)
           HasChanged = ChangeStatus::CHANGED;
@@ -2209,12 +2209,12 @@ struct AAICVTrackerFunction : public AAICVTracker {
     return HasChanged;
   }
 
-  /// Hepler to check if \p I is a call and get the value for it if it is
+  /// Helper to check if \p I is a call and get the value for it if it is
   /// unique.
-  Optional<Value *> getValueForCall(Attributor &A, const Instruction *I,
+  Optional<Value *> getValueForCall(Attributor &A, const Instruction &I,
                                     InternalControlVar &ICV) const {
 
-    const auto *CB = dyn_cast<CallBase>(I);
+    const auto *CB = dyn_cast<CallBase>(&I);
     if (!CB || CB->hasFnAttr("no_openmp") ||
         CB->hasFnAttr("no_openmp_routines"))
       return None;
@@ -2230,8 +2230,8 @@ struct AAICVTrackerFunction : public AAICVTracker {
     if (CalledFunction == GetterRFI.Declaration)
       return None;
     if (CalledFunction == SetterRFI.Declaration) {
-      if (ICVReplacementValuesMap[ICV].count(I))
-        return ICVReplacementValuesMap[ICV].lookup(I);
+      if (ICVReplacementValuesMap[ICV].count(&I))
+        return ICVReplacementValuesMap[ICV].lookup(&I);
 
       return nullptr;
     }
@@ -2243,8 +2243,11 @@ struct AAICVTrackerFunction : public AAICVTracker {
     const auto &ICVTrackingAA = A.getAAFor<AAICVTracker>(
         *this, IRPosition::callsite_returned(*CB), DepClassTy::REQUIRED);
 
-    if (ICVTrackingAA.isAssumedTracked())
-      return ICVTrackingAA.getUniqueReplacementValue(ICV);
+    if (ICVTrackingAA.isAssumedTracked()) {
+      Optional<Value *> URV = ICVTrackingAA.getUniqueReplacementValue(ICV);
+      if (!URV || (*URV && AA::isValidAtPosition(**URV, I, OMPInfoCache)))
+        return URV;
+    }
 
     // If we don't know, assume it changes.
     return nullptr;
@@ -2296,7 +2299,7 @@ struct AAICVTrackerFunction : public AAICVTracker {
           break;
         }
 
-        Optional<Value *> NewReplVal = getValueForCall(A, CurrInst, ICV);
+        Optional<Value *> NewReplVal = getValueForCall(A, *CurrInst, ICV);
         if (!NewReplVal.hasValue())
           continue;
 

@@ -590,4 +590,9 @@ def warn_padded_struct_size : Warning<
   InGroup<Padded>, DefaultIgnore;
 def warn_unnecessary_packed : Warning<
   "packed attribute is unnecessary for %0">, InGroup<Packed>, DefaultIgnore;
+
+// -Wunaligned-access
+def warn_unaligned_access : Warning<
+  "field %1 within %0 is less aligned than %2 and is usually due to %0 being "
+  "packed, which can lead to unaligned accesses">, InGroup<UnalignedAccess>, DefaultIgnore;
 }

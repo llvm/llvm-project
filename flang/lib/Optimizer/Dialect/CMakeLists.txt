@@ -3,6 +3,7 @@ add_flang_library(FIRDialect
   FIRDialect.cpp
   FIROps.cpp
   FIRType.cpp
+  Inliner.cpp
 
   DEPENDS
   CanonicalizationPatternsIncGen

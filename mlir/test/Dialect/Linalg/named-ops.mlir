@@ -566,7 +566,7 @@ func @conv_interface_wrong_input_indexing_map(
     %arg0 : tensor<?x?x?x?xf32>, %arg2 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   // expected-error @+1 {{unexpected input index map for convolutions}}
   %0 = "linalg.conv_2d_nhwc_hwcf"(%arg0, %arg1, %arg2) ({
-    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):  // no predecessors
+    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):  
       %1 = "arith.mulf"(%arg3, %arg4) : (f32, f32) -> f32
       %2 = "arith.addf"(%arg5, %1) : (f32, f32) -> f32
       "linalg.yield"(%2) : (f32) -> ()
@@ -583,7 +583,7 @@ func @conv_interface_wrong_num_operands(
     %arg0 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?x?xf32>, %arg2 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   // expected-error @+1 {{expected output/filter indexing maps to be projected permutations}}
   %0 = "linalg.conv_2d_nhwc_hwcf"(%arg0, %arg1, %arg2) ({
-    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):  // no predecessors
+    ^bb0(%arg3: f32, %arg4: f32, %arg5 : f32):  
       %1 = "arith.mulf"(%arg3, %arg4) : (f32, f32) -> f32
       %2 = "arith.addf"(%arg5, %1) : (f32, f32) -> f32
       "linalg.yield"(%2) : (f32) -> ()

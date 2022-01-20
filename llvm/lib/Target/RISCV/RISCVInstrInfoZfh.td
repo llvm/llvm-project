@@ -201,6 +201,7 @@ let Predicates = [HasStdExtZfh] in {
 
 /// Float constants
 def : Pat<(f16 (fpimm0)), (FMV_H_X X0)>;
+def : Pat<(f16 (fpimmneg0)), (FSGNJN_H (FMV_H_X X0), (FMV_H_X X0))>;
 
 /// Float conversion operations
 

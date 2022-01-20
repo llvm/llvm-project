@@ -17,16 +17,19 @@ class DialectRegistry;
 struct LogicalResult;
 class ModuleOp;
 
+namespace bufferization {
+struct AnalysisBufferizationOptions;
+} // namespace bufferization
+
 namespace linalg {
 namespace comprehensive_bufferize {
 
-struct AnalysisBufferizationOptions;
-
 /// Run Module Bufferization on the given module. Performs a simple function
 /// call analysis to determine which function arguments are inplaceable. Then
-/// analyzes and bufferizes FuncOps one-by-one with Comprehensive Bufferization.
+/// analyzes and bufferizes FuncOps one-by-one with One-Shot Bufferize.
 LogicalResult runComprehensiveBufferize(
-    ModuleOp moduleOp, std::unique_ptr<AnalysisBufferizationOptions> options);
+    ModuleOp moduleOp,
+    std::unique_ptr<bufferization::AnalysisBufferizationOptions> options);
 
 namespace std_ext {
 

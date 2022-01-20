@@ -1279,9 +1279,10 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result,
   Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new Block);
   Block &bodyBlock = bodyRegion->front();
-  Value inductionVar = bodyBlock.addArgument(builder.getIndexType());
+  Value inductionVar =
+      bodyBlock.addArgument(builder.getIndexType(), result.location);
   for (Value val : iterArgs)
-    bodyBlock.addArgument(val.getType());
+    bodyBlock.addArgument(val.getType(), val.getLoc());
 
   // Create the default terminator if the builder is not provided and if the
   // iteration arguments are not provided. Otherwise, leave this to the caller
@@ -1965,7 +1966,7 @@ AffineForOp mlir::replaceForOpWithNewYields(OpBuilder &b, AffineForOp loop,
   // Take the body of the original parent loop.
   newLoop.getLoopBody().takeBody(loop.getLoopBody());
   for (Value val : newIterArgs)
-    newLoop.getLoopBody().addArgument(val.getType());
+    newLoop.getLoopBody().addArgument(val.getType(), val.getLoc());
 
   // Update yield operation with new values to be added.
   if (!newYieldedValues.empty()) {
@@ -2887,7 +2888,7 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
   auto *body = new Block();
   // Add all the block arguments.
   for (unsigned i = 0, e = steps.size(); i < e; ++i)
-    body->addArgument(IndexType::get(builder.getContext()));
+    body->addArgument(IndexType::get(builder.getContext()), result.location);
   bodyRegion->push_back(body);
   if (resultTypes.empty())
     ensureTerminator(*bodyRegion, builder, result.location);

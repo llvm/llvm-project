@@ -130,11 +130,11 @@ void mlir::function_interface_impl::setAllResultAttrDicts(
 
 void mlir::function_interface_impl::insertFunctionArguments(
     Operation *op, ArrayRef<unsigned> argIndices, TypeRange argTypes,
-    ArrayRef<DictionaryAttr> argAttrs, ArrayRef<Optional<Location>> argLocs,
+    ArrayRef<DictionaryAttr> argAttrs, ArrayRef<Location> argLocs,
     unsigned originalNumArgs, Type newType) {
   assert(argIndices.size() == argTypes.size());
   assert(argIndices.size() == argAttrs.size() || argAttrs.empty());
-  assert(argIndices.size() == argLocs.size() || argLocs.empty());
+  assert(argIndices.size() == argLocs.size());
   if (argIndices.empty())
     return;
 
@@ -171,8 +171,7 @@ void mlir::function_interface_impl::insertFunctionArguments(
   // Update the function type and any entry block arguments.
   op->setAttr(getTypeAttrName(), TypeAttr::get(newType));
   for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
-    entry.insertArgument(argIndices[i] + i, argTypes[i],
-                         argLocs.empty() ? Optional<Location>{} : argLocs[i]);
+    entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
 }
 
 void mlir::function_interface_impl::insertFunctionResults(

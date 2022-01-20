@@ -335,7 +335,7 @@ struct C : B, A { C() {} };
 void callC() { C x; }
 
 // CHECK-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef %"struct.test2::C"* @"??0C@test2@@QAE@XZ"
-// CHECK:           (%"struct.test2::C"* {{[^,]*}} returned %this, i32 noundef %is_most_derived)
+// CHECK:           (%"struct.test2::C"* {{[^,]*}} returned align 4 dereferenceable(8) %this, i32 noundef %is_most_derived)
 // CHECK: br i1
 //   Virtual bases
 // CHECK: call x86_thiscallcc noundef %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* {{[^,]*}} %{{.*}})
@@ -346,7 +346,7 @@ void callC() { C x; }
 // CHECK: ret
 
 // CHECK2-LABEL: define linkonce_odr dso_local x86_thiscallcc noundef %"struct.test2::B"* @"??0B@test2@@QAE@XZ"
-// CHECK2:           (%"struct.test2::B"* {{[^,]*}} returned %this, i32 noundef %is_most_derived)
+// CHECK2:           (%"struct.test2::B"* {{[^,]*}} returned align 4 dereferenceable(4) %this, i32 noundef %is_most_derived)
 // CHECK2: call x86_thiscallcc noundef %"struct.test2::A"* @"??0A@test2@@QAE@XZ"(%"struct.test2::A"* {{[^,]*}} %{{.*}})
 // CHECK2: ret
 

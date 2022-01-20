@@ -495,8 +495,9 @@ void GenerateOp::build(
   Region *bodyRegion = result.regions.front().get();
   auto rank = resultTy.cast<RankedTensorType>().getRank();
   SmallVector<Type, 2> argumentTypes(rank, b.getIndexType());
+  SmallVector<Location, 2> argumentLocs(rank, result.location);
   Block *bodyBlock =
-      b.createBlock(bodyRegion, bodyRegion->end(), argumentTypes);
+      b.createBlock(bodyRegion, bodyRegion->end(), argumentTypes, argumentLocs);
   bodyBuilder(b, result.location, bodyBlock->getArguments());
 }
 
@@ -554,7 +555,7 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
 /// Canonicalizes the pattern of the form
 ///
 /// %tensor = tensor.generate %x {
-///   ^bb0(%arg0: index):  // no predecessors
+///   ^bb0(%arg0: index):
 ///   <computation>
 ///   yield %1 : index
 /// } : tensor<?xindex>

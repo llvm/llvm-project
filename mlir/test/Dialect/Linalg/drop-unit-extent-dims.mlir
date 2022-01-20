@@ -156,7 +156,7 @@ func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>, %shape: tensor<5xf3
   %0 = linalg.generic #trait
      ins(%arg0 : tensor<1x5xf32>)
     outs(%shape : tensor<5xf32>) {
-  ^bb0(%arg2: f32, %arg3: f32):     // no predecessors
+  ^bb0(%arg2: f32, %arg3: f32):     
     linalg.yield %arg2 : f32
   } -> tensor<5xf32>
   return %0 : tensor<5xf32>
@@ -250,7 +250,7 @@ func @fold_unit_dim_tensor_reshape_op(%arg0 : tensor<5xf32>) -> tensor<2x5xf32>
   %2 = linalg.generic {i64, indexing_maps = [#map1, #map0],
     iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%arg0 : tensor<5xf32>) outs(%1 : tensor<1x2x5xf32>) {
-    ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
+    ^bb0(%arg1: f32, %arg2: f32):  
       linalg.yield %arg1 : f32
     } -> tensor<1x2x5xf32>
   %3 = tensor.collapse_shape %2 [[0, 1], [2]]
@@ -338,7 +338,7 @@ func @unit_dim_for_reduction(%arg0: tensor<1x?x1x?xf32>) -> tensor<1x?xf32> {
     iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
     ins(%arg0 : tensor<1x?x1x?xf32>)
     outs(%2 : tensor<1x?xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
+  ^bb0(%arg1: f32, %arg2: f32):  
     %4 = arith.addf %arg1, %arg2 : f32
     linalg.yield %4 : f32
   } -> tensor<1x?xf32>
@@ -372,7 +372,7 @@ func @unit_dim_for_both_reduction(%arg0: tensor<1x?x1x1xf32>) -> tensor<1x1xf32>
     iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
     ins(%arg0 : tensor<1x?x1x1xf32>)
     outs(%2 : tensor<1x1xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
+  ^bb0(%arg1: f32, %arg2: f32):  
     %4 = arith.addf %arg1, %arg2 : f32
     linalg.yield %4 : f32
   } -> tensor<1x1xf32>
@@ -406,7 +406,7 @@ func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x1xf32
     iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
     ins(%arg0 : tensor<?x1x?x1xf32>)
     outs(%2 : tensor<?x1xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
+  ^bb0(%arg1: f32, %arg2: f32):  
     %4 = arith.addf %arg1, %arg2 : f32
     linalg.yield %4 : f32
   } -> tensor<?x1xf32>
@@ -608,7 +608,7 @@ func @leading_dim_1_canonicalization(%arg0: memref<1x5xf32>, %shape: memref<5xf3
   linalg.generic #trait
      ins(%arg0 : memref<1x5xf32>)
     outs(%shape : memref<5xf32>) {
-  ^bb0(%arg2: f32, %arg3: f32):     // no predecessors
+  ^bb0(%arg2: f32, %arg3: f32):     
     linalg.yield %arg2 : f32
   }
   return %shape : memref<5xf32>
@@ -702,7 +702,7 @@ func @fold_unit_dim_memref_reshape_op(%arg0 : memref<5xf32>) -> memref<2x5xf32>
   linalg.generic {i64, indexing_maps = [#map1, #map0],
     iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%arg0 : memref<5xf32>) outs(%1 : memref<1x2x5xf32>) {
-    ^bb0(%arg1: f32, %arg2: f32):  // no predecessors
+    ^bb0(%arg1: f32, %arg2: f32):  
       linalg.yield %arg1 : f32
     }
   %3 = memref.collapse_shape %1 [[0, 1], [2]]
@@ -792,7 +792,7 @@ func @input_stays_same(%arg0 : memref<?x1x?xf32, #map0>, %arg1 : f32, %shape: me
 // CHECK-SAME:   iterator_types = ["parallel", "parallel", "parallel"]}
 // CHECK-SAME:   ins(%[[ARG0]], %[[ARG1]] : memref<?x1x?xf32, #[[MAP0]]>, f32)
 // CHECK-SAME:   outs(%[[OUT]] : memref<?x?x?xf32>) {
-// CHECK:      ^bb0(%{{.*}}: f32, %[[ARG:.*]]: f32, %{{.*}}: f32): // no predecessors
+// CHECK:      ^bb0(%{{.*}}: f32, %[[ARG:.*]]: f32, %{{.*}}: f32): 
 // CHECK:       linalg.yield %[[ARG]] : f32
 // CHECK:      }
 // CHECK:      return %[[ARG2]] : memref<?x1x?x1x?xf32>

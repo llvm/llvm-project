@@ -270,7 +270,9 @@ static ParallelComputeFunction createParallelComputeFunction(
   rewriter.getListener()->notifyOperationInserted(func);
 
   // Create function entry block.
-  Block *block = b.createBlock(&func.getBody(), func.begin(), type.getInputs());
+  Block *block =
+      b.createBlock(&func.getBody(), func.begin(), type.getInputs(),
+                    SmallVector<Location>(type.getNumInputs(), op.getLoc()));
   b.setInsertionPointToEnd(block);
 
   ParallelComputeFunctionArgs args = {op.getNumLoops(), func.getArguments()};
@@ -482,7 +484,8 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   rewriter.getListener()->notifyOperationInserted(func);
 
   // Create function entry block.
-  Block *block = b.createBlock(&func.getBody(), func.begin(), type.getInputs());
+  Block *block = b.createBlock(&func.getBody(), func.begin(), type.getInputs(),
+                               SmallVector<Location>(type.getNumInputs(), loc));
   b.setInsertionPointToEnd(block);
 
   Type indexTy = b.getIndexType();
@@ -499,11 +502,12 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   // Create a work splitting while loop for the [blockStart, blockEnd) range.
   SmallVector<Type> types = {indexTy, indexTy};
   SmallVector<Value> operands = {blockStart, blockEnd};
+  SmallVector<Location> locations = {loc, loc};
 
   // Create a recursive dispatch loop.
   scf::WhileOp whileOp = b.create<scf::WhileOp>(types, operands);
-  Block *before = b.createBlock(&whileOp.getBefore(), {}, types);
-  Block *after = b.createBlock(&whileOp.getAfter(), {}, types);
+  Block *before = b.createBlock(&whileOp.getBefore(), {}, types, locations);
+  Block *after = b.createBlock(&whileOp.getAfter(), {}, types, locations);
 
   // Setup dispatch loop condition block: decide if we need to go into the
   // `after` block and launch one more async dispatch.

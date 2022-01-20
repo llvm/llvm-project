@@ -86,9 +86,9 @@ void use_object() {
   obj.getData();
   obj.getThis();
 }
-// CHECK: define linkonce_odr void @{{.*}}Object{{.*}}(%"struct.check_this::Object"* noundef %
-// CHECK: define linkonce_odr noundef i32 @{{.*}}Object{{.*}}getData{{.*}}(%"struct.check_this::Object"* noundef %
-// CHECK: define linkonce_odr noundef %"struct.check_this::Object"* @{{.*}}Object{{.*}}getThis{{.*}}(%"struct.check_this::Object"* noundef %
+// CHECK: define linkonce_odr void @{{.*}}Object{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr noundef i32 @{{.*}}Object{{.*}}getData{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr noundef %"struct.check_this::Object"* @{{.*}}Object{{.*}}getThis{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
 } // namespace check_this
 
 //************ Passing vector types

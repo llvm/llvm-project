@@ -368,7 +368,8 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
     continueBlock = remainingOpsBlock;
   } else {
     continueBlock =
-        rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes());
+        rewriter.createBlock(remainingOpsBlock, ifOp.getResultTypes(),
+                             SmallVector<Location>(ifOp.getNumResults(), loc));
     rewriter.create<BranchOp>(loc, remainingOpsBlock);
   }
 
@@ -433,9 +434,10 @@ ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
   rewriter.inlineRegionBefore(region, remainingOpsBlock);
 
   SmallVector<Value> vals;
-  for (auto arg : remainingOpsBlock->addArguments(op->getResultTypes())) {
+  SmallVector<Location> argLocs(op.getNumResults(), op->getLoc());
+  for (auto arg :
+       remainingOpsBlock->addArguments(op->getResultTypes(), argLocs))
     vals.push_back(arg);
-  }
   rewriter.replaceOp(op, vals);
   return success();
 }

@@ -9,7 +9,9 @@
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+
+using namespace mlir::bufferization;
 
 void mlir::linalg::comprehensive_bufferize::affine_ext::
     registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
