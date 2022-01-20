@@ -2521,12 +2521,11 @@ private:
       SD->IsScheduled = true;
       LLVM_DEBUG(dbgs() << "SLP:   schedule " << *SD << "\n");
 
-      ScheduleData *BundleMember = SD;
-      while (BundleMember) {
-        if (BundleMember->Inst != BundleMember->OpValue) {
-          BundleMember = BundleMember->NextInBundle;
+      for (ScheduleData *BundleMember = SD; BundleMember;
+           BundleMember = BundleMember->NextInBundle) {
+        if (BundleMember->Inst != BundleMember->OpValue)
           continue;
-        }
+        
         // Handle the def-use chain dependencies.
 
         // Decrement the unscheduled counter and insert to ready list if ready.
@@ -2591,7 +2590,6 @@ private:
                        << "SLP:    gets ready (mem): " << *DepBundle << "\n");
           }
         }
-        BundleMember = BundleMember->NextInBundle;
       }
     }
 
@@ -7659,8 +7657,8 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 
     // Move the scheduled instruction(s) to their dedicated places, if not
     // there yet.
-    ScheduleData *BundleMember = picked;
-    while (BundleMember) {
+    for (ScheduleData *BundleMember = picked; BundleMember;
+         BundleMember = BundleMember->NextInBundle) {
       Instruction *pickedInst = BundleMember->Inst;
       if (pickedInst->getNextNode() != LastScheduledInst) {
         BS->BB->getInstList().remove(pickedInst);
@@ -7668,7 +7666,6 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
                                      pickedInst);
       }
       LastScheduledInst = pickedInst;
-      BundleMember = BundleMember->NextInBundle;
     }
 
     BS->schedule(picked, ReadyInsts);
