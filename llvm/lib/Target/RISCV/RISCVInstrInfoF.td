@@ -320,7 +320,8 @@ def PseudoQuietFLT_S : PseudoQuietFCMP<FPR32>;
 //===----------------------------------------------------------------------===//
 
 /// Floating point constants
-def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimm0    : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimmneg0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(-0.0); }]>;
 
 /// Generic pattern classes
 class PatSetCC<RegisterClass Ty, SDPatternOperator OpNode, CondCode Cond, RVInst Inst>
@@ -336,6 +337,7 @@ let Predicates = [HasStdExtF] in {
 
 /// Float constants
 def : Pat<(f32 (fpimm0)), (FMV_W_X X0)>;
+def : Pat<(f32 (fpimmneg0)), (FSGNJN_S (FMV_W_X X0), (FMV_W_X X0))>;
 
 /// Float conversion operations
 

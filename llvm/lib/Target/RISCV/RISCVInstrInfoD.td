@@ -285,6 +285,8 @@ let Predicates = [HasStdExtD, IsRV32] in {
 
 /// Float constants
 def : Pat<(f64 (fpimm0)), (FCVT_D_W (i32 X0))>;
+def : Pat<(f64 (fpimmneg0)), (FSGNJN_D (FCVT_D_W (i32 X0)),
+                                       (FCVT_D_W (i32 X0)))>;
 
 // double->[u]int. Round-to-zero must be used.
 def : Pat<(i32 (any_fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, 0b001)>;
@@ -309,6 +311,8 @@ let Predicates = [HasStdExtD, IsRV64] in {
 
 /// Float constants
 def : Pat<(f64 (fpimm0)), (FMV_D_X (i64 X0))>;
+def : Pat<(f64 (fpimmneg0)), (FSGNJN_D (FMV_D_X (i64 X0)),
+                                       (FMV_D_X (i64 X0)))>;
 
 // Moves (no conversion)
 def : Pat<(bitconvert (i64 GPR:$rs1)), (FMV_D_X GPR:$rs1)>;
