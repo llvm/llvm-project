@@ -21,15 +21,9 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 using namespace llvm;
 
-#define SYSTEMZ_POSTREWRITE_NAME "SystemZ Post Rewrite pass"
-
 #define DEBUG_TYPE "systemz-postrewrite"
 STATISTIC(MemFoldCopies, "Number of copies inserted before folded mem ops.");
 STATISTIC(LOCRMuxJumps, "Number of LOCRMux jump-sequences (lower is better)");
-
-namespace llvm {
-  void initializeSystemZPostRewritePass(PassRegistry&);
-}
 
 namespace {
 
@@ -43,8 +37,6 @@ public:
   const SystemZInstrInfo *TII;
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
-
-  StringRef getPassName() const override { return SYSTEMZ_POSTREWRITE_NAME; }
 
 private:
   void selectLOCRMux(MachineBasicBlock &MBB,
@@ -70,7 +62,7 @@ char SystemZPostRewrite::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(SystemZPostRewrite, "systemz-post-rewrite",
-                SYSTEMZ_POSTREWRITE_NAME, false, false)
+                "SystemZ Post Rewrite pass", false, false)
 
 /// Returns an instance of the Post Rewrite pass.
 FunctionPass *llvm::createSystemZPostRewritePass(SystemZTargetMachine &TM) {
