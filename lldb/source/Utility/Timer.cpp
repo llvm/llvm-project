@@ -63,7 +63,7 @@ Timer::Timer(Timer::Category &category, const char *format, ...)
   TimerStack &stack = GetTimerStackForCurrentThread();
 
   stack.push_back(this);
-  if (g_quiet && stack.size() <= g_display_depth) {
+  if (!g_quiet && stack.size() <= g_display_depth) {
     std::lock_guard<std::mutex> lock(GetFileMutex());
 
     // Indent
@@ -89,7 +89,7 @@ Timer::~Timer() {
   Signposts->endInterval(this, m_category.GetName());
 
   TimerStack &stack = GetTimerStackForCurrentThread();
-  if (g_quiet && stack.size() <= g_display_depth) {
+  if (!g_quiet && stack.size() <= g_display_depth) {
     std::lock_guard<std::mutex> lock(GetFileMutex());
     ::fprintf(stdout, "%*s%.9f sec (%.9f sec)\n",
               int(stack.size() - 1) * TIMER_INDENT_AMOUNT, "",
