@@ -40,26 +40,6 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-using SymbolMapTy = DenseMap<const InputSection *, SmallVector<Defined *, 4>>;
-
-// Returns a map from sections to their symbols.
-static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
-  SymbolMapTy ret;
-  for (Defined *dr : syms)
-    ret[dr->isec].push_back(dr);
-
-  // Sort symbols by address. We want to print out symbols in the order they
-  // appear in the output file rather than the order they appeared in the input
-  // files.
-  for (auto &it : ret)
-    parallelSort(
-        it.second.begin(), it.second.end(), [](Defined *a, Defined *b) {
-          return a->getVA() != b->getVA() ? a->getVA() < b->getVA()
-                                          : a->getName() < b->getName();
-        });
-  return ret;
-}
-
 // Returns a list of all symbols that we want to print out.
 static std::vector<Defined *> getSymbols() {
   std::vector<Defined *> v;
@@ -126,7 +106,10 @@ void macho::writeMapFile() {
 
   // Collect symbol info that we want to print out.
   std::vector<Defined *> syms = getSymbols();
-  SymbolMapTy sectionSyms = getSectionSyms(syms);
+  parallelSort(syms.begin(), syms.end(), [](Defined *a, Defined *b) {
+    return a->getVA() != b->getVA() ? a->getVA() < b->getVA()
+                                    : a->getName() < b->getName();
+  });
   DenseMap<Symbol *, std::string> symStr = getSymbolStrings(syms);
 
   // Dump table of sections
@@ -144,15 +127,9 @@ void macho::writeMapFile() {
   // Dump table of symbols
   os << "# Symbols:\n";
   os << "# Address\t    File  Name\n";
-  for (InputSection *isec : inputSections) {
-    auto symsIt = sectionSyms.find(isec);
-    assert(!shouldOmitFromOutput(isec) || (symsIt == sectionSyms.end()));
-    if (symsIt == sectionSyms.end())
-      continue;
-    for (Symbol *sym : symsIt->second) {
-      os << format("0x%08llX\t[%3u] %s\n", sym->getVA(),
-                   readerToFileOrdinal[sym->getFile()], symStr[sym].c_str());
-    }
+  for (Symbol *sym : syms) {
+    os << format("0x%08llX\t[%3u] %s\n", sym->getVA(),
+                 readerToFileOrdinal[sym->getFile()], symStr[sym].c_str());
   }
 
   // TODO: when we implement -dead_strip, we should dump dead stripped symbols
