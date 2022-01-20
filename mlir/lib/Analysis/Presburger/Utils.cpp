@@ -16,6 +16,7 @@
 #include "mlir/Support/MathExtras.h"
 
 using namespace mlir;
+using namespace presburger_utils;
 
 /// Normalize a division's `dividend` and the `divisor` by their GCD. For
 /// example: if the dividend and divisor are [2,0,4] and 4 respectively,
@@ -144,7 +145,7 @@ static LogicalResult getDivRepr(const IntegerPolyhedron &cst, unsigned pos,
 /// be computed. If the representation could be computed, `dividend` and
 /// `denominator` are set. If the representation could not be computed,
 /// `llvm::None` is returned.
-Optional<std::pair<unsigned, unsigned>> presburger_utils::computeSingleVarRepr(
+MaybeLocalRepr presburger_utils::computeSingleVarRepr(
     const IntegerPolyhedron &cst, ArrayRef<bool> foundRepr, unsigned pos,
     SmallVector<int64_t, 8> &dividend, unsigned &divisor) {
   assert(pos < cst.getNumIds() && "invalid position");
@@ -153,6 +154,7 @@ Optional<std::pair<unsigned, unsigned>> presburger_utils::computeSingleVarRepr(
 
   SmallVector<unsigned, 4> lbIndices, ubIndices;
   cst.getLowerAndUpperBoundIndices(pos, &lbIndices, &ubIndices);
+  MaybeLocalRepr repr;
 
   for (unsigned ubPos : ubIndices) {
     for (unsigned lbPos : lbIndices) {
@@ -178,9 +180,10 @@ Optional<std::pair<unsigned, unsigned>> presburger_utils::computeSingleVarRepr(
       if (c < f)
         continue;
 
-      return std::make_pair(ubPos, lbPos);
+      repr.kind = ReprKind::Inequality;
+      repr.repr.inEqualityPair = {ubPos, lbPos};
+      return repr;
     }
   }
-
-  return llvm::None;
+  return repr;
 }
