@@ -2552,6 +2552,8 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
   Register MaskReg = I.getOperand(2).getReg();
   LLT Ty = MRI->getType(DstReg);
   LLT MaskTy = MRI->getType(MaskReg);
+  MachineBasicBlock *BB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
 
   const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
   const RegisterBank *SrcRB = RBI.getRegBank(SrcReg, *MRI, TRI);
@@ -2559,6 +2561,24 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
   const bool IsVGPR = DstRB->getID() == AMDGPU::VGPRRegBankID;
   if (DstRB != SrcRB) // Should only happen for hand written MIR.
     return false;
+
+  // Try to avoid emitting a bit operation when we only need to touch half of
+  // the 64-bit pointer.
+  APInt MaskOnes = KnownBits->getKnownOnes(MaskReg).zextOrSelf(64);
+  const APInt MaskHi32 = APInt::getHighBitsSet(64, 32);
+  const APInt MaskLo32 = APInt::getLowBitsSet(64, 32);
+
+  const bool CanCopyLow32 = (MaskOnes & MaskLo32) == MaskLo32;
+  const bool CanCopyHi32 = (MaskOnes & MaskHi32) == MaskHi32;
+
+  if (!IsVGPR && Ty.getSizeInBits() == 64 &&
+      !CanCopyLow32 && !CanCopyHi32) {
+    auto MIB = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_AND_B64), DstReg)
+      .addReg(SrcReg)
+      .addReg(MaskReg);
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  }
 
   unsigned NewOpc = IsVGPR ? AMDGPU::V_AND_B32_e64 : AMDGPU::S_AND_B32;
   const TargetRegisterClass &RegRC
@@ -2576,8 +2596,6 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
       !RBI.constrainGenericRegister(MaskReg, *MaskRC, *MRI))
     return false;
 
-  MachineBasicBlock *BB = I.getParent();
-  const DebugLoc &DL = I.getDebugLoc();
   if (Ty.getSizeInBits() == 32) {
     assert(MaskTy.getSizeInBits() == 32 &&
            "ptrmask should have been narrowed during legalize");
@@ -2600,13 +2618,7 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
 
   Register MaskedLo, MaskedHi;
 
-  // Try to avoid emitting a bit operation when we only need to touch half of
-  // the 64-bit pointer.
-  APInt MaskOnes = KnownBits->getKnownOnes(MaskReg).zextOrSelf(64);
-
-  const APInt MaskHi32 = APInt::getHighBitsSet(64, 32);
-  const APInt MaskLo32 = APInt::getLowBitsSet(64, 32);
-  if ((MaskOnes & MaskLo32) == MaskLo32) {
+  if (CanCopyLow32) {
     // If all the bits in the low half are 1, we only need a copy for it.
     MaskedLo = LoReg;
   } else {
@@ -2621,7 +2633,7 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
       .addReg(MaskLo);
   }
 
-  if ((MaskOnes & MaskHi32) == MaskHi32) {
+  if (CanCopyHi32) {
     // If all the bits in the high half are 1, we only need a copy for it.
     MaskedHi = HiReg;
   } else {
