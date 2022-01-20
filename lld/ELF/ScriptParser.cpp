@@ -20,7 +20,7 @@
 #include "ScriptLexer.h"
 #include "Symbols.h"
 #include "Target.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -290,7 +290,7 @@ void ScriptParser::addFile(StringRef s) {
     SmallString<128> pathData;
     StringRef path = (config->sysroot + s).toStringRef(pathData);
     if (sys::fs::exists(path))
-      driver->addFile(saver.save(path), /*withLOption=*/false);
+      driver->addFile(saver().save(path), /*withLOption=*/false);
     else
       setError("cannot find " + s + " inside " + config->sysroot);
     return;
@@ -304,7 +304,7 @@ void ScriptParser::addFile(StringRef s) {
     if (config->sysroot.empty())
       driver->addFile(s.substr(1), /*withLOption=*/false);
     else
-      driver->addFile(saver.save(config->sysroot + "/" + s.substr(1)),
+      driver->addFile(saver().save(config->sysroot + "/" + s.substr(1)),
                       /*withLOption=*/false);
   } else if (s.startswith("-l")) {
     // Case 3: search in the list of library paths.
@@ -327,7 +327,7 @@ void ScriptParser::addFile(StringRef s) {
     } else {
       // Finally, search in the list of library paths.
       if (Optional<std::string> path = findFromSearchPaths(s))
-        driver->addFile(saver.save(*path), /*withLOption=*/true);
+        driver->addFile(saver().save(*path), /*withLOption=*/true);
       else
         setError("unable to find " + s);
     }
