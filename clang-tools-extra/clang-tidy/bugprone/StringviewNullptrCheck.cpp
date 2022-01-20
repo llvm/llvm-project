@@ -44,6 +44,9 @@ RewriteRule StringviewNullptrCheckImpl() {
   auto static_cast_warning =
       cat("casting to basic_string_view from null is undefined; replace with "
           "the empty string");
+  auto argument_construction_warning =
+      cat("passing null as basic_string_view is undefined; replace with the "
+          "empty string");
   auto assignment_warning =
       cat("assignment to basic_string_view from null is undefined; replace "
           "with the default constructor");
@@ -53,9 +56,6 @@ RewriteRule StringviewNullptrCheckImpl() {
   auto equality_comparison_warning =
       cat("comparing basic_string_view to null is undefined; replace with the "
           "emptiness query");
-  auto constructor_argument_warning =
-      cat("passing null as basic_string_view is undefined; replace with the "
-          "empty string");
 
   // Matches declarations and expressions of type `basic_string_view`
   auto HasBasicStringViewType = hasType(hasUnqualifiedDesugaredType(recordType(
@@ -211,11 +211,12 @@ RewriteRule StringviewNullptrCheckImpl() {
       remove(node("null_arg_expr")), construction_warning);
 
   // `function(null_arg_expr)`
-  auto HandleFunctionArgumentInitialization = makeRule(
-      callExpr(hasAnyArgument(
-                   ignoringImpCasts(BasicStringViewConstructingFromNullExpr)),
-               unless(cxxOperatorCallExpr())),
-      changeTo(node("construct_expr"), cat("{}")), construction_warning);
+  auto HandleFunctionArgumentInitialization =
+      makeRule(callExpr(hasAnyArgument(ignoringImpCasts(
+                            BasicStringViewConstructingFromNullExpr)),
+                        unless(cxxOperatorCallExpr())),
+               changeTo(node("construct_expr"), cat("\"\"")),
+               argument_construction_warning);
 
   // `sv = null_arg_expr`
   auto HandleAssignment = makeRule(
@@ -268,7 +269,7 @@ RewriteRule StringviewNullptrCheckImpl() {
                                       BasicStringViewConstructingFromNullExpr)),
                    unless(HasBasicStringViewType)),
                changeTo(node("construct_expr"), cat("\"\"")),
-               constructor_argument_warning);
+               argument_construction_warning);
 
   return applyFirst(
       {HandleTemporaryCXXFunctionalCastExpr,
