@@ -2618,6 +2618,10 @@ private:
       }
     }
 
+    /// Build a bundle from the ScheduleData nodes corresponding to the
+    /// scalar instruction for each lane.
+    ScheduleData *buildBundle(ArrayRef<Value *> VL);
+
     /// Checks if a bundle of instructions can be scheduled, i.e. has no
     /// cyclic dependencies. This is only a dry-run, no instructions are
     /// actually moved at this stage.
@@ -7227,6 +7231,33 @@ void BoUpSLP::optimizeGatherSequence() {
   GatherShuffleSeq.clear();
 }
 
+BoUpSLP::ScheduleData *
+BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL) {
+  ScheduleData *Bundle = nullptr;  
+  ScheduleData *PrevInBundle = nullptr;
+  for (Value *V : VL) {
+    ScheduleData *BundleMember = getScheduleData(V);
+    assert(BundleMember &&
+           "no ScheduleData for bundle member "
+           "(maybe not in same basic block)");
+    assert(BundleMember->isSchedulingEntity() &&
+           "bundle member already part of other bundle");
+    if (PrevInBundle) {
+      PrevInBundle->NextInBundle = BundleMember;
+    } else {
+      Bundle = BundleMember;
+    }
+    BundleMember->UnscheduledDepsInBundle = 0;
+    Bundle->UnscheduledDepsInBundle += BundleMember->UnscheduledDeps;
+
+    // Group the instructions to a bundle.
+    BundleMember->FirstInBundle = Bundle;
+    PrevInBundle = BundleMember;
+  }
+  assert(Bundle && "Failed to find schedule bundle");
+  return Bundle;
+};
+
 // Groups the instructions to a bundle (which is then a single scheduling entity)
 // and schedules instructions until the bundle gets ready.
 Optional<BoUpSLP::ScheduleData *>
@@ -7239,9 +7270,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
 
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
-  ScheduleData *PrevInBundle = nullptr;
-  ScheduleData *Bundle = nullptr;
-  bool ReSchedule = false;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.OpValue << "\n");
 
   auto TryScheduleBundleImpl = [this, OldScheduleEnd, SLP](bool ReSchedule,
@@ -7293,33 +7321,22 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     }
   }
 
+  bool ReSchedule = false;
   for (Value *V : VL) {
     ScheduleData *BundleMember = getScheduleData(V);
     assert(BundleMember &&
            "no ScheduleData for bundle member (maybe not in same basic block)");
-    if (BundleMember->IsScheduled) {
-      // A bundle member was scheduled as single instruction before and now
-      // needs to be scheduled as part of the bundle. We just get rid of the
-      // existing schedule.
-      LLVM_DEBUG(dbgs() << "SLP:  reset schedule because " << *BundleMember
-                        << " was already scheduled\n");
-      ReSchedule = true;
-    }
-    assert(BundleMember->isSchedulingEntity() &&
-           "bundle member already part of other bundle");
-    if (PrevInBundle) {
-      PrevInBundle->NextInBundle = BundleMember;
-    } else {
-      Bundle = BundleMember;
-    }
-    BundleMember->UnscheduledDepsInBundle = 0;
-    Bundle->UnscheduledDepsInBundle += BundleMember->UnscheduledDeps;
-
-    // Group the instructions to a bundle.
-    BundleMember->FirstInBundle = Bundle;
-    PrevInBundle = BundleMember;
+    if (!BundleMember->IsScheduled)
+      continue;
+    // A bundle member was scheduled as single instruction before and now
+    // needs to be scheduled as part of the bundle. We just get rid of the
+    // existing schedule.
+    LLVM_DEBUG(dbgs() << "SLP:  reset schedule because " << *BundleMember
+                      << " was already scheduled\n");
+    ReSchedule = true;
   }
-  assert(Bundle && "Failed to find schedule bundle");
+
+  auto *Bundle = buildBundle(VL);
   TryScheduleBundleImpl(ReSchedule, Bundle);
   if (!Bundle->isReady()) {
     cancelScheduling(VL, S.OpValue);
