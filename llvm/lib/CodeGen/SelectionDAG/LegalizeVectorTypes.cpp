@@ -3249,6 +3249,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::MGATHER:
     Res = WidenVecRes_MGATHER(cast<MaskedGatherSDNode>(N));
     break;
+  case ISD::VP_GATHER:
+    Res = WidenVecRes_VP_GATHER(cast<VPGatherSDNode>(N));
+    break;
 
   case ISD::ADD: case ISD::VP_ADD:
   case ISD::AND: case ISD::VP_AND:
@@ -4486,6 +4489,29 @@ SDValue DAGTypeLegalizer::WidenVecRes_MGATHER(MaskedGatherSDNode *N) {
   return Res;
 }
 
+SDValue DAGTypeLegalizer::WidenVecRes_VP_GATHER(VPGatherSDNode *N) {
+  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDValue Mask = N->getMask();
+  SDValue Scale = N->getScale();
+  ElementCount WideEC = WideVT.getVectorElementCount();
+  SDLoc dl(N);
+
+  SDValue Index = GetWidenedVector(N->getIndex());
+  EVT WideMemVT = EVT::getVectorVT(*DAG.getContext(),
+                                   N->getMemoryVT().getScalarType(), WideEC);
+  Mask = GetWidenedMask(Mask, WideEC);
+
+  SDValue Ops[] = {N->getChain(), N->getBasePtr(),     Index, Scale,
+                   Mask,          N->getVectorLength()};
+  SDValue Res = DAG.getGatherVP(DAG.getVTList(WideVT, MVT::Other), WideMemVT,
+                                dl, Ops, N->getMemOperand(), N->getIndexType());
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
+}
+
 SDValue DAGTypeLegalizer::WidenVecRes_ScalarOp(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, N->getOperand(0));
@@ -4914,6 +4940,7 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::MSTORE:             Res = WidenVecOp_MSTORE(N, OpNo); break;
   case ISD::MGATHER:            Res = WidenVecOp_MGATHER(N, OpNo); break;
   case ISD::MSCATTER:           Res = WidenVecOp_MSCATTER(N, OpNo); break;
+  case ISD::VP_SCATTER:         Res = WidenVecOp_VP_SCATTER(N, OpNo); break;
   case ISD::SETCC:              Res = WidenVecOp_SETCC(N); break;
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:     Res = WidenVecOp_STRICT_FSETCC(N); break;
@@ -5456,6 +5483,34 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSCATTER(SDNode *N, unsigned OpNo) {
   return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), WideMemVT, SDLoc(N),
                               Ops, MSC->getMemOperand(), MSC->getIndexType(),
                               MSC->isTruncatingStore());
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VP_SCATTER(SDNode *N, unsigned OpNo) {
+  VPScatterSDNode *VPSC = cast<VPScatterSDNode>(N);
+  SDValue DataOp = VPSC->getValue();
+  SDValue Mask = VPSC->getMask();
+  SDValue Index = VPSC->getIndex();
+  SDValue Scale = VPSC->getScale();
+  EVT WideMemVT = VPSC->getMemoryVT();
+
+  if (OpNo == 1) {
+    DataOp = GetWidenedVector(DataOp);
+    Index = GetWidenedVector(Index);
+    const auto WideEC = DataOp.getValueType().getVectorElementCount();
+    Mask = GetWidenedMask(Mask, WideEC);
+    WideMemVT = EVT::getVectorVT(*DAG.getContext(),
+                                 VPSC->getMemoryVT().getScalarType(), WideEC);
+  } else if (OpNo == 4) {
+    // Just widen the index. It's allowed to have extra elements.
+    Index = GetWidenedVector(Index);
+  } else
+    llvm_unreachable("Can't widen this operand of mscatter");
+
+  SDValue Ops[] = {
+      VPSC->getChain(),       DataOp, VPSC->getBasePtr(), Index, Scale, Mask,
+      VPSC->getVectorLength()};
+  return DAG.getScatterVP(DAG.getVTList(MVT::Other), WideMemVT, SDLoc(N), Ops,
+                          VPSC->getMemOperand(), VPSC->getIndexType());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {

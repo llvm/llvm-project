@@ -150,6 +150,46 @@ define <2 x i64> @vpgather_v2i8_zextload_v2i64(<2 x i8*> %ptrs, <2 x i1> %m, i32
   ret <2 x i64> %ev
 }
 
+declare <3 x i8> @llvm.vp.gather.v3i8.v3p0i8(<3 x i8*>, <3 x i1>, i32)
+
+define <3 x i8> @vpgather_v3i8(<3 x i8*> %ptrs, <3 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vpgather_v3i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; RV32-NEXT:    vluxei32.v v9, (zero), v8, v0.t
+; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpgather_v3i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; RV64-NEXT:    vluxei64.v v10, (zero), v8, v0.t
+; RV64-NEXT:    vmv1r.v v8, v10
+; RV64-NEXT:    ret
+  %v = call <3 x i8> @llvm.vp.gather.v3i8.v3p0i8(<3 x i8*> %ptrs, <3 x i1> %m, i32 %evl)
+  ret <3 x i8> %v
+}
+
+define <3 x i8> @vpgather_truemask_v3i8(<3 x i8*> %ptrs, i32 zeroext %evl) {
+; RV32-LABEL: vpgather_truemask_v3i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; RV32-NEXT:    vluxei32.v v9, (zero), v8
+; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpgather_truemask_v3i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; RV64-NEXT:    vluxei64.v v10, (zero), v8
+; RV64-NEXT:    vmv1r.v v8, v10
+; RV64-NEXT:    ret
+  %mhead = insertelement <3 x i1> undef, i1 1, i32 0
+  %mtrue = shufflevector <3 x i1> %mhead, <3 x i1> undef, <3 x i32> zeroinitializer
+  %v = call <3 x i8> @llvm.vp.gather.v3i8.v3p0i8(<3 x i8*> %ptrs, <3 x i1> %mtrue, i32 %evl)
+  ret <3 x i8> %v
+}
+
 declare <4 x i8> @llvm.vp.gather.v4i8.v4p0i8(<4 x i8*>, <4 x i1>, i32)
 
 define <4 x i8> @vpgather_v4i8(<4 x i8*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
