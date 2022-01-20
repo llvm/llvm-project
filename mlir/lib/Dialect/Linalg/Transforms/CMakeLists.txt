@@ -38,7 +38,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRArithmetic
   MLIRBufferizableOpInterface
   MLIRComplex
-  MLIRComprehensiveBufferize
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRef
@@ -46,6 +45,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRLinalgAnalysis
   MLIRLinalgBufferizableOpInterfaceImpl
   MLIRLinalgUtils
+  MLIRModuleBufferization
   MLIRSCF
   MLIRSCFBufferizableOpInterfaceImpl
   MLIRSCFTransforms

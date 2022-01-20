@@ -1,4 +1,4 @@
-//===-- BufferizableOpInterface.td - Compreh. Bufferize ----*- tablegen -*-===//
+//===-- BufferizableOpInterface.td - Bufferizable Ops ------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
     An op interface for Comprehensive Bufferization. Ops that implement this
     interface can be bufferized using Comprehensive Bufferization.
   }];
-  let cppNamespace = "::mlir::linalg::comprehensive_bufferize";
+  let cppNamespace = "::mlir::bufferization";
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
@@ -311,12 +311,12 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
     // TODO: The following two attributes should belong to the tensor dialect.
     // The corresponding verifier should also be in the tensor dialect.
     /// Attribute name used to mark region arguments that can be bufferized
-    /// in-place during linalg comprehensive bufferization.
+    /// in-place during one-shot bufferization.
     constexpr const static ::llvm::StringLiteral
       kInplaceableAttrName = "linalg.inplaceable";
 
     /// Attribute name used to mark the bufferization layout for region
-    /// arguments during linalg comprehensive bufferization.
+    /// arguments during one-shot bufferization.
     constexpr const static ::llvm::StringLiteral
       kBufferLayoutAttrName = "linalg.buffer_layout";
   }];

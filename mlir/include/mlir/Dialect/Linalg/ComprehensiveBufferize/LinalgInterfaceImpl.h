@@ -9,20 +9,16 @@
 #ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_LINALGINTERFACEIMPL_H
 #define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_LINALGINTERFACEIMPL_H
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
 namespace mlir {
-
 class DialectRegistry;
 
 namespace linalg {
 namespace comprehensive_bufferize {
-
-class BufferizationAliasInfo;
-
 namespace linalg_ext {
 
-struct InitTensorEliminationStep : public PostAnalysisStep {
+struct InitTensorEliminationStep : public bufferization::PostAnalysisStep {
   /// A function that matches anchor OpOperands for InitTensorOp elimination.
   using AnchorMatchFn = std::function<bool(OpOperand &)>;
 
@@ -39,11 +35,11 @@ struct InitTensorEliminationStep : public PostAnalysisStep {
   ///   InitTensorOp.
   /// * The result of `rewriteFunc` must usually be analyzed for inplacability.
   ///   This analysis can be skipped with `skipAnalysis`.
-  LogicalResult eliminateInitTensors(Operation *op, BufferizationState &state,
-                                     BufferizationAliasInfo &aliasInfo,
-                                     AnchorMatchFn anchorMatchFunc,
-                                     RewriteFn rewriteFunc,
-                                     SmallVector<Operation *> &newOps);
+  LogicalResult
+  eliminateInitTensors(Operation *op, bufferization::BufferizationState &state,
+                       bufferization::BufferizationAliasInfo &aliasInfo,
+                       AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc,
+                       SmallVector<Operation *> &newOps);
 };
 
 /// Try to eliminate InitTensorOps inside `op` that are anchored on an
@@ -51,8 +47,8 @@ struct InitTensorEliminationStep : public PostAnalysisStep {
 /// (and some other conditions are met).
 struct InsertSliceAnchoredInitTensorEliminationStep
     : public InitTensorEliminationStep {
-  LogicalResult run(Operation *op, BufferizationState &state,
-                    BufferizationAliasInfo &aliasInfo,
+  LogicalResult run(Operation *op, bufferization::BufferizationState &state,
+                    bufferization::BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override;
 };
 

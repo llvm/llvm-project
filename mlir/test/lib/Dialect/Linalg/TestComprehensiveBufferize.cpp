@@ -12,14 +12,13 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizationInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.h"
@@ -34,6 +33,7 @@
 using namespace mlir;
 using namespace mlir::linalg;
 using namespace mlir::linalg::comprehensive_bufferize;
+using namespace mlir::bufferization;
 
 namespace {
 /// A helper struct for FunctionBufferize and ModuleBufferize. Both passes are
@@ -118,8 +118,8 @@ void TestComprehensiveFunctionBufferize::runOnOperation() {
       options->dialectFilter->insert(dialectNamespace);
   }
 
-  Operation *op = getOperation().getOperation();
-  if (failed(runComprehensiveBufferize(op, std::move(options))))
+  Operation *op = getOperation();
+  if (failed(runOneShotBufferize(op, std::move(options))))
     return;
 
   if (testAnalysisOnly)

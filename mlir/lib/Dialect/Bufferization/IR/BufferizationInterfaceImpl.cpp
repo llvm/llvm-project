@@ -6,24 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizationInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 
 using namespace mlir;
-using namespace linalg;
-using namespace comprehensive_bufferize;
+using namespace mlir::bufferization;
 
 namespace mlir {
-namespace linalg {
-namespace comprehensive_bufferize {
+namespace bufferization {
 namespace bufferization_ext {
 
-// TODO: These ops should implement BufferizableOpInterface directly when moved
-// to the Bufferization dialect.
+// TODO: These ops should implement BufferizableOpInterface.
 
 /// Bufferization of bufferization.to_memref. to_memref(to_tensor(x)) is folded
 /// to x. Other to_memref ops are ignored during bufferization.
@@ -57,7 +54,6 @@ struct ToMemrefOpInterface
   bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
                             const BufferizationState &state) const {
     // ToMemrefOps always bufferize inplace.
-    // TODO: Remove ToMemrefOps from the analysis.
     return true;
   }
 
@@ -121,14 +117,11 @@ struct ToTensorOpInterface
 };
 
 } // namespace bufferization_ext
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace bufferization
 } // namespace mlir
 
-void mlir::linalg::comprehensive_bufferize::bufferization_ext::
-    registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addOpInterface<bufferization::ToMemrefOp,
-                          bufferization_ext::ToMemrefOpInterface>();
-  registry.addOpInterface<bufferization::ToTensorOp,
-                          bufferization_ext::ToTensorOpInterface>();
+void bufferization_ext::registerBufferizableOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addOpInterface<ToMemrefOp, bufferization_ext::ToMemrefOpInterface>();
+  registry.addOpInterface<ToTensorOp, bufferization_ext::ToTensorOpInterface>();
 }

@@ -13,8 +13,8 @@
 #include "CodegenUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -284,8 +284,7 @@ static bool isInPlace(Value val) {
     if (auto funcOp = dyn_cast<FuncOp>(arg.getOwner()->getParentOp()))
       if (auto attr = funcOp.getArgAttrOfType<BoolAttr>(
               arg.getArgNumber(),
-              linalg::comprehensive_bufferize::BufferizableOpInterface::
-                  kInplaceableAttrName))
+              bufferization::BufferizableOpInterface::kInplaceableAttrName))
         return attr.getValue();
   return false;
 }

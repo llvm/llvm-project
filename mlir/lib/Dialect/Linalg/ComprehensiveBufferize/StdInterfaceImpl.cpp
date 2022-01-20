@@ -8,10 +8,12 @@
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h"
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
+
+using namespace mlir::bufferization;
 
 namespace mlir {
 namespace linalg {

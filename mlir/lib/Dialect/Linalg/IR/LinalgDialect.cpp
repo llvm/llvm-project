@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -65,12 +65,12 @@ constexpr const ::llvm::StringLiteral
 /// Attribute name used to mark the bufferization layout for region
 /// arguments during linalg comprehensive bufferization.
 constexpr const ::llvm::StringLiteral
-    comprehensive_bufferize::BufferizableOpInterface::kBufferLayoutAttrName;
+    bufferization::BufferizableOpInterface::kBufferLayoutAttrName;
 
 /// Attribute name used to mark region arguments that can be bufferized
 /// in-place during linalg comprehensive bufferization.
 constexpr const ::llvm::StringLiteral
-    comprehensive_bufferize::BufferizableOpInterface::kInplaceableAttrName;
+    bufferization::BufferizableOpInterface::kInplaceableAttrName;
 
 /// Trait to check if T provides a `regionBuilder` method.
 template <typename T, typename... Args>
@@ -125,7 +125,7 @@ void mlir::linalg::LinalgDialect::initialize() {
 
 LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
                                                       NamedAttribute attr) {
-  using comprehensive_bufferize::BufferizableOpInterface;
+  using bufferization::BufferizableOpInterface;
 
   if (attr.getName() == BufferizableOpInterface::kInplaceableAttrName) {
     if (!attr.getValue().isa<BoolAttr>()) {

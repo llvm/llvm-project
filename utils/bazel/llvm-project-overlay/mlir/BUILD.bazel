@@ -6506,7 +6506,7 @@ gentbl_cc_library(
 td_library(
     name = "BufferizableOpInterfaceTdFiles",
     srcs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.td",
+        "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td",
     ],
     includes = ["include"],
     deps = [
@@ -6520,15 +6520,15 @@ gentbl_cc_library(
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h.inc",
+            "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.cpp.inc",
+            "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.td",
+    td_file = "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td",
     deps = [
         ":BufferizableOpInterfaceTdFiles",
     ],
@@ -6537,10 +6537,12 @@ gentbl_cc_library(
 cc_library(
     name = "BufferizableOpInterface",
     srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.cpp",
+        "lib/Dialect/Bufferization/IR/BufferizableOpInterface.cpp",
+        "lib/Dialect/Bufferization/IR/BufferizationInterfaceImpl.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h",
+        "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
+        "include/mlir/Dialect/Bufferization/IR/BufferizationInterfaceImpl.h",
     ],
     includes = ["include"],
     deps = [
@@ -6601,7 +6603,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
-        ":ComprehensiveBufferize",
+        ":BufferizationTransforms",
         ":IR",
         ":LinalgOps",
         ":LinalgStructuredOpsIncGen",
@@ -6621,7 +6623,7 @@ cc_library(
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
-        ":ComprehensiveBufferize",
+        ":BufferizationTransforms",
         ":IR",
         ":SCFDialect",
         ":Support",
@@ -6891,7 +6893,6 @@ cc_library(
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":ComplexDialect",
-        ":ComprehensiveBufferize",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -6901,6 +6902,7 @@ cc_library(
         ":LinalgStructuredOpsIncGen",
         ":MathDialect",
         ":MemRefDialect",
+        ":ModuleBufferization",
         ":Pass",
         ":SCFBufferizableOpInterfaceImpl",
         ":SCFDialect",
@@ -6921,30 +6923,23 @@ cc_library(
 )
 
 cc_library(
-    name = "ComprehensiveBufferize",
+    name = "ModuleBufferization",
     srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/BufferizationInterfaceImpl.cpp",
-        "lib/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.cpp",
         "lib/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizationInterfaceImpl.h",
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h",
         "include/mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h",
     ],
     includes = ["include"],
     deps = [
         ":BufferizableOpInterface",
         ":BufferizationDialect",
-        ":ControlFlowInterfaces",
+        ":BufferizationTransforms",
         ":DialectUtils",
         ":IR",
-        ":InferTypeOpInterface",
         ":MemRefDialect",
-        ":Pass",
         ":StandardOps",
         ":Support",
-        ":Transforms",
         "//llvm:Support",
     ],
 )
@@ -7957,12 +7952,10 @@ gentbl_cc_library(
 
 cc_library(
     name = "BufferizationDialect",
-    srcs = glob(
-        [
-            "lib/Dialect/Bufferization/IR/Bufferization*.h",
-            "lib/Dialect/Bufferization/IR/Bufferization*.cpp",
-        ],
-    ),
+    srcs = [
+        "lib/Dialect/Bufferization/IR/BufferizationDialect.cpp",
+        "lib/Dialect/Bufferization/IR/BufferizationOps.cpp",
+    ],
     hdrs = ["include/mlir/Dialect/Bufferization/IR/Bufferization.h"],
     includes = ["include"],
     deps = [
@@ -8011,11 +8004,17 @@ cc_library(
     deps = [
         ":AllocationOpInterface",
         ":Analysis",
+        ":BufferizableOpInterface",
         ":BufferizationDialect",
         ":BufferizationPassIncGen",
+        ":ControlFlowInterfaces",
+        ":DialectUtils",
         ":IR",
+        ":InferTypeOpInterface",
         ":MemRefDialect",
         ":Pass",
+        ":StandardOps",
+        ":Support",
         ":Transforms",
         "//llvm:Support",
     ],

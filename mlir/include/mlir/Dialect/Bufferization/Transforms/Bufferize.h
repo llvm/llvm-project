@@ -52,6 +52,22 @@ void populateBufferizeMaterializationLegality(ConversionTarget &target);
 void populateEliminateBufferizeMaterializationsPatterns(
     BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
 
+class BufferizationState;
+
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Whether buffer copies are needed or not is queried from `state`.
+///
+/// Note: If `allowUnknownOps` is set to false, bufferization fails when an
+/// unknown op (that does not implement `BufferizableOpInterface`) is found. No
+/// to_tensor/to_memref ops are inserted in that case.
+///
+/// Note: Tje layout map chosen to bufferize is the most dynamic canonical
+/// strided layout of the proper rank. This ensures compatibility with expected
+/// layouts after transformations. Combinations of memref.cast +
+/// canonicalization are responsible for clean ups.
+// TODO: Extract `options` from `state` and pass as separate argument.
+LogicalResult bufferizeOp(Operation *op, const BufferizationState &state);
+
 } // namespace bufferization
 } // namespace mlir
 

@@ -1,4 +1,4 @@
-//===- BufferizableOpInterface.h - Comprehensive Bufferize ------*- C++ -*-===//
+//===- BufferizableOpInterface.h - Bufferizable Ops -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZABLEOPINTERFACE_H_
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZABLEOPINTERFACE_H_
+#ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZABLEOPINTERFACE_H_
+#define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZABLEOPINTERFACE_H_
 
 #include <utility>
 
@@ -25,13 +25,11 @@ class BlockAndValueMapping;
 class DominanceInfo;
 class FuncOp;
 
-namespace linalg {
-namespace comprehensive_bufferize {
+namespace bufferization {
 
 // TODO: from some HW description.
 static constexpr int64_t kBufferAlignments = 128;
 
-class BufferizationAliasInfo;
 class BufferizableOpInterface;
 struct BufferizationOptions;
 class BufferizationState;
@@ -241,7 +239,8 @@ public:
   }
 
   /// Return dialect-specific bufferization state or create one if none exists.
-  template <typename StateT> StateT &getOrCreateDialectState(StringRef name) {
+  template <typename StateT>
+  StateT &getOrCreateDialectState(StringRef name) {
     // Create state if it does not exist yet.
     if (!dialectState.count(name))
       dialectState[name] = std::make_unique<StateT>();
@@ -321,15 +320,13 @@ LogicalResult createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
 LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from, Value to,
                            const BufferizationOptions &options);
 
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace bufferization
 } // namespace mlir
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h.inc"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h.inc"
 
 namespace mlir {
-namespace linalg {
-namespace comprehensive_bufferize {
+namespace bufferization {
 
 /// AllocationHoistingBarrierOnly is an external implementation of
 /// BufferizableOpInterface for ops that are (not yet) bufferizable, but are
@@ -378,8 +375,7 @@ struct AllocationHoistingBarrierOnly
   bool isAllocationHoistingBarrier(Operation *op) const { return true; }
 };
 
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace bufferization
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZABLEOPINTERFACE_H_
+#endif // MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZABLEOPINTERFACE_H_

@@ -1,4 +1,4 @@
-//===- ComprehensiveBufferize.h - Linalg bufferization pass -----*- C++ -*-===//
+//===- OneShotAnalysis.h - One-Shot (Single Pass) Analysis ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVEBUFFERIZE_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVEBUFFERIZE_H
+#ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_ONESHOTANALYSIS_H
+#define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_ONESHOTANALYSIS_H
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 
 namespace mlir {
-
-namespace linalg {
-namespace comprehensive_bufferize {
+namespace bufferization {
 
 class AnalysisBufferizationState;
 class BufferizationAliasInfo;
 struct AnalysisBufferizationOptions;
-class BufferizationState;
 
 /// PostAnalysisSteps can be registered with `BufferizationOptions` and are
 /// executed after the analysis, but before bufferization. They can be used to
@@ -168,7 +165,7 @@ public:
 
 private:
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
-  /// functions and `runComprehensiveBufferize` may access this object.
+  /// functions and `runOneShotBufferize` may access this object.
   BufferizationAliasInfo aliasInfo;
 };
 
@@ -176,16 +173,12 @@ private:
 /// `state`.
 LogicalResult analyzeOp(Operation *op, AnalysisBufferizationState &state);
 
-/// Bufferize `op` and its nested ops. Bufferization decisions are stored in
-/// `state`.
-LogicalResult bufferizeOp(Operation *op, const BufferizationState &state);
+/// Run One-Shot Bufferize on the given op: Analysis + Bufferization
+LogicalResult
+runOneShotBufferize(Operation *op,
+                    std::unique_ptr<AnalysisBufferizationOptions> options);
 
-/// Run Comprehensive Bufferize on the given op: Analysis + Bufferization
-LogicalResult runComprehensiveBufferize(
-    Operation *op, std::unique_ptr<AnalysisBufferizationOptions> options);
-
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace bufferization
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_COMPREHENSIVEBUFFERIZE_H
+#endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_ONESHOTANALYSIS_H
