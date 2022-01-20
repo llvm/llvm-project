@@ -126,6 +126,8 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   StringRef CodeModel = getTargetOpts().CodeModel;
   unsigned FLen = ISAInfo->getFLen();
   unsigned MinVLen = ISAInfo->getMinVLen();
+  unsigned MaxELen = ISAInfo->getMaxELen();
+  unsigned MaxELenFp = ISAInfo->getMaxELenFp();
   if (CodeModel == "default")
     CodeModel = "small";
 
@@ -177,13 +179,16 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_fsqrt");
   }
 
-  if (MinVLen)
+  if (MinVLen) {
     Builder.defineMacro("__riscv_v_min_vlen", Twine(MinVLen));
+    Builder.defineMacro("__riscv_v_elen", Twine(MaxELen));
+    Builder.defineMacro("__riscv_v_elen_fp", Twine(MaxELenFp));
+  }
 
   if (ISAInfo->hasExtension("c"))
     Builder.defineMacro("__riscv_compressed");
 
-  if (ISAInfo->hasExtension("v"))
+  if (ISAInfo->hasExtension("zve32x"))
     Builder.defineMacro("__riscv_vector");
 }
 
