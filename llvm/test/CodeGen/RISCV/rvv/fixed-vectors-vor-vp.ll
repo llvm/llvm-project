@@ -128,6 +128,20 @@ define <4 x i8> @vor_vx_v4i8(<4 x i8> %va, i8 %b, <4 x i1> %m, i32 zeroext %evl)
   ret <4 x i8> %v
 }
 
+define <4 x i8> @vor_vx_v4i8_commute(<4 x i8> %va, i8 %b, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vor_vx_v4i8_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vor.vv v8, v9, v8, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <4 x i8> undef, i8 %b, i32 0
+  %vb = shufflevector <4 x i8> %elt.head, <4 x i8> undef, <4 x i32> zeroinitializer
+  %v = call <4 x i8> @llvm.vp.or.v4i8(<4 x i8> %vb, <4 x i8> %va, <4 x i1> %m, i32 %evl)
+  ret <4 x i8> %v
+}
+
 define <4 x i8> @vor_vx_v4i8_unmasked(<4 x i8> %va, i8 %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vor_vx_v4i8_unmasked:
 ; CHECK:       # %bb.0:
