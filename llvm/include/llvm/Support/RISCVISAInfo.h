@@ -67,6 +67,7 @@ public:
 
   bool hasExtension(StringRef Ext) const;
   std::string toString() const;
+  std::vector<std::string> toFeatureVector() const;
 
   static bool isSupportedExtensionFeature(StringRef Ext);
   static bool isSupportedExtension(StringRef Ext);

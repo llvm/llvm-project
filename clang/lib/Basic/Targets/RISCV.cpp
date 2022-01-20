@@ -214,10 +214,26 @@ bool RISCVTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
 
-  if (getTriple().getArch() == llvm::Triple::riscv64)
-    Features["64bit"] = true;
+  unsigned XLen = 32;
 
-  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+  if (getTriple().getArch() == llvm::Triple::riscv64) {
+    Features["64bit"] = true;
+    XLen = 64;
+  }
+
+  auto ParseResult = llvm::RISCVISAInfo::parseFeatures(XLen, FeaturesVec);
+  if (!ParseResult) {
+    std::string Buffer;
+    llvm::raw_string_ostream OutputErrMsg(Buffer);
+    handleAllErrors(ParseResult.takeError(), [&](llvm::StringError &ErrMsg) {
+      OutputErrMsg << ErrMsg.getMessage();
+    });
+    Diags.Report(diag::err_invalid_feature_combination) << OutputErrMsg.str();
+    return false;
+  }
+
+  return TargetInfo::initFeatureMap(Features, Diags, CPU,
+                                    (*ParseResult)->toFeatureVector());
 }
 
 /// Return true if has this feature, need to sync with handleTargetFeatures.

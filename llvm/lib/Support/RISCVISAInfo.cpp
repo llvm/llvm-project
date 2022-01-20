@@ -881,3 +881,17 @@ std::string RISCVISAInfo::toString() const {
 
   return Arch.str();
 }
+
+std::vector<std::string> RISCVISAInfo::toFeatureVector() const {
+  std::vector<std::string> FeatureVector;
+  for (auto Ext : Exts) {
+    std::string ExtName = Ext.first;
+    if (ExtName == "i") // i is not recognized in clang -cc1
+      continue;
+    std::string Feature = isExperimentalExtension(ExtName)
+                              ? "+experimental-" + ExtName
+                              : "+" + ExtName;
+    FeatureVector.push_back(Feature);
+  }
+  return FeatureVector;
+}
