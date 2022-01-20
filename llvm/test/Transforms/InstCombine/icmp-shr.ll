@@ -574,12 +574,9 @@ define i1 @ashr_ugt_0(i4 %x) {
   ret i1 %r
 }
 
-; negative test
-
 define i1 @ashr_ugt_1(i4 %x) {
 ; CHECK-LABEL: @ashr_ugt_1(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[S]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
@@ -587,12 +584,9 @@ define i1 @ashr_ugt_1(i4 %x) {
   ret i1 %r
 }
 
-; negative test
-
 define i1 @ashr_ugt_2(i4 %x) {
 ; CHECK-LABEL: @ashr_ugt_2(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[S]], 2
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[X:%.*]], 5
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
@@ -694,12 +688,9 @@ define i1 @ashr_ugt_11(i4 %x) {
   ret i1 %r
 }
 
-; negative test
-
 define i1 @ashr_ugt_12(i4 %x) {
 ; CHECK-LABEL: @ashr_ugt_12(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[S]], -4
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[X:%.*]], -7
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1
@@ -707,12 +698,9 @@ define i1 @ashr_ugt_12(i4 %x) {
   ret i1 %r
 }
 
-; negative test
-
 define i1 @ashr_ugt_13(i4 %x) {
 ; CHECK-LABEL: @ashr_ugt_13(
-; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[S]], -3
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i4 [[X:%.*]], -5
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = ashr i4 %x, 1

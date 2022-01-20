@@ -2344,8 +2344,7 @@ define i1 @ashr_ne_noexact(i8 %x) {
 
 define i1 @ashr_ugt_noexact(i8 %x) {
 ; CHECK-LABEL: @ashr_ugt_noexact(
-; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[S]], 10
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X:%.*]], 87
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i8 %x, 3
@@ -2356,8 +2355,7 @@ define i1 @ashr_ugt_noexact(i8 %x) {
 
 define i1 @ashr_uge_noexact(i8 %x) {
 ; CHECK-LABEL: @ashr_uge_noexact(
-; CHECK-NEXT:    [[S:%.*]] = ashr i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[S]], 9
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X:%.*]], 79
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr i8 %x, 3
@@ -2449,6 +2447,15 @@ define <4 x i1> @ashr_00_00_vec(<4 x i8> %x) {
   %s = ashr exact <4 x i8> %x, <i8 3,i8 3, i8 3, i8 3>
   %c = icmp ule <4 x i8> %s, <i8 10,i8 10,i8 10,i8 10>
   ret <4 x i1> %c
+}
+
+define i1 @ashr_sgt_overflow(i8 %x) {
+; CHECK-LABEL: @ashr_sgt_overflow(
+; CHECK-NEXT:    ret i1 false
+;
+  %s = ashr i8 %x, 1
+  %c = icmp sgt i8 %s, 63
+  ret i1 %c
 }
 
 define i1 @lshrult_01_00_exact(i4 %x) {
