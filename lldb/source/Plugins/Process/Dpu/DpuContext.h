@@ -48,7 +48,7 @@ public:
 
   void UpdateContext(struct dpu_context_t *new_context);
 
-  bool StopThreads();
+  bool StopThreads(uint32_t error_store_addr);
   bool ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list);
   dpu_error_t StepThread(uint32_t thread_index);
 

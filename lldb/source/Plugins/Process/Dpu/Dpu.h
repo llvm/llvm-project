@@ -47,6 +47,8 @@ public:
                               const uint32_t print_buffer_size,
                               const uint32_t print_var_addr);
   bool SetPrintfSequenceAddrsFromRuntimeInfo(dpu_program_t *runtime);
+  bool SetErrorStoreAddr(const uint32_t error_store_addr);
+  bool SetErrorStoreAddrFromRuntimeInfo(dpu_program_t *runtime);
 
   bool LoadElf(const FileSpec &elf_file_path);
   bool Boot();
@@ -123,6 +125,7 @@ private:
   dpuinstruction_t open_print_sequence_inst, close_print_sequence_inst;
   uint32_t printf_buffer_last_idx, printf_buffer_var_addr,
       printf_buffer_address, printf_buffer_size;
+  uint32_t error_store_addr;
   FILE *stdout_file;
   bool m_valid;
 };

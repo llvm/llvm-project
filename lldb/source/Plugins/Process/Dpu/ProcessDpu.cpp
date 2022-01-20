@@ -213,6 +213,11 @@ ProcessDpu::Factory::Attach(
   if (nr_tasklets_ptr != NULL)
     dpu->SetNrThreads(::strtoll(nr_tasklets_ptr, NULL, 10));
 
+  char *error_store_addr_ptr = std::getenv("UPMEM_LLDB_ERROR_STORE_ADDR");
+
+  if (error_store_addr_ptr != NULL)
+    dpu->SetErrorStoreAddr(::strtol(error_store_addr_ptr, NULL, 16));
+
   success = rank->SaveContext();
   if (!success)
     return Status("Cannot save the rank context ").ToError();

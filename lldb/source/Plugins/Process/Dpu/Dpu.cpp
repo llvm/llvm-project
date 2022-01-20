@@ -60,7 +60,8 @@ const uint32_t mram_aligned_mask = ~mram_aligned_mod;
 Dpu::Dpu(DpuRank *rank, dpu_t *dpu, FILE *stdout_file_, bool valid)
     : m_rank(rank), m_dpu(dpu), printf_enable(false),
       printf_buffer_last_idx((uint32_t)LLDB_INVALID_ADDRESS),
-      printf_buffer_var_addr((uint32_t)LLDB_INVALID_ADDRESS), m_valid(valid) {
+      printf_buffer_var_addr((uint32_t)LLDB_INVALID_ADDRESS),
+      error_store_addr((uint32_t)0 /*nullptr*/), m_valid(valid) {
   nr_threads = m_rank->GetNrThreads();
   nr_reg_per_thread = rank->GetDesc()->hw.dpu.nr_of_work_registers_per_thread;
 
@@ -116,6 +117,19 @@ bool Dpu::SetPrintfSequenceAddrsFromRuntimeInfo(dpu_program_t *runtime) {
   return true;
 }
 
+bool Dpu::SetErrorStoreAddr(const uint32_t _error_store_addr) {
+  error_store_addr = _error_store_addr;
+  return true;
+}
+
+bool Dpu::SetErrorStoreAddrFromRuntimeInfo(dpu_program_t *runtime) {
+  struct dpu_symbol_t dpu_error_storage;
+  if (dpu_get_symbol(runtime, "error_storage", &dpu_error_storage) != DPU_OK) {
+    return false;
+  }
+  return Dpu::SetErrorStoreAddr(dpu_error_storage.address);
+}
+
 bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   ModuleSP elf_mod(new Module(elf_file_path, k_dpu_arch));
 
@@ -133,6 +147,9 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
     nr_threads = nr_threads_enabled;
 
   if (!SetPrintfSequenceAddrsFromRuntimeInfo(runtime))
+    return false;
+
+  if (!SetErrorStoreAddrFromRuntimeInfo(runtime))
     return false;
 
   return true;
@@ -203,7 +220,7 @@ bool Dpu::StopThreads(bool force) {
     return true;
   dpu_is_running = false;
 
-  return m_context->StopThreads();
+  return m_context->StopThreads(error_store_addr);
 }
 
 StateType Dpu::StepOverPrintfSequenceAndContinue(StateType result_state,

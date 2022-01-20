@@ -79,7 +79,7 @@ void DpuContext::UpdateRunningThreads() {
   }
 }
 
-bool DpuContext::StopThreads() {
+bool DpuContext::StopThreads(uint32_t error_store_addr) {
   ResetScheduling();
 
   m_context->bkp_fault = false;
@@ -87,7 +87,8 @@ bool DpuContext::StopThreads() {
   m_context->mem_fault = false;
 
   int ret = DPU_OK;
-  ret = dpu_initialize_fault_process_for_dpu(m_dpu, m_context);
+  ret =
+      dpu_initialize_fault_process_for_dpu(m_dpu, m_context, error_store_addr);
   if (ret != DPU_OK)
     return false;
   ret = dpu_extract_context_for_dpu(m_dpu, m_context);
