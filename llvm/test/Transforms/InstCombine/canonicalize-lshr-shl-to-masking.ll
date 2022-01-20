@@ -19,8 +19,8 @@ define i8 @positive_samevar(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, %y
-  %ret = shl i8 %tmp0, %y
+  %t0 = lshr i8 %x, %y
+  %ret = shl i8 %t0, %y
   ret i8 %ret
 }
 
@@ -29,8 +29,8 @@ define i8 @positive_sameconst(i8 %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], -8
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  %ret = shl i8 %tmp0, 3
+  %t0 = lshr i8 %x, 3
+  %ret = shl i8 %t0, 3
   ret i8 %ret
 }
 
@@ -40,8 +40,8 @@ define i8 @positive_biggerlshr(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], 24
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 6
-  %ret = shl i8 %tmp0, 3
+  %t0 = lshr i8 %x, 6
+  %ret = shl i8 %t0, 3
   ret i8 %ret
 }
 
@@ -51,8 +51,8 @@ define i8 @positive_biggershl(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  %ret = shl i8 %tmp0, 6
+  %t0 = lshr i8 %x, 3
+  %ret = shl i8 %t0, 6
   ret i8 %ret
 }
 
@@ -66,8 +66,8 @@ define i8 @positive_samevar_shlnuw(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, %y
-  %ret = shl nuw i8 %tmp0, %y
+  %t0 = lshr i8 %x, %y
+  %ret = shl nuw i8 %t0, %y
   ret i8 %ret
 }
 
@@ -76,8 +76,8 @@ define i8 @positive_sameconst_shlnuw(i8 %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], -8
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  %ret = shl nuw i8 %tmp0, 3
+  %t0 = lshr i8 %x, 3
+  %ret = shl nuw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -87,8 +87,8 @@ define i8 @positive_biggerlshr_shlnuw(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], 24
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 6
-  %ret = shl nuw i8 %tmp0, 3
+  %t0 = lshr i8 %x, 6
+  %ret = shl nuw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -98,8 +98,8 @@ define i8 @positive_biggershl_shlnuw(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  %ret = shl nuw i8 %tmp0, 6
+  %t0 = lshr i8 %x, 3
+  %ret = shl nuw i8 %t0, 6
   ret i8 %ret
 }
 
@@ -113,8 +113,8 @@ define i8 @positive_samevar_shlnsw(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, %y
-  %ret = shl nsw i8 %tmp0, %y
+  %t0 = lshr i8 %x, %y
+  %ret = shl nsw i8 %t0, %y
   ret i8 %ret
 }
 
@@ -123,8 +123,8 @@ define i8 @positive_sameconst_shlnsw(i8 %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], -8
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  %ret = shl nsw i8 %tmp0, 3
+  %t0 = lshr i8 %x, 3
+  %ret = shl nsw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -134,8 +134,8 @@ define i8 @positive_biggerlshr_shlnsw(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], 24
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 6
-  %ret = shl nsw i8 %tmp0, 3
+  %t0 = lshr i8 %x, 6
+  %ret = shl nsw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -145,8 +145,8 @@ define i8 @positive_biggershl_shlnsw(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  %ret = shl nsw i8 %tmp0, 6
+  %t0 = lshr i8 %x, 3
+  %ret = shl nsw i8 %t0, 6
   ret i8 %ret
 }
 
@@ -160,8 +160,8 @@ define i8 @positive_samevar_shlnuwnsw(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, %y
-  %ret = shl nuw nsw i8 %tmp0, %y
+  %t0 = lshr i8 %x, %y
+  %ret = shl nuw nsw i8 %t0, %y
   ret i8 %ret
 }
 
@@ -170,8 +170,8 @@ define i8 @positive_sameconst_shlnuwnsw(i8 %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], -8
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  %ret = shl nuw nsw i8 %tmp0, 3
+  %t0 = lshr i8 %x, 3
+  %ret = shl nuw nsw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -181,8 +181,8 @@ define i8 @positive_biggerlshr_shlnuwnsw(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], 24
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 6
-  %ret = shl nuw nsw i8 %tmp0, 3
+  %t0 = lshr i8 %x, 6
+  %ret = shl nuw nsw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -192,8 +192,8 @@ define i8 @positive_biggershl_shlnuwnsw(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[TMP1]], -64
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  %ret = shl nuw nsw i8 %tmp0, 6
+  %t0 = lshr i8 %x, 3
+  %ret = shl nuw nsw i8 %t0, 6
   ret i8 %ret
 }
 
@@ -205,8 +205,8 @@ define i8 @positive_samevar_lshrexact(i8 %x, i8 %y) {
 ; CHECK-LABEL: @positive_samevar_lshrexact(
 ; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
-  %tmp0 = lshr exact i8 %x, %y
-  %ret = shl i8 %tmp0, %y
+  %t0 = lshr exact i8 %x, %y
+  %ret = shl i8 %t0, %y
   ret i8 %ret
 }
 
@@ -214,8 +214,8 @@ define i8 @positive_sameconst_lshrexact(i8 %x) {
 ; CHECK-LABEL: @positive_sameconst_lshrexact(
 ; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
-  %tmp0 = lshr exact i8 %x, 3
-  %ret = shl i8 %tmp0, 3
+  %t0 = lshr exact i8 %x, 3
+  %ret = shl i8 %t0, 3
   ret i8 %ret
 }
 
@@ -224,8 +224,8 @@ define i8 @positive_biggerlshr_lshrexact(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = lshr exact i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr exact i8 %x, 6
-  %ret = shl i8 %tmp0, 3
+  %t0 = lshr exact i8 %x, 6
+  %ret = shl i8 %t0, 3
   ret i8 %ret
 }
 
@@ -234,8 +234,8 @@ define i8 @positive_biggershl_lshrexact(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr exact i8 %x, 3
-  %ret = shl i8 %tmp0, 6
+  %t0 = lshr exact i8 %x, 3
+  %ret = shl i8 %t0, 6
   ret i8 %ret
 }
 
@@ -247,8 +247,8 @@ define i8 @positive_samevar_shlnsw_lshrexact(i8 %x, i8 %y) {
 ; CHECK-LABEL: @positive_samevar_shlnsw_lshrexact(
 ; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
-  %tmp0 = lshr exact i8 %x, %y
-  %ret = shl nsw i8 %tmp0, %y
+  %t0 = lshr exact i8 %x, %y
+  %ret = shl nsw i8 %t0, %y
   ret i8 %ret
 }
 
@@ -256,8 +256,8 @@ define i8 @positive_sameconst_shlnsw_lshrexact(i8 %x) {
 ; CHECK-LABEL: @positive_sameconst_shlnsw_lshrexact(
 ; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
-  %tmp0 = lshr exact i8 %x, 3
-  %ret = shl nsw i8 %tmp0, 3
+  %t0 = lshr exact i8 %x, 3
+  %ret = shl nsw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -266,8 +266,8 @@ define i8 @positive_biggerlshr_shlnsw_lshrexact(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = lshr exact i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr exact i8 %x, 6
-  %ret = shl nsw i8 %tmp0, 3
+  %t0 = lshr exact i8 %x, 6
+  %ret = shl nsw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -276,8 +276,8 @@ define i8 @positive_biggershl_shlnsw_lshrexact(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl nsw i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr exact i8 %x, 3
-  %ret = shl nsw i8 %tmp0, 6
+  %t0 = lshr exact i8 %x, 3
+  %ret = shl nsw i8 %t0, 6
   ret i8 %ret
 }
 
@@ -289,8 +289,8 @@ define i8 @positive_samevar_shlnuw_lshrexact(i8 %x, i8 %y) {
 ; CHECK-LABEL: @positive_samevar_shlnuw_lshrexact(
 ; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
-  %tmp0 = lshr exact i8 %x, %y
-  %ret = shl nuw i8 %tmp0, %y
+  %t0 = lshr exact i8 %x, %y
+  %ret = shl nuw i8 %t0, %y
   ret i8 %ret
 }
 
@@ -298,8 +298,8 @@ define i8 @positive_sameconst_shlnuw_lshrexact(i8 %x) {
 ; CHECK-LABEL: @positive_sameconst_shlnuw_lshrexact(
 ; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
-  %tmp0 = lshr exact i8 %x, 3
-  %ret = shl nuw i8 %tmp0, 3
+  %t0 = lshr exact i8 %x, 3
+  %ret = shl nuw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -308,8 +308,8 @@ define i8 @positive_biggerlshr_shlnuw_lshrexact(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = lshr exact i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr exact i8 %x, 6
-  %ret = shl nuw i8 %tmp0, 3
+  %t0 = lshr exact i8 %x, 6
+  %ret = shl nuw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -318,8 +318,8 @@ define i8 @positive_biggershl_shlnuw_lshrexact(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl nuw i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr exact i8 %x, 3
-  %ret = shl nuw i8 %tmp0, 6
+  %t0 = lshr exact i8 %x, 3
+  %ret = shl nuw i8 %t0, 6
   ret i8 %ret
 }
 
@@ -331,8 +331,8 @@ define i8 @positive_samevar_shlnuwnsw_lshrexact(i8 %x, i8 %y) {
 ; CHECK-LABEL: @positive_samevar_shlnuwnsw_lshrexact(
 ; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
-  %tmp0 = lshr exact i8 %x, %y
-  %ret = shl nuw nsw i8 %tmp0, %y
+  %t0 = lshr exact i8 %x, %y
+  %ret = shl nuw nsw i8 %t0, %y
   ret i8 %ret
 }
 
@@ -340,8 +340,8 @@ define i8 @positive_sameconst_shlnuwnsw_lshrexact(i8 %x) {
 ; CHECK-LABEL: @positive_sameconst_shlnuwnsw_lshrexact(
 ; CHECK-NEXT:    ret i8 [[X:%.*]]
 ;
-  %tmp0 = lshr exact i8 %x, 3
-  %ret = shl nuw nsw i8 %tmp0, 3
+  %t0 = lshr exact i8 %x, 3
+  %ret = shl nuw nsw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -350,8 +350,8 @@ define i8 @positive_biggerlshr_shlnuwnsw_lshrexact(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = lshr exact i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr exact i8 %x, 6
-  %ret = shl nuw nsw i8 %tmp0, 3
+  %t0 = lshr exact i8 %x, 6
+  %ret = shl nuw nsw i8 %t0, 3
   ret i8 %ret
 }
 
@@ -360,8 +360,8 @@ define i8 @positive_biggershl_shlnuwnsw_lshrexact(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i8 [[X:%.*]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr exact i8 %x, 3
-  %ret = shl nuw nsw i8 %tmp0, 6
+  %t0 = lshr exact i8 %x, 3
+  %ret = shl nuw nsw i8 %t0, 6
   ret i8 %ret
 }
 
@@ -375,8 +375,8 @@ define <2 x i8> @positive_samevar_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
-  %tmp0 = lshr <2 x i8> %x, %y
-  %ret = shl <2 x i8> %tmp0, %y
+  %t0 = lshr <2 x i8> %x, %y
+  %ret = shl <2 x i8> %t0, %y
   ret <2 x i8> %ret
 }
 
@@ -389,8 +389,8 @@ define <2 x i8> @positive_sameconst_vec(<2 x i8> %x) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 -8, i8 -8>
 ; CHECK-NEXT:    ret <2 x i8> [[TMP0]]
 ;
-  %tmp0 = lshr <2 x i8> %x, <i8 3, i8 3>
-  %ret = shl <2 x i8> %tmp0, <i8 3, i8 3>
+  %t0 = lshr <2 x i8> %x, <i8 3, i8 3>
+  %ret = shl <2 x i8> %t0, <i8 3, i8 3>
   ret <2 x i8> %ret
 }
 
@@ -400,8 +400,8 @@ define <3 x i8> @positive_sameconst_vec_undef0(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 3, i8 3>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 3, i8 undef, i8 3>
-  %ret = shl <3 x i8> %tmp0, <i8 3, i8 3, i8 3>
+  %t0 = lshr <3 x i8> %x, <i8 3, i8 undef, i8 3>
+  %ret = shl <3 x i8> %t0, <i8 3, i8 3, i8 3>
   ret <3 x i8> %ret
 }
 
@@ -411,8 +411,8 @@ define <3 x i8> @positive_sameconst_vec_undef1(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 undef, i8 3>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 3, i8 3, i8 3>
-  %ret = shl <3 x i8> %tmp0, <i8 3, i8 undef, i8 3>
+  %t0 = lshr <3 x i8> %x, <i8 3, i8 3, i8 3>
+  %ret = shl <3 x i8> %t0, <i8 3, i8 undef, i8 3>
   ret <3 x i8> %ret
 }
 
@@ -421,8 +421,8 @@ define <3 x i8> @positive_sameconst_vec_undef2(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and <3 x i8> [[X:%.*]], <i8 -8, i8 poison, i8 -8>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 3, i8 undef, i8 3>
-  %ret = shl <3 x i8> %tmp0, <i8 3, i8 undef, i8 3>
+  %t0 = lshr <3 x i8> %x, <i8 3, i8 undef, i8 3>
+  %ret = shl <3 x i8> %t0, <i8 3, i8 undef, i8 3>
   ret <3 x i8> %ret
 }
 
@@ -432,8 +432,8 @@ define <2 x i8> @positive_biggerlshr_vec(<2 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], <i8 24, i8 24>
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
-  %tmp0 = lshr <2 x i8> %x, <i8 6, i8 6>
-  %ret = shl <2 x i8> %tmp0, <i8 3, i8 3>
+  %t0 = lshr <2 x i8> %x, <i8 6, i8 6>
+  %ret = shl <2 x i8> %t0, <i8 3, i8 3>
   ret <2 x i8> %ret
 }
 
@@ -443,8 +443,8 @@ define <3 x i8> @positive_biggerlshr_vec_undef0(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 3, i8 3>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 6, i8 undef, i8 6>
-  %ret = shl <3 x i8> %tmp0, <i8 3, i8 3, i8 3>
+  %t0 = lshr <3 x i8> %x, <i8 6, i8 undef, i8 6>
+  %ret = shl <3 x i8> %t0, <i8 3, i8 3, i8 3>
   ret <3 x i8> %ret
 }
 
@@ -454,8 +454,8 @@ define <3 x i8> @positive_biggerlshr_vec_undef1(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 undef, i8 3>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 6, i8 6, i8 6>
-  %ret = shl <3 x i8> %tmp0, <i8 3, i8 undef, i8 3>
+  %t0 = lshr <3 x i8> %x, <i8 6, i8 6, i8 6>
+  %ret = shl <3 x i8> %t0, <i8 3, i8 undef, i8 3>
   ret <3 x i8> %ret
 }
 
@@ -465,8 +465,8 @@ define <3 x i8> @positive_biggerlshr_vec_undef2(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 undef, i8 3>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 6, i8 undef, i8 6>
-  %ret = shl <3 x i8> %tmp0, <i8 3, i8 undef, i8 3>
+  %t0 = lshr <3 x i8> %x, <i8 6, i8 undef, i8 6>
+  %ret = shl <3 x i8> %t0, <i8 3, i8 undef, i8 3>
   ret <3 x i8> %ret
 }
 
@@ -476,8 +476,8 @@ define <2 x i8> @positive_biggershl_vec(<2 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], <i8 -64, i8 -64>
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
-  %tmp0 = lshr <2 x i8> %x, <i8 3, i8 3>
-  %ret = shl <2 x i8> %tmp0, <i8 6, i8 6>
+  %t0 = lshr <2 x i8> %x, <i8 3, i8 3>
+  %ret = shl <2 x i8> %t0, <i8 6, i8 6>
   ret <2 x i8> %ret
 }
 
@@ -487,8 +487,8 @@ define <3 x i8> @positive_biggershl_vec_undef0(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 6, i8 6, i8 6>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 3, i8 undef, i8 3>
-  %ret = shl <3 x i8> %tmp0, <i8 6, i8 6, i8 6>
+  %t0 = lshr <3 x i8> %x, <i8 3, i8 undef, i8 3>
+  %ret = shl <3 x i8> %t0, <i8 6, i8 6, i8 6>
   ret <3 x i8> %ret
 }
 
@@ -498,8 +498,8 @@ define <3 x i8> @positive_biggershl_vec_undef1(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 6, i8 undef, i8 6>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 3, i8 3, i8 3>
-  %ret = shl <3 x i8> %tmp0, <i8 6, i8 undef, i8 6>
+  %t0 = lshr <3 x i8> %x, <i8 3, i8 3, i8 3>
+  %ret = shl <3 x i8> %t0, <i8 6, i8 undef, i8 6>
   ret <3 x i8> %ret
 }
 
@@ -509,8 +509,8 @@ define <3 x i8> @positive_biggershl_vec_undef2(<3 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 6, i8 undef, i8 6>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> %x, <i8 3, i8 undef, i8 3>
-  %ret = shl <3 x i8> %tmp0, <i8 6, i8 undef, i8 6>
+  %t0 = lshr <3 x i8> %x, <i8 3, i8 undef, i8 3>
+  %ret = shl <3 x i8> %t0, <i8 6, i8 undef, i8 6>
   ret <3 x i8> %ret
 }
 
@@ -525,9 +525,9 @@ define i8 @positive_sameconst_multiuse(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = and i8 [[X]], -8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  call void @use32(i8 %tmp0)
-  %ret = shl i8 %tmp0, 3
+  %t0 = lshr i8 %x, 3
+  call void @use32(i8 %t0)
+  %ret = shl i8 %t0, 3
   ret i8 %ret
 }
 
@@ -538,9 +538,9 @@ define i8 @positive_biggerlshr_multiuse(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl nuw nsw i8 [[TMP0]], 3
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 6
-  call void @use32(i8 %tmp0)
-  %ret = shl i8 %tmp0, 3
+  %t0 = lshr i8 %x, 6
+  call void @use32(i8 %t0)
+  %ret = shl i8 %t0, 3
   ret i8 %ret
 }
 
@@ -551,9 +551,9 @@ define i8 @positive_biggershl_multiuse(i8 %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl i8 [[TMP0]], 6
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, 3
-  call void @use32(i8 %tmp0)
-  %ret = shl i8 %tmp0, 6
+  %t0 = lshr i8 %x, 3
+  call void @use32(i8 %t0)
+  %ret = shl i8 %t0, 6
   ret i8 %ret
 }
 
@@ -567,8 +567,8 @@ define <2 x i8> @positive_biggerlshr_vec_nonsplat(<2 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <2 x i8> [[TMP0]], <i8 3, i8 6>
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
-  %tmp0 = lshr <2 x i8> %x, <i8 3, i8 3>
-  %ret = shl <2 x i8> %tmp0, <i8 3, i8 6>
+  %t0 = lshr <2 x i8> %x, <i8 3, i8 3>
+  %ret = shl <2 x i8> %t0, <i8 3, i8 6>
   ret <2 x i8> %ret
 }
 
@@ -578,8 +578,8 @@ define <2 x i8> @positive_biggerLlshr_vec_nonsplat(<2 x i8> %x) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl <2 x i8> [[TMP0]], <i8 3, i8 3>
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
-  %tmp0 = lshr <2 x i8> %x, <i8 3, i8 6>
-  %ret = shl <2 x i8> %tmp0, <i8 3, i8 3>
+  %t0 = lshr <2 x i8> %x, <i8 3, i8 6>
+  %ret = shl <2 x i8> %t0, <i8 3, i8 3>
   ret <2 x i8> %ret
 }
 
@@ -593,8 +593,8 @@ define i8 @negative_twovars(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl i8 [[TMP0]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, %y
-  %ret = shl i8 %tmp0, %z ; $z, not %y
+  %t0 = lshr i8 %x, %y
+  %ret = shl i8 %t0, %z ; $z, not %y
   ret i8 %ret
 }
 
@@ -608,8 +608,8 @@ define i8 @negative_oneuse(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[RET:%.*]] = shl i8 [[TMP0]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
-  %tmp0 = lshr i8 %x, %y
-  call void @use32(i8 %tmp0)
-  %ret = shl i8 %tmp0, %y
+  %t0 = lshr i8 %x, %y
+  call void @use32(i8 %t0)
+  %ret = shl i8 %t0, %y
   ret i8 %ret
 }
