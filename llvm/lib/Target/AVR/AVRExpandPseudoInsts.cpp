@@ -102,6 +102,9 @@ private:
   bool expandLSLW12Rd(Block &MBB, BlockIt MBBI);
   bool expandLSRW12Rd(Block &MBB, BlockIt MBBI);
 
+  // Common implementation of LPMWRdZ and ELPMWRdZ.
+  bool expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt);
+
   /// Scavenges a free GPR8 register for use.
   Register scavengeGPR8(MachineInstr &MI);
 };
@@ -809,17 +812,24 @@ bool AVRExpandPseudo::expand<AVR::LDDWRdPtrQ>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
-template <>
-bool AVRExpandPseudo::expand<AVR::LPMWRdZ>(Block &MBB, BlockIt MBBI) {
+bool AVRExpandPseudo::expandLPMWELPMW(Block &MBB, BlockIt MBBI, bool IsExt) {
   MachineInstr &MI = *MBBI;
   Register DstLoReg, DstHiReg;
   Register DstReg = MI.getOperand(0).getReg();
   Register TmpReg = 0; // 0 for no temporary register
   Register SrcReg = MI.getOperand(1).getReg();
   bool SrcIsKill = MI.getOperand(1).isKill();
-  unsigned OpLo = AVR::LPMRdZPi;
-  unsigned OpHi = AVR::LPMRdZ;
+  unsigned OpLo = IsExt ? AVR::ELPMRdZPi : AVR::LPMRdZPi;
+  unsigned OpHi = IsExt ? AVR::ELPMRdZ : AVR::LPMRdZ;
   TRI->splitReg(DstReg, DstLoReg, DstHiReg);
+
+  // Set the I/O register RAMPZ for ELPM.
+  if (IsExt) {
+    const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+    Register Bank = MI.getOperand(2).getReg();
+    // out RAMPZ, rtmp
+    buildMI(MBB, MBBI, AVR::OUTARr).addImm(STI.getIORegRAMPZ()).addReg(Bank);
+  }
 
   // Use a temporary register if src and dst registers are the same.
   if (DstReg == SrcReg)
@@ -858,8 +868,51 @@ bool AVRExpandPseudo::expand<AVR::LPMWRdZ>(Block &MBB, BlockIt MBBI) {
 }
 
 template <>
+bool AVRExpandPseudo::expand<AVR::LPMWRdZ>(Block &MBB, BlockIt MBBI) {
+  return expandLPMWELPMW(MBB, MBBI, false);
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ELPMWRdZ>(Block &MBB, BlockIt MBBI) {
+  return expandLPMWELPMW(MBB, MBBI, true);
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ELPMBRdZ>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register BankReg = MI.getOperand(2).getReg();
+  bool SrcIsKill = MI.getOperand(1).isKill();
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+
+  // Set the I/O register RAMPZ for ELPM (out RAMPZ, rtmp).
+  buildMI(MBB, MBBI, AVR::OUTARr).addImm(STI.getIORegRAMPZ()).addReg(BankReg);
+
+  // Load byte.
+  auto MILB = buildMI(MBB, MBBI, AVR::ELPMRdZ)
+                  .addReg(DstReg, RegState::Define)
+                  .addReg(SrcReg, getKillRegState(SrcIsKill));
+
+  MILB.setMemRefs(MI.memoperands());
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
 bool AVRExpandPseudo::expand<AVR::LPMWRdZPi>(Block &MBB, BlockIt MBBI) {
-  llvm_unreachable("wide LPMPi is unimplemented");
+  llvm_unreachable("16-bit LPMPi is unimplemented");
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ELPMBRdZPi>(Block &MBB, BlockIt MBBI) {
+  llvm_unreachable("byte ELPMPi is unimplemented");
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ELPMWRdZPi>(Block &MBB, BlockIt MBBI) {
+  llvm_unreachable("16-bit ELPMPi is unimplemented");
 }
 
 template <typename Func>
@@ -2269,6 +2322,10 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::LDDWRdPtrQ);
     EXPAND(AVR::LPMWRdZ);
     EXPAND(AVR::LPMWRdZPi);
+    EXPAND(AVR::ELPMBRdZ);
+    EXPAND(AVR::ELPMWRdZ);
+    EXPAND(AVR::ELPMBRdZPi);
+    EXPAND(AVR::ELPMWRdZPi);
     EXPAND(AVR::AtomicLoad8);
     EXPAND(AVR::AtomicLoad16);
     EXPAND(AVR::AtomicStore8);

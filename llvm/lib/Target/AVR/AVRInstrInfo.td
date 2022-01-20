@@ -1702,21 +1702,34 @@ let mayLoad = 1, hasSideEffects = 0 in {
       : F16<0b1001010111011000, (outs), (ins), "elpm", []>,
       Requires<[HasELPM]>;
 
-  def ELPMRdZ : FLPMX<1, 0,
-                      (outs GPR8
-                       : $dst),
-                      (ins ZREG
-                       : $z),
+  def ELPMRdZ : FLPMX<1, 0, (outs GPR8:$dst), (ins ZREG:$z),
                       "elpm\t$dst, $z", []>,
                 Requires<[HasELPMX]>;
 
-  let Defs = [R31R30] in def ELPMRdZPi : FLPMX<1, 1,
-                                               (outs GPR8
-                                                : $dst),
-                                               (ins ZREG
-                                                : $z),
-                                               "elpm\t$dst, $z+", []>,
-      Requires<[HasELPMX]>;
+  let Defs = [R31R30] in {
+    def ELPMRdZPi : FLPMX<1, 1, (outs GPR8:$dst), (ins ZREG:$z),
+                          "elpm\t$dst, $z+", []>,
+                    Requires<[HasELPMX]>;
+  }
+
+  // These pseudos are combination of the OUT and ELPM instructions.
+  let Defs = [R31R30], hasSideEffects = 1 in {
+    def ELPMBRdZ : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
+                          "elpmb\t$dst, $z, $p", []>,
+                   Requires<[HasELPMX]>;
+
+    def ELPMWRdZ : Pseudo<(outs DREGS:$dst), (ins ZREG:$z, LD8:$p),
+                          "elpmw\t$dst, $z, $p", []>,
+                   Requires<[HasELPMX]>;
+
+    def ELPMBRdZPi : Pseudo<(outs GPR8:$dst), (ins ZREG:$z, LD8:$p),
+                            "elpmb\t$dst, $z+, $p", []>,
+                     Requires<[HasELPMX]>;
+
+    def ELPMWRdZPi : Pseudo<(outs DREGS:$dst), (ins ZREG:$z, LD8:$p),
+                            "elpmw\t$dst, $z+, $p", []>,
+                     Requires<[HasELPMX]>;
+  }
 }
 
 // Store program memory operations.
