@@ -316,6 +316,8 @@ AST Matchers
   and the underlying ``Type`` with ``hasUnderlyingType``.
   ``hasDeclaration`` continues to see through the alias and apply to the
   underlying type.
+- Added the ``isConsteval`` matcher to match ``consteval`` function
+  declarations as well as `if consteval` and `if ! consteval` statements.
 
 clang-format
 ------------
