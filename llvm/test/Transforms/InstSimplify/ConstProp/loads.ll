@@ -336,3 +336,14 @@ define i32 @load_all_undef() {
   %v = load i32, i32* getelementptr (i32, i32* bitcast ({ i32, [4 x i8] }* @g_all_undef to i32*), i64 1)
   ret i32 %v
 }
+
+@g_i8_data = constant [16 x i8] c"\01\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00"
+
+define i64* @load_ptr_from_i8_data() {
+; CHECK-LABEL: @load_ptr_from_i8_data(
+; CHECK-NEXT:    [[V:%.*]] = load i64*, i64** bitcast ([16 x i8]* @g_i8_data to i64**), align 8
+; CHECK-NEXT:    ret i64* [[V]]
+;
+  %v = load i64*, i64** bitcast ([16 x i8]* @g_i8_data to i64**)
+  ret i64* %v
+}
