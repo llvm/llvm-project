@@ -71,8 +71,9 @@ int main(int argc, char const *argv[]) {
   // tag
   char *mte_buf_alt_tag = __arm_mte_create_random_tag(mte_buf, ~(1 << 10));
 
-  // lldb should be removing the whole top byte, not just the tags.
-  // So fill 63-60 with something non zero so we'll fail if we only remove tags.
+  // The memory tag manager should be removing the whole top byte, not just the
+  // tags. So fill 63-60 with something non zero so we'll fail if we only remove
+  // tags.
 #define SET_TOP_NIBBLE(ptr, value)                                             \
   (char *)((size_t)(ptr) | ((size_t)((value)&0xf) << 60))
   // mte_buf_alt_tag's nibble > mte_buf to check that lldb isn't just removing
@@ -81,6 +82,15 @@ int main(int argc, char const *argv[]) {
   mte_buf_alt_tag = SET_TOP_NIBBLE(mte_buf_alt_tag, 0xB);
   mte_buf_2 = SET_TOP_NIBBLE(mte_buf_2, 0xC);
   mte_read_only = SET_TOP_NIBBLE(mte_read_only, 0xD);
+
+// The top level commands should be removing all non-address bits, including
+// pointer signatures. This signs ptr with PAC key A. That signature goes
+// in some bits other than the top byte.
+#define sign_ptr(ptr) __asm__ __volatile__("pacdza %0" : "=r"(ptr) : "r"(ptr))
+  sign_ptr(mte_buf);
+  sign_ptr(mte_buf_alt_tag);
+  sign_ptr(mte_buf_2);
+  sign_ptr(mte_read_only);
 
   // Breakpoint here
   return 0;
