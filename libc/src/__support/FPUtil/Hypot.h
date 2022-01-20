@@ -22,33 +22,39 @@ namespace internal {
 template <typename T>
 static inline T find_leading_one(T mant, int &shift_length);
 
+// The following overloads are matched based on what is accepted by
+// __builtin_clz* rather than using the exactly-sized aliases from stdint.h
+// (such as uint32_t). There are 3 overloads even though 2 will only ever be
+// used by a specific platform, since unsigned long varies in size depending on
+// the word size of the architecture.
+
 template <>
-inline uint32_t find_leading_one<uint32_t>(uint32_t mant, int &shift_length) {
+inline unsigned int find_leading_one<unsigned int>(unsigned int mant,
+                                                   int &shift_length) {
   shift_length = 0;
-  constexpr int NSTEPS = 5;
-  constexpr uint32_t BOUNDS[NSTEPS] = {1 << 16, 1 << 8, 1 << 4, 1 << 2, 1 << 1};
-  constexpr int SHIFTS[NSTEPS] = {16, 8, 4, 2, 1};
-  for (int i = 0; i < NSTEPS; ++i) {
-    if (mant >= BOUNDS[i]) {
-      shift_length += SHIFTS[i];
-      mant >>= SHIFTS[i];
-    }
+  if (mant > 0) {
+    shift_length = (sizeof(mant) * 8) - 1 - __builtin_clz(mant);
   }
   return 1U << shift_length;
 }
 
 template <>
-inline uint64_t find_leading_one<uint64_t>(uint64_t mant, int &shift_length) {
+inline unsigned long find_leading_one<unsigned long>(unsigned long mant,
+                                                     int &shift_length) {
   shift_length = 0;
-  constexpr int NSTEPS = 6;
-  constexpr uint64_t BOUNDS[NSTEPS] = {1ULL << 32, 1ULL << 16, 1ULL << 8,
-                                       1ULL << 4,  1ULL << 2,  1ULL << 1};
-  constexpr int SHIFTS[NSTEPS] = {32, 16, 8, 4, 2, 1};
-  for (int i = 0; i < NSTEPS; ++i) {
-    if (mant >= BOUNDS[i]) {
-      shift_length += SHIFTS[i];
-      mant >>= SHIFTS[i];
-    }
+  if (mant > 0) {
+    shift_length = (sizeof(mant) * 8) - 1 - __builtin_clzl(mant);
+  }
+  return 1UL << shift_length;
+}
+
+template <>
+inline unsigned long long
+find_leading_one<unsigned long long>(unsigned long long mant,
+                                     int &shift_length) {
+  shift_length = 0;
+  if (mant > 0) {
+    shift_length = (sizeof(mant) * 8) - 1 - __builtin_clzll(mant);
   }
   return 1ULL << shift_length;
 }
