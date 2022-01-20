@@ -132,7 +132,7 @@ macro(add_cuda_bc_library)
     -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
     -D__AMDGCN__
     -Xclang -target-cpu -Xclang ${mcpu}
-    -fvisibility=default
+    -fvisibility=hidden
     -Wno-unused-value
     -nogpulib
     -O${optimization_level}
