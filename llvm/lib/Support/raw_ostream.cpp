@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Duration.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -868,8 +869,8 @@ Expected<sys::fs::FileLocker> raw_fd_ostream::lock() {
 }
 
 Expected<sys::fs::FileLocker>
-raw_fd_ostream::tryLockFor(std::chrono::milliseconds Timeout) {
-  std::error_code EC = sys::fs::tryLockFile(FD, Timeout);
+raw_fd_ostream::tryLockFor(Duration const& Timeout) {
+  std::error_code EC = sys::fs::tryLockFile(FD, Timeout.getDuration());
   if (!EC)
     return sys::fs::FileLocker(FD);
   return errorCodeToError(EC);
