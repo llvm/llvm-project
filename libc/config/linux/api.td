@@ -24,23 +24,13 @@ def SSizeT : TypeDecl<"ssize_t"> {
 
 def StructTm: TypeDecl<"struct tm"> {
   let Decl = [{
-    struct tm {
-      int tm_sec; // seconds after the minute
-      int tm_min; // minutes after the hour
-      int tm_hour; // hours since midnight
-      int tm_mday; // day of the month
-      int tm_mon; // months since January
-      int tm_year; // years since 1900
-      int tm_wday; // days since Sunday
-      int tm_yday; // days since January
-      int tm_isdst; // Daylight Saving Time flag
-    };
+    #include <llvm-libc-types/tm.h>
   }];
 }
 
 def TimeT: TypeDecl<"time_t"> {
-   let Decl = [{
-   typedef long time_t;
+  let Decl = [{
+    #include <llvm-libc-types/time_t.h>
   }];
 }
 
@@ -52,7 +42,7 @@ def OffT : TypeDecl<"off_t"> {
 
 def FILE : TypeDecl<"FILE"> {
   let Decl = [{
-    typedef struct FILE FILE;
+    #include <llvm-libc-types/FILE.h>
   }];
 }
 
@@ -114,10 +104,7 @@ def CTypeAPI : PublicAPI<"ctype.h"> {
 
 def IMaxDivT : TypeDecl<"imaxdiv_t"> {
   let Decl = [{
-    typedef struct {
-      intmax_t quot;
-      intmax_t rem;
-    } imaxdiv_t;
+    #include <llvm-libc-types/imaxdiv_t.h>
   }];
 }
 
@@ -195,24 +182,13 @@ def MathAPI : PublicAPI<"math.h"> {
 
 def FEnvT : TypeDecl<"fenv_t"> {
   let Decl = [{
-    #ifdef __aarch64__
-    typedef struct {
-      unsigned char __control_word[4];
-      unsigned char __status_word[4];
-    } fenv_t;
-    #endif
-    #ifdef __x86_64__
-    typedef struct {
-      unsigned char __x86_status[28];
-      unsigned char __mxcsr[4];
-    } fenv_t;
-    #endif
+    #include <llvm-libc-types/fenv_t.h>
   }];
 }
 
 def FExceptT : TypeDecl<"fexcept_t"> {
   let Decl = [{
-    typedef int fexcept_t;
+    #include <llvm-libc-types/fexcept_t.h>
   }];
 }
 
@@ -257,40 +233,31 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
 
 def DivT : TypeDecl<"div_t"> {
   let Decl = [{
-    typedef struct {
-      int quot;
-      int rem;
-    } div_t;
+    #include <llvm-libc-types/div_t.h>
   }];
 }
 
 def LDivT : TypeDecl<"ldiv_t"> {
   let Decl = [{
-    typedef struct {
-      long quot;
-      long rem;
-    } ldiv_t;
+    #include <llvm-libc-types/ldiv_t.h>
   }];
 }
 
 def LLDivT : TypeDecl<"lldiv_t"> {
   let Decl = [{
-    typedef struct {
-      long long quot;
-      long long rem;
-    } lldiv_t;
+    #include <llvm-libc-types/lldiv_t.h>
   }];
 }
 
 def BSearchCompareTDefn : TypeDecl<"__bsearchcompare_t"> {
   let Decl = [{
-    typedef int(*__bsearchcompare_t)(const void *, const void *);
+    #include <llvm-libc-types/__bsearchcompare_t.h>
   }];
 }
 
 def QSortCompareTDefn : TypeDecl<"__qsortcompare_t"> {
   let Decl = [{
-    typedef int(*__qsortcompare_t)(const void *, const void *);
+    #include <llvm-libc-types/__qsortcompare_t.h>
   }];
 }
 
@@ -367,21 +334,13 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 
 def StructSigactionDefn : TypeDecl<"struct sigaction"> {
   let Decl = [{
-    struct __sigaction {
-      union {
-        void (*sa_handler)(int);
-        void (*sa_action)(int, siginfo_t *, void *);
-      };
-      sigset_t sa_mask;
-      int sa_flags;
-      void (*sa_restorer)(void);
-    };
+    #include <llvm-libc-types/__sigaction.h>
   }];
 }
 
 def SighandlerTDefn : TypeDecl<"__sighandler_t"> {
   let Decl = [{
-    typedef void(*__sighandler_t)(int);
+    #include <llvm-libc-types/__sighandler_t.h>
   }];
 }
 
@@ -394,39 +353,37 @@ def SignalAPI : PublicAPI<"signal.h"> {
 
 def OnceFlag : TypeDecl<"once_flag"> {
   let Decl = [{
-    typedef unsigned int once_flag;
+    #include <llvm-libc-types/once_flag.h>
   }];
 }
 
 def MtxT : TypeDecl<"mtx_t"> {
   let Decl = [{
-    typedef struct {
-      unsigned char __internal_data[4];
-      int __mtx_type;
-    } mtx_t;
+    #include <llvm-libc-types/mtx_t.h>
   }];
 }
 
 def CndT : TypeDecl<"cnd_t"> {
   let Decl = [{
-    typedef struct {
-      void *__qfront;
-      void *__qback;
-      struct {
-        unsigned char __w[4];
-        int __t;
-      } __qmtx;
-    } cnd_t;
+    #include <llvm-libc-types/cnd_t.h>
+  }];
+}
+
+def ThrdT : TypeDecl<"thrd_t"> {
+  let Decl = [{
+    #include <llvm-libc-types/thrd_t.h>
   }];
 }
 
 def ThreadStartT : TypeDecl<"thrd_start_t"> {
-  let Decl = "typedef int (*thrd_start_t)(void *);";
+  let Decl = [{
+    #include <llvm-libc-types/thrd_start_t.h>
+  }];
 }
 
 def CallOnceFuncT : TypeDecl<"__call_once_func_t"> {
   let Decl = [{
-    typedef void(*__call_once_func_t)(void);
+    #include <llvm-libc-types/__call_once_func_t.h>
   }];
 }
 
@@ -440,6 +397,7 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
     CallOnceFuncT,
     MtxT,
     CndT,
+    ThrdT,
     ThreadStartT,
   ];
 

@@ -1,4 +1,4 @@
-//===-- C standard library header threads.h -------------------------------===//
+//===-- Definition of type ldiv_t -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_THREADS_H
-#define LLVM_LIBC_THREADS_H
+#ifndef __LLVM_LIBC_TYPES_LDIV_T_H__
+#define __LLVM_LIBC_TYPES_LDIV_T_H__
 
-#include <__llvm-libc-common.h>
+typedef struct {
+  long quot;
+  long rem;
+} ldiv_t;
 
-%%public_api()
-
-#endif // LLVM_LIBC_THREADS_H
+#endif // __LLVM_LIBC_TYPES_LDIV_T_H__
