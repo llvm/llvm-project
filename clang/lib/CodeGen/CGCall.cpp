@@ -2520,8 +2520,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       unsigned FirstIRArg, NumIRArgs;
       std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
       for (unsigned i = 0; i < NumIRArgs; i++)
-        ArgAttrs[FirstIRArg + i] =
-            llvm::AttributeSet::get(getLLVMContext(), Attrs);
+        ArgAttrs[FirstIRArg + i] = ArgAttrs[FirstIRArg + i].addAttributes(
+            getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), Attrs));
     }
   }
   assert(ArgNo == FI.arg_size());

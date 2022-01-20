@@ -227,7 +227,7 @@ namespace testNullReceiver {
 // CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, i64)*)({{.*}}, i64 %[[COERCE_VAL_PI]])
 // CHECK: br
 
-// CHECK: %[[CALL1:.*]] = call noundef %[[STRUCT_STRONG]]* @_ZN6StrongD1Ev(%[[STRUCT_STRONG]]* noundef %[[AGG_TMP]])
+// CHECK: %[[CALL1:.*]] = call noundef %[[STRUCT_STRONG]]* @_ZN6StrongD1Ev(%[[STRUCT_STRONG]]* noundef nonnull align 8 dereferenceable(8) %[[AGG_TMP]])
 // CHECK: br
 
 void test0(C *c) {
@@ -241,7 +241,7 @@ void test0(C *c) {
 // CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void ({{.*}}, %[[STRUCT_STRONGWEAK]]* noundef %[[AGG_TMP]])
 // CHECK: br
 
-// CHECK: %[[CALL1:.*]] = call noundef %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakD1Ev(%[[STRUCT_STRONGWEAK]]* noundef %[[AGG_TMP]])
+// CHECK: %[[CALL1:.*]] = call noundef %[[STRUCT_STRONGWEAK]]* @_ZN10StrongWeakD1Ev(%[[STRUCT_STRONGWEAK]]* noundef nonnull align 8 dereferenceable(16) %[[AGG_TMP]])
 // CHECK: br
 
 void test1(C *c) {
@@ -253,7 +253,7 @@ void test1(C *c) {
 // CHECK-LABEL: define{{.*}} void @_ZN16testNullReceiver5test2EP1C(
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_NONTRIVIAL]], align 8
 // CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %[[STRUCT_NONTRIVIAL]]*)*)({{.*}}, %[[STRUCT_NONTRIVIAL]]* noundef %[[AGG_TMP]])
-// CHECK-NEXT: call noundef %[[STRUCT_NONTRIVIAL]]* @_ZN10NonTrivialD1Ev(%[[STRUCT_NONTRIVIAL]]* noundef %[[AGG_TMP]])
+// CHECK-NEXT: call noundef %[[STRUCT_NONTRIVIAL]]* @_ZN10NonTrivialD1Ev(%[[STRUCT_NONTRIVIAL]]* noundef nonnull align 8 dereferenceable(8) %[[AGG_TMP]])
 
 void test2(C *c) {
   [c passNonTrivial:NonTrivial()];

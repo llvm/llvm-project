@@ -37,22 +37,22 @@ B::~B() { }
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1BD2Ev(%class.B* {{[^,]*}} %this)
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1BD1Ev(%class.B* {{[^,]*}} %this)
 
-// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} returned %this, i32* noundef %i)
-// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} returned %this, i32* noundef %i)
-// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BD2Ev(%class.B* {{[^,]*}} returned %this)
-// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BD1Ev(%class.B* {{[^,]*}} returned %this)
+// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
+// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
+// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BD2Ev(%class.B* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL: define{{.*}} %class.B* @_ZN1BD1Ev(%class.B* {{[^,]*}} returned{{[^,]*}} %this)
 
 // CHECKIOS5-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} %this, i32* noundef %i)
 // CHECKIOS5-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} %this, i32* noundef %i)
 // CHECKIOS5-LABEL: define{{.*}} %class.B* @_ZN1BD2Ev(%class.B* {{[^,]*}} %this)
 // CHECKIOS5-LABEL: define{{.*}} %class.B* @_ZN1BD1Ev(%class.B* {{[^,]*}} %this)
 
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} returned %this, i32* noundef %i)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} returned %this, i32* noundef %i)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.B* @_ZN1BD2Ev(%class.B* {{[^,]*}} returned %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.B* @_ZN1BD1Ev(%class.B* {{[^,]*}} returned %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.B* @_ZN1BC2EPi(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.B* @_ZN1BC1EPi(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.B* @_ZN1BD2Ev(%class.B* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.B* @_ZN1BD1Ev(%class.B* {{[^,]*}} returned{{[^,]*}} %this)
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef %class.B* @"??0B@@QAE@PAH@Z"(%class.B* {{[^,]*}} returned %this, i32* noundef %i)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef %class.B* @"??0B@@QAE@PAH@Z"(%class.B* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1B@@UAE@XZ"(%class.B* {{[^,]*}} %this)
 
 class C : public A, public B {
@@ -74,10 +74,10 @@ C::~C() { }
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1CD0Ev(%class.C* {{[^,]*}} %this)
 // CHECKGEN-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(%class.C* noundef %this)
 
-// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CC2EPiPc(%class.C* {{[^,]*}} returned %this, i32* noundef %i, i8* noundef %c)
-// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CC1EPiPc(%class.C* {{[^,]*}} returned %this, i32* noundef %i, i8* noundef %c)
-// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CD2Ev(%class.C* {{[^,]*}} returned %this)
-// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CD1Ev(%class.C* {{[^,]*}} returned %this)
+// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CC2EPiPc(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
+// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CC1EPiPc(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
+// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CD2Ev(%class.C* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL: define{{.*}} %class.C* @_ZN1CD1Ev(%class.C* {{[^,]*}} returned{{[^,]*}} %this)
 // CHECKARM-LABEL: define{{.*}} %class.C* @_ZThn8_N1CD1Ev(%class.C* noundef %this)
 // CHECKARM-LABEL: define{{.*}} void @_ZN1CD0Ev(%class.C* {{[^,]*}} %this)
 // CHECKARM-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(%class.C* noundef %this)
@@ -90,15 +90,15 @@ C::~C() { }
 // CHECKIOS5-LABEL: define{{.*}} void @_ZN1CD0Ev(%class.C* {{[^,]*}} %this)
 // CHECKIOS5-LABEL: define{{.*}} void @_ZThn8_N1CD0Ev(%class.C* noundef %this)
 
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZN1CC2EPiPc(%class.C* {{[^,]*}} returned %this, i32* noundef %i, i8* noundef %c)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZN1CC1EPiPc(%class.C* {{[^,]*}} returned %this, i32* noundef %i, i8* noundef %c)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZN1CD2Ev(%class.C* {{[^,]*}} returned %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZN1CD1Ev(%class.C* {{[^,]*}} returned %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZN1CC2EPiPc(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZN1CC1EPiPc(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZN1CD2Ev(%class.C* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZN1CD1Ev(%class.C* {{[^,]*}} returned{{[^,]*}} %this)
 // CHECKFUCHSIA-LABEL: define{{.*}} %class.C* @_ZThn16_N1CD1Ev(%class.C* noundef %this)
 // CHECKFUCHSIA-LABEL: define{{.*}} void @_ZN1CD0Ev(%class.C* {{[^,]*}} %this)
 // CHECKFUCHSIA-LABEL: define{{.*}} void @_ZThn16_N1CD0Ev(%class.C* noundef %this)
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef %class.C* @"??0C@@QAE@PAHPAD@Z"(%class.C* {{[^,]*}} returned %this, i32* noundef %i, i8* noundef %c)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef %class.C* @"??0C@@QAE@PAHPAD@Z"(%class.C* {{[^,]*}} returned{{[^,]*}} %this, i32* noundef %i, i8* noundef %c)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1C@@UAE@XZ"(%class.C* {{[^,]*}} %this)
 
 class D : public virtual A {
@@ -115,22 +115,22 @@ D::~D() { }
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1DD2Ev(%class.D* {{[^,]*}} %this, i8** noundef %vtt)
 // CHECKGEN-LABEL: define{{.*}} void @_ZN1DD1Ev(%class.D* {{[^,]*}} %this)
 
-// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} returned %this, i8** noundef %vtt)
-// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} returned %this)
-// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DD2Ev(%class.D* {{[^,]*}} returned %this, i8** noundef %vtt)
-// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} returned %this)
+// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i8** noundef %vtt)
+// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DD2Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i8** noundef %vtt)
+// CHECKARM-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
 
 // CHECKIOS5-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} %this, i8** noundef %vtt)
 // CHECKIOS5-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} %this)
 // CHECKIOS5-LABEL: define{{.*}} %class.D* @_ZN1DD2Ev(%class.D* {{[^,]*}} %this, i8** noundef %vtt)
 // CHECKIOS5-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} %this)
 
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} returned %this, i8** noundef %vtt)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} returned %this)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DD2Ev(%class.D* {{[^,]*}} returned %this, i8** noundef %vtt)
-// CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} returned %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DC2Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i8** noundef %vtt)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DC1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DD2Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i8** noundef %vtt)
+// CHECKFUCHSIA-LABEL: define{{.*}} %class.D* @_ZN1DD1Ev(%class.D* {{[^,]*}} returned{{[^,]*}} %this)
 
-// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef %class.D* @"??0D@@QAE@XZ"(%class.D* {{[^,]*}} returned %this, i32 noundef %is_most_derived)
+// CHECKMS-LABEL: define dso_local x86_thiscallcc noundef %class.D* @"??0D@@QAE@XZ"(%class.D* {{[^,]*}} returned{{[^,]*}} %this, i32 noundef %is_most_derived)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1D@@UAE@XZ"(%class.D* {{[^,]*}} %this)
 
 class E {
@@ -160,4 +160,4 @@ void test_destructor() {
 // ...but static calls create declarations with 'returned' this
 // CHECKARM,CHECKFUCHSIA: {{%.*}} = call noundef %class.E* @_ZN1ED1Ev(%class.E* {{[^,]*}} %
 
-// CHECKARM,CHECKFUCHSIA: declare noundef  %class.E* @_ZN1ED1Ev(%class.E* {{[^,]*}} returned)
+// CHECKARM,CHECKFUCHSIA: declare noundef  %class.E* @_ZN1ED1Ev(%class.E* {{[^,]*}} returned{{[^,]*}})

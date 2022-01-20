@@ -93,7 +93,7 @@ void c() {
 // CHECK1-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, %class.a**)*
 // CHECK1-NEXT:    call void [[TMP15]](i8* [[TMP14]], %class.a** [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4:[0-9]+]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = load %class.a*, %class.a** [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias !12
-// CHECK1-NEXT:    call void @_ZN1a1bEv(%class.a* noundef [[TMP16]]) #[[ATTR4]]
+// CHECK1-NEXT:    call void @_ZN1a1bEv(%class.a* noundef nonnull align 1 dereferenceable(1) [[TMP16]]) #[[ATTR4]]
 // CHECK1-NEXT:    ret i32 0
 //
 //
@@ -166,7 +166,7 @@ void c() {
 // CHECK2-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, %class.a**)*
 // CHECK2-NEXT:    call void [[TMP15]](i8* [[TMP14]], %class.a** [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4:[0-9]+]]
 // CHECK2-NEXT:    [[TMP16:%.*]] = load %class.a*, %class.a** [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias !12
-// CHECK2-NEXT:    call void @_ZN1a1bEv(%class.a* noundef [[TMP16]]) #[[ATTR4]]
+// CHECK2-NEXT:    call void @_ZN1a1bEv(%class.a* noundef nonnull align 1 dereferenceable(1) [[TMP16]]) #[[ATTR4]]
 // CHECK2-NEXT:    ret i32 0
 //
 //
@@ -240,7 +240,7 @@ void c() {
 // CHECK3-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, %class.a**)*
 // CHECK3-NEXT:    call void [[TMP15]](i8* [[TMP14]], %class.a** [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4:[0-9]+]]
 // CHECK3-NEXT:    [[TMP16:%.*]] = load %class.a*, %class.a** [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias !12
-// CHECK3-NEXT:    call void @_ZN1a1bEv(%class.a* noundef [[TMP16]]) #[[ATTR4]]
+// CHECK3-NEXT:    call void @_ZN1a1bEv(%class.a* noundef nonnull align 1 dereferenceable(1) [[TMP16]]) #[[ATTR4]]
 // CHECK3-NEXT:    ret i32 0
 //
 //
@@ -314,6 +314,6 @@ void c() {
 // CHECK4-NEXT:    [[TMP15:%.*]] = bitcast void (i8*, ...)* [[TMP13]] to void (i8*, %class.a**)*
 // CHECK4-NEXT:    call void [[TMP15]](i8* [[TMP14]], %class.a** [[DOTFIRSTPRIV_PTR_ADDR_I]]) #[[ATTR4:[0-9]+]]
 // CHECK4-NEXT:    [[TMP16:%.*]] = load %class.a*, %class.a** [[DOTFIRSTPRIV_PTR_ADDR_I]], align 8, !noalias !12
-// CHECK4-NEXT:    call void @_ZN1a1bEv(%class.a* noundef [[TMP16]]) #[[ATTR4]]
+// CHECK4-NEXT:    call void @_ZN1a1bEv(%class.a* noundef nonnull align 1 dereferenceable(1) [[TMP16]]) #[[ATTR4]]
 // CHECK4-NEXT:    ret i32 0
 //

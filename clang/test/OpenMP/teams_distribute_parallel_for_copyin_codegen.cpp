@@ -1749,7 +1749,7 @@ int main() {
 // CHECK9-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK9-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[REF_TMP]], i32 0, i32 0
 // CHECK9-NEXT:    store [2 x i32]* [[A]], [2 x i32]** [[TMP0]], align 8
-// CHECK9-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef [[REF_TMP]])
+// CHECK9-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(8) [[REF_TMP]])
 // CHECK9-NEXT:    ret i32 0
 //
 //
@@ -1905,7 +1905,7 @@ int main() {
 // CHECK9-NEXT:    store i32* [[I]], i32** [[TMP15]], align 8
 // CHECK9-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[REF_TMP]], i32 0, i32 2
 // CHECK9-NEXT:    store i32* [[TMP1]], i32** [[TMP16]], align 8
-// CHECK9-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(%class.anon.0* noundef [[REF_TMP]])
+// CHECK9-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(%class.anon.0* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
 // CHECK9-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK9:       omp.body.continue:
 // CHECK9-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -1942,7 +1942,7 @@ int main() {
 // CHECK10-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // CHECK10-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_ANON]], %class.anon* [[REF_TMP]], i32 0, i32 0
 // CHECK10-NEXT:    store [2 x i32]* [[A]], [2 x i32]** [[TMP0]], align 8
-// CHECK10-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef [[REF_TMP]])
+// CHECK10-NEXT:    call void @"_ZZ4mainENK3$_0clEv"(%class.anon* noundef nonnull align 8 dereferenceable(8) [[REF_TMP]])
 // CHECK10-NEXT:    ret i32 0
 //
 //
@@ -2098,7 +2098,7 @@ int main() {
 // CHECK10-NEXT:    store i32* [[I]], i32** [[TMP15]], align 8
 // CHECK10-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], %class.anon.0* [[REF_TMP]], i32 0, i32 2
 // CHECK10-NEXT:    store i32* [[TMP1]], i32** [[TMP16]], align 8
-// CHECK10-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(%class.anon.0* noundef [[REF_TMP]])
+// CHECK10-NEXT:    call void @"_ZZZ4mainENK3$_0clEvENKUlvE_clEv"(%class.anon.0* noundef nonnull align 8 dereferenceable(24) [[REF_TMP]])
 // CHECK10-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK10:       omp.body.continue:
 // CHECK10-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
