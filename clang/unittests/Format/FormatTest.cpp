@@ -16274,6 +16274,10 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "int &operator() = default;\n"
                "int &operator=() {",
                Alignment);
+  verifyFormat("int f()         = delete;\n"
+               "int &operator() = delete;\n"
+               "int &operator=() {",
+               Alignment);
   verifyFormat("int f()         = default; // comment\n"
                "int &operator() = default; // comment\n"
                "int &operator=() {",
@@ -16294,10 +16298,25 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "int &operator() = default;\n"
                "int &operator=();",
                Alignment);
+  verifyFormat("int f()         = delete;\n"
+               "int &operator() = delete;\n"
+               "int &operator=();",
+               Alignment);
   verifyFormat("/* long long padding */ int f() = default;\n"
                "int &operator()                 = default;\n"
                "int &operator/**/ =();",
                Alignment);
+  // https://llvm.org/PR33697
+  FormatStyle AlignmentWithPenalty = getLLVMStyle();
+  AlignmentWithPenalty.AlignConsecutiveAssignments =
+      FormatStyle::ACS_Consecutive;
+  AlignmentWithPenalty.PenaltyReturnTypeOnItsOwnLine = 5000;
+  verifyFormat("class SSSSSSSSSSSSSSSSSSSSSSSSSSSS {\n"
+               "  void f() = delete;\n"
+               "  SSSSSSSSSSSSSSSSSSSSSSSSSSSS &operator=(\n"
+               "      const SSSSSSSSSSSSSSSSSSSSSSSSSSSS &other) = delete;\n"
+               "};\n",
+               AlignmentWithPenalty);
 
   // Bug 25167
   /* Uncomment when fixed
