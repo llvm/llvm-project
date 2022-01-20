@@ -359,7 +359,7 @@ static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
 // Return the number of iterations we want to peel off.
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::PeelingPreferences &PP,
-                            unsigned &TripCount, DominatorTree &DT,
+                            unsigned TripCount, DominatorTree &DT,
                             ScalarEvolution &SE, unsigned Threshold) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
   // Save the PP.PeelCount value set by the target in
