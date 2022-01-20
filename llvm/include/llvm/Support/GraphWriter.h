@@ -28,8 +28,6 @@
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
-#include <cstddef>
 #include <iterator>
 #include <string>
 #include <type_traits>

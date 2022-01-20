@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Signposts.h"
-#include "llvm/Support/Timer.h"
 
 #include "llvm/Config/config.h"
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include <cassert>
 
 using namespace llvm;

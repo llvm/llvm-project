@@ -14,12 +14,10 @@
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace llvm {
 
-class Timer;
 class TimerGroup;
 class raw_ostream;
 

@@ -9,7 +9,6 @@
 #ifndef LLVM_SUPPORT_FILECOLLECTOR_H
 #define LLVM_SUPPORT_FILECOLLECTOR_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/VirtualFileSystem.h"

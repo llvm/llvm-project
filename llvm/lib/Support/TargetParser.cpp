@@ -13,9 +13,7 @@
 
 #include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 
 using namespace llvm;
