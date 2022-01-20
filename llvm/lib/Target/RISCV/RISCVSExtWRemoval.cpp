@@ -95,24 +95,32 @@ static bool isSignExtendingOpW(const MachineInstr &MI) {
   case RISCV::LHU:
   case RISCV::LB:
   case RISCV::LH:
+  case RISCV::SLT:
+  case RISCV::SLTI:
+  case RISCV::SLTU:
+  case RISCV::SLTIU:
   case RISCV::SEXTB:
   case RISCV::SEXTH:
   case RISCV::ZEXTH_RV64:
     return true;
-  }
-
+  // shifting right sufficiently makes the value 32-bit sign-extended
+  case RISCV::SRAI:
+    return MI.getOperand(2).getImm() >= 32;
+  case RISCV::SRLI:
+    return MI.getOperand(2).getImm() > 32;
   // The LI pattern ADDI rd, X0, imm is sign extended.
-  if (MI.getOpcode() == RISCV::ADDI && MI.getOperand(1).isReg() &&
-      MI.getOperand(1).getReg() == RISCV::X0)
-    return true;
-
+  case RISCV::ADDI:
+    return MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0;
   // An ANDI with an 11 bit immediate will zero bits 63:11.
-  if (MI.getOpcode() == RISCV::ANDI && isUInt<11>(MI.getOperand(2).getImm()))
-    return true;
-
+  case RISCV::ANDI:
+    return isUInt<11>(MI.getOperand(2).getImm());
+  // An ORI with an >11 bit immediate (negative 12-bit) will set bits 63:11.
+  case RISCV::ORI:
+    return !isUInt<11>(MI.getOperand(2).getImm());
   // Copying from X0 produces zero.
-  if (MI.getOpcode() == RISCV::COPY && MI.getOperand(1).getReg() == RISCV::X0)
-    return true;
+  case RISCV::COPY:
+    return MI.getOperand(1).getReg() == RISCV::X0;
+  }
 
   return false;
 }
@@ -157,9 +165,12 @@ static bool isSignExtendedW(const MachineInstr &OrigMI,
       Worklist.push_back(SrcMI);
       break;
     }
+    case RISCV::REM:
     case RISCV::ANDI:
     case RISCV::ORI:
     case RISCV::XORI: {
+      // |Remainder| is always <= |Dividend|. If D is 32-bit, then so is R.
+      // DIV doesn't work because of the edge case 0xf..f 8000 0000 / (long)-1
       // Logical operations use a sign extended 12-bit immediate. We just need
       // to check if the other operand is sign extended.
       Register SrcReg = MI->getOperand(1).getReg();
@@ -173,6 +184,7 @@ static bool isSignExtendedW(const MachineInstr &OrigMI,
       Worklist.push_back(SrcMI);
       break;
     }
+    case RISCV::REMU:
     case RISCV::AND:
     case RISCV::OR:
     case RISCV::XOR:
