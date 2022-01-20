@@ -1120,32 +1120,33 @@ public:
   /// DFS order (based on linkage relationships). Each JITDylib will appear
   /// only once.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
-  static std::vector<JITDylibSP> getDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
+  /// If any JITDylib in the order is defunct then this method will return an
+  /// error, otherwise returns the order.
+  static Expected<std::vector<JITDylibSP>>
+  getDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
 
   /// Returns the given JITDylibs and all of their transitive dependencies in
   /// reverse DFS order (based on linkage relationships). Each JITDylib will
   /// appear only once.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
-  static std::vector<JITDylibSP>
+  /// If any JITDylib in the order is defunct then this method will return an
+  /// error, otherwise returns the order.
+  static Expected<std::vector<JITDylibSP>>
   getReverseDFSLinkOrder(ArrayRef<JITDylibSP> JDs);
 
   /// Return this JITDylib and its transitive dependencies in DFS order
   /// based on linkage relationships.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
-  std::vector<JITDylibSP> getDFSLinkOrder();
+  /// If any JITDylib in the order is defunct then this method will return an
+  /// error, otherwise returns the order.
+  Expected<std::vector<JITDylibSP>> getDFSLinkOrder();
 
   /// Rteurn this JITDylib and its transitive dependencies in reverse DFS order
   /// based on linkage relationships.
   ///
-  /// It is illegal to call this method on a defunct JITDylib and the client
-  /// is responsible for ensuring that they do not do so.
-  std::vector<JITDylibSP> getReverseDFSLinkOrder();
+  /// If any JITDylib in the order is defunct then this method will return an
+  /// error, otherwise returns the order.
+  Expected<std::vector<JITDylibSP>> getReverseDFSLinkOrder();
 
 private:
   using AsynchronousSymbolQuerySet =

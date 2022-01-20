@@ -1958,19 +1958,22 @@ Error ExecutionSession::removeJITDylib(JITDylib &JD) {
   return Err;
 }
 
-std::vector<JITDylibSP> JITDylib::getDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
+Expected<std::vector<JITDylibSP>>
+JITDylib::getDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
   if (JDs.empty())
-    return {};
+    return std::vector<JITDylibSP>();
 
   auto &ES = JDs.front()->getExecutionSession();
-  return ES.runSessionLocked([&]() {
+  return ES.runSessionLocked([&]() -> Expected<std::vector<JITDylibSP>> {
     DenseSet<JITDylib *> Visited;
     std::vector<JITDylibSP> Result;
 
     for (auto &JD : JDs) {
 
-      assert(JD->State == Open && "JD is defunct");
-
+      if (JD->State != Open)
+        return make_error<StringError>(
+            "Error building link order: " + JD->getName() + " is defunct",
+            inconvertibleErrorCode());
       if (Visited.count(JD.get()))
         continue;
 
@@ -1995,18 +1998,19 @@ std::vector<JITDylibSP> JITDylib::getDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
   });
 }
 
-std::vector<JITDylibSP>
+Expected<std::vector<JITDylibSP>>
 JITDylib::getReverseDFSLinkOrder(ArrayRef<JITDylibSP> JDs) {
-  auto Tmp = getDFSLinkOrder(JDs);
-  std::reverse(Tmp.begin(), Tmp.end());
-  return Tmp;
+  auto Result = getDFSLinkOrder(JDs);
+  if (Result)
+    std::reverse(Result->begin(), Result->end());
+  return Result;
 }
 
-std::vector<JITDylibSP> JITDylib::getDFSLinkOrder() {
+Expected<std::vector<JITDylibSP>> JITDylib::getDFSLinkOrder() {
   return getDFSLinkOrder({this});
 }
 
-std::vector<JITDylibSP> JITDylib::getReverseDFSLinkOrder() {
+Expected<std::vector<JITDylibSP>> JITDylib::getReverseDFSLinkOrder() {
   return getReverseDFSLinkOrder({this});
 }
 

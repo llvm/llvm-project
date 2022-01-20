@@ -1426,21 +1426,21 @@ TEST(JITDylibTest, GetDFSLinkOrderTree) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD, &LibE}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibF}));
 
-  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({&LibB});
+  auto DFSOrderFromB = cantFail(JITDylib::getDFSLinkOrder({&LibB}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibD, &LibE}))
       << "Incorrect DFS link order for LibB";
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
+  auto DFSOrderFromA = cantFail(JITDylib::getDFSLinkOrder({&LibA}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA,
                               {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
       << "Incorrect DFS link order for libA";
 
-  auto DFSOrderFromAB = JITDylib::getDFSLinkOrder({&LibA, &LibB});
+  auto DFSOrderFromAB = cantFail(JITDylib::getDFSLinkOrder({&LibA, &LibB}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromAB,
                               {&LibA, &LibB, &LibD, &LibE, &LibC, &LibF}))
       << "Incorrect DFS link order for { libA, libB }";
 
-  auto DFSOrderFromBA = JITDylib::getDFSLinkOrder({&LibB, &LibA});
+  auto DFSOrderFromBA = cantFail(JITDylib::getDFSLinkOrder({&LibB, &LibA}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromBA,
                               {&LibB, &LibD, &LibE, &LibA, &LibC, &LibF}))
       << "Incorrect DFS link order for { libB, libA }";
@@ -1463,7 +1463,7 @@ TEST(JITDylibTest, GetDFSLinkOrderDiamond) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibD}));
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
+  auto DFSOrderFromA = cantFail(JITDylib::getDFSLinkOrder({&LibA}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibD, &LibC}))
       << "Incorrect DFS link order for libA";
 }
@@ -1483,15 +1483,15 @@ TEST(JITDylibTest, GetDFSLinkOrderCycle) {
   LibB.setLinkOrder(makeJITDylibSearchOrder({&LibC}));
   LibC.setLinkOrder(makeJITDylibSearchOrder({&LibA}));
 
-  auto DFSOrderFromA = JITDylib::getDFSLinkOrder({&LibA});
+  auto DFSOrderFromA = cantFail(JITDylib::getDFSLinkOrder({&LibA}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromA, {&LibA, &LibB, &LibC}))
       << "Incorrect DFS link order for libA";
 
-  auto DFSOrderFromB = JITDylib::getDFSLinkOrder({&LibB});
+  auto DFSOrderFromB = cantFail(JITDylib::getDFSLinkOrder({&LibB}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromB, {&LibB, &LibC, &LibA}))
       << "Incorrect DFS link order for libB";
 
-  auto DFSOrderFromC = JITDylib::getDFSLinkOrder({&LibC});
+  auto DFSOrderFromC = cantFail(JITDylib::getDFSLinkOrder({&LibC}));
   EXPECT_TRUE(linkOrdersEqual(DFSOrderFromC, {&LibC, &LibA, &LibB}))
       << "Incorrect DFS link order for libC";
 }
@@ -1545,6 +1545,8 @@ TEST_F(CoreAPIsStandardTest, RemoveJITDylibs) {
   EXPECT_TRUE(BazLookupFailed);
 
   EXPECT_THAT_ERROR(BazMR->notifyResolved({{Baz, BazSym}}), Failed());
+
+  EXPECT_THAT_EXPECTED(JD.getDFSLinkOrder(), Failed());
 
   BazMR->failMaterialization();
 }
