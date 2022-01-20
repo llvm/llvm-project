@@ -269,13 +269,10 @@ Optional<APFloat> ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
                                       const MachineRegisterInfo &MRI);
 
 /// Tries to constant fold a vector binop with sources \p Op1 and \p Op2.
-/// If successful, returns the G_BUILD_VECTOR representing the folded vector
-/// constant. \p MIB should have an insertion point already set to create new
-/// G_CONSTANT instructions as needed.
-Register ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
-                                 const Register Op2,
-                                 const MachineRegisterInfo &MRI,
-                                 MachineIRBuilder &MIB);
+/// Returns an empty vector on failure.
+SmallVector<APInt> ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
+                                           const Register Op2,
+                                           const MachineRegisterInfo &MRI);
 
 Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                   uint64_t Imm, const MachineRegisterInfo &MRI);

@@ -1008,6 +1008,11 @@ public:
   MachineInstrBuilder buildBuildVector(const DstOp &Res,
                                        ArrayRef<Register> Ops);
 
+  /// Build and insert \p Res = G_BUILD_VECTOR \p Op0, ... where each OpN is
+  /// built with G_CONSTANT.
+  MachineInstrBuilder buildBuildVectorConstant(const DstOp &Res,
+                                               ArrayRef<APInt> Ops);
+
   /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
   /// the number of elements
   MachineInstrBuilder buildSplatVector(const DstOp &Res,
