@@ -6,6 +6,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Instrumentation.h"
+#include "llvm/Support/Signposts.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
@@ -17,21 +19,25 @@ using namespace lldb_private::instrumentation;
 // Whether we're currently across the API boundary.
 static thread_local bool g_global_boundary = false;
 
+// Instrument SB API calls with singposts when supported.
+static llvm::ManagedStatic<llvm::SignpostEmitter> g_api_signposts;
+
 Instrumenter::Instrumenter(llvm::StringRef pretty_func,
                            std::string &&pretty_args)
-    : m_local_boundary(false) {
+    : m_pretty_func(pretty_func), m_local_boundary(false) {
   if (!g_global_boundary) {
     g_global_boundary = true;
     m_local_boundary = true;
+    g_api_signposts->startInterval(this, m_pretty_func);
   }
   LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "[{0}] {1} ({2})",
-           m_local_boundary ? "external" : "internal", pretty_func,
+           m_local_boundary ? "external" : "internal", m_pretty_func,
            pretty_args);
 }
 
-Instrumenter::~Instrumenter() { UpdateBoundary(); }
-
-void Instrumenter::UpdateBoundary() {
-  if (m_local_boundary)
+Instrumenter::~Instrumenter() {
+  if (m_local_boundary) {
     g_global_boundary = false;
+    g_api_signposts->endInterval(this, m_pretty_func);
+  }
 }
