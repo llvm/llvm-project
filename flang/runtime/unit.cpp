@@ -279,16 +279,23 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
       positionInRecord + static_cast<std::int64_t>(bytes))};
   if (openRecl) {
     // Check for fixed-length record overrun, but allow for
-    // the unformatted sequential record header & footer, if any.
-    int extra{access == Access::Sequential && isUnformatted && *isUnformatted
-            ? static_cast<int>(sizeof(std::uint32_t))
-            : 0};
-    if (furthestAfter > 2 * extra + *openRecl) {
+    // sequential record termination.
+    int extra{0};
+    int header{0};
+    if (access == Access::Sequential) {
+      if (isUnformatted.value_or(false)) {
+        // record header + footer
+        header = static_cast<int>(sizeof(std::uint32_t));
+        extra = 2 * header;
+      } else {
+        extra = 1; // newline
+      }
+    }
+    if (furthestAfter > extra + *openRecl) {
       handler.SignalError(IostatRecordWriteOverrun,
           "Attempt to write %zd bytes to position %jd in a fixed-size record "
           "of %jd bytes",
-          bytes,
-          static_cast<std::intmax_t>(positionInRecord - extra /*header*/),
+          bytes, static_cast<std::intmax_t>(positionInRecord - header),
           static_cast<std::intmax_t>(*openRecl));
       return false;
     }
@@ -487,15 +494,17 @@ bool ExternalFileUnit::AdvanceRecord(IoErrorHandler &handler) {
   } else { // Direction::Output
     bool ok{true};
     RUNTIME_CHECK(handler, isUnformatted.has_value());
-    if (openRecl && furthestPositionInRecord < *openRecl) {
-      // Pad remainder of fixed length record
-      WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + *openRecl, handler);
-      std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
-          isUnformatted.value_or(false) ? 0 : ' ',
-          *openRecl - furthestPositionInRecord);
-      furthestPositionInRecord = *openRecl;
-    }
-    if (!(openRecl && access == Access::Direct)) {
+    if (openRecl && access == Access::Direct) {
+      if (furthestPositionInRecord < *openRecl) {
+        // Pad remainder of fixed length record
+        WriteFrame(
+            frameOffsetInFile_, recordOffsetInFrame_ + *openRecl, handler);
+        std::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+            isUnformatted.value_or(false) ? 0 : ' ',
+            *openRecl - furthestPositionInRecord);
+        furthestPositionInRecord = *openRecl;
+      }
+    } else {
       positionInRecord = furthestPositionInRecord;
       if (isUnformatted.value_or(false)) {
         // Append the length of a sequential unformatted variable-length record
