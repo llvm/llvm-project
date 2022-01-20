@@ -195,7 +195,7 @@ V1::~V1() {
 // Check sign/authentication of vtable pointers and authentication of virtual
 // functions.
 
-// CHECK-LABEL: define %class.V1* @_ZN2V1D2Ev(
+// CHECK-LABEL: define noundef %class.V1* @_ZN2V1D2Ev(
 // CHECK: %[[T0:[0-9]+]] = load i8*, i8** %{{.*}}
 // CHECK: %[[T1:[0-9]+]] = ptrtoint i8* %[[T0]] to i64
 // CHECK: %[[T2:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T1]], i32 2, i64 0)
@@ -216,7 +216,7 @@ V1::~V1() {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.B0*)*, void (%class.B0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.B0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 53119)
-// CHECK: call void %[[T5]](%class.B0* nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.B0* noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testB0m0(B0 *a) {
   a->m0();
@@ -231,7 +231,7 @@ void testB0m0(B0 *a) {
 // CHECK: %[[T5:[0-9]+]] = load %struct.S1* (%class.B0*)*, %struct.S1* (%class.B0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint %struct.S1* (%class.B0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 15165)
-// CHECK: call %struct.S1* %[[T5]](%class.B0* nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call noundef %struct.S1* %[[T5]](%class.B0* noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testB0m1(B0 *a) {
   a->m1();
@@ -246,7 +246,7 @@ void testB0m1(B0 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.B0*)*, void (%class.B0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.B0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 43073)
-// CHECK: call void %[[T5]](%class.B0* nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.B0* noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testB0m2(B0 *a) {
   a->m2();
@@ -261,7 +261,7 @@ void testB0m2(B0 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.D0*)*, void (%class.D0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.D0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 53119)
-// CHECK: call void %[[T5]](%class.D0* nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.D0* noundef nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD0m0(D0 *a) {
   a->m0();
@@ -276,7 +276,7 @@ void testD0m0(D0 *a) {
 // CHECK: %[[T5:[0-9]+]] = load %struct.S2* (%class.D0*)*, %struct.S2* (%class.D0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint %struct.S2* (%class.D0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 35045)
-// CHECK: call %struct.S2* %[[T5]](%class.D0* nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call noundef %struct.S2* %[[T5]](%class.D0* noundef nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD0m1(D0 *a) {
   a->m1();
@@ -291,7 +291,7 @@ void testD0m1(D0 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.B0*)*, void (%class.B0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.B0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 43073)
-// CHECK: call void %[[T5]](%class.B0* nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.B0* noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD0m2(D0 *a) {
   a->m2();
@@ -306,7 +306,7 @@ void testD0m2(D0 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.D0*)*, void (%class.D0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.D0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 10565)
-// CHECK: call void %[[T5]](%class.D0* nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.D0* noundef nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD0m3(D0 *a) {
   a->m3();
@@ -322,7 +322,7 @@ void testD0m3(D0 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.D1*)*, void (%class.D1*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.D1*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 53119)
-// CHECK: call void %[[T5]](%class.D1* nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.D1* noundef nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD1m0(D1 *a) {
   a->m0();
@@ -337,7 +337,7 @@ void testD1m0(D1 *a) {
 // CHECK: %[[T5:[0-9]+]] = load %struct.S2* (%class.D1*)*, %struct.S2* (%class.D1*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint %struct.S2* (%class.D1*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 52864)
-// CHECK: call %struct.S2* %[[T5]](%class.D1* nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call noundef %struct.S2* %[[T5]](%class.D1* noundef nonnull align {{[0-9]+}} dereferenceable(16) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD1m1(D1 *a) {
   a->m1();
@@ -352,7 +352,7 @@ void testD1m1(D1 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.B0*)*, void (%class.B0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.B0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 43073)
-// CHECK: call void %[[T5]](%class.B0* nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.B0* noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD1m2(D1 *a) {
   a->m2();
@@ -368,7 +368,7 @@ void testD1m2(D1 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.D2*)*, void (%class.D2*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.D2*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 53119)
-// CHECK: call void %[[T5]](%class.D2* nonnull align {{[0-9]+}} dereferenceable(36) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.D2* noundef nonnull align {{[0-9]+}} dereferenceable(36) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD2m0(D2 *a) {
   a->m0();
@@ -383,21 +383,21 @@ void testD2m0(D2 *a) {
 // CHECK: %[[T5:[0-9]+]] = load %struct.S2* (%class.D2*)*, %struct.S2* (%class.D2*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint %struct.S2* (%class.D2*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 35045)
-// CHECK: call %struct.S2* %[[T5]](%class.D2* nonnull align {{[0-9]+}} dereferenceable(36) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call noundef %struct.S2* %[[T5]](%class.D2* noundef nonnull align {{[0-9]+}} dereferenceable(36) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD2m1(D2 *a) {
   a->m1();
 }
 
 // CHECK-LABEL: define void @_Z10testD2m2D0P2D2(
-// CHECK: call void @_ZN2B02m2Ev(%class.B0* nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}){{$}}
+// CHECK: call void @_ZN2B02m2Ev(%class.B0* noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}){{$}}
 
 void testD2m2D0(D2 *a) {
   a->D0::m2();
 }
 
 // CHECK-LABEL: define void @_Z10testD2m2D1P2D2(
-// CHECK: call void @_ZN2B02m2Ev(%class.B0* nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}){{$}}
+// CHECK: call void @_ZN2B02m2Ev(%class.B0* noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}){{$}}
 
 void testD2m2D1(D2 *a) {
   a->D1::m2();
@@ -412,7 +412,7 @@ void testD2m2D1(D2 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.D2*)*, void (%class.D2*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.D2*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 10565)
-// CHECK: call void %[[T5]](%class.D2* nonnull align {{[0-9]+}} dereferenceable(36) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.D2* noundef nonnull align {{[0-9]+}} dereferenceable(36) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD2m3(D2 *a) {
   a->m3();
@@ -427,7 +427,7 @@ void testD2m3(D2 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.D3*)*, void (%class.D3*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.D3*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 44578)
-// CHECK: call void %[[T5]](%class.D3* nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.D3* noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD3m0(D3 *a) {
   a->m0();
@@ -442,7 +442,7 @@ void testD3m0(D3 *a) {
 // CHECK: %[[T5:[0-9]+]] = load %struct.S2* (%class.D3*)*, %struct.S2* (%class.D3*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint %struct.S2* (%class.D3*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 30766)
-// CHECK: call %struct.S2* %[[T5]](%class.D3* nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call noundef %struct.S2* %[[T5]](%class.D3* noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD3m1(D3 *a) {
   a->m1();
@@ -457,7 +457,7 @@ void testD3m1(D3 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.B0*)*, void (%class.B0*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.B0*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 43073)
-// CHECK: call void %[[T5]](%class.B0* nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.B0* noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}) [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD3m2(D3 *a) {
   a->m2();
@@ -473,7 +473,7 @@ void testD3m2(D3 *a) {
 // CHECK: %[[T5:[0-9]+]] = load void (%class.D3*)*, void (%class.D3*)** %[[VFN]]
 // CHECK: %[[T6:[0-9]+]] = ptrtoint void (%class.D3*)** %[[VFN]] to i64
 // CHECK: %[[T7:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 62452)
-// CHECK: call void %[[T5]](%class.D3* nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: call void %[[T5]](%class.D3* noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD3Destructor0(D3 *a) {
   delete a;
@@ -498,8 +498,8 @@ void testD3Destructor0(D3 *a) {
 // CHECK: %[[T12:[0-9]+]] = load %class.D3* (%class.D3*)*, %class.D3* (%class.D3*)** %[[VFN]]
 // CHECK: %[[T13:[0-9]+]] = ptrtoint %class.D3* (%class.D3*)** %[[VFN]] to i64
 // CHECK: %[[T14:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T13]], i64 57279)
-// CHECK: %call = call %class.D3* %[[T12]](%class.D3* nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T14]]) ]
-// CHECK: call void @_ZdlPv(i8* %[[T7]])
+// CHECK: %call = call noundef %class.D3* %[[T12]](%class.D3* noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T14]]) ]
+// CHECK: call void @_ZdlPv(i8* noundef %[[T7]])
 
 void testD3Destructor1(D3 *a) {
   ::delete a;
@@ -515,7 +515,7 @@ void testD3Destructor1(D3 *a) {
 // CHECK: %[[T5:.*]] = load %class.D3* (%class.D3*)*, %class.D3* (%class.D3*)** %[[VFN]]
 // CHECK: %[[T6:.*]] = ptrtoint %class.D3* (%class.D3*)** %[[VFN]] to i64
 // CHECK: %[[T7:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 57279)
-// CHECK: %call = call %class.D3* %[[T5]](%class.D3* nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// CHECK: %call = call noundef %class.D3* %[[T5]](%class.D3* noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD3Destructor2(D3 *a) {
   a->~D3();
@@ -532,25 +532,25 @@ void materializeConstructors() {
   V1 V1;
 }
 
-// CHECK-LABEL: define linkonce_odr %class.B0* @_ZN2B0C2Ev(
+// CHECK-LABEL: define linkonce_odr noundef %class.B0* @_ZN2B0C2Ev(
 // CHECK: %[[THIS:[0-9]+]] = bitcast %class.B0* %{{.*}} to i32 (...)***
 // CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i8** getelementptr inbounds ({ [7 x i8*] }, { [7 x i8*] }* @_ZTV2B0, i32 0, inrange i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to i32 (...)**
 // CHECK: store i32 (...)** %[[SIGNED_VTADDR]], i32 (...)*** %[[THIS]]
 
-// CHECK-LABEL: define linkonce_odr %class.D0* @_ZN2D0C2Ev(
+// CHECK-LABEL: define linkonce_odr noundef %class.D0* @_ZN2D0C2Ev(
 // CHECK: %[[THIS:[0-9]+]] = bitcast %class.D0* %{{.*}} to i32 (...)***
 // CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i8** getelementptr inbounds ({ [9 x i8*] }, { [9 x i8*] }* @_ZTV2D0, i32 0, inrange i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to i32 (...)**
 // CHECK: store i32 (...)** %[[SIGNED_VTADDR]], i32 (...)*** %[[THIS]]
 
-// CHECK-LABEL: define linkonce_odr %class.D1* @_ZN2D1C2Ev(
+// CHECK-LABEL: define linkonce_odr noundef %class.D1* @_ZN2D1C2Ev(
 // CHECK: %[[THIS:[0-9]+]] = bitcast %class.D1* %{{.*}} to i32 (...)***
 // CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i8** getelementptr inbounds ({ [8 x i8*] }, { [8 x i8*] }* @_ZTV2D1, i32 0, inrange i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to i32 (...)**
 // CHECK: store i32 (...)** %[[SIGNED_VTADDR]], i32 (...)*** %[[THIS]]
 
-// CHECK-LABEL: define linkonce_odr %class.D2* @_ZN2D2C2Ev(
+// CHECK-LABEL: define linkonce_odr noundef %class.D2* @_ZN2D2C2Ev(
 // CHECK: %[[SLOT0:[0-9+]]] = bitcast %class.D2* %[[THIS:[a-z0-9]+]] to i32 (...)***
 // CHECK: %[[SIGN_VTADDR0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (i8** getelementptr inbounds ({ [9 x i8*], [8 x i8*] }, { [9 x i8*], [8 x i8*] }* @_ZTV2D2, i32 0, inrange i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[T1:[0-9]+]] = inttoptr i64 %[[SIGN_VTADDR0]] to i32 (...)**
@@ -562,7 +562,7 @@ void materializeConstructors() {
 // CHECK: %[[T5:[0-9]+]] = inttoptr i64 %[[SIGN_VTADDR1]] to i32 (...)**
 // CHECK: store i32 (...)** %[[T5]], i32 (...)*** %[[SLOT1]]
 
-// CHECK-LABEL: define linkonce_odr %class.V0* @_ZN2V0C2Ev(
+// CHECK-LABEL: define linkonce_odr noundef %class.V0* @_ZN2V0C2Ev(
 // CHECK: %[[VTT:[a-z0-9]+]] = load i8**, i8*** %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = load i8*, i8** %[[VTT]]
 // CHECK: %[[T1:[0-9]+]] = ptrtoint i8* %[[T0]] to i64

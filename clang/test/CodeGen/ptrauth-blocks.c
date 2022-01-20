@@ -15,7 +15,7 @@ void test_block_call() {
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[FNADDR]],
   // CHECK-NEXT: [[FNPTR:%.*]] = bitcast i8* [[T0]] to void (i8*)*
   // CHECK-NEXT: [[DISC:%.*]] = ptrtoint i8** [[FNADDR]] to i64
-  // CHECK-NEXT: call void [[FNPTR]](i8* [[BLOCK_OPAQUE]]) [ "ptrauth"(i32 0, i64 [[DISC]]) ]
+  // CHECK-NEXT: call void [[FNPTR]](i8* noundef [[BLOCK_OPAQUE]]) [ "ptrauth"(i32 0, i64 [[DISC]]) ]
   blockptr();
 }
 

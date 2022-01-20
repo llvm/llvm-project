@@ -27,10 +27,10 @@ typedef struct {
 SA getSA(void);
 void calleeSA(SA);
 
-// CHECK: define void @test_copy_constructor_SA(%[[STRUCT_SA]]* %{{.*}})
+// CHECK: define void @test_copy_constructor_SA(%[[STRUCT_SA]]* noundef %{{.*}})
 // CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(
 
-// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_pa1_50_8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_pa1_50_8(i8** noundef %[[DST:.*]], i8** noundef %[[SRC:.*]])
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -55,10 +55,10 @@ void test_copy_constructor_SA(SA *s) {
   SA t = *s;
 }
 
-// CHECK: define void @test_copy_constructor_SA2(%[[STRUCT_SA2]]* %{{.*}})
+// CHECK: define void @test_copy_constructor_SA2(%[[STRUCT_SA2]]* noundef %{{.*}})
 // CHECK: call void @__copy_constructor_8_8_t0w4_pa2_30_8(
 
-// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_pa2_30_8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_pa2_30_8(i8** noundef %[[DST:.*]], i8** noundef %[[SRC:.*]])
 // CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
 // CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
 // CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
@@ -109,14 +109,14 @@ void test_move_assignment_SA(SA *p) {
   *p = getSA();
 }
 
-// CHECK: define void @test_parameter_SA(%[[STRUCT_SA]]* %{{.*}})
+// CHECK: define void @test_parameter_SA(%[[STRUCT_SA]]* noundef %{{.*}})
 // CHECK-NOT: call
 // CHECK: ret void
 
 void test_parameter_SA(SA a) {
 }
 
-// CHECK: define void @test_argument_SA(%[[STRUCT_SA]]* %[[A:.*]])
+// CHECK: define void @test_argument_SA(%[[STRUCT_SA]]* noundef %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_SA]], align 8
 // CHECK: store %[[STRUCT_SA]]* %[[A]], %[[STRUCT_SA]]** %[[A_ADDR]], align 8
@@ -124,7 +124,7 @@ void test_parameter_SA(SA a) {
 // CHECK: %[[V1:.*]] = bitcast %[[STRUCT_SA]]* %[[AGG_TMP]] to i8**
 // CHECK: %[[V2:.*]] = bitcast %[[STRUCT_SA]]* %[[V0]] to i8**
 // CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(i8** %[[V1]], i8** %[[V2]]) #5
-// CHECK: call void @calleeSA(%[[STRUCT_SA]]* %[[AGG_TMP]])
+// CHECK: call void @calleeSA(%[[STRUCT_SA]]* noundef %[[AGG_TMP]])
 // CHECK-NOT: call
 // CHECK: ret void
 
@@ -132,7 +132,7 @@ void test_argument_SA(SA *a) {
   calleeSA(*a);
 }
 
-// CHECK: define void @test_return_SA(%[[STRUCT_SA]]* noalias sret(%struct.SA) align 8 %[[AGG_RESULT:.*]], %[[STRUCT_SA]]* %[[A:.*]])
+// CHECK: define void @test_return_SA(%[[STRUCT_SA]]* noalias sret(%struct.SA) align 8 %[[AGG_RESULT:.*]], %[[STRUCT_SA]]* noundef %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: store %[[STRUCT_SA]]* %[[A]], %[[STRUCT_SA]]** %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load %[[STRUCT_SA]]*, %[[STRUCT_SA]]** %[[A_ADDR]], align 8

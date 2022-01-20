@@ -103,7 +103,7 @@ void test_store_data_ia() {
 // CHECK-NEXT:    [[AUTHED:%.*]] = inttoptr i64 [[T1]] to i32*
 // CHECK-NEXT:    br label
 // CHECK:         [[RESULT:%.*]] = phi i32* [ null, {{.*}} ], [ [[AUTHED]], {{.*}} ]
-// CHECK-NEXT:    call void @use_upi(i32* [[RESULT]])
+// CHECK-NEXT:    call void @use_upi(i32* noundef [[RESULT]])
   use_upi(iqpi = global_aqpi);
 }
 
@@ -199,7 +199,7 @@ void test_load_data_i() {
 // CHECK-NEXT:    [[AUTHED:%.*]] = inttoptr i64 [[T1]] to i32*
 // CHECK-NEXT:    br label
 // CHECK:         [[T0:%.*]] = phi i32* [ null, {{.*}} ], [ [[AUTHED]], {{.*}} ]
-// CHECK-NEXT:    call void @use_upi(i32* [[T0]])
+// CHECK-NEXT:    call void @use_upi(i32* noundef [[T0]])
   use_upi(global_iqpi);
 }
 
@@ -405,7 +405,7 @@ void test_load_data_a() {
 // CHECK-NEXT:    [[AUTHED:%.*]] = inttoptr i64 [[T1]] to i32*
 // CHECK-NEXT:    br label
 // CHECK:         [[T0:%.*]] = phi i32* [ null, {{.*}} ], [ [[AUTHED]], {{.*}} ]
-// CHECK-NEXT:    call void @use_upi(i32* [[T0]])
+// CHECK-NEXT:    call void @use_upi(i32* noundef [[T0]])
   use_upi(global_aqpi);
 }
 
@@ -491,7 +491,7 @@ void test_store_function_ia() {
 // CHECK-NEXT:    [[SIGNED:%.*]] = inttoptr i64 [[T1]] to void ()*
 // CHECK-NEXT:    br label
 // CHECK:         [[T0:%.*]] = phi void ()* [ null, {{.*}} ], [ [[SIGNED]], {{.*}} ]
-// CHECK-NEXT:    call void @use_upf(void ()* [[T0]])
+// CHECK-NEXT:    call void @use_upf(void ()* noundef [[T0]])
   use_upf(iqpf = global_aqpf);
 }
 
@@ -562,7 +562,7 @@ void test_load_function_i() {
 // CHECK-NEXT:    [[SIGNED:%.*]] = inttoptr i64 [[T1]] to void ()*
 // CHECK-NEXT:    br label
 // CHECK:         [[T0:%.*]] = phi void ()* [ null, {{.*}} ], [ [[SIGNED]], {{.*}} ]
-// CHECK-NEXT:    call void @use_upf(void ()* [[T0]])
+// CHECK-NEXT:    call void @use_upf(void ()* noundef [[T0]])
   use_upf(global_iqpf);
 }
 
@@ -739,6 +739,6 @@ void test_load_function_a() {
 // CHECK-NEXT:    [[SIGNED:%.*]] = inttoptr i64 [[T1]] to void ()*
 // CHECK-NEXT:    br label
 // CHECK:         [[T0:%.*]] = phi void ()* [ null, {{.*}} ], [ [[SIGNED]], {{.*}} ]
-// CHECK-NEXT:    call void @use_upf(void ()* [[T0]])
+// CHECK-NEXT:    call void @use_upf(void ()* noundef [[T0]])
   use_upf(global_aqpf);
 }
