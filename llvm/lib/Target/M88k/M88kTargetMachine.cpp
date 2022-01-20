@@ -32,10 +32,13 @@ static cl::opt<bool>
                      cl::desc("Relax out of range conditional branches"));
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM88kTarget() {
-  // Register the target.
+  // Register the target and target specific passes.
   RegisterTargetMachine<M88kTargetMachine> X(getTheM88kTarget());
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
+  initializeM88kPreLegalizerCombinerPass(PR);
+  initializeM88kPostLegalizerLoweringPass(PR);
+  initializeM88kDelaySlotFillerPass(PR);
 }
 
 namespace {

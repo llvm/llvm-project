@@ -177,11 +177,6 @@ void M88kPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-// TODO This should not be needed here.
-namespace llvm {
-void initializeM88kPreLegalizerCombinerPass(PassRegistry &Registry);
-}
-
 M88kPreLegalizerCombiner::M88kPreLegalizerCombiner() : MachineFunctionPass(ID) {
   initializeM88kPreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
 }

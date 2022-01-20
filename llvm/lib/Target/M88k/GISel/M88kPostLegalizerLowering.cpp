@@ -162,11 +162,6 @@ void M88kPostLegalizerLowering::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-// TODO This should not be needed here.
-namespace llvm {
-void initializeM88kPostLegalizerLoweringPass(PassRegistry &Registry);
-}
-
 M88kPostLegalizerLowering::M88kPostLegalizerLowering()
     : MachineFunctionPass(ID) {
   initializeM88kPostLegalizerLoweringPass(*PassRegistry::getPassRegistry());

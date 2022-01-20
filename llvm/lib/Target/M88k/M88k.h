@@ -35,5 +35,9 @@ FunctionPass *createM88kPreLegalizerCombiner();
 FunctionPass *createM88kPostLegalizerLowering();
 FunctionPass *createM88kDelaySlotFiller();
 
+void initializeM88kPreLegalizerCombinerPass(PassRegistry &Registry);
+void initializeM88kPostLegalizerLoweringPass(PassRegistry &Registry);
+void initializeM88kDelaySlotFillerPass(PassRegistry &Registry);
+
 } // end namespace llvm
 #endif

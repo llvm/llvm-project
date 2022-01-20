@@ -41,11 +41,6 @@ public:
 };
 } // end anonymous namespace
 
-// TODO This should not be needed here.
-namespace llvm {
-void initializeM88kDelaySlotFillerPass(PassRegistry &Registry);
-}
-
 M88kDelaySlotFiller::M88kDelaySlotFiller() : MachineFunctionPass(ID) {
   initializeM88kDelaySlotFillerPass(*PassRegistry::getPassRegistry());
 }
