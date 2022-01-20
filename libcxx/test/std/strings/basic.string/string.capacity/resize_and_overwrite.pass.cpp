@@ -76,7 +76,8 @@ constexpr bool test() {
 
 void test_value_categories() {
   std::string s;
-  s.resize_and_overwrite(10, [](char*&, size_t&) { return 0; });
+  s.resize_and_overwrite(10, [](char*&&, size_t&&) { return 0; });
+  s.resize_and_overwrite(10, [](char* const&, const size_t&) { return 0; });
   struct RefQualified {
     int operator()(char*, size_t) && { return 0; }
   };

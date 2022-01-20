@@ -979,8 +979,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI constexpr
     void resize_and_overwrite(size_type __n, _Op __op) {
       __resize_default_init(__n);
-      pointer __data = data();
-      __erase_to_end(_VSTD::move(__op)(__data, __n));
+      __erase_to_end(_VSTD::move(__op)(data(), _LIBCPP_AUTO_CAST(__n)));
     }
 #endif
 
