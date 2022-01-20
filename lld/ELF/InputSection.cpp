@@ -219,7 +219,8 @@ OutputSection *SectionBase::getOutputSection() {
 // `uncompressedSize` member and remove the header from `rawData`.
 template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
   // Old-style header
-  if (name.startswith(".zdebug")) {
+  if (!(flags & SHF_COMPRESSED)) {
+    assert(name.startswith(".zdebug"));
     if (!toStringRef(rawData).startswith("ZLIB")) {
       error(toString(this) + ": corrupted compressed section header");
       return;
@@ -240,7 +241,6 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
     return;
   }
 
-  assert(flags & SHF_COMPRESSED);
   flags &= ~(uint64_t)SHF_COMPRESSED;
 
   // New-style header
