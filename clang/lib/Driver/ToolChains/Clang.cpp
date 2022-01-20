@@ -5822,6 +5822,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-ftype-visibility");
       CmdArgs.push_back("default");
     }
+  } else if (IsOpenMPDevice) {
+    // When compiling for the OpenMP device we want protected visibility by
+    // default. This prevents the device from accidenally preempting code on the
+    // host, makes the system more robust, and improves performance.
+    CmdArgs.push_back("-fvisibility");
+    CmdArgs.push_back("protected");
   }
 
   if (!RawTriple.isPS4())
