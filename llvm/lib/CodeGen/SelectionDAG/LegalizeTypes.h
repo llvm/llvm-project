@@ -936,6 +936,7 @@ private:
   SDValue WidenVecRes_VP_LOAD(VPLoadSDNode *N);
   SDValue WidenVecRes_MLOAD(MaskedLoadSDNode* N);
   SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
+  SDValue WidenVecRes_VP_GATHER(VPGatherSDNode* N);
   SDValue WidenVecRes_ScalarOp(SDNode* N);
   SDValue WidenVecRes_Select(SDNode *N);
   SDValue WidenVSELECTMask(SDNode *N);
@@ -972,6 +973,7 @@ private:
   SDValue WidenVecOp_MSTORE(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_MGATHER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_MSCATTER(SDNode* N, unsigned OpNo);
+  SDValue WidenVecOp_VP_SCATTER(SDNode* N, unsigned OpNo);
   SDValue WidenVecOp_SETCC(SDNode* N);
   SDValue WidenVecOp_STRICT_FSETCC(SDNode* N);
   SDValue WidenVecOp_VSELECT(SDNode *N);

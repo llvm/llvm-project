@@ -236,6 +236,42 @@ define void @vpscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x i16*> %ptrs, 
   ret void
 }
 
+declare void @llvm.vp.scatter.v3i16.v3p0i16(<3 x i16>, <3 x i16*>, <3 x i1>, i32)
+
+define void @vpscatter_v3i16(<3 x i16> %val, <3 x i16*> %ptrs, <3 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vpscatter_v3i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpscatter_v3i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
+; RV64-NEXT:    ret
+  call void @llvm.vp.scatter.v3i16.v3p0i16(<3 x i16> %val, <3 x i16*> %ptrs, <3 x i1> %m, i32 %evl)
+  ret void
+}
+
+define void @vpscatter_truemask_v3i16(<3 x i16> %val, <3 x i16*> %ptrs, i32 zeroext %evl) {
+; RV32-LABEL: vpscatter_truemask_v3i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV32-NEXT:    vsoxei32.v v8, (zero), v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpscatter_truemask_v3i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV64-NEXT:    vsoxei64.v v8, (zero), v10
+; RV64-NEXT:    ret
+  %mhead = insertelement <3 x i1> undef, i1 1, i32 0
+  %mtrue = shufflevector <3 x i1> %mhead, <3 x i1> undef, <3 x i32> zeroinitializer
+  call void @llvm.vp.scatter.v3i16.v3p0i16(<3 x i16> %val, <3 x i16*> %ptrs, <3 x i1> %mtrue, i32 %evl)
+  ret void
+}
+
 declare void @llvm.vp.scatter.v4i16.v4p0i16(<4 x i16>, <4 x i16*>, <4 x i1>, i32)
 
 define void @vpscatter_v4i16(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
