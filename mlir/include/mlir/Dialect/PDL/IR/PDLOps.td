@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -402,7 +403,8 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
 //===----------------------------------------------------------------------===//
 
 def PDL_PatternOp : PDL_Op<"pattern", [
-    IsolatedFromAbove, SingleBlock, Symbol
+    IsolatedFromAbove, SingleBlock, Symbol,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getDefaultDialect"]>
   ]> {
   let summary = "Define a rewrite pattern";
   let description = [{
@@ -573,7 +575,8 @@ def PDL_ResultsOp : PDL_Op<"results", [NoSideEffect]> {
 
 def PDL_RewriteOp : PDL_Op<"rewrite", [
      Terminator, HasParent<"pdl::PatternOp">, NoTerminator, NoRegionArguments,
-     SingleBlock, AttrSizedOperandSegments
+     SingleBlock, AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getDefaultDialect"]>
   ]> {
   let summary = "Specify the rewrite of a matched pattern";
   let description = [{

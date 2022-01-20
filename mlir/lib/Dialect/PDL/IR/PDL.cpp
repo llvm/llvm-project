@@ -355,6 +355,11 @@ RewriteOp PatternOp::getRewriter() {
   return cast<RewriteOp>(body().front().getTerminator());
 }
 
+/// The default dialect is `pdl`.
+StringRef PatternOp::getDefaultDialect() {
+  return PDLDialect::getDialectNamespace();
+}
+
 //===----------------------------------------------------------------------===//
 // pdl::ReplaceOp
 //===----------------------------------------------------------------------===//
@@ -429,6 +434,11 @@ static LogicalResult verify(RewriteOp op) {
   }
 
   return success();
+}
+
+/// The default dialect is `pdl`.
+StringRef RewriteOp::getDefaultDialect() {
+  return PDLDialect::getDialectNamespace();
 }
 
 //===----------------------------------------------------------------------===//
