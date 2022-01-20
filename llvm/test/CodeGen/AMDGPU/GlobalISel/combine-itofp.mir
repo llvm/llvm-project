@@ -10,11 +10,12 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_char_to_f32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
-    ; CHECK: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_AND %0, %1
@@ -31,11 +32,12 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_too_many_bits_to_f32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
-    ; CHECK: $vgpr0 = COPY [[UITOFP]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[UITOFP:%[0-9]+]]:_(s32) = G_UITOFP [[AND]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UITOFP]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 256
     %2:_(s32) = G_AND %0, %1
@@ -52,11 +54,12 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_char_to_f32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
-    ; CHECK: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_AND %0, %1
@@ -73,11 +76,12 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_bits127_to_f32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
-    ; CHECK: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 127
     %2:_(s32) = G_AND %0, %1
@@ -94,11 +98,12 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_bits128_to_f32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
-    ; CHECK: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 128
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 128
     %2:_(s32) = G_AND %0, %1
@@ -114,11 +119,12 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_too_many_bits_to_f32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[AND]](s32)
-    ; CHECK: $vgpr0 = COPY [[SITOFP]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[AND]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SITOFP]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 256
     %2:_(s32) = G_AND %0, %1
@@ -135,13 +141,14 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_char_to_f16
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[AMDGPU_CVT_F32_UBYTE0_]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
-    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_AND %0, %1
@@ -159,13 +166,14 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_char_to_f16
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[AMDGPU_CVT_F32_UBYTE0_]](s32)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
-    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 255
     %2:_(s32) = G_AND %0, %1
@@ -183,12 +191,13 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_s64_char_to_f32
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[TRUNC]]
-    ; CHECK: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[TRUNC]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 255
     %2:_(s64) = G_AND %0, %1
@@ -205,12 +214,13 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_s64_char_to_f32
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[TRUNC]]
-    ; CHECK: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[TRUNC]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 255
     %2:_(s64) = G_AND %0, %1
@@ -227,13 +237,14 @@ body:             |
 
     ; CHECK-LABEL: name: uitofp_s16_char_to_f32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; CHECK: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s16)
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[ANYEXT]]
-    ; CHECK: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s16)
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[ANYEXT]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s16) = G_CONSTANT i16 255
@@ -251,13 +262,14 @@ body:             |
 
     ; CHECK-LABEL: name: sitofp_s16_char_to_f32
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; CHECK: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s16)
-    ; CHECK: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[ANYEXT]]
-    ; CHECK: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[AND]](s16)
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[ANYEXT]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(s16) = G_CONSTANT i16 255
