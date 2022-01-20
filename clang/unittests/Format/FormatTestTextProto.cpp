@@ -34,17 +34,21 @@ protected:
     return format(Code, 0, Code.size(), Style);
   }
 
-  static void verifyFormat(llvm::StringRef Code, const FormatStyle &Style) {
+  static void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
+                            const FormatStyle &Style) {
+    ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
     EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
     EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
   }
 
-  static void verifyFormat(llvm::StringRef Code) {
+  static void _verifyFormat(const char *File, int Line, llvm::StringRef Code) {
     FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
     Style.ColumnLimit = 60; // To make writing tests easier.
-    verifyFormat(Code, Style);
+    _verifyFormat(File, Line, Code, Style);
   }
 };
+
+#define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
 TEST_F(FormatTestTextProto, KeepsTopLevelEntriesFittingALine) {
   verifyFormat("field_a: OK field_b: OK field_c: OK field_d: OK field_e: OK");

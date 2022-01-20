@@ -33,8 +33,10 @@ protected:
     return *Formatted;
   }
 
-  void verifySort(llvm::StringRef Expected, llvm::StringRef Code,
-                  unsigned Offset = 0, unsigned Length = 0) {
+  void _verifySort(const char *File, int Line, llvm::StringRef Expected,
+                   llvm::StringRef Code, unsigned Offset = 0,
+                   unsigned Length = 0) {
+    ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
     std::string Result = sort(Code, Offset, Length);
     EXPECT_EQ(Expected.str(), Result) << "Expected:\n"
                                       << Expected << "\nActual:\n"
@@ -43,6 +45,8 @@ protected:
 
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
 };
+
+#define verifySort(...) _verifySort(__FILE__, __LINE__, __VA_ARGS__)
 
 TEST_F(SortImportsTestJS, AlreadySorted) {
   verifySort("import {sym} from 'a';\n"
