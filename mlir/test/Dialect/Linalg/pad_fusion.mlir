@@ -15,9 +15,9 @@ func @dynamic_pad_fusion(%arg0 : tensor<?x?xf32>, %arg1 : index, %arg2 : index,
       %1 = arith.mulf %arg6, %arg6 : f32
       linalg.yield %1 : f32
     } -> tensor<?x?xf32>
-  %1 = linalg.pad_tensor %0 low [%arg1, %arg2] high [%arg3, %arg4] {
+  %1 = tensor.pad %0 low [%arg1, %arg2] high [%arg3, %arg4] {
     ^bb0(%arg6: index, %arg7 : index):
-      linalg.yield %arg5 : f32
+      tensor.yield %arg5 : f32
     } : tensor<?x?xf32> to tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
@@ -64,9 +64,9 @@ func @mixed_pad_fusion(%arg0 : tensor<?x42xf32>, %arg1 : index, %arg2 : index,
       %1 = arith.mulf %arg4, %arg4 : f32
       linalg.yield %1 : f32
     } -> tensor<42x?xf32>
-  %1 = linalg.pad_tensor %0 low [3, %arg1] high [4, %arg2] {
+  %1 = tensor.pad %0 low [3, %arg1] high [4, %arg2] {
     ^bb0(%arg4: index, %arg5 : index):
-      linalg.yield %arg3 : f32
+      tensor.yield %arg3 : f32
     } : tensor<42x?xf32> to tensor<49x?xf32>
   return %1 : tensor<49x?xf32>
 }

@@ -1,4 +1,4 @@
-//===- HoistPadding.h - Hoisting transformation for PadTensorOp -*- C++ -*-===//
+//===- HoistPadding.h - Hoisting for tensor::PadOp -*- C++ --------------*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,11 @@
 namespace mlir {
 class Value;
 
+namespace tensor {
+class PadOp;
+} // namespace tensor
+
 namespace linalg {
-class PadTensorOp;
 
 /// Mechanically hoist padding operations on tensors by `numLoops` into a new,
 /// generally larger tensor. This achieves packing of multiple padding ops into
@@ -59,8 +62,8 @@ class PadTensorOp;
 ///      }
 ///    }
 /// ```
-FailureOr<Value> hoistPaddingOnTensors(PadTensorOp opToHoist, int numLoops,
-                                       PadTensorOp &hoistedOp);
+FailureOr<Value> hoistPaddingOnTensors(tensor::PadOp opToHoist, int numLoops,
+                                       tensor::PadOp &hoistedOp);
 
 } // namespace linalg
 } // namespace mlir

@@ -476,6 +476,7 @@ static LogicalResult verify(GenerateOp op) {
   // Ensure that the region yields an element of the right type.
   auto yieldOp =
       llvm::cast<YieldOp>(op.body().getBlocks().front().getTerminator());
+
   if (yieldOp.value().getType() != resultTy.getElementType())
     return op.emitOpError(
         "body must be terminated with a `yield` operation of the tensor "
@@ -1480,6 +1481,258 @@ Value mlir::tensor::createCanonicalRankReducingInsertSliceOp(OpBuilder &b,
   SmallVector<OpFoldResult> strides(rank, b.getIndexAttr(1));
   return b.createOrFold<tensor::InsertSliceOp>(loc, tensor, dest, offsets,
                                                sizes, strides);
+}
+
+//===----------------------------------------------------------------------===//
+// PadOp
+//===----------------------------------------------------------------------===//
+
+// TODO: Replace custom<InferType> directive with AllTypesMatch as soon as it
+// supports optional types.
+void printInferType(OpAsmPrinter &printer, Operation *op, Value optOperand,
+                    Type typeToInfer, Type typeToInferFrom) {}
+
+ParseResult parseInferType(OpAsmParser &parser,
+                           Optional<OpAsmParser::OperandType> optOperand,
+                           Type &typeToInfer, Type typeToInferFrom) {
+  if (optOperand)
+    typeToInfer = typeToInferFrom;
+  return success();
+}
+
+static LogicalResult verify(PadOp op) {
+  auto sourceType = op.source().getType().cast<RankedTensorType>();
+  auto resultType = op.result().getType().cast<RankedTensorType>();
+  auto expectedType = PadOp::inferResultType(
+      sourceType, extractFromI64ArrayAttr(op.static_low()),
+      extractFromI64ArrayAttr(op.static_high()));
+  for (int i = 0, e = sourceType.getRank(); i < e; ++i) {
+    if (resultType.getDimSize(i) == expectedType.getDimSize(i))
+      continue;
+    if (expectedType.isDynamicDim(i))
+      continue;
+    return op.emitError("specified type ")
+           << resultType << " does not match the inferred type "
+           << expectedType;
+  }
+
+  auto &region = op.region();
+  unsigned rank = resultType.getRank();
+  Block &block = region.front();
+  if (block.getNumArguments() != rank)
+    return op.emitError("expected the block to have ") << rank << " arguments";
+
+  // Note: the number and type of yield values are checked in the YieldOp.
+  for (const auto &en : llvm::enumerate(block.getArgumentTypes())) {
+    if (!en.value().isIndex())
+      return op.emitOpError("expected block argument ")
+             << (en.index() + 1) << " to be an index";
+  }
+
+  // Ensure that the region yields an element of the right type.
+  auto yieldOp = llvm::cast<YieldOp>(block.getTerminator());
+  if (yieldOp.value().getType() !=
+      op.getType().cast<ShapedType>().getElementType())
+    return op.emitOpError("expected yield type to match shape element type");
+
+  return success();
+}
+
+RankedTensorType PadOp::inferResultType(RankedTensorType sourceType,
+                                        ArrayRef<int64_t> staticLow,
+                                        ArrayRef<int64_t> staticHigh,
+                                        ArrayRef<int64_t> resultShape) {
+  unsigned rank = sourceType.getRank();
+  assert(staticLow.size() == rank && "unexpected staticLow size mismatch");
+  assert(staticHigh.size() == rank && "unexpected staticHigh size mismatch");
+  assert((resultShape.empty() || resultShape.size() == rank) &&
+         "unexpected resultShape size mismatch");
+
+  SmallVector<int64_t, 4> inferredShape;
+  for (auto i : llvm::seq<unsigned>(0, rank)) {
+    if (sourceType.isDynamicDim(i) ||
+        staticLow[i] == ShapedType::kDynamicSize ||
+        staticHigh[i] == ShapedType::kDynamicSize) {
+      inferredShape.push_back(resultShape.empty() ? ShapedType::kDynamicSize
+                                                  : resultShape[i]);
+    } else {
+      int64_t size = sourceType.getDimSize(i) + staticLow[i] + staticHigh[i];
+      assert((resultShape.empty() || size == resultShape[i] ||
+              resultShape[i] == ShapedType::kDynamicSize) &&
+             "mismatch between inferred shape and result shape");
+      inferredShape.push_back(size);
+    }
+  }
+
+  return RankedTensorType::get(inferredShape, sourceType.getElementType());
+}
+
+void PadOp::build(OpBuilder &b, OperationState &result, Value source,
+                  ArrayRef<int64_t> staticLow, ArrayRef<int64_t> staticHigh,
+                  ValueRange low, ValueRange high, bool nofold,
+                  ArrayRef<NamedAttribute> attrs) {
+  auto sourceType = source.getType().cast<RankedTensorType>();
+  auto resultType = inferResultType(sourceType, staticLow, staticHigh);
+  build(b, result, resultType, source, low, high, b.getI64ArrayAttr(staticLow),
+        b.getI64ArrayAttr(staticHigh), nofold ? b.getUnitAttr() : UnitAttr());
+  result.addAttributes(attrs);
+}
+
+void PadOp::build(OpBuilder &b, OperationState &result, Value source,
+                  ValueRange low, ValueRange high, bool nofold,
+                  ArrayRef<NamedAttribute> attrs) {
+  auto sourceType = source.getType().cast<RankedTensorType>();
+  unsigned rank = sourceType.getRank();
+  SmallVector<int64_t, 4> staticVector(rank, ShapedType::kDynamicSize);
+  build(b, result, source, staticVector, staticVector, low, high, nofold,
+        attrs);
+}
+
+void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
+                  Value source, ArrayRef<OpFoldResult> low,
+                  ArrayRef<OpFoldResult> high, bool nofold,
+                  ArrayRef<NamedAttribute> attrs) {
+  assert(resultType.isa<RankedTensorType>());
+  auto sourceType = source.getType().cast<RankedTensorType>();
+  SmallVector<Value, 4> dynamicLow, dynamicHigh;
+  SmallVector<int64_t, 4> staticLow, staticHigh;
+  // staticLow and staticHigh have full information of the padding config.
+  // This will grow staticLow and staticHigh with 1 value. If the config is
+  // dynamic (ie not a constant), dynamicLow and dynamicHigh will grow with 1
+  // value as well.
+  dispatchIndexOpFoldResults(low, dynamicLow, staticLow,
+                             ShapedType::kDynamicSize);
+  dispatchIndexOpFoldResults(high, dynamicHigh, staticHigh,
+                             ShapedType::kDynamicSize);
+  if (!resultType) {
+    resultType = PadOp::inferResultType(sourceType, staticLow, staticHigh);
+  }
+  build(b, result, resultType, source, dynamicLow, dynamicHigh,
+        b.getI64ArrayAttr(staticLow), b.getI64ArrayAttr(staticHigh),
+        nofold ? b.getUnitAttr() : UnitAttr());
+  result.addAttributes(attrs);
+}
+
+namespace {
+// Folds tensor.pad when padding is static zeros and the attribute
+// doesn't request otherwise.
+struct FoldStaticZeroPadding : public OpRewritePattern<PadOp> {
+  using OpRewritePattern<PadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadOp padTensorOp,
+                                PatternRewriter &rewriter) const override {
+    if (!padTensorOp.hasZeroLowPad() || !padTensorOp.hasZeroHighPad())
+      return failure();
+    if (padTensorOp.nofold())
+      return failure();
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(
+        padTensorOp, padTensorOp.result().getType(), padTensorOp.source());
+    return success();
+  }
+};
+
+// Fold CastOp into PadOp when adding static information.
+struct FoldSourceTensorCast : public OpRewritePattern<PadOp> {
+  using OpRewritePattern<PadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadOp padTensorOp,
+                                PatternRewriter &rewriter) const override {
+    auto castOp = padTensorOp.source().getDefiningOp<tensor::CastOp>();
+    if (!tensor::canFoldIntoConsumerOp(castOp))
+      return failure();
+
+    auto newResultType = PadOp::inferResultType(
+        castOp.source().getType().cast<RankedTensorType>(),
+        extractFromI64ArrayAttr(padTensorOp.static_low()),
+        extractFromI64ArrayAttr(padTensorOp.static_high()),
+        padTensorOp.getResultType().getShape());
+
+    if (newResultType == padTensorOp.getResultType()) {
+      rewriter.updateRootInPlace(padTensorOp, [&]() {
+        padTensorOp.sourceMutable().assign(castOp.source());
+      });
+    } else {
+      auto newOp = rewriter.create<PadOp>(
+          padTensorOp->getLoc(), newResultType, padTensorOp.source(),
+          padTensorOp.low(), padTensorOp.high(), padTensorOp.static_low(),
+          padTensorOp.static_high(), padTensorOp.nofold());
+      BlockAndValueMapping mapper;
+      padTensorOp.getRegion().cloneInto(&newOp.getRegion(), mapper);
+
+      rewriter.replaceOpWithNewOp<tensor::CastOp>(
+          padTensorOp, padTensorOp.getResultType(), newOp);
+    }
+    return success();
+  }
+};
+
+// Fold CastOp using the result of PadOp back into the latter if it adds
+// static information.
+struct FoldTargetTensorCast : public OpRewritePattern<PadOp> {
+  using OpRewritePattern<PadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadOp padTensorOp,
+                                PatternRewriter &rewriter) const override {
+    if (!padTensorOp.result().hasOneUse())
+      return failure();
+    auto tensorCastOp =
+        dyn_cast<tensor::CastOp>(*padTensorOp->getUsers().begin());
+    if (!tensorCastOp)
+      return failure();
+    if (!tensor::preservesStaticInformation(padTensorOp.result().getType(),
+                                            tensorCastOp.dest().getType()))
+      return failure();
+
+    auto replacementOp = rewriter.create<PadOp>(
+        padTensorOp.getLoc(), tensorCastOp.dest().getType(),
+        padTensorOp.source(), padTensorOp.low(), padTensorOp.high(),
+        padTensorOp.static_low(), padTensorOp.static_high(),
+        padTensorOp.nofold());
+    replacementOp.region().takeBody(padTensorOp.region());
+
+    rewriter.replaceOp(padTensorOp, replacementOp.result());
+    rewriter.replaceOp(tensorCastOp, replacementOp.result());
+    return success();
+  }
+};
+} // namespace
+
+void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                        MLIRContext *context) {
+  results
+      .add<FoldStaticZeroPadding, FoldSourceTensorCast, FoldTargetTensorCast>(
+          context);
+}
+
+/// Return the padding value of the PadOp if it constant. In this context,
+/// "constant" means an actual constant or "defined outside of the block".
+///
+/// Values are considered constant in three cases:
+///  - A ConstantLike value.
+///  - A basic block argument from a different block.
+///  - A value defined outside of the block.
+///
+/// If the padding value is not constant, an empty Value is returned.
+Value PadOp::getConstantPaddingValue() {
+  auto yieldOp = dyn_cast<YieldOp>(getRegion().front().getTerminator());
+  if (!yieldOp)
+    return {};
+  Value padValue = yieldOp.value();
+  // Check if yield value is a constant.
+  if (matchPattern(padValue, m_Constant()))
+    return padValue;
+  // Check if yield value is defined inside the PadOp block.
+  if (padValue.getParentBlock() == &getRegion().front())
+    return {};
+  // Else: Yield value defined outside of the PadOp block.
+  return padValue;
+}
+
+OpFoldResult PadOp::fold(ArrayRef<Attribute>) {
+  if (getResultType().hasStaticShape() && getResultType() == getSourceType() &&
+      !nofold())
+    return source();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

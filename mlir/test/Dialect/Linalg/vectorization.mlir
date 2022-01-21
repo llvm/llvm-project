@@ -537,7 +537,7 @@ func @matmul_tensors(
 
 // CHECK-LABEL: func @pad_static(
 //  CHECK-SAME:                  %[[ARG0:.*]]: tensor<2x?x2xf32>, %[[PAD:.*]]: f32
-//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //   CHECK-DAG:   %[[INIT:.*]] = linalg.init_tensor [2, 3, 4] : tensor<2x3x4xf32>
@@ -547,9 +547,9 @@ func @matmul_tensors(
 //       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = [true, true, true]} : vector<2x3x2xf32>, tensor<2x3x4xf32>
 //       CHECK:   return %[[RESULT]]
 func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
-  %0 = linalg.pad_tensor %arg0 low[0, 0, 2] high[0, 1, 0] {
+  %0 = tensor.pad %arg0 low[0, 0, 2] high[0, 1, 0] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index):
-      linalg.yield %pad_value : f32
+      tensor.yield %pad_value : f32
     } : tensor<2x?x2xf32> to tensor<2x3x4xf32>
   return %0 : tensor<2x3x4xf32>
 }
@@ -558,7 +558,7 @@ func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4xf32>
 
 // CHECK-LABEL: func @pad_static_source(
 //  CHECK-SAME:                  %[[ARG0:.*]]: tensor<2x5x2xf32>, %[[PAD:.*]]: f32
-//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //       CHECK:   %[[INIT:.*]] = linalg.init_tensor [2, 6, 4] : tensor<2x6x4xf32>
@@ -568,9 +568,9 @@ func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4xf32>
 //       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = [true, true, true]} : vector<2x5x2xf32>, tensor<2x6x4xf32>
 //       CHECK:   return %[[WRITE]]
 func @pad_static_source(%arg0: tensor<2x5x2xf32>, %pad_value: f32) -> tensor<2x6x4xf32> {
-  %0 = linalg.pad_tensor %arg0 low[0, 0, 2] high[0, 1, 0] {
+  %0 = tensor.pad %arg0 low[0, 0, 2] high[0, 1, 0] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index):
-      linalg.yield %pad_value : f32
+      tensor.yield %pad_value : f32
     } : tensor<2x5x2xf32> to tensor<2x6x4xf32>
   return %0 : tensor<2x6x4xf32>
 }
@@ -579,7 +579,7 @@ func @pad_static_source(%arg0: tensor<2x5x2xf32>, %pad_value: f32) -> tensor<2x6
 
 // CHECK-LABEL: func @pad_static_dynamic(
 //  CHECK-SAME:                          %[[SRC:.*]]: tensor<1x2x2x?xf32>, %[[LOW:.*]]: index, %[[HIGH:.*]]: index
-//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:   %[[C5:.*]] = arith.constant 5 : index
@@ -596,9 +596,9 @@ func @pad_static_source(%arg0: tensor<2x5x2xf32>, %pad_value: f32) -> tensor<2x6
 //       CHECK:   return %[[RESULT]]
 func @pad_static_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
                   %pad_value: f32) -> tensor<6x?x?x?xf32> {
-  %0 = linalg.pad_tensor %arg0 low[2, %low, 3, 3] high[3, 3, %high, 2] {
+  %0 = tensor.pad %arg0 low[2, %low, 3, 3] high[3, 3, %high, 2] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
-      linalg.yield %pad_value : f32
+      tensor.yield %pad_value : f32
     } : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
   return %0 : tensor<6x?x?x?xf32>
 }
@@ -607,7 +607,7 @@ func @pad_static_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
 
 // CHECK-LABEL: func @pad_and_transfer_read
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
-//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C5:.*]] = arith.constant 5.0
 //       CHECK:   %[[RESULT:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] : tensor<5x6xf32>, vector<7x9xf32>
@@ -616,9 +616,9 @@ func @pad_and_transfer_read(%arg0: tensor<5x6xf32>) -> vector<7x9xf32> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5.0 : f32
   %c6 = arith.constant 6.0 : f32
-  %0 = linalg.pad_tensor %arg0 low[0, 0] high[5, 7] {
+  %0 = tensor.pad %arg0 low[0, 0] high[5, 7] {
     ^bb0(%arg1: index, %arg2: index):
-      linalg.yield %c5 : f32
+      tensor.yield %c5 : f32
   } : tensor<5x6xf32> to tensor<10x13xf32>
   %1 = vector.transfer_read %0[%c0, %c0], %c6
       : tensor<10x13xf32>, vector<7x9xf32>
@@ -631,7 +631,7 @@ func private @make_vector() -> vector<7x9xf32>
 
 // CHECK-LABEL: func @pad_and_transfer_write_static
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
-//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-NOT:   tensor.pad
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> vector<7x9xf32>
 //       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[VEC0]], %[[ARG0]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<5x6xf32>
@@ -640,9 +640,9 @@ func @pad_and_transfer_write_static(
     %arg0: tensor<5x6xf32>) -> tensor<5x6xf32> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5.0 : f32
-  %0 = linalg.pad_tensor %arg0 low[0, 0] high[5, 7] {
+  %0 = tensor.pad %arg0 low[0, 0] high[5, 7] {
     ^bb0(%arg2: index, %arg3: index):
-      linalg.yield %c5 : f32
+      tensor.yield %c5 : f32
   } : tensor<5x6xf32> to tensor<10x13xf32>
   %1 = call @make_vector() : () -> vector<7x9xf32>
   %2 = vector.transfer_write %1, %0[%c0, %c0]
@@ -657,7 +657,7 @@ func private @make_vector() -> vector<7x9xf32>
 
 // CHECK-LABEL: func @pad_and_transfer_write_dynamic_static
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x?xf32>, %[[SIZE:.*]]: index, %[[PADDING:.*]]: index
-//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-NOT:   tensor.pad
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[SUB:.*]] = tensor.extract_slice %[[ARG0]][0, 0] [%[[SIZE]], 6] [1, 1] : tensor<?x?xf32> to tensor<?x6xf32>
 //       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> vector<7x9xf32>
@@ -669,9 +669,9 @@ func @pad_and_transfer_write_dynamic_static(
   %c5 = arith.constant 5.0 : f32
   %s = tensor.extract_slice %arg0[0, 0] [%size, 6] [1, 1]
       : tensor<?x?xf32> to tensor<?x6xf32>
-  %0 = linalg.pad_tensor %s low[0, 0] high[%padding, 7] {
+  %0 = tensor.pad %s low[0, 0] high[%padding, 7] {
     ^bb0(%arg2: index, %arg3: index):
-      linalg.yield %c5 : f32
+      tensor.yield %c5 : f32
   } : tensor<?x6xf32> to tensor<?x13xf32>
   %1 = call @make_vector() : () -> vector<7x9xf32>
   %2 = vector.transfer_write %1, %0[%c0, %c0]
@@ -686,7 +686,7 @@ func private @make_vector() -> tensor<12x13xf32>
 
 // CHECK-LABEL: func @pad_and_insert_slice_source
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
-//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C5:.*]] = arith.constant 5.0
 //       CHECK:   %[[VEC0:.*]] = call @make_vector() : () -> tensor<12x13xf32>
@@ -697,9 +697,9 @@ func @pad_and_insert_slice_source(
     %arg0: tensor<5x6xf32>) -> tensor<12x13xf32> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5.0 : f32
-  %0 = linalg.pad_tensor %arg0 low[0, 0] high[2, 3] {
+  %0 = tensor.pad %arg0 low[0, 0] high[2, 3] {
     ^bb0(%arg2: index, %arg3: index):
-      linalg.yield %c5 : f32
+      tensor.yield %c5 : f32
   } : tensor<5x6xf32> to tensor<7x9xf32>
   %1 = call @make_vector() : () -> tensor<12x13xf32>
   %r = tensor.insert_slice %0 into %1[0, 0][7, 9][1, 1] : tensor<7x9xf32> into tensor<12x13xf32>
@@ -717,9 +717,9 @@ func private @make_vector() -> tensor<12x13xf32>
 func @pad_and_insert_slice_dest(
     %arg0: tensor<1x5x6xf32>) -> tensor<1x12x13xf32> {
   %c5 = arith.constant 5.0 : f32
-  %0 = linalg.pad_tensor %arg0 low[0, 0, 0] high[0, 7, 7] {
+  %0 = tensor.pad %arg0 low[0, 0, 0] high[0, 7, 7] {
     ^bb0(%arg2: index, %arg3: index, %arg4: index):
-      linalg.yield %c5 : f32
+      tensor.yield %c5 : f32
   } : tensor<1x5x6xf32> to tensor<1x12x13xf32>
   %1 = call @make_vector() : () -> tensor<12x13xf32>
   %r = tensor.insert_slice %1 into %0[0, 0, 0][1, 12, 13][1, 1, 1] : tensor<12x13xf32> into tensor<1x12x13xf32>
@@ -730,7 +730,7 @@ func @pad_and_insert_slice_dest(
 
 // CHECK-LABEL: func @pad_tensor_non_const_pad_value
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
-//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
@@ -743,14 +743,14 @@ func @pad_and_insert_slice_dest(
 func @pad_tensor_non_const_pad_value(%arg0: tensor<5x6xf32>) -> tensor<12x13xf32> {
   %c0 = arith.constant 0 : index
   %c5 = arith.constant 5.0 : f32
-  %0 = linalg.pad_tensor %arg0 low[3, 4] high[4, 3] {
+  %0 = tensor.pad %arg0 low[3, 4] high[4, 3] {
     ^bb0(%arg1: index, %arg2: index):
       %i1 = arith.index_cast %arg1 : index to i32
       %i2 = arith.index_cast %arg2 : index to i32
       %f1 = arith.sitofp %i1 : i32 to f32
       %f2 = arith.sitofp %i2 : i32 to f32
       %m = arith.mulf %f1, %f2 : f32
-      linalg.yield %m : f32
+      tensor.yield %m : f32
   } : tensor<5x6xf32> to tensor<12x13xf32>
   return %0 : tensor<12x13xf32>
 }

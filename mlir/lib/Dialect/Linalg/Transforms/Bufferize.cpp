@@ -320,7 +320,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     target.addLegalDialect<arith::ArithmeticDialect, AffineDialect,
                            memref::MemRefDialect, StandardOpsDialect,
                            tensor::TensorDialect>();
-    target.addIllegalOp<InitTensorOp, PadTensorOp, tensor::CollapseShapeOp,
+    target.addIllegalOp<InitTensorOp, tensor::PadOp, tensor::CollapseShapeOp,
                         tensor::ExpandShapeOp, tensor::ExtractSliceOp,
                         tensor::InsertSliceOp>();
 
@@ -363,5 +363,5 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       VectorTransferWriteOpConverter
     >(typeConverter, patterns.getContext());
   // clang-format on
-  patterns.add<GeneralizePadTensorOpPattern>(patterns.getContext());
+  patterns.add<GeneralizePadOpPattern>(patterns.getContext());
 }

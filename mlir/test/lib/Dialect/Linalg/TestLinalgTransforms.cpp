@@ -42,6 +42,7 @@ struct TestLinalgTransforms
                     memref::MemRefDialect,
                     scf::SCFDialect,
                     StandardOpsDialect,
+                    linalg::LinalgDialect,
                     vector::VectorDialect,
                     gpu::GPUDialect>();
     // clang-format on
@@ -549,20 +550,20 @@ static void applyLinalgToVectorPatterns(FuncOp funcOp) {
       funcOp.getContext(),
       LinalgTransformationFilter()
           .addOpFilter<ContractionOpInterface, FillOp, CopyOp, GenericOp>());
-  populatePadTensorOpVectorizationPatterns(patterns);
+  populatePadOpVectorizationPatterns(patterns);
   populateConvolutionVectorizationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
 static void applyPadTensorToGenericPatterns(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<PadTensorOpTransformationPattern>(funcOp.getContext());
+  patterns.add<PadOpTransformationPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
 static void applyGeneralizePadTensorPatterns(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<GeneralizePadTensorOpPattern>(funcOp.getContext());
+  patterns.add<GeneralizePadOpPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 

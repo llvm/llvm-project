@@ -1132,18 +1132,18 @@ void populateLinalgDistributeTiledLoopPattern(
 // Op-specific patterns.
 //===----------------------------------------------------------------------===//
 
-/// PadTensorOp is not canonicalized away yet, so we provide a transformation to
-/// `linalg.generic`.
-struct PadTensorOpTransformationPattern : public OpRewritePattern<PadTensorOp> {
-  using OpRewritePattern<PadTensorOp>::OpRewritePattern;
+/// tensor::PadOp is not canonicalized away yet, so we provide a transformation
+/// to `linalg.generic`.
+struct PadOpTransformationPattern : public OpRewritePattern<tensor::PadOp> {
+  using OpRewritePattern<tensor::PadOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(PadTensorOp padOp,
+  LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override;
 };
 
 /// Pad the operands of `opToPad` to a static bounding box. Use `paddingFunc`
 /// and `nofoldFunc` to set the padding value and the nofold attribute of the
-/// introduced PadTensorOps, respectively. Update `paddedOp` to the cloned
+/// introduced tensor::PadOps, respectively. Update `paddedOp` to the cloned
 /// statically shaped operation and return the extracted dynamically shaped
 /// results. If padding fails, return failure.
 FailureOr<SmallVector<Value>>
@@ -1153,23 +1153,23 @@ rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
                   LinalgOp &paddedOp);
 
 using OptimizeCopyFn =
-    std::function<LogicalResult(PatternRewriter &, PadTensorOp, Value)>;
+    std::function<LogicalResult(PatternRewriter &, tensor::PadOp, Value)>;
 
-/// Rewrite a PadTensorOp into a sequence of InitTensorOp, FillOp and
+/// Rewrite a tensor::PadOp into a sequence of InitTensorOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
 /// `OptimizeCopyFn` can be used to customize copying step optimization.
-struct GeneralizePadTensorOpPattern : public OpRewritePattern<PadTensorOp> {
-  GeneralizePadTensorOpPattern(MLIRContext *context,
-                               OptimizeCopyFn optimizeCopyFn = nullptr,
-                               PatternBenefit benefit = 1)
-      : OpRewritePattern<PadTensorOp>(context, benefit),
+struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
+  GeneralizePadOpPattern(MLIRContext *context,
+                         OptimizeCopyFn optimizeCopyFn = nullptr,
+                         PatternBenefit benefit = 1)
+      : OpRewritePattern<tensor::PadOp>(context, benefit),
         optimizeCopyFn(std::move(optimizeCopyFn)) {}
-  LogicalResult matchAndRewrite(PadTensorOp padOp,
+  LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const override;
 
 protected:
   OptimizeCopyFn optimizeCopyFn;
-  Value createFillOrGenerateOp(PatternRewriter &rewriter, PadTensorOp padOp,
+  Value createFillOrGenerateOp(PatternRewriter &rewriter, tensor::PadOp padOp,
                                Value dest,
                                const SmallVector<Value> &dynSizes) const;
 };
@@ -1179,9 +1179,9 @@ protected:
 /// are used to encode a certain ordering of pattern application. To avoid
 /// scattering magic constants throughout the code base, the patterns must be
 /// added with this function. `baseBenefit` can be used to offset the benefit
-/// of all PadTensorOp vectorization patterns by a certain value.
-void populatePadTensorOpVectorizationPatterns(RewritePatternSet &patterns,
-                                              PatternBenefit baseBenefit = 1);
+/// of all tensor::PadOp vectorization patterns by a certain value.
+void populatePadOpVectorizationPatterns(RewritePatternSet &patterns,
+                                        PatternBenefit baseBenefit = 1);
 
 /// Match and rewrite for the pattern:
 /// ```

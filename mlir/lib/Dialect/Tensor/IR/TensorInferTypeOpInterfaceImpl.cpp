@@ -161,6 +161,48 @@ struct ReifyExpandOrCollapseShapeOp
   }
 };
 
+namespace {
+
+struct ReifyPadOp
+    : public ReifyRankedShapedTypeOpInterface::ExternalModel<ReifyPadOp,
+                                                             PadOp> {
+  LogicalResult
+  reifyResultShapes(Operation *op, OpBuilder &b,
+                    ReifiedRankedShapedTypeDims &reifiedReturnShapes) const {
+    auto padOp = cast<PadOp>(op);
+    Location loc = padOp.getLoc();
+    auto lowPad = padOp.getMixedLowPad();
+    auto highPad = padOp.getMixedHighPad();
+    SmallVector<Value> shapes;
+    for (auto dim : llvm::seq<int64_t>(0, padOp.getSourceType().getRank())) {
+      // Shape along each dimension is source dim + low pad + high pad.
+      SmallVector<Value> mapOperands;
+      mapOperands.push_back(
+          b.createOrFold<tensor::DimOp>(loc, padOp.source(), dim));
+      AffineExpr expr = b.getAffineDimExpr(0);
+      unsigned numSymbols = 0;
+      auto addOpFoldResult = [&](OpFoldResult valueOrAttr) {
+        if (Value v = valueOrAttr.dyn_cast<Value>()) {
+          expr = expr + b.getAffineSymbolExpr(numSymbols++);
+          mapOperands.push_back(v);
+          return;
+        }
+        int64_t staticValue =
+            valueOrAttr.get<Attribute>().cast<IntegerAttr>().getInt();
+        expr = expr + staticValue;
+      };
+      addOpFoldResult(lowPad[dim]);
+      addOpFoldResult(highPad[dim]);
+      shapes.push_back(applyMapToValues(
+          b, loc, AffineMap::get(1, numSymbols, expr), mapOperands)[0]);
+    }
+    reifiedReturnShapes.emplace_back(std::move(shapes));
+    return success();
+  }
+};
+
+} // namespace
+
 void mlir::tensor::registerInferTypeOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry
@@ -169,4 +211,5 @@ void mlir::tensor::registerInferTypeOpInterfaceExternalModels(
   registry
       .addOpInterface<tensor::CollapseShapeOp,
                       ReifyExpandOrCollapseShapeOp<tensor::CollapseShapeOp>>();
+  registry.addOpInterface<tensor::PadOp, ReifyPadOp>();
 }

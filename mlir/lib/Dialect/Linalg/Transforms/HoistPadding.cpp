@@ -1,4 +1,4 @@
-//===- HoistPadding.cpp - Hoisting transformation for PadTensorOp ---------===//
+//===- HoistPadding.cpp - Hoisting for tensor::PadOp ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,7 +37,7 @@ using llvm::dbgs;
 using namespace mlir;
 using namespace mlir::linalg;
 
-/// Analysis class to support PadTensorOp hoisting across multiple enclosing
+/// Analysis class to support tensor::PadOp hoisting across multiple enclosing
 /// loops. The failure conditions are:
 ///   1. Pad op has a use that is not an input of a LinalgOp.
 ///   2. Pad op does not have a constant padding value.
@@ -53,7 +53,7 @@ using namespace mlir::linalg;
 ///   8. There is no enclosing scf::ForOp that indexes the padded data.
 /// Other cases succeed and will trigger hoisting of the pad op.
 struct HoistingAnalysis {
-  HoistingAnalysis(PadTensorOp padTensorOp, int numLoops);
+  HoistingAnalysis(tensor::PadOp padTensorOp, int numLoops);
 
   bool isValid() { return valid; }
 
@@ -98,7 +98,7 @@ private:
   /// ```
   /// dropNonIndexDependencies(%padded_slice, %slice)
   /// removes [scf.for %k, linalg.fill(%cst, %arg1)] from backwardSlice.
-  LogicalResult dropNonIndexDependencies(PadTensorOp padTensorOp,
+  LogicalResult dropNonIndexDependencies(tensor::PadOp padTensorOp,
                                          tensor::ExtractSliceOp sliceOp);
 
   /// Encodes whether the analysis is valid and hoisting can proceed.
@@ -107,7 +107,7 @@ private:
 
 /// Return true if all uses of `padTensorOp` are an input tensor of some
 /// LinalgOp.
-static bool isOnlyUsedAsInputOfLinalgOp(PadTensorOp padTensorOp) {
+static bool isOnlyUsedAsInputOfLinalgOp(tensor::PadOp padTensorOp) {
   for (OpOperand &use : padTensorOp.result().getUses()) {
     auto linalgUser = dyn_cast<linalg::LinalgOp>(use.getOwner());
     if (!linalgUser || !linalgUser.isInputTensor(&use)) {
@@ -126,7 +126,7 @@ static bool isOnlyUsedAsInputOfLinalgOp(PadTensorOp padTensorOp) {
 /// Multi-loops such as scf.parallel or linalg.tiled_loop are not modeled atm.
 /// Control-flow and other containing ops with regions are not modeled atm.
 static void
-getAtMostNEnclosingLoops(PadTensorOp padTensorOp, int nLevels,
+getAtMostNEnclosingLoops(tensor::PadOp padTensorOp, int nLevels,
                          SmallVector<scf::ForOp> &reverseEnclosingLoops) {
   AsmState state(padTensorOp->getParentOfType<mlir::FuncOp>());
   (void)state;
@@ -143,7 +143,7 @@ getAtMostNEnclosingLoops(PadTensorOp padTensorOp, int nLevels,
   }
 }
 
-HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
+HoistingAnalysis::HoistingAnalysis(tensor::PadOp padTensorOp, int numLoops) {
   valid = false;
 
   // Bail on any use that isn't an input of a Linalg op.
@@ -232,7 +232,7 @@ HoistingAnalysis::HoistingAnalysis(PadTensorOp padTensorOp, int numLoops) {
 }
 
 LogicalResult
-HoistingAnalysis::dropNonIndexDependencies(PadTensorOp padTensorOp,
+HoistingAnalysis::dropNonIndexDependencies(tensor::PadOp padTensorOp,
                                            tensor::ExtractSliceOp sliceOp) {
   // Set of all values used for index computation.
   SetVector<Value> indexEdges;
@@ -373,9 +373,9 @@ static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp outer,
                                        ValueRange{ivVal, lbVal, stepVal});
 }
 
-FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
+FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(tensor::PadOp opToHoist,
                                                      int numLoops,
-                                                     PadTensorOp &hoistedOp) {
+                                                     tensor::PadOp &hoistedOp) {
   LLVM_DEBUG(DBGS() << "Try to hoist " << *(opToHoist) << " by " << numLoops
                     << " loops\n");
   HoistingAnalysis analysis(opToHoist, numLoops);
@@ -399,7 +399,7 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
   // Create the packed tensor<?x?x..?xpadded_shape> into which we amortize
   // padding.
   SmallVector<int64_t> packedShape(nPackedLoops, ShapedType::kDynamicSize);
-  // TODO: go grab dims when necessary, for now PadTensorOp returns a static
+  // TODO: go grab dims when necessary, for now tensor::PadOp returns a static
   // tensor.
   llvm::append_range(packedShape, paddedTensorType.getShape());
   auto packedTensorType =
@@ -463,7 +463,7 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
   // sizes = [1 .. 1, paddedShape].
   SmallVector<OpFoldResult> sizes(nPackedLoops, b.getIndexAttr(1));
   for (int64_t sz : paddedTensorType.getShape()) {
-    // TODO: go grab dims when necessary, for now PadTensorOp returns a static
+    // TODO: go grab dims when necessary, for now tensor::PadOp returns a static
     // tensor.
     assert(!ShapedType::isDynamic(sz) && "padded tensor needs static sizes");
     sizes.push_back(b.getIndexAttr(sz));
@@ -506,6 +506,7 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(PadTensorOp opToHoist,
       loc, opToHoist.getResultType(), packedTensor, offsets, sizes, strides);
 
   // Make the newly cloned `opToHoist` available to the caller.
-  hoistedOp = cast<PadTensorOp>(bvm.lookup(opToHoist.result()).getDefiningOp());
+  hoistedOp =
+      cast<tensor::PadOp>(bvm.lookup(opToHoist.result()).getDefiningOp());
   return newResult;
 }

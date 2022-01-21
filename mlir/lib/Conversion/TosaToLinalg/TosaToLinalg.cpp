@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/CoversionUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
@@ -1932,7 +1933,7 @@ public:
       highValues.push_back(highVal);
     }
 
-    auto newPadOp = linalg::PadTensorOp::createPadScalarOp(
+    auto newPadOp = tensor::createPadScalarOp(
         padOp.getType(), input, padConstant, lowValues, highValues,
         /*nofold=*/false, loc, rewriter);
 

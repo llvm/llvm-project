@@ -682,20 +682,19 @@ static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
   return result;
 }
 
-/// Rewrite a PadTensorOp into a sequence of InitTensorOp, FillOp and
+/// Rewrite a tensor::PadOp into a sequence of InitTensorOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
 /// If there is enough static type information, TransferReadOps and
 /// TransferWriteOps may be generated instead of InsertSliceOps.
-struct GenericPadTensorOpVectorizationPattern
-    : public GeneralizePadTensorOpPattern {
-  GenericPadTensorOpVectorizationPattern(MLIRContext *context,
-                                         PatternBenefit benefit = 1)
-      : GeneralizePadTensorOpPattern(context, tryVectorizeCopy, benefit) {}
-  /// Vectorize the copying of a PadTensorOp's source. This is possible if
+struct GenericPadOpVectorizationPattern : public GeneralizePadOpPattern {
+  GenericPadOpVectorizationPattern(MLIRContext *context,
+                                   PatternBenefit benefit = 1)
+      : GeneralizePadOpPattern(context, tryVectorizeCopy, benefit) {}
+  /// Vectorize the copying of a tensor::PadOp's source. This is possible if
   /// each dimension size is statically know in the source type or the result
   /// type (or both).
   static LogicalResult tryVectorizeCopy(PatternRewriter &rewriter,
-                                        PadTensorOp padOp, Value dest) {
+                                        tensor::PadOp padOp, Value dest) {
     auto sourceType = padOp.getSourceType();
     auto resultType = padOp.getResultType();
 
@@ -767,13 +766,13 @@ struct GenericPadTensorOpVectorizationPattern
   }
 };
 
-/// Base pattern for rewriting PadTensorOps whose result is consumed by a
+/// Base pattern for rewriting tensor::PadOps whose result is consumed by a
 /// given operation type OpTy.
 template <typename OpTy>
-struct VectorizePadTensorOpUserPattern : public OpRewritePattern<PadTensorOp> {
-  using OpRewritePattern<PadTensorOp>::OpRewritePattern;
+struct VectorizePadOpUserPattern : public OpRewritePattern<tensor::PadOp> {
+  using OpRewritePattern<tensor::PadOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(PadTensorOp padOp,
+  LogicalResult matchAndRewrite(tensor::PadOp padOp,
                                 PatternRewriter &rewriter) const final {
     bool changed = false;
     // Insert users in vector, because some users may be replaced/removed.
@@ -785,10 +784,10 @@ struct VectorizePadTensorOpUserPattern : public OpRewritePattern<PadTensorOp> {
 
 protected:
   virtual LogicalResult rewriteUser(PatternRewriter &rewriter,
-                                    PadTensorOp padOp, OpTy op) const = 0;
+                                    tensor::PadOp padOp, OpTy op) const = 0;
 };
 
-/// Rewrite use of PadTensorOp result in TransferReadOp. E.g.:
+/// Rewrite use of tensor::PadOp result in TransferReadOp. E.g.:
 /// ```
 /// %0 = linalg.pad_tensor %src ... : tensor<?x?xf32> to tensor<17x5xf32>
 /// %r = vector.transfer_read %0[%c0, %c0], %cst
@@ -807,12 +806,12 @@ protected:
 /// - `xferOp` has no out-of-bounds dims or mask.
 /// - Low padding is static 0.
 /// - Single, scalar padding value.
-struct PadTensorOpVectorizationWithTransferReadPattern
-    : public VectorizePadTensorOpUserPattern<vector::TransferReadOp> {
-  using VectorizePadTensorOpUserPattern<
-      vector::TransferReadOp>::VectorizePadTensorOpUserPattern;
+struct PadOpVectorizationWithTransferReadPattern
+    : public VectorizePadOpUserPattern<vector::TransferReadOp> {
+  using VectorizePadOpUserPattern<
+      vector::TransferReadOp>::VectorizePadOpUserPattern;
 
-  LogicalResult rewriteUser(PatternRewriter &rewriter, PadTensorOp padOp,
+  LogicalResult rewriteUser(PatternRewriter &rewriter, tensor::PadOp padOp,
                             vector::TransferReadOp xferOp) const override {
     // Low padding must be static 0.
     if (!padOp.hasZeroLowPad())
@@ -837,7 +836,7 @@ struct PadTensorOpVectorizationWithTransferReadPattern
   }
 };
 
-/// Rewrite use of PadTensorOp result in TransferWriteOp.
+/// Rewrite use of tensor::PadOp result in TransferWriteOp.
 /// This pattern rewrites TransferWriteOps that write to a padded tensor
 /// value, where the same amount of padding is immediately removed again after
 /// the write. In such cases, the TransferWriteOp can write to the non-padded
@@ -869,12 +868,12 @@ struct PadTensorOpVectorizationWithTransferReadPattern
 ///   ExtractSliceOp trims the same amount of padding that was added
 ///   beforehand.
 /// - Single, scalar padding value.
-struct PadTensorOpVectorizationWithTransferWritePattern
-    : public VectorizePadTensorOpUserPattern<vector::TransferWriteOp> {
-  using VectorizePadTensorOpUserPattern<
-      vector::TransferWriteOp>::VectorizePadTensorOpUserPattern;
+struct PadOpVectorizationWithTransferWritePattern
+    : public VectorizePadOpUserPattern<vector::TransferWriteOp> {
+  using VectorizePadOpUserPattern<
+      vector::TransferWriteOp>::VectorizePadOpUserPattern;
 
-  LogicalResult rewriteUser(PatternRewriter &rewriter, PadTensorOp padOp,
+  LogicalResult rewriteUser(PatternRewriter &rewriter, tensor::PadOp padOp,
                             vector::TransferWriteOp xferOp) const override {
     // TODO: support 0-d corner case.
     if (xferOp.getTransferRank() == 0)
@@ -925,7 +924,7 @@ struct PadTensorOpVectorizationWithTransferWritePattern
   /// sizes may turn out to be equal at runtime.
   bool hasSameTensorSize(Value beforePadding,
                          tensor::ExtractSliceOp afterTrimming) const {
-    // If the input to PadTensorOp is a CastOp, try with with both CastOp
+    // If the input to tensor::PadOp is a CastOp, try with with both CastOp
     // result and CastOp operand.
     if (auto castOp = beforePadding.getDefiningOp<tensor::CastOp>())
       if (hasSameTensorSize(castOp.source(), afterTrimming))
@@ -1000,7 +999,7 @@ struct PadTensorOpVectorizationWithTransferWritePattern
   }
 };
 
-/// Rewrite use of PadTensorOp result in InsertSliceOp. E.g.:
+/// Rewrite use of tensor::PadOp result in InsertSliceOp. E.g.:
 /// ```
 /// %0 = linalg.pad_tensor %src ... : tensor<?x?xf32> to tensor<17x5xf32>
 /// %r = tensor.insert_slice %0
@@ -1023,12 +1022,12 @@ struct PadTensorOpVectorizationWithTransferWritePattern
 /// - Only unit strides in `insertOp`.
 /// - Single, scalar padding value.
 /// - `padOp` result not used as destination.
-struct PadTensorOpVectorizationWithInsertSlicePattern
-    : public VectorizePadTensorOpUserPattern<tensor::InsertSliceOp> {
-  using VectorizePadTensorOpUserPattern<
-      tensor::InsertSliceOp>::VectorizePadTensorOpUserPattern;
+struct PadOpVectorizationWithInsertSlicePattern
+    : public VectorizePadOpUserPattern<tensor::InsertSliceOp> {
+  using VectorizePadOpUserPattern<
+      tensor::InsertSliceOp>::VectorizePadOpUserPattern;
 
-  LogicalResult rewriteUser(PatternRewriter &rewriter, PadTensorOp padOp,
+  LogicalResult rewriteUser(PatternRewriter &rewriter, tensor::PadOp padOp,
                             tensor::InsertSliceOp insertOp) const override {
     // Low padding must be static 0.
     if (!padOp.hasZeroLowPad())
@@ -1087,14 +1086,14 @@ struct PadTensorOpVectorizationWithInsertSlicePattern
   }
 };
 
-void mlir::linalg::populatePadTensorOpVectorizationPatterns(
+void mlir::linalg::populatePadOpVectorizationPatterns(
     RewritePatternSet &patterns, PatternBenefit baseBenefit) {
-  patterns.add<GenericPadTensorOpVectorizationPattern>(patterns.getContext(),
-                                                       baseBenefit);
+  patterns.add<GenericPadOpVectorizationPattern>(patterns.getContext(),
+                                                 baseBenefit);
   // Try these specialized patterns first before resorting to the generic one.
-  patterns.add<PadTensorOpVectorizationWithTransferReadPattern,
-               PadTensorOpVectorizationWithTransferWritePattern,
-               PadTensorOpVectorizationWithInsertSlicePattern>(
+  patterns.add<PadOpVectorizationWithTransferReadPattern,
+               PadOpVectorizationWithTransferWritePattern,
+               PadOpVectorizationWithInsertSlicePattern>(
       patterns.getContext(), baseBenefit.getBenefit() + 1);
 }
 
