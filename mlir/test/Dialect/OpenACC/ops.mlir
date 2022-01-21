@@ -1,8 +1,8 @@
 // RUN: mlir-opt -split-input-file %s | FileCheck %s
 // Verify the printed output can be parsed.
-// RUN: mlir-opt -split-input-file %s | mlir-opt -allow-unregistered-dialect  | FileCheck %s
+// RUN: mlir-opt -split-input-file %s | mlir-opt  -split-input-file  | FileCheck %s
 // Verify the generic form can be parsed.
-// RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -split-input-file | FileCheck %s
 
 func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf32>) -> memref<10x10xf32> {
   %c0 = arith.constant 0 : index
