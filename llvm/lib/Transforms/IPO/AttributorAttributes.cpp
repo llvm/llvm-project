@@ -1216,7 +1216,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
         }
         UsrOI.Offset = PtrOI.Offset +
                        DL.getIndexedOffsetInType(
-                           CurPtr->getType()->getPointerElementType(), Indices);
+                           GEP->getSourceElementType(), Indices);
         Follow = true;
         return true;
       }
@@ -6650,9 +6650,10 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     IRBuilder<NoFolder> IRB(IP);
     const DataLayout &DL = IP->getModule()->getDataLayout();
 
-    if (Base->getType()->getPointerElementType() != PrivType)
-      Base = BitCastInst::CreateBitOrPointerCast(Base, PrivType->getPointerTo(),
-                                                 "", ACS.getInstruction());
+    Type *PrivPtrType = PrivType->getPointerTo();
+    if (Base->getType() != PrivPtrType)
+      Base = BitCastInst::CreateBitOrPointerCast(Base, PrivPtrType, "",
+                                                 ACS.getInstruction());
 
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
@@ -6794,7 +6795,7 @@ struct AAPrivatizablePtrFloating : public AAPrivatizablePtrImpl {
     if (auto *AI = dyn_cast<AllocaInst>(Obj))
       if (auto *CI = dyn_cast<ConstantInt>(AI->getArraySize()))
         if (CI->isOne())
-          return Obj->getType()->getPointerElementType();
+          return AI->getAllocatedType();
     if (auto *Arg = dyn_cast<Argument>(Obj)) {
       auto &PrivArgAA = A.getAAFor<AAPrivatizablePtr>(
           *this, IRPosition::argument(*Arg), DepClassTy::REQUIRED);
