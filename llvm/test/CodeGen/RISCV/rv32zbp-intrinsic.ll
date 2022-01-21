@@ -92,6 +92,15 @@ define i32 @shfli32(i32 %a) nounwind {
  ret i32 %tmp
 }
 
+define i32 @zipi32(i32 %a) nounwind {
+; RV32ZBP-LABEL: zipi32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    zip a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.shfl.i32(i32 %a, i32 15)
+ ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.unshfl.i32(i32 %a, i32 %b)
 
 define i32 @unshfl32(i32 %a, i32 %b) nounwind {
@@ -119,6 +128,15 @@ define i32 @unshfli32(i32 %a) nounwind {
 ; RV32ZBP-NEXT:    unshfli a0, a0, 13
 ; RV32ZBP-NEXT:    ret
   %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 13)
+ ret i32 %tmp
+}
+
+define i32 @unzipi32(i32 %a) nounwind {
+; RV32ZBP-LABEL: unzipi32:
+; RV32ZBP:       # %bb.0:
+; RV32ZBP-NEXT:    unzip a0, a0
+; RV32ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.unshfl.i32(i32 %a, i32 15)
  ret i32 %tmp
 }
 
