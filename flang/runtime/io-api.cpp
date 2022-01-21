@@ -317,7 +317,7 @@ Cookie IONAME(BeginClose)(
   } else {
     // CLOSE(UNIT=bad unit) is just a no-op
     Terminator oom{sourceFile, sourceLine};
-    return &New<NoopCloseStatementState>{oom}(sourceFile, sourceLine)
+    return &New<NoopStatementState>{oom}(sourceFile, sourceLine)
                 .release()
                 ->ioStatementState();
   }
@@ -325,11 +325,16 @@ Cookie IONAME(BeginClose)(
 
 Cookie IONAME(BeginFlush)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{
-      ExternalFileUnit::LookUpOrCrash(unitNumber, terminator)};
-  return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
-      unit, ExternalMiscIoStatementState::Flush, sourceFile, sourceLine);
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+        *unit, ExternalMiscIoStatementState::Flush, sourceFile, sourceLine);
+  } else {
+    // FLUSH(UNIT=unknown) is a no-op
+    Terminator oom{sourceFile, sourceLine};
+    return &New<NoopStatementState>{oom}(sourceFile, sourceLine)
+                .release()
+                ->ioStatementState();
+  }
 }
 
 Cookie IONAME(BeginBackspace)(
@@ -880,7 +885,7 @@ bool IONAME(SetStatus)(Cookie cookie, const char *keyword, std::size_t length) {
     }
     return false;
   }
-  if (io.get_if<NoopCloseStatementState>()) {
+  if (io.get_if<NoopStatementState>()) {
     return true; // don't bother validating STATUS= in a no-op CLOSE
   }
   io.GetIoErrorHandler().Crash(
