@@ -59,7 +59,7 @@ void convert(const BinaryFunction &BF,
       CSI.Offset = *Offset - BB->getInputOffset();
 
       if (BC.MIB->isIndirectCall(Instr) || BC.MIB->isIndirectBranch(Instr)) {
-        auto ICSP = BC.MIB->tryGetAnnotationAs<IndirectCallSiteProfile>(
+        const auto ICSP = BC.MIB->tryGetAnnotationAs<IndirectCallSiteProfile>(
             Instr, "CallProfile");
         if (!ICSP)
           continue;

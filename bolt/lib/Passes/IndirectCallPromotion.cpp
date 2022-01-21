@@ -281,7 +281,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
         Inst.getOperand(0).getReg() == BC.MRI->getProgramCounter())
       return Targets;
 
-    auto ICSP = BC.MIB->tryGetAnnotationAs<IndirectCallSiteProfile>(
+    const auto ICSP = BC.MIB->tryGetAnnotationAs<IndirectCallSiteProfile>(
         Inst, "CallProfile");
     if (ICSP) {
       for (const IndirectCallProfile &CSP : ICSP.get()) {
@@ -938,7 +938,7 @@ size_t IndirectCallPromotion::canPromoteCallsite(
   // If we have no targets (or no calls), skip this callsite.
   if (Targets.empty() || !NumCalls) {
     if (opts::Verbosity >= 1) {
-      const auto InstIdx = &Inst - &(*BB.begin());
+      const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
       outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " @ "
              << InstIdx << " in " << BB.getName() << ", calls = " << NumCalls
              << ", targets empty or NumCalls == 0.\n";
@@ -985,7 +985,7 @@ size_t IndirectCallPromotion::canPromoteCallsite(
     if (TopNFrequency == 0 ||
         TopNFrequency < opts::IndirectCallPromotionMispredictThreshold) {
       if (opts::Verbosity >= 1) {
-        const auto InstIdx = &Inst - &(*BB.begin());
+        const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
         outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " @ "
                << InstIdx << " in " << BB.getName() << ", calls = " << NumCalls
                << ", top N mis. frequency " << format("%.1f", TopNFrequency)
@@ -1034,7 +1034,7 @@ size_t IndirectCallPromotion::canPromoteCallsite(
       if (TopNMispredictFrequency <
           opts::IndirectCallPromotionMispredictThreshold) {
         if (opts::Verbosity >= 1) {
-          const auto InstIdx = &Inst - &(*BB.begin());
+          const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
           outs() << "BOLT-INFO: ICP failed in " << *BB.getFunction() << " @ "
                  << InstIdx << " in " << BB.getName()
                  << ", calls = " << NumCalls << ", top N mispredict frequency "
@@ -1064,7 +1064,7 @@ void IndirectCallPromotion::printCallsiteInfo(
   BinaryContext &BC = BB.getFunction()->getBinaryContext();
   const bool IsTailCall = BC.MIB->isTailCall(Inst);
   const bool IsJumpTable = BB.getFunction()->getJumpTable(Inst);
-  const auto InstIdx = &Inst - &(*BB.begin());
+  const ptrdiff_t InstIdx = &Inst - &(*BB.begin());
 
   outs() << "BOLT-INFO: ICP candidate branch info: " << *BB.getFunction()
          << " @ " << InstIdx << " in " << BB.getName()
@@ -1219,7 +1219,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
 
       for (unsigned Idx = 0; Idx < BB->size(); ++Idx) {
         MCInst &Inst = BB->getInstructionAtIndex(Idx);
-        const auto InstIdx = &Inst - &(*BB->begin());
+        const ptrdiff_t InstIdx = &Inst - &(*BB->begin());
         const bool IsTailCall = BC.MIB->isTailCall(Inst);
         const bool HasIndirectCallProfile =
             BC.MIB->hasAnnotation(Inst, "CallProfile");
