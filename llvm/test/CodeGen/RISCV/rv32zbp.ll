@@ -1491,7 +1491,7 @@ define i32 @grev7_i32(i32 %a) nounwind {
 ;
 ; RV32ZBP-LABEL: grev7_i32:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    rev.b a0, a0
+; RV32ZBP-NEXT:    grevi a0, a0, 7
 ; RV32ZBP-NEXT:    ret
   %and1 = shl i32 %a, 1
   %shl1 = and i32 %and1, -1431655766
@@ -1560,8 +1560,8 @@ define i64 @grev7_i64(i64 %a) nounwind {
 ;
 ; RV32ZBP-LABEL: grev7_i64:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    rev.b a0, a0
-; RV32ZBP-NEXT:    rev.b a1, a1
+; RV32ZBP-NEXT:    grevi a0, a0, 7
+; RV32ZBP-NEXT:    grevi a1, a1, 7
 ; RV32ZBP-NEXT:    ret
   %and1 = shl i64 %a, 1
   %shl1 = and i64 %and1, -6148914691236517206
@@ -2175,7 +2175,7 @@ define zeroext i8 @bitreverse_i8(i8 zeroext %a) nounwind {
 ;
 ; RV32ZBP-LABEL: bitreverse_i8:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    rev.b a0, a0
+; RV32ZBP-NEXT:    grevi a0, a0, 7
 ; RV32ZBP-NEXT:    ret
   %1 = tail call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %1
@@ -2450,7 +2450,7 @@ define i32 @bitreverse_bswap_i32(i32 %a) {
 ;
 ; RV32ZBP-LABEL: bitreverse_bswap_i32:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    rev.b a0, a0
+; RV32ZBP-NEXT:    grevi a0, a0, 7
 ; RV32ZBP-NEXT:    ret
   %1 = call i32 @llvm.bitreverse.i32(i32 %a)
   %2 = call i32 @llvm.bswap.i32(i32 %1)
@@ -2539,8 +2539,8 @@ define i64 @bitreverse_bswap_i64(i64 %a) {
 ;
 ; RV32ZBP-LABEL: bitreverse_bswap_i64:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    rev.b a0, a0
-; RV32ZBP-NEXT:    rev.b a1, a1
+; RV32ZBP-NEXT:    grevi a0, a0, 7
+; RV32ZBP-NEXT:    grevi a1, a1, 7
 ; RV32ZBP-NEXT:    ret
   %1 = call i64 @llvm.bitreverse.i64(i64 %a)
   %2 = call i64 @llvm.bswap.i64(i64 %1)

@@ -1438,7 +1438,7 @@ define i64 @grev7_i64(i64 %a) nounwind {
 ;
 ; RV64ZBP-LABEL: grev7_i64:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    rev.b a0, a0
+; RV64ZBP-NEXT:    grevi a0, a0, 7
 ; RV64ZBP-NEXT:    ret
   %and1 = shl i64 %a, 1
   %shl1 = and i64 %and1, -6148914691236517206
@@ -2481,7 +2481,7 @@ define i64 @bitreverse_bswap_i64(i64 %a) {
 ;
 ; RV64ZBP-LABEL: bitreverse_bswap_i64:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    rev.b a0, a0
+; RV64ZBP-NEXT:    grevi a0, a0, 7
 ; RV64ZBP-NEXT:    ret
   %1 = call i64 @llvm.bitreverse.i64(i64 %a)
   %2 = call i64 @llvm.bswap.i64(i64 %1)

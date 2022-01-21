@@ -39,7 +39,7 @@ rev4.b x5, x6
 # CHECK-S-OBJ: rev2.b t0, t1
 rev2.b x5, x6
 
-# CHECK-S-OBJ-NOALIAS: grevi t0, t1, 7
+# CHECK-S-OBJ-NOALIAS: brev8 t0, t1
 # CHECK-S-OBJ: rev.b t0, t1
 rev.b x5, x6
 
