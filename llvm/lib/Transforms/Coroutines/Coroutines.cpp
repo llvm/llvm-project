@@ -679,8 +679,8 @@ static void checkAsyncFuncPointer(const Instruction *I, Value *V) {
   if (AsyncFuncPtrAddr->getType()->isOpaquePointerTy())
     return;
 
-  auto *StructTy =
-      cast<StructType>(AsyncFuncPtrAddr->getType()->getPointerElementType());
+  auto *StructTy = cast<StructType>(
+      AsyncFuncPtrAddr->getType()->getNonOpaquePointerElementType());
   if (StructTy->isOpaque() || !StructTy->isPacked() ||
       StructTy->getNumElements() != 2 ||
       !StructTy->getElementType(0)->isIntegerTy(32) ||

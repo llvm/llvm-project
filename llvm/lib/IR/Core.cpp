@@ -1691,8 +1691,7 @@ LLVMValueRef LLVMConstGEP(LLVMValueRef ConstantVal,
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
-  Type *Ty =
-      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
   return wrap(ConstantExpr::getGetElementPtr(Ty, Val, IdxList));
 }
 
@@ -1710,8 +1709,7 @@ LLVMValueRef LLVMConstInBoundsGEP(LLVMValueRef ConstantVal,
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
-  Type *Ty =
-      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
   return wrap(ConstantExpr::getInBoundsGetElementPtr(Ty, Val, IdxList));
 }
 
@@ -2278,7 +2276,8 @@ void LLVMSetExternallyInitialized(LLVMValueRef GlobalVar, LLVMBool IsExtInit) {
 LLVMValueRef LLVMAddAlias(LLVMModuleRef M, LLVMTypeRef Ty, LLVMValueRef Aliasee,
                           const char *Name) {
   auto *PTy = cast<PointerType>(unwrap(Ty));
-  return wrap(GlobalAlias::create(PTy->getElementType(), PTy->getAddressSpace(),
+  return wrap(GlobalAlias::create(PTy->getNonOpaquePointerElementType(),
+                                  PTy->getAddressSpace(),
                                   GlobalValue::ExternalLinkage, Name,
                                   unwrap<Constant>(Aliasee), unwrap(M)));
 }
@@ -3218,7 +3217,7 @@ LLVMValueRef LLVMBuildInvoke(LLVMBuilderRef B, LLVMValueRef Fn,
                              const char *Name) {
   Value *V = unwrap(Fn);
   FunctionType *FnT =
-      cast<FunctionType>(cast<PointerType>(V->getType())->getElementType());
+      cast<FunctionType>(V->getType()->getNonOpaquePointerElementType());
 
   return wrap(
       unwrap(B)->CreateInvoke(FnT, unwrap(Fn), unwrap(Then), unwrap(Catch),
@@ -3590,7 +3589,8 @@ LLVMValueRef LLVMBuildLoad(LLVMBuilderRef B, LLVMValueRef PointerVal,
   Value *V = unwrap(PointerVal);
   PointerType *Ty = cast<PointerType>(V->getType());
 
-  return wrap(unwrap(B)->CreateLoad(Ty->getElementType(), V, Name));
+  return wrap(
+      unwrap(B)->CreateLoad(Ty->getNonOpaquePointerElementType(), V, Name));
 }
 
 LLVMValueRef LLVMBuildLoad2(LLVMBuilderRef B, LLVMTypeRef Ty,
@@ -3692,8 +3692,7 @@ LLVMValueRef LLVMBuildGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                           const char *Name) {
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
   Value *Val = unwrap(Pointer);
-  Type *Ty =
-      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
   return wrap(unwrap(B)->CreateGEP(Ty, Val, IdxList, Name));
 }
 
@@ -3709,8 +3708,7 @@ LLVMValueRef LLVMBuildInBoundsGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                                   const char *Name) {
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
   Value *Val = unwrap(Pointer);
-  Type *Ty =
-      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
   return wrap(unwrap(B)->CreateInBoundsGEP(Ty, Val, IdxList, Name));
 }
 
@@ -3725,8 +3723,7 @@ LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
 LLVMValueRef LLVMBuildStructGEP(LLVMBuilderRef B, LLVMValueRef Pointer,
                                 unsigned Idx, const char *Name) {
   Value *Val = unwrap(Pointer);
-  Type *Ty =
-      cast<PointerType>(Val->getType()->getScalarType())->getElementType();
+  Type *Ty = Val->getType()->getScalarType()->getNonOpaquePointerElementType();
   return wrap(unwrap(B)->CreateStructGEP(Ty, Val, Idx, Name));
 }
 
@@ -3947,7 +3944,7 @@ LLVMValueRef LLVMBuildCall(LLVMBuilderRef B, LLVMValueRef Fn,
                            const char *Name) {
   Value *V = unwrap(Fn);
   FunctionType *FnT =
-      cast<FunctionType>(cast<PointerType>(V->getType())->getElementType());
+      cast<FunctionType>(V->getType()->getNonOpaquePointerElementType());
 
   return wrap(unwrap(B)->CreateCall(FnT, unwrap(Fn),
                                     makeArrayRef(unwrap(Args), NumArgs), Name));

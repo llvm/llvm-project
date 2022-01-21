@@ -1437,8 +1437,10 @@ static Value *buildGEP(IRBuilderTy &IRB, Value *BasePtr,
   if (Indices.size() == 1 && cast<ConstantInt>(Indices.back())->isZero())
     return BasePtr;
 
-  return IRB.CreateInBoundsGEP(BasePtr->getType()->getPointerElementType(),
-                               BasePtr, Indices, NamePrefix + "sroa_idx");
+  // buildGEP() is only called for non-opaque pointers.
+  return IRB.CreateInBoundsGEP(
+      BasePtr->getType()->getNonOpaquePointerElementType(), BasePtr, Indices,
+      NamePrefix + "sroa_idx");
 }
 
 /// Get a natural GEP off of the BasePtr walking through Ty toward

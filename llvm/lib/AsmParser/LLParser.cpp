@@ -1410,14 +1410,14 @@ static inline GlobalValue *createGlobalFwdRef(Module *M, PointerType *PTy) {
                               nullptr, GlobalVariable::NotThreadLocal,
                               PTy->getAddressSpace());
 
-  if (auto *FT = dyn_cast<FunctionType>(PTy->getPointerElementType()))
+  Type *ElemTy = PTy->getNonOpaquePointerElementType();
+  if (auto *FT = dyn_cast<FunctionType>(ElemTy))
     return Function::Create(FT, GlobalValue::ExternalWeakLinkage,
                             PTy->getAddressSpace(), "", M);
   else
-    return new GlobalVariable(*M, PTy->getPointerElementType(), false,
-                              GlobalValue::ExternalWeakLinkage, nullptr, "",
-                              nullptr, GlobalVariable::NotThreadLocal,
-                              PTy->getAddressSpace());
+    return new GlobalVariable(
+        *M, ElemTy, false, GlobalValue::ExternalWeakLinkage, nullptr, "",
+        nullptr, GlobalVariable::NotThreadLocal, PTy->getAddressSpace());
 }
 
 Value *LLParser::checkValidVariableType(LocTy Loc, const Twine &Name, Type *Ty,
@@ -5602,7 +5602,7 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
     if (FRVI != ForwardRefVals.end()) {
       FwdFn = FRVI->second.first;
       if (!FwdFn->getType()->isOpaque()) {
-        if (!FwdFn->getType()->getPointerElementType()->isFunctionTy())
+        if (!FwdFn->getType()->getNonOpaquePointerElementType()->isFunctionTy())
           return error(FRVI->second.second, "invalid forward reference to "
                                             "function as global value!");
         if (FwdFn->getType() != PFT)
