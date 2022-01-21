@@ -130,7 +130,7 @@ set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -S -x c++ -std=c++17
+set(bc_flags -S -x c++ -std=c++17 -fvisibility=hidden
               ${clang_opt_flags}
              -Xclang -emit-llvm-bc
              -Xclang -aux-triple -Xclang ${aux_triple}
@@ -231,5 +231,5 @@ foreach(sm ${nvptx_sm_list})
 endforeach()
 
 foreach(mcpu ${amdgpu_mcpus})
-  compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -fvisibility=default -nogpulib)
+  compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -nogpulib)
 endforeach()
