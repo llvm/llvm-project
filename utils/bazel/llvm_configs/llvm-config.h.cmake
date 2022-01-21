@@ -91,9 +91,6 @@
 /* Define if LLVM was built with a dependency to the libtensorflow dynamic library */
 #cmakedefine LLVM_HAVE_TF_API
 
-/* Define if LLVM was built with a dependency to the tensorflow compiler */
-#cmakedefine LLVM_HAVE_TF_AOT
-
 /* Define to 1 if you have the <sysexits.h> header file. */
 #cmakedefine HAVE_SYSEXITS_H ${HAVE_SYSEXITS_H}
 
