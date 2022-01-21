@@ -19,9 +19,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <functional>
-#include <numeric>
 #include <utility>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::itanium_demangle;
