@@ -20,9 +20,9 @@ TEST(FSUniqueIDTest, construct) {
 }
 
 TEST(FSUniqueIDTest, equals) {
-  EXPECT_TRUE(UniqueID(20, 10) == UniqueID(20, 10));
-  EXPECT_FALSE(UniqueID(20, 20) == UniqueID(20, 10));
-  EXPECT_FALSE(UniqueID(10, 10) == UniqueID(20, 10));
+  EXPECT_EQ(UniqueID(20, 10), UniqueID(20, 10));
+  EXPECT_NE(UniqueID(20, 20), UniqueID(20, 10));
+  EXPECT_NE(UniqueID(10, 10), UniqueID(20, 10));
 }
 
 TEST(FSUniqueIDTest, less) {
