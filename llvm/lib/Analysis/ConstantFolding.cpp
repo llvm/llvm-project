@@ -553,23 +553,16 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
 
   // If this isn't an integer load we can't fold it directly.
   if (!IntType) {
-    // If this is a float/double load, we can try folding it as an int32/64 load
-    // and then bitcast the result.  This can be useful for union cases.  Note
+    // If this is a non-integer load, we can try folding it as an int load and
+    // then bitcast the result.  This can be useful for union cases.  Note
     // that address spaces don't matter here since we're not going to result in
     // an actual new load.
-    Type *MapTy;
-    if (LoadTy->isHalfTy())
-      MapTy = Type::getInt16Ty(C->getContext());
-    else if (LoadTy->isFloatTy())
-      MapTy = Type::getInt32Ty(C->getContext());
-    else if (LoadTy->isDoubleTy())
-      MapTy = Type::getInt64Ty(C->getContext());
-    else if (LoadTy->isVectorTy()) {
-      MapTy = PointerType::getIntNTy(
-          C->getContext(), DL.getTypeSizeInBits(LoadTy).getFixedSize());
-    } else
+    if (!LoadTy->isHalfTy() && !LoadTy->isFloatTy() && !LoadTy->isDoubleTy() &&
+        !LoadTy->isVectorTy())
       return nullptr;
 
+    Type *MapTy = Type::getIntNTy(
+          C->getContext(), DL.getTypeSizeInBits(LoadTy).getFixedSize());
     if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, Offset, DL)) {
       if (Res->isNullValue() && !LoadTy->isX86_MMXTy() &&
           !LoadTy->isX86_AMXTy())
