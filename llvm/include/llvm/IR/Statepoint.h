@@ -123,7 +123,7 @@ public:
   /// statepoint.
   Type *getActualReturnType() const {
     auto *CalleeTy =
-      cast<PointerType>(getActualCalledOperand()->getType())->getElementType();
+        getActualCalledOperand()->getType()->getPointerElementType();
     return cast<FunctionType>(CalleeTy)->getReturnType();
   }
 

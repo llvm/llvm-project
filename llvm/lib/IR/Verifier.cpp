@@ -1826,33 +1826,34 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
              "Attribute 'preallocated' does not support unsized types!", V);
     }
     if (!PTy->isOpaque()) {
-      if (!isa<PointerType>(PTy->getElementType()))
+      if (!isa<PointerType>(PTy->getNonOpaquePointerElementType()))
         Assert(!Attrs.hasAttribute(Attribute::SwiftError),
                "Attribute 'swifterror' only applies to parameters "
                "with pointer to pointer type!",
                V);
       if (Attrs.hasAttribute(Attribute::ByRef)) {
-        Assert(Attrs.getByRefType() == PTy->getElementType(),
+        Assert(Attrs.getByRefType() == PTy->getNonOpaquePointerElementType(),
                "Attribute 'byref' type does not match parameter!", V);
       }
 
       if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
-        Assert(Attrs.getByValType() == PTy->getElementType(),
+        Assert(Attrs.getByValType() == PTy->getNonOpaquePointerElementType(),
                "Attribute 'byval' type does not match parameter!", V);
       }
 
       if (Attrs.hasAttribute(Attribute::Preallocated)) {
-        Assert(Attrs.getPreallocatedType() == PTy->getElementType(),
+        Assert(Attrs.getPreallocatedType() ==
+                   PTy->getNonOpaquePointerElementType(),
                "Attribute 'preallocated' type does not match parameter!", V);
       }
 
       if (Attrs.hasAttribute(Attribute::InAlloca)) {
-        Assert(Attrs.getInAllocaType() == PTy->getElementType(),
+        Assert(Attrs.getInAllocaType() == PTy->getNonOpaquePointerElementType(),
                "Attribute 'inalloca' type does not match parameter!", V);
       }
 
       if (Attrs.hasAttribute(Attribute::ElementType)) {
-        Assert(Attrs.getElementType() == PTy->getElementType(),
+        Assert(Attrs.getElementType() == PTy->getNonOpaquePointerElementType(),
                "Attribute 'elementtype' type does not match parameter!", V);
       }
     }
@@ -2195,9 +2196,10 @@ void Verifier::verifyStatepoint(const CallBase &Call) {
 
   const Value *Target = Call.getArgOperand(2);
   auto *PT = dyn_cast<PointerType>(Target->getType());
-  Assert(PT && PT->getElementType()->isFunctionTy(),
+  Assert(PT && PT->getPointerElementType()->isFunctionTy(),
          "gc.statepoint callee must be of function pointer type", Call, Target);
-  FunctionType *TargetFuncType = cast<FunctionType>(PT->getElementType());
+  FunctionType *TargetFuncType =
+      cast<FunctionType>(PT->getPointerElementType());
 
   const int NumCallArgs = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
   Assert(NumCallArgs >= 0,
@@ -5005,7 +5007,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // Assert that result type matches wrapped callee.
     const Value *Target = StatepointCall->getArgOperand(2);
     auto *PT = cast<PointerType>(Target->getType());
-    auto *TargetFuncType = cast<FunctionType>(PT->getElementType());
+    auto *TargetFuncType = cast<FunctionType>(PT->getPointerElementType());
     Assert(Call.getType() == TargetFuncType->getReturnType(),
            "gc.result result type does not match wrapped callee", Call);
     break;
@@ -5312,7 +5314,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       PointerType *Op0PtrTy =
           cast<PointerType>(Call.getArgOperand(0)->getType());
       if (!Op0PtrTy->isOpaque())
-        Op0ElemTy = Op0PtrTy->getElementType();
+        Op0ElemTy = Op0PtrTy->getNonOpaquePointerElementType();
       break;
     }
     case Intrinsic::matrix_column_major_store: {
@@ -5326,7 +5328,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       PointerType *Op1PtrTy =
           cast<PointerType>(Call.getArgOperand(1)->getType());
       if (!Op1PtrTy->isOpaque())
-        Op1ElemTy = Op1PtrTy->getElementType();
+        Op1ElemTy = Op1PtrTy->getNonOpaquePointerElementType();
       break;
     }
     default:

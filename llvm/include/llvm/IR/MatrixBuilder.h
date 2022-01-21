@@ -68,7 +68,7 @@ public:
 
     // Deal with the pointer
     PointerType *PtrTy = cast<PointerType>(DataPtr->getType());
-    Type *EltTy = PtrTy->getElementType();
+    Type *EltTy = PtrTy->getPointerElementType();
 
     auto *RetType = FixedVectorType::get(EltTy, Rows * Columns);
 

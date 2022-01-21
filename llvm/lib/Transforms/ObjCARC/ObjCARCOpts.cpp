@@ -980,7 +980,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
     if (IsNullOrUndef(CI->getArgOperand(0))) {
       Changed = true;
       Type *Ty = CI->getArgOperand(0)->getType();
-      new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
+      new StoreInst(UndefValue::get(Ty->getPointerElementType()),
                     Constant::getNullValue(Ty), CI);
       Value *NewValue = UndefValue::get(CI->getType());
       LLVM_DEBUG(
@@ -1000,7 +1000,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
         IsNullOrUndef(CI->getArgOperand(1))) {
       Changed = true;
       Type *Ty = CI->getArgOperand(0)->getType();
-      new StoreInst(UndefValue::get(cast<PointerType>(Ty)->getElementType()),
+      new StoreInst(UndefValue::get(Ty->getPointerElementType()),
                     Constant::getNullValue(Ty), CI);
 
       Value *NewValue = UndefValue::get(CI->getType());

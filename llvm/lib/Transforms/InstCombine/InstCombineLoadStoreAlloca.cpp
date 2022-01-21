@@ -345,7 +345,8 @@ void PointerReplacer::replacePointer(Instruction &I, Value *V) {
 #ifndef NDEBUG
   auto *PT = cast<PointerType>(I.getType());
   auto *NT = cast<PointerType>(V->getType());
-  assert(PT != NT && PT->getElementType() == NT->getElementType() &&
+  assert(PT != NT &&
+         PT->getPointerElementType() == NT->getPointerElementType() &&
          "Invalid usage");
 #endif
   WorkMap[&I] = V;

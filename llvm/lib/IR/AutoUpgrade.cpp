@@ -4495,7 +4495,7 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 
   if (F.getCallingConv() == CallingConv::X86_INTR &&
       !F.arg_empty() && !F.hasParamAttribute(0, Attribute::ByVal)) {
-    Type *ByValTy = cast<PointerType>(F.getArg(0)->getType())->getElementType();
+    Type *ByValTy = F.getArg(0)->getType()->getPointerElementType();
     Attribute NewAttr = Attribute::getWithByValType(F.getContext(), ByValTy);
     F.addParamAttr(0, NewAttr);
   }

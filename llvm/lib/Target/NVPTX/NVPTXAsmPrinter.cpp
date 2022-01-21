@@ -1454,7 +1454,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
           if (static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() !=
               NVPTX::CUDA) {
-            Type *ETy = PTy->getElementType();
+            Type *ETy = PTy->getPointerElementType();
             int addrSpace = PTy->getAddressSpace();
             switch (addrSpace) {
             default:
@@ -1514,7 +1514,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     // param has byVal attribute. So should be a pointer
     auto *PTy = dyn_cast<PointerType>(Ty);
     assert(PTy && "Param with byval attribute should be a pointer type");
-    Type *ETy = PTy->getElementType();
+    Type *ETy = PTy->getPointerElementType();
 
     if (isABI || isKernelFunc) {
       // Just print .param .align <a> .b8 .param[size];

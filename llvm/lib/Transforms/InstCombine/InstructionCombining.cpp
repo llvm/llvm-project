@@ -1372,7 +1372,7 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
 Type *
 InstCombinerImpl::FindElementAtOffset(PointerType *PtrTy, int64_t IntOffset,
                                       SmallVectorImpl<Value *> &NewIndices) {
-  Type *Ty = PtrTy->getElementType();
+  Type *Ty = PtrTy->getPointerElementType();
   if (!Ty->isSized())
     return nullptr;
 
@@ -2311,7 +2311,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // type. For now, skip these.
   if (StrippedPtr != PtrOp && !StrippedPtrTy->isOpaque()) {
     bool HasZeroPointerIndex = false;
-    Type *StrippedPtrEltTy = StrippedPtrTy->getElementType();
+    Type *StrippedPtrEltTy = StrippedPtrTy->getNonOpaquePointerElementType();
 
     if (auto *C = dyn_cast<ConstantInt>(GEP.getOperand(1)))
       HasZeroPointerIndex = C->isZero();
@@ -2498,7 +2498,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (auto *BCI = dyn_cast<BitCastInst>(ASCStrippedPtrOp)) {
     Value *SrcOp = BCI->getOperand(0);
     PointerType *SrcType = cast<PointerType>(BCI->getSrcTy());
-    Type *SrcEltType = SrcType->getElementType();
+    Type *SrcEltType = SrcType->getPointerElementType();
 
     // GEP directly using the source operand if this GEP is accessing an element
     // of a bitcasted pointer to vector or array of the same dimensions:

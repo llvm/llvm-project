@@ -17894,7 +17894,7 @@ Value *PPCTargetLowering::emitMaskedAtomicRMWIntrinsic(
   assert(EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() &&
          "Only support quadword now");
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Type *ValTy = cast<PointerType>(AlignedAddr->getType())->getElementType();
+  Type *ValTy = AlignedAddr->getType()->getPointerElementType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
   Function *RMW = Intrinsic::getDeclaration(
       M, getIntrinsicForAtomicRMWBinOp128(AI->getOperation()));
@@ -17919,7 +17919,7 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   assert(EnableQuadwordAtomics && Subtarget.hasQuadwordAtomics() &&
          "Only support quadword now");
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
-  Type *ValTy = cast<PointerType>(AlignedAddr->getType())->getElementType();
+  Type *ValTy = AlignedAddr->getType()->getPointerElementType();
   assert(ValTy->getPrimitiveSizeInBits() == 128);
   Function *IntCmpXchg =
       Intrinsic::getDeclaration(M, Intrinsic::ppc_cmpxchg_i128);

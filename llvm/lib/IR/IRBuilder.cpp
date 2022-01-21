@@ -679,7 +679,7 @@ static CallInst *CreateGCStatepointCallCommon(
     const Twine &Name) {
   // Extract out the type of the callee.
   auto *FuncPtrType = cast<PointerType>(ActualCallee->getType());
-  assert(isa<FunctionType>(FuncPtrType->getElementType()) &&
+  assert(isa<FunctionType>(FuncPtrType->getPointerElementType()) &&
          "actual callee must be a callable value");
 
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
@@ -736,7 +736,7 @@ static InvokeInst *CreateGCStatepointInvokeCommon(
     ArrayRef<T3> GCArgs, const Twine &Name) {
   // Extract out the type of the callee.
   auto *FuncPtrType = cast<PointerType>(ActualInvokee->getType());
-  assert(isa<FunctionType>(FuncPtrType->getElementType()) &&
+  assert(isa<FunctionType>(FuncPtrType->getPointerElementType()) &&
          "actual callee must be a callable value");
 
   Module *M = Builder->GetInsertBlock()->getParent()->getParent();
@@ -1002,12 +1002,11 @@ Value *IRBuilderBase::CreatePtrDiff(Value *LHS, Value *RHS,
                                     const Twine &Name) {
   assert(LHS->getType() == RHS->getType() &&
          "Pointer subtraction operand types must match!");
-  auto *ArgType = cast<PointerType>(LHS->getType());
+  auto *ArgElemType = LHS->getType()->getPointerElementType();
   Value *LHS_int = CreatePtrToInt(LHS, Type::getInt64Ty(Context));
   Value *RHS_int = CreatePtrToInt(RHS, Type::getInt64Ty(Context));
   Value *Difference = CreateSub(LHS_int, RHS_int);
-  return CreateExactSDiv(Difference,
-                         ConstantExpr::getSizeOf(ArgType->getElementType()),
+  return CreateExactSDiv(Difference, ConstantExpr::getSizeOf(ArgElemType),
                          Name);
 }
 

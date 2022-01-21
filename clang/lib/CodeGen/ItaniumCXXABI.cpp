@@ -4472,8 +4472,7 @@ static void InitCatchParam(CodeGenFunction &CGF,
       // pad.  The best solution is to fix the personality function.
       } else {
         // Pull the pointer for the reference type off.
-        llvm::Type *PtrTy =
-          cast<llvm::PointerType>(LLVMCatchTy)->getElementType();
+        llvm::Type *PtrTy = LLVMCatchTy->getPointerElementType();
 
         // Create the temporary and write the adjusted pointer into it.
         Address ExnPtrTmp =

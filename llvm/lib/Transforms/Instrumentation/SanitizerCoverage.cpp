@@ -918,7 +918,7 @@ void ModuleSanitizerCoverage::InjectTraceForGep(
 void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
     Function &, ArrayRef<LoadInst *> Loads, ArrayRef<StoreInst *> Stores) {
   auto CallbackIdx = [&](const Value *Ptr) -> int {
-    auto ElementTy = cast<PointerType>(Ptr->getType())->getElementType();
+    auto *ElementTy = Ptr->getType()->getPointerElementType();
     uint64_t TypeSize = DL->getTypeStoreSizeInBits(ElementTy);
     return TypeSize == 8     ? 0
            : TypeSize == 16  ? 1

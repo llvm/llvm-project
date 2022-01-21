@@ -443,7 +443,7 @@ auto AlignVectors::createAdjustedPointer(IRBuilder<> &Builder, Value *Ptr,
   // we don't need to do pointer casts.
   auto *PtrTy = cast<PointerType>(Ptr->getType());
   if (!PtrTy->isOpaque()) {
-    Type *ElemTy = PtrTy->getElementType();
+    Type *ElemTy = PtrTy->getNonOpaquePointerElementType();
     int ElemSize = HVC.getAllocSizeOf(ElemTy);
     if (Adjust % ElemSize == 0 && Adjust != 0) {
       Value *Tmp0 =

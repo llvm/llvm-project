@@ -142,13 +142,13 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   for (SetVector<Value *>::iterator I1 = Pointers.begin(), E = Pointers.end();
        I1 != E; ++I1) {
     auto I1Size = LocationSize::afterPointer();
-    Type *I1ElTy = cast<PointerType>((*I1)->getType())->getElementType();
+    Type *I1ElTy = (*I1)->getType()->getPointerElementType();
     if (I1ElTy->isSized())
       I1Size = LocationSize::precise(DL.getTypeStoreSize(I1ElTy));
 
     for (SetVector<Value *>::iterator I2 = Pointers.begin(); I2 != I1; ++I2) {
       auto I2Size = LocationSize::afterPointer();
-      Type *I2ElTy = cast<PointerType>((*I2)->getType())->getElementType();
+      Type *I2ElTy = (*I2)->getType()->getPointerElementType();
       if (I2ElTy->isSized())
         I2Size = LocationSize::precise(DL.getTypeStoreSize(I2ElTy));
 
@@ -233,7 +233,7 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   for (CallBase *Call : Calls) {
     for (auto Pointer : Pointers) {
       auto Size = LocationSize::afterPointer();
-      Type *ElTy = cast<PointerType>(Pointer->getType())->getElementType();
+      Type *ElTy = Pointer->getType()->getPointerElementType();
       if (ElTy->isSized())
         Size = LocationSize::precise(DL.getTypeStoreSize(ElTy));
 

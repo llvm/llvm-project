@@ -331,8 +331,8 @@ void MetadataStreamerV2::emitKernelArg(const Argument &Arg) {
   if (auto PtrTy = dyn_cast<PointerType>(Arg.getType())) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
       // FIXME: Should report this for all address spaces
-      PointeeAlign = DL.getValueOrABITypeAlignment(Arg.getParamAlign(),
-                                                   PtrTy->getElementType());
+      PointeeAlign = DL.getValueOrABITypeAlignment(
+          Arg.getParamAlign(), PtrTy->getPointerElementType());
     }
   }
 
@@ -732,8 +732,8 @@ void MetadataStreamerV3::emitKernelArg(const Argument &Arg, unsigned &Offset,
   // FIXME: Need to distinguish in memory alignment from pointer alignment.
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
     if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-      PointeeAlign = DL.getValueOrABITypeAlignment(Arg.getParamAlign(),
-                                                   PtrTy->getElementType());
+      PointeeAlign = DL.getValueOrABITypeAlignment(
+          Arg.getParamAlign(), PtrTy->getPointerElementType());
     }
   }
 

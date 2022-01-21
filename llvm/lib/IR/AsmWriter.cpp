@@ -587,7 +587,7 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
         OS << " addrspace(" << AddressSpace << ')';
       return;
     }
-    print(PTy->getElementType(), OS);
+    print(PTy->getNonOpaquePointerElementType(), OS);
     if (unsigned AddressSpace = PTy->getAddressSpace())
       OS << " addrspace(" << AddressSpace << ')';
     OS << '*';

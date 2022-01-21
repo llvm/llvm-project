@@ -91,7 +91,7 @@ Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
 
   // Get the type really allocated and the type casted to.
   Type *AllocElTy = AI.getAllocatedType();
-  Type *CastElTy = PTy->getElementType();
+  Type *CastElTy = PTy->getPointerElementType();
   if (!AllocElTy->isSized() || !CastElTy->isSized()) return nullptr;
 
   // This optimisation does not work for cases where the cast type
@@ -2649,8 +2649,8 @@ static Instruction *convertBitCastToGEP(BitCastInst &CI, IRBuilderBase &Builder,
   if (SrcPTy->isOpaque() || DstPTy->isOpaque())
     return nullptr;
 
-  Type *DstElTy = DstPTy->getElementType();
-  Type *SrcElTy = SrcPTy->getElementType();
+  Type *DstElTy = DstPTy->getNonOpaquePointerElementType();
+  Type *SrcElTy = SrcPTy->getNonOpaquePointerElementType();
 
   // When the type pointed to is not sized the cast cannot be
   // turned into a gep.
@@ -2669,8 +2669,8 @@ static Instruction *convertBitCastToGEP(BitCastInst &CI, IRBuilderBase &Builder,
   // If we found a path from the src to dest, create the getelementptr now.
   if (SrcElTy == DstElTy) {
     SmallVector<Value *, 8> Idxs(NumZeros + 1, Builder.getInt32(0));
-    GetElementPtrInst *GEP =
-        GetElementPtrInst::Create(SrcPTy->getElementType(), Src, Idxs);
+    GetElementPtrInst *GEP = GetElementPtrInst::Create(
+        SrcPTy->getNonOpaquePointerElementType(), Src, Idxs);
 
     // If the source pointer is dereferenceable, then assume it points to an
     // allocated object and apply "inbounds" to the GEP.
