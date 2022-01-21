@@ -510,8 +510,7 @@ public:
   /// is provided, the integer induction variable will first be truncated to
   /// the corresponding type. \p CanonicalIV is the scalar value generated for
   /// the canonical induction variable.
-  void widenIntOrFpInduction(PHINode *IV, const InductionDescriptor &ID,
-                             Value *Start, TruncInst *Trunc, VPValue *Def,
+  void widenIntOrFpInduction(PHINode *IV, VPWidenIntOrFpInductionRecipe *Def,
                              VPTransformState &State, Value *CanonicalIV);
 
   /// Construct the vector value of a scalarized value \p V one lane at a time.
@@ -2478,17 +2477,12 @@ bool InnerLoopVectorizer::needsScalarInduction(Instruction *IV) const {
   return llvm::any_of(IV->users(), isScalarInst);
 }
 
-/// Returns true if \p ID starts at 0 and has a step of 1.
-static bool isCanonicalID(const InductionDescriptor &ID) {
-  if (!ID.getConstIntStepValue() || !ID.getConstIntStepValue()->isOne())
-    return false;
-  auto *StartC = dyn_cast<ConstantInt>(ID.getStartValue());
-  return StartC && StartC->isZero();
-}
-
 void InnerLoopVectorizer::widenIntOrFpInduction(
-    PHINode *IV, const InductionDescriptor &ID, Value *Start, TruncInst *Trunc,
-    VPValue *Def, VPTransformState &State, Value *CanonicalIV) {
+    PHINode *IV, VPWidenIntOrFpInductionRecipe *Def, VPTransformState &State,
+    Value *CanonicalIV) {
+  Value *Start = Def->getStartValue()->getLiveInIRValue();
+  const InductionDescriptor &ID = Def->getInductionDescriptor();
+  TruncInst *Trunc = Def->getTruncInst();
   IRBuilder<> &Builder = State.Builder;
   assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
   assert(!State.VF.isZero() && "VF must be non-zero");
@@ -2519,7 +2513,7 @@ void InnerLoopVectorizer::widenIntOrFpInduction(
   auto CreateScalarIV = [&](Value *&Step) -> Value * {
     Value *ScalarIV = CanonicalIV;
     Type *NeededType = IV->getType();
-    if (!isCanonicalID(ID) || ScalarIV->getType() != NeededType) {
+    if (!Def->isCanonical() || ScalarIV->getType() != NeededType) {
       ScalarIV =
           NeededType->isIntegerTy()
               ? Builder.CreateSExtOrTrunc(ScalarIV, NeededType)
@@ -9702,9 +9696,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Int or FP induction being replicated.");
   auto *CanonicalIV = State.get(getParent()->getPlan()->getCanonicalIV(), 0);
-  State.ILV->widenIntOrFpInduction(IV, getInductionDescriptor(),
-                                   getStartValue()->getLiveInIRValue(),
-                                   getTruncInst(), this, State, CanonicalIV);
+  State.ILV->widenIntOrFpInduction(IV, this, State, CanonicalIV);
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {

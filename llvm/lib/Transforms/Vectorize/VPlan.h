@@ -1059,6 +1059,7 @@ public:
 
   /// Returns the start value of the induction.
   VPValue *getStartValue() { return getOperand(0); }
+  const VPValue *getStartValue() const { return getOperand(0); }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
@@ -1071,6 +1072,10 @@ public:
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
+
+  /// Returns true if the induction is canonical, i.e. starting at 0 and
+  /// incremented by UF * VF (= the original IV is incremented by 1).
+  bool isCanonical() const;
 };
 
 /// A pure virtual base class for all recipes modeling header phis, including
