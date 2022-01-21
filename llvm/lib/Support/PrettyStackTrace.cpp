@@ -20,6 +20,10 @@
 #include "llvm/Support/Watchdog.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef __APPLE__
+#include "llvm/ADT/SmallString.h"
+#endif
+
 #include <atomic>
 #include <cassert>
 #include <cstdarg>
