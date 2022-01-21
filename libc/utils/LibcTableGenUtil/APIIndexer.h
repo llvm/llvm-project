@@ -63,10 +63,10 @@ public:
   NameToRecordMapping EnumerationSpecMap;
   NameToRecordMapping FunctionSpecMap;
   NameToRecordMapping MacroDefsMap;
-  NameToRecordMapping TypeDeclsMap;
 
   std::unordered_map<std::string, std::string> FunctionToHeaderMap;
 
+  NameSet RequiredTypes;
   NameSet Structs;
   NameSet Enumerations;
   NameSet Functions;

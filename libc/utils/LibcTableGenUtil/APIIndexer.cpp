@@ -120,9 +120,9 @@ void APIIndexer::indexPublicAPIDef(llvm::Record *PublicAPI) {
   for (llvm::Record *MacroDef : MacroDefList)
     MacroDefsMap[std::string(MacroDef->getValueAsString("Name"))] = MacroDef;
 
-  auto TypeDeclList = PublicAPI->getValueAsListOfDefs("TypeDeclarations");
-  for (llvm::Record *TypeDecl : TypeDeclList)
-    TypeDeclsMap[std::string(TypeDecl->getValueAsString("Name"))] = TypeDecl;
+  auto TypeList = PublicAPI->getValueAsListOfStrings("Types");
+  for (llvm::StringRef TypeName : TypeList)
+    RequiredTypes.insert(std::string(TypeName));
 
   auto StructList = PublicAPI->getValueAsListOfStrings("Structs");
   for (llvm::StringRef StructName : StructList)

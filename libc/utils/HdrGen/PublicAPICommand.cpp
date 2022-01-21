@@ -10,6 +10,7 @@
 
 #include "utils/LibcTableGenUtil/APIIndexer.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SourceMgr.h"
@@ -38,6 +39,12 @@ static void dedentAndWrite(llvm::StringRef Text, llvm::raw_ostream &OS) {
   }
 }
 
+static std::string getTypeHdrName(const std::string &Name) {
+  llvm::SmallVector<llvm::StringRef> Parts;
+  llvm::SplitString(llvm::StringRef(Name), Parts);
+  return llvm::join(Parts.begin(), Parts.end(), "_");
+}
+
 namespace llvm_libc {
 
 void writeAPIFromIndex(APIIndexer &G,
@@ -54,16 +61,12 @@ void writeAPIFromIndex(APIIndexer &G,
     OS << '\n';
   }
 
-  for (auto &Pair : G.TypeDeclsMap) {
-    const std::string &Name = Pair.first;
-    if (G.TypeSpecMap.find(Name) == G.TypeSpecMap.end())
-      llvm::PrintFatalError(Name + " not found in any standard spec.\n");
-
-    llvm::Record *TypeDecl = Pair.second;
-    dedentAndWrite(TypeDecl->getValueAsString("Decl"), OS);
-
-    OS << '\n';
+  for (auto &TypeName : G.RequiredTypes) {
+    if (G.TypeSpecMap.find(TypeName) == G.TypeSpecMap.end())
+      llvm::PrintFatalError(TypeName + " not found in any standard spec.\n");
+    OS << "#include <llvm-libc-types/" << getTypeHdrName(TypeName) << ".h>\n";
   }
+  OS << '\n';
 
   if (G.Enumerations.size() != 0)
     OS << "enum {" << '\n';
