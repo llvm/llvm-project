@@ -479,10 +479,10 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a3
-; RV32I-NEXT:    mv s3, a2
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s2, a1
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
 ; RV32I-NEXT:    li a2, 0
@@ -491,10 +491,10 @@ define double @fmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv a4, a0
 ; RV32I-NEXT:    lui a0, 524288
 ; RV32I-NEXT:    xor a5, a1, a0
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    mv a2, s3
-; RV32I-NEXT:    mv a3, s2
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a2, s1
+; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call fma@plt
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -559,25 +559,25 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s4, a5
-; RV32I-NEXT:    mv s5, a4
+; RV32I-NEXT:    mv s0, a5
+; RV32I-NEXT:    mv s1, a4
 ; RV32I-NEXT:    mv s2, a3
 ; RV32I-NEXT:    mv s3, a2
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __adddf3@plt
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    mv s1, a1
-; RV32I-NEXT:    mv a0, s5
-; RV32I-NEXT:    mv a1, s4
+; RV32I-NEXT:    mv s4, a0
+; RV32I-NEXT:    mv s5, a1
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __adddf3@plt
 ; RV32I-NEXT:    mv a4, a0
 ; RV32I-NEXT:    lui a0, 524288
-; RV32I-NEXT:    xor a2, s1, a0
+; RV32I-NEXT:    xor a2, s5, a0
 ; RV32I-NEXT:    xor a5, a1, a0
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    mv a0, s4
 ; RV32I-NEXT:    mv a1, a2
 ; RV32I-NEXT:    mv a2, s3
 ; RV32I-NEXT:    mv a3, s2
@@ -600,19 +600,19 @@ define double @fnmadd_d(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a2
-; RV64I-NEXT:    mv s2, a1
+; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
-; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slli a2, a1, 63
-; RV64I-NEXT:    xor a1, s1, a2
+; RV64I-NEXT:    xor a1, s2, a2
 ; RV64I-NEXT:    xor a2, a0, a2
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    mv a1, s2
+; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call fma@plt
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -655,7 +655,7 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s4, a5
+; RV32I-NEXT:    mv s0, a5
 ; RV32I-NEXT:    mv s1, a4
 ; RV32I-NEXT:    mv s2, a1
 ; RV32I-NEXT:    mv s3, a0
@@ -664,20 +664,20 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __adddf3@plt
-; RV32I-NEXT:    mv s5, a0
-; RV32I-NEXT:    mv s0, a1
+; RV32I-NEXT:    mv s4, a0
+; RV32I-NEXT:    mv s5, a1
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s4
+; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __adddf3@plt
 ; RV32I-NEXT:    mv a4, a0
 ; RV32I-NEXT:    lui a0, 524288
-; RV32I-NEXT:    xor a3, s0, a0
+; RV32I-NEXT:    xor a3, s5, a0
 ; RV32I-NEXT:    xor a5, a1, a0
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a1, s2
-; RV32I-NEXT:    mv a2, s5
+; RV32I-NEXT:    mv a2, s4
 ; RV32I-NEXT:    call fma@plt
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -697,19 +697,19 @@ define double @fnmadd_d_2(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a2
-; RV64I-NEXT:    mv s2, a0
+; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
-; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    slli a2, a1, 63
-; RV64I-NEXT:    xor a1, s1, a2
+; RV64I-NEXT:    xor a1, s2, a2
 ; RV64I-NEXT:    xor a2, a0, a2
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    call fma@plt
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -748,19 +748,19 @@ define double @fnmsub_d(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a5
-; RV32I-NEXT:    mv s3, a4
-; RV32I-NEXT:    mv s0, a3
-; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s0, a5
+; RV32I-NEXT:    mv s1, a4
+; RV32I-NEXT:    mv s2, a3
+; RV32I-NEXT:    mv s3, a2
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __adddf3@plt
 ; RV32I-NEXT:    lui a2, 524288
 ; RV32I-NEXT:    xor a1, a1, a2
-; RV32I-NEXT:    mv a2, s1
-; RV32I-NEXT:    mv a3, s0
-; RV32I-NEXT:    mv a4, s3
-; RV32I-NEXT:    mv a5, s2
+; RV32I-NEXT:    mv a2, s3
+; RV32I-NEXT:    mv a3, s2
+; RV32I-NEXT:    mv a4, s1
+; RV32I-NEXT:    mv a5, s0
 ; RV32I-NEXT:    call fma@plt
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -820,10 +820,10 @@ define double @fnmsub_d_2(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a5
-; RV32I-NEXT:    mv s3, a4
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s0, a5
+; RV32I-NEXT:    mv s1, a4
+; RV32I-NEXT:    mv s2, a1
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    mv a0, a2
 ; RV32I-NEXT:    mv a1, a3
 ; RV32I-NEXT:    li a2, 0
@@ -832,10 +832,10 @@ define double @fnmsub_d_2(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    lui a0, 524288
 ; RV32I-NEXT:    xor a3, a1, a0
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    mv a4, s3
-; RV32I-NEXT:    mv a5, s2
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a4, s1
+; RV32I-NEXT:    mv a5, s0
 ; RV32I-NEXT:    call fma@plt
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -945,10 +945,10 @@ define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a3
-; RV32I-NEXT:    mv s3, a2
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s2, a1
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    mv a0, a4
 ; RV32I-NEXT:    mv a1, a5
 ; RV32I-NEXT:    li a2, 0
@@ -956,10 +956,10 @@ define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    call __adddf3@plt
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv s5, a1
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    mv a2, s3
-; RV32I-NEXT:    mv a3, s2
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a2, s1
+; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __muldf3@plt
 ; RV32I-NEXT:    mv a2, s4
 ; RV32I-NEXT:    mv a3, s5
@@ -981,16 +981,16 @@ define double @fmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s2, a1
+; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
-; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    mv a1, s2
-; RV64I-NEXT:    call __muldf3@plt
 ; RV64I-NEXT:    mv a1, s0
+; RV64I-NEXT:    call __muldf3@plt
+; RV64I-NEXT:    mv a1, s2
 ; RV64I-NEXT:    call __subdf3@plt
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -1033,22 +1033,15 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a5
-; RV32I-NEXT:    mv s3, a4
-; RV32I-NEXT:    mv s0, a3
-; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s0, a5
+; RV32I-NEXT:    mv s1, a4
+; RV32I-NEXT:    mv s2, a3
+; RV32I-NEXT:    mv s3, a2
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __adddf3@plt
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv s5, a1
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    li a2, 0
-; RV32I-NEXT:    li a3, 0
-; RV32I-NEXT:    call __adddf3@plt
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    mv s1, a1
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a1, s2
 ; RV32I-NEXT:    li a2, 0
@@ -1056,15 +1049,22 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    call __adddf3@plt
 ; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    mv s3, a1
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a1, s0
+; RV32I-NEXT:    li a2, 0
+; RV32I-NEXT:    li a3, 0
+; RV32I-NEXT:    call __adddf3@plt
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    mv s1, a1
 ; RV32I-NEXT:    mv a0, s4
 ; RV32I-NEXT:    mv a1, s5
-; RV32I-NEXT:    mv a2, s0
-; RV32I-NEXT:    mv a3, s1
+; RV32I-NEXT:    mv a2, s2
+; RV32I-NEXT:    mv a3, s3
 ; RV32I-NEXT:    call __muldf3@plt
 ; RV32I-NEXT:    lui a2, 524288
 ; RV32I-NEXT:    xor a1, a1, a2
-; RV32I-NEXT:    mv a2, s2
-; RV32I-NEXT:    mv a3, s3
+; RV32I-NEXT:    mv a2, s0
+; RV32I-NEXT:    mv a3, s1
 ; RV32I-NEXT:    call __subdf3@plt
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -1078,26 +1078,25 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ;
 ; RV64I-LABEL: fnmadd_d_contract:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -48
-; RV64I-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s2, a2
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
-; RV64I-NEXT:    mv s3, a0
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    mv a0, s3
+; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    mv a1, s1
 ; RV64I-NEXT:    call __muldf3@plt
 ; RV64I-NEXT:    li a1, -1
@@ -1105,12 +1104,11 @@ define double @fnmadd_d_contract(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    call __subdf3@plt
-; RV64I-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 48
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %a_ = fadd double 0.0, %a ; avoid negation using xor
   %b_ = fadd double 0.0, %b ; avoid negation using xor
@@ -1148,29 +1146,29 @@ define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s5, 4(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a5
-; RV32I-NEXT:    mv s3, a4
-; RV32I-NEXT:    mv s4, a3
-; RV32I-NEXT:    mv s5, a2
+; RV32I-NEXT:    mv s0, a5
+; RV32I-NEXT:    mv s1, a4
+; RV32I-NEXT:    mv s2, a3
+; RV32I-NEXT:    mv s3, a2
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __adddf3@plt
-; RV32I-NEXT:    mv s0, a0
-; RV32I-NEXT:    mv s1, a1
-; RV32I-NEXT:    mv a0, s5
-; RV32I-NEXT:    mv a1, s4
+; RV32I-NEXT:    mv s4, a0
+; RV32I-NEXT:    mv s5, a1
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
 ; RV32I-NEXT:    li a2, 0
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    call __adddf3@plt
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a3, a1
-; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    mv a1, s1
+; RV32I-NEXT:    mv a0, s4
+; RV32I-NEXT:    mv a1, s5
 ; RV32I-NEXT:    call __muldf3@plt
 ; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    mv a3, a1
-; RV32I-NEXT:    mv a0, s3
-; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    call __subdf3@plt
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -1189,19 +1187,19 @@ define double @fnmsub_d_contract(double %a, double %b, double %c) nounwind {
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s2, a2
+; RV64I-NEXT:    mv s0, a2
 ; RV64I-NEXT:    mv s1, a1
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
-; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    li a1, 0
 ; RV64I-NEXT:    call __adddf3@plt
 ; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call __muldf3@plt
 ; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call __subdf3@plt
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload

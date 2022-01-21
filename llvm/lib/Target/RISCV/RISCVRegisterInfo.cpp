@@ -347,3 +347,8 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
     Ops.push_back(dwarf::DW_OP_minus);
   }
 }
+
+unsigned
+RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
+  return MF.getSubtarget<RISCVSubtarget>().hasStdExtC() ? 1 : 0;
+}

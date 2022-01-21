@@ -164,16 +164,16 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32IZbbZbt-NEXT:    sltu a2, a0, a4
 ; RV32IZbbZbt-NEXT:    sub a3, a1, a5
 ; RV32IZbbZbt-NEXT:    sub a2, a3, a2
-; RV32IZbbZbt-NEXT:    srai a6, a2, 31
-; RV32IZbbZbt-NEXT:    lui a3, 524288
-; RV32IZbbZbt-NEXT:    xor a7, a6, a3
-; RV32IZbbZbt-NEXT:    xor a3, a1, a2
+; RV32IZbbZbt-NEXT:    srai a3, a2, 31
+; RV32IZbbZbt-NEXT:    lui a6, 524288
+; RV32IZbbZbt-NEXT:    xor a6, a3, a6
+; RV32IZbbZbt-NEXT:    xor a7, a1, a2
 ; RV32IZbbZbt-NEXT:    xor a1, a1, a5
-; RV32IZbbZbt-NEXT:    and a1, a1, a3
-; RV32IZbbZbt-NEXT:    slti a3, a1, 0
-; RV32IZbbZbt-NEXT:    cmov a1, a3, a7, a2
+; RV32IZbbZbt-NEXT:    and a1, a1, a7
+; RV32IZbbZbt-NEXT:    slti a5, a1, 0
+; RV32IZbbZbt-NEXT:    cmov a1, a5, a6, a2
 ; RV32IZbbZbt-NEXT:    sub a0, a0, a4
-; RV32IZbbZbt-NEXT:    cmov a0, a3, a6, a0
+; RV32IZbbZbt-NEXT:    cmov a0, a5, a3, a0
 ; RV32IZbbZbt-NEXT:    ret
 ;
 ; RV64IZbbZbt-LABEL: func64:

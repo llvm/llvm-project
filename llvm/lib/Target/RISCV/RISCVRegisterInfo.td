@@ -73,12 +73,11 @@ def sub_vrm1_7 : ComposedSubRegIndex<sub_vrm2_3, sub_vrm1_1>;
 // are not part of GPRC, the most restrictive register class used by the
 // compressed instruction set. This will influence the greedy register
 // allocator to reduce the use of registers that can't be encoded in 16 bit
-// instructions. This affects register allocation even when compressed
-// instruction isn't targeted, we see no major negative codegen impact.
+// instructions.
 
 let RegAltNameIndices = [ABIRegAltName] in {
   def X0  : RISCVReg<0, "x0", ["zero"]>, DwarfRegNum<[0]>;
-  let CostPerUse = [1] in {
+  let CostPerUse = [0, 1] in {
   def X1  : RISCVReg<1, "x1", ["ra"]>, DwarfRegNum<[1]>;
   def X2  : RISCVReg<2, "x2", ["sp"]>, DwarfRegNum<[2]>;
   def X3  : RISCVReg<3, "x3", ["gp"]>, DwarfRegNum<[3]>;
@@ -95,7 +94,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   def X13 : RISCVReg<13,"x13", ["a3"]>, DwarfRegNum<[13]>;
   def X14 : RISCVReg<14,"x14", ["a4"]>, DwarfRegNum<[14]>;
   def X15 : RISCVReg<15,"x15", ["a5"]>, DwarfRegNum<[15]>;
-  let CostPerUse = [1] in {
+  let CostPerUse = [0, 1] in {
   def X16 : RISCVReg<16,"x16", ["a6"]>, DwarfRegNum<[16]>;
   def X17 : RISCVReg<17,"x17", ["a7"]>, DwarfRegNum<[17]>;
   def X18 : RISCVReg<18,"x18", ["s2"]>, DwarfRegNum<[18]>;

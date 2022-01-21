@@ -65,20 +65,20 @@ define i128 @cmovcc128(i64 signext %a, i128 %b, i128 %c) nounwind {
 ; RV32I-NEXT:  .LBB1_2: # %entry
 ; RV32I-NEXT:    beqz a1, .LBB1_5
 ; RV32I-NEXT:  # %bb.3: # %entry
-; RV32I-NEXT:    addi a7, a4, 4
+; RV32I-NEXT:    addi a5, a4, 4
 ; RV32I-NEXT:    bnez a1, .LBB1_6
 ; RV32I-NEXT:  .LBB1_4:
-; RV32I-NEXT:    addi a5, a3, 8
+; RV32I-NEXT:    addi a6, a3, 8
 ; RV32I-NEXT:    j .LBB1_7
 ; RV32I-NEXT:  .LBB1_5:
-; RV32I-NEXT:    addi a7, a3, 4
+; RV32I-NEXT:    addi a5, a3, 4
 ; RV32I-NEXT:    beqz a1, .LBB1_4
 ; RV32I-NEXT:  .LBB1_6: # %entry
-; RV32I-NEXT:    addi a5, a4, 8
+; RV32I-NEXT:    addi a6, a4, 8
 ; RV32I-NEXT:  .LBB1_7: # %entry
-; RV32I-NEXT:    lw a6, 0(a2)
-; RV32I-NEXT:    lw a7, 0(a7)
-; RV32I-NEXT:    lw a2, 0(a5)
+; RV32I-NEXT:    lw a2, 0(a2)
+; RV32I-NEXT:    lw a5, 0(a5)
+; RV32I-NEXT:    lw a6, 0(a6)
 ; RV32I-NEXT:    beqz a1, .LBB1_9
 ; RV32I-NEXT:  # %bb.8: # %entry
 ; RV32I-NEXT:    addi a1, a4, 12
@@ -88,25 +88,25 @@ define i128 @cmovcc128(i64 signext %a, i128 %b, i128 %c) nounwind {
 ; RV32I-NEXT:  .LBB1_10: # %entry
 ; RV32I-NEXT:    lw a1, 0(a1)
 ; RV32I-NEXT:    sw a1, 12(a0)
-; RV32I-NEXT:    sw a2, 8(a0)
-; RV32I-NEXT:    sw a7, 4(a0)
-; RV32I-NEXT:    sw a6, 0(a0)
+; RV32I-NEXT:    sw a6, 8(a0)
+; RV32I-NEXT:    sw a5, 4(a0)
+; RV32I-NEXT:    sw a2, 0(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IBT-LABEL: cmovcc128:
 ; RV32IBT:       # %bb.0: # %entry
-; RV32IBT-NEXT:    addi a6, a3, 12
-; RV32IBT-NEXT:    addi a7, a4, 12
-; RV32IBT-NEXT:    addi t0, a3, 8
-; RV32IBT-NEXT:    addi t1, a4, 8
-; RV32IBT-NEXT:    addi t2, a3, 4
-; RV32IBT-NEXT:    addi a5, a4, 4
+; RV32IBT-NEXT:    addi a5, a3, 12
+; RV32IBT-NEXT:    addi a6, a4, 12
+; RV32IBT-NEXT:    addi a7, a3, 8
+; RV32IBT-NEXT:    addi t0, a4, 8
+; RV32IBT-NEXT:    addi t1, a3, 4
+; RV32IBT-NEXT:    addi t2, a4, 4
 ; RV32IBT-NEXT:    xori a1, a1, 123
 ; RV32IBT-NEXT:    or a1, a1, a2
 ; RV32IBT-NEXT:    cmov a2, a1, a4, a3
-; RV32IBT-NEXT:    cmov a3, a1, a5, t2
-; RV32IBT-NEXT:    cmov a4, a1, t1, t0
-; RV32IBT-NEXT:    cmov a1, a1, a7, a6
+; RV32IBT-NEXT:    cmov a3, a1, t2, t1
+; RV32IBT-NEXT:    cmov a4, a1, t0, a7
+; RV32IBT-NEXT:    cmov a1, a1, a6, a5
 ; RV32IBT-NEXT:    lw a1, 0(a1)
 ; RV32IBT-NEXT:    lw a4, 0(a4)
 ; RV32IBT-NEXT:    lw a3, 0(a3)
@@ -192,20 +192,20 @@ define i128 @cmov128(i1 %a, i128 %b, i128 %c) nounwind {
 ; RV32I-NEXT:  .LBB3_2: # %entry
 ; RV32I-NEXT:    bnez a1, .LBB3_5
 ; RV32I-NEXT:  # %bb.3: # %entry
-; RV32I-NEXT:    addi a7, a3, 4
+; RV32I-NEXT:    addi a5, a3, 4
 ; RV32I-NEXT:    beqz a1, .LBB3_6
 ; RV32I-NEXT:  .LBB3_4:
-; RV32I-NEXT:    addi a5, a2, 8
+; RV32I-NEXT:    addi a6, a2, 8
 ; RV32I-NEXT:    j .LBB3_7
 ; RV32I-NEXT:  .LBB3_5:
-; RV32I-NEXT:    addi a7, a2, 4
+; RV32I-NEXT:    addi a5, a2, 4
 ; RV32I-NEXT:    bnez a1, .LBB3_4
 ; RV32I-NEXT:  .LBB3_6: # %entry
-; RV32I-NEXT:    addi a5, a3, 8
+; RV32I-NEXT:    addi a6, a3, 8
 ; RV32I-NEXT:  .LBB3_7: # %entry
-; RV32I-NEXT:    lw a6, 0(a4)
-; RV32I-NEXT:    lw a7, 0(a7)
-; RV32I-NEXT:    lw a4, 0(a5)
+; RV32I-NEXT:    lw a4, 0(a4)
+; RV32I-NEXT:    lw a5, 0(a5)
+; RV32I-NEXT:    lw a6, 0(a6)
 ; RV32I-NEXT:    bnez a1, .LBB3_9
 ; RV32I-NEXT:  # %bb.8: # %entry
 ; RV32I-NEXT:    addi a1, a3, 12
@@ -215,26 +215,26 @@ define i128 @cmov128(i1 %a, i128 %b, i128 %c) nounwind {
 ; RV32I-NEXT:  .LBB3_10: # %entry
 ; RV32I-NEXT:    lw a1, 0(a1)
 ; RV32I-NEXT:    sw a1, 12(a0)
-; RV32I-NEXT:    sw a4, 8(a0)
-; RV32I-NEXT:    sw a7, 4(a0)
-; RV32I-NEXT:    sw a6, 0(a0)
+; RV32I-NEXT:    sw a6, 8(a0)
+; RV32I-NEXT:    sw a5, 4(a0)
+; RV32I-NEXT:    sw a4, 0(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IBT-LABEL: cmov128:
 ; RV32IBT:       # %bb.0: # %entry
-; RV32IBT-NEXT:    addi a6, a3, 12
-; RV32IBT-NEXT:    addi a7, a2, 12
-; RV32IBT-NEXT:    addi t0, a3, 8
-; RV32IBT-NEXT:    addi t1, a2, 8
-; RV32IBT-NEXT:    addi a4, a3, 4
-; RV32IBT-NEXT:    addi a5, a2, 4
+; RV32IBT-NEXT:    addi a4, a3, 12
+; RV32IBT-NEXT:    addi a5, a2, 12
+; RV32IBT-NEXT:    addi a6, a3, 8
+; RV32IBT-NEXT:    addi a7, a2, 8
+; RV32IBT-NEXT:    addi t0, a3, 4
+; RV32IBT-NEXT:    addi t1, a2, 4
 ; RV32IBT-NEXT:    andi a1, a1, 1
 ; RV32IBT-NEXT:    cmov a2, a1, a2, a3
-; RV32IBT-NEXT:    cmov a3, a1, a5, a4
-; RV32IBT-NEXT:    cmov a4, a1, t1, t0
-; RV32IBT-NEXT:    cmov a1, a1, a7, a6
+; RV32IBT-NEXT:    cmov a3, a1, t1, t0
+; RV32IBT-NEXT:    cmov a6, a1, a7, a6
+; RV32IBT-NEXT:    cmov a1, a1, a5, a4
 ; RV32IBT-NEXT:    lw a1, 0(a1)
-; RV32IBT-NEXT:    lw a4, 0(a4)
+; RV32IBT-NEXT:    lw a4, 0(a6)
 ; RV32IBT-NEXT:    lw a3, 0(a3)
 ; RV32IBT-NEXT:    lw a2, 0(a2)
 ; RV32IBT-NEXT:    sw a1, 12(a0)
@@ -476,17 +476,17 @@ entry:
 define i32 @cmovdiffcc(i1 %a, i1 %b, i32 %c, i32 %d, i32 %e, i32 %f) nounwind {
 ; RV32I-LABEL: cmovdiffcc:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    andi a1, a1, 1
-; RV32I-NEXT:    beqz a0, .LBB7_3
+; RV32I-NEXT:    andi a6, a0, 1
+; RV32I-NEXT:    andi a0, a1, 1
+; RV32I-NEXT:    beqz a6, .LBB7_3
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    beqz a1, .LBB7_4
+; RV32I-NEXT:    beqz a0, .LBB7_4
 ; RV32I-NEXT:  .LBB7_2: # %entry
 ; RV32I-NEXT:    add a0, a2, a4
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB7_3: # %entry
 ; RV32I-NEXT:    mv a2, a3
-; RV32I-NEXT:    bnez a1, .LBB7_2
+; RV32I-NEXT:    bnez a0, .LBB7_2
 ; RV32I-NEXT:  .LBB7_4: # %entry
 ; RV32I-NEXT:    mv a4, a5
 ; RV32I-NEXT:    add a0, a2, a4
@@ -503,17 +503,17 @@ define i32 @cmovdiffcc(i1 %a, i1 %b, i32 %c, i32 %d, i32 %e, i32 %f) nounwind {
 ;
 ; RV64I-LABEL: cmovdiffcc:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    andi a1, a1, 1
-; RV64I-NEXT:    beqz a0, .LBB7_3
+; RV64I-NEXT:    andi a6, a0, 1
+; RV64I-NEXT:    andi a0, a1, 1
+; RV64I-NEXT:    beqz a6, .LBB7_3
 ; RV64I-NEXT:  # %bb.1: # %entry
-; RV64I-NEXT:    beqz a1, .LBB7_4
+; RV64I-NEXT:    beqz a0, .LBB7_4
 ; RV64I-NEXT:  .LBB7_2: # %entry
 ; RV64I-NEXT:    addw a0, a2, a4
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB7_3: # %entry
 ; RV64I-NEXT:    mv a2, a3
-; RV64I-NEXT:    bnez a1, .LBB7_2
+; RV64I-NEXT:    bnez a0, .LBB7_2
 ; RV64I-NEXT:  .LBB7_4: # %entry
 ; RV64I-NEXT:    mv a4, a5
 ; RV64I-NEXT:    addw a0, a2, a4

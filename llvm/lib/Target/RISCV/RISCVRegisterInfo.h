@@ -66,6 +66,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   void getOffsetOpcodes(const StackOffset &Offset,
                         SmallVectorImpl<uint64_t> &Ops) const override;
+
+  unsigned getRegisterCostTableIndex(const MachineFunction &MF) const override;
 };
 }
 
