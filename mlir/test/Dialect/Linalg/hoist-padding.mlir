@@ -30,7 +30,7 @@ func @static_size_divisible(%arg0: tensor<24x12xf32>,
     //  MATVEC-DAG:   %[[T4:.*]] = tensor.extract_slice %[[T0]][%[[IDX0]]
     %2 = tensor.extract_slice %arg1[%arg3] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = linalg.pad_tensor %2 nofold low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  // no predecessors
+    ^bb0(%arg5: index):  
       linalg.yield %cst : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -81,11 +81,11 @@ func @static_size_not_divisible(%arg0: tensor<24x12xf32>,
     %3 = tensor.extract_slice %arg1[%arg3] [%1] [1] : tensor<12xf32> to tensor<?xf32>
     %4 = affine.apply #map1(%1)
     %5 = linalg.pad_tensor %2 low[%c0, %c0] high[%c0, %4]  {
-    ^bb0(%arg5: index, %arg6: index):  // no predecessors
+    ^bb0(%arg5: index, %arg6: index):  
       linalg.yield %cst : f32
     } : tensor<24x?xf32> to tensor<24x5xf32>
     %6 = linalg.pad_tensor %3 low[%c0] high[%4]  {
-    ^bb0(%arg5: index):  // no predecessors
+    ^bb0(%arg5: index):  
       linalg.yield %cst : f32
     } : tensor<?xf32> to tensor<5xf32>
 
@@ -141,11 +141,11 @@ func @dynamic_size(%arg0: tensor<24x?xf32>,
     %4 = tensor.extract_slice %arg1[%arg3] [%2] [1] : tensor<?xf32> to tensor<?xf32>
     %5 = affine.apply #map1(%2)
     %6 = linalg.pad_tensor %3 low[%c0, %c0] high[%c0, %5]  {
-    ^bb0(%arg5: index, %arg6: index):  // no predecessors
+    ^bb0(%arg5: index, %arg6: index):  
       linalg.yield %cst : f32
     } : tensor<24x?xf32> to tensor<24x4xf32>
     %7 = linalg.pad_tensor %4 nofold low[%c0] high[%5]  {
-    ^bb0(%arg5: index):  // no predecessors
+    ^bb0(%arg5: index):  
       linalg.yield %cst : f32
     } : tensor<?xf32> to tensor<4xf32>
 
@@ -177,7 +177,7 @@ func @non_constant_padding(%arg0: tensor<24x12xf32>,
     //      MATVEC:  %[[T1:.*]] = linalg.pad_tensor %[[T0]]
     %2 = tensor.extract_slice %arg1[%arg3] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = linalg.pad_tensor %2 nofold low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  // no predecessors
+    ^bb0(%arg5: index):  
       %5 = arith.index_cast %arg3 : index to i32
       %6 = arith.sitofp %5 : i32 to f32
       linalg.yield %6 : f32
@@ -214,7 +214,7 @@ func @non_constant_op_padding(%arg0: tensor<24x12xf32>,
     %2 = tensor.extract_slice %arg1[%arg3] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = tensor.extract %arg1[%arg3] : tensor<12xf32>
     %4 = linalg.pad_tensor %2 nofold low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  // no predecessors
+    ^bb0(%arg5: index):  
       linalg.yield %3 : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -251,7 +251,7 @@ func @non_index_operand(%arg0: tensor<24x12xf32>,
     %2 = tensor.extract_slice %arg1[%arg4] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = arith.index_cast %arg3 : i32 to index
     %4 = linalg.pad_tensor %2 nofold low[%3] high[%3]  {
-    ^bb0(%arg6: index):  // no predecessors
+    ^bb0(%arg6: index):  
       linalg.yield %cst : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -288,7 +288,7 @@ func @memory_effect(%arg0: tensor<24x12xf32>,
     %2 = tensor.extract_slice %arg1[%arg4] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = memref.load %arg3[%c0] : memref<?xindex>
     %4 = linalg.pad_tensor %2 nofold low[%3] high[%3]  {
-    ^bb0(%arg6: index):  // no predecessors
+    ^bb0(%arg6: index):  
       linalg.yield %cst : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -328,7 +328,7 @@ func @index_result_loop(%arg0: tensor<24x12xf32>,
       scf.yield %6 : index
     }
     %4 = linalg.pad_tensor %2 nofold low[%3] high[%3]  {
-    ^bb0(%arg6: index):  // no predecessors
+    ^bb0(%arg6: index):  
       linalg.yield %cst : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -373,7 +373,7 @@ func @tile_and_fuse(%arg0: tensor<12x6xf32>,
 
     // Check the fused and padded fill op does not prevent hoisting.
     %4 = linalg.pad_tensor %2 nofold low[%c0, %c0] high[%3, %c0]  {
-    ^bb0(%arg5: index, %arg6: index):  // no predecessors
+    ^bb0(%arg5: index, %arg6: index):  
       linalg.yield %cst : f32
     } : tensor<?x24xf32> to tensor<5x24xf32>
     %5 = linalg.fill(%cst, %4) : f32, tensor<5x24xf32> -> tensor<5x24xf32>
@@ -394,18 +394,18 @@ func @tile_and_fuse(%arg0: tensor<12x6xf32>,
       %10 = tensor.extract_slice %arg1[%arg5, 0] [3, 24] [1, 1] : tensor<6x24xf32> to tensor<3x24xf32>
       %11 = tensor.extract_slice %arg6[0, 0] [%1, 24] [1, 1] : tensor<?x24xf32> to tensor<?x24xf32>
       %12 = linalg.pad_tensor %9 nofold low[%c0, %c0] high[%3, %c0]  {
-      ^bb0(%arg7: index, %arg8: index):  // no predecessors
+      ^bb0(%arg7: index, %arg8: index):  
         linalg.yield %cst : f32
       } : tensor<?x3xf32> to tensor<5x3xf32>
       %13 = linalg.pad_tensor %10 nofold low[%c0, %c0] high[%c0, %c0]  {
-      ^bb0(%arg7: index, %arg8: index):  // no predecessors
+      ^bb0(%arg7: index, %arg8: index):  
         linalg.yield %cst : f32
       } : tensor<3x24xf32> to tensor<3x24xf32>
 
       // Check the output padding is not hoisted.
       //      MATMUL:   %[[T8:.*]] = linalg.pad_tensor
       %14 = linalg.pad_tensor %11 nofold low[%c0, %c0] high[%3, %c0]  {
-      ^bb0(%arg7: index, %arg8: index):  // no predecessors
+      ^bb0(%arg7: index, %arg8: index):  
         linalg.yield %cst : f32
       } : tensor<?x24xf32> to tensor<5x24xf32>
 

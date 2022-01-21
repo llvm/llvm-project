@@ -72,7 +72,7 @@ inline ArrayRef<NamedAttribute> getResultAttrs(Operation *op, unsigned index) {
 void insertFunctionArguments(Operation *op, ArrayRef<unsigned> argIndices,
                              TypeRange argTypes,
                              ArrayRef<DictionaryAttr> argAttrs,
-                             ArrayRef<Optional<Location>> argLocs,
+                             ArrayRef<Location> argLocs,
                              unsigned originalNumArgs, Type newType);
 
 /// Insert the specified results and update the function type attribute.

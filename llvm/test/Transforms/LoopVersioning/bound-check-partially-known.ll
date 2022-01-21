@@ -17,12 +17,10 @@ define void @bound_check_partially_known_1(i32 %N) {
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr [[STRUCT_FOO]], %struct.foo* @global, i64 0, i32 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SCEVGEP45:%.*]] = bitcast double* [[SCEVGEP4]] to i8*
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult i8* bitcast (%struct.foo* @global to i8*), [[SCEVGEP23]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 false, [[BOUND1]]
 ; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ult i8* [[SCEVGEP1]], [[SCEVGEP45]]
 ; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult i8* bitcast (double* getelementptr inbounds ([[STRUCT_FOO]], %struct.foo* @global, i64 0, i32 1, i64 0) to i8*), [[SCEVGEP23]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT8]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %loop.ph.lver.orig, label %loop.ph
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT8]], label %loop.ph.lver.orig, label %loop.ph
 ;
 entry:
   %N.ext = zext i32 %N to i64

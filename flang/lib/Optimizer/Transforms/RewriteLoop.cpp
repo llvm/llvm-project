@@ -49,7 +49,7 @@ public:
     // conditional block since it already has the induction variable and
     // loop-carried values as arguments.
     auto *conditionalBlock = &loop.region().front();
-    conditionalBlock->addArgument(rewriter.getIndexType());
+    conditionalBlock->addArgument(rewriter.getIndexType(), loc);
     auto *firstBlock =
         rewriter.splitBlock(conditionalBlock, conditionalBlock->begin());
     auto *lastBlock = &loop.region().back();

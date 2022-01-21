@@ -156,7 +156,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
       assert(empty() && "function already has an entry block");
       Block *entry = new Block();
       push_back(entry);
-      entry->addArguments($_op.getArgumentTypes());
+      
+      // FIXME: Allow for passing in locations for these arguments instead of using
+      // the operations location.
+      ArrayRef<Type> inputTypes = $_op.getArgumentTypes();
+      SmallVector<Location> locations(inputTypes.size(),
+                                      $_op.getOperation()->getLoc());
+      entry->addArguments(inputTypes, locations);
       return entry;
     }
 
@@ -234,7 +240,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// Insert a single argument of type `argType` with attributes `argAttrs` and
     /// location `argLoc` at `argIndex`.
     void insertArgument(unsigned argIndex, Type argType, DictionaryAttr argAttrs,
-                        Optional<Location> argLoc = {}) {
+                        Location argLoc) {
       insertArguments({argIndex}, {argType}, {argAttrs}, {argLoc});
     }
 
@@ -244,7 +250,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// appear in the same order that they were listed here.
     void insertArguments(ArrayRef<unsigned> argIndices, TypeRange argTypes,
                         ArrayRef<DictionaryAttr> argAttrs,
-                        ArrayRef<Optional<Location>> argLocs) {
+                        ArrayRef<Location> argLocs) {
       unsigned originalNumArgs = $_op.getNumArguments();
       Type newType = $_op.getTypeWithArgsAndResults(
           argIndices, argTypes, /*resultIndices=*/{}, /*resultTypes=*/{});

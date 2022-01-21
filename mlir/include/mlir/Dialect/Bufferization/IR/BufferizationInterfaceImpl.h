@@ -6,22 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZATIONINTERFACEIMPL_H
-#define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZATIONINTERFACEIMPL_H
+#ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONINTERFACEIMPL_H_
+#define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONINTERFACEIMPL_H_
 
 namespace mlir {
 
 class DialectRegistry;
 
-namespace linalg {
-namespace comprehensive_bufferize {
+namespace bufferization {
 namespace bufferization_ext {
 
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);
 
 } // namespace bufferization_ext
-} // namespace comprehensive_bufferize
-} // namespace linalg
+} // namespace bufferization
 } // namespace mlir
 
-#endif // MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_BUFFERIZATIONINTERFACEIMPL_H
+#endif // MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONINTERFACEIMPL_H_

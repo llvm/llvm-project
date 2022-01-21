@@ -363,32 +363,42 @@ multiclass VPatBinaryWVL_VV_VX<SDNode vop, string instruction_name> {
   }
 }
 
-class VPatBinaryVL_VF<SDNode vop,
-                      string instruction_name,
-                      ValueType result_type,
-                      ValueType vop_type,
-                      ValueType mask_type,
-                      int sew,
-                      LMULInfo vlmul,
-                      VReg vop_reg_class,
-                      RegisterClass scalar_reg_class> :
-    Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
-                          (vop_type (SplatFPOp scalar_reg_class:$rs2)),
-                          (mask_type true_mask),
-                          VLOpFrag)),
+multiclass VPatBinaryVL_VF<SDNode vop,
+                           string instruction_name,
+                           ValueType result_type,
+                           ValueType vop_type,
+                           ValueType mask_type,
+                           int sew,
+                           LMULInfo vlmul,
+                           VReg vop_reg_class,
+                           RegisterClass scalar_reg_class> {
+  def : Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
+                         (vop_type (SplatFPOp scalar_reg_class:$rs2)),
+                         (mask_type true_mask),
+                         VLOpFrag)),
         (!cast<Instruction>(instruction_name#"_"#vlmul.MX)
                      vop_reg_class:$rs1,
                      scalar_reg_class:$rs2,
                      GPR:$vl, sew)>;
+  def : Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
+                         (vop_type (SplatFPOp scalar_reg_class:$rs2)),
+                         (mask_type V0),
+                         VLOpFrag)),
+        (!cast<Instruction>(instruction_name#"_"#vlmul.MX#"_MASK")
+                     (result_type (IMPLICIT_DEF)),
+                     vop_reg_class:$rs1,
+                     scalar_reg_class:$rs2,
+                     (mask_type V0), GPR:$vl, sew, TAIL_AGNOSTIC)>;
+}
 
 multiclass VPatBinaryFPVL_VV_VF<SDNode vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
     defm : VPatBinaryVL_VV<vop, instruction_name,
                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
                            vti.LMul, vti.RegClass>;
-    def : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
-                          vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                          vti.LMul, vti.RegClass, vti.ScalarRegClass>;
+    defm : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
+                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
+                           vti.LMul, vti.RegClass, vti.ScalarRegClass>;
   }
 }
 

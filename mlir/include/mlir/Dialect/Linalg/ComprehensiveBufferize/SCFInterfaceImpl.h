@@ -9,7 +9,7 @@
 #ifndef MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_SCFINTERFACEIMPL_H
 #define MLIR_DIALECT_LINALG_COMPREHENSIVEBUFFERIZE_SCFINTERFACEIMPL_H
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
 namespace mlir {
 
@@ -23,9 +23,9 @@ namespace scf_ext {
 /// bbArgs. This is required because the i-th OpResult of an scf.for op is
 /// currently assumed to alias with the i-th iter_arg (in the absence of
 /// conflicts).
-struct AssertScfForAliasingProperties : public PostAnalysisStep {
-  LogicalResult run(Operation *op, BufferizationState &state,
-                    BufferizationAliasInfo &aliasInfo,
+struct AssertScfForAliasingProperties : public bufferization::PostAnalysisStep {
+  LogicalResult run(Operation *op, bufferization::BufferizationState &state,
+                    bufferization::BufferizationAliasInfo &aliasInfo,
                     SmallVector<Operation *> &newOps) override;
 };
 

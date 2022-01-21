@@ -581,10 +581,11 @@ end:
 define void @p8_constant_mask_signbit_noncanonical(i32 %x, i32* %p0, i32* %p1) {
 ; LZCNT-LABEL: @p8_constant_mask_signbit_noncanonical(
 ; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[X_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !dbg [[DBG142:![0-9]+]]
-; LZCNT-NEXT:    [[X_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[X_NUMLEADINGZEROS]], !dbg [[DBG142]]
-; LZCNT-NEXT:    [[X_LEADINGONEPOS:%.*]] = add nsw i32 [[X_NUMACTIVEBITS]], -1, !dbg [[DBG142]]
-; LZCNT-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i32 31, [[X_LEADINGONEPOS]], !dbg [[DBG142]]
+; LZCNT-NEXT:    [[X_MASKED:%.*]] = and i32 [[X:%.*]], -1, !dbg [[DBG142:![0-9]+]]
+; LZCNT-NEXT:    [[X_MASKED_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X_MASKED]], i1 true), !dbg [[DBG142]]
+; LZCNT-NEXT:    [[X_MASKED_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[X_MASKED_NUMLEADINGZEROS]], !dbg [[DBG142]]
+; LZCNT-NEXT:    [[X_MASKED_LEADINGONEPOS:%.*]] = add nsw i32 [[X_MASKED_NUMACTIVEBITS]], -1, !dbg [[DBG142]]
+; LZCNT-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i32 31, [[X_MASKED_LEADINGONEPOS]], !dbg [[DBG142]]
 ; LZCNT-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i32 [[LOOP_BACKEDGETAKENCOUNT]], 1, !dbg [[DBG142]]
 ; LZCNT-NEXT:    [[X_CURR:%.*]] = shl i32 [[X]], [[LOOP_BACKEDGETAKENCOUNT]], !dbg [[DBG142]]
 ; LZCNT-NEXT:    [[X_NEXT:%.*]] = shl i32 [[X_CURR]], 1, !dbg [[DBG142]]
@@ -648,10 +649,11 @@ end:
 define void @p9_constant_mask_signbit_canonical(i32 %x, i32* %p0, i32* %p1) {
 ; LZCNT-LABEL: @p9_constant_mask_signbit_canonical(
 ; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[X_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !dbg [[DBG156:![0-9]+]]
-; LZCNT-NEXT:    [[X_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[X_NUMLEADINGZEROS]], !dbg [[DBG156]]
-; LZCNT-NEXT:    [[X_LEADINGONEPOS:%.*]] = add nsw i32 [[X_NUMACTIVEBITS]], -1, !dbg [[DBG156]]
-; LZCNT-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i32 31, [[X_LEADINGONEPOS]], !dbg [[DBG156]]
+; LZCNT-NEXT:    [[X_MASKED:%.*]] = and i32 [[X:%.*]], -1, !dbg [[DBG156:![0-9]+]]
+; LZCNT-NEXT:    [[X_MASKED_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X_MASKED]], i1 true), !dbg [[DBG156]]
+; LZCNT-NEXT:    [[X_MASKED_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[X_MASKED_NUMLEADINGZEROS]], !dbg [[DBG156]]
+; LZCNT-NEXT:    [[X_MASKED_LEADINGONEPOS:%.*]] = add nsw i32 [[X_MASKED_NUMACTIVEBITS]], -1, !dbg [[DBG156]]
+; LZCNT-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i32 31, [[X_MASKED_LEADINGONEPOS]], !dbg [[DBG156]]
 ; LZCNT-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i32 [[LOOP_BACKEDGETAKENCOUNT]], 1, !dbg [[DBG156]]
 ; LZCNT-NEXT:    [[X_CURR:%.*]] = shl i32 [[X]], [[LOOP_BACKEDGETAKENCOUNT]], !dbg [[DBG156]]
 ; LZCNT-NEXT:    [[X_NEXT:%.*]] = shl i32 [[X_CURR]], 1, !dbg [[DBG156]]
@@ -991,10 +993,11 @@ end:
 define i32 @p14(i32 %x) {
 ; LZCNT-LABEL: @p14(
 ; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[X_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !dbg [[DBG231:![0-9]+]]
-; LZCNT-NEXT:    [[X_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[X_NUMLEADINGZEROS]], !dbg [[DBG231]]
-; LZCNT-NEXT:    [[X_LEADINGONEPOS:%.*]] = add nsw i32 [[X_NUMACTIVEBITS]], -1, !dbg [[DBG231]]
-; LZCNT-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i32 31, [[X_LEADINGONEPOS]], !dbg [[DBG231]]
+; LZCNT-NEXT:    [[X_MASKED:%.*]] = and i32 [[X:%.*]], -1, !dbg [[DBG231:![0-9]+]]
+; LZCNT-NEXT:    [[X_MASKED_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X_MASKED]], i1 true), !dbg [[DBG231]]
+; LZCNT-NEXT:    [[X_MASKED_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[X_MASKED_NUMLEADINGZEROS]], !dbg [[DBG231]]
+; LZCNT-NEXT:    [[X_MASKED_LEADINGONEPOS:%.*]] = add nsw i32 [[X_MASKED_NUMACTIVEBITS]], -1, !dbg [[DBG231]]
+; LZCNT-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i32 31, [[X_MASKED_LEADINGONEPOS]], !dbg [[DBG231]]
 ; LZCNT-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i32 [[LOOP_BACKEDGETAKENCOUNT]], 1, !dbg [[DBG231]]
 ; LZCNT-NEXT:    [[X_CURR:%.*]] = shl i32 [[X]], [[LOOP_BACKEDGETAKENCOUNT]], !dbg [[DBG231]]
 ; LZCNT-NEXT:    [[X_NEXT:%.*]] = shl i32 [[X_CURR]], 1, !dbg [[DBG231]]
@@ -1615,10 +1618,11 @@ end:
 define i32 @n30(i32 %x) {
 ; LZCNT-LABEL: @n30(
 ; LZCNT-NEXT:  entry:
-; LZCNT-NEXT:    [[X_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true), !dbg [[DBG462:![0-9]+]]
-; LZCNT-NEXT:    [[X_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[X_NUMLEADINGZEROS]], !dbg [[DBG462]]
-; LZCNT-NEXT:    [[X_LEADINGONEPOS:%.*]] = add nsw i32 [[X_NUMACTIVEBITS]], -1, !dbg [[DBG462]]
-; LZCNT-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i32 31, [[X_LEADINGONEPOS]], !dbg [[DBG462]]
+; LZCNT-NEXT:    [[X_MASKED:%.*]] = and i32 [[X:%.*]], -1, !dbg [[DBG462:![0-9]+]]
+; LZCNT-NEXT:    [[X_MASKED_NUMLEADINGZEROS:%.*]] = call i32 @llvm.ctlz.i32(i32 [[X_MASKED]], i1 true), !dbg [[DBG462]]
+; LZCNT-NEXT:    [[X_MASKED_NUMACTIVEBITS:%.*]] = sub nuw nsw i32 32, [[X_MASKED_NUMLEADINGZEROS]], !dbg [[DBG462]]
+; LZCNT-NEXT:    [[X_MASKED_LEADINGONEPOS:%.*]] = add nsw i32 [[X_MASKED_NUMACTIVEBITS]], -1, !dbg [[DBG462]]
+; LZCNT-NEXT:    [[LOOP_BACKEDGETAKENCOUNT:%.*]] = sub nuw nsw i32 31, [[X_MASKED_LEADINGONEPOS]], !dbg [[DBG462]]
 ; LZCNT-NEXT:    [[LOOP_TRIPCOUNT:%.*]] = add nuw nsw i32 [[LOOP_BACKEDGETAKENCOUNT]], 1, !dbg [[DBG462]]
 ; LZCNT-NEXT:    [[X_CURR:%.*]] = shl i32 [[X]], [[LOOP_BACKEDGETAKENCOUNT]], !dbg [[DBG462]]
 ; LZCNT-NEXT:    [[X_NEXT:%.*]] = shl i32 [[X_CURR]], 1, !dbg [[DBG462]]

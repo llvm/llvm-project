@@ -607,6 +607,9 @@ std::optional<Expr<SomeType>> ConvertToNumeric(int kind, Expr<SomeType> &&x) {
 
 std::optional<Expr<SomeType>> ConvertToType(
     const DynamicType &type, Expr<SomeType> &&x) {
+  if (type.IsTypelessIntrinsicArgument()) {
+    return std::nullopt;
+  }
   switch (type.category()) {
   case TypeCategory::Integer:
     if (auto *boz{std::get_if<BOZLiteralConstant>(&x.u)}) {

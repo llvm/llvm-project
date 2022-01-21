@@ -595,7 +595,7 @@ static ParseResult parseIsolatedRegionOp(OpAsmParser &parser,
 
   // Parse the body region, and reuse the operand info as the argument info.
   Region *body = result.addRegion();
-  return parser.parseRegion(*body, argInfo, argType,
+  return parser.parseRegion(*body, argInfo, argType, /*argLocations=*/{},
                             /*enableNameShadowing=*/true);
 }
 

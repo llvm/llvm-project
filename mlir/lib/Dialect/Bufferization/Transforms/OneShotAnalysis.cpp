@@ -1,4 +1,4 @@
-//===- ComprehensiveBufferize.cpp - Single pass bufferization -------------===//
+//===- OneShotAnalysis.cpp - One-Shot (Single Pass) Analysis --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Comprehensive Bufferize bufferizes function bodies. Function boundaries
-// (FuncOp bbArgs, CallOps, ReturnOps) are treated as "unknown" ops.
-// ModuleBufferization.cpp is an extension of Comprehensive Bufferize for simple
+// One-Shot Analysis analyzes function bodies. Function boundaries (FuncOp
+// bbArgs, CallOps, ReturnOps) are treated as "unknown" ops.
+// ModuleBufferization.cpp is an extension of One-Shot Analysis for simple
 // call graphs.
 //
-// Comprehensive Bufferize consists of two phases.
+// One-Shot Bufferize consists of two phases.
 //
 // 1. Analyze ops to decide which OpResults can bufferize inplace, i.e., without
 //    inserting buffer copies. The analysis queries op bufferization semantics
@@ -20,49 +20,43 @@
 //    function does not generate buffer copies for OpResults that were decided
 //    to bufferize inplace during the analysis phase.
 //
+// This file contains only the analysis. The actual bufferization is implemented
+// via `bufferizeOp` (Bufferize.h). For convenience, this file also contains a
+// helper function `runOneShotBufferize` that analyzes an op (and its nested
+// ops) and then bufferizes it.
+//
 // Inplace bufferization decisions are passed from the analysis to the
 // bufferization phase via `BufferizationState` and `BufferizationAliasInfo`.
 // They can be printed for debugging purposes with `testAnalysisOnly`.
 //
 // Ops that do not implement `BufferizableOpInterface` can be analyzed but are
-// treated conservatively. E.g., the analysis has to assume that their
+// treated conservatively. E.g., the analysis has to assume that their tensor
 // OpOperands bufferize to memory writes. While such ops can be analyzed, they
 // are not bufferized and remain in the IR. to_tensor and to_memref ops are
 // inserted at the bufferization boundary.
 //
-// Note: If `allowUnknownOps` is set to false, bufferization fails when an
-// unknown op (that does not implement `BufferizableOpInterface`) is found. No
-// to_tensor/to_memref ops are inserted.
-//
-// This pass caters to high-performance codegen where buffer reuse is deemed
-// critical: the pass should fail if the bufferized form of the function needs
-// to return any buffer, unless `allowReturnMemref` is enabled.
-//
-//  Lastly, note that layout map chosen to bufferize is the most dynamic
-//  canonical strided layout of the proper rank. This ensures compatibility with
-//  expected layouts after transformations. Combinations of memref.cast +
-//  canonicalization are responsible for clean ups.
+// This analysis caters to high-performance codegen where buffer reuse is deemed
+// critical: the analysis should fail if the bufferized form of the function
+// needs to return a buffer, unless `allowReturnMemref` is enabled.
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
 #include <random>
 
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
-using namespace linalg;
-using namespace tensor;
-using namespace comprehensive_bufferize;
+using namespace mlir::bufferization;
 
 static bool isaTensor(Type t) { return t.isa<TensorType>(); }
 
@@ -751,65 +745,8 @@ struct AssertDestinationPassingStyle : public PostAnalysisStep {
   }
 };
 
-/// Rewrite pattern that bufferizes bufferizable ops.
-struct BufferizationPattern
-    : public OpInterfaceRewritePattern<BufferizableOpInterface> {
-  BufferizationPattern(MLIRContext *context, const BufferizationState &state,
-                       PatternBenefit benefit = 1)
-      : OpInterfaceRewritePattern<BufferizableOpInterface>(context, benefit),
-        state(state) {}
-
-  LogicalResult matchAndRewrite(BufferizableOpInterface bufferizableOp,
-                                PatternRewriter &rewriter) const override {
-    // No tensors => no buffers.
-    if (!hasTensorSemantics(bufferizableOp.getOperation()))
-      return failure();
-    if (!state.getOptions().isOpAllowed(bufferizableOp.getOperation()))
-      return failure();
-    return bufferizableOp.bufferize(rewriter, state);
-  }
-
-private:
-  const BufferizationState &state;
-};
-
-/// Check the result of bufferization. Return an error if an op was not
-/// bufferized, unless partial bufferization is allowed.
-static LogicalResult
-checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
-  if (!options.allowUnknownOps) {
-    // Check if all ops were bufferized.
-    LogicalResult status = success();
-    op->walk([&](Operation *op) {
-      if (!hasTensorSemantics(op))
-        return WalkResult::advance();
-
-      // Bufferization dialect ops will canonicalize away if all other ops are
-      // bufferized.
-      if (isa<bufferization::ToMemrefOp, bufferization::ToTensorOp>(op))
-        return WalkResult::advance();
-
-      // Ops that are not in the allow list can be ignored.
-      if (!options.isOpAllowed(op))
-        return WalkResult::advance();
-
-      // Ops without any uses and no side effects will fold away.
-      if (op->getUses().empty() && MemoryEffectOpInterface::hasNoEffect(op))
-        return WalkResult::advance();
-
-      status = op->emitError("op was not bufferized");
-      return WalkResult::interrupt();
-    });
-
-    if (failed(status))
-      return status;
-  }
-
-  return success();
-}
-
-LogicalResult mlir::linalg::comprehensive_bufferize::analyzeOp(
-    Operation *op, AnalysisBufferizationState &state) {
+LogicalResult bufferization::analyzeOp(Operation *op,
+                                       AnalysisBufferizationState &state) {
   DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
   const auto &options =
@@ -849,18 +786,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::analyzeOp(
   return success();
 }
 
-LogicalResult mlir::linalg::comprehensive_bufferize::bufferizeOp(
-    Operation *op, const BufferizationState &state) {
-  // Bufferize the op and its nested ops.
-  OwningRewritePatternList patterns(op->getContext());
-  patterns.add<BufferizationPattern>(op->getContext(), state);
-  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
-    return failure();
-
-  return checkBufferizationResult(op, state.getOptions());
-}
-
-LogicalResult mlir::linalg::comprehensive_bufferize::runComprehensiveBufferize(
+LogicalResult bufferization::runOneShotBufferize(
     Operation *op, std::unique_ptr<AnalysisBufferizationOptions> options) {
   AnalysisBufferizationState state(op, *options);
   if (failed(analyzeOp(op, state)))

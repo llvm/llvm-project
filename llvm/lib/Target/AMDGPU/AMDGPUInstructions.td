@@ -406,9 +406,10 @@ class Aligned<int Bytes> {
   int MinAlignment = Bytes;
 }
 
-class StoreHi16<SDPatternOperator op> : PatFrag <
+class StoreHi16<SDPatternOperator op, ValueType vt> : PatFrag <
   (ops node:$value, node:$ptr), (op (srl node:$value, (i32 16)), node:$ptr)> {
   let IsStore = 1;
+  let MemoryVT = vt;
 }
 
 def LoadAddress_constant : AddressSpaceList<[ AddrSpaces.Constant,
@@ -527,9 +528,9 @@ def truncstorei16_#as : PatFrag<(ops node:$val, node:$ptr),
   let MemoryVT = i16;
 }
 
-def store_hi16_#as : StoreHi16 <truncstorei16>;
-def truncstorei8_hi16_#as : StoreHi16<truncstorei8>;
-def truncstorei16_hi16_#as : StoreHi16<truncstorei16>;
+def store_hi16_#as : StoreHi16 <truncstorei16, i16>;
+def truncstorei8_hi16_#as : StoreHi16<truncstorei8, i8>;
+def truncstorei16_hi16_#as : StoreHi16<truncstorei16, i16>;
 
 defm atomic_store_#as : binary_atomic_op<atomic_store>;
 

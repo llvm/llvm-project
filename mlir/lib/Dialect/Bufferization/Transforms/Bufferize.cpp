@@ -8,10 +8,12 @@
 
 #include "PassDetail.h"
 
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -128,4 +130,81 @@ struct FinalizingBufferizePass
 std::unique_ptr<OperationPass<FuncOp>>
 mlir::bufferization::createFinalizingBufferizePass() {
   return std::make_unique<FinalizingBufferizePass>();
+}
+
+static bool isaTensor(Type t) { return t.isa<TensorType>(); }
+
+/// Return true if the given op has a tensor result or a tensor operand.
+static bool hasTensorSemantics(Operation *op) {
+  bool hasTensorResult = any_of(op->getResultTypes(), isaTensor);
+  bool hasTensorOperand = any_of(op->getOperandTypes(), isaTensor);
+  return hasTensorResult || hasTensorOperand;
+}
+
+/// Rewrite pattern that bufferizes bufferizable ops.
+struct BufferizationPattern
+    : public OpInterfaceRewritePattern<BufferizableOpInterface> {
+  BufferizationPattern(MLIRContext *context, const BufferizationState &state,
+                       PatternBenefit benefit = 1)
+      : OpInterfaceRewritePattern<BufferizableOpInterface>(context, benefit),
+        state(state) {}
+
+  LogicalResult matchAndRewrite(BufferizableOpInterface bufferizableOp,
+                                PatternRewriter &rewriter) const override {
+    // No tensors => no buffers.
+    if (!hasTensorSemantics(bufferizableOp.getOperation()))
+      return failure();
+    if (!state.getOptions().isOpAllowed(bufferizableOp.getOperation()))
+      return failure();
+    return bufferizableOp.bufferize(rewriter, state);
+  }
+
+private:
+  const BufferizationState &state;
+};
+
+/// Check the result of bufferization. Return an error if an op was not
+/// bufferized, unless partial bufferization is allowed.
+static LogicalResult
+checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
+  if (!options.allowUnknownOps) {
+    // Check if all ops were bufferized.
+    LogicalResult status = success();
+    op->walk([&](Operation *op) {
+      if (!hasTensorSemantics(op))
+        return WalkResult::advance();
+
+      // Bufferization dialect ops will canonicalize away if all other ops are
+      // bufferized.
+      if (isa<bufferization::ToMemrefOp, bufferization::ToTensorOp>(op))
+        return WalkResult::advance();
+
+      // Ops that are not in the allow list can be ignored.
+      if (!options.isOpAllowed(op))
+        return WalkResult::advance();
+
+      // Ops without any uses and no side effects will fold away.
+      if (op->getUses().empty() && MemoryEffectOpInterface::hasNoEffect(op))
+        return WalkResult::advance();
+
+      status = op->emitError("op was not bufferized");
+      return WalkResult::interrupt();
+    });
+
+    if (failed(status))
+      return status;
+  }
+
+  return success();
+}
+
+LogicalResult bufferization::bufferizeOp(Operation *op,
+                                         const BufferizationState &state) {
+  // Bufferize the op and its nested ops.
+  OwningRewritePatternList patterns(op->getContext());
+  patterns.add<BufferizationPattern>(op->getContext(), state);
+  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    return failure();
+
+  return checkBufferizationResult(op, state.getOptions());
 }

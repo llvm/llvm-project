@@ -41,9 +41,10 @@ protected:
         /*Ranges=*/{1, tooling::Range(0, Code.size())}, Style);
   }
 
-  static void verifyFormat(llvm::StringRef Code,
-                           const FormatStyle &Style = getLLVMStyle(),
-                           llvm::StringRef ExpectedCode = "") {
+  static void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
+                            const FormatStyle &Style = getLLVMStyle(),
+                            llvm::StringRef ExpectedCode = "") {
+    ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
     bool HasOriginalCode = true;
     if (ExpectedCode == "") {
       ExpectedCode = Code;
@@ -82,6 +83,8 @@ protected:
     return Result;
   }
 };
+
+#define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
 TEST_F(DefinitionBlockSeparatorTest, Basic) {
   FormatStyle Style = getLLVMStyle();
