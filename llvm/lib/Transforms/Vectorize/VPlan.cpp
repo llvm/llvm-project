@@ -1262,6 +1262,7 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
   } else
     O << " " << VPlanIngredient(IV);
 }
+#endif
 
 bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
@@ -1269,6 +1270,7 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   return StartC && StartC->isZero() && StepC && StepC->isOne();
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-GEP ";
