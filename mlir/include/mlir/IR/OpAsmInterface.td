@@ -70,7 +70,7 @@ def OpAsmOpInterface : OpInterface<"OpAsmOpInterface"> {
       returned `spv`. The default implementation returns an empty string which
       is ignored.
       }],
-      "StringRef", "getDefaultDialect", (ins), "", "return \"\";"
+      "::llvm::StringRef", "getDefaultDialect", (ins), "", "return \"\";"
     >,
   ];
 }

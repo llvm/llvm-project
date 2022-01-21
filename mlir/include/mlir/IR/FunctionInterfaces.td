@@ -55,13 +55,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
       the type (to allow for this method may be called on function
       declarations).
     }],
-    "ArrayRef<Type>", "getArgumentTypes">,
+    "::llvm::ArrayRef<::mlir::Type>", "getArgumentTypes">,
     InterfaceMethod<[{
       Returns the function result types based exclusively on
       the type (to allow for this method may be called on function
       declarations).
     }],
-    "ArrayRef<Type>", "getResultTypes">,
+    "::llvm::ArrayRef<::mlir::Type>", "getResultTypes">,
     InterfaceMethod<[{
       Returns a clone of the function type with the given argument and
       result types.
@@ -70,7 +70,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
             an appropriate clone method:
               `Type clone(ArrayRef<Type> inputs, ArrayRef<Type> results)`
     }],
-    "Type", "cloneTypeWith", (ins
+    "::mlir::Type", "cloneTypeWith", (ins
       "::mlir::TypeRange":$inputs, "::mlir::TypeRange":$results
     ), /*methodBody=*/[{}], /*defaultImplementation=*/[{
       return $_op.getType().clone(inputs, results);
