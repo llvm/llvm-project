@@ -1263,6 +1263,12 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
     O << " " << VPlanIngredient(IV);
 }
 
+bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
+  auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
+  auto *StepC = dyn_cast<SCEVConstant>(getInductionDescriptor().getStep());
+  return StartC && StartC->isZero() && StepC && StepC->isOne();
+}
+
 void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-GEP ";
