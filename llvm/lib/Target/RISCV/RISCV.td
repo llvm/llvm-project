@@ -161,19 +161,11 @@ foreach i = { 6-15 } in {
                         [!cast<SubtargetFeature>("FeatureStdExtZvl"#!srl(I, 1)#"b")]>;
 }
 
-def FeatureStdExtZvlsseg
-    : SubtargetFeature<"experimental-zvlsseg", "HasStdExtZvlsseg", "true",
-                       "'Zvlsseg' (Vector segment load/store instructions)",
-                       []>;
-def HasStdExtZvlsseg : Predicate<"Subtarget->hasStdExtZvlsseg()">,
-                                 AssemblerPredicate<(all_of FeatureStdExtZvlsseg),
-                                 "'Zvlsseg' (Vector segment load/store instructions)">;
-
 def FeatureStdExtZve32x
     : SubtargetFeature<"experimental-zve32x", "HasStdExtZve32x", "true",
                        "'Zve32x' (Vector Extensions for Embedded Processors "
                        "with maximal 32 EEW)",
-                       [FeatureStdExtZvlsseg, FeatureStdExtZvl32b]>;
+                       [FeatureStdExtZvl32b]>;
 def HasStdExtZve32x : Predicate<"SubTarget->hasStdExtZve32x()">,
                                  AssemblerPredicate<(all_of FeatureStdExtZve32x),
                                  "'Zve32x' (Vector Extensions for Embedded Processors "

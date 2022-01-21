@@ -140,8 +140,7 @@ enum RISCVExtension : uint8_t {
   F = 1 << 1,
   D = 1 << 2,
   Zfh = 1 << 3,
-  Zvlsseg = 1 << 4,
-  RV64 = 1 << 5,
+  RV64 = 1 << 4,
 };
 
 // TODO refactor RVVIntrinsic class design after support all intrinsic
@@ -445,8 +444,8 @@ void RVVType::initBuiltinStr() {
     return;
   }
   BuiltinStr = "q" + utostr(Scale.getValue()) + BuiltinStr;
-  // Pointer to vector types. Defined for Zvlsseg load intrinsics.
-  // Zvlsseg load intrinsics have pointer type arguments to store the loaded
+  // Pointer to vector types. Defined for segment load intrinsics.
+  // segment load intrinsics have pointer type arguments to store the loaded
   // vector values.
   if (IsPointer)
     BuiltinStr += "*";
@@ -797,8 +796,6 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
       RISCVExtensions |= RISCVExtension::D;
   }
   for (auto Extension : RequiredExtensions) {
-    if (Extension == "Zvlsseg")
-      RISCVExtensions |= RISCVExtension::Zvlsseg;
     if (Extension == "RV64")
       RISCVExtensions |= RISCVExtension::RV64;
   }
@@ -1311,8 +1308,6 @@ bool RVVEmitter::emitExtDefStr(uint8_t Extents, raw_ostream &OS) {
     OS << LS << "defined(__riscv_d)";
   if (Extents & RISCVExtension::Zfh)
     OS << LS << "defined(__riscv_zfh)";
-  if (Extents & RISCVExtension::Zvlsseg)
-    OS << LS << "defined(__riscv_zvlsseg)";
   if (Extents & RISCVExtension::RV64)
     OS << LS << "(__riscv_xlen == 64)";
   OS << "\n";
