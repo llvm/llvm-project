@@ -1350,10 +1350,6 @@ public:
     return AliasResult::NoAlias;
   }
 
-  /// Get a special name to use when printing the given operation. See
-  /// OpAsmInterface.td#getAsmResultNames for usage details and documentation.
-  virtual void getAsmResultNames(Operation *op,
-                                 OpAsmSetValueNameFn setNameFn) const {}
 };
 } // namespace mlir
 
