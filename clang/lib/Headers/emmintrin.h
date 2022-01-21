@@ -2375,7 +2375,7 @@ _mm_madd_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_max_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_pmaxsw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_elementwise_max((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Compares corresponding elements of two 128-bit unsigned [16 x i8]
@@ -2395,7 +2395,7 @@ _mm_max_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_max_epu8(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_pmaxub128((__v16qi)__a, (__v16qi)__b);
+  return (__m128i)__builtin_elementwise_max((__v16qu)__a, (__v16qu)__b);
 }
 
 /// Compares corresponding elements of two 128-bit signed [8 x i16]
@@ -2415,7 +2415,7 @@ _mm_max_epu8(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_min_epi16(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_pminsw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_elementwise_min((__v8hi)__a, (__v8hi)__b);
 }
 
 /// Compares corresponding elements of two 128-bit unsigned [16 x i8]
@@ -2435,7 +2435,7 @@ _mm_min_epi16(__m128i __a, __m128i __b)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_min_epu8(__m128i __a, __m128i __b)
 {
-  return (__m128i)__builtin_ia32_pminub128((__v16qi)__a, (__v16qi)__b);
+  return (__m128i)__builtin_elementwise_min((__v16qu)__a, (__v16qu)__b);
 }
 
 /// Multiplies the corresponding elements of two signed [8 x i16]
