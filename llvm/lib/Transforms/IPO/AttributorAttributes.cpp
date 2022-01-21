@@ -417,30 +417,16 @@ const Value *stripAndAccumulateMinimalOffsets(
                                                 AttributorAnalysis);
 }
 
-static const Value *getMinimalBaseOfAccessPointerOperand(
-    Attributor &A, const AbstractAttribute &QueryingAA, const Instruction *I,
-    int64_t &BytesOffset, const DataLayout &DL, bool AllowNonInbounds = false) {
-  const Value *Ptr = getPointerOperand(I, /* AllowVolatile */ false);
-  if (!Ptr)
-    return nullptr;
+static const Value *
+getMinimalBaseOfPointer(Attributor &A, const AbstractAttribute &QueryingAA,
+                        const Value *Ptr, int64_t &BytesOffset,
+                        const DataLayout &DL, bool AllowNonInbounds = false) {
   APInt OffsetAPInt(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
   const Value *Base = stripAndAccumulateMinimalOffsets(
       A, QueryingAA, Ptr, DL, OffsetAPInt, AllowNonInbounds);
 
   BytesOffset = OffsetAPInt.getSExtValue();
   return Base;
-}
-
-static const Value *
-getBasePointerOfAccessPointerOperand(const Instruction *I, int64_t &BytesOffset,
-                                     const DataLayout &DL,
-                                     bool AllowNonInbounds = false) {
-  const Value *Ptr = getPointerOperand(I, /* AllowVolatile */ false);
-  if (!Ptr)
-    return nullptr;
-
-  return GetPointerBaseWithConstantOffset(Ptr, BytesOffset, DL,
-                                          AllowNonInbounds);
 }
 
 /// Clamp the information known for all returned values of a function
@@ -2151,31 +2137,26 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
     return DerefAA.getKnownDereferenceableBytes();
   }
 
+  Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
+  if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() || I->isVolatile())
+    return 0;
+
   int64_t Offset;
   const Value *Base =
-      getMinimalBaseOfAccessPointerOperand(A, QueryingAA, I, Offset, DL);
-  if (Base) {
-    if (Base == &AssociatedValue &&
-        getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
-      int64_t DerefBytes =
-          (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType()) + Offset;
-
-      IsNonNull |= !NullPointerIsDefined;
-      return std::max(int64_t(0), DerefBytes);
-    }
+      getMinimalBaseOfPointer(A, QueryingAA, Loc->Ptr, Offset, DL);
+  if (Base && Base == &AssociatedValue) {
+    int64_t DerefBytes = Loc->Size.getValue() + Offset;
+    IsNonNull |= !NullPointerIsDefined;
+    return std::max(int64_t(0), DerefBytes);
   }
 
   /// Corner case when an offset is 0.
-  Base = getBasePointerOfAccessPointerOperand(I, Offset, DL,
-                                              /*AllowNonInbounds*/ true);
-  if (Base) {
-    if (Offset == 0 && Base == &AssociatedValue &&
-        getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
-      int64_t DerefBytes =
-          (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType());
-      IsNonNull |= !NullPointerIsDefined;
-      return std::max(int64_t(0), DerefBytes);
-    }
+  Base = GetPointerBaseWithConstantOffset(Loc->Ptr, Offset, DL,
+                                          /*AllowNonInbounds*/ true);
+  if (Base && Base == &AssociatedValue && Offset == 0) {
+    int64_t DerefBytes = Loc->Size.getValue();
+    IsNonNull |= !NullPointerIsDefined;
+    return std::max(int64_t(0), DerefBytes);
   }
 
   return 0;
@@ -4083,17 +4064,15 @@ struct AADereferenceableImpl : AADereferenceable {
     if (!UseV->getType()->isPointerTy())
       return;
 
-    Type *PtrTy = UseV->getType();
-    const DataLayout &DL = A.getDataLayout();
+    Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
+    if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() || I->isVolatile())
+      return;
+
     int64_t Offset;
-    if (const Value *Base = getBasePointerOfAccessPointerOperand(
-            I, Offset, DL, /*AllowNonInbounds*/ true)) {
-      if (Base == &getAssociatedValue() &&
-          getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
-        uint64_t Size = DL.getTypeStoreSize(PtrTy->getPointerElementType());
-        State.addAccessedBytes(Offset, Size);
-      }
-    }
+    const Value *Base = GetPointerBaseWithConstantOffset(
+        Loc->Ptr, Offset, A.getDataLayout(), /*AllowNonInbounds*/ true);
+    if (Base && Base == &getAssociatedValue())
+      State.addAccessedBytes(Offset, Loc->Size.getValue());
   }
 
   /// See followUsesInMBEC
