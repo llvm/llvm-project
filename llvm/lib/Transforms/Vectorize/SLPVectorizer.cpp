@@ -581,7 +581,7 @@ static bool InTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
 }
 
 /// \returns the AA location that is being access by the instruction.
-static MemoryLocation getLocation(Instruction *I, AAResults *AA) {
+static MemoryLocation getLocation(Instruction *I) {
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
     return MemoryLocation::get(SI);
   if (LoadInst *LI = dyn_cast<LoadInst>(I))
@@ -7551,12 +7551,12 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
       Instruction *SrcInst = BundleMember->Inst;
       assert(SrcInst->mayReadOrWriteMemory() &&
              "NextLoadStore list for non memory effecting bundle?");
-      MemoryLocation SrcLoc = getLocation(SrcInst, SLP->AA);
+      MemoryLocation SrcLoc = getLocation(SrcInst);
       bool SrcMayWrite = BundleMember->Inst->mayWriteToMemory();
       unsigned numAliased = 0;
       unsigned DistToSrc = 1;
 
-      while (DepDest) {
+      for ( ; DepDest; DepDest = DepDest->NextLoadStore) {
         assert(isInSchedulingRegion(DepDest));
 
         // We have two limits to reduce the complexity:
@@ -7586,7 +7586,6 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
             WorkList.push_back(DestBundle);
           }
         }
-        DepDest = DepDest->NextLoadStore;
 
         // Example, explaining the loop break condition: Let's assume our
         // starting instruction is i0 and MaxMemDepDistance = 3.
