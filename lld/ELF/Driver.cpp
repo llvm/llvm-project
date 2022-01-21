@@ -77,14 +77,14 @@ std::unique_ptr<LinkerDriver> elf::driver;
 static void setConfigs(opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
 
-bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
-               raw_ostream &stdoutOS, raw_ostream &stderrOS) {
-  lld::stdoutOS = &stdoutOS;
-  lld::stderrOS = &stderrOS;
+bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
+               llvm::raw_ostream &stderrOS, bool exitEarly,
+               bool disableOutput) {
+  // This driver-specific context will be freed later by lldMain().
+  auto *ctx = new CommonLinkerContext;
 
-  errorHandler().cleanupCallback = []() {
-    freeArena();
-
+  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.cleanupCallback = []() {
     inputSections.clear();
     outputSections.clear();
     memoryBuffers.clear();
@@ -106,13 +106,9 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
 
     SharedFile::vernauxNum = 0;
   };
-
-  errorHandler().logName = args::getFilenameWithoutExe(args[0]);
-  errorHandler().errorLimitExceededMsg =
-      "too many errors emitted, stopping now (use "
-      "-error-limit=0 to see all errors)";
-  errorHandler().exitEarly = canExitEarly;
-  stderrOS.enable_colors(stderrOS.has_colors());
+  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
+  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
+                                 "-error-limit=0 to see all errors)";
 
   config = std::make_unique<Configuration>();
   driver = std::make_unique<LinkerDriver>();
@@ -126,15 +122,7 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
 
   driver->linkerMain(args);
 
-  // Exit immediately if we don't need to return to the caller.
-  // This saves time because the overhead of calling destructors
-  // for all globally-allocated objects is not negligible.
-  int hasError = errorCount() ? 1 : 0;
-  if (canExitEarly)
-    exitLld(hasError);
-  else
-    errorHandler().reset();
-  return !hasError;
+  return errorCount() == 0;
 }
 
 // Parses a linker -m option.
@@ -1258,7 +1246,7 @@ static void readConfigs(opt::InputArgList &args) {
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
-    parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+    parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq_minus))
@@ -2071,9 +2059,9 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     if (!sym)
       continue;
 
-    Symbol *real = addUnusedUndefined(saver.save("__real_" + name));
+    Symbol *real = addUnusedUndefined(saver().save("__real_" + name));
     Symbol *wrap =
-        addUnusedUndefined(saver.save("__wrap_" + name), sym->binding);
+        addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten
