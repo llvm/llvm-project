@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-include(GNUInstallDirs)
-
 # Add path for custom modules.
 set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
@@ -13,6 +11,13 @@ set(CMAKE_MODULE_PATH
 # using LLVM as an external library.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(lldb)
+  set(LLDB_BUILT_STANDALONE TRUE)
+endif()
+
+# Must go below project(..)
+include(GNUInstallDirs)
+
+if(LLDB_BUILT_STANDALONE)
   include(LLDBStandalone)
 
   set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
