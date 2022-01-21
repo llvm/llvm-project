@@ -1379,6 +1379,14 @@ Currently, only the following parameter attributes are defined:
     information that is not mapped to base types in the backend (for example,
     over-alignment specification through language attributes).
 
+``allocalign``
+    The function parameter marked with this attribute is is the alignment in bytes of the
+    newly allocated block returned by this function. The returned value must either have
+    the specified alignment or be the null pointer. The return value MAY be more aligned
+    than the requested alignment, but not less aligned.  Invalid (e.g. non-power-of-2)
+    alignments are permitted for the allocalign parameter, so long as the returned pointer
+    is null. This attribute may only be applied to integer parameters.
+
 .. _gc:
 
 Garbage Collector Strategy Names

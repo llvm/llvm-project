@@ -962,6 +962,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
         break;
       // These attributes cannot be applied to functions.
       case Attribute::Alignment:
+      case Attribute::AllocAlign:
       case Attribute::ByVal:
       case Attribute::Dereferenceable:
       case Attribute::DereferenceableOrNull:
