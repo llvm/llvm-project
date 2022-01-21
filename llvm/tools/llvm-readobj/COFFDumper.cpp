@@ -52,6 +52,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Win64EH.h"
 #include "llvm/Support/raw_ostream.h"
+#include <ctime>
 
 using namespace llvm;
 using namespace llvm::object;
