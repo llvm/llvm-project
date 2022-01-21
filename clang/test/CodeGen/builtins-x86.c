@@ -259,8 +259,11 @@ void f0() {
   tmp_V4s = __builtin_ia32_psignw(tmp_V4s, tmp_V4s);
   tmp_V4i = __builtin_ia32_psignd128(tmp_V4i, tmp_V4i);
   tmp_V2i = __builtin_ia32_psignd(tmp_V2i, tmp_V2i);
+  tmp_V16c = __builtin_ia32_pabsb128(tmp_V16c);
   tmp_V8c = __builtin_ia32_pabsb(tmp_V8c);
+  tmp_V8s = __builtin_ia32_pabsw128(tmp_V8s);
   tmp_V4s = __builtin_ia32_pabsw(tmp_V4s);
+  tmp_V4i = __builtin_ia32_pabsd128(tmp_V4i);
   tmp_V2i = __builtin_ia32_pabsd(tmp_V2i);
   tmp_V4s = __builtin_ia32_psllw(tmp_V4s, tmp_V1LLi);
   tmp_V2i = __builtin_ia32_pslld(tmp_V2i, tmp_V1LLi);
