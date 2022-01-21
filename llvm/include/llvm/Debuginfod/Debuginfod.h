@@ -23,6 +23,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include <chrono>
+
 namespace llvm {
 
 typedef ArrayRef<uint8_t> BuildIDRef;
