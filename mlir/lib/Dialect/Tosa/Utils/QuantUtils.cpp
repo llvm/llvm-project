@@ -46,8 +46,8 @@ static void computeMultiplierAndShiftTosaScale16(double scale,
 
   // Shifting tops out at 63 bits. Right shift to make 63 bits the max.
   if (shift > 63) {
-    // Shifting the multiplier by more than 32-bits is unnecessary.
-    multiplier = multiplier >> std::min<int32_t>(32, shift - 63);
+    // Shifting the multiplier by more than 31-bits is unnecessary.
+    multiplier = multiplier >> std::min<int32_t>(31, shift - 63);
     shift = 63;
   }
 }
@@ -82,7 +82,7 @@ static void computeMultiplierAndShiftTosaScale32(double scale,
   // Shifting tops out at 63 bits. Right shift to make 63 bits the max.
   if (shift > 63) {
     // Shifting the multiplier by more than 32-bits is unnecessary.
-    multiplier = multiplier >> std::min<int32_t>(32, shift - 63);
+    multiplier = multiplier >> std::min<int32_t>(31, shift - 63);
     shift = 63;
   }
 }
