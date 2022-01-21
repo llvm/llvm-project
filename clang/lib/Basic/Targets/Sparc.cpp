@@ -156,8 +156,6 @@ void SparcV8TargetInfo::getTargetDefines(const LangOptions &Opts,
       Builder.defineMacro("__sparcv8__");
       break;
     case CG_V9:
-      Builder.defineMacro("__sparcv9");
-      Builder.defineMacro("__sparcv9__");
       Builder.defineMacro("__sparc_v9__");
       break;
     }
