@@ -797,8 +797,7 @@ public:
   /// A sentinel value used for values with names set.
   enum : unsigned { NameSentinel = ~0U };
 
-  SSANameState(Operation *op, const OpPrintingFlags &printerFlags,
-               DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
+  SSANameState(Operation *op, const OpPrintingFlags &printerFlags);
 
   /// Print the SSA identifier for the given value to 'stream'. If
   /// 'printResultNo' is true, it also presents the result number ('#' number)
@@ -866,15 +865,12 @@ private:
   /// These are the printing flags.  They control, eg., whether to print in
   /// generic form.
   OpPrintingFlags printerFlags;
-
-  DialectInterfaceCollection<OpAsmDialectInterface> &interfaces;
 };
 } // namespace
 
 SSANameState::SSANameState(
-    Operation *op, const OpPrintingFlags &printerFlags,
-    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces)
-    : printerFlags(printerFlags), interfaces(interfaces) {
+    Operation *op, const OpPrintingFlags &printerFlags)
+    : printerFlags(printerFlags) {
   llvm::SaveAndRestore<unsigned> valueIDSaver(nextValueID);
   llvm::SaveAndRestore<unsigned> argumentIDSaver(nextArgumentID);
   llvm::SaveAndRestore<unsigned> conflictIDSaver(nextConflictID);
@@ -1071,8 +1067,6 @@ void SSANameState::numberValuesInOp(Operation &op) {
   if (!printerFlags.shouldPrintGenericOpForm()) {
     if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op))
       asmInterface.getAsmResultNames(setResultNameFn);
-    else if (auto *asmInterface = interfaces.getInterfaceFor(op.getDialect()))
-      asmInterface->getAsmResultNames(&op, setResultNameFn);
   }
 
   // If the first result wasn't numbered, give it a default number.
@@ -1172,7 +1166,7 @@ class AsmStateImpl {
 public:
   explicit AsmStateImpl(Operation *op, const OpPrintingFlags &printerFlags,
                         AsmState::LocationMap *locationMap)
-      : interfaces(op->getContext()), nameState(op, printerFlags, interfaces),
+      : interfaces(op->getContext()), nameState(op, printerFlags),
         printerFlags(printerFlags), locationMap(locationMap) {}
 
   /// Initialize the alias state to enable the printing of aliases.

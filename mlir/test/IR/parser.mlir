@@ -1209,18 +1209,15 @@ func private @string_attr_name() attributes {"0 . 0", nested = {"0 . 0"}}
 func private @nested_reference() attributes {test.ref = @some_symbol::@some_nested_symbol }
 
 // CHECK-LABEL: func @custom_asm_names
-func @custom_asm_names() -> (i32, i32, i32, i32, i32, i32, i32) {
+func @custom_asm_names() -> (i32, i32, i32, i32, i32, i32) {
   // CHECK: %[[FIRST:first.*]], %[[MIDDLE:middle_results.*]]:2, %[[LAST:[0-9]+]]
   %0, %1:2, %2 = "test.asm_interface_op"() : () -> (i32, i32, i32, i32)
 
   // CHECK: %[[FIRST_2:first.*]], %[[LAST_2:[0-9]+]]
   %3, %4 = "test.asm_interface_op"() : () -> (i32, i32)
 
-  // CHECK: %[[RESULT:result.*]]
-  %5 = "test.asm_dialect_interface_op"() : () -> (i32)
-
   // CHECK: return %[[FIRST]], %[[MIDDLE]]#0, %[[MIDDLE]]#1, %[[LAST]], %[[FIRST_2]], %[[LAST_2]]
-  return %0, %1#0, %1#1, %2, %3, %4, %5 : i32, i32, i32, i32, i32, i32, i32
+  return %0, %1#0, %1#1, %2, %3, %4 : i32, i32, i32, i32, i32, i32
 }
 
 

@@ -99,12 +99,6 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
     }
     return AliasResult::NoAlias;
   }
-
-  void getAsmResultNames(Operation *op,
-                         OpAsmSetValueNameFn setNameFn) const final {
-    if (auto asmOp = dyn_cast<AsmDialectInterfaceOp>(op))
-      setNameFn(asmOp, "result");
-  }
 };
 
 struct TestDialectFoldInterface : public DialectFoldInterface {
