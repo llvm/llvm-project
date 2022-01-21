@@ -412,20 +412,20 @@
 // RV32-EXPERIMENTAL-V-BADVERS: error: invalid arch name 'rv32iv0p1'
 // RV32-EXPERIMENTAL-V-BADVERS: unsupported version number 0.1 for experimental extension 'v'
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10 -menable-experimental-extensions -### %s -c 2>&1 | \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32iv1p0 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-V-GOODVERS %s
 // RV32-EXPERIMENTAL-V-GOODVERS: "-target-feature" "+experimental-v"
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10_zvl32b0p10 -### %s -c 2>&1 | \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32iv1p0_zvl32b1p0 -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVL-NOFLAG %s
-// RV32-EXPERIMENTAL-ZVL-NOFLAG: error: invalid arch name 'rv32iv0p10_zvl32b0p10'
+// RV32-EXPERIMENTAL-ZVL-NOFLAG: error: invalid arch name 'rv32iv1p0_zvl32b1p0'
 // RV32-EXPERIMENTAL-ZVL-NOFLAG: requires '-menable-experimental-extensions'
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10_zvl32b0p1 -menable-experimental-extensions -### %s -c 2>&1 | \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32iv1p0_zvl32b0p1 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVL-BADVERS %s
-// RV32-EXPERIMENTAL-ZVL-BADVERS: error: invalid arch name 'rv32iv0p10_zvl32b0p1'
+// RV32-EXPERIMENTAL-ZVL-BADVERS: error: invalid arch name 'rv32iv1p0_zvl32b0p1'
 // RV32-EXPERIMENTAL-ZVL-BADVERS: unsupported version number 0.1 for experimental extension
 
-// RUN: %clang -target riscv32-unknown-elf -march=rv32iv0p10_zvl32b0p10 -menable-experimental-extensions -### %s -c 2>&1 | \
+// RUN: %clang -target riscv32-unknown-elf -march=rv32iv1p0_zvl32b1p0 -menable-experimental-extensions -### %s -c 2>&1 | \
 // RUN:   FileCheck -check-prefix=RV32-EXPERIMENTAL-ZVL-GOODVERS %s
 // RV32-EXPERIMENTAL-ZVL-GOODVERS: "-target-feature" "+experimental-zvl32b"
