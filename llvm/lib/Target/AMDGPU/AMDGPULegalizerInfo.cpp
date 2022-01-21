@@ -4450,44 +4450,6 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   unsigned CorrectedNumVAddrs = Intr->NumVAddrs;
 
-  // Optimize _L to _LZ when _L is zero
-  if (const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
-          AMDGPU::getMIMGLZMappingInfo(Intr->BaseOpcode)) {
-    const ConstantFP *ConstantLod;
-
-    if (mi_match(MI.getOperand(ArgOffset + Intr->LodIndex).getReg(), *MRI,
-                 m_GFCst(ConstantLod))) {
-      if (ConstantLod->isZero() || ConstantLod->isNegative()) {
-        // Set new opcode to _lz variant of _l, and change the intrinsic ID.
-        const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
-            AMDGPU::getImageDimIntrinsicByBaseOpcode(LZMappingInfo->LZ,
-                                                     Intr->Dim);
-
-        // The starting indexes should remain in the same place.
-        --CorrectedNumVAddrs;
-
-        MI.getOperand(NumDefs).setIntrinsicID(
-            static_cast<Intrinsic::ID>(NewImageDimIntr->Intr));
-        MI.RemoveOperand(ArgOffset + Intr->LodIndex);
-        Intr = NewImageDimIntr;
-      }
-    }
-  }
-
-  // Optimize _mip away, when 'lod' is zero
-  if (AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode)) {
-    int64_t ConstantLod;
-    if (mi_match(MI.getOperand(ArgOffset + Intr->MipIndex).getReg(), *MRI,
-                 m_ICst(ConstantLod))) {
-      if (ConstantLod == 0) {
-        // TODO: Change intrinsic opcode and remove operand instead or replacing
-        // it with 0, as the _L to _LZ handling is done above.
-        MI.getOperand(ArgOffset + Intr->MipIndex).ChangeToImmediate(0);
-        --CorrectedNumVAddrs;
-      }
-    }
-  }
-
   // Rewrite the addressing register layout before doing anything else.
   if (BaseOpcode->Gradients && !ST.hasG16() && (IsA16 != IsG16)) {
     // 16 bit gradients are supported, but are tied to the A16 control
