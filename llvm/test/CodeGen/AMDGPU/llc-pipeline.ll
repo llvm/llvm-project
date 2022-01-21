@@ -1,7 +1,5 @@
 ; When EXPENSIVE_CHECKS are enabled, the machine verifier appears between each
 ; pass. Ignore it with 'grep -v'.
-; fixme: the following line is added to cleanup bots, will be removed in weeks.
-; RUN: rm -f %S/llc-pipeline.s
 ; RUN: llc -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | grep -v 'Verify generated machine code' | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
 ; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
