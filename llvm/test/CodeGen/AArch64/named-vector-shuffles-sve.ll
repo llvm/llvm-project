@@ -24,7 +24,7 @@ define <vscale x 16 x i8> @splice_nxv16i8_first_idx(<vscale x 16 x i8> %a, <vsca
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @splice_nxv16i8_last_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #1 {
+define <vscale x 16 x i8> @splice_nxv16i8_last_idx(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv16i8_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #255
@@ -51,7 +51,7 @@ define <vscale x 4 x i32> @splice_nxv4i32_first_idx(<vscale x 4 x i32> %a, <vsca
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x i32> @splice_nxv4i32_last_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #1 {
+define <vscale x 4 x i32> @splice_nxv4i32_last_idx(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv4i32_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
@@ -69,7 +69,7 @@ define <vscale x 2 x i64> @splice_nxv2i64_first_idx(<vscale x 2 x i64> %a, <vsca
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 2 x i64> @splice_nxv2i64_last_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #1 {
+define <vscale x 2 x i64> @splice_nxv2i64_last_idx(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv2i64_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
@@ -109,7 +109,7 @@ define <vscale x 2 x half> @splice_nxv2f16_first_idx(<vscale x 2 x half> %a, <vs
   ret <vscale x 2 x half> %res
 }
 
-define <vscale x 2 x half> @splice_nxv2f16_last_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) #1 {
+define <vscale x 2 x half> @splice_nxv2f16_last_idx(<vscale x 2 x half> %a, <vscale x 2 x half> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv2f16_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
@@ -149,7 +149,7 @@ define <vscale x 4 x half> @splice_nxv4f16_first_idx(<vscale x 4 x half> %a, <vs
   ret <vscale x 4 x half> %res
 }
 
-define <vscale x 4 x half> @splice_nxv4f16_last_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #1 {
+define <vscale x 4 x half> @splice_nxv4f16_last_idx(<vscale x 4 x half> %a, <vscale x 4 x half> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv4f16_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
@@ -167,7 +167,7 @@ define <vscale x 8 x half> @splice_nxv8f16_first_idx(<vscale x 8 x half> %a, <vs
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 8 x half> @splice_nxv8f16_last_idx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #1 {
+define <vscale x 8 x half> @splice_nxv8f16_last_idx(<vscale x 8 x half> %a, <vscale x 8 x half> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv8f16_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #254
@@ -207,7 +207,7 @@ define <vscale x 2 x float> @splice_nxv2f32_first_idx(<vscale x 2 x float> %a, <
   ret <vscale x 2 x float> %res
 }
 
-define <vscale x 2 x float> @splice_nxv2f32_last_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #1 {
+define <vscale x 2 x float> @splice_nxv2f32_last_idx(<vscale x 2 x float> %a, <vscale x 2 x float> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv2f32_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
@@ -225,7 +225,7 @@ define <vscale x 4 x float> @splice_nxv4f32_first_idx(<vscale x 4 x float> %a, <
   ret <vscale x 4 x float> %res
 }
 
-define <vscale x 4 x float> @splice_nxv4f32_last_idx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #1 {
+define <vscale x 4 x float> @splice_nxv4f32_last_idx(<vscale x 4 x float> %a, <vscale x 4 x float> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv4f32_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #252
@@ -243,7 +243,7 @@ define <vscale x 2 x double> @splice_nxv2f64_first_idx(<vscale x 2 x double> %a,
   ret <vscale x 2 x double> %res
 }
 
-define <vscale x 2 x double> @splice_nxv2f64_last_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #1 {
+define <vscale x 2 x double> @splice_nxv2f64_last_idx(<vscale x 2 x double> %a, <vscale x 2 x double> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv2f64_last_idx:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z1.b, #248
@@ -345,7 +345,7 @@ define <vscale x 8 x i32> @splice_nxv8i32_idx(<vscale x 8 x i32> %a, <vscale x 8
 }
 
 ; Verify splitvec type legalisation works as expected.
-define <vscale x 16 x float> @splice_nxv16f32_16(<vscale x 16 x float> %a, <vscale x 16 x float> %b) #2 {
+define <vscale x 16 x float> @splice_nxv16f32_16(<vscale x 16 x float> %a, <vscale x 16 x float> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv16f32_16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -392,7 +392,7 @@ define <vscale x 16 x i8> @splice_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x 
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @splice_nxv16i8_neg32(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #2 {
+define <vscale x 16 x i8> @splice_nxv16i8_neg32(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv16i8_neg32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -403,7 +403,7 @@ define <vscale x 16 x i8> @splice_nxv16i8_neg32(<vscale x 16 x i8> %a, <vscale x
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @splice_nxv16i8_neg64(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #3 {
+define <vscale x 16 x i8> @splice_nxv16i8_neg64(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(4,16) #0 {
 ; CHECK-LABEL: splice_nxv16i8_neg64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
@@ -414,7 +414,7 @@ define <vscale x 16 x i8> @splice_nxv16i8_neg64(<vscale x 16 x i8> %a, <vscale x
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @splice_nxv16i8_neg128(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #4 {
+define <vscale x 16 x i8> @splice_nxv16i8_neg128(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(8,16) #0 {
 ; CHECK-LABEL: splice_nxv16i8_neg128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -425,7 +425,7 @@ define <vscale x 16 x i8> @splice_nxv16i8_neg128(<vscale x 16 x i8> %a, <vscale 
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @splice_nxv16i8_neg256(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #1 {
+define <vscale x 16 x i8> @splice_nxv16i8_neg256(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(16,16) #0 {
 ; CHECK-LABEL: splice_nxv16i8_neg256:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -447,7 +447,7 @@ define <vscale x 16 x i8> @splice_nxv16i8_1(<vscale x 16 x i8> %a, <vscale x 16 
   ret <vscale x 16 x i8> %res
 }
 
-define <vscale x 16 x i8> @splice_nxv16i8_neg17(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #2 {
+define <vscale x 16 x i8> @splice_nxv16i8_neg17(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv16i8_neg17:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -492,7 +492,7 @@ define <vscale x 8 x i16> @splice_nxv8i16_1(<vscale x 8 x i16> %a, <vscale x 8 x
   ret <vscale x 8 x i16> %res
 }
 
-define <vscale x 8 x i16> @splice_nxv8i16_neg9(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) #2 {
+define <vscale x 8 x i16> @splice_nxv8i16_neg9(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv8i16_neg9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -537,7 +537,7 @@ define <vscale x 4 x i32> @splice_nxv4i32_1(<vscale x 4 x i32> %a, <vscale x 4 x
   ret <vscale x 4 x i32> %res
 }
 
-define <vscale x 4 x i32> @splice_nxv4i32_neg5(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #2 {
+define <vscale x 4 x i32> @splice_nxv4i32_neg5(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv4i32_neg5:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl5
@@ -570,7 +570,7 @@ define <vscale x 2 x i64> @splice_nxv2i64_1(<vscale x 2 x i64> %a, <vscale x 2 x
   ret <vscale x 2 x i64> %res
 }
 
-define <vscale x 2 x i64> @splice_nxv2i64_neg3(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) #2 {
+define <vscale x 2 x i64> @splice_nxv2i64_neg3(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv2i64_neg3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl3
@@ -603,7 +603,7 @@ define <vscale x 8 x half> @splice_nxv8f16_1(<vscale x 8 x half> %a, <vscale x 8
   ret <vscale x 8 x half> %res
 }
 
-define <vscale x 8 x half> @splice_nxv8f16_neg9(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #2 {
+define <vscale x 8 x half> @splice_nxv8f16_neg9(<vscale x 8 x half> %a, <vscale x 8 x half> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv8f16_neg9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -648,7 +648,7 @@ define <vscale x 4 x float> @splice_nxv4f32_1(<vscale x 4 x float> %a, <vscale x
   ret <vscale x 4 x float> %res
 }
 
-define <vscale x 4 x float> @splice_nxv4f32_neg5(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #2 {
+define <vscale x 4 x float> @splice_nxv4f32_neg5(<vscale x 4 x float> %a, <vscale x 4 x float> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv4f32_neg5:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl5
@@ -681,7 +681,7 @@ define <vscale x 2 x double> @splice_nxv2f64_1(<vscale x 2 x double> %a, <vscale
   ret <vscale x 2 x double> %res
 }
 
-define <vscale x 2 x double> @splice_nxv2f64_neg3(<vscale x 2 x double> %a, <vscale x 2 x double> %b) #2 {
+define <vscale x 2 x double> @splice_nxv2f64_neg3(<vscale x 2 x double> %a, <vscale x 2 x double> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv2f64_neg3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl3
@@ -797,7 +797,7 @@ define <vscale x 8 x i32> @splice_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i
 }
 
 ; Verify splitvec type legalisation works as expected.
-define <vscale x 16 x float> @splice_nxv16f32_neg17(<vscale x 16 x float> %a, <vscale x 16 x float> %b) #2 {
+define <vscale x 16 x float> @splice_nxv16f32_neg17(<vscale x 16 x float> %a, <vscale x 16 x float> %b) vscale_range(2,16) #0 {
 ; CHECK-LABEL: splice_nxv16f32_neg17:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -848,7 +848,3 @@ declare <vscale x 16 x float> @llvm.experimental.vector.splice.nxv16f32(<vscale 
 declare <vscale x 2 x double> @llvm.experimental.vector.splice.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, i32)
 
 attributes #0 = { nounwind "target-features"="+sve" }
-attributes #1 = { nounwind "target-features"="+sve" vscale_range(16,16) }
-attributes #2 = { nounwind "target-features"="+sve" vscale_range(2,16) }
-attributes #3 = { nounwind "target-features"="+sve" vscale_range(4,16) }
-attributes #4 = { nounwind "target-features"="+sve" vscale_range(8,16) }
