@@ -88,6 +88,9 @@ public:
   constexpr bool IsSubnormal() const {
     return Exponent() == 0 && !GetSignificand().IsZero();
   }
+  constexpr bool IsNormal() const {
+    return !(IsInfinite() || IsNotANumber() || IsSubnormal());
+  }
 
   constexpr Real ABS() const { // non-arithmetic, no flags returned
     return {word_.IBCLR(bits - 1)};

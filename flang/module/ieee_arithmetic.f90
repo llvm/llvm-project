@@ -11,6 +11,8 @@ module ieee_arithmetic
 
   use __Fortran_builtins, only: &
     ieee_is_nan => __builtin_ieee_is_nan, &
+    ieee_is_normal => __builtin_ieee_is_normal, &
+    ieee_is_negative => __builtin_ieee_is_negative, &
     ieee_next_after => __builtin_ieee_next_after, &
     ieee_next_down => __builtin_ieee_next_down, &
     ieee_next_up => __builtin_ieee_next_up, &
@@ -234,6 +236,40 @@ module ieee_arithmetic
   _IS_FINITE(10)
   _IS_FINITE(16)
 #undef _IS_FINITE
+
+#define _IS_NEGATIVE(KIND) \
+  elemental function ieee_is_negative_a##KIND(x) result(res); \
+    real(kind=KIND), intent(in) :: x; \
+    logical :: res; \
+    type(ieee_class_type) :: classification; \
+    classification = ieee_class(x); \
+    res = classification == ieee_negative_zero .or. classification == ieee_negative_denormal \
+     .or. classification == ieee_negative_normal .or. classification == ieee_negative_inf; \
+  end function
+  _IS_NEGATIVE(2)
+  _IS_NEGATIVE(3)
+  _IS_NEGATIVE(4)
+  _IS_NEGATIVE(8)
+  _IS_NEGATIVE(10)
+  _IS_NEGATIVE(16)
+#undef _IS_NEGATIVE
+
+#define _IS_NORMAL(KIND) \
+  elemental function ieee_is_normal_a##KIND(x) result(res); \
+    real(kind=KIND), intent(in) :: x; \
+    logical :: res; \
+    type(ieee_class_type) :: classification; \
+    classification = ieee_class(x); \
+    res = classification == ieee_negative_normal .or. classification == ieee_positive_normal \
+      .or. classification == ieee_negative_zero .or. classification == ieee_positive_zero; \
+  end function
+  _IS_NORMAL(2)
+  _IS_NORMAL(3)
+  _IS_NORMAL(4)
+  _IS_NORMAL(8)
+  _IS_NORMAL(10)
+  _IS_NORMAL(16)
+#undef _IS_NORMAL
 
 ! TODO: handle edge cases from 17.11.31
 #define _REM(XKIND,YKIND) \

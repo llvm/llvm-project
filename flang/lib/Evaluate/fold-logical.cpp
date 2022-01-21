@@ -118,6 +118,20 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
           return Scalar<T>{x.IsNotANumber()};
         }));
+  } else if (name == "__builtin_ieee_is_negative") {
+    auto restorer{context.messages().DiscardMessages()};
+    using DefaultReal = Type<TypeCategory::Real, 4>;
+    return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
+        ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
+          return Scalar<T>{x.IsNegative()};
+        }));
+  } else if (name == "__builtin_ieee_is_normal") {
+    auto restorer{context.messages().DiscardMessages()};
+    using DefaultReal = Type<TypeCategory::Real, 4>;
+    return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
+        ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
+          return Scalar<T>{x.IsNormal()};
+        }));
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
       if (auto *expr{args[0]->UnwrapExpr()}) {
