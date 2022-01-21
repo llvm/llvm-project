@@ -1,4 +1,5 @@
-// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
+// RUN: tco %s | FileCheck %s
+// REQUIRES: shell
 
 // Check that tco is working with a basic test.
 
