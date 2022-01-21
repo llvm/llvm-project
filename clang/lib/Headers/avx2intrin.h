@@ -26,19 +26,19 @@
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_abs_epi8(__m256i __a)
 {
-    return (__m256i)__builtin_ia32_pabsb256((__v32qi)__a);
+    return (__m256i)__builtin_elementwise_abs((__v32qs)__a);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_abs_epi16(__m256i __a)
 {
-    return (__m256i)__builtin_ia32_pabsw256((__v16hi)__a);
+    return (__m256i)__builtin_elementwise_abs((__v16hi)__a);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_abs_epi32(__m256i __a)
 {
-    return (__m256i)__builtin_ia32_pabsd256((__v8si)__a);
+    return (__m256i)__builtin_elementwise_abs((__v8si)__a);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
