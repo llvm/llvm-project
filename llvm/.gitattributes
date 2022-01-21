@@ -25,3 +25,5 @@ test/tools/llvm-mca/X86/directives-handle-crlf.s text eol=crlf
 test/tools/llvm-strings/radix.test text eol=lf
 test/tools/split-file/basic.test text eol=lf
 test/tools/split-file/Inputs/basic-*.txt eol=lf
+test/tools/split-file/basic.crlf.test text eol=crlf
+test/tools/split-file/Inputs/basic-*.crlf eol=crlf
