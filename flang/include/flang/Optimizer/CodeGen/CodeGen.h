@@ -12,6 +12,8 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 
 namespace fir {
@@ -36,9 +38,13 @@ std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>> createFirTargetRewritePass(
 /// Convert FIR to the LLVM IR dialect
 std::unique_ptr<mlir::Pass> createFIRToLLVMPass();
 
+using LLVMIRLoweringPrinter =
+    std::function<void(llvm::Module &, llvm::raw_ostream &)>;
 /// Convert the LLVM IR dialect to LLVM-IR proper
-std::unique_ptr<mlir::Pass>
-createLLVMDialectToLLVMPass(llvm::raw_ostream &output);
+std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
+    llvm::raw_ostream &output,
+    LLVMIRLoweringPrinter printer =
+        [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
 
 // declarative passes
 #define GEN_PASS_REGISTRATION
