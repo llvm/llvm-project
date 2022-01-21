@@ -485,7 +485,7 @@ _mm512_mask_blend_epi16 (__mmask32 __U, __m512i __A, __m512i __W)
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_abs_epi8 (__m512i __A)
 {
-  return (__m512i)__builtin_elementwise_abs((__v64qs)__A);
+  return (__m512i)__builtin_ia32_pabsb512((__v64qi)__A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
@@ -507,7 +507,7 @@ _mm512_maskz_abs_epi8 (__mmask64 __U, __m512i __A)
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_abs_epi16 (__m512i __A)
 {
-  return (__m512i)__builtin_elementwise_abs((__v32hi)__A);
+  return (__m512i)__builtin_ia32_pabsw512((__v32hi)__A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
