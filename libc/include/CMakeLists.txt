@@ -67,7 +67,7 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.time_t
-    .llvm-libc-types.tm
+    .llvm-libc-types.struct_tm
 )
 
 add_gen_header(
@@ -103,7 +103,7 @@ add_gen_header(
   DATA_FILES
     ../config/${LIBC_TARGET_OS}/signal.h.in
   DEPENDS
-    .llvm-libc-types.__sigaction
+    .llvm-libc-types.struct_sigaction
     .llvm-libc-types.__sighandler_t
 )
 
