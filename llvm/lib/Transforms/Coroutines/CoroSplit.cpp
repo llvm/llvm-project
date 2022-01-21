@@ -618,7 +618,8 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
   Value *CachedSlot = nullptr;
   auto getSwiftErrorSlot = [&](Type *ValueTy) -> Value * {
     if (CachedSlot) {
-      assert(CachedSlot->getType()->getPointerElementType() == ValueTy &&
+      assert(cast<PointerType>(CachedSlot->getType())
+                 ->isOpaqueOrPointeeTypeMatches(ValueTy) &&
              "multiple swifterror slots in function with different types");
       return CachedSlot;
     }
@@ -627,7 +628,8 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     for (auto &Arg : F.args()) {
       if (Arg.isSwiftError()) {
         CachedSlot = &Arg;
-        assert(Arg.getType()->getPointerElementType() == ValueTy &&
+        assert(cast<PointerType>(Arg.getType())
+                   ->isOpaqueOrPointeeTypeMatches(ValueTy) &&
                "swifterror argument does not have expected type");
         return &Arg;
       }
