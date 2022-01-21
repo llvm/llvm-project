@@ -11,8 +11,8 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/PreprocessorExcludedConditionalDirectiveSkipMapping.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -308,13 +308,15 @@ public:
 
 private:
   /// Check whether the file should be minimized.
-  bool shouldMinimize(StringRef Filename);
+  bool shouldMinimize(StringRef Filename, llvm::sys::fs::UniqueID UID);
 
   /// Returns entry for the given filename.
   ///
   /// Attempts to use the local and shared caches first, then falls back to
   /// using the underlying filesystem.
-  llvm::ErrorOr<EntryRef> getOrCreateFileSystemEntry(StringRef Filename);
+  llvm::ErrorOr<EntryRef>
+  getOrCreateFileSystemEntry(StringRef Filename,
+                             bool DisableMinimization = false);
 
   /// For a filename that's not yet associated with any entry in the caches,
   /// uses the underlying filesystem to either look up the entry based in the
@@ -325,7 +327,7 @@ private:
   /// Minimizes the given entry if necessary and returns a wrapper object with
   /// reference semantics.
   EntryRef minimizeIfNecessary(const CachedFileSystemEntry &Entry,
-                               StringRef Filename);
+                               StringRef Filename, bool Disable);
 
   /// Represents a filesystem entry that has been stat-ed (and potentially read)
   /// and that's about to be inserted into the cache as `CachedFileSystemEntry`.
@@ -401,7 +403,7 @@ private:
   /// currently active preprocessor.
   ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings;
   /// The set of files that should not be minimized.
-  llvm::StringSet<> NotToBeMinimized;
+  llvm::DenseSet<llvm::sys::fs::UniqueID> NotToBeMinimized;
 };
 
 } // end namespace dependencies
