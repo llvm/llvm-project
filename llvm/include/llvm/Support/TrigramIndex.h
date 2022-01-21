@@ -33,7 +33,6 @@
 #include <vector>
 
 namespace llvm {
-class StringRef;
 
 class TrigramIndex {
  public:

@@ -21,8 +21,10 @@
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Caching.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
 
 namespace llvm {

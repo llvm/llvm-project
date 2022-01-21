@@ -26,10 +26,6 @@ typedef unsigned short __v32hu __attribute__((__vector_size__(64)));
 typedef unsigned long long __v8du __attribute__((__vector_size__(64)));
 typedef unsigned int __v16su __attribute__((__vector_size__(64)));
 
-/* We need an explicitly signed variant for char. Note that this shouldn't
- * appear in the interface though. */
-typedef signed char __v64qs __attribute__((__vector_size__(64)));
-
 typedef float __m512 __attribute__((__vector_size__(64), __aligned__(64)));
 typedef double __m512d __attribute__((__vector_size__(64), __aligned__(64)));
 typedef long long __m512i __attribute__((__vector_size__(64), __aligned__(64)));
@@ -1850,7 +1846,7 @@ _mm512_mask_ceil_pd (__m512d __W, __mmask8 __U, __m512d __A)
 static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_abs_epi64(__m512i __A)
 {
-  return (__m512i)__builtin_elementwise_abs((__v8di)__A);
+  return (__m512i)__builtin_ia32_pabsq512((__v8di)__A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
@@ -1872,7 +1868,7 @@ _mm512_maskz_abs_epi64 (__mmask8 __U, __m512i __A)
 static __inline __m512i __DEFAULT_FN_ATTRS512
 _mm512_abs_epi32(__m512i __A)
 {
-  return (__m512i)__builtin_elementwise_abs((__v16si) __A);
+  return (__m512i)__builtin_ia32_pabsd512((__v16si) __A);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
