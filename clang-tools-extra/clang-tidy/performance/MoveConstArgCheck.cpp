@@ -68,9 +68,9 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 bool IsRValueReferenceParam(const Expr *Invocation,
-                            const QualType &InvocationParmType,
+                            const QualType *InvocationParmType,
                             const Expr *Arg) {
-  if (Invocation && InvocationParmType->isRValueReferenceType() &&
+  if (Invocation && (*InvocationParmType)->isRValueReferenceType() &&
       Arg->isLValue()) {
     if (!Invocation->getType()->isRecordType())
       return true;
@@ -138,7 +138,7 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
     // std::move shouldn't be removed when an lvalue wrapped by std::move is
     // passed to the function with an rvalue reference parameter.
     bool IsRVRefParam =
-        IsRValueReferenceParam(ReceivingExpr, *InvocationParmType, Arg);
+        IsRValueReferenceParam(ReceivingExpr, InvocationParmType, Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;
 
