@@ -13,7 +13,6 @@
 // const charT* do_is(const charT* low, const charT* high, mask* vec) const;
 
 // REQUIRES: locale.en_US.UTF-8
-// XFAIL: LIBCXX-WINDOWS-FIXME
 // XFAIL: libcpp-has-no-wide-characters
 
 #include <locale>
@@ -149,17 +148,27 @@ int main(int, char**)
 
             // L'\x00DA'
             assert(!(m[0] & F::space));
-            assert(!(m[0] & F::print));
             assert(!(m[0] & F::cntrl));
-            assert(!(m[0] & F::upper));
             assert(!(m[0] & F::lower));
-            assert(!(m[0] & F::alpha));
             assert(!(m[0] & F::digit));
             assert(!(m[0] & F::punct));
             assert(!(m[0] & F::xdigit));
             assert(!(m[0] & F::blank));
+#if defined(_WIN32)
+            // On Windows, these wchars are classified according to their
+            // Unicode interpretation even in the "C" locale.
+            assert( (m[0] & F::alpha));
+            assert( (m[0] & F::upper));
+            assert( (m[0] & F::print));
+            assert( (m[0] & F::alnum));
+            assert( (m[0] & F::graph));
+#else
+            assert(!(m[0] & F::alpha));
+            assert(!(m[0] & F::upper));
+            assert(!(m[0] & F::print));
             assert(!(m[0] & F::alnum));
             assert(!(m[0] & F::graph));
+#endif
 
             // L' '
             assert( (m[1] & F::space));
