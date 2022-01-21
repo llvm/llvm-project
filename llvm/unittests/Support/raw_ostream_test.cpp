@@ -469,7 +469,7 @@ TEST(raw_ostreamTest, reserve_stream) {
   OS << "11111111111111111111";
   uint64_t CurrentPos = OS.tell();
   OS.reserveExtraSpace(1000);
-  EXPECT_TRUE(Str.capacity() >= CurrentPos + 1000);
+  EXPECT_GE(Str.capacity(), CurrentPos + 1000);
   OS << "hello";
   OS << 1;
   OS << 'w' << 'o' << 'r' << 'l' << 'd';
