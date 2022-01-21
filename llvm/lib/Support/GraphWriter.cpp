@@ -25,6 +25,11 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+
+#ifdef __APPLE__
+#include "llvm/Support/CommandLine.h"
+#endif
+
 #include <string>
 #include <system_error>
 #include <vector>
