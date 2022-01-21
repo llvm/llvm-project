@@ -123,7 +123,7 @@ def PDL_ApplyNativeRewriteOp
 // pdl::AttributeOp
 //===----------------------------------------------------------------------===//
 
-def PDL_AttributeOp : PDL_Op<"attribute"> {
+def PDL_AttributeOp : PDL_Op<"attribute", [NoSideEffect]> {
   let summary = "Define an input attribute in a pattern";
   let description = [{
     `pdl.attribute` operations capture named attribute edges into an operation.
@@ -191,7 +191,8 @@ def PDL_EraseOp : PDL_Op<"erase", [HasParent<"pdl::RewriteOp">]> {
 // pdl::OperandOp
 //===----------------------------------------------------------------------===//
 
-def PDL_OperandOp : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
+def PDL_OperandOp
+    : PDL_Op<"operand", [HasParent<"pdl::PatternOp">, NoSideEffect]> {
   let summary = "Define an external input operand in a pattern";
   let description = [{
     `pdl.operand` operations capture external operand edges into an operation
@@ -228,7 +229,8 @@ def PDL_OperandOp : PDL_Op<"operand", [HasParent<"pdl::PatternOp">]> {
 // pdl::OperandsOp
 //===----------------------------------------------------------------------===//
 
-def PDL_OperandsOp : PDL_Op<"operands", [HasParent<"pdl::PatternOp">]> {
+def PDL_OperandsOp
+    : PDL_Op<"operands", [HasParent<"pdl::PatternOp">, NoSideEffect]> {
   let summary = "Define a range of input operands in a pattern";
   let description = [{
     `pdl.operands` operations capture external operand range edges into an
@@ -495,7 +497,7 @@ def PDL_ReplaceOp : PDL_Op<"replace", [
 // pdl::ResultOp
 //===----------------------------------------------------------------------===//
 
-def PDL_ResultOp : PDL_Op<"result"> {
+def PDL_ResultOp : PDL_Op<"result", [NoSideEffect]> {
   let summary = "Extract a result from an operation";
   let description = [{
     `pdl.result` operations extract result edges from an operation node within
@@ -528,7 +530,7 @@ def PDL_ResultOp : PDL_Op<"result"> {
 // pdl::ResultsOp
 //===----------------------------------------------------------------------===//
 
-def PDL_ResultsOp : PDL_Op<"results"> {
+def PDL_ResultsOp : PDL_Op<"results", [NoSideEffect]> {
   let summary = "Extract a result group from an operation";
   let description = [{
     `pdl.results` operations extract a result group from an operation within a
@@ -631,7 +633,7 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
 // pdl::TypeOp
 //===----------------------------------------------------------------------===//
 
-def PDL_TypeOp : PDL_Op<"type"> {
+def PDL_TypeOp : PDL_Op<"type", [NoSideEffect]> {
   let summary = "Define a type handle within a pattern";
   let description = [{
     `pdl.type` operations capture result type constraints of `Attributes`,
@@ -659,7 +661,7 @@ def PDL_TypeOp : PDL_Op<"type"> {
 // pdl::TypesOp
 //===----------------------------------------------------------------------===//
 
-def PDL_TypesOp : PDL_Op<"types"> {
+def PDL_TypesOp : PDL_Op<"types", [NoSideEffect]> {
   let summary = "Define a range of type handles within a pattern";
   let description = [{
     `pdl.types` operations capture result type constraints of `Value`s, and
