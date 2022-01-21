@@ -597,27 +597,18 @@ def ZEXTH_RV64 : RVInstR<0b0000100, 0b100, OPC_OP_32, (outs GPR:$rd),
 // or gorci. Since Zbb is closer to being finalized than Zbp this will be
 // misleading to users.
 let Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV32] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def REV8_RV32 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                        "rev8", "$rd, $rs1">, Sched<[WriteREV8, ReadREV8]> {
-  let imm12 = { 0b01101, 0b0011000 };
-}
+def REV8_RV32 : RVBUnary<0b0110100, 0b11000, 0b101, OPC_OP_IMM, "rev8">,
+                Sched<[WriteREV8, ReadREV8]>;
 } // Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV32]
 
 let Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV64] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def REV8_RV64 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                        "rev8", "$rd, $rs1">, Sched<[WriteREV8, ReadREV8]> {
-  let imm12 = { 0b01101, 0b0111000 };
-}
+def REV8_RV64 : RVBUnary<0b0110101, 0b11000, 0b101, OPC_OP_IMM, "rev8">,
+                Sched<[WriteREV8, ReadREV8]>;
 } // Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def ORCB : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                   "orc.b", "$rd, $rs1">, Sched<[WriteORCB, ReadORCB]> {
-  let imm12 = { 0b00101, 0b0000111 };
-}
+def ORCB : RVBUnary<0b0010100, 0b00111, 0b101, OPC_OP_IMM, "orc.b">,
+           Sched<[WriteORCB, ReadORCB]>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbpOrZbkb] in 
