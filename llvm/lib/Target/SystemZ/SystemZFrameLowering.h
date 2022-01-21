@@ -77,6 +77,9 @@ public:
   bool hasFP(const MachineFunction &MF) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
+  void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
   // Return the byte offset from the incoming stack pointer of Reg's
   // ABI-defined save slot.  Return 0 if no slot is defined for Reg.  Adjust
