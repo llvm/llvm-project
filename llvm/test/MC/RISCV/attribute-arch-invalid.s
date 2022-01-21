@@ -5,9 +5,6 @@
 
 ## Version strings are required for experimental extensions
 
-.attribute arch, "rv32iv"
-# CHECK: error: invalid arch name 'rv32iv', experimental extension requires explicit version number `v`
-
 .attribute arch, "rv32izbe"
 # CHECK:  error: invalid arch name 'rv32izbe', experimental extension requires explicit version number `zbe`
 
@@ -25,6 +22,3 @@
 
 .attribute arch, "rv32izbt"
 # CHECK: error: invalid arch name 'rv32izbt', experimental extension requires explicit version number `zbt`
-
-.attribute arch, "rv32iv"
-# CHECK: error: invalid arch name 'rv32iv', experimental extension requires explicit version number `v`

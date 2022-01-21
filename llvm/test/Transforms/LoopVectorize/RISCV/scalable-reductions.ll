@@ -2,7 +2,7 @@
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-vector-bits-max=128 \
 ; RUN:   -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+experimental-v,+f -S 2>%t | FileCheck %s -check-prefix=CHECK
+; RUN:   -mattr=+v,+f -S 2>%t | FileCheck %s -check-prefix=CHECK
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-REMARK
 
 ; Reduction can be vectorized

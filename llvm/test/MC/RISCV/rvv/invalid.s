@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=riscv64 --mattr=+experimental-v --mattr=+f %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv64 --mattr=+v --mattr=+f %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
 vsetivli a2, 32, e8,m1

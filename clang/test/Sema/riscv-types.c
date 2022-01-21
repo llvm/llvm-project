@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv64 -target-feature +experimental-v -ast-print %s \
+// RUN: %clang_cc1 -triple riscv64 -target-feature +v -ast-print %s \
 // RUN:    | FileCheck %s
 
 void bar(void) {

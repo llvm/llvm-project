@@ -1,12 +1,12 @@
-# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+experimental-v %s \
+# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+v %s \
 # RUN:   --mattr=+f --riscv-no-aliases \
 # RUN:   | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
-# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
-# RUN:   --mattr=+f | llvm-objdump -d --mattr=+experimental-v --mattr=+f -M no-aliases - \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+v %s \
+# RUN:   --mattr=+f | llvm-objdump -d --mattr=+v --mattr=+f -M no-aliases - \
 # RUN:   | FileCheck %s --check-prefix=CHECK-INST
-# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+v %s \
 # RUN:   --mattr=+f | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 vfsqrt.v v8, v4, v0.t
