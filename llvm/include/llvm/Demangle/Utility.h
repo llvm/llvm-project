@@ -50,7 +50,7 @@ class OutputBuffer {
     }
 
     std::array<char, 21> Temp;
-    char *TempPtr = Temp.end();
+    char *TempPtr = Temp.data() + Temp.size();
 
     while (N) {
       *--TempPtr = char('0' + N % 10);
