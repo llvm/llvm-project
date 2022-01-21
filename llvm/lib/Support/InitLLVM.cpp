@@ -15,6 +15,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 
 #ifdef _WIN32
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
 #endif
 
