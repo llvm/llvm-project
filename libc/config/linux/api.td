@@ -24,7 +24,7 @@ def SSizeT : TypeDecl<"ssize_t"> {
 
 def StructTm: TypeDecl<"struct tm"> {
   let Decl = [{
-    #include <llvm-libc-types/tm.h>
+    #include <llvm-libc-types/struct_tm.h>
   }];
 }
 
@@ -334,7 +334,7 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 
 def StructSigactionDefn : TypeDecl<"struct sigaction"> {
   let Decl = [{
-    #include <llvm-libc-types/__sigaction.h>
+    #include <llvm-libc-types/struct_sigaction.h>
   }];
 }
 
