@@ -519,6 +519,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__functional/is_transparent.h>
 #include <__hash_table>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__node_handle>
 #include <__utility/forward.h>
 #include <compare>
@@ -1186,7 +1187,7 @@ public:
         {return __table_.__insert_unique(__x);}
 
     iterator insert(const_iterator __p, const value_type& __x) {
-        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
                              "unordered_map::insert(const_iterator, const value_type&) called with an iterator not "
                              "referring to this unordered_map");
         ((void)__p);
@@ -1207,7 +1208,7 @@ public:
         {return __table_.__insert_unique(_VSTD::move(__x));}
 
     iterator insert(const_iterator __p, value_type&& __x) {
-        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
                              "unordered_map::insert(const_iterator, const value_type&) called with an iterator not"
                              " referring to this unordered_map");
         ((void)__p);
@@ -1225,7 +1226,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         iterator insert(const_iterator __p, _Pp&& __x)
         {
-            _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+            _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
                                  "unordered_map::insert(const_iterator, value_type&&) called with an iterator not"
                                  " referring to this unordered_map");
           ((void)__p);
@@ -1241,7 +1242,7 @@ public:
     template <class... _Args>
     _LIBCPP_INLINE_VISIBILITY
     iterator emplace_hint(const_iterator __p, _Args&&... __args) {
-        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
                              "unordered_map::emplace_hint(const_iterator, args...) called with an iterator not"
                              " referring to this unordered_map");
           ((void)__p);
@@ -1273,7 +1274,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         iterator try_emplace(const_iterator __h, const key_type& __k, _Args&&... __args)
     {
-        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__h) == this,
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__h)) == this,
                              "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
                              " referring to this unordered_map");
         ((void)__h);
@@ -1284,7 +1285,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         iterator try_emplace(const_iterator __h, key_type&& __k, _Args&&... __args)
     {
-        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(&__h) == this,
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__h)) == this,
                              "unordered_map::try_emplace(const_iterator, key, args...) called with an iterator not"
                              " referring to this unordered_map");
         ((void)__h);
@@ -1692,7 +1693,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
 {
     _VSTD::__debug_db_insert_c(this);
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, &__u);
+    __get_db()->swap(this, _VSTD::addressof(__u));
 #endif
 }
 
@@ -1712,7 +1713,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
     }
 #if _LIBCPP_DEBUG_LEVEL == 2
     else
-        __get_db()->swap(this, &__u);
+        __get_db()->swap(this, _VSTD::addressof(__u));
 #endif
 }
 
@@ -2468,7 +2469,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
 {
     _VSTD::__debug_db_insert_c(this);
 #if _LIBCPP_DEBUG_LEVEL == 2
-    __get_db()->swap(this, &__u);
+    __get_db()->swap(this, _VSTD::addressof(__u));
 #endif
 }
 
@@ -2489,7 +2490,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     }
 #if _LIBCPP_DEBUG_LEVEL == 2
     else
-        __get_db()->swap(this, &__u);
+        __get_db()->swap(this, _VSTD::addressof(__u));
 #endif
 }
 
