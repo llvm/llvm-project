@@ -42,8 +42,9 @@ DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
 }
 
 EntryRef DependencyScanningWorkerFilesystem::minimizeIfNecessary(
-    const CachedFileSystemEntry &Entry, StringRef Filename) {
-  if (Entry.isError() || Entry.isDirectory() || !shouldMinimize(Filename))
+    const CachedFileSystemEntry &Entry, StringRef Filename, bool Disable) {
+  if (Entry.isError() || Entry.isDirectory() || Disable ||
+      !shouldMinimize(Filename, Entry.getUniqueID()))
     return EntryRef(/*Minimized=*/false, Filename, Entry);
 
   CachedFileContents *Contents = Entry.getContents();
@@ -210,19 +211,18 @@ static bool shouldCacheStatFailures(StringRef Filename) {
 }
 
 void DependencyScanningWorkerFilesystem::disableMinimization(
-    StringRef RawFilename) {
-  llvm::SmallString<256> Filename;
-  llvm::sys::path::native(RawFilename, Filename);
-  NotToBeMinimized.insert(Filename);
+    StringRef Filename) {
+  // Since we're not done setting up `NotToBeMinimized` yet, we need to disable
+  // minimization explicitly.
+  if (llvm::ErrorOr<EntryRef> Result =
+          getOrCreateFileSystemEntry(Filename, /*DisableMinimization=*/true))
+    NotToBeMinimized.insert(Result->getStatus().getUniqueID());
 }
 
-bool DependencyScanningWorkerFilesystem::shouldMinimize(StringRef RawFilename) {
-  if (!shouldMinimizeBasedOnExtension(RawFilename))
-    return false;
-
-  llvm::SmallString<256> Filename;
-  llvm::sys::path::native(RawFilename, Filename);
-  return !NotToBeMinimized.contains(Filename);
+bool DependencyScanningWorkerFilesystem::shouldMinimize(
+    StringRef Filename, llvm::sys::fs::UniqueID UID) {
+  return shouldMinimizeBasedOnExtension(Filename) &&
+         !NotToBeMinimized.contains(UID);
 }
 
 const CachedFileSystemEntry &
@@ -275,13 +275,15 @@ DependencyScanningWorkerFilesystem::computeAndStoreResult(StringRef Filename) {
 
 llvm::ErrorOr<EntryRef>
 DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
-    StringRef Filename) {
+    StringRef Filename, bool DisableMinimization) {
   if (const auto *Entry = findEntryByFilenameWithWriteThrough(Filename))
-    return minimizeIfNecessary(*Entry, Filename).unwrapError();
+    return minimizeIfNecessary(*Entry, Filename, DisableMinimization)
+        .unwrapError();
   auto MaybeEntry = computeAndStoreResult(Filename);
   if (!MaybeEntry)
     return MaybeEntry.getError();
-  return minimizeIfNecessary(*MaybeEntry, Filename).unwrapError();
+  return minimizeIfNecessary(*MaybeEntry, Filename, DisableMinimization)
+      .unwrapError();
 }
 
 llvm::ErrorOr<llvm::vfs::Status>
