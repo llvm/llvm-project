@@ -279,6 +279,133 @@ Value makePolynomialCalculation(ImplicitLocOpBuilder &builder,
 } // namespace
 
 //----------------------------------------------------------------------------//
+// AtanOp approximation.
+//----------------------------------------------------------------------------//
+
+namespace {
+struct AtanApproximation : public OpRewritePattern<math::AtanOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::AtanOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+LogicalResult
+AtanApproximation::matchAndRewrite(math::AtanOp op,
+                                   PatternRewriter &rewriter) const {
+  auto operand = op.getOperand();
+  if (!getElementTypeOrSelf(operand).isF32())
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+
+  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  auto one = broadcast(builder, f32Cst(builder, 1.0f), shape);
+
+  // Remap the problem over [0.0, 1.0] by looking at the absolute value and the
+  // handling symmetry.
+  Value abs = builder.create<math::AbsOp>(operand);
+  Value reciprocal = builder.create<arith::DivFOp>(one, abs);
+  Value compare =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, abs, reciprocal);
+  Value x = builder.create<SelectOp>(compare, abs, reciprocal);
+
+  // Perform the Taylor series approximation for atan over the range
+  // [-1.0, 1.0].
+  auto n1 = broadcast(builder, f32Cst(builder, 0.14418283), shape);
+  auto n2 = broadcast(builder, f32Cst(builder, -0.34999234), shape);
+  auto n3 = broadcast(builder, f32Cst(builder, -0.01067831), shape);
+  auto n4 = broadcast(builder, f32Cst(builder, 1.00209986), shape);
+
+  Value p = builder.create<math::FmaOp>(x, n1, n2);
+  p = builder.create<math::FmaOp>(x, p, n3);
+  p = builder.create<math::FmaOp>(x, p, n4);
+  p = builder.create<arith::MulFOp>(x, p);
+
+  // Remap the solution for over [0.0, 1.0] to [0.0, inf]
+  auto half_pi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
+  Value sub = builder.create<arith::SubFOp>(half_pi, p);
+  Value select = builder.create<SelectOp>(compare, p, sub);
+
+  // Correct for signing of the input.
+  rewriter.replaceOpWithNewOp<math::CopySignOp>(op, select, operand);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
+// AtanOp approximation.
+//----------------------------------------------------------------------------//
+
+namespace {
+struct Atan2Approximation : public OpRewritePattern<math::Atan2Op> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::Atan2Op op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+LogicalResult
+Atan2Approximation::matchAndRewrite(math::Atan2Op op,
+                                    PatternRewriter &rewriter) const {
+  auto y = op.getOperand(0);
+  auto x = op.getOperand(1);
+  if (!getElementTypeOrSelf(x).isF32())
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+
+  ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
+  ArrayRef<int64_t> shape = vectorShape(op.getResult());
+
+  // Compute atan in the valid range.
+  auto div = builder.create<arith::DivFOp>(y, x);
+  auto atan = builder.create<math::AtanOp>(div);
+
+  // Determine what the atan would be for a 180 degree rotation.
+  auto zero = broadcast(builder, f32Cst(builder, 0.0f), shape);
+  auto pi = broadcast(builder, f32Cst(builder, 3.14159265359f), shape);
+  auto add_pi = builder.create<arith::AddFOp>(atan, pi);
+  auto sub_pi = builder.create<arith::SubFOp>(atan, pi);
+  auto atan_gt =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, atan, zero);
+  auto flipped_atan = builder.create<SelectOp>(atan_gt, sub_pi, add_pi);
+
+  // Determine whether to directly use atan or use the 180 degree flip
+  auto x_gt = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, x, zero);
+  Value result = builder.create<SelectOp>(x_gt, atan, flipped_atan);
+
+  // Handle x = 0, y > 0
+  Value x_zero =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, x, zero);
+  Value y_gt =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, y, zero);
+  Value is_half_pi = builder.create<arith::AndIOp>(x_zero, y_gt);
+  auto half_pi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
+  result = builder.create<SelectOp>(is_half_pi, half_pi, result);
+
+  // Handle x = 0, y < 0
+  Value y_lt =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, y, zero);
+  Value is_negative_half_pi_pi = builder.create<arith::AndIOp>(x_zero, y_lt);
+  auto negative_half_pi_pi =
+      broadcast(builder, f32Cst(builder, -1.57079632679), shape);
+  result = builder.create<SelectOp>(is_negative_half_pi_pi, negative_half_pi_pi,
+                                    result);
+
+  // Handle x = 0, y = 0;
+  Value y_zero =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, y, zero);
+  Value is_nan = builder.create<arith::AndIOp>(x_zero, y_zero);
+  Value cst_nan = broadcast(builder, f32FromBits(builder, 0x7fc00000), shape);
+  result = builder.create<SelectOp>(is_nan, cst_nan, result);
+
+  rewriter.replaceOp(op, result);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 // TanhOp approximation.
 //----------------------------------------------------------------------------//
 
@@ -1074,9 +1201,10 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
 void mlir::populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options) {
-  patterns.add<TanhApproximation, LogApproximation, Log2Approximation,
-               Log1pApproximation, ErfPolynomialApproximation, ExpApproximation,
-               ExpM1Approximation, SinAndCosApproximation<true, math::SinOp>,
+  patterns.add<AtanApproximation, Atan2Approximation, TanhApproximation,
+               LogApproximation, Log2Approximation, Log1pApproximation,
+               ErfPolynomialApproximation, ExpApproximation, ExpM1Approximation,
+               SinAndCosApproximation<true, math::SinOp>,
                SinAndCosApproximation<false, math::CosOp>>(
       patterns.getContext());
   if (options.enableAvx2)
