@@ -23,7 +23,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 
 #define DEBUG_TYPE "flang-codegen"
@@ -3306,44 +3305,8 @@ public:
     }
   }
 };
-
-/// Lower from LLVM IR dialect to proper LLVM-IR and dump the module
-struct LLVMIRLoweringPass
-    : public mlir::PassWrapper<LLVMIRLoweringPass,
-                               mlir::OperationPass<mlir::ModuleOp>> {
-  using Printer = fir::LLVMIRLoweringPrinter;
-  LLVMIRLoweringPass(raw_ostream &output, Printer p)
-      : output{output}, printer{p} {}
-
-  mlir::ModuleOp getModule() { return getOperation(); }
-
-  void runOnOperation() override final {
-    auto *ctx = getModule().getContext();
-    auto optName = getModule().getName();
-    llvm::LLVMContext llvmCtx;
-    if (auto llvmModule = mlir::translateModuleToLLVMIR(
-            getModule(), llvmCtx, optName ? *optName : "FIRModule")) {
-      printer(*llvmModule, output);
-      return;
-    }
-
-    mlir::emitError(mlir::UnknownLoc::get(ctx), "could not emit LLVM-IR\n");
-    signalPassFailure();
-  }
-
-private:
-  raw_ostream &output;
-  Printer printer;
-};
-
 } // namespace
 
 std::unique_ptr<mlir::Pass> fir::createFIRToLLVMPass() {
   return std::make_unique<FIRToLLVMLowering>();
-}
-
-std::unique_ptr<mlir::Pass>
-fir::createLLVMDialectToLLVMPass(raw_ostream &output,
-                                 fir::LLVMIRLoweringPrinter printer) {
-  return std::make_unique<LLVMIRLoweringPass>(output, printer);
 }
