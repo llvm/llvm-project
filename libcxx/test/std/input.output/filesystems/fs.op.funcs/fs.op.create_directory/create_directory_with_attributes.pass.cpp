@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // This test requires the dylib support introduced in D92769.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.15
 
