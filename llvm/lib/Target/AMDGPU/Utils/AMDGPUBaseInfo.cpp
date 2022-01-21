@@ -1084,6 +1084,13 @@ bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI) {
     return isGFX10Plus(STI);
   case ID_XNACK_MASK:
     return isGFX10(STI) && !AMDGPU::isGFX10_BEncoding(STI);
+  case ID_TBA_LO:
+  case ID_TBA_HI:
+  case ID_TMA_LO:
+  case ID_TMA_HI:
+    return isGFX9(STI) || isGFX10(STI);
+  case ID_POPS_PACKER:
+    return isGFX10(STI);
   default:
     return ID_SYMBOLIC_FIRST_ <= Id && Id < getLastSymbolicHwreg(STI) &&
            IdSymbolic[Id];
