@@ -687,6 +687,7 @@ def : InstAlias<"zip4 $rd, $rs",   (SHFLI   GPR:$rd, GPR:$rs, 0b1100)>;
 def : InstAlias<"unzip4 $rd, $rs", (UNSHFLI GPR:$rd, GPR:$rs, 0b1100)>;
 def : InstAlias<"zip2 $rd, $rs",   (SHFLI   GPR:$rd, GPR:$rs, 0b1110)>;
 def : InstAlias<"unzip2 $rd, $rs", (UNSHFLI GPR:$rd, GPR:$rs, 0b1110)>;
+// zip and unzip are considered instructions rather than an alias.
 
 def : InstAlias<"orc16 $rd, $rs", (GORCI GPR:$rd, GPR:$rs, 0b10000)>;
 def : InstAlias<"orc8 $rd, $rs",  (GORCI GPR:$rd, GPR:$rs, 0b11000)>;
@@ -865,6 +866,9 @@ def : PatGprImm<riscv_shfl, SHFLI, shfl_uimm>;
 def : PatGprImm<riscv_unshfl, UNSHFLI, shfl_uimm>;
 def : PatGprImm<riscv_grev, GREVI, uimmlog2xlen>;
 def : PatGprImm<riscv_gorc, GORCI, uimmlog2xlen>;
+
+// We treat brev8 as a separate instruction, so match it directly.
+def : Pat<(riscv_grev GPR:$rs1, 7), (BREV8 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp, IsRV64] in
@@ -876,6 +880,10 @@ def : Pat<(i32 (rotl (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>
 
 // We treat rev8 as a separate instruction, so match it directly.
 def : Pat<(i32 (riscv_grev GPR:$rs1, 24)), (REV8_RV32 GPR:$rs1)>;
+
+// We treat zip and unzip as separate instructions, so match it directly.
+def : Pat<(i32 (riscv_shfl GPR:$rs1, 15)), (ZIP_RV32 GPR:$rs1)>;
+def : Pat<(i32 (riscv_unshfl GPR:$rs1, 15)), (UNZIP_RV32 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp, IsRV32]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
