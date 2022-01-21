@@ -224,6 +224,8 @@ TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately1) {
   EXPECT_TRUE(StatusFull1);
   EXPECT_EQ(StatusMinimized0->getSize(), 17u);
   EXPECT_EQ(StatusFull1->getSize(), 30u);
+  EXPECT_EQ(StatusMinimized0->getName(), StringRef("/mod.h"));
+  EXPECT_EQ(StatusFull1->getName(), StringRef("/mod.h"));
 }
 
 TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately2) {
@@ -245,6 +247,8 @@ TEST(DependencyScanningFilesystem, IgnoredFilesAreCachedSeparately2) {
   EXPECT_TRUE(StatusMinimized1);
   EXPECT_EQ(StatusFull0->getSize(), 30u);
   EXPECT_EQ(StatusMinimized1->getSize(), 17u);
+  EXPECT_EQ(StatusFull0->getName(), StringRef("/mod.h"));
+  EXPECT_EQ(StatusMinimized1->getName(), StringRef("/mod.h"));
 }
 
 } // end namespace dependencies
