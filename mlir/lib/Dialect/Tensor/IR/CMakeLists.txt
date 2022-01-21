@@ -2,6 +2,7 @@ set(LLVM_OPTIONAL_SOURCES
   TensorDialect.cpp
   TensorInferTypeOpInterfaceImpl.cpp
   TensorOps.cpp
+  TensorTilingInterfaceImpl.cpp
 )
 
 add_mlir_dialect_library(MLIRTensor
@@ -42,4 +43,21 @@ add_mlir_dialect_library(MLIRTensorInferTypeOpInterfaceImpl
   MLIRStandard
   MLIRSupport
   MLIRTensor
+  )
+
+add_mlir_dialect_library(MLIRTensorTilingInterfaceImpl
+  TensorTilingInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tensor
+
+  LINK_LIBS PUBLIC
+  MLIRAffine
+  MLIRIR
+  MLIRLinalg
+  MLIRSCF
+  MLIRStandard
+  MLIRSupport
+  MLIRTensor
+  MLIRTilingInterface
   )

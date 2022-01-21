@@ -107,12 +107,12 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
     OpBuilder &b, Location loc, Value source, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides);
 
-/// Create a PadTensorOp that pads `source` to the size of the statically sized
-/// `type` whose static sizes are assumed to be greater than the dynamic
+/// Create a tensor::PadOp that pads `source` to the size of the statically
+/// sized `type` whose static sizes are assumed to be greater than the dynamic
 /// `source` size. The padding introduces trailing `pad` values until the target
 /// size is met. If `source` is defined by one or more LinalgOps that have been
 /// padded with the same value and sizes, return their padded result instead of
-/// creating a PadTensorOp.
+/// creating a tensor::PadOp.
 ///
 /// Example:
 /// ```

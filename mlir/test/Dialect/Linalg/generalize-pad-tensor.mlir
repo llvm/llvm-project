@@ -9,9 +9,9 @@
 // CHECK:           return %[[PADDED]] : tensor<1x32x32x1xf32>
 func @generalize_pad_tensor_static_shape(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32> {
   %cst = arith.constant 0.000000e+00 : f32
-  %0 = linalg.pad_tensor %arg0 low[0, 2, 2, 0] high[0, 2, 2, 0]  {
+  %0 = tensor.pad %arg0 low[0, 2, 2, 0] high[0, 2, 2, 0]  {
   ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):  
-    linalg.yield %cst : f32
+    tensor.yield %cst : f32
   } : tensor<1x28x28x1xf32> to tensor<1x32x32x1xf32>
   return %0 : tensor<1x32x32x1xf32>
 }
@@ -38,9 +38,9 @@ func @generalize_pad_tensor_static_shape(%arg0: tensor<1x28x28x1xf32>) -> tensor
 func @generalize_pad_tensor_dynamic_shape(%arg0: tensor<4x?x2x?xf32>, %arg1: index) -> tensor<4x?x?x?xf32> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
-  %out = linalg.pad_tensor %arg0 low[%c0, %c0, %arg1, %c0] high[%c0, %c0, %c0, %arg1]  {
+  %out = tensor.pad %arg0 low[%c0, %c0, %arg1, %c0] high[%c0, %c0, %c0, %arg1]  {
   ^bb0(%gen_arg1: index, %gen_arg2: index, %gen_arg3: index, %gen_arg4: index):  
-    linalg.yield %cst : f32
+    tensor.yield %cst : f32
   } : tensor<4x?x2x?xf32> to tensor<4x?x?x?xf32>
   return %out : tensor<4x?x?x?xf32>
 }

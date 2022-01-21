@@ -13,9 +13,9 @@ func @main() {
   %offset = arith.constant 2 : index
   %cst = arith.constant 2.3 : f32
   %c0 = arith.constant 0 : index
-  %out = linalg.pad_tensor %dynamic low[%c0, %offset, %c0] high[%c0, %c0, %offset]  {
+  %out = tensor.pad %dynamic low[%c0, %offset, %c0] high[%c0, %c0, %offset]  {
   ^bb0(%gen_arg1: index, %gen_arg2: index, %gen_arg3: index):
-    linalg.yield %cst : f32
+    tensor.yield %cst : f32
   } : tensor<1x?x3xf32> to tensor<1x?x?xf32>
   %unranked = tensor.cast %out: tensor<1x?x?xf32> to tensor<*xf32>
   call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()

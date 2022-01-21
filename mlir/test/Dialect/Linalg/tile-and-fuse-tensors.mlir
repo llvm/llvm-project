@@ -288,7 +288,7 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 //     CHECK:         tensor.generate
 //     CHECK:       else
 //     CHECK:         tensor.extract_slice
-//     CHECK:         linalg.pad_tensor
+//     CHECK:         tensor.pad
 //     CHECK:       tensor.extract_slice
 //     CHECK:       tensor.extract_slice
 //     CHECK:       linalg.generic
@@ -303,9 +303,9 @@ func @pad_generic_static(%small_input: tensor<58x1xf32>, %large_input: tensor<64
   %d0 = tensor.dim %large_input, %c0 : tensor<64x128xf32>
   %d1 = tensor.dim %large_input, %c1 : tensor<64x128xf32>
 
-  %pad = linalg.pad_tensor %small_input low[4, 60] high[2, 67] {
+  %pad = tensor.pad %small_input low[4, 60] high[2, 67] {
   ^bb0(%arg0: index, %arg1: index):
-    linalg.yield %zero : f32
+    tensor.yield %zero : f32
   } : tensor<58x1xf32> to tensor<64x128xf32>
 
   %fill = linalg.fill(%zero, %large_input) : f32, tensor<64x128xf32> -> tensor<64x128xf32>

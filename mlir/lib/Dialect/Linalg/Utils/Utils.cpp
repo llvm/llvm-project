@@ -23,6 +23,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -328,7 +329,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
   // Exit if `source` is not defined by an ExtractSliceOp.
   auto sliceOp = source.getDefiningOp<tensor::ExtractSliceOp>();
   if (!sliceOp)
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Search the `source` use-def chain for padded LinalgOps.
   Value current = sliceOp.source();
@@ -339,22 +340,22 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     OpResult opResult = current.cast<OpResult>();
     current = linalgOp.getOutputOperand(opResult.getResultNumber())->get();
   }
-  auto padTensorOp = current ? current.getDefiningOp<PadTensorOp>() : nullptr;
+  auto padTensorOp = current ? current.getDefiningOp<tensor::PadOp>() : nullptr;
 
-  // Exit if the search fails to match a PadTensorOp at the end of the matched
+  // Exit if the search fails to match a tensor::PadOp at the end of the matched
   // LinalgOp sequence.
   if (!padTensorOp)
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the padded result type does not match.
   if (sliceOp.source().getType() != type)
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the LinalgOps are not high padded.
   if (llvm::any_of(padTensorOp.getMixedLowPad(), [](OpFoldResult ofr) {
         return getConstantIntValue(ofr) != static_cast<int64_t>(0);
       }))
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if `padTensorOpSliceOp`, which defines the slice used by
   // `padTensorOp`, is rank-reducing.
@@ -362,7 +363,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
       padTensorOp.source().getDefiningOp<tensor::ExtractSliceOp>();
   if (!padTensorOpSliceOp || sliceOp.getMixedSizes().size() !=
                                  padTensorOpSliceOp.getMixedSizes().size())
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
   // of the slice padded by `padTensorOp`.
@@ -372,7 +373,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                      return !isEqualConstantIntOrValue(std::get<0>(it),
                                                        std::get<1>(it));
                    }))
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the padding values do not match.
   Attribute padTensorOpPadAttr, padAttr;
@@ -380,7 +381,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
   if (!padTensorOpPad ||
       !matchPattern(padTensorOpPad, m_Constant(&padTensorOpPadAttr)) ||
       !matchPattern(pad, m_Constant(&padAttr)) || padTensorOpPadAttr != padAttr)
-    return PadTensorOp::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Return the padded result if the padding values and sizes match.
   return sliceOp.source();
