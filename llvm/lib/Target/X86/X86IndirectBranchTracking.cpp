@@ -95,14 +95,45 @@ static bool IsCallReturnTwice(llvm::MachineOperand &MOp) {
   return Attrs.hasFnAttr(Attribute::ReturnsTwice);
 }
 
+// Checks if function should have an ENDBR in its prologue
+static bool needsPrologueENDBR(MachineFunction &MF, const Module *M) {
+  Function &F = MF.getFunction();
+
+  if (F.doesNoCfCheck())
+    return false;
+
+  const X86TargetMachine *TM =
+      static_cast<const X86TargetMachine *>(&MF.getTarget());
+  Metadata *IBTSeal = M->getModuleFlag("ibt-seal");
+
+  switch (TM->getCodeModel()) {
+  // Large code model functions always reachable through indirect calls.
+  case CodeModel::Large:
+    return true;
+  // Only address taken functions in LTO'ed kernel are reachable indirectly.
+  // IBTSeal implies LTO, thus only check if function is address taken.
+  case CodeModel::Kernel:
+    // Check if ibt-seal was enabled (implies LTO is being used).
+    if (IBTSeal) {
+      return F.hasAddressTaken();
+    }
+    // if !IBTSeal, fall into default case.
+    LLVM_FALLTHROUGH;
+  // Address taken or externally linked functions may be reachable.
+  default:
+    return (F.hasAddressTaken() || !F.hasLocalLinkage());
+  }
+}
+
 bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &SubTarget = MF.getSubtarget<X86Subtarget>();
 
+  const Module *M = MF.getMMI().getModule();
   // Check that the cf-protection-branch is enabled.
-  Metadata *isCFProtectionSupported =
-      MF.getMMI().getModule()->getModuleFlag("cf-protection-branch");
-  // NB: We need to enable IBT in jitted code if JIT compiler is CET
-  // enabled.
+  Metadata *isCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
+
+  //  NB: We need to enable IBT in jitted code if JIT compiler is CET
+  //  enabled.
   const X86TargetMachine *TM =
       static_cast<const X86TargetMachine *>(&MF.getTarget());
 #ifdef __CET__
@@ -119,13 +150,8 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   TII = SubTarget.getInstrInfo();
   EndbrOpcode = SubTarget.is64Bit() ? X86::ENDBR64 : X86::ENDBR32;
 
-  // Large code model, non-internal function or function whose address
-  // was taken, can be accessed through indirect calls. Mark the first
-  // BB with ENDBR instruction unless nocf_check attribute is used.
-  if ((TM->getCodeModel() == CodeModel::Large ||
-       MF.getFunction().hasAddressTaken() ||
-       !MF.getFunction().hasLocalLinkage()) &&
-      !MF.getFunction().doesNoCfCheck()) {
+  // If function is reachable indirectly, mark the first BB with ENDBR.
+  if (needsPrologueENDBR(MF, M)) {
     auto MBB = MF.begin();
     Changed |= addENDBR(*MBB, MBB->begin());
   }
