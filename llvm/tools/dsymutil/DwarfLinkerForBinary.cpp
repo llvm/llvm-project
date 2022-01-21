@@ -30,7 +30,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/BinaryFormat/Swift.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
@@ -175,7 +174,7 @@ bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {
         warn(Warning, Context);
       });
-  return Streamer->init(TheTriple, "__DWARF");
+  return Streamer->init(TheTriple);
 }
 
 ErrorOr<const object::ObjectFile &>
@@ -296,77 +295,6 @@ DwarfLinkerForBinary::loadObject(const DebugMapObject &Obj,
   return ErrorOrObj.getError();
 }
 
-static bool binaryHasSwiftReflectionSections(const DebugMap &Map,
-                                             const LinkOptions &Options,
-                                             BinaryHolder &BinHolder) {
-  // If the input binary has swift5 reflection sections, there is no need to
-  // copy them to the .dSYM. Only copy them for binaries where the linker
-  // omitted the reflection metadata.
-  if (!Map.getBinaryPath().empty() &&
-      Options.FileType == OutputFileType::Object) {
-
-    auto ObjectEntry = BinHolder.getObjectEntry(Map.getBinaryPath());
-    // If ObjectEntry or Object has an error, no binary exists, therefore no
-    // reflection sections exist.
-    if (!ObjectEntry) {
-      // Any errors will be diagnosed later in the main loop, ignore them here.
-      llvm::consumeError(ObjectEntry.takeError());
-      return false;
-    }
-
-    auto Object =
-        ObjectEntry->getObjectAs<object::MachOObjectFile>(Map.getTriple());
-    if (!Object) {
-      // Any errors will be diagnosed later in the main loop, ignore them here.
-      llvm::consumeError(Object.takeError());
-      return false;
-    }
-
-    for (auto &Section : Object->sections()) {
-      llvm::Expected<llvm::StringRef> NameOrErr =
-          Object->getSectionName(Section.getRawDataRefImpl());
-      if (!NameOrErr) {
-        llvm::consumeError(NameOrErr.takeError());
-        continue;
-      }
-      NameOrErr->consume_back("__TEXT");
-      if (Object->mapReflectionSectionNameToEnumValue(*NameOrErr) !=
-          llvm::swift::Swift5ReflectionSectionKind::Unknown) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-static void
-copySwiftReflectionMetadata(const llvm::dsymutil::DebugMapObject *Obj,
-                            DwarfStreamer *Streamer) {
-  auto OF =
-      llvm::object::ObjectFile::createObjectFile(Obj->getObjectFilename());
-  if (!OF) {
-    llvm::consumeError(OF.takeError());
-    return;
-  } else if (auto *MO =
-                 dyn_cast<llvm::object::MachOObjectFile>(OF->getBinary())) {
-    for (auto &Section : OF->getBinary()->sections()) {
-      llvm::Expected<llvm::StringRef> NameOrErr =
-          MO->getSectionName(Section.getRawDataRefImpl());
-      if (!NameOrErr) {
-        llvm::consumeError(NameOrErr.takeError());
-        continue;
-      }
-      llvm::Expected<llvm::StringRef> SectionContents = Section.getContents();
-      if (SectionContents) {
-        NameOrErr->consume_back("__TEXT");
-        Streamer->emitSwiftReflectionSection(
-            MO->mapReflectionSectionNameToEnumValue(*NameOrErr),
-            *SectionContents, Section.getAlignment(), Section.getSize());
-      }
-    }
-  }
-}
-
 bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   if (!createStreamer(Map.getTriple(), OutFile))
     return false;
@@ -461,19 +389,8 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
         llvm_unreachable("Unhandled DebugMap object");
       });
   GeneralLinker.setSwiftInterfacesMap(&ParseableSwiftInterfaces);
-  bool ReflectionSectionsPresentInBinary = false;
-  // If there is no output specified, no point in checking the binary for swift5
-  // reflection sections.
-  if (!Options.NoOutput) {
-    ReflectionSectionsPresentInBinary =
-        binaryHasSwiftReflectionSections(Map, Options, BinHolder);
-  }
 
   for (const auto &Obj : Map.objects()) {
-
-    if (!ReflectionSectionsPresentInBinary)
-      copySwiftReflectionMetadata(Obj.get(), Streamer.get());
-
     // N_AST objects (swiftmodule files) should get dumped directly into the
     // appropriate DWARF section.
     if (Obj->getType() == MachO::N_AST) {
@@ -514,6 +431,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
       continue;
     }
+
     if (auto ErrorOrObj = loadObject(*Obj, Map, RL))
       GeneralLinker.addObjectFile(*ErrorOrObj);
     else {
