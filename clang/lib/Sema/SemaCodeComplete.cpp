@@ -5519,9 +5519,10 @@ QualType getApproximateType(const Expr *E) {
                         : getApproximateType(CDSME->getBase());
     if (CDSME->isArrow() && !Base.isNull())
       Base = Base->getPointeeType(); // could handle unique_ptr etc here?
-    auto *RD = Base.isNull()
-                   ? nullptr
-                   : llvm::dyn_cast<CXXRecordDecl>(getAsRecordDecl(Base));
+    auto *RD =
+        Base.isNull()
+            ? nullptr
+            : llvm::dyn_cast_or_null<CXXRecordDecl>(getAsRecordDecl(Base));
     if (RD && RD->isCompleteDefinition()) {
       // Look up member heuristically, including in bases.
       for (const auto *Member : RD->lookupDependentName(
