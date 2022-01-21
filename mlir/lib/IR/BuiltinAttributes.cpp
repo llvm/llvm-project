@@ -1236,8 +1236,7 @@ bool OpaqueElementsAttr::decode(ElementsAttr &result) {
   Dialect *dialect = getContext()->getLoadedDialect(getDialect());
   if (!dialect)
     return true;
-  auto *interface =
-      dialect->getRegisteredInterface<DialectDecodeAttributesInterface>();
+  auto *interface = llvm::dyn_cast<DialectDecodeAttributesInterface>(dialect);
   if (!interface)
     return true;
   return failed(interface->decode(*this, result));

@@ -77,8 +77,7 @@ or transformation without the need to determine the specific dialect subclass:
 
 ```c++
 Dialect *dialect = ...;
-if (DialectInlinerInterface *interface
-      = dialect->getRegisteredInterface<DialectInlinerInterface>()) {
+if (DialectInlinerInterface *interface = dyn_cast<DialectInlinerInterface>(dialect)) {
   // The dialect has provided an implementation of this interface.
   ...
 }

@@ -231,8 +231,8 @@ combineOneSpec(DataLayoutSpecInterface spec,
     // dialect is not loaded for some reason, use the default combinator
     // that conservatively accepts identical entries only.
     entriesForID[id] =
-        dialect ? dialect->getRegisteredInterface<DataLayoutDialectInterface>()
-                      ->combine(entriesForID[id], kvp.second)
+        dialect ? cast<DataLayoutDialectInterface>(dialect)->combine(
+                      entriesForID[id], kvp.second)
                 : DataLayoutDialectInterface::defaultCombine(entriesForID[id],
                                                              kvp.second);
     if (!entriesForID[id])
