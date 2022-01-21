@@ -6316,12 +6316,18 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // Push back extra arguments.
   for (unsigned I = Intr->VAddrStart; I < Intr->GradientStart; I++) {
     if (IsA16 && (Op.getOperand(ArgOffset + I).getValueType() == MVT::f16)) {
+      assert(I == Intr->BiasIndex && "Got unexpected 16-bit extra argument");
       // Special handling of bias when A16 is on. Bias is of type half but
       // occupies full 32-bit.
-      SDValue bias = DAG.getBuildVector( MVT::v2f16, DL, {Op.getOperand(ArgOffset + I), DAG.getUNDEF(MVT::f16)});
-      VAddrs.push_back(bias);
-    } else
+      SDValue Bias = DAG.getBuildVector(
+          MVT::v2f16, DL,
+          {Op.getOperand(ArgOffset + I), DAG.getUNDEF(MVT::f16)});
+      VAddrs.push_back(Bias);
+    } else {
+      assert((!IsA16 || Intr->NumBiasArgs == 0 || I != Intr->BiasIndex) &&
+             "Bias needs to be converted to 16 bit in A16 mode");
       VAddrs.push_back(Op.getOperand(ArgOffset + I));
+    }
   }
 
   if (BaseOpcode->Gradients && !ST->hasG16() && (IsA16 != IsG16)) {

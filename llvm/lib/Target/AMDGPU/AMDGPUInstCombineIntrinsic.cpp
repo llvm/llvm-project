@@ -127,13 +127,19 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
     FloatCoord = Coord->getType()->isFloatingPointTy();
   }
 
-  if (OnlyDerivatives) {
-    if (!ST->hasG16())
-      return None;
-  } else {
-    if (!ST->hasA16())
-      OnlyDerivatives = true; // Only supports G16
+  if (!OnlyDerivatives && !ST->hasA16())
+    OnlyDerivatives = true; // Only supports G16
+
+  // Check if there is a bias parameter and if it can be converted to f16
+  if (!OnlyDerivatives && ImageDimIntr->NumBiasArgs != 0) {
+    Value *Bias = II.getOperand(ImageDimIntr->BiasIndex);
+    if (!canSafelyConvertTo16Bit(*Bias))
+      OnlyDerivatives = true;
   }
+
+  if (OnlyDerivatives && (!ST->hasG16() || ImageDimIntr->GradientStart ==
+                                               ImageDimIntr->CoordStart))
+    return None;
 
   Type *CoordType = FloatCoord ? Type::getHalfTy(II.getContext())
                                : Type::getInt16Ty(II.getContext());
@@ -143,8 +149,13 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
     return None;
 
   ArgTys[ImageDimIntr->GradientTyArg] = CoordType;
-  if (!OnlyDerivatives)
+  if (!OnlyDerivatives) {
     ArgTys[ImageDimIntr->CoordTyArg] = CoordType;
+
+    // Change the bias type
+    if (ImageDimIntr->NumBiasArgs != 0)
+      ArgTys[ImageDimIntr->BiasTyArg] = Type::getHalfTy(II.getContext());
+  }
   Function *I =
       Intrinsic::getDeclaration(II.getModule(), II.getIntrinsicID(), ArgTys);
 
@@ -156,6 +167,12 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
        OperandIndex < EndIndex; OperandIndex++) {
     Args[OperandIndex] =
         convertTo16Bit(*II.getOperand(OperandIndex), IC.Builder);
+  }
+
+  // Convert the bias
+  if (!OnlyDerivatives && ImageDimIntr->NumBiasArgs != 0) {
+    Value *Bias = II.getOperand(ImageDimIntr->BiasIndex);
+    Args[ImageDimIntr->BiasIndex] = convertTo16Bit(*Bias, IC.Builder);
   }
 
   CallInst *NewCall = IC.Builder.CreateCall(I, Args);

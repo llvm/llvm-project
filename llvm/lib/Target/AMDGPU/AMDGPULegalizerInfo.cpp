@@ -4273,15 +4273,18 @@ static void packImage16bitOpsToDwords(MachineIRBuilder &B, MachineInstr &MI,
     if ((I < Intr->GradientStart) ||
         (I >= Intr->GradientStart && I < Intr->CoordStart && !IsG16) ||
         (I >= Intr->CoordStart && !IsA16)) {
-      // Handle any gradient or coordinate operands that should not be packed
       if ((I < Intr->GradientStart) && IsA16 &&
           (B.getMRI()->getType(AddrReg) == S16)) {
+        assert(I == Intr->BiasIndex && "Got unexpected 16-bit extra argument");
         // Special handling of bias when A16 is on. Bias is of type half but
         // occupies full 32-bit.
         PackedAddrs.push_back(
             B.buildBuildVector(V2S16, {AddrReg, B.buildUndef(S16).getReg(0)})
                 .getReg(0));
       } else {
+        assert((!IsA16 || Intr->NumBiasArgs == 0 || I != Intr->BiasIndex) &&
+               "Bias needs to be converted to 16 bit in A16 mode");
+        // Handle any gradient or coordinate operands that should not be packed
         AddrReg = B.buildBitcast(V2S16, AddrReg).getReg(0);
         PackedAddrs.push_back(AddrReg);
       }
