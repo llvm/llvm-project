@@ -164,7 +164,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
 
   const auto *Entry = LocalCache.getCachedEntry(Filename);
   if (Entry && !Entry->needsUpdate(ShouldBeMinimized))
-    return EntryRef(ShouldBeMinimized, *Entry);
+    return EntryRef(ShouldBeMinimized, *Entry).unwrapError();
 
   // FIXME: Handle PCM/PCH files.
   // FIXME: Handle module map files.
@@ -194,7 +194,7 @@ DependencyScanningWorkerFilesystem::getOrCreateFileSystemEntry(
 
   // Store the result in the local cache.
   Entry = &SharedCacheEntry.Value;
-  return EntryRef(ShouldBeMinimized, *Entry);
+  return EntryRef(ShouldBeMinimized, *Entry).unwrapError();
 }
 
 llvm::ErrorOr<llvm::vfs::Status>
@@ -241,16 +241,15 @@ private:
 
 llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> MinimizedVFSFile::create(
     EntryRef Entry, ExcludedPreprocessorDirectiveSkipMapping *PPSkipMappings) {
+  assert(!Entry.isError() && "error");
+
   if (Entry.isDirectory())
     return std::make_error_code(std::errc::is_a_directory);
 
-  llvm::ErrorOr<StringRef> Contents = Entry.getContents();
-  if (!Contents)
-    return Contents.getError();
   auto Result = std::make_unique<MinimizedVFSFile>(
-      llvm::MemoryBuffer::getMemBuffer(*Contents, Entry.getName(),
+      llvm::MemoryBuffer::getMemBuffer(Entry.getContents(), Entry.getName(),
                                        /*RequiresNullTerminator=*/false),
-      *Entry.getStatus());
+      Entry.getStatus());
 
   const auto *EntrySkipMappings = Entry.getPPSkippedRangeMapping();
   if (EntrySkipMappings && !EntrySkipMappings->empty() && PPSkipMappings)
