@@ -80,6 +80,12 @@ LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
   return symbolizeCodeCommon(ModuleName, ModuleOffset);
 }
 
+Expected<DILineInfo>
+LLVMSymbolizer::symbolizeCode(ArrayRef<uint8_t> BuildID,
+                              object::SectionedAddress ModuleOffset) {
+  return symbolizeCodeCommon(BuildID, ModuleOffset);
+}
+
 template <typename T>
 Expected<DIInliningInfo> LLVMSymbolizer::symbolizeInlinedCodeCommon(
     const T &ModuleSpecifier, object::SectionedAddress ModuleOffset) {
@@ -123,6 +129,12 @@ LLVMSymbolizer::symbolizeInlinedCode(const std::string &ModuleName,
   return symbolizeInlinedCodeCommon(ModuleName, ModuleOffset);
 }
 
+Expected<DIInliningInfo>
+LLVMSymbolizer::symbolizeInlinedCode(ArrayRef<uint8_t> BuildID,
+                                     object::SectionedAddress ModuleOffset) {
+  return symbolizeInlinedCodeCommon(BuildID, ModuleOffset);
+}
+
 template <typename T>
 Expected<DIGlobal>
 LLVMSymbolizer::symbolizeDataCommon(const T &ModuleSpecifier,
@@ -162,6 +174,12 @@ LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
   return symbolizeDataCommon(ModuleName, ModuleOffset);
 }
 
+Expected<DIGlobal>
+LLVMSymbolizer::symbolizeData(ArrayRef<uint8_t> BuildID,
+                              object::SectionedAddress ModuleOffset) {
+  return symbolizeDataCommon(BuildID, ModuleOffset);
+}
+
 template <typename T>
 Expected<std::vector<DILocal>>
 LLVMSymbolizer::symbolizeFrameCommon(const T &ModuleSpecifier,
@@ -197,11 +215,18 @@ LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
   return symbolizeFrameCommon(ModuleName, ModuleOffset);
 }
 
+Expected<std::vector<DILocal>>
+LLVMSymbolizer::symbolizeFrame(ArrayRef<uint8_t> BuildID,
+                               object::SectionedAddress ModuleOffset) {
+  return symbolizeFrameCommon(BuildID, ModuleOffset);
+}
+
 void LLVMSymbolizer::flush() {
   ObjectForUBPathAndArch.clear();
   BinaryForPath.clear();
   ObjectPairForPathArch.clear();
   Modules.clear();
+  BuildIDPaths.clear();
 }
 
 namespace {
@@ -367,7 +392,7 @@ ObjectFile *LLVMSymbolizer::lookUpBuildIDObject(const std::string &Path,
   if (BuildID->size() < 2)
     return nullptr;
   std::string DebugBinaryPath;
-  if (!findDebugBinary(*BuildID, DebugBinaryPath))
+  if (!getOrFindDebugBinary(*BuildID, DebugBinaryPath))
     return nullptr;
   auto DbgObjOrErr = getOrCreateObject(DebugBinaryPath, ArchName);
   if (!DbgObjOrErr) {
@@ -421,12 +446,29 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   return false;
 }
 
-bool LLVMSymbolizer::findDebugBinary(const ArrayRef<uint8_t> BuildID,
-                                     std::string &Result) {
+static StringRef getBuildIDStr(ArrayRef<uint8_t> BuildID) {
+  return StringRef(reinterpret_cast<const char *>(BuildID.data()),
+                   BuildID.size());
+}
+
+bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
+                                          std::string &Result) {
+  StringRef BuildIDStr = getBuildIDStr(BuildID);
+  auto I = BuildIDPaths.find(BuildIDStr);
+  if (I != BuildIDPaths.end()) {
+    Result = I->second;
+    return true;
+  }
+  auto recordPath = [&](StringRef Path) {
+    Result = Path.str();
+    auto InsertResult = BuildIDPaths.insert({BuildIDStr, Result});
+    assert(InsertResult.second);
+  };
+
   Optional<std::string> Path;
   Path = LocalDIFetcher(Opts.DebugFileDirectory).fetchBuildID(BuildID);
   if (Path) {
-    Result = std::move(*Path);
+    recordPath(*Path);
     return true;
   }
 
@@ -434,7 +476,7 @@ bool LLVMSymbolizer::findDebugBinary(const ArrayRef<uint8_t> BuildID,
   for (const std::unique_ptr<DIFetcher> &Fetcher : DIFetchers) {
     Path = Fetcher->fetchBuildID(BuildID);
     if (Path) {
-      Result = std::move(*Path);
+      recordPath(*Path);
       return true;
     }
   }
@@ -595,6 +637,17 @@ LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
   std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
   // FIXME: handle COFF object with PDB info to use PDBContext
   return createModuleInfo(&Obj, std::move(Context), ObjName);
+}
+
+Expected<SymbolizableModule *>
+LLVMSymbolizer::getOrCreateModuleInfo(ArrayRef<uint8_t> BuildID) {
+  std::string Path;
+  if (!getOrFindDebugBinary(BuildID, Path)) {
+    return createStringError(errc::no_such_file_or_directory,
+                             Twine("could not find build ID '") +
+                                 toHex(BuildID) + "'");
+  }
+  return getOrCreateModuleInfo(Path);
 }
 
 namespace {
