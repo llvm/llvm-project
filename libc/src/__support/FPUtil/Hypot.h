@@ -144,9 +144,7 @@ static inline T hypot(T x, T y) {
   if ((x_bits.get_unbiased_exponent() >=
        y_bits.get_unbiased_exponent() + MantissaWidth<T>::VALUE + 2) ||
       (y == 0)) {
-    // Check if the rounding mode is FE_UPWARD, will need -frounding-math so
-    // that the compiler does not optimize it away.
-    if ((y != 0) && (0x1p0f + 0x1p-24f != 0x1p0f)) {
+    if ((y != 0) && (get_round() == FE_UPWARD)) {
       UIntType out_bits = FPBits_t(abs(x)).uintval();
       return T(FPBits_t(++out_bits));
     }
@@ -154,9 +152,7 @@ static inline T hypot(T x, T y) {
   } else if ((y_bits.get_unbiased_exponent() >=
               x_bits.get_unbiased_exponent() + MantissaWidth<T>::VALUE + 2) ||
              (x == 0)) {
-    // Check if the rounding mode is FE_UPWARD, will need -frounding-math so
-    // that the compiler does not optimize it away.
-    if ((x != 0) && (0x1p0f + 0x1p-24f != 0x1p0f)) {
+    if ((x != 0) && (get_round() == FE_UPWARD)) {
       UIntType out_bits = FPBits_t(abs(y)).uintval();
       return T(FPBits_t(++out_bits));
     }
