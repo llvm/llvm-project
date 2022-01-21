@@ -86,6 +86,8 @@ public:
 private:
   void UpdateBoundary();
 
+  llvm::StringRef m_pretty_func;
+
   /// Whether this function call was the one crossing the API boundary.
   bool m_local_boundary = false;
 };
