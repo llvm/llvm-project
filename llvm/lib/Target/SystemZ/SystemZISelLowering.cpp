@@ -318,8 +318,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
   setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, PtrVT, Custom);
 
-  // Use custom expanders so that we can force the function to use
-  // a frame pointer.
   setOperationAction(ISD::STACKSAVE,    MVT::Other, Custom);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Custom);
 
@@ -4194,7 +4192,6 @@ SDValue SystemZTargetLowering::lowerSTACKSAVE(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
   auto *Regs = Subtarget->getSpecialRegisters();
-  MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     report_fatal_error("Variable-sized stack allocations are not supported "
                        "in GHC calling convention");
@@ -4207,7 +4204,6 @@ SDValue SystemZTargetLowering::lowerSTACKRESTORE(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   const SystemZSubtarget *Subtarget = &MF.getSubtarget<SystemZSubtarget>();
   auto *Regs = Subtarget->getSpecialRegisters();
-  MF.getInfo<SystemZMachineFunctionInfo>()->setManipulatesSP(true);
   bool StoreBackchain = MF.getFunction().hasFnAttribute("backchain");
 
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
