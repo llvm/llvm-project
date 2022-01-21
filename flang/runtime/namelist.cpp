@@ -322,6 +322,29 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
+// Advance to the terminal '/' of a namelist group.
+static void SkipNamelistGroup(IoStatementState &io) {
+  while (auto ch{io.GetNextNonBlank()}) {
+    io.HandleRelativePosition(1);
+    if (*ch == '/') {
+      break;
+    } else if (*ch == '\'' || *ch == '"') {
+      // Skip quoted character literal
+      char32_t quote{*ch};
+      while (true) {
+        if ((ch = io.GetCurrentChar())) {
+          io.HandleRelativePosition(1);
+          if (*ch == quote) {
+            break;
+          }
+        } else if (!io.AdvanceRecord()) {
+          return;
+        }
+      }
+    }
+  }
+}
+
 bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Input>("InputNamelist");
@@ -330,26 +353,35 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   auto *listInput{io.get_if<ListDirectedStatementState<Direction::Input>>()};
   RUNTIME_CHECK(handler, listInput != nullptr);
-  // Check the group header
+  // Find this namelist group's header in the input
   io.BeginReadingRecord();
-  std::optional<char32_t> next{io.GetNextNonBlank()};
-  if (!next || *next != '&') {
-    handler.SignalError(
-        "NAMELIST input group does not begin with '&' (at '%lc')", *next);
-    return false;
-  }
-  io.HandleRelativePosition(1);
+  std::optional<char32_t> next;
   char name[nameBufferSize];
-  if (!GetLowerCaseName(io, name, sizeof name)) {
-    handler.SignalError("NAMELIST input group has no name");
-    return false;
-  }
   RUNTIME_CHECK(handler, group.groupName != nullptr);
-  if (std::strcmp(group.groupName, name) != 0) {
-    handler.SignalError(
-        "NAMELIST input group name '%s' is not the expected '%s'", name,
-        group.groupName);
-    return false;
+  while (true) {
+    next = io.GetNextNonBlank();
+    while (next && *next != '&') {
+      // Extension: comment lines without ! before namelist groups
+      if (!io.AdvanceRecord()) {
+        next.reset();
+      } else {
+        next = io.GetNextNonBlank();
+      }
+    }
+    if (!next || *next != '&') {
+      handler.SignalError(
+          "NAMELIST input group does not begin with '&' (at '%lc')", *next);
+      return false;
+    }
+    io.HandleRelativePosition(1);
+    if (!GetLowerCaseName(io, name, sizeof name)) {
+      handler.SignalError("NAMELIST input group has no name");
+      return false;
+    }
+    if (std::strcmp(group.groupName, name) == 0) {
+      break; // found it
+    }
+    SkipNamelistGroup(io);
   }
   // Read the group's items
   while (true) {
