@@ -376,3 +376,65 @@ define void @negative_scatter_v4i16_no_uniform_vals_no_uniform_ptrs_all_active_m
 ; Function Attrs:
 declare void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16>, <4 x i16*>, i32 immarg, <4 x i1>)
 declare void @llvm.masked.scatter.nxv4i16.nxv4p0i16(<vscale x 4 x i16>, <vscale x 4 x i16*>, i32 immarg, <vscale x 4 x i1>)
+
+; Test gathers that can be simplified to scalar load + splat
+
+;; Splat address and all active mask
+define <vscale x 2 x i64> @gather_nxv2i64_uniform_ptrs_all_active_mask(i64* %src) {
+; CHECK-LABEL: @gather_nxv2i64_uniform_ptrs_all_active_mask(
+; CHECK-NEXT:    [[LOAD_SCALAR:%.*]] = load i64, i64* [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[LOAD_SCALAR]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[BROADCAST_SPLAT2]]
+;
+  %broadcast.splatinsert = insertelement <vscale x 2 x i64*> poison, i64 *%src, i32 0
+  %broadcast.splat = shufflevector <vscale x 2 x i64*> %broadcast.splatinsert, <vscale x 2 x i64*> poison, <vscale x 2 x i32> zeroinitializer
+  %res = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x i64*> %broadcast.splat, i32 8, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i32 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i64> undef)
+  ret <vscale x 2 x i64> %res
+}
+
+define <2 x i64> @gather_v2i64_uniform_ptrs_all_active_mask(i64* %src) {
+; CHECK-LABEL: @gather_v2i64_uniform_ptrs_all_active_mask(
+; CHECK-NEXT:    [[LOAD_SCALAR:%.*]] = load i64, i64* [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[LOAD_SCALAR]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i64> [[BROADCAST_SPLAT2]]
+;
+  %broadcast.splatinsert = insertelement <2 x i64*> poison, i64 *%src, i32 0
+  %broadcast.splat = shufflevector <2 x i64*> %broadcast.splatinsert, <2 x i64*> poison, <2 x i32> zeroinitializer
+  %res = call <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*> %broadcast.splat, i32 8, <2 x i1> <i1 1, i1 1>, <2 x i64> undef)
+  ret <2 x i64> %res
+}
+
+; Negative gather tests
+
+;; Vector of pointers is not a splat.
+define <2 x i64> @negative_gather_v2i64_non_uniform_ptrs_all_active_mask(<2 x i64*> %inVal, i64* %src ) {
+; CHECK-LABEL: @negative_gather_v2i64_non_uniform_ptrs_all_active_mask(
+; CHECK-NEXT:    [[INSERT_VALUE:%.*]] = insertelement <2 x i64*> [[INVAL:%.*]], i64* [[SRC:%.*]], i64 1
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> [[INSERT_VALUE]], i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> undef)
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %insert.value = insertelement <2 x i64*> %inVal, i64 *%src, i32 1
+  %res = call <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*> %insert.value, i32 8, <2 x i1><i1 1, i1 1>, <2 x i64> undef)
+  ret <2 x i64> %res
+}
+
+;; Unknown mask value
+define <2 x i64> @negative_gather_v2i64_uniform_ptrs_no_all_active_mask(i64* %src, <2 x i1> %mask) {
+; CHECK-LABEL: @negative_gather_v2i64_uniform_ptrs_no_all_active_mask(
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64*> poison, i64* [[SRC:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64*> [[BROADCAST_SPLATINSERT]], <2 x i64*> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> [[BROADCAST_SPLAT]], i32 8, <2 x i1> [[MASK:%.*]], <2 x i64> undef)
+; CHECK-NEXT:    ret <2 x i64> [[RES]]
+;
+  %broadcast.splatinsert = insertelement <2 x i64*> poison, i64 *%src, i32 0
+  %broadcast.splat = shufflevector <2 x i64*> %broadcast.splatinsert, <2 x i64*> poison, <2 x i32> zeroinitializer
+  %res = call <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*> %broadcast.splat, i32 8, <2 x i1> %mask, <2 x i64> undef)
+  ret <2 x i64> %res
+}
+
+; Function Attrs:
+declare <vscale x 2 x i64> @llvm.masked.gather.nxv2i64(<vscale x 2 x i64*>, i32, <vscale x 2 x i1>, <vscale x 2 x i64>)
+declare <2 x i64> @llvm.masked.gather.v2i64(<2 x i64*>, i32, <2 x i1>, <2 x i64>)
+
