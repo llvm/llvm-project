@@ -14285,21 +14285,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
       return Builder.CreateCall(F, Ops[0]);
     }
   }
-  case X86::BI__builtin_ia32_pabsb128:
-  case X86::BI__builtin_ia32_pabsw128:
-  case X86::BI__builtin_ia32_pabsd128:
-  case X86::BI__builtin_ia32_pabsb256:
-  case X86::BI__builtin_ia32_pabsw256:
-  case X86::BI__builtin_ia32_pabsd256:
-  case X86::BI__builtin_ia32_pabsq128:
-  case X86::BI__builtin_ia32_pabsq256:
-  case X86::BI__builtin_ia32_pabsb512:
-  case X86::BI__builtin_ia32_pabsw512:
-  case X86::BI__builtin_ia32_pabsd512:
-  case X86::BI__builtin_ia32_pabsq512: {
-    Function *F = CGM.getIntrinsic(Intrinsic::abs, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
-  }
   case X86::BI__builtin_ia32_pmaxsb128:
   case X86::BI__builtin_ia32_pmaxsw128:
   case X86::BI__builtin_ia32_pmaxsd128:
