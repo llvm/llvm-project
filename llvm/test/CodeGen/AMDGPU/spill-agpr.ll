@@ -1,37 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX908 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A %s
 
-; GCN-LABEL: {{^}}max_24regs_32a_used:
-; GCN-NOT:     s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
-; GCN-NOT:     s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
-; GCN-DAG:     v_mfma_f32_16x16x1f32
-; GCN-DAG:     v_mfma_f32_16x16x1f32
-; GCN-DAG:     v_accvgpr_read_b32
-; GCN-NOT:     buffer_store_dword
-; GCN-NOT:     buffer_load_dword
-; GFX908-NOT:  v_accvgpr_write_b32
-; GFX90A:      v_accvgpr_write_b32
-; GCN:         ScratchSize: 0
-define amdgpu_kernel void @max_24regs_32a_used(<16 x float> addrspace(1)* %arg, float addrspace(1)* %out) #0 {
-bb:
-  %in.1 = load <16 x float>, <16 x float> addrspace(1)* %arg
-  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float 1.0, float 1.0, <16 x float> %in.1, i32 0, i32 0, i32 0)
-  %mai.2 = tail call <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float 1.0, float 1.0, <16 x float> %mai.1, i32 0, i32 0, i32 0)
-  %elt1 = extractelement <16 x float> %mai.2, i32 0
-  %elt2 = extractelement <16 x float> %mai.1, i32 15
-  %elt3 = extractelement <16 x float> %mai.1, i32 14
-  %elt4 = extractelement <16 x float> %mai.2, i32 1
-  store float %elt1, float addrspace(1)* %out
-  %gep1 = getelementptr float, float addrspace(1)* %out, i64 1
-  store float %elt2, float addrspace(1)* %gep1
-  %gep2 = getelementptr float, float addrspace(1)* %out, i64 2
-  store float %elt3, float addrspace(1)* %gep2
-  %gep3 = getelementptr float, float addrspace(1)* %out, i64 3
-  store float %elt4, float addrspace(1)* %gep3
-
-  ret void
-}
-
 ; GCN-LABEL: {{^}}max_12regs_13a_used:
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
@@ -152,7 +121,6 @@ declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>
 declare <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float, float, <4 x float>, i32, i32, i32)
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 
-attributes #0 = { nounwind "amdgpu-num-vgpr"="24" }
 attributes #1 = { nounwind "amdgpu-num-vgpr"="10" }
 attributes #2 = { nounwind "amdgpu-num-vgpr"="12" }
 attributes #3 = { nounwind "amdgpu-num-vgpr"="32" }

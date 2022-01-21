@@ -300,6 +300,13 @@ static bool updateOperand(FoldCandidate &Fold,
   assert(!Fold.needsShrink() && "not handled");
 
   if (Fold.isImm()) {
+    if (Old.isTied()) {
+      int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(MI->getOpcode());
+      if (NewMFMAOpc == -1)
+        return false;
+      MI->setDesc(TII.get(NewMFMAOpc));
+      MI->untieRegOperand(0);
+    }
     Old.ChangeToImmediate(Fold.ImmToFold);
     return true;
   }

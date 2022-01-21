@@ -3198,10 +3198,14 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                Opc == AMDGPU::V_FMAC_F16_e32 || Opc == AMDGPU::V_FMAC_F16_e64 ||
                Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
   bool IsF64 = Opc == AMDGPU::V_FMAC_F64_e32 || Opc == AMDGPU::V_FMAC_F64_e64;
+  int NewMFMAOpc = -1;
 
   switch (Opc) {
   default:
-    return nullptr;
+    NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
+    if (NewMFMAOpc == -1)
+      return nullptr;
+    break;
   case AMDGPU::V_MAC_F16_e64:
   case AMDGPU::V_FMAC_F16_e64:
     IsF16 = true;
@@ -3230,6 +3234,19 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   }
   }
 
+  MachineInstrBuilder MIB;
+  MachineBasicBlock &MBB = *MI.getParent();
+
+  if (NewMFMAOpc != -1) {
+    MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+      MIB.add(MI.getOperand(I));
+    updateLiveVariables(LV, MI, *MIB);
+    if (LIS)
+      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+    return MIB;
+  }
+
   const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::vdst);
   const MachineOperand *Src0 = getNamedOperand(MI, AMDGPU::OpName::src0);
   const MachineOperand *Src0Mods =
@@ -3240,8 +3257,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
   const MachineOperand *Clamp = getNamedOperand(MI, AMDGPU::OpName::clamp);
   const MachineOperand *Omod = getNamedOperand(MI, AMDGPU::OpName::omod);
-  MachineInstrBuilder MIB;
-  MachineBasicBlock &MBB = *MI.getParent();
 
   if (!Src0Mods && !Src1Mods && !Clamp && !Omod && !IsF64 &&
       // If we have an SGPR input, we will violate the constant bus restriction.
@@ -7748,6 +7763,12 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
       Gen = SIEncodingFamily::SDWA10;
       break;
     }
+  }
+
+  if (isMAI(Opcode)) {
+    int MFMAOp = AMDGPU::getMFMAEarlyClobberOp(Opcode);
+    if (MFMAOp != -1)
+      Opcode = MFMAOp;
   }
 
   int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);

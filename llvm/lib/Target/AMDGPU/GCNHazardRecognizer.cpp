@@ -95,7 +95,9 @@ static bool isDGEMM(unsigned Opcode) {
   return Opcode == AMDGPU::V_MFMA_F64_4X4X4F64_e64 ||
          Opcode == AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64 ||
          Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_e64 ||
-         Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64;
+         Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64 ||
+         Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64 ||
+         Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64;
 }
 
 static bool isXDL(const GCNSubtarget &ST, const MachineInstr &MI) {
@@ -1477,6 +1479,8 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
         switch (Opc1) {
         case AMDGPU::V_MFMA_F64_16X16X4F64_e64:
         case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
+        case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
+        case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
           if (!isXDL(ST, *MI))
             NeedWaitStates = DMFMA16x16WritesVGPROverlappedSrcCWaitStates;
           break;
@@ -1509,6 +1513,8 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
       switch (Opc1) {
       case AMDGPU::V_MFMA_F64_16X16X4F64_e64:
       case AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64:
+      case AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64:
+      case AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
         NeedWaitStates = DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates;
         break;
       case AMDGPU::V_MFMA_F64_4X4X4F64_e64:
