@@ -219,7 +219,7 @@ declare x86_fp80 @acoshl(x86_fp80)
 ; CHECK: declare x86_fp80 @acosl(x86_fp80) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
 declare x86_fp80 @acosl(x86_fp80)
 
-; CHECK: declare noalias noundef i8* @aligned_alloc(i64 noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare noalias noundef i8* @aligned_alloc(i64 allocalign noundef, i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i8* @aligned_alloc(i64, i64)
 
 ; CHECK: declare double @asin(double) [[NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]]
@@ -656,7 +656,7 @@ declare i32 @lstat64(i8*, %opaque*)
 ; CHECK: declare noalias noundef i8* @malloc(i64 noundef) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare i8* @malloc(i64)
 
-; CHECK-LINUX: declare noalias noundef i8* @memalign(i64, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK-LINUX: declare noalias noundef i8* @memalign(i64 allocalign, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare i8* @memalign(i64, i64)
 
 ; CHECK: declare i8* @memccpy(i8* noalias writeonly, i8* noalias nocapture readonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
