@@ -882,3 +882,95 @@ define float @fsub_fadd_fsub_reassoc_use2(float %w, float %x, float %y, float %z
   %s2 = fsub fast float %a, %z
   ret float %s2
 }
+
+define float @fmul_c1(float %x, float %y) {
+; CHECK-LABEL: @fmul_c1(
+; CHECK-NEXT:    [[M:%.*]] = fmul float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fsub float [[Y:%.*]], [[M]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fmul float %x, 42.0
+  %r = fsub float %y, %m
+  ret float %r
+}
+
+define <2 x float> @fmul_c1_fmf(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fmul_c1_fmf(
+; CHECK-NEXT:    [[M:%.*]] = fmul ninf nsz <2 x float> [[X:%.*]], <float 4.200000e+01, float 5.000000e-01>
+; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> [[Y:%.*]], [[M]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %m = fmul ninf nsz <2 x float> %x, <float 42.0, float 0.5>
+  %r = fsub <2 x float> %y, %m
+  ret <2 x float> %r
+}
+
+define float @fmul_c1_use(float %x, float %y) {
+; CHECK-LABEL: @fmul_c1_use(
+; CHECK-NEXT:    [[M:%.*]] = fmul float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    call void @use(float [[M]])
+; CHECK-NEXT:    [[R:%.*]] = fsub float [[Y:%.*]], [[M]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fmul float %x, 42.0
+  call void @use(float %m)
+  %r = fsub float %y, %m
+  ret float %r
+}
+
+define half @fdiv_c0(half %x, half %y) {
+; CHECK-LABEL: @fdiv_c0(
+; CHECK-NEXT:    [[M:%.*]] = fdiv half 0xH4700, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub half [[Y:%.*]], [[M]]
+; CHECK-NEXT:    ret half [[R]]
+;
+  %m = fdiv half 7.0, %x
+  %r = fsub half %y, %m
+  ret half %r
+}
+
+define double @fdiv_c0_fmf(double %x, double %y) {
+; CHECK-LABEL: @fdiv_c0_fmf(
+; CHECK-NEXT:    [[M:%.*]] = fdiv double 7.000000e+00, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nnan double [[Y:%.*]], [[M]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %m = fdiv double 7.0, %x
+  %r = fsub reassoc nnan double %y, %m
+  ret double %r
+}
+
+define <2 x float> @fdiv_c1(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fdiv_c1(
+; CHECK-NEXT:    [[M:%.*]] = fdiv <2 x float> [[X:%.*]], <float 4.270000e+02, float -0.000000e+00>
+; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> [[Y:%.*]], [[M]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %m = fdiv <2 x float> %x, <float 427.0, float -0.0>
+  %r = fsub <2 x float> %y, %m
+  ret <2 x float> %r
+}
+
+define float @fdiv_c1_fmf(float %x, float %y) {
+; CHECK-LABEL: @fdiv_c1_fmf(
+; CHECK-NEXT:    [[M:%.*]] = fdiv nnan float [[X:%.*]], 4.270000e+02
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc float [[Y:%.*]], [[M]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %m = fdiv nnan float %x, 427.0
+  %r = fsub reassoc float %y, %m
+  ret float %r
+}
+
+define <2 x float> @fdiv_c1_use(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fdiv_c1_use(
+; CHECK-NEXT:    [[M:%.*]] = fdiv <2 x float> [[X:%.*]], <float 4.270000e+02, float -0.000000e+00>
+; CHECK-NEXT:    call void @use_vec(<2 x float> [[M]])
+; CHECK-NEXT:    [[R:%.*]] = fsub <2 x float> [[Y:%.*]], [[M]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %m = fdiv <2 x float> %x, <float 427.0, float -0.0>
+  call void @use_vec(<2 x float> %m)
+  %r = fsub <2 x float> %y, %m
+  ret <2 x float> %r
+}

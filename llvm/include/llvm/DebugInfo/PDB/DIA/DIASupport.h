@@ -27,7 +27,14 @@
 
 // DIA headers must come after windows headers.
 #include <cvconst.h>
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
 #include <dia2.h>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #include <diacreate.h>
 
 #endif // LLVM_DEBUGINFO_PDB_DIA_DIASUPPORT_H

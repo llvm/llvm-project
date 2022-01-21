@@ -10,12 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Parser.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -65,12 +65,12 @@ constexpr const ::llvm::StringLiteral
 /// Attribute name used to mark the bufferization layout for region
 /// arguments during linalg comprehensive bufferization.
 constexpr const ::llvm::StringLiteral
-    comprehensive_bufferize::BufferizableOpInterface::kBufferLayoutAttrName;
+    bufferization::BufferizableOpInterface::kBufferLayoutAttrName;
 
 /// Attribute name used to mark region arguments that can be bufferized
 /// in-place during linalg comprehensive bufferization.
 constexpr const ::llvm::StringLiteral
-    comprehensive_bufferize::BufferizableOpInterface::kInplaceableAttrName;
+    bufferization::BufferizableOpInterface::kInplaceableAttrName;
 
 /// Trait to check if T provides a `regionBuilder` method.
 template <typename T, typename... Args>
@@ -125,7 +125,7 @@ void mlir::linalg::LinalgDialect::initialize() {
 
 LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
                                                       NamedAttribute attr) {
-  using comprehensive_bufferize::BufferizableOpInterface;
+  using bufferization::BufferizableOpInterface;
 
   if (attr.getName() == BufferizableOpInterface::kInplaceableAttrName) {
     if (!attr.getValue().isa<BoolAttr>()) {
@@ -133,7 +133,7 @@ LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
              << "'" << BufferizableOpInterface::kInplaceableAttrName
              << "' is expected to be a boolean attribute";
     }
-    if (!op->hasTrait<OpTrait::FunctionLike>())
+    if (!isa<FunctionOpInterface>(op))
       return op->emitError() << "expected " << attr.getName()
                              << " to be used on function-like operations";
     return success();
@@ -144,7 +144,7 @@ LogicalResult LinalgDialect::verifyOperationAttribute(Operation *op,
              << "'" << BufferizableOpInterface::kBufferLayoutAttrName
              << "' is expected to be a affine map attribute";
     }
-    if (!op->hasTrait<OpTrait::FunctionLike>())
+    if (!isa<FunctionOpInterface>(op))
       return op->emitError() << "expected " << attr.getName()
                              << " to be used on function-like operations";
     return success();

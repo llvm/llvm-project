@@ -468,8 +468,8 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, bool EmitColdPart,
       // Prepare to tag this location with a label if we need to keep track of
       // the location of calls/returns for BOLT address translation maps
       if (!EmitCodeOnly && BF.requiresAddressTranslation() &&
-          BC.MIB->hasAnnotation(Instr, "Offset")) {
-        const auto Offset = BC.MIB->getAnnotationAs<uint32_t>(Instr, "Offset");
+          BC.MIB->getOffset(Instr)) {
+        const uint32_t Offset = *BC.MIB->getOffset(Instr);
         MCSymbol *LocSym = BC.Ctx->createTempSymbol();
         Streamer.emitLabel(LocSym);
         BB->getLocSyms().emplace_back(Offset, LocSym);

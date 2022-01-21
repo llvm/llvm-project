@@ -15,7 +15,7 @@ func @generic_op_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xf32>,
      iterator_types = ["parallel", "parallel", "parallel"]}
        ins(%0, %arg1, %arg2 : tensor<?x?x?xf32>, tensor<?x?x?xf32>, f32)
        outs(%0 : tensor<?x?x?xf32>) {
-    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32, %s: f32):       // no predecessors
+    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32, %s: f32):       
       %1 = arith.mulf %arg3, %arg4 : f32
       %2 = arith.addf %1, %arg5 : f32
       linalg.yield %2 : f32
@@ -58,7 +58,7 @@ func @generic_op_reshape_consumer_fusion(%arg0 : tensor<?x?xf32>,
      iterator_types = ["parallel", "parallel"]}
        ins(%arg0, %arg1, %arg2 : tensor<?x?xf32>, tensor<?x?xf32>, f32)
        outs(%arg0 : tensor<?x?xf32>) {
-    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32, %s: f32):       // no predecessors
+    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32, %s: f32):       
       %1 = arith.mulf %arg3, %arg4 : f32
       %2 = arith.addf %1, %arg5 : f32
       linalg.yield %2 : f32
@@ -143,7 +143,7 @@ func @generic_op_reshape_consumer_static(%arg0: tensor<264x4xf32>)
      iterator_types = ["parallel", "parallel"]}
        ins(%arg0, %cst : tensor<264x4xf32>, tensor<264x4xf32>)
        outs(%0 : tensor<264x4xf32>) {
-    ^bb0(%arg1: f32, %arg2: f32, %s: f32):  // no predecessors
+    ^bb0(%arg1: f32, %arg2: f32, %s: f32):  
       %2 = arith.mulf %arg1, %arg2 : f32
       linalg.yield %2 : f32
     } -> tensor<264x4xf32>
@@ -230,7 +230,7 @@ func @indexed_producer_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
      iterator_types = ["parallel", "parallel"]}
        ins(%arg0, %arg1 : tensor<?x?xi32>, tensor<?x?xi32>)
       outs(%arg0 : tensor<?x?xi32>) {
-    ^bb0(%arg3: i32, %arg4: i32, %s: i32):       // no predecessors
+    ^bb0(%arg3: i32, %arg4: i32, %s: i32):       
       %idx0 = linalg.index 0 : index
       %idx1 = linalg.index 1 : index
       %1 = arith.muli %arg3, %arg4 : i32
@@ -345,7 +345,7 @@ func @reshape_as_producer_projected_permutation(
      iterator_types = ["parallel", "parallel", "parallel"]}
      ins(%0 : tensor<264x?xi32>)
     outs(%shape : tensor<264x?x4xi32>) {
-  ^bb0(%arg1: i32, %s: i32):  // no predecessors
+  ^bb0(%arg1: i32, %s: i32):  
     %idx0 = linalg.index 0 : index
     %idx1 = linalg.index 1 : index
     %idx2 = linalg.index 2 : index
@@ -401,7 +401,7 @@ func @generic_op_reshape_consumer_fusion_projected(%arg0 : tensor<?x?xf32>,
      iterator_types = ["parallel", "parallel"]}
        ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
        outs(%arg0 : tensor<?x?xf32>) {
-    ^bb0(%arg3: f32, %arg4: f32, %s: f32):       // no predecessors
+    ^bb0(%arg3: f32, %arg4: f32, %s: f32):       
       %1 = arith.mulf %arg3, %arg4 : f32
       linalg.yield %1 : f32
   } -> tensor<?x?xf32>
@@ -439,7 +439,7 @@ func @unit_dim_reshape_expansion(%arg0 : tensor<1x5xf32>) -> tensor<5x5xf32> {
                       affine_map<(d0, d1) -> (d0, d1)>],
      iterator_types = ["parallel", "parallel"]}
     ins(%0 : tensor<5xf32>) outs(%1 : tensor<5x5xf32>) {
-  ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+  ^bb0(%arg2: f32, %arg3: f32):  
     linalg.yield %arg2 : f32
   } -> tensor<5x5xf32>
   return %2 : tensor<5x5xf32>
@@ -458,7 +458,7 @@ func @unit_dim_reshape_collapse(%arg0 : tensor<5xf32>) -> tensor<5x1x5xf32> {
                       affine_map<(d0, d1) -> (d0, d1)>],
      iterator_types = ["parallel", "parallel"]}
     ins(%arg0 : tensor<5xf32>) outs(%0 : tensor<5x5xf32>) {
-  ^bb0(%arg2: f32, %arg3: f32):  // no predecessors
+  ^bb0(%arg2: f32, %arg3: f32):  
     linalg.yield %arg2 : f32
   } -> tensor<5x5xf32>
   %2 = tensor.expand_shape %1 [[0, 1], [2]]
@@ -487,7 +487,7 @@ func @unit_dim_reshape_expansion_full
      iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%0, %arg1 : tensor<?x2x4xf32>, tensor<?x2x4xf32>)
     outs(%2 : tensor<?x2x4xf32>) {
-  ^bb0(%arg2: f32, %arg3: f32, %arg4: f32):  // no predecessors
+  ^bb0(%arg2: f32, %arg3: f32, %arg4: f32):  
     %4 = arith.mulf %arg2, %arg3 : f32
     linalg.yield %4 : f32
   } -> tensor<?x2x4xf32>
@@ -529,4 +529,31 @@ func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
 //      CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %[[ARG0]]
 //      CHECK:   %[[GENERIC:.+]] = linalg.generic
 // CHECK-SAME:       ins(%[[RESHAPE]] : tensor<?xf32>)
+//      CHECK:   return %[[GENERIC]]
+
+// -----
+
+func @no_fuse_mismatched_dynamism(%arg0: tensor<1x1xi64>, %arg1: tensor<?xi64>) -> tensor<1xi64> {
+  %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<1x1xi64> into tensor<1xi64>
+  %1 = linalg.init_tensor [1] : tensor<1xi64>
+  %2 = linalg.generic
+    {indexing_maps = [affine_map<(d0) -> (d0)>,
+                      affine_map<(d0) -> (d0)>,
+                      affine_map<(d0) -> (d0)>],
+     iterator_types = ["parallel"]}
+    ins(%0, %arg1 : tensor<1xi64>, tensor<?xi64>)
+    outs(%1 : tensor<1xi64>) {
+  ^bb0(%arg4: i64, %arg5: i64, %arg6: i64):  
+    %3 = arith.addi %arg4, %arg5 : i64
+    linalg.yield %3 : i64
+  } -> tensor<1xi64>
+  return %2 : tensor<1xi64>
+}
+
+//      CHECK: func @no_fuse_mismatched_dynamism
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<1x1xi64>
+// CHECK-SAME:     %[[ARG1:.+]]: tensor<?xi64>
+//      CHECK:   %[[RESHAPE:.+]] = tensor.collapse_shape %[[ARG0]]
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:       ins(%[[RESHAPE]], %[[ARG1]] : tensor<1xi64>, tensor<?xi64>)
 //      CHECK:   return %[[GENERIC]]

@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-#ifdef TEST_COMPILER_C1XX
+#ifdef TEST_COMPILER_MSVC
 #pragma warning(disable: 4244) // conversion from 'const double' to 'int', possible loss of data
 #endif
 

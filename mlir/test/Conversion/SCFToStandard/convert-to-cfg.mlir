@@ -473,7 +473,7 @@ func @while_values(%arg0: i32, %arg1: f32) {
     scf.condition(%0) %2, %3 : i64, f64
   } do {
   // CHECK:   ^[[AFTER]](%[[ARG4:.*]]: i64, %[[ARG5:.*]]: f64):
-  ^bb0(%arg2: i64, %arg3: f64):  // no predecessors
+  ^bb0(%arg2: i64, %arg3: f64):  
     // CHECK:   br ^[[BEFORE]](%{{.*}}, %{{.*}} : i32, f32)
     scf.yield %c0_i32, %cst : i32, f32
   }

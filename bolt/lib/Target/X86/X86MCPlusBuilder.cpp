@@ -2020,7 +2020,7 @@ public:
 
     Inst.setOpcode(NewOpcode);
     removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
-    removeAnnotation(Inst, "Offset");
+    clearOffset(Inst);
     return true;
   }
 
@@ -3808,10 +3808,9 @@ public:
 
         if (CallOrJmp.getOpcode() == X86::CALL64r ||
             CallOrJmp.getOpcode() == X86::CALL64pcrel32) {
-          if (hasAnnotation(CallInst, "Offset"))
+          if (Optional<uint32_t> Offset = getOffset(CallInst))
             // Annotated as duplicated call
-            addAnnotation(CallOrJmp, "Offset",
-                          getAnnotationAs<uint32_t>(CallInst, "Offset"));
+            setOffset(CallOrJmp, *Offset);
         }
 
         if (isInvoke(CallInst) && !isInvoke(CallOrJmp)) {

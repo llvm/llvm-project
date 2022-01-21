@@ -170,7 +170,7 @@ protected:
     return *passState;
   }
 
-  /// Return the MLIR context for the current function being transformed.
+  /// Return the MLIR context for the current operation being transformed.
   MLIRContext &getContext() { return *getOperation()->getContext(); }
 
   /// The polymorphic API that runs the pass over the currently held operation.
@@ -332,7 +332,7 @@ private:
 ///   - modify any state within the parent operation, this includes adding
 ///     additional operations.
 ///
-/// Derived function passes are expected to provide the following:
+/// Derived operation passes are expected to provide the following:
 ///   - A 'void runOnOperation()' method.
 ///   - A 'StringRef getName() const' method.
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
@@ -365,7 +365,7 @@ protected:
 ///   - modify any state within the parent operation, this includes adding
 ///     additional operations.
 ///
-/// Derived function passes are expected to provide the following:
+/// Derived operation passes are expected to provide the following:
 ///   - A 'void runOnOperation()' method.
 ///   - A 'StringRef getName() const' method.
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
@@ -375,13 +375,19 @@ protected:
   OperationPass(const OperationPass &) = default;
 };
 
+/// NOTICE: This class is deprecated in favor of `OperationPass<FuncOp>`
+/// and will be removed soon.
 /// A model for providing function pass specific utilities.
 ///
 /// Derived function passes are expected to provide the following:
 ///   - A 'void runOnFunction()' method.
 ///   - A 'StringRef getName() const' method.
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
-class FunctionPass : public OperationPass<FuncOp> {
+class [[deprecated(
+    "Use OperationPass<FuncOp> instead: See "
+    "https://llvm.discourse.group/t/"
+    "functionpass-deprecated-in-favor-of-operationpass-funcop")]] FunctionPass
+    : public OperationPass<FuncOp> {
 public:
   using OperationPass<FuncOp>::OperationPass;
 

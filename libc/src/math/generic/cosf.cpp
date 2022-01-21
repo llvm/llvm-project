@@ -25,9 +25,9 @@ LLVM_LIBC_FUNCTION(float, cosf, (float y)) {
   double x = y;
   double s;
   int n;
-  const sincos_t *p = &__SINCOSF_TABLE[0];
+  const sincos_t *p = &SINCOSF_TABLE[0];
 
-  if (abstop12(y) < abstop12(pio4)) {
+  if (abstop12(y) < abstop12(PIO4)) {
     double x2 = x * x;
 
     if (unlikely(abstop12(y) < abstop12(as_float(0x39800000))))
@@ -41,7 +41,7 @@ LLVM_LIBC_FUNCTION(float, cosf, (float y)) {
     s = p->sign[n & 3];
 
     if (n & 2)
-      p = &__SINCOSF_TABLE[1];
+      p = &SINCOSF_TABLE[1];
 
     return sinf_poly(x * s, x * x, p, n ^ 1);
   } else if (abstop12(y) < abstop12(INFINITY)) {
@@ -54,7 +54,7 @@ LLVM_LIBC_FUNCTION(float, cosf, (float y)) {
     s = p->sign[(n + sign) & 3];
 
     if ((n + sign) & 2)
-      p = &__SINCOSF_TABLE[1];
+      p = &SINCOSF_TABLE[1];
 
     return sinf_poly(x * s, x * x, p, n ^ 1);
   }

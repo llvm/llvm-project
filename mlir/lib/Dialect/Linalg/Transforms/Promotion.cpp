@@ -397,8 +397,8 @@ struct LinalgPromotionPass : public LinalgPromotionBase<LinalgPromotionPass> {
     this->useAlloca = useAlloca;
   }
 
-  void runOnFunction() override {
-    getFunction().walk([&](LinalgOp op) {
+  void runOnOperation() override {
+    getOperation().walk([&](LinalgOp op) {
       auto options = LinalgPromotionOptions()
                          .setDynamicBuffers(dynamicBuffers)
                          .setUseAlloca(useAlloca);

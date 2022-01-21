@@ -9,8 +9,8 @@ module attributes {
   gpu.module @kernels {
     gpu.func @kernel_mul(%arg0 : memref<4x4xf32>, %arg1 : memref<4x4xf32>, %arg2 : memref<4x4xf32>)
       kernel attributes { spv.entry_point_abi = {local_size = dense<[1, 1, 1]>: vector<3xi32> }} {
-      %x = "gpu.block_id"() {dimension = "x"} : () -> index
-      %y = "gpu.block_id"() {dimension = "y"} : () -> index
+      %x = gpu.block_id x
+      %y = gpu.block_id y
       %1 = memref.load %arg0[%x, %y] : memref<4x4xf32>
       %2 = memref.load %arg1[%x, %y] : memref<4x4xf32>
       %3 = arith.mulf %1, %2 : f32

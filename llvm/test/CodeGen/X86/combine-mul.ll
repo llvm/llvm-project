@@ -361,6 +361,38 @@ define <2 x i64> @combine_mul_to_abs_v2i64(<2 x i64> %x) {
   ret <2 x i64> %m
 }
 
+; 'Quadratic Reciprocity' - and(mul(x,x),2) -> 0
+
+define i64 @combine_mul_self_knownbits(i64 %x) {
+; SSE-LABEL: combine_mul_self_knownbits:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_knownbits:
+; AVX:       # %bb.0:
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    retq
+  %1 = mul i64 %x, %x
+  %2 = and i64 %1, 2
+  ret i64 %2
+}
+
+define <4 x i32> @combine_mul_self_knownbits_vector(<4 x i32> %x) {
+; SSE-LABEL: combine_mul_self_knownbits_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_mul_self_knownbits_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = mul <4 x i32> %x, %x
+  %2 = and <4 x i32> %1, <i32 2, i32 2, i32 2, i32 2>
+  ret <4 x i32> %2
+}
+
 ; This would infinite loop because DAGCombiner wants to turn this into a shift,
 ; but x86 lowering wants to avoid non-uniform vector shift amounts.
 

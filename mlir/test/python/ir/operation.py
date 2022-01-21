@@ -306,7 +306,7 @@ def testDetachedOperation():
             "foo": StringAttr.get("foo_value"),
             "bar": StringAttr.get("bar_value"),
         })
-    # CHECK: %0:2 = "custom.op1"() ( {
+    # CHECK: %0:2 = "custom.op1"() ({
     # CHECK: }) {bar = "bar_value", foo = "foo_value"} : () -> (si32, si32)
     print(op1)
 
@@ -360,8 +360,8 @@ def testOperationWithRegion():
     i32 = IntegerType.get_signed(32)
     op1 = Operation.create("custom.op1", regions=1)
     block = op1.regions[0].blocks.append(i32, i32)
-    # CHECK: "custom.op1"() ( {
-    # CHECK: ^bb0(%arg0: si32, %arg1: si32):  // no predecessors
+    # CHECK: "custom.op1"() ({
+    # CHECK: ^bb0(%arg0: si32, %arg1: si32):
     # CHECK:   "custom.terminator"() : () -> ()
     # CHECK: }) : () -> ()
     terminator = Operation.create("custom.terminator")
@@ -555,7 +555,7 @@ def testOperationPrint():
   print(bytes_value)
 
   # Test get_asm with options.
-  # CHECK: value = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>
+  # CHECK: value = opaque<"elided_large_const", "0xDEADBEEF"> : tensor<4xi32>
   # CHECK: "std.return"(%arg0) : (i32) -> () -:4:7
   module.operation.print(
       large_elements_limit=2,
@@ -645,7 +645,7 @@ def testInvalidOperationStrSoftFails():
     invalid_op = create_invalid_operation()
     # Verify that we fallback to the generic printer for safety.
     # CHECK: // Verification failed, printing generic form
-    # CHECK: "builtin.module"() ( {
+    # CHECK: "builtin.module"() ({
     # CHECK: }) : () -> ()
     print(invalid_op)
     # CHECK: .verify = False

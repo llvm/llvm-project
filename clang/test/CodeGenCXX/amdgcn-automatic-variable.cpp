@@ -74,8 +74,8 @@ public:
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A:%.*]] = alloca [[CLASS_A:%.*]], align 4, addrspace(5)
 // CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast [[CLASS_A]] addrspace(5)* [[A]] to %class.A*
-// CHECK-NEXT:    call void @_ZN1AC1Ev(%class.A* noundef [[A_ASCAST]])
-// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* noundef [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AC1Ev(%class.A* noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
+// CHECK-NEXT:    call void @_ZN1AD1Ev(%class.A* noundef nonnull align 4 dereferenceable(4) [[A_ASCAST]])
 // CHECK-NEXT:    ret void
 //
 void func3() {

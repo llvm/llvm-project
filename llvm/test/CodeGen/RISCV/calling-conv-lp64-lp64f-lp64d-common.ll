@@ -106,21 +106,21 @@ define i32 @caller_many_scalars() nounwind {
 define i64 @callee_large_scalars(i256 %a, i256 %b) nounwind {
 ; RV64I-LABEL: callee_large_scalars:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    ld a6, 0(a1)
-; RV64I-NEXT:    ld a7, 0(a0)
+; RV64I-NEXT:    ld a2, 0(a1)
+; RV64I-NEXT:    ld a3, 0(a0)
 ; RV64I-NEXT:    ld a4, 8(a1)
 ; RV64I-NEXT:    ld a5, 24(a1)
-; RV64I-NEXT:    ld a2, 24(a0)
-; RV64I-NEXT:    ld a3, 8(a0)
+; RV64I-NEXT:    ld a6, 24(a0)
+; RV64I-NEXT:    ld a7, 8(a0)
 ; RV64I-NEXT:    ld a1, 16(a1)
 ; RV64I-NEXT:    ld a0, 16(a0)
-; RV64I-NEXT:    xor a2, a2, a5
-; RV64I-NEXT:    xor a3, a3, a4
-; RV64I-NEXT:    or a2, a3, a2
+; RV64I-NEXT:    xor a5, a6, a5
+; RV64I-NEXT:    xor a4, a7, a4
+; RV64I-NEXT:    or a4, a4, a5
 ; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    xor a1, a7, a6
+; RV64I-NEXT:    xor a1, a3, a2
 ; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    or a0, a0, a2
+; RV64I-NEXT:    or a0, a0, a4
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
   %1 = icmp eq i256 %a, %b
@@ -161,21 +161,21 @@ define i64 @callee_large_scalars_exhausted_regs(i64 %a, i64 %b, i64 %c, i64 %d, 
 ; RV64I-LABEL: callee_large_scalars_exhausted_regs:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ld a0, 8(sp)
-; RV64I-NEXT:    ld a6, 0(a0)
-; RV64I-NEXT:    ld t0, 0(a7)
+; RV64I-NEXT:    ld a1, 0(a0)
+; RV64I-NEXT:    ld a2, 0(a7)
 ; RV64I-NEXT:    ld a3, 8(a0)
 ; RV64I-NEXT:    ld a4, 24(a0)
 ; RV64I-NEXT:    ld a5, 24(a7)
-; RV64I-NEXT:    ld a1, 8(a7)
+; RV64I-NEXT:    ld a6, 8(a7)
 ; RV64I-NEXT:    ld a0, 16(a0)
-; RV64I-NEXT:    ld a2, 16(a7)
+; RV64I-NEXT:    ld a7, 16(a7)
 ; RV64I-NEXT:    xor a4, a5, a4
-; RV64I-NEXT:    xor a1, a1, a3
-; RV64I-NEXT:    or a1, a1, a4
-; RV64I-NEXT:    xor a0, a2, a0
-; RV64I-NEXT:    xor a2, t0, a6
-; RV64I-NEXT:    or a0, a2, a0
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    xor a3, a6, a3
+; RV64I-NEXT:    or a3, a3, a4
+; RV64I-NEXT:    xor a0, a7, a0
+; RV64I-NEXT:    xor a1, a2, a1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    or a0, a0, a3
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
   %1 = icmp eq i256 %h, %j

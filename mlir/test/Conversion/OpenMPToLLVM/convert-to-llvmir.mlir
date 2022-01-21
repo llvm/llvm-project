@@ -50,8 +50,8 @@ func @wsloop(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: inde
   // CHECK: omp.parallel
   omp.parallel {
     // CHECK: omp.wsloop (%[[ARG6:.*]], %[[ARG7:.*]]) : i64 = (%[[ARG0]], %[[ARG1]]) to (%[[ARG2]], %[[ARG3]]) step (%[[ARG4]], %[[ARG5]]) {
-    "omp.wsloop"(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5) ( {
-    ^bb0(%arg6: index, %arg7: index):  // no predecessors
+    "omp.wsloop"(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5) ({
+    ^bb0(%arg6: index, %arg7: index):  
       // CHECK-DAG: %[[CAST_ARG6:.*]] = builtin.unrealized_conversion_cast %[[ARG6]] : i64 to index
       // CHECK-DAG: %[[CAST_ARG7:.*]] = builtin.unrealized_conversion_cast %[[ARG7]] : i64 to index
       // CHECK: "test.payload"(%[[CAST_ARG6]], %[[CAST_ARG7]]) : (index, index) -> ()

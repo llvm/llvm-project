@@ -199,17 +199,6 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
-// Objects of derived types might be assignment compatible if they are equal
-// with respect to everything other than their instantiated type parameters
-// and their constant instantiated type parameters have the same values.
-bool DerivedTypeSpec::MightBeAssignmentCompatibleWith(
-    const DerivedTypeSpec &that) const {
-  if (!RawEquals(that)) {
-    return false;
-  }
-  return AreTypeParamCompatible(*this, that);
-}
-
 class InstantiateHelper {
 public:
   InstantiateHelper(Scope &scope) : scope_{scope} {}

@@ -1,5 +1,7 @@
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
 ; RUN: wasm-ld --no-gc-sections --experimental-pic -pie -o %t.wasm %t.o
+; RUN: obj2yaml %t.wasm | FileCheck %s
+; RUN: llvm-objdump --disassemble-symbols=__wasm_start --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
 
 target triple = "wasm32-unknown-emscripten"
 
@@ -32,7 +34,7 @@ define void @_start() {
 
 declare void @external_func()
 
-;      CHECK: Sections:
+; CHECK:      Sections:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            dylink.0
 ; CHECK-NEXT:     MemorySize:      16
@@ -43,6 +45,14 @@ declare void @external_func()
 
 ; CHECK:        - Type:            IMPORT
 ; CHECK-NEXT:     Imports:
+; CHECK-NEXT:      - Module:          env
+; CHECK-NEXT:        Field:           __indirect_function_table
+; CHECK-NEXT:        Kind:            TABLE
+; CHECK-NEXT:        Table:
+; CHECK-NEXT:          Index:           0
+; CHECK-NEXT:          ElemType:        FUNCREF
+; CHECK-NEXT:          Limits:
+; CHECK-NEXT:            Minimum:         0x1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL
@@ -58,28 +68,29 @@ declare void @external_func()
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
 ; CHECK-NEXT:         GlobalMutable:   false
-; CHECK-NEXT:       - Module:          env
-; CHECK-NEXT:         Field:           __indirect_function_table
-; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Table:
-; CHECK-NEXT:           Index:           0
-; CHECK-NEXT:           ElemType:        FUNCREF
-; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Minimum:         0x1
 
 ; CHECK:        - Type:            START
-; CHECK-NEXT:     StartFunction:   2
+; CHECK-NEXT:     StartFunction:   4
 
 ; CHECK:        - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            __wasm_call_ctors
+; CHECK-NEXT:         Name:            external_func
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         Name:            __wasm_apply_data_relocs
+; CHECK-NEXT:         Name:            __wasm_call_ctors
 ; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Name:            __wasm_apply_data_relocs
+; CHECK-NEXT:       - Index:           3
 ; CHECK-NEXT:         Name:            __wasm_apply_global_relocs
+; CHECK-NEXT:       - Index:           4
+; CHECK-NEXT:         Name:            __wasm_start
 
+; DISASSEM:       <__wasm_start>:
+; DISASSEM-EMPTY:
+; DISASSEM-NEXT:   call 2
+; DISASSEM-NEXT:   call 3
+; DISASSEM-NEXT:   end
 
 ; Run the same test with threading support.  In this mode
 ; we expect __wasm_init_memory and __wasm_apply_data_relocs
@@ -89,11 +100,16 @@ declare void @external_func()
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals,+atomics,+bulk-memory -filetype=obj %s -o %t.shmem.o
 ; RUN: wasm-ld --no-gc-sections --shared-memory --allow-undefined --experimental-pic -pie -o %t.shmem.wasm %t.shmem.o
 ; RUN: obj2yaml %t.shmem.wasm | FileCheck %s --check-prefix=SHMEM
+; RUN: llvm-objdump --disassemble-symbols=__wasm_start --no-show-raw-insn --no-leading-addr %t.shmem.wasm | FileCheck %s --check-prefixes DISASSEM-SHMEM
 
-; SHMEM:         - Type:            CODE
-; SHMEM:           - Index:           6
-; SHMEM-NEXT:        Locals:          []
-; SHMEM-NEXT:        Body:            100310050B
+; SHMEM:         - Type:            START
+; SHMEM-NEXT:      StartFunction:   6
+
+; DISASSEM-SHMEM:       <__wasm_start>:
+; DISASSEM-SHMEM-EMPTY:
+; DISASSEM-SHMEM-NEXT:   call 3
+; DISASSEM-SHMEM-NEXT:   call 5
+; DISASSEM-SHMEM-NEXT:   end
 
 ; SHMEM:         FunctionNames:
 ; SHMEM-NEXT:      - Index:           0

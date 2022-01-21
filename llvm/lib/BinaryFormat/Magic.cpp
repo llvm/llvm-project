@@ -88,7 +88,10 @@ file_magic llvm::identify_magic(StringRef Magic) {
     if (startswith(Magic, "!<arch>\n") || startswith(Magic, "!<thin>\n"))
       return file_magic::archive;
     break;
-
+  case '<':
+    if (startswith(Magic, "<bigaf>\n"))
+      return file_magic::archive;
+    break;
   case '\177':
     if (startswith(Magic, "\177ELF") && Magic.size() >= 18) {
       bool Data2MSB = Magic[5] == 2;

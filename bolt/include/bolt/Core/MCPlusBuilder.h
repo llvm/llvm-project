@@ -78,7 +78,7 @@ private:
     assert(Index < 256 && "annotation index max value exceeded");
     assert((Value == (Value << 8) >> 8) && "annotation value out of range");
 
-    Value &= 0xffffffffffffff;
+    Value &= 0xff'ffff'ffff'ffff;
     Value |= (int64_t)Index << 56;
 
     return Value;
@@ -91,7 +91,7 @@ private:
 
   /// Extract annotation value from immediate operand value.
   static int64_t extractAnnotationValue(int64_t ImmValue) {
-    ImmValue &= 0xffffffffffffff;
+    ImmValue &= 0xff'ffff'ffff'ffff;
     return (ImmValue << 8) >> 8;
   }
 
@@ -1074,6 +1074,18 @@ public:
   /// If \p Inst was marked as a conditional tail call convert it to a regular
   /// branch. Return true if the instruction was converted.
   bool unsetConditionalTailCall(MCInst &Inst);
+
+  /// Return offset of \p Inst in the original function, if available.
+  Optional<uint32_t> getOffset(const MCInst &Inst) const;
+
+  /// Return the offset if the annotation is present, or \p Default otherwise.
+  uint32_t getOffsetWithDefault(const MCInst &Inst, uint32_t Default) const;
+
+  /// Set offset of \p Inst in the original function.
+  bool setOffset(MCInst &Inst, uint32_t Offset, AllocatorIdTy AllocatorId = 0);
+
+  /// Remove offset annotation.
+  bool clearOffset(MCInst &Inst);
 
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with

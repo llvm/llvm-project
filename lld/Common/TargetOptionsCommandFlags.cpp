@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/TargetOptionsCommandFlags.h"
-
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Target/TargetOptions.h"
-
-static llvm::codegen::RegisterCodeGenFlags CGF;
 
 llvm::TargetOptions lld::initTargetOptionsFromCodeGenFlags() {
   return llvm::codegen::InitTargetOptionsFromCodeGenFlags(llvm::Triple());

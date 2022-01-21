@@ -64,11 +64,11 @@ public:
 
   virtual void Dump(Stream &s) = 0;
 
-  StatsDuration GetIndexTime() { return m_index_time; }
+  StatsDuration::Duration GetIndexTime() { return m_index_time; }
 
 protected:
   Module &m_module;
-  StatsDuration m_index_time{0.0};
+  StatsDuration m_index_time;
 
   /// Helper function implementing common logic for processing function dies. If
   /// the function given by "ref" matches search criteria given by

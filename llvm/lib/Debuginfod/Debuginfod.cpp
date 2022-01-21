@@ -52,6 +52,7 @@ Expected<std::string> getDefaultDebuginfodCacheDirectory() {
   if (!sys::path::cache_directory(CacheDirectory))
     return createStringError(
         errc::io_error, "Unable to determine appropriate cache directory.");
+  sys::path::append(CacheDirectory, "llvm-debuginfod", "client");
   return std::string(CacheDirectory);
 }
 

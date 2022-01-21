@@ -24,7 +24,7 @@
 namespace mlir {
 namespace spirv {
 enum class Version : uint32_t;
-enum class Extension;
+enum class Extension : uint32_t;
 enum class Capability : uint32_t;
 } // namespace spirv
 } // namespace mlir

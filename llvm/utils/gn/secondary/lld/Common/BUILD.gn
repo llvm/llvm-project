@@ -32,6 +32,7 @@ static_library("Common") {
   ]
   sources = [
     "Args.cpp",
+    "CommonLinkerContext.cpp",
     "DWARF.cpp",
     "ErrorHandler.cpp",
     "Filesystem.cpp",

@@ -13,8 +13,8 @@
 #include "CodegenUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -284,8 +284,7 @@ static bool isInPlace(Value val) {
     if (auto funcOp = dyn_cast<FuncOp>(arg.getOwner()->getParentOp()))
       if (auto attr = funcOp.getArgAttrOfType<BoolAttr>(
               arg.getArgNumber(),
-              linalg::comprehensive_bufferize::BufferizableOpInterface::
-                  kInplaceableAttrName))
+              bufferization::BufferizableOpInterface::kInplaceableAttrName))
         return attr.getValue();
   return false;
 }
@@ -1204,8 +1203,10 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen,
   assert(types.size() == operands.size());
   Location loc = op.getLoc();
   scf::WhileOp whileOp = rewriter.create<scf::WhileOp>(loc, types, operands);
-  Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types);
-  Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, types);
+
+  SmallVector<Location> locs(types.size(), loc);
+  Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types, locs);
+  Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, types, locs);
 
   // Build the "before" region, which effectively consists
   // of a conjunction of "i < upper" tests on all induction.

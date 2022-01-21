@@ -414,6 +414,14 @@ void ConstantHoistingPass::collectConstantCandidates(
   IntegerType *PtrIntTy = DL->getIntPtrType(*Ctx, GVPtrTy->getAddressSpace());
   APInt Offset(DL->getTypeSizeInBits(PtrIntTy), /*val*/0, /*isSigned*/true);
   auto *GEPO = cast<GEPOperator>(ConstExpr);
+
+  // TODO: If we have a mix of inbounds and non-inbounds GEPs, then basing a
+  // non-inbounds GEP on an inbounds GEP is potentially incorrect. Restrict to
+  // inbounds GEP for now -- alternatively, we could drop inbounds from the
+  // constant expression,
+  if (!GEPO->isInBounds())
+    return;
+
   if (!GEPO->accumulateConstantOffset(*DL, Offset))
     return;
 
@@ -470,7 +478,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   // Visit constant expressions that have constant integers.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
     // Handle constant gep expressions.
-    if (ConstHoistGEP && ConstExpr->isGEPWithNoNotionalOverIndexing())
+    if (ConstHoistGEP && isa<GEPOperator>(ConstExpr))
       collectConstantCandidates(ConstCandMap, Inst, Idx, ConstExpr);
 
     // Only visit constant cast expressions.
@@ -810,7 +818,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
 
   // Visit constant expression.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
-    if (ConstExpr->isGEPWithNoNotionalOverIndexing()) {
+    if (isa<GEPOperator>(ConstExpr)) {
       // Operand is a ConstantGEP, replace it.
       updateOperand(ConstUser.Inst, ConstUser.OpndIdx, Mat);
       return;

@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBStringList.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StringList.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBStringList::SBStringList() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBStringList); }
+SBStringList::SBStringList() { LLDB_INSTRUMENT_VA(this); }
 
 SBStringList::SBStringList(const lldb_private::StringList *lldb_strings_ptr) {
   if (lldb_strings_ptr)
@@ -22,14 +22,13 @@ SBStringList::SBStringList(const lldb_private::StringList *lldb_strings_ptr) {
 }
 
 SBStringList::SBStringList(const SBStringList &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBStringList, (const lldb::SBStringList &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 const SBStringList &SBStringList::operator=(const SBStringList &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBStringList &,
-                     SBStringList, operator=,(const lldb::SBStringList &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
@@ -47,17 +46,17 @@ const lldb_private::StringList &SBStringList::operator*() const {
 }
 
 bool SBStringList::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStringList, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBStringList::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStringList, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return (m_opaque_up != nullptr);
 }
 
 void SBStringList::AppendString(const char *str) {
-  LLDB_RECORD_METHOD(void, SBStringList, AppendString, (const char *), str);
+  LLDB_INSTRUMENT_VA(this, str);
 
   if (str != nullptr) {
     if (IsValid())
@@ -68,8 +67,7 @@ void SBStringList::AppendString(const char *str) {
 }
 
 void SBStringList::AppendList(const char **strv, int strc) {
-  LLDB_RECORD_METHOD(void, SBStringList, AppendList, (const char **, int), strv,
-                     strc);
+  LLDB_INSTRUMENT_VA(this, strv, strc);
 
   if ((strv != nullptr) && (strc > 0)) {
     if (IsValid())
@@ -80,8 +78,7 @@ void SBStringList::AppendList(const char **strv, int strc) {
 }
 
 void SBStringList::AppendList(const SBStringList &strings) {
-  LLDB_RECORD_METHOD(void, SBStringList, AppendList,
-                     (const lldb::SBStringList &), strings);
+  LLDB_INSTRUMENT_VA(this, strings);
 
   if (strings.IsValid()) {
     if (!IsValid())
@@ -97,7 +94,7 @@ void SBStringList::AppendList(const StringList &strings) {
 }
 
 uint32_t SBStringList::GetSize() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBStringList, GetSize);
+  LLDB_INSTRUMENT_VA(this);
 
   if (IsValid()) {
     return m_opaque_up->GetSize();
@@ -106,8 +103,7 @@ uint32_t SBStringList::GetSize() const {
 }
 
 const char *SBStringList::GetStringAtIndex(size_t idx) {
-  LLDB_RECORD_METHOD(const char *, SBStringList, GetStringAtIndex, (size_t),
-                     idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   if (IsValid()) {
     return m_opaque_up->GetStringAtIndex(idx);
@@ -116,8 +112,7 @@ const char *SBStringList::GetStringAtIndex(size_t idx) {
 }
 
 const char *SBStringList::GetStringAtIndex(size_t idx) const {
-  LLDB_RECORD_METHOD_CONST(const char *, SBStringList, GetStringAtIndex,
-                           (size_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   if (IsValid()) {
     return m_opaque_up->GetStringAtIndex(idx);
@@ -126,7 +121,7 @@ const char *SBStringList::GetStringAtIndex(size_t idx) const {
 }
 
 void SBStringList::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBStringList, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   if (IsValid()) {
     m_opaque_up->Clear();

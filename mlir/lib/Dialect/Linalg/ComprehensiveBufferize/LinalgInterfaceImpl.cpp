@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
@@ -17,6 +17,7 @@
 using namespace mlir;
 using namespace linalg;
 using namespace comprehensive_bufferize;
+using namespace mlir::bufferization;
 
 namespace {
 
@@ -193,7 +194,6 @@ struct LinalgOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo,
                                 const BufferizationState &state) const {
     return BufferRelation::Equivalent;
   }
@@ -221,9 +221,9 @@ struct InitTensorOpInterface
     if (initTensorOp->getUses().empty())
       return success();
 
-    FailureOr<Value> alloc = state.createAlloc(
-        rewriter, initTensorOp->getLoc(), initTensorOp.result(),
-        state.getOptions().createDeallocs);
+    FailureOr<Value> alloc =
+        createAlloc(rewriter, initTensorOp->getLoc(), initTensorOp.result(),
+                    state.getOptions().createDeallocs, state.getOptions());
     if (failed(alloc))
       return failure();
     replaceOpWithBufferizedValues(rewriter, op, *alloc);
@@ -264,7 +264,6 @@ struct TiledLoopOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationAliasInfo &aliasInfo,
                                 const BufferizationState &state) const {
     return BufferRelation::Equivalent;
   }
@@ -367,7 +366,9 @@ struct TiledLoopOpInterface
       Value output = std::get<1>(it);
       Value toMemrefOp = rewriter.create<bufferization::ToMemrefOp>(
           newTerminator.getLoc(), output.getType(), std::get<0>(it));
-      state.createMemCpy(rewriter, newTerminator.getLoc(), toMemrefOp, output);
+      if (failed(createMemCpy(rewriter, newTerminator.getLoc(), toMemrefOp,
+                              output, state.getOptions())))
+        return failure();
     }
 
     // Erase old terminator.

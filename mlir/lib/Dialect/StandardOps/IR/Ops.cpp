@@ -146,7 +146,7 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
 
     Region *bodyRegion = result.addRegion();
     bodyRegion->push_back(new Block());
-    bodyRegion->addArgument(elementType);
+    bodyRegion->addArgument(elementType, memref.getLoc());
   }
 }
 
@@ -195,7 +195,7 @@ static ParseResult parseGenericAtomicRMWOp(OpAsmParser &parser,
 
 static void print(OpAsmPrinter &p, GenericAtomicRMWOp op) {
   p << ' ' << op.getMemref() << "[" << op.getIndices()
-    << "] : " << op.getMemref().getType();
+    << "] : " << op.getMemref().getType() << ' ';
   p.printRegion(op.getRegion());
   p.printOptionalAttrDict(op->getAttrs());
 }

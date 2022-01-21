@@ -47,6 +47,14 @@ public:
     return nullptr;
   }
 
+  Value *FoldAnd(Value *LHS, Value *RHS) const override {
+    auto *LC = dyn_cast<Constant>(LHS);
+    auto *RC = dyn_cast<Constant>(RHS);
+    if (LC && RC)
+      return ConstantExpr::getAnd(LC, RC);
+    return nullptr;
+  }
+
   Value *FoldOr(Value *LHS, Value *RHS) const override {
     auto *LC = dyn_cast<Constant>(LHS);
     auto *RC = dyn_cast<Constant>(RHS);
@@ -152,10 +160,6 @@ public:
   Constant *CreateAShr(Constant *LHS, Constant *RHS,
                        bool isExact = false) const override {
     return ConstantExpr::getAShr(LHS, RHS, isExact);
-  }
-
-  Constant *CreateAnd(Constant *LHS, Constant *RHS) const override {
-    return ConstantExpr::getAnd(LHS, RHS);
   }
 
   Constant *CreateOr(Constant *LHS, Constant *RHS) const {

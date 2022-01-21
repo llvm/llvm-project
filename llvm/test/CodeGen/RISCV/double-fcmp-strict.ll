@@ -250,16 +250,16 @@ define i32 @fcmp_one(double %a, double %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a3
-; RV32I-NEXT:    mv s3, a2
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s2, a1
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    call __eqdf2@plt
 ; RV32I-NEXT:    snez s4, a0
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    mv a2, s3
-; RV32I-NEXT:    mv a3, s2
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a2, s1
+; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __unorddf2@plt
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    and a0, a0, s4
@@ -378,16 +378,16 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a3
-; RV32I-NEXT:    mv s3, a2
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s2, a1
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    call __eqdf2@plt
 ; RV32I-NEXT:    seqz s4, a0
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    mv a2, s3
-; RV32I-NEXT:    mv a3, s2
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a2, s1
+; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __unorddf2@plt
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    or a0, a0, s4
@@ -885,16 +885,16 @@ define i32 @fcmps_one(double %a, double %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a3
-; RV32I-NEXT:    mv s3, a2
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s2, a1
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    call __eqdf2@plt
 ; RV32I-NEXT:    snez s4, a0
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    mv a2, s3
-; RV32I-NEXT:    mv a3, s2
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a2, s1
+; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __unorddf2@plt
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    and a0, a0, s4
@@ -999,16 +999,16 @@ define i32 @fcmps_ueq(double %a, double %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s2, a3
-; RV32I-NEXT:    mv s3, a2
-; RV32I-NEXT:    mv s0, a1
-; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    mv s0, a3
+; RV32I-NEXT:    mv s1, a2
+; RV32I-NEXT:    mv s2, a1
+; RV32I-NEXT:    mv s3, a0
 ; RV32I-NEXT:    call __eqdf2@plt
 ; RV32I-NEXT:    seqz s4, a0
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    mv a2, s3
-; RV32I-NEXT:    mv a3, s2
+; RV32I-NEXT:    mv a0, s3
+; RV32I-NEXT:    mv a1, s2
+; RV32I-NEXT:    mv a2, s1
+; RV32I-NEXT:    mv a3, s0
 ; RV32I-NEXT:    call __unorddf2@plt
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    or a0, a0, s4

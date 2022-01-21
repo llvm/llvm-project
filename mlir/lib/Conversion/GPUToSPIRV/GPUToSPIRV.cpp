@@ -115,26 +115,10 @@ public:
 // Builtins.
 //===----------------------------------------------------------------------===//
 
-static Optional<int32_t> getLaunchConfigIndex(Operation *op) {
-  auto dimAttr = op->getAttrOfType<StringAttr>("dimension");
-  if (!dimAttr)
-    return llvm::None;
-
-  return llvm::StringSwitch<Optional<int32_t>>(dimAttr.getValue())
-      .Case("x", 0)
-      .Case("y", 1)
-      .Case("z", 2)
-      .Default(llvm::None);
-}
-
 template <typename SourceOp, spirv::BuiltIn builtin>
 LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
     SourceOp op, typename SourceOp::Adaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto index = getLaunchConfigIndex(op);
-  if (!index)
-    return failure();
-
   auto *typeConverter = this->template getTypeConverter<SPIRVTypeConverter>();
   auto indexType = typeConverter->getIndexType();
 
@@ -143,7 +127,7 @@ LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
       spirv::getBuiltinVariableValue(op, builtin, indexType, rewriter);
   rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
       op, indexType, spirvBuiltin,
-      rewriter.getI32ArrayAttr({index.getValue()}));
+      rewriter.getI32ArrayAttr({static_cast<int32_t>(op.dimension())}));
   return success();
 }
 
@@ -164,12 +148,9 @@ SingleDimLaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
 LogicalResult WorkGroupSizeConversion::matchAndRewrite(
     gpu::BlockDimOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto index = getLaunchConfigIndex(op);
-  if (!index)
-    return failure();
-
   auto workGroupSizeAttr = spirv::lookupLocalWorkGroupSize(op);
-  auto val = workGroupSizeAttr.getValues<int32_t>()[index.getValue()];
+  auto val = workGroupSizeAttr
+                 .getValues<int32_t>()[static_cast<int32_t>(op.dimension())];
   auto convertedType =
       getTypeConverter()->convertType(op.getResult().getType());
   if (!convertedType)
@@ -216,7 +197,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
                                llvm::None));
   for (const auto &namedAttr : funcOp->getAttrs()) {
-    if (namedAttr.getName() == function_like_impl::getTypeAttrName() ||
+    if (namedAttr.getName() == FunctionOpInterface::getTypeAttrName() ||
         namedAttr.getName() == SymbolTable::getSymbolAttrName())
       continue;
     newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());

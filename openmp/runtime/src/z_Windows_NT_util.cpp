@@ -1327,16 +1327,18 @@ static void __kmp_reap_common(kmp_info_t *th) {
     // KMP_WAIT to cover this usage also.
     void *obj = NULL;
     kmp_uint32 spins;
+    kmp_uint64 time;
 #if USE_ITT_BUILD
     KMP_FSYNC_SPIN_INIT(obj, (void *)&th->th.th_info.ds.ds_alive);
 #endif /* USE_ITT_BUILD */
     KMP_INIT_YIELD(spins);
+    KMP_INIT_BACKOFF(time);
     do {
 #if USE_ITT_BUILD
       KMP_FSYNC_SPIN_PREPARE(obj);
 #endif /* USE_ITT_BUILD */
       __kmp_is_thread_alive(th, &exit_val);
-      KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+      KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
     } while (exit_val == STILL_ACTIVE && TCR_4(th->th.th_info.ds.ds_alive));
 #if USE_ITT_BUILD
     if (exit_val == STILL_ACTIVE) {

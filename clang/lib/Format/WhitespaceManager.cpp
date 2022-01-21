@@ -731,6 +731,11 @@ void WhitespaceManager::alignConsecutiveAssignments() {
         if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
           return false;
 
+        // Do not align operator= overloads.
+        FormatToken *Previous = C.Tok->getPreviousNonComment();
+        if (Previous && Previous->is(tok::kw_operator))
+          return false;
+
         return C.Tok->is(tok::equal);
       },
       Changes, /*StartAt=*/0, Style.AlignConsecutiveAssignments);

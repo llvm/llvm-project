@@ -2870,7 +2870,7 @@ the configuration (without a prefix: ``Auto``).
   readability to have the signature indented two levels and to use
   ``OuterScope``. The KJ style guide requires ``OuterScope``.
   `KJ style guide
-  <https://github.com/capnproto/capnproto/blob/master/kjdoc/style-guide.md>`_
+  <https://github.com/capnproto/capnproto/blob/master/style-guide.md>`_
 
   Possible values:
 

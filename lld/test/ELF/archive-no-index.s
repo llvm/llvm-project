@@ -5,9 +5,13 @@
 # RUN: rm -f %t.a
 # RUN: llvm-ar crS %t.a %t.archive.o
 
-# RUN: not ld.lld -o /dev/null %t.o %t.a 2>&1 | FileCheck %s
+# RUN: ld.lld %t.o %t.a -o /dev/null 2>&1 | count 0
+
+# RUN: ld.lld -shared %t.archive.o -o %t.so
+# RUN: llvm-ar crS %t.a %t.so
+# RUN: not ld.lld %t.o %t.a --noinhibit-exec -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
+
+# ERR: error: {{.*}}.a: archive member '{{.*}}.so' is neither ET_REL nor LLVM bitcode
 
 .globl _start
 _start:
-
-# CHECK: error: {{.*}}.a: archive has no index; run ranlib to add one

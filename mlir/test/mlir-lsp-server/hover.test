@@ -114,7 +114,7 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "\"builtin.func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"builtin.func\"() ( {\n}) {sym_name = \"foo\", type = (i1) -> ()} : () -> ()\n```\n"
+// CHECK-NEXT:      "value": "\"builtin.func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"builtin.func\"() ({\n}) {sym_name = \"foo\", type = (i1) -> ()} : () -> ()\n```\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {
@@ -138,7 +138,7 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "\"builtin.func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"builtin.func\"() ( {\n}) {sym_name = \"foo\", type = (i1) -> ()} : () -> ()\n```\n"
+// CHECK-NEXT:      "value": "\"builtin.func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"builtin.func\"() ({\n}) {sym_name = \"foo\", type = (i1) -> ()} : () -> ()\n```\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {

@@ -128,8 +128,8 @@ static LogicalResult foldMemRefCastInTiledLoopOp(TiledLoopOp op) {
     auto castOp = operand.get().getDefiningOp<memref::CastOp>();
     if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
       operand.set(castOp.getOperand());
-      BlockArgument newBbArg =
-          body->insertArgument(bbArgIndex, castOp.getOperand().getType());
+      BlockArgument newBbArg = body->insertArgument(
+          bbArgIndex, castOp.getOperand().getType(), op.getLoc());
       BlockArgument oldBbArg = body->getArgument(newBbArg.getArgNumber() + 1);
 
       // Insert memref.cast back to the original type.
@@ -573,13 +573,18 @@ void GenericOp::build(
     return;
 
   SmallVector<Type, 4> blockArgTypes;
-  for (ValueRange container : {inputs, outputs})
-    for (Value v : container)
+  SmallVector<Location, 4> blockArgLocs;
+  for (ValueRange container : {inputs, outputs}) {
+    for (Value v : container) {
       blockArgTypes.push_back(getElementTypeOrSelf(v));
+      blockArgLocs.push_back(v.getLoc());
+    }
+  }
 
   OpBuilder::InsertionGuard guard(builder);
   auto &region = *result.regions.front();
-  Block *bodyBlock = builder.createBlock(&region, region.end(), blockArgTypes);
+  Block *bodyBlock =
+      builder.createBlock(&region, region.end(), blockArgTypes, blockArgLocs);
   bodyBuild(builder, result.location, bodyBlock->getArguments());
 }
 
@@ -650,8 +655,10 @@ static void print(OpAsmPrinter &p, GenericOp op) {
   }
 
   // Print region.
-  if (!op.region().empty())
+  if (!op.region().empty()) {
+    p << ' ';
     p.printRegion(op.region());
+  }
 
   // Print results.
   printNamedStructuredOpResults(p, op.result_tensors().getTypes());
@@ -855,12 +862,19 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
     SmallVector<Value> returnedArgs;
-    for (Value yieldVal : yieldOp.values()) {
-      auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
+    for (const auto &yieldVal : llvm::enumerate(yieldOp.values())) {
+      auto yieldArg = yieldVal.value().dyn_cast<BlockArgument>();
       if (!yieldArg || yieldArg.getOwner() != &body)
         return failure();
       unsigned argumentNumber = yieldArg.getArgNumber();
-      returnedArgs.push_back(genericOp->getOperand(argumentNumber));
+      Value returnedArg = genericOp->getOperand(argumentNumber);
+      Type resultType = genericOp->getResult(yieldVal.index()).getType();
+      // The input can have a different type than the result, e.g. a dynamic
+      // input dimension can be turned into a static output dimension.
+      if (returnedArg.getType() != resultType)
+        returnedArg = rewriter.create<tensor::CastOp>(genericOp.getLoc(),
+                                                      resultType, returnedArg);
+      returnedArgs.push_back(returnedArg);
     }
     if (returnedArgs.size() != genericOp->getNumResults())
       return failure();
@@ -1199,13 +1213,13 @@ PadTensorOp PadTensorOp::createPadScalarOp(Type type, Value source, Value pad,
   auto padTensorOp =
       builder.create<linalg::PadTensorOp>(loc, type, source, low, high, nofold);
   int rank = padTensorOp.getResultType().getRank();
-  SmallVector<Type, 4> blockArgTypes;
-  blockArgTypes.assign(rank, builder.getIndexType());
+  SmallVector<Type, 4> blockArgTypes(rank, builder.getIndexType());
+  SmallVector<Location, 4> blockArgLocs(rank, loc);
   auto &region = padTensorOp.region();
   // `builder.createBlock` changes the insertion point within the block. Create
   // a guard to reset the insertion point of the builder after it is destroyed.
   OpBuilder::InsertionGuard guard(builder);
-  builder.createBlock(&region, region.end(), blockArgTypes);
+  builder.createBlock(&region, region.end(), blockArgTypes, blockArgLocs);
   builder.create<linalg::YieldOp>(loc, pad);
   return padTensorOp;
 }
@@ -1761,12 +1775,17 @@ void TiledLoopOp::build(OpBuilder &builder, OperationState &result,
   OpBuilder::InsertionGuard guard(builder);
   unsigned numIVs = steps.size();
   SmallVector<Type, 8> argTypes(numIVs, builder.getIndexType());
-  for (Type type : TypeRange(inputs))
-    argTypes.push_back(type);
-  for (Type type : TypeRange(outputs))
-    argTypes.push_back(type);
+  SmallVector<Location, 8> argLocs(numIVs, result.location);
+  for (Value input : inputs) {
+    argTypes.push_back(input.getType());
+    argLocs.push_back(input.getLoc());
+  }
+  for (Value output : outputs) {
+    argTypes.push_back(output.getType());
+    argLocs.push_back(output.getLoc());
+  }
   Region *bodyRegion = result.addRegion();
-  Block *bodyBlock = builder.createBlock(bodyRegion, {}, argTypes);
+  Block *bodyBlock = builder.createBlock(bodyRegion, {}, argTypes, argLocs);
 
   if (bodyBuilderFn) {
     builder.setInsertionPointToStart(bodyBlock);
@@ -1805,11 +1824,12 @@ static void print(OpAsmPrinter &p, TiledLoopOp op) {
         return attr.cast<StringAttr>().getValue() !=
                getParallelIteratorTypeName();
       }))
-    p << " iterators" << op.iterator_types() << "";
+    p << " iterators" << op.iterator_types();
 
   if (op.distribution_types().hasValue())
-    p << " distribution" << op.distribution_types().getValue() << "";
+    p << " distribution" << op.distribution_types().getValue();
 
+  p << ' ';
   p.printRegion(op.region(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
       op->getAttrs(), /*elidedAttrs=*/{TiledLoopOp::getOperandSegmentSizeAttr(),
@@ -2427,13 +2447,20 @@ static void fillStructuredOpRegion(
   // TODO: atm all operands go through getElementTypeOrSelf,
   // reconsider when we have evidence we need to.
   SmallVector<Type, 8> argTypes;
-  for (auto containers : {inputTypes, outputTypes})
-    for (auto t : containers)
+  SmallVector<Location, 8> argLocs;
+  for (auto containers : {inputTypes, outputTypes}) {
+    for (auto t : containers) {
       argTypes.push_back(getElementTypeOrSelf(t));
+
+      // TODO: Pass in a proper location here.
+      argLocs.push_back(opBuilder.getUnknownLoc());
+    }
+  }
 
   // RAII.
   OpBuilder::InsertionGuard guard(opBuilder);
-  Block *body = opBuilder.createBlock(&region, /*insertPt=*/{}, argTypes);
+  Block *body =
+      opBuilder.createBlock(&region, /*insertPt=*/{}, argTypes, argLocs);
   unsigned actual = body->getNumArguments();
   unsigned expected = NamedStructuredOpType::getNumRegionArgs();
   if (expected != actual) {

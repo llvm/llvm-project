@@ -12,7 +12,6 @@
 
 #include <__config>
 #include <__debug>
-#include <__function_like.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
@@ -43,10 +42,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
 namespace ranges {
 namespace __next {
 
-struct __fn final : private __function_like {
-  _LIBCPP_HIDE_FROM_ABI
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <input_or_output_iterator _Ip>
   _LIBCPP_HIDE_FROM_ABI
   constexpr _Ip operator()(_Ip __x) const {
@@ -79,7 +75,7 @@ struct __fn final : private __function_like {
 } // namespace __next
 
 inline namespace __cpo {
-  inline constexpr auto next = __next::__fn(__function_like::__tag());
+  inline constexpr auto next = __next::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

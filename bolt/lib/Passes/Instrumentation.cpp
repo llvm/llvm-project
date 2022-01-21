@@ -377,7 +377,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
     for (auto I = BB.begin(); I != BB.end(); ++I) {
       const MCInst &Inst = *I;
-      if (!BC.MIB->hasAnnotation(Inst, "Offset"))
+      if (!BC.MIB->getOffset(Inst))
         continue;
 
       const bool IsJumpTable = Function.getJumpTable(Inst);
@@ -389,7 +389,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
                BC.MIB->isUnsupportedBranch(Inst.getOpcode()))
         continue;
 
-      uint32_t FromOffset = BC.MIB->getAnnotationAs<uint32_t>(Inst, "Offset");
+      const uint32_t FromOffset = *BC.MIB->getOffset(Inst);
       const MCSymbol *Target = BC.MIB->getTargetSymbol(Inst);
       BinaryBasicBlock *TargetBB = Function.getBasicBlockForLabel(Target);
       uint32_t ToOffset = TargetBB ? TargetBB->getInputOffset() : 0;
@@ -465,9 +465,9 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       // if it was branching to the end of the function as a result of
       // __builtin_unreachable(), in which case it was deleted by fixBranches.
       // Ignore this case. FIXME: force fixBranches() to preserve the offset.
-      if (!BC.MIB->hasAnnotation(*LastInstr, "Offset"))
+      if (!BC.MIB->getOffset(*LastInstr))
         continue;
-      FromOffset = BC.MIB->getAnnotationAs<uint32_t>(*LastInstr, "Offset");
+      FromOffset = *BC.MIB->getOffset(*LastInstr);
 
       // Do not instrument edges in the spanning tree
       if (STOutSet[&BB].find(FTBB) != STOutSet[&BB].end()) {

@@ -333,9 +333,8 @@ struct LLVMFunctionTypeStorage : public TypeStorage {
   /// Construct a storage from the given components. The list is expected to be
   /// allocated in the context.
   LLVMFunctionTypeStorage(Type result, ArrayRef<Type> arguments, bool variadic)
-      : argumentTypes(arguments) {
-    returnTypeAndVariadic.setPointerAndInt(result, variadic);
-  }
+      : resultType(result), isVariadicFlag(variadic),
+        numArguments(arguments.size()), argumentTypes(arguments.data()) {}
 
   /// Hook into the type uniquing infrastructure.
   static LLVMFunctionTypeStorage *construct(TypeStorageAllocator &allocator,
@@ -358,19 +357,24 @@ struct LLVMFunctionTypeStorage : public TypeStorage {
   }
 
   /// Returns the list of function argument types.
-  ArrayRef<Type> getArgumentTypes() const { return argumentTypes; }
+  ArrayRef<Type> getArgumentTypes() const {
+    return ArrayRef<Type>(argumentTypes, numArguments);
+  }
 
   /// Checks whether the function type is variadic.
-  bool isVariadic() const { return returnTypeAndVariadic.getInt(); }
+  bool isVariadic() const { return isVariadicFlag; }
 
   /// Returns the function result type.
-  Type getReturnType() const { return returnTypeAndVariadic.getPointer(); }
+  const Type &getReturnType() const { return resultType; }
 
 private:
-  /// Function result type packed with the variadic bit.
-  llvm::PointerIntPair<Type, 1, bool> returnTypeAndVariadic;
-  /// Argument types.
-  ArrayRef<Type> argumentTypes;
+  /// The result type of the function.
+  Type resultType;
+  /// Flag indicating if the function is variadic.
+  bool isVariadicFlag;
+  /// The argument types of the function.
+  unsigned numArguments;
+  const Type *argumentTypes;
 };
 
 //===----------------------------------------------------------------------===//

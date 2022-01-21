@@ -1359,12 +1359,8 @@ public:
   }
 
   Value *CreateAnd(Value *LHS, Value *RHS, const Twine &Name = "") {
-    if (auto *RC = dyn_cast<Constant>(RHS)) {
-      if (isa<ConstantInt>(RC) && cast<ConstantInt>(RC)->isMinusOne())
-        return LHS;  // LHS & -1 -> LHS
-      if (auto *LC = dyn_cast<Constant>(LHS))
-        return Insert(Folder.CreateAnd(LC, RC), Name);
-    }
+    if (auto *V = Folder.FoldAnd(LHS, RHS))
+      return V;
     return Insert(BinaryOperator::CreateAnd(LHS, RHS), Name);
   }
 

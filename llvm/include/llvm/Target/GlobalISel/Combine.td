@@ -391,7 +391,7 @@ def add_p2i_to_ptradd : GICombineRule<
 >;
 
 // Fold (ptr_add (int2ptr C1), C2) -> C1 + C2
-def const_ptradd_to_i2p_matchinfo : GIDefMatchData<"int64_t">;
+def const_ptradd_to_i2p_matchinfo : GIDefMatchData<"APInt">;
 def const_ptradd_to_i2p: GICombineRule<
   (defs root:$root, const_ptradd_to_i2p_matchinfo:$info),
   (match (wip_match_opcode G_PTR_ADD):$root,

@@ -250,13 +250,13 @@ struct ConvertMathToLLVMPass
     : public ConvertMathToLLVMBase<ConvertMathToLLVMPass> {
   ConvertMathToLLVMPass() = default;
 
-  void runOnFunction() override {
+  void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext());
     populateMathToLLVMConversionPatterns(converter, patterns);
     LLVMConversionTarget target(getContext());
-    if (failed(
-            applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

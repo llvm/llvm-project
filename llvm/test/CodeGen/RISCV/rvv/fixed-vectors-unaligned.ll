@@ -548,16 +548,16 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV32-NEXT:    andi a3, a2, 1
 ; RV32-NEXT:    beqz a3, .LBB8_2
 ; RV32-NEXT:  # %bb.1: # %cond.load
-; RV32-NEXT:    lbu a6, 1(a0)
-; RV32-NEXT:    lbu a7, 0(a0)
+; RV32-NEXT:    lbu a3, 1(a0)
+; RV32-NEXT:    lbu a4, 0(a0)
 ; RV32-NEXT:    lbu a5, 3(a0)
-; RV32-NEXT:    lbu a3, 2(a0)
-; RV32-NEXT:    slli a4, a6, 8
-; RV32-NEXT:    or a4, a4, a7
-; RV32-NEXT:    slli a5, a5, 8
-; RV32-NEXT:    or a3, a5, a3
-; RV32-NEXT:    slli a3, a3, 16
+; RV32-NEXT:    lbu a6, 2(a0)
+; RV32-NEXT:    slli a3, a3, 8
 ; RV32-NEXT:    or a3, a3, a4
+; RV32-NEXT:    slli a4, a5, 8
+; RV32-NEXT:    or a4, a4, a6
+; RV32-NEXT:    slli a4, a4, 16
+; RV32-NEXT:    or a3, a4, a3
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV32-NEXT:    vmv.v.x v8, a3
 ; RV32-NEXT:    andi a2, a2, 2
@@ -608,16 +608,16 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV64-NEXT:    andi a3, a2, 1
 ; RV64-NEXT:    beqz a3, .LBB8_2
 ; RV64-NEXT:  # %bb.1: # %cond.load
-; RV64-NEXT:    lbu a6, 1(a0)
-; RV64-NEXT:    lbu a7, 0(a0)
+; RV64-NEXT:    lbu a3, 1(a0)
+; RV64-NEXT:    lbu a4, 0(a0)
 ; RV64-NEXT:    lb a5, 3(a0)
-; RV64-NEXT:    lbu a3, 2(a0)
-; RV64-NEXT:    slli a4, a6, 8
-; RV64-NEXT:    or a4, a4, a7
-; RV64-NEXT:    slli a5, a5, 8
-; RV64-NEXT:    or a3, a5, a3
-; RV64-NEXT:    slli a3, a3, 16
+; RV64-NEXT:    lbu a6, 2(a0)
+; RV64-NEXT:    slli a3, a3, 8
 ; RV64-NEXT:    or a3, a3, a4
+; RV64-NEXT:    slli a4, a5, 8
+; RV64-NEXT:    or a4, a4, a6
+; RV64-NEXT:    slli a4, a4, 16
+; RV64-NEXT:    or a3, a4, a3
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV64-NEXT:    vmv.v.x v8, a3
 ; RV64-NEXT:    andi a2, a2, 2

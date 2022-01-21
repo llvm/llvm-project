@@ -30,6 +30,7 @@ function(get_errc_messages outvar)
         int main() {
             std::cout << getMessageFor(ENOENT) << ';' << getMessageFor(EISDIR);
             std::cout << ';' << getMessageFor(EINVAL) << ';' << getMessageFor(EACCES);
+            return 0;
         }
     ")
 

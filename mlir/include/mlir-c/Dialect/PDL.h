@@ -49,6 +49,8 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAPDLRangeType(MlirType type);
 
 MLIR_CAPI_EXPORTED MlirType mlirPDLRangeTypeGet(MlirType elementType);
 
+MLIR_CAPI_EXPORTED MlirType mlirPDLRangeTypeGetElementType(MlirType type);
+
 //===---------------------------------------------------------------------===//
 // TypeType
 //===---------------------------------------------------------------------===//

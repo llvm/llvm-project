@@ -10,6 +10,7 @@
 #define LLVM_ANALYSIS_INLINEADVISOR_H
 
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
@@ -161,14 +162,13 @@ public:
 
   /// This must be called when the Inliner pass is exited, as function passes
   /// may be run subsequently. This allows an implementation of InlineAdvisor
-  /// to prepare for a partial update.
-  virtual void onPassExit() {}
+  /// to prepare for a partial update, based on the optional SCC.
+  virtual void onPassExit(LazyCallGraph::SCC *SCC = nullptr) {}
 
-  /// Called when the module is invalidated. We let the advisor implementation
-  /// decide what to refresh - in the case of the development mode
-  /// implementation, for example, we wouldn't want to delete the whole object
-  /// and need to re-load the model evaluator.
-  virtual void onModuleInvalidated() {}
+  /// Support for printer pass
+  virtual void print(raw_ostream &OS) const {
+    OS << "Unimplemented InlineAdvisor print\n";
+  }
 
 protected:
   InlineAdvisor(Module &M, FunctionAnalysisManager &FAM);
@@ -217,8 +217,6 @@ public:
     Result(Module &M, ModuleAnalysisManager &MAM) : M(M), MAM(MAM) {}
     bool invalidate(Module &, const PreservedAnalyses &PA,
                     ModuleAnalysisManager::Invalidator &) {
-      if (Advisor && !PA.areAllPreserved())
-        Advisor->onModuleInvalidated();
       // Check whether the analysis has been explicitly invalidated. Otherwise,
       // it's stateless and remains preserved.
       auto PAC = PA.getChecker<InlineAdvisorAnalysis>();
@@ -237,16 +235,23 @@ public:
   Result run(Module &M, ModuleAnalysisManager &MAM) { return Result(M, MAM); }
 };
 
-#ifdef LLVM_HAVE_TF_AOT
+/// Printer pass for the FunctionPropertiesAnalysis results.
+class InlineAdvisorAnalysisPrinterPass
+    : public PassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit InlineAdvisorAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
 std::unique_ptr<InlineAdvisor>
 getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM);
-#endif
 
-#ifdef LLVM_HAVE_TF_API
 std::unique_ptr<InlineAdvisor>
 getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                           std::function<bool(CallBase &)> GetDefaultAdvice);
-#endif
 
 // Default (manual policy) decision making helper APIs. Shared with the legacy
 // pass manager inliner.

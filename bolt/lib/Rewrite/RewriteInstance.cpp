@@ -2771,7 +2771,6 @@ void RewriteInstance::buildFunctionsCFG() {
                      "Build Binary Functions", opts::TimeBuild);
 
   // Create annotation indices to allow lock-free execution
-  BC->MIB->getOrCreateAnnotationIndex("Offset");
   BC->MIB->getOrCreateAnnotationIndex("JTIndexReg");
   BC->MIB->getOrCreateAnnotationIndex("NOP");
   BC->MIB->getOrCreateAnnotationIndex("Size");

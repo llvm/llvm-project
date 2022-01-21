@@ -770,8 +770,8 @@ namespace {
 class ArrayValueCopyConverter
     : public ArrayValueCopyBase<ArrayValueCopyConverter> {
 public:
-  void runOnFunction() override {
-    auto func = getFunction();
+  void runOnOperation() override {
+    auto func = getOperation();
     LLVM_DEBUG(llvm::dbgs() << "\n\narray-value-copy pass on function '"
                             << func.getName() << "'\n");
     auto *context = &getContext();

@@ -2131,7 +2131,9 @@ def Vector_ConstantMaskOp :
     specifies an exclusive upper bound [0, mask-dim-size-element-value)
     for a unique dimension in the vector result. The conjunction of the ranges
     define a hyper-rectangular region within which elements values are set to 1
-    (otherwise element values are set to 0).
+    (otherwise element values are set to 0). Each value of 'mask_dim_sizes' must
+    be non-negative and not greater than the size of the corresponding vector
+    dimension (as opposed to vector.create_mask which allows this).
 
     Example:
 
@@ -2169,7 +2171,9 @@ def Vector_CreateMaskOp :
     each operand specifies a range [0, operand-value) for a unique dimension in
     the vector result. The conjunction of the operand ranges define a
     hyper-rectangular region within which elements values are set to 1
-    (otherwise element values are set to 0).
+    (otherwise element values are set to 0). If operand-value is negative, it is
+    treated as if it were zero, and if it is greater than the corresponding
+    dimension size, it is treated as if it were equal to the dimension size.
 
     Example:
 

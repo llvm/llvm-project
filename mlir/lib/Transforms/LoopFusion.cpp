@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Analysis/AffineAnalysis.h"
-#include "mlir/Analysis/AffineStructures.h"
-#include "mlir/Analysis/LoopAnalysis.h"
-#include "mlir/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExpr.h"
@@ -56,7 +56,7 @@ struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
     this->affineFusionMode = affineFusionMode;
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 };
 
 } // namespace
@@ -1975,9 +1975,9 @@ public:
 
 } // namespace
 
-void LoopFusion::runOnFunction() {
+void LoopFusion::runOnOperation() {
   MemRefDependenceGraph g;
-  if (!g.init(getFunction()))
+  if (!g.init(getOperation()))
     return;
 
   Optional<unsigned> fastMemorySpaceOpt;

@@ -695,6 +695,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 */
 
 #include <__chrono/calendar.h>
+#include <__chrono/convert_to_timespec.h>
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
 #include <__chrono/high_resolution_clock.h>

@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
+def BufferDeallocation : Pass<"buffer-deallocation", "FuncOp"> {
   let summary = "Adds all required dealloc operations for all allocations in "
                 "the input program";
   let description = [{
@@ -67,7 +67,7 @@ def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
           args_out = 1 : i64,
           indexing_maps = [#map0, #map0],
           iterator_types = ["parallel"]} %arg1, %1 {
-        ^bb0(%arg3: f32, %arg4: f32):  // no predecessors
+        ^bb0(%arg3: f32, %arg4: f32):
           %4 = exp %arg3 : f32
           linalg.yield %4 : f32
         }: memref<2xf32>, memref<2xf32>
@@ -88,7 +88,7 @@ def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
   let constructor = "mlir::bufferization::createBufferDeallocationPass()";
 }
 
-def FinalizingBufferize : FunctionPass<"finalizing-bufferize"> {
+def FinalizingBufferize : Pass<"finalizing-bufferize", "FuncOp"> {
   let summary = "Finalize a partial bufferization";
   let description = [{
     A bufferize pass that finalizes a partial bufferization by removing

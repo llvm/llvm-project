@@ -4,7 +4,6 @@ add_flang_library(FIRTransforms
   AffineDemotion.cpp
   CharacterConversion.cpp
   ArrayValueCopy.cpp
-  Inliner.cpp
   ExternalNameConversion.cpp
   MemoryAllocation.cpp
   MemRefDataFlowOpt.cpp

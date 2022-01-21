@@ -435,8 +435,8 @@ static scf::ForOp replaceForOpWithNewSignature(OpBuilder &b, scf::ForOp loop,
   newLoop.getLoopBody().getBlocks().splice(
       newLoop.getLoopBody().getBlocks().begin(),
       loop.getLoopBody().getBlocks());
-  for (auto operand : newIterOperands)
-    newLoop.getBody()->addArgument(operand.getType());
+  for (Value operand : newIterOperands)
+    newLoop.getBody()->addArgument(operand.getType(), operand.getLoc());
 
   for (auto it : llvm::zip(loop.getResults(), newLoop.getResults().take_front(
                                                   loop.getNumResults())))
@@ -535,12 +535,12 @@ namespace {
 
 struct ConvertVectorToGPUPass
     : public ConvertVectorToGPUBase<ConvertVectorToGPUPass> {
-  void runOnFunction() override {
-    RewritePatternSet patterns(getFunction().getContext());
+  void runOnOperation() override {
+    RewritePatternSet patterns(getOperation().getContext());
     populatePrepareVectorToMMAPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 
-    convertVectorToMMAOps(getFunction());
+    convertVectorToMMAOps(getOperation());
   }
 };
 

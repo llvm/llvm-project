@@ -16,7 +16,7 @@
 include "mlir/Pass/PassBase.td"
 include "mlir/Rewrite/PassUtil.td"
 
-def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
+def AffineLoopFusion : Pass<"affine-loop-fusion", "FuncOp"> {
   let summary = "Fuse affine loop nests";
   let description = [{
     This pass performs fusion of loop nests using a slicing-based approach. It
@@ -149,7 +149,7 @@ def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
 }
 
 def AffinePipelineDataTransfer
-    : FunctionPass<"affine-pipeline-data-transfer"> {
+    : Pass<"affine-pipeline-data-transfer", "FuncOp"> {
   let summary = "Pipeline non-blocking data transfers between explicitly "
                 "managed levels of the memory hierarchy";
   let description = [{
@@ -217,7 +217,7 @@ def AffinePipelineDataTransfer
   let constructor = "mlir::createPipelineDataTransferPass()";
 }
 
-def BufferHoisting : FunctionPass<"buffer-hoisting"> {
+def BufferHoisting : Pass<"buffer-hoisting", "FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";
   let description = [{
@@ -227,7 +227,7 @@ def BufferHoisting : FunctionPass<"buffer-hoisting"> {
   let constructor = "mlir::createBufferHoistingPass()";
 }
 
-def BufferLoopHoisting : FunctionPass<"buffer-loop-hoisting"> {
+def BufferLoopHoisting : Pass<"buffer-loop-hoisting", "FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "out of loop nests";
   let description = [{
@@ -237,7 +237,7 @@ def BufferLoopHoisting : FunctionPass<"buffer-loop-hoisting"> {
   let constructor = "mlir::createBufferLoopHoistingPass()";
 }
 
-def PromoteBuffersToStack : FunctionPass<"promote-buffers-to-stack"> {
+def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "FuncOp"> {
   let summary = "Promotes heap-based allocations to automatically managed "
                 "stack-based allocations";
   let description = [{
@@ -384,7 +384,7 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
   ];
 }
 
-def LoopCoalescing : FunctionPass<"loop-coalescing"> {
+def LoopCoalescing : Pass<"loop-coalescing", "FuncOp"> {
   let summary = "Coalesce nested loops with independent bounds into a single "
                 "loop";
   let constructor = "mlir::createLoopCoalescingPass()";

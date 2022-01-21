@@ -1409,32 +1409,32 @@ SDValue M68kTargetLowering::LowerXALUO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Arith, SetCC);
 }
 
-/// Create a BT (Bit Test) node - Test bit \p BitNo in \p Src and set condition
-/// according to equal/not-equal condition code \p CC.
+/// Create a BTST (Bit Test) node - Test bit \p BitNo in \p Src and set
+/// condition according to equal/not-equal condition code \p CC.
 static SDValue getBitTestCondition(SDValue Src, SDValue BitNo, ISD::CondCode CC,
                                    const SDLoc &DL, SelectionDAG &DAG) {
-  // If Src is i8, promote it to i32 with any_extend.  There is no i8 BT
+  // If Src is i8, promote it to i32 with any_extend.  There is no i8 BTST
   // instruction.  Since the shift amount is in-range-or-undefined, we know
   // that doing a bittest on the i32 value is ok.
   if (Src.getValueType() == MVT::i8 || Src.getValueType() == MVT::i16)
     Src = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
 
   // If the operand types disagree, extend the shift amount to match.  Since
-  // BT ignores high bits (like shifts) we can use anyextend.
+  // BTST ignores high bits (like shifts) we can use anyextend.
   if (Src.getValueType() != BitNo.getValueType())
     BitNo = DAG.getNode(ISD::ANY_EXTEND, DL, Src.getValueType(), BitNo);
 
-  SDValue BT = DAG.getNode(M68kISD::BT, DL, MVT::i32, Src, BitNo);
+  SDValue BTST = DAG.getNode(M68kISD::BTST, DL, MVT::i32, Src, BitNo);
 
   // NOTE BTST sets CCR.Z flag
   M68k::CondCode Cond = CC == ISD::SETEQ ? M68k::COND_NE : M68k::COND_EQ;
   return DAG.getNode(M68kISD::SETCC, DL, MVT::i8,
-                     DAG.getConstant(Cond, DL, MVT::i8), BT);
+                     DAG.getConstant(Cond, DL, MVT::i8), BTST);
 }
 
-/// Result of 'and' is compared against zero. Change to a BT node if possible.
-static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &DL,
-                            SelectionDAG &DAG) {
+/// Result of 'and' is compared against zero. Change to a BTST node if possible.
+static SDValue LowerAndToBTST(SDValue And, ISD::CondCode CC, const SDLoc &DL,
+                              SelectionDAG &DAG) {
   SDValue Op0 = And.getOperand(0);
   SDValue Op1 = And.getOperand(1);
   if (Op0.getOpcode() == ISD::TRUNCATE)
@@ -1468,7 +1468,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &DL,
       RHS = AndLHS.getOperand(1);
     }
 
-    // Use BT if the immediate can't be encoded in a TEST instruction.
+    // Use BTST if the immediate can't be encoded in a TEST instruction.
     if (!isUInt<32>(AndRHSVal) && isPowerOf2_64(AndRHSVal)) {
       LHS = AndLHS;
       RHS = DAG.getConstant(Log2_64_Ceil(AndRHSVal), DL, LHS.getValueType());
@@ -1592,8 +1592,8 @@ static unsigned TranslateM68kCC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
 }
 
 // Convert (truncate (srl X, N) to i1) to (bt X, N)
-static SDValue LowerTruncateToBT(SDValue Op, ISD::CondCode CC, const SDLoc &DL,
-                                 SelectionDAG &DAG) {
+static SDValue LowerTruncateToBTST(SDValue Op, ISD::CondCode CC,
+                                   const SDLoc &DL, SelectionDAG &DAG) {
 
   assert(Op.getOpcode() == ISD::TRUNCATE && Op.getValueType() == MVT::i1 &&
          "Expected TRUNCATE to i1 node");
@@ -1889,14 +1889,14 @@ SDValue M68kTargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned M68kCC,
 }
 
 /// Result of 'and' or 'trunc to i1' is compared against zero.
-/// Change to a BT node if possible.
-SDValue M68kTargetLowering::LowerToBT(SDValue Op, ISD::CondCode CC,
-                                      const SDLoc &DL,
-                                      SelectionDAG &DAG) const {
+/// Change to a BTST node if possible.
+SDValue M68kTargetLowering::LowerToBTST(SDValue Op, ISD::CondCode CC,
+                                        const SDLoc &DL,
+                                        SelectionDAG &DAG) const {
   if (Op.getOpcode() == ISD::AND)
-    return LowerAndToBT(Op, CC, DL, DAG);
+    return LowerAndToBTST(Op, CC, DL, DAG);
   if (Op.getOpcode() == ISD::TRUNCATE && Op.getValueType() == MVT::i1)
-    return LowerTruncateToBT(Op, CC, DL, DAG);
+    return LowerTruncateToBTST(Op, CC, DL, DAG);
   return SDValue();
 }
 
@@ -1909,14 +1909,14 @@ SDValue M68kTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
 
-  // Optimize to BT if possible.
-  // Lower (X & (1 << N)) == 0 to BT(X, N).
-  // Lower ((X >>u N) & 1) != 0 to BT(X, N).
-  // Lower ((X >>s N) & 1) != 0 to BT(X, N).
-  // Lower (trunc (X >> N) to i1) to BT(X, N).
+  // Optimize to BTST if possible.
+  // Lower (X & (1 << N)) == 0 to BTST(X, N).
+  // Lower ((X >>u N) & 1) != 0 to BTST(X, N).
+  // Lower ((X >>s N) & 1) != 0 to BTST(X, N).
+  // Lower (trunc (X >> N) to i1) to BTST(X, N).
   if (Op0.hasOneUse() && isNullConstant(Op1) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    if (SDValue NewSetCC = LowerToBT(Op0, CC, DL, DAG)) {
+    if (SDValue NewSetCC = LowerToBTST(Op0, CC, DL, DAG)) {
       if (VT == MVT::i1)
         return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, NewSetCC);
       return NewSetCC;
@@ -2099,7 +2099,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     bool IllegalFPCMov = false;
 
-    if ((isM68kLogicalCmp(Cmp) && !IllegalFPCMov) || Opc == M68kISD::BT) {
+    if ((isM68kLogicalCmp(Cmp) && !IllegalFPCMov) || Opc == M68kISD::BTST) {
       Cond = Cmp;
       addTest = false;
     }
@@ -2163,7 +2163,7 @@ SDValue M68kTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     // We know the result of AND is compared against zero. Try to match
     // it to BT.
     if (Cond.getOpcode() == ISD::AND && Cond.hasOneUse()) {
-      if (SDValue NewSetCC = LowerToBT(Cond, ISD::SETNE, DL, DAG)) {
+      if (SDValue NewSetCC = LowerToBTST(Cond, ISD::SETNE, DL, DAG)) {
         CC = NewSetCC.getOperand(0);
         Cond = NewSetCC.getOperand(1);
         addTest = false;
@@ -2282,7 +2282,7 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     SDValue Cmp = Cond.getOperand(1);
     unsigned Opc = Cmp.getOpcode();
 
-    if (isM68kLogicalCmp(Cmp) || Opc == M68kISD::BT) {
+    if (isM68kLogicalCmp(Cmp) || Opc == M68kISD::BTST) {
       Cond = Cmp;
       AddTest = false;
     } else {
@@ -2427,7 +2427,7 @@ SDValue M68kTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
 
     // We know the result is compared against zero. Try to match it to BT.
     if (Cond.hasOneUse()) {
-      if (SDValue NewSetCC = LowerToBT(Cond, ISD::SETNE, DL, DAG)) {
+      if (SDValue NewSetCC = LowerToBTST(Cond, ISD::SETNE, DL, DAG)) {
         CC = NewSetCC.getOperand(0);
         Cond = NewSetCC.getOperand(1);
         AddTest = false;
@@ -3391,8 +3391,8 @@ const char *M68kTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "M68kISD::AND";
   case M68kISD::CMP:
     return "M68kISD::CMP";
-  case M68kISD::BT:
-    return "M68kISD::BT";
+  case M68kISD::BTST:
+    return "M68kISD::BTST";
   case M68kISD::SELECT:
     return "M68kISD::SELECT";
   case M68kISD::CMOV:

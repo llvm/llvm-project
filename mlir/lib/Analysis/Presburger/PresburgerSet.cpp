@@ -8,10 +8,12 @@
 
 #include "mlir/Analysis/Presburger/PresburgerSet.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace mlir;
+using namespace presburger_utils;
 
 PresburgerSet::PresburgerSet(const IntegerPolyhedron &poly)
     : nDim(poly.getNumDimIds()), nSym(poly.getNumSymbolIds()) {
@@ -209,8 +211,7 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
 
   // Find out which inequalities of sI correspond to division inequalities for
   // the local variables of sI.
-  std::vector<llvm::Optional<std::pair<unsigned, unsigned>>> repr(
-      sI.getNumLocalIds());
+  std::vector<MaybeLocalRepr> repr(sI.getNumLocalIds());
   sI.getLocalReprs(repr);
 
   // Add sI's locals to b, after b's locals. Also add b's locals to sI, before
@@ -220,18 +221,20 @@ static void subtractRecursively(IntegerPolyhedron &b, Simplex &simplex,
   // Mark which inequalities of sI are division inequalities and add all such
   // inequalities to b.
   llvm::SmallBitVector isDivInequality(sI.getNumInequalities());
-  for (Optional<std::pair<unsigned, unsigned>> &maybePair : repr) {
-    assert(maybePair &&
+  for (MaybeLocalRepr &maybeInequality : repr) {
+    assert(maybeInequality.kind == ReprKind::Inequality &&
            "Subtraction is not supported when a representation of the local "
            "variables of the subtrahend cannot be found!");
+    auto lb = maybeInequality.repr.inEqualityPair.lowerBoundIdx;
+    auto ub = maybeInequality.repr.inEqualityPair.upperBoundIdx;
 
-    b.addInequality(sI.getInequality(maybePair->first));
-    b.addInequality(sI.getInequality(maybePair->second));
+    b.addInequality(sI.getInequality(lb));
+    b.addInequality(sI.getInequality(ub));
 
-    assert(maybePair->first != maybePair->second &&
+    assert(lb != ub &&
            "Upper and lower bounds must be different inequalities!");
-    isDivInequality[maybePair->first] = true;
-    isDivInequality[maybePair->second] = true;
+    isDivInequality[lb] = true;
+    isDivInequality[ub] = true;
   }
 
   unsigned offset = simplex.getNumConstraints();

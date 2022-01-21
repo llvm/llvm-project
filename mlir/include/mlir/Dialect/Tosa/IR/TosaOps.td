@@ -341,6 +341,8 @@ def Tosa_ClampOp : Tosa_Op<"clamp", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

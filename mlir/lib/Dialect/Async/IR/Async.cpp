@@ -107,7 +107,8 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   for (Value operand : operands) {
     auto valueType = operand.getType().dyn_cast<ValueType>();
     bodyBlock.addArgument(valueType ? valueType.getValueType()
-                                    : operand.getType());
+                                    : operand.getType(),
+                          operand.getLoc());
   }
 
   // Create the default terminator if the builder is not provided and if the
@@ -144,6 +145,7 @@ static void print(OpAsmPrinter &p, ExecuteOp op) {
   p.printOptionalArrowTypeList(llvm::drop_begin(op.getResultTypes()));
   p.printOptionalAttrDictWithKeyword(op->getAttrs(),
                                      {kOperandSegmentSizesAttr});
+  p << ' ';
   p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
 }
 
@@ -219,6 +221,7 @@ static ParseResult parseExecuteOp(OpAsmParser &parser, OperationState &result) {
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, /*arguments=*/{unwrappedArgs},
                          /*argTypes=*/{unwrappedTypes},
+                         /*argLocations=*/{},
                          /*enableNameShadowing=*/false))
     return failure();
 

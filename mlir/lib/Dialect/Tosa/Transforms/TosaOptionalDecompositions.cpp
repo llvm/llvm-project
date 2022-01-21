@@ -25,10 +25,10 @@ namespace {
 
 struct TosaOptionalDecompositions
     : public TosaOptionalDecompositionsBase<TosaOptionalDecompositions> {
-  void runOnFunction() override {
+  void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    auto func = getFunction();
+    auto func = getOperation();
 
     mlir::tosa::populateTosaDecomposeConv2D(ctx, patterns);
     mlir::tosa::populateTosaDecomposeTransposeConv(ctx, patterns);

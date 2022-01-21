@@ -8,6 +8,13 @@ subroutine bozchecks
   logical :: resbit
   complex :: rescmplx
   real :: dbl, e
+  interface
+    subroutine explicit(n, x, c)
+      integer :: n
+      real :: x
+      character :: c
+    end subroutine
+  end interface
   ! C7107
   !ERROR: Invalid digit ('a') in BOZ literal 'b"110a"'
   integer, parameter :: a = B"110A"
@@ -75,7 +82,16 @@ subroutine bozchecks
   res = MERGE_BITS(B"1101",B"0011",B"1011")
   res = MERGE_BITS(B"1101",3,B"1011")
 
+  !ERROR: Typeless (BOZ) not allowed for 'x=' argument
+  res = KIND(z'feedface')
+
   res = REAL(B"1101")
+
+  !Ok
+  call explicit(z'deadbeef', o'666', 'a')
+
+  !ERROR: Actual argument 'z'55'' associated with dummy argument 'c=' is not a variable or typed expression
+  call explicit(z'deadbeef', o'666', b'01010101')
 
   !ERROR: BOZ argument requires an explicit interface
   call implictSub(Z'12345')
