@@ -60,7 +60,7 @@ class OutputBuffer {
     // Add negative sign...
     if (isNeg)
       *--TempPtr = '-';
-    this->operator<<(StringView(TempPtr, Temp.end()));
+    this->operator<<(StringView(TempPtr, Temp.data() + Temp.size()));
   }
 
 public:
