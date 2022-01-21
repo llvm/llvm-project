@@ -135,7 +135,7 @@ TEST(NamelistTests, Subscripts) {
   aDesc->GetDimension(1).SetBounds(-1, 1);
   const NamelistGroup::Item items[]{{"a", *aDesc}};
   const NamelistGroup group{"justa", 1, items};
-  static char t1[]{"&justa A(0,1:-1:-2)=1 2/"};
+  static char t1[]{"&justa A(0,+1:-1:-2)=1 2/"};
   StaticDescriptor<1, true> statDesc;
   Descriptor &internalDesc{statDesc.descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
@@ -223,7 +223,7 @@ TEST(NamelistTypes, ArraySubstring) {
           std::vector<std::string>{"abcdefgh", "ijklmnop"}, 8)};
   const NamelistGroup::Item items[]{{"a", *scDesc}};
   const NamelistGroup group{"justa", 1, items};
-  static char t1[]{"&justa A(:)(2:5)='BCDE' 'JKLM'/"};
+  static char t1[]{"&justa A(:)(2:+5)='BCDE' 'JKLM'/"};
   StaticDescriptor<1, true> statDesc;
   Descriptor &internalDesc{statDesc.descriptor()};
   internalDesc.Establish(TypeCode{CFI_type_char},
