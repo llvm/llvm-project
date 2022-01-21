@@ -7256,7 +7256,7 @@ BoUpSLP::BlockScheduling::buildBundle(ArrayRef<Value *> VL) {
   }
   assert(Bundle && "Failed to find schedule bundle");
   return Bundle;
-};
+}
 
 // Groups the instructions to a bundle (which is then a single scheduling entity)
 // and schedules instructions until the bundle gets ready.
