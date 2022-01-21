@@ -15,7 +15,6 @@
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Dialect/Arithmetic/IR/ArithmeticBase.td"
 
 //===----------------------------------------------------------------------===//
 // ArmSVE dialect definition
