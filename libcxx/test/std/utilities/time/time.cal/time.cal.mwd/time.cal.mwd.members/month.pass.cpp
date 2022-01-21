@@ -31,8 +31,6 @@ int main(int, char**)
     ASSERT_NOEXCEPT(                 std::declval<const month_weekday>().month());
     ASSERT_SAME_TYPE(month, decltype(std::declval<const month_weekday>().month()));
 
-    static_assert( month_weekday{}.month() == month{}, "");
-
     for (unsigned i = 1; i <= 50; ++i)
     {
         month_weekday md(month{i}, weekday_indexed{Sunday, 1});

@@ -50,7 +50,7 @@ int main(int, char**)
         month_day{std::chrono::February, day{1}},
         false, true), "");
 
-//  same day, different months
+    //  same day, different months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
             assert((testComparisons6(
@@ -58,7 +58,7 @@ int main(int, char**)
                 month_day{month{j}, day{1}},
                 i == j, i < j )));
 
-//  same month, different days
+    //  same month, different days
     for (unsigned i = 1; i < 31; ++i)
         for (unsigned j = 1; j < 31; ++j)
             assert((testComparisons6(

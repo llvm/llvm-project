@@ -19,8 +19,6 @@
 //   Otherwise the value returned is unspecified.
 //   [Example: January - February == years{11}. —end example]
 
-extern "C" int printf(const char *, ...);
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>

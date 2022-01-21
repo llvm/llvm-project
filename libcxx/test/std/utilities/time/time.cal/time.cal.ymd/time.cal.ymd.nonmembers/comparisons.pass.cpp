@@ -47,51 +47,51 @@ int main(int, char**)
         year_month_day{year{1234}, January, day{1}},
         true, false), "");
 
-//  different day
+    // different day
     static_assert( testComparisons6(
         year_month_day{year{1234}, January, day{1}},
         year_month_day{year{1234}, January, day{2}},
         false, true), "");
 
-//  different month
+    // different month
     static_assert( testComparisons6(
         year_month_day{year{1234}, January, day{1}},
         year_month_day{year{1234}, February, day{1}},
         false, true), "");
 
-//  different year
+    // different year
     static_assert( testComparisons6(
         year_month_day{year{1234}, January, day{1}},
         year_month_day{year{1235}, January, day{1}},
         false, true), "");
 
 
-//  different month and day
+    // different month and day
     static_assert( testComparisons6(
         year_month_day{year{1234}, January, day{2}},
         year_month_day{year{1234}, February, day{1}},
         false, true), "");
 
-//  different year and month
+    // different year and month
     static_assert( testComparisons6(
         year_month_day{year{1234}, February, day{1}},
         year_month_day{year{1235}, January, day{1}},
         false, true), "");
 
-//  different year and day
+    // different year and day
     static_assert( testComparisons6(
         year_month_day{year{1234}, January, day{2}},
         year_month_day{year{1235}, January, day{1}},
         false, true), "");
 
-//  different year, month and day
+    // different year, month and day
     static_assert( testComparisons6(
         year_month_day{year{1234}, February, day{2}},
         year_month_day{year{1235}, January, day{1}},
         false, true), "");
 
 
-//  same year, different days
+    // same year, different days
     for (unsigned i = 1; i < 28; ++i)
         for (unsigned j = 1; j < 28; ++j)
             assert((testComparisons6(
@@ -99,7 +99,7 @@ int main(int, char**)
                 year_month_day{year{1234}, January, day{j}},
                 i == j, i < j )));
 
-//  same year, different months
+    // same year, different months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
             assert((testComparisons6(
@@ -107,13 +107,13 @@ int main(int, char**)
                 year_month_day{year{1234}, month{j}, day{12}},
                 i == j, i < j )));
 
-//  same month, different years
-    for (int i = 1000; i < 20; ++i)
-        for (int j = 1000; j < 20; ++j)
+    // same month, different years
+    for (int i = 1000; i < 2000; ++i)
+        for (int j = 1000; j < 2000; ++j)
         assert((testComparisons6(
             year_month_day{year{i}, January, day{12}},
             year_month_day{year{j}, January, day{12}},
             i == j, i < j )));
 
-  return 0;
+    return 0;
 }

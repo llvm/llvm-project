@@ -30,7 +30,7 @@ int main(int, char**)
     ASSERT_NOEXCEPT(               std::declval<const year_month_day_last>().day());
     ASSERT_SAME_TYPE(day, decltype(std::declval<const year_month_day_last>().day()));
 
-//  Some months have a 31st
+    // Some months have a 31st
     static_assert( year_month_day_last{year{2020}, month_day_last{month{ 1}}}.day() == day{31}, "");
     static_assert( year_month_day_last{year{2020}, month_day_last{month{ 2}}}.day() == day{29}, "");
     static_assert( year_month_day_last{year{2020}, month_day_last{month{ 3}}}.day() == day{31}, "");
@@ -48,5 +48,5 @@ int main(int, char**)
     assert((year_month_day_last{year{2020}, month_day_last{month{ 2}}}.day() == day{29}));
     assert((year_month_day_last{year{2021}, month_day_last{month{ 2}}}.day() == day{28}));
 
-  return 0;
+    return 0;
 }
