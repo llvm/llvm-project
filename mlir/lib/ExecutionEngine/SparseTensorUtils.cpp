@@ -26,6 +26,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <iostream>
 #include <limits>
 #include <numeric>
 #include <vector>
@@ -713,6 +715,31 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   return tensor;
 }
 
+/// Writes the sparse tensor to extended FROSTT format.
+template <typename V>
+void outSparseTensor(const SparseTensorCOO<V> &tensor, char *filename) {
+  auto &sizes = tensor.getSizes();
+  auto &elements = tensor.getElements();
+  uint64_t rank = tensor.getRank();
+  uint64_t nnz = elements.size();
+  std::fstream file;
+  file.open(filename, std::ios_base::out | std::ios_base::trunc);
+  assert(file.is_open());
+  file << "; extended FROSTT format\n" << rank << " " << nnz << std::endl;
+  for (uint64_t r = 0; r < rank - 1; r++)
+    file << sizes[r] << " ";
+  file << sizes[rank - 1] << std::endl;
+  for (uint64_t i = 0; i < nnz; i++) {
+    auto &idx = elements[i].indices;
+    for (uint64_t r = 0; r < rank; r++)
+      file << (idx[r] + 1) << " ";
+    file << elements[i].value << std::endl;
+  }
+  file.flush();
+  file.close();
+  assert(file.good());
+}
+
 } // namespace
 
 extern "C" {
@@ -843,6 +870,17 @@ extern "C" {
     index_t *added = aref->data + aref->offset;                                \
     static_cast<SparseTensorStorageBase *>(tensor)->expInsert(                 \
         cursor, values, filled, added, count);                                 \
+  }
+
+#define IMPL_OUT(NAME, V)                                                      \
+  void NAME(void *tensor, void *dest, bool sort) {                             \
+    assert(tensor &&dest);                                                     \
+    auto coo = static_cast<SparseTensorCOO<V> *>(tensor);                      \
+    if (sort)                                                                  \
+      coo->sort();                                                             \
+    char *filename = static_cast<char *>(dest);                                \
+    outSparseTensor<V>(*coo, filename);                                        \
+    delete coo;                                                                \
   }
 
 // Assume index_t is in fact uint64_t, so that _mlir_ciface_newSparseTensor
@@ -1026,6 +1064,14 @@ IMPL_EXPINSERT(expInsertI32, int32_t)
 IMPL_EXPINSERT(expInsertI16, int16_t)
 IMPL_EXPINSERT(expInsertI8, int8_t)
 
+/// Helper to output a sparse tensor, one per value type.
+IMPL_OUT(outSparseTensorF64, double)
+IMPL_OUT(outSparseTensorF32, float)
+IMPL_OUT(outSparseTensorI64, int64_t)
+IMPL_OUT(outSparseTensorI32, int32_t)
+IMPL_OUT(outSparseTensorI16, int16_t)
+IMPL_OUT(outSparseTensorI8, int8_t)
+
 #undef CASE
 #undef IMPL_SPARSEVALUES
 #undef IMPL_GETOVERHEAD
@@ -1033,6 +1079,7 @@ IMPL_EXPINSERT(expInsertI8, int8_t)
 #undef IMPL_GETNEXT
 #undef IMPL_LEXINSERT
 #undef IMPL_EXPINSERT
+#undef IMPL_OUT
 
 //===----------------------------------------------------------------------===//
 //
@@ -1162,6 +1209,7 @@ void convertFromMLIRSparseTensor(void *tensor, uint64_t *pRank, uint64_t *pNse,
   *pValues = values;
   *pIndices = indices;
 }
+
 } // extern "C"
 
 #endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS

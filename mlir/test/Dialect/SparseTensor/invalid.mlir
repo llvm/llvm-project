@@ -204,3 +204,11 @@ func @sparse_convert_dim_mismatch(%arg0: tensor<10x?xf32>) -> tensor<10x10xf32, 
   %0 = sparse_tensor.convert %arg0 : tensor<10x?xf32> to tensor<10x10xf32, #CSR>
   return %0 : tensor<10x10xf32, #CSR>
 }
+
+// -----
+
+func @invalid_out_dense(%arg0: tensor<10xf64>, %arg1: !llvm.ptr<i8>) {
+  // expected-error@+1 {{expected a sparse tensor for output}}
+  sparse_tensor.out %arg0, %arg1 : tensor<10xf64>, !llvm.ptr<i8>
+  return
+}

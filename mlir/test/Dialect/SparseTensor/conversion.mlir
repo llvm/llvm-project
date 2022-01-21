@@ -468,3 +468,27 @@ func @sparse_compression(%arg0: tensor<8x8xf64, #SparseMatrix>,
     : tensor<8x8xf64, #SparseMatrix>, memref<?xindex>, memref<?xf64>, memref<?xi1>, memref<?xindex>, index
   return
 }
+
+// CHECK-LABEL: func @sparse_out1(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
+//  CHECK-SAME: %[[B:.*]]: !llvm.ptr<i8>)
+//  CHECK-DAG:  %[[C:.*]] = arith.constant false
+//       CHECK: %[[T:.*]] = call @newSparseTensor(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[A]])
+//       CHECK: call @outSparseTensorF64(%[[T]], %[[B]], %[[C]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i1) -> ()
+//       CHECK: return
+func @sparse_out1(%arg0: tensor<?x?xf64, #SparseMatrix>, %arg1: !llvm.ptr<i8>) {
+  sparse_tensor.out %arg0, %arg1 : tensor<?x?xf64, #SparseMatrix>, !llvm.ptr<i8>
+  return
+}
+
+// CHECK-LABEL: func @sparse_out2(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
+//  CHECK-SAME: %[[B:.*]]: !llvm.ptr<i8>)
+//  CHECK-DAG:  %[[C:.*]] = arith.constant true
+//       CHECK: %[[T:.*]] = call @newSparseTensor(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[A]])
+//       CHECK: call @outSparseTensorF32(%[[T]], %[[B]], %[[C]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i1) -> ()
+//       CHECK: return
+func @sparse_out2(%arg0: tensor<?x?x?xf32, #SparseTensor>, %arg1: !llvm.ptr<i8>) {
+  sparse_tensor.out %arg0, %arg1 : tensor<?x?x?xf32, #SparseTensor>, !llvm.ptr<i8>
+  return
+}
