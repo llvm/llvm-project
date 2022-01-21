@@ -27,10 +27,10 @@ constexpr int const_index(int base) {
 
 void f(std::array<int, 10> a, int pos) {
   a [ pos / 2 /*comment*/] = 1;
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use array subscript when the index is not an integer constant expression; use gsl::at() instead [cppcoreguidelines-pro-bounds-constant-array-index]
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use array subscript when the index is not an integer constant expression [cppcoreguidelines-pro-bounds-constant-array-index]
   // CHECK-FIXES: gsl::at(a,  pos / 2 /*comment*/) = 1;
   int j = a[pos - 1];
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: do not use array subscript when the index is not an integer constant expression; use gsl::at() instead
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: do not use array subscript when the index is not an integer constant expression
   // CHECK-FIXES: int j = gsl::at(a, pos - 1);
 
   a.at(pos-1) = 2; // OK, at() instead of []
@@ -54,7 +54,7 @@ void g() {
   int a[10];
   for (int i = 0; i < 10; ++i) {
     a[i] = i;
-    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use array subscript when the index is not an integer constant expression; use gsl::at() instead
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use array subscript when the index is not an integer constant expression
     // CHECK-FIXES: gsl::at(a, i) = i;
     gsl::at(a, i) = i; // OK, gsl::at() instead of []
   }
