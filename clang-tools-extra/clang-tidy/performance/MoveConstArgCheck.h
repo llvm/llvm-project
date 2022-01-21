@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_MOVECONSTANTARGUMENTCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace clang {
 namespace tidy {
@@ -36,6 +37,7 @@ public:
 
 private:
   const bool CheckTriviallyCopyableMove;
+  llvm::DenseSet<const CallExpr *> AlreadyCheckedMoves;
 };
 
 } // namespace performance
