@@ -179,6 +179,19 @@ string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO: define escaping rules
 Not listed here, but MLIR does support comments. They use standard BCPL syntax,
 starting with a `//` and going until the end of the line.
 
+
+### Top level Productions
+
+```
+// Top level production
+toplevel := (operation | attribute-alias-def | type-alias-def)*
+```
+
+The production `toplevel` is the top level production that is parsed by any parsing
+consuming the MLIR syntax. [Operations](#operations),
+[Attribute alises](#attribute-value-aliases), and [Type aliases](#type-aliases)
+can be declared on the toplevel.
+
 ### Identifiers and keywords
 
 Syntax:
