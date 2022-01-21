@@ -158,10 +158,12 @@ LogicalResult mlir::MlirOptMain(raw_ostream &outputStream,
     return splitAndProcessBuffer(
         std::move(buffer),
         [&](std::unique_ptr<MemoryBuffer> chunkBuffer, raw_ostream &os) {
-          return processBuffer(os, std::move(chunkBuffer), verifyDiagnostics,
-                               verifyPasses, allowUnregisteredDialects,
-                               preloadDialectsInContext, passManagerSetupFn,
-                               registry, threadPool);
+          LogicalResult result = processBuffer(
+              os, std::move(chunkBuffer), verifyDiagnostics, verifyPasses,
+              allowUnregisteredDialects, preloadDialectsInContext,
+              passManagerSetupFn, registry, threadPool);
+          os << "// -----\n";
+          return result;
         },
         outputStream);
 
