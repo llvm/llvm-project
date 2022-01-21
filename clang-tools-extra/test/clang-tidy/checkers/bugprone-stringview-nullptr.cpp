@@ -1039,24 +1039,24 @@ void function_argument_initialization() /* f */ {
   // Function Argument Initialization
   {
     function(nullptr) /* f1 */;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function({}) /* f1 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing null as basic_string_view is undefined; replace with the empty string
+    // CHECK-FIXES: {{^}}    function("") /* f1 */;
 
     function((nullptr)) /* f2 */;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function({}) /* f2 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
+    // CHECK-FIXES: {{^}}    function("") /* f2 */;
 
     function({nullptr}) /* f3 */;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function({}) /* f3 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
+    // CHECK-FIXES: {{^}}    function("") /* f3 */;
 
     function({(nullptr)}) /* f4 */;
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function({}) /* f4 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
+    // CHECK-FIXES: {{^}}    function("") /* f4 */;
 
     function({{}}) /* f5 */; // Default `const CharT*`
-    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: constructing{{.*}}default
-    // CHECK-FIXES: {{^}}    function({}) /* f5 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: passing{{.*}}empty string
+    // CHECK-FIXES: {{^}}    function("") /* f5 */;
   }
 
   // Function Argument Initialization With Temporary
@@ -1599,7 +1599,7 @@ void constructor_invocation() /* r */ {
   struct AcceptsSV {
     explicit AcceptsSV(std::string_view) {}
   } r1(nullptr);
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: passing null as basic_string_view is undefined; replace with the empty string
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: passing{{.*}}empty string
   // CHECK-FIXES: {{^}}  } r1("");
 
   (void)(AcceptsSV{nullptr}) /* r2 */;
