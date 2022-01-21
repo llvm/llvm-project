@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -fno-signed-char %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
+// RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -118,6 +120,8 @@ void check_conditional_literal(const char* s, int i) {
   printf(i ? "%i\n" : "%i %s %s\n", i, s); // expected-warning{{more '%' conversions than data arguments}}
 }
 
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
+
 void check_writeback_specifier()
 {
   int x;
@@ -153,6 +157,45 @@ void check_writeback_specifier()
   printf("%Ln", 0); // expected-warning{{length modifier 'L' results in undefined behavior or no effect with 'n' conversion specifier}}
   // expected-note@-1{{did you mean to use 'll'?}}
 }
+
+#else
+
+void check_writeback_specifier()
+{
+  int x;
+  printf("%n", &x); // expected-warning{{'%n' specifier not supported on this platform}}
+
+  printf("%hhn", (signed char*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hhn", (char*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hhn", (unsigned char*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hhn", (int*)0); // expected-warning{{format specifies type 'signed char *' but the argument has type 'int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%hn", (short*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hn", (unsigned short*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%hn", (int*)0); // expected-warning{{format specifies type 'short *' but the argument has type 'int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%n", (int*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%n", (unsigned int*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%n", (char*)0); // expected-warning{{format specifies type 'int *' but the argument has type 'char *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%ln", (long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%ln", (unsigned long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%ln", (int*)0); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%lln", (long long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%lln", (unsigned long long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%lln", (int*)0); // expected-warning{{format specifies type 'long long *' but the argument has type 'int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%qn", (long long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%qn", (unsigned long long*)0); // expected-warning{{'%n' specifier not supported on this platform}}
+}
+
+#endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
 
 void check_invalid_specifier(FILE* fp, char *buf)
 {
@@ -386,14 +429,28 @@ void bug7377_bad_length_mod_usage() {
   // Bad flag usage
   printf("%#p", (void *) 0); // expected-warning{{flag '#' results in undefined behavior with 'p' conversion specifier}}
   printf("%0d", -1); // no-warning
+  printf("%-p", (void *) 0); // no-warning
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%#n", (int *) 0); // expected-warning{{flag '#' results in undefined behavior with 'n' conversion specifier}}
   printf("%-n", (int *) 0); // expected-warning{{flag '-' results in undefined behavior with 'n' conversion specifier}}
-  printf("%-p", (void *) 0); // no-warning
+#else
+  printf("%#n", (int *) 0); // expected-warning{{flag '#' results in undefined behavior with 'n' conversion specifier}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+  printf("%-n", (int *) 0); // expected-warning{{flag '-' results in undefined behavior with 'n' conversion specifier}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+#endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
 
   // Bad optional amount use
   printf("%.2c", 'a'); // expected-warning{{precision used with 'c' conversion specifier, resulting in undefined behavior}}
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%1n", (int *) 0); // expected-warning{{field width used with 'n' conversion specifier, resulting in undefined behavior}}
   printf("%.9n", (int *) 0); // expected-warning{{precision used with 'n' conversion specifier, resulting in undefined behavior}}
+#else
+  printf("%1n", (int *) 0); // expected-warning{{field width used with 'n' conversion specifier, resulting in undefined behavior}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+  printf("%.9n", (int *) 0); // expected-warning{{precision used with 'n' conversion specifier, resulting in undefined behavior}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+#endif // #if !defined(__ANDROID__) && !defined(__Fuchsia__)
 
   // Ignored flags
   printf("% +f", 1.23); // expected-warning{{flag ' ' is ignored when flag '+' is present}}
@@ -644,6 +701,8 @@ void test14_zed(int *p) {
   test14_bar("%", "%d", p); // expected-warning{{incomplete format specifier}}
 }
 
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
+
 void test_qualifiers(volatile int *vip, const int *cip,
                      const volatile int *cvip) {
   printf("%n", cip); // expected-warning{{format specifies type 'int *' but the argument has type 'const int *'}}
@@ -659,6 +718,29 @@ void test_qualifiers(volatile int *vip, const int *cip,
   printf("%n", (ip_t)0); // No warning.
   printf("%n", (cip_t)0); // expected-warning{{format specifies type 'int *' but the argument has type 'cip_t' (aka 'const int *')}}
 }
+
+#else
+
+void test_qualifiers(volatile int *vip, const int *cip,
+                     const volatile int *cvip) {
+  printf("%n", cip); // expected-warning{{format specifies type 'int *' but the argument has type 'const int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+  printf("%n", cvip); // expected-warning{{format specifies type 'int *' but the argument has type 'const volatile int *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+
+  printf("%n", vip); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%p", cip); // No warning.
+  printf("%p", cvip); // No warning.
+
+
+  typedef int* ip_t;
+  typedef const int* cip_t;
+  printf("%n", (ip_t)0); // expected-warning{{'%n' specifier not supported on this platform}}
+  printf("%n", (cip_t)0); // expected-warning{{format specifies type 'int *' but the argument has type 'cip_t' (aka 'const int *')}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+}
+
+#endif // #if !defined(__ANDROID__) && !defined(__Fuchsia__)
 
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #pragma GCC diagnostic warning "-Wformat-security"
