@@ -18,10 +18,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Transforms/ControlFlowSinkUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Transforms/Utils.h"
 #include <vector>
 
 #define DEBUG_TYPE "cf-sink"

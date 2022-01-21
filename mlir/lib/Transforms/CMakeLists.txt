@@ -6,12 +6,8 @@ add_mlir_library(MLIRTransforms
   CSE.cpp
   Inliner.cpp
   LocationSnapshot.cpp
-  LoopCoalescing.cpp
-  LoopFusion.cpp
   LoopInvariantCodeMotion.cpp
   OpStats.cpp
-  ParallelLoopCollapsing.cpp
-  PipelineDataTransfer.cpp
   SCCP.cpp
   StripDebugInfo.cpp
   SymbolDCE.cpp
@@ -21,18 +17,13 @@ add_mlir_library(MLIRTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
 
   DEPENDS
-  MLIRStandardOpsIncGen
   MLIRTransformsPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
   MLIRAnalysis
   MLIRCopyOpInterface
   MLIRLoopLikeInterface
-  MLIRMemRef
-  MLIRSCF
   MLIRPass
   MLIRSupport
   MLIRTransformUtils
-  MLIRVector
   )

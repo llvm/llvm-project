@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_LOOPUTILS_H
-#define MLIR_TRANSFORMS_LOOPUTILS_H
+#ifndef MLIR_DIALECT_AFFINE_LOOPUTILS_H
+#define MLIR_DIALECT_AFFINE_LOOPUTILS_H
 
 #include "mlir/IR/Block.h"
 #include "mlir/Support/LLVM.h"
@@ -45,9 +45,6 @@ LogicalResult loopUnrollFull(AffineForOp forOp);
 LogicalResult loopUnrollByFactor(
     AffineForOp forOp, uint64_t unrollFactor,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
-LogicalResult loopUnrollByFactor(
-    scf::ForOp forOp, uint64_t unrollFactor,
-    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
 
 /// Unrolls this loop by the specified unroll factor or its trip count,
 /// whichever is lower.
@@ -63,8 +60,6 @@ bool LLVM_ATTRIBUTE_UNUSED isPerfectlyNested(ArrayRef<AffineForOp> loops);
 /// AffineForOp, and the second op is a terminator).
 void getPerfectlyNestedLoops(SmallVectorImpl<AffineForOp> &nestedLoops,
                              AffineForOp root);
-void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
-                             scf::ForOp root);
 
 /// Unrolls and jams this loop by the specified factor. `forOp` can be a loop
 /// with iteration arguments performing supported reductions and its inner loops
@@ -78,10 +73,9 @@ LogicalResult loopUnrollJamByFactor(AffineForOp forOp,
 LogicalResult loopUnrollJamUpToFactor(AffineForOp forOp,
                                       uint64_t unrollJamFactor);
 
-/// Promotes the loop body of a AffineForOp/scf::ForOp to its containing block
-/// if the loop was known to have a single iteration.
+/// Promotes the loop body of a AffineForOp to its containing block if the loop
+/// was known to have a single iteration.
 LogicalResult promoteIfSingleIteration(AffineForOp forOp);
-LogicalResult promoteIfSingleIteration(scf::ForOp forOp);
 
 /// Promotes all single iteration AffineForOp's in the Function, i.e., moves
 /// their body into the containing Block.
@@ -146,13 +140,9 @@ AffineForOp sinkSequentialLoops(AffineForOp forOp);
 /// occurrence in `forOps`, under each of the `targets`.
 /// Returns the new AffineForOps, one per each of (`forOps`, `targets`) pair,
 /// nested immediately under each of `targets`.
-using Loops = SmallVector<scf::ForOp, 8>;
-using TileLoops = std::pair<Loops, Loops>;
 SmallVector<SmallVector<AffineForOp, 8>, 8> tile(ArrayRef<AffineForOp> forOps,
                                                  ArrayRef<uint64_t> sizes,
                                                  ArrayRef<AffineForOp> targets);
-SmallVector<Loops, 8> tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
-                           ArrayRef<scf::ForOp> targets);
 
 /// Performs tiling (with interchange) by strip-mining the `forOps` by `sizes`
 /// and sinking them, in their order of occurrence in `forOps`, under `target`.
@@ -160,15 +150,6 @@ SmallVector<Loops, 8> tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
 /// `target`.
 SmallVector<AffineForOp, 8> tile(ArrayRef<AffineForOp> forOps,
                                  ArrayRef<uint64_t> sizes, AffineForOp target);
-Loops tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
-           scf::ForOp target);
-
-/// Tile a nest of scf::ForOp loops rooted at `rootForOp` with the given
-/// (parametric) sizes. Sizes are expected to be strictly positive values at
-/// runtime.  If more sizes than loops are provided, discard the trailing values
-/// in sizes.  Assumes the loop nest is permutable.
-/// Returns the newly created intra-tile loops.
-Loops tilePerfectlyNested(scf::ForOp rootForOp, ArrayRef<Value> sizes);
 
 /// Explicit copy / DMA generation options for mlir::affineDataCopyGenerate.
 struct AffineCopyOptions {
@@ -236,16 +217,6 @@ LogicalResult generateCopyForMemRegion(const MemRefRegion &memrefRegion,
                                        const AffineCopyOptions &copyOptions,
                                        CopyGenerateResult &result);
 
-/// Tile a nest of standard for loops rooted at `rootForOp` by finding such
-/// parametric tile sizes that the outer loops have a fixed number of iterations
-/// as defined in `sizes`.
-TileLoops extractFixedOuterLoops(scf::ForOp rootFOrOp, ArrayRef<int64_t> sizes);
-
-/// Replace a perfect nest of "for" loops with a single linearized loop. Assumes
-/// `loops` contains a list of perfectly nested loops with bounds and steps
-/// independent of any loop induction variable involved in the nest.
-void coalesceLoops(MutableArrayRef<scf::ForOp> loops);
-
 /// Replace a perfect nest of "for" loops with a single linearized loop. Assumes
 /// `loops` contains a list of perfectly nested loops outermost to innermost
 /// that are normalized (step one and lower bound of zero) and with bounds and
@@ -253,12 +224,6 @@ void coalesceLoops(MutableArrayRef<scf::ForOp> loops);
 /// Coalescing affine.for loops is not always possible, i.e., the result may not
 /// be representable using affine.for.
 LogicalResult coalesceLoops(MutableArrayRef<AffineForOp> loops);
-
-/// Take the ParallelLoop and for each set of dimension indices, combine them
-/// into a single dimension. combinedDimensions must contain each index into
-/// loops exactly once.
-void collapseParallelLoops(scf::ParallelOp loops,
-                           ArrayRef<std::vector<unsigned>> combinedDimensions);
 
 /// Maps `forOp` for execution on a parallel grid of virtual `processorIds` of
 /// size given by `numProcessors`. This is achieved by embedding the SSA values
@@ -321,9 +286,6 @@ LogicalResult
 separateFullTiles(MutableArrayRef<AffineForOp> nest,
                   SmallVectorImpl<AffineForOp> *fullTileNest = nullptr);
 
-/// Move loop invariant code out of `looplike`.
-LogicalResult moveLoopInvariantCode(LoopLikeOpInterface looplike);
-
 } // namespace mlir
 
-#endif // MLIR_TRANSFORMS_LOOPUTILS_H
+#endif // MLIR_DIALECT_AFFINE_LOOPUTILS_H

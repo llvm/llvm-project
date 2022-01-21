@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/LoopUtils.h"
-
+#include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -25,7 +25,6 @@
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "mlir/Transforms/Utils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
@@ -108,42 +107,9 @@ getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
     lb.erase();
 }
 
-// Build the IR that performs ceil division of a positive value by a constant:
-//    ceildiv(a, B) = divis(a + (B-1), B)
-// where divis is rounding-to-zero division.
-static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
-                             int64_t divisor) {
-  assert(divisor > 0 && "expected positive divisor");
-  assert(dividend.getType().isIndex() && "expected index-typed value");
-
-  Value divisorMinusOneCst =
-      builder.create<arith::ConstantIndexOp>(loc, divisor - 1);
-  Value divisorCst = builder.create<arith::ConstantIndexOp>(loc, divisor);
-  Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOneCst);
-  return builder.create<arith::DivSIOp>(loc, sum, divisorCst);
-}
-
-// Build the IR that performs ceil division of a positive value by another
-// positive value:
-//    ceildiv(a, b) = divis(a + (b - 1), b)
-// where divis is rounding-to-zero division.
-static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
-                             Value divisor) {
-  assert(dividend.getType().isIndex() && "expected index-typed value");
-
-  Value cstOne = builder.create<arith::ConstantIndexOp>(loc, 1);
-  Value divisorMinusOne = builder.create<arith::SubIOp>(loc, divisor, cstOne);
-  Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOne);
-  return builder.create<arith::DivSIOp>(loc, sum, divisor);
-}
-
 /// Helper to replace uses of loop carried values (iter_args) and loop
-/// yield values while promoting single iteration affine.for and scf.for ops.
-template <typename AffineOrSCFForOp>
-static void replaceIterArgsAndYieldResults(AffineOrSCFForOp forOp) {
-  static_assert(
-      llvm::is_one_of<AffineOrSCFForOp, AffineForOp, scf::ForOp>::value,
-      "only for affine.for and scf.for ops");
+/// yield values while promoting single iteration affine.for ops.
+static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
   // Replace uses of iter arguments with iter operands (initial values).
   auto iterOperands = forOp.getIterOperands();
   auto iterArgs = forOp.getRegionIterArgs();
@@ -201,46 +167,6 @@ LogicalResult mlir::promoteIfSingleIteration(AffineForOp forOp) {
                                       forOp.getBody()->getOperations());
   forOp.erase();
   return success();
-}
-
-/// Promotes the loop body of a forOp to its containing block if the forOp
-/// it can be determined that the loop has a single iteration.
-LogicalResult mlir::promoteIfSingleIteration(scf::ForOp forOp) {
-  auto lbCstOp = forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto ubCstOp = forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCstOp = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
-  if (!lbCstOp || !ubCstOp || !stepCstOp || lbCstOp.value() < 0 ||
-      ubCstOp.value() < 0 || stepCstOp.value() < 0)
-    return failure();
-  int64_t tripCount =
-      mlir::ceilDiv(ubCstOp.value() - lbCstOp.value(), stepCstOp.value());
-  if (tripCount != 1)
-    return failure();
-  auto iv = forOp.getInductionVar();
-  iv.replaceAllUsesWith(lbCstOp);
-
-  replaceIterArgsAndYieldResults(forOp);
-
-  // Move the loop body operations, except for its terminator, to the loop's
-  // containing block.
-  auto *parentBlock = forOp->getBlock();
-  forOp.getBody()->getTerminator()->erase();
-  parentBlock->getOperations().splice(Block::iterator(forOp),
-                                      forOp.getBody()->getOperations());
-  forOp.erase();
-  return success();
-}
-
-/// Promotes all single iteration 'for' ops in `f`, i.e., moves
-/// their body into the containing Block.
-void mlir::promoteSingleIterationLoops(FuncOp f) {
-  // Gathers all innermost loops through a post order pruned walk.
-  f.walk([](Operation *op) {
-    if (auto forOp = dyn_cast<AffineForOp>(op))
-      (void)promoteIfSingleIteration(forOp);
-    else if (auto forOp = dyn_cast<scf::ForOp>(op))
-      (void)promoteIfSingleIteration(forOp);
-  });
 }
 
 /// Generates an affine.for op with the specified lower and upper bounds
@@ -1011,38 +937,22 @@ mlir::tilePerfectlyNestedParametric(MutableArrayRef<AffineForOp> input,
   return success();
 }
 
-/// Collect perfectly nested loops starting from `rootForOps`.  Loops are
-/// perfectly nested if each loop is the first and only non-terminator operation
-/// in the parent loop.  Collect at most `maxLoops` loops and append them to
-/// `forOps`.
-template <typename T>
-static void getPerfectlyNestedLoopsImpl(
-    SmallVectorImpl<T> &forOps, T rootForOp,
-    unsigned maxLoops = std::numeric_limits<unsigned>::max()) {
-  for (unsigned i = 0; i < maxLoops; ++i) {
-    forOps.push_back(rootForOp);
-    Block &body = rootForOp.getRegion().front();
-    if (body.begin() != std::prev(body.end(), 2))
-      return;
-
-    rootForOp = dyn_cast<T>(&body.front());
-    if (!rootForOp)
-      return;
-  }
-}
-
 /// Get perfectly nested sequence of loops starting at root of loop nest
 /// (the first op being another AffineFor, and the second op - a terminator).
 /// A loop is perfectly nested iff: the first op in the loop's body is another
 /// AffineForOp, and the second op is a terminator).
 void mlir::getPerfectlyNestedLoops(SmallVectorImpl<AffineForOp> &nestedLoops,
                                    AffineForOp root) {
-  getPerfectlyNestedLoopsImpl(nestedLoops, root);
-}
+  for (unsigned i = 0; i < std::numeric_limits<unsigned>::max(); ++i) {
+    nestedLoops.push_back(root);
+    Block &body = root.getRegion().front();
+    if (body.begin() != std::prev(body.end(), 2))
+      return;
 
-void mlir::getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
-                                   scf::ForOp root) {
-  getPerfectlyNestedLoopsImpl(nestedLoops, root);
+    root = dyn_cast<AffineForOp>(&body.front());
+    if (!root)
+      return;
+  }
 }
 
 /// Identify valid and profitable bands of loops to tile. This is currently just
@@ -1084,10 +994,10 @@ LogicalResult mlir::loopUnrollUpToFactor(AffineForOp forOp,
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 
-/// Generates unrolled copies of AffineForOp or scf::ForOp 'loopBodyBlock', with
-/// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
-/// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
-/// unrolled iteration using annotateFn.
+/// Generates unrolled copies of AffineForOp 'loopBodyBlock', with associated
+/// 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap 'forOpIV' for each
+/// unrolled body. If specified, annotates the Ops in each unrolled iteration
+/// using annotateFn.
 static void generateUnrolledLoop(
     Block *loopBodyBlock, Value forOpIV, uint64_t unrollFactor,
     function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
@@ -1232,127 +1142,6 @@ LogicalResult mlir::loopUnrollByFactor(
       /*annotateFn=*/annotateFn,
       /*iterArgs=*/iterArgs, /*yieldedValues=*/yieldedValues);
 
-  // Promote the loop body up if this has turned into a single iteration loop.
-  (void)promoteIfSingleIteration(forOp);
-  return success();
-}
-
-/// Unrolls 'forOp' by 'unrollFactor', returns success if the loop is unrolled.
-LogicalResult mlir::loopUnrollByFactor(
-    scf::ForOp forOp, uint64_t unrollFactor,
-    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn) {
-  assert(unrollFactor > 0 && "expected positive unroll factor");
-
-  // Return if the loop body is empty.
-  if (llvm::hasSingleElement(forOp.getBody()->getOperations()))
-    return success();
-
-  // Compute tripCount = ceilDiv((upperBound - lowerBound), step) and populate
-  // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
-  OpBuilder boundsBuilder(forOp);
-  auto loc = forOp.getLoc();
-  auto step = forOp.getStep();
-  Value upperBoundUnrolled;
-  Value stepUnrolled;
-  bool generateEpilogueLoop = true;
-
-  auto lbCstOp = forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto ubCstOp = forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCstOp = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
-  if (lbCstOp && ubCstOp && stepCstOp) {
-    // Constant loop bounds computation.
-    int64_t lbCst = lbCstOp.value();
-    int64_t ubCst = ubCstOp.value();
-    int64_t stepCst = stepCstOp.value();
-    assert(lbCst >= 0 && ubCst >= 0 && stepCst >= 0 &&
-           "expected positive loop bounds and step");
-    int64_t tripCount = mlir::ceilDiv(ubCst - lbCst, stepCst);
-
-    if (unrollFactor == 1) {
-      if (tripCount == 1 && failed(promoteIfSingleIteration(forOp)))
-        return failure();
-      return success();
-    }
-
-    int64_t tripCountEvenMultiple = tripCount - (tripCount % unrollFactor);
-    int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
-    assert(upperBoundUnrolledCst <= ubCst);
-    int64_t stepUnrolledCst = stepCst * unrollFactor;
-
-    // Create constant for 'upperBoundUnrolled' and set epilogue loop flag.
-    generateEpilogueLoop = upperBoundUnrolledCst < ubCst;
-    if (generateEpilogueLoop)
-      upperBoundUnrolled = boundsBuilder.create<arith::ConstantIndexOp>(
-          loc, upperBoundUnrolledCst);
-    else
-      upperBoundUnrolled = ubCstOp;
-
-    // Create constant for 'stepUnrolled'.
-    stepUnrolled = stepCst == stepUnrolledCst
-                       ? step
-                       : boundsBuilder.create<arith::ConstantIndexOp>(
-                             loc, stepUnrolledCst);
-  } else {
-    // Dynamic loop bounds computation.
-    // TODO: Add dynamic asserts for negative lb/ub/step, or
-    // consider using ceilDiv from AffineApplyExpander.
-    auto lowerBound = forOp.getLowerBound();
-    auto upperBound = forOp.getUpperBound();
-    Value diff =
-        boundsBuilder.create<arith::SubIOp>(loc, upperBound, lowerBound);
-    Value tripCount = ceilDivPositive(boundsBuilder, loc, diff, step);
-    Value unrollFactorCst =
-        boundsBuilder.create<arith::ConstantIndexOp>(loc, unrollFactor);
-    Value tripCountRem =
-        boundsBuilder.create<arith::RemSIOp>(loc, tripCount, unrollFactorCst);
-    // Compute tripCountEvenMultiple = tripCount - (tripCount % unrollFactor)
-    Value tripCountEvenMultiple =
-        boundsBuilder.create<arith::SubIOp>(loc, tripCount, tripCountRem);
-    // Compute upperBoundUnrolled = lowerBound + tripCountEvenMultiple * step
-    upperBoundUnrolled = boundsBuilder.create<arith::AddIOp>(
-        loc, lowerBound,
-        boundsBuilder.create<arith::MulIOp>(loc, tripCountEvenMultiple, step));
-    // Scale 'step' by 'unrollFactor'.
-    stepUnrolled =
-        boundsBuilder.create<arith::MulIOp>(loc, step, unrollFactorCst);
-  }
-
-  // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
-  if (generateEpilogueLoop) {
-    OpBuilder epilogueBuilder(forOp->getContext());
-    epilogueBuilder.setInsertionPoint(forOp->getBlock(),
-                                      std::next(Block::iterator(forOp)));
-    auto epilogueForOp = cast<scf::ForOp>(epilogueBuilder.clone(*forOp));
-    epilogueForOp.setLowerBound(upperBoundUnrolled);
-
-    // Update uses of loop results.
-    auto results = forOp.getResults();
-    auto epilogueResults = epilogueForOp.getResults();
-    auto epilogueIterOperands = epilogueForOp.getIterOperands();
-
-    for (auto e : llvm::zip(results, epilogueResults, epilogueIterOperands)) {
-      std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
-      epilogueForOp->replaceUsesOfWith(std::get<2>(e), std::get<0>(e));
-    }
-    (void)promoteIfSingleIteration(epilogueForOp);
-  }
-
-  // Create unrolled loop.
-  forOp.setUpperBound(upperBoundUnrolled);
-  forOp.setStep(stepUnrolled);
-
-  auto iterArgs = ValueRange(forOp.getRegionIterArgs());
-  auto yieldedValues = forOp.getBody()->getTerminator()->getOperands();
-
-  generateUnrolledLoop(
-      forOp.getBody(), forOp.getInductionVar(), unrollFactor,
-      [&](unsigned i, Value iv, OpBuilder b) {
-        // iv' = iv + step * i;
-        auto stride = b.create<arith::MulIOp>(
-            loc, step, b.create<arith::ConstantIndexOp>(loc, i));
-        return b.create<arith::AddIOp>(loc, iv, stride);
-      },
-      annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
   (void)promoteIfSingleIteration(forOp);
   return success();
@@ -1888,61 +1677,25 @@ stripmineSink(AffineForOp forOp, uint64_t factor,
   return innerLoops;
 }
 
-static Loops stripmineSink(scf::ForOp forOp, Value factor,
-                           ArrayRef<scf::ForOp> targets) {
-  auto originalStep = forOp.getStep();
-  auto iv = forOp.getInductionVar();
-
-  OpBuilder b(forOp);
-  forOp.setStep(b.create<arith::MulIOp>(forOp.getLoc(), originalStep, factor));
-
-  Loops innerLoops;
-  for (auto t : targets) {
-    // Save information for splicing ops out of t when done
-    auto begin = t.getBody()->begin();
-    auto nOps = t.getBody()->getOperations().size();
-
-    // Insert newForOp before the terminator of `t`.
-    auto b = OpBuilder::atBlockTerminator((t.getBody()));
-    Value stepped = b.create<arith::AddIOp>(t.getLoc(), iv, forOp.getStep());
-    Value less = b.create<arith::CmpIOp>(t.getLoc(), arith::CmpIPredicate::slt,
-                                         forOp.getUpperBound(), stepped);
-    Value ub =
-        b.create<SelectOp>(t.getLoc(), less, forOp.getUpperBound(), stepped);
-
-    // Splice [begin, begin + nOps - 1) into `newForOp` and replace uses.
-    auto newForOp = b.create<scf::ForOp>(t.getLoc(), iv, ub, originalStep);
-    newForOp.getBody()->getOperations().splice(
-        newForOp.getBody()->getOperations().begin(),
-        t.getBody()->getOperations(), begin, std::next(begin, nOps - 1));
-    replaceAllUsesInRegionWith(iv, newForOp.getInductionVar(),
-                               newForOp.getRegion());
-
-    innerLoops.push_back(newForOp);
-  }
-
-  return innerLoops;
-}
-
 // Stripmines a `forOp` by `factor` and sinks it under a single `target`.
 // Returns the new AffineForOps, nested immediately under `target`.
-template <typename ForType, typename SizeType>
-static ForType stripmineSink(ForType forOp, SizeType factor, ForType target) {
+template <typename SizeType>
+static AffineForOp stripmineSink(AffineForOp forOp, SizeType factor,
+                                 AffineForOp target) {
   // TODO: Use cheap structural assertions that targets are nested under
   // forOp and that targets are not nested under each other when DominanceInfo
   // exposes the capability. It seems overkill to construct a whole function
   // dominance tree at this point.
-  auto res = stripmineSink(forOp, factor, ArrayRef<ForType>{target});
+  auto res = stripmineSink(forOp, factor, ArrayRef<AffineForOp>(target));
   assert(res.size() == 1 && "Expected 1 inner forOp");
   return res[0];
 }
 
-template <typename ForType, typename SizeType>
-static SmallVector<SmallVector<ForType, 8>, 8>
-tileImpl(ArrayRef<ForType> forOps, ArrayRef<SizeType> sizes,
-         ArrayRef<ForType> targets) {
-  SmallVector<SmallVector<ForType, 8>, 8> res;
-  SmallVector<ForType, 8> currentTargets(targets.begin(), targets.end());
+SmallVector<SmallVector<AffineForOp, 8>, 8>
+mlir::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
+           ArrayRef<AffineForOp> targets) {
+  SmallVector<SmallVector<AffineForOp, 8>, 8> res;
+  SmallVector<AffineForOp, 8> currentTargets(targets.begin(), targets.end());
   for (auto it : llvm::zip(forOps, sizes)) {
     auto step = stripmineSink(std::get<0>(it), std::get<1>(it), currentTargets);
     res.push_back(step);
@@ -1951,286 +1704,15 @@ tileImpl(ArrayRef<ForType> forOps, ArrayRef<SizeType> sizes,
   return res;
 }
 
-SmallVector<SmallVector<AffineForOp, 8>, 8>
-mlir::tile(ArrayRef<AffineForOp> forOps, ArrayRef<uint64_t> sizes,
-           ArrayRef<AffineForOp> targets) {
-  return tileImpl(forOps, sizes, targets);
-}
-
-SmallVector<Loops, 8> mlir::tile(ArrayRef<scf::ForOp> forOps,
-                                 ArrayRef<Value> sizes,
-                                 ArrayRef<scf::ForOp> targets) {
-  return tileImpl(forOps, sizes, targets);
-}
-
-template <typename ForType, typename SizeType>
-static SmallVector<ForType, 8>
-tileImpl(ArrayRef<ForType> forOps, ArrayRef<SizeType> sizes, ForType target) {
-  SmallVector<ForType, 8> res;
-  for (auto loops : tile(forOps, sizes, ArrayRef<ForType>{target})) {
+SmallVector<AffineForOp, 8> mlir::tile(ArrayRef<AffineForOp> forOps,
+                                       ArrayRef<uint64_t> sizes,
+                                       AffineForOp target) {
+  SmallVector<AffineForOp, 8> res;
+  for (auto loops : tile(forOps, sizes, ArrayRef<AffineForOp>(target))) {
     assert(loops.size() == 1);
     res.push_back(loops[0]);
   }
   return res;
-}
-
-SmallVector<AffineForOp, 8> mlir::tile(ArrayRef<AffineForOp> forOps,
-                                       ArrayRef<uint64_t> sizes,
-                                       AffineForOp target) {
-  return tileImpl(forOps, sizes, target);
-}
-
-Loops mlir::tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
-                 scf::ForOp target) {
-  return tileImpl(forOps, sizes, target);
-}
-
-Loops mlir::tilePerfectlyNested(scf::ForOp rootForOp, ArrayRef<Value> sizes) {
-  // Collect perfectly nested loops.  If more size values provided than nested
-  // loops available, truncate `sizes`.
-  SmallVector<scf::ForOp, 4> forOps;
-  forOps.reserve(sizes.size());
-  getPerfectlyNestedLoopsImpl(forOps, rootForOp, sizes.size());
-  if (forOps.size() < sizes.size())
-    sizes = sizes.take_front(forOps.size());
-
-  return ::tile(forOps, sizes, forOps.back());
-}
-
-// Hoist the ops within `outer` that appear before `inner`.
-// Such ops include the ops that have been introduced by parametric tiling.
-// Ops that come from triangular loops (i.e. that belong to the program slice
-// rooted at `outer`) and ops that have side effects cannot be hoisted.
-// Return failure when any op fails to hoist.
-static LogicalResult hoistOpsBetween(scf::ForOp outer, scf::ForOp inner) {
-  SetVector<Operation *> forwardSlice;
-  getForwardSlice(
-      outer.getInductionVar(), &forwardSlice,
-      [&inner](Operation *op) { return op != inner.getOperation(); });
-  LogicalResult status = success();
-  SmallVector<Operation *, 8> toHoist;
-  for (auto &op : outer.getBody()->without_terminator()) {
-    // Stop when encountering the inner loop.
-    if (&op == inner.getOperation())
-      break;
-    // Skip over non-hoistable ops.
-    if (forwardSlice.count(&op) > 0) {
-      status = failure();
-      continue;
-    }
-    // Skip intermediate scf::ForOp, these are not considered a failure.
-    if (isa<scf::ForOp>(op))
-      continue;
-    // Skip other ops with regions.
-    if (op.getNumRegions() > 0) {
-      status = failure();
-      continue;
-    }
-    // Skip if op has side effects.
-    // TODO: loads to immutable memory regions are ok.
-    if (!MemoryEffectOpInterface::hasNoEffect(&op)) {
-      status = failure();
-      continue;
-    }
-    toHoist.push_back(&op);
-  }
-  auto *outerForOp = outer.getOperation();
-  for (auto *op : toHoist)
-    op->moveBefore(outerForOp);
-  return status;
-}
-
-// Traverse the interTile and intraTile loops and try to hoist ops such that
-// bands of perfectly nested loops are isolated.
-// Return failure if either perfect interTile or perfect intraTile bands cannot
-// be formed.
-static LogicalResult tryIsolateBands(const TileLoops &tileLoops) {
-  LogicalResult status = success();
-  const Loops &interTile = tileLoops.first;
-  const Loops &intraTile = tileLoops.second;
-  auto size = interTile.size();
-  assert(size == intraTile.size());
-  if (size <= 1)
-    return success();
-  for (unsigned s = 1; s < size; ++s)
-    status = succeeded(status) ? hoistOpsBetween(intraTile[0], intraTile[s])
-                               : failure();
-  for (unsigned s = 1; s < size; ++s)
-    status = succeeded(status) ? hoistOpsBetween(interTile[0], interTile[s])
-                               : failure();
-  return status;
-}
-
-TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
-                                       ArrayRef<int64_t> sizes) {
-  // Collect perfectly nested loops.  If more size values provided than nested
-  // loops available, truncate `sizes`.
-  SmallVector<scf::ForOp, 4> forOps;
-  forOps.reserve(sizes.size());
-  getPerfectlyNestedLoopsImpl(forOps, rootForOp, sizes.size());
-  if (forOps.size() < sizes.size())
-    sizes = sizes.take_front(forOps.size());
-
-  // Compute the tile sizes such that i-th outer loop executes size[i]
-  // iterations.  Given that the loop current executes
-  //   numIterations = ceildiv((upperBound - lowerBound), step)
-  // iterations, we need to tile with size ceildiv(numIterations, size[i]).
-  SmallVector<Value, 4> tileSizes;
-  tileSizes.reserve(sizes.size());
-  for (unsigned i = 0, e = sizes.size(); i < e; ++i) {
-    assert(sizes[i] > 0 && "expected strictly positive size for strip-mining");
-
-    auto forOp = forOps[i];
-    OpBuilder builder(forOp);
-    auto loc = forOp.getLoc();
-    Value diff = builder.create<arith::SubIOp>(loc, forOp.getUpperBound(),
-                                               forOp.getLowerBound());
-    Value numIterations = ceilDivPositive(builder, loc, diff, forOp.getStep());
-    Value iterationsPerBlock =
-        ceilDivPositive(builder, loc, numIterations, sizes[i]);
-    tileSizes.push_back(iterationsPerBlock);
-  }
-
-  // Call parametric tiling with the given sizes.
-  auto intraTile = tile(forOps, tileSizes, forOps.back());
-  TileLoops tileLoops = std::make_pair(forOps, intraTile);
-
-  // TODO: for now we just ignore the result of band isolation.
-  // In the future, mapping decisions may be impacted by the ability to
-  // isolate perfectly nested bands.
-  (void)tryIsolateBands(tileLoops);
-
-  return tileLoops;
-}
-
-/// Return the new lower bound, upper bound, and step in that order. Insert any
-/// additional bounds calculations before the given builder and any additional
-/// conversion back to the original loop induction value inside the given Block.
-static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
-                                OpBuilder &insideLoopBuilder, Location loc,
-                                Value lowerBound, Value upperBound, Value step,
-                                Value inductionVar) {
-  // Check if the loop is already known to have a constant zero lower bound or
-  // a constant one step.
-  bool isZeroBased = false;
-  if (auto ubCst = lowerBound.getDefiningOp<arith::ConstantIndexOp>())
-    isZeroBased = ubCst.value() == 0;
-
-  bool isStepOne = false;
-  if (auto stepCst = step.getDefiningOp<arith::ConstantIndexOp>())
-    isStepOne = stepCst.value() == 1;
-
-  // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
-  // assuming the step is strictly positive.  Update the bounds and the step
-  // of the loop to go from 0 to the number of iterations, if necessary.
-  // TODO: introduce support for negative steps or emit dynamic asserts
-  // on step positivity, whatever gets implemented first.
-  if (isZeroBased && isStepOne)
-    return {/*lowerBound=*/lowerBound, /*upperBound=*/upperBound,
-            /*step=*/step};
-
-  Value diff = boundsBuilder.create<arith::SubIOp>(loc, upperBound, lowerBound);
-  Value newUpperBound = ceilDivPositive(boundsBuilder, loc, diff, step);
-
-  Value newLowerBound =
-      isZeroBased ? lowerBound
-                  : boundsBuilder.create<arith::ConstantIndexOp>(loc, 0);
-  Value newStep =
-      isStepOne ? step : boundsBuilder.create<arith::ConstantIndexOp>(loc, 1);
-
-  // Insert code computing the value of the original loop induction variable
-  // from the "normalized" one.
-  Value scaled =
-      isStepOne
-          ? inductionVar
-          : insideLoopBuilder.create<arith::MulIOp>(loc, inductionVar, step);
-  Value shifted =
-      isZeroBased
-          ? scaled
-          : insideLoopBuilder.create<arith::AddIOp>(loc, scaled, lowerBound);
-
-  SmallPtrSet<Operation *, 2> preserve{scaled.getDefiningOp(),
-                                       shifted.getDefiningOp()};
-  inductionVar.replaceAllUsesExcept(shifted, preserve);
-  return {/*lowerBound=*/newLowerBound, /*upperBound=*/newUpperBound,
-          /*step=*/newStep};
-}
-
-/// Transform a loop with a strictly positive step
-///   for %i = %lb to %ub step %s
-/// into a 0-based loop with step 1
-///   for %ii = 0 to ceildiv(%ub - %lb, %s) step 1 {
-///     %i = %ii * %s + %lb
-/// Insert the induction variable remapping in the body of `inner`, which is
-/// expected to be either `loop` or another loop perfectly nested under `loop`.
-/// Insert the definition of new bounds immediate before `outer`, which is
-/// expected to be either `loop` or its parent in the loop nest.
-static void normalizeLoop(scf::ForOp loop, scf::ForOp outer, scf::ForOp inner) {
-  OpBuilder builder(outer);
-  OpBuilder innerBuilder = OpBuilder::atBlockBegin(inner.getBody());
-  auto loopPieces = normalizeLoop(builder, innerBuilder, loop.getLoc(),
-                                  loop.getLowerBound(), loop.getUpperBound(),
-                                  loop.getStep(), loop.getInductionVar());
-
-  loop.setLowerBound(loopPieces.lowerBound);
-  loop.setUpperBound(loopPieces.upperBound);
-  loop.setStep(loopPieces.step);
-}
-
-void mlir::coalesceLoops(MutableArrayRef<scf::ForOp> loops) {
-  if (loops.size() < 2)
-    return;
-
-  scf::ForOp innermost = loops.back();
-  scf::ForOp outermost = loops.front();
-
-  // 1. Make sure all loops iterate from 0 to upperBound with step 1.  This
-  // allows the following code to assume upperBound is the number of iterations.
-  for (auto loop : loops)
-    normalizeLoop(loop, outermost, innermost);
-
-  // 2. Emit code computing the upper bound of the coalesced loop as product
-  // of the number of iterations of all loops.
-  OpBuilder builder(outermost);
-  Location loc = outermost.getLoc();
-  Value upperBound = outermost.getUpperBound();
-  for (auto loop : loops.drop_front())
-    upperBound =
-        builder.create<arith::MulIOp>(loc, upperBound, loop.getUpperBound());
-  outermost.setUpperBound(upperBound);
-
-  builder.setInsertionPointToStart(outermost.getBody());
-
-  // 3. Remap induction variables. For each original loop, the value of the
-  // induction variable can be obtained by dividing the induction variable of
-  // the linearized loop by the total number of iterations of the loops nested
-  // in it modulo the number of iterations in this loop (remove the values
-  // related to the outer loops):
-  //   iv_i = floordiv(iv_linear, product-of-loop-ranges-until-i) mod range_i.
-  // Compute these iteratively from the innermost loop by creating a "running
-  // quotient" of division by the range.
-  Value previous = outermost.getInductionVar();
-  for (unsigned i = 0, e = loops.size(); i < e; ++i) {
-    unsigned idx = loops.size() - i - 1;
-    if (i != 0)
-      previous = builder.create<arith::DivSIOp>(loc, previous,
-                                                loops[idx + 1].getUpperBound());
-
-    Value iv = (i == e - 1) ? previous
-                            : builder.create<arith::RemSIOp>(
-                                  loc, previous, loops[idx].getUpperBound());
-    replaceAllUsesInRegionWith(loops[idx].getInductionVar(), iv,
-                               loops.back().getRegion());
-  }
-
-  // 4. Move the operations from the innermost just above the second-outermost
-  // loop, delete the extra terminator and the second-outermost loop.
-  scf::ForOp second = loops[1];
-  innermost.getBody()->back().erase();
-  outermost.getBody()->getOperations().splice(
-      Block::iterator(second.getOperation()),
-      innermost.getBody()->getOperations());
-  second.erase();
 }
 
 LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
@@ -2345,89 +1827,6 @@ LogicalResult mlir::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
       innermost.getBody()->getOperations());
   secondOutermostLoop.erase();
   return success();
-}
-
-void mlir::collapseParallelLoops(
-    scf::ParallelOp loops, ArrayRef<std::vector<unsigned>> combinedDimensions) {
-  OpBuilder outsideBuilder(loops);
-  Location loc = loops.getLoc();
-
-  // Presort combined dimensions.
-  auto sortedDimensions = llvm::to_vector<3>(combinedDimensions);
-  for (auto &dims : sortedDimensions)
-    std::sort(dims.begin(), dims.end());
-
-  // Normalize ParallelOp's iteration pattern.
-  SmallVector<Value, 3> normalizedLowerBounds, normalizedSteps,
-      normalizedUpperBounds;
-  for (unsigned i = 0, e = loops.getNumLoops(); i < e; ++i) {
-    OpBuilder insideLoopBuilder = OpBuilder::atBlockBegin(loops.getBody());
-    auto resultBounds =
-        normalizeLoop(outsideBuilder, insideLoopBuilder, loc,
-                      loops.getLowerBound()[i], loops.getUpperBound()[i],
-                      loops.getStep()[i], loops.getBody()->getArgument(i));
-
-    normalizedLowerBounds.push_back(resultBounds.lowerBound);
-    normalizedUpperBounds.push_back(resultBounds.upperBound);
-    normalizedSteps.push_back(resultBounds.step);
-  }
-
-  // Combine iteration spaces.
-  SmallVector<Value, 3> lowerBounds, upperBounds, steps;
-  auto cst0 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 0);
-  auto cst1 = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
-  for (unsigned i = 0, e = sortedDimensions.size(); i < e; ++i) {
-    Value newUpperBound = outsideBuilder.create<arith::ConstantIndexOp>(loc, 1);
-    for (auto idx : sortedDimensions[i]) {
-      newUpperBound = outsideBuilder.create<arith::MulIOp>(
-          loc, newUpperBound, normalizedUpperBounds[idx]);
-    }
-    lowerBounds.push_back(cst0);
-    steps.push_back(cst1);
-    upperBounds.push_back(newUpperBound);
-  }
-
-  // Create new ParallelLoop with conversions to the original induction values.
-  // The loop below uses divisions to get the relevant range of values in the
-  // new induction value that represent each range of the original induction
-  // value. The remainders then determine based on that range, which iteration
-  // of the original induction value this represents. This is a normalized value
-  // that is un-normalized already by the previous logic.
-  auto newPloop = outsideBuilder.create<scf::ParallelOp>(
-      loc, lowerBounds, upperBounds, steps,
-      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs) {
-        for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
-          Value previous = ploopIVs[i];
-          unsigned numberCombinedDimensions = combinedDimensions[i].size();
-          // Iterate over all except the last induction value.
-          for (unsigned j = numberCombinedDimensions - 1; j > 0; --j) {
-            unsigned idx = combinedDimensions[i][j];
-
-            // Determine the current induction value's current loop iteration
-            Value iv = insideBuilder.create<arith::RemSIOp>(
-                loc, previous, normalizedUpperBounds[idx]);
-            replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
-                                       loops.getRegion());
-
-            // Remove the effect of the current induction value to prepare for
-            // the next value.
-            previous = insideBuilder.create<arith::DivSIOp>(
-                loc, previous, normalizedUpperBounds[idx]);
-          }
-
-          // The final induction value is just the remaining value.
-          unsigned idx = combinedDimensions[i][0];
-          replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx),
-                                     previous, loops.getRegion());
-        }
-      });
-
-  // Replace the old loop with the new loop.
-  loops.getBody()->back().erase();
-  newPloop.getBody()->getOperations().splice(
-      Block::iterator(newPloop.getBody()->back()),
-      loops.getBody()->getOperations());
-  loops.erase();
 }
 
 void mlir::mapLoopToProcessorIds(scf::ForOp forOp, ArrayRef<Value> processorId,

@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Transforms/LoopUtils.h"
-#include "mlir/Transforms/Passes.h"
+#include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -20,7 +20,7 @@ using namespace mlir;
 
 namespace {
 struct ParallelLoopCollapsing
-    : public ParallelLoopCollapsingBase<ParallelLoopCollapsing> {
+    : public SCFParallelLoopCollapsingBase<ParallelLoopCollapsing> {
   void runOnOperation() override {
     Operation *module = getOperation();
 
