@@ -6007,9 +6007,10 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
   Optional<APInt> getSize(Attributor &A, const AbstractAttribute &AA,
                           AllocationInfo &AI) {
-    auto Mapper = [&](const Value *V) -> const Value* {
+    auto Mapper = [&](const Value *V) -> const Value * {
       bool UsedAssumedInformation = false;
-      if (Optional<Constant *> SimpleV = A.getAssumedConstant(*V, AA, UsedAssumedInformation))
+      if (Optional<Constant *> SimpleV =
+              A.getAssumedConstant(*V, AA, UsedAssumedInformation))
         if (*SimpleV)
           return *SimpleV;
       return V;
@@ -6266,8 +6267,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       if (!Size.hasValue() || Size.getValue().ugt(MaxHeapToStackSize)) {
         LLVM_DEBUG({
           if (!Size.hasValue())
-            dbgs() << "[H2S] Unknown allocation size: " << *AI.CB
-                   << "\n";
+            dbgs() << "[H2S] Unknown allocation size: " << *AI.CB << "\n";
           else
             dbgs() << "[H2S] Allocation size too large: " << *AI.CB << " vs. "
                    << MaxHeapToStackSize << "\n";
