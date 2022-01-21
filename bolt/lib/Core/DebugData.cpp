@@ -11,11 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/DebugData.h"
-#include "bolt/Core/BinaryBasicBlock.h"
-#include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/BinaryContext.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
@@ -32,6 +31,8 @@ extern llvm::cl::opt<unsigned> Verbosity;
 } // namespace opts
 
 namespace llvm {
+class MCSymbol;
+
 namespace bolt {
 
 const DebugLineTableRowRef DebugLineTableRowRef::NULL_ROW{0, 0};

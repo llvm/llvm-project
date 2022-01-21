@@ -13,8 +13,6 @@
 
 namespace llvm {
 namespace bolt {
-class DataflowInfoManager;
-class FrameAnalysis;
 
 class AllocCombinerPass : public BinaryFunctionPass {
   /// Stats aggregating variables

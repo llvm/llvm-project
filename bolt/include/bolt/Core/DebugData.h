@@ -14,7 +14,6 @@
 #ifndef BOLT_CORE_DEBUG_DATA_H
 #define BOLT_CORE_DEBUG_DATA_H
 
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -32,8 +31,6 @@
 #define DWARF2_FLAG_END_SEQUENCE (1 << 4)
 
 namespace llvm {
-
-class DWARFAbbreviationDeclarationSet;
 
 namespace bolt {
 
