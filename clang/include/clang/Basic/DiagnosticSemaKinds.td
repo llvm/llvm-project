@@ -9369,6 +9369,9 @@ def warn_printf_ObjCflags_without_ObjCConversion: Warning<
 def warn_printf_invalid_objc_flag: Warning<
     "'%0' is not a valid object format flag">,
     InGroup<Format>;
+def warn_printf_narg_not_supported : Warning<
+    "'%%n' specifier not supported on this platform">,
+    InGroup<Format>;
 def warn_scanf_scanlist_incomplete : Warning<
   "no closing ']' for '%%[' in scanf format string">,
   InGroup<Format>;

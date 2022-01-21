@@ -241,8 +241,13 @@ void testSizeTypes() {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
   
   short x;
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%zn", &x); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'short *'}}
-  // PrintfSpecifier::fixType doesn't handle %n, so a fix-it is not emitted, 
+#else
+  printf("%zn", &x); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'short *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+#endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
+  // PrintfSpecifier::fixType doesn't handle %n, so a fix-it is not emitted,
   // see the comment in PrintfSpecifier::fixType in PrintfFormatString.cpp.
 }
 
@@ -269,12 +274,21 @@ void testPtrDiffTypes() {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:11-[[@LINE-1]]:14}:"%f"
 
   ptrdiff_t p3 = 0;
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%tn", &p3); // No warning.
+#else
+  printf("%tn", &p3); // expected-warning{{'%n' specifier not supported on this platform}}
+#endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
 
   short x;
+#if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%tn", &x); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'short *'}}
   // PrintfSpecifier::fixType doesn't handle %n, so a fix-it is not emitted,
   // see the comment in PrintfSpecifier::fixType in PrintfFormatString.cpp.
+#else
+  printf("%tn", &x); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'short *'}}
+  // expected-warning@-1 {{'%n' specifier not supported on this platform}}
+#endif // !defined(__ANDROID__) && !defined(__Fuchsia__)
 }
 
 void testEnum() {
