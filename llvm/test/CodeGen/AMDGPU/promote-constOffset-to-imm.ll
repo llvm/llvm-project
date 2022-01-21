@@ -374,6 +374,7 @@ define amdgpu_kernel void @clmem_read_simplified(i8 addrspace(1)*  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v5, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %call = tail call i64 @_Z13get_global_idj(i32 0)
@@ -1011,6 +1012,7 @@ define hidden amdgpu_kernel void @clmem_read(i8 addrspace(1)*  %buffer) {
 ; GFX11-NEXT:    s_branch .LBB1_1
 ; GFX11-NEXT:  .LBB1_5: ; %while.end
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[4:5], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %call = tail call i64 @_Z13get_global_idj(i32 0)
@@ -1435,6 +1437,7 @@ define amdgpu_kernel void @Address32(i8 addrspace(1)* %buffer) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_add3_u32 v0, v5, v1, v0
 ; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
    %call = tail call i64 @_Z13get_global_idj(i32 0)
@@ -1736,6 +1739,7 @@ define amdgpu_kernel void @Offset64(i8 addrspace(1)*  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v6, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v7, v1, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %call = tail call i64 @_Z13get_global_idj(i32 0)
@@ -1992,6 +1996,7 @@ define amdgpu_kernel void @p32Offset64(i8 addrspace(1)*  %buffer) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add3_u32 v0, v4, v0, v5
 ; GFX11-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %call = tail call i64 @_Z13get_global_idj(i32 0)
@@ -2258,6 +2263,7 @@ define amdgpu_kernel void @DiffBase(i8 addrspace(1)* %buffer1,
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v3, v5, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                                     i8 addrspace(1)* %buffer2) {
 entry:
@@ -2663,6 +2669,7 @@ define amdgpu_kernel void @ReverseOrder(i8 addrspace(1)* %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v5, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %call = tail call i64 @_Z13get_global_idj(i32 0)
@@ -2913,6 +2920,7 @@ define hidden amdgpu_kernel void @negativeoffset(i8 addrspace(1)* nocapture %buf
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v4, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v5, v1, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %call = tail call i64 @_Z13get_global_idj(i32 0) #2

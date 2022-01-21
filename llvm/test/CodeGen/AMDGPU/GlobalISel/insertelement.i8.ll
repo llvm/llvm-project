@@ -104,6 +104,7 @@ define amdgpu_ps void @insertelement_s_v2i8_s_s(<2 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <2 x i8>, <2 x i8> addrspace(4)* %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
@@ -204,6 +205,7 @@ define amdgpu_ps void @insertelement_v_v2i8_s_s(<2 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <2 x i8>, <2 x i8> addrspace(1 )* %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
@@ -306,6 +308,7 @@ define amdgpu_ps void @insertelement_s_v2i8_v_s(<2 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <2 x i8>, <2 x i8> addrspace(4)* %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
@@ -412,6 +415,7 @@ define amdgpu_ps void @insertelement_s_v2i8_s_v(<2 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <2 x i8>, <2 x i8> addrspace(4)* %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
@@ -514,6 +518,7 @@ define amdgpu_ps void @insertelement_s_v2i8_v_v(<2 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <2 x i8>, <2 x i8> addrspace(4)* %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
@@ -614,6 +619,7 @@ define amdgpu_ps void @insertelement_v_v2i8_s_v(<2 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <2 x i8>, <2 x i8> addrspace(1)* %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
@@ -711,6 +717,7 @@ define amdgpu_ps void @insertelement_v_v2i8_v_s(<2 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <2 x i8>, <2 x i8> addrspace(1)* %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
@@ -808,6 +815,7 @@ define amdgpu_ps void @insertelement_v_v2i8_v_v(<2 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or_b32_e32 v2, v2, v3
 ; GFX11-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <2 x i8>, <2 x i8> addrspace(1)* %ptr
   %insert = insertelement <2 x i8> %vec, i8 %val, i32 %idx
@@ -1047,6 +1055,7 @@ define amdgpu_ps void @insertelement_v_v4i8_s_s(<4 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or3_b32 v2, v4, v2, v3
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <4 x i8>, <4 x i8> addrspace(1 )* %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
@@ -1230,6 +1239,7 @@ define amdgpu_ps void @insertelement_s_v4i8_v_s(<4 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or3_b32 v2, v4, v2, v3
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <4 x i8>, <4 x i8> addrspace(4)* %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
@@ -1417,6 +1427,7 @@ define amdgpu_ps void @insertelement_s_v4i8_s_v(<4 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or3_b32 v2, v4, v2, v3
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <4 x i8>, <4 x i8> addrspace(4)* %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
@@ -1601,6 +1612,7 @@ define amdgpu_ps void @insertelement_s_v4i8_v_v(<4 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or3_b32 v2, v4, v2, v3
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <4 x i8>, <4 x i8> addrspace(4)* %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
@@ -1782,6 +1794,7 @@ define amdgpu_ps void @insertelement_v_v4i8_s_v(<4 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or3_b32 v2, v4, v2, v3
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <4 x i8>, <4 x i8> addrspace(1)* %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
@@ -1961,6 +1974,7 @@ define amdgpu_ps void @insertelement_v_v4i8_v_s(<4 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or3_b32 v2, v4, v2, v3
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <4 x i8>, <4 x i8> addrspace(1)* %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
@@ -2141,6 +2155,7 @@ define amdgpu_ps void @insertelement_v_v4i8_v_v(<4 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    v_or3_b32 v2, v4, v2, v3
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <4 x i8>, <4 x i8> addrspace(1)* %ptr
   %insert = insertelement <4 x i8> %vec, i8 %val, i32 %idx
@@ -2486,6 +2501,7 @@ define amdgpu_ps void @insertelement_s_v8i8_s_s(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v3, s1
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <8 x i8>, <8 x i8> addrspace(4)* %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
@@ -2772,6 +2788,7 @@ define amdgpu_ps void @insertelement_v_v8i8_s_s(<8 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GFX11-NEXT:    v_or3_b32 v3, v5, v7, v6
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <8 x i8>, <8 x i8> addrspace(1 )* %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
@@ -3097,6 +3114,7 @@ define amdgpu_ps void @insertelement_s_v8i8_v_s(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GFX11-NEXT:    v_or3_b32 v3, v5, v7, v6
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <8 x i8>, <8 x i8> addrspace(4)* %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
@@ -3428,6 +3446,7 @@ define amdgpu_ps void @insertelement_s_v8i8_s_v(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GFX11-NEXT:    v_or3_b32 v3, v5, v7, v6
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <8 x i8>, <8 x i8> addrspace(4)* %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
@@ -3754,6 +3773,7 @@ define amdgpu_ps void @insertelement_s_v8i8_v_v(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GFX11-NEXT:    v_or3_b32 v3, v5, v7, v6
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <8 x i8>, <8 x i8> addrspace(4)* %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
@@ -4039,6 +4059,7 @@ define amdgpu_ps void @insertelement_v_v8i8_s_v(<8 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GFX11-NEXT:    v_or3_b32 v3, v5, v7, v6
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <8 x i8>, <8 x i8> addrspace(1)* %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
@@ -4322,6 +4343,7 @@ define amdgpu_ps void @insertelement_v_v8i8_v_s(<8 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GFX11-NEXT:    v_or3_b32 v3, v5, v7, v6
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <8 x i8>, <8 x i8> addrspace(1)* %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
@@ -4607,6 +4629,7 @@ define amdgpu_ps void @insertelement_v_v8i8_v_v(<8 x i8> addrspace(1)* %ptr, i8 
 ; GFX11-NEXT:    v_or3_b32 v2, v3, v4, v2
 ; GFX11-NEXT:    v_or3_b32 v3, v5, v8, v7
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <8 x i8>, <8 x i8> addrspace(1)* %ptr
   %insert = insertelement <8 x i8> %vec, i8 %val, i32 %idx
@@ -5202,6 +5225,7 @@ define amdgpu_ps void @insertelement_s_v16i8_s_s(<16 x i8> addrspace(4)* inreg %
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_mov_b32 v2, s2
 ; GFX11-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <16 x i8>, <16 x i8> addrspace(4)* %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
@@ -5666,6 +5690,7 @@ define amdgpu_ps void @insertelement_v_v16i8_s_s(<16 x i8> addrspace(1)* %ptr, i
 ; GFX11-NEXT:    v_or3_b32 v2, v2, v12, v6
 ; GFX11-NEXT:    v_or3_b32 v3, v3, v14, v7
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <16 x i8>, <16 x i8> addrspace(1 )* %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
@@ -6218,6 +6243,7 @@ define amdgpu_ps void @insertelement_s_v16i8_v_s(<16 x i8> addrspace(4)* inreg %
 ; GFX11-NEXT:    v_or3_b32 v2, v2, v11, v9
 ; GFX11-NEXT:    v_or3_b32 v3, v3, v12, v10
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <16 x i8>, <16 x i8> addrspace(4)* %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
@@ -6774,6 +6800,7 @@ define amdgpu_ps void @insertelement_s_v16i8_s_v(<16 x i8> addrspace(4)* inreg %
 ; GFX11-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX11-NEXT:    v_or3_b32 v3, v3, v12, v10
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <16 x i8>, <16 x i8> addrspace(4)* %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
@@ -7328,6 +7355,7 @@ define amdgpu_ps void @insertelement_s_v16i8_v_v(<16 x i8> addrspace(4)* inreg %
 ; GFX11-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX11-NEXT:    v_or3_b32 v3, v3, v12, v10
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <16 x i8>, <16 x i8> addrspace(4)* %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
@@ -7790,6 +7818,7 @@ define amdgpu_ps void @insertelement_v_v16i8_s_v(<16 x i8> addrspace(1)* %ptr, i
 ; GFX11-NEXT:    v_or3_b32 v2, v3, v12, v6
 ; GFX11-NEXT:    v_or3_b32 v3, v8, v14, v7
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
@@ -8251,6 +8280,7 @@ define amdgpu_ps void @insertelement_v_v16i8_v_s(<16 x i8> addrspace(1)* %ptr, i
 ; GFX11-NEXT:    v_or3_b32 v2, v8, v12, v6
 ; GFX11-NEXT:    v_or3_b32 v3, v10, v14, v7
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx
@@ -8714,6 +8744,7 @@ define amdgpu_ps void @insertelement_v_v16i8_v_v(<16 x i8> addrspace(1)* %ptr, i
 ; GFX11-NEXT:    v_or3_b32 v2, v9, v13, v7
 ; GFX11-NEXT:    v_or3_b32 v3, v12, v15, v8
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %vec = load <16 x i8>, <16 x i8> addrspace(1)* %ptr
   %insert = insertelement <16 x i8> %vec, i8 %val, i32 %idx

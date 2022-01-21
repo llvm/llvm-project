@@ -79,6 +79,7 @@ define amdgpu_kernel void @global_volatile_load_0(
 ; GFX11-WGP-NEXT:    global_load_b32 v1, v0, s[0:1] glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: global_volatile_load_0:
@@ -89,6 +90,7 @@ define amdgpu_kernel void @global_volatile_load_0(
 ; GFX11-CU-NEXT:    global_load_b32 v1, v0, s[0:1] glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -177,6 +179,7 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX11-WGP-NEXT:    global_load_b32 v0, v0, s[0:1] glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: global_volatile_load_1:
@@ -187,6 +190,7 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX11-CU-NEXT:    global_load_b32 v0, v0, s[0:1] glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -274,6 +278,7 @@ define amdgpu_kernel void @global_volatile_store_0(
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3] dlc
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: global_volatile_store_0:
@@ -285,6 +290,7 @@ define amdgpu_kernel void @global_volatile_store_0(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3] dlc
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -374,6 +380,7 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX11-WGP-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3] dlc
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: global_volatile_store_1:
@@ -385,6 +392,7 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3] dlc
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -469,6 +477,7 @@ define amdgpu_kernel void @global_volatile_workgroup_acquire_load(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    buffer_gl0_inv
 ; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: global_volatile_workgroup_acquire_load:
@@ -479,6 +488,7 @@ define amdgpu_kernel void @global_volatile_workgroup_acquire_load(
 ; GFX11-CU-NEXT:    global_load_b32 v1, v0, s[0:1]
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(1)* %out) {
 entry:
@@ -559,6 +569,7 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: global_volatile_workgroup_release_store:
@@ -570,6 +581,7 @@ define amdgpu_kernel void @global_volatile_workgroup_release_store(
 ; GFX11-CU-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
    i32 %in, i32 addrspace(1)* %out) {
 entry:

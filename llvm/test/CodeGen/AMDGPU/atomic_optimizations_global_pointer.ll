@@ -185,6 +185,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1164-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: add_i32_constant:
@@ -221,6 +222,7 @@ define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1132-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
 ; GFX1132-NEXT:    s_mov_b32 s2, -1
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %old = atomicrmw add i32 addrspace(1)* %inout, i32 5 acq_rel
@@ -450,6 +452,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_add_nc_u32_e32 v0, s0, v0
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: add_i32_uniform:
@@ -489,6 +492,7 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_e32 v0, s0, v0
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %old = atomicrmw add i32 addrspace(1)* %inout, i32 %additive acq_rel
@@ -818,6 +822,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX1164-NEXT:    s_mov_b32 s2, s6
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: add_i32_varying:
@@ -880,6 +885,7 @@ define amdgpu_kernel void @add_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX1132-NEXT:    s_mov_b32 s2, s6
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1080,6 +1086,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
 ; GFX1164-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: add_i64_constant:
@@ -1117,6 +1124,7 @@ define amdgpu_kernel void @add_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1132-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1132-NEXT:    s_mov_b32 s2, -1
 ; GFX1132-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %old = atomicrmw add i64 addrspace(1)* %inout, i64 5 acq_rel
@@ -1398,6 +1406,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s1, v1, vcc
 ; GFX1164-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: add_i64_uniform:
@@ -1446,6 +1455,7 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GFX1132-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %old = atomicrmw add i64 addrspace(1)* %inout, i64 %additive acq_rel
@@ -1536,6 +1546,7 @@ define amdgpu_kernel void @add_i64_varying(i64 addrspace(1)* %out, i64 addrspace
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    s_mov_b32 s5, s1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1758,6 +1769,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1164-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: sub_i32_constant:
@@ -1795,6 +1807,7 @@ define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, i32 addrspac
 ; GFX1132-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX1132-NEXT:    s_mov_b32 s2, -1
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %old = atomicrmw sub i32 addrspace(1)* %inout, i32 5 acq_rel
@@ -2024,6 +2037,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1164-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: sub_i32_uniform:
@@ -2063,6 +2077,7 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1132-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %old = atomicrmw sub i32 addrspace(1)* %inout, i32 %subitive acq_rel
@@ -2392,6 +2407,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1164-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX1164-NEXT:    s_mov_b32 s2, s6
 ; GFX1164-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: sub_i32_varying:
@@ -2454,6 +2470,7 @@ define amdgpu_kernel void @sub_i32_varying(i32 addrspace(1)* %out, i32 addrspace
 ; GFX1132-NEXT:    v_sub_nc_u32_e32 v0, s2, v0
 ; GFX1132-NEXT:    s_mov_b32 s2, s6
 ; GFX1132-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
@@ -2703,6 +2720,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1164-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1164-NEXT:    s_mov_b32 s2, -1
 ; GFX1164-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: sub_i64_constant:
@@ -2743,6 +2761,7 @@ define amdgpu_kernel void @sub_i64_constant(i64 addrspace(1)* %out, i64 addrspac
 ; GFX1132-NEXT:    s_mov_b32 s3, 0x31016000
 ; GFX1132-NEXT:    s_mov_b32 s2, -1
 ; GFX1132-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %old = atomicrmw sub i64 addrspace(1)* %inout, i64 5 acq_rel
@@ -3024,6 +3043,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1164-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1164-NEXT:    v_sub_co_ci_u32_e32 v1, vcc, s1, v1, vcc
 ; GFX1164-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
+; GFX1164-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1164-NEXT:    s_endpgm
 ;
 ; GFX1132-LABEL: sub_i64_uniform:
@@ -3072,6 +3092,7 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 addrspace
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GFX1132-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
+; GFX1132-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1132-NEXT:    s_endpgm
 entry:
   %old = atomicrmw sub i64 addrspace(1)* %inout, i64 %subitive acq_rel
@@ -3162,6 +3183,7 @@ define amdgpu_kernel void @sub_i64_varying(i64 addrspace(1)* %out, i64 addrspace
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    s_mov_b32 s5, s1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[4:7], 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()

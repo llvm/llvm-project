@@ -1281,6 +1281,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[13:16], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1429,6 +1430,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_s(<8 x double> inreg %vec, do
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[14:17], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1489,6 +1491,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_s(<8 x double> %vec, double i
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1694,6 +1697,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_v(<8 x double> inreg %vec, do
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[15:18], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1817,6 +1821,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_v(<8 x double> %vec, double i
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1877,6 +1882,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_s(<8 x double> %vec, double %
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -1997,6 +2003,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v(<8 x double> %vec, double %
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
@@ -2631,6 +2638,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %idx.add = add i32 %idx, 1
@@ -2756,6 +2764,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; MOVREL_GFX11-NEXT:    global_store_b128 v[0:1], v[12:15], off dlc
 ; MOVREL_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; MOVREL_GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; MOVREL_GFX11-NEXT:    s_endpgm
 entry:
   %idx.add = add i32 %idx, 1

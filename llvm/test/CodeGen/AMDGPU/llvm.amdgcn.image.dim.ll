@@ -2535,6 +2535,7 @@ define amdgpu_ps void @store_1d(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %
 ; GFX11-LABEL: store_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x80,0x0f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2570,6 +2571,7 @@ define amdgpu_ps void @store_2d(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %
 ; GFX11-LABEL: store_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v[4:5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm ; encoding: [0x84,0x0f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2605,6 +2607,7 @@ define amdgpu_ps void @store_3d(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %
 ; GFX11-LABEL: store_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v[4:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm ; encoding: [0x88,0x0f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.3d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %r, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2640,6 +2643,7 @@ define amdgpu_ps void @store_cube(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32
 ; GFX11-LABEL: store_cube:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v[4:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm ; encoding: [0x8c,0x0f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.cube.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2675,6 +2679,7 @@ define amdgpu_ps void @store_1darray(<8 x i32> inreg %rsrc, <4 x float> %vdata, 
 ; GFX11-LABEL: store_1darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v[4:5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm ; encoding: [0x90,0x0f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.1darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2710,6 +2715,7 @@ define amdgpu_ps void @store_2darray(<8 x i32> inreg %rsrc, <4 x float> %vdata, 
 ; GFX11-LABEL: store_2darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v[4:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm ; encoding: [0x94,0x0f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.2darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2745,6 +2751,7 @@ define amdgpu_ps void @store_2dmsaa(<8 x i32> inreg %rsrc, <4 x float> %vdata, i
 ; GFX11-LABEL: store_2dmsaa:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v[4:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA unorm ; encoding: [0x98,0x0f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.2dmsaa.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2780,6 +2787,7 @@ define amdgpu_ps void @store_2darraymsaa(<8 x i32> inreg %rsrc, <4 x float> %vda
 ; GFX11-LABEL: store_2darraymsaa:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v[4:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm ; encoding: [0x9c,0x0f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.2darraymsaa.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2815,6 +2823,7 @@ define amdgpu_ps void @store_mip_1d(<8 x i32> inreg %rsrc, <4 x float> %vdata, i
 ; GFX11-LABEL: store_mip_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store_mip v[0:3], v[4:5], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x80,0x0f,0x1c,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.mip.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2850,6 +2859,7 @@ define amdgpu_ps void @store_mip_2d(<8 x i32> inreg %rsrc, <4 x float> %vdata, i
 ; GFX11-LABEL: store_mip_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store_mip v[0:3], v[4:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm ; encoding: [0x84,0x0f,0x1c,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.mip.2d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2885,6 +2895,7 @@ define amdgpu_ps void @store_mip_3d(<8 x i32> inreg %rsrc, <4 x float> %vdata, i
 ; GFX11-LABEL: store_mip_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store_mip v[0:3], v[4:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm ; encoding: [0x88,0x0f,0x1c,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.mip.3d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %r, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2920,6 +2931,7 @@ define amdgpu_ps void @store_mip_cube(<8 x i32> inreg %rsrc, <4 x float> %vdata,
 ; GFX11-LABEL: store_mip_cube:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store_mip v[0:3], v[4:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_CUBE unorm ; encoding: [0x8c,0x0f,0x1c,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.mip.cube.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2955,6 +2967,7 @@ define amdgpu_ps void @store_mip_1darray(<8 x i32> inreg %rsrc, <4 x float> %vda
 ; GFX11-LABEL: store_mip_1darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store_mip v[0:3], v[4:6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D_ARRAY unorm ; encoding: [0x90,0x0f,0x1c,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.mip.1darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %slice, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -2990,6 +3003,7 @@ define amdgpu_ps void @store_mip_2darray(<8 x i32> inreg %rsrc, <4 x float> %vda
 ; GFX11-LABEL: store_mip_2darray:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store_mip v[0:3], v[4:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D_ARRAY unorm ; encoding: [0x94,0x0f,0x1c,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.mip.2darray.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %t, i32 %slice, i32 %mip, <8 x i32> %rsrc, i32 0, i32 0)
@@ -3435,6 +3449,7 @@ define amdgpu_ps void @store_1d_V1(<8 x i32> inreg %rsrc, float %vdata, i32 %s) 
 ; GFX11-LABEL: store_1d_V1:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v0, v1, s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x80,0x02,0x18,0xf0,0x01,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.1d.f32.i32(float %vdata, i32 2, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -3470,6 +3485,7 @@ define amdgpu_ps void @store_1d_V2(<8 x i32> inreg %rsrc, <2 x float> %vdata, i3
 ; GFX11-LABEL: store_1d_V2:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:1], v2, s[0:7] dmask:0xc dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x80,0x0c,0x18,0xf0,0x02,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.1d.v2f32.i32(<2 x float> %vdata, i32 12, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
@@ -3628,6 +3644,7 @@ define amdgpu_ps void @store_1d_glc(<8 x i32> inreg %rsrc, <4 x float> %vdata, i
 ; GFX11-LABEL: store_1d_glc:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc ; encoding: [0x80,0x4f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 1)
@@ -3663,6 +3680,7 @@ define amdgpu_ps void @store_1d_slc(<8 x i32> inreg %rsrc, <4 x float> %vdata, i
 ; GFX11-LABEL: store_1d_slc:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm slc ; encoding: [0x80,0x1f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 2)
@@ -3698,6 +3716,7 @@ define amdgpu_ps void @store_1d_glc_slc(<8 x i32> inreg %rsrc, <4 x float> %vdat
 ; GFX11-LABEL: store_1d_glc_slc:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm glc slc ; encoding: [0x80,0x5f,0x18,0xf0,0x04,0x00,0x00,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 3)
@@ -3989,6 +4008,7 @@ define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %a
 ; GFX11-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x80,0x0f,0x00,0xf0,0x04,0x00,0x02,0x00]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
 ; GFX11-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf dim:SQ_RSRC_IMG_1D unorm ; encoding: [0x80,0x0f,0x18,0xf0,0x04,0x00,0x04,0x00]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS) ; encoding: [0x03,0x00,0xb6,0xbf]
 ; GFX11-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %arg3, i32 15, i32 %arg4, <8 x i32> %arg, i32 0, i32 0)

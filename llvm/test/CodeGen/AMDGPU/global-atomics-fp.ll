@@ -140,6 +140,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32(float addrspace(1)* %ptr) 
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 seq_cst
   store float %result, float addrspace(1)* undef
@@ -265,6 +266,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_ieee(float addrspace(1)* %
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
   store float %result, float addrspace(1)* undef
@@ -566,6 +568,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_agent(float addrspace(1)* 
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("agent") seq_cst
   store float %result, float addrspace(1)* undef
@@ -707,6 +710,7 @@ define amdgpu_kernel void @global_atomic_fadd_ret_f32_system(float addrspace(1)*
 ; GFX11-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %result = atomicrmw fadd float addrspace(1)* %ptr, float 4.0 syncscope("one-as") seq_cst
   store float %result, float addrspace(1)* undef
@@ -966,6 +970,7 @@ define amdgpu_kernel void @infer_as_before_atomic(float* addrspace(4)* %arg) #0 
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_atomic_add_f32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %load = load float*, float* addrspace(4)* %arg
   %v = atomicrmw fadd float* %load, float 1.0 syncscope("agent-one-as") monotonic, align 4

@@ -183,6 +183,7 @@ define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* 
 ; GFX11-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                       half addrspace(1)* %in2) #0 {
    %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
@@ -326,6 +327,7 @@ define amdgpu_kernel void @fast_frem_f16(half addrspace(1)* %out, half addrspace
 ; GFX11-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                       half addrspace(1)* %in2) #0 {
    %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
@@ -469,6 +471,7 @@ define amdgpu_kernel void @unsafe_frem_f16(half addrspace(1)* %out, half addrspa
 ; GFX11-NEXT:    v_trunc_f16_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f16 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                              half addrspace(1)* %in2) #1 {
    %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
@@ -670,6 +673,7 @@ define amdgpu_kernel void @frem_f32(float addrspace(1)* %out, float addrspace(1)
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                       float addrspace(1)* %in2) #0 {
    %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
@@ -805,6 +809,7 @@ define amdgpu_kernel void @fast_frem_f32(float addrspace(1)* %out, float addrspa
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                       float addrspace(1)* %in2) #0 {
    %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
@@ -940,6 +945,7 @@ define amdgpu_kernel void @unsafe_frem_f32(float addrspace(1)* %out, float addrs
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                              float addrspace(1)* %in2) #1 {
    %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
@@ -1149,6 +1155,7 @@ define amdgpu_kernel void @frem_f64(double addrspace(1)* %out, double addrspace(
 ; GFX11-NEXT:    v_trunc_f64_e32 v[4:5], v[4:5]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX11-NEXT:    global_store_b64 v12, v[0:1], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                       double addrspace(1)* %in2) #0 {
    %r0 = load double, double addrspace(1)* %in1, align 8
@@ -1332,6 +1339,7 @@ define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrs
 ; GFX11-NEXT:    v_trunc_f64_e32 v[4:5], v[4:5]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX11-NEXT:    global_store_b64 v10, v[0:1], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                       double addrspace(1)* %in2) #0 {
    %r0 = load double, double addrspace(1)* %in1, align 8
@@ -1515,6 +1523,7 @@ define amdgpu_kernel void @unsafe_frem_f64(double addrspace(1)* %out, double add
 ; GFX11-NEXT:    v_trunc_f64_e32 v[4:5], v[4:5]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX11-NEXT:    global_store_b64 v10, v[0:1], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                              double addrspace(1)* %in2) #1 {
    %r0 = load double, double addrspace(1)* %in1, align 8
@@ -1795,6 +1804,7 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; GFX11-NEXT:    v_fma_f16 v1, -v4, v2, v1
 ; GFX11-NEXT:    v_pack_b32_f16 v1, v3, v1
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                         <2 x half> addrspace(1)* %in2) #0 {
    %gep2 = getelementptr <2 x half>, <2 x half> addrspace(1)* %in2, i32 4
@@ -2235,6 +2245,7 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; GFX11-NEXT:    v_fma_f16 v0, -v5, v2, v0
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v3, v0
 ; GFX11-NEXT:    global_store_b64 v4, v[0:1], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                         <4 x half> addrspace(1)* %in2) #0 {
    %gep2 = getelementptr <4 x half>, <4 x half> addrspace(1)* %in2, i32 4
@@ -2535,6 +2546,7 @@ define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 ; GFX11-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX11-NEXT:    v_fma_f32 v0, -v3, v2, v0
 ; GFX11-NEXT:    global_store_b64 v4, v[0:1], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                         <2 x float> addrspace(1)* %in2) #0 {
    %gep2 = getelementptr <2 x float>, <2 x float> addrspace(1)* %in2, i32 4
@@ -3017,6 +3029,7 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; GFX11-NEXT:    v_trunc_f32_e32 v5, v5
 ; GFX11-NEXT:    v_fma_f32 v0, -v5, v4, v0
 ; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                         <4 x float> addrspace(1)* %in2) #0 {
    %gep2 = getelementptr <4 x float>, <4 x float> addrspace(1)* %in2, i32 4
@@ -3328,6 +3341,7 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; GFX11-NEXT:    v_trunc_f64_e32 v[6:7], v[6:7]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[6:7], v[4:5], v[0:1]
 ; GFX11-NEXT:    global_store_b128 v16, v[0:3], s[4:5]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
                         <2 x double> addrspace(1)* %in2) #0 {
    %gep2 = getelementptr <2 x double>, <2 x double> addrspace(1)* %in2, i32 4
