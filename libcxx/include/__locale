@@ -512,8 +512,7 @@ public:
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_ALPHA
 # define _LIBCPP_CTYPE_MASK_IS_COMPOSITE_XDIGIT
 #elif defined(__MVS__)
-    static const mask __regex_word = 0x8000;
-# if defined(__NATIVE_ASCII_F)`
+# if defined(__NATIVE_ASCII_F)
     typedef unsigned int mask;
     static const mask space  = _ISSPACE_A;
     static const mask print  = _ISPRINT_A;
@@ -538,6 +537,7 @@ public:
     static const mask xdigit = __ISXDIGIT;
     static const mask blank  = __ISBLANK;
 # endif
+    static const mask __regex_word = 0x8000;
 #else
 # error unknown rune table for this platform -- do you mean to define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE?
 #endif
