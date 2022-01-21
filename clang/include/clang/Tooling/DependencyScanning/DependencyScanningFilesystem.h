@@ -57,25 +57,26 @@ public:
     return !MaybeStat || MaybeStat->isStatusKnown();
   }
 
-  /// \returns True if the current entry points to a directory.
-  bool isDirectory() const { return MaybeStat && MaybeStat->isDirectory(); }
+  /// \returns True if the entry is a filesystem error.
+  bool isError() const { return !MaybeStat; }
 
-  /// \returns The error or the file's original contents.
-  llvm::ErrorOr<StringRef> getOriginalContents() const {
-    if (!MaybeStat)
-      return MaybeStat.getError();
-    assert(!MaybeStat->isDirectory() && "not a file");
+  /// \returns True if the current entry points to a directory.
+  bool isDirectory() const { return !isError() && MaybeStat->isDirectory(); }
+
+  /// \returns Original contents of the file.
+  StringRef getOriginalContents() const {
     assert(isInitialized() && "not initialized");
+    assert(!isError() && "error");
+    assert(!MaybeStat->isDirectory() && "not a file");
     assert(OriginalContents && "not read");
     return OriginalContents->getBuffer();
   }
 
-  /// \returns The error or the file's minimized contents.
-  llvm::ErrorOr<StringRef> getMinimizedContents() const {
-    if (!MaybeStat)
-      return MaybeStat.getError();
-    assert(!MaybeStat->isDirectory() && "not a file");
+  /// \returns Minimized contents of the file.
+  StringRef getMinimizedContents() const {
     assert(isInitialized() && "not initialized");
+    assert(!isError() && "error");
+    assert(!isDirectory() && "not a file");
     llvm::MemoryBuffer *Buffer = MinimizedContentsAccess.load();
     assert(Buffer && "not minimized");
     return Buffer->getBuffer();
@@ -94,21 +95,31 @@ public:
     return ShouldBeMinimized && !MinimizedContentsAccess.load();
   }
 
-  /// \returns The error or the status of the entry.
-  llvm::ErrorOr<llvm::vfs::Status> getStatus() const {
+  /// \returns The error.
+  std::error_code getError() const {
     assert(isInitialized() && "not initialized");
-    return MaybeStat;
+    return MaybeStat.getError();
+  }
+
+  /// \returns The entry status.
+  llvm::vfs::Status getStatus() const {
+    assert(isInitialized() && "not initialized");
+    assert(!isError() && "error");
+    return *MaybeStat;
   }
 
   /// \returns the name of the file.
   StringRef getName() const {
     assert(isInitialized() && "not initialized");
+    assert(!isError() && "error");
     return MaybeStat->getName();
   }
 
   /// Return the mapping between location -> distance that is used to speed up
   /// the block skipping in the preprocessor.
   const PreprocessorSkippedRangeMapping &getPPSkippedRangeMapping() const {
+    assert(!isError() && "error");
+    assert(!isDirectory() && "not a file");
     return PPSkippedRangeMapping;
   }
 
@@ -183,19 +194,25 @@ public:
   EntryRef(bool Minimized, const CachedFileSystemEntry &Entry)
       : Minimized(Minimized), Entry(Entry) {}
 
-  llvm::ErrorOr<llvm::vfs::Status> getStatus() const {
-    auto MaybeStat = Entry.getStatus();
-    if (!MaybeStat || MaybeStat->isDirectory())
-      return MaybeStat;
-    return llvm::vfs::Status::copyWithNewSize(*MaybeStat,
-                                              getContents()->size());
+  llvm::vfs::Status getStatus() const {
+    llvm::vfs::Status Stat = Entry.getStatus();
+    if (Stat.isDirectory())
+      return Stat;
+    return llvm::vfs::Status::copyWithNewSize(Stat, getContents().size());
   }
 
+  bool isError() const { return Entry.isError(); }
   bool isDirectory() const { return Entry.isDirectory(); }
-
   StringRef getName() const { return Entry.getName(); }
 
-  llvm::ErrorOr<StringRef> getContents() const {
+  /// If the cached entry represents an error, promotes it into `ErrorOr`.
+  llvm::ErrorOr<EntryRef> unwrapError() const {
+    if (isError())
+      return Entry.getError();
+    return *this;
+  }
+
+  StringRef getContents() const {
     return Minimized ? Entry.getMinimizedContents()
                      : Entry.getOriginalContents();
   }
