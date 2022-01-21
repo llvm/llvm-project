@@ -163,6 +163,21 @@ def HasStdExtZbbOrZbpOrZbkb
                                    "'Zbp' (Permutation 'B' Instructions) or "
                                    "'Zbkb' (Bitmanip instructions for Cryptography)">;
 
+// The Carry-less multiply subextension for cryptography is a subset of basic carry-less multiply subextension. The former should be enabled if the latter is enabled.
+def FeatureStdExtZbkc
+    : SubtargetFeature<"zbkc", "HasStdExtZbkc", "true",
+                       "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+def HasStdExtZbkc
+    : Predicate<"Subtarget->hasStdExtZbkc()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZbkc),
+                             "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+
+def HasStdExtZbcOrZbkc
+    : Predicate<"Subtarget->hasStdExtZbc() || Subtarget->hasStdExtZbkc()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbc, FeatureStdExtZbkc),
+                                   "'Zbc' (Carry-Less 'B' Instructions) or "
+                                   "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
+
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
                        "Disable RVC Hint Instructions.">;
