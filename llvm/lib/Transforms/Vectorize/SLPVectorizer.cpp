@@ -7246,7 +7246,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   bool ReSchedule = false;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.OpValue << "\n");
 
-  auto &&TryScheduleBundle = [this, OldScheduleEnd, SLP](bool ReSchedule,
+  auto TryScheduleBundleImpl = [this, OldScheduleEnd, SLP](bool ReSchedule,
                                                          ScheduleData *Bundle) {
     // The scheduling region got new instructions at the lower end (or it is a
     // new region for the first bundle). This makes it necessary to
@@ -7290,7 +7290,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       // Otherwise the compiler may crash trying to incorrectly calculate
       // dependencies and emit instruction in the wrong order at the actual
       // scheduling.
-      TryScheduleBundle(/*ReSchedule=*/false, nullptr);
+      TryScheduleBundleImpl(/*ReSchedule=*/false, nullptr);
       return None;
     }
   }
@@ -7322,7 +7322,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     PrevInBundle = BundleMember;
   }
   assert(Bundle && "Failed to find schedule bundle");
-  TryScheduleBundle(ReSchedule, Bundle);
+  TryScheduleBundleImpl(ReSchedule, Bundle);
   if (!Bundle->isReady()) {
     cancelScheduling(VL, S.OpValue);
     return None;
@@ -9618,7 +9618,7 @@ tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
                        function_ref<unsigned(T *)> Limit,
                        function_ref<bool(T *, T *)> Comparator,
                        function_ref<bool(T *, T *)> AreCompatible,
-                       function_ref<bool(ArrayRef<T *>, bool)> TryToVectorize,
+                       function_ref<bool(ArrayRef<T *>, bool)> TryToVectorizeHelper,
                        bool LimitForRegisterSize) {
   bool Changed = false;
   // Sort by type, parent, operands.
@@ -9647,7 +9647,7 @@ tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
     // same/alternate ops only, this may result in some extra final
     // vectorization.
     if (NumElts > 1 &&
-        TryToVectorize(makeArrayRef(IncIt, NumElts), LimitForRegisterSize)) {
+        TryToVectorizeHelper(makeArrayRef(IncIt, NumElts), LimitForRegisterSize)) {
       // Success start over because instructions might have been changed.
       Changed = true;
     } else if (NumElts < Limit(*IncIt) &&
@@ -9658,7 +9658,7 @@ tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
     // Final attempt to vectorize instructions with the same types.
     if (Candidates.size() > 1 &&
         (SameTypeIt == E || (*SameTypeIt)->getType() != (*IncIt)->getType())) {
-      if (TryToVectorize(Candidates, /*LimitForRegisterSize=*/false)) {
+      if (TryToVectorizeHelper(Candidates, /*LimitForRegisterSize=*/false)) {
         // Success start over because instructions might have been changed.
         Changed = true;
       } else if (LimitForRegisterSize) {
@@ -9669,7 +9669,7 @@ tryToVectorizeSequence(SmallVectorImpl<T *> &Incoming,
           while (SameTypeIt != End && AreCompatible(*SameTypeIt, *It))
             ++SameTypeIt;
           unsigned NumElts = (SameTypeIt - It);
-          if (NumElts > 1 && TryToVectorize(makeArrayRef(It, NumElts),
+          if (NumElts > 1 && TryToVectorizeHelper(makeArrayRef(It, NumElts),
                                             /*LimitForRegisterSize=*/false))
             Changed = true;
           It = SameTypeIt;
