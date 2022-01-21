@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBDeclaration.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Declaration.h"
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
 
 #include <climits>
@@ -19,12 +19,10 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBDeclaration::SBDeclaration() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBDeclaration);
-}
+SBDeclaration::SBDeclaration() { LLDB_INSTRUMENT_VA(this); }
 
 SBDeclaration::SBDeclaration(const SBDeclaration &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBDeclaration, (const lldb::SBDeclaration &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_up = clone(rhs.m_opaque_up);
 }
@@ -35,9 +33,7 @@ SBDeclaration::SBDeclaration(const lldb_private::Declaration *lldb_object_ptr) {
 }
 
 const SBDeclaration &SBDeclaration::operator=(const SBDeclaration &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBDeclaration &,
-                     SBDeclaration, operator=,(const lldb::SBDeclaration &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_up = clone(rhs.m_opaque_up);
@@ -52,19 +48,17 @@ void SBDeclaration::SetDeclaration(
 SBDeclaration::~SBDeclaration() = default;
 
 bool SBDeclaration::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDeclaration, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBDeclaration::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBDeclaration, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up.get() && m_opaque_up->IsValid();
 }
 
 SBFileSpec SBDeclaration::GetFileSpec() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBDeclaration,
-                                   GetFileSpec);
-
+  LLDB_INSTRUMENT_VA(this);
 
   SBFileSpec sb_file_spec;
   if (m_opaque_up.get() && m_opaque_up->GetFile())
@@ -74,8 +68,7 @@ SBFileSpec SBDeclaration::GetFileSpec() const {
 }
 
 uint32_t SBDeclaration::GetLine() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBDeclaration, GetLine);
-
+  LLDB_INSTRUMENT_VA(this);
 
   uint32_t line = 0;
   if (m_opaque_up)
@@ -86,7 +79,7 @@ uint32_t SBDeclaration::GetLine() const {
 }
 
 uint32_t SBDeclaration::GetColumn() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBDeclaration, GetColumn);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_up)
     return m_opaque_up->GetColumn();
@@ -94,8 +87,7 @@ uint32_t SBDeclaration::GetColumn() const {
 }
 
 void SBDeclaration::SetFileSpec(lldb::SBFileSpec filespec) {
-  LLDB_RECORD_METHOD(void, SBDeclaration, SetFileSpec, (lldb::SBFileSpec),
-                     filespec);
+  LLDB_INSTRUMENT_VA(this, filespec);
 
   if (filespec.IsValid())
     ref().SetFile(filespec.ref());
@@ -103,20 +95,19 @@ void SBDeclaration::SetFileSpec(lldb::SBFileSpec filespec) {
     ref().SetFile(FileSpec());
 }
 void SBDeclaration::SetLine(uint32_t line) {
-  LLDB_RECORD_METHOD(void, SBDeclaration, SetLine, (uint32_t), line);
+  LLDB_INSTRUMENT_VA(this, line);
 
   ref().SetLine(line);
 }
 
 void SBDeclaration::SetColumn(uint32_t column) {
-  LLDB_RECORD_METHOD(void, SBDeclaration, SetColumn, (uint32_t), column);
+  LLDB_INSTRUMENT_VA(this, column);
 
   ref().SetColumn(column);
 }
 
 bool SBDeclaration::operator==(const SBDeclaration &rhs) const {
-  LLDB_RECORD_METHOD_CONST(
-      bool, SBDeclaration, operator==,(const lldb::SBDeclaration &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   lldb_private::Declaration *lhs_ptr = m_opaque_up.get();
   lldb_private::Declaration *rhs_ptr = rhs.m_opaque_up.get();
@@ -128,8 +119,7 @@ bool SBDeclaration::operator==(const SBDeclaration &rhs) const {
 }
 
 bool SBDeclaration::operator!=(const SBDeclaration &rhs) const {
-  LLDB_RECORD_METHOD_CONST(
-      bool, SBDeclaration, operator!=,(const lldb::SBDeclaration &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   lldb_private::Declaration *lhs_ptr = m_opaque_up.get();
   lldb_private::Declaration *rhs_ptr = rhs.m_opaque_up.get();
@@ -155,8 +145,7 @@ const lldb_private::Declaration &SBDeclaration::ref() const {
 }
 
 bool SBDeclaration::GetDescription(SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBDeclaration, GetDescription, (lldb::SBStream &),
-                     description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   Stream &strm = description.ref();
 

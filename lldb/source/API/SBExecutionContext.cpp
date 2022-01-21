@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBExecutionContext.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBProcess.h"
@@ -19,48 +19,43 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBExecutionContext::SBExecutionContext() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBExecutionContext);
-}
+SBExecutionContext::SBExecutionContext() { LLDB_INSTRUMENT_VA(this); }
 
 SBExecutionContext::SBExecutionContext(const lldb::SBExecutionContext &rhs)
     : m_exe_ctx_sp(rhs.m_exe_ctx_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBExecutionContext,
-                          (const lldb::SBExecutionContext &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBExecutionContext::SBExecutionContext(
     lldb::ExecutionContextRefSP exe_ctx_ref_sp)
     : m_exe_ctx_sp(exe_ctx_ref_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBExecutionContext, (lldb::ExecutionContextRefSP),
-                          exe_ctx_ref_sp);
+  LLDB_INSTRUMENT_VA(this, exe_ctx_ref_sp);
 }
 
 SBExecutionContext::SBExecutionContext(const lldb::SBTarget &target)
     : m_exe_ctx_sp(new ExecutionContextRef()) {
-  LLDB_RECORD_CONSTRUCTOR(SBExecutionContext, (const lldb::SBTarget &), target);
+  LLDB_INSTRUMENT_VA(this, target);
 
   m_exe_ctx_sp->SetTargetSP(target.GetSP());
 }
 
 SBExecutionContext::SBExecutionContext(const lldb::SBProcess &process)
     : m_exe_ctx_sp(new ExecutionContextRef()) {
-  LLDB_RECORD_CONSTRUCTOR(SBExecutionContext, (const lldb::SBProcess &),
-                          process);
+  LLDB_INSTRUMENT_VA(this, process);
 
   m_exe_ctx_sp->SetProcessSP(process.GetSP());
 }
 
 SBExecutionContext::SBExecutionContext(lldb::SBThread thread)
     : m_exe_ctx_sp(new ExecutionContextRef()) {
-  LLDB_RECORD_CONSTRUCTOR(SBExecutionContext, (lldb::SBThread), thread);
+  LLDB_INSTRUMENT_VA(this, thread);
 
   m_exe_ctx_sp->SetThreadPtr(thread.get());
 }
 
 SBExecutionContext::SBExecutionContext(const lldb::SBFrame &frame)
     : m_exe_ctx_sp(new ExecutionContextRef()) {
-  LLDB_RECORD_CONSTRUCTOR(SBExecutionContext, (const lldb::SBFrame &), frame);
+  LLDB_INSTRUMENT_VA(this, frame);
 
   m_exe_ctx_sp->SetFrameSP(frame.GetFrameSP());
 }
@@ -69,9 +64,7 @@ SBExecutionContext::~SBExecutionContext() = default;
 
 const SBExecutionContext &SBExecutionContext::
 operator=(const lldb::SBExecutionContext &rhs) {
-  LLDB_RECORD_METHOD(
-      const lldb::SBExecutionContext &,
-      SBExecutionContext, operator=,(const lldb::SBExecutionContext &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_exe_ctx_sp = rhs.m_exe_ctx_sp;
   return *this;
@@ -82,8 +75,7 @@ ExecutionContextRef *SBExecutionContext::get() const {
 }
 
 SBTarget SBExecutionContext::GetTarget() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBTarget, SBExecutionContext,
-                                   GetTarget);
+  LLDB_INSTRUMENT_VA(this);
 
   SBTarget sb_target;
   if (m_exe_ctx_sp) {
@@ -95,8 +87,7 @@ SBTarget SBExecutionContext::GetTarget() const {
 }
 
 SBProcess SBExecutionContext::GetProcess() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBProcess, SBExecutionContext,
-                                   GetProcess);
+  LLDB_INSTRUMENT_VA(this);
 
   SBProcess sb_process;
   if (m_exe_ctx_sp) {
@@ -108,8 +99,7 @@ SBProcess SBExecutionContext::GetProcess() const {
 }
 
 SBThread SBExecutionContext::GetThread() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBThread, SBExecutionContext,
-                                   GetThread);
+  LLDB_INSTRUMENT_VA(this);
 
   SBThread sb_thread;
   if (m_exe_ctx_sp) {
@@ -121,7 +111,7 @@ SBThread SBExecutionContext::GetThread() const {
 }
 
 SBFrame SBExecutionContext::GetFrame() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFrame, SBExecutionContext, GetFrame);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFrame sb_frame;
   if (m_exe_ctx_sp) {
