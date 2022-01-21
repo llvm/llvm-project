@@ -202,3 +202,21 @@ module @apply_native_rewrite {
     }
   }
 }
+
+// -----
+
+// CHECK-LABEL: module @unbound_rewrite_op
+module @unbound_rewrite_op {
+  // CHECK: module @rewriters
+  // CHECK:   func @pdl_generated_rewriter()
+  // CHECK:     %[[UNUSED:.*]] = pdl_interp.create_operation "bar.op"
+  // CHECK:     pdl_interp.finalize
+  pdl.pattern : benefit(1) {
+    %root = pdl.operation "foo.op"
+    pdl.rewrite %root {
+      %unused = pdl.operation "bar.op"
+    }
+  }
+}
+
+// -----

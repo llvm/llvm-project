@@ -268,8 +268,7 @@ def PDL_OperandsOp
 // pdl::OperationOp
 //===----------------------------------------------------------------------===//
 
-def PDL_OperationOp
-    : PDL_Op<"operation", [AttrSizedOperandSegments, NoSideEffect]> {
+def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
   let summary = "Define an operation within a pattern";
   let description = [{
     `pdl.operation` operations define operation nodes within a pattern. Within
