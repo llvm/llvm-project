@@ -52,8 +52,8 @@ int main(int, char**)
     static_assert( year_month_weekday{sd} == ymwd, ""); // and back
     }
 
-//  There's one more leap day between 1/1/40 and 1/1/70
-//  when compared to 1/1/70 -> 1/1/2000
+    // There's one more leap day between 1/1/40 and 1/1/70
+    // when compared to 1/1/70 -> 1/1/2000
     {
     constexpr year_month_weekday ymwd{year{1940}, month{1},weekday_indexed{std::chrono::Tuesday, 1}};
     constexpr sys_days sd{ymwd};

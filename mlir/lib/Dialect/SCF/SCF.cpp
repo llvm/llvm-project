@@ -118,6 +118,7 @@ static ParseResult parseExecuteRegionOp(OpAsmParser &parser,
 static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
   p.printOptionalArrowTypeList(op.getResultTypes());
 
+  p << ' ';
   p.printRegion(op.getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
@@ -223,7 +224,7 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
     SmallVector<Value> blockArgs;
 
     for (auto res : op.getResults())
-      blockArgs.push_back(postBlock->addArgument(res.getType()));
+      blockArgs.push_back(postBlock->addArgument(res.getType(), res.getLoc()));
 
     rewriter.replaceOp(op, blockArgs);
     return success();
@@ -259,9 +260,9 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
   Region *bodyRegion = result.addRegion();
   bodyRegion->push_back(new Block);
   Block &bodyBlock = bodyRegion->front();
-  bodyBlock.addArgument(builder.getIndexType());
+  bodyBlock.addArgument(builder.getIndexType(), result.location);
   for (Value v : iterArgs)
-    bodyBlock.addArgument(v.getType());
+    bodyBlock.addArgument(v.getType(), v.getLoc());
 
   // Create the default terminator if the builder is not provided and if the
   // iteration arguments are not provided. Otherwise, leave this to the caller
@@ -347,6 +348,7 @@ static void print(OpAsmPrinter &p, ForOp op) {
                           " iter_args");
   if (!op.getIterOperands().empty())
     p << " -> (" << op.getIterOperands().getTypes() << ')';
+  p << ' ';
   p.printRegion(op.getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/op.hasIterOperands());
@@ -1110,6 +1112,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
     // Print yield explicitly if the op defines values.
     printBlockTerminators = true;
   }
+  p << ' ';
   p.printRegion(op.getThenRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
@@ -1117,7 +1120,7 @@ static void print(OpAsmPrinter &p, IfOp op) {
   // Print the 'else' regions if it exists and has a block.
   auto &elseRegion = op.getElseRegion();
   if (!elseRegion.empty()) {
-    p << " else";
+    p << " else ";
     p.printRegion(elseRegion,
                   /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/printBlockTerminators);
@@ -1674,8 +1677,9 @@ void ParallelOp::build(
   OpBuilder::InsertionGuard guard(builder);
   unsigned numIVs = steps.size();
   SmallVector<Type, 8> argTypes(numIVs, builder.getIndexType());
+  SmallVector<Location, 8> argLocs(numIVs, result.location);
   Region *bodyRegion = result.addRegion();
-  Block *bodyBlock = builder.createBlock(bodyRegion, {}, argTypes);
+  Block *bodyBlock = builder.createBlock(bodyRegion, {}, argTypes, argLocs);
 
   if (bodyBuilderFn) {
     builder.setInsertionPointToStart(bodyBlock);
@@ -1844,6 +1848,7 @@ static void print(OpAsmPrinter &p, ParallelOp op) {
   if (!op.getInitVals().empty())
     p << " init (" << op.getInitVals() << ")";
   p.printOptionalArrowTypeList(op.getResultTypes());
+  p << ' ';
   p.printRegion(op.getRegion(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
       op->getAttrs(), /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
@@ -2050,7 +2055,8 @@ void ReduceOp::build(
 
   OpBuilder::InsertionGuard guard(builder);
   Region *bodyRegion = result.addRegion();
-  Block *body = builder.createBlock(bodyRegion, {}, ArrayRef<Type>{type, type});
+  Block *body = builder.createBlock(bodyRegion, {}, ArrayRef<Type>{type, type},
+                                    {result.location, result.location});
   if (bodyBuilderFn)
     bodyBuilderFn(builder, result.location, body->getArgument(0),
                   body->getArgument(1));
@@ -2100,7 +2106,7 @@ static ParseResult parseReduceOp(OpAsmParser &parser, OperationState &result) {
 
 static void print(OpAsmPrinter &p, ReduceOp op) {
   p << "(" << op.getOperand() << ") ";
-  p << " : " << op.getOperand().getType();
+  p << " : " << op.getOperand().getType() << ' ';
   p.printRegion(op.getReductionOperator());
 }
 
@@ -2215,8 +2221,9 @@ static void print(OpAsmPrinter &p, scf::WhileOp op) {
                           op.getInits(), " ");
   p << " : ";
   p.printFunctionalType(op.getInits().getTypes(), op.getResults().getTypes());
+  p << ' ';
   p.printRegion(op.getBefore(), /*printEntryBlockArgs=*/false);
-  p << " do";
+  p << " do ";
   p.printRegion(op.getAfter());
   p.printOptionalAttrDictWithKeyword(op->getAttrs());
 }
@@ -2363,6 +2370,7 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
     SmallVector<unsigned> newResultsIndices;
     SmallVector<Type> newResultTypes;
     SmallVector<Value> newTermArgs;
+    SmallVector<Location> newArgLocs;
     bool needUpdate = false;
     for (const auto &it :
          llvm::enumerate(llvm::zip(op.getResults(), afterArgs, termArgs))) {
@@ -2376,6 +2384,7 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
         newResultsIndices.emplace_back(i);
         newTermArgs.emplace_back(termArg);
         newResultTypes.emplace_back(result.getType());
+        newArgLocs.emplace_back(result.getLoc());
       }
     }
 
@@ -2393,7 +2402,7 @@ struct WhileUnusedResult : public OpRewritePattern<WhileOp> {
         rewriter.create<WhileOp>(op.getLoc(), newResultTypes, op.getInits());
 
     Block &newAfterBlock = *rewriter.createBlock(
-        &newWhile.getAfter(), /*insertPt*/ {}, newResultTypes);
+        &newWhile.getAfter(), /*insertPt*/ {}, newResultTypes, newArgLocs);
 
     // Build new results list and new after block args (unused entries will be
     // null).

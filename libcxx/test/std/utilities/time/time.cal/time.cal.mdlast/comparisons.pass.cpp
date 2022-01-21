@@ -35,10 +35,10 @@ int main(int, char**)
     static_assert( testComparisons6Values<month_day_last>(month{1}, month{1}), "");
     static_assert( testComparisons6Values<month_day_last>(month{1}, month{2}), "");
 
-//  same day, different months
-    for (unsigned i = 1; i < 12; ++i)
-        for (unsigned j = 1; j < 12; ++j)
-            assert((testComparisons6Values<month_day_last>(month{i}, month{j})));
+    // same day, different months
+    for (unsigned i = 1; i <= 12; ++i)
+        for (unsigned j = 1; j <= 12; ++j)
+            assert(testComparisons6Values<month_day_last>(month{i}, month{j}));
 
-  return 0;
+    return 0;
 }

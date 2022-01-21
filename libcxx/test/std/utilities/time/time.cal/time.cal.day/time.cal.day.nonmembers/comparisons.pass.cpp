@@ -33,7 +33,7 @@ int main(int, char**)
     static_assert(testComparisons6Values<day>(0U, 0U), "");
     static_assert(testComparisons6Values<day>(0U, 1U), "");
 
-//  Some 'ok' values as well
+    //  Some 'ok' values as well
     static_assert(testComparisons6Values<day>( 5U,  5U), "");
     static_assert(testComparisons6Values<day>( 5U, 10U), "");
 

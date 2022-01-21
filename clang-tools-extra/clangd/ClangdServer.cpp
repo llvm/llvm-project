@@ -775,7 +775,7 @@ void ClangdServer::inlayHints(PathRef File, llvm::Optional<Range> RestrictRange,
       return CB(InpAST.takeError());
     CB(clangd::inlayHints(InpAST->AST, std::move(RestrictRange)));
   };
-  WorkScheduler->runWithAST("InlayHints", File, std::move(Action));
+  WorkScheduler->runWithAST("InlayHints", File, std::move(Action), Transient);
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

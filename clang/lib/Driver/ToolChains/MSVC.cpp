@@ -47,7 +47,14 @@
 // Make sure this comes before MSVCSetupApi.h
 #include <comdef.h>
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnon-virtual-dtor"
+#endif
 #include "MSVCSetupApi.h"
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 #include "llvm/Support/COM.h"
 _COM_SMARTPTR_TYPEDEF(ISetupConfiguration, __uuidof(ISetupConfiguration));
 _COM_SMARTPTR_TYPEDEF(ISetupConfiguration2, __uuidof(ISetupConfiguration2));
@@ -510,6 +517,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_g_Group, options::OPT__SLASH_Z7))
     CmdArgs.push_back("-debug");
+
+  // If we specify /hotpatch, let the linker add padding in front of each
+  // function, like MSVC does.
+  if (Args.hasArg(options::OPT_fms_hotpatch, options::OPT__SLASH_hotpatch))
+    CmdArgs.push_back("-functionpadmin");
 
   // Pass on /Brepro if it was passed to the compiler.
   // Note that /Brepro maps to -mno-incremental-linker-compatible.

@@ -267,10 +267,13 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
     SmallVector<Value> operands = {args[0], leadingZeros, zero};
     SmallVector<Type> types = {elementTy, elementTy, elementTy};
+    SmallVector<Location> locations = {loc, loc, loc};
 
     auto whileOp = rewriter.create<scf::WhileOp>(loc, types, operands);
-    Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, types);
-    Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, types);
+    Block *before =
+        rewriter.createBlock(&whileOp.getBefore(), {}, types, locations);
+    Block *after =
+        rewriter.createBlock(&whileOp.getAfter(), {}, types, locations);
 
     // The conditional block of the while loop.
     {
@@ -830,19 +833,22 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
   Value input = op->getOperand(0);
 
   llvm::SmallVector<int64_t> reduceShape;
+  SmallVector<Value> dynDims;
   for (unsigned i = 0; i < inputTy.getRank(); i++) {
-    if (axis != i)
+    if (axis != i) {
       reduceShape.push_back(inputTy.getDimSize(i));
+      if (inputTy.isDynamicDim(i))
+        dynDims.push_back(rewriter.create<tensor::DimOp>(loc, input, i));
+    }
   }
 
   Type reduceTy = RankedTensorType::get(reduceShape, resultTy.getElementType());
 
   // First fill the output buffer with the init value.
-  auto initTensor =
-      rewriter
-          .create<linalg::InitTensorOp>(loc, ArrayRef<Value>({}), reduceShape,
-                                        resultTy.getElementType())
-          .result();
+  auto initTensor = rewriter
+                        .create<linalg::InitTensorOp>(loc, dynDims, reduceShape,
+                                                      resultTy.getElementType())
+                        .result();
 
   auto fillValueAttr = createInitialValueForReduceOp(op, elementTy, rewriter);
   if (!fillValueAttr)
@@ -1406,7 +1412,7 @@ public:
 
     OpBuilder::InsertionGuard regionGuard(rewriter);
     rewriter.createBlock(&genericOp.region(), genericOp.region().end(),
-                         TypeRange({resultElementTy}));
+                         TypeRange({resultElementTy}), loc);
     Value batch = rewriter.create<linalg::IndexOp>(loc, 0);
     Value y = rewriter.create<linalg::IndexOp>(loc, 1);
     Value x = rewriter.create<linalg::IndexOp>(loc, 2);
@@ -2156,9 +2162,9 @@ public:
 
     {
       OpBuilder::InsertionGuard regionGuard(rewriter);
-      Block *block =
-          rewriter.createBlock(&genericOp.region(), genericOp.region().end(),
-                               TypeRange({inputElementTy, resultElementTy}));
+      Block *block = rewriter.createBlock(
+          &genericOp.region(), genericOp.region().end(),
+          TypeRange({inputElementTy, resultElementTy}), {loc, loc});
 
       auto inputValue = block->getArgument(0);
       rewriter.setInsertionPointToStart(block);

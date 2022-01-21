@@ -103,7 +103,7 @@ bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
   unsigned HighGPR = SystemZ::R15D;
   int StartSPOffset = SystemZMC::ELFCallFrameSize;
   for (auto &CS : CSI) {
-    unsigned Reg = CS.getReg();
+    Register Reg = CS.getReg();
     int Offset = getRegSpillOffset(MF, Reg);
     if (Offset) {
       if (SystemZ::GR64BitRegClass.contains(Reg) && StartSPOffset > Offset) {
@@ -124,7 +124,7 @@ bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
     // Also save the GPR varargs, if any.  R6D is call-saved, so would
     // already be included, but we also need to handle the call-clobbered
     // argument registers.
-    unsigned FirstGPR = ZFI->getVarArgsFirstGPR();
+    Register FirstGPR = ZFI->getVarArgsFirstGPR();
     if (FirstGPR < SystemZ::ELFNumArgGPRs) {
       unsigned Reg = SystemZ::ELFArgGPRs[FirstGPR];
       int Offset = getRegSpillOffset(MF, Reg);
@@ -143,7 +143,7 @@ bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
   for (auto &CS : CSI) {
     if (CS.getFrameIdx() != INT32_MAX)
       continue;
-    unsigned Reg = CS.getReg();
+    Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     unsigned Size = TRI->getSpillSize(*RC);
     CurrOffset -= Size;
@@ -271,7 +271,7 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
     // Make sure all call-saved GPRs are included as operands and are
     // marked as live on entry.
     for (const CalleeSavedInfo &I : CSI) {
-      unsigned Reg = I.getReg();
+      Register Reg = I.getReg();
       if (SystemZ::GR64BitRegClass.contains(Reg))
         addSavedGPR(MBB, MIB, Reg, true);
     }
@@ -284,7 +284,7 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
 
   // Save FPRs/VRs in the normal TargetInstrInfo way.
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
@@ -314,7 +314,7 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
 
   // Restore FPRs/VRs in the normal TargetInstrInfo way.
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
                                 &SystemZ::FP64BitRegClass, TRI);
@@ -346,7 +346,7 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
 
     // Do a second scan adding regs as being defined by instruction
     for (const CalleeSavedInfo &I : CSI) {
-      unsigned Reg = I.getReg();
+      Register Reg = I.getReg();
       if (Reg != RestoreGPRs.LowGPR && Reg != RestoreGPRs.HighGPR &&
           SystemZ::GR64BitRegClass.contains(Reg))
         MIB.addReg(Reg, RegState::ImplicitDefine);
@@ -500,7 +500,7 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Add CFI for the GPR saves.
     for (auto &Save : CSI) {
-      unsigned Reg = Save.getReg();
+      Register Reg = Save.getReg();
       if (SystemZ::GR64BitRegClass.contains(Reg)) {
         int FI = Save.getFrameIdx();
         int64_t Offset = MFFrame.getObjectOffset(FI);
@@ -580,7 +580,7 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
   // Skip over the FPR/VR saves.
   SmallVector<unsigned, 8> CFIIndexes;
   for (auto &Save : CSI) {
-    unsigned Reg = Save.getReg();
+    Register Reg = Save.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       if (MBBI != MBB.end() &&
           (MBBI->getOpcode() == SystemZ::STD ||
@@ -764,8 +764,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
 
 bool SystemZELFFrameLowering::hasFP(const MachineFunction &MF) const {
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          MF.getFrameInfo().hasVarSizedObjects() ||
-          MF.getInfo<SystemZMachineFunctionInfo>()->getManipulatesSP());
+          MF.getFrameInfo().hasVarSizedObjects());
 }
 
 StackOffset SystemZELFFrameLowering::getFrameIndexReference(
@@ -850,7 +849,7 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
 
   auto ProcessCSI = [&](std::vector<CalleeSavedInfo> &CSIList) {
     for (auto &CS : CSIList) {
-      unsigned Reg = CS.getReg();
+      Register Reg = CS.getReg();
       int Offset = RegSpillOffsets[Reg];
       if (Offset >= 0) {
         if (GRRegClass.contains(Reg)) {
@@ -895,7 +894,7 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
   for (auto &CS : CSI) {
     if (CS.getFrameIdx() != INT32_MAX)
       continue;
-    unsigned Reg = CS.getReg();
+    Register Reg = CS.getReg();
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
     Align Alignment = TRI->getSpillAlign(*RC);
     unsigned Size = TRI->getSpillSize(*RC);
@@ -966,7 +965,7 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
     // marked as live on entry.
     auto &GRRegClass = SystemZ::GR64BitRegClass;
     for (const CalleeSavedInfo &I : CSI) {
-      unsigned Reg = I.getReg();
+      Register Reg = I.getReg();
       if (GRRegClass.contains(Reg))
         addSavedGPR(MBB, MIB, Reg, true);
     }
@@ -974,7 +973,7 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
 
   // Spill FPRs to the stack in the normal TargetInstrInfo way
   for (const CalleeSavedInfo &I : CSI) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
@@ -1007,7 +1006,7 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
 
   // Restore FPRs in the normal TargetInstrInfo way.
   for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-    unsigned Reg = CSI[I].getReg();
+    Register Reg = CSI[I].getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, CSI[I].getFrameIdx(),
                                 &SystemZ::FP64BitRegClass, TRI);
@@ -1041,7 +1040,7 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
 
       // Do a second scan adding regs as being defined by instruction
       for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-        unsigned Reg = CSI[I].getReg();
+        Register Reg = CSI[I].getReg();
         if (Reg > RestoreGPRs.LowGPR && Reg < RestoreGPRs.HighGPR)
           MIB.addReg(Reg, RegState::ImplicitDefine);
       }

@@ -317,7 +317,7 @@ Cookie IONAME(BeginClose)(
   } else {
     // CLOSE(UNIT=bad unit) is just a no-op
     Terminator oom{sourceFile, sourceLine};
-    return &New<NoopCloseStatementState>{oom}(sourceFile, sourceLine)
+    return &New<NoopStatementState>{oom}(sourceFile, sourceLine)
                 .release()
                 ->ioStatementState();
   }
@@ -325,11 +325,16 @@ Cookie IONAME(BeginClose)(
 
 Cookie IONAME(BeginFlush)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
-  Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{
-      ExternalFileUnit::LookUpOrCrash(unitNumber, terminator)};
-  return &unit.BeginIoStatement<ExternalMiscIoStatementState>(
-      unit, ExternalMiscIoStatementState::Flush, sourceFile, sourceLine);
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return &unit->BeginIoStatement<ExternalMiscIoStatementState>(
+        *unit, ExternalMiscIoStatementState::Flush, sourceFile, sourceLine);
+  } else {
+    // FLUSH(UNIT=unknown) is a no-op
+    Terminator oom{sourceFile, sourceLine};
+    return &New<NoopStatementState>{oom}(sourceFile, sourceLine)
+                .release()
+                ->ioStatementState();
+  }
 }
 
 Cookie IONAME(BeginBackspace)(
@@ -519,7 +524,7 @@ bool IONAME(SetPos)(Cookie cookie, std::int64_t pos) {
   ConnectionState &connection{io.GetConnectionState()};
   if (connection.access != Access::Stream) {
     io.GetIoErrorHandler().SignalError(
-        "REC= may not appear unless ACCESS='STREAM'");
+        "POS= may not appear unless ACCESS='STREAM'");
     return false;
   }
   if (pos < 1) {
@@ -593,7 +598,8 @@ bool IONAME(SetRound)(Cookie cookie, const char *keyword, std::size_t length) {
 bool IONAME(SetSign)(Cookie cookie, const char *keyword, std::size_t length) {
   IoStatementState &io{*cookie};
   ConnectionState &connection{io.GetConnectionState()};
-  static const char *keywords[]{"PLUS", "YES", "PROCESSOR_DEFINED", nullptr};
+  static const char *keywords[]{
+      "PLUS", "SUPPRESS", "PROCESSOR_DEFINED", nullptr};
   switch (IdentifyValue(keyword, length, keywords)) {
   case 0:
     connection.modes.editingFlags |= signPlus;
@@ -826,13 +832,15 @@ bool IONAME(SetRecl)(Cookie cookie, std::size_t n) {
   }
   if (n <= 0) {
     io.GetIoErrorHandler().SignalError("RECL= must be greater than zero");
-  }
-  if (open->wasExtant() &&
-      open->unit().openRecl.value_or(n) != static_cast<std::int64_t>(n)) {
+    return false;
+  } else if (open->wasExtant() &&
+      open->unit().openRecl.value_or(0) != static_cast<std::int64_t>(n)) {
     open->SignalError("RECL= may not be changed for an open unit");
+    return false;
+  } else {
+    open->unit().openRecl = n;
+    return true;
   }
-  open->unit().openRecl = n;
-  return true;
 }
 
 bool IONAME(SetStatus)(Cookie cookie, const char *keyword, std::size_t length) {
@@ -877,7 +885,7 @@ bool IONAME(SetStatus)(Cookie cookie, const char *keyword, std::size_t length) {
     }
     return false;
   }
-  if (io.get_if<NoopCloseStatementState>()) {
+  if (io.get_if<NoopStatementState>()) {
     return true; // don't bother validating STATUS= in a no-op CLOSE
   }
   io.GetIoErrorHandler().Crash(

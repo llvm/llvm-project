@@ -16,9 +16,9 @@
 namespace __llvm_libc {
 
 // 2PI * 2^-64.
-static const double pi63 = as_double(0x3c1921fb54442d18);
+static constexpr double PI63 = 0x1.921fb54442d18p-62;
 // PI / 4.
-static const double pio4 = as_double(0x3fe921fb54442d18);
+static constexpr double PIO4 = 0x1.921fb54442d18p-1;
 
 // The constants and polynomials for sine and cosine.
 typedef struct {
@@ -30,10 +30,10 @@ typedef struct {
 } sincos_t;
 
 // Polynomial data (the cosine polynomial is negated in the 2nd entry).
-extern const sincos_t __SINCOSF_TABLE[2];
+extern const sincos_t SINCOSF_TABLE[2];
 
 // Table with 4/PI to 192 bit precision.
-extern const uint32_t __INV_PIO4[];
+extern const uint32_t INV_PIO4[];
 
 // Top 12 bits of the float representation with the sign bit cleared.
 static inline uint32_t abstop12(float x) {
@@ -117,7 +117,7 @@ static inline double reduce_fast(double x, const sincos_t *p, int *np) {
 // can have at most 29 leading zeros after the binary point, the double
 // precision result is accurate to 33 bits.
 static inline double reduce_large(uint32_t xi, int *np) {
-  const uint32_t *arr = &__INV_PIO4[(xi >> 26) & 15];
+  const uint32_t *arr = &INV_PIO4[(xi >> 26) & 15];
   int shift = (xi >> 23) & 7;
   uint64_t n, res0, res1, res2;
 
@@ -134,7 +134,7 @@ static inline double reduce_large(uint32_t xi, int *np) {
   res0 -= n << 62;
   double x = (int64_t)res0;
   *np = n;
-  return x * pi63;
+  return x * PI63;
 }
 
 } // namespace __llvm_libc

@@ -130,7 +130,7 @@ set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
 list(TRANSFORM LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL PREPEND "-I")
 
 # Set flags for LLVM Bitcode compilation.
-set(bc_flags -S -x c++ -std=c++17
+set(bc_flags -S -x c++ -std=c++17 -fvisibility=hidden
               ${clang_opt_flags}
              -Xclang -emit-llvm-bc
              -Xclang -aux-triple -Xclang ${aux_triple}
@@ -227,9 +227,9 @@ endfunction()
 
 # Generate a Bitcode library for all the compute capabilities the user requested
 foreach(sm ${nvptx_sm_list})
-  compileDeviceRTLLibrary(sm_${sm} nvptx -target nvptx64 -Xclang -target-feature -Xclang +ptx61 "-D__CUDA_ARCH__=${sm}0")
+  compileDeviceRTLLibrary(sm_${sm} nvptx -target nvptx64-nvidia-cuda -Xclang -target-feature -Xclang +ptx61 "-D__CUDA_ARCH__=${sm}0")
 endforeach()
 
 foreach(mcpu ${amdgpu_mcpus})
-  compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -fvisibility=default -nogpulib)
+  compileDeviceRTLLibrary(${mcpu} amdgpu -target amdgcn-amd-amdhsa -D__AMDGCN__ -nogpulib)
 endforeach()

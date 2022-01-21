@@ -413,7 +413,10 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   // If we're in C mode, check that we don't have any decls after stmts.  If
   // so, emit an extension diagnostic in C89 and potentially a warning in later
   // versions.
-  if (!getLangOpts().CPlusPlus) {
+  const unsigned MixedDeclsCodeID = getLangOpts().C99
+                                        ? diag::warn_mixed_decls_code
+                                        : diag::ext_mixed_decls_code;
+  if (!getLangOpts().CPlusPlus && !Diags.isIgnored(MixedDeclsCodeID, L)) {
     // Note that __extension__ can be around a decl.
     unsigned i = 0;
     // Skip over all declarations.
@@ -426,8 +429,7 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
 
     if (i != NumElts) {
       Decl *D = *cast<DeclStmt>(Elts[i])->decl_begin();
-      Diag(D->getLocation(), !getLangOpts().C99 ? diag::ext_mixed_decls_code
-                                                : diag::warn_mixed_decls_code);
+      Diag(D->getLocation(), MixedDeclsCodeID);
     }
   }
 

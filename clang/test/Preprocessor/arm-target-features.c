@@ -267,7 +267,7 @@
 // CHECK-DEFS:#define __ARM_SIZEOF_WCHAR_T 4
 
 // RUN: %clang -target arm-none-linux-gnu -fno-math-errno -fno-signed-zeros\
-// RUN:        -fno-trapping-math -fassociative-math -freciprocal-math\
+// RUN:        -fno-trapping-math -fassociative-math -freciprocal-math -fapprox-func\
 // RUN:        -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-FASTMATH %s
 // RUN: %clang -target arm-none-linux-gnu -ffast-math -x c -E -dM %s -o -\
 // RUN:        | FileCheck -match-full-lines --check-prefix=CHECK-FASTMATH %s

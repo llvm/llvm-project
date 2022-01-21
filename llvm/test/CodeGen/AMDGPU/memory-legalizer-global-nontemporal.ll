@@ -60,7 +60,7 @@ define amdgpu_kernel void @global_nontemporal_load_0(
 ;
 ; SKIP-CACHE-INV-LABEL: global_nontemporal_load_0:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -177,7 +177,7 @@ define amdgpu_kernel void @global_nontemporal_load_1(
 ;
 ; SKIP-CACHE-INV-LABEL: global_nontemporal_load_1:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, 0
@@ -293,7 +293,7 @@ define amdgpu_kernel void @global_nontemporal_store_0(
 ;
 ; SKIP-CACHE-INV-LABEL: global_nontemporal_store_0:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -407,7 +407,7 @@ define amdgpu_kernel void @global_nontemporal_store_1(
 ;
 ; SKIP-CACHE-INV-LABEL: global_nontemporal_store_1:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s7, 0xf000
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s6, 0
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e32 v0, 2, v0

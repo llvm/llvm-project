@@ -38,7 +38,7 @@ func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attribute
   %4 = linalg.generic #attrs
     ins(%2, %farg1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
-    ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):  // no predecessors
+    ^bb0(%arg0: i32, %arg1: i32, %arg2: i1):  
       %8 = arith.cmpi slt, %arg0, %arg1 : i32
       linalg.yield %8 : i1
   } -> tensor<i1>
@@ -68,7 +68,7 @@ func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attribute
 // DET-ALL:       ^[[bb1]](%{{.*}}: tensor<10xi32>)
 // DET-ALL:         linalg.init_tensor [] : tensor<i32>
 // DET-ALL:         linalg.generic {{{.*}}} ins(%{{.*}} : tensor<10xi32>) outs(%{{.*}} : tensor<i32>) {
-// DET-ALL:         ^bb0(%{{.*}}: i32, %{{.*}}: i32):  // no predecessors
+// DET-ALL:         ^bb0(%{{.*}}: i32, %{{.*}}: i32):  
 // DET-ALL:           %{{.*}} = arith.addi %{{.*}}, %{{.*}}
 // DET-ALL:           linalg.yield %{{.*}} : i32
 // DET-ALL:         } -> tensor<i32>

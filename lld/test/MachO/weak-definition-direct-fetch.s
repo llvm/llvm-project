@@ -65,6 +65,11 @@
 # RUN: %lld -lSystem -o %t/weak-ar-weak-dylib -L%t %t/weakfoo.a -lweakfoo %t/refs-foo.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
+# RUN: %lld -lSystem -o %t/weak-dylib-weak-ar -L%t -lweakfoo --start-lib %t/weakfoo.o --end-lib %t/refs-foo.o
+# RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
+# RUN: %lld -lSystem -o %t/weak-ar-weak-dylib -L%t --start-lib %t/weakfoo.o --end-lib -lweakfoo %t/refs-foo.o
+# RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
+
 ## (Weak) archive symbols have the same precedence as dylib symbols.
 # RUN: %lld -lSystem -o %t/weak-ar-nonweak-dylib -L%t %t/weakfoo.a -lfoo %t/refs-foo.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-nonweak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
@@ -96,12 +101,24 @@
 # RUN: %lld -dylib -lSystem -o %t/weak-unref-dylib-weak-ar -L%t -lweakfoo %t/weakfoo.a
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-unref-dylib-weak-ar | FileCheck %s --check-prefix=NO-SYM
 
+# RUN: %lld -dylib -lSystem -o %t/weak-ar-weak-unref-dylib -L%t --start-lib %t/weakfoo.o --end-lib -lweakfoo
+# RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-weak-unref-dylib | FileCheck %s --check-prefix=NO-SYM
+# RUN: %lld -dylib -lSystem -o %t/weak-unref-dylib-weak-ar -L%t -lweakfoo --start-lib %t/weakfoo.o --end-lib
+# RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-unref-dylib-weak-ar | FileCheck %s --check-prefix=NO-SYM
+
 ## However, weak references are sufficient to cause the archive to be loaded.
 # RUN: %lld -dylib -lSystem -o %t/weak-ar-weak-ref-weak-dylib -L%t %t/weakfoo.a -lweakfoo %t/weak-refs-foo.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-weak-ref-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 # RUN: %lld -dylib -lSystem -o %t/weak-ref-weak-dylib-weak-ar -L%t -lweakfoo %t/weakfoo.a %t/weak-refs-foo.o
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ref-weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 # RUN: %lld -dylib -lSystem -o %t/weak-ref-weak-dylib-weak-ar -L%t -lweakfoo %t/weak-refs-foo.o %t/weakfoo.a
+# RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ref-weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
+
+# RUN: %lld -dylib -lSystem -o %t/weak-ar-weak-ref-weak-dylib -L%t --start-lib %t/weakfoo.o --end-lib -lweakfoo %t/weak-refs-foo.o
+# RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ar-weak-ref-weak-dylib | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
+# RUN: %lld -dylib -lSystem -o %t/weak-ref-weak-dylib-weak-ar -L%t -lweakfoo --start-lib %t/weakfoo.o --end-lib %t/weak-refs-foo.o
+# RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ref-weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
+# RUN: %lld -dylib -lSystem -o %t/weak-ref-weak-dylib-weak-ar -L%t -lweakfoo %t/weak-refs-foo.o --start-lib %t/weakfoo.o --end-lib
 # RUN: llvm-objdump --macho --lazy-bind --syms %t/weak-ref-weak-dylib-weak-ar | FileCheck %s --check-prefix=PREFER-WEAK-OBJECT
 
 #--- foo.s

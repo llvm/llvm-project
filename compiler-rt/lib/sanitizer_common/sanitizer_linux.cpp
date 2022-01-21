@@ -80,6 +80,7 @@
 
 #if SANITIZER_FREEBSD
 #include <sys/exec.h>
+#include <sys/procctl.h>
 #include <sys/sysctl.h>
 #include <machine/atomic.h>
 extern "C" {
@@ -2185,30 +2186,14 @@ void CheckASLR() {
     ReExec();
   }
 #elif SANITIZER_FREEBSD
-  int aslr_pie;
-  uptr len = sizeof(aslr_pie);
-#if SANITIZER_WORDSIZE == 64
-  if (UNLIKELY(internal_sysctlbyname("kern.elf64.aslr.pie_enable",
-      &aslr_pie, &len, NULL, 0) == -1)) {
+  int aslr_status;
+  if (UNLIKELY(procctl(P_PID, 0, PROC_ASLR_STATUS, &aslr_status) == -1)) {
     // We're making things less 'dramatic' here since
-    // the OID is not necessarily guaranteed to be here
+    // the cmd is not necessarily guaranteed to be here
     // just yet regarding FreeBSD release
     return;
   }
-
-  if (aslr_pie > 0) {
-    Printf("This sanitizer is not compatible with enabled ASLR "
-           "and binaries compiled with PIE\n");
-    Die();
-  }
-#endif
-  // there might be 32 bits compat for 64 bits
-  if (UNLIKELY(internal_sysctlbyname("kern.elf32.aslr.pie_enable",
-      &aslr_pie, &len, NULL, 0) == -1)) {
-    return;
-  }
-
-  if (aslr_pie > 0) {
+  if ((aslr_status & PROC_ASLR_ACTIVE) != 0) {
     Printf("This sanitizer is not compatible with enabled ASLR "
            "and binaries compiled with PIE\n");
     Die();

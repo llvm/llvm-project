@@ -88,19 +88,18 @@ public:
 
 /// A conversion pattern for detensoring internal (non-entry) blocks within a
 /// function.
-struct FunctionNonEntryBlockConversion : public ConversionPattern {
+struct FunctionNonEntryBlockConversion
+    : public OpInterfaceConversionPattern<FunctionOpInterface> {
   FunctionNonEntryBlockConversion(MLIRContext *ctx, TypeConverter &converter,
                                   DenseSet<BlockArgument> blockArgsToDetensor)
-      : ConversionPattern(converter, MatchTraitOpTypeTag(),
-                          TypeID::get<OpTrait::FunctionLike>(), /*benefit=*/1,
-                          ctx),
+      : OpInterfaceConversionPattern(converter, ctx),
         blockArgsToDetensor(std::move(blockArgsToDetensor)) {}
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(FunctionOpInterface op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
-    Region &region = function_like_impl::getFunctionBody(op);
+    Region &region = op.getBody();
     SmallVector<TypeConverter::SignatureConversion, 2> conversions;
 
     for (Block &block : llvm::drop_begin(region, 1)) {
@@ -197,7 +196,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
     /// detensored, then:
     /// - opsToDetensor should be = {linalg.generic{add}}.
     /// - blockArgsToDetensor should be = {bb1 -> {0}, bb2 -> {0}}.
-    virtual void compute(Operation *func,
+    virtual void compute(FunctionOpInterface func,
                          DetensorizeTypeConverter typeConverter,
                          DenseSet<Operation *> &opsToDetensor,
                          DenseSet<BlockArgument> &blockArgsToDetensor) = 0;
@@ -249,7 +248,8 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   /// AND can be detensored.
   class ControlFlowDetectionModel : public CostModel {
   public:
-    void compute(Operation *func, DetensorizeTypeConverter typeConverter,
+    void compute(FunctionOpInterface func,
+                 DetensorizeTypeConverter typeConverter,
                  DenseSet<Operation *> &opsToDetensor,
                  DenseSet<BlockArgument> &blockArgsToDetensor) override {
       SmallVector<Value> workList;
@@ -454,7 +454,8 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   /// Detensorize everything that can detensored.
   class AggressiveDetensoringModel : public CostModel {
   public:
-    void compute(Operation *func, DetensorizeTypeConverter typeConverter,
+    void compute(FunctionOpInterface func,
+                 DetensorizeTypeConverter typeConverter,
                  DenseSet<Operation *> &opsToDetensor,
                  DenseSet<BlockArgument> &blockArgsToDetensor) override {
       func->walk([&](GenericOp genericOp) {
@@ -462,16 +463,13 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
           opsToDetensor.insert(genericOp);
       });
 
-      for (Block &block :
-           llvm::drop_begin(function_like_impl::getFunctionBody(func), 1))
+      for (Block &block : llvm::drop_begin(func.getBody(), 1))
         for (BlockArgument blockArgument : block.getArguments())
           blockArgsToDetensor.insert(blockArgument);
     }
   };
 
   void runOnOperation() override {
-    assert(getOperation()->hasTrait<OpTrait::FunctionLike>() &&
-           "DetensorizePass can only be run on FunctionLike operations");
     MLIRContext *context = &getContext();
     DetensorizeTypeConverter typeConverter;
     RewritePatternSet patterns(context);
@@ -479,15 +477,15 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
     DenseSet<Operation *> opsToDetensor;
     DenseMap<Operation *, DenseSet<int>> detensorableBranchOps;
     DenseSet<BlockArgument> blockArgsToDetensor;
+    FunctionOpInterface funcOp = cast<FunctionOpInterface>(getOperation());
 
     if (aggressiveMode.getValue()) {
       AggressiveDetensoringModel costModel;
-      costModel.compute(getOperation(), typeConverter, opsToDetensor,
+      costModel.compute(funcOp, typeConverter, opsToDetensor,
                         blockArgsToDetensor);
-
     } else {
       ControlFlowDetectionModel costModel;
-      costModel.compute(getOperation(), typeConverter, opsToDetensor,
+      costModel.compute(funcOp, typeConverter, opsToDetensor,
                         blockArgsToDetensor);
     }
 
@@ -503,8 +501,8 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       // since detensoring can't happen along external calling convention
       // boundaries, which we conservatively approximate as all function
       // signatures.
-      if (op->hasTrait<OpTrait::FunctionLike>()) {
-        auto &body = function_like_impl::getFunctionBody(op);
+      if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
+        Region &body = funcOp.getBody();
         return llvm::all_of(llvm::drop_begin(body, 1), [&](Block &block) {
           return !llvm::any_of(
               blockArgsToDetensor, [&](BlockArgument blockArgument) {

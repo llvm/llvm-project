@@ -56,9 +56,8 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -210,6 +209,8 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
     return cachedReads[key] = mbref;
   }
 
+  llvm::BumpPtrAllocator &bAlloc = lld::bAlloc();
+
   // Object files and archive files may be fat files, which contain multiple
   // real files for different CPU ISAs. Here, we search for a file that matches
   // with the current link target and returns it as a MemoryBufferRef.
@@ -241,7 +242,7 @@ Optional<MemoryBufferRef> macho::readFile(StringRef path) {
 }
 
 InputFile::InputFile(Kind kind, const InterfaceFile &interface)
-    : id(idCount++), fileKind(kind), name(saver.save(interface.getPath())) {}
+    : id(idCount++), fileKind(kind), name(saver().save(interface.getPath())) {}
 
 // Some sections comprise of fixed-size records, so instead of splitting them at
 // symbol boundaries, we split them based on size. Records are distinct from
@@ -836,13 +837,21 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
   sections.back().subsections.push_back({0, isec});
 }
 
-ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName)
-    : InputFile(ObjKind, mb), modTime(modTime) {
+ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
+                 bool lazy)
+    : InputFile(ObjKind, mb, lazy), modTime(modTime) {
   this->archiveName = std::string(archiveName);
-  if (target->wordSize == 8)
-    parse<LP64>();
-  else
-    parse<ILP32>();
+  if (lazy) {
+    if (target->wordSize == 8)
+      parseLazy<LP64>();
+    else
+      parseLazy<ILP32>();
+  } else {
+    if (target->wordSize == 8)
+      parse<LP64>();
+    else
+      parse<ILP32>();
+  }
 }
 
 template <class LP> void ObjFile::parse() {
@@ -902,6 +911,32 @@ template <class LP> void ObjFile::parse() {
   parseDebugInfo();
   if (compactUnwindSection)
     registerCompactUnwind();
+}
+
+template <class LP> void ObjFile::parseLazy() {
+  using Header = typename LP::mach_header;
+  using NList = typename LP::nlist;
+
+  auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+  const load_command *cmd = findCommand(hdr, LC_SYMTAB);
+  if (!cmd)
+    return;
+  auto *c = reinterpret_cast<const symtab_command *>(cmd);
+  ArrayRef<NList> nList(reinterpret_cast<const NList *>(buf + c->symoff),
+                        c->nsyms);
+  const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
+  symbols.resize(nList.size());
+  for (auto it : llvm::enumerate(nList)) {
+    const NList &sym = it.value();
+    if ((sym.n_type & N_EXT) && !isUndef(sym)) {
+      // TODO: Bound checking
+      StringRef name = strtab + sym.n_strx;
+      symbols[it.index()] = symtab->addLazyObject(name, *this);
+      if (!lazy)
+        break;
+    }
+  }
 }
 
 void ObjFile::parseDebugInfo() {
@@ -1177,7 +1212,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     // Find all the $ld$* symbols to process first.
     parseTrie(buf + c->export_off, c->export_size,
               [&](const Twine &name, uint64_t flags) {
-                StringRef savedName = saver.save(name);
+                StringRef savedName = saver().save(name);
                 if (handleLDSymbol(savedName))
                   return;
                 entries.push_back({savedName, flags});
@@ -1251,7 +1286,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     umbrella = this;
   this->umbrella = umbrella;
 
-  installName = saver.save(interface.getInstallName());
+  installName = saver().save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
 
@@ -1270,7 +1305,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 
   exportingFile = isImplicitlyLinked(installName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
-    StringRef savedName = saver.save(name);
+    StringRef savedName = saver().save(name);
     if (exportingFile->hiddenSymbols.contains(CachedHashStringRef(savedName)))
       return;
 
@@ -1389,7 +1424,7 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
       config->platformInfo.minimum >= end)
     return;
 
-  this->installName = saver.save(installName);
+  this->installName = saver().save(installName);
 
   if (!compatVersion.empty()) {
     VersionTuple cVersion;
@@ -1411,7 +1446,7 @@ void DylibFile::handleLDInstallNameSymbol(StringRef name,
   if (!condition.consume_front("os") || version.tryParse(condition))
     warn("failed to parse os version, symbol '" + originalName + "' ignored");
   else if (version == config->platformInfo.minimum)
-    this->installName = saver.save(installName);
+    this->installName = saver().save(installName);
 }
 
 void DylibFile::handleLDHideSymbol(StringRef name, StringRef originalName) {
@@ -1516,7 +1551,7 @@ void ArchiveFile::fetch(const object::Archive::Symbol &sym) {
 
 static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
                                           BitcodeFile &file) {
-  StringRef name = saver.save(objSym.getName());
+  StringRef name = saver().save(objSym.getName());
 
   if (objSym.isUndefined())
     return symtab->addUndefined(name, &file, /*isWeakRef=*/objSym.isWeak());
@@ -1548,8 +1583,8 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive)
-    : InputFile(BitcodeKind, mb) {
+                         uint64_t offsetInArchive, bool lazy)
+    : InputFile(BitcodeKind, mb, lazy) {
   this->archiveName = std::string(archiveName);
   std::string path = mb.getBufferIdentifier().str();
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
@@ -1558,19 +1593,55 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // So, we append the archive name to disambiguate two members with the same
   // name from multiple different archives, and offset within the archive to
   // disambiguate two members of the same name from a single archive.
-  MemoryBufferRef mbref(
-      mb.getBuffer(),
-      saver.save(archiveName.empty() ? path
-                                     : archiveName + sys::path::filename(path) +
-                                           utostr(offsetInArchive)));
+  MemoryBufferRef mbref(mb.getBuffer(),
+                        saver().save(archiveName.empty()
+                                         ? path
+                                         : archiveName +
+                                               sys::path::filename(path) +
+                                               utostr(offsetInArchive)));
 
   obj = check(lto::InputFile::create(mbref));
+  if (lazy)
+    parseLazy();
+  else
+    parse();
+}
 
+void BitcodeFile::parse() {
   // Convert LTO Symbols to LLD Symbols in order to perform resolution. The
   // "winning" symbol will then be marked as Prevailing at LTO compilation
   // time.
+  symbols.clear();
   for (const lto::InputFile::Symbol &objSym : obj->symbols())
     symbols.push_back(createBitcodeSymbol(objSym, *this));
+}
+
+void BitcodeFile::parseLazy() {
+  symbols.resize(obj->symbols().size());
+  for (auto it : llvm::enumerate(obj->symbols())) {
+    const lto::InputFile::Symbol &objSym = it.value();
+    if (!objSym.isUndefined()) {
+      symbols[it.index()] =
+          symtab->addLazyObject(saver().save(objSym.getName()), *this);
+      if (!lazy)
+        break;
+    }
+  }
+}
+
+void macho::extract(InputFile &file, StringRef reason) {
+  assert(file.lazy);
+  file.lazy = false;
+  printArchiveMemberLoad(reason, &file);
+  if (auto *bitcode = dyn_cast<BitcodeFile>(&file)) {
+    bitcode->parse();
+  } else {
+    auto &f = cast<ObjFile>(file);
+    if (target->wordSize == 8)
+      f.parse<LP64>();
+    else
+      f.parse<ILP32>();
+  }
 }
 
 template void ObjFile::parse<LP64>();

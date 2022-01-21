@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBVariablesOptions.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/lldb-private.h"
 
@@ -80,21 +80,17 @@ private:
 
 SBVariablesOptions::SBVariablesOptions()
     : m_opaque_up(new VariablesOptionsImpl()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBVariablesOptions);
+  LLDB_INSTRUMENT_VA(this);
 }
 
 SBVariablesOptions::SBVariablesOptions(const SBVariablesOptions &options)
     : m_opaque_up(new VariablesOptionsImpl(options.ref())) {
-  LLDB_RECORD_CONSTRUCTOR(SBVariablesOptions,
-                          (const lldb::SBVariablesOptions &), options);
+  LLDB_INSTRUMENT_VA(this, options);
 }
 
 SBVariablesOptions &SBVariablesOptions::
 operator=(const SBVariablesOptions &options) {
-  LLDB_RECORD_METHOD(
-      lldb::SBVariablesOptions &,
-      SBVariablesOptions, operator=,(const lldb::SBVariablesOptions &),
-      options);
+  LLDB_INSTRUMENT_VA(this, options);
 
   m_opaque_up = std::make_unique<VariablesOptionsImpl>(options.ref());
   return *this;
@@ -103,109 +99,97 @@ operator=(const SBVariablesOptions &options) {
 SBVariablesOptions::~SBVariablesOptions() = default;
 
 bool SBVariablesOptions::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBVariablesOptions::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up != nullptr;
 }
 
 bool SBVariablesOptions::GetIncludeArguments() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions,
-                                   GetIncludeArguments);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetIncludeArguments();
 }
 
 void SBVariablesOptions::SetIncludeArguments(bool arguments) {
-  LLDB_RECORD_METHOD(void, SBVariablesOptions, SetIncludeArguments, (bool),
-                     arguments);
+  LLDB_INSTRUMENT_VA(this, arguments);
 
   m_opaque_up->SetIncludeArguments(arguments);
 }
 
 bool SBVariablesOptions::GetIncludeRecognizedArguments(
     const lldb::SBTarget &target) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBVariablesOptions,
-                           GetIncludeRecognizedArguments,
-                           (const lldb::SBTarget &), target);
+  LLDB_INSTRUMENT_VA(this, target);
 
   return m_opaque_up->GetIncludeRecognizedArguments(target.GetSP());
 }
 
 void SBVariablesOptions::SetIncludeRecognizedArguments(bool arguments) {
-  LLDB_RECORD_METHOD(void, SBVariablesOptions, SetIncludeRecognizedArguments,
-                     (bool), arguments);
+  LLDB_INSTRUMENT_VA(this, arguments);
 
   m_opaque_up->SetIncludeRecognizedArguments(arguments);
 }
 
 bool SBVariablesOptions::GetIncludeLocals() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions, GetIncludeLocals);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetIncludeLocals();
 }
 
 void SBVariablesOptions::SetIncludeLocals(bool locals) {
-  LLDB_RECORD_METHOD(void, SBVariablesOptions, SetIncludeLocals, (bool),
-                     locals);
+  LLDB_INSTRUMENT_VA(this, locals);
 
   m_opaque_up->SetIncludeLocals(locals);
 }
 
 bool SBVariablesOptions::GetIncludeStatics() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions, GetIncludeStatics);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetIncludeStatics();
 }
 
 void SBVariablesOptions::SetIncludeStatics(bool statics) {
-  LLDB_RECORD_METHOD(void, SBVariablesOptions, SetIncludeStatics, (bool),
-                     statics);
+  LLDB_INSTRUMENT_VA(this, statics);
 
   m_opaque_up->SetIncludeStatics(statics);
 }
 
 bool SBVariablesOptions::GetInScopeOnly() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions, GetInScopeOnly);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetInScopeOnly();
 }
 
 void SBVariablesOptions::SetInScopeOnly(bool in_scope_only) {
-  LLDB_RECORD_METHOD(void, SBVariablesOptions, SetInScopeOnly, (bool),
-                     in_scope_only);
+  LLDB_INSTRUMENT_VA(this, in_scope_only);
 
   m_opaque_up->SetInScopeOnly(in_scope_only);
 }
 
 bool SBVariablesOptions::GetIncludeRuntimeSupportValues() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBVariablesOptions,
-                                   GetIncludeRuntimeSupportValues);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetIncludeRuntimeSupportValues();
 }
 
 void SBVariablesOptions::SetIncludeRuntimeSupportValues(
     bool runtime_support_values) {
-  LLDB_RECORD_METHOD(void, SBVariablesOptions, SetIncludeRuntimeSupportValues,
-                     (bool), runtime_support_values);
+  LLDB_INSTRUMENT_VA(this, runtime_support_values);
 
   m_opaque_up->SetIncludeRuntimeSupportValues(runtime_support_values);
 }
 
 lldb::DynamicValueType SBVariablesOptions::GetUseDynamic() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::DynamicValueType, SBVariablesOptions,
-                                   GetUseDynamic);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_up->GetUseDynamic();
 }
 
 void SBVariablesOptions::SetUseDynamic(lldb::DynamicValueType dynamic) {
-  LLDB_RECORD_METHOD(void, SBVariablesOptions, SetUseDynamic,
-                     (lldb::DynamicValueType), dynamic);
+  LLDB_INSTRUMENT_VA(this, dynamic);
 
   m_opaque_up->SetUseDynamic(dynamic);
 }

@@ -17,8 +17,7 @@
 #include "SymbolTable.h"
 #include "SyntheticSections.h"
 #include "WriterUtils.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -190,7 +189,7 @@ void Writer::createRelocSections() {
     else if (sec->type == WASM_SEC_CODE)
       name = "reloc.CODE";
     else if (sec->type == WASM_SEC_CUSTOM)
-      name = saver.save("reloc." + sec->name);
+      name = saver().save("reloc." + sec->name);
     else
       llvm_unreachable(
           "relocations only supported for code, data, or custom sections");
@@ -389,8 +388,8 @@ static void addStartStopSymbols(const OutputSegment *seg) {
   LLVM_DEBUG(dbgs() << "addStartStopSymbols: " << name << "\n");
   uint64_t start = seg->startVA;
   uint64_t stop = start + seg->size;
-  symtab->addOptionalDataSymbol(saver.save("__start_" + name), start);
-  symtab->addOptionalDataSymbol(saver.save("__stop_" + name), stop);
+  symtab->addOptionalDataSymbol(saver().save("__start_" + name), start);
+  symtab->addOptionalDataSymbol(saver().save("__stop_" + name), stop);
 }
 
 void Writer::addSections() {
@@ -958,7 +957,7 @@ static void createFunction(DefinedFunction *func, StringRef bodyContent) {
     writeUleb128(os, bodyContent.size(), "function size");
     os << bodyContent;
   }
-  ArrayRef<uint8_t> body = arrayRefFromStringRef(saver.save(functionBody));
+  ArrayRef<uint8_t> body = arrayRefFromStringRef(saver().save(functionBody));
   cast<SyntheticFunction>(func->function)->setBody(body);
 }
 
@@ -1022,7 +1021,16 @@ void Writer::createSyntheticInitFunctions() {
     }
   }
 
-  if (WasmSym::applyGlobalRelocs && WasmSym::initMemory) {
+  int startCount = 0;
+  if (WasmSym::applyGlobalRelocs)
+    startCount++;
+  if (WasmSym::WasmSym::initMemory || WasmSym::applyDataRelocs)
+    startCount++;
+
+  // If there is only one start function we can just use that function
+  // itself as the Wasm start function, otherwise we need to synthesize
+  // a new function to call them in sequence.
+  if (startCount > 1) {
     WasmSym::startFunction = symtab->addSyntheticFunction(
         "__wasm_start", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_start"));
@@ -1179,6 +1187,14 @@ void Writer::createInitMemoryFunction() {
       }
     }
 
+    // Memory init is now complete.  Apply data relocation if there
+    // are any.
+    if (WasmSym::applyDataRelocs) {
+      writeU8(os, WASM_OPCODE_CALL, "CALL");
+      writeUleb128(os, WasmSym::applyDataRelocs->getFunctionIndex(),
+                   "function index");
+    }
+
     if (config->sharedMemory) {
       // Set flag to 2 to mark end of initialization
       writeGetFlagAddress();
@@ -1231,17 +1247,28 @@ void Writer::createInitMemoryFunction() {
 }
 
 void Writer::createStartFunction() {
+  // If the start function exists when we have more than one function to call.
   if (WasmSym::startFunction) {
     std::string bodyContent;
     {
       raw_string_ostream os(bodyContent);
       writeUleb128(os, 0, "num locals");
-      writeU8(os, WASM_OPCODE_CALL, "CALL");
-      writeUleb128(os, WasmSym::initMemory->getFunctionIndex(),
-                   "function index");
-      writeU8(os, WASM_OPCODE_CALL, "CALL");
-      writeUleb128(os, WasmSym::applyGlobalRelocs->getFunctionIndex(),
-                   "function index");
+      if (WasmSym::initMemory) {
+        writeU8(os, WASM_OPCODE_CALL, "CALL");
+        writeUleb128(os, WasmSym::initMemory->getFunctionIndex(),
+                     "function index");
+      } else if (WasmSym::applyDataRelocs) {
+        // When initMemory is present it calls applyDataRelocs.  If not,
+        // we must call it directly.
+        writeU8(os, WASM_OPCODE_CALL, "CALL");
+        writeUleb128(os, WasmSym::applyDataRelocs->getFunctionIndex(),
+                     "function index");
+      }
+      if (WasmSym::applyGlobalRelocs) {
+        writeU8(os, WASM_OPCODE_CALL, "CALL");
+        writeUleb128(os, WasmSym::applyGlobalRelocs->getFunctionIndex(),
+                     "function index");
+      }
       writeU8(os, WASM_OPCODE_END, "END");
     }
     createFunction(WasmSym::startFunction, bodyContent);
@@ -1249,6 +1276,8 @@ void Writer::createStartFunction() {
     WasmSym::startFunction = WasmSym::initMemory;
   } else if (WasmSym::applyGlobalRelocs) {
     WasmSym::startFunction = WasmSym::applyGlobalRelocs;
+  } else if (WasmSym::applyDataRelocs) {
+    WasmSym::startFunction = WasmSym::applyDataRelocs;
   }
 }
 
@@ -1311,8 +1340,7 @@ void Writer::createCallCtorsFunction() {
   // If __wasm_call_ctors isn't referenced, there aren't any ctors, and we
   // aren't calling `__wasm_apply_data_relocs` for Emscripten-style PIC, don't
   // define the `__wasm_call_ctors` function.
-  if (!WasmSym::callCtors->isLive() && !WasmSym::applyDataRelocs &&
-      initFunctions.empty())
+  if (!WasmSym::callCtors->isLive() && initFunctions.empty())
     return;
 
   // First write the body's contents to a string.
@@ -1321,7 +1349,7 @@ void Writer::createCallCtorsFunction() {
     raw_string_ostream os(bodyContent);
     writeUleb128(os, 0, "num locals");
 
-    if (WasmSym::applyDataRelocs) {
+    if (WasmSym::applyDataRelocs && !WasmSym::initMemory) {
       writeU8(os, WASM_OPCODE_CALL, "CALL");
       writeUleb128(os, WasmSym::applyDataRelocs->getFunctionIndex(),
                    "function index");

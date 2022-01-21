@@ -47,8 +47,8 @@ _main:
 
 # CHECK-NEXT: # Symbols:
 # CHECK-NEXT: # Address        File  Name
-# CHECK-NEXT: 0x[[#NUMBER]]    [  1]  _number
 # CHECK-NEXT: 0x[[#MAIN]]      [  1]  _main
 # CHECK-NEXT: 0x[[#FOO]]       [  2]  _foo
+# CHECK-NEXT: 0x[[#NUMBER]]    [  1]  _number
 
 # MAPFILE: "name":"Total Write map file"

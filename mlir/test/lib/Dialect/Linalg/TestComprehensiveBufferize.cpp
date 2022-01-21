@@ -12,14 +12,13 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationInterfaceImpl.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizableOpInterface.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/BufferizationInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ComprehensiveBufferize.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/LinalgInterfaceImpl.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/SCFInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/StdInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.h"
@@ -34,12 +33,14 @@
 using namespace mlir;
 using namespace mlir::linalg;
 using namespace mlir::linalg::comprehensive_bufferize;
+using namespace mlir::bufferization;
 
 namespace {
 /// A helper struct for FunctionBufferize and ModuleBufferize. Both passes are
 /// mostly identical.
 struct TestComprehensiveFunctionBufferize
-    : public PassWrapper<TestComprehensiveFunctionBufferize, FunctionPass> {
+    : public PassWrapper<TestComprehensiveFunctionBufferize,
+                         OperationPass<FuncOp>> {
   StringRef getArgument() const final {
     return "test-comprehensive-function-bufferize";
   }
@@ -68,7 +69,7 @@ struct TestComprehensiveFunctionBufferize
     vector_ext::registerBufferizableOpInterfaceExternalModels(registry);
   }
 
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   Option<bool> allowReturnMemref{
       *this, "allow-return-memref",
@@ -99,11 +100,11 @@ struct TestComprehensiveFunctionBufferize
 };
 } // namespace
 
-void TestComprehensiveFunctionBufferize::runOnFunction() {
-  auto options = std::make_unique<BufferizationOptions>();
+void TestComprehensiveFunctionBufferize::runOnOperation() {
+  auto options = std::make_unique<AnalysisBufferizationOptions>();
 
   if (!allowReturnMemref)
-    options->addPostAnalysisStep<scf_ext::AssertDestinationPassingStyle>();
+    options->addPostAnalysisStep<scf_ext::AssertScfForAliasingProperties>();
 
   options->allowReturnMemref = allowReturnMemref;
   options->allowUnknownOps = allowUnknownOps;
@@ -117,8 +118,8 @@ void TestComprehensiveFunctionBufferize::runOnFunction() {
       options->dialectFilter->insert(dialectNamespace);
   }
 
-  Operation *op = getFunction().getOperation();
-  if (failed(runComprehensiveBufferize(op, std::move(options))))
+  Operation *op = getOperation();
+  if (failed(runOneShotBufferize(op, std::move(options))))
     return;
 
   if (testAnalysisOnly)

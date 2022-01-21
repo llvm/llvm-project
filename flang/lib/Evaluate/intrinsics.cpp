@@ -486,7 +486,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"image_status", {{"image", SameInt}, OptionalTEAM}, DefaultInt},
     {"index",
         {{"string", SameChar}, {"substring", SameChar},
-            {"back", AnyLogical, Rank::scalar, Optionality::optional},
+            {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
     {"int", {{"a", AnyNumeric, Rank::elementalOrBOZ}, DefaultingKIND}, KINDInt},
@@ -1183,7 +1183,7 @@ static DynamicType GetBuiltinDerivedType(
 }
 
 // Ensure that the keywords of arguments to MAX/MIN and their variants
-// are of the form A123 with no duplicates.
+// are of the form A123 with no duplicates or leading zeroes.
 static bool CheckMaxMinArgument(std::optional<parser::CharBlock> keyword,
     std::set<parser::CharBlock> &set, const char *intrinsicName,
     parser::ContextualMessages &messages) {
@@ -1191,7 +1191,7 @@ static bool CheckMaxMinArgument(std::optional<parser::CharBlock> keyword,
     std::size_t j{1};
     for (; j < keyword->size(); ++j) {
       char ch{(*keyword)[j]};
-      if (ch < '0' || ch > '9') {
+      if (ch < (j == 1 ? '1' : '0') || ch > '9') {
         break;
       }
     }
@@ -1347,10 +1347,17 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             d.rank == Rank::elementalOrBOZ) {
           continue;
         } else {
-          const IntrinsicDummyArgument &nextParam{dummy[j + 1]};
-          messages.Say(
-              "Typeless (BOZ) not allowed for both '%s=' & '%s=' arguments"_err_en_US, // C7109
-              d.keyword, nextParam.keyword);
+          const IntrinsicDummyArgument *nextParam{
+              j + 1 < dummies ? &dummy[j + 1] : nullptr};
+          if (nextParam && nextParam->rank == Rank::elementalOrBOZ) {
+            messages.Say(
+                "Typeless (BOZ) not allowed for both '%s=' & '%s=' arguments"_err_en_US, // C7109
+                d.keyword, nextParam->keyword);
+          } else {
+            messages.Say(
+                "Typeless (BOZ) not allowed for '%s=' argument"_err_en_US,
+                d.keyword);
+          }
         }
       } else {
         // NULL(), procedure, or procedure pointer
@@ -1801,8 +1808,19 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     if (const auto &arg{rearranged[j]}) {
       if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
         std::string kw{d.keyword};
-        if (isMaxMin) {
-          kw = "a"s + std::to_string(j + 1);
+        if (arg->keyword()) {
+          kw = arg->keyword()->ToString();
+        } else if (isMaxMin) {
+          for (std::size_t k{j + 1};; ++k) {
+            kw = "a"s + std::to_string(k);
+            auto iter{std::find_if(dummyArgs.begin(), dummyArgs.end(),
+                [&kw](const characteristics::DummyArgument &prev) {
+                  return prev.name == kw;
+                })};
+            if (iter == dummyArgs.end()) {
+              break;
+            }
+          }
         }
         auto dc{characteristics::DummyArgument::FromActual(
             std::move(kw), *expr, context)};

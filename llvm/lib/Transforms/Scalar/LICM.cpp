@@ -1355,7 +1355,7 @@ static bool isFreeInLoop(const Instruction &I, const Loop *CurLoop,
         TargetTransformInfo::TCC_Free)
       return false;
     // For a GEP, we cannot simply use getUserCost because currently it
-    // optimistically assume that a GEP will fold into addressing mode
+    // optimistically assumes that a GEP will fold into addressing mode
     // regardless of its users.
     const BasicBlock *BB = GEP->getParent();
     for (const User *U : GEP->users()) {

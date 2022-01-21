@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/LoopAnalysis.h"
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -34,14 +34,14 @@ void printReductionResult(Operation *redRegionOp, unsigned numOutput,
 }
 
 struct TestMatchReductionPass
-    : public PassWrapper<TestMatchReductionPass, FunctionPass> {
+    : public PassWrapper<TestMatchReductionPass, OperationPass<FuncOp>> {
   StringRef getArgument() const final { return "test-match-reduction"; }
   StringRef getDescription() const final {
     return "Test the match reduction utility.";
   }
 
-  void runOnFunction() override {
-    FuncOp func = getFunction();
+  void runOnOperation() override {
+    FuncOp func = getOperation();
     func->emitRemark("Testing function");
 
     func.walk<WalkOrder::PreOrder>([](Operation *op) {

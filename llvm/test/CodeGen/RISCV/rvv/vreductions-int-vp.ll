@@ -1185,7 +1185,7 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV64-LABEL: vpreduce_umax_nxv32i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    csrr a3, vlenb
-; RV64-NEXT:    srli a6, a3, 2
+; RV64-NEXT:    srli a2, a3, 2
 ; RV64-NEXT:    slli a4, a0, 32
 ; RV64-NEXT:    slli a0, a3, 1
 ; RV64-NEXT:    srli a3, a4, 32
@@ -1195,8 +1195,8 @@ define signext i32 @vpreduce_umax_nxv32i32(i32 signext %s, <vscale x 32 x i32> %
 ; RV64-NEXT:    mv a4, a0
 ; RV64-NEXT:  .LBB67_2:
 ; RV64-NEXT:    li a5, 0
-; RV64-NEXT:    vsetvli a2, zero, e8, mf2, ta, mu
-; RV64-NEXT:    vslidedown.vx v24, v0, a6
+; RV64-NEXT:    vsetvli a6, zero, e8, mf2, ta, mu
+; RV64-NEXT:    vslidedown.vx v24, v0, a2
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
 ; RV64-NEXT:    vmv.s.x v25, a3
 ; RV64-NEXT:    vsetvli zero, a4, e32, m8, tu, mu

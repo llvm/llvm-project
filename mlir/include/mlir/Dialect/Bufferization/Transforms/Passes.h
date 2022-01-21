@@ -16,7 +16,7 @@ std::unique_ptr<Pass> createBufferDeallocationPass();
 
 /// Creates a pass that finalizes a partial bufferization by removing remaining
 /// bufferization.to_tensor and bufferization.to_memref operations.
-std::unique_ptr<FunctionPass> createFinalizingBufferizePass();
+std::unique_ptr<OperationPass<FuncOp>> createFinalizingBufferizePass();
 
 //===----------------------------------------------------------------------===//
 // Registration

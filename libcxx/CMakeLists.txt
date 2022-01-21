@@ -10,8 +10,6 @@ endif()
 #===============================================================================
 cmake_minimum_required(VERSION 3.13.4)
 
-include(GNUInstallDirs)
-
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 # Add path for custom modules
@@ -39,14 +37,17 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUIL
   # In a standalone build, we don't have llvm to automatically generate the
   # llvm-lit script for us.  So we need to provide an explicit directory that
   # the configurator should write the script into.
-  set(LIBCXX_STANDALONE_BUILD 1)
+  set(LIBCXX_STANDALONE_BUILD TRUE)
   set(LLVM_LIT_OUTPUT_DIR "${LIBCXX_BINARY_DIR}/bin")
-
-  # Find the LLVM sources and simulate LLVM CMake options.
-  include(HandleOutOfTreeLLVM)
 endif()
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
 if (LIBCXX_STANDALONE_BUILD)
+  # Find the LLVM sources and simulate LLVM CMake options.
+  include(HandleOutOfTreeLLVM)
+
   find_package(Python3 COMPONENTS Interpreter)
   if(NOT Python3_Interpreter_FOUND)
     message(SEND_ERROR "Python3 not found. Python3 is required")

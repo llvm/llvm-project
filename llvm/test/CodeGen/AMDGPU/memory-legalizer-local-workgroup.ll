@@ -59,7 +59,7 @@ define amdgpu_kernel void @local_workgroup_unordered_load(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_unordered_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -167,7 +167,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_load(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -276,7 +276,7 @@ define amdgpu_kernel void @local_workgroup_acquire_load(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -392,7 +392,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_load(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -500,7 +500,7 @@ define amdgpu_kernel void @local_workgroup_unordered_store(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_unordered_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
@@ -589,7 +589,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_store(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
@@ -683,7 +683,7 @@ define amdgpu_kernel void @local_workgroup_release_store(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_release_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
@@ -783,7 +783,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_store(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
@@ -878,7 +878,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -972,7 +972,7 @@ define amdgpu_kernel void @local_workgroup_acquire_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -1072,7 +1072,7 @@ define amdgpu_kernel void @local_workgroup_release_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_release_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -1177,7 +1177,7 @@ define amdgpu_kernel void @local_workgroup_acq_rel_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acq_rel_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -1288,7 +1288,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -1398,7 +1398,7 @@ define amdgpu_kernel void @local_workgroup_acquire_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -1514,7 +1514,7 @@ define amdgpu_kernel void @local_workgroup_acq_rel_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acq_rel_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -1636,7 +1636,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -1748,13 +1748,12 @@ define amdgpu_kernel void @local_workgroup_monotonic_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -1853,13 +1852,12 @@ define amdgpu_kernel void @local_workgroup_acquire_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
@@ -1964,13 +1962,12 @@ define amdgpu_kernel void @local_workgroup_release_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_release_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
@@ -2080,13 +2077,12 @@ define amdgpu_kernel void @local_workgroup_acq_rel_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acq_rel_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2202,13 +2198,12 @@ define amdgpu_kernel void @local_workgroup_seq_cst_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2319,13 +2314,12 @@ define amdgpu_kernel void @local_workgroup_monotonic_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
@@ -2430,13 +2424,12 @@ define amdgpu_kernel void @local_workgroup_acquire_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
@@ -2546,13 +2539,12 @@ define amdgpu_kernel void @local_workgroup_release_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_release_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2668,13 +2660,12 @@ define amdgpu_kernel void @local_workgroup_acq_rel_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acq_rel_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2790,13 +2781,12 @@ define amdgpu_kernel void @local_workgroup_seq_cst_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2912,13 +2902,12 @@ define amdgpu_kernel void @local_workgroup_monotonic_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3034,13 +3023,12 @@ define amdgpu_kernel void @local_workgroup_acquire_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3156,13 +3144,12 @@ define amdgpu_kernel void @local_workgroup_release_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_release_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3278,13 +3265,12 @@ define amdgpu_kernel void @local_workgroup_acq_rel_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acq_rel_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3400,13 +3386,12 @@ define amdgpu_kernel void @local_workgroup_seq_cst_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3520,13 +3505,12 @@ define amdgpu_kernel void @local_workgroup_monotonic_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -3641,13 +3625,12 @@ define amdgpu_kernel void @local_workgroup_acquire_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -3768,13 +3751,12 @@ define amdgpu_kernel void @local_workgroup_release_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_release_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3900,13 +3882,12 @@ define amdgpu_kernel void @local_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acq_rel_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4034,13 +4015,12 @@ define amdgpu_kernel void @local_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4163,13 +4143,12 @@ define amdgpu_kernel void @local_workgroup_monotonic_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -4286,13 +4265,12 @@ define amdgpu_kernel void @local_workgroup_acquire_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -4414,13 +4392,12 @@ define amdgpu_kernel void @local_workgroup_release_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_release_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4548,13 +4525,12 @@ define amdgpu_kernel void @local_workgroup_acq_rel_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acq_rel_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4682,13 +4658,12 @@ define amdgpu_kernel void @local_workgroup_seq_cst_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4816,13 +4791,12 @@ define amdgpu_kernel void @local_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_monotonic_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -4950,13 +4924,12 @@ define amdgpu_kernel void @local_workgroup_acquire_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acquire_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5084,13 +5057,12 @@ define amdgpu_kernel void @local_workgroup_release_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_release_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5218,13 +5190,12 @@ define amdgpu_kernel void @local_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_acq_rel_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5352,13 +5323,12 @@ define amdgpu_kernel void @local_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_seq_cst_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5476,7 +5446,7 @@ define amdgpu_kernel void @local_workgroup_one_as_unordered_load(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_unordered_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -5584,7 +5554,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_load(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -5692,7 +5662,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_load(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -5800,7 +5770,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_load(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_load:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -5900,7 +5870,7 @@ define amdgpu_kernel void @local_workgroup_one_as_unordered_store(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_unordered_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
@@ -5989,7 +5959,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_store(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
@@ -6078,7 +6048,7 @@ define amdgpu_kernel void @local_workgroup_one_as_release_store(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_release_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
@@ -6167,7 +6137,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_store(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_store:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s1
@@ -6256,7 +6226,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -6345,7 +6315,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -6434,7 +6404,7 @@ define amdgpu_kernel void @local_workgroup_one_as_release_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_release_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -6523,7 +6493,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acq_rel_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -6612,7 +6582,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -6709,7 +6679,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -6817,7 +6787,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acq_rel_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -6925,7 +6895,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_ret_atomicrmw(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_ret_atomicrmw:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
@@ -7029,13 +6999,12 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7129,13 +7098,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7229,13 +7197,12 @@ define amdgpu_kernel void @local_workgroup_one_as_release_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_release_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7329,13 +7296,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acq_rel_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7429,13 +7395,12 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_monotonic_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7529,13 +7494,12 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7629,13 +7593,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7729,13 +7692,12 @@ define amdgpu_kernel void @local_workgroup_one_as_release_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_release_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7829,13 +7791,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acq_rel_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -7929,13 +7890,12 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_acquire_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -8029,13 +7989,12 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -8129,13 +8088,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -8229,13 +8187,12 @@ define amdgpu_kernel void @local_workgroup_one_as_release_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_release_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -8329,13 +8286,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acq_rel_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -8429,13 +8385,12 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_seq_cst_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_b32 v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_endpgm
 ;
@@ -8537,13 +8492,12 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_monotonic_ret_cmpxch
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -8657,13 +8611,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -8777,13 +8730,12 @@ define amdgpu_kernel void @local_workgroup_one_as_release_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_release_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -8897,13 +8849,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9017,13 +8968,12 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9137,13 +9087,12 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9257,13 +9206,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9377,13 +9325,12 @@ define amdgpu_kernel void @local_workgroup_one_as_release_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_release_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9497,13 +9444,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acq_rel_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9617,13 +9563,12 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_acquire_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9737,13 +9682,12 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9857,13 +9801,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acquire_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -9977,13 +9920,12 @@ define amdgpu_kernel void @local_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_release_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -10097,13 +10039,12 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1
@@ -10217,13 +10158,12 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; SKIP-CACHE-INV-LABEL: local_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg:
 ; SKIP-CACHE-INV:       ; %bb.0: ; %entry
-; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
-; SKIP-CACHE-INV-NEXT:    s_load_dword s0, s[0:1], 0xb
+; SKIP-CACHE-INV-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 m0, -1
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s2
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s0
-; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s3
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, s0
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v1, s2
+; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, s1
 ; SKIP-CACHE-INV-NEXT:    ds_cmpst_rtn_b32 v1, v0, v1, v2 offset:16
 ; SKIP-CACHE-INV-NEXT:    s_waitcnt lgkmcnt(0)
 ; SKIP-CACHE-INV-NEXT:    ds_write_b32 v0, v1

@@ -954,6 +954,20 @@ define <vscale x 16 x i32> @vmul_vx_nxv16i32(<vscale x 16 x i32> %va, i32 %b, <v
   ret <vscale x 16 x i32> %v
 }
 
+define <vscale x 16 x i32> @vmul_vx_nxv16i32_commute(<vscale x 16 x i32> %va, i32 %b, <vscale x 16 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vmul_vx_nxv16i32_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vmv.v.x v16, a0
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vmul.vv v8, v16, v8, v0.t
+; CHECK-NEXT:    ret
+  %elt.head = insertelement <vscale x 16 x i32> undef, i32 %b, i32 0
+  %vb = shufflevector <vscale x 16 x i32> %elt.head, <vscale x 16 x i32> undef, <vscale x 16 x i32> zeroinitializer
+  %v = call <vscale x 16 x i32> @llvm.vp.mul.nxv16i32(<vscale x 16 x i32> %vb, <vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 %evl)
+  ret <vscale x 16 x i32> %v
+}
+
 define <vscale x 16 x i32> @vmul_vx_nxv16i32_unmasked(<vscale x 16 x i32> %va, i32 %b, i32 zeroext %evl) {
 ; CHECK-LABEL: vmul_vx_nxv16i32_unmasked:
 ; CHECK:       # %bb.0:

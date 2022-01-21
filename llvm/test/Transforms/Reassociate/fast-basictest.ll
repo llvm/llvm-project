@@ -353,8 +353,8 @@ define float @test12(float %X) {
 ; Check again with 'reassoc' and 'nsz' ('nsz' not technically required).
 define float @test12_reassoc_nsz(float %X) {
 ; CHECK-LABEL: @test12_reassoc_nsz(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], 3.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = fsub reassoc nsz float 6.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz float [[TMP1]], 6.000000e+00
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
   %A = fsub reassoc nsz float 1.000000e+00, %X

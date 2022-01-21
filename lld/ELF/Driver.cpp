@@ -77,14 +77,14 @@ std::unique_ptr<LinkerDriver> elf::driver;
 static void setConfigs(opt::InputArgList &args);
 static void readConfigs(opt::InputArgList &args);
 
-bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
-               raw_ostream &stdoutOS, raw_ostream &stderrOS) {
-  lld::stdoutOS = &stdoutOS;
-  lld::stderrOS = &stderrOS;
+bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
+               llvm::raw_ostream &stderrOS, bool exitEarly,
+               bool disableOutput) {
+  // This driver-specific context will be freed later by lldMain().
+  auto *ctx = new CommonLinkerContext;
 
-  errorHandler().cleanupCallback = []() {
-    freeArena();
-
+  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.cleanupCallback = []() {
     inputSections.clear();
     outputSections.clear();
     memoryBuffers.clear();
@@ -106,13 +106,9 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
 
     SharedFile::vernauxNum = 0;
   };
-
-  errorHandler().logName = args::getFilenameWithoutExe(args[0]);
-  errorHandler().errorLimitExceededMsg =
-      "too many errors emitted, stopping now (use "
-      "-error-limit=0 to see all errors)";
-  errorHandler().exitEarly = canExitEarly;
-  stderrOS.enable_colors(stderrOS.has_colors());
+  ctx->e.logName = args::getFilenameWithoutExe(args[0]);
+  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
+                                 "-error-limit=0 to see all errors)";
 
   config = std::make_unique<Configuration>();
   driver = std::make_unique<LinkerDriver>();
@@ -126,15 +122,7 @@ bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
 
   driver->linkerMain(args);
 
-  // Exit immediately if we don't need to return to the caller.
-  // This saves time because the overhead of calling destructors
-  // for all globally-allocated objects is not negligible.
-  int hasError = errorCount() ? 1 : 0;
-  if (canExitEarly)
-    exitLld(hasError);
-  else
-    errorHandler().reset();
-  return !hasError;
+  return errorCount() == 0;
 }
 
 // Parses a linker -m option.
@@ -235,23 +223,22 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     std::unique_ptr<Archive> file =
         CHECK(Archive::create(mbref), path + ": failed to parse archive");
 
-    // If an archive file has no symbol table, it is likely that a user
-    // is attempting LTO and using a default ar command that doesn't
-    // understand the LLVM bitcode file. It is a pretty common error, so
-    // we'll handle it as if it had a symbol table.
+    // If an archive file has no symbol table, it may be intentional (used as a
+    // group of lazy object files where the symbol table is not useful), or the
+    // user is attempting LTO and using a default ar command that doesn't
+    // understand the LLVM bitcode file. Treat the archive as a group of lazy
+    // object files.
     if (!file->isEmpty() && !file->hasSymbolTable()) {
-      // Check if all members are bitcode files. If not, ignore, which is the
-      // default action without the LTO hack described above.
       for (const std::pair<MemoryBufferRef, uint64_t> &p :
-           getArchiveMembers(mbref))
-        if (identify_magic(p.first.getBuffer()) != file_magic::bitcode) {
-          error(path + ": archive has no index; run ranlib to add one");
-          return;
-        }
-
-      for (const std::pair<MemoryBufferRef, uint64_t> &p :
-           getArchiveMembers(mbref))
-        files.push_back(createLazyFile(p.first, path, p.second));
+           getArchiveMembers(mbref)) {
+        auto magic = identify_magic(p.first.getBuffer());
+        if (magic == file_magic::bitcode ||
+            magic == file_magic::elf_relocatable)
+          files.push_back(createLazyFile(p.first, path, p.second));
+        else
+          error(path + ": archive member '" + p.first.getBufferIdentifier() +
+                "' is neither ET_REL nor LLVM bitcode");
+      }
       return;
     }
 
@@ -1259,7 +1246,7 @@ static void readConfigs(opt::InputArgList &args) {
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
-    parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+    parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
   for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq_minus))
@@ -2072,9 +2059,9 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     if (!sym)
       continue;
 
-    Symbol *real = addUnusedUndefined(saver.save("__real_" + name));
+    Symbol *real = addUnusedUndefined(saver().save("__real_" + name));
     Symbol *wrap =
-        addUnusedUndefined(saver.save("__wrap_" + name), sym->binding);
+        addUnusedUndefined(saver().save("__wrap_" + name), sym->binding);
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten

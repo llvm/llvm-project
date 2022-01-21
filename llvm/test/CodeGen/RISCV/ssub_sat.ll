@@ -156,16 +156,16 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32IZbbZbt-NEXT:    sltu a4, a0, a2
 ; RV32IZbbZbt-NEXT:    sub a5, a1, a3
 ; RV32IZbbZbt-NEXT:    sub a4, a5, a4
-; RV32IZbbZbt-NEXT:    srai a6, a4, 31
-; RV32IZbbZbt-NEXT:    lui a5, 524288
-; RV32IZbbZbt-NEXT:    xor a7, a6, a5
-; RV32IZbbZbt-NEXT:    xor a5, a1, a4
+; RV32IZbbZbt-NEXT:    srai a5, a4, 31
+; RV32IZbbZbt-NEXT:    lui a6, 524288
+; RV32IZbbZbt-NEXT:    xor a6, a5, a6
+; RV32IZbbZbt-NEXT:    xor a7, a1, a4
 ; RV32IZbbZbt-NEXT:    xor a1, a1, a3
-; RV32IZbbZbt-NEXT:    and a1, a1, a5
+; RV32IZbbZbt-NEXT:    and a1, a1, a7
 ; RV32IZbbZbt-NEXT:    slti a3, a1, 0
-; RV32IZbbZbt-NEXT:    cmov a1, a3, a7, a4
+; RV32IZbbZbt-NEXT:    cmov a1, a3, a6, a4
 ; RV32IZbbZbt-NEXT:    sub a0, a0, a2
-; RV32IZbbZbt-NEXT:    cmov a0, a3, a6, a0
+; RV32IZbbZbt-NEXT:    cmov a0, a3, a5, a0
 ; RV32IZbbZbt-NEXT:    ret
 ;
 ; RV64IZbbZbt-LABEL: func2:

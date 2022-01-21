@@ -14,7 +14,7 @@
 #include "Target.h"
 
 #include "lld/Common/Args.h"
-#include "lld/Common/ErrorHandler.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/LTO/Config.h"
@@ -148,7 +148,7 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
       modTime = getModTime(filePath);
     }
     ret.push_back(make<ObjFile>(
-        MemoryBufferRef(buf[i], saver.save(filePath.str())), modTime, ""));
+        MemoryBufferRef(buf[i], saver().save(filePath.str())), modTime, ""));
   }
   for (std::unique_ptr<MemoryBuffer> &file : files)
     if (file)

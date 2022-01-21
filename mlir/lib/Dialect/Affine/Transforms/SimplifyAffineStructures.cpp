@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Analysis/Utils.h"
+#include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/IntegerSet.h"
@@ -30,7 +30,7 @@ namespace {
 /// identity layout ones.
 struct SimplifyAffineStructures
     : public SimplifyAffineStructuresBase<SimplifyAffineStructures> {
-  void runOnFunction() override;
+  void runOnOperation() override;
 
   /// Utility to simplify an affine attribute and update its entry in the parent
   /// operation if necessary.
@@ -76,8 +76,8 @@ mlir::createSimplifyAffineStructuresPass() {
   return std::make_unique<SimplifyAffineStructures>();
 }
 
-void SimplifyAffineStructures::runOnFunction() {
-  auto func = getFunction();
+void SimplifyAffineStructures::runOnOperation() {
+  auto func = getOperation();
   simplifiedAttributes.clear();
   RewritePatternSet patterns(func.getContext());
   AffineApplyOp::getCanonicalizationPatterns(patterns, func.getContext());

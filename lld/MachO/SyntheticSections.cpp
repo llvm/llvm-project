@@ -16,8 +16,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/EndianStream.h"
@@ -834,7 +833,7 @@ void SymtabSection::emitBeginSourceStab(DWARFUnit *compileUnit) {
   if (!dir.endswith(sep))
     dir += sep;
   stab.strx = stringTableSection.addString(
-      saver.save(dir + compileUnit->getUnitDIE().getShortName()));
+      saver().save(dir + compileUnit->getUnitDIE().getShortName()));
   stabs.emplace_back(std::move(stab));
 }
 
@@ -856,7 +855,7 @@ void SymtabSection::emitObjectFileStab(ObjFile *file) {
   if (!file->archiveName.empty())
     path.append({"(", file->getName(), ")"});
 
-  StringRef adjustedPath = saver.save(path.str());
+  StringRef adjustedPath = saver().save(path.str());
   adjustedPath.consume_front(config->osoPrefix);
 
   stab.strx = stringTableSection.addString(adjustedPath);
@@ -1283,7 +1282,10 @@ void BitcodeBundleSection::finalize() {
   using namespace llvm::sys::fs;
   CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
   xar_t xar(xar_open(xarPath.data(), O_RDWR));
+#pragma clang diagnostic pop
   if (!xar)
     fatal("failed to open XAR temporary file at " + xarPath);
   CHECK_EC(xar_opt_set(xar, XAR_OPT_COMPRESSION, XAR_OPT_VAL_NONE));

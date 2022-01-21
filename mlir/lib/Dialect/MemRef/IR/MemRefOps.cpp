@@ -211,11 +211,12 @@ void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
 static void print(OpAsmPrinter &p, AllocaScopeOp &op) {
   bool printBlockTerminators = false;
 
-  p << " ";
+  p << ' ';
   if (!op.results().empty()) {
     p << " -> (" << op.getResultTypes() << ")";
     printBlockTerminators = true;
   }
+  p << ' ';
   p.printRegion(op.bodyRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/printBlockTerminators);
@@ -1333,6 +1334,7 @@ computeReshapeCollapsedType(MemRefType type,
   AffineExpr offset;
   SmallVector<AffineExpr, 4> strides;
   auto status = getStridesAndOffset(type, strides, offset);
+  auto isIdentityLayout = type.getLayout().isIdentity();
   (void)status;
   assert(succeeded(status) && "expected strided memref");
 
@@ -1349,12 +1351,19 @@ computeReshapeCollapsedType(MemRefType type,
     unsigned dim = m.getNumResults();
     int64_t size = 1;
     AffineExpr stride = strides[currentDim + dim - 1];
-    if (!isReshapableDimBand(currentDim, dim, sizes, strides)) {
+    if (isIdentityLayout ||
+        isReshapableDimBand(currentDim, dim, sizes, strides)) {
+      for (unsigned d = 0; d < dim; ++d) {
+        int64_t currentSize = sizes[currentDim + d];
+        if (ShapedType::isDynamic(currentSize)) {
+          size = ShapedType::kDynamicSize;
+          break;
+        }
+        size *= currentSize;
+      }
+    } else {
       size = ShapedType::kDynamicSize;
       stride = AffineExpr();
-    } else {
-      for (unsigned d = 0; d < dim; ++d)
-        size *= sizes[currentDim + d];
     }
     newSizes.push_back(size);
     newStrides.push_back(stride);

@@ -325,12 +325,18 @@ public:
   PyBlock appendBlock(const py::args &pyArgTypes) {
     operation->checkValid();
     llvm::SmallVector<MlirType, 4> argTypes;
+    llvm::SmallVector<MlirLocation, 4> argLocs;
     argTypes.reserve(pyArgTypes.size());
+    argLocs.reserve(pyArgTypes.size());
     for (auto &pyArg : pyArgTypes) {
       argTypes.push_back(pyArg.cast<PyType &>());
+      // TODO: Pass in a proper location here.
+      argLocs.push_back(
+          mlirLocationUnknownGet(mlirTypeGetContext(argTypes.back())));
     }
 
-    MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+    MlirBlock block =
+        mlirBlockCreate(argTypes.size(), argTypes.data(), argLocs.data());
     mlirRegionAppendOwnedBlock(region, block);
     return PyBlock(operation, block);
   }
@@ -2717,12 +2723,18 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyRegion &parent, py::list pyArgTypes) {
             parent.checkValid();
             llvm::SmallVector<MlirType, 4> argTypes;
+            llvm::SmallVector<MlirLocation, 4> argLocs;
             argTypes.reserve(pyArgTypes.size());
+            argLocs.reserve(pyArgTypes.size());
             for (auto &pyArg : pyArgTypes) {
               argTypes.push_back(pyArg.cast<PyType &>());
+              // TODO: Pass in a proper location here.
+              argLocs.push_back(
+                  mlirLocationUnknownGet(mlirTypeGetContext(argTypes.back())));
             }
 
-            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data(),
+                                              argLocs.data());
             mlirRegionInsertOwnedBlock(parent, 0, block);
             return PyBlock(parent.getParentOperation(), block);
           },
@@ -2734,12 +2746,18 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyBlock &self, py::args pyArgTypes) {
             self.checkValid();
             llvm::SmallVector<MlirType, 4> argTypes;
+            llvm::SmallVector<MlirLocation, 4> argLocs;
             argTypes.reserve(pyArgTypes.size());
+            argLocs.reserve(pyArgTypes.size());
             for (auto &pyArg : pyArgTypes) {
               argTypes.push_back(pyArg.cast<PyType &>());
+              // TODO: Pass in a proper location here.
+              argLocs.push_back(
+                  mlirLocationUnknownGet(mlirTypeGetContext(argTypes.back())));
             }
 
-            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data(),
+                                              argLocs.data());
             MlirRegion region = mlirBlockGetParentRegion(self.get());
             mlirRegionInsertOwnedBlockBefore(region, self.get(), block);
             return PyBlock(self.getParentOperation(), block);
@@ -2751,12 +2769,18 @@ void mlir::python::populateIRCore(py::module &m) {
           [](PyBlock &self, py::args pyArgTypes) {
             self.checkValid();
             llvm::SmallVector<MlirType, 4> argTypes;
+            llvm::SmallVector<MlirLocation, 4> argLocs;
             argTypes.reserve(pyArgTypes.size());
+            argLocs.reserve(pyArgTypes.size());
             for (auto &pyArg : pyArgTypes) {
               argTypes.push_back(pyArg.cast<PyType &>());
-            }
 
-            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data());
+              // TODO: Pass in a proper location here.
+              argLocs.push_back(
+                  mlirLocationUnknownGet(mlirTypeGetContext(argTypes.back())));
+            }
+            MlirBlock block = mlirBlockCreate(argTypes.size(), argTypes.data(),
+                                              argLocs.data());
             MlirRegion region = mlirBlockGetParentRegion(self.get());
             mlirRegionInsertOwnedBlockAfter(region, self.get(), block);
             return PyBlock(self.getParentOperation(), block);

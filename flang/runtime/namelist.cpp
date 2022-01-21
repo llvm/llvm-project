@@ -99,7 +99,7 @@ static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
   std::optional<SubscriptValue> value;
   std::optional<char32_t> ch{io.GetCurrentChar()};
   bool negate{ch && *ch == '-'};
-  if (negate) {
+  if ((ch && *ch == '+') || negate) {
     io.HandleRelativePosition(1);
     ch = io.GetCurrentChar();
   }
@@ -225,6 +225,67 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
+static bool HandleSubstring(
+    IoStatementState &io, Descriptor &desc, const char *name) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  auto pair{desc.type().GetCategoryAndKind()};
+  if (!pair || pair->first != TypeCategory::Character) {
+    handler.SignalError("Substring reference to non-character item '%s'", name);
+    return false;
+  }
+  int kind{pair->second};
+  SubscriptValue chars{static_cast<SubscriptValue>(desc.ElementBytes()) / kind};
+  // Allow for blanks in substring bounds; they're nonstandard, but not
+  // ambiguous within the parentheses.
+  io.HandleRelativePosition(1); // skip '('
+  std::optional<SubscriptValue> lower, upper;
+  std::optional<char32_t> ch{io.GetNextNonBlank()};
+  if (ch) {
+    if (*ch == ':') {
+      lower = 1;
+    } else {
+      lower = GetSubscriptValue(io);
+      ch = io.GetNextNonBlank();
+    }
+  }
+  if (ch && ch == ':') {
+    io.HandleRelativePosition(1);
+    ch = io.GetNextNonBlank();
+    if (ch) {
+      if (*ch == ')') {
+        upper = chars;
+      } else {
+        upper = GetSubscriptValue(io);
+        ch = io.GetNextNonBlank();
+      }
+    }
+  }
+  if (ch && *ch == ')') {
+    io.HandleRelativePosition(1);
+    if (lower && upper) {
+      if (*lower > *upper) {
+        // An empty substring, whatever the values are
+        desc.raw().elem_len = 0;
+        return true;
+      }
+      if (*lower >= 1 || *upper <= chars) {
+        // Offset the base address & adjust the element byte length
+        desc.raw().elem_len = (*upper - *lower + 1) * kind;
+        desc.set_base_addr(reinterpret_cast<void *>(
+            reinterpret_cast<char *>(desc.raw().base_addr) +
+            kind * (*lower - 1)));
+        return true;
+      }
+    }
+    handler.SignalError(
+        "Bad substring bounds for NAMELIST input group item '%s'", name);
+  } else {
+    handler.SignalError(
+        "Bad substring (missing ')') for NAMELIST input group item '%s'", name);
+  }
+  return false;
+}
+
 static bool HandleComponent(IoStatementState &io, Descriptor &desc,
     const Descriptor &source, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
@@ -261,6 +322,29 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
+// Advance to the terminal '/' of a namelist group.
+static void SkipNamelistGroup(IoStatementState &io) {
+  while (auto ch{io.GetNextNonBlank()}) {
+    io.HandleRelativePosition(1);
+    if (*ch == '/') {
+      break;
+    } else if (*ch == '\'' || *ch == '"') {
+      // Skip quoted character literal
+      char32_t quote{*ch};
+      while (true) {
+        if ((ch = io.GetCurrentChar())) {
+          io.HandleRelativePosition(1);
+          if (*ch == quote) {
+            break;
+          }
+        } else if (!io.AdvanceRecord()) {
+          return;
+        }
+      }
+    }
+  }
+}
+
 bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Input>("InputNamelist");
@@ -269,26 +353,35 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   auto *listInput{io.get_if<ListDirectedStatementState<Direction::Input>>()};
   RUNTIME_CHECK(handler, listInput != nullptr);
-  // Check the group header
+  // Find this namelist group's header in the input
   io.BeginReadingRecord();
-  std::optional<char32_t> next{io.GetNextNonBlank()};
-  if (!next || *next != '&') {
-    handler.SignalError(
-        "NAMELIST input group does not begin with '&' (at '%lc')", *next);
-    return false;
-  }
-  io.HandleRelativePosition(1);
+  std::optional<char32_t> next;
   char name[nameBufferSize];
-  if (!GetLowerCaseName(io, name, sizeof name)) {
-    handler.SignalError("NAMELIST input group has no name");
-    return false;
-  }
   RUNTIME_CHECK(handler, group.groupName != nullptr);
-  if (std::strcmp(group.groupName, name) != 0) {
-    handler.SignalError(
-        "NAMELIST input group name '%s' is not the expected '%s'", name,
-        group.groupName);
-    return false;
+  while (true) {
+    next = io.GetNextNonBlank();
+    while (next && *next != '&') {
+      // Extension: comment lines without ! before namelist groups
+      if (!io.AdvanceRecord()) {
+        next.reset();
+      } else {
+        next = io.GetNextNonBlank();
+      }
+    }
+    if (!next || *next != '&') {
+      handler.SignalError(
+          "NAMELIST input group does not begin with '&' (at '%lc')", *next);
+      return false;
+    }
+    io.HandleRelativePosition(1);
+    if (!GetLowerCaseName(io, name, sizeof name)) {
+      handler.SignalError("NAMELIST input group has no name");
+      return false;
+    }
+    if (std::strcmp(group.groupName, name) == 0) {
+      break; // found it
+    }
+    SkipNamelistGroup(io);
   }
   // Read the group's items
   while (true) {
@@ -319,19 +412,36 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     StaticDescriptor<maxRank, true, 16> staticDesc[2];
     int whichStaticDesc{0};
     next = io.GetCurrentChar();
+    bool hadSubscripts{false};
+    bool hadSubstring{false};
     if (next && (*next == '(' || *next == '%')) {
       do {
         Descriptor &mutableDescriptor{staticDesc[whichStaticDesc].descriptor()};
         whichStaticDesc ^= 1;
         if (*next == '(') {
-          if (!(HandleSubscripts(
-                  io, mutableDescriptor, *useDescriptor, name))) {
+          if (!hadSubstring && (hadSubscripts || useDescriptor->rank() == 0)) {
+            mutableDescriptor = *useDescriptor;
+            mutableDescriptor.raw().attribute = CFI_attribute_pointer;
+            if (!HandleSubstring(io, mutableDescriptor, name)) {
+              return false;
+            }
+            hadSubstring = true;
+          } else if (hadSubscripts) {
+            handler.SignalError("Multiple sets of subscripts for item '%s' in "
+                                "NAMELIST group '%s'",
+                name, group.groupName);
+            return false;
+          } else if (!HandleSubscripts(
+                         io, mutableDescriptor, *useDescriptor, name)) {
             return false;
           }
+          hadSubscripts = true;
         } else {
           if (!HandleComponent(io, mutableDescriptor, *useDescriptor, name)) {
             return false;
           }
+          hadSubscripts = false;
+          hadSubstring = false;
         }
         useDescriptor = &mutableDescriptor;
         next = io.GetCurrentChar();

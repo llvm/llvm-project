@@ -134,7 +134,7 @@ getFileLineDwarf(const SectionChunk *c, uint32_t addr) {
   const DILineInfo &lineInfo = *optionalLineInfo;
   if (lineInfo.FileName == DILineInfo::BadString)
     return None;
-  return std::make_pair(saver.save(lineInfo.FileName), lineInfo.Line);
+  return std::make_pair(saver().save(lineInfo.FileName), lineInfo.Line);
 }
 
 static Optional<std::pair<StringRef, uint32_t>>

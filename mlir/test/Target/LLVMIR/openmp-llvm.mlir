@@ -368,7 +368,7 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
   %1 = llvm.mlir.constant(10 : index) : i64
   %2 = llvm.mlir.constant(1 : index) : i64
   omp.parallel {
-    "omp.wsloop"(%1, %0, %2) ( {
+    "omp.wsloop"(%1, %0, %2) ({
     ^bb0(%arg1: i64):
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right functions are called.
@@ -393,7 +393,7 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr<f32>) {
   %1 = llvm.mlir.constant(10 : index) : i64
   %2 = llvm.mlir.constant(1 : index) : i64
   // CHECK: store i64 31, i64* %{{.*}}upperbound
-  "omp.wsloop"(%1, %0, %2) ( {
+  "omp.wsloop"(%1, %0, %2) ({
   ^bb0(%arg1: i64):
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
@@ -411,7 +411,7 @@ llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr<f32>) {
   %1 = llvm.mlir.constant(10 : index) : i64
   %2 = llvm.mlir.constant(1 : index) : i64
   // CHECK: store i64 32, i64* %{{.*}}upperbound
-  "omp.wsloop"(%1, %0, %2) ( {
+  "omp.wsloop"(%1, %0, %2) ({
   ^bb0(%arg1: i64):
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
@@ -430,8 +430,81 @@ llvm.func @test_omp_wsloop_dynamic(%lb : i64, %ub : i64, %step : i64) -> () {
   // CHECK: call void @__kmpc_dispatch_init_8u
   // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
   // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
-  // CHECK  br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+  // CHECK: br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
    llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+// -----
+
+llvm.func @body(i64)
+
+llvm.func @test_omp_wsloop_dynamic_chunk_const(%lb : i64, %ub : i64, %step : i64) -> () {
+ %chunk_size_const = llvm.mlir.constant(2 : i16) : i16
+ omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic = %chunk_size_const : i16) {
+  // CHECK: call void @__kmpc_dispatch_init_8u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 35, i64 {{.*}}, i64 %{{.*}}, i64 {{.*}}, i64 2)
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_8u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK: br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i64) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+// -----
+
+llvm.func @body(i32)
+
+llvm.func @test_omp_wsloop_dynamic_chunk_var(%lb : i32, %ub : i32, %step : i32) -> () {
+ %1 = llvm.mlir.constant(1 : i64) : i64
+ %chunk_size_alloca = llvm.alloca %1 x i16 {bindc_name = "chunk_size", in_type = i16, uniq_name = "_QFsub1Echunk_size"} : (i64) -> !llvm.ptr<i16>
+ %chunk_size_var = llvm.load %chunk_size_alloca : !llvm.ptr<i16>
+ omp.wsloop (%iv) : i32 = (%lb) to (%ub) step (%step) schedule(dynamic = %chunk_size_var : i16) {
+  // CHECK: %[[CHUNK_SIZE:.*]] = sext i16 %{{.*}} to i32
+  // CHECK: call void @__kmpc_dispatch_init_4u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 35, i32 {{.*}}, i32 %{{.*}}, i32 {{.*}}, i32 %[[CHUNK_SIZE]])
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_4u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK: br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i32) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+// -----
+
+llvm.func @body(i32)
+
+llvm.func @test_omp_wsloop_dynamic_chunk_var2(%lb : i32, %ub : i32, %step : i32) -> () {
+ %1 = llvm.mlir.constant(1 : i64) : i64
+ %chunk_size_alloca = llvm.alloca %1 x i64 {bindc_name = "chunk_size", in_type = i64, uniq_name = "_QFsub1Echunk_size"} : (i64) -> !llvm.ptr<i64>
+ %chunk_size_var = llvm.load %chunk_size_alloca : !llvm.ptr<i64>
+ omp.wsloop (%iv) : i32 = (%lb) to (%ub) step (%step) schedule(dynamic = %chunk_size_var : i64) {
+  // CHECK: %[[CHUNK_SIZE:.*]] = trunc i64 %{{.*}} to i32
+  // CHECK: call void @__kmpc_dispatch_init_4u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 35, i32 {{.*}}, i32 %{{.*}}, i32 {{.*}}, i32 %[[CHUNK_SIZE]])
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_4u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK: br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i32) -> ()
+   omp.yield
+ }
+ llvm.return
+}
+
+// -----
+
+llvm.func @body(i32)
+
+llvm.func @test_omp_wsloop_dynamic_chunk_var3(%lb : i32, %ub : i32, %step : i32, %chunk_size : i32) -> () {
+ omp.wsloop (%iv) : i32 = (%lb) to (%ub) step (%step) schedule(dynamic = %chunk_size : i32) {
+  // CHECK: call void @__kmpc_dispatch_init_4u(%struct.ident_t* @{{.*}}, i32 %{{.*}}, i32 35, i32 {{.*}}, i32 %{{.*}}, i32 {{.*}}, i32 %{{.*}})
+  // CHECK: %[[continue:.*]] = call i32 @__kmpc_dispatch_next_4u
+  // CHECK: %[[cond:.*]] = icmp ne i32 %[[continue]], 0
+  // CHECK: br i1 %[[cond]], label %omp_loop.header{{.*}}, label %omp_loop.exit{{.*}}
+   llvm.call @body(%iv) : (i32) -> ()
    omp.yield
  }
  llvm.return
@@ -663,14 +736,14 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
     // CHECK: [[TMP2:%.*]] = getelementptr inbounds [1 x i64], [1 x i64]* [[ADDR]], i64 0, i64 0
     // CHECK: [[OMP_THREAD2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
     // CHECK: call void @__kmpc_doacross_wait(%struct.ident_t* @[[GLOB3]], i32 [[OMP_THREAD2]], i64* [[TMP2]])
-    omp.ordered depend_type("dependsink") depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
+    omp.ordered depend_type(dependsink) depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
 
     // CHECK: [[TMP3:%.*]] = getelementptr inbounds [1 x i64], [1 x i64]* [[ADDR3]], i64 0, i64 0
     // CHECK: store i64 [[ARG0]], i64* [[TMP3]], align 8
     // CHECK: [[TMP4:%.*]] = getelementptr inbounds [1 x i64], [1 x i64]* [[ADDR3]], i64 0, i64 0
     // CHECK: [[OMP_THREAD4:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB5:[0-9]+]])
     // CHECK: call void @__kmpc_doacross_post(%struct.ident_t* @[[GLOB5]], i32 [[OMP_THREAD4]], i64* [[TMP4]])
-    omp.ordered depend_type("dependsource") depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
+    omp.ordered depend_type(dependsource) depend_vec(%arg3 : i64) {num_loops_val = 1 : i64}
 
     omp.yield
   }
@@ -690,7 +763,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
     // CHECK: [[TMP10:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[ADDR7]], i64 0, i64 0
     // CHECK: [[OMP_THREAD8:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB7]])
     // CHECK: call void @__kmpc_doacross_wait(%struct.ident_t* @[[GLOB7]], i32 [[OMP_THREAD8]], i64* [[TMP10]])
-    omp.ordered depend_type("dependsink") depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {num_loops_val = 2 : i64}
+    omp.ordered depend_type(dependsink) depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {num_loops_val = 2 : i64}
 
     // CHECK: [[TMP11:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[ADDR9]], i64 0, i64 0
     // CHECK: store i64 [[ARG0]], i64* [[TMP11]], align 8
@@ -699,7 +772,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
     // CHECK: [[TMP13:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[ADDR9]], i64 0, i64 0
     // CHECK: [[OMP_THREAD10:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB9:[0-9]+]])
     // CHECK: call void @__kmpc_doacross_post(%struct.ident_t* @[[GLOB9]], i32 [[OMP_THREAD10]], i64* [[TMP13]])
-    omp.ordered depend_type("dependsource") depend_vec(%arg3, %arg4 : i64, i64) {num_loops_val = 2 : i64}
+    omp.ordered depend_type(dependsource) depend_vec(%arg3, %arg4 : i64, i64) {num_loops_val = 2 : i64}
 
     omp.yield
   }
@@ -889,6 +962,22 @@ llvm.func @omp_sections_with_clauses() -> () {
       omp.terminator
     }
     omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+// Check that translation doesn't crash in presence of repeated successor
+// blocks with different arguments within OpenMP operations: LLVM cannot
+// represent this and a dummy block will be introduced for forwarding. The
+// introduction mechanism itself is tested elsewhere.
+// CHECK-LABEL: @repeated_successor
+llvm.func @repeated_successor(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: i1) {
+  omp.wsloop (%arg4) : i64 = (%arg0) to (%arg1) step (%arg2)  {
+    llvm.cond_br %arg3, ^bb1(%arg0 : i64), ^bb1(%arg1 : i64)
+  ^bb1(%0: i64):  // 2 preds: ^bb0, ^bb0
+    omp.yield
   }
   llvm.return
 }

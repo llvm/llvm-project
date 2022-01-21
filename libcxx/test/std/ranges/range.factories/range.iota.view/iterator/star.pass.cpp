@@ -10,14 +10,19 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-sign-compare
-
 // constexpr W operator*() const noexcept(is_nothrow_copy_constructible_v<W>);
+
+#include "test_macros.h"
+
+#if defined(TEST_COMPILER_CLANG) || defined(TEST_COMPILER_GCC)
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#elif defined(TEST_COMPILER_MSVC)
+#pragma warning(disable: 4018) // various "signed/unsigned mismatch"
+#endif
 
 #include <ranges>
 #include <cassert>
 
-#include "test_macros.h"
 #include "../types.h"
 
 struct NotNoexceptCopy {

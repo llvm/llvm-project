@@ -736,6 +736,72 @@ func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
 
 // -----
 
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+
+// CHECK-LABEL: @reduce_float_dyn
+func @reduce_float_dyn(%arg0: tensor<?x5x4xf32>) -> () {
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[DYN:.+]] = tensor.dim %arg0, %[[C0]]
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [%[[DYN]], 4]
+  // CHECK: %[[CST0:.+]] = arith.constant 0.0
+  // CHECK: %[[FILL:.+]] = linalg.fill(%[[CST0]], %[[INIT]])
+  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "reduction", "parallel"]} ins(%arg0 : tensor<?x5x4xf32>) outs(%[[FILL]] : tensor<?x4xf32>)
+  // CHECK: ^bb0(%arg1: f32, %arg2: f32)
+  // CHECK:   %[[RES:.+]] = arith.addf %arg1, %arg2 : f32
+  // CHECK:   linalg.yield %[[RES]] : f32
+  // CHECK: %[[COLLAPSED:.+]] = tensor.collapse_shape %[[GENERIC]] {{\[}}[0, 1]] : tensor<?x4xf32> into tensor<?xf32>
+  // CHECK: tensor.expand_shape %[[COLLAPSED]] {{\[}}[0, 1, 2]] : tensor<?xf32> into tensor<?x1x4xf32>
+  %0 = "tosa.reduce_sum"(%arg0) {axis = 1 : i64} : (tensor<?x5x4xf32>) -> tensor<?x1x4xf32>
+  return
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: @reduce_float_dyn_nonzero_batch
+func @reduce_float_dyn_nonzero_batch(%arg0: tensor<5x?x4xf32>) -> () {
+  // CHECK: %[[C1:.+]] = arith.constant 1
+  // CHECK: %[[DYN:.+]] = tensor.dim %arg0, %[[C1]]
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [5, %[[DYN]]]
+  // CHECK: %[[CST1:.+]] = arith.constant 1.0
+  // CHECK: %[[FILL:.+]] = linalg.fill(%[[CST1]], %[[INIT]])
+  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel", "reduction"]} ins(%arg0 : tensor<5x?x4xf32>) outs(%[[FILL]] : tensor<5x?xf32>)
+  // CHECK: ^bb0(%arg1: f32, %arg2: f32)
+  // CHECK:   %[[RES:.+]] = arith.mulf %arg1, %arg2 : f32
+  // CHECK:   linalg.yield %[[RES]] : f32
+  // CHECK: %[[COLLAPSED:.+]] = tensor.collapse_shape %[[GENERIC]] {{\[}}[0, 1]] : tensor<5x?xf32> into tensor<?xf32>
+  // CHECK: tensor.expand_shape %[[COLLAPSED]] {{\[}}[0, 1, 2]] : tensor<?xf32> into tensor<5x?x1xf32>
+  %0 = "tosa.reduce_prod"(%arg0) {axis = 2 : i64} : (tensor<5x?x4xf32>) -> tensor<5x?x1xf32>
+  return
+}
+
+// -----
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0)>
+
+// CHECK-LABEL: @reduce_float_dyn_multiple
+func @reduce_float_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
+  // CHECK: %[[C0:.+]] = arith.constant 0
+  // CHECK: %[[DYN:.+]] = tensor.dim %arg0, %[[C0]]
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [%[[DYN]]]
+  // CHECK: %[[CMIN:.+]] = arith.constant -3.40282347E+38
+  // CHECK: %[[FILL:.+]] = linalg.fill(%[[CMIN]], %[[INIT]])
+  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%[[FILL]] : tensor<?xf32>)
+  // CHECK: ^bb0(%arg1: f32, %arg2: f32)
+  // CHECK:   %[[CMP:.+]] = arith.cmpf ogt, %arg1, %arg2 : f32
+  // CHECK:   %[[RES:.+]] = select %[[CMP]], %arg1, %arg2 : f32
+  // CHECK:   linalg.yield %[[RES]] : f32
+  // CHECK: tensor.expand_shape %[[GENERIC]] {{\[}}[0, 1]] : tensor<?xf32> into tensor<?x1xf32>
+  %0 = "tosa.reduce_max"(%arg0) {axis = 1 : i64} : (tensor<?x?xf32>) -> tensor<?x1xf32>
+  return
+}
+
+// -----
+
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
 // CHECK: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d0)>
@@ -1093,7 +1159,7 @@ func @pad_float(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
   // CHECK: linalg.pad_tensor %arg0 low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
-  // CHECK: ^bb0(%arg1: index, %arg2: index):  // no predecessors
+  // CHECK: ^bb0(%arg1: index, %arg2: index):  
   // CHECK:   linalg.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<4x9xf32>)
@@ -1129,7 +1195,7 @@ func @pad_float_explicit(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 4.200000e+01 : f32
   // CHECK: linalg.pad_tensor %arg0 low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
-  // CHECK: ^bb0(%arg1: index, %arg2: index):  // no predecessors
+  // CHECK: ^bb0(%arg1: index, %arg2: index):  
   // CHECK:   linalg.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
   %1 = arith.constant dense<42.0> : tensor<f32>

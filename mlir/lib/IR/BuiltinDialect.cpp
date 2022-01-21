@@ -108,24 +108,23 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_like_impl::addArgAndResultAttrs(builder, state, argAttrs,
-                                           /*resultAttrs=*/llvm::None);
+  function_interface_impl::addArgAndResultAttrs(builder, state, argAttrs,
+                                                /*resultAttrs=*/llvm::None);
 }
 
 static ParseResult parseFuncOp(OpAsmParser &parser, OperationState &result) {
-  auto buildFuncType = [](Builder &builder, ArrayRef<Type> argTypes,
-                          ArrayRef<Type> results,
-                          function_like_impl::VariadicFlag, std::string &) {
-    return builder.getFunctionType(argTypes, results);
-  };
+  auto buildFuncType =
+      [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
 
-  return function_like_impl::parseFunctionLikeOp(
+  return function_interface_impl::parseFunctionOp(
       parser, result, /*allowVariadic=*/false, buildFuncType);
 }
 
 static void print(FuncOp op, OpAsmPrinter &p) {
   FunctionType fnType = op.getType();
-  function_like_impl::printFunctionLikeOp(
+  function_interface_impl::printFunctionOp(
       p, op, fnType.getInputs(), /*isVariadic=*/false, fnType.getResults());
 }
 

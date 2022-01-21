@@ -83,6 +83,9 @@ Improvements to clang-tidy
 - Generalized the `modernize-use-default-member-init` check to handle non-default
   constructors.
 
+- Eliminated false positives for `cppcoreguidelines-macro-usage` by restricting
+  the warning about using constants to only macros that expand to literals.
+
 New checks
 ^^^^^^^^^^
 
@@ -172,6 +175,9 @@ Changes in existing checks
   option to control whether to warn on narrowing integer to floating-point
   conversions.
 
+- Improved :doc:`performance-move-const-arg` check.
+
+  Removed a wrong FixIt for trivially copyable objects wrapped by ``std::move()`` and passed to an rvalue reference parameter. Removal of ``std::move()`` would break the code.
 
 Removed checks
 ^^^^^^^^^^^^^^

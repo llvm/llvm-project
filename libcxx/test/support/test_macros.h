@@ -77,7 +77,7 @@
 #  define TEST_COMPILER_APPLE_CLANG
 # endif
 #elif defined(_MSC_VER)
-# define TEST_COMPILER_C1XX
+# define TEST_COMPILER_MSVC
 #elif defined(__GNUC__)
 # define TEST_COMPILER_GCC
 #endif
@@ -147,7 +147,7 @@
 
 #if defined(__cpp_lib_is_constant_evaluated) && __cpp_lib_is_constant_evaluated >= 201811L
 # define TEST_IS_CONSTANT_EVALUATED std::is_constant_evaluated()
-#elif __has_builtin(__builtin_is_constant_evaluated)
+#elif TEST_HAS_BUILTIN(__builtin_is_constant_evaluated)
 # define TEST_IS_CONSTANT_EVALUATED __builtin_is_constant_evaluated()
 #else
 # define TEST_IS_CONSTANT_EVALUATED false

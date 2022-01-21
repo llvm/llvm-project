@@ -154,6 +154,10 @@ private:
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
+                           bool UseGOT) const;
+  SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
+
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
   CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg) const;
 };

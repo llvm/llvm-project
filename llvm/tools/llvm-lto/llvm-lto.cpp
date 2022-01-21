@@ -267,7 +267,7 @@ static cl::opt<bool>
 namespace {
 
 struct ModuleInfo {
-  std::vector<bool> CanBeHidden;
+  BitVector CanBeHidden;
 };
 
 } // end anonymous namespace

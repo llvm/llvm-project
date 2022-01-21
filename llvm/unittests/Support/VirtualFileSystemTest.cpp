@@ -2164,6 +2164,11 @@ TEST_F(VFSFromYAMLTest, RecursiveDirectoryIterationLevel) {
 
 TEST_F(VFSFromYAMLTest, RelativePaths) {
   IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  std::error_code EC;
+  SmallString<128> CWD;
+  EC = llvm::sys::fs::current_path(CWD);
+  ASSERT_FALSE(EC);
+
   // Filename at root level without a parent directory.
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
       "{ 'roots': [\n"
@@ -2172,16 +2177,26 @@ TEST_F(VFSFromYAMLTest, RelativePaths) {
       "  }\n"
       "] }",
       Lower);
-  EXPECT_EQ(nullptr, FS.get());
+  ASSERT_TRUE(FS.get() != nullptr);
+  SmallString<128> ExpectedPathNotInDir("file-not-in-directory.h");
+  llvm::sys::fs::make_absolute(ExpectedPathNotInDir);
+  checkContents(FS->dir_begin(CWD, EC), {ExpectedPathNotInDir});
 
   // Relative file path.
   FS = getFromYAMLString("{ 'roots': [\n"
-                         "  { 'type': 'file', 'name': 'relative/file/path.h',\n"
+                         "  { 'type': 'file', 'name': 'relative/path.h',\n"
                          "    'external-contents': '//root/external/file'\n"
                          "  }\n"
                          "] }",
                          Lower);
-  EXPECT_EQ(nullptr, FS.get());
+  ASSERT_TRUE(FS.get() != nullptr);
+  SmallString<128> Parent("relative");
+  llvm::sys::fs::make_absolute(Parent);
+  auto I = FS->dir_begin(Parent, EC);
+  ASSERT_FALSE(EC);
+  // Convert to POSIX path for comparison of windows paths
+  ASSERT_EQ("relative/path.h",
+            getPosixPath(std::string(I->path().substr(CWD.size() + 1))));
 
   // Relative directory path.
   FS = getFromYAMLString(
@@ -2191,9 +2206,14 @@ TEST_F(VFSFromYAMLTest, RelativePaths) {
       "  }\n"
       "] }",
       Lower);
-  EXPECT_EQ(nullptr, FS.get());
+  ASSERT_TRUE(FS.get() != nullptr);
+  SmallString<128> Root("relative/directory");
+  llvm::sys::fs::make_absolute(Root);
+  I = FS->dir_begin(Root, EC);
+  ASSERT_FALSE(EC);
+  ASSERT_EQ("path.h", std::string(I->path().substr(Root.size() + 1)));
 
-  EXPECT_EQ(3, NumDiagnostics);
+  EXPECT_EQ(0, NumDiagnostics);
 }
 
 TEST_F(VFSFromYAMLTest, NonFallthroughDirectoryIteration) {

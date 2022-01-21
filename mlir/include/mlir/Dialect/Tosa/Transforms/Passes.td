@@ -15,7 +15,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def TosaInferShapes : FunctionPass<"tosa-infer-shapes"> {
+def TosaInferShapes : Pass<"tosa-infer-shapes", "FuncOp"> {
   let summary = "Propagate shapes across TOSA operations";
   let description = [{
     Pass that uses operand types and propagates shapes to TOSA operations.
@@ -30,7 +30,7 @@ def TosaInferShapes : FunctionPass<"tosa-infer-shapes"> {
   ];
 }
 
-def TosaMakeBroadcastable : FunctionPass<"tosa-make-broadcastable"> {
+def TosaMakeBroadcastable : Pass<"tosa-make-broadcastable", "FuncOp"> {
   let summary = "TOSA rank Reshape to enable Broadcasting";
   let description = [{
     Pass that enables broadcast by making all input arrays have the same
@@ -43,7 +43,8 @@ def TosaMakeBroadcastable : FunctionPass<"tosa-make-broadcastable"> {
   let constructor = "createTosaMakeBroadcastablePass()";
 }
 
-def TosaOptionalDecompositions : FunctionPass<"tosa-optional-decompositions"> {
+def TosaOptionalDecompositions
+  : Pass<"tosa-optional-decompositions", "FuncOp"> {
   let summary = "Applies Tosa operations optional decompositions";
   let description = [{
     Pass to apply the Tosa operations decompositions 

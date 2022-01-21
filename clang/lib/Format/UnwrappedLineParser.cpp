@@ -1042,8 +1042,7 @@ void UnwrappedLineParser::parsePPDefine() {
 
   nextToken();
   if (FormatTok->Tok.getKind() == tok::l_paren &&
-      FormatTok->WhitespaceRange.getBegin() ==
-          FormatTok->WhitespaceRange.getEnd()) {
+      !FormatTok->hasWhitespaceBefore()) {
     parseParens();
   }
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)

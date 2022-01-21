@@ -649,6 +649,12 @@ void SearchableTableEmitter::collectTableEntries(
         Field.IsInstruction = true;
     }
   }
+
+  SearchIndex Idx;
+  std::copy(Table.Fields.begin(), Table.Fields.end(),
+            std::back_inserter(Idx.Fields));
+  std::sort(Table.Entries.begin(), Table.Entries.end(),
+            [&](Record *LHS, Record *RHS) { return compareBy(LHS, RHS, Idx); });
 }
 
 void SearchableTableEmitter::run(raw_ostream &OS) {

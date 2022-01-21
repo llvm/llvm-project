@@ -421,18 +421,18 @@ define <33 x double> @vpload_v33f64(<33 x double>* %ptr, <33 x i1> %m, i32 zeroe
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a5, a4
 ; CHECK-NEXT:  .LBB32_2:
-; CHECK-NEXT:    li a6, 16
-; CHECK-NEXT:    bltu a5, a6, .LBB32_4
+; CHECK-NEXT:    li a4, 16
+; CHECK-NEXT:    bltu a5, a4, .LBB32_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    li a5, 16
 ; CHECK-NEXT:  .LBB32_4:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v0, v8, 4
-; CHECK-NEXT:    addi a4, a1, 256
+; CHECK-NEXT:    addi a6, a1, 256
 ; CHECK-NEXT:    vsetvli zero, a5, e64, m8, ta, mu
-; CHECK-NEXT:    vle64.v v16, (a4), v0.t
-; CHECK-NEXT:    li a4, 32
-; CHECK-NEXT:    bltu a2, a4, .LBB32_6
+; CHECK-NEXT:    vle64.v v16, (a6), v0.t
+; CHECK-NEXT:    li a5, 32
+; CHECK-NEXT:    bltu a2, a5, .LBB32_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:  .LBB32_6:
@@ -443,10 +443,10 @@ define <33 x double> @vpload_v33f64(<33 x double>* %ptr, <33 x i1> %m, i32 zeroe
 ; CHECK-NEXT:  .LBB32_8:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v0, v8, 2
-; CHECK-NEXT:    addi a4, a1, 128
+; CHECK-NEXT:    addi a5, a1, 128
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
-; CHECK-NEXT:    vle64.v v24, (a4), v0.t
-; CHECK-NEXT:    bltu a2, a6, .LBB32_10
+; CHECK-NEXT:    vle64.v v24, (a5), v0.t
+; CHECK-NEXT:    bltu a2, a4, .LBB32_10
 ; CHECK-NEXT:  # %bb.9:
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:  .LBB32_10:

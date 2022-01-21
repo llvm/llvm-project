@@ -1784,7 +1784,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
 
     if (!Use.isReg())
       continue;
-    unsigned Reg = Use.getReg();
+    Register Reg = Use.getReg();
     bool FullReg;
     const MachineInstr *MI1;
 

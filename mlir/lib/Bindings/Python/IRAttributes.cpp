@@ -673,6 +673,12 @@ public:
       if (width == 1) {
         return mlirDenseElementsAttrGetBoolValue(*this, pos);
       }
+      if (width == 8) {
+        return mlirDenseElementsAttrGetUInt8Value(*this, pos);
+      }
+      if (width == 16) {
+        return mlirDenseElementsAttrGetUInt16Value(*this, pos);
+      }
       if (width == 32) {
         return mlirDenseElementsAttrGetUInt32Value(*this, pos);
       }
@@ -682,6 +688,12 @@ public:
     } else {
       if (width == 1) {
         return mlirDenseElementsAttrGetBoolValue(*this, pos);
+      }
+      if (width == 8) {
+        return mlirDenseElementsAttrGetInt8Value(*this, pos);
+      }
+      if (width == 16) {
+        return mlirDenseElementsAttrGetInt16Value(*this, pos);
       }
       if (width == 32) {
         return mlirDenseElementsAttrGetInt32Value(*this, pos);

@@ -111,8 +111,8 @@ void NormalizeMemRefs::setCalleesAndCallersNonNormalizable(
   // Caller of the function.
   Optional<SymbolTable::UseRange> symbolUses = funcOp.getSymbolUses(moduleOp);
   for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
-    // TODO: Extend this for ops that are FunctionLike. This would require
-    // creating an OpInterface for FunctionLike ops.
+    // TODO: Extend this for ops that are FunctionOpInterface. This would
+    // require creating an OpInterface for FunctionOpInterface ops.
     FuncOp parentFuncOp = symbolUse.getUser()->getParentOfType<FuncOp>();
     for (FuncOp &funcOp : normalizableFuncs) {
       if (parentFuncOp == funcOp) {
@@ -297,8 +297,8 @@ void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
       // TODO: Further optimization - Check if the memref is indeed part of
       // ReturnOp at the parentFuncOp and only then updation of signature is
       // required.
-      // TODO: Extend this for ops that are FunctionLike. This would require
-      // creating an OpInterface for FunctionLike ops.
+      // TODO: Extend this for ops that are FunctionOpInterface. This would
+      // require creating an OpInterface for FunctionOpInterface ops.
       FuncOp parentFuncOp = newCallOp->getParentOfType<FuncOp>();
       funcOpsToUpdate.insert(parentFuncOp);
     }
@@ -332,6 +332,8 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
   OpBuilder b(funcOp);
 
   FunctionType functionType = funcOp.getType();
+  SmallVector<Location> functionArgLocs(llvm::map_range(
+      funcOp.getArguments(), [](BlockArgument arg) { return arg.getLoc(); }));
   SmallVector<Type, 8> inputTypes;
   // Walk over each argument of a function to perform memref normalization (if
   for (unsigned argIndex :
@@ -356,8 +358,8 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
     }
 
     // Insert a new temporary argument with the new memref type.
-    BlockArgument newMemRef =
-        funcOp.front().insertArgument(argIndex, newMemRefType);
+    BlockArgument newMemRef = funcOp.front().insertArgument(
+        argIndex, newMemRefType, functionArgLocs[argIndex]);
     BlockArgument oldMemRef = funcOp.getArgument(argIndex + 1);
     AffineMap layoutMap = memrefType.getLayout().getAffineMap();
     // Replace all uses of the old memref.

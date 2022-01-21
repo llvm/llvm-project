@@ -152,6 +152,4 @@ RUN: FileCheck %s < %t.proftext --match-full-lines --strict-whitespace -check-pr
 ; PROBE-NEXT: !CFGChecksum: 563022570642068
 
 
-; PREINLINE: FunctionMetadata {{.*}} Flags: {attr,preinlined}
-
-
+; PREINLINE: ProfileSummarySection {{.*}} Flags: {context-nested}

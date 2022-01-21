@@ -22,7 +22,7 @@ func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: tensor<f
     %9 = tensor.extract_slice %arg1[%arg3] [2] [1] : tensor<64xf32> to tensor<2xf32>
     %10 = tensor.cast %9 : tensor<2xf32> to tensor<?xf32>
     %11 = linalg.pad_tensor %10 low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  // no predecessors
+    ^bb0(%arg5: index):  
       linalg.yield %cst : f32
     } : tensor<?xf32> to tensor<2xf32>
     %12 = tensor.insert_slice %11 into %arg4[%8, 0] [1, 2] [1, 1] : tensor<2xf32> into tensor<?x2xf32>
@@ -39,7 +39,7 @@ func @init_and_dot(%arg0: tensor<64xf32>, %arg1: tensor<64xf32>, %arg2: tensor<f
     %9 = tensor.extract_slice %arg0[%arg3] [2] [1] : tensor<64xf32> to tensor<2xf32>
     %10 = tensor.cast %9 : tensor<2xf32> to tensor<?xf32>
     %11 = linalg.pad_tensor %10 low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  // no predecessors
+    ^bb0(%arg5: index):  
       linalg.yield %cst : f32
     } : tensor<?xf32> to tensor<2xf32>
     %12 = tensor.insert_slice %11 into %arg4[%8, 0] [1, 2] [1, 1] : tensor<2xf32> into tensor<?x2xf32>

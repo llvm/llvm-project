@@ -836,6 +836,16 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC;
   }
 
+  /// Extra classof implementations to allow directly casting from VPUser ->
+  /// VPInstruction.
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && R->getVPDefID() == VPRecipeBase::VPInstructionSC;
+  }
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPInstructionSC;
+  }
+
   unsigned getOpcode() const { return Opcode; }
 
   /// Generate the instruction.
@@ -1049,6 +1059,7 @@ public:
 
   /// Returns the start value of the induction.
   VPValue *getStartValue() { return getOperand(0); }
+  const VPValue *getStartValue() const { return getOperand(0); }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
@@ -1061,6 +1072,10 @@ public:
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
+
+  /// Returns true if the induction is canonical, i.e. starting at 0 and
+  /// incremented by UF * VF (= the original IV is incremented by 1).
+  bool isCanonical() const;
 };
 
 /// A pure virtual base class for all recipes modeling header phis, including
