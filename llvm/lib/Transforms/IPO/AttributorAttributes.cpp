@@ -8497,13 +8497,30 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
                                                   /* UseValueSimplify */ false))
       return indicatePessimisticFixpoint();
 
-    return clampStateAndIndicateChange(getState(), T);
+    // Ensure that long def-use chains can't cause circular reasoning either by
+    // introducing a cutoff below.
+    if (clampStateAndIndicateChange(getState(), T) == ChangeStatus::UNCHANGED)
+      return ChangeStatus::UNCHANGED;
+    if (++NumChanges > MaxNumChanges) {
+      LLVM_DEBUG(dbgs() << "[AAValueConstantRange] performed " << NumChanges
+                        << " but only " << MaxNumChanges
+                        << " are allowed to avoid cyclic reasoning.");
+      return indicatePessimisticFixpoint();
+    }
+    return ChangeStatus::CHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
     STATS_DECLTRACK_FLOATING_ATTR(value_range)
   }
+
+  /// Tracker to bail after too many widening steps of the constant range.
+  int NumChanges = 0;
+
+  /// Upper bound for the number of allowed changes (=widening steps) for the
+  /// constant range before we give up.
+  static constexpr int MaxNumChanges = 5;
 };
 
 struct AAValueConstantRangeFunction : AAValueConstantRangeImpl {
