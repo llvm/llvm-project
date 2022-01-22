@@ -441,11 +441,15 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
                  << "\"\n";
         });
 
-        // Model the section symbols as anonymous symbol.
+        // In RISCV, temporary symbols (Used to generate dwarf, eh_frame
+        // sections...) will appear in object code's symbol table, and LLVM does
+        // not use names on these temporary symbols (RISCV gnu toolchain uses
+        // names on these temporary symbols). If the symbol is unnamed, add an
+        // anonymous symbol.
         auto &GSym =
-            Sym.getType() == ELF::STT_SECTION
-                ? G->addAnonymousSymbol(*B, Sym.getValue(), Sym.st_size, false,
-                                        false)
+            Name->empty()
+                ? G->addAnonymousSymbol(*B, Sym.getValue(), Sym.st_size,
+                                        false, false)
                 : G->addDefinedSymbol(*B, Sym.getValue(), *Name, Sym.st_size, L,
                                       S, Sym.getType() == ELF::STT_FUNC, false);
         setGraphSymbol(SymIndex, GSym);
