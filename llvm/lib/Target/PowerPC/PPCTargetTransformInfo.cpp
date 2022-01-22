@@ -653,10 +653,16 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
       }
 
       return true;
-    } else if (isa<BinaryOperator>(J) &&
-               (J->getType()->getScalarType()->isFP128Ty() ||
+    } else if ((J->getType()->getScalarType()->isFP128Ty() ||
                 J->getType()->getScalarType()->isPPC_FP128Ty())) {
       // Most operations on f128 or ppc_f128 values become calls.
+      return true;
+    } else if (isa<FCmpInst>(J) &&
+               J->getOperand(0)->getType()->getScalarType()->isFP128Ty()) {
+      return true;
+    } else if ((isa<FPTruncInst>(J) || isa<FPExtInst>(J)) &&
+               (cast<CastInst>(J)->getSrcTy()->getScalarType()->isFP128Ty() ||
+                cast<CastInst>(J)->getDestTy()->getScalarType()->isFP128Ty())) {
       return true;
     } else if (isa<UIToFPInst>(J) || isa<SIToFPInst>(J) ||
                isa<FPToUIInst>(J) || isa<FPToSIInst>(J)) {
