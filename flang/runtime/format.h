@@ -86,11 +86,6 @@ public:
   FormatControl(const Terminator &, const CharType *format,
       std::size_t formatLength, int maxHeight = maxMaxHeight);
 
-  // Determines the max parenthesis nesting level by scanning and validating
-  // the FORMAT string.
-  static int GetMaxParenthesisNesting(
-      IoErrorHandler &, const CharType *format, std::size_t formatLength);
-
   // For attempting to allocate in a user-supplied stack area
   static std::size_t GetNeededSize(int maxHeight) {
     return sizeof(FormatControl) -
@@ -144,6 +139,15 @@ private:
 
   static constexpr CharType Capitalize(CharType ch) {
     return ch >= 'a' && ch <= 'z' ? ch + 'A' - 'a' : ch;
+  }
+
+  void ReportBadFormat(Context &context, const char *msg, int offset) const {
+    if constexpr (std::is_same_v<CharType, char>) {
+      context.SignalError(IostatErrorInFormat,
+          "%s; at offset %d in format '%s'", msg, offset, format_);
+    } else {
+      context.SignalError(IostatErrorInFormat, "%s; at offset %d", msg, offset);
+    }
   }
 
   // Data members are arranged and typed so as to reduce size.
