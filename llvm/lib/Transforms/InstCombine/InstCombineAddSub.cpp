@@ -1288,6 +1288,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   // (A*B)+(A*C) -> A*(B+C) etc
   if (Value *V = SimplifyUsingDistributiveLaws(I))
     return replaceInstUsesWith(I, V);
@@ -1536,6 +1539,9 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   if (Instruction *FoldedFAdd = foldBinOpIntoSelectOrPhi(I))
     return FoldedFAdd;
 
@@ -1750,6 +1756,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   if (Instruction *X = foldVectorBinop(I))
     return X;
+
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
@@ -2312,6 +2321,9 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
 
   if (Instruction *X = foldVectorBinop(I))
     return X;
+
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
 
   // Subtraction from -0.0 is the canonical form of fneg.
   // fsub -0.0, X ==> fneg X

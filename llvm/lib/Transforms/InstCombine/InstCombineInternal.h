@@ -608,6 +608,16 @@ public:
   /// only possible if all operands to the PHI are constants).
   Instruction *foldOpIntoPhi(Instruction &I, PHINode *PN);
 
+  /// For a binary operator with 2 phi operands, try to hoist the binary
+  /// operation before the phi. This can result in fewer instructions in
+  /// patterns where at least one set of phi operands simplifies.
+  /// Example:
+  /// BB3: binop (phi [X, BB1], [C1, BB2]), (phi [Y, BB1], [C2, BB2])
+  /// -->
+  /// BB1: BO = binop X, Y
+  /// BB3: phi [BO, BB1], [(binop C1, C2), BB2]
+  Instruction *foldBinopWithPhiOperands(BinaryOperator &BO);
+
   /// Given an instruction with a select as one operand and a constant as the
   /// other operand, try to fold the binary operator into the select arguments.
   /// This also works for Cast instructions, which obviously do not have a

@@ -46,11 +46,7 @@ define i32 @dont_widen_undef() {
 ; CHECK:       block1:
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[CMP_I:%.*]] = phi i1 [ false, [[BLOCK1:%.*]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CMP115:%.*]] = phi i1 [ true, [[BLOCK1]] ], [ false, [[ENTRY]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = or i1 [[CMP_I]], [[CMP115]]
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
-; CHECK-NEXT:    ret i32 [[CONV2]]
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
   br label %block2
@@ -76,11 +72,7 @@ define i32 @dont_widen_undef_logical() {
 ; CHECK:       block1:
 ; CHECK-NEXT:    br label [[BLOCK2]]
 ; CHECK:       block2:
-; CHECK-NEXT:    [[CMP_I:%.*]] = phi i1 [ false, [[BLOCK1:%.*]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[CMP115:%.*]] = phi i1 [ true, [[BLOCK1]] ], [ false, [[ENTRY]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = or i1 [[CMP_I]], [[CMP115]]
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
-; CHECK-NEXT:    ret i32 [[CONV2]]
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
   br label %block2
