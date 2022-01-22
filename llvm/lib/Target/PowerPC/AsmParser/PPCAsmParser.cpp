@@ -121,6 +121,7 @@ class PPCAsmParser : public MCTargetAsmParser {
   bool ParseDirectiveMachine(SMLoc L);
   bool ParseDirectiveAbiVersion(SMLoc L);
   bool ParseDirectiveLocalEntry(SMLoc L);
+  bool ParseGNUAttribute(SMLoc L);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -1605,6 +1606,8 @@ bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
     ParseDirectiveAbiVersion(DirectiveID.getLoc());
   else if (IDVal == ".localentry")
     ParseDirectiveLocalEntry(DirectiveID.getLoc());
+  else if (IDVal.startswith(".gnu_attribute"))
+    ParseGNUAttribute(DirectiveID.getLoc());
   else
     return true;
   return false;
@@ -1720,7 +1723,16 @@ bool PPCAsmParser::ParseDirectiveLocalEntry(SMLoc L) {
   return false;
 }
 
+bool PPCAsmParser::ParseGNUAttribute(SMLoc L) {
+  int64_t Tag;
+  int64_t IntegerValue;
+  if (!getParser().parseGNUAttribute(L, Tag, IntegerValue))
+    return false;
 
+  getParser().getStreamer().emitGNUAttribute(Tag, IntegerValue);
+
+  return true;
+}
 
 /// Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {
