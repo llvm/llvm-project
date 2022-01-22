@@ -58,7 +58,7 @@ namespace {
 
 class ScopedDeclarationState {
 public:
-  ScopedDeclarationState(UnwrappedLine &Line, std::vector<bool> &Stack,
+  ScopedDeclarationState(UnwrappedLine &Line, llvm::BitVector &Stack,
                          bool MustBeDeclaration)
       : Line(Line), Stack(Stack) {
     Line.MustBeDeclaration = MustBeDeclaration;
@@ -74,7 +74,7 @@ public:
 
 private:
   UnwrappedLine &Line;
-  std::vector<bool> &Stack;
+  llvm::BitVector &Stack;
 };
 
 static bool isLineComment(const FormatToken &FormatTok) {
@@ -1042,8 +1042,7 @@ void UnwrappedLineParser::parsePPDefine() {
 
   nextToken();
   if (FormatTok->Tok.getKind() == tok::l_paren &&
-      FormatTok->WhitespaceRange.getBegin() ==
-          FormatTok->WhitespaceRange.getEnd()) {
+      !FormatTok->hasWhitespaceBefore()) {
     parseParens();
   }
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_None)

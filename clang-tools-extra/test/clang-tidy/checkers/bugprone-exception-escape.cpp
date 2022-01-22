@@ -288,6 +288,49 @@ int indirectly_recursive(int n) noexcept {
   return recursion_helper(n);
 }
 
+struct super_throws {
+  super_throws() noexcept(false) { throw 42; }
+};
+
+struct sub_throws : super_throws {
+  sub_throws() noexcept : super_throws() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'sub_throws' which should not throw exceptions
+};
+
+struct super_throws_again {
+  super_throws_again() throw(int);
+};
+
+struct sub_throws_again : super_throws_again {
+  sub_throws_again() noexcept : super_throws_again() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'sub_throws_again' which should not throw exceptions
+};
+
+struct init_member_throws {
+  super_throws s;
+
+  init_member_throws() noexcept : s() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'init_member_throws' which should not throw exceptions
+};
+
+struct implicit_init_member_throws {
+  super_throws s;
+
+  implicit_init_member_throws() noexcept {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'implicit_init_member_throws' which should not throw exceptions
+};
+
+struct init {
+  explicit init(int, int) noexcept(false) { throw 42; }
+};
+
+struct in_class_init_throws {
+  init i{1, 2};
+
+  in_class_init_throws() noexcept {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: an exception may be thrown in function 'in_class_init_throws' which should not throw exceptions
+};
+
 int main() {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'main' which should not throw exceptions
   throw 1;

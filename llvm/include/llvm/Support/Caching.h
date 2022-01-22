@@ -62,10 +62,11 @@ using AddBufferFn =
     std::function<void(unsigned Task, std::unique_ptr<MemoryBuffer> MB)>;
 
 /// Create a local file system cache which uses the given cache name, temporary
-/// file prefix, cache directory and file callback. This function also creates
-/// the cache directory if it does not already exist. The cache name appears in
-/// error messages for errors during caching. The temporary file prefix is used
-/// in the temporary file naming scheme used when writing files atomically.
+/// file prefix, cache directory and file callback.  This function does not
+/// immediately create the cache directory if it does not yet exist; this is
+/// done lazily the first time a file is added.  The cache name appears in error
+/// messages for errors during caching. The temporary file prefix is used in the
+/// temporary file naming scheme used when writing files atomically.
 Expected<FileCache> localCache(
     Twine CacheNameRef, Twine TempFilePrefixRef, Twine CacheDirectoryPathRef,
     AddBufferFn AddBuffer = [](size_t Task, std::unique_ptr<MemoryBuffer> MB) {

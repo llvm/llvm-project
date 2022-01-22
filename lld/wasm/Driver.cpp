@@ -483,7 +483,6 @@ static void setConfigs() {
   if (config->shared) {
     config->importMemory = true;
     config->importUndefined = true;
-    config->unresolvedSymbols = UnresolvedPolicy::Ignore;
   }
 }
 

@@ -31,10 +31,10 @@ TEST(LlvmLibcLog2fTest, SpecialNumbers) {
 }
 
 TEST(LlvmLibcLog2fTest, TrickyInputs) {
-  constexpr int N = 9;
-  constexpr uint32_t INPUTS[N] = {0x3f7d57f5U, 0x3f7ed848U, 0x3f7fd6ccU,
-                                  0x3f7fffffU, 0x3f80079bU, 0x3f81d0b5U,
-                                  0x3f82e602U, 0x3f83c98dU, 0x3f8cba39U};
+  constexpr int N = 10;
+  constexpr uint32_t INPUTS[N] = {
+      0x3f7d57f5U, 0x3f7e3274U, 0x3f7ed848U, 0x3f7fd6ccU, 0x3f7fffffU,
+      0x3f80079bU, 0x3f81d0b5U, 0x3f82e602U, 0x3f83c98dU, 0x3f8cba39U};
 
   for (int i = 0; i < N; ++i) {
     float x = float(FPBits(INPUTS[i]));

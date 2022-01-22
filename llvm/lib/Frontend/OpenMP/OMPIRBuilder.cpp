@@ -60,6 +60,20 @@ static cl::opt<double> UnrollThresholdFactor(
              "simplifications still taking place"),
     cl::init(1.5));
 
+#ifndef NDEBUG
+/// Return whether IP1 and IP2 are ambiguous, i.e. that inserting instructions
+/// at position IP1 may change the meaning of IP2 or vice-versa. This is because
+/// an InsertPoint stores the instruction before something is inserted. For
+/// instance, if both point to the same instruction, two IRBuilders alternating
+/// creating instruction will cause the instructions to be interleaved.
+static bool isConflictIP(IRBuilder<>::InsertPoint IP1,
+                         IRBuilder<>::InsertPoint IP2) {
+  if (!IP1.isSet() || !IP2.isSet())
+    return false;
+  return IP1.getBlock() == IP2.getBlock() && IP1.getPoint() == IP2.getPoint();
+}
+#endif
+
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
 
@@ -527,6 +541,8 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     BodyGenCallbackTy BodyGenCB, PrivatizeCallbackTy PrivCB,
     FinalizeCallbackTy FiniCB, Value *IfCondition, Value *NumThreads,
     omp::ProcBindKind ProcBind, bool IsCancellable) {
+  assert(!isConflictIP(Loc.IP, OuterAllocaIP) && "IPs must not be ambiguous");
+
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -1500,6 +1516,8 @@ OpenMPIRBuilder::applyStaticWorkshareLoop(DebugLoc DL, CanonicalLoopInfo *CLI,
                                           InsertPointTy AllocaIP,
                                           bool NeedsBarrier, Value *Chunk) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
+  assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
+         "Require dedicated allocate IP");
 
   // Set up the source location value for OpenMP runtime.
   Builder.restoreIP(CLI->getPreheaderIP());
@@ -1630,6 +1648,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyDynamicWorkshareLoop(
     DebugLoc DL, CanonicalLoopInfo *CLI, InsertPointTy AllocaIP,
     OMPScheduleType SchedType, bool NeedsBarrier, Value *Chunk) {
   assert(CLI->isValid() && "Requires a valid canonical loop");
+  assert(!isConflictIP(AllocaIP, CLI->getPreheaderIP()) &&
+         "Require dedicated allocate IP");
 
   // Set up the source location value for OpenMP runtime.
   Builder.SetCurrentDebugLocation(DL);

@@ -27,8 +27,8 @@ module @simple {
   // CHECK:     pdl_interp.apply_rewrite "rewriter"(%[[REWRITE_ROOT]]
   // CHECK:     pdl_interp.finalize
   pdl.pattern : benefit(1) {
-    %root = pdl.operation "foo.op"
-    pdl.rewrite %root with "rewriter"
+    %root = operation "foo.op"
+    rewrite %root with "rewriter"
   }
 }
 
@@ -48,11 +48,11 @@ module @attributes {
   // CHECK-DAG:   %[[ATTR1_TYPE:.*]] = pdl_interp.get_attribute_type of %[[ATTR1]]
   // CHECK-DAG:   pdl_interp.check_type %[[ATTR1_TYPE]] is i64
   pdl.pattern : benefit(1) {
-    %type = pdl.type : i64
-    %attr = pdl.attribute 10 : i64
-    %attr1 = pdl.attribute : %type
-    %root = pdl.operation {"attr" = %attr, "attr1" = %attr1}
-    pdl.rewrite %root with "rewriter"
+    %type = type : i64
+    %attr = attribute 10 : i64
+    %attr1 = attribute : %type
+    %root = operation {"attr" = %attr, "attr1" = %attr1}
+    rewrite %root with "rewriter"
   }
 }
 
@@ -67,13 +67,13 @@ module @constraints {
   // CHECK:       pdl_interp.apply_constraint "multi_constraint" [true](%[[INPUT]], %[[INPUT1]], %[[RESULT]]
 
   pdl.pattern : benefit(1) {
-    %input0 = pdl.operand
-    %input1 = pdl.operand
-    %root = pdl.operation(%input0, %input1 : !pdl.value, !pdl.value)
-    %result0 = pdl.result 0 of %root
+    %input0 = operand
+    %input1 = operand
+    %root = operation(%input0, %input1 : !pdl.value, !pdl.value)
+    %result0 = result 0 of %root
 
     pdl.apply_native_constraint "multi_constraint"[true](%input0, %input1, %result0 : !pdl.value, !pdl.value, !pdl.value)
-    pdl.rewrite %root with "rewriter"
+    rewrite %root with "rewriter"
   }
 }
 
@@ -94,10 +94,10 @@ module @inputs {
   // CHECK-DAG:  %[[INPUT1:.*]] = pdl_interp.get_operand 1 of %[[ROOT]]
   // CHECK-DAG:  pdl_interp.are_equal %[[INPUT]], %[[INPUT1]] : !pdl.value
   pdl.pattern : benefit(1) {
-    %type = pdl.type : i64
-    %input = pdl.operand : %type
-    %root = pdl.operation(%input, %input : !pdl.value, !pdl.value)
-    pdl.rewrite %root with "rewriter"
+    %type = type : i64
+    %input = operand : %type
+    %root = operation(%input, %input : !pdl.value, !pdl.value)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -124,11 +124,11 @@ module @variadic_inputs {
   // CHECK-DAG:  %[[INPUT2:.*]] = pdl_interp.get_operands 2 of %[[ROOT]] : !pdl.value
   // CHECK-DAG:  pdl_interp.are_equal %[[INPUT]], %[[INPUT2]] : !pdl.value
   pdl.pattern : benefit(1) {
-    %types = pdl.types : [i64]
-    %inputs = pdl.operands : %types
-    %input = pdl.operand
-    %root = pdl.operation(%input, %inputs, %input : !pdl.value, !pdl.range<value>, !pdl.value)
-    pdl.rewrite %root with "rewriter"
+    %types = types : [i64]
+    %inputs = operands : %types
+    %input = operand
+    %root = operation(%input, %inputs, %input : !pdl.value, !pdl.range<value>, !pdl.value)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -147,10 +147,10 @@ module @single_operand_range {
   // The operand count is unknown, so there is no need to check for it.
   // CHECK-NOT: pdl_interp.check_operand_count
   pdl.pattern : benefit(1) {
-    %types = pdl.types : [i64]
-    %operands = pdl.operands : %types
-    %root = pdl.operation(%operands : !pdl.range<value>)
-    pdl.rewrite %root with "rewriter"
+    %types = types : [i64]
+    %operands = operands : %types
+    %root = operation(%operands : !pdl.range<value>)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -171,10 +171,10 @@ module @results {
   // access for it.
   // CHECK-NOT:   pdl_interp.get_result 1 of %[[ROOT]]
   pdl.pattern : benefit(1) {
-    %type1 = pdl.type : i32
-    %type2 = pdl.type
-    %root = pdl.operation -> (%type1, %type2 : !pdl.type, !pdl.type)
-    pdl.rewrite %root with "rewriter"
+    %type1 = type : i32
+    %type2 = type
+    %root = operation -> (%type1, %type2 : !pdl.type, !pdl.type)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -201,10 +201,10 @@ module @variadic_results {
   // CHECK-DAG:  %[[RESULT2:.*]] = pdl_interp.get_results 2 of %[[ROOT]] : !pdl.value
   // CHECK-DAG:   pdl_interp.is_not_null %[[RESULT2]] : !pdl.value
   pdl.pattern : benefit(1) {
-    %types = pdl.types : [i64]
-    %type = pdl.type
-    %root = pdl.operation -> (%type, %types, %type : !pdl.type, !pdl.range<type>, !pdl.type)
-    pdl.rewrite %root with "rewriter"
+    %types = types : [i64]
+    %type = type
+    %root = operation -> (%type, %types, %type : !pdl.type, !pdl.range<type>, !pdl.type)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -223,9 +223,9 @@ module @single_result_range {
   // The result count is unknown, so there is no need to check for it.
   // CHECK-NOT: pdl_interp.check_result_count
   pdl.pattern : benefit(1) {
-    %types = pdl.types : [i64]
-    %root = pdl.operation -> (%types : !pdl.range<type>)
-    pdl.rewrite %root with "rewriter"
+    %types = types : [i64]
+    %root = operation -> (%types : !pdl.range<type>)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -251,14 +251,14 @@ module @results_as_operands {
   // CHECK-DAG:   pdl_interp.are_equal %[[DEF_OP_0]], %[[DEF_OP_1]]
 
   pdl.pattern : benefit(1) {
-    %type1 = pdl.type : i32
-    %type2 = pdl.type
-    %inputOp = pdl.operation -> (%type1, %type2 : !pdl.type, !pdl.type)
-    %result1 = pdl.result 0 of %inputOp
-    %result2 = pdl.result 1 of %inputOp
+    %type1 = type : i32
+    %type2 = type
+    %inputOp = operation -> (%type1, %type2 : !pdl.type, !pdl.type)
+    %result1 = result 0 of %inputOp
+    %result2 = result 1 of %inputOp
 
-    %root = pdl.operation(%result1, %result2 : !pdl.value, !pdl.value)
-    pdl.rewrite %root with "rewriter"
+    %root = operation(%result1, %result2 : !pdl.value, !pdl.value)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -274,12 +274,12 @@ module @single_result_range_as_operands {
   // CHECK-DAG:  pdl_interp.are_equal %[[RESULTS]], %[[OPERANDS]] : !pdl.range<value>
 
   pdl.pattern : benefit(1) {
-    %types = pdl.types
-    %inputOp = pdl.operation -> (%types : !pdl.range<type>)
-    %results = pdl.results of %inputOp
+    %types = types
+    %inputOp = operation -> (%types : !pdl.range<type>)
+    %results = results of %inputOp
 
-    %root = pdl.operation(%results : !pdl.range<value>)
-    pdl.rewrite %root with "rewriter"
+    %root = operation(%results : !pdl.range<value>)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -292,14 +292,14 @@ module @switch_single_result_type {
   // CHECK:   %[[RESULT_TYPE:.*]] = pdl_interp.get_value_type of %[[RESULT]]
   // CHECK:   pdl_interp.switch_type %[[RESULT_TYPE]] to [i32, i64]
   pdl.pattern : benefit(1) {
-    %type = pdl.type : i32
-    %root = pdl.operation -> (%type : !pdl.type)
-    pdl.rewrite %root with "rewriter"
+    %type = type : i32
+    %root = operation -> (%type : !pdl.type)
+    rewrite %root with "rewriter"
   }
   pdl.pattern : benefit(1) {
-    %type = pdl.type : i64
-    %root = pdl.operation -> (%type : !pdl.type)
-    pdl.rewrite %root with "rewriter"
+    %type = type : i64
+    %root = operation -> (%type : !pdl.type)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -312,14 +312,14 @@ module @switch_result_types {
   // CHECK:   %[[RESULT_TYPES:.*]] = pdl_interp.get_value_type of %[[RESULTS]]
   // CHECK:   pdl_interp.switch_types %[[RESULT_TYPES]] to {{\[\[}}i32], [i64, i32]]
   pdl.pattern : benefit(1) {
-    %types = pdl.types : [i32]
-    %root = pdl.operation -> (%types : !pdl.range<type>)
-    pdl.rewrite %root with "rewriter"
+    %types = types : [i32]
+    %root = operation -> (%types : !pdl.range<type>)
+    rewrite %root with "rewriter"
   }
   pdl.pattern : benefit(1) {
-    %types = pdl.types : [i64, i32]
-    %root = pdl.operation -> (%types : !pdl.range<type>)
-    pdl.rewrite %root with "rewriter"
+    %types = types : [i64, i32]
+    %root = operation -> (%types : !pdl.range<type>)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -337,17 +337,17 @@ module @switch_operand_count_at_least {
   // CHECK: ^[[PATTERN_1_NEXT_BLOCK]]:
   // CHECK-NEXT: {{.*}} -> ^{{.*}}, ^bb2
   pdl.pattern : benefit(1) {
-    %operand = pdl.operand
-    %operands = pdl.operands
-    %root = pdl.operation(%operand, %operands : !pdl.value, !pdl.range<value>)
-    pdl.rewrite %root with "rewriter"
+    %operand = operand
+    %operands = operands
+    %root = operation(%operand, %operands : !pdl.value, !pdl.range<value>)
+    rewrite %root with "rewriter"
   }
   pdl.pattern : benefit(1) {
-    %operand = pdl.operand
-    %operand2 = pdl.operand
-    %operands = pdl.operands
-    %root = pdl.operation(%operand, %operand2, %operands : !pdl.value, !pdl.value, !pdl.range<value>)
-    pdl.rewrite %root with "rewriter"
+    %operand = operand
+    %operand2 = operand
+    %operands = operands
+    %root = operation(%operand, %operand2, %operands : !pdl.value, !pdl.value, !pdl.range<value>)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -366,17 +366,17 @@ module @switch_result_count_at_least {
   // CHECK-NEXT: pdl_interp.get_result
   // CHECK-NEXT: pdl_interp.is_not_null {{.*}} -> ^{{.*}}, ^[[PATTERN_2_BLOCK]]
   pdl.pattern : benefit(1) {
-    %type = pdl.type
-    %types = pdl.types
-    %root = pdl.operation -> (%type, %types : !pdl.type, !pdl.range<type>)
-    pdl.rewrite %root with "rewriter"
+    %type = type
+    %types = types
+    %root = operation -> (%type, %types : !pdl.type, !pdl.range<type>)
+    rewrite %root with "rewriter"
   }
   pdl.pattern : benefit(1) {
-    %type = pdl.type
-    %type2 = pdl.type
-    %types = pdl.types
-    %root = pdl.operation -> (%type, %type2, %types : !pdl.type, !pdl.type, !pdl.range<type>)
-    pdl.rewrite %root with "rewriter"
+    %type = type
+    %type2 = type
+    %types = types
+    %root = operation -> (%type, %type2, %types : !pdl.type, !pdl.type, !pdl.range<type>)
+    rewrite %root with "rewriter"
   }
 }
 
@@ -396,16 +396,16 @@ module @predicate_ordering {
   // CHECK: pdl_interp.apply_constraint "typeConstraint" [](%[[RESULT_TYPE]]
 
   pdl.pattern : benefit(1) {
-    %resultType = pdl.type
+    %resultType = type
     pdl.apply_native_constraint "typeConstraint"[](%resultType : !pdl.type)
-    %root = pdl.operation -> (%resultType : !pdl.type)
-    pdl.rewrite %root with "rewriter"
+    %root = operation -> (%resultType : !pdl.type)
+    rewrite %root with "rewriter"
   }
 
   pdl.pattern : benefit(1) {
-    %resultType = pdl.type
-    %apply = pdl.operation -> (%resultType : !pdl.type)
-    pdl.rewrite %apply with "rewriter"
+    %resultType = type
+    %apply = operation -> (%resultType : !pdl.type)
+    rewrite %apply with "rewriter"
   }
 }
 
@@ -435,16 +435,16 @@ module @multi_root {
   // CHECK-DAG:   pdl_interp.is_not_null %[[ROOT2]] : !pdl.operation
 
   pdl.pattern @rewrite_multi_root : benefit(1) {
-    %input1 = pdl.operand
-    %input2 = pdl.operand
-    %type = pdl.type
-    %op1 = pdl.operation(%input1 : !pdl.value) -> (%type : !pdl.type)
-    %val1 = pdl.result 0 of %op1
-    %root1 = pdl.operation(%val1 : !pdl.value)
-    %op2 = pdl.operation(%input2 : !pdl.value) -> (%type : !pdl.type)
-    %val2 = pdl.result 0 of %op2
-    %root2 = pdl.operation(%val1, %val2 : !pdl.value, !pdl.value)
-    pdl.rewrite %root1 with "rewriter"(%root2 : !pdl.operation)
+    %input1 = operand
+    %input2 = operand
+    %type = type
+    %op1 = operation(%input1 : !pdl.value) -> (%type : !pdl.type)
+    %val1 = result 0 of %op1
+    %root1 = operation(%val1 : !pdl.value)
+    %op2 = operation(%input2 : !pdl.value) -> (%type : !pdl.type)
+    %val2 = result 0 of %op2
+    %root2 = operation(%val1, %val2 : !pdl.value, !pdl.value)
+    rewrite %root1 with "rewriter"(%root2 : !pdl.operation)
   }
 }
 
@@ -467,13 +467,13 @@ module @overlapping_roots {
   // CHECK-DAG: pdl_interp.is_not_null %[[INPUT2]] : !pdl.value
 
   pdl.pattern @rewrite_overlapping_roots : benefit(1) {
-    %input1 = pdl.operand
-    %input2 = pdl.operand
-    %type = pdl.type
-    %op = pdl.operation(%input1, %input2 : !pdl.value, !pdl.value) -> (%type : !pdl.type)
-    %val = pdl.result 0 of %op
-    %root = pdl.operation(%val : !pdl.value)
-    pdl.rewrite with "rewriter"(%root : !pdl.operation)
+    %input1 = operand
+    %input2 = operand
+    %type = type
+    %op = operation(%input1, %input2 : !pdl.value, !pdl.value) -> (%type : !pdl.type)
+    %val = result 0 of %op
+    %root = operation(%val : !pdl.value)
+    rewrite with "rewriter"(%root : !pdl.operation)
   }
 }
 
@@ -499,13 +499,13 @@ module @force_overlapped_root {
   // CHECK-DAG:   pdl_interp.check_operand_count of %[[OP]] is 1
 
   pdl.pattern @rewrite_forced_overlapped_root : benefit(1) {
-    %input1 = pdl.operand
-    %input2 = pdl.operand
-    %type = pdl.type
-    %root = pdl.operation(%input1, %input2 : !pdl.value, !pdl.value) -> (%type : !pdl.type)
-    %val = pdl.result 0 of %root
-    %op = pdl.operation(%val : !pdl.value)
-    pdl.rewrite %root with "rewriter"(%op : !pdl.operation)
+    %input1 = operand
+    %input2 = operand
+    %type = type
+    %root = operation(%input1, %input2 : !pdl.value, !pdl.value) -> (%type : !pdl.type)
+    %val = result 0 of %root
+    %op = operation(%val : !pdl.value)
+    rewrite %root with "rewriter"(%op : !pdl.operation)
   }
 }
 
@@ -527,11 +527,11 @@ module @variadic_results_all {
   // CHECK-DAG:   pdl_interp.is_not_null %[[OP]]
   // CHECK-DAG:   pdl_interp.check_result_count of %[[OP]] is 0
   pdl.pattern @variadic_results_all : benefit(1) {
-    %types = pdl.types
-    %root = pdl.operation -> (%types : !pdl.range<type>)
-    %vals = pdl.results of %root
-    %op = pdl.operation(%vals : !pdl.range<value>)
-    pdl.rewrite %root with "rewriter"(%op : !pdl.operation)
+    %types = types
+    %root = operation -> (%types : !pdl.range<type>)
+    %vals = results of %root
+    %op = operation(%vals : !pdl.range<value>)
+    rewrite %root with "rewriter"(%op : !pdl.operation)
   }
 }
 
@@ -562,14 +562,14 @@ module @variadic_results_at {
   // CHECK-DAG:   pdl_interp.check_operand_count of %[[OP]] is 0
   // CHECK-DAG:   pdl_interp.check_result_count of %[[OP]] is at_least 1
   pdl.pattern @variadic_results_at : benefit(1) {
-    %type = pdl.type
-    %types = pdl.types
-    %val = pdl.operand
-    %op = pdl.operation -> (%types, %type : !pdl.range<type>, !pdl.type)
-    %vals = pdl.results 0 of %op -> !pdl.range<value>
-    %root1 = pdl.operation(%vals, %val : !pdl.range<value>, !pdl.value)
-    %root2 = pdl.operation(%val, %vals : !pdl.value, !pdl.range<value>)
-    pdl.rewrite with "rewriter"(%root1, %root2 : !pdl.operation, !pdl.operation)
+    %type = type
+    %types = types
+    %val = operand
+    %op = operation -> (%types, %type : !pdl.range<type>, !pdl.type)
+    %vals = results 0 of %op -> !pdl.range<value>
+    %root1 = operation(%vals, %val : !pdl.range<value>, !pdl.value)
+    %root2 = operation(%val, %vals : !pdl.value, !pdl.range<value>)
+    rewrite with "rewriter"(%root1, %root2 : !pdl.operation, !pdl.operation)
   }
 }
 
@@ -583,11 +583,11 @@ module @attribute_literal {
 
   // Check the correct lowering of an attribute that hasn't been bound.
   pdl.pattern : benefit(1) {
-    %attr = pdl.attribute 10
+    %attr = attribute 10
     pdl.apply_native_constraint "constraint"(%attr: !pdl.attribute)
 
-    %root = pdl.operation
-    pdl.rewrite %root with "rewriter"
+    %root = operation
+    rewrite %root with "rewriter"
   }
 }
 
@@ -602,12 +602,12 @@ module @type_literal {
 
   // Check the correct lowering of a type that hasn't been bound.
   pdl.pattern : benefit(1) {
-    %type = pdl.type : i32
-    %types = pdl.types : [i32, i64]
+    %type = type : i32
+    %types = types : [i32, i64]
     pdl.apply_native_constraint "constraint"(%type, %types: !pdl.type, !pdl.range<type>)
 
-    %root = pdl.operation
-    pdl.rewrite %root with "rewriter"
+    %root = operation
+    rewrite %root with "rewriter"
   }
 }
 
@@ -638,16 +638,16 @@ module @common_connector {
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTB_OP]], %[[VAL0]] : !pdl.value
   // CHECK-DAG    } -> ^[[CONTA:.*]]
   pdl.pattern @common_connector : benefit(1) {
-      %type = pdl.type
-      %op = pdl.operation -> (%type, %type : !pdl.type, !pdl.type)
-      %val0 = pdl.result 0 of %op
-      %val1 = pdl.result 1 of %op
-      %rootA = pdl.operation (%val0 : !pdl.value)
-      %rootB = pdl.operation (%val0 : !pdl.value)
-      %inter = pdl.operation (%val1 : !pdl.value) -> (%type : !pdl.type)
-      %val2 = pdl.result 0 of %inter
-      %rootC = pdl.operation (%val2 : !pdl.value)
-      pdl.rewrite with "rewriter"(%rootA, %rootB, %rootC : !pdl.operation, !pdl.operation, !pdl.operation)
+      %type = type
+      %op = operation -> (%type, %type : !pdl.type, !pdl.type)
+      %val0 = result 0 of %op
+      %val1 = result 1 of %op
+      %rootA = operation (%val0 : !pdl.value)
+      %rootB = operation (%val0 : !pdl.value)
+      %inter = operation (%val1 : !pdl.value) -> (%type : !pdl.type)
+      %val2 = result 0 of %inter
+      %rootC = operation (%val2 : !pdl.value)
+      rewrite with "rewriter"(%rootA, %rootB, %rootC : !pdl.operation, !pdl.operation, !pdl.operation)
   }
 }
 
@@ -679,15 +679,15 @@ module @common_connector_range {
   // CHECK-DAG:     pdl_interp.are_equal %[[ROOTB_OPS]], %[[VALS0]] : !pdl.range<value>
   // CHECK-DAG    } -> ^[[CONTA:.*]]
   pdl.pattern @common_connector_range : benefit(1) {
-    %types = pdl.types
-    %op = pdl.operation -> (%types, %types : !pdl.range<type>, !pdl.range<type>)
-    %vals0 = pdl.results 0 of %op -> !pdl.range<value>
-    %vals1 = pdl.results 1 of %op -> !pdl.range<value>
-    %rootA = pdl.operation (%vals0 : !pdl.range<value>)
-    %rootB = pdl.operation (%vals0 : !pdl.range<value>)
-    %inter = pdl.operation (%vals1 : !pdl.range<value>) -> (%types : !pdl.range<type>)
-    %vals2 = pdl.results of %inter
-    %rootC = pdl.operation (%vals2 : !pdl.range<value>)
-    pdl.rewrite with "rewriter"(%rootA, %rootB, %rootC : !pdl.operation, !pdl.operation, !pdl.operation)
+    %types = types
+    %op = operation -> (%types, %types : !pdl.range<type>, !pdl.range<type>)
+    %vals0 = results 0 of %op -> !pdl.range<value>
+    %vals1 = results 1 of %op -> !pdl.range<value>
+    %rootA = operation (%vals0 : !pdl.range<value>)
+    %rootB = operation (%vals0 : !pdl.range<value>)
+    %inter = operation (%vals1 : !pdl.range<value>) -> (%types : !pdl.range<type>)
+    %vals2 = results of %inter
+    %rootC = operation (%vals2 : !pdl.range<value>)
+    rewrite with "rewriter"(%rootA, %rootB, %rootC : !pdl.operation, !pdl.operation, !pdl.operation)
   }
 }

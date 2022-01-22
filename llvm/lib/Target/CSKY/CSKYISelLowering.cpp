@@ -119,6 +119,8 @@ SDValue CSKYTargetLowering::LowerOperation(SDValue Op,
     return LowerGlobalAddress(Op, DAG);
   case ISD::ExternalSymbol:
     return LowerExternalSymbol(Op, DAG);
+  case ISD::GlobalTLSAddress:
+    return LowerGlobalTLSAddress(Op, DAG);
   case ISD::JumpTable:
     return LowerJumpTable(Op, DAG);
   case ISD::BlockAddress:
@@ -1004,4 +1006,117 @@ Register CSKYTargetLowering::getExceptionPointerRegister(
 Register CSKYTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   return CSKY::R1;
+}
+
+SDValue CSKYTargetLowering::LowerGlobalTLSAddress(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT Ty = Op.getValueType();
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
+  int64_t Offset = N->getOffset();
+  MVT XLenVT = MVT::i32;
+
+  TLSModel::Model Model = getTargetMachine().getTLSModel(N->getGlobal());
+  SDValue Addr;
+  switch (Model) {
+  case TLSModel::LocalExec:
+    Addr = getStaticTLSAddr(N, DAG, /*UseGOT=*/false);
+    break;
+  case TLSModel::InitialExec:
+    Addr = getStaticTLSAddr(N, DAG, /*UseGOT=*/true);
+    break;
+  case TLSModel::LocalDynamic:
+  case TLSModel::GeneralDynamic:
+    Addr = getDynamicTLSAddr(N, DAG);
+    break;
+  }
+
+  // In order to maximise the opportunity for common subexpression elimination,
+  // emit a separate ADD node for the global address offset instead of folding
+  // it in the global address node. Later peephole optimisations may choose to
+  // fold it back in when profitable.
+  if (Offset != 0)
+    return DAG.getNode(ISD::ADD, DL, Ty, Addr,
+                       DAG.getConstant(Offset, DL, XLenVT));
+  return Addr;
+}
+
+SDValue CSKYTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
+                                             SelectionDAG &DAG,
+                                             bool UseGOT) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  CSKYMachineFunctionInfo *CFI = MF.getInfo<CSKYMachineFunctionInfo>();
+
+  unsigned CSKYPCLabelIndex = CFI->createPICLabelUId();
+
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+
+  CSKYCP::CSKYCPModifier Flag = UseGOT ? CSKYCP::TLSIE : CSKYCP::TLSLE;
+  bool AddCurrentAddr = UseGOT ? true : false;
+  unsigned char PCAjust = UseGOT ? 4 : 0;
+
+  CSKYConstantPoolValue *CPV =
+      CSKYConstantPoolConstant::Create(N->getGlobal(), CSKYCP::CPValue, PCAjust,
+                                       Flag, AddCurrentAddr, CSKYPCLabelIndex);
+  SDValue CAddr = DAG.getTargetConstantPool(CPV, Ty);
+
+  SDValue Load;
+  if (UseGOT) {
+    SDValue PICLabel = DAG.getTargetConstant(CSKYPCLabelIndex, DL, MVT::i32);
+    auto *LRWGRS = DAG.getMachineNode(CSKY::PseudoTLSLA32, DL, {Ty, Ty},
+                                      {CAddr, PICLabel});
+    auto LRWADDGRS =
+        DAG.getNode(ISD::ADD, DL, Ty, SDValue(LRWGRS, 0), SDValue(LRWGRS, 1));
+    Load = DAG.getLoad(Ty, DL, DAG.getEntryNode(), LRWADDGRS,
+                       MachinePointerInfo(N->getGlobal()));
+  } else {
+    Load = SDValue(DAG.getMachineNode(CSKY::LRW32, DL, Ty, CAddr), 0);
+  }
+
+  // Add the thread pointer.
+  SDValue TPReg = DAG.getRegister(CSKY::R31, MVT::i32);
+  return DAG.getNode(ISD::ADD, DL, Ty, Load, TPReg);
+}
+
+SDValue CSKYTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
+                                              SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  CSKYMachineFunctionInfo *CFI = MF.getInfo<CSKYMachineFunctionInfo>();
+
+  unsigned CSKYPCLabelIndex = CFI->createPICLabelUId();
+
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  IntegerType *CallTy = Type::getIntNTy(*DAG.getContext(), Ty.getSizeInBits());
+
+  CSKYConstantPoolValue *CPV =
+      CSKYConstantPoolConstant::Create(N->getGlobal(), CSKYCP::CPValue, 4,
+                                       CSKYCP::TLSGD, true, CSKYPCLabelIndex);
+  SDValue Addr = DAG.getTargetConstantPool(CPV, Ty);
+  SDValue PICLabel = DAG.getTargetConstant(CSKYPCLabelIndex, DL, MVT::i32);
+
+  auto *LRWGRS =
+      DAG.getMachineNode(CSKY::PseudoTLSLA32, DL, {Ty, Ty}, {Addr, PICLabel});
+
+  auto Load =
+      DAG.getNode(ISD::ADD, DL, Ty, SDValue(LRWGRS, 0), SDValue(LRWGRS, 1));
+
+  // Prepare argument list to generate call.
+  ArgListTy Args;
+  ArgListEntry Entry;
+  Entry.Node = Load;
+  Entry.Ty = CallTy;
+  Args.push_back(Entry);
+
+  // Setup call to __tls_get_addr.
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(DL)
+      .setChain(DAG.getEntryNode())
+      .setLibCallee(CallingConv::C, CallTy,
+                    DAG.getExternalSymbol("__tls_get_addr", Ty),
+                    std::move(Args));
+  SDValue V = LowerCallTo(CLI).first;
+
+  return V;
 }

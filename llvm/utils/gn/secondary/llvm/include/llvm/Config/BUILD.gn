@@ -89,7 +89,6 @@ write_cmake_config("config") {
     "HAVE_LIBPFM=",
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
-    "HAVE_MALLINFO2=",
     "HAVE_SIGNAL_H=1",
     "HAVE_STD_IS_TRIVIALLY_COPYABLE=1",
     "HAVE_STRERROR=1",
@@ -143,6 +142,7 @@ write_cmake_config("config") {
       "HAVE_LINK_H=1",
       "HAVE_LSEEK64=1",
       "HAVE_MALLINFO=1",
+      "HAVE_MALLINFO2=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
   } else {
@@ -151,6 +151,7 @@ write_cmake_config("config") {
       "HAVE_LINK_H=",
       "HAVE_LSEEK64=",
       "HAVE_MALLINFO=",
+      "HAVE_MALLINFO2=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
   }
@@ -335,7 +336,6 @@ write_cmake_config("llvm-config") {
     "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_FORCE_ENABLE_STATS=",
     "LLVM_HAS_ATOMICS=1",
-    "LLVM_HAVE_TF_AOT=",
     "LLVM_HAVE_TF_API=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",

@@ -36,13 +36,13 @@ int main(int, char**)
 
     static_assert(testConstexpr<weekday>(), "");
 
-//  This is different than all the other tests, because the '7' gets converted to
-//  a zero in the constructor, but then back to '7' by iso_encoding().
+    //  This is different than all the other tests, because the '7' gets converted to
+    //  a zero in the constructor, but then back to '7' by iso_encoding().
     for (unsigned i = 0; i <= 10; ++i)
     {
         weekday wd(i);
         assert(wd.iso_encoding() == (i == 0 ? 7 : i));
     }
 
-  return 0;
+    return 0;
 }

@@ -318,6 +318,13 @@ fuseElementwiseOpsImpl(GenericOp producer, OpOperand *consumerOpOperand,
       consumer.iterator_types(),
       /*doc=*/nullptr,
       /*library_call=*/nullptr);
+  if (!fusedOp.getShapesToLoopsMap()) {
+    // Fused op has invalid indexing maps. Typically this means something is off
+    // in the input, but going ahead here would result in verification errors.
+    // So cleanup and abort.
+    rewriter.eraseOp(fusedOp);
+    return llvm::None;
+  }
 
   // Construct an AffineMap from consumer loops to producer loops.
   // consumer loop -> tensor index

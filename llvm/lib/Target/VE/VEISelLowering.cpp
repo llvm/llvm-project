@@ -1661,8 +1661,7 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
     MVT LegalResVT = MVT::getVectorVT(ElemVT, 256);
 
     auto AVL = CDAG.getConstant(NumEls, MVT::i32);
-    return CDAG.getNode(VEISD::VEC_BROADCAST, LegalResVT,
-                        {Op.getOperand(0), AVL});
+    return CDAG.getBroadcast(LegalResVT, Op.getOperand(0), AVL);
   }
 
   // Expand
@@ -2667,21 +2666,6 @@ bool VETargetLowering::hasAndNot(SDValue Y) const {
   return true;
 }
 
-/// \returns the VVP_* SDNode opcode corresponsing to \p OC.
-static Optional<unsigned> getVVPOpcode(unsigned Opcode) {
-  switch (Opcode) {
-#define HANDLE_VP_TO_VVP(VPOPC, VVPNAME)                                       \
-  case ISD::VPOPC:                                                             \
-    return VEISD::VVPNAME;
-#define ADD_VVP_OP(VVPNAME, SDNAME)                                            \
-  case VEISD::VVPNAME:                                                         \
-  case ISD::SDNAME:                                                            \
-    return VEISD::VVPNAME;
-#include "VVPNodes.def"
-  }
-  return None;
-}
-
 SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
   // Can we represent this as a VVP node.
   const unsigned Opcode = Op->getOpcode();
@@ -2711,26 +2695,15 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
     // Materialize the VL parameter.
     AVL = CDAG.getConstant(OpVecVT.getVectorNumElements(), MVT::i32);
     SDValue ConstTrue = CDAG.getConstant(1, MVT::i32);
-    Mask = CDAG.getNode(VEISD::VEC_BROADCAST, MaskVT,
-                        ConstTrue); // emit a VEISD::VEC_BROADCAST here.
+    Mask = CDAG.getBroadcast(MaskVT, ConstTrue, AVL);
   }
 
-  // Categories we are interested in.
-  bool IsBinaryOp = false;
-
-  switch (VVPOpcode) {
-#define ADD_BINARY_VVP_OP(VVPNAME, ...)                                        \
-  case VEISD::VVPNAME:                                                         \
-    IsBinaryOp = true;                                                         \
-    break;
-#include "VVPNodes.def"
-  }
-
-  if (IsBinaryOp) {
+  if (isVVPBinaryOp(VVPOpcode)) {
     assert(LegalVecVT.isSimple());
     return CDAG.getNode(VVPOpcode, LegalVecVT,
                         {Op->getOperand(0), Op->getOperand(1), Mask, AVL});
-  } else if (VVPOpcode == VEISD::VVP_SELECT) {
+  }
+  if (VVPOpcode == VEISD::VVP_SELECT) {
     auto Mask = Op->getOperand(0);
     auto OnTrue = Op->getOperand(1);
     auto OnFalse = Op->getOperand(2);

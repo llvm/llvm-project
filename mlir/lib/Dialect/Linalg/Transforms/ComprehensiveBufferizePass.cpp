@@ -67,7 +67,7 @@ struct LinalgComprehensiveModuleBufferize
 
 static void applyEnablingTransformations(ModuleOp moduleOp) {
   RewritePatternSet patterns(moduleOp.getContext());
-  patterns.add<GeneralizePadTensorOpPattern>(moduleOp.getContext());
+  patterns.add<GeneralizePadOpPattern>(moduleOp.getContext());
   (void)applyPatternsAndFoldGreedily(moduleOp, std::move(patterns));
 }
 

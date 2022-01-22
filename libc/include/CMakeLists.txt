@@ -20,6 +20,8 @@ add_gen_header(
   GEN_HDR fenv.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.fenv_t
+    .llvm-libc-types.fexcept_t
 )
 
 add_gen_header(
@@ -28,6 +30,7 @@ add_gen_header(
   GEN_HDR inttypes.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.imaxdiv_t
 )
 
 add_gen_header(
@@ -54,6 +57,7 @@ add_gen_header(
   GEN_HDR string.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.size_t
 )
 
 add_gen_header(
@@ -62,18 +66,22 @@ add_gen_header(
   GEN_HDR time.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.time_t
+    .llvm-libc-types.struct_tm
 )
 
 add_gen_header(
   threads
   DEF_FILE threads.h.def
   GEN_HDR threads.h
-  PARAMS
-    platform_threads=../config/${LIBC_TARGET_OS}/threads.h.in
   DEPENDS
     .llvm_libc_common_h
-  DATA_FILES
-    ../config/${LIBC_TARGET_OS}/threads.h.in
+    .llvm-libc-types.__call_once_func_t
+    .llvm-libc-types.cnd_t
+    .llvm-libc-types.mtx_t
+    .llvm-libc-types.once_flag
+    .llvm-libc-types.thrd_start_t
+    .llvm-libc-types.thrd_t
 )
 
 add_gen_header(
@@ -94,6 +102,9 @@ add_gen_header(
   GEN_HDR signal.h
   DATA_FILES
     ../config/${LIBC_TARGET_OS}/signal.h.in
+  DEPENDS
+    .llvm-libc-types.struct_sigaction
+    .llvm-libc-types.__sighandler_t
 )
 
 add_gen_header(
@@ -102,6 +113,8 @@ add_gen_header(
   GEN_HDR stdio.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.FILE
+    .llvm-libc-types.size_t
 )
 
 add_gen_header(
@@ -110,6 +123,12 @@ add_gen_header(
   GEN_HDR stdlib.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.__bsearchcompare_t
+    .llvm-libc-types.__qsortcompare_t
+    .llvm-libc-types.div_t
+    .llvm-libc-types.ldiv_t
+    .llvm-libc-types.lldiv_t
+    .llvm-libc-types.size_t
 )
 
 add_gen_header(

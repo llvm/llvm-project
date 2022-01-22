@@ -82,7 +82,7 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
 bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
   auto Buf = FS->getBufferForFile(LS.AbsolutePath);
   if (!Buf) {
-    elog("Background-index: Couldn't read {0} to validate stored index: {1}",
+    vlog("Background-index: Couldn't read {0} to validate stored index: {1}",
          LS.AbsolutePath, Buf.getError().message());
     // There is no point in indexing an unreadable file.
     return false;

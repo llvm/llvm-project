@@ -143,6 +143,26 @@ def HasStdExtZbbOrZbp
                                    "'Zbb' (Base 'B' Instructions) or "
                                    "'Zbp' (Permutation 'B' Instructions)">;
 
+def FeatureStdExtZbkb
+    : SubtargetFeature<"zbkb", "HasStdExtZbkb", "true",
+                       "'Zbkb' (Bitmanip instructions for Cryptography)">;
+def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZbkb),
+                             "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
+def HasStdExtZbpOrZbkb
+    : Predicate<"Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkb()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbp, FeatureStdExtZbkb),
+                                   "'Zbp' (Permutation 'B' Instructions) or "
+                                   "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
+def HasStdExtZbbOrZbpOrZbkb
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkb()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbp, FeatureStdExtZbkb),
+                                   "'Zbb' (Base 'B' Instructions) or "
+                                   "'Zbp' (Permutation 'B' Instructions) or "
+                                   "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
                        "Disable RVC Hint Instructions.">;
@@ -161,68 +181,51 @@ foreach i = { 6-15 } in {
                         [!cast<SubtargetFeature>("FeatureStdExtZvl"#!srl(I, 1)#"b")]>;
 }
 
-def FeatureStdExtZvlsseg
-    : SubtargetFeature<"experimental-zvlsseg", "HasStdExtZvlsseg", "true",
-                       "'Zvlsseg' (Vector segment load/store instructions)",
-                       []>;
-def HasStdExtZvlsseg : Predicate<"Subtarget->hasStdExtZvlsseg()">,
-                                 AssemblerPredicate<(all_of FeatureStdExtZvlsseg),
-                                 "'Zvlsseg' (Vector segment load/store instructions)">;
-
 def FeatureStdExtZve32x
     : SubtargetFeature<"experimental-zve32x", "HasStdExtZve32x", "true",
                        "'Zve32x' (Vector Extensions for Embedded Processors "
                        "with maximal 32 EEW)",
-                       [FeatureStdExtZvlsseg, FeatureStdExtZvl32b]>;
-def HasStdExtZve32x : Predicate<"SubTarget->hasStdExtZve32x()">,
-                                 AssemblerPredicate<(all_of FeatureStdExtZve32x),
-                                 "'Zve32x' (Vector Extensions for Embedded Processors "
-                                 "with maximal 32 EEW)">;
+                       [FeatureStdExtZvl32b]>;
 
 def FeatureStdExtZve32f
     : SubtargetFeature<"experimental-zve32f", "HasStdExtZve32f", "true",
                        "'Zve32f' (Vector Extensions for Embedded Processors "
                        "with maximal 32 EEW and F extension)",
                        [FeatureStdExtZve32x]>;
-def HasStdExtZve32f : Predicate<"SubTarget->hasStdExtZve32f()">;
 
 def FeatureStdExtZve64x
     : SubtargetFeature<"experimental-zve64x", "HasStdExtZve64x", "true",
                        "'Zve64x' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW)", [FeatureStdExtZve32x, FeatureStdExtZvl64b]>;
-def HasStdExtZve64x : Predicate<"SubTarget->hasStdExtZve64x()">;
 
 def FeatureStdExtZve64f
     : SubtargetFeature<"experimental-zve64f", "HasStdExtZve64f", "true",
                        "'Zve64f' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW and F extension)",
                        [FeatureStdExtZve32f, FeatureStdExtZve64x]>;
-def HasStdExtZve64f : Predicate<"SubTarget->hasStdExtZve64f()">;
 
 def FeatureStdExtZve64d
     : SubtargetFeature<"experimental-zve64d", "HasStdExtZve64d", "true",
                        "'Zve64d' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW, F and D extension)",
                        [FeatureStdExtZve64f]>;
-def HasStdExtZve64d : Predicate<"SubTarget->hasStdExtZve64d()">;
 
 def FeatureStdExtV
     : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
                        "'V' (Vector Extension for Application Processors)",
                        [FeatureStdExtZvl128b, FeatureStdExtZve64d, FeatureStdExtF, FeatureStdExtD]>;
-def HasStdExtV : Predicate<"Subtarget->hasStdExtV()">;
 
 def HasVInstructions    : Predicate<"Subtarget->hasVInstructions()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve32x),
           "'V' (Vector Extension for Application Processors), 'Zve32x' or "
           "'Zve64x' (Vector Extensions for Embedded Processors)">;
-def HasVInstructionsI64 : Predicate<"Subtarget->hasStdExtZve64x()">,
+def HasVInstructionsI64 : Predicate<"Subtarget->hasVInstructionsI64()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve64x),
           "'V' (Vector Extension for Application Processors) or 'Zve64x' "
           "(Vector Extensions for Embedded Processors)">;
-def HasVInstructionsAnyF : Predicate<"Subtarget->hasStdExtZve32f()">,
+def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
       AssemblerPredicate<
           (any_of FeatureStdExtZve32f),
           "'V' (Vector Extension for Application Processors), 'Zve32f', "

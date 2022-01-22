@@ -249,6 +249,19 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   // TODO: Is the Parallel construct cancellable?
   bool isCancellable = false;
 
+  // Ensure that the BasicBlock for the the parallel region is sparate from the
+  // function entry which we may need to insert allocas.
+  if (builder.GetInsertBlock() ==
+      &builder.GetInsertBlock()->getParent()->getEntryBlock()) {
+    assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end() &&
+           "Assuming end of basic block");
+    llvm::BasicBlock *entryBB =
+        llvm::BasicBlock::Create(builder.getContext(), "parallel.entry",
+                                 builder.GetInsertBlock()->getParent(),
+                                 builder.GetInsertBlock()->getNextNode());
+    builder.CreateBr(entryBB);
+    builder.SetInsertPoint(entryBB);
+  }
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(
       builder.saveIP(), builder.getCurrentDebugLocation());
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createParallel(

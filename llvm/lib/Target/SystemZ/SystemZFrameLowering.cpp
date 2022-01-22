@@ -764,8 +764,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
 
 bool SystemZELFFrameLowering::hasFP(const MachineFunction &MF) const {
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          MF.getFrameInfo().hasVarSizedObjects() ||
-          MF.getInfo<SystemZMachineFunctionInfo>()->getManipulatesSP());
+          MF.getFrameInfo().hasVarSizedObjects());
 }
 
 StackOffset SystemZELFFrameLowering::getFrameIndexReference(

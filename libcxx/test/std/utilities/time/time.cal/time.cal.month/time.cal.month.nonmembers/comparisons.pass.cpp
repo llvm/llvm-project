@@ -36,12 +36,12 @@ int main(int, char**)
     static_assert(testComparisons6Values<month>(0U ,0U), "");
     static_assert(testComparisons6Values<month>(0U, 1U), "");
 
-//  Some 'ok' values as well
+    //  Some 'ok' values as well
     static_assert(testComparisons6Values<month>( 5U,  5U), "");
     static_assert(testComparisons6Values<month>( 5U, 10U), "");
 
-    for (unsigned i = 1; i < 10; ++i)
-        for (unsigned j = 10; j < 10; ++j)
+    for (unsigned i = 1; i <= 12; ++i)
+        for (unsigned j = 1; j <= 12; ++j)
             assert(testComparisons6Values<month>(i, j));
 
   return 0;

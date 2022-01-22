@@ -915,7 +915,7 @@ class FlatSignedAtomicPatNoRtn <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 class FlatSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
                            ValueType data_vt = vt> : GCNPat <
   (vt (node (GlobalOffset i64:$vaddr, i16:$offset), data_vt:$data)),
-  (inst $vaddr, $data, $offset)
+  (inst VReg_64:$vaddr, getVregSrcForVT<data_vt>.ret:$data, $offset)
 >;
 
 class ScratchLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <

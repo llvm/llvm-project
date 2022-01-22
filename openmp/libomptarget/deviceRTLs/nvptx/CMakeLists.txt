@@ -165,6 +165,7 @@ set(bc_flags -S -x c++ -O1 -std=c++14
              -mllvm -openmp-opt-disable
              -ffreestanding
              -target nvptx64
+             -fvisibility=hidden
              -Xclang -emit-llvm-bc
              -Xclang -aux-triple -Xclang ${aux_triple}
              -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device

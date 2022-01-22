@@ -43,7 +43,7 @@ int main(int, char**)
 
     static_assert( year_month_day{year{2019},   January, day{1}}.ok(), ""); // All OK
 
-//  Some months have a 31st
+    // Some months have a 31st
     static_assert( year_month_day{year{2020},   month{ 1}, day{31}}.ok(), "");
     static_assert(!year_month_day{year{2020},   month{ 2}, day{31}}.ok(), "");
     static_assert( year_month_day{year{2020},   month{ 3}, day{31}}.ok(), "");
@@ -57,7 +57,7 @@ int main(int, char**)
     static_assert(!year_month_day{year{2020},   month{11}, day{31}}.ok(), "");
     static_assert( year_month_day{year{2020},   month{12}, day{31}}.ok(), "");
 
-//  Everyone except FEB has a 30th
+    // Everyone except FEB has a 30th
     static_assert( year_month_day{year{2020},   month{ 1}, day{30}}.ok(), "");
     static_assert(!year_month_day{year{2020},   month{ 2}, day{30}}.ok(), "");
     static_assert( year_month_day{year{2020},   month{ 3}, day{30}}.ok(), "");
@@ -93,5 +93,5 @@ int main(int, char**)
         assert( ym.ok() == year{i}.ok());
     }
 
-  return 0;
+    return 0;
 }

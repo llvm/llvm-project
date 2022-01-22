@@ -182,7 +182,6 @@ set(files
   __format/formatter_integral.h
   __format/formatter_string.h
   __format/parser_std_format_spec.h
-  __function_like.h
   __functional/binary_function.h
   __functional/binary_negate.h
   __functional/bind.h

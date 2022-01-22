@@ -4280,6 +4280,7 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":TilingInterfaceTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
 )
@@ -4336,6 +4337,7 @@ cc_library(
         ":StandardOps",
         ":Support",
         ":TensorOpsIncGen",
+        ":TilingInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -4351,6 +4353,38 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":StandardOps",
+        ":TensorDialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TensorTilingInterfaceImpl",
+    srcs = ["lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp"],
+    hdrs = ["include/mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"],
+    includes = ["include"],
+    deps = [
+        ":Affine",
+        ":IR",
+        ":LinalgOps",
+        ":SCFDialect",
+        ":StandardOps",
+        ":TensorDialect",
+        ":TilingInterface",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "TensorUtils",
+    srcs = ["lib/Dialect/Tensor/Utils/Utils.cpp"],
+    hdrs = ["include/mlir/Dialect/Tensor/Utils/Utils.h"],
+    includes = ["include"],
+    deps = [
+        ":Affine",
+        ":ArithmeticDialect",
+        ":IR",
+        ":Support",
         ":TensorDialect",
         "//llvm:Support",
     ],
@@ -5634,6 +5668,7 @@ cc_library(
         ":StandardToSPIRV",
         ":TensorDialect",
         ":TensorInferTypeOpInterfaceImpl",
+        ":TensorTilingInterfaceImpl",
         ":TensorTransforms",
         ":TosaDialect",
         ":TosaToLinalg",
@@ -6913,6 +6948,7 @@ cc_library(
         ":Support",
         ":TensorBufferizableOpInterfaceImpl",
         ":TensorDialect",
+        ":TensorUtils",
         ":TransformUtils",
         ":VectorBufferizableOpInterfaceImpl",
         ":VectorOps",
@@ -6952,7 +6988,6 @@ cc_library(
     deps = [
         ":IR",
         ":Support",
-        ":TensorDialect",
         ":TilingInterfaceIncGen",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -7255,6 +7290,7 @@ cc_library(
         ":SCFDialect",
         ":StandardOps",
         ":TensorDialect",
+        ":TensorUtils",
         ":TosaDialect",
         ":Transforms",
     ],

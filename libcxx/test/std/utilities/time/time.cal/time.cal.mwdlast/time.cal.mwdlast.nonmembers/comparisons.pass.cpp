@@ -48,7 +48,7 @@ int main(int, char**)
         month_weekday_last{std::chrono::January, weekday_last{Wednesday}},
         false), "");
 
-//  vary the months
+    //  vary the months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
             assert((testComparisons2(
@@ -56,7 +56,7 @@ int main(int, char**)
                 month_weekday_last{month{j}, weekday_last{Tuesday}},
             i == j)));
 
-//  vary the weekday
+    //  vary the weekday
     for (unsigned i = 0; i < 6; ++i)
         for (unsigned j = 0; j < 6; ++j)
             assert((testComparisons2(
@@ -64,11 +64,11 @@ int main(int, char**)
                 month_weekday_last{January, weekday_last{weekday{j}}},
             i == j)));
 
-//  both different
-        assert((testComparisons2(
-            month_weekday_last{month{1}, weekday_last{weekday{1}}},
-            month_weekday_last{month{2}, weekday_last{weekday{2}}},
-        false)));
+    //  both different
+    assert((testComparisons2(
+        month_weekday_last{month{1}, weekday_last{weekday{1}}},
+        month_weekday_last{month{2}, weekday_last{weekday{2}}},
+    false)));
 
-  return 0;
+    return 0;
 }

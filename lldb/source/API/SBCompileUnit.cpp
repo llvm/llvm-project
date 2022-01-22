@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCompileUnit.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Module.h"
@@ -17,26 +16,23 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
+#include "lldb/Utility/Instrumentation.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-SBCompileUnit::SBCompileUnit() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCompileUnit);
-}
+SBCompileUnit::SBCompileUnit() { LLDB_INSTRUMENT_VA(this); }
 
 SBCompileUnit::SBCompileUnit(lldb_private::CompileUnit *lldb_object_ptr)
     : m_opaque_ptr(lldb_object_ptr) {}
 
 SBCompileUnit::SBCompileUnit(const SBCompileUnit &rhs)
     : m_opaque_ptr(rhs.m_opaque_ptr) {
-  LLDB_RECORD_CONSTRUCTOR(SBCompileUnit, (const lldb::SBCompileUnit &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 const SBCompileUnit &SBCompileUnit::operator=(const SBCompileUnit &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBCompileUnit &,
-                     SBCompileUnit, operator=,(const lldb::SBCompileUnit &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
   return *this;
@@ -45,8 +41,7 @@ const SBCompileUnit &SBCompileUnit::operator=(const SBCompileUnit &rhs) {
 SBCompileUnit::~SBCompileUnit() { m_opaque_ptr = nullptr; }
 
 SBFileSpec SBCompileUnit::GetFileSpec() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFileSpec, SBCompileUnit,
-                                   GetFileSpec);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFileSpec file_spec;
   if (m_opaque_ptr)
@@ -55,7 +50,7 @@ SBFileSpec SBCompileUnit::GetFileSpec() const {
 }
 
 uint32_t SBCompileUnit::GetNumLineEntries() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBCompileUnit, GetNumLineEntries);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr) {
     LineTable *line_table = m_opaque_ptr->GetLineTable();
@@ -67,8 +62,7 @@ uint32_t SBCompileUnit::GetNumLineEntries() const {
 }
 
 SBLineEntry SBCompileUnit::GetLineEntryAtIndex(uint32_t idx) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBLineEntry, SBCompileUnit,
-                           GetLineEntryAtIndex, (uint32_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBLineEntry sb_line_entry;
   if (m_opaque_ptr) {
@@ -85,9 +79,7 @@ SBLineEntry SBCompileUnit::GetLineEntryAtIndex(uint32_t idx) const {
 
 uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
                                            SBFileSpec *inline_file_spec) const {
-  LLDB_RECORD_METHOD_CONST(uint32_t, SBCompileUnit, FindLineEntryIndex,
-                           (uint32_t, uint32_t, lldb::SBFileSpec *), start_idx,
-                           line, inline_file_spec);
+  LLDB_INSTRUMENT_VA(this, start_idx, line, inline_file_spec);
 
   const bool exact = true;
   return FindLineEntryIndex(start_idx, line, inline_file_spec, exact);
@@ -96,9 +88,7 @@ uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
 uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
                                            SBFileSpec *inline_file_spec,
                                            bool exact) const {
-  LLDB_RECORD_METHOD_CONST(uint32_t, SBCompileUnit, FindLineEntryIndex,
-                           (uint32_t, uint32_t, lldb::SBFileSpec *, bool),
-                           start_idx, line, inline_file_spec, exact);
+  LLDB_INSTRUMENT_VA(this, start_idx, line, inline_file_spec, exact);
 
   uint32_t index = UINT32_MAX;
   if (m_opaque_ptr) {
@@ -118,7 +108,7 @@ uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
 }
 
 uint32_t SBCompileUnit::GetNumSupportFiles() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBCompileUnit, GetNumSupportFiles);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
     return m_opaque_ptr->GetSupportFiles().GetSize();
@@ -127,8 +117,7 @@ uint32_t SBCompileUnit::GetNumSupportFiles() const {
 }
 
 lldb::SBTypeList SBCompileUnit::GetTypes(uint32_t type_mask) {
-  LLDB_RECORD_METHOD(lldb::SBTypeList, SBCompileUnit, GetTypes, (uint32_t),
-                     type_mask);
+  LLDB_INSTRUMENT_VA(this, type_mask);
 
   SBTypeList sb_type_list;
 
@@ -151,8 +140,7 @@ lldb::SBTypeList SBCompileUnit::GetTypes(uint32_t type_mask) {
 }
 
 SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBFileSpec, SBCompileUnit,
-                           GetSupportFileAtIndex, (uint32_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBFileSpec sb_file_spec;
   if (m_opaque_ptr) {
@@ -166,9 +154,7 @@ SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
 uint32_t SBCompileUnit::FindSupportFileIndex(uint32_t start_idx,
                                              const SBFileSpec &sb_file,
                                              bool full) {
-  LLDB_RECORD_METHOD(uint32_t, SBCompileUnit, FindSupportFileIndex,
-                     (uint32_t, const lldb::SBFileSpec &, bool), start_idx,
-                     sb_file, full);
+  LLDB_INSTRUMENT_VA(this, start_idx, sb_file, full);
 
   if (m_opaque_ptr) {
     const FileSpecList &support_files = m_opaque_ptr->GetSupportFiles();
@@ -178,7 +164,7 @@ uint32_t SBCompileUnit::FindSupportFileIndex(uint32_t start_idx,
 }
 
 lldb::LanguageType SBCompileUnit::GetLanguage() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::LanguageType, SBCompileUnit, GetLanguage);
+  LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
     return m_opaque_ptr->GetLanguage();
@@ -186,25 +172,23 @@ lldb::LanguageType SBCompileUnit::GetLanguage() {
 }
 
 bool SBCompileUnit::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCompileUnit, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBCompileUnit::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCompileUnit, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_ptr != nullptr;
 }
 
 bool SBCompileUnit::operator==(const SBCompileUnit &rhs) const {
-  LLDB_RECORD_METHOD_CONST(
-      bool, SBCompileUnit, operator==,(const lldb::SBCompileUnit &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_ptr == rhs.m_opaque_ptr;
 }
 
 bool SBCompileUnit::operator!=(const SBCompileUnit &rhs) const {
-  LLDB_RECORD_METHOD_CONST(
-      bool, SBCompileUnit, operator!=,(const lldb::SBCompileUnit &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_ptr != rhs.m_opaque_ptr;
 }
@@ -224,8 +208,7 @@ void SBCompileUnit::reset(lldb_private::CompileUnit *lldb_object_ptr) {
 }
 
 bool SBCompileUnit::GetDescription(SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBCompileUnit, GetDescription, (lldb::SBStream &),
-                     description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   Stream &strm = description.ref();
 

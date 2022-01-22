@@ -5,25 +5,27 @@
 define void @foo(i32* nocapture noundef %p1) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -128
-; CHECK-NEXT:    .cfi_def_cfa_offset 128
-; CHECK-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -192
+; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    sd ra, 184(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 176(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 168(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 160(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
-; CHECK-NEXT:    addi s0, sp, 128
+; CHECK-NEXT:    .cfi_offset s2, -32
+; CHECK-NEXT:    addi s0, sp, 192
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    mv s1, sp
-; CHECK-NEXT:    mv s1, a0
+; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a0, s1, 104
+; CHECK-NEXT:    addi a0, s1, 160
 ; CHECK-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    addi t0, s1, 64
@@ -39,16 +41,17 @@ define void @foo(i32* nocapture noundef %p1) {
 ; CHECK-NEXT:    call bar@plt
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; CHECK-NEXT:    vle32.v v8, (s1)
-; CHECK-NEXT:    addi a0, s1, 104
+; CHECK-NEXT:    vle32.v v8, (s2)
+; CHECK-NEXT:    addi a0, s1, 160
 ; CHECK-NEXT:    vl2re8.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfadd.vv v8, v10, v8
-; CHECK-NEXT:    vse32.v v8, (s1)
-; CHECK-NEXT:    addi sp, s0, -128
-; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 128
+; CHECK-NEXT:    vse32.v v8, (s2)
+; CHECK-NEXT:    addi sp, s0, -192
+; CHECK-NEXT:    ld ra, 184(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 176(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 168(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 160(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 192
 ; CHECK-NEXT:    ret
 entry:
   %vla = alloca [10 x i32], align 64

@@ -352,9 +352,27 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
 // * Dereferenceable address & few lanes -> scalarize speculative load/selects
 // * Adjacent vector addresses -> masked.load
 // * Narrow width by halfs excluding zero/undef lanes
-// * Vector splat address w/known mask -> scalar load
 // * Vector incrementing address -> vector masked load
 Instruction *InstCombinerImpl::simplifyMaskedGather(IntrinsicInst &II) {
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
+  if (!ConstMask)
+    return nullptr;
+
+  // Vector splat address w/known mask -> scalar load
+  // Fold the gather to load the source vector first lane
+  // because it is reloading the same value each time
+  if (ConstMask->isAllOnesValue())
+    if (auto *SplatPtr = getSplatValue(II.getArgOperand(0))) {
+      auto *VecTy = cast<VectorType>(II.getType());
+      const Align Alignment =
+          cast<ConstantInt>(II.getArgOperand(1))->getAlignValue();
+      LoadInst *L = Builder.CreateAlignedLoad(VecTy->getElementType(), SplatPtr,
+                                              Alignment, "load.scalar");
+      Value *Shuf =
+          Builder.CreateVectorSplat(VecTy->getElementCount(), L, "broadcast");
+      return replaceInstUsesWith(II, cast<Instruction>(Shuf));
+    }
+
   return nullptr;
 }
 
@@ -1214,6 +1232,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::bswap: {
     Value *IIOperand = II->getArgOperand(0);
     Value *X = nullptr;
+
+    KnownBits Known = computeKnownBits(IIOperand, 0, II);
+    uint64_t LZ = alignDown(Known.countMinLeadingZeros(), 8);
+    uint64_t TZ = alignDown(Known.countMinTrailingZeros(), 8);
+
+    // bswap(x) -> shift(x) if x has exactly one "active byte"
+    if (Known.getBitWidth() - LZ - TZ == 8) {
+      assert(LZ != TZ && "active byte cannot be in the middle");
+      if (LZ > TZ)  // -> shl(x) if the "active byte" is in the low part of x
+        return BinaryOperator::CreateNUWShl(
+            IIOperand, ConstantInt::get(IIOperand->getType(), LZ - TZ));
+      // -> lshr(x) if the "active byte" is in the high part of x
+      return BinaryOperator::CreateExactLShr(
+            IIOperand, ConstantInt::get(IIOperand->getType(), TZ - LZ));
+    }
 
     // bswap(trunc(bswap(x))) -> trunc(lshr(x, c))
     if (match(IIOperand, m_Trunc(m_BSwap(m_Value(X))))) {

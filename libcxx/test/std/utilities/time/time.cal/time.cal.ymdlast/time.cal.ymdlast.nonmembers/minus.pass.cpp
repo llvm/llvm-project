@@ -75,7 +75,7 @@ int main(int, char**)
     ASSERT_SAME_TYPE(year_month_day_last, decltype(std::declval<year_month_day_last>() - std::declval<months>()));
 
     static_assert(testConstexprMonths(year_month_day_last{year{1234}, month_day_last{December}}), "");
-//  TODO test wrapping
+    // TODO test wrapping
     year_month_day_last ym{year{1234}, month_day_last{December}};
     for (unsigned i = 0; i <= 10; ++i)
     {
@@ -86,5 +86,5 @@ int main(int, char**)
     }
 
 
-  return 0;
+    return 0;
 }

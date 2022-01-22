@@ -12,7 +12,6 @@
 
 #include <__config>
 #include <__debug>
-#include <__function_like.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
@@ -72,7 +71,7 @@ void advance(_InputIter& __i, _Distance __orig_n) {
 namespace ranges {
 namespace __advance {
 
-struct __fn final : private __function_like {
+struct __fn {
 private:
   template <class _Tp>
   _LIBCPP_HIDE_FROM_ABI
@@ -99,8 +98,6 @@ private:
   }
 
 public:
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
   // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
   _LIBCPP_HIDE_FROM_ABI
@@ -191,7 +188,7 @@ public:
 } // namespace __advance
 
 inline namespace __cpo {
-  inline constexpr auto advance = __advance::__fn(__function_like::__tag());
+  inline constexpr auto advance = __advance::__fn{};
 } // namespace __cpo
 } // namespace ranges
 

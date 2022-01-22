@@ -9,8 +9,6 @@
 #ifndef LLVM_SUPPORT_RISCVISAINFO_H
 #define LLVM_SUPPORT_RISCVISAINFO_H
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 

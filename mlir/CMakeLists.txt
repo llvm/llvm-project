@@ -1,10 +1,15 @@
 # MLIR project.
 
-include(GNUInstallDirs)
-
 # Check if MLIR is built as a standalone project.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(mlir)
+  set(MLIR_STANDALONE_BUILD TRUE)
+endif()
+
+# Must go below project(..)
+include(GNUInstallDirs)
+
+if(MLIR_STANDALONE_BUILD)
   cmake_minimum_required(VERSION 3.13.4)
 
   find_package(LLVM CONFIG REQUIRED)

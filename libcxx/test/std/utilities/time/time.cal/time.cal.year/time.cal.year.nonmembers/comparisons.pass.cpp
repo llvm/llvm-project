@@ -36,7 +36,7 @@ int main(int, char**)
     static_assert(testComparisons6Values<year>(0,0), "");
     static_assert(testComparisons6Values<year>(0,1), "");
 
-//  Some 'ok' values as well
+    //  Some 'ok' values as well
     static_assert(testComparisons6Values<year>( 5, 5), "");
     static_assert(testComparisons6Values<year>( 5,10), "");
 
@@ -44,5 +44,5 @@ int main(int, char**)
         for (int j = 1; j < 10; ++j)
             assert(testComparisons6Values<year>(i, j));
 
-  return 0;
+    return 0;
 }

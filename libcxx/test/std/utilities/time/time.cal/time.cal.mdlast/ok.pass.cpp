@@ -36,7 +36,7 @@ int main(int, char**)
         assert( mdl.ok());
     }
 
-//  If the month is not ok, all the days are bad
+    //  If the month is not ok, all the days are bad
     for (unsigned i = 13; i <= 50; ++i)
     {
         month_day_last mdl{month{i}};

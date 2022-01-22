@@ -1158,9 +1158,9 @@ func @pad_float(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
-  // CHECK: linalg.pad_tensor %arg0 low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
+  // CHECK: tensor.pad %arg0 low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
   // CHECK: ^bb0(%arg1: index, %arg2: index):  
-  // CHECK:   linalg.yield [[CST]]
+  // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<4x9xf32>)
   return %1 : tensor<4x9xf32>
@@ -1169,8 +1169,8 @@ func @pad_float(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
 func @pad_int(%arg0 : tensor<1x2xi32>) -> (tensor<4x9xi32>) {
   %0 = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
   // CHECK: [[CST:%.+]] = arith.constant 0 : i32
-  // CHECK: linalg.pad_tensor
-  // CHECK:   linalg.yield [[CST]]
+  // CHECK: tensor.pad
+  // CHECK:   tensor.yield [[CST]]
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xi32>, tensor<2x2xi32>)  -> (tensor<4x9xi32>)
   return %1 : tensor<4x9xi32>
 }
@@ -1178,8 +1178,8 @@ func @pad_int(%arg0 : tensor<1x2xi32>) -> (tensor<4x9xi32>) {
 func @pad_quant(%arg0 : tensor<1x2xi32>) -> (tensor<4x9xi32>) {
   %0 = arith.constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
   // CHECK: [[CST:%.+]] = arith.constant 42 : i32
-  // CHECK: linalg.pad_tensor
-  // CHECK:   linalg.yield [[CST]]
+  // CHECK: tensor.pad
+  // CHECK:   tensor.yield [[CST]]
   %1 = "tosa.pad"(%arg0, %0) { quantization_info = { input_zp = 42 : i32}} : (tensor<1x2xi32>, tensor<2x2xi32>)  -> (tensor<4x9xi32>)
   return %1 : tensor<4x9xi32>
 }
@@ -1194,9 +1194,9 @@ func @pad_float_explicit(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   // CHECK-DAG: [[INDEX3:%.+]] = arith.constant 3 : index
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 4.200000e+01 : f32
-  // CHECK: linalg.pad_tensor %arg0 low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
+  // CHECK: tensor.pad %arg0 low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
   // CHECK: ^bb0(%arg1: index, %arg2: index):  
-  // CHECK:   linalg.yield [[CST]]
+  // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
   %1 = arith.constant dense<42.0> : tensor<f32>
   %2 = "tosa.pad"(%arg0, %0, %1)  : (tensor<1x2xf32>, tensor<2x2xi32>, tensor<f32>)  -> (tensor<4x9xf32>)

@@ -20,6 +20,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
 using namespace llvm;

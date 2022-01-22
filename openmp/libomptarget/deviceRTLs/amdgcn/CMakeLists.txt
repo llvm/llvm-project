@@ -161,7 +161,7 @@ macro(build_bc_library mcpu target_libname)
     -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
     -D__AMDGCN__
     -Xclang -target-cpu -Xclang ${mcpu}
-    -fvisibility=default
+    -fvisibility=hidden
     -Wno-unused-value
     -nogpulib
     ${clang_opt_flags}
