@@ -4,6 +4,8 @@
 declare void @use(i32)
 declare void @sideeffect()
 
+; negative test (but we could allow this?) - don't hoist to conditional predecessor block
+
 define i32 @add_const_incoming0_speculative(i1 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: @add_const_incoming0_speculative(
 ; CHECK-NEXT:  entry:
@@ -34,11 +36,10 @@ define i32 @add_const_incoming0_nonspeculative(i1 %b, i32 %x, i32 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i32 [ 42, [[ENTRY:%.*]] ], [ [[X:%.*]], [[IF]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ 17, [[ENTRY]] ], [ [[Y:%.*]], [[IF]] ]
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP0]], [[IF]] ], [ 59, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -53,6 +54,8 @@ then:
   %r = add i32 %p0, %p1
   ret i32 %r
 }
+
+; negative test (but we could allow this?) - don't hoist to conditional predecessor block
 
 define i32 @sub_const_incoming0(i1 %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_const_incoming0(
@@ -84,11 +87,10 @@ define i32 @sub_const_incoming1(i1 %b, i32 %x, i32 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i32 [ [[X:%.*]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[Y:%.*]], [[IF]] ], [ 17, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = sub i32 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP0]], [[IF]] ], [ 25, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -109,11 +111,10 @@ define i8 @mul_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ 17, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = mul i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ -54, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -134,11 +135,10 @@ define i8 @and_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ 17, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -159,11 +159,10 @@ define i8 @xor_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ 17, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 59, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -184,11 +183,10 @@ define i64 @or_const_incoming1(i1 %b, i64 %x, i64 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i64 [ [[X:%.*]], [[IF]] ], [ 3, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i64 [ [[Y:%.*]], [[IF]] ], [ 16, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP0]], [[IF]] ], [ 19, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -209,11 +207,10 @@ define i64 @or_const_incoming01(i1 %b, i64 %x, i64 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i64 [ 3, [[ENTRY:%.*]] ], [ [[X:%.*]], [[IF]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i64 [ 16, [[ENTRY]] ], [ [[Y:%.*]], [[IF]] ]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP0]], [[IF]] ], [ 19, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -234,11 +231,10 @@ define i64 @or_const_incoming10(i1 %b, i64 %x, i64 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = or i64 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i64 [ [[Y:%.*]], [[IF]] ], [ 16, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i64 [ [[X:%.*]], [[IF]] ], [ 3, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i64 [ [[TMP0]], [[IF]] ], [ 19, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
 entry:
@@ -253,6 +249,8 @@ then:
   %r = or i64 %p0, %p1
   ret i64 %r
 }
+
+; negative test (but we could allow this?) - don't hoist to conditional predecessor block
 
 define i8 @ashr_const_incoming0_speculative(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @ashr_const_incoming0_speculative(
@@ -284,11 +282,10 @@ define i8 @ashr_const_incoming0(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ 42, [[ENTRY:%.*]] ], [ [[X:%.*]], [[IF]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ 3, [[ENTRY]] ], [ [[Y:%.*]], [[IF]] ]
-; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 5, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -309,11 +306,10 @@ define i8 @lshr_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ 3, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 5, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -334,11 +330,10 @@ define i8 @shl_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ 3, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = shl nuw nsw i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 80, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -384,11 +379,10 @@ define i8 @sdiv_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ -42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ 17, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ -2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -409,11 +403,10 @@ define i8 @udiv_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ -42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ 17, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 12, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -434,11 +427,10 @@ define i8 @srem_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = srem i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ -17, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = srem i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 8, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -459,11 +451,10 @@ define i8 @urem_const_incoming1(i1 %b, i8 %x, i8 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = urem i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi i8 [ [[X:%.*]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi i8 [ [[Y:%.*]], [[IF]] ], [ -17, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ [[TMP0]], [[IF]] ], [ 42, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -484,11 +475,10 @@ define float @fmul_const_incoming1(i1 %b, float %x, float %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi float [ [[X:%.*]], [[IF]] ], [ 4.200000e+01, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi float [ [[Y:%.*]], [[IF]] ], [ 1.700000e+01, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = fmul float [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi float [ [[TMP0]], [[IF]] ], [ 7.140000e+02, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
 entry:
@@ -509,11 +499,10 @@ define float @fadd_const_incoming1(i1 %b, float %x, float %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd fast float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi float [ [[X:%.*]], [[IF]] ], [ 4.200000e+01, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi float [ [[Y:%.*]], [[IF]] ], [ 1.700000e+01, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi float [ [[TMP0]], [[IF]] ], [ 5.900000e+01, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
 entry:
@@ -534,11 +523,10 @@ define float @fsub_const_incoming1(i1 %b, float %x, float %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = fsub nnan ninf float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi float [ [[X:%.*]], [[IF]] ], [ 4.200000e+01, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi float [ [[Y:%.*]], [[IF]] ], [ 1.700000e+01, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan ninf float [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi float [ [[TMP0]], [[IF]] ], [ 2.500000e+01, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
 entry:
@@ -559,11 +547,10 @@ define float @frem_const_incoming1(i1 %b, float %x, float %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[THEN:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = frem nsz float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br label [[THEN]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[P0:%.*]] = phi float [ [[X:%.*]], [[IF]] ], [ 4.200000e+01, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[P1:%.*]] = phi float [ [[Y:%.*]], [[IF]] ], [ 1.700000e+01, [[ENTRY]] ]
-; CHECK-NEXT:    [[R:%.*]] = frem nsz float [[P0]], [[P1]]
+; CHECK-NEXT:    [[R:%.*]] = phi float [ [[TMP0]], [[IF]] ], [ 8.000000e+00, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[R]]
 ;
 entry:
@@ -658,6 +645,9 @@ then:
   ret i64 %r
 }
 
+; The mul could be hoisted before the call that may not return
+; if we are ok with speculating a potentially expensive op.
+
 define i8 @mul_const_incoming0_speculatable(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_const_incoming0_speculatable(
 ; CHECK-NEXT:  entry:
@@ -685,6 +675,8 @@ then:
   ret i8 %r
 }
 
+; The udiv should never be hoisted before the call that may not return.
+
 define i8 @udiv_const_incoming0_not_speculatable(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_const_incoming0_not_speculatable(
 ; CHECK-NEXT:  entry:
@@ -711,6 +703,8 @@ then:
   %r = udiv i8 %p0, %p1
   ret i8 %r
 }
+
+; TODO: It is ok to hoist the udiv even though it is not in the same block as the phis.
 
 define i8 @udiv_const_incoming0_different_block(i1 %b, i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_const_incoming0_different_block(
@@ -750,20 +744,10 @@ define { i64, i32 } @ParseRetVal(i1 %b, { i64, i32 } ()* %x) {
 ; CHECK-NEXT:    [[T4:%.*]] = tail call { i64, i32 } [[X:%.*]]()
 ; CHECK-NEXT:    [[T5:%.*]] = extractvalue { i64, i32 } [[T4]], 0
 ; CHECK-NEXT:    [[T6:%.*]] = extractvalue { i64, i32 } [[T4]], 1
-; CHECK-NEXT:    [[T7:%.*]] = and i64 [[T5]], -4294967296
-; CHECK-NEXT:    [[T8:%.*]] = and i64 [[T5]], 4294901760
-; CHECK-NEXT:    [[T9:%.*]] = and i64 [[T5]], 65280
-; CHECK-NEXT:    [[T10:%.*]] = and i64 [[T5]], 255
 ; CHECK-NEXT:    br label [[F]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[T12:%.*]] = phi i64 [ [[T10]], [[T]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[T13:%.*]] = phi i64 [ [[T9]], [[T]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[T14:%.*]] = phi i64 [ [[T8]], [[T]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[T15:%.*]] = phi i64 [ [[T7]], [[T]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[T16:%.*]] = phi i32 [ [[T6]], [[T]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[T17:%.*]] = or i64 [[T13]], [[T12]]
-; CHECK-NEXT:    [[T18:%.*]] = or i64 [[T17]], [[T14]]
-; CHECK-NEXT:    [[T19:%.*]] = or i64 [[T18]], [[T15]]
+; CHECK-NEXT:    [[T16:%.*]] = phi i32 [ [[T6]], [[T]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[T19:%.*]] = phi i64 [ [[T5]], [[T]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[T20:%.*]] = insertvalue { i64, i32 } poison, i64 [[T19]], 0
 ; CHECK-NEXT:    [[T21:%.*]] = insertvalue { i64, i32 } [[T20]], i32 [[T16]], 1
 ; CHECK-NEXT:    ret { i64, i32 } [[T21]]
