@@ -33,21 +33,23 @@ entry:
 ; CHECK-NEXT: %[[CMP:.*]] = icmp eq i32 %__THREW__.val, 1
 ; CHECK-NEXT: br i1 %[[CMP]], label %lpad, label %try.cont
 
-; longjmp checking part
-; CHECK:    if.then1:
-; CHECK:      call i32 @testSetjmp
-
+; CHECK:    lpad:
 lpad:                                             ; preds = %entry
   %0 = landingpad { i8*, i32 }
           catch i8* null
   %1 = extractvalue { i8*, i32 } %0, 0
   %2 = extractvalue { i8*, i32 } %0, 1
+; CHECK-NOT:  call {{.*}} void @__invoke_void(void ()* @__cxa_end_catch)
   %3 = call i8* @__cxa_begin_catch(i8* %1) #2
   call void @__cxa_end_catch()
   br label %try.cont
 
 try.cont:                                         ; preds = %lpad, %entry
   ret void
+
+; longjmp checking part
+; CHECK:    if.then1:
+; CHECK:      call i32 @testSetjmp
 }
 
 ; @foo can either throw an exception or longjmp. Because this function doesn't
