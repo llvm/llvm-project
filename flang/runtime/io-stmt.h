@@ -163,9 +163,14 @@ public:
     return std::nullopt;
   }
 
-  std::optional<char32_t> NextInField(std::optional<int> &remaining) {
+  std::optional<char32_t> NextInField(
+      std::optional<int> &remaining, char32_t decimal = '.') {
     if (!remaining) { // list-directed or NAMELIST: check for separators
       if (auto next{GetCurrentChar()}) {
+        if (*next == decimal) { // can be ','
+          HandleRelativePosition(1);
+          return next;
+        }
         switch (*next) {
         case ' ':
         case '\t':
