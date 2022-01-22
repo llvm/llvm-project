@@ -24,7 +24,7 @@ constexpr bool test() {
   static_assert( std::is_default_constructible_v<std::ranges::drop_view<ForwardView>>);
   static_assert(!std::is_default_constructible_v<std::ranges::drop_view<NoDefaultCtorForwardView>>);
 
-  static_assert( std::is_nothrow_default_constructible_v<std::ranges::drop_view<ForwardView>>);
+  LIBCPP_STATIC_ASSERT( std::is_nothrow_default_constructible_v<std::ranges::drop_view<ForwardView>>);
   static_assert(!std::is_nothrow_default_constructible_v<ThrowingDefaultCtorForwardView>);
   static_assert(!std::is_nothrow_default_constructible_v<std::ranges::drop_view<ThrowingDefaultCtorForwardView>>);
 

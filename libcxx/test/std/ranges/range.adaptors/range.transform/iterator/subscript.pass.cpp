@@ -24,10 +24,10 @@ constexpr bool test() {
   assert(iter1[0] == 2);
   assert(iter1[4] == 6);
 
-  static_assert(!noexcept(
-    std::declval<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>>()[0]));
-  static_assert( noexcept(
-    std::declval<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOneNoexcept>>>()[0]));
+  ASSERT_NOT_NOEXCEPT(
+    std::declval<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOneMutable>>>()[0]);
+  LIBCPP_ASSERT_NOEXCEPT(
+    std::declval<std::ranges::iterator_t<std::ranges::transform_view<MoveOnlyView, PlusOneNoexcept>>>()[0]);
 
   ASSERT_SAME_TYPE(
     int,
