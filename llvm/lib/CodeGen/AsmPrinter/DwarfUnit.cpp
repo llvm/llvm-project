@@ -597,10 +597,8 @@ DIE *DwarfUnit::createTypeDIE(const DIScope *Context, DIE &ContextDIE,
       // Skip updating the accelerator tables since this is not the full type.
       if (MDString *TypeId = CTy->getRawIdentifier())
         DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy);
-      else {
-        auto X = DD->enterNonTypeUnitContext();
+      else
         finishNonUnitTypeDIE(TyDIE, CTy);
-      }
       return &TyDIE;
     }
     constructTypeDIE(TyDIE, CTy);
@@ -1842,5 +1840,23 @@ void DwarfTypeUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) {
   StringRef Name = CTy->getName();
   if (!Name.empty())
     addString(D, dwarf::DW_AT_name, Name);
+  // If the type is in an anonymous namespace, we can't reference it from a TU
+  // (since the type would be CU local and the TU doesn't specify which TU has
+  // the appropriate type definition) - so flag this emission as such and skip
+  // the rest of the emission now since we're going to throw out all this work
+  // and put the outer/referencing type in the CU instead.
+  // FIXME: Probably good to generalize this to a DICompositeType flag populated
+  // by the frontend, then we could use that to have types that can have
+  // decl+def merged by LTO but where the definition still doesn't go in a type
+  // unit because the type has only one definition.
+  for (DIScope *S = CTy->getScope(); S; S = S->getScope()) {
+    if (auto *NS = dyn_cast<DINamespace>(S)) {
+      if (NS->getName().empty()) {
+        DD->seenLocalType();
+        break;
+      }
+    }
+  }
+  auto X = DD->enterNonTypeUnitContext();
   getCU().createTypeDIE(CTy);
 }
