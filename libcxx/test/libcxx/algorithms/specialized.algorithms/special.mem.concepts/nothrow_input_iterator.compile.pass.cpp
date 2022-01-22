@@ -26,6 +26,6 @@ struct InputProxyIterator {
 };
 
 static_assert(std::ranges::__nothrow_input_iterator<cpp20_input_iterator<int*>>);
-static_assert(!std::ranges::__nothrow_input_iterator<output_iterator<int*>>);
+static_assert(!std::ranges::__nothrow_input_iterator<cpp17_output_iterator<int*>>);
 static_assert(std::input_iterator<InputProxyIterator>);
 static_assert(!std::ranges::__nothrow_input_iterator<InputProxyIterator>);

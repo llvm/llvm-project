@@ -572,7 +572,7 @@ static_assert(std::same_as<InputTestIteratorTraits::reference, int&>);
 static_assert(std::same_as<InputTestIteratorTraits::pointer, int*>);
 static_assert(!has_iterator_concept_v<InputTestIteratorTraits>);
 
-using OutputTestIteratorTraits = std::iterator_traits<output_iterator<int*>>;
+using OutputTestIteratorTraits = std::iterator_traits<cpp17_output_iterator<int*>>;
 static_assert(std::same_as<OutputTestIteratorTraits::iterator_category, std::output_iterator_tag>);
 static_assert(std::same_as<OutputTestIteratorTraits::value_type, void>);
 static_assert(std::same_as<OutputTestIteratorTraits::difference_type, std::ptrdiff_t>);

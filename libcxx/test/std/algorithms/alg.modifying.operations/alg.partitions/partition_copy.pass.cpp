@@ -49,10 +49,10 @@ int main(int, char**)
         const int ia[] = {1, 2, 3, 4, 6, 8, 5, 7};
         int r1[10] = {0};
         int r2[10] = {0};
-        typedef std::pair<output_iterator<int*>,  int*> P;
+        typedef std::pair<cpp17_output_iterator<int*>,  int*> P;
         P p = std::partition_copy(cpp17_input_iterator<const int*>(std::begin(ia)),
                                   cpp17_input_iterator<const int*>(std::end(ia)),
-                                  output_iterator<int*>(r1), r2, is_odd());
+                                  cpp17_output_iterator<int*>(r1), r2, is_odd());
         assert(p.first.base() == r1 + 4);
         assert(r1[0] == 1);
         assert(r1[1] == 3);

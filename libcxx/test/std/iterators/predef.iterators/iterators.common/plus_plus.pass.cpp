@@ -150,13 +150,13 @@ void test() {
     assert(commonIter1 == commonSent1);
   }
 
-  // Increment a common_iterator<output_iterator>: iter_value_t is not always valid for
-  // output iterators (it isn't for our test output_iterator). This is worth testing
+  // Increment a common_iterator<cpp17_output_iterator>: iter_value_t is not always valid for
+  // output iterators (it isn't for our test cpp17_output_iterator). This is worth testing
   // because it gets tricky when we define operator++(int).
   {
     int buffer[] = {0, 1, 2, 3, 4};
-    using Common = std::common_iterator<output_iterator<int*>, sentinel_type<int*>>;
-    auto iter = Common(output_iterator<int*>(buffer));
+    using Common = std::common_iterator<cpp17_output_iterator<int*>, sentinel_type<int*>>;
+    auto iter = Common(cpp17_output_iterator<int*>(buffer));
     auto sent = Common(sentinel_type<int*>{buffer + 5});
 
     *iter++ = 90;

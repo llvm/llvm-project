@@ -147,13 +147,13 @@ void test6()
 
 int main(int, char**)
 {
-    test_char<output_iterator<char*> >();
+    test_char<cpp17_output_iterator<char*> >();
     test_char<forward_iterator<char*> >();
     test_char<bidirectional_iterator<char*> >();
     test_char<random_access_iterator<char*> >();
     test_char<char*>();
 
-    test_int<output_iterator<int*> >();
+    test_int<cpp17_output_iterator<int*> >();
     test_int<forward_iterator<int*> >();
     test_int<bidirectional_iterator<int*> >();
     test_int<random_access_iterator<int*> >();

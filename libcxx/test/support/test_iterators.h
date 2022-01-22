@@ -17,12 +17,14 @@
 
 #include "test_macros.h"
 
+// This iterator meets C++20's Cpp17OutputIterator requirements, as described
+// in Table 90 ([output.iterators]).
 template <class It>
-class output_iterator
+class cpp17_output_iterator
 {
     It it_;
 
-    template <class U> friend class output_iterator;
+    template <class U> friend class cpp17_output_iterator;
 public:
     typedef          std::output_iterator_tag                  iterator_category;
     typedef void                                               value_type;
@@ -30,25 +32,28 @@ public:
     typedef It                                                 pointer;
     typedef typename std::iterator_traits<It>::reference       reference;
 
-    TEST_CONSTEXPR output_iterator() : it_() {}
-    TEST_CONSTEXPR explicit output_iterator(It it) : it_(std::move(it)) {}
+    TEST_CONSTEXPR cpp17_output_iterator() : it_() {}
+    TEST_CONSTEXPR explicit cpp17_output_iterator(It it) : it_(std::move(it)) {}
     template <class U>
-        TEST_CONSTEXPR output_iterator(const output_iterator<U>& u) : it_(u.it_) {}
+        TEST_CONSTEXPR cpp17_output_iterator(const cpp17_output_iterator<U>& u) :it_(u.it_) {}
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
 
-    TEST_CONSTEXPR_CXX14 output_iterator& operator++() {++it_; return *this;}
-    TEST_CONSTEXPR_CXX14 output_iterator operator++(int) {return output_iterator(it_++);}
+    TEST_CONSTEXPR_CXX14 cpp17_output_iterator& operator++() {++it_; return *this;}
+    TEST_CONSTEXPR_CXX14 cpp17_output_iterator operator++(int) {return cpp17_output_iterator(it_++);}
 
     TEST_CONSTEXPR It base() const {return it_;} // TODO remove me
-    friend TEST_CONSTEXPR It base(const output_iterator& i) { return i.it_; }
+    friend TEST_CONSTEXPR It base(const cpp17_output_iterator& i) { return i.it_; }
 
     template <class T>
     void operator,(T const &) = delete;
 };
+#ifndef _LIBCPP_HAS_NO_CONCEPTS
+   static_assert(std::output_iterator<cpp17_output_iterator<int*>, int>);
+#endif
 
-// This is the Cpp17InputIterator requirement as described in Table 87 ([input.iterators]),
-// formerly known as InputIterator prior to C++20.
+// This iterator meets C++20's Cpp17InputIterator requirements, as described
+// in Table 89 ([input.iterators]).
 template <class It, class ItTraits = It>
 class cpp17_input_iterator
 {
@@ -82,6 +87,9 @@ public:
     template <class T>
     void operator,(T const &) = delete;
 };
+#ifndef _LIBCPP_HAS_NO_CONCEPTS
+   static_assert(std::input_iterator<cpp17_input_iterator<int*>>);
+#endif
 
 template <class It>
 class forward_iterator

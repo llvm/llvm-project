@@ -40,35 +40,35 @@ test_copy_n()
 TEST_CONSTEXPR_CXX20 bool
 test()
 {
-    test_copy_n<cpp17_input_iterator<const int*>, output_iterator<int*> >();
+    test_copy_n<cpp17_input_iterator<const int*>, cpp17_output_iterator<int*> >();
     test_copy_n<cpp17_input_iterator<const int*>, cpp17_input_iterator<int*> >();
     test_copy_n<cpp17_input_iterator<const int*>, forward_iterator<int*> >();
     test_copy_n<cpp17_input_iterator<const int*>, bidirectional_iterator<int*> >();
     test_copy_n<cpp17_input_iterator<const int*>, random_access_iterator<int*> >();
     test_copy_n<cpp17_input_iterator<const int*>, int*>();
 
-    test_copy_n<forward_iterator<const int*>, output_iterator<int*> >();
+    test_copy_n<forward_iterator<const int*>, cpp17_output_iterator<int*> >();
     test_copy_n<forward_iterator<const int*>, cpp17_input_iterator<int*> >();
     test_copy_n<forward_iterator<const int*>, forward_iterator<int*> >();
     test_copy_n<forward_iterator<const int*>, bidirectional_iterator<int*> >();
     test_copy_n<forward_iterator<const int*>, random_access_iterator<int*> >();
     test_copy_n<forward_iterator<const int*>, int*>();
 
-    test_copy_n<bidirectional_iterator<const int*>, output_iterator<int*> >();
+    test_copy_n<bidirectional_iterator<const int*>, cpp17_output_iterator<int*> >();
     test_copy_n<bidirectional_iterator<const int*>, cpp17_input_iterator<int*> >();
     test_copy_n<bidirectional_iterator<const int*>, forward_iterator<int*> >();
     test_copy_n<bidirectional_iterator<const int*>, bidirectional_iterator<int*> >();
     test_copy_n<bidirectional_iterator<const int*>, random_access_iterator<int*> >();
     test_copy_n<bidirectional_iterator<const int*>, int*>();
 
-    test_copy_n<random_access_iterator<const int*>, output_iterator<int*> >();
+    test_copy_n<random_access_iterator<const int*>, cpp17_output_iterator<int*> >();
     test_copy_n<random_access_iterator<const int*>, cpp17_input_iterator<int*> >();
     test_copy_n<random_access_iterator<const int*>, forward_iterator<int*> >();
     test_copy_n<random_access_iterator<const int*>, bidirectional_iterator<int*> >();
     test_copy_n<random_access_iterator<const int*>, random_access_iterator<int*> >();
     test_copy_n<random_access_iterator<const int*>, int*>();
 
-    test_copy_n<const int*, output_iterator<int*> >();
+    test_copy_n<const int*, cpp17_output_iterator<int*> >();
     test_copy_n<const int*, cpp17_input_iterator<int*> >();
     test_copy_n<const int*, forward_iterator<int*> >();
     test_copy_n<const int*, bidirectional_iterator<int*> >();

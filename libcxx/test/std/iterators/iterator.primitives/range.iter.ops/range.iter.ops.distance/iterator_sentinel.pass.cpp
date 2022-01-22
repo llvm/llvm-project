@@ -166,7 +166,7 @@ constexpr bool test() {
   }
 
   test_unsized<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>();
-  test_unsized<output_iterator<int*>, sentinel_wrapper<output_iterator<int*>>>();
+  test_unsized<cpp17_output_iterator<int*>, sentinel_wrapper<cpp17_output_iterator<int*>>>();
   test_unsized<forward_iterator<int*>, sentinel_wrapper<forward_iterator<int*>>>();
   test_unsized<bidirectional_iterator<int*>, sentinel_wrapper<bidirectional_iterator<int*>>>();
   test_unsized<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>();
@@ -178,7 +178,7 @@ constexpr bool test() {
 
   test_sized<cpp17_input_iterator<int*>, sized_sentinel<cpp17_input_iterator<int*>>>();
   test_sized<cpp20_input_iterator<int*>, sized_sentinel<cpp20_input_iterator<int*>>>();
-  test_sized<output_iterator<int*>, sized_sentinel<output_iterator<int*>>>();
+  test_sized<cpp17_output_iterator<int*>, sized_sentinel<cpp17_output_iterator<int*>>>();
   test_sized<forward_iterator<int*>, sized_sentinel<forward_iterator<int*>>>();
   test_sized<bidirectional_iterator<int*>, sized_sentinel<bidirectional_iterator<int*>>>();
   test_sized<random_access_iterator<int*>, sized_sentinel<random_access_iterator<int*>>>();

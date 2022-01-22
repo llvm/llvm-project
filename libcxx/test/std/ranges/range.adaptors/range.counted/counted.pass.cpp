@@ -171,12 +171,12 @@ constexpr bool test() {
   }
 
   {
-    auto it = output_iterator<int*>(buffer);
+    auto it = cpp17_output_iterator<int*>(buffer);
 
     auto c1 = std::views::counted(it, 3);
     auto c2 = std::views::counted(std::as_const(it), 3);
     auto c3 = std::views::counted(std::move(it), 3);
-    auto c4 = std::views::counted(output_iterator<int*>(buffer), 3);
+    auto c4 = std::views::counted(cpp17_output_iterator<int*>(buffer), 3);
 
     using Expected = std::ranges::subrange<std::counted_iterator<decltype(it)>, std::default_sentinel_t>;
 

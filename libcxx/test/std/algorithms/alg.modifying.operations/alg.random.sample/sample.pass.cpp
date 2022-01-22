@@ -138,23 +138,23 @@ void test_small_population() {
 
 int main(int, char**) {
   test<cpp17_input_iterator, int, random_access_iterator, int>();
-  test<forward_iterator, int, output_iterator, int>();
+  test<forward_iterator, int, cpp17_output_iterator, int>();
   test<forward_iterator, int, random_access_iterator, int>();
 
   test<cpp17_input_iterator, int, random_access_iterator, double>();
-  test<forward_iterator, int, output_iterator, double>();
+  test<forward_iterator, int, cpp17_output_iterator, double>();
   test<forward_iterator, int, random_access_iterator, double>();
 
   test_empty_population<cpp17_input_iterator, int, random_access_iterator, int>();
-  test_empty_population<forward_iterator, int, output_iterator, int>();
+  test_empty_population<forward_iterator, int, cpp17_output_iterator, int>();
   test_empty_population<forward_iterator, int, random_access_iterator, int>();
 
   test_empty_sample<cpp17_input_iterator, int, random_access_iterator, int>();
-  test_empty_sample<forward_iterator, int, output_iterator, int>();
+  test_empty_sample<forward_iterator, int, cpp17_output_iterator, int>();
   test_empty_sample<forward_iterator, int, random_access_iterator, int>();
 
   test_small_population<cpp17_input_iterator, int, random_access_iterator, int>();
-  test_small_population<forward_iterator, int, output_iterator, int>();
+  test_small_population<forward_iterator, int, cpp17_output_iterator, int>();
   test_small_population<forward_iterator, int, random_access_iterator, int>();
 
   return 0;
