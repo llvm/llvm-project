@@ -1076,6 +1076,12 @@ public:
   /// Returns true if the induction is canonical, i.e. starting at 0 and
   /// incremented by UF * VF (= the original IV is incremented by 1).
   bool isCanonical() const;
+
+  /// Returns the scalar type of the induction.
+  const Type *getScalarType() const {
+    const TruncInst *TruncI = getTruncInst();
+    return TruncI ? TruncI->getType() : IV->getType();
+  }
 };
 
 /// A pure virtual base class for all recipes modeling header phis, including
@@ -1675,6 +1681,11 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns the scalar type of the induction.
+  const Type *getScalarType() const {
+    return getOperand(0)->getLiveInIRValue()->getType();
+  }
 };
 
 /// A Recipe for widening the canonical induction variable of the vector loop.
@@ -1691,6 +1702,16 @@ public:
     return D->getVPDefID() == VPRecipeBase::VPWidenCanonicalIVSC;
   }
 
+  /// Extra classof implementations to allow directly casting from VPUser ->
+  /// VPWidenCanonicalIVRecipe.
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && R->getVPDefID() == VPRecipeBase::VPWidenCanonicalIVSC;
+  }
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenCanonicalIVSC;
+  }
+
   /// Generate a canonical vector induction variable of the vector loop, with
   /// start = {<Part*VF, Part*VF+1, ..., Part*VF+VF-1> for 0 <= Part < UF}, and
   /// step = <VF*UF, VF*UF, ..., VF*UF>.
@@ -1701,6 +1722,12 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns the scalar type of the induction.
+  const Type *getScalarType() const {
+    return cast<VPCanonicalIVPHIRecipe>(getOperand(0)->getDef())
+        ->getScalarType();
+  }
 };
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
