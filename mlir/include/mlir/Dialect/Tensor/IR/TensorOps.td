@@ -782,13 +782,14 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
 // PadOp
 //===----------------------------------------------------------------------===//
 
-def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect]> {
+def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
+    SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
   let summary = "tensor pad operation";
   let description = [{
     `tensor.pad` is an operation that pads the `source` tensor
     with given `low` and `high` padding config.
 
-    The PadTensor operation supports the following arguments:
+    The PadOp operation supports the following arguments:
 
     * source: the "base" tensor on which to pad.
     * low: A list contains the padding along the start of each
