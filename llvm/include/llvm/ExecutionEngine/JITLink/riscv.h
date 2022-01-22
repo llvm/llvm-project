@@ -79,12 +79,6 @@ enum EdgeKind_riscv : Edge::Kind {
   ///   Fixup <- (Target - Fixup + Addend)
   R_RISCV_CALL,
 
-  /// 32 bits PC relative relocation
-  ///
-  /// Fixup expression:
-  ///   Fixup <- (Target - Fixup + Addend)
-  R_RISCV_32_PCREL,
-
   /// PC relative GOT offset
   ///
   /// Fixup expression:
@@ -143,7 +137,7 @@ enum EdgeKind_riscv : Edge::Kind {
   ///
   /// Fixup expression
   ///   Fixup <- (Target - *{1}Fixup - Addend)
-  R_RISCV_SUB8,
+  R_RISCV_SUB8
 };
 
 /// Returns a string name for the given riscv edge. For debugging purposes
