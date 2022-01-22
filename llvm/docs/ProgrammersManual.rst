@@ -585,7 +585,7 @@ semantics.  For example:
       // On error, return the Error value.
       return Err;
     // On success, use MB.
-    return processContent(MB->getBuffer());
+    return processBuffer(MB->getBuffer());
   }
 
 This third form works with any type that can be assigned to from ``T&&``. This
@@ -1263,7 +1263,7 @@ Define your statistic like this:
 
 .. code-block:: c++
 
-  #define DEBUG_TYPE "mypassname"   // This goes before any #includes.
+  #define DEBUG_TYPE "mypassname"   // This goes after any #includes.
   STATISTIC(NumXForms, "The # of times I did stuff");
 
 The ``STATISTIC`` macro defines a static variable, whose name is specified by

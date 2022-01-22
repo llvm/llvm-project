@@ -1171,21 +1171,25 @@ TYPED_TEST(BitVectorTest, PushBack) {
   EXPECT_EQ(-1, Vec.find_first());
   EXPECT_EQ(10U, Vec.size());
   EXPECT_EQ(0U, Vec.count());
+  EXPECT_EQ(false, Vec.back());
 
   Vec.push_back(true);
   EXPECT_EQ(10, Vec.find_first());
   EXPECT_EQ(11U, Vec.size());
   EXPECT_EQ(1U, Vec.count());
+  EXPECT_EQ(true, Vec.back());
 
   Vec.push_back(false);
   EXPECT_EQ(10, Vec.find_first());
   EXPECT_EQ(12U, Vec.size());
   EXPECT_EQ(1U, Vec.count());
+  EXPECT_EQ(false, Vec.back());
 
   Vec.push_back(true);
   EXPECT_EQ(10, Vec.find_first());
   EXPECT_EQ(13U, Vec.size());
   EXPECT_EQ(2U, Vec.count());
+  EXPECT_EQ(true, Vec.back());
 
   // Add a lot of values to cause reallocation.
   for (int i = 0; i != 100; ++i) {
@@ -1195,6 +1199,28 @@ TYPED_TEST(BitVectorTest, PushBack) {
   EXPECT_EQ(10, Vec.find_first());
   EXPECT_EQ(213U, Vec.size());
   EXPECT_EQ(102U, Vec.count());
+}
+
+TYPED_TEST(BitVectorTest, PopBack) {
+  TypeParam Vec(10, true);
+  EXPECT_EQ(10U, Vec.size());
+  EXPECT_EQ(10U, Vec.count());
+  EXPECT_EQ(true, Vec.back());
+
+  Vec.pop_back();
+  EXPECT_EQ(9U, Vec.size());
+  EXPECT_EQ(9U, Vec.count());
+  EXPECT_EQ(true, Vec.back());
+
+  Vec.push_back(false);
+  EXPECT_EQ(10U, Vec.size());
+  EXPECT_EQ(9U, Vec.count());
+  EXPECT_EQ(false, Vec.back());
+
+  Vec.pop_back();
+  EXPECT_EQ(9U, Vec.size());
+  EXPECT_EQ(9U, Vec.count());
+  EXPECT_EQ(true, Vec.back());
 }
 
 TYPED_TEST(BitVectorTest, DenseSet) {

@@ -190,7 +190,7 @@ bool MSP430FrameLowering::spillCalleeSavedRegisters(
   MFI->setCalleeSavedFrameSize(CSI.size() * 2);
 
   for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
-    unsigned Reg = I.getReg();
+    Register Reg = I.getReg();
     // Add the callee-saved register as live-in. It's killed at the spill.
     MBB.addLiveIn(Reg);
     BuildMI(MBB, MI, DL, TII.get(MSP430::PUSH16r))

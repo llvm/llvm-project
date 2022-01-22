@@ -16,6 +16,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/Tool.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -95,9 +96,9 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     if (II.isFilename())
       CmdArgs.push_back(II.getFilename());
 
+  bool HasLibm = false;
   if (Args.hasArg(options::OPT_l)) {
     auto Lm = Args.getAllArgValues(options::OPT_l);
-    bool HasLibm = false;
     for (auto &Lib : Lm) {
       if (Lib == "m") {
         HasLibm = true;
@@ -143,6 +144,26 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs,
       InputInfo(&JA, Args.MakeArgString(OutputFileName))));
+
+  // If we linked in libm definitions late we run another round of optimizations
+  // to inline the definitions and fold what is foldable.
+  if (HasLibm) {
+    ArgStringList OptCmdArgs;
+    const char *OptOutputFileName =
+        getOutputFileName(C, OutputFilePrefix, "-linked-opt", "bc");
+    addLLCOptArg(Args, OptCmdArgs);
+    OptCmdArgs.push_back(OutputFileName);
+    OptCmdArgs.push_back("-o");
+    OptCmdArgs.push_back(OptOutputFileName);
+    const char *OptExec =
+        Args.MakeArgString(getToolChain().GetProgramPath("opt"));
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::AtFileCurCP(), OptExec, OptCmdArgs,
+        InputInfo(&JA, Args.MakeArgString(OutputFileName)),
+        InputInfo(&JA, Args.MakeArgString(OptOutputFileName))));
+    OutputFileName = OptOutputFileName;
+  }
+
   return OutputFileName;
 }
 
@@ -285,10 +306,22 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   const OptTable &Opts = getDriver().getOpts();
 
-  if (DeviceOffloadKind != Action::OFK_OpenMP) {
-    for (Arg *A : Args) {
-      DAL->append(A);
+  if (DeviceOffloadKind == Action::OFK_OpenMP) {
+    for (Arg *A : Args)
+      if (!llvm::is_contained(*DAL, A))
+        DAL->append(A);
+
+    std::string Arch = DAL->getLastArgValue(options::OPT_march_EQ).str();
+    if (Arch.empty()) {
+      checkSystemForAMDGPU(Args, *this, Arch);
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ), Arch);
     }
+
+    return DAL;
+  }
+
+  for (Arg *A : Args) {
+    DAL->append(A);
   }
 
   if (!BoundArch.empty()) {

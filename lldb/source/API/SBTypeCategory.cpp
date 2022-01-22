@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeCategory.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeFilter.h"
@@ -26,9 +26,7 @@ using namespace lldb_private;
 
 typedef std::pair<lldb::TypeCategoryImplSP, user_id_t> ImplType;
 
-SBTypeCategory::SBTypeCategory() {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeCategory);
-}
+SBTypeCategory::SBTypeCategory() { LLDB_INSTRUMENT_VA(this); }
 
 SBTypeCategory::SBTypeCategory(const char *name) {
   DataVisualization::Categories::GetCategory(ConstString(name), m_opaque_sp);
@@ -36,23 +34,23 @@ SBTypeCategory::SBTypeCategory(const char *name) {
 
 SBTypeCategory::SBTypeCategory(const lldb::SBTypeCategory &rhs)
     : m_opaque_sp(rhs.m_opaque_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBTypeCategory, (const lldb::SBTypeCategory &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBTypeCategory::~SBTypeCategory() = default;
 
 bool SBTypeCategory::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeCategory, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBTypeCategory::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeCategory, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return (m_opaque_sp.get() != nullptr);
 }
 
 bool SBTypeCategory::GetEnabled() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeCategory, GetEnabled);
+  LLDB_INSTRUMENT_VA(this);
 
   if (!IsValid())
     return false;
@@ -60,7 +58,7 @@ bool SBTypeCategory::GetEnabled() {
 }
 
 void SBTypeCategory::SetEnabled(bool enabled) {
-  LLDB_RECORD_METHOD(void, SBTypeCategory, SetEnabled, (bool), enabled);
+  LLDB_INSTRUMENT_VA(this, enabled);
 
   if (!IsValid())
     return;
@@ -71,7 +69,7 @@ void SBTypeCategory::SetEnabled(bool enabled) {
 }
 
 const char *SBTypeCategory::GetName() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeCategory, GetName);
+  LLDB_INSTRUMENT_VA(this);
 
   if (!IsValid())
     return nullptr;
@@ -79,8 +77,7 @@ const char *SBTypeCategory::GetName() {
 }
 
 lldb::LanguageType SBTypeCategory::GetLanguageAtIndex(uint32_t idx) {
-  LLDB_RECORD_METHOD(lldb::LanguageType, SBTypeCategory, GetLanguageAtIndex,
-                     (uint32_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   if (IsValid())
     return m_opaque_sp->GetLanguageAtIndex(idx);
@@ -88,7 +85,7 @@ lldb::LanguageType SBTypeCategory::GetLanguageAtIndex(uint32_t idx) {
 }
 
 uint32_t SBTypeCategory::GetNumLanguages() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumLanguages);
+  LLDB_INSTRUMENT_VA(this);
 
   if (IsValid())
     return m_opaque_sp->GetNumLanguages();
@@ -96,15 +93,14 @@ uint32_t SBTypeCategory::GetNumLanguages() {
 }
 
 void SBTypeCategory::AddLanguage(lldb::LanguageType language) {
-  LLDB_RECORD_METHOD(void, SBTypeCategory, AddLanguage, (lldb::LanguageType),
-                     language);
+  LLDB_INSTRUMENT_VA(this, language);
 
   if (IsValid())
     m_opaque_sp->AddLanguage(language);
 }
 
 uint32_t SBTypeCategory::GetNumFormats() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumFormats);
+  LLDB_INSTRUMENT_VA(this);
 
   if (!IsValid())
     return 0;
@@ -114,7 +110,7 @@ uint32_t SBTypeCategory::GetNumFormats() {
 }
 
 uint32_t SBTypeCategory::GetNumSummaries() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumSummaries);
+  LLDB_INSTRUMENT_VA(this);
 
   if (!IsValid())
     return 0;
@@ -123,7 +119,7 @@ uint32_t SBTypeCategory::GetNumSummaries() {
 }
 
 uint32_t SBTypeCategory::GetNumFilters() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumFilters);
+  LLDB_INSTRUMENT_VA(this);
 
   if (!IsValid())
     return 0;
@@ -132,7 +128,7 @@ uint32_t SBTypeCategory::GetNumFilters() {
 }
 
 uint32_t SBTypeCategory::GetNumSynthetics() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeCategory, GetNumSynthetics);
+  LLDB_INSTRUMENT_VA(this);
 
   if (!IsValid())
     return 0;
@@ -142,8 +138,7 @@ uint32_t SBTypeCategory::GetNumSynthetics() {
 
 lldb::SBTypeNameSpecifier
 SBTypeCategory::GetTypeNameSpecifierForFilterAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
-                     GetTypeNameSpecifierForFilterAtIndex, (uint32_t), index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (!IsValid())
     return SBTypeNameSpecifier();
@@ -153,8 +148,7 @@ SBTypeCategory::GetTypeNameSpecifierForFilterAtIndex(uint32_t index) {
 
 lldb::SBTypeNameSpecifier
 SBTypeCategory::GetTypeNameSpecifierForFormatAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
-                     GetTypeNameSpecifierForFormatAtIndex, (uint32_t), index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (!IsValid())
     return SBTypeNameSpecifier();
@@ -164,8 +158,7 @@ SBTypeCategory::GetTypeNameSpecifierForFormatAtIndex(uint32_t index) {
 
 lldb::SBTypeNameSpecifier
 SBTypeCategory::GetTypeNameSpecifierForSummaryAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
-                     GetTypeNameSpecifierForSummaryAtIndex, (uint32_t), index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (!IsValid())
     return SBTypeNameSpecifier();
@@ -175,9 +168,7 @@ SBTypeCategory::GetTypeNameSpecifierForSummaryAtIndex(uint32_t index) {
 
 lldb::SBTypeNameSpecifier
 SBTypeCategory::GetTypeNameSpecifierForSyntheticAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBTypeNameSpecifier, SBTypeCategory,
-                     GetTypeNameSpecifierForSyntheticAtIndex, (uint32_t),
-                     index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (!IsValid())
     return SBTypeNameSpecifier();
@@ -186,8 +177,7 @@ SBTypeCategory::GetTypeNameSpecifierForSyntheticAtIndex(uint32_t index) {
 }
 
 SBTypeFilter SBTypeCategory::GetFilterForType(SBTypeNameSpecifier spec) {
-  LLDB_RECORD_METHOD(lldb::SBTypeFilter, SBTypeCategory, GetFilterForType,
-                     (lldb::SBTypeNameSpecifier), spec);
+  LLDB_INSTRUMENT_VA(this, spec);
 
   if (!IsValid())
     return SBTypeFilter();
@@ -213,8 +203,7 @@ SBTypeFilter SBTypeCategory::GetFilterForType(SBTypeNameSpecifier spec) {
   return lldb::SBTypeFilter(filter_sp);
 }
 SBTypeFormat SBTypeCategory::GetFormatForType(SBTypeNameSpecifier spec) {
-  LLDB_RECORD_METHOD(lldb::SBTypeFormat, SBTypeCategory, GetFormatForType,
-                     (lldb::SBTypeNameSpecifier), spec);
+  LLDB_INSTRUMENT_VA(this, spec);
 
   if (!IsValid())
     return SBTypeFormat();
@@ -238,8 +227,7 @@ SBTypeFormat SBTypeCategory::GetFormatForType(SBTypeNameSpecifier spec) {
 }
 
 SBTypeSummary SBTypeCategory::GetSummaryForType(SBTypeNameSpecifier spec) {
-  LLDB_RECORD_METHOD(lldb::SBTypeSummary, SBTypeCategory, GetSummaryForType,
-                     (lldb::SBTypeNameSpecifier), spec);
+  LLDB_INSTRUMENT_VA(this, spec);
 
   if (!IsValid())
     return SBTypeSummary();
@@ -263,8 +251,7 @@ SBTypeSummary SBTypeCategory::GetSummaryForType(SBTypeNameSpecifier spec) {
 }
 
 SBTypeSynthetic SBTypeCategory::GetSyntheticForType(SBTypeNameSpecifier spec) {
-  LLDB_RECORD_METHOD(lldb::SBTypeSynthetic, SBTypeCategory, GetSyntheticForType,
-                     (lldb::SBTypeNameSpecifier), spec);
+  LLDB_INSTRUMENT_VA(this, spec);
 
   if (!IsValid())
     return SBTypeSynthetic();
@@ -291,8 +278,7 @@ SBTypeSynthetic SBTypeCategory::GetSyntheticForType(SBTypeNameSpecifier spec) {
 }
 
 SBTypeFilter SBTypeCategory::GetFilterAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBTypeFilter, SBTypeCategory, GetFilterAtIndex,
-                     (uint32_t), index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (!IsValid())
     return SBTypeFilter();
@@ -309,8 +295,7 @@ SBTypeFilter SBTypeCategory::GetFilterAtIndex(uint32_t index) {
 }
 
 SBTypeFormat SBTypeCategory::GetFormatAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBTypeFormat, SBTypeCategory, GetFormatAtIndex,
-                     (uint32_t), index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (!IsValid())
     return SBTypeFormat();
@@ -318,8 +303,7 @@ SBTypeFormat SBTypeCategory::GetFormatAtIndex(uint32_t index) {
 }
 
 SBTypeSummary SBTypeCategory::GetSummaryAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBTypeSummary, SBTypeCategory, GetSummaryAtIndex,
-                     (uint32_t), index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (!IsValid())
     return SBTypeSummary();
@@ -327,8 +311,7 @@ SBTypeSummary SBTypeCategory::GetSummaryAtIndex(uint32_t index) {
 }
 
 SBTypeSynthetic SBTypeCategory::GetSyntheticAtIndex(uint32_t index) {
-  LLDB_RECORD_METHOD(lldb::SBTypeSynthetic, SBTypeCategory, GetSyntheticAtIndex,
-                     (uint32_t), index);
+  LLDB_INSTRUMENT_VA(this, index);
 
   if (!IsValid())
     return SBTypeSynthetic();
@@ -346,9 +329,7 @@ SBTypeSynthetic SBTypeCategory::GetSyntheticAtIndex(uint32_t index) {
 
 bool SBTypeCategory::AddTypeFormat(SBTypeNameSpecifier type_name,
                                    SBTypeFormat format) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, AddTypeFormat,
-                     (lldb::SBTypeNameSpecifier, lldb::SBTypeFormat), type_name,
-                     format);
+  LLDB_INSTRUMENT_VA(this, type_name, format);
 
   if (!IsValid())
     return false;
@@ -370,8 +351,7 @@ bool SBTypeCategory::AddTypeFormat(SBTypeNameSpecifier type_name,
 }
 
 bool SBTypeCategory::DeleteTypeFormat(SBTypeNameSpecifier type_name) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, DeleteTypeFormat,
-                     (lldb::SBTypeNameSpecifier), type_name);
+  LLDB_INSTRUMENT_VA(this, type_name);
 
   if (!IsValid())
     return false;
@@ -389,9 +369,7 @@ bool SBTypeCategory::DeleteTypeFormat(SBTypeNameSpecifier type_name) {
 
 bool SBTypeCategory::AddTypeSummary(SBTypeNameSpecifier type_name,
                                     SBTypeSummary summary) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, AddTypeSummary,
-                     (lldb::SBTypeNameSpecifier, lldb::SBTypeSummary),
-                     type_name, summary);
+  LLDB_INSTRUMENT_VA(this, type_name, summary);
 
   if (!IsValid())
     return false;
@@ -447,8 +425,7 @@ bool SBTypeCategory::AddTypeSummary(SBTypeNameSpecifier type_name,
 }
 
 bool SBTypeCategory::DeleteTypeSummary(SBTypeNameSpecifier type_name) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, DeleteTypeSummary,
-                     (lldb::SBTypeNameSpecifier), type_name);
+  LLDB_INSTRUMENT_VA(this, type_name);
 
   if (!IsValid())
     return false;
@@ -466,9 +443,7 @@ bool SBTypeCategory::DeleteTypeSummary(SBTypeNameSpecifier type_name) {
 
 bool SBTypeCategory::AddTypeFilter(SBTypeNameSpecifier type_name,
                                    SBTypeFilter filter) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, AddTypeFilter,
-                     (lldb::SBTypeNameSpecifier, lldb::SBTypeFilter), type_name,
-                     filter);
+  LLDB_INSTRUMENT_VA(this, type_name, filter);
 
   if (!IsValid())
     return false;
@@ -490,8 +465,7 @@ bool SBTypeCategory::AddTypeFilter(SBTypeNameSpecifier type_name,
 }
 
 bool SBTypeCategory::DeleteTypeFilter(SBTypeNameSpecifier type_name) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, DeleteTypeFilter,
-                     (lldb::SBTypeNameSpecifier), type_name);
+  LLDB_INSTRUMENT_VA(this, type_name);
 
   if (!IsValid())
     return false;
@@ -509,9 +483,7 @@ bool SBTypeCategory::DeleteTypeFilter(SBTypeNameSpecifier type_name) {
 
 bool SBTypeCategory::AddTypeSynthetic(SBTypeNameSpecifier type_name,
                                       SBTypeSynthetic synth) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, AddTypeSynthetic,
-                     (lldb::SBTypeNameSpecifier, lldb::SBTypeSynthetic),
-                     type_name, synth);
+  LLDB_INSTRUMENT_VA(this, type_name, synth);
 
   if (!IsValid())
     return false;
@@ -567,8 +539,7 @@ bool SBTypeCategory::AddTypeSynthetic(SBTypeNameSpecifier type_name,
 }
 
 bool SBTypeCategory::DeleteTypeSynthetic(SBTypeNameSpecifier type_name) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, DeleteTypeSynthetic,
-                     (lldb::SBTypeNameSpecifier), type_name);
+  LLDB_INSTRUMENT_VA(this, type_name);
 
   if (!IsValid())
     return false;
@@ -586,9 +557,7 @@ bool SBTypeCategory::DeleteTypeSynthetic(SBTypeNameSpecifier type_name) {
 
 bool SBTypeCategory::GetDescription(lldb::SBStream &description,
                                     lldb::DescriptionLevel description_level) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, GetDescription,
-                     (lldb::SBStream &, lldb::DescriptionLevel), description,
-                     description_level);
+  LLDB_INSTRUMENT_VA(this, description, description_level);
 
   if (!IsValid())
     return false;
@@ -598,9 +567,7 @@ bool SBTypeCategory::GetDescription(lldb::SBStream &description,
 
 lldb::SBTypeCategory &SBTypeCategory::
 operator=(const lldb::SBTypeCategory &rhs) {
-  LLDB_RECORD_METHOD(lldb::SBTypeCategory &,
-                     SBTypeCategory, operator=,(const lldb::SBTypeCategory &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
@@ -609,8 +576,7 @@ operator=(const lldb::SBTypeCategory &rhs) {
 }
 
 bool SBTypeCategory::operator==(lldb::SBTypeCategory &rhs) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, operator==,(lldb::SBTypeCategory &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
     return !rhs.IsValid();
@@ -619,8 +585,7 @@ bool SBTypeCategory::operator==(lldb::SBTypeCategory &rhs) {
 }
 
 bool SBTypeCategory::operator!=(lldb::SBTypeCategory &rhs) {
-  LLDB_RECORD_METHOD(bool, SBTypeCategory, operator!=,(lldb::SBTypeCategory &),
-                     rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
     return rhs.IsValid();

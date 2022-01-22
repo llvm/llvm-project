@@ -787,10 +787,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // Note that we don't want to make the variable non-external
     // because of this, but unique-external linkage suits us.
 
-    // We need variables inside OpenMP declare target directives to be visible.
-    if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(Var))
-      return LinkageInfo::external();
-
     if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var) &&
         !IgnoreVarTypeLinkage) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
@@ -916,10 +912,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   // always be default.
   if (!isExternallyVisible(LV.getLinkage()))
     return LinkageInfo(LV.getLinkage(), DefaultVisibility, false);
-
-  // Mark the symbols as hidden when compiling for the device.
-  if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice)
-    LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
   return LV;
 }
@@ -1074,11 +1066,6 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
 
   // Finally, merge in information from the class.
   LV.mergeMaybeWithVisibility(classLV, considerClassVisibility);
-
-  // We need variables inside OpenMP declare target directives to be visible.
-  if (const VarDecl *VD = dyn_cast<VarDecl>(D))
-    if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
-      return LinkageInfo(LV.getLinkage(), DefaultVisibility, false);
 
   return LV;
 }

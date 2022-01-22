@@ -18,8 +18,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Thunks.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
@@ -143,7 +142,7 @@ void InputSectionBase::uncompress() const {
   {
     static std::mutex mu;
     std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = bAlloc.Allocate<char>(size);
+    uncompressedBuf = bAlloc().Allocate<char>(size);
   }
 
   if (Error e = zlib::uncompress(toStringRef(rawData), uncompressedBuf, size))
@@ -219,7 +218,8 @@ OutputSection *SectionBase::getOutputSection() {
 // `uncompressedSize` member and remove the header from `rawData`.
 template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
   // Old-style header
-  if (name.startswith(".zdebug")) {
+  if (!(flags & SHF_COMPRESSED)) {
+    assert(name.startswith(".zdebug"));
     if (!toStringRef(rawData).startswith("ZLIB")) {
       error(toString(this) + ": corrupted compressed section header");
       return;
@@ -236,11 +236,10 @@ template <typename ELFT> void InputSectionBase::parseCompressedHeader() {
 
     // Restore the original section name.
     // (e.g. ".zdebug_info" -> ".debug_info")
-    name = saver.save("." + name.substr(2));
+    name = saver().save("." + name.substr(2));
     return;
   }
 
-  assert(flags & SHF_COMPRESSED);
   flags &= ~(uint64_t)SHF_COMPRESSED;
 
   // New-style header
@@ -1181,11 +1180,6 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
   std::vector<Relocation *> morestackCalls;
 
   for (Relocation &rel : relocations) {
-    // Local symbols can't possibly be cross-calls, and should have been
-    // resolved long before this line.
-    if (rel.sym->isLocal())
-      continue;
-
     // Ignore calls into the split-stack api.
     if (rel.sym->getName().startswith("__morestack")) {
       if (rel.sym->getName().equals("__morestack"))

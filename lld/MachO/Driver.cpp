@@ -128,7 +128,7 @@ static Optional<StringRef> findFramework(StringRef name) {
         // only append suffix if realpath() succeeds
         Twine suffixed = location + suffix;
         if (fs::exists(suffixed))
-          return resolvedFrameworks[key] = saver.save(suffixed.str());
+          return resolvedFrameworks[key] = saver().save(suffixed.str());
       }
       // Suffix lookup failed, fall through to the no-suffix case.
     }
@@ -165,7 +165,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
         path::append(buffer, path);
         // Do not warn about paths that are computed via the syslib roots
         if (fs::is_directory(buffer)) {
-          paths.push_back(saver.save(buffer.str()));
+          paths.push_back(saver().save(buffer.str()));
           found = true;
         }
       }
@@ -183,7 +183,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
       SmallString<261> buffer(root);
       path::append(buffer, path);
       if (fs::is_directory(buffer))
-        paths.push_back(saver.save(buffer.str()));
+        paths.push_back(saver().save(buffer.str()));
     }
   }
   return paths;
@@ -249,7 +249,8 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
 static DenseMap<StringRef, ArchiveFile *> loadedArchives;
 
 static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
-                          bool isExplicit = true, bool isBundleLoader = false) {
+                          bool isLazy = false, bool isExplicit = true,
+                          bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return nullptr;
@@ -319,7 +320,7 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     break;
   }
   case file_magic::macho_object:
-    newFile = make<ObjFile>(mbref, getModTime(path), "");
+    newFile = make<ObjFile>(mbref, getModTime(path), "", isLazy);
     break;
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
@@ -331,7 +332,7 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     }
     break;
   case file_magic::bitcode:
-    newFile = make<BitcodeFile>(mbref, "", 0);
+    newFile = make<BitcodeFile>(mbref, "", 0, isLazy);
     break;
   case file_magic::macho_executable:
   case file_magic::macho_bundle:
@@ -346,9 +347,20 @@ static InputFile *addFile(StringRef path, ForceLoad forceLoadArchive,
     error(path + ": unhandled file type");
   }
   if (newFile && !isa<DylibFile>(newFile)) {
+    if ((isa<ObjFile>(newFile) || isa<BitcodeFile>(newFile)) && newFile->lazy &&
+        config->forceLoadObjC) {
+      for (Symbol *sym : newFile->symbols)
+        if (sym && sym->getName().startswith(objc::klass)) {
+          extract(*newFile, "-ObjC");
+          break;
+        }
+      if (newFile->lazy && hasObjCSection(mbref))
+        extract(*newFile, "-ObjC");
+    }
+
     // printArchiveMemberLoad() prints both .a and .o names, so no need to
-    // print the .a name here.
-    if (config->printEachFile && magic != file_magic::archive)
+    // print the .a name here. Similarly skip lazy files.
+    if (config->printEachFile && magic != file_magic::archive && !isLazy)
       message(toString(newFile));
     inputFiles.insert(newFile);
   }
@@ -360,7 +372,7 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoadArchive, isExplicit))) {
+            addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -380,7 +392,7 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
                          ForceLoad forceLoadArchive) {
   if (Optional<StringRef> path = findFramework(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, forceLoadArchive, isExplicit))) {
+            addFile(*path, forceLoadArchive, /*isLazy=*/false, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -425,13 +437,13 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   }
 }
 
-static void addFileList(StringRef path) {
+static void addFileList(StringRef path, bool isLazy) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), ForceLoad::Default);
+    addFile(rerootPath(path), ForceLoad::Default, isLazy);
 }
 
 // An order file has one entry per line, in the following format:
@@ -545,7 +557,8 @@ static void compileBitcodeFiles() {
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
     if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
-      lto->add(*bitcodeFile);
+      if (!file->lazy)
+        lto->add(*bitcodeFile);
 
   for (ObjFile *file : lto->compile())
     inputFiles.insert(file);
@@ -962,6 +975,7 @@ static void createFiles(const InputArgList &args) {
   TimeTraceScope timeScope("Load input files");
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
+  bool isLazy = false;
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -969,7 +983,7 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), ForceLoad::Default);
+      addFile(rerootPath(arg->getValue()), ForceLoad::Default, isLazy);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
@@ -989,7 +1003,7 @@ static void createFiles(const InputArgList &args) {
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
-      addFileList(arg->getValue());
+      addFileList(arg->getValue(), isLazy);
       break;
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), ForceLoad::Yes);
@@ -1010,6 +1024,16 @@ static void createFiles(const InputArgList &args) {
                    opt.getID() == OPT_weak_framework,
                    opt.getID() == OPT_reexport_framework, /*isExplicit=*/true,
                    ForceLoad::Default);
+      break;
+    case OPT_start_lib:
+      if (isLazy)
+        error("nested --start-lib");
+      isLazy = true;
+      break;
+    case OPT_end_lib:
+      if (!isLazy)
+        error("stray --end-lib");
+      isLazy = false;
       break;
     default:
       break;
@@ -1102,14 +1126,14 @@ static void referenceStubBinder() {
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
 }
 
-bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
-                 raw_ostream &stdoutOS, raw_ostream &stderrOS) {
-  lld::stdoutOS = &stdoutOS;
-  lld::stderrOS = &stderrOS;
+bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+                 llvm::raw_ostream &stderrOS, bool exitEarly,
+                 bool disableOutput) {
+  // This driver-specific context will be freed later by lldMain().
+  auto *ctx = new CommonLinkerContext;
 
-  errorHandler().cleanupCallback = []() {
-    freeArena();
-
+  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.cleanupCallback = []() {
     resolvedFrameworks.clear();
     resolvedLibraries.clear();
     cachedReads.clear();
@@ -1130,17 +1154,15 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     InputFile::resetIdCount();
   };
 
-  errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
-  stderrOS.enable_colors(stderrOS.has_colors());
+  ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
 
-  errorHandler().errorLimitExceededMsg =
-      "too many errors emitted, stopping now "
-      "(use --error-limit=0 to see all errors)";
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
-  errorHandler().verbose = args.hasArg(OPT_verbose);
+  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
+                                 "(use --error-limit=0 to see all errors)";
+  ctx->e.errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
+  ctx->e.verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
@@ -1184,7 +1206,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       // these are meaningful for our text based stripping
       if (config->osoPrefix.equals(".") || config->osoPrefix.endswith(sep))
         expanded += sep;
-      config->osoPrefix = saver.save(expanded.str());
+      config->osoPrefix = saver().save(expanded.str());
     }
   }
 
@@ -1247,7 +1269,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
-    addFile(arg->getValue(), ForceLoad::Default, /*isExplicit=*/false,
+    addFile(arg->getValue(), ForceLoad::Default, /*isLazy=*/false,
+            /*isExplicit=*/false,
             /*isBundleLoader=*/true);
   }
   if (const Arg *arg = args.getLastArg(OPT_umbrella)) {
@@ -1265,7 +1288,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->runtimePaths = args::getStrings(args, OPT_rpath);
-  config->allLoad = args.hasArg(OPT_all_load);
+  config->allLoad = args.hasFlag(OPT_all_load, OPT_noall_load, false);
   config->archMultiple = args.hasArg(OPT_arch_multiple);
   config->applicationExtension = args.hasFlag(
       OPT_application_extension, OPT_no_application_extension, false);
@@ -1471,7 +1494,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
-      parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+      parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                        arg->getSpelling());
 
     for (const Arg *arg : args.filtered(OPT_mllvm))
@@ -1562,11 +1585,5 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     timeTraceProfilerCleanup();
   }
-
-  if (canExitEarly)
-    exitLld(errorCount() ? 1 : 0);
-
-  bool ret = errorCount() == 0;
-  errorHandler().reset();
-  return ret;
+  return errorCount() == 0;
 }

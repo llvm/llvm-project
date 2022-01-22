@@ -360,7 +360,7 @@ define amdgpu_ps float @test_wwm3(i32 inreg %idx) {
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB9_2
@@ -381,7 +381,7 @@ define amdgpu_ps float @test_wwm3(i32 inreg %idx) {
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB9_2
@@ -401,7 +401,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -425,7 +425,7 @@ define amdgpu_ps float @test_wwm4(i32 inreg %idx) {
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB10_2
@@ -445,7 +445,7 @@ define amdgpu_ps float @test_wwm4(i32 inreg %idx) {
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB10_2
@@ -464,7 +464,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -548,7 +548,7 @@ define amdgpu_ps float @test_wwm6_then() {
 ; GFX9-W64-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB12_2
@@ -571,7 +571,7 @@ define amdgpu_ps float @test_wwm6_then() {
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB12_2
@@ -590,7 +590,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -617,7 +617,8 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX9-W64-NEXT:    global_load_dword v1, v[3:4], off glc
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
+; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-W64-NEXT:  .LBB13_1: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -644,8 +645,9 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX10-W32-NEXT:    global_load_dword v1, v[3:4], off glc dlc
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
-; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
+; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
+; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX10-W32-NEXT:  .LBB13_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_or_saveexec_b32 s1, -1
@@ -672,7 +674,7 @@ main_body:
   br label %loop
 
 loop:
-  %counter = phi i32 [ %lo, %main_body ], [ %counter.1, %loop ]
+  %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
   %src1 = load volatile float, float addrspace(1)* undef
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
@@ -817,7 +819,7 @@ define amdgpu_ps float @test_strict_wqm3(i32 inreg %idx) {
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB17_2
@@ -839,7 +841,7 @@ define amdgpu_ps float @test_strict_wqm3(i32 inreg %idx) {
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB17_2
@@ -860,7 +862,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -884,7 +886,7 @@ define amdgpu_ps float @test_strict_wqm4(i32 inreg %idx) {
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB18_2
@@ -905,7 +907,7 @@ define amdgpu_ps float @test_strict_wqm4(i32 inreg %idx) {
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB18_2
@@ -925,7 +927,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -1013,7 +1015,7 @@ define amdgpu_ps float @test_strict_wqm6_then() {
 ; GFX9-W64-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB20_2
@@ -1038,7 +1040,7 @@ define amdgpu_ps float @test_strict_wqm6_then() {
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB20_2
@@ -1058,7 +1060,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -1086,7 +1088,8 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX9-W64-NEXT:    global_load_dword v1, v[3:4], off glc
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
+; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-W64-NEXT:  .LBB21_1: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1116,8 +1119,9 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX10-W32-NEXT:    global_load_dword v1, v[3:4], off glc dlc
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
-; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
+; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
+; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX10-W32-NEXT:  .LBB21_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
@@ -1146,7 +1150,7 @@ main_body:
   br label %loop
 
 loop:
-  %counter = phi i32 [ %lo, %main_body ], [ %counter.1, %loop ]
+  %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
   %src1 = load volatile float, float addrspace(1)* undef
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wqm.f32(float %out)
@@ -2464,7 +2468,7 @@ define amdgpu_ps float @test_strict_wwm3(i32 inreg %idx) {
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB39_2
@@ -2485,7 +2489,7 @@ define amdgpu_ps float @test_strict_wwm3(i32 inreg %idx) {
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB39_2
@@ -2505,7 +2509,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -2529,7 +2533,7 @@ define amdgpu_ps float @test_strict_wwm4(i32 inreg %idx) {
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB40_2
@@ -2549,7 +2553,7 @@ define amdgpu_ps float @test_strict_wwm4(i32 inreg %idx) {
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB40_2
@@ -2568,7 +2572,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -2652,7 +2656,7 @@ define amdgpu_ps float @test_strict_wwm6_then() {
 ; GFX9-W64-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v0
+; GFX9-W64-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-W64-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX9-W64-NEXT:    s_cbranch_execz .LBB42_2
@@ -2675,7 +2679,7 @@ define amdgpu_ps float @test_strict_wwm6_then() {
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
-; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 32, v0
+; GFX10-W32-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 16, v0
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-W32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX10-W32-NEXT:    s_cbranch_execz .LBB42_2
@@ -2694,7 +2698,7 @@ main_body:
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
-  %cc = icmp uge i32 %hi, 32
+  %cc = icmp uge i32 %hi, 16
   br i1 %cc, label %endif, label %if
 
 if:
@@ -2717,7 +2721,8 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX9-W64-NEXT:    global_load_dword v1, v[3:4], off glc
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
+; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
+; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-W64-NEXT:  .LBB43_1: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2744,8 +2749,9 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX10-W32-NEXT:    global_load_dword v1, v[3:4], off glc dlc
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, s0
-; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
+; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
+; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX10-W32-NEXT:  .LBB43_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2772,7 +2778,7 @@ main_body:
   br label %loop
 
 loop:
-  %counter = phi i32 [ %lo, %main_body ], [ %counter.1, %loop ]
+  %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
   %src1 = load volatile float, float addrspace(1)* undef
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)

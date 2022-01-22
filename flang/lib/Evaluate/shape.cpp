@@ -560,13 +560,12 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
             if (subp.isFunction()) {
               auto resultShape{(*this)(subp.result())};
               if (resultShape && !useResultSymbolShape_) {
-                // Ensure the shape does not contain descriptor inquiries, they
-                // may refer to symbols belonging to the called subprogram scope
-                // that are meaningless on the caller side without the related
-                // call expression.
+                // Ensure the shape is constant. Otherwise, it may be referring
+                // to symbols that belong to the subroutine scope and are
+                // meaningless on the caller side without the related call
+                // expression.
                 for (auto extent : *resultShape) {
-                  if (extent &&
-                      std::holds_alternative<DescriptorInquiry>(extent->u)) {
+                  if (extent && !IsConstantExpr(*extent)) {
                     return std::nullopt;
                   }
                 }

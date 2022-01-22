@@ -2293,7 +2293,7 @@ LLVMValueRef LLVMAddAlias2(LLVMModuleRef M, LLVMTypeRef ValueTy,
 
 LLVMValueRef LLVMGetNamedGlobalAlias(LLVMModuleRef M,
                                      const char *Name, size_t NameLen) {
-  return wrap(unwrap(M)->getNamedAlias(Name));
+  return wrap(unwrap(M)->getNamedAlias(StringRef(Name, NameLen)));
 }
 
 LLVMValueRef LLVMGetFirstGlobalAlias(LLVMModuleRef M) {

@@ -216,19 +216,20 @@ def riscv_zext_vl : SDNode<"RISCVISD::VZEXT_VL", SDT_RISCVVEXTEND_VL>;
 
 def riscv_trunc_vector_vl : SDNode<"RISCVISD::TRUNCATE_VECTOR_VL",
                                    SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                                        SDTCisVec<1>,
+                                                        SDTCisSameNumEltsAs<0, 1>,
                                                         SDTCisSameNumEltsAs<0, 2>,
                                                         SDTCVecEltisVT<2, i1>,
                                                         SDTCisVT<3, XLenVT>]>>;
 
-def SDT_RISCVVWMUL_VL : SDTypeProfile<1, 4, [SDTCisVec<0>,
-                                             SDTCisSameNumEltsAs<0, 1>,
-                                             SDTCisSameAs<1, 2>,
-                                             SDTCisSameNumEltsAs<1, 3>,
-                                             SDTCVecEltisVT<3, i1>,
-                                             SDTCisVT<4, XLenVT>]>;
-def riscv_vwmul_vl  : SDNode<"RISCVISD::VWMUL_VL",  SDT_RISCVVWMUL_VL, [SDNPCommutative]>;
-def riscv_vwmulu_vl : SDNode<"RISCVISD::VWMULU_VL", SDT_RISCVVWMUL_VL, [SDNPCommutative]>;
+def SDT_RISCVVWBinOp_VL : SDTypeProfile<1, 4, [SDTCisVec<0>,
+                                               SDTCisSameNumEltsAs<0, 1>,
+                                               SDTCisSameAs<1, 2>,
+                                               SDTCisSameNumEltsAs<1, 3>,
+                                               SDTCVecEltisVT<3, i1>,
+                                               SDTCisVT<4, XLenVT>]>;
+def riscv_vwmul_vl  : SDNode<"RISCVISD::VWMUL_VL",  SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
+def riscv_vwmulu_vl : SDNode<"RISCVISD::VWMULU_VL", SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
+def riscv_vwaddu_vl : SDNode<"RISCVISD::VWADDU_VL", SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
 
 def SDTRVVVecReduce : SDTypeProfile<1, 5, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisSameAs<0, 3>,
@@ -363,32 +364,42 @@ multiclass VPatBinaryWVL_VV_VX<SDNode vop, string instruction_name> {
   }
 }
 
-class VPatBinaryVL_VF<SDNode vop,
-                      string instruction_name,
-                      ValueType result_type,
-                      ValueType vop_type,
-                      ValueType mask_type,
-                      int sew,
-                      LMULInfo vlmul,
-                      VReg vop_reg_class,
-                      RegisterClass scalar_reg_class> :
-    Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
-                          (vop_type (SplatFPOp scalar_reg_class:$rs2)),
-                          (mask_type true_mask),
-                          VLOpFrag)),
+multiclass VPatBinaryVL_VF<SDNode vop,
+                           string instruction_name,
+                           ValueType result_type,
+                           ValueType vop_type,
+                           ValueType mask_type,
+                           int sew,
+                           LMULInfo vlmul,
+                           VReg vop_reg_class,
+                           RegisterClass scalar_reg_class> {
+  def : Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
+                         (vop_type (SplatFPOp scalar_reg_class:$rs2)),
+                         (mask_type true_mask),
+                         VLOpFrag)),
         (!cast<Instruction>(instruction_name#"_"#vlmul.MX)
                      vop_reg_class:$rs1,
                      scalar_reg_class:$rs2,
                      GPR:$vl, sew)>;
+  def : Pat<(result_type (vop (vop_type vop_reg_class:$rs1),
+                         (vop_type (SplatFPOp scalar_reg_class:$rs2)),
+                         (mask_type V0),
+                         VLOpFrag)),
+        (!cast<Instruction>(instruction_name#"_"#vlmul.MX#"_MASK")
+                     (result_type (IMPLICIT_DEF)),
+                     vop_reg_class:$rs1,
+                     scalar_reg_class:$rs2,
+                     (mask_type V0), GPR:$vl, sew, TAIL_AGNOSTIC)>;
+}
 
 multiclass VPatBinaryFPVL_VV_VF<SDNode vop, string instruction_name> {
   foreach vti = AllFloatVectors in {
     defm : VPatBinaryVL_VV<vop, instruction_name,
                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
                            vti.LMul, vti.RegClass>;
-    def : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
-                          vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                          vti.LMul, vti.RegClass, vti.ScalarRegClass>;
+    defm : VPatBinaryVL_VF<vop, instruction_name#"_V"#vti.ScalarSuffix,
+                           vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
+                           vti.LMul, vti.RegClass, vti.ScalarRegClass>;
   }
 }
 
@@ -701,6 +712,9 @@ foreach vti = AllIntegerVectors in {
                  (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1, simm5:$rs2,
                  (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 }
+
+// 12.2. Vector Widening Integer Add/Subtract
+defm : VPatBinaryWVL_VV_VX<riscv_vwaddu_vl, "PseudoVWADDU">;
 
 // 12.3. Vector Integer Extension
 defm : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF2",

@@ -58,6 +58,11 @@ Improvements to Clang's diagnostics
   release being diagnosed against). These new groups are automatically implied
   when passing ``-Wc++N-extensions``. Resolves PR33518.
 
+- Support ``-Wdeclaration-after-statement`` with C99 and later standards, and
+  not just C89, matching GCC's behaviour. A notable usecase is supporting style
+  guides that forbid mixing declarations and code, but want to move to newer C
+  standards.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -135,6 +140,16 @@ Windows Support
   Users should use a recent SDK and pass ``-DQUERY_H_RESTRICTION_PERMISSIVE``
   or pass ``/permissive`` to disable C++ operator names altogether. See
   `PR42427 <https://llvm.org/pr42427>` for more info.
+
+- Add support for MSVC-compatible ``/hotpatch`` flag in clang-cl, and equivalent
+  -cc1 flag ``-fms-hotpatch``. Along with the linker flag ``/functionpadmin``
+  this creates executable images suitable for runtime code patching. This flag
+  is only required for x86/x64 targets; ARM/ARM64 simply needs the linker
+  ``/functionpadmin``.
+
+  With this addition, clang-cl can be used in live code patching scenarios,
+  along with tools such as Live++ or Recode. Microsoft Edit and Continue isn't
+  currently supported.
 
 C Language Changes in Clang
 ---------------------------
@@ -306,6 +321,8 @@ AST Matchers
   and the underlying ``Type`` with ``hasUnderlyingType``.
   ``hasDeclaration`` continues to see through the alias and apply to the
   underlying type.
+- Added the ``isConsteval`` matcher to match ``consteval`` function
+  declarations as well as `if consteval` and `if ! consteval` statements.
 
 clang-format
 ------------

@@ -549,5 +549,5 @@ NativeThreadLinux::GetSiginfo() const {
       GetProcess().GetSignalInfo(GetID(), siginfo_buf->getBufferStart());
   if (!error.Success())
     return error.ToError();
-  return siginfo_buf;
+  return std::move(siginfo_buf);
 }

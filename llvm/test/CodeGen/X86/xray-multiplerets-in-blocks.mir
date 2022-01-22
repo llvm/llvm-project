@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -run-pass xray-instrumentation -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
+# RUN: llc -run-pass=xray-instrumentation -mtriple=x86_64-unknown-linux-gnu -o - %s | FileCheck %s
 #
 # Make sure we can handle multiple ret instructions in a single basic block for
 # XRay.

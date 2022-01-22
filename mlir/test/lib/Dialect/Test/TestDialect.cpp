@@ -99,12 +99,6 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
     }
     return AliasResult::NoAlias;
   }
-
-  void getAsmResultNames(Operation *op,
-                         OpAsmSetValueNameFn setNameFn) const final {
-    if (auto asmOp = dyn_cast<AsmDialectInterfaceOp>(op))
-      setNameFn(asmOp, "result");
-  }
 };
 
 struct TestDialectFoldInterface : public DialectFoldInterface {
@@ -595,7 +589,7 @@ static ParseResult parseIsolatedRegionOp(OpAsmParser &parser,
 
   // Parse the body region, and reuse the operand info as the argument info.
   Region *body = result.addRegion();
-  return parser.parseRegion(*body, argInfo, argType,
+  return parser.parseRegion(*body, argInfo, argType, /*argLocations=*/{},
                             /*enableNameShadowing=*/true);
 }
 

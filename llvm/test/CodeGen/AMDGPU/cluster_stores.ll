@@ -269,10 +269,10 @@ define amdgpu_ps void @cluster_image_load(<8 x i32> inreg %src, <8 x i32> inreg 
 entry:
   %x1 = add i32 %x, 1
   %y1 = add i32 %y, 1
-  %val1 = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %x1, i32 %y1, i32 0, <8 x i32> %src, i32 0, i32 0)
+  %val1 = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 %x1, i32 %y1, <8 x i32> %src, i32 0, i32 0)
   %x2 = add i32 %x, 2
   %y2 = add i32 %y, 2
-  %val2 = call <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 15, i32 %x2, i32 %y2, i32 0, <8 x i32> %src, i32 0, i32 0)
+  %val2 = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 15, i32 %x2, i32 %y2, <8 x i32> %src, i32 0, i32 0)
   %val = fadd fast <4 x float> %val1, %val2
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %val, i32 15, i32 %x, i32 %y, <8 x i32> %dst, i32 0, i32 0)
   ret void
@@ -286,20 +286,22 @@ entry:
 define amdgpu_ps void @no_cluster_image_load(<8 x i32> inreg %src1, <8 x i32> inreg %src2, <8 x i32> inreg %dst, i32 %x, i32 %y) {
 ; GFX9-LABEL: no_cluster_image_load:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    image_load v[2:5], v[0:1], s[0:7] dmask:0xf unorm
-; GFX9-NEXT:    image_load v[6:9], v[0:1], s[8:15] dmask:0xf unorm
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    image_load_mip v[3:6], v[0:2], s[0:7] dmask:0xf unorm
+; GFX9-NEXT:    image_load_mip v[7:10], v[0:2], s[8:15] dmask:0xf unorm
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_f32_e32 v6, v6, v10
 ; GFX9-NEXT:    v_add_f32_e32 v5, v5, v9
 ; GFX9-NEXT:    v_add_f32_e32 v4, v4, v8
 ; GFX9-NEXT:    v_add_f32_e32 v3, v3, v7
-; GFX9-NEXT:    v_add_f32_e32 v2, v2, v6
-; GFX9-NEXT:    image_store v[2:5], v[0:1], s[16:23] dmask:0xf unorm
+; GFX9-NEXT:    image_store v[3:6], v[0:1], s[16:23] dmask:0xf unorm
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: no_cluster_image_load:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    image_load v[2:5], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
-; GFX10-NEXT:    image_load v[6:9], v[0:1], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX10-NEXT:    v_mov_b32_e32 v10, 0
+; GFX10-NEXT:    image_load_mip v[2:5], [v0, v1, v10], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX10-NEXT:    image_load_mip v[6:9], [v0, v1, v10], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_f32_e32 v5, v5, v9
 ; GFX10-NEXT:    v_add_f32_e32 v4, v4, v8
@@ -389,6 +391,7 @@ entry:
   ret void
 }
 
+declare <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg)
 declare <4 x float> @llvm.amdgcn.image.load.mip.2d.v4f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg)
 declare <4 x float> @llvm.amdgcn.image.sample.d.2d.v4f32.f32(i32, float, float, float, float, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float>, i32 immarg, i32, i32, <8 x i32>, i32 immarg, i32 immarg)

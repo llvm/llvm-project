@@ -146,7 +146,7 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
 
     Region *bodyRegion = result.addRegion();
     bodyRegion->push_back(new Block());
-    bodyRegion->addArgument(elementType);
+    bodyRegion->addArgument(elementType, memref.getLoc());
   }
 }
 

@@ -369,8 +369,8 @@ void LaunchOp::build(OpBuilder &builder, OperationState &result,
   // the rest have the same types as the data operands.
   Region *kernelRegion = result.addRegion();
   Block *body = new Block();
-  body->addArguments(
-      std::vector<Type>(kNumConfigRegionAttributes, builder.getIndexType()));
+  for (unsigned i = 0; i < kNumConfigRegionAttributes; ++i)
+    body->addArgument(builder.getIndexType(), result.location);
   kernelRegion->push_back(body);
 }
 
@@ -670,11 +670,13 @@ parseLaunchFuncOperands(OpAsmParser &parser,
                         SmallVectorImpl<Type> &argTypes) {
   if (parser.parseOptionalKeyword("args"))
     return success();
-  SmallVector<NamedAttrList, 4> argAttrs;
+  SmallVector<NamedAttrList> argAttrs;
+  SmallVector<Location> argLocations;
   bool isVariadic = false;
   return function_interface_impl::parseFunctionArgumentList(
       parser, /*allowAttributes=*/false,
-      /*allowVariadic=*/false, argNames, argTypes, argAttrs, isVariadic);
+      /*allowVariadic=*/false, argNames, argTypes, argAttrs, argLocations,
+      isVariadic);
 }
 
 static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
@@ -697,21 +699,21 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
 
 /// Adds a new block argument that corresponds to buffers located in
 /// workgroup memory.
-BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type) {
+BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type, Location loc) {
   auto attrName = getNumWorkgroupAttributionsAttrName();
   auto attr = (*this)->getAttrOfType<IntegerAttr>(attrName);
   (*this)->setAttr(attrName,
                    IntegerAttr::get(attr.getType(), attr.getValue() + 1));
   return getBody().insertArgument(getType().getNumInputs() + attr.getInt(),
-                                  type);
+                                  type, loc);
 }
 
 /// Adds a new block argument that corresponds to buffers located in
 /// private memory.
-BlockArgument GPUFuncOp::addPrivateAttribution(Type type) {
+BlockArgument GPUFuncOp::addPrivateAttribution(Type type, Location loc) {
   // Buffers on the private memory always come after buffers on the workgroup
   // memory.
-  return getBody().addArgument(type);
+  return getBody().addArgument(type, loc);
 }
 
 void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
@@ -727,9 +729,14 @@ void GPUFuncOp::build(OpBuilder &builder, OperationState &result,
   result.addAttributes(attrs);
   Region *body = result.addRegion();
   Block *entryBlock = new Block;
-  entryBlock->addArguments(type.getInputs());
-  entryBlock->addArguments(workgroupAttributions);
-  entryBlock->addArguments(privateAttributions);
+
+  // TODO: Allow passing in proper locations here.
+  for (Type argTy : type.getInputs())
+    entryBlock->addArgument(argTy, result.location);
+  for (Type argTy : workgroupAttributions)
+    entryBlock->addArgument(argTy, result.location);
+  for (Type argTy : privateAttributions)
+    entryBlock->addArgument(argTy, result.location);
 
   body->getBlocks().push_back(entryBlock);
 }
@@ -776,11 +783,12 @@ parseAttributions(OpAsmParser &parser, StringRef keyword,
 ///                 (`->` function-result-list)? memory-attribution `kernel`?
 ///                 function-attributes? region
 static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> entryArgs;
-  SmallVector<NamedAttrList, 1> argAttrs;
-  SmallVector<NamedAttrList, 1> resultAttrs;
-  SmallVector<Type, 8> argTypes;
-  SmallVector<Type, 4> resultTypes;
+  SmallVector<OpAsmParser::OperandType> entryArgs;
+  SmallVector<NamedAttrList> argAttrs;
+  SmallVector<NamedAttrList> resultAttrs;
+  SmallVector<Type> argTypes;
+  SmallVector<Type> resultTypes;
+  SmallVector<Location> argLocations;
   bool isVariadic;
 
   // Parse the function name.
@@ -792,7 +800,7 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
   auto signatureLocation = parser.getCurrentLocation();
   if (failed(function_interface_impl::parseFunctionSignature(
           parser, /*allowVariadic=*/false, entryArgs, argTypes, argAttrs,
-          isVariadic, resultTypes, resultAttrs)))
+          argLocations, isVariadic, resultTypes, resultAttrs)))
     return failure();
 
   if (entryArgs.empty() && !argTypes.empty())

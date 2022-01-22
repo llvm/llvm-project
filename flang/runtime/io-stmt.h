@@ -34,7 +34,7 @@ class InquireUnconnectedFileState;
 class InquireIOLengthState;
 class ExternalMiscIoStatementState;
 class CloseStatementState;
-class NoopCloseStatementState;
+class NoopStatementState; // CLOSE or FLUSH on unknown unit
 
 template <Direction, typename CHAR = char>
 class InternalFormattedIoStatementState;
@@ -87,7 +87,7 @@ public:
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t); // for r* in list I/O
-  std::optional<DataEdit> GetNextDataEdit(int = 1);
+  std::optional<DataEdit> GetNextDataEdit(int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const; // null if internal unit
   bool BeginReadingRecord();
   void FinishReadingRecord();
@@ -238,7 +238,7 @@ public:
 private:
   std::variant<std::reference_wrapper<OpenStatementState>,
       std::reference_wrapper<CloseStatementState>,
-      std::reference_wrapper<NoopCloseStatementState>,
+      std::reference_wrapper<NoopStatementState>,
       std::reference_wrapper<
           InternalFormattedIoStatementState<Direction::Output>>,
       std::reference_wrapper<
@@ -287,7 +287,8 @@ struct IoStatementBase : public IoErrorHandler {
   void BackspaceRecord();
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
-  std::optional<DataEdit> GetNextDataEdit(IoStatementState &, int = 1);
+  std::optional<DataEdit> GetNextDataEdit(
+      IoStatementState &, int maxRepeat = 1);
   ExternalFileUnit *GetExternalFileUnit() const;
   bool BeginReadingRecord();
   void FinishReadingRecord();
@@ -616,9 +617,9 @@ private:
   ConnectionState connection_;
 };
 
-class NoopCloseStatementState : public NoUnitIoStatementState {
+class NoopStatementState : public NoUnitIoStatementState {
 public:
-  NoopCloseStatementState(const char *sourceFile, int sourceLine)
+  NoopStatementState(const char *sourceFile, int sourceLine)
       : NoUnitIoStatementState{sourceFile, sourceLine, *this} {}
   void set_status(CloseStatus) {} // discards
 };

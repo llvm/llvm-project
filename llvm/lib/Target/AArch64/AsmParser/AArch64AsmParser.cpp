@@ -48,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -3284,6 +3285,8 @@ static const struct Extension {
     {"sme", {AArch64::FeatureSME}},
     {"sme-f64", {AArch64::FeatureSMEF64}},
     {"sme-i64", {AArch64::FeatureSMEI64}},
+    {"hbc", {AArch64::FeatureHBC}},
+    {"mops", {AArch64::FeatureMOPS}},
     // FIXME: Unsupported extensions
     {"lor", {}},
     {"rdma", {}},

@@ -789,6 +789,17 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
     Align Alignment =
         DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
     uint64_t AllocSize = DL.getTypeAllocSize(GV->getValueType());
+
+    // HIP uses an extern unsized array in local address space for dynamically
+    // allocated shared memory.  In that case, we have to disable the promotion.
+    if (GV->hasExternalLinkage() && AllocSize == 0) {
+      LocalMemLimit = 0;
+      LLVM_DEBUG(dbgs() << "Function has a reference to externally allocated "
+                           "local memory. Promoting to local memory "
+                           "disabled.\n");
+      return false;
+    }
+
     AllocatedSizes.emplace_back(AllocSize, Alignment);
   }
 

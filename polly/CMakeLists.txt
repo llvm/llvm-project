@@ -1,10 +1,14 @@
-include(GNUInstallDirs)
-
 # Check if this is a in tree build.
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   project(Polly)
   cmake_minimum_required(VERSION 3.13.4)
+  set(POLLY_STANDALONE_BUILD TRUE)
+endif()
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
+if(POLLY_STANDALONE_BUILD)
   # Where is LLVM installed?
   find_package(LLVM CONFIG REQUIRED)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LLVM_CMAKE_DIR})

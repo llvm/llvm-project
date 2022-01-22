@@ -103,11 +103,9 @@ define i32 @mul_bool(i32 %x, i1 %y) {
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
   %z = zext i1 %y to i32
-  %m = mul i32 %x, %z
+  %m = mul i32 %z, %x
   ret i32 %m
 }
-
-; Commute and test vector type.
 
 define <2 x i32> @mul_bool_vec(<2 x i32> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @mul_bool_vec(
@@ -115,18 +113,55 @@ define <2 x i32> @mul_bool_vec(<2 x i32> %x, <2 x i1> %y) {
 ; CHECK-NEXT:    ret <2 x i32> [[M]]
 ;
   %z = zext <2 x i1> %y to <2 x i32>
+  %m = mul <2 x i32> %z, %x
+  ret <2 x i32> %m
+}
+
+define <2 x i32> @mul_bool_vec_commute(<2 x i32> %px, <2 x i1> %y) {
+; CHECK-LABEL: @mul_bool_vec_commute(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i32> [[PX:%.*]], [[PX]]
+; CHECK-NEXT:    [[M:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> [[X]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[M]]
+;
+  %x = mul <2 x i32> %px, %px  ; thwart complexity-based canonicalization
+  %z = zext <2 x i1> %y to <2 x i32>
   %m = mul <2 x i32> %x, %z
   ret <2 x i32> %m
 }
 
-define <2 x i32> @mul_bool_vec_commute(<2 x i32> %x, <2 x i1> %y) {
-; CHECK-LABEL: @mul_bool_vec_commute(
-; CHECK-NEXT:    [[M:%.*]] = select <2 x i1> [[Y:%.*]], <2 x i32> [[X:%.*]], <2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <2 x i32> [[M]]
+; X * C (when X is a sext boolean) --> X ? -C : 0
+
+define i32 @mul_sext_bool(i1 %x) {
+; CHECK-LABEL: @mul_sext_bool(
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X:%.*]], i32 -42, i32 0
+; CHECK-NEXT:    ret i32 [[M]]
 ;
-  %z = zext <2 x i1> %y to <2 x i32>
-  %m = mul <2 x i32> %z, %x
-  ret <2 x i32> %m
+  %s = sext i1 %x to i32
+  %m = mul i32 %s, 42
+  ret i32 %m
+}
+
+define i32 @mul_sext_bool_use(i1 %x) {
+; CHECK-LABEL: @mul_sext_bool_use(
+; CHECK-NEXT:    [[S:%.*]] = sext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[S]])
+; CHECK-NEXT:    [[M:%.*]] = select i1 [[X]], i32 -42, i32 0
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %s = sext i1 %x to i32
+  call void @use32(i32 %s)
+  %m = mul i32 %s, 42
+  ret i32 %m
+}
+
+define <2 x i8> @mul_sext_bool_vec(<2 x i1> %x) {
+; CHECK-LABEL: @mul_sext_bool_vec(
+; CHECK-NEXT:    [[M:%.*]] = select <2 x i1> [[X:%.*]], <2 x i8> <i8 -42, i8 -128>, <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> [[M]]
+;
+  %s = sext <2 x i1> %x to <2 x i8>
+  %m = mul <2 x i8> %s, <i8 42, i8 -128>
+  ret <2 x i8> %m
 }
 
 define <3 x i7> @mul_bools(<3 x i1> %x, <3 x i1> %y) {

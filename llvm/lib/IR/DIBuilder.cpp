@@ -1013,6 +1013,24 @@ static Function *getDeclareIntrin(Module &M) {
                                                   : Intrinsic::dbg_declare);
 }
 
+Instruction *DIBuilder::insertDbgValueIntrinsic(
+    llvm::Value *Val, DILocalVariable *VarInfo, DIExpression *Expr,
+    const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
+  if (!ValueFn)
+    ValueFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_value);
+  return insertDbgIntrinsic(ValueFn, Val, VarInfo, Expr, DL, InsertBB,
+                            InsertBefore);
+}
+
+Instruction *DIBuilder::insertDbgAddrIntrinsic(
+    llvm::Value *Val, DILocalVariable *VarInfo, DIExpression *Expr,
+    const DILocation *DL, BasicBlock *InsertBB, Instruction *InsertBefore) {
+  if (!AddrFn)
+    AddrFn = Intrinsic::getDeclaration(&M, Intrinsic::dbg_addr);
+  return insertDbgIntrinsic(AddrFn, Val, VarInfo, Expr, DL, InsertBB,
+                            InsertBefore);
+}
+
 Instruction *DIBuilder::insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       BasicBlock *InsertBB,

@@ -12,7 +12,6 @@
 
 #include "llvm/Support/X86TargetParser.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include <numeric>
 
 using namespace llvm;

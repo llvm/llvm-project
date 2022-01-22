@@ -567,7 +567,8 @@ TEST(VirtualFileSystemTest, BasicRealFSRecursiveIteration) {
   for (const std::string &Name : Contents) {
     ASSERT_FALSE(Name.empty());
     int Index = Name[Name.size() - 1] - 'a';
-    ASSERT_TRUE(Index >= 0 && Index < 4);
+    ASSERT_GE(Index, 0);
+    ASSERT_LT(Index, 4);
     Counts[Index]++;
   }
   EXPECT_EQ(1, Counts[0]); // a
@@ -644,7 +645,8 @@ TEST(VirtualFileSystemTest, BasicRealFSRecursiveIterationNoPush) {
     for (const std::string &Name : Contents) {
       ASSERT_FALSE(Name.empty());
       int Index = Name[Name.size() - 1] - 'a';
-      ASSERT_TRUE(Index >= 0 && Index < 7);
+      ASSERT_GE(Index, 0);
+      ASSERT_LT(Index, 7);
       Counts[Index]++;
     }
     EXPECT_EQ(1, Counts[0]); // a
@@ -1183,9 +1185,9 @@ TEST_F(InMemoryFileSystemTest, AddHardLinkToFile) {
   FS.addFile(Target, 0, MemoryBuffer::getMemBuffer("content of target"));
   EXPECT_TRUE(FS.addHardLink(FromLink, Target));
   EXPECT_THAT(FromLink, IsHardLinkTo(&FS, Target));
-  EXPECT_TRUE(FS.status(FromLink)->getSize() == FS.status(Target)->getSize());
-  EXPECT_TRUE(FS.getBufferForFile(FromLink)->get()->getBuffer() ==
-              FS.getBufferForFile(Target)->get()->getBuffer());
+  EXPECT_EQ(FS.status(FromLink)->getSize(), FS.status(Target)->getSize());
+  EXPECT_EQ(FS.getBufferForFile(FromLink)->get()->getBuffer(),
+            FS.getBufferForFile(Target)->get()->getBuffer());
 }
 
 TEST_F(InMemoryFileSystemTest, AddHardLinkInChainPattern) {
@@ -1381,7 +1383,7 @@ TEST_F(VFSFromYAMLTest, MappedFiles) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
       new vfs::OverlayFileSystem(Lower));
@@ -1474,7 +1476,7 @@ TEST_F(VFSFromYAMLTest, MappedRoot) {
                         "]\n"
                         "}",
                         Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
       new vfs::OverlayFileSystem(Lower));
@@ -1522,7 +1524,7 @@ TEST_F(VFSFromYAMLTest, RemappedDirectoryOverlay) {
                         "              ]\n"
                         "}]}",
                         Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
       new vfs::OverlayFileSystem(Lower));
@@ -1567,7 +1569,7 @@ TEST_F(VFSFromYAMLTest, RemappedDirectoryOverlayNoExternalNames) {
                         "              ]\n"
                         "}]}",
                         Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   ErrorOr<vfs::Status> S = FS->status("//root/foo");
   ASSERT_FALSE(S.getError());
@@ -1608,7 +1610,7 @@ TEST_F(VFSFromYAMLTest, RemappedDirectoryOverlayNoFallthrough) {
                         "              ]\n"
                         "}]}",
                         Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   ErrorOr<vfs::Status> S = Lower->status("//root/foo");
   ASSERT_FALSE(S.getError());
@@ -1752,7 +1754,7 @@ TEST_F(VFSFromYAMLTest, CaseInsensitive) {
       "              ]\n"
       "}]}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
       new vfs::OverlayFileSystem(Lower));
@@ -1788,7 +1790,7 @@ TEST_F(VFSFromYAMLTest, CaseSensitive) {
       "              ]\n"
       "}]}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
       new vfs::OverlayFileSystem(Lower));
@@ -1930,7 +1932,7 @@ TEST_F(VFSFromYAMLTest, UseExternalName) {
                         "  }\n"
                         "] }",
                         Lower);
-  ASSERT_TRUE(nullptr != FS.get());
+  ASSERT_NE(nullptr, FS.get());
 
   // default true
   EXPECT_EQ("//root/external/file", FS->status("//root/A")->getName());
@@ -1954,7 +1956,7 @@ TEST_F(VFSFromYAMLTest, UseExternalName) {
                          "  }\n"
                          "] }",
                          Lower);
-  ASSERT_TRUE(nullptr != FS.get());
+  ASSERT_NE(nullptr, FS.get());
 
   // default
   EXPECT_EQ("//root/A", FS->status("//root/A")->getName());
@@ -1974,7 +1976,7 @@ TEST_F(VFSFromYAMLTest, MultiComponentPath) {
                         "    'external-contents': '//root/other' }]\n"
                         "}",
                         Lower);
-  ASSERT_TRUE(nullptr != FS.get());
+  ASSERT_NE(nullptr, FS.get());
   EXPECT_FALSE(FS->status("//root/path/to/file").getError());
   EXPECT_FALSE(FS->status("//root/path/to").getError());
   EXPECT_FALSE(FS->status("//root/path").getError());
@@ -1988,7 +1990,7 @@ TEST_F(VFSFromYAMLTest, MultiComponentPath) {
       "                    'external-contents': '//root/other' }]}]\n"
       "}",
       Lower);
-  ASSERT_TRUE(nullptr != FS.get());
+  ASSERT_NE(nullptr, FS.get());
   EXPECT_FALSE(FS->status("//root/path/to/file").getError());
   EXPECT_FALSE(FS->status("//root/path/to").getError());
   EXPECT_FALSE(FS->status("//root/path").getError());
@@ -2002,7 +2004,7 @@ TEST_F(VFSFromYAMLTest, MultiComponentPath) {
       "                    'external-contents': '//root/other' }]}]\n"
       "}",
       Lower);
-  ASSERT_TRUE(nullptr != FS.get());
+  ASSERT_NE(nullptr, FS.get());
   EXPECT_FALSE(FS->status("//root/path/to/file").getError());
   EXPECT_FALSE(FS->status("//root/path/to").getError());
   EXPECT_FALSE(FS->status("//root/path").getError());
@@ -2021,7 +2023,7 @@ TEST_F(VFSFromYAMLTest, TrailingSlashes) {
       "                    'external-contents': '//root/other' }]}]\n"
       "}",
       Lower);
-  ASSERT_TRUE(nullptr != FS.get());
+  ASSERT_NE(nullptr, FS.get());
   EXPECT_FALSE(FS->status("//root/path/to/file").getError());
   EXPECT_FALSE(FS->status("//root/path/to").getError());
   EXPECT_FALSE(FS->status("//root/path").getError());
@@ -2057,7 +2059,7 @@ TEST_F(VFSFromYAMLTest, DirectoryIteration) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
       new vfs::OverlayFileSystem(Lower));
@@ -2107,7 +2109,7 @@ TEST_F(VFSFromYAMLTest, DirectoryIterationSameDirMultipleEntries) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
       new vfs::OverlayFileSystem(Lower));
@@ -2142,7 +2144,7 @@ TEST_F(VFSFromYAMLTest, RecursiveDirectoryIterationLevel) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
       new vfs::OverlayFileSystem(Lower));
@@ -2164,6 +2166,11 @@ TEST_F(VFSFromYAMLTest, RecursiveDirectoryIterationLevel) {
 
 TEST_F(VFSFromYAMLTest, RelativePaths) {
   IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  std::error_code EC;
+  SmallString<128> CWD;
+  EC = llvm::sys::fs::current_path(CWD);
+  ASSERT_FALSE(EC);
+
   // Filename at root level without a parent directory.
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
       "{ 'roots': [\n"
@@ -2172,16 +2179,26 @@ TEST_F(VFSFromYAMLTest, RelativePaths) {
       "  }\n"
       "] }",
       Lower);
-  EXPECT_EQ(nullptr, FS.get());
+  ASSERT_TRUE(FS.get() != nullptr);
+  SmallString<128> ExpectedPathNotInDir("file-not-in-directory.h");
+  llvm::sys::fs::make_absolute(ExpectedPathNotInDir);
+  checkContents(FS->dir_begin(CWD, EC), {ExpectedPathNotInDir});
 
   // Relative file path.
   FS = getFromYAMLString("{ 'roots': [\n"
-                         "  { 'type': 'file', 'name': 'relative/file/path.h',\n"
+                         "  { 'type': 'file', 'name': 'relative/path.h',\n"
                          "    'external-contents': '//root/external/file'\n"
                          "  }\n"
                          "] }",
                          Lower);
-  EXPECT_EQ(nullptr, FS.get());
+  ASSERT_TRUE(FS.get() != nullptr);
+  SmallString<128> Parent("relative");
+  llvm::sys::fs::make_absolute(Parent);
+  auto I = FS->dir_begin(Parent, EC);
+  ASSERT_FALSE(EC);
+  // Convert to POSIX path for comparison of windows paths
+  ASSERT_EQ("relative/path.h",
+            getPosixPath(std::string(I->path().substr(CWD.size() + 1))));
 
   // Relative directory path.
   FS = getFromYAMLString(
@@ -2191,9 +2208,14 @@ TEST_F(VFSFromYAMLTest, RelativePaths) {
       "  }\n"
       "] }",
       Lower);
-  EXPECT_EQ(nullptr, FS.get());
+  ASSERT_TRUE(FS.get() != nullptr);
+  SmallString<128> Root("relative/directory");
+  llvm::sys::fs::make_absolute(Root);
+  I = FS->dir_begin(Root, EC);
+  ASSERT_FALSE(EC);
+  ASSERT_EQ("path.h", std::string(I->path().substr(Root.size() + 1)));
 
-  EXPECT_EQ(3, NumDiagnostics);
+  EXPECT_EQ(0, NumDiagnostics);
 }
 
 TEST_F(VFSFromYAMLTest, NonFallthroughDirectoryIteration) {
@@ -2218,7 +2240,7 @@ TEST_F(VFSFromYAMLTest, NonFallthroughDirectoryIteration) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   std::error_code EC;
   checkContents(FS->dir_begin("//root/", EC),
@@ -2246,7 +2268,7 @@ TEST_F(VFSFromYAMLTest, DirectoryIterationWithDuplicates) {
       "]\n"
       "}",
 	  Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   std::error_code EC;
   checkContents(FS->dir_begin("//root/", EC),
@@ -2275,7 +2297,7 @@ TEST_F(VFSFromYAMLTest, DirectoryIterationErrorInVFSLayer) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   std::error_code EC;
   checkContents(FS->dir_begin("//root/foo", EC),
@@ -2308,7 +2330,7 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   // Regular file present in underlying file system.
   SmallString<16> RealPath;
@@ -2350,7 +2372,7 @@ TEST_F(VFSFromYAMLTest, WorkingDirectory) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
   std::error_code EC = FS->setCurrentWorkingDirectory("//root/bar");
   ASSERT_FALSE(EC);
 
@@ -2419,10 +2441,10 @@ TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthrough) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
   std::error_code EC = FS->setCurrentWorkingDirectory("//root/");
   ASSERT_FALSE(EC);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   llvm::ErrorOr<vfs::Status> Status = FS->status("bar/a");
   ASSERT_FALSE(Status.getError());
@@ -2491,10 +2513,10 @@ TEST_F(VFSFromYAMLTest, WorkingDirectoryFallthroughInvalid) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
   std::error_code EC = FS->setCurrentWorkingDirectory("//root/");
   ASSERT_FALSE(EC);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   llvm::ErrorOr<vfs::Status> Status = FS->status("bar/a");
   ASSERT_FALSE(Status.getError());
@@ -2528,10 +2550,10 @@ TEST_F(VFSFromYAMLTest, VirtualWorkingDirectory) {
       "]\n"
       "}",
       Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
   std::error_code EC = FS->setCurrentWorkingDirectory("//root/bar");
   ASSERT_FALSE(EC);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   llvm::ErrorOr<vfs::Status> Status = FS->status("a");
   ASSERT_FALSE(Status.getError());
@@ -2576,7 +2598,7 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest) {
   Lower->addDirectory("//root/h");
 
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   EXPECT_TRUE(FS->exists(_a.path()));
   EXPECT_TRUE(FS->exists(_ab.path()));
@@ -2616,7 +2638,7 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest2) {
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
-  EXPECT_TRUE(FS.get() != nullptr);
+  EXPECT_NE(FS.get(), nullptr);
 }
 
 TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest3) {
@@ -2649,7 +2671,7 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTest3) {
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
-  EXPECT_TRUE(FS.get() != nullptr);
+  EXPECT_NE(FS.get(), nullptr);
 }
 
 TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
@@ -2669,7 +2691,7 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
   OS.flush();
 
   // We didn't add a single file - only directories.
-  EXPECT_TRUE(Buffer.find("'type': 'file'") == std::string::npos);
+  EXPECT_EQ(Buffer.find("'type': 'file'"), std::string::npos);
 
   IntrusiveRefCntPtr<ErrorDummyFileSystem> Lower(new ErrorDummyFileSystem());
   Lower->addDirectory("//root/a");
@@ -2681,7 +2703,7 @@ TEST_F(VFSFromYAMLTest, YAMLVFSWriterTestHandleDirs) {
   Lower->addRegularFile("//root/c/c");
 
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLRawString(Buffer, Lower);
-  ASSERT_TRUE(FS.get() != nullptr);
+  ASSERT_NE(FS.get(), nullptr);
 
   EXPECT_FALSE(FS->exists(_a.path("a")));
   EXPECT_FALSE(FS->exists(_b.path("b")));

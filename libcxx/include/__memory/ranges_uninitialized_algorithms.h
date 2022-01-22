@@ -13,7 +13,6 @@
 #include <__algorithm/in_out_result.h>
 #include <__concepts/constructible.h>
 #include <__config>
-#include <__function_like.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
@@ -40,9 +39,7 @@ namespace ranges {
 
 namespace __uninitialized_default_construct {
 
-struct __fn final : private __function_like {
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator,
             __nothrow_sentinel_for<_ForwardIterator> _Sentinel>
     requires default_initializable<iter_value_t<_ForwardIterator>>
@@ -62,16 +59,14 @@ struct __fn final : private __function_like {
 } // namespace __uninitialized_default_construct
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_default_construct = __uninitialized_default_construct::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_default_construct = __uninitialized_default_construct::__fn{};
 } // namespace __cpo
 
 // uninitialized_default_construct_n
 
 namespace __uninitialized_default_construct_n {
 
-struct __fn final : private __function_like {
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator>
     requires default_initializable<iter_value_t<_ForwardIterator>>
   _ForwardIterator operator()(_ForwardIterator __first,
@@ -84,18 +79,14 @@ struct __fn final : private __function_like {
 } // namespace __uninitialized_default_construct_n
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_default_construct_n =
-      __uninitialized_default_construct_n::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_default_construct_n = __uninitialized_default_construct_n::__fn{};
 } // namespace __cpo
 
 // uninitialized_value_construct
 
 namespace __uninitialized_value_construct {
 
-struct __fn final : private __function_like {
-
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator,
             __nothrow_sentinel_for<_ForwardIterator> _Sentinel>
     requires default_initializable<iter_value_t<_ForwardIterator>>
@@ -110,24 +101,19 @@ struct __fn final : private __function_like {
   borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range) const {
     return (*this)(ranges::begin(__range), ranges::end(__range));
   }
-
 };
 
 } // namespace __uninitialized_value_construct
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_value_construct =
-      __uninitialized_value_construct::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_value_construct = __uninitialized_value_construct::__fn{};
 } // namespace __cpo
 
 // uninitialized_value_construct_n
 
 namespace __uninitialized_value_construct_n {
 
-struct __fn final : private __function_like {
-
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator>
     requires default_initializable<iter_value_t<_ForwardIterator>>
   _ForwardIterator operator()(_ForwardIterator __first,
@@ -135,24 +121,19 @@ struct __fn final : private __function_like {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return _VSTD::__uninitialized_value_construct_n<_ValueType>(_VSTD::move(__first), __n);
   }
-
 };
 
 } // namespace __uninitialized_value_construct_n
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_value_construct_n =
-      __uninitialized_value_construct_n::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_value_construct_n = __uninitialized_value_construct_n::__fn{};
 } // namespace __cpo
 
 // uninitialized_fill
 
 namespace __uninitialized_fill {
 
-struct __fn final : private __function_like {
-
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator,
             __nothrow_sentinel_for<_ForwardIterator> _Sentinel,
             class _Tp>
@@ -167,23 +148,19 @@ struct __fn final : private __function_like {
   borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range, const _Tp& __x) const {
     return (*this)(ranges::begin(__range), ranges::end(__range), __x);
   }
-
 };
 
 } // namespace __uninitialized_fill
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_fill = __uninitialized_fill::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_fill = __uninitialized_fill::__fn{};
 } // namespace __cpo
 
 // uninitialized_fill_n
 
 namespace __uninitialized_fill_n {
 
-struct __fn final : private __function_like {
-
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator, class _Tp>
     requires constructible_from<iter_value_t<_ForwardIterator>, const _Tp&>
   _ForwardIterator operator()(_ForwardIterator __first,
@@ -192,13 +169,12 @@ struct __fn final : private __function_like {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return _VSTD::__uninitialized_fill_n<_ValueType>(_VSTD::move(__first), __n, __x);
   }
-
 };
 
 } // namespace __uninitialized_fill_n
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_fill_n = __uninitialized_fill_n::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_fill_n = __uninitialized_fill_n::__fn{};
 } // namespace __cpo
 
 // uninitialized_copy
@@ -208,9 +184,7 @@ using uninitialized_copy_result = in_out_result<_InputIterator, _OutputIterator>
 
 namespace __uninitialized_copy {
 
-struct __fn final : private __function_like {
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <input_iterator _InputIterator,
             sentinel_for<_InputIterator> _Sentinel1,
             __nothrow_forward_iterator _OutputIterator,
@@ -237,7 +211,7 @@ struct __fn final : private __function_like {
 } // namespace __uninitialized_copy
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_copy = __uninitialized_copy::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_copy = __uninitialized_copy::__fn{};
 } // namespace __cpo
 
 // uninitialized_copy_n
@@ -247,9 +221,7 @@ using uninitialized_copy_n_result = in_out_result<_InputIterator, _OutputIterato
 
 namespace __uninitialized_copy_n {
 
-struct __fn final : private __function_like {
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <input_iterator _InputIterator,
            __nothrow_forward_iterator _OutputIterator,
            __nothrow_sentinel_for<_OutputIterator> _Sentinel>
@@ -267,7 +239,7 @@ struct __fn final : private __function_like {
 } // namespace __uninitialized_copy_n
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_copy_n = __uninitialized_copy_n::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_copy_n = __uninitialized_copy_n::__fn{};
 } // namespace __cpo
 
 // uninitialized_move
@@ -277,9 +249,7 @@ using uninitialized_move_result = in_out_result<_InputIterator, _OutputIterator>
 
 namespace __uninitialized_move {
 
-struct __fn final : private __function_like {
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <input_iterator _InputIterator,
             sentinel_for<_InputIterator> _Sentinel1,
             __nothrow_forward_iterator _OutputIterator,
@@ -289,7 +259,6 @@ struct __fn final : private __function_like {
   operator()(_InputIterator __ifirst, _Sentinel1 __ilast, _OutputIterator __ofirst, _Sentinel2 __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
     auto __iter_move = [](auto&& __iter) -> decltype(auto) { return ranges::iter_move(__iter); };
-
     auto __result = _VSTD::__uninitialized_move<_ValueType>(_VSTD::move(__ifirst), _VSTD::move(__ilast),
                                                             _VSTD::move(__ofirst), _VSTD::move(__olast), __iter_move);
     return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
@@ -307,7 +276,7 @@ struct __fn final : private __function_like {
 } // namespace __uninitialized_move
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_move = __uninitialized_move::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_move = __uninitialized_move::__fn{};
 } // namespace __cpo
 
 // uninitialized_move_n
@@ -317,9 +286,7 @@ using uninitialized_move_n_result = in_out_result<_InputIterator, _OutputIterato
 
 namespace __uninitialized_move_n {
 
-struct __fn final : private __function_like {
-  constexpr explicit __fn(__tag __x) noexcept : __function_like(__x) {}
-
+struct __fn {
   template <input_iterator _InputIterator,
            __nothrow_forward_iterator _OutputIterator,
            __nothrow_sentinel_for<_OutputIterator> _Sentinel>
@@ -329,9 +296,8 @@ struct __fn final : private __function_like {
              _OutputIterator __ofirst, _Sentinel __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
     auto __iter_move = [](auto&& __iter) -> decltype(auto) { return ranges::iter_move(__iter); };
-
-    auto __result = _VSTD::__uninitialized_move_n<_ValueType>(_VSTD::move(__ifirst), __n, _VSTD::move(__ofirst),
-                                                              _VSTD::move(__olast), __iter_move);
+    auto __result = _VSTD::__uninitialized_move_n<_ValueType>(_VSTD::move(__ifirst), __n,
+                                                              _VSTD::move(__ofirst), _VSTD::move(__olast), __iter_move);
     return {_VSTD::move(__result.first), _VSTD::move(__result.second)};
   }
 };
@@ -339,7 +305,7 @@ struct __fn final : private __function_like {
 } // namespace __uninitialized_move_n
 
 inline namespace __cpo {
-  inline constexpr auto uninitialized_move_n = __uninitialized_move_n::__fn(__function_like::__tag());
+  inline constexpr auto uninitialized_move_n = __uninitialized_move_n::__fn{};
 } // namespace __cpo
 
 } // namespace ranges

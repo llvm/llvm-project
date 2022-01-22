@@ -127,7 +127,7 @@ int main(void) {
 // CHECK: define dso_local noundef signext i32 @main()
 // CHECK: entry:
 // CHECK:   %0 = load ppc_fp128, ppc_fp128* %lf, align 16
-// CHECK:   call void @_ZN5CTestC1Eg(%class.CTest* noundef %ct, ppc_fp128 noundef %0)
+// CHECK:   call void @_ZN5CTestC1Eg(%class.CTest* noundef nonnull align 16 dereferenceable(32) %ct, ppc_fp128 noundef %0)
 // CHECK:   %mem2 = getelementptr inbounds %struct.T1, %struct.T1* %tf, i32 0, i32 0
 // CHECK:   %1 = load ppc_fp128, ppc_fp128* %mem2, align 16
 // CHECK:   %2 = load ppc_fp128, ppc_fp128* %lf, align 16
@@ -140,13 +140,13 @@ int main(void) {
 // CHECK:   ret i32 0
 // CHECK: }
 
-// CHECK: define linkonce_odr void @_ZN5CTestC1Eg(%class.CTest* noundef %this, ppc_fp128 noundef %arg)
+// CHECK: define linkonce_odr void @_ZN5CTestC1Eg(%class.CTest* noundef nonnull align 16 dereferenceable(32) %this, ppc_fp128 noundef %arg)
 // CHECK: entry:
 // CHECK:   store %class.CTest* %this, %class.CTest** %this.addr, align 8
 // CHECK:   store ppc_fp128 %arg, ppc_fp128* %arg.addr, align 16
 // CHECK:   %this1 = load %class.CTest*, %class.CTest** %this.addr, align 8
 // CHECK:   %0 = load ppc_fp128, ppc_fp128* %arg.addr, align 16
-// CHECK:   call void @_ZN5CTestC2Eg(%class.CTest* noundef %this1, ppc_fp128 noundef %0)
+// CHECK:   call void @_ZN5CTestC2Eg(%class.CTest* noundef nonnull align 16 dereferenceable(32) %this1, ppc_fp128 noundef %0)
 // CHECK:   ret void
 // CHECK: }
 
@@ -160,7 +160,7 @@ int main(void) {
 // CHECK:   ret ppc_fp128 %mul
 // CHECK: }
 
-// CHECK: define linkonce_odr void @_ZN5CTestC2Eg(%class.CTest* noundef %this, ppc_fp128 noundef %arg)
+// CHECK: define linkonce_odr void @_ZN5CTestC2Eg(%class.CTest* noundef nonnull align 16 dereferenceable(32) %this, ppc_fp128 noundef %arg)
 // CHECK: entry:
 // CHECK:   store %class.CTest* %this, %class.CTest** %this.addr, align 8
 // CHECK:   store ppc_fp128 %arg, ppc_fp128* %arg.addr, align 16

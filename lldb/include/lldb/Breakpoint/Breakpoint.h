@@ -581,7 +581,7 @@ public:
   llvm::json::Value GetStatistics();
 
   /// Get the time it took to resolve all locations in this breakpoint.
-  StatsDuration GetResolveTime() const { return m_resolve_time; }
+  StatsDuration::Duration GetResolveTime() const { return m_resolve_time; }
 
 protected:
   friend class Target;
@@ -660,7 +660,7 @@ private:
 
   BreakpointName::Permissions m_permissions;
 
-  StatsDuration m_resolve_time{0.0};
+  StatsDuration m_resolve_time;
 
   void SendBreakpointChangedEvent(lldb::BreakpointEventType eventKind);
 

@@ -245,6 +245,7 @@ enum NodeType : unsigned {
   // Widening instructions
   VWMUL_VL,
   VWMULU_VL,
+  VWADDU_VL,
 
   // Vector compare producing a mask. Fourth operand is input mask. Fifth
   // operand is VL.

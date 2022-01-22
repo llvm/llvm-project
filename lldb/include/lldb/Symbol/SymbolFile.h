@@ -316,14 +316,14 @@ public:
   ///
   /// \returns 0.0 if no information has been parsed or if there is
   /// no computational cost to parsing the debug information.
-  virtual StatsDuration GetDebugInfoParseTime() { return StatsDuration(0.0); }
+  virtual StatsDuration::Duration GetDebugInfoParseTime() { return {}; }
 
   /// Return the time it took to index the debug information in the object
   /// file.
   ///
   /// \returns 0.0 if the file doesn't need to be indexed or if it
   /// hasn't been indexed yet, or a valid duration if it has.
-  virtual StatsDuration GetDebugInfoIndexTime() { return StatsDuration(0.0); }
+  virtual StatsDuration::Duration GetDebugInfoIndexTime() { return {}; }
 
   /// Accessors for the bool that indicates if the debug info index was loaded
   /// from, or saved to the module index cache.

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
-#include "lldb/Utility/ReproducerInstrumentation.h"
+#include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/lldb-public.h"
 
@@ -93,19 +93,18 @@ static Status AttachToProcess(ProcessAttachInfo &attach_info, Target &target) {
 }
 
 // SBTarget constructor
-SBTarget::SBTarget() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTarget); }
+SBTarget::SBTarget() { LLDB_INSTRUMENT_VA(this); }
 
 SBTarget::SBTarget(const SBTarget &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBTarget, (const lldb::SBTarget &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 }
 
 SBTarget::SBTarget(const TargetSP &target_sp) : m_opaque_sp(target_sp) {
-  LLDB_RECORD_CONSTRUCTOR(SBTarget, (const lldb::TargetSP &), target_sp);
+  LLDB_INSTRUMENT_VA(this, target_sp);
 }
 
 const SBTarget &SBTarget::operator=(const SBTarget &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBTarget &,
-                     SBTarget, operator=,(const lldb::SBTarget &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
@@ -116,22 +115,19 @@ const SBTarget &SBTarget::operator=(const SBTarget &rhs) {
 SBTarget::~SBTarget() = default;
 
 bool SBTarget::EventIsTargetEvent(const SBEvent &event) {
-  LLDB_RECORD_STATIC_METHOD(bool, SBTarget, EventIsTargetEvent,
-                            (const lldb::SBEvent &), event);
+  LLDB_INSTRUMENT_VA(event);
 
   return Target::TargetEventData::GetEventDataFromEvent(event.get()) != nullptr;
 }
 
 SBTarget SBTarget::GetTargetFromEvent(const SBEvent &event) {
-  LLDB_RECORD_STATIC_METHOD(lldb::SBTarget, SBTarget, GetTargetFromEvent,
-                            (const lldb::SBEvent &), event);
+  LLDB_INSTRUMENT_VA(event);
 
   return Target::TargetEventData::GetTargetFromEvent(event.get());
 }
 
 uint32_t SBTarget::GetNumModulesFromEvent(const SBEvent &event) {
-  LLDB_RECORD_STATIC_METHOD(uint32_t, SBTarget, GetNumModulesFromEvent,
-                            (const lldb::SBEvent &), event);
+  LLDB_INSTRUMENT_VA(event);
 
   const ModuleList module_list =
       Target::TargetEventData::GetModuleListFromEvent(event.get());
@@ -140,9 +136,7 @@ uint32_t SBTarget::GetNumModulesFromEvent(const SBEvent &event) {
 
 SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
                                              const SBEvent &event) {
-  LLDB_RECORD_STATIC_METHOD(lldb::SBModule, SBTarget, GetModuleAtIndexFromEvent,
-                            (const uint32_t, const lldb::SBEvent &), idx,
-                            event);
+  LLDB_INSTRUMENT_VA(idx, event);
 
   const ModuleList module_list =
       Target::TargetEventData::GetModuleListFromEvent(event.get());
@@ -150,24 +144,23 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 }
 
 const char *SBTarget::GetBroadcasterClassName() {
-  LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBTarget,
-                                    GetBroadcasterClassName);
+  LLDB_INSTRUMENT();
 
   return Target::GetStaticBroadcasterClass().AsCString();
 }
 
 bool SBTarget::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTarget, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBTarget::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTarget, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   return m_opaque_sp.get() != nullptr && m_opaque_sp->IsValid();
 }
 
 SBProcess SBTarget::GetProcess() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBProcess, SBTarget, GetProcess);
+  LLDB_INSTRUMENT_VA(this);
 
   SBProcess sb_process;
   ProcessSP process_sp;
@@ -181,7 +174,7 @@ SBProcess SBTarget::GetProcess() {
 }
 
 SBPlatform SBTarget::GetPlatform() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBPlatform, SBTarget, GetPlatform);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
@@ -194,7 +187,7 @@ SBPlatform SBTarget::GetPlatform() {
 }
 
 SBDebugger SBTarget::GetDebugger() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBDebugger, SBTarget, GetDebugger);
+  LLDB_INSTRUMENT_VA(this);
 
   SBDebugger debugger;
   TargetSP target_sp(GetSP());
@@ -204,7 +197,7 @@ SBDebugger SBTarget::GetDebugger() const {
 }
 
 SBStructuredData SBTarget::GetStatistics() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBStructuredData, SBTarget, GetStatistics);
+  LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData data;
   TargetSP target_sp(GetSP());
@@ -219,7 +212,7 @@ SBStructuredData SBTarget::GetStatistics() {
 }
 
 void SBTarget::SetCollectingStats(bool v) {
-  LLDB_RECORD_METHOD(void, SBTarget, SetCollectingStats, (bool), v);
+  LLDB_INSTRUMENT_VA(this, v);
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
@@ -228,7 +221,7 @@ void SBTarget::SetCollectingStats(bool v) {
 }
 
 bool SBTarget::GetCollectingStats() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTarget, GetCollectingStats);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
@@ -237,16 +230,14 @@ bool SBTarget::GetCollectingStats() {
 }
 
 SBProcess SBTarget::LoadCore(const char *core_file) {
-  LLDB_RECORD_METHOD(lldb::SBProcess, SBTarget, LoadCore, (const char *),
-                     core_file);
+  LLDB_INSTRUMENT_VA(this, core_file);
 
   lldb::SBError error; // Ignored
   return LoadCore(core_file, error);
 }
 
 SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
-  LLDB_RECORD_METHOD(lldb::SBProcess, SBTarget, LoadCore,
-                     (const char *, lldb::SBError &), core_file, error);
+  LLDB_INSTRUMENT_VA(this, core_file, error);
 
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
@@ -270,9 +261,7 @@ SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
 
 SBProcess SBTarget::LaunchSimple(char const **argv, char const **envp,
                                  const char *working_directory) {
-  LLDB_RECORD_METHOD(lldb::SBProcess, SBTarget, LaunchSimple,
-                     (const char **, const char **, const char *), argv, envp,
-                     working_directory);
+  LLDB_INSTRUMENT_VA(this, argv, envp, working_directory);
 
   TargetSP target_sp = GetSP();
   if (!target_sp)
@@ -295,7 +284,7 @@ SBProcess SBTarget::LaunchSimple(char const **argv, char const **envp,
 }
 
 SBError SBTarget::Install() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBTarget, Install);
+  LLDB_INSTRUMENT_VA(this);
 
   SBError sb_error;
   TargetSP target_sp(GetSP());
@@ -312,12 +301,9 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
                            const char *working_directory,
                            uint32_t launch_flags, // See LaunchFlags
                            bool stop_at_entry, lldb::SBError &error) {
-  LLDB_RECORD_METHOD(lldb::SBProcess, SBTarget, Launch,
-                     (lldb::SBListener &, const char **, const char **,
-                      const char *, const char *, const char *, const char *,
-                      uint32_t, bool, lldb::SBError &),
-                     listener, argv, envp, stdin_path, stdout_path, stderr_path,
-                     working_directory, launch_flags, stop_at_entry, error);
+  LLDB_INSTRUMENT_VA(this, listener, argv, envp, stdin_path, stdout_path,
+                     stderr_path, working_directory, launch_flags,
+                     stop_at_entry, error);
 
   SBProcess sb_process;
   ProcessSP process_sp;
@@ -395,10 +381,7 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
 }
 
 SBProcess SBTarget::Launch(SBLaunchInfo &sb_launch_info, SBError &error) {
-  LLDB_RECORD_METHOD(lldb::SBProcess, SBTarget, Launch,
-                     (lldb::SBLaunchInfo &, lldb::SBError &), sb_launch_info,
-                     error);
-
+  LLDB_INSTRUMENT_VA(this, sb_launch_info, error);
 
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
@@ -444,9 +427,7 @@ SBProcess SBTarget::Launch(SBLaunchInfo &sb_launch_info, SBError &error) {
 }
 
 lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
-  LLDB_RECORD_METHOD(lldb::SBProcess, SBTarget, Attach,
-                     (lldb::SBAttachInfo &, lldb::SBError &), sb_attach_info,
-                     error);
+  LLDB_INSTRUMENT_VA(this, sb_attach_info, error);
 
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
@@ -483,9 +464,7 @@ lldb::SBProcess SBTarget::AttachToProcessWithID(
     lldb::pid_t pid, // The process ID to attach to
     SBError &error   // An error explaining what went wrong if attach fails
 ) {
-  LLDB_RECORD_METHOD(lldb::SBProcess, SBTarget, AttachToProcessWithID,
-                     (lldb::SBListener &, lldb::pid_t, lldb::SBError &),
-                     listener, pid, error);
+  LLDB_INSTRUMENT_VA(this, listener, pid, error);
 
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
@@ -515,9 +494,7 @@ lldb::SBProcess SBTarget::AttachToProcessWithName(
     bool wait_for, // if true wait for a new instance of "name" to be launched
     SBError &error // An error explaining what went wrong if attach fails
 ) {
-  LLDB_RECORD_METHOD(lldb::SBProcess, SBTarget, AttachToProcessWithName,
-                     (lldb::SBListener &, const char *, bool, lldb::SBError &),
-                     listener, name, wait_for, error);
+  LLDB_INSTRUMENT_VA(this, listener, name, wait_for, error);
 
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
@@ -541,10 +518,7 @@ lldb::SBProcess SBTarget::AttachToProcessWithName(
 lldb::SBProcess SBTarget::ConnectRemote(SBListener &listener, const char *url,
                                         const char *plugin_name,
                                         SBError &error) {
-  LLDB_RECORD_METHOD(
-      lldb::SBProcess, SBTarget, ConnectRemote,
-      (lldb::SBListener &, const char *, const char *, lldb::SBError &),
-      listener, url, plugin_name, error);
+  LLDB_INSTRUMENT_VA(this, listener, url, plugin_name, error);
 
   SBProcess sb_process;
   ProcessSP process_sp;
@@ -574,7 +548,7 @@ lldb::SBProcess SBTarget::ConnectRemote(SBListener &listener, const char *url,
 }
 
 SBFileSpec SBTarget::GetExecutable() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFileSpec, SBTarget, GetExecutable);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFileSpec exe_file_spec;
   TargetSP target_sp(GetSP());
@@ -588,15 +562,13 @@ SBFileSpec SBTarget::GetExecutable() {
 }
 
 bool SBTarget::operator==(const SBTarget &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBTarget, operator==,(const lldb::SBTarget &),
-                           rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_sp.get() == rhs.m_opaque_sp.get();
 }
 
 bool SBTarget::operator!=(const SBTarget &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBTarget, operator!=,(const lldb::SBTarget &),
-                           rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return m_opaque_sp.get() != rhs.m_opaque_sp.get();
 }
@@ -608,8 +580,7 @@ void SBTarget::SetSP(const lldb::TargetSP &target_sp) {
 }
 
 lldb::SBAddress SBTarget::ResolveLoadAddress(lldb::addr_t vm_addr) {
-  LLDB_RECORD_METHOD(lldb::SBAddress, SBTarget, ResolveLoadAddress,
-                     (lldb::addr_t), vm_addr);
+  LLDB_INSTRUMENT_VA(this, vm_addr);
 
   lldb::SBAddress sb_addr;
   Address &addr = sb_addr.ref();
@@ -627,8 +598,7 @@ lldb::SBAddress SBTarget::ResolveLoadAddress(lldb::addr_t vm_addr) {
 }
 
 lldb::SBAddress SBTarget::ResolveFileAddress(lldb::addr_t file_addr) {
-  LLDB_RECORD_METHOD(lldb::SBAddress, SBTarget, ResolveFileAddress,
-                     (lldb::addr_t), file_addr);
+  LLDB_INSTRUMENT_VA(this, file_addr);
 
   lldb::SBAddress sb_addr;
   Address &addr = sb_addr.ref();
@@ -645,8 +615,7 @@ lldb::SBAddress SBTarget::ResolveFileAddress(lldb::addr_t file_addr) {
 
 lldb::SBAddress SBTarget::ResolvePastLoadAddress(uint32_t stop_id,
                                                  lldb::addr_t vm_addr) {
-  LLDB_RECORD_METHOD(lldb::SBAddress, SBTarget, ResolvePastLoadAddress,
-                     (uint32_t, lldb::addr_t), stop_id, vm_addr);
+  LLDB_INSTRUMENT_VA(this, stop_id, vm_addr);
 
   lldb::SBAddress sb_addr;
   Address &addr = sb_addr.ref();
@@ -666,9 +635,7 @@ lldb::SBAddress SBTarget::ResolvePastLoadAddress(uint32_t stop_id,
 SBSymbolContext
 SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
                                          uint32_t resolve_scope) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContext, SBTarget,
-                     ResolveSymbolContextForAddress,
-                     (const lldb::SBAddress &, uint32_t), addr, resolve_scope);
+  LLDB_INSTRUMENT_VA(this, addr, resolve_scope);
 
   SBSymbolContext sc;
   SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
@@ -683,9 +650,7 @@ SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
 
 size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
                             lldb::SBError &error) {
-  LLDB_RECORD_METHOD(size_t, SBTarget, ReadMemory,
-                     (const lldb::SBAddress, void *, size_t, lldb::SBError &),
-                     addr, buf, size, error);
+  LLDB_INSTRUMENT_VA(this, addr, buf, size, error);
 
   SBError sb_error;
   size_t bytes_read = 0;
@@ -703,8 +668,7 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
 
 SBBreakpoint SBTarget::BreakpointCreateByLocation(const char *file,
                                                   uint32_t line) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
-                     (const char *, uint32_t), file, line);
+  LLDB_INSTRUMENT_VA(this, file, line);
 
   return SBBreakpoint(
       BreakpointCreateByLocation(SBFileSpec(file, false), line));
@@ -713,8 +677,7 @@ SBBreakpoint SBTarget::BreakpointCreateByLocation(const char *file,
 SBBreakpoint
 SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
                                      uint32_t line) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
-                     (const lldb::SBFileSpec &, uint32_t), sb_file_spec, line);
+  LLDB_INSTRUMENT_VA(this, sb_file_spec, line);
 
   return BreakpointCreateByLocation(sb_file_spec, line, 0);
 }
@@ -722,9 +685,7 @@ SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
 SBBreakpoint
 SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
                                      uint32_t line, lldb::addr_t offset) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
-                     (const lldb::SBFileSpec &, uint32_t, lldb::addr_t),
-                     sb_file_spec, line, offset);
+  LLDB_INSTRUMENT_VA(this, sb_file_spec, line, offset);
 
   SBFileSpecList empty_list;
   return BreakpointCreateByLocation(sb_file_spec, line, offset, empty_list);
@@ -734,10 +695,7 @@ SBBreakpoint
 SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
                                      uint32_t line, lldb::addr_t offset,
                                      SBFileSpecList &sb_module_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
-                     (const lldb::SBFileSpec &, uint32_t, lldb::addr_t,
-                      lldb::SBFileSpecList &),
-                     sb_file_spec, line, offset, sb_module_list);
+  LLDB_INSTRUMENT_VA(this, sb_file_spec, line, offset, sb_module_list);
 
   return BreakpointCreateByLocation(sb_file_spec, line, 0, offset,
                                     sb_module_list);
@@ -746,10 +704,7 @@ SBTarget::BreakpointCreateByLocation(const SBFileSpec &sb_file_spec,
 SBBreakpoint SBTarget::BreakpointCreateByLocation(
     const SBFileSpec &sb_file_spec, uint32_t line, uint32_t column,
     lldb::addr_t offset, SBFileSpecList &sb_module_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
-                     (const lldb::SBFileSpec &, uint32_t, uint32_t,
-                      lldb::addr_t, lldb::SBFileSpecList &),
-                     sb_file_spec, line, column, offset, sb_module_list);
+  LLDB_INSTRUMENT_VA(this, sb_file_spec, line, column, offset, sb_module_list);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -777,10 +732,7 @@ SBBreakpoint SBTarget::BreakpointCreateByLocation(
     const SBFileSpec &sb_file_spec, uint32_t line, uint32_t column,
     lldb::addr_t offset, SBFileSpecList &sb_module_list,
     bool move_to_nearest_code) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByLocation,
-                     (const lldb::SBFileSpec &, uint32_t, uint32_t,
-                      lldb::addr_t, lldb::SBFileSpecList &, bool),
-                     sb_file_spec, line, column, offset, sb_module_list,
+  LLDB_INSTRUMENT_VA(this, sb_file_spec, line, column, offset, sb_module_list,
                      move_to_nearest_code);
 
   SBBreakpoint sb_bp;
@@ -807,8 +759,7 @@ SBBreakpoint SBTarget::BreakpointCreateByLocation(
 
 SBBreakpoint SBTarget::BreakpointCreateByName(const char *symbol_name,
                                               const char *module_name) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
-                     (const char *, const char *), symbol_name, module_name);
+  LLDB_INSTRUMENT_VA(this, symbol_name, module_name);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -839,10 +790,7 @@ lldb::SBBreakpoint
 SBTarget::BreakpointCreateByName(const char *symbol_name,
                                  const SBFileSpecList &module_list,
                                  const SBFileSpecList &comp_unit_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
-                     (const char *, const lldb::SBFileSpecList &,
-                      const lldb::SBFileSpecList &),
-                     symbol_name, module_list, comp_unit_list);
+  LLDB_INSTRUMENT_VA(this, symbol_name, module_list, comp_unit_list);
 
   lldb::FunctionNameType name_type_mask = eFunctionNameTypeAuto;
   return BreakpointCreateByName(symbol_name, name_type_mask,
@@ -853,10 +801,8 @@ SBTarget::BreakpointCreateByName(const char *symbol_name,
 lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
     const char *symbol_name, uint32_t name_type_mask,
     const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
-                     (const char *, uint32_t, const lldb::SBFileSpecList &,
-                      const lldb::SBFileSpecList &),
-                     symbol_name, name_type_mask, module_list, comp_unit_list);
+  LLDB_INSTRUMENT_VA(this, symbol_name, name_type_mask, module_list,
+                     comp_unit_list);
 
   return BreakpointCreateByName(symbol_name, name_type_mask,
                                 eLanguageTypeUnknown, module_list,
@@ -867,12 +813,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
     const char *symbol_name, uint32_t name_type_mask,
     LanguageType symbol_language, const SBFileSpecList &module_list,
     const SBFileSpecList &comp_unit_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByName,
-                     (const char *, uint32_t, lldb::LanguageType,
-                      const lldb::SBFileSpecList &,
-                      const lldb::SBFileSpecList &),
-                     symbol_name, name_type_mask, symbol_language, module_list,
-                     comp_unit_list);
+  LLDB_INSTRUMENT_VA(this, symbol_name, name_type_mask, symbol_language,
+                     module_list, comp_unit_list);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -893,11 +835,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
 lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
     const char *symbol_names[], uint32_t num_names, uint32_t name_type_mask,
     const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list) {
-  LLDB_RECORD_METHOD(
-      lldb::SBBreakpoint, SBTarget, BreakpointCreateByNames,
-      (const char **, uint32_t, uint32_t, const lldb::SBFileSpecList &,
-       const lldb::SBFileSpecList &),
-      symbol_names, num_names, name_type_mask, module_list, comp_unit_list);
+  LLDB_INSTRUMENT_VA(this, symbol_names, num_names, name_type_mask, module_list,
+                     comp_unit_list);
 
   return BreakpointCreateByNames(symbol_names, num_names, name_type_mask,
                                  eLanguageTypeUnknown, module_list,
@@ -908,12 +847,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
     const char *symbol_names[], uint32_t num_names, uint32_t name_type_mask,
     LanguageType symbol_language, const SBFileSpecList &module_list,
     const SBFileSpecList &comp_unit_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByNames,
-                     (const char **, uint32_t, uint32_t, lldb::LanguageType,
-                      const lldb::SBFileSpecList &,
-                      const lldb::SBFileSpecList &),
-                     symbol_names, num_names, name_type_mask, symbol_language,
-                     module_list, comp_unit_list);
+  LLDB_INSTRUMENT_VA(this, symbol_names, num_names, name_type_mask,
+                     symbol_language, module_list, comp_unit_list);
 
   return BreakpointCreateByNames(symbol_names, num_names, name_type_mask,
                                  eLanguageTypeUnknown, 0, module_list,
@@ -924,12 +859,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
     const char *symbol_names[], uint32_t num_names, uint32_t name_type_mask,
     LanguageType symbol_language, lldb::addr_t offset,
     const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByNames,
-                     (const char **, uint32_t, uint32_t, lldb::LanguageType,
-                      lldb::addr_t, const lldb::SBFileSpecList &,
-                      const lldb::SBFileSpecList &),
-                     symbol_names, num_names, name_type_mask, symbol_language,
-                     offset, module_list, comp_unit_list);
+  LLDB_INSTRUMENT_VA(this, symbol_names, num_names, name_type_mask,
+                     symbol_language, offset, module_list, comp_unit_list);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -949,9 +880,7 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
 
 SBBreakpoint SBTarget::BreakpointCreateByRegex(const char *symbol_name_regex,
                                                const char *module_name) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByRegex,
-                     (const char *, const char *), symbol_name_regex,
-                     module_name);
+  LLDB_INSTRUMENT_VA(this, symbol_name_regex, module_name);
 
   SBFileSpecList module_spec_list;
   SBFileSpecList comp_unit_list;
@@ -966,10 +895,7 @@ lldb::SBBreakpoint
 SBTarget::BreakpointCreateByRegex(const char *symbol_name_regex,
                                   const SBFileSpecList &module_list,
                                   const SBFileSpecList &comp_unit_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByRegex,
-                     (const char *, const lldb::SBFileSpecList &,
-                      const lldb::SBFileSpecList &),
-                     symbol_name_regex, module_list, comp_unit_list);
+  LLDB_INSTRUMENT_VA(this, symbol_name_regex, module_list, comp_unit_list);
 
   return BreakpointCreateByRegex(symbol_name_regex, eLanguageTypeUnknown,
                                  module_list, comp_unit_list);
@@ -978,12 +904,8 @@ SBTarget::BreakpointCreateByRegex(const char *symbol_name_regex,
 lldb::SBBreakpoint SBTarget::BreakpointCreateByRegex(
     const char *symbol_name_regex, LanguageType symbol_language,
     const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list) {
-  LLDB_RECORD_METHOD(
-      lldb::SBBreakpoint, SBTarget, BreakpointCreateByRegex,
-      (const char *, lldb::LanguageType, const lldb::SBFileSpecList &,
-       const lldb::SBFileSpecList &),
-      symbol_name_regex, symbol_language, module_list, comp_unit_list);
-
+  LLDB_INSTRUMENT_VA(this, symbol_name_regex, symbol_language, module_list,
+                     comp_unit_list);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1003,8 +925,7 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByRegex(
 }
 
 SBBreakpoint SBTarget::BreakpointCreateByAddress(addr_t address) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateByAddress,
-                     (lldb::addr_t), address);
+  LLDB_INSTRUMENT_VA(this, address);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1018,8 +939,7 @@ SBBreakpoint SBTarget::BreakpointCreateByAddress(addr_t address) {
 }
 
 SBBreakpoint SBTarget::BreakpointCreateBySBAddress(SBAddress &sb_address) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateBySBAddress,
-                     (lldb::SBAddress &), sb_address);
+  LLDB_INSTRUMENT_VA(this, sb_address);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1040,10 +960,7 @@ lldb::SBBreakpoint
 SBTarget::BreakpointCreateBySourceRegex(const char *source_regex,
                                         const lldb::SBFileSpec &source_file,
                                         const char *module_name) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget,
-                     BreakpointCreateBySourceRegex,
-                     (const char *, const lldb::SBFileSpec &, const char *),
-                     source_regex, source_file, module_name);
+  LLDB_INSTRUMENT_VA(this, source_regex, source_file, module_name);
 
   SBFileSpecList module_spec_list;
 
@@ -1063,11 +980,7 @@ SBTarget::BreakpointCreateBySourceRegex(const char *source_regex,
 lldb::SBBreakpoint SBTarget::BreakpointCreateBySourceRegex(
     const char *source_regex, const SBFileSpecList &module_list,
     const lldb::SBFileSpecList &source_file_list) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget,
-                     BreakpointCreateBySourceRegex,
-                     (const char *, const lldb::SBFileSpecList &,
-                      const lldb::SBFileSpecList &),
-                     source_regex, module_list, source_file_list);
+  LLDB_INSTRUMENT_VA(this, source_regex, module_list, source_file_list);
 
   return BreakpointCreateBySourceRegex(source_regex, module_list,
                                        source_file_list, SBStringList());
@@ -1077,11 +990,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateBySourceRegex(
     const char *source_regex, const SBFileSpecList &module_list,
     const lldb::SBFileSpecList &source_file_list,
     const SBStringList &func_names) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget,
-                     BreakpointCreateBySourceRegex,
-                     (const char *, const lldb::SBFileSpecList &,
-                      const lldb::SBFileSpecList &, const lldb::SBStringList &),
-                     source_regex, module_list, source_file_list, func_names);
+  LLDB_INSTRUMENT_VA(this, source_regex, module_list, source_file_list,
+                     func_names);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1106,9 +1016,7 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateBySourceRegex(
 lldb::SBBreakpoint
 SBTarget::BreakpointCreateForException(lldb::LanguageType language,
                                        bool catch_bp, bool throw_bp) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateForException,
-                     (lldb::LanguageType, bool, bool), language, catch_bp,
-                     throw_bp);
+  LLDB_INSTRUMENT_VA(this, language, catch_bp, throw_bp);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1126,11 +1034,8 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateFromScript(
     const char *class_name, SBStructuredData &extra_args,
     const SBFileSpecList &module_list, const SBFileSpecList &file_list,
     bool request_hardware) {
-  LLDB_RECORD_METHOD(
-      lldb::SBBreakpoint, SBTarget, BreakpointCreateFromScript,
-      (const char *, lldb::SBStructuredData &, const lldb::SBFileSpecList &,
-       const lldb::SBFileSpecList &, bool),
-      class_name, extra_args, module_list, file_list, request_hardware);
+  LLDB_INSTRUMENT_VA(this, class_name, extra_args, module_list, file_list,
+                     request_hardware);
 
   SBBreakpoint sb_bp;
   TargetSP target_sp(GetSP());
@@ -1153,7 +1058,7 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateFromScript(
 }
 
 uint32_t SBTarget::GetNumBreakpoints() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBTarget, GetNumBreakpoints);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1164,8 +1069,7 @@ uint32_t SBTarget::GetNumBreakpoints() const {
 }
 
 SBBreakpoint SBTarget::GetBreakpointAtIndex(uint32_t idx) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBBreakpoint, SBTarget, GetBreakpointAtIndex,
-                           (uint32_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBBreakpoint sb_breakpoint;
   TargetSP target_sp(GetSP());
@@ -1177,8 +1081,7 @@ SBBreakpoint SBTarget::GetBreakpointAtIndex(uint32_t idx) const {
 }
 
 bool SBTarget::BreakpointDelete(break_id_t bp_id) {
-  LLDB_RECORD_METHOD(bool, SBTarget, BreakpointDelete, (lldb::break_id_t),
-                     bp_id);
+  LLDB_INSTRUMENT_VA(this, bp_id);
 
   bool result = false;
   TargetSP target_sp(GetSP());
@@ -1191,8 +1094,7 @@ bool SBTarget::BreakpointDelete(break_id_t bp_id) {
 }
 
 SBBreakpoint SBTarget::FindBreakpointByID(break_id_t bp_id) {
-  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, FindBreakpointByID,
-                     (lldb::break_id_t), bp_id);
+  LLDB_INSTRUMENT_VA(this, bp_id);
 
   SBBreakpoint sb_breakpoint;
   TargetSP target_sp(GetSP());
@@ -1206,8 +1108,7 @@ SBBreakpoint SBTarget::FindBreakpointByID(break_id_t bp_id) {
 
 bool SBTarget::FindBreakpointsByName(const char *name,
                                      SBBreakpointList &bkpts) {
-  LLDB_RECORD_METHOD(bool, SBTarget, FindBreakpointsByName,
-                     (const char *, lldb::SBBreakpointList &), name, bkpts);
+  LLDB_INSTRUMENT_VA(this, name, bkpts);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1228,8 +1129,7 @@ bool SBTarget::FindBreakpointsByName(const char *name,
 }
 
 void SBTarget::GetBreakpointNames(SBStringList &names) {
-  LLDB_RECORD_METHOD(void, SBTarget, GetBreakpointNames, (lldb::SBStringList &),
-                     names);
+  LLDB_INSTRUMENT_VA(this, names);
 
   names.Clear();
 
@@ -1245,8 +1145,7 @@ void SBTarget::GetBreakpointNames(SBStringList &names) {
 }
 
 void SBTarget::DeleteBreakpointName(const char *name) {
-  LLDB_RECORD_METHOD(void, SBTarget, DeleteBreakpointName, (const char *),
-                     name);
+  LLDB_INSTRUMENT_VA(this, name);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1256,7 +1155,7 @@ void SBTarget::DeleteBreakpointName(const char *name) {
 }
 
 bool SBTarget::EnableAllBreakpoints() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTarget, EnableAllBreakpoints);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1268,7 +1167,7 @@ bool SBTarget::EnableAllBreakpoints() {
 }
 
 bool SBTarget::DisableAllBreakpoints() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTarget, DisableAllBreakpoints);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1280,7 +1179,7 @@ bool SBTarget::DisableAllBreakpoints() {
 }
 
 bool SBTarget::DeleteAllBreakpoints() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTarget, DeleteAllBreakpoints);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1293,9 +1192,7 @@ bool SBTarget::DeleteAllBreakpoints() {
 
 lldb::SBError SBTarget::BreakpointsCreateFromFile(SBFileSpec &source_file,
                                                   SBBreakpointList &new_bps) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBTarget, BreakpointsCreateFromFile,
-                     (lldb::SBFileSpec &, lldb::SBBreakpointList &),
-                     source_file, new_bps);
+  LLDB_INSTRUMENT_VA(this, source_file, new_bps);
 
   SBStringList empty_name_list;
   return BreakpointsCreateFromFile(source_file, empty_name_list, new_bps);
@@ -1304,10 +1201,7 @@ lldb::SBError SBTarget::BreakpointsCreateFromFile(SBFileSpec &source_file,
 lldb::SBError SBTarget::BreakpointsCreateFromFile(SBFileSpec &source_file,
                                                   SBStringList &matching_names,
                                                   SBBreakpointList &new_bps) {
-  LLDB_RECORD_METHOD(
-      lldb::SBError, SBTarget, BreakpointsCreateFromFile,
-      (lldb::SBFileSpec &, lldb::SBStringList &, lldb::SBBreakpointList &),
-      source_file, matching_names, new_bps);
+  LLDB_INSTRUMENT_VA(this, source_file, matching_names, new_bps);
 
   SBError sberr;
   TargetSP target_sp(GetSP());
@@ -1339,8 +1233,7 @@ lldb::SBError SBTarget::BreakpointsCreateFromFile(SBFileSpec &source_file,
 }
 
 lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBTarget, BreakpointsWriteToFile,
-                     (lldb::SBFileSpec &), dest_file);
+  LLDB_INSTRUMENT_VA(this, dest_file);
 
   SBError sberr;
   TargetSP target_sp(GetSP());
@@ -1355,9 +1248,7 @@ lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file) {
 lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file,
                                                SBBreakpointList &bkpt_list,
                                                bool append) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBTarget, BreakpointsWriteToFile,
-                     (lldb::SBFileSpec &, lldb::SBBreakpointList &, bool),
-                     dest_file, bkpt_list, append);
+  LLDB_INSTRUMENT_VA(this, dest_file, bkpt_list, append);
 
   SBError sberr;
   TargetSP target_sp(GetSP());
@@ -1375,7 +1266,7 @@ lldb::SBError SBTarget::BreakpointsWriteToFile(SBFileSpec &dest_file,
 }
 
 uint32_t SBTarget::GetNumWatchpoints() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBTarget, GetNumWatchpoints);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1386,8 +1277,7 @@ uint32_t SBTarget::GetNumWatchpoints() const {
 }
 
 SBWatchpoint SBTarget::GetWatchpointAtIndex(uint32_t idx) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBWatchpoint, SBTarget, GetWatchpointAtIndex,
-                           (uint32_t), idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBWatchpoint sb_watchpoint;
   TargetSP target_sp(GetSP());
@@ -1399,9 +1289,7 @@ SBWatchpoint SBTarget::GetWatchpointAtIndex(uint32_t idx) const {
 }
 
 bool SBTarget::DeleteWatchpoint(watch_id_t wp_id) {
-  LLDB_RECORD_METHOD(bool, SBTarget, DeleteWatchpoint, (lldb::watch_id_t),
-                     wp_id);
-
+  LLDB_INSTRUMENT_VA(this, wp_id);
 
   bool result = false;
   TargetSP target_sp(GetSP());
@@ -1416,9 +1304,7 @@ bool SBTarget::DeleteWatchpoint(watch_id_t wp_id) {
 }
 
 SBWatchpoint SBTarget::FindWatchpointByID(lldb::watch_id_t wp_id) {
-  LLDB_RECORD_METHOD(lldb::SBWatchpoint, SBTarget, FindWatchpointByID,
-                     (lldb::watch_id_t), wp_id);
-
+  LLDB_INSTRUMENT_VA(this, wp_id);
 
   SBWatchpoint sb_watchpoint;
   lldb::WatchpointSP watchpoint_sp;
@@ -1437,9 +1323,7 @@ SBWatchpoint SBTarget::FindWatchpointByID(lldb::watch_id_t wp_id) {
 lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
                                           bool read, bool write,
                                           SBError &error) {
-  LLDB_RECORD_METHOD(lldb::SBWatchpoint, SBTarget, WatchAddress,
-                     (lldb::addr_t, size_t, bool, bool, lldb::SBError &), addr,
-                     size, read, write, error);
+  LLDB_INSTRUMENT_VA(this, addr, size, read, write, error);
 
   SBWatchpoint sb_watchpoint;
   lldb::WatchpointSP watchpoint_sp;
@@ -1472,7 +1356,7 @@ lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
 }
 
 bool SBTarget::EnableAllWatchpoints() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTarget, EnableAllWatchpoints);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1486,7 +1370,7 @@ bool SBTarget::EnableAllWatchpoints() {
 }
 
 bool SBTarget::DisableAllWatchpoints() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTarget, DisableAllWatchpoints);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1501,9 +1385,7 @@ bool SBTarget::DisableAllWatchpoints() {
 
 SBValue SBTarget::CreateValueFromAddress(const char *name, SBAddress addr,
                                          SBType type) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBTarget, CreateValueFromAddress,
-                     (const char *, lldb::SBAddress, lldb::SBType), name, addr,
-                     type);
+  LLDB_INSTRUMENT_VA(this, name, addr, type);
 
   SBValue sb_value;
   lldb::ValueObjectSP new_value_sp;
@@ -1521,9 +1403,7 @@ SBValue SBTarget::CreateValueFromAddress(const char *name, SBAddress addr,
 
 lldb::SBValue SBTarget::CreateValueFromData(const char *name, lldb::SBData data,
                                             lldb::SBType type) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBTarget, CreateValueFromData,
-                     (const char *, lldb::SBData, lldb::SBType), name, data,
-                     type);
+  LLDB_INSTRUMENT_VA(this, name, data, type);
 
   SBValue sb_value;
   lldb::ValueObjectSP new_value_sp;
@@ -1541,8 +1421,7 @@ lldb::SBValue SBTarget::CreateValueFromData(const char *name, lldb::SBData data,
 
 lldb::SBValue SBTarget::CreateValueFromExpression(const char *name,
                                                   const char *expr) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBTarget, CreateValueFromExpression,
-                     (const char *, const char *), name, expr);
+  LLDB_INSTRUMENT_VA(this, name, expr);
 
   SBValue sb_value;
   lldb::ValueObjectSP new_value_sp;
@@ -1557,7 +1436,7 @@ lldb::SBValue SBTarget::CreateValueFromExpression(const char *name,
 }
 
 bool SBTarget::DeleteAllWatchpoints() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTarget, DeleteAllWatchpoints);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1572,9 +1451,7 @@ bool SBTarget::DeleteAllWatchpoints() {
 
 void SBTarget::AppendImageSearchPath(const char *from, const char *to,
                                      lldb::SBError &error) {
-  LLDB_RECORD_METHOD(void, SBTarget, AppendImageSearchPath,
-                     (const char *, const char *, lldb::SBError &), from, to,
-                     error);
+  LLDB_INSTRUMENT_VA(this, from, to, error);
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
@@ -1591,18 +1468,14 @@ void SBTarget::AppendImageSearchPath(const char *from, const char *to,
 
 lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
                                    const char *uuid_cstr) {
-  LLDB_RECORD_METHOD(lldb::SBModule, SBTarget, AddModule,
-                     (const char *, const char *, const char *), path, triple,
-                     uuid_cstr);
+  LLDB_INSTRUMENT_VA(this, path, triple, uuid_cstr);
 
   return AddModule(path, triple, uuid_cstr, nullptr);
 }
 
 lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
                                    const char *uuid_cstr, const char *symfile) {
-  LLDB_RECORD_METHOD(lldb::SBModule, SBTarget, AddModule,
-                     (const char *, const char *, const char *, const char *),
-                     path, triple, uuid_cstr, symfile);
+  LLDB_INSTRUMENT_VA(this, path, triple, uuid_cstr, symfile);
 
   lldb::SBModule sb_module;
   TargetSP target_sp(GetSP());
@@ -1629,8 +1502,7 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
 }
 
 lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
-  LLDB_RECORD_METHOD(lldb::SBModule, SBTarget, AddModule,
-                     (const lldb::SBModuleSpec &), module_spec);
+  LLDB_INSTRUMENT_VA(this, module_spec);
 
   lldb::SBModule sb_module;
   TargetSP target_sp(GetSP());
@@ -1641,7 +1513,7 @@ lldb::SBModule SBTarget::AddModule(const SBModuleSpec &module_spec) {
 }
 
 bool SBTarget::AddModule(lldb::SBModule &module) {
-  LLDB_RECORD_METHOD(bool, SBTarget, AddModule, (lldb::SBModule &), module);
+  LLDB_INSTRUMENT_VA(this, module);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1652,7 +1524,7 @@ bool SBTarget::AddModule(lldb::SBModule &module) {
 }
 
 uint32_t SBTarget::GetNumModules() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBTarget, GetNumModules);
+  LLDB_INSTRUMENT_VA(this);
 
   uint32_t num = 0;
   TargetSP target_sp(GetSP());
@@ -1665,14 +1537,13 @@ uint32_t SBTarget::GetNumModules() const {
 }
 
 void SBTarget::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBTarget, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_sp.reset();
 }
 
 SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
-  LLDB_RECORD_METHOD(lldb::SBModule, SBTarget, FindModule,
-                     (const lldb::SBFileSpec &), sb_file_spec);
+  LLDB_INSTRUMENT_VA(this, sb_file_spec);
 
   SBModule sb_module;
   TargetSP target_sp(GetSP());
@@ -1685,8 +1556,7 @@ SBModule SBTarget::FindModule(const SBFileSpec &sb_file_spec) {
 }
 
 SBSymbolContextList SBTarget::FindCompileUnits(const SBFileSpec &sb_file_spec) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContextList, SBTarget, FindCompileUnits,
-                     (const lldb::SBFileSpec &), sb_file_spec);
+  LLDB_INSTRUMENT_VA(this, sb_file_spec);
 
   SBSymbolContextList sb_sc_list;
   const TargetSP target_sp(GetSP());
@@ -1696,7 +1566,7 @@ SBSymbolContextList SBTarget::FindCompileUnits(const SBFileSpec &sb_file_spec) {
 }
 
 lldb::ByteOrder SBTarget::GetByteOrder() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::ByteOrder, SBTarget, GetByteOrder);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp)
@@ -1705,7 +1575,7 @@ lldb::ByteOrder SBTarget::GetByteOrder() {
 }
 
 const char *SBTarget::GetTriple() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTarget, GetTriple);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1720,7 +1590,7 @@ const char *SBTarget::GetTriple() {
 }
 
 uint32_t SBTarget::GetDataByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTarget, GetDataByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1730,7 +1600,7 @@ uint32_t SBTarget::GetDataByteSize() {
 }
 
 uint32_t SBTarget::GetCodeByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTarget, GetCodeByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1740,7 +1610,7 @@ uint32_t SBTarget::GetCodeByteSize() {
 }
 
 uint32_t SBTarget::GetMaximumNumberOfChildrenToDisplay() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBTarget, GetMaximumNumberOfChildrenToDisplay);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if(target_sp){
@@ -1750,7 +1620,7 @@ uint32_t SBTarget::GetMaximumNumberOfChildrenToDisplay() const {
 }
 
 uint32_t SBTarget::GetAddressByteSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTarget, GetAddressByteSize);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp)
@@ -1759,8 +1629,7 @@ uint32_t SBTarget::GetAddressByteSize() {
 }
 
 SBModule SBTarget::GetModuleAtIndex(uint32_t idx) {
-  LLDB_RECORD_METHOD(lldb::SBModule, SBTarget, GetModuleAtIndex, (uint32_t),
-                     idx);
+  LLDB_INSTRUMENT_VA(this, idx);
 
   SBModule sb_module;
   ModuleSP module_sp;
@@ -1775,7 +1644,7 @@ SBModule SBTarget::GetModuleAtIndex(uint32_t idx) {
 }
 
 bool SBTarget::RemoveModule(lldb::SBModule module) {
-  LLDB_RECORD_METHOD(bool, SBTarget, RemoveModule, (lldb::SBModule), module);
+  LLDB_INSTRUMENT_VA(this, module);
 
   TargetSP target_sp(GetSP());
   if (target_sp)
@@ -1784,9 +1653,7 @@ bool SBTarget::RemoveModule(lldb::SBModule module) {
 }
 
 SBBroadcaster SBTarget::GetBroadcaster() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBBroadcaster, SBTarget,
-                                   GetBroadcaster);
-
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   SBBroadcaster broadcaster(target_sp.get(), false);
@@ -1796,9 +1663,7 @@ SBBroadcaster SBTarget::GetBroadcaster() const {
 
 bool SBTarget::GetDescription(SBStream &description,
                               lldb::DescriptionLevel description_level) {
-  LLDB_RECORD_METHOD(bool, SBTarget, GetDescription,
-                     (lldb::SBStream &, lldb::DescriptionLevel), description,
-                     description_level);
+  LLDB_INSTRUMENT_VA(this, description, description_level);
 
   Stream &strm = description.ref();
 
@@ -1813,8 +1678,7 @@ bool SBTarget::GetDescription(SBStream &description,
 
 lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
                                                   uint32_t name_type_mask) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContextList, SBTarget, FindFunctions,
-                     (const char *, uint32_t), name, name_type_mask);
+  LLDB_INSTRUMENT_VA(this, name, name_type_mask);
 
   lldb::SBSymbolContextList sb_sc_list;
   if (!name || !name[0])
@@ -1837,9 +1701,7 @@ lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
 lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
                                                         uint32_t max_matches,
                                                         MatchType matchtype) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContextList, SBTarget, FindGlobalFunctions,
-                     (const char *, uint32_t, lldb::MatchType), name,
-                     max_matches, matchtype);
+  LLDB_INSTRUMENT_VA(this, name, max_matches, matchtype);
 
   lldb::SBSymbolContextList sb_sc_list;
   if (name && name[0]) {
@@ -1873,8 +1735,7 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
 }
 
 lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
-  LLDB_RECORD_METHOD(lldb::SBType, SBTarget, FindFirstType, (const char *),
-                     typename_cstr);
+  LLDB_INSTRUMENT_VA(this, typename_cstr);
 
   TargetSP target_sp(GetSP());
   if (typename_cstr && typename_cstr[0] && target_sp) {
@@ -1915,8 +1776,7 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
 }
 
 SBType SBTarget::GetBasicType(lldb::BasicType type) {
-  LLDB_RECORD_METHOD(lldb::SBType, SBTarget, GetBasicType, (lldb::BasicType),
-                     type);
+  LLDB_INSTRUMENT_VA(this, type);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -1928,8 +1788,7 @@ SBType SBTarget::GetBasicType(lldb::BasicType type) {
 }
 
 lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
-  LLDB_RECORD_METHOD(lldb::SBTypeList, SBTarget, FindTypes, (const char *),
-                     typename_cstr);
+  LLDB_INSTRUMENT_VA(this, typename_cstr);
 
   SBTypeList sb_type_list;
   TargetSP target_sp(GetSP());
@@ -1973,8 +1832,7 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
 
 SBValueList SBTarget::FindGlobalVariables(const char *name,
                                           uint32_t max_matches) {
-  LLDB_RECORD_METHOD(lldb::SBValueList, SBTarget, FindGlobalVariables,
-                     (const char *, uint32_t), name, max_matches);
+  LLDB_INSTRUMENT_VA(this, name, max_matches);
 
   SBValueList sb_value_list;
 
@@ -2002,9 +1860,7 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
 SBValueList SBTarget::FindGlobalVariables(const char *name,
                                           uint32_t max_matches,
                                           MatchType matchtype) {
-  LLDB_RECORD_METHOD(lldb::SBValueList, SBTarget, FindGlobalVariables,
-                     (const char *, uint32_t, lldb::MatchType), name,
-                     max_matches, matchtype);
+  LLDB_INSTRUMENT_VA(this, name, max_matches, matchtype);
 
   SBValueList sb_value_list;
 
@@ -2046,8 +1902,7 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
 }
 
 lldb::SBValue SBTarget::FindFirstGlobalVariable(const char *name) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBTarget, FindFirstGlobalVariable,
-                     (const char *), name);
+  LLDB_INSTRUMENT_VA(this, name);
 
   SBValueList sb_value_list(FindGlobalVariables(name, 1));
   if (sb_value_list.IsValid() && sb_value_list.GetSize() > 0)
@@ -2056,7 +1911,7 @@ lldb::SBValue SBTarget::FindFirstGlobalVariable(const char *name) {
 }
 
 SBSourceManager SBTarget::GetSourceManager() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBSourceManager, SBTarget, GetSourceManager);
+  LLDB_INSTRUMENT_VA(this);
 
   SBSourceManager source_manager(*this);
   return source_manager;
@@ -2064,8 +1919,7 @@ SBSourceManager SBTarget::GetSourceManager() {
 
 lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
                                                    uint32_t count) {
-  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBTarget, ReadInstructions,
-                     (lldb::SBAddress, uint32_t), base_addr, count);
+  LLDB_INSTRUMENT_VA(this, base_addr, count);
 
   return ReadInstructions(base_addr, count, nullptr);
 }
@@ -2073,9 +1927,7 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
 lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
                                                    uint32_t count,
                                                    const char *flavor_string) {
-  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBTarget, ReadInstructions,
-                     (lldb::SBAddress, uint32_t, const char *), base_addr,
-                     count, flavor_string);
+  LLDB_INSTRUMENT_VA(this, base_addr, count, flavor_string);
 
   SBInstructionList sb_instructions;
 
@@ -2105,9 +1957,7 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
 lldb::SBInstructionList SBTarget::GetInstructions(lldb::SBAddress base_addr,
                                                   const void *buf,
                                                   size_t size) {
-  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBTarget, GetInstructions,
-                     (lldb::SBAddress, const void *, size_t), base_addr, buf,
-                     size);
+  LLDB_INSTRUMENT_VA(this, base_addr, buf, size);
 
   return GetInstructionsWithFlavor(base_addr, nullptr, buf, size);
 }
@@ -2116,10 +1966,7 @@ lldb::SBInstructionList
 SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
                                     const char *flavor_string, const void *buf,
                                     size_t size) {
-  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBTarget,
-                     GetInstructionsWithFlavor,
-                     (lldb::SBAddress, const char *, const void *, size_t),
-                     base_addr, flavor_string, buf, size);
+  LLDB_INSTRUMENT_VA(this, base_addr, flavor_string, buf, size);
 
   SBInstructionList sb_instructions;
 
@@ -2143,9 +1990,7 @@ SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
 lldb::SBInstructionList SBTarget::GetInstructions(lldb::addr_t base_addr,
                                                   const void *buf,
                                                   size_t size) {
-  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBTarget, GetInstructions,
-                     (lldb::addr_t, const void *, size_t), base_addr, buf,
-                     size);
+  LLDB_INSTRUMENT_VA(this, base_addr, buf, size);
 
   return GetInstructionsWithFlavor(ResolveLoadAddress(base_addr), nullptr, buf,
                                    size);
@@ -2155,10 +2000,7 @@ lldb::SBInstructionList
 SBTarget::GetInstructionsWithFlavor(lldb::addr_t base_addr,
                                     const char *flavor_string, const void *buf,
                                     size_t size) {
-  LLDB_RECORD_METHOD(lldb::SBInstructionList, SBTarget,
-                     GetInstructionsWithFlavor,
-                     (lldb::addr_t, const char *, const void *, size_t),
-                     base_addr, flavor_string, buf, size);
+  LLDB_INSTRUMENT_VA(this, base_addr, flavor_string, buf, size);
 
   return GetInstructionsWithFlavor(ResolveLoadAddress(base_addr), flavor_string,
                                    buf, size);
@@ -2166,9 +2008,7 @@ SBTarget::GetInstructionsWithFlavor(lldb::addr_t base_addr,
 
 SBError SBTarget::SetSectionLoadAddress(lldb::SBSection section,
                                         lldb::addr_t section_base_addr) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBTarget, SetSectionLoadAddress,
-                     (lldb::SBSection, lldb::addr_t), section,
-                     section_base_addr);
+  LLDB_INSTRUMENT_VA(this, section, section_base_addr);
 
   SBError sb_error;
   TargetSP target_sp(GetSP());
@@ -2204,8 +2044,7 @@ SBError SBTarget::SetSectionLoadAddress(lldb::SBSection section,
 }
 
 SBError SBTarget::ClearSectionLoadAddress(lldb::SBSection section) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBTarget, ClearSectionLoadAddress,
-                     (lldb::SBSection), section);
+  LLDB_INSTRUMENT_VA(this, section);
 
   SBError sb_error;
 
@@ -2240,8 +2079,7 @@ SBError SBTarget::ClearSectionLoadAddress(lldb::SBSection section) {
 
 SBError SBTarget::SetModuleLoadAddress(lldb::SBModule module,
                                        int64_t slide_offset) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBTarget, SetModuleLoadAddress,
-                     (lldb::SBModule, int64_t), module, slide_offset);
+  LLDB_INSTRUMENT_VA(this, module, slide_offset);
 
   SBError sb_error;
 
@@ -2274,8 +2112,7 @@ SBError SBTarget::SetModuleLoadAddress(lldb::SBModule module,
 }
 
 SBError SBTarget::ClearModuleLoadAddress(lldb::SBModule module) {
-  LLDB_RECORD_METHOD(lldb::SBError, SBTarget, ClearModuleLoadAddress,
-                     (lldb::SBModule), module);
+  LLDB_INSTRUMENT_VA(this, module);
 
   SBError sb_error;
 
@@ -2327,8 +2164,7 @@ SBError SBTarget::ClearModuleLoadAddress(lldb::SBModule module) {
 
 lldb::SBSymbolContextList SBTarget::FindSymbols(const char *name,
                                                 lldb::SymbolType symbol_type) {
-  LLDB_RECORD_METHOD(lldb::SBSymbolContextList, SBTarget, FindSymbols,
-                     (const char *, lldb::SymbolType), name, symbol_type);
+  LLDB_INSTRUMENT_VA(this, name, symbol_type);
 
   SBSymbolContextList sb_sc_list;
   if (name && name[0]) {
@@ -2341,8 +2177,7 @@ lldb::SBSymbolContextList SBTarget::FindSymbols(const char *name,
 }
 
 lldb::SBValue SBTarget::EvaluateExpression(const char *expr) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBTarget, EvaluateExpression,
-                     (const char *), expr);
+  LLDB_INSTRUMENT_VA(this, expr);
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
@@ -2358,9 +2193,7 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr) {
 
 lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
                                            const SBExpressionOptions &options) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBTarget, EvaluateExpression,
-                     (const char *, const lldb::SBExpressionOptions &), expr,
-                     options);
+  LLDB_INSTRUMENT_VA(this, expr, options);
 
   Log *expr_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
   SBValue expr_result;
@@ -2393,7 +2226,7 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
 }
 
 lldb::addr_t SBTarget::GetStackRedZoneSize() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::addr_t, SBTarget, GetStackRedZoneSize);
+  LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
@@ -2410,8 +2243,7 @@ lldb::addr_t SBTarget::GetStackRedZoneSize() {
 }
 
 bool SBTarget::IsLoaded(const SBModule &module) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBTarget, IsLoaded, (const lldb::SBModule &),
-                           module);
+  LLDB_INSTRUMENT_VA(this, module);
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
@@ -2425,7 +2257,7 @@ bool SBTarget::IsLoaded(const SBModule &module) const {
 }
 
 lldb::SBLaunchInfo SBTarget::GetLaunchInfo() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBLaunchInfo, SBTarget, GetLaunchInfo);
+  LLDB_INSTRUMENT_VA(this);
 
   lldb::SBLaunchInfo launch_info(nullptr);
   TargetSP target_sp(GetSP());
@@ -2435,8 +2267,7 @@ lldb::SBLaunchInfo SBTarget::GetLaunchInfo() const {
 }
 
 void SBTarget::SetLaunchInfo(const lldb::SBLaunchInfo &launch_info) {
-  LLDB_RECORD_METHOD(void, SBTarget, SetLaunchInfo,
-                     (const lldb::SBLaunchInfo &), launch_info);
+  LLDB_INSTRUMENT_VA(this, launch_info);
 
   TargetSP target_sp(GetSP());
   if (target_sp)
@@ -2444,7 +2275,7 @@ void SBTarget::SetLaunchInfo(const lldb::SBLaunchInfo &launch_info) {
 }
 
 SBEnvironment SBTarget::GetEnvironment() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBTarget, GetEnvironment);
+  LLDB_INSTRUMENT_VA(this);
   TargetSP target_sp(GetSP());
 
   if (target_sp) {
@@ -2455,7 +2286,7 @@ SBEnvironment SBTarget::GetEnvironment() {
 }
 
 lldb::SBTrace SBTarget::GetTrace() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBTrace, SBTarget, GetTrace);
+  LLDB_INSTRUMENT_VA(this);
   TargetSP target_sp(GetSP());
 
   if (target_sp)
@@ -2465,8 +2296,7 @@ lldb::SBTrace SBTarget::GetTrace() {
 }
 
 lldb::SBTrace SBTarget::CreateTrace(lldb::SBError &error) {
-  LLDB_RECORD_METHOD(lldb::SBTrace, SBTarget, CreateTrace, (lldb::SBError &),
-                     error);
+  LLDB_INSTRUMENT_VA(this, error);
   TargetSP target_sp(GetSP());
   error.Clear();
 

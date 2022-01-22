@@ -287,9 +287,16 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
       DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
       &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
 
+  {
+    // TODO: Unfortunately the header's fields are named DataSize and
+    // CountersSize when they should be named NumData and NumCounters,
+    // respectively.
+    const uint64_t CountersSize = NumCounters;
+    const uint64_t DataSize = NumData;
 /* Initialize header structure.  */
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
 #include "profile/InstrProfData.inc"
+  }
 
   /* On WIN64, label differences are truncated 32-bit values. Truncate
    * CountersDelta to match. */

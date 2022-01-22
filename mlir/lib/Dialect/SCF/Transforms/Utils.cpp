@@ -106,11 +106,18 @@ FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
 
   ValueRange outlinedValues(captures.getArrayRef());
   SmallVector<Type> outlinedFuncArgTypes;
+  SmallVector<Location> outlinedFuncArgLocs;
   // Region's arguments are exactly the first block's arguments as per
   // Region::getArguments().
   // Func's arguments are cat(regions's arguments, captures arguments).
-  llvm::append_range(outlinedFuncArgTypes, region.getArgumentTypes());
-  llvm::append_range(outlinedFuncArgTypes, outlinedValues.getTypes());
+  for (BlockArgument arg : region.getArguments()) {
+    outlinedFuncArgTypes.push_back(arg.getType());
+    outlinedFuncArgLocs.push_back(arg.getLoc());
+  }
+  for (Value value : outlinedValues) {
+    outlinedFuncArgTypes.push_back(value.getType());
+    outlinedFuncArgLocs.push_back(value.getLoc());
+  }
   FunctionType outlinedFuncType =
       FunctionType::get(rewriter.getContext(), outlinedFuncArgTypes,
                         originalTerminator->getOperandTypes());
@@ -137,7 +144,9 @@ FailureOr<FuncOp> mlir::outlineSingleBlockRegion(RewriterBase &rewriter,
   // terminator(call_results).
   Block *newBlock = rewriter.createBlock(
       &region, region.begin(),
-      TypeRange{outlinedFuncArgTypes}.take_front(numOriginalBlockArguments));
+      TypeRange{outlinedFuncArgTypes}.take_front(numOriginalBlockArguments),
+      ArrayRef<Location>(outlinedFuncArgLocs)
+          .take_front(numOriginalBlockArguments));
   {
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointToEnd(newBlock);

@@ -28,15 +28,14 @@ define void @test() {
 }
 
 ; Same as previous test, but with a bitcasted argument.
-; TODO: Call slot optimization should not be applied here.
 define void @test_bitcast() {
 ; CHECK-LABEL: define {{[^@]+}}@test_bitcast() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca [2 x i8], align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca [2 x i8], align 1
 ; CHECK-NEXT:    [[PTR1_CAST:%.*]] = bitcast [2 x i8]* [[PTR1]] to i8*
 ; CHECK-NEXT:    [[PTR2_CAST:%.*]] = bitcast [2 x i8]* [[PTR2]] to i8*
-; CHECK-NEXT:    [[PTR11:%.*]] = bitcast [2 x i8]* [[PTR1]] to i8*
-; CHECK-NEXT:    call void @foo(i8* [[PTR11]])
+; CHECK-NEXT:    call void @foo(i8* [[PTR2_CAST]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR1_CAST]], i8* [[PTR2_CAST]], i32 2, i1 false)
 ; CHECK-NEXT:    call void @foo(i8* [[PTR1_CAST]])
 ; CHECK-NEXT:    ret void
 ;
@@ -57,8 +56,7 @@ define void @test_lifetime_end() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[PTR2]])
-; CHECK-NEXT:    call void @foo(i8* [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR1]], i8* [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @foo(i8* [[PTR1]])
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* [[PTR2]])
 ; CHECK-NEXT:    call void @foo(i8* [[PTR1]])
 ; CHECK-NEXT:    ret void
@@ -101,8 +99,7 @@ define void @test_function_end() {
 ; CHECK-LABEL: define {{[^@]+}}@test_function_end() {
 ; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @foo(i8* [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* [[PTR1]], i8* [[PTR2]], i32 1, i1 false)
+; CHECK-NEXT:    call void @foo(i8* [[PTR1]])
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = alloca i8

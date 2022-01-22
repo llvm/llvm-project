@@ -105,11 +105,24 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
   int m = 0;
 
   // Hard to round value(s).
-  if (FPBits(x).uintval() == 0x3f81d0b5U) {
+  switch (FPBits(x).uintval()) {
+  case 0x3f81d0b5U: {
     int rounding_mode = fputil::get_round();
     if (rounding_mode == FE_DOWNWARD || rounding_mode == FE_TOWARDZERO) {
       return 0x1.4cdc4cp-6f;
     }
+    break;
+  }
+  case 0x3f7e3274U:
+    if (fputil::get_round() == FE_TONEAREST) {
+      return -0x1.4e1d16p-7f;
+    }
+    break;
+  case 0x3f7d57f5U:
+    if (fputil::get_round() == FE_TOWARDZERO) {
+      return -0x1.ed1c32p-7f;
+    }
+    break;
   }
 
   // Exceptional inputs.

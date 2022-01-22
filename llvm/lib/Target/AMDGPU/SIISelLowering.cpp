@@ -6188,10 +6188,6 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
       AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
-  const AMDGPU::MIMGLZMappingInfo *LZMappingInfo =
-      AMDGPU::getMIMGLZMappingInfo(Intr->BaseOpcode);
-  const AMDGPU::MIMGMIPMappingInfo *MIPMappingInfo =
-      AMDGPU::getMIMGMIPMappingInfo(Intr->BaseOpcode);
   unsigned IntrOpcode = Intr->BaseOpcode;
   bool IsGFX10Plus = AMDGPU::isGFX10Plus(*Subtarget);
 
@@ -6279,28 +6275,6 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   unsigned VAddrEnd = ArgOffset + Intr->VAddrEnd;
   SmallVector<SDValue, 4> VAddrs;
 
-  // Optimize _L to _LZ when _L is zero
-  if (LZMappingInfo) {
-    if (auto *ConstantLod = dyn_cast<ConstantFPSDNode>(
-            Op.getOperand(ArgOffset + Intr->LodIndex))) {
-      if (ConstantLod->isZero() || ConstantLod->isNegative()) {
-        IntrOpcode = LZMappingInfo->LZ;  // set new opcode to _lz variant of _l
-        VAddrEnd--;                      // remove 'lod'
-      }
-    }
-  }
-
-  // Optimize _mip away, when 'lod' is zero
-  if (MIPMappingInfo) {
-    if (auto *ConstantLod = dyn_cast<ConstantSDNode>(
-            Op.getOperand(ArgOffset + Intr->MipIndex))) {
-      if (ConstantLod->isZero()) {
-        IntrOpcode = MIPMappingInfo->NONMIP;  // set new opcode to variant without _mip
-        VAddrEnd--;                           // remove 'mip'
-      }
-    }
-  }
-
   // Check for 16 bit addresses or derivatives and pack if true.
   MVT VAddrVT =
       Op.getOperand(ArgOffset + Intr->GradientStart).getSimpleValueType();
@@ -6316,12 +6290,18 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   // Push back extra arguments.
   for (unsigned I = Intr->VAddrStart; I < Intr->GradientStart; I++) {
     if (IsA16 && (Op.getOperand(ArgOffset + I).getValueType() == MVT::f16)) {
+      assert(I == Intr->BiasIndex && "Got unexpected 16-bit extra argument");
       // Special handling of bias when A16 is on. Bias is of type half but
       // occupies full 32-bit.
-      SDValue bias = DAG.getBuildVector( MVT::v2f16, DL, {Op.getOperand(ArgOffset + I), DAG.getUNDEF(MVT::f16)});
-      VAddrs.push_back(bias);
-    } else
+      SDValue Bias = DAG.getBuildVector(
+          MVT::v2f16, DL,
+          {Op.getOperand(ArgOffset + I), DAG.getUNDEF(MVT::f16)});
+      VAddrs.push_back(Bias);
+    } else {
+      assert((!IsA16 || Intr->NumBiasArgs == 0 || I != Intr->BiasIndex) &&
+             "Bias needs to be converted to 16 bit in A16 mode");
       VAddrs.push_back(Op.getOperand(ArgOffset + I));
+    }
   }
 
   if (BaseOpcode->Gradients && !ST->hasG16() && (IsA16 != IsG16)) {

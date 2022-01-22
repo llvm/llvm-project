@@ -137,3 +137,5 @@
 `3593 <https://wg21.link/LWG3593>`__,"Several iterators' ``base() const &`` and ``lazy_split_view::outer-iterator::value_type::end()`` missing ``noexcept``","October 2021","","","|ranges|"
 `3595 <https://wg21.link/LWG3595>`__,"Exposition-only classes proxy and postfix-proxy for ``common_iterator`` should be fully ``constexpr``","October 2021","","","|ranges|"
 "","","","",""
+`3645 <https://wg21.link/LWG3645>`__,"``resize_and_overwrite`` is overspecified to call its callback with lvalues", "Not voted in","|Complete|","14.0",""
+"","","","",""

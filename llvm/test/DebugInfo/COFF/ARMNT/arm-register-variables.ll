@@ -24,7 +24,8 @@
 ;      OBJ:   Compile3Sym {
 ; OBJ-NEXT:     Kind: S_COMPILE3 (0x113C)
 ; OBJ-NEXT:     Language: C (0x0)
-; OBJ-NEXT:     Flags [ (0x0)
+; OBJ-NEXT:     Flags [ (0x4000)
+; OBJ-NEXT:       HotPatch (0x4000)
 ; OBJ-NEXT:     ]
 ; OBJ-NEXT:     Machine: ARMNT (0xF4)
 

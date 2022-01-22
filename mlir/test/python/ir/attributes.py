@@ -292,6 +292,50 @@ def testDenseIntAttr():
     print(ShapedType(a.type).element_type)
 
 
+# CHECK-LABEL: TEST: testDenseIntAttrGetItem
+@run
+def testDenseIntAttrGetItem():
+  def print_item(attr_asm):
+    attr = DenseIntElementsAttr(Attribute.parse(attr_asm))
+    dtype = ShapedType(attr.type).element_type
+    try:
+      item = attr[0]
+      print(f"{dtype}:", item)
+    except TypeError as e:
+      print(f"{dtype}:", e)
+
+  with Context():
+    # CHECK: i1: 1
+    print_item("dense<true> : tensor<i1>")
+    # CHECK: i8: 123
+    print_item("dense<123> : tensor<i8>")
+    # CHECK: i16: 123
+    print_item("dense<123> : tensor<i16>")
+    # CHECK: i32: 123
+    print_item("dense<123> : tensor<i32>")
+    # CHECK: i64: 123
+    print_item("dense<123> : tensor<i64>")
+    # CHECK: ui8: 123
+    print_item("dense<123> : tensor<ui8>")
+    # CHECK: ui16: 123
+    print_item("dense<123> : tensor<ui16>")
+    # CHECK: ui32: 123
+    print_item("dense<123> : tensor<ui32>")
+    # CHECK: ui64: 123
+    print_item("dense<123> : tensor<ui64>")
+    # CHECK: si8: -123
+    print_item("dense<-123> : tensor<si8>")
+    # CHECK: si16: -123
+    print_item("dense<-123> : tensor<si16>")
+    # CHECK: si32: -123
+    print_item("dense<-123> : tensor<si32>")
+    # CHECK: si64: -123
+    print_item("dense<-123> : tensor<si64>")
+
+    # CHECK: i7: Unsupported integer type
+    print_item("dense<123> : tensor<i7>")
+
+
 # CHECK-LABEL: TEST: testDenseFPAttr
 @run
 def testDenseFPAttr():

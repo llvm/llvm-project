@@ -55,13 +55,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
       the type (to allow for this method may be called on function
       declarations).
     }],
-    "ArrayRef<Type>", "getArgumentTypes">,
+    "::llvm::ArrayRef<::mlir::Type>", "getArgumentTypes">,
     InterfaceMethod<[{
       Returns the function result types based exclusively on
       the type (to allow for this method may be called on function
       declarations).
     }],
-    "ArrayRef<Type>", "getResultTypes">,
+    "::llvm::ArrayRef<::mlir::Type>", "getResultTypes">,
     InterfaceMethod<[{
       Returns a clone of the function type with the given argument and
       result types.
@@ -70,7 +70,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
             an appropriate clone method:
               `Type clone(ArrayRef<Type> inputs, ArrayRef<Type> results)`
     }],
-    "Type", "cloneTypeWith", (ins
+    "::mlir::Type", "cloneTypeWith", (ins
       "::mlir::TypeRange":$inputs, "::mlir::TypeRange":$results
     ), /*methodBody=*/[{}], /*defaultImplementation=*/[{
       return $_op.getType().clone(inputs, results);
@@ -156,7 +156,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
       assert(empty() && "function already has an entry block");
       Block *entry = new Block();
       push_back(entry);
-      entry->addArguments($_op.getArgumentTypes());
+      
+      // FIXME: Allow for passing in locations for these arguments instead of using
+      // the operations location.
+      ArrayRef<Type> inputTypes = $_op.getArgumentTypes();
+      SmallVector<Location> locations(inputTypes.size(),
+                                      $_op.getOperation()->getLoc());
+      entry->addArguments(inputTypes, locations);
       return entry;
     }
 
@@ -234,7 +240,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// Insert a single argument of type `argType` with attributes `argAttrs` and
     /// location `argLoc` at `argIndex`.
     void insertArgument(unsigned argIndex, Type argType, DictionaryAttr argAttrs,
-                        Optional<Location> argLoc = {}) {
+                        Location argLoc) {
       insertArguments({argIndex}, {argType}, {argAttrs}, {argLoc});
     }
 
@@ -244,7 +250,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// appear in the same order that they were listed here.
     void insertArguments(ArrayRef<unsigned> argIndices, TypeRange argTypes,
                         ArrayRef<DictionaryAttr> argAttrs,
-                        ArrayRef<Optional<Location>> argLocs) {
+                        ArrayRef<Location> argLocs) {
       unsigned originalNumArgs = $_op.getNumArguments();
       Type newType = $_op.getTypeWithArgsAndResults(
           argIndices, argTypes, /*resultIndices=*/{}, /*resultTypes=*/{});

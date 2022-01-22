@@ -14,7 +14,6 @@
 
 #include "lldb/lldb-types.h"
 
-#include "lldb/Utility/ReproducerInstrumentation.h"
 #include "Utils.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/StreamFile.h"
@@ -38,6 +37,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
 
 #include "lldb/API/SBAddress.h"
@@ -55,17 +55,16 @@ using namespace lldb;
 using namespace lldb_private;
 
 SBFrame::SBFrame() : m_opaque_sp(new ExecutionContextRef()) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFrame);
+  LLDB_INSTRUMENT_VA(this);
 }
 
 SBFrame::SBFrame(const StackFrameSP &lldb_object_sp)
     : m_opaque_sp(new ExecutionContextRef(lldb_object_sp)) {
-  LLDB_RECORD_CONSTRUCTOR(SBFrame, (const lldb::StackFrameSP &),
-                          lldb_object_sp);
+  LLDB_INSTRUMENT_VA(this, lldb_object_sp);
 }
 
 SBFrame::SBFrame(const SBFrame &rhs) {
-  LLDB_RECORD_CONSTRUCTOR(SBFrame, (const lldb::SBFrame &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_sp = clone(rhs.m_opaque_sp);
 }
@@ -73,8 +72,7 @@ SBFrame::SBFrame(const SBFrame &rhs) {
 SBFrame::~SBFrame() = default;
 
 const SBFrame &SBFrame::operator=(const SBFrame &rhs) {
-  LLDB_RECORD_METHOD(const lldb::SBFrame &,
-                     SBFrame, operator=,(const lldb::SBFrame &), rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
@@ -90,11 +88,11 @@ void SBFrame::SetFrameSP(const StackFrameSP &lldb_object_sp) {
 }
 
 bool SBFrame::IsValid() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFrame, IsValid);
+  LLDB_INSTRUMENT_VA(this);
   return this->operator bool();
 }
 SBFrame::operator bool() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFrame, operator bool);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -112,8 +110,7 @@ SBFrame::operator bool() const {
 }
 
 SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
-  LLDB_RECORD_METHOD_CONST(lldb::SBSymbolContext, SBFrame, GetSymbolContext,
-                           (uint32_t), resolve_scope);
+  LLDB_INSTRUMENT_VA(this, resolve_scope);
 
   SBSymbolContext sb_sym_ctx;
   std::unique_lock<std::recursive_mutex> lock;
@@ -133,7 +130,7 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
 }
 
 SBModule SBFrame::GetModule() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBModule, SBFrame, GetModule);
+  LLDB_INSTRUMENT_VA(this);
 
   SBModule sb_module;
   ModuleSP module_sp;
@@ -158,8 +155,7 @@ SBModule SBFrame::GetModule() const {
 }
 
 SBCompileUnit SBFrame::GetCompileUnit() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBCompileUnit, SBFrame,
-                                   GetCompileUnit);
+  LLDB_INSTRUMENT_VA(this);
 
   SBCompileUnit sb_comp_unit;
   std::unique_lock<std::recursive_mutex> lock;
@@ -183,7 +179,7 @@ SBCompileUnit SBFrame::GetCompileUnit() const {
 }
 
 SBFunction SBFrame::GetFunction() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBFunction, SBFrame, GetFunction);
+  LLDB_INSTRUMENT_VA(this);
 
   SBFunction sb_function;
   std::unique_lock<std::recursive_mutex> lock;
@@ -207,7 +203,7 @@ SBFunction SBFrame::GetFunction() const {
 }
 
 SBSymbol SBFrame::GetSymbol() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBSymbol, SBFrame, GetSymbol);
+  LLDB_INSTRUMENT_VA(this);
 
   SBSymbol sb_symbol;
   std::unique_lock<std::recursive_mutex> lock;
@@ -230,7 +226,7 @@ SBSymbol SBFrame::GetSymbol() const {
 }
 
 SBBlock SBFrame::GetBlock() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBBlock, SBFrame, GetBlock);
+  LLDB_INSTRUMENT_VA(this);
 
   SBBlock sb_block;
   std::unique_lock<std::recursive_mutex> lock;
@@ -251,7 +247,7 @@ SBBlock SBFrame::GetBlock() const {
 }
 
 SBBlock SBFrame::GetFrameBlock() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBBlock, SBFrame, GetFrameBlock);
+  LLDB_INSTRUMENT_VA(this);
 
   SBBlock sb_block;
   std::unique_lock<std::recursive_mutex> lock;
@@ -272,7 +268,7 @@ SBBlock SBFrame::GetFrameBlock() const {
 }
 
 SBLineEntry SBFrame::GetLineEntry() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBLineEntry, SBFrame, GetLineEntry);
+  LLDB_INSTRUMENT_VA(this);
 
   SBLineEntry sb_line_entry;
   std::unique_lock<std::recursive_mutex> lock;
@@ -295,7 +291,7 @@ SBLineEntry SBFrame::GetLineEntry() const {
 }
 
 uint32_t SBFrame::GetFrameID() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBFrame, GetFrameID);
+  LLDB_INSTRUMENT_VA(this);
 
   uint32_t frame_idx = UINT32_MAX;
 
@@ -310,7 +306,7 @@ uint32_t SBFrame::GetFrameID() const {
 }
 
 lldb::addr_t SBFrame::GetCFA() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::addr_t, SBFrame, GetCFA);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -322,7 +318,7 @@ lldb::addr_t SBFrame::GetCFA() const {
 }
 
 addr_t SBFrame::GetPC() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::addr_t, SBFrame, GetPC);
+  LLDB_INSTRUMENT_VA(this);
 
   addr_t addr = LLDB_INVALID_ADDRESS;
   std::unique_lock<std::recursive_mutex> lock;
@@ -346,7 +342,7 @@ addr_t SBFrame::GetPC() const {
 }
 
 bool SBFrame::SetPC(addr_t new_pc) {
-  LLDB_RECORD_METHOD(bool, SBFrame, SetPC, (lldb::addr_t), new_pc);
+  LLDB_INSTRUMENT_VA(this, new_pc);
 
   bool ret_val = false;
   std::unique_lock<std::recursive_mutex> lock;
@@ -369,7 +365,7 @@ bool SBFrame::SetPC(addr_t new_pc) {
 }
 
 addr_t SBFrame::GetSP() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::addr_t, SBFrame, GetSP);
+  LLDB_INSTRUMENT_VA(this);
 
   addr_t addr = LLDB_INVALID_ADDRESS;
   std::unique_lock<std::recursive_mutex> lock;
@@ -392,7 +388,7 @@ addr_t SBFrame::GetSP() const {
 }
 
 addr_t SBFrame::GetFP() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::addr_t, SBFrame, GetFP);
+  LLDB_INSTRUMENT_VA(this);
 
   addr_t addr = LLDB_INVALID_ADDRESS;
   std::unique_lock<std::recursive_mutex> lock;
@@ -415,7 +411,7 @@ addr_t SBFrame::GetFP() const {
 }
 
 SBAddress SBFrame::GetPCAddress() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBAddress, SBFrame, GetPCAddress);
+  LLDB_INSTRUMENT_VA(this);
 
   SBAddress sb_addr;
   std::unique_lock<std::recursive_mutex> lock;
@@ -436,14 +432,13 @@ SBAddress SBFrame::GetPCAddress() const {
 }
 
 void SBFrame::Clear() {
-  LLDB_RECORD_METHOD_NO_ARGS(void, SBFrame, Clear);
+  LLDB_INSTRUMENT_VA(this);
 
   m_opaque_sp->Clear();
 }
 
 lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, GetValueForVariablePath,
-                     (const char *), var_path);
+  LLDB_INSTRUMENT_VA(this, var_path);
 
   SBValue sb_value;
   std::unique_lock<std::recursive_mutex> lock;
@@ -461,9 +456,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
 
 lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
                                                DynamicValueType use_dynamic) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, GetValueForVariablePath,
-                     (const char *, lldb::DynamicValueType), var_path,
-                     use_dynamic);
+  LLDB_INSTRUMENT_VA(this, var_path, use_dynamic);
 
   SBValue sb_value;
   if (var_path == nullptr || var_path[0] == '\0') {
@@ -496,8 +489,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
 }
 
 SBValue SBFrame::FindVariable(const char *name) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, FindVariable, (const char *),
-                     name);
+  LLDB_INSTRUMENT_VA(this, name);
 
   SBValue value;
   std::unique_lock<std::recursive_mutex> lock;
@@ -515,8 +507,7 @@ SBValue SBFrame::FindVariable(const char *name) {
 
 SBValue SBFrame::FindVariable(const char *name,
                               lldb::DynamicValueType use_dynamic) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, FindVariable,
-                     (const char *, lldb::DynamicValueType), name, use_dynamic);
+  LLDB_INSTRUMENT_VA(this, name, use_dynamic);
 
   VariableSP var_sp;
   SBValue sb_value;
@@ -549,8 +540,7 @@ SBValue SBFrame::FindVariable(const char *name,
 }
 
 SBValue SBFrame::FindValue(const char *name, ValueType value_type) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, FindValue,
-                     (const char *, lldb::ValueType), name, value_type);
+  LLDB_INSTRUMENT_VA(this, name, value_type);
 
   SBValue value;
   std::unique_lock<std::recursive_mutex> lock;
@@ -568,9 +558,7 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type) {
 
 SBValue SBFrame::FindValue(const char *name, ValueType value_type,
                            lldb::DynamicValueType use_dynamic) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, FindValue,
-                     (const char *, lldb::ValueType, lldb::DynamicValueType),
-                     name, value_type, use_dynamic);
+  LLDB_INSTRUMENT_VA(this, name, value_type, use_dynamic);
 
   SBValue sb_value;
 
@@ -682,8 +670,7 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
 }
 
 bool SBFrame::IsEqual(const SBFrame &that) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBFrame, IsEqual, (const lldb::SBFrame &),
-                           that);
+  LLDB_INSTRUMENT_VA(this, that);
 
   lldb::StackFrameSP this_sp = GetFrameSP();
   lldb::StackFrameSP that_sp = that.GetFrameSP();
@@ -691,21 +678,19 @@ bool SBFrame::IsEqual(const SBFrame &that) const {
 }
 
 bool SBFrame::operator==(const SBFrame &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBFrame, operator==,(const lldb::SBFrame &),
-                           rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return IsEqual(rhs);
 }
 
 bool SBFrame::operator!=(const SBFrame &rhs) const {
-  LLDB_RECORD_METHOD_CONST(bool, SBFrame, operator!=,(const lldb::SBFrame &),
-                           rhs);
+  LLDB_INSTRUMENT_VA(this, rhs);
 
   return !IsEqual(rhs);
 }
 
 SBThread SBFrame::GetThread() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBThread, SBFrame, GetThread);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -717,7 +702,7 @@ SBThread SBFrame::GetThread() const {
 }
 
 const char *SBFrame::Disassemble() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFrame, Disassemble);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *disassembly = nullptr;
   std::unique_lock<std::recursive_mutex> lock;
@@ -741,9 +726,7 @@ const char *SBFrame::Disassemble() const {
 
 SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
                                   bool in_scope_only) {
-  LLDB_RECORD_METHOD(lldb::SBValueList, SBFrame, GetVariables,
-                     (bool, bool, bool, bool), arguments, locals, statics,
-                     in_scope_only);
+  LLDB_INSTRUMENT_VA(this, arguments, locals, statics, in_scope_only);
 
   SBValueList value_list;
   std::unique_lock<std::recursive_mutex> lock;
@@ -773,9 +756,8 @@ SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
 lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
                                         bool statics, bool in_scope_only,
                                         lldb::DynamicValueType use_dynamic) {
-  LLDB_RECORD_METHOD(lldb::SBValueList, SBFrame, GetVariables,
-                     (bool, bool, bool, bool, lldb::DynamicValueType),
-                     arguments, locals, statics, in_scope_only, use_dynamic);
+  LLDB_INSTRUMENT_VA(this, arguments, locals, statics, in_scope_only,
+                     use_dynamic);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -794,8 +776,7 @@ lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
 }
 
 SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
-  LLDB_RECORD_METHOD(lldb::SBValueList, SBFrame, GetVariables,
-                     (const lldb::SBVariablesOptions &), options);
+  LLDB_INSTRUMENT_VA(this, options);
 
   SBValueList value_list;
   std::unique_lock<std::recursive_mutex> lock;
@@ -895,7 +876,7 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
 }
 
 SBValueList SBFrame::GetRegisters() {
-  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBValueList, SBFrame, GetRegisters);
+  LLDB_INSTRUMENT_VA(this);
 
   SBValueList value_list;
   std::unique_lock<std::recursive_mutex> lock;
@@ -925,8 +906,7 @@ SBValueList SBFrame::GetRegisters() {
 }
 
 SBValue SBFrame::FindRegister(const char *name) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, FindRegister, (const char *),
-                     name);
+  LLDB_INSTRUMENT_VA(this, name);
 
   SBValue result;
   ValueObjectSP value_sp;
@@ -957,8 +937,7 @@ SBValue SBFrame::FindRegister(const char *name) {
 }
 
 bool SBFrame::GetDescription(SBStream &description) {
-  LLDB_RECORD_METHOD(bool, SBFrame, GetDescription, (lldb::SBStream &),
-                     description);
+  LLDB_INSTRUMENT_VA(this, description);
 
   Stream &strm = description.ref();
 
@@ -984,8 +963,7 @@ bool SBFrame::GetDescription(SBStream &description) {
 }
 
 SBValue SBFrame::EvaluateExpression(const char *expr) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, EvaluateExpression, (const char *),
-                     expr);
+  LLDB_INSTRUMENT_VA(this, expr);
 
   SBValue result;
   std::unique_lock<std::recursive_mutex> lock;
@@ -1012,9 +990,7 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
 SBValue
 SBFrame::EvaluateExpression(const char *expr,
                             lldb::DynamicValueType fetch_dynamic_value) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, EvaluateExpression,
-                     (const char *, lldb::DynamicValueType), expr,
-                     fetch_dynamic_value);
+  LLDB_INSTRUMENT_VA(this, expr, fetch_dynamic_value);
 
   SBExpressionOptions options;
   options.SetFetchDynamicValue(fetch_dynamic_value);
@@ -1035,9 +1011,7 @@ SBFrame::EvaluateExpression(const char *expr,
 SBValue SBFrame::EvaluateExpression(const char *expr,
                                     lldb::DynamicValueType fetch_dynamic_value,
                                     bool unwind_on_error) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, EvaluateExpression,
-                     (const char *, lldb::DynamicValueType, bool), expr,
-                     fetch_dynamic_value, unwind_on_error);
+  LLDB_INSTRUMENT_VA(this, expr, fetch_dynamic_value, unwind_on_error);
 
   SBExpressionOptions options;
   std::unique_lock<std::recursive_mutex> lock;
@@ -1057,9 +1031,7 @@ SBValue SBFrame::EvaluateExpression(const char *expr,
 
 lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
                                           const SBExpressionOptions &options) {
-  LLDB_RECORD_METHOD(lldb::SBValue, SBFrame, EvaluateExpression,
-                     (const char *, const lldb::SBExpressionOptions &), expr,
-                     options);
+  LLDB_INSTRUMENT_VA(this, expr, options);
 
   Log *expr_log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
@@ -1110,13 +1082,13 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
 }
 
 bool SBFrame::IsInlined() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBFrame, IsInlined);
+  LLDB_INSTRUMENT_VA(this);
 
   return static_cast<const SBFrame *>(this)->IsInlined();
 }
 
 bool SBFrame::IsInlined() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFrame, IsInlined);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1140,13 +1112,13 @@ bool SBFrame::IsInlined() const {
 }
 
 bool SBFrame::IsArtificial() {
-  LLDB_RECORD_METHOD_NO_ARGS(bool, SBFrame, IsArtificial);
+  LLDB_INSTRUMENT_VA(this);
 
   return static_cast<const SBFrame *>(this)->IsArtificial();
 }
 
 bool SBFrame::IsArtificial() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBFrame, IsArtificial);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1159,13 +1131,13 @@ bool SBFrame::IsArtificial() const {
 }
 
 const char *SBFrame::GetFunctionName() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBFrame, GetFunctionName);
+  LLDB_INSTRUMENT_VA(this);
 
   return static_cast<const SBFrame *>(this)->GetFunctionName();
 }
 
 lldb::LanguageType SBFrame::GuessLanguage() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::LanguageType, SBFrame, GuessLanguage);
+  LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1186,7 +1158,7 @@ lldb::LanguageType SBFrame::GuessLanguage() const {
 }
 
 const char *SBFrame::GetFunctionName() const {
-  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBFrame, GetFunctionName);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *name = nullptr;
   std::unique_lock<std::recursive_mutex> lock;
@@ -1228,7 +1200,7 @@ const char *SBFrame::GetFunctionName() const {
 }
 
 const char *SBFrame::GetDisplayFunctionName() {
-  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBFrame, GetDisplayFunctionName);
+  LLDB_INSTRUMENT_VA(this);
 
   const char *name = nullptr;
 

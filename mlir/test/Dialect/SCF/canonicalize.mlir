@@ -839,7 +839,7 @@ func @while_cond_true() -> i1 {
 // CHECK-NEXT:           %[[cmp:.+]] = "test.condition"() : () -> i1
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[cmp]] : i1
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%arg0: i1):  // no predecessors
+// CHECK-NEXT:         ^bb0(%arg0: i1):  
 // CHECK-NEXT:           "test.use"(%[[true]]) : (i1) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }
@@ -862,7 +862,7 @@ func @while_unused_arg(%x : i32, %y : f64) -> i32 {
 // CHECK-NEXT:           %[[cmp:.*]] = "test.condition"(%[[arg2]]) : (i32) -> i1
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[arg2]] : i32
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%[[post:.+]]: i32):  // no predecessors
+// CHECK-NEXT:         ^bb0(%[[post:.+]]: i32):  
 // CHECK-NEXT:           %[[next:.+]] = "test.use"(%[[post]]) : (i32) -> i32
 // CHECK-NEXT:           scf.yield %[[next]] : i32
 // CHECK-NEXT:         }
@@ -890,7 +890,7 @@ func @while_unused_result() -> i32 {
 // CHECK-NEXT:           %{{.*}} = "test.get_some_value"() : () -> i64
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[val]] : i32
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%[[arg:.*]]: i32):  // no predecessors
+// CHECK-NEXT:         ^bb0(%[[arg:.*]]: i32):  
 // CHECK-NEXT:           "test.use"(%[[arg]]) : (i32) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }
@@ -918,7 +918,7 @@ func @while_cmp_lhs(%arg0 : i32) {
 // CHECK-NEXT:         %[[cmp:.+]] = arith.cmpi ne, %[[val]], %arg0 : i32
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[val]] : i32
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%arg1: i32):  // no predecessors
+// CHECK-NEXT:         ^bb0(%arg1: i32):  
 // CHECK-NEXT:           "test.use"(%[[true]], %[[false]], %arg1) : (i1, i1, i32) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }
@@ -945,7 +945,7 @@ func @while_cmp_rhs(%arg0 : i32) {
 // CHECK-NEXT:         %[[cmp:.+]] = arith.cmpi ne, %arg0, %[[val]] : i32
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[val]] : i32
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%arg1: i32):  // no predecessors
+// CHECK-NEXT:         ^bb0(%arg1: i32):  
 // CHECK-NEXT:           "test.use"(%[[true]], %[[false]], %arg1) : (i1, i1, i32) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }

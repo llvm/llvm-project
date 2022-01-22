@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -o - | FileCheck %s --check-prefix HOST --check-prefix CHECK
 // RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -fopenmp -x c++ -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix DEVICE --check-prefix CHECK
-// RUN: %clang_cc1 -fopenmp -x c++ -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
-// RUN: %clang_cc1 -fopenmp -x c++ -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - | FileCheck %s --check-prefix DEVICE --check-prefix CHECK
+// RUN: %clang_cc1 -fopenmp -x c++ -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fvisibility protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix DEVICE --check-prefix CHECK
+// RUN: %clang_cc1 -fopenmp -x c++ -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fvisibility protected -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
+// RUN: %clang_cc1 -fopenmp -x c++ -triple nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fvisibility protected -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - | FileCheck %s --check-prefix DEVICE --check-prefix CHECK
 
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o - | FileCheck %s --check-prefix SIMD-ONLY
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o -| FileCheck %s --check-prefix SIMD-ONLY
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - | FileCheck %s --check-prefix SIMD-ONLY
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fvisibility protected -fopenmp-host-ir-file-path %t-ppc-host.bc -o -| FileCheck %s --check-prefix SIMD-ONLY
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fvisibility protected -fopenmp-host-ir-file-path %t-ppc-host.bc -emit-pch -o %t
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fvisibility protected -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -o - | FileCheck %s --check-prefix SIMD-ONLY
 
 #ifndef HEADER
 #define HEADER
@@ -16,9 +16,9 @@
 // SIMD-ONLY-NOT: {{__kmpc|__tgt}}
 
 // DEVICE-DAG: [[C_ADDR:.+]] = internal global i32 0,
-// DEVICE-DAG: [[CD_ADDR:@.+]] ={{ hidden | }}global %struct.S zeroinitializer,
+// DEVICE-DAG: [[CD_ADDR:@.+]] ={{ protected | }}global %struct.S zeroinitializer,
 // HOST-DAG: @[[C_ADDR:.+]] = internal global i32 0,
-// HOST-DAG: @[[CD_ADDR:.+]] ={{( hidden | dso_local)?}} global %struct.S zeroinitializer,
+// HOST-DAG: @[[CD_ADDR:.+]] ={{( protected | dso_local)?}} global %struct.S zeroinitializer,
 
 #pragma omp declare target
 int foo() { return 0; }
@@ -34,12 +34,12 @@ int car() { return 0; }
 #pragma omp declare target (bar)
 int caz() { return 0; }
 
-// DEVICE-DAG: define{{ hidden | }}noundef i32 [[FOO:@.*foo.*]]()
-// DEVICE-DAG: define{{ hidden | }}noundef i32 [[BAR:@.*bar.*]]()
-// DEVICE-DAG: define{{ hidden | }}noundef i32 [[BAZ:@.*baz.*]]()
-// DEVICE-DAG: define{{ hidden | }}noundef i32 [[DOO:@.*doo.*]]()
-// DEVICE-DAG: define{{ hidden | }}noundef i32 [[CAR:@.*car.*]]()
-// DEVICE-DAG: define{{ hidden | }}noundef i32 [[CAZ:@.*caz.*]]()
+// DEVICE-DAG: define{{ protected | }}noundef i32 [[FOO:@.*foo.*]]()
+// DEVICE-DAG: define{{ protected | }}noundef i32 [[BAR:@.*bar.*]]()
+// DEVICE-DAG: define{{ protected | }}noundef i32 [[BAZ:@.*baz.*]]()
+// DEVICE-DAG: define{{ protected | }}noundef i32 [[DOO:@.*doo.*]]()
+// DEVICE-DAG: define{{ protected | }}noundef i32 [[CAR:@.*car.*]]()
+// DEVICE-DAG: define{{ protected | }}noundef i32 [[CAZ:@.*caz.*]]()
 
 static int c = foo() + bar() + baz();
 #pragma omp declare target (c)

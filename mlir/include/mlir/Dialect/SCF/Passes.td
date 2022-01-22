@@ -104,7 +104,7 @@ def SCFForToWhileLoop
         %1 = arith.cmpi slt, %i, %arg1 : index
         scf.condition(%1) %i : index
       } do {
-      ^bb0(%i: index):  // no predecessors
+      ^bb0(%i: index):  
         %1 = arith.addi %i, %c1 : index
         %2 = arith.addi %arg2, %arg2 : i32
         memref.store %2, %arg0[%i] : memref<?xi32>

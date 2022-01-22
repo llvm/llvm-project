@@ -32,7 +32,7 @@ macro(mlir_configure_python_dev_packages)
   message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
   message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
   mlir_detect_pybind11_install()
-  find_package(pybind11 2.6 CONFIG REQUIRED)
+  find_package(pybind11 2.8 CONFIG REQUIRED)
   message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIR}")
   message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
                  "suffix = '${PYTHON_MODULE_SUFFIX}', "

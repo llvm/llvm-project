@@ -16,13 +16,13 @@ def constructAndPrintInModule(f):
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @operations : benefit(1)  {
-# CHECK:     %0 = pdl.attribute
-# CHECK:     %1 = pdl.type
-# CHECK:     %2 = pdl.operation  {"attr" = %0} -> (%1 : !pdl.type)
-# CHECK:     %3 = pdl.result 0 of %2
-# CHECK:     %4 = pdl.operand
-# CHECK:     %5 = pdl.operation(%3, %4 : !pdl.value, !pdl.value)
-# CHECK:     pdl.rewrite %5 with "rewriter"
+# CHECK:     %0 = attribute
+# CHECK:     %1 = type
+# CHECK:     %2 = operation  {"attr" = %0} -> (%1 : !pdl.type)
+# CHECK:     %3 = result 0 of %2
+# CHECK:     %4 = operand
+# CHECK:     %5 = operation(%3, %4 : !pdl.value, !pdl.value)
+# CHECK:     rewrite %5 with "rewriter"
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -40,9 +40,9 @@ def test_operations():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_with_args : benefit(1)  {
-# CHECK:     %0 = pdl.operand
-# CHECK:     %1 = pdl.operation(%0 : !pdl.value)
-# CHECK:     pdl.rewrite %1 with "rewriter"(%0 : !pdl.value)
+# CHECK:     %0 = operand
+# CHECK:     %1 = operation(%0 : !pdl.value)
+# CHECK:     rewrite %1 with "rewriter"(%0 : !pdl.value)
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -55,8 +55,8 @@ def test_rewrite_with_args():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_with_params : benefit(1)  {
-# CHECK:     %0 = pdl.operation
-# CHECK:     pdl.rewrite %0 with "rewriter" ["I am param"]
+# CHECK:     %0 = operation
+# CHECK:     rewrite %0 with "rewriter" ["I am param"]
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -68,9 +68,9 @@ def test_rewrite_with_params():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_with_args_and_params : benefit(1)  {
-# CHECK:     %0 = pdl.operand
-# CHECK:     %1 = pdl.operation(%0 : !pdl.value)
-# CHECK:     pdl.rewrite %1 with "rewriter" ["I am param"](%0 : !pdl.value)
+# CHECK:     %0 = operand
+# CHECK:     %1 = operation(%0 : !pdl.value)
+# CHECK:     rewrite %1 with "rewriter" ["I am param"](%0 : !pdl.value)
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -83,16 +83,16 @@ def test_rewrite_with_args_and_params():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_multi_root_optimal : benefit(1)  {
-# CHECK:     %0 = pdl.operand
-# CHECK:     %1 = pdl.operand
-# CHECK:     %2 = pdl.type
-# CHECK:     %3 = pdl.operation(%0 : !pdl.value)  -> (%2 : !pdl.type)
-# CHECK:     %4 = pdl.result 0 of %3
-# CHECK:     %5 = pdl.operation(%4 : !pdl.value)
-# CHECK:     %6 = pdl.operation(%1 : !pdl.value)  -> (%2 : !pdl.type)
-# CHECK:     %7 = pdl.result 0 of %6
-# CHECK:     %8 = pdl.operation(%4, %7 : !pdl.value, !pdl.value)
-# CHECK:     pdl.rewrite with "rewriter" ["I am param"](%5, %8 : !pdl.operation, !pdl.operation)
+# CHECK:     %0 = operand
+# CHECK:     %1 = operand
+# CHECK:     %2 = type
+# CHECK:     %3 = operation(%0 : !pdl.value)  -> (%2 : !pdl.type)
+# CHECK:     %4 = result 0 of %3
+# CHECK:     %5 = operation(%4 : !pdl.value)
+# CHECK:     %6 = operation(%1 : !pdl.value)  -> (%2 : !pdl.type)
+# CHECK:     %7 = result 0 of %6
+# CHECK:     %8 = operation(%4, %7 : !pdl.value, !pdl.value)
+# CHECK:     rewrite with "rewriter" ["I am param"](%5, %8 : !pdl.operation, !pdl.operation)
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -112,16 +112,16 @@ def test_rewrite_multi_root_optimal():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_multi_root_forced : benefit(1)  {
-# CHECK:     %0 = pdl.operand
-# CHECK:     %1 = pdl.operand
-# CHECK:     %2 = pdl.type
-# CHECK:     %3 = pdl.operation(%0 : !pdl.value)  -> (%2 : !pdl.type)
-# CHECK:     %4 = pdl.result 0 of %3
-# CHECK:     %5 = pdl.operation(%4 : !pdl.value)
-# CHECK:     %6 = pdl.operation(%1 : !pdl.value)  -> (%2 : !pdl.type)
-# CHECK:     %7 = pdl.result 0 of %6
-# CHECK:     %8 = pdl.operation(%4, %7 : !pdl.value, !pdl.value)
-# CHECK:     pdl.rewrite %5 with "rewriter" ["I am param"](%8 : !pdl.operation)
+# CHECK:     %0 = operand
+# CHECK:     %1 = operand
+# CHECK:     %2 = type
+# CHECK:     %3 = operation(%0 : !pdl.value)  -> (%2 : !pdl.type)
+# CHECK:     %4 = result 0 of %3
+# CHECK:     %5 = operation(%4 : !pdl.value)
+# CHECK:     %6 = operation(%1 : !pdl.value)  -> (%2 : !pdl.type)
+# CHECK:     %7 = result 0 of %6
+# CHECK:     %8 = operation(%4, %7 : !pdl.value, !pdl.value)
+# CHECK:     rewrite %5 with "rewriter" ["I am param"](%8 : !pdl.operation)
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -141,13 +141,13 @@ def test_rewrite_multi_root_forced():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_add_body : benefit(1)  {
-# CHECK:     %0 = pdl.type : i32
-# CHECK:     %1 = pdl.type
-# CHECK:     %2 = pdl.operation  -> (%0, %1 : !pdl.type, !pdl.type)
-# CHECK:     pdl.rewrite %2  {
-# CHECK:       %3 = pdl.type
-# CHECK:       %4 = pdl.operation "foo.op"  -> (%0, %3 : !pdl.type, !pdl.type)
-# CHECK:       pdl.replace %2 with %4
+# CHECK:     %0 = type : i32
+# CHECK:     %1 = type
+# CHECK:     %2 = operation  -> (%0, %1 : !pdl.type, !pdl.type)
+# CHECK:     rewrite %2  {
+# CHECK:       %3 = type
+# CHECK:       %4 = operation "foo.op"  -> (%0, %3 : !pdl.type, !pdl.type)
+# CHECK:       replace %2 with %4
 # CHECK:     }
 # CHECK:   }
 # CHECK: }
@@ -166,11 +166,11 @@ def test_rewrite_add_body():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_type : benefit(1)  {
-# CHECK:     %0 = pdl.type : i32
-# CHECK:     %1 = pdl.type
-# CHECK:     %2 = pdl.operation  -> (%0, %1 : !pdl.type, !pdl.type)
-# CHECK:     pdl.rewrite %2  {
-# CHECK:       %3 = pdl.operation "foo.op"  -> (%0, %1 : !pdl.type, !pdl.type)
+# CHECK:     %0 = type : i32
+# CHECK:     %1 = type
+# CHECK:     %2 = operation  -> (%0, %1 : !pdl.type, !pdl.type)
+# CHECK:     rewrite %2  {
+# CHECK:       %3 = operation "foo.op"  -> (%0, %1 : !pdl.type, !pdl.type)
 # CHECK:     }
 # CHECK:   }
 # CHECK: }
@@ -187,11 +187,11 @@ def test_rewrite_type():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_types : benefit(1)  {
-# CHECK:     %0 = pdl.types
-# CHECK:     %1 = pdl.operation  -> (%0 : !pdl.range<type>)
-# CHECK:     pdl.rewrite %1  {
-# CHECK:       %2 = pdl.types : [i32, i64]
-# CHECK:       %3 = pdl.operation "foo.op"  -> (%0, %2 : !pdl.range<type>, !pdl.range<type>)
+# CHECK:     %0 = types
+# CHECK:     %1 = operation  -> (%0 : !pdl.range<type>)
+# CHECK:     rewrite %1  {
+# CHECK:       %2 = types : [i32, i64]
+# CHECK:       %3 = operation "foo.op"  -> (%0, %2 : !pdl.range<type>, !pdl.range<type>)
 # CHECK:     }
 # CHECK:   }
 # CHECK: }
@@ -208,11 +208,11 @@ def test_rewrite_types():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @rewrite_operands : benefit(1)  {
-# CHECK:     %0 = pdl.types
-# CHECK:     %1 = pdl.operands : %0
-# CHECK:     %2 = pdl.operation(%1 : !pdl.range<value>)
-# CHECK:     pdl.rewrite %2  {
-# CHECK:       %3 = pdl.operation "foo.op"  -> (%0 : !pdl.range<type>)
+# CHECK:     %0 = types
+# CHECK:     %1 = operands : %0
+# CHECK:     %2 = operation(%1 : !pdl.range<value>)
+# CHECK:     rewrite %2  {
+# CHECK:       %3 = operation "foo.op"  -> (%0 : !pdl.range<type>)
 # CHECK:     }
 # CHECK:   }
 # CHECK: }
@@ -229,9 +229,9 @@ def test_rewrite_operands():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @native_rewrite : benefit(1)  {
-# CHECK:     %0 = pdl.operation
-# CHECK:     pdl.rewrite %0  {
-# CHECK:       pdl.apply_native_rewrite "NativeRewrite"(%0 : !pdl.operation)
+# CHECK:     %0 = operation
+# CHECK:     rewrite %0  {
+# CHECK:       apply_native_rewrite "NativeRewrite"(%0 : !pdl.operation)
 # CHECK:     }
 # CHECK:   }
 # CHECK: }
@@ -246,10 +246,10 @@ def test_native_rewrite():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @attribute_with_value : benefit(1)  {
-# CHECK:     %0 = pdl.operation
-# CHECK:     pdl.rewrite %0  {
-# CHECK:       %1 = pdl.attribute "value"
-# CHECK:       pdl.apply_native_rewrite "NativeRewrite"(%1 : !pdl.attribute)
+# CHECK:     %0 = operation
+# CHECK:     rewrite %0  {
+# CHECK:       %1 = attribute "value"
+# CHECK:       apply_native_rewrite "NativeRewrite"(%1 : !pdl.attribute)
 # CHECK:     }
 # CHECK:   }
 # CHECK: }
@@ -265,9 +265,9 @@ def test_attribute_with_value():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @erase : benefit(1)  {
-# CHECK:     %0 = pdl.operation
-# CHECK:     pdl.rewrite %0  {
-# CHECK:       pdl.erase %0
+# CHECK:     %0 = operation
+# CHECK:     rewrite %0  {
+# CHECK:       erase %0
 # CHECK:     }
 # CHECK:   }
 # CHECK: }
@@ -282,11 +282,11 @@ def test_erase():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern @operation_results : benefit(1)  {
-# CHECK:     %0 = pdl.types
-# CHECK:     %1 = pdl.operation  -> (%0 : !pdl.range<type>)
-# CHECK:     %2 = pdl.results of %1
-# CHECK:     %3 = pdl.operation(%2 : !pdl.range<value>)
-# CHECK:     pdl.rewrite %3 with "rewriter"
+# CHECK:     %0 = types
+# CHECK:     %1 = operation  -> (%0 : !pdl.range<type>)
+# CHECK:     %2 = results of %1
+# CHECK:     %3 = operation(%2 : !pdl.range<value>)
+# CHECK:     rewrite %3 with "rewriter"
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule
@@ -302,10 +302,10 @@ def test_operation_results():
 
 # CHECK: module  {
 # CHECK:   pdl.pattern : benefit(1)  {
-# CHECK:     %0 = pdl.type
-# CHECK:     pdl.apply_native_constraint "typeConstraint" [](%0 : !pdl.type)
-# CHECK:     %1 = pdl.operation  -> (%0 : !pdl.type)
-# CHECK:     pdl.rewrite %1 with "rewrite"
+# CHECK:     %0 = type
+# CHECK:     apply_native_constraint "typeConstraint" [](%0 : !pdl.type)
+# CHECK:     %1 = operation  -> (%0 : !pdl.type)
+# CHECK:     rewrite %1 with "rewrite"
 # CHECK:   }
 # CHECK: }
 @constructAndPrintInModule

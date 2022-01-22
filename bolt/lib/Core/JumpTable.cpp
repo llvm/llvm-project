@@ -14,7 +14,6 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinarySection.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "bolt"
 

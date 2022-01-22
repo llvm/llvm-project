@@ -507,3 +507,85 @@ func @rsqrt_vector_2x16xf32(%arg0: vector<2x16xf32>) -> vector<2x16xf32> {
   %0 = math.rsqrt %arg0 : vector<2x16xf32>
   return %0 : vector<2x16xf32>
 }
+
+// CHECK-LABEL: @atan_scalar
+// CHECK-DAG:  %[[ONE:.+]] = arith.constant 1.000000e+00
+// CHECK-DAG:  %[[N1:.+]] = arith.constant 0.144182831
+// CHECK-DAG:  %[[N2:.+]] = arith.constant -0.349992335
+// CHECK-DAG:  %[[N3:.+]] = arith.constant -0.0106783099
+// CHECK-DAG:  %[[N4:.+]] = arith.constant 1.00209987
+// CHECK-DAG:  %[[HALF_PI:.+]] = arith.constant 1.57079637
+// CHECK-DAG:  %[[ABS:.+]] = math.abs %arg0
+// CHECK-DAG:  %[[DIV:.+]] = arith.divf %cst, %[[ABS]]
+// CHECK-DAG:  %[[CMP:.+]] = arith.cmpf olt, %[[ABS]], %[[DIV]]
+// CHECK-DAG:  %[[SEL:.+]] = select %[[CMP]], %[[ABS]], %[[DIV]]
+// CHECK-DAG:  %[[P0:.+]] = math.fma %[[SEL]], %[[N1]], %[[N2]]
+// CHECK-DAG:  %[[P1:.+]] = math.fma %[[SEL]], %[[P0]], %[[N3]]
+// CHECK-DAG:  %[[P2:.+]] = math.fma %[[SEL]], %[[P1]], %[[N4]]
+// CHECK-DAG:  %[[P3:.+]] = arith.mulf %[[SEL]], %[[P2]]
+// CHECK-DAG:  %[[SUB:.+]] = arith.subf %[[HALF_PI]], %[[P3]]
+// CHECK-DAG:  %[[EST:.+]] = select %[[CMP]], %[[P3]], %[[SUB]]
+// CHECK-DAG:  %[[RES:.+]] = math.copysign %[[EST]], %arg0
+// CHECK:  return %[[RES]]
+func @atan_scalar(%arg0: f32) -> f32 {
+  %0 = math.atan %arg0 : f32
+  return %0 : f32
+}
+
+
+// CHECK-LABEL: @atan2_scalar
+
+// ATan approximation:
+// CHECK-DAG:  %[[ONE:.+]] = arith.constant 1.000000e+00
+// CHECK-DAG:  %[[N1:.+]] = arith.constant 0.144182831
+// CHECK-DAG:  %[[N2:.+]] = arith.constant -0.349992335
+// CHECK-DAG:  %[[N3:.+]] = arith.constant -0.0106783099
+// CHECK-DAG:  %[[N4:.+]] = arith.constant 1.00209987
+// CHECK-DAG:  %[[HALF_PI:.+]] = arith.constant 1.57079637
+// CHECK-DAG:  %[[RATIO:.+]] = arith.divf %arg0, %arg1
+// CHECK-DAG:  %[[ABS:.+]] = math.abs %[[RATIO]]
+// CHECK-DAG:  %[[DIV:.+]] = arith.divf %cst, %[[ABS]]
+// CHECK-DAG:  %[[CMP:.+]] = arith.cmpf olt, %[[ABS]], %[[DIV]]
+// CHECK-DAG:  %[[SEL:.+]] = select %[[CMP]], %[[ABS]], %[[DIV]]
+// CHECK-DAG:  %[[P0:.+]] = math.fma %[[SEL]], %[[N1]], %[[N2]]
+// CHECK-DAG:  %[[P1:.+]] = math.fma %[[SEL]], %[[P0]], %[[N3]]
+// CHECK-DAG:  %[[P2:.+]] = math.fma %[[SEL]], %[[P1]], %[[N4]]
+// CHECK-DAG:  %[[P3:.+]] = arith.mulf %[[SEL]], %[[P2]]
+// CHECK-DAG:  %[[SUB:.+]] = arith.subf %[[HALF_PI]], %[[P3]]
+// CHECK-DAG:  %[[EST:.+]] = select %[[CMP]], %[[P3]], %[[SUB]]
+// CHECK-DAG:  %[[ATAN:.+]] = math.copysign %[[EST]], %[[RATIO]]
+
+// Handle the case of x < 0:
+// CHECK-DAG: %[[ZERO:.+]] = arith.constant 0.000000e+00
+// CHECK-DAG: %[[PI:.+]] = arith.constant 3.14159274
+// CHECK-DAG: %[[ADD_PI:.+]] = arith.addf %[[ATAN]], %[[PI]]
+// CHECK-DAG: %[[SUB_PI:.+]] = arith.subf %[[ATAN]], %[[PI]]
+// CHECK-DAG: %[[CMP_ATAN:.+]] = arith.cmpf ogt, %[[ATAN]], %[[ZERO]]
+// CHECK-DAG: %[[ATAN_ADJUST:.+]] = select %[[CMP_ATAN]], %[[SUB_PI]], %[[ADD_PI]]
+// CHECK-DAG: %[[X_NEG:.+]] = arith.cmpf ogt, %arg1, %[[ZERO]]
+// CHECK-DAG: %[[ATAN_EST:.+]] = select %[[X_NEG]], %[[ATAN]], %[[ATAN_ADJUST]]
+
+// Handle PI / 2 edge case:
+// CHECK-DAG: %[[X_ZERO:.+]] = arith.cmpf oeq, %arg1, %[[ZERO]]
+// CHECK-DAG: %[[Y_POS:.+]] = arith.cmpf ogt, %arg0, %[[ZERO]]
+// CHECK-DAG: %[[IS_HALF_PI:.+]] = arith.andi %[[X_ZERO]], %[[Y_POS]]
+// CHECK-DAG: %[[EDGE1:.+]] = select %[[IS_HALF_PI]], %[[HALF_PI]], %[[ATAN_EST]]
+
+// Handle -PI / 2 edge case:
+// CHECK-DAG: %[[NEG_HALF_PI:.+]] = arith.constant -1.57079637
+// CHECK-DAG: %[[Y_NEG:.+]] = arith.cmpf olt, %arg0, %[[ZERO]]
+// CHECK-DAG: %[[IS_NEG_HALF_PI:.+]] = arith.andi %[[X_ZERO]], %[[Y_NEG]]
+// CHECK-DAG: %[[EDGE2:.+]] = select %[[IS_NEG_HALF_PI]], %[[NEG_HALF_PI]], %[[EDGE1]]
+
+// Handle Nan edgecase:
+// CHECK-DAG: %[[Y_ZERO:.+]] = arith.cmpf oeq, %arg0, %[[ZERO]]
+// CHECK-DAG: %[[X_Y_ZERO:.+]] = arith.andi %[[X_ZERO]], %[[Y_ZERO]]
+// CHECK-DAG: %[[NAN:.+]] = arith.constant 0x7FC00000
+// CHECK-DAG: %[[EDGE3:.+]] = select %[[X_Y_ZERO]], %[[NAN]], %[[EDGE2]]
+// CHECK: return %[[EDGE3]]
+
+func @atan2_scalar(%arg0: f32, %arg1: f32) -> f32 {
+  %0 = math.atan2 %arg0, %arg1 : f32
+  return %0 : f32
+}
+

@@ -313,14 +313,14 @@ class RVBTernaryImm5<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode,
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZbbOrZbp] in {
+let Predicates = [HasStdExtZbbOrZbpOrZbkb] in {
 def ANDN  : ALU_rr<0b0100000, 0b111, "andn">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def ORN   : ALU_rr<0b0100000, 0b110, "orn">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def XNOR  : ALU_rr<0b0100000, 0b100, "xnor">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-} // Predicates = [HasStdExtZbbOrZbp]
+} // Predicates = [HasStdExtZbbOrZbpOrZbkb]
 
 let Predicates = [HasStdExtZba] in {
 def SH1ADD : ALU_rr<0b0010000, 0b010, "sh1add">,
@@ -331,12 +331,12 @@ def SH3ADD : ALU_rr<0b0010000, 0b110, "sh3add">,
              Sched<[WriteSHXADD, ReadSHXADD, ReadSHXADD]>;
 } // Predicates = [HasStdExtZba]
 
-let Predicates = [HasStdExtZbbOrZbp] in {
+let Predicates = [HasStdExtZbbOrZbpOrZbkb] in {
 def ROL   : ALU_rr<0b0110000, 0b001, "rol">,
             Sched<[WriteRotateReg, ReadRotateReg, ReadRotateReg]>;
 def ROR   : ALU_rr<0b0110000, 0b101, "ror">,
             Sched<[WriteRotateReg, ReadRotateReg, ReadRotateReg]>;
-} // Predicates = [HasStdExtZbbOrZbp]
+} // Predicates = [HasStdExtZbbOrZbpOrZbkb]
 
 let Predicates = [HasStdExtZbs] in {
 def BCLR : ALU_rr<0b0100100, 0b001, "bclr">,
@@ -360,7 +360,7 @@ def XPERMB : ALU_rr<0b0010100, 0b100, "xperm.b">, Sched<[]>;
 def XPERMH : ALU_rr<0b0010100, 0b110, "xperm.h">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
-let Predicates = [HasStdExtZbbOrZbp] in
+let Predicates = [HasStdExtZbbOrZbpOrZbkb] in
 def RORI  : RVBShift_ri<0b01100, 0b101, OPC_OP_IMM, "rori">,
             Sched<[WriteRotateImm, ReadRotateImm]>;
 
@@ -440,13 +440,16 @@ def CRC32CD : RVBUnary<0b0110000, 0b11011, 0b001, OPC_OP_IMM, "crc32c.d">,
               Sched<[]>;
 
 let Predicates = [HasStdExtZbc] in {
-def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul">,
-             Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 def CLMULR : ALU_rr<0b0000101, 0b010, "clmulr">,
+             Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
+} // Predicates = [HasStdExtZbc]
+
+let Predicates = [HasStdExtZbcOrZbkc] in {
+def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul">,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh">,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
-} // Predicates = [HasStdExtZbc]
+} // Predicates = [HasStdExtZbcOrZbkc]
 
 let Predicates = [HasStdExtZbb] in {
 def MIN  : ALU_rr<0b0000101, 0b100, "min">,
@@ -471,11 +474,13 @@ def BDECOMPRESS : ALU_rr<0b0100100, 0b110, "bdecompress">, Sched<[]>;
 def BCOMPRESS   : ALU_rr<0b0000100, 0b110, "bcompress">, Sched<[]>;
 } // Predicates = [HasStdExtZbe]
 
-let Predicates = [HasStdExtZbp] in {
+let Predicates = [HasStdExtZbpOrZbkb] in {
 def PACK  : ALU_rr<0b0000100, 0b100, "pack">, Sched<[]>;
-def PACKU : ALU_rr<0b0100100, 0b100, "packu">, Sched<[]>;
 def PACKH : ALU_rr<0b0000100, 0b111, "packh">, Sched<[]>;
-} // Predicates = [HasStdExtZbp]
+} // Predicates = [HasStdExtZbpOrZbkb]
+
+let Predicates = [HasStdExtZbp] in 
+def PACKU : ALU_rr<0b0100100, 0b100, "packu">, Sched<[]>;
 
 let Predicates = [HasStdExtZbm, IsRV64] in {
 def BMATOR   : ALU_rr<0b0000100, 0b011, "bmator">, Sched<[]>;
@@ -504,7 +509,7 @@ def SH3ADDUW : ALUW_rr<0b0010000, 0b110, "sh3add.uw">,
                Sched<[WriteSHXADD32, ReadSHXADD32, ReadSHXADD32]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
+let Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV64] in {
 def ROLW  : ALUW_rr<0b0110000, 0b001, "rolw">,
             Sched<[WriteRotateReg32, ReadRotateReg32, ReadRotateReg32]>;
 def RORW  : ALUW_rr<0b0110000, 0b101, "rorw">,
@@ -520,7 +525,7 @@ let Predicates = [HasStdExtZbp, IsRV64] in {
 def XPERMW : ALU_rr<0b0010100, 0b000, "xperm.w">, Sched<[]>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
+let Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV64] in
 def RORIW : RVBShiftW_ri<0b0110000, 0b101, OPC_OP_IMM_32, "roriw">,
             Sched<[WriteRotateImm32, ReadRotateImm32]>;
 
@@ -559,10 +564,11 @@ def BDECOMPRESSW : ALUW_rr<0b0100100, 0b110, "bdecompressw">, Sched<[]>;
 def BCOMPRESSW   : ALUW_rr<0b0000100, 0b110, "bcompressw">, Sched<[]>;
 } // Predicates = [HasStdExtZbe, IsRV64]
 
-let Predicates = [HasStdExtZbp, IsRV64] in {
+let Predicates = [HasStdExtZbpOrZbkb, IsRV64] in 
 def PACKW  : ALUW_rr<0b0000100, 0b100, "packw">, Sched<[]>;
+
+let Predicates = [HasStdExtZbp, IsRV64] in 
 def PACKUW : ALUW_rr<0b0100100, 0b100, "packuw">, Sched<[]>;
-} // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbf, IsRV64] in
 def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">,
@@ -593,29 +599,29 @@ def ZEXTH_RV64 : RVInstR<0b0000100, 0b100, OPC_OP_32, (outs GPR:$rd),
 // causes diagnostics to suggest that Zbp rather than Zbb is required for rev8
 // or gorci. Since Zbb is closer to being finalized than Zbp this will be
 // misleading to users.
-let Predicates = [HasStdExtZbbOrZbp, IsRV32] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def REV8_RV32 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                        "rev8", "$rd, $rs1">, Sched<[WriteREV8, ReadREV8]> {
-  let imm12 = { 0b01101, 0b0011000 };
-}
-} // Predicates = [HasStdExtZbbOrZbp, IsRV32]
+let Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV32] in {
+def REV8_RV32 : RVBUnary<0b0110100, 0b11000, 0b101, OPC_OP_IMM, "rev8">,
+                Sched<[WriteREV8, ReadREV8]>;
+} // Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV32]
 
-let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def REV8_RV64 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                        "rev8", "$rd, $rs1">, Sched<[WriteREV8, ReadREV8]> {
-  let imm12 = { 0b01101, 0b0111000 };
-}
-} // Predicates = [HasStdExtZbbOrZbp, IsRV64]
+let Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV64] in {
+def REV8_RV64 : RVBUnary<0b0110101, 0b11000, 0b101, OPC_OP_IMM, "rev8">,
+                Sched<[WriteREV8, ReadREV8]>;
+} // Predicates = [HasStdExtZbbOrZbpOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def ORCB : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                   "orc.b", "$rd, $rs1">, Sched<[WriteORCB, ReadORCB]> {
-  let imm12 = { 0b00101, 0b0000111 };
-}
+def ORCB : RVBUnary<0b0010100, 0b00111, 0b101, OPC_OP_IMM, "orc.b">,
+           Sched<[WriteORCB, ReadORCB]>;
 } // Predicates = [HasStdExtZbbOrZbp]
+
+let Predicates = [HasStdExtZbpOrZbkb] in 
+def BREV8 : RVBUnary<0b0110100, 0b00111, 0b101, OPC_OP_IMM, "brev8">;
+
+let Predicates = [HasStdExtZbpOrZbkb, IsRV32] in {
+def ZIP_RV32   : RVBUnary<0b0000100, 0b01111, 0b001, OPC_OP_IMM, "zip">;
+def UNZIP_RV32 : RVBUnary<0b0000100, 0b01111, 0b101, OPC_OP_IMM, "unzip">;
+} // Predicates = [HasStdExtZbkb, IsRV32]
+
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
@@ -631,11 +637,11 @@ def : InstAlias<"rev2.n $rd, $rs", (GREVI GPR:$rd, GPR:$rs, 0b00010)>;
 def : InstAlias<"rev.n $rd, $rs",  (GREVI GPR:$rd, GPR:$rs, 0b00011)>;
 def : InstAlias<"rev4.b $rd, $rs", (GREVI GPR:$rd, GPR:$rs, 0b00100)>;
 def : InstAlias<"rev2.b $rd, $rs", (GREVI GPR:$rd, GPR:$rs, 0b00110)>;
-def : InstAlias<"rev.b $rd, $rs",  (GREVI GPR:$rd, GPR:$rs, 0b00111)>;
 def : InstAlias<"rev8.h $rd, $rs", (GREVI GPR:$rd, GPR:$rs, 0b01000)>;
 def : InstAlias<"rev4.h $rd, $rs", (GREVI GPR:$rd, GPR:$rs, 0b01100)>;
 def : InstAlias<"rev2.h $rd, $rs", (GREVI GPR:$rd, GPR:$rs, 0b01110)>;
 def : InstAlias<"rev.h $rd, $rs",  (GREVI GPR:$rd, GPR:$rs, 0b01111)>;
+def : InstAlias<"rev.b $rd, $rs",  (BREV8 GPR:$rd, GPR:$rs)>;
 
 def : InstAlias<"zip.n $rd, $rs",    (SHFLI   GPR:$rd, GPR:$rs, 0b0001)>;
 def : InstAlias<"unzip.n $rd, $rs",  (UNSHFLI GPR:$rd, GPR:$rs, 0b0001)>;
@@ -675,8 +681,7 @@ def : InstAlias<"zip4 $rd, $rs",   (SHFLI   GPR:$rd, GPR:$rs, 0b1100)>;
 def : InstAlias<"unzip4 $rd, $rs", (UNSHFLI GPR:$rd, GPR:$rs, 0b1100)>;
 def : InstAlias<"zip2 $rd, $rs",   (SHFLI   GPR:$rd, GPR:$rs, 0b1110)>;
 def : InstAlias<"unzip2 $rd, $rs", (UNSHFLI GPR:$rd, GPR:$rs, 0b1110)>;
-def : InstAlias<"zip $rd, $rs",    (SHFLI   GPR:$rd, GPR:$rs, 0b1111)>;
-def : InstAlias<"unzip $rd, $rs",  (UNSHFLI GPR:$rd, GPR:$rs, 0b1111)>;
+// zip and unzip are considered instructions rather than an alias.
 
 def : InstAlias<"orc16 $rd, $rs", (GORCI GPR:$rd, GPR:$rs, 0b10000)>;
 def : InstAlias<"orc8 $rd, $rs",  (GORCI GPR:$rd, GPR:$rs, 0b11000)>;
@@ -855,6 +860,9 @@ def : PatGprImm<riscv_shfl, SHFLI, shfl_uimm>;
 def : PatGprImm<riscv_unshfl, UNSHFLI, shfl_uimm>;
 def : PatGprImm<riscv_grev, GREVI, uimmlog2xlen>;
 def : PatGprImm<riscv_gorc, GORCI, uimmlog2xlen>;
+
+// We treat brev8 as a separate instruction, so match it directly.
+def : Pat<(riscv_grev GPR:$rs1, 7), (BREV8 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp, IsRV64] in
@@ -866,6 +874,10 @@ def : Pat<(i32 (rotl (riscv_grev GPR:$rs1, 24), (i32 16))), (GREVI GPR:$rs1, 8)>
 
 // We treat rev8 as a separate instruction, so match it directly.
 def : Pat<(i32 (riscv_grev GPR:$rs1, 24)), (REV8_RV32 GPR:$rs1)>;
+
+// We treat zip and unzip as separate instructions, so match it directly.
+def : Pat<(i32 (riscv_shfl GPR:$rs1, 15)), (ZIP_RV32 GPR:$rs1)>;
+def : Pat<(i32 (riscv_unshfl GPR:$rs1, 15)), (UNZIP_RV32 GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp, IsRV32]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {

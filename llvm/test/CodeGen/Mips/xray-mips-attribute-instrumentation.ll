@@ -1,7 +1,7 @@
-; RUN: llc -filetype=asm -o - -mtriple=mips-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MIPS32 %s
-; RUN: llc -filetype=asm -o - -mtriple=mipsel-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MIPS32 %s
-; RUN: llc -filetype=asm -o - -mtriple=mips64-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MIPS64 %s
-; RUN: llc -filetype=asm -o - -mtriple=mips64el-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MIPS64 %s
+; RUN: llc -mtriple=mips-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MIPS32 %s
+; RUN: llc -mtriple=mipsel-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MIPS32 %s
+; RUN: llc -mtriple=mips64-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MIPS64 %s
+; RUN: llc -mtriple=mips64el-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MIPS64 %s
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK:       .p2align 2

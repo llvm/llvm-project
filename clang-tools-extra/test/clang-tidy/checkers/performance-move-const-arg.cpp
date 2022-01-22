@@ -246,3 +246,97 @@ void lambda2() {
   };
   f(MoveSemantics());
 }
+
+void showInt(int &&v);
+void showInt(int v1, int &&v2);
+void showPointer(const char *&&s);
+void showPointer2(const char *const &&s);
+void showTriviallyCopyable(TriviallyCopyable &&obj);
+void showTriviallyCopyablePointer(const TriviallyCopyable *&&obj);
+void testFunctions() {
+  int a = 10;
+  showInt(std::move(a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: std::move of the variable 'a' of the trivially-copyable type 'int' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-10]]:20: note: consider changing the 1st parameter of 'showInt' from 'int &&' to 'const int &'
+  showInt(int());
+  showInt(a, std::move(a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: std::move of the variable 'a' of the trivially-copyable type 'int' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-13]]:28: note: consider changing the 2nd parameter of 'showInt' from 'int &&' to 'const int &'
+  const char* s = "";
+  showPointer(std::move(s));
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: std::move of the variable 's' of the trivially-copyable type 'const char *' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-16]]:32: note: consider changing the 1st parameter of 'showPointer' from 'const char *&&' to 'const char *'
+  showPointer2(std::move(s)); 
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: std::move of the variable 's' of the trivially-copyable type 'const char *' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-18]]:39: note: consider changing the 1st parameter of 'showPointer2' from 'const char *const &&' to 'const char *const'
+  TriviallyCopyable *obj = new TriviallyCopyable();
+  showTriviallyCopyable(std::move(*obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: std::move of the expression of the trivially-copyable type 'TriviallyCopyable' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-21]]:48: note: consider changing the 1st parameter of 'showTriviallyCopyable' from 'TriviallyCopyable &&' to 'const TriviallyCopyable &'
+  showTriviallyCopyablePointer(std::move(obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: std::move of the variable 'obj' of the trivially-copyable type 'TriviallyCopyable *' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-23]]:62: note: consider changing the 1st parameter of 'showTriviallyCopyablePointer' from 'const TriviallyCopyable *&&' to 'const TriviallyCopyable *'
+}
+template <class T>
+void forwardToShowInt(T && t) {
+  showInt(static_cast<T &&>(t));
+}
+void testTemplate() {
+  int a = 10;
+  forwardToShowInt(std::move(a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: std::move of the variable 'a' of the trivially-copyable type 'int' has no effect [performance-move-const-arg]
+}
+
+struct Tmp {
+  Tmp();
+  Tmp(int &&a);
+  Tmp(int v1, int &&a);
+  Tmp(const char *&&s);
+  Tmp(TriviallyCopyable&& obj);
+  Tmp(const TriviallyCopyable *&&obj);
+  void showTmp(TriviallyCopyable&& t);
+  static void showTmpStatic(TriviallyCopyable&& t);
+};
+void testMethods() {
+  Tmp t;
+  int a = 10;
+  Tmp t1(std::move(a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable 'a' of the trivially-copyable type 'int' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-13]]:13: note: consider changing the 1st parameter of 'Tmp' from 'int &&' to 'const int &'
+  Tmp t2(a, std::move(a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: std::move of the variable 'a' of the trivially-copyable type 'int' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-15]]:21: note: consider changing the 2nd parameter of 'Tmp' from 'int &&' to 'const int &'
+  const char* s = "";
+  Tmp t3(std::move(s));
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable 's' of the trivially-copyable type 'const char *' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-18]]:21: note: consider changing the 1st parameter of 'Tmp' from 'const char *&&' to 'const char *'
+  TriviallyCopyable *obj = new TriviallyCopyable();
+  Tmp t4(std::move(*obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the expression of the trivially-copyable type 'TriviallyCopyable' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-21]]:27: note: consider changing the 1st parameter of 'Tmp' from 'TriviallyCopyable &&' to 'const TriviallyCopyable &'
+  Tmp t5(std::move(obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable 'obj' of the trivially-copyable type 'TriviallyCopyable *' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-23]]:34: note: consider changing the 1st parameter of 'Tmp' from 'const TriviallyCopyable *&&' to 'const TriviallyCopyable *'
+  t.showTmp(std::move(*obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: std::move of the expression of the trivially-copyable type 'TriviallyCopyable' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-25]]:36: note: consider changing the 1st parameter of 'showTmp' from 'TriviallyCopyable &&' to 'const TriviallyCopyable &'
+  Tmp::showTmpStatic(std::move(*obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: std::move of the expression of the trivially-copyable type 'TriviallyCopyable' has no effect [performance-move-const-arg]
+  // CHECK-MESSAGES: :[[@LINE-27]]:49: note: consider changing the 1st parameter of 'showTmpStatic' from 'TriviallyCopyable &&' to 'const TriviallyCopyable &'
+}
+
+void showA(A &&v) {}
+void testA() {
+  A a;
+  showA(std::move(a));
+}
+
+void testFuncPointer() {
+  int a = 10;
+  void (*choice)(int, int &&);
+  choice = showInt;
+  choice(std::move(a), std::move(a));
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: std::move of the variable 'a' of the trivially-copyable type 'int' has no effect; remove std::move() [performance-move-const-arg]
+  // CHECK-FIXES: choice(a, std::move(a));
+  // CHECK-MESSAGES: :[[@LINE-3]]:24: warning: std::move of the variable 'a' of the trivially-copyable type 'int' has no effect [performance-move-const-arg]
+}

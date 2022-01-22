@@ -1,5 +1,4 @@
 if ( CMAKE_SYSTEM_NAME MATCHES "Windows" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD" )
-  add_definitions( -DIMPORT_LIBLLDB )
   list(APPEND extra_libs lldbHost)
 endif ()
 

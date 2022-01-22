@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_HYPOT_H
 
 #include "BasicOperations.h"
+#include "FEnvImpl.h"
 #include "FPBits.h"
 #include "src/__support/CPP/TypeTraits.h"
 
@@ -21,33 +22,39 @@ namespace internal {
 template <typename T>
 static inline T find_leading_one(T mant, int &shift_length);
 
+// The following overloads are matched based on what is accepted by
+// __builtin_clz* rather than using the exactly-sized aliases from stdint.h
+// (such as uint32_t). There are 3 overloads even though 2 will only ever be
+// used by a specific platform, since unsigned long varies in size depending on
+// the word size of the architecture.
+
 template <>
-inline uint32_t find_leading_one<uint32_t>(uint32_t mant, int &shift_length) {
+inline unsigned int find_leading_one<unsigned int>(unsigned int mant,
+                                                   int &shift_length) {
   shift_length = 0;
-  constexpr int NSTEPS = 5;
-  constexpr uint32_t BOUNDS[NSTEPS] = {1 << 16, 1 << 8, 1 << 4, 1 << 2, 1 << 1};
-  constexpr int SHIFTS[NSTEPS] = {16, 8, 4, 2, 1};
-  for (int i = 0; i < NSTEPS; ++i) {
-    if (mant >= BOUNDS[i]) {
-      shift_length += SHIFTS[i];
-      mant >>= SHIFTS[i];
-    }
+  if (mant > 0) {
+    shift_length = (sizeof(mant) * 8) - 1 - __builtin_clz(mant);
   }
   return 1U << shift_length;
 }
 
 template <>
-inline uint64_t find_leading_one<uint64_t>(uint64_t mant, int &shift_length) {
+inline unsigned long find_leading_one<unsigned long>(unsigned long mant,
+                                                     int &shift_length) {
   shift_length = 0;
-  constexpr int NSTEPS = 6;
-  constexpr uint64_t BOUNDS[NSTEPS] = {1ULL << 32, 1ULL << 16, 1ULL << 8,
-                                       1ULL << 4,  1ULL << 2,  1ULL << 1};
-  constexpr int SHIFTS[NSTEPS] = {32, 16, 8, 4, 2, 1};
-  for (int i = 0; i < NSTEPS; ++i) {
-    if (mant >= BOUNDS[i]) {
-      shift_length += SHIFTS[i];
-      mant >>= SHIFTS[i];
-    }
+  if (mant > 0) {
+    shift_length = (sizeof(mant) * 8) - 1 - __builtin_clzl(mant);
+  }
+  return 1UL << shift_length;
+}
+
+template <>
+inline unsigned long long
+find_leading_one<unsigned long long>(unsigned long long mant,
+                                     int &shift_length) {
+  shift_length = 0;
+  if (mant > 0) {
+    shift_length = (sizeof(mant) * 8) - 1 - __builtin_clzll(mant);
   }
   return 1ULL << shift_length;
 }
@@ -143,11 +150,18 @@ static inline T hypot(T x, T y) {
   if ((x_bits.get_unbiased_exponent() >=
        y_bits.get_unbiased_exponent() + MantissaWidth<T>::VALUE + 2) ||
       (y == 0)) {
+    if ((y != 0) && (get_round() == FE_UPWARD)) {
+      UIntType out_bits = FPBits_t(abs(x)).uintval();
+      return T(FPBits_t(++out_bits));
+    }
     return abs(x);
   } else if ((y_bits.get_unbiased_exponent() >=
               x_bits.get_unbiased_exponent() + MantissaWidth<T>::VALUE + 2) ||
              (x == 0)) {
-    y_bits.set_sign(0);
+    if ((x != 0) && (get_round() == FE_UPWARD)) {
+      UIntType out_bits = FPBits_t(abs(y)).uintval();
+      return T(FPBits_t(++out_bits));
+    }
     return abs(y);
   }
 
@@ -250,8 +264,16 @@ static inline T hypot(T x, T y) {
   y_new >>= 1;
 
   // Round to the nearest, tie to even.
-  if (round_bit && (lsb || sticky_bits || (r != 0))) {
-    ++y_new;
+  switch (get_round()) {
+  case FE_TONEAREST:
+    // Round to nearest, ties to even
+    if (round_bit && (lsb || sticky_bits || (r != 0)))
+      ++y_new;
+    break;
+  case FE_UPWARD:
+    if (round_bit || sticky_bits || (r != 0))
+      ++y_new;
+    break;
   }
 
   if (y_new >= (ONE >> 1)) {
