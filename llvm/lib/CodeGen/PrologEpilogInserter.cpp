@@ -856,47 +856,34 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     if (FixedOff > Offset) Offset = FixedOff;
   }
 
+  Align MaxAlign = MFI.getMaxAlign();
   // First assign frame offsets to stack objects that are used to spill
   // callee saved registers.
-  if (StackGrowsDown && MaxCSFrameIndex >= MinCSFrameIndex) {
-    for (unsigned i = MinCSFrameIndex; i <= MaxCSFrameIndex; ++i) {
-      if (MFI.getStackID(i) !=
-          TargetStackID::Default) // Only allocate objects on the default stack.
+  if (MaxCSFrameIndex >= MinCSFrameIndex) {
+    for (unsigned i = 0; i <= MaxCSFrameIndex - MinCSFrameIndex; ++i) {
+      unsigned FrameIndex =
+          StackGrowsDown ? MinCSFrameIndex + i : MaxCSFrameIndex - i;
+
+      // Only allocate objects on the default stack.
+      if (MFI.getStackID(FrameIndex) != TargetStackID::Default)
         continue;
 
-      // If the stack grows down, we need to add the size to find the lowest
-      // address of the object.
-      Offset += MFI.getObjectSize(i);
-
-      // Adjust to alignment boundary
-      Offset = alignTo(Offset, MFI.getObjectAlign(i), Skew);
-
-      LLVM_DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << -Offset << "]\n");
-      MFI.setObjectOffset(i, -Offset);        // Set the computed offset
-    }
-  } else if (MaxCSFrameIndex >= MinCSFrameIndex) {
-    // Be careful about underflow in comparisons agains MinCSFrameIndex.
-    for (unsigned i = MaxCSFrameIndex; i != MinCSFrameIndex - 1; --i) {
-      if (MFI.getStackID(i) !=
-          TargetStackID::Default) // Only allocate objects on the default stack.
+      // TODO: should this just be if (MFI.isDeadObjectIndex(FrameIndex))
+      if (!StackGrowsDown && MFI.isDeadObjectIndex(FrameIndex))
         continue;
 
-      if (MFI.isDeadObjectIndex(i))
-        continue;
-
-      // Adjust to alignment boundary
-      Offset = alignTo(Offset, MFI.getObjectAlign(i), Skew);
-
-      LLVM_DEBUG(dbgs() << "alloc FI(" << i << ") at SP[" << Offset << "]\n");
-      MFI.setObjectOffset(i, Offset);
-      Offset += MFI.getObjectSize(i);
+      AdjustStackOffset(MFI, FrameIndex, StackGrowsDown, Offset, MaxAlign,
+                        Skew);
     }
   }
+
+  assert(MaxAlign == MFI.getMaxAlign() &&
+         "MFI.getMaxAlign should already account for all callee-saved "
+         "registers without a fixed stack slot");
 
   // FixedCSEnd is the stack offset to the end of the fixed and callee-save
   // stack area.
   int64_t FixedCSEnd = Offset;
-  Align MaxAlign = MFI.getMaxAlign();
 
   // Make sure the special register scavenging spill slot is closest to the
   // incoming stack pointer if a frame pointer is required and is closer
