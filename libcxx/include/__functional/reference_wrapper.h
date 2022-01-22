@@ -176,7 +176,7 @@ public:
 #endif // _LIBCPP_CXX03_LANG
 };
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER > 14
 template <class _Tp>
 reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
 #endif
@@ -194,7 +194,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 reference_wrapper<_Tp>
 ref(reference_wrapper<_Tp> __t) _NOEXCEPT
 {
-    return _VSTD::ref(__t.get());
+    return __t;
 }
 
 template <class _Tp>
@@ -210,7 +210,9 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 reference_wrapper<const _Tp>
 cref(reference_wrapper<_Tp> __t) _NOEXCEPT
 {
-    return _VSTD::cref(__t.get());
+    // C++20 says "return __t", but C++03 lacks the relevant
+    // converting constructor. This should be equivalent.
+    return __t.get();
 }
 
 #ifndef _LIBCPP_CXX03_LANG
