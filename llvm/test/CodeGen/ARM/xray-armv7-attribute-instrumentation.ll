@@ -1,5 +1,5 @@
-; RUN: llc -filetype=asm -o - -mtriple=armv7-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -filetype=asm -o - -mtriple=armv7-apple-ios6.0.0  < %s | FileCheck %s
+; RUN: llc -mtriple=armv7-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=armv7-apple-ios6.0.0  < %s | FileCheck %s
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK-LABEL: Lxray_sled_0:
