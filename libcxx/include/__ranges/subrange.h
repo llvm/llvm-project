@@ -40,12 +40,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
   template<class _From, class _To>
+  concept __uses_nonqualification_pointer_conversion =
+    is_pointer_v<_From> && is_pointer_v<_To> &&
+    !convertible_to<remove_pointer_t<_From>(*)[], remove_pointer_t<_To>(*)[]>;
+
+  template<class _From, class _To>
   concept __convertible_to_non_slicing =
     convertible_to<_From, _To> &&
-    // If they're both pointers, they must have the same element type.
-    !(is_pointer_v<decay_t<_From>> &&
-      is_pointer_v<decay_t<_To>> &&
-      __different_from<remove_pointer_t<decay_t<_From>>, remove_pointer_t<decay_t<_To>>>);
+    !__uses_nonqualification_pointer_conversion<decay_t<_From>, decay_t<_To>>;
 
   template<class _Tp>
   concept __pair_like =
