@@ -187,7 +187,18 @@ void UnsetAlternateSignalStack() {
   altstack.ss_flags = SS_DISABLE;
   altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
   CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
+#if SANITIZER_AMDGPU
+  // If oldstack size is different from the one we allocated early on, the
+  // stack is not allocated by us and we shouldn't free it here.
+  // This is not a bulletproof solution because the stack could be allocated by
+  // other components with the same size and we shouldn't free it either.
+  // A complete solution should tag or register the stack pointer when it is
+  // allocated and only free stack when we can be sure the pointer is ours.
+  if (oldstack.ss_size == altstack.ss_size)
+    UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
+#else
   UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
+#endif
 }
 
 static void MaybeInstallSigaction(int signum,
