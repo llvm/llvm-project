@@ -130,7 +130,7 @@
 `3580 <https://wg21.link/LWG3580>`__,"``iota_view``'s ``iterator``'s binary ``operator+`` should be improved","October 2021","|Complete|","14.0","|ranges|"
 `3581 <https://wg21.link/LWG3581>`__,"The range constructor makes ``basic_string_view`` not trivially move constructible","October 2021","|Complete|","14.0","|ranges|"
 `3585 <https://wg21.link/LWG3585>`__,"``variant`` converting assignment with immovable alternative","October 2021","",""
-`3589 <https://wg21.link/LWG3589>`__,"The ``const`` lvalue reference overload of ``get`` for ``subrange`` does not constrain ``I`` to be ``copyable`` when ``N == 0``","October 2021","","","|ranges|"
+`3589 <https://wg21.link/LWG3589>`__,"The ``const`` lvalue reference overload of ``get`` for ``subrange`` does not constrain ``I`` to be ``copyable`` when ``N == 0``","October 2021","|Complete|","14.0","|ranges|"
 `3590 <https://wg21.link/LWG3590>`__,"``split_view::base() const &`` is overconstrained","October 2021","","","|ranges|"
 `3591 <https://wg21.link/LWG3591>`__,"``lazy_split_view<input_view>::inner-iterator::base() &&`` invalidates outer iterators","October 2021","","","|ranges|"
 `3592 <https://wg21.link/LWG3592>`__,"``lazy_split_view`` needs to check the simpleness of Pattern","October 2021","","","|ranges|"

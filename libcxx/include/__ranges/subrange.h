@@ -227,7 +227,7 @@ namespace ranges {
     -> subrange<iterator_t<_Range>, sentinel_t<_Range>, subrange_kind::sized>;
 
   template<size_t _Index, class _Iter, class _Sent, subrange_kind _Kind>
-    requires (_Index < 2)
+    requires ((_Index == 0 && copyable<_Iter>) || _Index == 1)
   _LIBCPP_HIDE_FROM_ABI
   constexpr auto get(const subrange<_Iter, _Sent, _Kind>& __subrange) {
     if constexpr (_Index == 0)
