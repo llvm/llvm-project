@@ -324,3 +324,30 @@ void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
     E.first->eraseFromParent();
   }
 }
+
+void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
+  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+  VPWidenCanonicalIVRecipe *WidenNewIV = nullptr;
+  for (VPUser *U : CanonicalIV->users()) {
+    WidenNewIV = dyn_cast<VPWidenCanonicalIVRecipe>(U);
+    if (WidenNewIV)
+      break;
+  }
+
+  if (!WidenNewIV)
+    return;
+
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+
+    // If the induction recipe is canonical and the types match, use it
+    // directly.
+    if (WidenOriginalIV && WidenOriginalIV->isCanonical() &&
+        WidenOriginalIV->getScalarType() == WidenNewIV->getScalarType()) {
+      WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
+      WidenNewIV->eraseFromParent();
+      return;
+    }
+  }
+}
