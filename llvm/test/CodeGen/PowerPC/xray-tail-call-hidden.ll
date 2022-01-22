@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -o - -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 declare hidden i32 @callee() nounwind noinline uwtable "function-instrument"="xray-always"
 
