@@ -34,25 +34,16 @@ public:
 private:
     type* __f_;
 
-#ifndef _LIBCPP_CXX03_LANG
     static void __fun(_Tp&) _NOEXCEPT;
     static void __fun(_Tp&&) = delete;
-#endif
 
 public:
-    // construct/copy/destroy
-#ifdef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY
-    reference_wrapper(type& __f) _NOEXCEPT
-        : __f_(_VSTD::addressof(__f)) {}
-#else
-    template <class _Up, class = __enable_if_t<!__is_same_uncvref<_Up, reference_wrapper>::value, decltype(__fun(declval<_Up>())) >>
+    template <class _Up, class = __enable_if_t<!__is_same_uncvref<_Up, reference_wrapper>::value, decltype(__fun(declval<_Up>())) > >
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     reference_wrapper(_Up&& __u) _NOEXCEPT_(noexcept(__fun(declval<_Up>()))) {
         type& __f = static_cast<_Up&&>(__u);
         __f_ = _VSTD::addressof(__f);
     }
-#endif
 
     // access
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -210,15 +201,11 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 reference_wrapper<const _Tp>
 cref(reference_wrapper<_Tp> __t) _NOEXCEPT
 {
-    // C++20 says "return __t", but C++03 lacks the relevant
-    // converting constructor. This should be equivalent.
-    return __t.get();
+    return __t;
 }
 
-#ifndef _LIBCPP_CXX03_LANG
 template <class _Tp> void ref(const _Tp&&) = delete;
 template <class _Tp> void cref(const _Tp&&) = delete;
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -12,8 +12,6 @@
 
 // reference_wrapper(T&&) = delete;
 
-// XFAIL: c++03
-
 #include <functional>
 #include <cassert>
 
