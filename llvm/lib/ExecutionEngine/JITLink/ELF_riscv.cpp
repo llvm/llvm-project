@@ -359,11 +359,38 @@ private:
       *FixupPtr = static_cast<uint8_t>(Value);
       break;
     }
+    case R_RISCV_SET6: {
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
+      uint32_t RawData = *(little32_t *)FixupPtr;
+      int64_t Word6 = Value & 0x3f;
+      *(little32_t *)FixupPtr = (RawData & 0xffffffc0) | Word6;
+      break;
+    }
+    case R_RISCV_SET8: {
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
+      uint32_t RawData = *(little32_t *)FixupPtr;
+      int64_t Word8 = Value & 0xff;
+      *(little32_t *)FixupPtr = (RawData & 0xffffff00) | Word8;
+      break;
+    }
+    case R_RISCV_SET16: {
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
+      uint32_t RawData = *(little32_t *)FixupPtr;
+      int64_t Word16 = Value & 0xffff;
+      *(little32_t *)FixupPtr = (RawData & 0xffff0000) | Word16;
+      break;
+    }
+    case R_RISCV_SET32: {
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
+      int64_t Word32 = Value & 0xffffffff;
+      *(little32_t *)FixupPtr = Word32;
+      break;
+    }
     case R_RISCV_32_PCREL: {
-      // FIXME: It seems that R_RISCV_32_PCREL relocation will only appear in debug sections
-      // like eh_frame section. Currently, because of eh_frame will not be processed in JITLink's RISCV
-      // backend, test this relocation is difficult, so here report error if needs to fixup this relocation
-      return make_error<JITLinkError>("Fixup of relocation type R_RISCV_32_PCREL is not supportted");
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      int64_t Word32 = Value & 0xffffffff;
+      *(little32_t *)FixupPtr = Word32;
+      break;
     }
     }
     return Error::success();
@@ -415,6 +442,14 @@ private:
       return EdgeKind_riscv::R_RISCV_SUB16;
     case ELF::R_RISCV_SUB8:
       return EdgeKind_riscv::R_RISCV_SUB8;
+    case ELF::R_RISCV_SET6:
+      return EdgeKind_riscv::R_RISCV_SET6;
+    case ELF::R_RISCV_SET8:
+      return EdgeKind_riscv::R_RISCV_SET8;
+    case ELF::R_RISCV_SET16:
+      return EdgeKind_riscv::R_RISCV_SET16;
+    case ELF::R_RISCV_SET32:
+      return EdgeKind_riscv::R_RISCV_SET32;
     case ELF::R_RISCV_32_PCREL:
       return EdgeKind_riscv::R_RISCV_32_PCREL;
     }
