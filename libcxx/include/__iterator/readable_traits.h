@@ -57,14 +57,14 @@ template<__has_member_element_type _Tp>
 struct indirectly_readable_traits<_Tp>
   : __cond_value_type<typename _Tp::element_type> {};
 
-// Pre-emptively applies LWG3541
 template<__has_member_value_type _Tp>
-requires __has_member_element_type<_Tp>
+  requires __has_member_element_type<_Tp>
 struct indirectly_readable_traits<_Tp> {};
+
 template<__has_member_value_type _Tp>
-requires __has_member_element_type<_Tp> &&
-         same_as<remove_cv_t<typename _Tp::element_type>,
-                 remove_cv_t<typename _Tp::value_type>>
+  requires __has_member_element_type<_Tp> &&
+           same_as<remove_cv_t<typename _Tp::element_type>,
+                   remove_cv_t<typename _Tp::value_type>>
 struct indirectly_readable_traits<_Tp>
   : __cond_value_type<typename _Tp::value_type> {};
 
