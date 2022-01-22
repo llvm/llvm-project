@@ -156,6 +156,13 @@ Cookie BeginExternalListIO(const char *what, int unitNumber,
   }
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
       unitNumber, DIR, false /*!unformatted*/, terminator)};
+  if (!unit.isUnformatted.has_value()) {
+    unit.isUnformatted = false;
+  }
+  if (*unit.isUnformatted) {
+    terminator.Crash("%s attempted on unformatted file", what);
+    return nullptr;
+  }
   if (ChildIo * child{unit.GetChildIo()}) {
     return child->CheckFormattingAndDirection(terminator, what, false, DIR)
         ? &child->BeginIoStatement<ChildListIoStatementState<DIR>>(
@@ -164,13 +171,6 @@ Cookie BeginExternalListIO(const char *what, int unitNumber,
   } else {
     if (unit.access == Access::Direct) {
       terminator.Crash("%s attempted on direct access file", what);
-      return nullptr;
-    }
-    if (!unit.isUnformatted.has_value()) {
-      unit.isUnformatted = false;
-    }
-    if (*unit.isUnformatted) {
-      terminator.Crash("%s attempted on unformatted file", what);
       return nullptr;
     }
     IoErrorHandler handler{terminator};
@@ -202,6 +202,13 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
   }
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
       unitNumber, DIR, false /*!unformatted*/, terminator)};
+  if (!unit.isUnformatted.has_value()) {
+    unit.isUnformatted = false;
+  }
+  if (*unit.isUnformatted) {
+    terminator.Crash("Formatted I/O attempted on unformatted file");
+    return nullptr;
+  }
   if (ChildIo * child{unit.GetChildIo()}) {
     return child->CheckFormattingAndDirection(terminator,
                DIR == Direction::Output ? "formatted output"
@@ -211,13 +218,6 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
               *child, sourceFile, sourceLine)
         : nullptr;
   } else {
-    if (!unit.isUnformatted.has_value()) {
-      unit.isUnformatted = false;
-    }
-    if (*unit.isUnformatted) {
-      terminator.Crash("Formatted I/O attempted on unformatted file");
-      return nullptr;
-    }
     IoErrorHandler handler{terminator};
     unit.SetDirection(DIR, handler);
     IoStatementState &io{
@@ -247,6 +247,12 @@ Cookie BeginUnformattedIO(
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{ExternalFileUnit::LookUpOrCreateAnonymous(
       unitNumber, DIR, true /*unformatted*/, terminator)};
+  if (!unit.isUnformatted.has_value()) {
+    unit.isUnformatted = true;
+  }
+  if (!*unit.isUnformatted) {
+    terminator.Crash("Unformatted I/O attempted on formatted file");
+  }
   if (ChildIo * child{unit.GetChildIo()}) {
     return child->CheckFormattingAndDirection(terminator,
                DIR == Direction::Output ? "unformatted output"
@@ -256,12 +262,6 @@ Cookie BeginUnformattedIO(
               *child, sourceFile, sourceLine)
         : nullptr;
   } else {
-    if (!unit.isUnformatted.has_value()) {
-      unit.isUnformatted = true;
-    }
-    if (!*unit.isUnformatted) {
-      terminator.Crash("Unformatted I/O attempted on formatted file");
-    }
     IoStatementState &io{
         unit.BeginIoStatement<ExternalUnformattedIoStatementState<DIR>>(
             unit, sourceFile, sourceLine)};
@@ -367,8 +367,13 @@ Cookie IONAME(BeginRewind)(
 Cookie IONAME(BeginInquireUnit)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
-    return &unit->BeginIoStatement<InquireUnitState>(
-        *unit, sourceFile, sourceLine);
+    if (ChildIo * child{unit->GetChildIo()}) {
+      return &child->BeginIoStatement<InquireUnitState>(
+          *unit, sourceFile, sourceLine);
+    } else {
+      return &unit->BeginIoStatement<InquireUnitState>(
+          *unit, sourceFile, sourceLine);
+    }
   } else {
     // INQUIRE(UNIT=unrecognized unit)
     Terminator oom{sourceFile, sourceLine};

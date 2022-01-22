@@ -137,7 +137,37 @@ enum EdgeKind_riscv : Edge::Kind {
   ///
   /// Fixup expression
   ///   Fixup <- (Target - *{1}Fixup - Addend)
-  R_RISCV_SUB8
+  R_RISCV_SUB8,
+
+  /// Local label assignment
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target + Addend)
+  R_RISCV_SET6,
+
+  /// Local label assignment
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target + Addend)
+  R_RISCV_SET8,
+
+  /// Local label assignment
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target + Addend)
+  R_RISCV_SET16,
+
+  /// Local label assignment
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target + Addend)
+  R_RISCV_SET32,
+
+  /// Local label assignment
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend)
+  R_RISCV_32_PCREL,
 };
 
 /// Returns a string name for the given riscv edge. For debugging purposes

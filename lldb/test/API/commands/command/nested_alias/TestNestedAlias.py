@@ -46,6 +46,8 @@ class NestedAliasTestCase(TestBase):
             self.runCmd('command unalias rd', check=False)
             self.runCmd('command unalias fo', check=False)
             self.runCmd('command unalias foself', check=False)
+            self.runCmd('command unalias add_two', check=False)
+            self.runCmd('command unalias two', check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -96,3 +98,8 @@ class NestedAliasTestCase(TestBase):
                 'Show variables for the current',
                 'stack frame.'],
             matching=True)
+
+        # Check that aliases can be created for raw input commands.
+        self.expect('command alias two expr -- 2')
+        self.expect('command alias add_two two +')
+        self.expect('add_two 3', patterns=[' = 5$'])

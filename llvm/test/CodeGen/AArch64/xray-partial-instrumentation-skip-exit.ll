@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -o - -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" "xray-skip-exit" {
 ; CHECK-LABEL: Lxray_sled_0:

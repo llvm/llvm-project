@@ -440,13 +440,16 @@ def CRC32CD : RVBUnary<0b0110000, 0b11011, 0b001, OPC_OP_IMM, "crc32c.d">,
               Sched<[]>;
 
 let Predicates = [HasStdExtZbc] in {
-def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul">,
-             Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 def CLMULR : ALU_rr<0b0000101, 0b010, "clmulr">,
+             Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
+} // Predicates = [HasStdExtZbc]
+
+let Predicates = [HasStdExtZbcOrZbkc] in {
+def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul">,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh">,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
-} // Predicates = [HasStdExtZbc]
+} // Predicates = [HasStdExtZbcOrZbkc]
 
 let Predicates = [HasStdExtZbb] in {
 def MIN  : ALU_rr<0b0000101, 0b100, "min">,
