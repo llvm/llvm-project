@@ -359,12 +359,6 @@ private:
       *FixupPtr = static_cast<uint8_t>(Value);
       break;
     }
-    case R_RISCV_32_PCREL: {
-      // FIXME: It seems that R_RISCV_32_PCREL relocation will only appear in debug sections
-      // like eh_frame section. Currently, because of eh_frame will not be processed in JITLink's RISCV
-      // backend, test this relocation is difficult, so here report error if needs to fixup this relocation
-      return make_error<JITLinkError>("Fixup of relocation type R_RISCV_32_PCREL is not supportted");
-    }
     }
     return Error::success();
   }
@@ -415,8 +409,6 @@ private:
       return EdgeKind_riscv::R_RISCV_SUB16;
     case ELF::R_RISCV_SUB8:
       return EdgeKind_riscv::R_RISCV_SUB8;
-    case ELF::R_RISCV_32_PCREL:
-      return EdgeKind_riscv::R_RISCV_32_PCREL;
     }
 
     return make_error<JITLinkError>("Unsupported riscv relocation:" +
