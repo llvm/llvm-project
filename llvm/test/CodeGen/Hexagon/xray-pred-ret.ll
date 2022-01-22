@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -o - -mtriple=hexagon-unknown-linux-musl < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon-unknown-linux-musl < %s | FileCheck %s
 
 define void @Foo(i32 signext %a, i32 signext %b) #0 {
 ; CHECK-LABEL: @Foo

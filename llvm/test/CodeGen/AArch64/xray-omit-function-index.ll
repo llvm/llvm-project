@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -no-xray-index -o - -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -no-xray-index -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK-LABEL: Lxray_sled_0:

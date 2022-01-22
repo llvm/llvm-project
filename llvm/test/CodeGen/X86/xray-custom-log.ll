@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=x86_64 < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mtriple=x86_64 -relocation-model=pic < %s | FileCheck %s --check-prefix=PIC
+; RUN: llc -mtriple=x86_64 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64 -relocation-model=pic < %s | FileCheck %s --check-prefix=PIC
 
 ; RUN: llc -mtriple=x86_64 -filetype=obj %s -o %t
 ; RUN: llvm-dwarfdump %t | FileCheck %s --check-prefix=DBG

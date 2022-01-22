@@ -1,5 +1,5 @@
-; RUN: llc -filetype=asm -o - -mtriple=hexagon-unknown-elf < %s | FileCheck %s
-; RUN: llc -filetype=asm -o - -mtriple=hexagon-unknown-linux-musl  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon-unknown-elf < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon-unknown-linux-musl  < %s | FileCheck %s
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK-LABEL: .Lxray_sled_0:
