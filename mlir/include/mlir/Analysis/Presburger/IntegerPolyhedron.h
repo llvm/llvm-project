@@ -265,10 +265,11 @@ public:
   /// otherwise.
   bool containsPoint(ArrayRef<int64_t> point) const;
 
-  /// Find pairs of inequalities identified by their position indices, using
-  /// which an explicit representation for each local variable can be computed.
-  /// The pairs are stored as indices of upperbound, lowerbound inequalities. If
-  /// no such pair can be found, it is stored as llvm::None.
+  /// Find equality and pairs of inequality contraints identified by their
+  /// position indices, using which an explicit representation for each local
+  /// variable can be computed. The indices of the constraints are stored in
+  /// `MaybeLocalRepr` struct. If no such pair can be found, the kind attribute
+  /// in `MaybeLocalRepr` is set to None.
   ///
   /// The dividends of the explicit representations are stored in `dividends`
   /// and the denominators in `denominators`. If no explicit representation
