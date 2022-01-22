@@ -1236,14 +1236,18 @@ TypeSystemSwiftTypeRef::TypeSystemSwiftTypeRef(
 }
 
 SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContext() const {
-  if (!m_swift_ast_context) {
-    if (auto *module = GetModule()) {
-      m_swift_ast_context_sp = SwiftASTContext::CreateInstance(
-          LanguageType::eLanguageTypeSwift, *module,
-          const_cast<TypeSystemSwiftTypeRef *>(this));
-      m_swift_ast_context =
-          llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
-    }
+  if (m_swift_ast_context_initialized)
+    return m_swift_ast_context;
+
+  // SwiftASTContext::CreateInstance() returns a nullptr on failure,
+  // there is no point in trying to initialize when that happens.
+  m_swift_ast_context_initialized = true;
+  if (auto *module = GetModule()) {
+    m_swift_ast_context_sp = SwiftASTContext::CreateInstance(
+        LanguageType::eLanguageTypeSwift, *module,
+        const_cast<TypeSystemSwiftTypeRef *>(this));
+    m_swift_ast_context =
+        llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
   }
   return m_swift_ast_context;
 }
