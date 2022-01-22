@@ -543,17 +543,16 @@ define amdgpu_kernel void @test_copy_v3i8_align1(<3 x i8> addrspace(1)* %out, <3
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s8, s2
 ; VI-NEXT:    s_mov_b32 s9, s3
-; VI-NEXT:    buffer_load_ubyte v0, off, s[8:11], 0
-; VI-NEXT:    buffer_load_ubyte v1, off, s[8:11], 0 offset:1
-; VI-NEXT:    buffer_load_ubyte v2, off, s[8:11], 0 offset:2
+; VI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; VI-NEXT:    buffer_load_ubyte v1, off, s[8:11], 0 offset:2
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
-; VI-NEXT:    s_waitcnt vmcnt(2)
+; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
-; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    buffer_store_byte v1, off, s[4:7], 0 offset:1
-; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    buffer_store_byte v2, off, s[4:7], 0 offset:2
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    buffer_store_byte v1, off, s[4:7], 0 offset:2
+; VI-NEXT:    v_lshrrev_b16_e32 v0, 8, v0
+; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0 offset:1
 ; VI-NEXT:    s_endpgm
   %val = load <3 x i8>, <3 x i8> addrspace(1)* %in, align 1
   store <3 x i8> %val, <3 x i8> addrspace(1)* %out, align 1
