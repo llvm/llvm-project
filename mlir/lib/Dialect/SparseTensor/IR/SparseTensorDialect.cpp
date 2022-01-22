@@ -329,6 +329,12 @@ static LogicalResult verify(ReleaseOp op) {
   return success();
 }
 
+static LogicalResult verify(OutOp op) {
+  if (!getSparseTensorEncoding(op.tensor().getType()))
+    return op.emitError("expected a sparse tensor for output");
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TensorDialect Methods.
 //===----------------------------------------------------------------------===//
