@@ -780,6 +780,7 @@ def : Pat<(AArch64LOADgot texternalsym:$addr),
 def : Pat<(AArch64LOADgot tconstpool:$addr),
           (LOADgot tconstpool:$addr)>;
 
+// In general these get lowered into a sequence of three 4-byte instructions.
 // 32-bit jump table destination is actually only 2 instructions since we can
 // use the table itself as a PC-relative base. But optimization occurs after
 // branch relaxation so be pessimistic.
@@ -815,8 +816,12 @@ let hasSideEffects = 1, isCodeGenOnly = 1 in {
 // SpeculationBarrierEndBB must only be used after an unconditional control
 // flow, i.e. after a terminator for which isBarrier is True.
 let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
+  // This gets lowered to a pair of 4-byte instructions.
+  let Size = 8 in
   def SpeculationBarrierISBDSBEndBB
       : Pseudo<(outs), (ins), []>, Sched<[]>;
+  // This gets lowered to a 4-byte instruction.
+  let Size = 4 in
   def SpeculationBarrierSBEndBB
       : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
@@ -2356,7 +2361,8 @@ def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
-let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1,
+// This gets lowered to an instruction sequence which takes 16 bytes
+let isCall = 1, Defs = [LR, X0, X1], hasSideEffects = 1, Size = 16,
     isCodeGenOnly = 1 in
 def TLSDESC_CALLSEQ
     : Pseudo<(outs), (ins i64imm:$sym),
@@ -8370,6 +8376,7 @@ def AArch64mops_memset_tagging : SDNode<"AArch64ISD::MOPS_MEMSET_TAGGING", SDT_A
 def AArch64mops_memcopy : SDNode<"AArch64ISD::MOPS_MEMCOPY", SDT_AArch64mops>;
 def AArch64mops_memmove : SDNode<"AArch64ISD::MOPS_MEMMOVE", SDT_AArch64mops>;
 
+// MOPS operations always contain three 4-byte instructions
 let Predicates = [HasMOPS], Defs = [NZCV], Size = 12, mayStore = 1 in {
   let mayLoad = 1 in {
     def MOPSMemoryCopyPseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64common:$Rs_wb, GPR64:$Rn_wb),
@@ -8391,7 +8398,8 @@ let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, maySt
                                           [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
 }
 
-let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1 in
+// This gets lowered into an instruction sequence of 20 bytes
+let Defs = [X16, X17], mayStore = 1, isCodeGenOnly = 1, Size = 20 in
 def StoreSwiftAsyncContext
       : Pseudo<(outs), (ins GPR64:$ctx, GPR64sp:$base, simm9:$offset),
                []>, Sched<[]>;
