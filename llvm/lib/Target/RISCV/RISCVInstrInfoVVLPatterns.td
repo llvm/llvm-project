@@ -216,17 +216,17 @@ def riscv_zext_vl : SDNode<"RISCVISD::VZEXT_VL", SDT_RISCVVEXTEND_VL>;
 
 def riscv_trunc_vector_vl : SDNode<"RISCVISD::TRUNCATE_VECTOR_VL",
                                    SDTypeProfile<1, 3, [SDTCisVec<0>,
-                                                        SDTCisVec<1>,
+                                                        SDTCisSameNumEltsAs<0, 1>,
                                                         SDTCisSameNumEltsAs<0, 2>,
                                                         SDTCVecEltisVT<2, i1>,
                                                         SDTCisVT<3, XLenVT>]>>;
 
 def SDT_RISCVVWBinOp_VL : SDTypeProfile<1, 4, [SDTCisVec<0>,
-                                             SDTCisSameNumEltsAs<0, 1>,
-                                             SDTCisSameAs<1, 2>,
-                                             SDTCisSameNumEltsAs<1, 3>,
-                                             SDTCVecEltisVT<3, i1>,
-                                             SDTCisVT<4, XLenVT>]>;
+                                               SDTCisSameNumEltsAs<0, 1>,
+                                               SDTCisSameAs<1, 2>,
+                                               SDTCisSameNumEltsAs<1, 3>,
+                                               SDTCVecEltisVT<3, i1>,
+                                               SDTCisVT<4, XLenVT>]>;
 def riscv_vwmul_vl  : SDNode<"RISCVISD::VWMUL_VL",  SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
 def riscv_vwmulu_vl : SDNode<"RISCVISD::VWMULU_VL", SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
 def riscv_vwaddu_vl : SDNode<"RISCVISD::VWADDU_VL", SDT_RISCVVWBinOp_VL, [SDNPCommutative]>;
