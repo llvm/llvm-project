@@ -157,8 +157,38 @@ public:
   /// See Operation::walk for more details.
   template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  RetT walk(FnT &&callback) {
+  typename std::enable_if<
+      llvm::function_traits<std::decay_t<FnT>>::num_args == 1, RetT>::type
+  walk(FnT &&callback) {
     return state->walk<Order>(std::forward<FnT>(callback));
+  }
+
+  /// Generic walker with a stage aware callback. Walk the operation by calling
+  /// the callback for each nested operation (including this one) N+1 times,
+  /// where N is the number of regions attached to that operation.
+  ///
+  /// The callback method can take any of the following forms:
+  ///   void(Operation *, const WalkStage &) : Walk all operation opaquely
+  ///     * op.walk([](Operation *nestedOp, const WalkStage &stage) { ...});
+  ///   void(OpT, const WalkStage &) : Walk all operations of the given derived
+  ///                                  type.
+  ///     * op.walk([](ReturnOp returnOp, const WalkStage &stage) { ...});
+  ///   WalkResult(Operation*|OpT, const WalkStage &stage) : Walk operations,
+  ///          but allow for interruption/skipping.
+  ///     * op.walk([](... op, const WalkStage &stage) {
+  ///         // Skip the walk of this op based on some invariant.
+  ///         if (some_invariant)
+  ///           return WalkResult::skip();
+  ///         // Interrupt, i.e cancel, the walk based on some invariant.
+  ///         if (another_invariant)
+  ///           return WalkResult::interrupt();
+  ///         return WalkResult::advance();
+  ///       });
+  template <typename FnT, typename RetT = detail::walkResultType<FnT>>
+  typename std::enable_if<
+      llvm::function_traits<std::decay_t<FnT>>::num_args == 2, RetT>::type
+  walk(FnT &&callback) {
+    return state->walk(std::forward<FnT>(callback));
   }
 
   // These are default implementations of customization hooks.
