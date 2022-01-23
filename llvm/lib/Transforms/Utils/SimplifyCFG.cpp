@@ -2775,10 +2775,10 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // subsequently causes this merge to happen.  We really want control
   // dependence information for this check, but simplifycfg can't keep it up
   // to date, and this catches most of the cases we care about anyway.
-  BasicBlock *BB = PN->getParent();
+  BasicBlock *MergeBB = PN->getParent();
 
   BasicBlock *IfTrue, *IfFalse;
-  BranchInst *DomBI = GetIfCondition(BB, IfTrue, IfFalse);
+  BranchInst *DomBI = GetIfCondition(MergeBB, IfTrue, IfFalse);
   if (!DomBI)
     return false;
   Value *IfCond = DomBI->getCondition();
@@ -2810,7 +2810,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       BranchProbability BIFalseProb = BITrueProb.getCompl();
       if (IfBlocks.size() == 1) {
         BranchProbability BIBBProb =
-            DomBI->getSuccessor(0) == BB ? BITrueProb : BIFalseProb;
+            DomBI->getSuccessor(0) == MergeBB ? BITrueProb : BIFalseProb;
         if (BIBBProb >= Likely)
           return false;
       } else {
@@ -2823,7 +2823,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // Don't try to fold an unreachable block. For example, the phi node itself
   // can't be the candidate if-condition for a select that we want to form.
   if (auto *IfCondPhiInst = dyn_cast<PHINode>(IfCond))
-    if (IfCondPhiInst->getParent() == BB)
+    if (IfCondPhiInst->getParent() == MergeBB)
       return false;
 
   // Okay, we found that we can merge this two-entry phi node into a select.
@@ -2832,7 +2832,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // doesn't support cmov's).  Only do this transformation if there are two or
   // fewer PHI nodes in this block.
   unsigned NumPhis = 0;
-  for (BasicBlock::iterator I = BB->begin(); isa<PHINode>(I); ++NumPhis, ++I)
+  for (BasicBlock::iterator I = MergeBB->begin(); isa<PHINode>(I);
+       ++NumPhis, ++I)
     if (NumPhis > 2)
       return false;
 
@@ -2845,7 +2846,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
 
   bool Changed = false;
-  for (BasicBlock::iterator II = BB->begin(); isa<PHINode>(II);) {
+  for (BasicBlock::iterator II = MergeBB->begin(); isa<PHINode>(II);) {
     PHINode *PN = cast<PHINode>(II++);
     if (Value *V = SimplifyInstruction(PN, {DL, PN})) {
       PN->replaceAllUsesWith(V);
@@ -2854,16 +2855,16 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       continue;
     }
 
-    if (!dominatesMergePoint(PN->getIncomingValue(0), BB, AggressiveInsts,
+    if (!dominatesMergePoint(PN->getIncomingValue(0), MergeBB, AggressiveInsts,
                              Cost, Budget, TTI) ||
-        !dominatesMergePoint(PN->getIncomingValue(1), BB, AggressiveInsts,
+        !dominatesMergePoint(PN->getIncomingValue(1), MergeBB, AggressiveInsts,
                              Cost, Budget, TTI))
       return Changed;
   }
 
   // If we folded the first phi, PN dangles at this point.  Refresh it.  If
   // we ran out of PHIs then we simplified them all.
-  PN = dyn_cast<PHINode>(BB->begin());
+  PN = dyn_cast<PHINode>(MergeBB->begin());
   if (!PN)
     return true;
 
@@ -2927,7 +2928,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   IRBuilder<NoFolder> Builder(DomBI);
   // Propagate fast-math-flags from phi nodes to replacement selects.
   IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
-  while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
+  while (PHINode *PN = dyn_cast<PHINode>(MergeBB->begin())) {
     if (isa<FPMathOperator>(PN))
       Builder.setFastMathFlags(PN->getFastMathFlags());
 
@@ -2944,11 +2945,11 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // At this point, all IfBlocks are empty, so our if statement
   // has been flattened.  Change DomBlock to jump directly to our new block to
   // avoid other simplifycfg's kicking in on the diamond.
-  Builder.CreateBr(BB);
+  Builder.CreateBr(MergeBB);
 
   SmallVector<DominatorTree::UpdateType, 3> Updates;
   if (DTU) {
-    Updates.push_back({DominatorTree::Insert, DomBlock, BB});
+    Updates.push_back({DominatorTree::Insert, DomBlock, MergeBB});
     for (auto *Successor : successors(DomBlock))
       Updates.push_back({DominatorTree::Delete, DomBlock, Successor});
   }
