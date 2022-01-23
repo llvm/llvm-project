@@ -30,8 +30,7 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_disassemble
 #include "CommandOptions.inc"
 
-CommandObjectDisassemble::CommandOptions::CommandOptions()
-    : Options(), func_name(), plugin_name(), flavor_string(), arch() {
+CommandObjectDisassemble::CommandOptions::CommandOptions() {
   OptionParsingStarting(nullptr);
 }
 
