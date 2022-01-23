@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple=riscv32 --mattr=+experimental-zve32x %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 --mattr=+zve32x %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
 vluxei64.v v8, (a0), v4, v0.t
