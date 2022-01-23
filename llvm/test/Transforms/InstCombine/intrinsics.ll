@@ -79,8 +79,8 @@ define i1 @cttz_i1(i1 %arg) {
   ret i1 %cnt
 }
 
-define i1 @cttz_i1_zero_is_undef(i1 %arg) {
-; CHECK-LABEL: @cttz_i1_zero_is_undef(
+define i1 @cttz_i1_zero_is_poison(i1 %arg) {
+; CHECK-LABEL: @cttz_i1_zero_is_poison(
 ; CHECK-NEXT:    ret i1 false
 ;
   %cnt = call i1 @llvm.cttz.i1(i1 %arg, i1 true) nounwind readnone
@@ -96,8 +96,8 @@ define <2 x i1> @cttz_v2i1(<2 x i1> %arg) {
   ret <2 x i1> %cnt
 }
 
-define <2 x i1> @cttz_v2i1_zero_is_undef(<2 x i1> %arg) {
-; CHECK-LABEL: @cttz_v2i1_zero_is_undef(
+define <2 x i1> @cttz_v2i1_zero_is_poison(<2 x i1> %arg) {
+; CHECK-LABEL: @cttz_v2i1_zero_is_poison(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %cnt = call <2 x i1> @llvm.cttz.v2i1(<2 x i1> %arg, i1 true) nounwind readnone
@@ -196,8 +196,8 @@ define i1 @ctlz_i1(i1 %arg) {
   ret i1 %cnt
 }
 
-define i1 @ctlz_i1_zero_is_undef(i1 %arg) {
-; CHECK-LABEL: @ctlz_i1_zero_is_undef(
+define i1 @ctlz_i1_zero_is_poison(i1 %arg) {
+; CHECK-LABEL: @ctlz_i1_zero_is_poison(
 ; CHECK-NEXT:    ret i1 false
 ;
   %cnt = call i1 @llvm.ctlz.i1(i1 %arg, i1 true) nounwind readnone
@@ -213,8 +213,8 @@ define <2 x i1> @ctlz_v2i1(<2 x i1> %arg) {
   ret <2 x i1> %cnt
 }
 
-define <2 x i1> @ctlz_v2i1_zero_is_undef(<2 x i1> %arg) {
-; CHECK-LABEL: @ctlz_v2i1_zero_is_undef(
+define <2 x i1> @ctlz_v2i1_zero_is_poison(<2 x i1> %arg) {
+; CHECK-LABEL: @ctlz_v2i1_zero_is_poison(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %cnt = call <2 x i1> @llvm.ctlz.v2i1(<2 x i1> %arg, i1 true) nounwind readnone
@@ -283,24 +283,24 @@ define <2 x i1> @ctlz_knownbits3_vec(<2 x i8> %arg) {
   ret <2 x i1> %res
 }
 
-define i32 @ctlz_undef(i32 %Value) {
-; CHECK-LABEL: @ctlz_undef(
-; CHECK-NEXT:    ret i32 undef
+define i32 @ctlz_poison(i32 %Value) {
+; CHECK-LABEL: @ctlz_poison(
+; CHECK-NEXT:    ret i32 poison
 ;
   %ctlz = call i32 @llvm.ctlz.i32(i32 0, i1 true)
   ret i32 %ctlz
 }
 
-define <2 x i32> @ctlz_undef_vec(<2 x i32> %Value) {
-; CHECK-LABEL: @ctlz_undef_vec(
-; CHECK-NEXT:    ret <2 x i32> undef
+define <2 x i32> @ctlz_poison_vec(<2 x i32> %Value) {
+; CHECK-LABEL: @ctlz_poison_vec(
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> zeroinitializer, i1 true)
   ret <2 x i32> %ctlz
 }
 
-define i32 @ctlz_make_undef(i32 %a) {
-; CHECK-LABEL: @ctlz_make_undef(
+define i32 @ctlz_no_zero(i32 %a) {
+; CHECK-LABEL: @ctlz_no_zero(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], 8
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[OR]], i1 true), !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[CTLZ]]
@@ -310,8 +310,8 @@ define i32 @ctlz_make_undef(i32 %a) {
   ret i32 %ctlz
 }
 
-define <2 x i32> @ctlz_make_undef_vec(<2 x i32> %a) {
-; CHECK-LABEL: @ctlz_make_undef_vec(
+define <2 x i32> @ctlz_no_zero_vec(<2 x i32> %a) {
+; CHECK-LABEL: @ctlz_no_zero_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[OR]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[CTLZ]]
@@ -321,24 +321,24 @@ define <2 x i32> @ctlz_make_undef_vec(<2 x i32> %a) {
   ret <2 x i32> %ctlz
 }
 
-define i32 @cttz_undef(i32 %Value) nounwind {
-; CHECK-LABEL: @cttz_undef(
-; CHECK-NEXT:    ret i32 undef
+define i32 @cttz_poison(i32 %Value) {
+; CHECK-LABEL: @cttz_poison(
+; CHECK-NEXT:    ret i32 poison
 ;
   %cttz = call i32 @llvm.cttz.i32(i32 0, i1 true)
   ret i32 %cttz
 }
 
-define <2 x i32> @cttz_undef_vec(<2 x i32> %Value) nounwind {
-; CHECK-LABEL: @cttz_undef_vec(
-; CHECK-NEXT:    ret <2 x i32> undef
+define <2 x i32> @cttz_poison_vec(<2 x i32> %Value) {
+; CHECK-LABEL: @cttz_poison_vec(
+; CHECK-NEXT:    ret <2 x i32> poison
 ;
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> zeroinitializer, i1 true)
   ret <2 x i32> %cttz
 }
 
-define i32 @cttz_make_undef(i32 %a) {
-; CHECK-LABEL: @cttz_make_undef(
+define i32 @cttz_no_zero(i32 %a) {
+; CHECK-LABEL: @cttz_no_zero(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[A:%.*]], 8
 ; CHECK-NEXT:    [[CTTZ:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[OR]], i1 true), !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[CTTZ]]
@@ -348,8 +348,8 @@ define i32 @cttz_make_undef(i32 %a) {
   ret i32 %cttz
 }
 
-define <2 x i32> @cttz_make_undef_vec(<2 x i32> %a) {
-; CHECK-LABEL: @cttz_make_undef_vec(
+define <2 x i32> @cttz_no_zero_vec(<2 x i32> %a) {
+; CHECK-LABEL: @cttz_no_zero_vec(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[CTTZ:%.*]] = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[OR]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[CTTZ]]

@@ -2572,9 +2572,9 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
     case Intrinsic::ctlz:
       assert(C1 && "Must be constant int");
 
-      // cttz(0, 1) and ctlz(0, 1) are undef.
+      // cttz(0, 1) and ctlz(0, 1) are poison.
       if (C1->isOne() && (!C0 || C0->isZero()))
-        return UndefValue::get(Ty);
+        return PoisonValue::get(Ty);
       if (!C0)
         return Constant::getNullValue(Ty);
       if (IntrinsicID == Intrinsic::cttz)
