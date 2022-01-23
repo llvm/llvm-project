@@ -17,9 +17,6 @@ namespace diff {
 
 using DynTypedNode = DynTypedNode;
 
-class SyntaxTree;
-struct ComparisonOptions;
-
 /// Within a tree, this identifies a node by its preorder offset.
 struct NodeId {
 private:

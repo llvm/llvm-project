@@ -34,6 +34,7 @@
 #include "clang/AST/ASTContext.h"
 
 namespace clang {
+class DynTypedNode;
 namespace syntax {
 class TokenBuffer;
 } // namespace syntax
