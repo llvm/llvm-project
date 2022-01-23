@@ -39,15 +39,22 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_PTRTOINT)
       .legalFor({{S32, P0}})
       .minScalar(0, S32);
+  getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
+      .legalIf([](const LegalityQuery &Query) { return false; })
+      .maxScalar(0, S32);
+  getActionDefinitionsBuilder(G_TRUNC)
+      .legalIf([](const LegalityQuery &Query) { return false; })
+      .maxScalar(1, S32);
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
       .legalForTypesWithMemDesc({{S32, P0, S8, 8}, {S32, P0, S16, 16}});
-  getActionDefinitionsBuilder(G_LOAD).legalForTypesWithMemDesc(
-      {{S32, P0, S32, 32}, {S64, P0, S64, 64}});
-  getActionDefinitionsBuilder(G_STORE).legalForTypesWithMemDesc(
-      {{S8, P0, S8, 8},    // Truncating store.
-       {S16, P0, S16, 16}, // Truncating store.
-       {S32, P0, S32, 32},
-       {S64, P0, S64, 64}});
+  getActionDefinitionsBuilder({G_LOAD, G_STORE})
+      .legalForTypesWithMemDesc({{S32, P0, S8, 8},
+                                 {S32, P0, S16, 16},
+                                 {S32, P0, S32, 32},
+                                 {P0, P0, P0, 32},
+                                 {S64, P0, S64, 64}})
+      .unsupportedIfMemSizeNotPow2()
+      .minScalar(0, S32);
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{P0, S32}})
       .clampScalar(1, S32, S32);
