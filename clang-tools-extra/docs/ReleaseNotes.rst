@@ -124,6 +124,11 @@ New checks
   Finds cases where code could use ``data()`` rather than the address of the
   element at index 0 in a container.
 
+- New :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability-duplicate-include>` check.
+
+  Looks for duplicate includes and removes them.  
+
 - New :doc:`readability-identifier-length
   <clang-tidy/checks/readability-identifier-length>` check.
 
