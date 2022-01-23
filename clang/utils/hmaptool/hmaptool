@@ -44,7 +44,7 @@ class HeaderMap(object):
                         path,))
 
             (version, reserved, strtable_offset, num_entries,
-             num_buckets) = struct.unpack(header_fmt, data)
+             num_buckets, _) = struct.unpack(header_fmt, data)
 
             if version != 1:
                 raise SystemExit("error: %s: unknown headermap version: %r" % (
