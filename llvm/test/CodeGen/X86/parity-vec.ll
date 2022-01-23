@@ -36,8 +36,8 @@ define i1 @canonical_parity(<16 x i1> %x) {
 ; POPCNT-NEXT:    psllw $7, %xmm0
 ; POPCNT-NEXT:    pmovmskb %xmm0, %eax
 ; POPCNT-NEXT:    popcntl %eax, %eax
-; POPCNT-NEXT:    testb $1, %al
-; POPCNT-NEXT:    setne %al
+; POPCNT-NEXT:    andl $1, %eax
+; POPCNT-NEXT:    # kill: def $al killed $al killed $eax
 ; POPCNT-NEXT:    retq
   %i1 = bitcast <16 x i1> %x to i16
   %i2 = call i16 @llvm.ctpop.i16(i16 %i1)
