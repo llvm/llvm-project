@@ -1033,3 +1033,67 @@ define void @add_U256_without_i128_or_recursive(%uint256* sret(%uint256) %0, %ui
   store i64 %37, i64* %41, align 8
   ret void
 }
+
+define i32 @addcarry_ult(i32 %a, i32 %b, i32 %x, i32 %y) {
+; CHECK-LABEL: addcarry_ult:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    cmpl %ecx, %edx
+; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %k = icmp ult i32 %x, %y
+  %z = zext i1 %k to i32
+  %r = add i32 %s, %z
+  ret i32 %r
+}
+
+define i32 @addcarry_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
+; CHECK-LABEL: addcarry_ugt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    cmpl %edx, %ecx
+; CHECK-NEXT:    adcl $0, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %k = icmp ugt i32 %x, %y
+  %z = zext i1 %k to i32
+  %r = add i32 %s, %z
+  ret i32 %r
+}
+
+define i32 @addcarry_ule(i32 %a, i32 %b, i32 %x, i32 %y) {
+; CHECK-LABEL: addcarry_ule:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    cmpl %edx, %ecx
+; CHECK-NEXT:    sbbl $-1, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %k = icmp ule i32 %x, %y
+  %z = zext i1 %k to i32
+  %r = add i32 %s, %z
+  ret i32 %r
+}
+
+define i32 @addcarry_uge(i32 %a, i32 %b, i32 %x, i32 %y) {
+; CHECK-LABEL: addcarry_uge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    cmpl %ecx, %edx
+; CHECK-NEXT:    sbbl $-1, %eax
+; CHECK-NEXT:    retq
+  %s = add i32 %a, %b
+  %k = icmp uge i32 %x, %y
+  %z = zext i1 %k to i32
+  %r = add i32 %s, %z
+  ret i32 %r
+}
