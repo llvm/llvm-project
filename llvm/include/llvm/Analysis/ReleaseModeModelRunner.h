@@ -10,6 +10,10 @@
 // Only inference is supported.
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
+#define LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
+
 #include "llvm/Analysis/MLModelRunner.h"
 
 #include <memory>
@@ -70,3 +74,5 @@ private:
   std::unique_ptr<TGen> CompiledModel;
 };
 } // namespace llvm
+
+#endif // LLVM_ANALYSIS_RELEASEMODEMODELRUNNER_H
