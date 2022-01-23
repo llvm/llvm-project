@@ -317,6 +317,52 @@ static Error addSection(StringRef SecName, StringRef Filename, Object &Obj) {
   return Error::success();
 }
 
+static Expected<Section &> findSection(StringRef SecName, Object &O) {
+  StringRef SegName;
+  std::tie(SegName, SecName) = SecName.split(",");
+  auto FoundSeg =
+      llvm::find_if(O.LoadCommands, [SegName](const LoadCommand &LC) {
+        return LC.getSegmentName() == SegName;
+      });
+  if (FoundSeg == O.LoadCommands.end())
+    return createStringError(errc::invalid_argument,
+                             "could not find segment with name '%s'",
+                             SegName.str().c_str());
+  auto FoundSec = llvm::find_if(FoundSeg->Sections,
+                                [SecName](const std::unique_ptr<Section> &Sec) {
+                                  return Sec->Sectname == SecName;
+                                });
+  if (FoundSec == FoundSeg->Sections.end())
+    return createStringError(errc::invalid_argument,
+                             "could not find section with name '%s'",
+                             SecName.str().c_str());
+
+  assert(FoundSec->get()->CanonicalName == (SegName + "," + SecName).str());
+  return *FoundSec->get();
+}
+
+static Error updateSection(StringRef SecName, StringRef Filename, Object &O) {
+  Expected<Section &> SecToUpdateOrErr = findSection(SecName, O);
+
+  if (!SecToUpdateOrErr)
+    return SecToUpdateOrErr.takeError();
+  Section &Sec = *SecToUpdateOrErr;
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFile(Filename);
+  if (!BufOrErr)
+    return createFileError(Filename, errorCodeToError(BufOrErr.getError()));
+  std::unique_ptr<MemoryBuffer> Buf = std::move(*BufOrErr);
+
+  if (Buf->getBufferSize() > Sec.Size)
+    return createStringError(
+        errc::invalid_argument,
+        "new section cannot be larger than previous section");
+  Sec.Content = O.NewSectionsContents.save(Buf->getBuffer());
+  Sec.Size = Sec.Content.size();
+  return Error::success();
+}
+
 // isValidMachOCannonicalName returns success if Name is a MachO cannonical name
 // ("<segment>,<section>") and lengths of both segment and section names are
 // valid.
@@ -371,6 +417,16 @@ static Error handleArgs(const CommonConfig &Config,
     if (Error E = isValidMachOCannonicalName(SecName))
       return E;
     if (Error E = addSection(SecName, File, Obj))
+      return E;
+  }
+
+  for (const auto &Flag : Config.UpdateSection) {
+    StringRef SectionName;
+    StringRef FileName;
+    std::tie(SectionName, FileName) = Flag.split('=');
+    if (Error E = isValidMachOCannonicalName(SectionName))
+      return E;
+    if (Error E = updateSection(SectionName, FileName, Obj))
       return E;
   }
 
