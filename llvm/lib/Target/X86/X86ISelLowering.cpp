@@ -29831,6 +29831,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
 
     SDValue AmtMask = DAG.getConstant(EltSizeInBits - 1, DL, VT);
     SDValue AmtMod = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
+    bool IsCst = ISD::isBuildVectorOfConstantSDNodes(AmtMod.getNode());
 
     unsigned ShiftOpc = IsFSHR ? ISD::SRL : ISD::SHL;
     unsigned NumElts = VT.getVectorNumElements();
@@ -29867,7 +29868,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     MVT WideVT = MVT::getVectorVT(WideSVT, NumElts);
 
     // If per-element shifts are legal, fallback to generic expansion.
-    if (supportedVectorVarShift(VT, Subtarget, ShiftOpc))
+    if (supportedVectorVarShift(VT, Subtarget, ShiftOpc) || Subtarget.hasXOP())
       return SDValue();
 
     // Attempt to fold as:
@@ -29889,7 +29890,8 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     }
 
     // Attempt to fold per-element (ExtVT) shift as unpack(y,x) << zext(z)
-    if (supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc)) {
+    if ((IsCst && !IsFSHR && EltSizeInBits == 8) ||
+        supportedVectorVarShift(ExtVT, Subtarget, ShiftOpc)) {
       SDValue Z = DAG.getConstant(0, DL, VT);
       SDValue RLo = DAG.getBitcast(ExtVT, getUnpackl(DAG, DL, VT, Op1, Op0));
       SDValue RHi = DAG.getBitcast(ExtVT, getUnpackh(DAG, DL, VT, Op1, Op0));
