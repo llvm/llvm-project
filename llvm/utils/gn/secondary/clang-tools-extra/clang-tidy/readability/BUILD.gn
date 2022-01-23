@@ -19,6 +19,7 @@ static_library("readability") {
     "ContainerSizeEmptyCheck.cpp",
     "ConvertMemberFunctionsToStatic.cpp",
     "DeleteNullPointerCheck.cpp",
+    "DuplicateIncludeCheck.cpp",
     "ElseAfterReturnCheck.cpp",
     "FunctionCognitiveComplexityCheck.cpp",
     "FunctionSizeCheck.cpp",
