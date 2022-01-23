@@ -198,6 +198,7 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
   case omp::ClauseProcBindKind::spread:
     return llvm::omp::ProcBindKind::OMP_PROC_BIND_spread;
   }
+  llvm_unreachable("Unknown ClauseProcBindKind kind");
 }
 
 /// Converts the OpenMP parallel operation to LLVM IR.
@@ -891,7 +892,7 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
+/// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
 llvm::AtomicOrdering
 convertAtomicOrdering(Optional<omp::ClauseMemoryOrderKind> ao) {
   if (!ao)
@@ -909,9 +910,10 @@ convertAtomicOrdering(Optional<omp::ClauseMemoryOrderKind> ao) {
   case omp::ClauseMemoryOrderKind::relaxed:
     return llvm::AtomicOrdering::Monotonic;
   }
+  llvm_unreachable("Unknown ClauseMemoryOrderKind kind");
 }
 
-// Convert omp.atomic.read operation to LLVM IR.
+/// Convert omp.atomic.read operation to LLVM IR.
 static LogicalResult
 convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
