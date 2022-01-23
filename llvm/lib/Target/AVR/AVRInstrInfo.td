@@ -1394,7 +1394,7 @@ let canFoldAsLoad = 1, isReMaterializable = 1 in {
   // ldd Rd,   P+q
   // ldd Rd+1, P+q+1
   let Constraints = "@earlyclobber $dst" in def LDDWRdPtrQ
-      : Pseudo<(outs DREGS_WITHOUT_YZ_WORKAROUND
+      : Pseudo<(outs DREGS
                 : $dst),
                (ins memri
                 : $memri),
