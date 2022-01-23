@@ -174,3 +174,35 @@ void TaskGroup::spawn(std::function<void()> F) {
 } // namespace parallel
 } // namespace llvm
 #endif // LLVM_ENABLE_THREADS
+
+void llvm::parallelForEachN(size_t Begin, size_t End,
+                            llvm::function_ref<void(size_t)> Fn) {
+  // If we have zero or one items, then do not incur the overhead of spinning up
+  // a task group.  They are surprisingly expensive, and because they do not
+  // support nested parallelism, a single entry task group can block parallel
+  // execution underneath them.
+#if LLVM_ENABLE_THREADS
+  auto NumItems = End - Begin;
+  if (NumItems > 1 && parallel::strategy.ThreadsRequested != 1) {
+    // Limit the number of tasks to MaxTasksPerGroup to limit job scheduling
+    // overhead on large inputs.
+    auto TaskSize = NumItems / parallel::detail::MaxTasksPerGroup;
+    if (TaskSize == 0)
+      TaskSize = 1;
+
+    parallel::detail::TaskGroup TG;
+    for (; Begin + TaskSize < End; Begin += TaskSize) {
+      TG.spawn([=, &Fn] {
+        for (size_t I = Begin, E = Begin + TaskSize; I != E; ++I)
+          Fn(I);
+      });
+    }
+    for (; Begin != End; ++Begin)
+      Fn(Begin);
+    return;
+  }
+#endif
+
+  for (; Begin != End; ++Begin)
+    Fn(Begin);
+}
