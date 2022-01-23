@@ -138,7 +138,7 @@ getEqualLocalDeclContext(Sema &sema, DeclContext *foreign_ctxt) {
 
   // We currently only support building namespaces.
   if (foreign_ctxt->isNamespace()) {
-    NamedDecl *ns = llvm::dyn_cast<NamedDecl>(foreign_ctxt);
+    NamedDecl *ns = llvm::cast<NamedDecl>(foreign_ctxt);
     llvm::StringRef ns_name = ns->getName();
 
     auto lookup_result = emulateLookupInCtxt(sema, ns_name, *parent);
