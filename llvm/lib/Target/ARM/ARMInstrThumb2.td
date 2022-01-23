@@ -2194,6 +2194,8 @@ def : InstAlias<"mov${p} $Rd, $imm",
                 (t2MOVi16 rGPR:$Rd, imm256_65535_expr:$imm, pred:$p), 0>,
                 Requires<[IsThumb, HasV8MBaseline]>, Sched<[WriteALU]>;
 
+// This gets lowered to a single 4-byte instructions
+let Size = 4 in
 def t2MOVi16_ga_pcrel : PseudoInst<(outs rGPR:$Rd),
                                 (ins i32imm:$addr, pclabel:$id), IIC_iMOVi, []>,
                         Sched<[WriteALU]>;
@@ -2223,6 +2225,8 @@ def t2MOVTi16 : T2I<(outs rGPR:$Rd),
   let DecoderMethod = "DecodeT2MOVTWInstruction";
 }
 
+// This gets lowered to a single 4-byte instructions
+let Size = 4 in
 def t2MOVTi16_ga_pcrel : PseudoInst<(outs rGPR:$Rd),
                      (ins rGPR:$src, i32imm:$addr, pclabel:$id), IIC_iMOVi, []>,
                      Sched<[WriteALU]>, Requires<[IsThumb, HasV8MBaseline]>;
@@ -3814,10 +3818,11 @@ def : T2Pat<(stlex_2 (and GPR:$Rt, 0xffff), addr_offset_none:$addr),
 //   doing so, we also cause the prologue/epilogue code to actively preserve
 //   all of the callee-saved registers, which is exactly what we want.
 //   $val is a scratch register for our use.
+// This gets lowered to an instruction sequence of 12 bytes
 let Defs =
   [ R0,  R1,  R2,  R3,  R4,  R5,  R6,  R7,  R8,  R9,  R10, R11, R12, LR, CPSR,
     Q0, Q1, Q2, Q3, Q8, Q9, Q10, Q11, Q12, Q13, Q14, Q15],
-  hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,
+  hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1, Size = 12,
   usesCustomInserter = 1 in {
   def t2Int_eh_sjlj_setjmp : Thumb2XI<(outs), (ins tGPR:$src, tGPR:$val),
                                AddrModeNone, 0, NoItinerary, "", "",
@@ -3825,9 +3830,10 @@ let Defs =
                              Requires<[IsThumb2, HasVFP2]>;
 }
 
+// This gets lowered to an instruction sequence of 12 bytes
 let Defs =
   [ R0,  R1,  R2,  R3,  R4,  R5,  R6,  R7,  R8,  R9,  R10, R11, R12, LR, CPSR ],
-  hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1,
+  hasSideEffects = 1, isBarrier = 1, isCodeGenOnly = 1, Size = 12,
   usesCustomInserter = 1 in {
   def t2Int_eh_sjlj_setjmp_nofp : Thumb2XI<(outs), (ins tGPR:$src, tGPR:$val),
                                AddrModeNone, 0, NoItinerary, "", "",
@@ -4224,7 +4230,7 @@ def : t2InstAlias<"hvc\t$imm16", (t2HVC imm0_65535:$imm16)>;
 // 32-bit immediate using movw + movt.
 // This is a single pseudo instruction to make it re-materializable.
 // FIXME: Remove this when we can do generalized remat.
-let isReMaterializable = 1, isMoveImm = 1 in
+let isReMaterializable = 1, isMoveImm = 1, Size = 8 in
 def t2MOVi32imm : PseudoInst<(outs rGPR:$dst), (ins i32imm:$src), IIC_iMOVix2,
                             [(set rGPR:$dst, (i32 imm:$src))]>,
                             Requires<[IsThumb, UseMovt]>;
@@ -5006,8 +5012,12 @@ def : InstAlias<"dfb${p}", (t2DSB 0xc, pred:$p), 1>, Requires<[HasDFB]>;
 // SpeculationBarrierEndBB must only be used after an unconditional control
 // flow, i.e. after a terminator for which isBarrier is True.
 let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
+  // This gets lowered to a pair of 4-byte instructions
+  let Size = 8 in
   def t2SpeculationBarrierISBDSBEndBB
       : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+  // This gets lowered to a single 4-byte instructions
+  let Size = 4 in
   def t2SpeculationBarrierSBEndBB
       : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
 }

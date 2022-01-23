@@ -3657,6 +3657,8 @@ def : InstAlias<"mov${p} $Rd, $imm",
                 (MOVi16 GPR:$Rd, imm0_65535_expr:$imm, pred:$p), 0>,
         Requires<[IsARM, HasV6T2]>;
 
+// This gets lowered to a single 4-byte instructions
+let Size = 4 in
 def MOVi16_ga_pcrel : PseudoInst<(outs GPR:$Rd),
                                 (ins i32imm:$addr, pclabel:$id), IIC_iMOVi, []>,
                       Sched<[WriteALU]>;
@@ -3680,6 +3682,8 @@ def MOVTi16 : AI1<0b1010, (outs GPRnopc:$Rd),
   let DecoderMethod = "DecodeArmMOVTWInstruction";
 }
 
+// This gets lowered to a single 4-byte instructions
+let Size = 4 in
 def MOVTi16_ga_pcrel : PseudoInst<(outs GPR:$Rd),
                       (ins GPR:$src, i32imm:$addr, pclabel:$id), IIC_iMOVi, []>,
                       Sched<[WriteALU]>;
@@ -5895,27 +5899,30 @@ def : ARMPat<(ARMthread_pointer), (MRC 15, 0, 13, 0, 3)>,
 //
 // These are pseudo-instructions and are lowered to individual MC-insts, so
 // no encoding information is necessary.
+// This gets lowered to an instruction sequence of 20 bytes
 let Defs =
   [ R0,  R1,  R2,  R3,  R4,  R5,  R6,  R7,  R8,  R9,  R10, R11, R12, LR, CPSR,
     Q0, Q1, Q2, Q3, Q4, Q5, Q6, Q7, Q8, Q9, Q10, Q11, Q12, Q13, Q14, Q15 ],
-  hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1 in {
+  hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1, Size = 20 in {
   def Int_eh_sjlj_setjmp : PseudoInst<(outs), (ins GPR:$src, GPR:$val),
                                NoItinerary,
                          [(set R0, (ARMeh_sjlj_setjmp GPR:$src, GPR:$val))]>,
                            Requires<[IsARM, HasVFP2]>;
 }
 
+// This gets lowered to an instruction sequence of 20 bytes
 let Defs =
   [ R0,  R1,  R2,  R3,  R4,  R5,  R6,  R7,  R8,  R9,  R10, R11, R12, LR, CPSR ],
-  hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1 in {
+  hasSideEffects = 1, isBarrier = 1, usesCustomInserter = 1, Size = 20 in {
   def Int_eh_sjlj_setjmp_nofp : PseudoInst<(outs), (ins GPR:$src, GPR:$val),
                                    NoItinerary,
                          [(set R0, (ARMeh_sjlj_setjmp GPR:$src, GPR:$val))]>,
                                 Requires<[IsARM, NoVFP]>;
 }
 
+// This gets lowered to an instruction sequence of 16 bytes
 // FIXME: Non-IOS version(s)
-let isBarrier = 1, hasSideEffects = 1, isTerminator = 1,
+let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, Size = 16,
     Defs = [ R7, LR, SP ] in {
 def Int_eh_sjlj_longjmp : PseudoInst<(outs), (ins GPR:$src, GPR:$scratch),
                              NoItinerary,
@@ -5958,7 +5965,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [SP] in
 // This is a single pseudo instruction, the benefit is that it can be remat'd
 // as a single unit instead of having to handle reg inputs.
 // FIXME: Remove this when we can do generalized remat.
-let isReMaterializable = 1, isMoveImm = 1 in
+let isReMaterializable = 1, isMoveImm = 1, Size = 8 in
 def MOVi32imm : PseudoInst<(outs GPR:$dst), (ins i32imm:$src), IIC_iMOVix2,
                            [(set GPR:$dst, (arm_i32imm:$src))]>,
                            Requires<[IsARM]>;
@@ -6419,8 +6426,12 @@ def SPACE : PseudoInst<(outs GPR:$Rd), (ins i32imm:$size, GPR:$Rn),
 // SpeculationBarrierEndBB must only be used after an unconditional control
 // flow, i.e. after a terminator for which isBarrier is True.
 let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
+  // This gets lowered to a pair of 4-byte instructions
+  let Size = 8 in
   def SpeculationBarrierISBDSBEndBB
       : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+  // This gets lowered to a single 4-byte instructions
+  let Size = 4 in
   def SpeculationBarrierSBEndBB
       : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
 }
