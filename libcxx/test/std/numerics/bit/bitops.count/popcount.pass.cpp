@@ -50,7 +50,7 @@ constexpr bool test()
     assert(std::popcount(T(max - 1)) == std::numeric_limits<T>::digits - 1);
     assert(std::popcount(max) == std::numeric_limits<T>::digits);
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     if constexpr (std::is_same_v<T, __uint128_t>) {
         T val = 128;
         assert(std::popcount(val-1) ==  7);
@@ -87,7 +87,7 @@ int main(int, char**)
     static_assert(!std::is_invocable_v<L, int>);
     static_assert(!std::is_invocable_v<L, long>);
     static_assert(!std::is_invocable_v<L, long long>);
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     static_assert(!std::is_invocable_v<L, __int128_t>);
 #endif
 
@@ -119,7 +119,7 @@ int main(int, char**)
     static_assert(test<unsigned int>());
     static_assert(test<unsigned long>());
     static_assert(test<unsigned long long>());
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     static_assert(test<__uint128_t>());
 #endif
     static_assert(test<uint8_t>());
@@ -135,7 +135,7 @@ int main(int, char**)
     test<unsigned int>();
     test<unsigned long>();
     test<unsigned long long>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__uint128_t>();
 #endif
     test<uint8_t>();

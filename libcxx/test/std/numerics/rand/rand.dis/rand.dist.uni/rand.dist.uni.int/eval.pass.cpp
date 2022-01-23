@@ -133,7 +133,7 @@ int main(int, char**)
     // or unsigned long long.
     // (We support __int128 as an extension.)
 
-#if !defined(_LIBCPP_HAS_NO_INT128) && !defined(TEST_BUGGY_I128_FP)
+#if !defined(TEST_HAS_NO_INT128) && !defined(TEST_BUGGY_I128_FP)
     test_statistics<__int128_t, std::minstd_rand0>();
     test_statistics<__uint128_t, std::minstd_rand0>();
 

@@ -368,6 +368,10 @@ inline void DoNotOptimize(Tp const& value) {
 #   define TEST_HAS_NO_UNICODE
 #endif
 
+#if defined(_LIBCPP_HAS_NO_INT128) || defined(TEST_COMPILER_MSVC)
+#   define TEST_HAS_NO_INT128
+#endif
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif

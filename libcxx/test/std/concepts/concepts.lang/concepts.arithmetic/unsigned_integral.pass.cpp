@@ -69,7 +69,7 @@ static_assert(CheckUnsignedIntegralQualifiers<char32_t>() ==
               !std::is_signed_v<char32_t>);
 
 // extended integers
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
 static_assert(CheckUnsignedIntegralQualifiers<__uint128_t>());
 static_assert(!CheckUnsignedIntegralQualifiers<__int128_t>());
 #endif

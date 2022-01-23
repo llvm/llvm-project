@@ -98,7 +98,7 @@ void test_all_unsigned_integral_types() {
   test_unsigned_integral_type<unsigned, CharT>();
   test_unsigned_integral_type<unsigned long, CharT>();
   test_unsigned_integral_type<unsigned long long, CharT>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_unsigned_integral_type<__uint128_t, CharT>();
 #endif
 }

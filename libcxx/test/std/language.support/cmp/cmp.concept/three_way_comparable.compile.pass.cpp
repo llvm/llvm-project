@@ -34,7 +34,7 @@ static_assert(std::three_way_comparable<char8_t const&>);
 static_assert(std::three_way_comparable<char16_t volatile&>);
 static_assert(std::three_way_comparable<char32_t const volatile&>);
 #endif
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
 static_assert(std::three_way_comparable<__int128_t const&>);
 static_assert(std::three_way_comparable<__uint128_t const&>);
 #endif

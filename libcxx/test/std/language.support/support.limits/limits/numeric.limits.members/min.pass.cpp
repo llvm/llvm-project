@@ -59,7 +59,7 @@ int main(int, char**)
     test<unsigned long>(0);
     test<long long>(LLONG_MIN);
     test<unsigned long long>(0);
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     test<__int128_t>(-__int128_t(__uint128_t(-1)/2) - 1);
     test<__uint128_t>(0);
 #endif

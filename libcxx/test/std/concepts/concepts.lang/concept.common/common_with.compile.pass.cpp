@@ -60,7 +60,7 @@ static_assert(std::common_with<void, void>);
 static_assert(CheckCommonWith<int, int>());
 static_assert(CheckCommonWith<int, long>());
 static_assert(CheckCommonWith<int, unsigned char>());
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
 static_assert(CheckCommonWith<int, __int128_t>());
 #endif
 static_assert(CheckCommonWith<int, double>());

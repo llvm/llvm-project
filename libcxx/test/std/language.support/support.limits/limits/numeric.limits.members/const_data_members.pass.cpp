@@ -138,7 +138,7 @@ int main(int, char**)
     TEST_NUMERIC_LIMITS(volatile long)
     TEST_NUMERIC_LIMITS(const volatile long)
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     TEST_NUMERIC_LIMITS(__int128_t)
     TEST_NUMERIC_LIMITS(const __int128_t)
     TEST_NUMERIC_LIMITS(volatile __int128_t)
@@ -175,7 +175,7 @@ int main(int, char**)
     TEST_NUMERIC_LIMITS(volatile unsigned long long)
     TEST_NUMERIC_LIMITS(const volatile unsigned long long)
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
     TEST_NUMERIC_LIMITS(__uint128_t)
     TEST_NUMERIC_LIMITS(const __uint128_t)
     TEST_NUMERIC_LIMITS(volatile __uint128_t)

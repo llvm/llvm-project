@@ -181,7 +181,7 @@ void test() {
   test<Context, long long, long long>(std::numeric_limits<long>::max());
   test<Context, long long, long long>(std::numeric_limits<long long>::max());
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test<Context, __int128_t, __int128_t>(std::numeric_limits<__int128_t>::min());
   test<Context, __int128_t, __int128_t>(std::numeric_limits<long long>::min());
   test<Context, __int128_t, __int128_t>(std::numeric_limits<long>::min());
@@ -242,7 +242,7 @@ void test() {
   test<Context, unsigned long long, unsigned long long>(
       std::numeric_limits<unsigned long long>::max());
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test<Context, __uint128_t, __uint128_t>(0);
   test<Context, __uint128_t, __uint128_t>(
       std::numeric_limits<unsigned char>::max());
