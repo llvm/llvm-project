@@ -29,6 +29,10 @@ system is not necessarily the best solution:
 Supported Systems
 =================
 
+Clang has the ablity to generate compilation database fragments via
+the :option:`-MJ argument <clang -MJ\<arg>>`. You can concatenate those
+fragments together between ``[`` and ``]`` to create a compilation database.
+
 Currently `CMake <https://cmake.org>`_ (since 2.8.5) supports generation
 of compilation databases for Unix Makefile builds (Ninja builds in the
 works) with the option ``CMAKE_EXPORT_COMPILE_COMMANDS``.
