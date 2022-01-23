@@ -69,7 +69,7 @@ public:
                             nullptr),
         IOHandlerDelegateMultiline("DONE",
                                    IOHandlerDelegate::Completion::LLDBCommand),
-        m_options(), m_func_options("breakpoint command", false, 'F') {
+        m_func_options("breakpoint command", false, 'F') {
     SetHelpLong(
         R"(
 General information about entering breakpoint commands
@@ -281,7 +281,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions() : OptionGroup(), m_one_liner() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -479,8 +479,7 @@ public:
   CommandObjectBreakpointCommandDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "delete",
                             "Delete the set of commands from a breakpoint.",
-                            nullptr),
-        m_options() {
+                            nullptr) {
     CommandArgumentEntry arg;
     CommandArgumentData bp_id_arg;
 
@@ -502,7 +501,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 

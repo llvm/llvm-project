@@ -227,7 +227,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -355,7 +355,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), file() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -602,7 +602,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), file() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 

@@ -49,7 +49,7 @@ class CommandObjectFrameDiagnose : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -110,8 +110,7 @@ public:
                             nullptr,
                             eCommandRequiresThread | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
-                                eCommandProcessMustBePaused),
-        m_options() {
+                                eCommandProcessMustBePaused) {
     CommandArgumentEntry arg;
     CommandArgumentData index_arg;
 
@@ -222,7 +221,7 @@ class CommandObjectFrameSelect : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -267,8 +266,7 @@ public:
                             nullptr,
                             eCommandRequiresThread | eCommandTryTargetAPILock |
                                 eCommandProcessMustBeLaunched |
-                                eCommandProcessMustBePaused),
-        m_options() {
+                                eCommandProcessMustBePaused) {
     CommandArgumentEntry arg;
     CommandArgumentData index_arg;
 
@@ -399,10 +397,9 @@ public:
             eCommandRequiresFrame | eCommandTryTargetAPILock |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
                 eCommandRequiresProcess),
-        m_option_group(),
         m_option_variable(
             true), // Include the frame specific options by passing "true"
-        m_option_format(eFormatDefault), m_varobj_options() {
+        m_option_format(eFormatDefault) {
     SetHelpLong(R"(
 Children of aggregate variables can be specified such as 'var->child.x'.  In
 'frame variable', the operators -> and [] do not invoke operator overloads if
@@ -729,7 +726,7 @@ class CommandObjectFrameRecognizerAdd : public CommandObjectParsed {
 private:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
     ~CommandOptions() override = default;
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -798,8 +795,7 @@ protected:
 public:
   CommandObjectFrameRecognizerAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "frame recognizer add",
-                            "Add a new frame recognizer.", nullptr),
-        m_options() {
+                            "Add a new frame recognizer.", nullptr) {
     SetHelpLong(R"(
 Frame recognizers allow for retrieving information about special frames based on
 ABI, arguments or other special properties of that frame, even without source

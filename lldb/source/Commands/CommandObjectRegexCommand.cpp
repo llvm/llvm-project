@@ -20,7 +20,7 @@ CommandObjectRegexCommand::CommandObjectRegexCommand(
     bool is_removable)
     : CommandObjectRaw(interpreter, name, help, syntax),
       m_max_matches(max_matches), m_completion_type_mask(completion_type_mask),
-      m_entries(), m_is_removable(is_removable) {}
+      m_is_removable(is_removable) {}
 
 // Destructor
 CommandObjectRegexCommand::~CommandObjectRegexCommand() = default;

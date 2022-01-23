@@ -69,7 +69,7 @@ public:
 
   SynthAddOptions(bool sptr, bool sref, bool casc, bool regx, std::string catg)
       : m_skip_pointers(sptr), m_skip_references(sref), m_cascade(casc),
-        m_regex(regx), m_target_types(), m_category(catg) {}
+        m_regex(regx), m_category(catg) {}
 
   typedef std::shared_ptr<SynthAddOptions> SharedPointer;
 };
@@ -103,7 +103,7 @@ class CommandObjectTypeSummaryAdd : public CommandObjectParsed,
 private:
   class CommandOptions : public Options {
   public:
-    CommandOptions(CommandInterpreter &interpreter) : Options() {}
+    CommandOptions(CommandInterpreter &interpreter) {}
 
     ~CommandOptions() override = default;
 
@@ -286,7 +286,7 @@ class CommandObjectTypeSynthAdd : public CommandObjectParsed,
 private:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -498,7 +498,7 @@ class CommandObjectTypeFormatAdd : public CommandObjectParsed {
 private:
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions() : OptionGroup() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -571,8 +571,7 @@ public:
   CommandObjectTypeFormatAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "type format add",
                             "Add a new formatting style for a type.", nullptr),
-        m_option_group(), m_format_options(eFormatInvalid),
-        m_command_options() {
+        m_format_options(eFormatInvalid) {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
 
@@ -708,7 +707,7 @@ class CommandObjectTypeFormatterDelete : public CommandObjectParsed {
 protected:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -760,7 +759,7 @@ public:
   CommandObjectTypeFormatterDelete(CommandInterpreter &interpreter,
                                    uint32_t formatter_kind_mask,
                                    const char *name, const char *help)
-      : CommandObjectParsed(interpreter, name, help, nullptr), m_options(),
+      : CommandObjectParsed(interpreter, name, help, nullptr),
         m_formatter_kind_mask(formatter_kind_mask) {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
@@ -873,7 +872,7 @@ class CommandObjectTypeFormatterClear : public CommandObjectParsed {
 private:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -914,7 +913,7 @@ public:
   CommandObjectTypeFormatterClear(CommandInterpreter &interpreter,
                                   uint32_t formatter_kind_mask,
                                   const char *name, const char *help)
-      : CommandObjectParsed(interpreter, name, help, nullptr), m_options(),
+      : CommandObjectParsed(interpreter, name, help, nullptr),
         m_formatter_kind_mask(formatter_kind_mask) {}
 
   ~CommandObjectTypeFormatterClear() override = default;
@@ -1713,7 +1712,7 @@ class CommandObjectTypeCategoryDefine : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
     CommandOptions()
-        : Options(), m_define_enabled(false, false),
+        : m_define_enabled(false, false),
           m_cate_language(eLanguageTypeUnknown, eLanguageTypeUnknown) {}
 
     ~CommandOptions() override = default;
@@ -1760,8 +1759,7 @@ public:
   CommandObjectTypeCategoryDefine(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "type category define",
                             "Define a new category as a source of formatters.",
-                            nullptr),
-        m_options() {
+                            nullptr) {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
 
@@ -1817,7 +1815,7 @@ protected:
 class CommandObjectTypeCategoryEnable : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -1863,8 +1861,7 @@ public:
   CommandObjectTypeCategoryEnable(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "type category enable",
                             "Enable a category as a source of formatters.",
-                            nullptr),
-        m_options() {
+                            nullptr) {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
 
@@ -1995,7 +1992,7 @@ protected:
 class CommandObjectTypeCategoryDisable : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -2041,8 +2038,7 @@ public:
   CommandObjectTypeCategoryDisable(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "type category disable",
                             "Disable a category as a source of formatters.",
-                            nullptr),
-        m_options() {
+                            nullptr) {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
 
@@ -2409,7 +2405,7 @@ private:
     typedef std::vector<std::string> option_vector;
 
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -2528,8 +2524,7 @@ private:
 public:
   CommandObjectTypeFilterAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "type filter add",
-                            "Add a new filter for a type.", nullptr),
-        m_options() {
+                            "Add a new filter for a type.", nullptr) {
     CommandArgumentEntry type_arg;
     CommandArgumentData type_style_arg;
 
@@ -2666,7 +2661,7 @@ protected:
 
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions() : OptionGroup() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -2716,8 +2711,7 @@ public:
                          "Lookup types and declarations in the current target, "
                          "following language-specific naming conventions.",
                          "type lookup <type-specifier>",
-                         eCommandRequiresTarget),
-        m_option_group(), m_command_options() {
+                         eCommandRequiresTarget) {
     m_option_group.Append(&m_command_options);
     m_option_group.Finalize();
   }
