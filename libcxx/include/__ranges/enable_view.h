@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <concepts>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -25,8 +26,17 @@ namespace ranges {
 
 struct view_base { };
 
+template<class _Derived>
+  requires is_class_v<_Derived> && same_as<_Derived, remove_cv_t<_Derived>>
+class view_interface;
+
+template<class _Op, class _Yp>
+  requires is_convertible_v<_Op*, view_interface<_Yp>*>
+void __is_derived_from_view_interface(const _Op*, const view_interface<_Yp>*);
+
 template <class _Tp>
-inline constexpr bool enable_view = derived_from<_Tp, view_base>;
+inline constexpr bool enable_view = derived_from<_Tp, view_base> ||
+  requires { ranges::__is_derived_from_view_interface((_Tp*)nullptr, (_Tp*)nullptr); };
 
 } // end namespace ranges
 

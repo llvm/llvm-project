@@ -1,5 +1,5 @@
-; RUN: opt %s -S -riscv-gather-scatter-lowering -mtriple=riscv64 -mattr=+m,+experimental-v -riscv-v-vector-bits-min=256 | FileCheck %s
-; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+experimental-v -riscv-v-vector-bits-min=256 | FileCheck %s --check-prefix=CHECK-ASM
+; RUN: opt %s -S -riscv-gather-scatter-lowering -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=256 | FileCheck %s
+; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=256 | FileCheck %s --check-prefix=CHECK-ASM
 
 %struct.foo = type { i32, i32, i32, i32 }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple riscv64 -target-feature +experimental-v \
+// RUN: %clang_cc1 -triple riscv64 -target-feature +v \
 // RUN:   -dwarf-version=4 -debug-info-kind=limited -emit-llvm -o - %s \
 // RUN:   | FileCheck --check-prefix=DEBUGINFO %s
 #include <stdint.h>

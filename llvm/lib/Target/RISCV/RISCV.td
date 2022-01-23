@@ -185,48 +185,48 @@ def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
                   AssemblerPredicate<(all_of(not FeatureNoRVCHints)),
                                       "RVC Hint Instructions">;
 
-def FeatureStdExtZvl32b : SubtargetFeature<"experimental-zvl32b", "ZvlLen", "ExtZvl::Zvl32b",
+def FeatureStdExtZvl32b : SubtargetFeature<"zvl32b", "ZvlLen", "ExtZvl::Zvl32b",
                        "'Zvl' (Minimum Vector Length) 32">;
 
 foreach i = { 6-15 } in {
     defvar I = !shl(1, i);
     def FeatureStdExtZvl#I#b :
-        SubtargetFeature<"experimental-zvl"#I#"b", "ZvlLen", "ExtZvl::Zvl"#I#"b",
+        SubtargetFeature<"zvl"#I#"b", "ZvlLen", "ExtZvl::Zvl"#I#"b",
                         "'Zvl' (Minimum Vector Length) "#I,
                         [!cast<SubtargetFeature>("FeatureStdExtZvl"#!srl(I, 1)#"b")]>;
 }
 
 def FeatureStdExtZve32x
-    : SubtargetFeature<"experimental-zve32x", "HasStdExtZve32x", "true",
+    : SubtargetFeature<"zve32x", "HasStdExtZve32x", "true",
                        "'Zve32x' (Vector Extensions for Embedded Processors "
                        "with maximal 32 EEW)",
                        [FeatureStdExtZvl32b]>;
 
 def FeatureStdExtZve32f
-    : SubtargetFeature<"experimental-zve32f", "HasStdExtZve32f", "true",
+    : SubtargetFeature<"zve32f", "HasStdExtZve32f", "true",
                        "'Zve32f' (Vector Extensions for Embedded Processors "
                        "with maximal 32 EEW and F extension)",
                        [FeatureStdExtZve32x]>;
 
 def FeatureStdExtZve64x
-    : SubtargetFeature<"experimental-zve64x", "HasStdExtZve64x", "true",
+    : SubtargetFeature<"zve64x", "HasStdExtZve64x", "true",
                        "'Zve64x' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW)", [FeatureStdExtZve32x, FeatureStdExtZvl64b]>;
 
 def FeatureStdExtZve64f
-    : SubtargetFeature<"experimental-zve64f", "HasStdExtZve64f", "true",
+    : SubtargetFeature<"zve64f", "HasStdExtZve64f", "true",
                        "'Zve64f' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW and F extension)",
                        [FeatureStdExtZve32f, FeatureStdExtZve64x]>;
 
 def FeatureStdExtZve64d
-    : SubtargetFeature<"experimental-zve64d", "HasStdExtZve64d", "true",
+    : SubtargetFeature<"zve64d", "HasStdExtZve64d", "true",
                        "'Zve64d' (Vector Extensions for Embedded Processors "
                        "with maximal 64 EEW, F and D extension)",
                        [FeatureStdExtZve64f]>;
 
 def FeatureStdExtV
-    : SubtargetFeature<"experimental-v", "HasStdExtV", "true",
+    : SubtargetFeature<"v", "HasStdExtV", "true",
                        "'V' (Vector Extension for Application Processors)",
                        [FeatureStdExtZvl128b, FeatureStdExtZve64d, FeatureStdExtF, FeatureStdExtD]>;
 
