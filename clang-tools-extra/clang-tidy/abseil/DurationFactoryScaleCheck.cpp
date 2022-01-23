@@ -192,7 +192,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<BinaryOperator>("div_binop")) {
     // We next handle division.
     // For division, we only check the RHS.
-    const auto *FloatLit = llvm::dyn_cast<FloatingLiteral>(DivBinOp->getRHS());
+    const auto *FloatLit = llvm::cast<FloatingLiteral>(DivBinOp->getRHS());
 
     llvm::Optional<DurationScale> NewScale =
         getNewScale(Scale, 1.0 / FloatLit->getValueAsApproximateDouble());
