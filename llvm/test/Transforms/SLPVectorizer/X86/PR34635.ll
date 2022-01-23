@@ -2,7 +2,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux -slp-vectorizer -S -mcpu=corei7 | FileCheck %s
 
 define i32 @main() {
-; CHECK-LABEL: define {{[^@]+}}@main(
+; CHECK-LABEL: @main(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[T:%.*]] = alloca <8 x i32>, align 32
 ; CHECK-NEXT:    [[T1:%.*]] = bitcast <8 x i32>* [[T]] to [8 x i32]*

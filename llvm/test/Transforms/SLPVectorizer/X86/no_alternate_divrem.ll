@@ -12,10 +12,10 @@ define void @test_add_sdiv(i32 *%arr1, i32 *%arr2, i32 %a0, i32 %a1, i32 %a2, i3
 ; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr i32, i32* [[ARR2]], i32 1
 ; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, i32* [[ARR2]], i32 2
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr i32, i32* [[ARR2]], i32 3
-; CHECK-NEXT:    [[V0:%.*]] = load i32, i32* [[GEP1_0]]
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[GEP1_1]]
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[GEP1_2]]
-; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* [[GEP1_3]]
+; CHECK-NEXT:    [[V0:%.*]] = load i32, i32* [[GEP1_0]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[GEP1_1]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[GEP1_2]], align 4
+; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* [[GEP1_3]], align 4
 ; CHECK-NEXT:    [[Y0:%.*]] = add nsw i32 [[A0:%.*]], 1146
 ; CHECK-NEXT:    [[Y1:%.*]] = add nsw i32 [[A1:%.*]], 146
 ; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
@@ -24,10 +24,10 @@ define void @test_add_sdiv(i32 *%arr1, i32 *%arr2, i32 %a0, i32 %a1, i32 %a2, i3
 ; CHECK-NEXT:    [[RES1:%.*]] = add nsw i32 [[V1]], [[Y1]]
 ; CHECK-NEXT:    [[RES2:%.*]] = sdiv i32 [[V2]], [[Y2]]
 ; CHECK-NEXT:    [[RES3:%.*]] = add nsw i32 [[V3]], [[Y3]]
-; CHECK-NEXT:    store i32 [[RES0]], i32* [[GEP2_0]]
-; CHECK-NEXT:    store i32 [[RES1]], i32* [[GEP2_1]]
-; CHECK-NEXT:    store i32 [[RES2]], i32* [[GEP2_2]]
-; CHECK-NEXT:    store i32 [[RES3]], i32* [[GEP2_3]]
+; CHECK-NEXT:    store i32 [[RES0]], i32* [[GEP2_0]], align 4
+; CHECK-NEXT:    store i32 [[RES1]], i32* [[GEP2_1]], align 4
+; CHECK-NEXT:    store i32 [[RES2]], i32* [[GEP2_2]], align 4
+; CHECK-NEXT:    store i32 [[RES3]], i32* [[GEP2_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -76,10 +76,10 @@ define void @test_urem_add(i32 *%arr1, i32 *%arr2, i32 %a0, i32 %a1, i32 %a2, i3
 ; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr i32, i32* [[ARR2]], i32 1
 ; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, i32* [[ARR2]], i32 2
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr i32, i32* [[ARR2]], i32 3
-; CHECK-NEXT:    [[V0:%.*]] = load i32, i32* [[GEP1_0]]
-; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[GEP1_1]]
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[GEP1_2]]
-; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* [[GEP1_3]]
+; CHECK-NEXT:    [[V0:%.*]] = load i32, i32* [[GEP1_0]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[GEP1_1]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[GEP1_2]], align 4
+; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* [[GEP1_3]], align 4
 ; CHECK-NEXT:    [[Y0:%.*]] = add nsw i32 [[A0:%.*]], 1146
 ; CHECK-NEXT:    [[Y1:%.*]] = add nsw i32 [[A1:%.*]], 146
 ; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
@@ -88,10 +88,10 @@ define void @test_urem_add(i32 *%arr1, i32 *%arr2, i32 %a0, i32 %a1, i32 %a2, i3
 ; CHECK-NEXT:    [[RES1:%.*]] = urem i32 [[V1]], [[Y1]]
 ; CHECK-NEXT:    [[RES2:%.*]] = urem i32 [[V2]], [[Y2]]
 ; CHECK-NEXT:    [[RES3:%.*]] = add nsw i32 [[V3]], [[Y3]]
-; CHECK-NEXT:    store i32 [[RES0]], i32* [[GEP2_0]]
-; CHECK-NEXT:    store i32 [[RES1]], i32* [[GEP2_1]]
-; CHECK-NEXT:    store i32 [[RES2]], i32* [[GEP2_2]]
-; CHECK-NEXT:    store i32 [[RES3]], i32* [[GEP2_3]]
+; CHECK-NEXT:    store i32 [[RES0]], i32* [[GEP2_0]], align 4
+; CHECK-NEXT:    store i32 [[RES1]], i32* [[GEP2_1]], align 4
+; CHECK-NEXT:    store i32 [[RES2]], i32* [[GEP2_2]], align 4
+; CHECK-NEXT:    store i32 [[RES3]], i32* [[GEP2_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

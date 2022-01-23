@@ -111,9 +111,9 @@ define void @externally_used_ptrs() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP8]], <2 x i64>* [[TMP9]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

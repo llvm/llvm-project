@@ -23,11 +23,11 @@ define void @_foo(double %p1, double %p2, double %p3) #0 {
 ; CHECK-NEXT:    [[VECINIT_I_I237:%.*]] = insertelement <2 x double> undef, double [[T_0259]], i32 0
 ; CHECK-NEXT:    [[X13:%.*]] = tail call i32 @_xfn(<2 x double> [[VECINIT_I_I237]])
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [256 x i32], [256 x i32]* [[TAB1]], i64 0, i64 [[INDVARS_IV266]]
-; CHECK-NEXT:    store i32 [[X13]], i32* [[ARRAYIDX]], align 4, !tbaa !0
+; CHECK-NEXT:    store i32 [[X13]], i32* [[ARRAYIDX]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[VECINIT_I_I:%.*]] = insertelement <2 x double> undef, double [[P3_ADDR_0258]], i32 0
 ; CHECK-NEXT:    [[X14:%.*]] = tail call i32 @_xfn(<2 x double> [[VECINIT_I_I]])
 ; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds [256 x i32], [256 x i32]* [[TAB2]], i64 0, i64 [[INDVARS_IV266]]
-; CHECK-NEXT:    store i32 [[X14]], i32* [[ARRAYIDX26]], align 4, !tbaa !0
+; CHECK-NEXT:    store i32 [[X14]], i32* [[ARRAYIDX26]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[ADD27]] = fadd double [[MUL19]], [[T_0259]]
 ; CHECK-NEXT:    [[ADD28]] = fadd double [[MUL21]], [[P3_ADDR_0258]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT267]] = add nuw nsw i64 [[INDVARS_IV266]], 1

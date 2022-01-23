@@ -29,6 +29,7 @@ define i8 @reduce_or(%struct.buf* %a, %struct.buf* %b) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <8 x i8> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> [[TMP4]])
 ; CHECK-NEXT:    ret i8 [[TMP5]]
+;
 
 entry:
   %arrayidx = getelementptr inbounds %struct.buf, %struct.buf* %a, i64 0, i32 0, i64 0

@@ -24,9 +24,11 @@ define i32 @bar(double* nocapture %A, i32 %d) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fptrunc <2 x double> [[TMP2]] to <2 x float>
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[D:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[TMP7:%.*]], label [[TMP5:%.*]]
-; CHECK:         [[TMP6:%.*]] = tail call i32 (...) @foo()
+; CHECK:       5:
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 (...) @foo()
 ; CHECK-NEXT:    br label [[TMP7]]
-; CHECK:         [[TMP8:%.*]] = fadd <2 x float> [[TMP3]], <float 4.000000e+00, float 5.000000e+00>
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP3]], <float 4.000000e+00, float 5.000000e+00>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, double* [[A]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = fpext <2 x float> [[TMP8]] to <2 x double>
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 9.000000e+00, double 5.000000e+00>

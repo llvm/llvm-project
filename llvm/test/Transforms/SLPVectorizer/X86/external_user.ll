@@ -82,7 +82,7 @@ define i32 @needtogather(double *noalias %a, i32 *noalias %b,  float * noalias %
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[D:%.*]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[C:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[C:%.*]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float 0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SUB]], 0.000000e+00
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[CONV]], [[MUL]]
