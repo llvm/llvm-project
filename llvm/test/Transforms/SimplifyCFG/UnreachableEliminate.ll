@@ -64,9 +64,8 @@ T:
 define void @test5(i1 %cond, i8* %ptr) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    store i8 2, i8* [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[PTR_2:%.*]] = select i1 [[COND:%.*]], i8* null, i8* [[PTR:%.*]]
+; CHECK-NEXT:    store i8 2, i8* [[PTR_2]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -93,12 +92,11 @@ declare i1 @llvm.type.test(i8*, metadata) nounwind readnone
 define void @test5_type_test_assume(i1 %cond, i8* %ptr, [3 x i8*]* %vtable) {
 ; CHECK-LABEL: @test5_type_test_assume(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    [[PTR_2:%.*]] = select i1 [[COND:%.*]], i8* null, i8* [[PTR:%.*]]
 ; CHECK-NEXT:    [[VTABLEI8:%.*]] = bitcast [3 x i8*]* [[VTABLE:%.*]] to i8*
 ; CHECK-NEXT:    [[P:%.*]] = call i1 @llvm.type.test(i8* [[VTABLEI8]], metadata !"foo")
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[P]])
-; CHECK-NEXT:    store i8 2, i8* [[PTR:%.*]], align 8
+; CHECK-NEXT:    store i8 2, i8* [[PTR_2]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -144,9 +142,8 @@ bb2:
 define void @test6(i1 %cond, i8* %ptr) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    store i8 2, i8* [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[PTR_2:%.*]] = select i1 [[COND:%.*]], i8* null, i8* [[PTR:%.*]]
+; CHECK-NEXT:    store i8 2, i8* [[PTR_2]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -203,9 +200,8 @@ else:
 define void @test8(i1 %X, void ()* %Y) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    call void [[Y:%.*]]()
+; CHECK-NEXT:    [[PHI:%.*]] = select i1 [[X:%.*]], void ()* null, void ()* [[Y:%.*]]
+; CHECK-NEXT:    call void [[PHI]]()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -248,9 +244,8 @@ declare i8* @fn_noundef_arg(i8* noundef %p)
 define void @test9(i1 %X, i8* %Y) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[Y:%.*]])
+; CHECK-NEXT:    [[PHI:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[PHI]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -269,9 +264,8 @@ else:
 define void @test9_deref(i1 %X, i8* %Y) {
 ; CHECK-LABEL: @test9_deref(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_deref_arg(i8* [[Y:%.*]])
+; CHECK-NEXT:    [[PHI:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_deref_arg(i8* [[PHI]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -290,9 +284,8 @@ else:
 define void @test9_deref_or_null(i1 %X, i8* %Y) {
 ; CHECK-LABEL: @test9_deref_or_null(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_deref_or_null_arg(i8* [[Y:%.*]])
+; CHECK-NEXT:    [[PHI:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_deref_or_null_arg(i8* [[PHI]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -346,9 +339,8 @@ else:
 define void @test9_null_callsite(i1 %X, i8* %Y) {
 ; CHECK-LABEL: @test9_null_callsite(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_arg(i8* noundef nonnull [[Y:%.*]])
+; CHECK-NEXT:    [[PHI:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_arg(i8* noundef nonnull [[PHI]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -387,10 +379,9 @@ else:
 define void @test9_gep_zero(i1 %X, i8* %Y) {
 ; CHECK-LABEL: @test9_gep_zero(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[GEP]])
+; CHECK-NEXT:    [[PHI:%.*]] = select i1 [[X:%.*]], i8* null, i8* [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[PHI]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[GEP]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -409,11 +400,10 @@ else:
 define void @test9_gep_bitcast(i1 %X, i32* %Y) {
 ; CHECK-LABEL: @test9_gep_bitcast(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[PHI:%.*]] = select i1 [[X:%.*]], i32* null, i32* [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[PHI]], i64 0
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i32* [[GEP]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[BC]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @fn_nonnull_noundef_arg(i8* [[BC]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
