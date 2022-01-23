@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 | FileCheck %s
 ; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 | FileCheck %s
 
-define i16 @f1() {
+define zeroext i16 @f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: or %r2, %r0, 0
 ; CHECK: jmp %r1
@@ -17,7 +17,7 @@ define i32 @f2() {
   ret i32 0
 }
 
-define i16 @f3() {
+define zeroext i16 @f3() {
 ; CHECK-LABEL: f3:
 ; CHECK: or %r2, %r0, 1
 ; CHECK: jmp %r1
@@ -31,7 +31,7 @@ define i32 @f4() {
   ret i32 1
 }
 
-define i16 @f5() {
+define zeroext i16 @f5() {
 ; CHECK-LABEL: f5:
 ; CHECK: or %r2, %r0, 51966
 ; CHECK: jmp %r1
