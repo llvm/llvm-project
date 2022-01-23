@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS Support)
 
-add_tablegen(libc-wrappergen llvm-libc
+add_tablegen(libc-wrappergen LLVM_LIBC
   Main.cpp
 )
 
