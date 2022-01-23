@@ -58,17 +58,8 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
     {"zbkb", RISCVExtensionVersion{1, 0}},
     {"zbkc", RISCVExtensionVersion{1, 0}},
-};
 
-static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"v", RISCVExtensionVersion{1, 0}},
-    {"zbe", RISCVExtensionVersion{0, 93}},
-    {"zbf", RISCVExtensionVersion{0, 93}},
-    {"zbm", RISCVExtensionVersion{0, 93}},
-    {"zbp", RISCVExtensionVersion{0, 93}},
-    {"zbr", RISCVExtensionVersion{0, 93}},
-    {"zbt", RISCVExtensionVersion{0, 93}},
-
     {"zvl32b", RISCVExtensionVersion{1, 0}},
     {"zvl64b", RISCVExtensionVersion{1, 0}},
     {"zvl128b", RISCVExtensionVersion{1, 0}},
@@ -86,6 +77,15 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zve64x", RISCVExtensionVersion{1, 0}},
     {"zve64f", RISCVExtensionVersion{1, 0}},
     {"zve64d", RISCVExtensionVersion{1, 0}},
+};
+
+static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
+    {"zbe", RISCVExtensionVersion{0, 93}},
+    {"zbf", RISCVExtensionVersion{0, 93}},
+    {"zbm", RISCVExtensionVersion{0, 93}},
+    {"zbp", RISCVExtensionVersion{0, 93}},
+    {"zbr", RISCVExtensionVersion{0, 93}},
+    {"zbt", RISCVExtensionVersion{0, 93}},
 };
 
 static bool stripExperimentalPrefix(StringRef &Ext) {

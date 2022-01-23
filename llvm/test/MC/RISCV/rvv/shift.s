@@ -1,11 +1,11 @@
-# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+experimental-v %s \
+# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+v %s \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
-# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
-# RUN:        | llvm-objdump -d --mattr=+experimental-v - \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+v %s \
+# RUN:        | llvm-objdump -d --mattr=+v - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
-# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \
+# RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+v %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 vsll.vv v8, v4, v20, v0.t

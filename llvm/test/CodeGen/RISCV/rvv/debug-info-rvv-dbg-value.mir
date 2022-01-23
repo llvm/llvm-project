@@ -1,6 +1,6 @@
-# RUN: llc -march=riscv64 -mattr=+experimental-v -o %t0 -filetype=obj \
+# RUN: llc -march=riscv64 -mattr=+v -o %t0 -filetype=obj \
 # RUN:   -start-before=prologepilog %s
-# RUN: llc -march=riscv64 -mattr=+experimental-v -o %t1 -filetype=obj \
+# RUN: llc -march=riscv64 -mattr=+v -o %t1 -filetype=obj \
 # RUN:   -frame-pointer=all -start-before=prologepilog %s
 # RUN: llvm-dwarfdump --name="value0" %t0 | FileCheck %s --check-prefix=CHECK0-PLUS
 # RUN: llvm-dwarfdump --name="value1" %t0 | FileCheck %s --check-prefix=CHECK1-PLUS

@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 ; RUN: opt -loop-vectorize -dce -instcombine -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+experimental-v -debug-only=loop-vectorize \
+; RUN:   -mattr=+v -debug-only=loop-vectorize \
 ; RUN:   -riscv-v-vector-bits-min=128 -S < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: foo
