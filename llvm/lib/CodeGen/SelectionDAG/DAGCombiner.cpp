@@ -18396,6 +18396,15 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       Value.getValueType().isInteger() &&
       (!isa<ConstantSDNode>(Value) ||
        !cast<ConstantSDNode>(Value)->isOpaque())) {
+    // Convert a truncating store of a extension into a standard store.
+    if ((Value.getOpcode() == ISD::ZERO_EXTEND ||
+         Value.getOpcode() == ISD::SIGN_EXTEND ||
+         Value.getOpcode() == ISD::ANY_EXTEND) &&
+        Value.getOperand(0).getValueType() == ST->getMemoryVT() &&
+        TLI.isOperationLegalOrCustom(ISD::STORE, ST->getMemoryVT()))
+      return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
+                          ST->getMemOperand());
+
     APInt TruncDemandedBits =
         APInt::getLowBitsSet(Value.getScalarValueSizeInBits(),
                              ST->getMemoryVT().getScalarSizeInBits());

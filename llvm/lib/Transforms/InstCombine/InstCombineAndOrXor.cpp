@@ -1872,6 +1872,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *X = foldVectorBinop(I))
     return X;
 
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(I))
@@ -2664,6 +2667,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
   if (Instruction *X = foldVectorBinop(I))
     return X;
+
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
 
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
@@ -3552,6 +3558,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   if (Instruction *X = foldVectorBinop(I))
     return X;
+
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
 
   if (Instruction *NewXor = foldXorToXor(I, Builder))
     return NewXor;

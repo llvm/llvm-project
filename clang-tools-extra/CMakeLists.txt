@@ -1,4 +1,5 @@
 include(CMakeDependentOption)
+include(GNUInstallDirs)
 
 option(CLANG_TIDY_ENABLE_STATIC_ANALYZER
   "Include static analyzer checks in clang-tidy" ON)

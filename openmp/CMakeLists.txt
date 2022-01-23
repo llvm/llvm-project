@@ -7,7 +7,12 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(openmp C CXX)
+endif()
 
+# Must go below project(..)
+include(GNUInstallDirs)
+
+if (OPENMP_STANDALONE_BUILD)
   # CMAKE_BUILD_TYPE was not set, default to Release.
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
