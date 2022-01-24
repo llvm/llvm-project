@@ -16,6 +16,7 @@
 
 #include "bolt/Passes/InstrumentationSummary.h"
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
+#include <memory>
 
 namespace llvm {
 namespace bolt {
