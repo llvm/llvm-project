@@ -10,7 +10,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
-  MLIRBufferizableOpInterface
+  MLIRBufferization
   MLIRBufferizationTransforms
   MLIRIR
   MLIRMemRef

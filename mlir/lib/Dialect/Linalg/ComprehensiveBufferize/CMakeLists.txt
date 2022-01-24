@@ -13,7 +13,7 @@ add_mlir_dialect_library(MLIRAffineBufferizableOpInterfaceImpl
 
   LINK_LIBS PUBLIC
   MLIRAffine
-  MLIRBufferizableOpInterface
+  MLIRBufferization
 )
 
 add_mlir_dialect_library(MLIRArithBufferizableOpInterfaceImpl
@@ -21,7 +21,7 @@ add_mlir_dialect_library(MLIRArithBufferizableOpInterfaceImpl
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
-  MLIRBufferizableOpInterface
+  MLIRBufferization
   MLIRIR
   MLIRMemRef
   MLIRStandardOpsTransforms
@@ -31,7 +31,7 @@ add_mlir_dialect_library(MLIRLinalgBufferizableOpInterfaceImpl
   LinalgInterfaceImpl.cpp
 
   LINK_LIBS PUBLIC
-  MLIRBufferizableOpInterface
+  MLIRBufferization
   MLIRBufferizationTransforms
   MLIRIR
   MLIRLinalg
@@ -42,7 +42,7 @@ add_mlir_dialect_library(MLIRSCFBufferizableOpInterfaceImpl
   SCFInterfaceImpl.cpp
 
   LINK_LIBS PUBLIC
-  MLIRBufferizableOpInterface
+  MLIRBufferization
   MLIRBufferizationTransforms
   MLIRIR
   MLIRSCF
@@ -52,7 +52,7 @@ add_mlir_dialect_library(MLIRStdBufferizableOpInterfaceImpl
   StdInterfaceImpl.cpp
 
   LINK_LIBS PUBLIC
-  MLIRBufferizableOpInterface
+  MLIRBufferization
   MLIRStandard
 )
 
@@ -60,7 +60,7 @@ add_mlir_dialect_library(MLIRVectorBufferizableOpInterfaceImpl
   VectorInterfaceImpl.cpp
 
   LINK_LIBS PUBLIC
-  MLIRBufferizableOpInterface
+  MLIRBufferization
   MLIRIR
   MLIRVector
 )
@@ -69,7 +69,7 @@ add_mlir_dialect_library(MLIRModuleBufferization
   ModuleBufferization.cpp
 
   LINK_LIBS PUBLIC
-  MLIRBufferizableOpInterface
+  MLIRBufferization
   MLIRBufferizationTransforms
   MLIRIR
   MLIRMemRef

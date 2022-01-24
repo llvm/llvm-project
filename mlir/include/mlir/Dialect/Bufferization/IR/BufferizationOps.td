@@ -10,6 +10,7 @@
 #define BUFFERIZATION_OPS
 
 include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CopyOpInterface.td"
@@ -64,11 +65,14 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 // ToTensorOp
 //===----------------------------------------------------------------------===//
 
-def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor",
-    [SameOperandsAndResultShape, SameOperandsAndResultElementType,
-     TypesMatchWith<"result type matches tensor equivalent of 'memref'",
-                    "memref", "result",
-                    "memref::getTensorTypeFromMemRefType($_self)">]> {
+def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
+    BufferizableOpInterface,
+    SameOperandsAndResultShape,
+    SameOperandsAndResultElementType,
+    TypesMatchWith<"result type matches tensor equivalent of 'memref'",
+                   "memref", "result",
+                   "memref::getTensorTypeFromMemRefType($_self)">
+  ]> {
   let summary = "memref to tensor operation";
   let description = [{
     Create a tensor from a memref, making an independent copy of the element
@@ -110,6 +114,35 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor",
         return resultType.cast<TensorType>();
       return {};
     }
+
+    //===------------------------------------------------------------------===//
+    // BufferizableOpInterface implementation
+    //===------------------------------------------------------------------===//
+
+    // ToTensorOp conceptually loads a tensor from a memory location. The
+    // One-Shot analysis has no information about the memref that is loaded from
+    // by ToTensorOp. We have to assume that the loaded tensor may after
+    // bufferization potentially alias with any other bufferized tensor. Since
+    // ToTensorOp and ToMemrefOp have no aliasing OpOperand/OpResult pairs, this
+    // cannot be encoded directly in the analysis. However, declaring ToTensorOp
+    // results as not writable enforces a buffer copy and has the same effect.
+
+    LogicalResult bufferize(RewriterBase &rewriter,
+                            const BufferizationState &state) const {
+      // to_tensor cannot be bufferized. However, other ops that are using
+      // to_tensor's result will eventually be bufferized. At that point, they
+      // will start using to_tensor's memref operand. Once all users of
+      // to_tensor are bufferized, the op will not have any users anymore and
+      // DCE away. In case of partial bufferization, to_memref(to_tensor(x))
+      // constructs may be left over. These are folded by the canonicalizer or
+      // FinalizingBufferize.
+      return failure();
+    }
+
+    bool isWritable(Value value, const BufferizationState &state) const {
+      // It is unknown whether the memref operand is writable or not.
+      return false;
+    }
   }];
 
   let assemblyFormat = "$memref attr-dict `:` type($memref)";
@@ -123,11 +156,15 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor",
 // ToMemrefOp
 //===----------------------------------------------------------------------===//
 
-def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref",
-    [SameOperandsAndResultShape, SameOperandsAndResultElementType, NoSideEffect,
-     TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
-                    "memref", "tensor",
-                    "memref::getTensorTypeFromMemRefType($_self)">]> {
+def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
+    BufferizableOpInterface,
+    SameOperandsAndResultShape,
+    SameOperandsAndResultElementType,
+    NoSideEffect,
+    TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
+                   "memref", "tensor",
+                   "memref::getTensorTypeFromMemRefType($_self)">
+  ]> {
   let summary = "tensor to memref cast operation";
   let description = [{
     Casts a tensor to a memref.
@@ -149,6 +186,44 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref",
   let results = (outs AnyRankedOrUnrankedMemRef:$memref);
   // This op is fully verified by traits.
   let verifier = ?;
+
+  let extraClassDeclaration = [{
+    //===------------------------------------------------------------------===//
+    // BufferizableOpInterface implementation
+    //===------------------------------------------------------------------===//
+
+    // Note: ToMemrefOp / ToTensorOp are temporary ops that are inserted at the
+    // bufferization boundary. When One-Shot bufferization is complete, there
+    // should be no such ops left over. If `allowUnknownOps` (or after running a
+    // partial bufferization pass), such ops may be part of the resulting IR,
+    // but such IR may no longer be analyzable by One-Shot analysis.
+
+    bool bufferizesToMemoryRead(OpOperand &opOperand,
+                                const BufferizationState &state) const {
+      // It is unknown whether the resulting memref will be read or not.
+      return true;
+    }
+
+    bool bufferizesToMemoryWrite(OpOperand &opOperand,
+                                 const BufferizationState &state) const {
+      // It is unknown whether the resulting MemRef will be written or not.
+      return true;
+    }
+
+    bool mustBufferizeInPlace(OpOperand &opOperand,
+                              const BufferizationState &state) const {
+      // ToMemrefOps always bufferize inplace.
+      return true;
+    }
+
+    OpResult getAliasingOpResult(OpOperand &opOperand,
+                                 const BufferizationState &state) const {
+      return OpResult();
+    }
+
+    LogicalResult bufferize(RewriterBase &rewriter,
+                            const BufferizationState &state);
+  }];
 
   let assemblyFormat = "$tensor attr-dict `:` type($memref)";
 
