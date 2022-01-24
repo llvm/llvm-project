@@ -13,6 +13,10 @@
 ;; by llc by default, and that it can be turned explicitly on or off as
 ;; desired.
 
+;; Xfail due to faults found in the discussion on
+;; https://reviews.llvm.org/D116821
+; XFAIL: *
+
 ; INSTRREFON: DBG_INSTR_REF
 ; INSTRREFOFF: DBG_VALUE
 
