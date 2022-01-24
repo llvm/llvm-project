@@ -215,8 +215,8 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // an automatic definition in header is emitted.
   string HeaderCode = "";
 
-  // Sub extension of vector spec.
-  list<string> RequiredExtensions = [];
+  // Features required to enable for this builtin.
+  list<string> RequiredFeatures = [];
 
   // Number of fields for Load/Store Segment instructions.
   int NF = 1;
@@ -720,7 +720,7 @@ multiclass RVVIndexedLoad<string op> {
         defvar eew64 = "64";
         defvar eew64_type = "(Log2EEW:6)";
         let Name = op # eew64 # "_v", IRName = op, IRNameMask = op # "_mask",
-            RequiredExtensions = ["RV64"] in {
+            RequiredFeatures = ["RV64"] in {
             def: RVVBuiltin<"v", "vPCe" # eew64_type # "Uv", type>;
               if !not(IsFloat<type>.val) then {
                 def: RVVBuiltin<"Uv", "UvPCUe" # eew64_type # "Uv", type>;
@@ -819,7 +819,7 @@ multiclass RVVIndexedStore<string op> {
         defvar eew64 = "64";
         defvar eew64_type = "(Log2EEW:6)";
         let Name = op # eew64  # "_v", IRName = op, IRNameMask = op # "_mask",
-            RequiredExtensions = ["RV64"]  in  {
+            RequiredFeatures = ["RV64"]  in  {
           def : RVVBuiltin<"v", "0Pe" # eew64_type # "Uvv", type>;
           if !not(IsFloat<type>.val) then {
             def : RVVBuiltin<"Uv", "0PUe" # eew64_type # "UvUv", type>;
