@@ -773,6 +773,7 @@ public:
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
   bool isTargetWatchABI() const { return TargetTriple.isWatchABI(); }
+  bool isTargetDriverKit() const { return TargetTriple.isDriverKit(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetNetBSD() const { return TargetTriple.isOSNetBSD(); }

@@ -27,6 +27,7 @@
 
 // RUN: llvm-mc -triple x86_64-apple-watchos1.0.0 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-WATCHOS
 // RUN: llvm-mc -triple x86_64-apple-tvos8.0.0 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-TVOS
+// RUN: llvm-mc -triple x86_64-apple-driverkit19.0 %s -filetype=obj -o - | llvm-objdump --macho --private-headers - | FileCheck %s --check-prefix=CHECK-DRIVERKIT
 // CHECK-WATCHOS: Load command
 // CHECK-WATCHOS:           cmd LC_VERSION_MIN_WATCHOS
 // CHECK-WATCHOS-NEXT:   cmdsize 16
@@ -49,6 +50,13 @@
 // CHECK-MACCATALYST-NEXT:      sdk n/a
 // CHECK-MACCATALYST-NEXT:    minos 13.0
 // CHECK-MACCATALYST-NEXT:   ntools 0
+
+// CHECK-DRIVERKIT:            cmd LC_BUILD_VERSION
+// CHECK-DRIVERKIT-NEXT:   cmdsize 24
+// CHECK-DRIVERKIT-NEXT:  platform driverkit
+// CHECK-DRIVERKIT-NEXT:       sdk n/a
+// CHECK-DRIVERKIT-NEXT:     minos 19.0
+// CHECK-DRIVERKIT-NEXT:    ntools 0
 
 // CHECK-BUILD-MACOS:           cmd LC_BUILD_VERSION
 // CHECK-BUILD-MACOS-NEXT:  cmdsize 24
