@@ -1272,9 +1272,7 @@ bool RISCVTargetLowering::shouldSinkOperands(
         case Intrinsic::vp_or:
         case Intrinsic::vp_xor:
         case Intrinsic::vp_fadd:
-        case Intrinsic::vp_fsub:
         case Intrinsic::vp_fmul:
-        case Intrinsic::vp_fdiv:
         case Intrinsic::vp_shl:
         case Intrinsic::vp_lshr:
         case Intrinsic::vp_ashr:
@@ -1283,9 +1281,11 @@ bool RISCVTargetLowering::shouldSinkOperands(
         case Intrinsic::vp_urem:
         case Intrinsic::vp_srem:
           return Operand == 1;
-        // ... the one exception is vp.sub which has explicit patterns for both
-        // LHS and RHS (as vrsub).
+        // ... with the exception of vp.sub/vp.fsub/vp.fdiv, which have
+        // explicit patterns for both LHS and RHS (as 'vr' versions).
         case Intrinsic::vp_sub:
+        case Intrinsic::vp_fsub:
+        case Intrinsic::vp_fdiv:
           return Operand == 0 || Operand == 1;
         default:
           return false;
