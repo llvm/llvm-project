@@ -75,6 +75,7 @@ fputil_common_hdrs = [
     "src/__support/FPUtil/FEnvUtils.h",
     "src/__support/FPUtil/FPBits.h",
     "src/__support/FPUtil/FloatProperties.h",
+    "src/__support/FPUtil/Hypot.h",
     "src/__support/FPUtil/ManipulationFunctions.h",
     "src/__support/FPUtil/NearestIntegerOperations.h",
     "src/__support/FPUtil/NormalFloat.h",
@@ -370,6 +371,10 @@ libc_math_function(name = "frexp")
 libc_math_function(name = "frexpf")
 
 libc_math_function(name = "frexpl")
+
+libc_math_function(name = "hypot")
+
+libc_math_function(name = "hypotf")
 
 libc_math_function(name = "logb")
 
