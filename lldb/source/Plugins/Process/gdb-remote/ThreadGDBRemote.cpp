@@ -346,3 +346,23 @@ bool ThreadGDBRemote::CalculateStopInfo() {
         ->CalculateThreadStopInfo(this);
   return false;
 }
+
+llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+ThreadGDBRemote::GetSiginfo(size_t max_size) const {
+  ProcessSP process_sp(GetProcess());
+  if (!process_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "no process");
+  ProcessGDBRemote *gdb_process =
+      static_cast<ProcessGDBRemote *>(process_sp.get());
+  if (!gdb_process->m_gdb_comm.GetQXferSigInfoReadSupported())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "qXfer:siginfo:read not supported");
+
+  llvm::Expected<std::string> response =
+      gdb_process->m_gdb_comm.ReadExtFeature("siginfo", "");
+  if (!response)
+    return response.takeError();
+
+  return llvm::MemoryBuffer::getMemBufferCopy(response.get());
+}
