@@ -3436,7 +3436,8 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   // Fast path if we're building some type units and one has already used the
   // address pool we know we're going to throw away all this work anyway, so
   // don't bother building dependent types.
-  if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
+  if (!TypeUnitsUnderConstruction.empty() &&
+      (AddrPool.hasBeenUsed() || SeenLocalType))
     return;
 
   auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
@@ -3447,6 +3448,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 
   bool TopLevelType = TypeUnitsUnderConstruction.empty();
   AddrPool.resetUsedFlag();
+  SeenLocalType = false;
 
   auto OwnedUnit = std::make_unique<DwarfTypeUnit>(CU, Asm, this, &InfoHolder,
                                                     getDwoLineTable(CU));
@@ -3490,7 +3492,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 
     // Types referencing entries in the address table cannot be placed in type
     // units.
-    if (AddrPool.hasBeenUsed()) {
+    if (AddrPool.hasBeenUsed() || SeenLocalType) {
 
       // Remove all the types built while building this type.
       // This is pessimistic as some of these types might not be dependent on
@@ -3518,14 +3520,18 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
 
 DwarfDebug::NonTypeUnitContext::NonTypeUnitContext(DwarfDebug *DD)
     : DD(DD),
-      TypeUnitsUnderConstruction(std::move(DD->TypeUnitsUnderConstruction)), AddrPoolUsed(DD->AddrPool.hasBeenUsed()) {
+      TypeUnitsUnderConstruction(std::move(DD->TypeUnitsUnderConstruction)),
+      AddrPoolUsed(DD->AddrPool.hasBeenUsed()),
+      SeenLocalType(DD->SeenLocalType) {
   DD->TypeUnitsUnderConstruction.clear();
   DD->AddrPool.resetUsedFlag();
+  DD->SeenLocalType = false;
 }
 
 DwarfDebug::NonTypeUnitContext::~NonTypeUnitContext() {
   DD->TypeUnitsUnderConstruction = std::move(TypeUnitsUnderConstruction);
   DD->AddrPool.resetUsedFlag(AddrPoolUsed);
+  DD->SeenLocalType = SeenLocalType;
 }
 
 DwarfDebug::NonTypeUnitContext DwarfDebug::enterNonTypeUnitContext() {

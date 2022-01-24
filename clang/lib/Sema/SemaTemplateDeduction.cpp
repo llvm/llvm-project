@@ -5355,7 +5355,7 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
   bool AtLeastAsSpecialized;
   S.runWithSufficientStackSpace(Info.getLocation(), [&] {
     AtLeastAsSpecialized = !FinishTemplateArgumentDeduction(
-        S, P2, /*PartialOrdering=*/true,
+        S, P2, /*IsPartialOrdering=*/true,
         TemplateArgumentList(TemplateArgumentList::OnStack,
                              TST1->template_arguments()),
         Deduced, Info);

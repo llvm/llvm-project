@@ -36,7 +36,7 @@ using namespace lldb_private;
 class CommandObjectSourceInfo : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -118,8 +118,7 @@ public:
             "Display source line information for the current target "
             "process.  Defaults to instruction pointer in current stack "
             "frame.",
-            nullptr, eCommandRequiresTarget),
-        m_options() {}
+            nullptr, eCommandRequiresTarget) {}
 
   ~CommandObjectSourceInfo() override = default;
 
@@ -624,7 +623,7 @@ protected:
 class CommandObjectSourceList : public CommandObjectParsed {
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -723,8 +722,7 @@ public:
       : CommandObjectParsed(interpreter, "source list",
                             "Display source code for the current target "
                             "process as specified by options.",
-                            nullptr, eCommandRequiresTarget),
-        m_options() {}
+                            nullptr, eCommandRequiresTarget) {}
 
   ~CommandObjectSourceList() override = default;
 
@@ -757,7 +755,7 @@ protected:
     SourceInfo(ConstString name, const LineEntry &line_entry)
         : function(name), line_entry(line_entry) {}
 
-    SourceInfo() : function(), line_entry() {}
+    SourceInfo() {}
 
     bool IsValid() const { return (bool)function && line_entry.IsValid(); }
 
