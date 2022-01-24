@@ -41,6 +41,7 @@ class ScriptedProcesTestCase(TestBase):
         self.expect('script dir(ScriptedProcess)',
                     substrs=["launch"])
 
+    @skipUnlessDarwin
     def test_invalid_scripted_register_context(self):
         """Test that we can launch an lldb scripted process with an invalid
         Scripted Thread, with invalid register context."""
@@ -77,7 +78,7 @@ class ScriptedProcesTestCase(TestBase):
 
         self.assertIn("Failed to get scripted thread registers data.", log)
 
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(['x86_64', 'arm64', 'arm64e']))
     def test_scripted_process_and_scripted_thread(self):
         """Test that we can launch an lldb scripted process using the SBAPI,
         check its process ID, read string from memory, check scripted thread
@@ -124,8 +125,10 @@ class ScriptedProcesTestCase(TestBase):
                 break
 
         self.assertTrue(GPRs, "Invalid General Purpose Registers Set")
-        self.assertEqual(GPRs.GetNumChildren(), 21)
+        self.assertGreater(GPRs.GetNumChildren(), 0)
         for idx, reg in enumerate(GPRs, start=1):
+            if idx > 21:
+                break
             self.assertEqual(idx, int(reg.value, 16))
 
     def create_stack_skinny_corefile(self, file):
