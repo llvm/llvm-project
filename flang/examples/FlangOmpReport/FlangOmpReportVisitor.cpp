@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang-omp-report-visitor.h"
+#include "FlangOmpReportVisitor.h"
 #include "llvm/ADT/StringExtras.h"
 
 namespace Fortran {
