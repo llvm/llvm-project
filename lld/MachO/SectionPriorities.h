@@ -1,4 +1,4 @@
-//===- CallGraphSort.h ------------------------------------------*- C++ -*-===//
+//===- SectionPriorities.h --------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLD_MACHO_CALL_GRAPH_SORT_H
-#define LLD_MACHO_CALL_GRAPH_SORT_H
+#ifndef LLD_MACHO_SECTION_PRIORITIES_H
+#define LLD_MACHO_SECTION_PRIORITIES_H
 
 #include "InputSection.h"
 #include "llvm/ADT/DenseMap.h"
