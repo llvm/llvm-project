@@ -188,7 +188,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (ISAInfo->hasExtension("c"))
     Builder.defineMacro("__riscv_compressed");
 
-  if (ISAInfo->hasExtension("zve32x"))
+  if (ISAInfo->hasExtension("zve32x") || ISAInfo->hasExtension("v"))
     Builder.defineMacro("__riscv_vector");
 }
 

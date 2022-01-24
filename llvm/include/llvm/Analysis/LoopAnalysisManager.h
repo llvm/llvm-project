@@ -87,7 +87,7 @@ typedef InnerAnalysisManagerProxy<LoopAnalysisManager, Function>
 template <> class LoopAnalysisManagerFunctionProxy::Result {
 public:
   explicit Result(LoopAnalysisManager &InnerAM, LoopInfo &LI)
-      : InnerAM(&InnerAM), LI(&LI), MSSAUsed(false) {}
+      : InnerAM(&InnerAM), LI(&LI) {}
   Result(Result &&Arg)
       : InnerAM(std::move(Arg.InnerAM)), LI(Arg.LI), MSSAUsed(Arg.MSSAUsed) {
     // We have to null out the analysis manager in the moved-from state
@@ -136,7 +136,7 @@ public:
 private:
   LoopAnalysisManager *InnerAM;
   LoopInfo *LI;
-  bool MSSAUsed;
+  bool MSSAUsed = false;
 };
 
 /// Provide a specialized run method for the \c LoopAnalysisManagerFunctionProxy

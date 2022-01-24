@@ -372,3 +372,9 @@ foreach i = 0...3 in {
   let isRV32Only = 1 in
   def : SysReg<"hstateen"#i#"h", !add(0x61C, i)>;
 }
+
+//===-----------------------------------------------
+// Entropy Source CSR
+//===-----------------------------------------------
+
+def SEED : SysReg<"seed", 0x015>;

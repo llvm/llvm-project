@@ -2339,9 +2339,8 @@ bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
           Found = true;
         }
       } else if (MO.isRegMask()) {
-        for (TargetRegisterClass::iterator I = RC->begin(),
-             IE = RC->end(); I != IE; ++I)
-          if (MO.clobbersPhysReg(*I)) {
+        for (MCPhysReg R : *RC)
+          if (MO.clobbersPhysReg(R)) {
             Pred.push_back(MO);
             Found = true;
           }

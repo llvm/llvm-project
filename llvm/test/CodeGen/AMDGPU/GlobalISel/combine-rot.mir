@@ -99,13 +99,63 @@ body: |
 ...
 
 ---
-name: rotl_i32_bad_const
+name: rot_i32_const
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: rot_i32_const
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: %amt1:_(s32) = G_CONSTANT i32 12
+    ; CHECK-NEXT: %or:_(s32) = G_ROTR %a, %amt1(s32)
+    ; CHECK-NEXT: $vgpr1 = COPY %or(s32)
+    %a:_(s32) = COPY $vgpr0
+    %amt0:_(s32) = G_CONSTANT i32 20
+    %amt1:_(s32) = G_CONSTANT i32 12
+    %shl:_(s32) = G_SHL %a, %amt0
+    %lshr:_(s32) = G_LSHR %a, %amt1
+    %or:_(s32) = G_OR %shl, %lshr
+    $vgpr1 = COPY %or
+...
+
+---
+name: rot_i32_bad_const
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    ; CHECK-LABEL: name: rot_i32_bad_const
+    ; CHECK: liveins: $vgpr0, $vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %a:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: %amt0:_(s32) = G_CONSTANT i32 20
+    ; CHECK-NEXT: %amt1:_(s32) = G_CONSTANT i32 11
+    ; CHECK-NEXT: %shl:_(s32) = G_SHL %a, %amt0(s32)
+    ; CHECK-NEXT: %lshr:_(s32) = G_LSHR %a, %amt1(s32)
+    ; CHECK-NEXT: %or:_(s32) = G_OR %shl, %lshr
+    ; CHECK-NEXT: $vgpr1 = COPY %or(s32)
+    %a:_(s32) = COPY $vgpr0
+    %amt0:_(s32) = G_CONSTANT i32 20
+    %amt1:_(s32) = G_CONSTANT i32 11
+    %shl:_(s32) = G_SHL %a, %amt0
+    %lshr:_(s32) = G_LSHR %a, %amt1
+    %or:_(s32) = G_OR %shl, %lshr
+    $vgpr1 = COPY %or
+...
+
+
+---
+name: rotl_i32_bad_bw
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
 
-    ; CHECK-LABEL: name: rotl_i32_bad_const
+    ; CHECK-LABEL: name: rotl_i32_bad_bw
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %a:_(s32) = COPY $vgpr0

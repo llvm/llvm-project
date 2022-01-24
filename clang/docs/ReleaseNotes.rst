@@ -252,6 +252,14 @@ X86 Support in Clang
 
 - Support for ``AVX512-FP16`` instructions has been added.
 
+DWARF Support in Clang
+----------------------
+
+- The default DWARF version has increased from DWARFv4 to DWARFv5.  You can opt
+  back in to the old behavior with -gdwarf-4. Some platforms (Darwin, Android,
+  and SCE for instance) already opt out of this version bump as is suitable for
+  the platform
+
 Arm and AArch64 Support in Clang
 --------------------------------
 
