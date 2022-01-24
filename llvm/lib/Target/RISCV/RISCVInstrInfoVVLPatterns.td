@@ -616,7 +616,7 @@ multiclass VPatReductionVL<SDNode vop, string instruction_name, bit is_float> {
 multiclass VPatBinarySDNodeExt_V_WV<SDNode op, PatFrags extop, string instruction_name> {
   foreach vti = AllWidenableIntVectors in {
     def : Pat<
-      (vti.Vti.Vector 
+      (vti.Vti.Vector
         (riscv_trunc_vector_vl
           (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
               (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
@@ -631,7 +631,7 @@ multiclass VPatBinarySDNodeExt_V_WV<SDNode op, PatFrags extop, string instructio
 multiclass VPatBinarySDNodeExt_V_WX<SDNode op, PatFrags extop, string instruction_name> {
   foreach vti = AllWidenableIntVectors in {
     def : Pat<
-      (vti.Vti.Vector 
+      (vti.Vti.Vector
         (riscv_trunc_vector_vl
           (op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
               (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1))))),
