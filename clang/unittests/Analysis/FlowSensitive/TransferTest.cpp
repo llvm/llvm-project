@@ -1865,4 +1865,91 @@ TEST_F(TransferTest, VarDeclInDoWhile) {
               });
 }
 
+TEST_F(TransferTest, AggregateInitialization) {
+  std::string BracesCode = R"(
+    struct A {
+      int Foo;
+    };
+
+    struct B {
+      int Bar;
+      A Baz;
+      int Qux;
+    };
+
+    void target(int BarArg, int FooArg, int QuxArg) {
+      B Quux{BarArg, {FooArg}, QuxArg};
+      /*[[p]]*/
+    }
+  )";
+  std::string BraceEllisionCode = R"(
+    struct A {
+      int Foo;
+    };
+
+    struct B {
+      int Bar;
+      A Baz;
+      int Qux;
+    };
+
+    void target(int BarArg, int FooArg, int QuxArg) {
+      B Quux = {BarArg, FooArg, QuxArg};
+      /*[[p]]*/
+    }
+  )";
+  for (const std::string &Code : {BracesCode, BraceEllisionCode}) {
+    runDataflow(
+        Code, [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+          ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+          const Environment &Env = Results[0].second.Env;
+
+          const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+          ASSERT_THAT(FooDecl, NotNull());
+
+          const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+          ASSERT_THAT(BarDecl, NotNull());
+
+          const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+          ASSERT_THAT(BazDecl, NotNull());
+
+          const ValueDecl *QuxDecl = findValueDecl(ASTCtx, "Qux");
+          ASSERT_THAT(QuxDecl, NotNull());
+
+          const ValueDecl *FooArgDecl = findValueDecl(ASTCtx, "FooArg");
+          ASSERT_THAT(FooArgDecl, NotNull());
+
+          const ValueDecl *BarArgDecl = findValueDecl(ASTCtx, "BarArg");
+          ASSERT_THAT(BarArgDecl, NotNull());
+
+          const ValueDecl *QuxArgDecl = findValueDecl(ASTCtx, "QuxArg");
+          ASSERT_THAT(QuxArgDecl, NotNull());
+
+          const ValueDecl *QuuxDecl = findValueDecl(ASTCtx, "Quux");
+          ASSERT_THAT(QuuxDecl, NotNull());
+
+          const auto *FooArgVal =
+              cast<IntegerValue>(Env.getValue(*FooArgDecl, SkipPast::None));
+          const auto *BarArgVal =
+              cast<IntegerValue>(Env.getValue(*BarArgDecl, SkipPast::None));
+          const auto *QuxArgVal =
+              cast<IntegerValue>(Env.getValue(*QuxArgDecl, SkipPast::None));
+
+          const auto *QuuxVal =
+              cast<StructValue>(Env.getValue(*QuuxDecl, SkipPast::None));
+          ASSERT_THAT(QuuxVal, NotNull());
+
+          const auto *BazVal = cast<StructValue>(&QuuxVal->getChild(*BazDecl));
+          ASSERT_THAT(BazVal, NotNull());
+
+          EXPECT_EQ(&QuuxVal->getChild(*BarDecl), BarArgVal);
+          EXPECT_EQ(&BazVal->getChild(*FooDecl), FooArgVal);
+          EXPECT_EQ(&QuuxVal->getChild(*QuxDecl), QuxArgVal);
+        });
+  }
+}
+
 } // namespace

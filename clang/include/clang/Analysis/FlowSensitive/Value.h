@@ -100,15 +100,18 @@ public:
     return Val->getKind() == Kind::Struct;
   }
 
-  /// Returns the child value for `D`.
+  /// Returns the child value that is assigned for `D`.
   Value &getChild(const ValueDecl &D) const {
     auto It = Children.find(&D);
     assert(It != Children.end());
     return *It->second;
   }
 
+  /// Assigns `Val` as the child value for `D`.
+  void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
+
 private:
-  const llvm::DenseMap<const ValueDecl *, Value *> Children;
+  llvm::DenseMap<const ValueDecl *, Value *> Children;
 };
 
 } // namespace dataflow
