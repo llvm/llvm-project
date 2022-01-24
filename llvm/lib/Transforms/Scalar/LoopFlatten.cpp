@@ -10,10 +10,13 @@
 //
 // The intention is to optimise loop nests like this, which together access an
 // array linearly:
+//
 //   for (int i = 0; i < N; ++i)
 //     for (int j = 0; j < M; ++j)
 //       f(A[i*M+j]);
+//
 // into one loop:
+//
 //   for (int i = 0; i < (N*M); ++i)
 //     f(A[i]);
 //
@@ -22,7 +25,27 @@
 // expression like i*M+j. If they had any other uses, we would have to insert a
 // div/mod to reconstruct the original values, so this wouldn't be profitable.
 //
-// We also need to prove that N*M will not overflow.
+// We also need to prove that N*M will not overflow. The preferred solution is
+// to widen the IV, which avoids overflow checks, so that is tried first. If
+// the IV cannot be widened, then we try to determine that this new tripcount
+// expression won't overflow.
+//
+// Q: Does LoopFlatten use SCEV?
+// Short answer: Yes and no.
+//
+// Long answer:
+// For this transformation to be valid, we require all uses of the induction
+// variables to be linear expressions of the form i*M+j. The different Loop
+// APIs are used to get some loop components like the induction variable,
+// compare statement, etc. In addition, we do some pattern matching to find the
+// linear expressions and other loop components like the loop increment. The
+// latter are examples of expressions that do use the induction variable, but
+// are safe to ignore when we check all uses to be of the form i*M+j. We keep
+// track of all of this in bookkeeping struct FlattenInfo.
+// We assume the loops to be canonical, i.e. starting at 0 and increment with
+// 1. This makes RHS of the compare the loop tripcount (with the right
+// predicate). We use SCEV to then sanity check that this tripcount matches
+// with the tripcount as computed by SCEV.
 //
 //===----------------------------------------------------------------------===//
 
@@ -75,30 +98,48 @@ static cl::opt<bool>
             cl::desc("Widen the loop induction variables, if possible, so "
                      "overflow checks won't reject flattening"));
 
+// We require all uses of both induction variables to match this pattern:
+//
+//   (OuterPHI * InnerTripCount) + InnerPHI
+//
+// I.e., it needs to be a linear expression of the induction variables and the
+// inner loop trip count. We keep track of all different expressions on which
+// checks will be performed in this bookkeeping struct.
+//
 struct FlattenInfo {
-  Loop *OuterLoop = nullptr;
+  Loop *OuterLoop = nullptr;  // The loop pair to be flattened.
   Loop *InnerLoop = nullptr;
-  // These PHINodes correspond to loop induction variables, which are expected
-  // to start at zero and increment by one on each loop.
-  PHINode *InnerInductionPHI = nullptr;
-  PHINode *OuterInductionPHI = nullptr;
-  Value *InnerTripCount = nullptr;
-  Value *OuterTripCount = nullptr;
-  BinaryOperator *InnerIncrement = nullptr;
-  BinaryOperator *OuterIncrement = nullptr;
-  BranchInst *InnerBranch = nullptr;
-  BranchInst *OuterBranch = nullptr;
-  SmallPtrSet<Value *, 4> LinearIVUses;
+
+  PHINode *InnerInductionPHI = nullptr; // These PHINodes correspond to loop
+  PHINode *OuterInductionPHI = nullptr; // induction variables, which are
+                                        // expected to start at zero and
+                                        // increment by one on each loop.
+
+  Value *InnerTripCount = nullptr; // The product of these two tripcounts
+  Value *OuterTripCount = nullptr; // will be the new flattened loop
+                                   // tripcount. Also used to recognise a
+                                   // linear expression that will be replaced.
+
+  SmallPtrSet<Value *, 4> LinearIVUses;  // Contains the linear expressions
+                                         // of the form i*M+j that will be
+                                         // replaced.
+
+  BinaryOperator *InnerIncrement = nullptr;  // Uses of induction variables in
+  BinaryOperator *OuterIncrement = nullptr;  // loop control statements that
+  BranchInst *InnerBranch = nullptr;         // are safe to ignore.
+
+  BranchInst *OuterBranch = nullptr; // The instruction that needs to be
+                                     // updated with new tripcount.
+
   SmallPtrSet<PHINode *, 4> InnerPHIsToTransform;
 
-  // Whether this holds the flatten info before or after widening.
-  bool Widened = false;
+  bool Widened = false; // Whether this holds the flatten info before or after
+                        // widening.
 
-  // Holds the old/narrow induction phis, i.e. the Phis before IV widening has
-  // been applied. This bookkeeping is used so we can skip some checks on these
-  // phi nodes.
-  PHINode *NarrowInnerInductionPHI = nullptr;
-  PHINode *NarrowOuterInductionPHI = nullptr;
+  PHINode *NarrowInnerInductionPHI = nullptr; // Holds the old/narrow induction
+  PHINode *NarrowOuterInductionPHI = nullptr; // phis, i.e. the Phis before IV
+                                              // has been apllied. Used to skip
+                                              // checks on phi nodes.
 
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL){};
 
