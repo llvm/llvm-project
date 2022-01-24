@@ -229,7 +229,7 @@ namespace {
   private:
     struct Register {
       Register() = default;
-      Register(unsigned R, unsigned S) : Reg(R), Sub(S) {}
+      Register(llvm::Register R, unsigned S) : Reg(R), Sub(S) {}
       Register(const MachineOperand &Op)
         : Reg(Op.getReg()), Sub(Op.getSubReg()) {}
       Register &operator=(const MachineOperand &Op) {
@@ -1573,7 +1573,7 @@ HCE::Register HCE::insertInitializer(Loc DefL, const ExtenderInit &ExtI) {
         // No compounds are available. It is not clear whether we should
         // even process such extenders where the initializer cannot be
         // a single instruction, but do it for now.
-        unsigned TmpR = MRI->createVirtualRegister(&Hexagon::IntRegsRegClass);
+        llvm::Register TmpR = MRI->createVirtualRegister(&Hexagon::IntRegsRegClass);
         BuildMI(MBB, At, dl, HII->get(Hexagon::S2_asl_i_r), TmpR)
           .add(MachineOperand(Ex.Rs))
           .addImm(Ex.S);
