@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic itanium demangler library. This file has two byte-per-byte identical
-// copies in the source tree, one in libcxxabi, and the other in llvm.
+// Generic itanium demangler library.
+// There are two copies of this file in the source tree.  The one under
+// libcxxabi is the original and the one under llvm is the copy.  Use
+// cp-to-llvm.sh to update the copy.  See README.txt for more details.
 //
 //===----------------------------------------------------------------------===//
 

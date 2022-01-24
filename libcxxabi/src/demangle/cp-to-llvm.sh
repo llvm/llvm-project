@@ -26,10 +26,11 @@ if [[ $ANSWER =~ ^[Yy]$ ]]; then
     chmod -w $LLVM_DEMANGLE_DIR/README.txt
     for I in $HDRS ; do
 	rm -f $LLVM_DEMANGLE_DIR/$I
-	cat - $I >$LLVM_DEMANGLE_DIR/$I <<EOF
-// Do not edit! -*- read-only -*-
-// See README.txt for instructions
-EOF
+	dash=$(echo "$I---------------------------" | cut -c -27 |\
+		   sed 's|[^-]*||')
+	sed -e '1s|^//=*-* .*\.h -*.*=*// *$|//===--- '"$I $dash"'-*- mode:c++;eval:(read-only-mode) -*-===//|' \
+	    -e '2s|^// *$|//       Do not edit! See README.txt.|' \
+	    $I >$LLVM_DEMANGLE_DIR/$I
 	chmod -w $LLVM_DEMANGLE_DIR/$I
     done
 fi

@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Provide some utility classes for use in the demangler(s).
+// Provide some utility classes for use in the demangler.
+// There are two copies of this file in the source tree.  The one in libcxxabi
+// is the original and the one in llvm is the copy.  Use cp-to-llvm.sh to update
+// the copy.  See README.txt for more details.
 //
 //===----------------------------------------------------------------------===//
 

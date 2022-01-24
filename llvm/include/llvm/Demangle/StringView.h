@@ -1,7 +1,5 @@
-// Do not edit! -*- read-only -*-
-// See README.txt for instructions
-//===--- StringView.h -------------------------------------------*- C++ -*-===//
-//
+//===--- StringView.h ----------------*- mode:c++;eval:(read-only-mode) -*-===//
+//       Do not edit! See README.txt.
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -9,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // FIXME: Use std::string_view instead when we support C++17.
+// There are two copies of this file in the source tree.  The one under
+// libcxxabi is the original and the one under llvm is the copy.  Use
+// cp-to-llvm.sh to update the copy.  See README.txt for more details.
 //
 //===----------------------------------------------------------------------===//
 
