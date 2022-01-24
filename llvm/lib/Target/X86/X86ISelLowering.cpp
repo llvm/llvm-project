@@ -25785,9 +25785,9 @@ static SDValue getMaskNode(SDValue Mask, MVT MaskVT,
 /// (vselect \p Mask, \p Op, \p PreservedSrc) for others along with the
 /// necessary casting or extending for \p Mask when lowering masking intrinsics
 static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
-                  SDValue PreservedSrc,
-                  const X86Subtarget &Subtarget,
-                  SelectionDAG &DAG) {
+                                    SDValue PreservedSrc,
+                                    const X86Subtarget &Subtarget,
+                                    SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
   MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
   unsigned OpcodeSelect = ISD::VSELECT;
