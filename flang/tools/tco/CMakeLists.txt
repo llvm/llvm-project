@@ -1,13 +1,21 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+set(LLVM_LINK_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
+)
 
-set(LIBS
+add_flang_tool(tco tco.cpp)
+llvm_update_compile_flags(tco)
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+target_link_libraries(tco PRIVATE
   FIRCodeGen
   FIRDialect
   FIRSupport
   FIRTransforms
+  FIRBuilder
   ${dialect_libs}
   MLIRIR
   MLIRLLVMIR
+  MLIRLLVMToLLVMIRTranslation
+  MLIRTargetLLVMIRExport
   MLIRPass
   MLIRStandardToLLVM
   MLIRTransforms
@@ -19,6 +27,3 @@ set(LIBS
   MLIRSupport
   MLIRVectorToLLVM
 )
-
-add_flang_tool(tco tco.cpp)
-target_link_libraries(tco PRIVATE ${LIBS})
