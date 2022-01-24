@@ -553,11 +553,28 @@ define void @setgt_vi_v64i8(<64 x i8>* %x, <64 x i1>* %z) {
 ; CHECK-NEXT:    li a2, 64
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmsgt.vx v12, v8, zero
+; CHECK-NEXT:    vmsgt.vi v12, v8, 0
 ; CHECK-NEXT:    vsm.v v12, (a1)
 ; CHECK-NEXT:    ret
   %a = load <64 x i8>, <64 x i8>* %x
   %b = insertelement <64 x i8> undef, i8 0, i32 0
+  %c = shufflevector <64 x i8> %b, <64 x i8> undef, <64 x i32> zeroinitializer
+  %d = icmp sgt <64 x i8> %a, %c
+  store <64 x i1> %d, <64 x i1>* %z
+  ret void
+}
+
+define void @setgt_vi_v64i8_nonzero(<64 x i8>* %x, <64 x i1>* %z) {
+; CHECK-LABEL: setgt_vi_v64i8_nonzero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    vsetvli zero, a2, e8, m4, ta, mu
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vmsgt.vi v12, v8, 5
+; CHECK-NEXT:    vsm.v v12, (a1)
+; CHECK-NEXT:    ret
+  %a = load <64 x i8>, <64 x i8>* %x
+  %b = insertelement <64 x i8> undef, i8 5, i32 0
   %c = shufflevector <64 x i8> %b, <64 x i8> undef, <64 x i32> zeroinitializer
   %d = icmp sgt <64 x i8> %a, %c
   store <64 x i1> %d, <64 x i1>* %z
@@ -619,8 +636,7 @@ define void @setugt_vi_v32i8(<32 x i8>* %x, <32 x i1>* %z) {
 ; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    li a0, 5
-; CHECK-NEXT:    vmsgtu.vx v10, v8, a0
+; CHECK-NEXT:    vmsgtu.vi v10, v8, 5
 ; CHECK-NEXT:    vsm.v v10, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, <32 x i8>* %x
