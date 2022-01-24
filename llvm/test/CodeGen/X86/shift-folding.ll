@@ -88,9 +88,7 @@ define i16 @srl_load_narrowing1(i32* %arg) {
 ; CHECK-LABEL: srl_load_narrowing1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl (%eax), %eax
-; CHECK-NEXT:    shrl $8, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    movzwl 1(%eax), %eax
 ; CHECK-NEXT:    retl
   %tmp1 = load i32, i32* %arg, align 1
   %tmp2 = lshr i32 %tmp1, 8

@@ -12214,7 +12214,8 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     // accessing any of the loaded bytes.  If the load was a zextload/extload
     // then the result of the shift+trunc is zero/undef (handled elsewhere).
     ShAmt = SRL1C->getZExtValue();
-    if (ShAmt >= LN->getMemoryVT().getSizeInBits())
+    uint64_t MemoryWidth = LN->getMemoryVT().getSizeInBits();
+    if (ShAmt >= MemoryWidth)
       return SDValue();
 
     // Because a SRL must be assumed to *need* to zero-extend the high bits
@@ -12223,13 +12224,19 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     if (LN->getExtensionType() == ISD::SEXTLOAD)
       return SDValue();
 
-    unsigned ExtVTBits = ExtVT.getScalarSizeInBits();
-    // Is the shift amount a multiple of size of ExtVT?
-    if ((ShAmt & (ExtVTBits - 1)) != 0)
-      return SDValue();
-    // Is the load width a multiple of size of ExtVT?
-    if ((SRL.getScalarValueSizeInBits() & (ExtVTBits - 1)) != 0)
-      return SDValue();
+    // Avoid reading outside the memory accessed by the original load (could
+    // happened if we only adjust the load base pointer by ShAmt). Instead we
+    // try to narrow the load even further. The typical scenario here is:
+    //   (i64 (truncate (i96 (srl (load x), 64)))) ->
+    //     (i64 (truncate (i96 (zextload (load i32 + offset) from i32))))
+    if (ExtVT.getScalarSizeInBits() > MemoryWidth - ShAmt) {
+      // Don't replace sextload by zextload.
+      if (ExtType == ISD::SEXTLOAD)
+        return SDValue();
+      // Narrow the load.
+      ExtType = ISD::ZEXTLOAD;
+      ExtVT = EVT::getIntegerVT(*DAG.getContext(), MemoryWidth - ShAmt);
+    }
 
     // If the SRL is only used by a masking AND, we may be able to adjust
     // the ExtVT to make the AND redundant.
@@ -12241,7 +12248,7 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
         EVT MaskedVT = EVT::getIntegerVT(*DAG.getContext(),
                                          ShiftMask.countTrailingOnes());
         // If the mask is smaller, recompute the type.
-        if ((ExtVTBits > MaskedVT.getScalarSizeInBits()) &&
+        if ((ExtVT.getScalarSizeInBits() > MaskedVT.getScalarSizeInBits()) &&
             TLI.isLoadExtLegal(ExtType, SRL.getValueType(), MaskedVT))
           ExtVT = MaskedVT;
       }
