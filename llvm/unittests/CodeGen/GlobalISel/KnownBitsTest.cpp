@@ -1917,3 +1917,58 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsSBFX) {
   EXPECT_EQ(1u, Info.computeNumSignBits(CopyUnkValBfxReg));
   EXPECT_EQ(1u, Info.computeNumSignBits(CopyUnkOffBfxReg));
 }
+
+TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
+  StringRef MIRString = R"MIR(
+   %val:_(s64) = COPY $vgpr0_vgpr1
+   %ptrval:_(p1) = COPY $vgpr0_vgpr1
+
+   %assert_align0:_(s64) = G_ASSERT_ALIGN %val, 0
+   %copy_assert_align0:_(s64) = COPY %assert_align0
+
+   %assert_align1:_(s64) = G_ASSERT_ALIGN %val, 1
+   %copy_assert_align1:_(s64) = COPY %assert_align1
+
+   %assert_align2:_(s64) = G_ASSERT_ALIGN %val, 2
+   %copy_assert_align2:_(s64) = COPY %assert_align2
+
+   %assert_align3:_(s64) = G_ASSERT_ALIGN %val, 3
+   %copy_assert_align3:_(s64) = COPY %assert_align3
+
+   %assert_align8:_(s64) = G_ASSERT_ALIGN %val, 8
+   %copy_assert_align8:_(s64) = COPY %assert_align8
+
+   %assert_maxalign:_(s64) = G_ASSERT_ALIGN %val, 30
+   %copy_assert_maxalign:_(s64) = COPY %assert_maxalign
+
+   %assert_ptr_align5:_(p1) = G_ASSERT_ALIGN %ptrval, 5
+   %copy_assert_ptr_align5:_(p1) = COPY %assert_ptr_align5
+)MIR";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  GISelKnownBits Info(*MF);
+
+  KnownBits Res;
+  auto GetKB = [&](unsigned Idx) {
+    Register CopyReg = Copies[Idx];
+    auto *Copy = MRI->getVRegDef(CopyReg);
+    return Info.getKnownBits(Copy->getOperand(1).getReg());
+  };
+
+  auto CheckBits = [&](unsigned NumBits, unsigned Idx) {
+    Res = GetKB(Idx);
+    EXPECT_EQ(64u, Res.getBitWidth());
+    EXPECT_EQ(NumBits, Res.Zero.countTrailingOnes());
+    EXPECT_EQ(64u, Res.One.countTrailingZeros());
+    EXPECT_EQ(Align(1ull << NumBits), Info.computeKnownAlignment(Copies[Idx]));
+  };
+
+  CheckBits(0, Copies.size() - 7);
+  CheckBits(1, Copies.size() - 6);
+  CheckBits(2, Copies.size() - 5);
+  CheckBits(3, Copies.size() - 4);
+  CheckBits(8, Copies.size() - 3);
+  CheckBits(30, Copies.size() - 2);
+  CheckBits(5, Copies.size() - 1);
+}
