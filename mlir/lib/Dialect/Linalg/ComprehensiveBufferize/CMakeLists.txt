@@ -5,7 +5,6 @@ set(LLVM_OPTIONAL_SOURCES
   ModuleBufferization.cpp
   SCFInterfaceImpl.cpp
   StdInterfaceImpl.cpp
-  TensorInterfaceImpl.cpp
   VectorInterfaceImpl.cpp
 )
 
@@ -55,16 +54,6 @@ add_mlir_dialect_library(MLIRStdBufferizableOpInterfaceImpl
   LINK_LIBS PUBLIC
   MLIRBufferizableOpInterface
   MLIRStandard
-)
-
-add_mlir_dialect_library(MLIRTensorBufferizableOpInterfaceImpl
-  TensorInterfaceImpl.cpp
-
-  LINK_LIBS PUBLIC
-  MLIRBufferizableOpInterface
-  MLIRIR
-  MLIRMemRef
-  MLIRTensor
 )
 
 add_mlir_dialect_library(MLIRVectorBufferizableOpInterfaceImpl

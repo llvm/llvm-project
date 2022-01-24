@@ -4415,11 +4415,15 @@ cc_library(
             "lib/Dialect/Tensor/Transforms/*.h",
         ],
     ),
-    hdrs = ["include/mlir/Dialect/Tensor/Transforms/Passes.h"],
+    hdrs = [
+        "include/mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h",
+        "include/mlir/Dialect/Tensor/Transforms/Passes.h",
+    ],
     includes = ["include"],
     deps = [
         ":ArithmeticDialect",
         ":Async",
+        ":BufferizableOpInterface",
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":IR",
@@ -6685,25 +6689,6 @@ cc_library(
 )
 
 cc_library(
-    name = "TensorBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/TensorInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":BufferizableOpInterface",
-        ":IR",
-        ":MemRefDialect",
-        ":Support",
-        ":TensorDialect",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
     name = "VectorBufferizableOpInterfaceImpl",
     srcs = [
         "lib/Dialect/Linalg/ComprehensiveBufferize/VectorInterfaceImpl.cpp",
@@ -6946,8 +6931,8 @@ cc_library(
         ":StandardOpsTransforms",
         ":StdBufferizableOpInterfaceImpl",
         ":Support",
-        ":TensorBufferizableOpInterfaceImpl",
         ":TensorDialect",
+        ":TensorTransforms",
         ":TensorUtils",
         ":TransformUtils",
         ":VectorBufferizableOpInterfaceImpl",
