@@ -247,7 +247,7 @@ define i16 @test_pr53123_sub_constraint_sign(i16 %v) {
 ; CHECK-NEXT:    [[ADD:%.*]] = shl nuw nsw i16 [[V]], 1
 ; CHECK-NEXT:    [[SUB9:%.*]] = sub nuw nsw i16 32767, [[ADD]]
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp ugt i16 [[ADD]], [[SUB9]]
-; CHECK-NEXT:    br i1 false, label [[BB_3:%.*]], label [[BB_2]]
+; CHECK-NEXT:    br i1 [[CMP11]], label [[BB_3:%.*]], label [[BB_2]]
 ; CHECK:       bb.2:
 ; CHECK-NEXT:    ret i16 1
 ; CHECK:       bb.3:
