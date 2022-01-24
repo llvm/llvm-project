@@ -1,4 +1,5 @@
 add_mlir_library(MLIRTransformUtils
+  ControlFlowSinkUtils.cpp
   DialectConversion.cpp
   FoldUtils.cpp
   GreedyPatternRewriteDriver.cpp

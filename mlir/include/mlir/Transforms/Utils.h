@@ -25,6 +25,7 @@ namespace mlir {
 
 class AffineApplyOp;
 class AffineForOp;
+class DominanceInfo;
 class Location;
 class OpBuilder;
 
@@ -146,6 +147,53 @@ Operation *createComposedAffineApplyOp(OpBuilder &builder, Location loc,
 ///      have any uses other than those in this opInst.
 void createAffineComputationSlice(Operation *opInst,
                                   SmallVectorImpl<AffineApplyOp> *sliceOps);
+
+/// Given a list of regions, perform control flow sinking on them. For each
+/// region, control-flow sinking moves operations that dominate the region but
+/// whose only users are in the region into the regions so that they aren't
+/// executed on paths where their results are not needed.
+///
+/// TODO: For the moment, this is a *simple* control-flow sink, i.e., no
+/// duplicating of ops. It should be made to accept a cost model to determine
+/// whether duplicating a particular op is profitable.
+///
+/// Example:
+///
+/// ```mlir
+/// %0 = arith.addi %arg0, %arg1
+/// scf.if %cond {
+///   scf.yield %0
+/// } else {
+///   scf.yield %arg2
+/// }
+/// ```
+///
+/// After control-flow sink:
+///
+/// ```mlir
+/// scf.if %cond {
+///   %0 = arith.addi %arg0, %arg1
+///   scf.yield %0
+/// } else {
+///   scf.yield %arg2
+/// }
+/// ```
+///
+/// Users must supply a callback `shouldMoveIntoRegion` that determines whether
+/// the given operation that only has users in the given operation should be
+/// moved into that region.
+///
+/// Returns the number of operations sunk.
+size_t
+controlFlowSink(ArrayRef<Region *> regions, DominanceInfo &domInfo,
+                function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion);
+
+/// Populates `regions` with regions of the provided region branch op that are
+/// executed at most once at that are reachable given the current operands of
+/// the op. These regions can be passed to `controlFlowSink` to perform sinking
+/// on the regions of the operation.
+void getSinglyExecutedRegionsToSink(RegionBranchOpInterface branch,
+                                    SmallVectorImpl<Region *> &regions);
 
 } // namespace mlir
 
