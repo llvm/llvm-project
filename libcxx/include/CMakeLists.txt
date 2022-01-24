@@ -178,6 +178,7 @@ set(files
   __format/formatter.h
   __format/formatter_bool.h
   __format/formatter_char.h
+  __format/formatter_floating_point.h
   __format/formatter_integer.h
   __format/formatter_integral.h
   __format/formatter_string.h

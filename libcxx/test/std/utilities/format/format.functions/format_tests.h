@@ -13,6 +13,8 @@
 #include "make_string.h"
 #include "test_macros.h"
 
+#include <cmath>
+
 // In this file the following template types are used:
 // TestFunction must be callable as check(expected-result, string-to-format, args-to-format...)
 // ExceptionTest must be callable as check_exception(expected-exception, string-to-format, args-to-format...)
@@ -992,6 +994,1496 @@ void format_test_char_as_integer(TestFunction check,
         fmt, '*');
 }
 
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_hex_lower_case(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // Test whether the hexadecimal letters are the proper case.
+  // The precision is too large for float, so two tests are used.
+  check(STR("answer is '1.abcp+0'"), STR("answer is '{:a}'"), F(0x1.abcp+0));
+  check(STR("answer is '1.defp+0'"), STR("answer is '{:a}'"), F(0x1.defp+0));
+
+  // *** align-fill & width ***
+  check(STR("answer is '   1p-2'"), STR("answer is '{:7a}'"), F(0.25));
+  check(STR("answer is '   1p-2'"), STR("answer is '{:>7a}'"), F(0.25));
+  check(STR("answer is '1p-2   '"), STR("answer is '{:<7a}'"), F(0.25));
+  check(STR("answer is ' 1p-2  '"), STR("answer is '{:^7a}'"), F(0.25));
+
+  check(STR("answer is '---1p-3'"), STR("answer is '{:->7a}'"), F(125e-3));
+  check(STR("answer is '1p-3---'"), STR("answer is '{:-<7a}'"), F(125e-3));
+  check(STR("answer is '-1p-3--'"), STR("answer is '{:-^7a}'"), F(125e-3));
+
+  check(STR("answer is '***inf'"), STR("answer is '{:*>6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf***'"), STR("answer is '{:*<6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*inf**'"), STR("answer is '{:*^6a}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-inf'"), STR("answer is '{:#>7a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf###'"), STR("answer is '{:#<7a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-inf##'"), STR("answer is '{:#^7a}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^nan'"), STR("answer is '{:^>6a}'"), nan_pos);
+  check(STR("answer is 'nan^^^'"), STR("answer is '{:^<6a}'"), nan_pos);
+  check(STR("answer is '^nan^^'"), STR("answer is '{:^^6a}'"), nan_pos);
+
+  check(STR("answer is '000-nan'"), STR("answer is '{:0>7a}'"), nan_neg);
+  check(STR("answer is '-nan000'"), STR("answer is '{:0<7a}'"), nan_neg);
+  check(STR("answer is '0-nan00'"), STR("answer is '{:0^7a}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   1p-2'"), STR("answer is '{:>07a}'"), F(0.25));
+  check(STR("answer is '1p-2   '"), STR("answer is '{:<07a}'"), F(0.25));
+  check(STR("answer is ' 1p-2  '"), STR("answer is '{:^07a}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0p+0'"), STR("answer is '{:a}'"), F(0));
+  check(STR("answer is '0p+0'"), STR("answer is '{:-a}'"), F(0));
+  check(STR("answer is '+0p+0'"), STR("answer is '{:+a}'"), F(0));
+  check(STR("answer is ' 0p+0'"), STR("answer is '{: a}'"), F(0));
+
+  check(STR("answer is '-0p+0'"), STR("answer is '{:a}'"), F(-0.));
+  check(STR("answer is '-0p+0'"), STR("answer is '{:-a}'"), F(-0.));
+  check(STR("answer is '-0p+0'"), STR("answer is '{:+a}'"), F(-0.));
+  check(STR("answer is '-0p+0'"), STR("answer is '{: a}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'inf'"), STR("answer is '{:a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf'"), STR("answer is '{:-a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+inf'"), STR("answer is '{:+a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' inf'"), STR("answer is '{: a}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-inf'"), STR("answer is '{:a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:-a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:+a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{: a}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:a}'"), nan_pos);
+  check(STR("answer is 'nan'"), STR("answer is '{:-a}'"), nan_pos);
+  check(STR("answer is '+nan'"), STR("answer is '{:+a}'"), nan_pos);
+  check(STR("answer is ' nan'"), STR("answer is '{: a}'"), nan_pos);
+
+  check(STR("answer is '-nan'"), STR("answer is '{:a}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:-a}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:+a}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{: a}'"), nan_neg);
+
+  // *** alternate form ***
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0p+0'"), STR("answer is '{:a}'"), F(0));
+  check(STR("answer is '0.p+0'"), STR("answer is '{:#a}'"), F(0));
+
+  check(STR("answer is '1p+1'"), STR("answer is '{:.0a}'"), F(2.5));
+  check(STR("answer is '1.p+1'"), STR("answer is '{:#.0a}'"), F(2.5));
+  check(STR("answer is '1.4p+1'"), STR("answer is '{:#a}'"), F(2.5));
+
+  check(STR("answer is 'inf'"), STR("answer is '{:#a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:#a}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:#a}'"), nan_pos);
+  check(STR("answer is '-nan'"), STR("answer is '{:#a}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '1p-5'"), STR("answer is '{:04a}'"), 0.03125);
+  check(STR("answer is '+1p-5'"), STR("answer is '{:+05a}'"), 0.03125);
+  check(STR("answer is '+01p-5'"), STR("answer is '{:+06a}'"), 0.03125);
+
+  check(STR("answer is '0001p-5'"), STR("answer is '{:07a}'"), 0.03125);
+  check(STR("answer is '0001p-5'"), STR("answer is '{:-07a}'"), 0.03125);
+  check(STR("answer is '+001p-5'"), STR("answer is '{:+07a}'"), 0.03125);
+  check(STR("answer is ' 001p-5'"), STR("answer is '{: 07a}'"), 0.03125);
+
+  check(STR("answer is '       inf'"), STR("answer is '{:010a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{:-010a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +inf'"), STR("answer is '{:+010a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{: 010a}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -inf'"), STR("answer is '{:010a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:-010a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:+010a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{: 010a}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       nan'"), STR("answer is '{:010a}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{:-010a}'"), nan_pos);
+  check(STR("answer is '      +nan'"), STR("answer is '{:+010a}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{: 010a}'"), nan_pos);
+
+  check(STR("answer is '      -nan'"), STR("answer is '{:010a}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:-010a}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:+010a}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{: 010a}'"), nan_neg);
+
+  // *** precision ***
+  // See format_test_floating_point_hex_lower_case_precision
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_hex_upper_case(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // Test whether the hexadecimal letters are the proper case.
+  // The precision is too large for float, so two tests are used.
+  check(STR("answer is '1.ABCP+0'"), STR("answer is '{:A}'"), F(0x1.abcp+0));
+  check(STR("answer is '1.DEFP+0'"), STR("answer is '{:A}'"), F(0x1.defp+0));
+
+  // *** align-fill & width ***
+  check(STR("answer is '   1P-2'"), STR("answer is '{:7A}'"), F(0.25));
+  check(STR("answer is '   1P-2'"), STR("answer is '{:>7A}'"), F(0.25));
+  check(STR("answer is '1P-2   '"), STR("answer is '{:<7A}'"), F(0.25));
+  check(STR("answer is ' 1P-2  '"), STR("answer is '{:^7A}'"), F(0.25));
+
+  check(STR("answer is '---1P-3'"), STR("answer is '{:->7A}'"), F(125e-3));
+  check(STR("answer is '1P-3---'"), STR("answer is '{:-<7A}'"), F(125e-3));
+  check(STR("answer is '-1P-3--'"), STR("answer is '{:-^7A}'"), F(125e-3));
+
+  check(STR("answer is '***INF'"), STR("answer is '{:*>6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF***'"), STR("answer is '{:*<6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*INF**'"), STR("answer is '{:*^6A}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-INF'"), STR("answer is '{:#>7A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF###'"), STR("answer is '{:#<7A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-INF##'"), STR("answer is '{:#^7A}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^NAN'"), STR("answer is '{:^>6A}'"), nan_pos);
+  check(STR("answer is 'NAN^^^'"), STR("answer is '{:^<6A}'"), nan_pos);
+  check(STR("answer is '^NAN^^'"), STR("answer is '{:^^6A}'"), nan_pos);
+
+  check(STR("answer is '000-NAN'"), STR("answer is '{:0>7A}'"), nan_neg);
+  check(STR("answer is '-NAN000'"), STR("answer is '{:0<7A}'"), nan_neg);
+  check(STR("answer is '0-NAN00'"), STR("answer is '{:0^7A}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   1P-2'"), STR("answer is '{:>07A}'"), F(0.25));
+  check(STR("answer is '1P-2   '"), STR("answer is '{:<07A}'"), F(0.25));
+  check(STR("answer is ' 1P-2  '"), STR("answer is '{:^07A}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0P+0'"), STR("answer is '{:A}'"), F(0));
+  check(STR("answer is '0P+0'"), STR("answer is '{:-A}'"), F(0));
+  check(STR("answer is '+0P+0'"), STR("answer is '{:+A}'"), F(0));
+  check(STR("answer is ' 0P+0'"), STR("answer is '{: A}'"), F(0));
+
+  check(STR("answer is '-0P+0'"), STR("answer is '{:A}'"), F(-0.));
+  check(STR("answer is '-0P+0'"), STR("answer is '{:-A}'"), F(-0.));
+  check(STR("answer is '-0P+0'"), STR("answer is '{:+A}'"), F(-0.));
+  check(STR("answer is '-0P+0'"), STR("answer is '{: A}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'INF'"), STR("answer is '{:A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF'"), STR("answer is '{:-A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+INF'"), STR("answer is '{:+A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' INF'"), STR("answer is '{: A}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-INF'"), STR("answer is '{:A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:-A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:+A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{: A}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:A}'"), nan_pos);
+  check(STR("answer is 'NAN'"), STR("answer is '{:-A}'"), nan_pos);
+  check(STR("answer is '+NAN'"), STR("answer is '{:+A}'"), nan_pos);
+  check(STR("answer is ' NAN'"), STR("answer is '{: A}'"), nan_pos);
+
+  check(STR("answer is '-NAN'"), STR("answer is '{:A}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:-A}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:+A}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{: A}'"), nan_neg);
+
+  // *** alternate form ***
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0P+0'"), STR("answer is '{:A}'"), F(0));
+  check(STR("answer is '0.P+0'"), STR("answer is '{:#A}'"), F(0));
+
+  check(STR("answer is '1P+1'"), STR("answer is '{:.0A}'"), F(2.5));
+  check(STR("answer is '1.P+1'"), STR("answer is '{:#.0A}'"), F(2.5));
+  check(STR("answer is '1.4P+1'"), STR("answer is '{:#A}'"), F(2.5));
+
+  check(STR("answer is 'INF'"), STR("answer is '{:#A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:#A}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:#A}'"), nan_pos);
+  check(STR("answer is '-NAN'"), STR("answer is '{:#A}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '1P-5'"), STR("answer is '{:04A}'"), 0.03125);
+  check(STR("answer is '+1P-5'"), STR("answer is '{:+05A}'"), 0.03125);
+  check(STR("answer is '+01P-5'"), STR("answer is '{:+06A}'"), 0.03125);
+
+  check(STR("answer is '0001P-5'"), STR("answer is '{:07A}'"), 0.03125);
+  check(STR("answer is '0001P-5'"), STR("answer is '{:-07A}'"), 0.03125);
+  check(STR("answer is '+001P-5'"), STR("answer is '{:+07A}'"), 0.03125);
+  check(STR("answer is ' 001P-5'"), STR("answer is '{: 07A}'"), 0.03125);
+
+  check(STR("answer is '       INF'"), STR("answer is '{:010A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{:-010A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +INF'"), STR("answer is '{:+010A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{: 010A}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -INF'"), STR("answer is '{:010A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:-010A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:+010A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{: 010A}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       NAN'"), STR("answer is '{:010A}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{:-010A}'"), nan_pos);
+  check(STR("answer is '      +NAN'"), STR("answer is '{:+010A}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{: 010A}'"), nan_pos);
+
+  check(STR("answer is '      -NAN'"), STR("answer is '{:010A}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:-010A}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:+010A}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{: 010A}'"), nan_neg);
+
+  // *** precision ***
+  // See format_test_floating_point_hex_upper_case_precision
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_hex_lower_case_precision(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   1.000000p-2'"), STR("answer is '{:14.6a}'"), F(0.25));
+  check(STR("answer is '   1.000000p-2'"), STR("answer is '{:>14.6a}'"), F(0.25));
+  check(STR("answer is '1.000000p-2   '"), STR("answer is '{:<14.6a}'"), F(0.25));
+  check(STR("answer is ' 1.000000p-2  '"), STR("answer is '{:^14.6a}'"), F(0.25));
+
+  check(STR("answer is '---1.000000p-3'"), STR("answer is '{:->14.6a}'"), F(125e-3));
+  check(STR("answer is '1.000000p-3---'"), STR("answer is '{:-<14.6a}'"), F(125e-3));
+  check(STR("answer is '-1.000000p-3--'"), STR("answer is '{:-^14.6a}'"), F(125e-3));
+
+  check(STR("answer is '***inf'"), STR("answer is '{:*>6.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf***'"), STR("answer is '{:*<6.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*inf**'"), STR("answer is '{:*^6.6a}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-inf'"), STR("answer is '{:#>7.6a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf###'"), STR("answer is '{:#<7.6a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-inf##'"), STR("answer is '{:#^7.6a}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^nan'"), STR("answer is '{:^>6.6a}'"), nan_pos);
+  check(STR("answer is 'nan^^^'"), STR("answer is '{:^<6.6a}'"), nan_pos);
+  check(STR("answer is '^nan^^'"), STR("answer is '{:^^6.6a}'"), nan_pos);
+
+  check(STR("answer is '000-nan'"), STR("answer is '{:0>7.6a}'"), nan_neg);
+  check(STR("answer is '-nan000'"), STR("answer is '{:0<7.6a}'"), nan_neg);
+  check(STR("answer is '0-nan00'"), STR("answer is '{:0^7.6a}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   1.000000p-2'"), STR("answer is '{:>014.6a}'"), F(0.25));
+  check(STR("answer is '1.000000p-2   '"), STR("answer is '{:<014.6a}'"), F(0.25));
+  check(STR("answer is ' 1.000000p-2  '"), STR("answer is '{:^014.6a}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0.000000p+0'"), STR("answer is '{:.6a}'"), F(0));
+  check(STR("answer is '0.000000p+0'"), STR("answer is '{:-.6a}'"), F(0));
+  check(STR("answer is '+0.000000p+0'"), STR("answer is '{:+.6a}'"), F(0));
+  check(STR("answer is ' 0.000000p+0'"), STR("answer is '{: .6a}'"), F(0));
+
+  check(STR("answer is '-0.000000p+0'"), STR("answer is '{:.6a}'"), F(-0.));
+  check(STR("answer is '-0.000000p+0'"), STR("answer is '{:-.6a}'"), F(-0.));
+  check(STR("answer is '-0.000000p+0'"), STR("answer is '{:+.6a}'"), F(-0.));
+  check(STR("answer is '-0.000000p+0'"), STR("answer is '{: .6a}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'inf'"), STR("answer is '{:.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf'"), STR("answer is '{:-.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+inf'"), STR("answer is '{:+.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' inf'"), STR("answer is '{: .6a}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-inf'"), STR("answer is '{:.6a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:-.6a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:+.6a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{: .6a}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:.6a}'"), nan_pos);
+  check(STR("answer is 'nan'"), STR("answer is '{:-.6a}'"), nan_pos);
+  check(STR("answer is '+nan'"), STR("answer is '{:+.6a}'"), nan_pos);
+  check(STR("answer is ' nan'"), STR("answer is '{: .6a}'"), nan_pos);
+
+  check(STR("answer is '-nan'"), STR("answer is '{:.6a}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:-.6a}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:+.6a}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{: .6a}'"), nan_neg);
+
+  // *** alternate form ***
+  check(STR("answer is '1.400000p+1'"), STR("answer is '{:#.6a}'"), F(2.5));
+
+  check(STR("answer is 'inf'"), STR("answer is '{:#.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:#.6a}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:#.6a}'"), nan_pos);
+  check(STR("answer is '-nan'"), STR("answer is '{:#.6a}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '1.000000p-5'"), STR("answer is '{:011.6a}'"), 0.03125);
+  check(STR("answer is '+1.000000p-5'"), STR("answer is '{:+012.6a}'"), 0.03125);
+  check(STR("answer is '+01.000000p-5'"), STR("answer is '{:+013.6a}'"), 0.03125);
+
+  check(STR("answer is '0001.000000p-5'"), STR("answer is '{:014.6a}'"), 0.03125);
+  check(STR("answer is '0001.000000p-5'"), STR("answer is '{:-014.6a}'"), 0.03125);
+  check(STR("answer is '+001.000000p-5'"), STR("answer is '{:+014.6a}'"), 0.03125);
+  check(STR("answer is ' 001.000000p-5'"), STR("answer is '{: 014.6a}'"), 0.03125);
+
+  check(STR("answer is '       inf'"), STR("answer is '{:010.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{:-010.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +inf'"), STR("answer is '{:+010.6a}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{: 010.6a}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -inf'"), STR("answer is '{:010.6a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:-010.6a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:+010.6a}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{: 010.6a}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       nan'"), STR("answer is '{:010.6a}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{:-010.6a}'"), nan_pos);
+  check(STR("answer is '      +nan'"), STR("answer is '{:+010.6a}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{: 010.6a}'"), nan_pos);
+
+  check(STR("answer is '      -nan'"), STR("answer is '{:010.6a}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:-010.6a}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:+010.6a}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{: 010.6a}'"), nan_neg);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_hex_upper_case_precision(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   1.000000P-2'"), STR("answer is '{:14.6A}'"), F(0.25));
+  check(STR("answer is '   1.000000P-2'"), STR("answer is '{:>14.6A}'"), F(0.25));
+  check(STR("answer is '1.000000P-2   '"), STR("answer is '{:<14.6A}'"), F(0.25));
+  check(STR("answer is ' 1.000000P-2  '"), STR("answer is '{:^14.6A}'"), F(0.25));
+
+  check(STR("answer is '---1.000000P-3'"), STR("answer is '{:->14.6A}'"), F(125e-3));
+  check(STR("answer is '1.000000P-3---'"), STR("answer is '{:-<14.6A}'"), F(125e-3));
+  check(STR("answer is '-1.000000P-3--'"), STR("answer is '{:-^14.6A}'"), F(125e-3));
+
+  check(STR("answer is '***INF'"), STR("answer is '{:*>6.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF***'"), STR("answer is '{:*<6.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*INF**'"), STR("answer is '{:*^6.6A}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-INF'"), STR("answer is '{:#>7.6A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF###'"), STR("answer is '{:#<7.6A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-INF##'"), STR("answer is '{:#^7.6A}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^NAN'"), STR("answer is '{:^>6.6A}'"), nan_pos);
+  check(STR("answer is 'NAN^^^'"), STR("answer is '{:^<6.6A}'"), nan_pos);
+  check(STR("answer is '^NAN^^'"), STR("answer is '{:^^6.6A}'"), nan_pos);
+
+  check(STR("answer is '000-NAN'"), STR("answer is '{:0>7.6A}'"), nan_neg);
+  check(STR("answer is '-NAN000'"), STR("answer is '{:0<7.6A}'"), nan_neg);
+  check(STR("answer is '0-NAN00'"), STR("answer is '{:0^7.6A}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   1.000000P-2'"), STR("answer is '{:>014.6A}'"), F(0.25));
+  check(STR("answer is '1.000000P-2   '"), STR("answer is '{:<014.6A}'"), F(0.25));
+  check(STR("answer is ' 1.000000P-2  '"), STR("answer is '{:^014.6A}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0.000000P+0'"), STR("answer is '{:.6A}'"), F(0));
+  check(STR("answer is '0.000000P+0'"), STR("answer is '{:-.6A}'"), F(0));
+  check(STR("answer is '+0.000000P+0'"), STR("answer is '{:+.6A}'"), F(0));
+  check(STR("answer is ' 0.000000P+0'"), STR("answer is '{: .6A}'"), F(0));
+
+  check(STR("answer is '-0.000000P+0'"), STR("answer is '{:.6A}'"), F(-0.));
+  check(STR("answer is '-0.000000P+0'"), STR("answer is '{:-.6A}'"), F(-0.));
+  check(STR("answer is '-0.000000P+0'"), STR("answer is '{:+.6A}'"), F(-0.));
+  check(STR("answer is '-0.000000P+0'"), STR("answer is '{: .6A}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'INF'"), STR("answer is '{:.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF'"), STR("answer is '{:-.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+INF'"), STR("answer is '{:+.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' INF'"), STR("answer is '{: .6A}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-INF'"), STR("answer is '{:.6A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:-.6A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:+.6A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{: .6A}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:.6A}'"), nan_pos);
+  check(STR("answer is 'NAN'"), STR("answer is '{:-.6A}'"), nan_pos);
+  check(STR("answer is '+NAN'"), STR("answer is '{:+.6A}'"), nan_pos);
+  check(STR("answer is ' NAN'"), STR("answer is '{: .6A}'"), nan_pos);
+
+  check(STR("answer is '-NAN'"), STR("answer is '{:.6A}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:-.6A}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:+.6A}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{: .6A}'"), nan_neg);
+
+  // *** alternate form ***
+  check(STR("answer is '1.400000P+1'"), STR("answer is '{:#.6A}'"), F(2.5));
+
+  check(STR("answer is 'INF'"), STR("answer is '{:#.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:#.6A}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:#.6A}'"), nan_pos);
+  check(STR("answer is '-NAN'"), STR("answer is '{:#.6A}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '1.000000P-5'"), STR("answer is '{:011.6A}'"), 0.03125);
+  check(STR("answer is '+1.000000P-5'"), STR("answer is '{:+012.6A}'"), 0.03125);
+  check(STR("answer is '+01.000000P-5'"), STR("answer is '{:+013.6A}'"), 0.03125);
+
+  check(STR("answer is '0001.000000P-5'"), STR("answer is '{:014.6A}'"), 0.03125);
+  check(STR("answer is '0001.000000P-5'"), STR("answer is '{:-014.6A}'"), 0.03125);
+  check(STR("answer is '+001.000000P-5'"), STR("answer is '{:+014.6A}'"), 0.03125);
+  check(STR("answer is ' 001.000000P-5'"), STR("answer is '{: 014.6A}'"), 0.03125);
+
+  check(STR("answer is '       INF'"), STR("answer is '{:010.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{:-010.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +INF'"), STR("answer is '{:+010.6A}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{: 010.6A}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -INF'"), STR("answer is '{:010.6A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:-010.6A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:+010.6A}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{: 010.6A}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       NAN'"), STR("answer is '{:010.6A}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{:-010.6A}'"), nan_pos);
+  check(STR("answer is '      +NAN'"), STR("answer is '{:+010.6A}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{: 010.6A}'"), nan_pos);
+
+  check(STR("answer is '      -NAN'"), STR("answer is '{:010.6A}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:-010.6A}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:+010.6A}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{: 010.6A}'"), nan_neg);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_scientific_lower_case(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   2.500000e-01'"), STR("answer is '{:15e}'"), F(0.25));
+  check(STR("answer is '   2.500000e-01'"), STR("answer is '{:>15e}'"), F(0.25));
+  check(STR("answer is '2.500000e-01   '"), STR("answer is '{:<15e}'"), F(0.25));
+  check(STR("answer is ' 2.500000e-01  '"), STR("answer is '{:^15e}'"), F(0.25));
+
+  check(STR("answer is '---1.250000e-01'"), STR("answer is '{:->15e}'"), F(125e-3));
+  check(STR("answer is '1.250000e-01---'"), STR("answer is '{:-<15e}'"), F(125e-3));
+  check(STR("answer is '-1.250000e-01--'"), STR("answer is '{:-^15e}'"), F(125e-3));
+
+  check(STR("answer is '***inf'"), STR("answer is '{:*>6e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf***'"), STR("answer is '{:*<6e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*inf**'"), STR("answer is '{:*^6e}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-inf'"), STR("answer is '{:#>7e}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf###'"), STR("answer is '{:#<7e}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-inf##'"), STR("answer is '{:#^7e}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^nan'"), STR("answer is '{:^>6e}'"), nan_pos);
+  check(STR("answer is 'nan^^^'"), STR("answer is '{:^<6e}'"), nan_pos);
+  check(STR("answer is '^nan^^'"), STR("answer is '{:^^6e}'"), nan_pos);
+
+  check(STR("answer is '000-nan'"), STR("answer is '{:0>7e}'"), nan_neg);
+  check(STR("answer is '-nan000'"), STR("answer is '{:0<7e}'"), nan_neg);
+  check(STR("answer is '0-nan00'"), STR("answer is '{:0^7e}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   2.500000e-01'"), STR("answer is '{:>015e}'"), F(0.25));
+  check(STR("answer is '2.500000e-01   '"), STR("answer is '{:<015e}'"), F(0.25));
+  check(STR("answer is ' 2.500000e-01  '"), STR("answer is '{:^015e}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0.000000e+00'"), STR("answer is '{:e}'"), F(0));
+  check(STR("answer is '0.000000e+00'"), STR("answer is '{:-e}'"), F(0));
+  check(STR("answer is '+0.000000e+00'"), STR("answer is '{:+e}'"), F(0));
+  check(STR("answer is ' 0.000000e+00'"), STR("answer is '{: e}'"), F(0));
+
+  check(STR("answer is '-0.000000e+00'"), STR("answer is '{:e}'"), F(-0.));
+  check(STR("answer is '-0.000000e+00'"), STR("answer is '{:-e}'"), F(-0.));
+  check(STR("answer is '-0.000000e+00'"), STR("answer is '{:+e}'"), F(-0.));
+  check(STR("answer is '-0.000000e+00'"), STR("answer is '{: e}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'inf'"), STR("answer is '{:e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf'"), STR("answer is '{:-e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+inf'"), STR("answer is '{:+e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' inf'"), STR("answer is '{: e}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-inf'"), STR("answer is '{:e}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:-e}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:+e}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{: e}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:e}'"), nan_pos);
+  check(STR("answer is 'nan'"), STR("answer is '{:-e}'"), nan_pos);
+  check(STR("answer is '+nan'"), STR("answer is '{:+e}'"), nan_pos);
+  check(STR("answer is ' nan'"), STR("answer is '{: e}'"), nan_pos);
+
+  check(STR("answer is '-nan'"), STR("answer is '{:e}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:-e}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:+e}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{: e}'"), nan_neg);
+
+  // *** alternate form **
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0e+00'"), STR("answer is '{:.0e}'"), F(0));
+  check(STR("answer is '0.e+00'"), STR("answer is '{:#.0e}'"), F(0));
+
+  check(STR("answer is '0.000000e+00'"), STR("answer is '{:#e}'"), F(0));
+  check(STR("answer is '2.500000e+00'"), STR("answer is '{:#e}'"), F(2.5));
+
+  check(STR("answer is 'inf'"), STR("answer is '{:#e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:#e}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:#e}'"), nan_pos);
+  check(STR("answer is '-nan'"), STR("answer is '{:#e}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '3.125000e-02'"), STR("answer is '{:07e}'"), 0.03125);
+  check(STR("answer is '+3.125000e-02'"), STR("answer is '{:+07e}'"), 0.03125);
+  check(STR("answer is '+3.125000e-02'"), STR("answer is '{:+08e}'"), 0.03125);
+  check(STR("answer is '+3.125000e-02'"), STR("answer is '{:+09e}'"), 0.03125);
+
+  check(STR("answer is '003.125000e-02'"), STR("answer is '{:014e}'"), 0.03125);
+  check(STR("answer is '003.125000e-02'"), STR("answer is '{:-014e}'"), 0.03125);
+  check(STR("answer is '+03.125000e-02'"), STR("answer is '{:+014e}'"), 0.03125);
+  check(STR("answer is ' 03.125000e-02'"), STR("answer is '{: 014e}'"), 0.03125);
+
+  check(STR("answer is '       inf'"), STR("answer is '{:010e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{:-010e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +inf'"), STR("answer is '{:+010e}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{: 010e}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -inf'"), STR("answer is '{:010e}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:-010e}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:+010e}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{: 010e}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       nan'"), STR("answer is '{:010e}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{:-010e}'"), nan_pos);
+  check(STR("answer is '      +nan'"), STR("answer is '{:+010e}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{: 010e}'"), nan_pos);
+
+  check(STR("answer is '      -nan'"), STR("answer is '{:010e}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:-010e}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:+010e}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{: 010e}'"), nan_neg);
+
+  // *** precision ***
+  check(STR("answer is '3e-02'"), STR("answer is '{:.0e}'"), 0.03125);
+  check(STR("answer is '3.1e-02'"), STR("answer is '{:.1e}'"), 0.03125);
+  check(STR("answer is '3.125e-02'"), STR("answer is '{:.3e}'"), 0.03125);
+  check(STR("answer is '3.1250000000e-02'"), STR("answer is '{:.10e}'"), 0.03125);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_scientific_upper_case(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   2.500000E-01'"), STR("answer is '{:15E}'"), F(0.25));
+  check(STR("answer is '   2.500000E-01'"), STR("answer is '{:>15E}'"), F(0.25));
+  check(STR("answer is '2.500000E-01   '"), STR("answer is '{:<15E}'"), F(0.25));
+  check(STR("answer is ' 2.500000E-01  '"), STR("answer is '{:^15E}'"), F(0.25));
+
+  check(STR("answer is '---1.250000E-01'"), STR("answer is '{:->15E}'"), F(125e-3));
+  check(STR("answer is '1.250000E-01---'"), STR("answer is '{:-<15E}'"), F(125e-3));
+  check(STR("answer is '-1.250000E-01--'"), STR("answer is '{:-^15E}'"), F(125e-3));
+
+  check(STR("answer is '***INF'"), STR("answer is '{:*>6E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF***'"), STR("answer is '{:*<6E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*INF**'"), STR("answer is '{:*^6E}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-INF'"), STR("answer is '{:#>7E}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF###'"), STR("answer is '{:#<7E}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-INF##'"), STR("answer is '{:#^7E}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^NAN'"), STR("answer is '{:^>6E}'"), nan_pos);
+  check(STR("answer is 'NAN^^^'"), STR("answer is '{:^<6E}'"), nan_pos);
+  check(STR("answer is '^NAN^^'"), STR("answer is '{:^^6E}'"), nan_pos);
+
+  check(STR("answer is '000-NAN'"), STR("answer is '{:0>7E}'"), nan_neg);
+  check(STR("answer is '-NAN000'"), STR("answer is '{:0<7E}'"), nan_neg);
+  check(STR("answer is '0-NAN00'"), STR("answer is '{:0^7E}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   2.500000E-01'"), STR("answer is '{:>015E}'"), F(0.25));
+  check(STR("answer is '2.500000E-01   '"), STR("answer is '{:<015E}'"), F(0.25));
+  check(STR("answer is ' 2.500000E-01  '"), STR("answer is '{:^015E}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0.000000E+00'"), STR("answer is '{:E}'"), F(0));
+  check(STR("answer is '0.000000E+00'"), STR("answer is '{:-E}'"), F(0));
+  check(STR("answer is '+0.000000E+00'"), STR("answer is '{:+E}'"), F(0));
+  check(STR("answer is ' 0.000000E+00'"), STR("answer is '{: E}'"), F(0));
+
+  check(STR("answer is '-0.000000E+00'"), STR("answer is '{:E}'"), F(-0.));
+  check(STR("answer is '-0.000000E+00'"), STR("answer is '{:-E}'"), F(-0.));
+  check(STR("answer is '-0.000000E+00'"), STR("answer is '{:+E}'"), F(-0.));
+  check(STR("answer is '-0.000000E+00'"), STR("answer is '{: E}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'INF'"), STR("answer is '{:E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF'"), STR("answer is '{:-E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+INF'"), STR("answer is '{:+E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' INF'"), STR("answer is '{: E}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-INF'"), STR("answer is '{:E}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:-E}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:+E}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{: E}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:E}'"), nan_pos);
+  check(STR("answer is 'NAN'"), STR("answer is '{:-E}'"), nan_pos);
+  check(STR("answer is '+NAN'"), STR("answer is '{:+E}'"), nan_pos);
+  check(STR("answer is ' NAN'"), STR("answer is '{: E}'"), nan_pos);
+
+  check(STR("answer is '-NAN'"), STR("answer is '{:E}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:-E}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:+E}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{: E}'"), nan_neg);
+
+  // *** alternate form **
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0E+00'"), STR("answer is '{:.0E}'"), F(0));
+  check(STR("answer is '0.E+00'"), STR("answer is '{:#.0E}'"), F(0));
+
+  check(STR("answer is '0.000000E+00'"), STR("answer is '{:#E}'"), F(0));
+  check(STR("answer is '2.500000E+00'"), STR("answer is '{:#E}'"), F(2.5));
+
+  check(STR("answer is 'INF'"), STR("answer is '{:#E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:#E}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:#E}'"), nan_pos);
+  check(STR("answer is '-NAN'"), STR("answer is '{:#E}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '3.125000E-02'"), STR("answer is '{:07E}'"), 0.03125);
+  check(STR("answer is '+3.125000E-02'"), STR("answer is '{:+07E}'"), 0.03125);
+  check(STR("answer is '+3.125000E-02'"), STR("answer is '{:+08E}'"), 0.03125);
+  check(STR("answer is '+3.125000E-02'"), STR("answer is '{:+09E}'"), 0.03125);
+
+  check(STR("answer is '003.125000E-02'"), STR("answer is '{:014E}'"), 0.03125);
+  check(STR("answer is '003.125000E-02'"), STR("answer is '{:-014E}'"), 0.03125);
+  check(STR("answer is '+03.125000E-02'"), STR("answer is '{:+014E}'"), 0.03125);
+  check(STR("answer is ' 03.125000E-02'"), STR("answer is '{: 014E}'"), 0.03125);
+
+  check(STR("answer is '       INF'"), STR("answer is '{:010E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{:-010E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +INF'"), STR("answer is '{:+010E}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{: 010E}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -INF'"), STR("answer is '{:010E}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:-010E}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:+010E}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{: 010E}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       NAN'"), STR("answer is '{:010E}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{:-010E}'"), nan_pos);
+  check(STR("answer is '      +NAN'"), STR("answer is '{:+010E}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{: 010E}'"), nan_pos);
+
+  check(STR("answer is '      -NAN'"), STR("answer is '{:010E}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:-010E}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:+010E}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{: 010E}'"), nan_neg);
+
+  // *** precision ***
+  check(STR("answer is '3E-02'"), STR("answer is '{:.0E}'"), 0.03125);
+  check(STR("answer is '3.1E-02'"), STR("answer is '{:.1E}'"), 0.03125);
+  check(STR("answer is '3.125E-02'"), STR("answer is '{:.3E}'"), 0.03125);
+  check(STR("answer is '3.1250000000E-02'"), STR("answer is '{:.10E}'"), 0.03125);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_fixed_lower_case(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   0.250000'"), STR("answer is '{:11f}'"), F(0.25));
+  check(STR("answer is '   0.250000'"), STR("answer is '{:>11f}'"), F(0.25));
+  check(STR("answer is '0.250000   '"), STR("answer is '{:<11f}'"), F(0.25));
+  check(STR("answer is ' 0.250000  '"), STR("answer is '{:^11f}'"), F(0.25));
+
+  check(STR("answer is '---0.125000'"), STR("answer is '{:->11f}'"), F(125e-3));
+  check(STR("answer is '0.125000---'"), STR("answer is '{:-<11f}'"), F(125e-3));
+  check(STR("answer is '-0.125000--'"), STR("answer is '{:-^11f}'"), F(125e-3));
+
+  check(STR("answer is '***inf'"), STR("answer is '{:*>6f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf***'"), STR("answer is '{:*<6f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*inf**'"), STR("answer is '{:*^6f}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-inf'"), STR("answer is '{:#>7f}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf###'"), STR("answer is '{:#<7f}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-inf##'"), STR("answer is '{:#^7f}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^nan'"), STR("answer is '{:^>6f}'"), nan_pos);
+  check(STR("answer is 'nan^^^'"), STR("answer is '{:^<6f}'"), nan_pos);
+  check(STR("answer is '^nan^^'"), STR("answer is '{:^^6f}'"), nan_pos);
+
+  check(STR("answer is '000-nan'"), STR("answer is '{:0>7f}'"), nan_neg);
+  check(STR("answer is '-nan000'"), STR("answer is '{:0<7f}'"), nan_neg);
+  check(STR("answer is '0-nan00'"), STR("answer is '{:0^7f}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   0.250000'"), STR("answer is '{:>011f}'"), F(0.25));
+  check(STR("answer is '0.250000   '"), STR("answer is '{:<011f}'"), F(0.25));
+  check(STR("answer is ' 0.250000  '"), STR("answer is '{:^011f}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0.000000'"), STR("answer is '{:f}'"), F(0));
+  check(STR("answer is '0.000000'"), STR("answer is '{:-f}'"), F(0));
+  check(STR("answer is '+0.000000'"), STR("answer is '{:+f}'"), F(0));
+  check(STR("answer is ' 0.000000'"), STR("answer is '{: f}'"), F(0));
+
+  check(STR("answer is '-0.000000'"), STR("answer is '{:f}'"), F(-0.));
+  check(STR("answer is '-0.000000'"), STR("answer is '{:-f}'"), F(-0.));
+  check(STR("answer is '-0.000000'"), STR("answer is '{:+f}'"), F(-0.));
+  check(STR("answer is '-0.000000'"), STR("answer is '{: f}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'inf'"), STR("answer is '{:f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf'"), STR("answer is '{:-f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+inf'"), STR("answer is '{:+f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' inf'"), STR("answer is '{: f}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-inf'"), STR("answer is '{:f}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:-f}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:+f}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{: f}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:f}'"), nan_pos);
+  check(STR("answer is 'nan'"), STR("answer is '{:-f}'"), nan_pos);
+  check(STR("answer is '+nan'"), STR("answer is '{:+f}'"), nan_pos);
+  check(STR("answer is ' nan'"), STR("answer is '{: f}'"), nan_pos);
+
+  check(STR("answer is '-nan'"), STR("answer is '{:f}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:-f}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:+f}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{: f}'"), nan_neg);
+
+  // *** alternate form **
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0'"), STR("answer is '{:.0f}'"), F(0));
+  check(STR("answer is '0.'"), STR("answer is '{:#.0f}'"), F(0));
+
+  check(STR("answer is '0.000000'"), STR("answer is '{:#f}'"), F(0));
+  check(STR("answer is '2.500000'"), STR("answer is '{:#f}'"), F(2.5));
+
+  check(STR("answer is 'inf'"), STR("answer is '{:#f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:#f}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:#f}'"), nan_pos);
+  check(STR("answer is '-nan'"), STR("answer is '{:#f}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '0.031250'"), STR("answer is '{:07f}'"), 0.03125);
+  check(STR("answer is '+0.031250'"), STR("answer is '{:+07f}'"), 0.03125);
+  check(STR("answer is '+0.031250'"), STR("answer is '{:+08f}'"), 0.03125);
+  check(STR("answer is '+0.031250'"), STR("answer is '{:+09f}'"), 0.03125);
+
+  check(STR("answer is '000.031250'"), STR("answer is '{:010f}'"), 0.03125);
+  check(STR("answer is '000.031250'"), STR("answer is '{:-010f}'"), 0.03125);
+  check(STR("answer is '+00.031250'"), STR("answer is '{:+010f}'"), 0.03125);
+  check(STR("answer is ' 00.031250'"), STR("answer is '{: 010f}'"), 0.03125);
+
+  check(STR("answer is '       inf'"), STR("answer is '{:010f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{:-010f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +inf'"), STR("answer is '{:+010f}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{: 010f}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -inf'"), STR("answer is '{:010f}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:-010f}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:+010f}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{: 010f}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       nan'"), STR("answer is '{:010f}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{:-010f}'"), nan_pos);
+  check(STR("answer is '      +nan'"), STR("answer is '{:+010f}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{: 010f}'"), nan_pos);
+
+  check(STR("answer is '      -nan'"), STR("answer is '{:010f}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:-010f}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:+010f}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{: 010f}'"), nan_neg);
+
+  // *** precision ***
+  check(STR("answer is '0'"), STR("answer is '{:.0f}'"), 0.03125);
+  check(STR("answer is '0.0'"), STR("answer is '{:.1f}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.5f}'"), 0.03125);
+  check(STR("answer is '0.0312500000'"), STR("answer is '{:.10f}'"), 0.03125);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_fixed_upper_case(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   0.250000'"), STR("answer is '{:11F}'"), F(0.25));
+  check(STR("answer is '   0.250000'"), STR("answer is '{:>11F}'"), F(0.25));
+  check(STR("answer is '0.250000   '"), STR("answer is '{:<11F}'"), F(0.25));
+  check(STR("answer is ' 0.250000  '"), STR("answer is '{:^11F}'"), F(0.25));
+
+  check(STR("answer is '---0.125000'"), STR("answer is '{:->11F}'"), F(125e-3));
+  check(STR("answer is '0.125000---'"), STR("answer is '{:-<11F}'"), F(125e-3));
+  check(STR("answer is '-0.125000--'"), STR("answer is '{:-^11F}'"), F(125e-3));
+
+  check(STR("answer is '***INF'"), STR("answer is '{:*>6F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF***'"), STR("answer is '{:*<6F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*INF**'"), STR("answer is '{:*^6F}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-INF'"), STR("answer is '{:#>7F}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF###'"), STR("answer is '{:#<7F}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-INF##'"), STR("answer is '{:#^7F}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^NAN'"), STR("answer is '{:^>6F}'"), nan_pos);
+  check(STR("answer is 'NAN^^^'"), STR("answer is '{:^<6F}'"), nan_pos);
+  check(STR("answer is '^NAN^^'"), STR("answer is '{:^^6F}'"), nan_pos);
+
+  check(STR("answer is '000-NAN'"), STR("answer is '{:0>7F}'"), nan_neg);
+  check(STR("answer is '-NAN000'"), STR("answer is '{:0<7F}'"), nan_neg);
+  check(STR("answer is '0-NAN00'"), STR("answer is '{:0^7F}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   0.250000'"), STR("answer is '{:>011F}'"), F(0.25));
+  check(STR("answer is '0.250000   '"), STR("answer is '{:<011F}'"), F(0.25));
+  check(STR("answer is ' 0.250000  '"), STR("answer is '{:^011F}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0.000000'"), STR("answer is '{:F}'"), F(0));
+  check(STR("answer is '0.000000'"), STR("answer is '{:-F}'"), F(0));
+  check(STR("answer is '+0.000000'"), STR("answer is '{:+F}'"), F(0));
+  check(STR("answer is ' 0.000000'"), STR("answer is '{: F}'"), F(0));
+
+  check(STR("answer is '-0.000000'"), STR("answer is '{:F}'"), F(-0.));
+  check(STR("answer is '-0.000000'"), STR("answer is '{:-F}'"), F(-0.));
+  check(STR("answer is '-0.000000'"), STR("answer is '{:+F}'"), F(-0.));
+  check(STR("answer is '-0.000000'"), STR("answer is '{: F}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'INF'"), STR("answer is '{:F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF'"), STR("answer is '{:-F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+INF'"), STR("answer is '{:+F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' INF'"), STR("answer is '{: F}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-INF'"), STR("answer is '{:F}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:-F}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:+F}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{: F}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:F}'"), nan_pos);
+  check(STR("answer is 'NAN'"), STR("answer is '{:-F}'"), nan_pos);
+  check(STR("answer is '+NAN'"), STR("answer is '{:+F}'"), nan_pos);
+  check(STR("answer is ' NAN'"), STR("answer is '{: F}'"), nan_pos);
+
+  check(STR("answer is '-NAN'"), STR("answer is '{:F}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:-F}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:+F}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{: F}'"), nan_neg);
+
+  // *** alternate form **
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0'"), STR("answer is '{:.0F}'"), F(0));
+  check(STR("answer is '0.'"), STR("answer is '{:#.0F}'"), F(0));
+
+  check(STR("answer is '0.000000'"), STR("answer is '{:#F}'"), F(0));
+  check(STR("answer is '2.500000'"), STR("answer is '{:#F}'"), F(2.5));
+
+  check(STR("answer is 'INF'"), STR("answer is '{:#F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:#F}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:#F}'"), nan_pos);
+  check(STR("answer is '-NAN'"), STR("answer is '{:#F}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '0.031250'"), STR("answer is '{:07F}'"), 0.03125);
+  check(STR("answer is '+0.031250'"), STR("answer is '{:+07F}'"), 0.03125);
+  check(STR("answer is '+0.031250'"), STR("answer is '{:+08F}'"), 0.03125);
+  check(STR("answer is '+0.031250'"), STR("answer is '{:+09F}'"), 0.03125);
+
+  check(STR("answer is '000.031250'"), STR("answer is '{:010F}'"), 0.03125);
+  check(STR("answer is '000.031250'"), STR("answer is '{:-010F}'"), 0.03125);
+  check(STR("answer is '+00.031250'"), STR("answer is '{:+010F}'"), 0.03125);
+  check(STR("answer is ' 00.031250'"), STR("answer is '{: 010F}'"), 0.03125);
+
+  check(STR("answer is '       INF'"), STR("answer is '{:010F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{:-010F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +INF'"), STR("answer is '{:+010F}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{: 010F}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -INF'"), STR("answer is '{:010F}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:-010F}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:+010F}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{: 010F}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       NAN'"), STR("answer is '{:010F}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{:-010F}'"), nan_pos);
+  check(STR("answer is '      +NAN'"), STR("answer is '{:+010F}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{: 010F}'"), nan_pos);
+
+  check(STR("answer is '      -NAN'"), STR("answer is '{:010F}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:-010F}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:+010F}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{: 010F}'"), nan_neg);
+
+  // *** precision ***
+  check(STR("answer is '0'"), STR("answer is '{:.0F}'"), 0.03125);
+  check(STR("answer is '0.0'"), STR("answer is '{:.1F}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.5F}'"), 0.03125);
+  check(STR("answer is '0.0312500000'"), STR("answer is '{:.10F}'"), 0.03125);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_general_lower_case(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   0.25'"), STR("answer is '{:7g}'"), F(0.25));
+  check(STR("answer is '   0.25'"), STR("answer is '{:>7g}'"), F(0.25));
+  check(STR("answer is '0.25   '"), STR("answer is '{:<7g}'"), F(0.25));
+  check(STR("answer is ' 0.25  '"), STR("answer is '{:^7g}'"), F(0.25));
+
+  check(STR("answer is '---0.125'"), STR("answer is '{:->8g}'"), F(125e-3));
+  check(STR("answer is '0.125---'"), STR("answer is '{:-<8g}'"), F(125e-3));
+  check(STR("answer is '-0.125--'"), STR("answer is '{:-^8g}'"), F(125e-3));
+
+  check(STR("answer is '***inf'"), STR("answer is '{:*>6g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf***'"), STR("answer is '{:*<6g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*inf**'"), STR("answer is '{:*^6g}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-inf'"), STR("answer is '{:#>7g}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf###'"), STR("answer is '{:#<7g}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-inf##'"), STR("answer is '{:#^7g}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^nan'"), STR("answer is '{:^>6g}'"), nan_pos);
+  check(STR("answer is 'nan^^^'"), STR("answer is '{:^<6g}'"), nan_pos);
+  check(STR("answer is '^nan^^'"), STR("answer is '{:^^6g}'"), nan_pos);
+
+  check(STR("answer is '000-nan'"), STR("answer is '{:0>7g}'"), nan_neg);
+  check(STR("answer is '-nan000'"), STR("answer is '{:0<7g}'"), nan_neg);
+  check(STR("answer is '0-nan00'"), STR("answer is '{:0^7g}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   0.25'"), STR("answer is '{:>07g}'"), F(0.25));
+  check(STR("answer is '0.25   '"), STR("answer is '{:<07g}'"), F(0.25));
+  check(STR("answer is ' 0.25  '"), STR("answer is '{:^07g}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0'"), STR("answer is '{:g}'"), F(0));
+  check(STR("answer is '0'"), STR("answer is '{:-g}'"), F(0));
+  check(STR("answer is '+0'"), STR("answer is '{:+g}'"), F(0));
+  check(STR("answer is ' 0'"), STR("answer is '{: g}'"), F(0));
+
+  check(STR("answer is '-0'"), STR("answer is '{:g}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{:-g}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{:+g}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{: g}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'inf'"), STR("answer is '{:g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf'"), STR("answer is '{:-g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+inf'"), STR("answer is '{:+g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' inf'"), STR("answer is '{: g}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-inf'"), STR("answer is '{:g}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:-g}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:+g}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{: g}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:g}'"), nan_pos);
+  check(STR("answer is 'nan'"), STR("answer is '{:-g}'"), nan_pos);
+  check(STR("answer is '+nan'"), STR("answer is '{:+g}'"), nan_pos);
+  check(STR("answer is ' nan'"), STR("answer is '{: g}'"), nan_pos);
+
+  check(STR("answer is '-nan'"), STR("answer is '{:g}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:-g}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:+g}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{: g}'"), nan_neg);
+
+  // *** alternate form **
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0'"), STR("answer is '{:.0g}'"), F(0));
+  check(STR("answer is '0.'"), STR("answer is '{:#.0g}'"), F(0));
+
+  check(STR("answer is '0.'"), STR("answer is '{:#g}'"), F(0));
+  check(STR("answer is '2.5'"), STR("answer is '{:#g}'"), F(2.5));
+
+  check(STR("answer is 'inf'"), STR("answer is '{:#g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:#g}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:#g}'"), nan_pos);
+  check(STR("answer is '-nan'"), STR("answer is '{:#g}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '0.03125'"), STR("answer is '{:06g}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+06g}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+07g}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+08g}'"), 0.03125);
+
+  check(STR("answer is '000.03125'"), STR("answer is '{:09g}'"), 0.03125);
+  check(STR("answer is '000.03125'"), STR("answer is '{:-09g}'"), 0.03125);
+  check(STR("answer is '+00.03125'"), STR("answer is '{:+09g}'"), 0.03125);
+  check(STR("answer is ' 00.03125'"), STR("answer is '{: 09g}'"), 0.03125);
+
+  check(STR("answer is '       inf'"), STR("answer is '{:010g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{:-010g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +inf'"), STR("answer is '{:+010g}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{: 010g}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -inf'"), STR("answer is '{:010g}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:-010g}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:+010g}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{: 010g}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       nan'"), STR("answer is '{:010g}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{:-010g}'"), nan_pos);
+  check(STR("answer is '      +nan'"), STR("answer is '{:+010g}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{: 010g}'"), nan_pos);
+
+  check(STR("answer is '      -nan'"), STR("answer is '{:010g}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:-010g}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:+010g}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{: 010g}'"), nan_neg);
+
+  // *** precision ***
+  check(STR("answer is '0.03'"), STR("answer is '{:.0g}'"), 0.03125);
+  check(STR("answer is '0.03'"), STR("answer is '{:.1g}'"), 0.03125);
+  check(STR("answer is '0.031'"), STR("answer is '{:.2g}'"), 0.03125);
+  check(STR("answer is '0.0312'"), STR("answer is '{:.3g}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.4g}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.5g}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.10g}'"), 0.03125);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_general_upper_case(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   0.25'"), STR("answer is '{:7G}'"), F(0.25));
+  check(STR("answer is '   0.25'"), STR("answer is '{:>7G}'"), F(0.25));
+  check(STR("answer is '0.25   '"), STR("answer is '{:<7G}'"), F(0.25));
+  check(STR("answer is ' 0.25  '"), STR("answer is '{:^7G}'"), F(0.25));
+
+  check(STR("answer is '---0.125'"), STR("answer is '{:->8G}'"), F(125e-3));
+  check(STR("answer is '0.125---'"), STR("answer is '{:-<8G}'"), F(125e-3));
+  check(STR("answer is '-0.125--'"), STR("answer is '{:-^8G}'"), F(125e-3));
+
+  check(STR("answer is '***INF'"), STR("answer is '{:*>6G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF***'"), STR("answer is '{:*<6G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*INF**'"), STR("answer is '{:*^6G}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-INF'"), STR("answer is '{:#>7G}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF###'"), STR("answer is '{:#<7G}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-INF##'"), STR("answer is '{:#^7G}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^NAN'"), STR("answer is '{:^>6G}'"), nan_pos);
+  check(STR("answer is 'NAN^^^'"), STR("answer is '{:^<6G}'"), nan_pos);
+  check(STR("answer is '^NAN^^'"), STR("answer is '{:^^6G}'"), nan_pos);
+
+  check(STR("answer is '000-NAN'"), STR("answer is '{:0>7G}'"), nan_neg);
+  check(STR("answer is '-NAN000'"), STR("answer is '{:0<7G}'"), nan_neg);
+  check(STR("answer is '0-NAN00'"), STR("answer is '{:0^7G}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   0.25'"), STR("answer is '{:>07G}'"), F(0.25));
+  check(STR("answer is '0.25   '"), STR("answer is '{:<07G}'"), F(0.25));
+  check(STR("answer is ' 0.25  '"), STR("answer is '{:^07G}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0'"), STR("answer is '{:G}'"), F(0));
+  check(STR("answer is '0'"), STR("answer is '{:-G}'"), F(0));
+  check(STR("answer is '+0'"), STR("answer is '{:+G}'"), F(0));
+  check(STR("answer is ' 0'"), STR("answer is '{: G}'"), F(0));
+
+  check(STR("answer is '-0'"), STR("answer is '{:G}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{:-G}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{:+G}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{: G}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'INF'"), STR("answer is '{:G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'INF'"), STR("answer is '{:-G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+INF'"), STR("answer is '{:+G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' INF'"), STR("answer is '{: G}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-INF'"), STR("answer is '{:G}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:-G}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:+G}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{: G}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:G}'"), nan_pos);
+  check(STR("answer is 'NAN'"), STR("answer is '{:-G}'"), nan_pos);
+  check(STR("answer is '+NAN'"), STR("answer is '{:+G}'"), nan_pos);
+  check(STR("answer is ' NAN'"), STR("answer is '{: G}'"), nan_pos);
+
+  check(STR("answer is '-NAN'"), STR("answer is '{:G}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:-G}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{:+G}'"), nan_neg);
+  check(STR("answer is '-NAN'"), STR("answer is '{: G}'"), nan_neg);
+
+  // *** alternate form **
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0'"), STR("answer is '{:.0G}'"), F(0));
+  check(STR("answer is '0.'"), STR("answer is '{:#.0G}'"), F(0));
+
+  check(STR("answer is '0.'"), STR("answer is '{:#G}'"), F(0));
+  check(STR("answer is '2.5'"), STR("answer is '{:#G}'"), F(2.5));
+
+  check(STR("answer is 'INF'"), STR("answer is '{:#G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-INF'"), STR("answer is '{:#G}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'NAN'"), STR("answer is '{:#G}'"), nan_pos);
+  check(STR("answer is '-NAN'"), STR("answer is '{:#G}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '0.03125'"), STR("answer is '{:06G}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+06G}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+07G}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+08G}'"), 0.03125);
+
+  check(STR("answer is '000.03125'"), STR("answer is '{:09G}'"), 0.03125);
+  check(STR("answer is '000.03125'"), STR("answer is '{:-09G}'"), 0.03125);
+  check(STR("answer is '+00.03125'"), STR("answer is '{:+09G}'"), 0.03125);
+  check(STR("answer is ' 00.03125'"), STR("answer is '{: 09G}'"), 0.03125);
+
+  check(STR("answer is '       INF'"), STR("answer is '{:010G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{:-010G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +INF'"), STR("answer is '{:+010G}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       INF'"), STR("answer is '{: 010G}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -INF'"), STR("answer is '{:010G}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:-010G}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{:+010G}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -INF'"), STR("answer is '{: 010G}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       NAN'"), STR("answer is '{:010G}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{:-010G}'"), nan_pos);
+  check(STR("answer is '      +NAN'"), STR("answer is '{:+010G}'"), nan_pos);
+  check(STR("answer is '       NAN'"), STR("answer is '{: 010G}'"), nan_pos);
+
+  check(STR("answer is '      -NAN'"), STR("answer is '{:010G}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:-010G}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{:+010G}'"), nan_neg);
+  check(STR("answer is '      -NAN'"), STR("answer is '{: 010G}'"), nan_neg);
+
+  // *** precision ***
+  check(STR("answer is '0.03'"), STR("answer is '{:.0G}'"), 0.03125);
+  check(STR("answer is '0.03'"), STR("answer is '{:.1G}'"), 0.03125);
+  check(STR("answer is '0.031'"), STR("answer is '{:.2G}'"), 0.03125);
+  check(STR("answer is '0.0312'"), STR("answer is '{:.3G}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.4G}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.5G}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.10G}'"), 0.03125);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_default(TestFunction check) {
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   0.25'"), STR("answer is '{:7}'"), F(0.25));
+  check(STR("answer is '   0.25'"), STR("answer is '{:>7}'"), F(0.25));
+  check(STR("answer is '0.25   '"), STR("answer is '{:<7}'"), F(0.25));
+  check(STR("answer is ' 0.25  '"), STR("answer is '{:^7}'"), F(0.25));
+
+  check(STR("answer is '---0.125'"), STR("answer is '{:->8}'"), F(125e-3));
+  check(STR("answer is '0.125---'"), STR("answer is '{:-<8}'"), F(125e-3));
+  check(STR("answer is '-0.125--'"), STR("answer is '{:-^8}'"), F(125e-3));
+
+  check(STR("answer is '***inf'"), STR("answer is '{:*>6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf***'"), STR("answer is '{:*<6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*inf**'"), STR("answer is '{:*^6}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-inf'"), STR("answer is '{:#>7}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf###'"), STR("answer is '{:#<7}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-inf##'"), STR("answer is '{:#^7}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^nan'"), STR("answer is '{:^>6}'"), nan_pos);
+  check(STR("answer is 'nan^^^'"), STR("answer is '{:^<6}'"), nan_pos);
+  check(STR("answer is '^nan^^'"), STR("answer is '{:^^6}'"), nan_pos);
+
+  check(STR("answer is '000-nan'"), STR("answer is '{:0>7}'"), nan_neg);
+  check(STR("answer is '-nan000'"), STR("answer is '{:0<7}'"), nan_neg);
+  check(STR("answer is '0-nan00'"), STR("answer is '{:0^7}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   0.25'"), STR("answer is '{:>07}'"), F(0.25));
+  check(STR("answer is '0.25   '"), STR("answer is '{:<07}'"), F(0.25));
+  check(STR("answer is ' 0.25  '"), STR("answer is '{:^07}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0'"), STR("answer is '{:}'"), F(0));
+  check(STR("answer is '0'"), STR("answer is '{:-}'"), F(0));
+  check(STR("answer is '+0'"), STR("answer is '{:+}'"), F(0));
+  check(STR("answer is ' 0'"), STR("answer is '{: }'"), F(0));
+
+  check(STR("answer is '-0'"), STR("answer is '{:}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{:-}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{:+}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{: }'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'inf'"), STR("answer is '{:}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf'"), STR("answer is '{:-}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+inf'"), STR("answer is '{:+}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' inf'"), STR("answer is '{: }'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-inf'"), STR("answer is '{:}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:-}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:+}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{: }'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:}'"), nan_pos);
+  check(STR("answer is 'nan'"), STR("answer is '{:-}'"), nan_pos);
+  check(STR("answer is '+nan'"), STR("answer is '{:+}'"), nan_pos);
+  check(STR("answer is ' nan'"), STR("answer is '{: }'"), nan_pos);
+
+  check(STR("answer is '-nan'"), STR("answer is '{:}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:-}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:+}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{: }'"), nan_neg);
+
+  // *** alternate form ***
+  check(STR("answer is '0.'"), STR("answer is '{:#}'"), F(0));
+  check(STR("answer is '2.5'"), STR("answer is '{:#}'"), F(2.5));
+
+  check(STR("answer is 'inf'"), STR("answer is '{:#}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:#}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:#}'"), nan_pos);
+  check(STR("answer is '-nan'"), STR("answer is '{:#}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '0.03125'"), STR("answer is '{:07}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+07}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+08}'"), 0.03125);
+  check(STR("answer is '+00.03125'"), STR("answer is '{:+09}'"), 0.03125);
+
+  check(STR("answer is '0000.03125'"), STR("answer is '{:010}'"), 0.03125);
+  check(STR("answer is '0000.03125'"), STR("answer is '{:-010}'"), 0.03125);
+  check(STR("answer is '+000.03125'"), STR("answer is '{:+010}'"), 0.03125);
+  check(STR("answer is ' 000.03125'"), STR("answer is '{: 010}'"), 0.03125);
+
+  check(STR("answer is '       inf'"), STR("answer is '{:010}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{:-010}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +inf'"), STR("answer is '{:+010}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{: 010}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -inf'"), STR("answer is '{:010}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:-010}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:+010}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{: 010}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       nan'"), STR("answer is '{:010}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{:-010}'"), nan_pos);
+  check(STR("answer is '      +nan'"), STR("answer is '{:+010}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{: 010}'"), nan_pos);
+
+  check(STR("answer is '      -nan'"), STR("answer is '{:010}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:-010}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:+010}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{: 010}'"), nan_neg);
+
+  // *** precision ***
+  // See format_test_floating_point_default_precision
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction>
+void format_test_floating_point_default_precision(TestFunction check) {
+
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
+  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+
+  // *** align-fill & width ***
+  check(STR("answer is '   0.25'"), STR("answer is '{:7.6}'"), F(0.25));
+  check(STR("answer is '   0.25'"), STR("answer is '{:>7.6}'"), F(0.25));
+  check(STR("answer is '0.25   '"), STR("answer is '{:<7.6}'"), F(0.25));
+  check(STR("answer is ' 0.25  '"), STR("answer is '{:^7.6}'"), F(0.25));
+
+  check(STR("answer is '---0.125'"), STR("answer is '{:->8.6}'"), F(125e-3));
+  check(STR("answer is '0.125---'"), STR("answer is '{:-<8.6}'"), F(125e-3));
+  check(STR("answer is '-0.125--'"), STR("answer is '{:-^8.6}'"), F(125e-3));
+
+  check(STR("answer is '***inf'"), STR("answer is '{:*>6.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf***'"), STR("answer is '{:*<6.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '*inf**'"), STR("answer is '{:*^6.6}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '###-inf'"), STR("answer is '{:#>7.6}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf###'"), STR("answer is '{:#<7.6}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '#-inf##'"), STR("answer is '{:#^7.6}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '^^^nan'"), STR("answer is '{:^>6.6}'"), nan_pos);
+  check(STR("answer is 'nan^^^'"), STR("answer is '{:^<6.6}'"), nan_pos);
+  check(STR("answer is '^nan^^'"), STR("answer is '{:^^6.6}'"), nan_pos);
+
+  check(STR("answer is '000-nan'"), STR("answer is '{:0>7.6}'"), nan_neg);
+  check(STR("answer is '-nan000'"), STR("answer is '{:0<7.6}'"), nan_neg);
+  check(STR("answer is '0-nan00'"), STR("answer is '{:0^7.6}'"), nan_neg);
+
+  // Test whether zero padding is ignored
+  check(STR("answer is '   0.25'"), STR("answer is '{:>07.6}'"), F(0.25));
+  check(STR("answer is '0.25   '"), STR("answer is '{:<07.6}'"), F(0.25));
+  check(STR("answer is ' 0.25  '"), STR("answer is '{:^07.6}'"), F(0.25));
+
+  // *** Sign ***
+  check(STR("answer is '0'"), STR("answer is '{:.6}'"), F(0));
+  check(STR("answer is '0'"), STR("answer is '{:-.6}'"), F(0));
+  check(STR("answer is '+0'"), STR("answer is '{:+.6}'"), F(0));
+  check(STR("answer is ' 0'"), STR("answer is '{: .6}'"), F(0));
+
+  check(STR("answer is '-0'"), STR("answer is '{:.6}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{:-.6}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{:+.6}'"), F(-0.));
+  check(STR("answer is '-0'"), STR("answer is '{: .6}'"), F(-0.));
+
+  // [format.string.std]/5 The sign option applies to floating-point infinity and NaN.
+  check(STR("answer is 'inf'"), STR("answer is '{:.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is 'inf'"), STR("answer is '{:-.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '+inf'"), STR("answer is '{:+.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is ' inf'"), STR("answer is '{: .6}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '-inf'"), STR("answer is '{:.6}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:-.6}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:+.6}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{: .6}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:.6}'"), nan_pos);
+  check(STR("answer is 'nan'"), STR("answer is '{:-.6}'"), nan_pos);
+  check(STR("answer is '+nan'"), STR("answer is '{:+.6}'"), nan_pos);
+  check(STR("answer is ' nan'"), STR("answer is '{: .6}'"), nan_pos);
+
+  check(STR("answer is '-nan'"), STR("answer is '{:.6}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:-.6}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{:+.6}'"), nan_neg);
+  check(STR("answer is '-nan'"), STR("answer is '{: .6}'"), nan_neg);
+
+  // *** alternate form **
+  // When precision is zero there's no decimal point except when the alternate form is specified.
+  check(STR("answer is '0'"), STR("answer is '{:.0}'"), F(0));
+  check(STR("answer is '0.'"), STR("answer is '{:#.0}'"), F(0));
+
+  check(STR("answer is '0.'"), STR("answer is '{:#.6}'"), F(0));
+  check(STR("answer is '2.5'"), STR("answer is '{:#.6}'"), F(2.5));
+
+  check(STR("answer is 'inf'"), STR("answer is '{:#.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '-inf'"), STR("answer is '{:#.6}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is 'nan'"), STR("answer is '{:#.6}'"), nan_pos);
+  check(STR("answer is '-nan'"), STR("answer is '{:#.6}'"), nan_neg);
+
+  // *** zero-padding & width ***
+  check(STR("answer is '0.03125'"), STR("answer is '{:06.6}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+06.6}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+07.6}'"), 0.03125);
+  check(STR("answer is '+0.03125'"), STR("answer is '{:+08.6}'"), 0.03125);
+
+  check(STR("answer is '000.03125'"), STR("answer is '{:09.6}'"), 0.03125);
+  check(STR("answer is '000.03125'"), STR("answer is '{:-09.6}'"), 0.03125);
+  check(STR("answer is '+00.03125'"), STR("answer is '{:+09.6}'"), 0.03125);
+  check(STR("answer is ' 00.03125'"), STR("answer is '{: 09.6}'"), 0.03125);
+
+  check(STR("answer is '       inf'"), STR("answer is '{:010.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{:-010.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '      +inf'"), STR("answer is '{:+010.6}'"), std::numeric_limits<F>::infinity());
+  check(STR("answer is '       inf'"), STR("answer is '{: 010.6}'"), std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '      -inf'"), STR("answer is '{:010.6}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:-010.6}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{:+010.6}'"), -std::numeric_limits<F>::infinity());
+  check(STR("answer is '      -inf'"), STR("answer is '{: 010.6}'"), -std::numeric_limits<F>::infinity());
+
+  check(STR("answer is '       nan'"), STR("answer is '{:010.6}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{:-010.6}'"), nan_pos);
+  check(STR("answer is '      +nan'"), STR("answer is '{:+010.6}'"), nan_pos);
+  check(STR("answer is '       nan'"), STR("answer is '{: 010.6}'"), nan_pos);
+
+  check(STR("answer is '      -nan'"), STR("answer is '{:010.6}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:-010.6}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{:+010.6}'"), nan_neg);
+  check(STR("answer is '      -nan'"), STR("answer is '{: 010.6}'"), nan_neg);
+
+  // *** precision ***
+  check(STR("answer is '0.03'"), STR("answer is '{:.0}'"), 0.03125);
+  check(STR("answer is '0.03'"), STR("answer is '{:.1}'"), 0.03125);
+  check(STR("answer is '0.031'"), STR("answer is '{:.2}'"), 0.03125);
+  check(STR("answer is '0.0312'"), STR("answer is '{:.3}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.4}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.5}'"), 0.03125);
+  check(STR("answer is '0.03125'"), STR("answer is '{:.10}'"), 0.03125);
+
+  // *** locale-specific form ***
+  // See locale-specific_form.pass.cpp
+}
+
+template <class F, class CharT, class TestFunction, class ExceptionTest>
+void format_test_floating_point(TestFunction check, ExceptionTest check_exception) {
+  format_test_floating_point_hex_lower_case<F, CharT>(check);
+  format_test_floating_point_hex_upper_case<F, CharT>(check);
+  format_test_floating_point_hex_lower_case_precision<F, CharT>(check);
+  format_test_floating_point_hex_upper_case_precision<F, CharT>(check);
+
+  format_test_floating_point_scientific_lower_case<F, CharT>(check);
+  format_test_floating_point_scientific_upper_case<F, CharT>(check);
+
+  format_test_floating_point_fixed_lower_case<F, CharT>(check);
+  format_test_floating_point_fixed_upper_case<F, CharT>(check);
+
+  format_test_floating_point_general_lower_case<F, CharT>(check);
+  format_test_floating_point_general_upper_case<F, CharT>(check);
+
+  format_test_floating_point_default<F, CharT>(check);
+  format_test_floating_point_default_precision<F, CharT>(check);
+
+  // *** type ***
+  for (const auto& fmt : invalid_types<CharT>("aAeEfFgG"))
+    check_exception("The format-spec type has a type not supported for a floating-point argument", fmt, F(1));
+}
+
+template <class CharT, class TestFunction, class ExceptionTest>
+void format_test_floating_point(TestFunction check, ExceptionTest check_exception) {
+  format_test_floating_point<float, CharT>(check, check_exception);
+  format_test_floating_point<double, CharT>(check, check_exception);
+  format_test_floating_point<long double, CharT>(check, check_exception);
+}
+
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   // *** Test escaping  ***
@@ -1115,12 +2607,10 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   format_test_unsigned_integer<CharT>(check, check_exception);
 
   // *** Test floating point format argument ***
-// TODO FMT Enable after floating-point support has been enabled
-#if 0
-  check(STR("hello 42.000000"), STR("hello {}"), static_cast<float>(42));
-  check(STR("hello 42.000000"), STR("hello {}"), static_cast<double>(42));
-  check(STR("hello 42.000000"), STR("hello {}"), static_cast<long double>(42));
-#endif
+  check(STR("hello 42"), STR("hello {}"), static_cast<float>(42));
+  check(STR("hello 42"), STR("hello {}"), static_cast<double>(42));
+  check(STR("hello 42"), STR("hello {}"), static_cast<long double>(42));
+  format_test_floating_point<CharT>(check, check_exception);
 }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
