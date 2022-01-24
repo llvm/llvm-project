@@ -3964,8 +3964,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
 let Defs = [ITSTATE] in
 def t2IT : Thumb2XI<(outs), (ins it_pred:$cc, it_mask:$mask),
                     AddrModeNone, 2,  IIC_iALUx,
-                    "it$mask\t$cc", "", []>,
-           ComplexDeprecationPredicate<"IT"> {
+                    "it$mask\t$cc", "", []> {
   // 16-bit instruction.
   let Inst{31-16} = 0x0000;
   let Inst{15-8} = 0b10111111;

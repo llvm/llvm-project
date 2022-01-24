@@ -1,5 +1,5 @@
-; RUN: llc -O3 -mtriple=armv8a-none-eabi -mattr=+fullfp16 -o - %s | FileCheck %s
-; RUN: llc -O3 -mtriple=thumbv8a-none-eabi -mattr=+fullfp16 -arm-no-restrict-it -o - %s | FileCheck %s
+; RUN: llc -O3 -mtriple=armv8a-none-eabi -mattr=+fullfp16 -arm-restrict-it -o - %s | FileCheck %s
+; RUN: llc -O3 -mtriple=thumbv8a-none-eabi -mattr=+fullfp16 -o - %s | FileCheck %s
 
 ; Require the vmul.f16 not to be predicated, because it's illegal to
 ; do so with fp16 instructions

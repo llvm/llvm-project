@@ -33,28 +33,28 @@ mcr p15, #0, r5, c7, c10, #5
 @ CHECK-NO-WARN-NOT: warning: deprecated since v7, use 'dmb'
 it ge
 movge r0, #4096
-@ CHECK-THUMBV8: warning: deprecated instruction in IT block
+@ CHECK-THUMBV8-NOT: warning
 @ CHECK-THUMBV7-NOT: warning
 @ CHECK-NO-WARN-NOT: warning
 ite ge
 addge r0, r1
 addlt r0, r2
-@ CHECK-ARMV8: warning: applying IT instruction to more than one subsequent instruction is deprecated
-@ CHECK-THUMBV8: warning: applying IT instruction to more than one subsequent instruction is deprecated
+@ CHECK-ARMV8-NOT: warning
+@ CHECK-THUMBV8-NOT: warning
 @ CHECK-THUMBV7-NOT: warning
 @ CHECK-NO-WARN-NOT: warning
 it ge
 movge r0, pc // invalid operand
-@ CHECK-THUMBV8: warning: deprecated instruction in IT block
+@ CHECK-THUMBV8-NOT: warning
 @ CHECK-THUMBV7-NOT: warning
 @ CHECK-NO-WARN-NOT: warning
 it ge
 revge r0, r0 // invalid instruction
-@ CHECK-THUMBV8: warning: deprecated instruction in IT block
+@ CHECK-THUMBV8-NOT: warning
 @ CHECK-THUMBV7-NOT: warning
 @ CHECK-NO-WARN-NOT: warning
 it ge
 clzge r0, r0 // only has 32-bit form
-@ CHECK-THUMBV8: warning: deprecated instruction in IT block
+@ CHECK-THUMBV8-NOT: warning
 @ CHECK-THUMBV7-NOT: warning
 @ CHECK-NO-WARN-NOT: warning

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv8 -stop-after=if-converter -arm-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv8 -stop-after=if-converter -arm-atomic-cfg-tidy=0 -arm-restrict-it | FileCheck %s
 
 %struct.S = type { i8* (i8*)*, [1 x i8] }
 define internal zeroext i8 @bar(%struct.S* %x, %struct.S* nocapture %y) nounwind readonly {
@@ -18,7 +18,7 @@ bb:
   %9 = icmp eq i32 %8, 0
   br i1 %9, label %return, label %bb2
 
-; CHECK: bb.2.bb2:
+; CHECK: bb.1.bb:
 ; CHECK: successors: %bb.4(0x40000000), %bb.3(0x40000000)
 
 bb2:

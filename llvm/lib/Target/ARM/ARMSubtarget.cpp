@@ -52,19 +52,16 @@ UseFusedMulOps("arm-use-mulops",
 
 enum ITMode {
   DefaultIT,
-  RestrictedIT,
-  NoRestrictedIT
+  RestrictedIT
 };
 
 static cl::opt<ITMode>
 IT(cl::desc("IT block support"), cl::Hidden, cl::init(DefaultIT),
    cl::ZeroOrMore,
    cl::values(clEnumValN(DefaultIT, "arm-default-it",
-                         "Generate IT block based on arch"),
+                         "Generate any type of IT block"),
               clEnumValN(RestrictedIT, "arm-restrict-it",
-                         "Disallow deprecated IT based on ARMv8"),
-              clEnumValN(NoRestrictedIT, "arm-no-restrict-it",
-                         "Allow IT blocks based on ARMv7")));
+                         "Disallow complex IT blocks")));
 
 /// ForceFastISel - Use the fast-isel, even for subtargets where it is not
 /// currently supported (for testing only).
@@ -237,13 +234,10 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   switch (IT) {
   case DefaultIT:
-    RestrictIT = hasV8Ops() && !hasMinSize();
+    RestrictIT = false;
     break;
   case RestrictedIT:
     RestrictIT = true;
-    break;
-  case NoRestrictedIT:
-    RestrictIT = false;
     break;
   }
 

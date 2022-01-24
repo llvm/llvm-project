@@ -49,8 +49,8 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i8_signbit_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    uxtb r1, r1
+; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    movs r1, #1
 ; THUMB8-NEXT:    eor.w r0, r1, r0, lsr #7
@@ -92,8 +92,8 @@ define i1 @scalar_i8_lowestbit_eq(i8 %x, i8 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i8_lowestbit_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    uxtb r1, r1
+; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    movs r1, #1
 ; THUMB8-NEXT:    bic.w r0, r1, r0
@@ -138,8 +138,8 @@ define i1 @scalar_i8_bitsinmiddle_eq(i8 %x, i8 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i8_bitsinmiddle_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    uxtb r1, r1
+; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    and r0, r0, #24
 ; THUMB8-NEXT:    clz r0, r0
@@ -186,8 +186,8 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i16_signbit_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    uxth r0, r0
 ; THUMB8-NEXT:    uxth r1, r1
+; THUMB8-NEXT:    uxth r0, r0
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    movs r1, #1
 ; THUMB8-NEXT:    eor.w r0, r1, r0, lsr #15
@@ -229,8 +229,8 @@ define i1 @scalar_i16_lowestbit_eq(i16 %x, i16 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i16_lowestbit_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    uxth r0, r0
 ; THUMB8-NEXT:    uxth r1, r1
+; THUMB8-NEXT:    uxth r0, r0
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    movs r1, #1
 ; THUMB8-NEXT:    bic.w r0, r1, r0
@@ -276,8 +276,8 @@ define i1 @scalar_i16_bitsinmiddle_eq(i16 %x, i16 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i16_bitsinmiddle_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    uxth r0, r0
 ; THUMB8-NEXT:    uxth r1, r1
+; THUMB8-NEXT:    uxth r0, r0
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    and r0, r0, #4080
 ; THUMB8-NEXT:    clz r0, r0
@@ -481,14 +481,13 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; THUMB8:       @ %bb.0:
 ; THUMB8-NEXT:    rsb.w r3, r2, #32
 ; THUMB8-NEXT:    lsrs r0, r2
-; THUMB8-NEXT:    lsl.w r3, r1, r3
-; THUMB8-NEXT:    orrs r0, r3
 ; THUMB8-NEXT:    subs r2, #32
-; THUMB8-NEXT:    lsr.w r1, r1, r2
-; THUMB8-NEXT:    it mi
-; THUMB8-NEXT:    movmi r1, r0
-; THUMB8-NEXT:    movs r0, #1
-; THUMB8-NEXT:    bics r0, r1
+; THUMB8-NEXT:    lsl.w r3, r1, r3
+; THUMB8-NEXT:    orr.w r0, r0, r3
+; THUMB8-NEXT:    it pl
+; THUMB8-NEXT:    lsrpl.w r0, r1, r2
+; THUMB8-NEXT:    movs r1, #1
+; THUMB8-NEXT:    bic.w r0, r1, r0
 ; THUMB8-NEXT:    bx lr
   %t0 = shl i64 1, %y
   %t1 = and i64 %t0, %x
@@ -565,13 +564,12 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; THUMB8-NEXT:    lsl.w r3, r1, r3
 ; THUMB8-NEXT:    orrs r0, r3
 ; THUMB8-NEXT:    subs.w r3, r2, #32
-; THUMB8-NEXT:    lsr.w r3, r1, r3
-; THUMB8-NEXT:    it mi
-; THUMB8-NEXT:    movmi r3, r0
-; THUMB8-NEXT:    lsr.w r0, r1, r2
 ; THUMB8-NEXT:    it pl
-; THUMB8-NEXT:    movpl r0, #0
-; THUMB8-NEXT:    pkhbt r0, r0, r3
+; THUMB8-NEXT:    lsrpl.w r0, r1, r3
+; THUMB8-NEXT:    lsr.w r1, r1, r2
+; THUMB8-NEXT:    it pl
+; THUMB8-NEXT:    movpl r1, #0
+; THUMB8-NEXT:    pkhbt r0, r1, r0
 ; THUMB8-NEXT:    clz r0, r0
 ; THUMB8-NEXT:    lsrs r0, r0, #5
 ; THUMB8-NEXT:    bx lr
@@ -988,8 +986,8 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i8_signbit_ne:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    uxtb r1, r1
+; THUMB8-NEXT:    uxtb r0, r0
 ; THUMB8-NEXT:    lsrs r0, r1
 ; THUMB8-NEXT:    lsrs r0, r0, #7
 ; THUMB8-NEXT:    bx lr
