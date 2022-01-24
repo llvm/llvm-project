@@ -1348,3 +1348,14 @@ func @write_after_select_read_one(
   // CHECK: return %[[f]], %[[select]]
   return %f, %w : f32, tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_rank(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<*xf32>
+func @tensor_rank(%arg0: tensor<*xf32>) -> index {
+  // CHECK: %[[r:.*]] = memref.rank %[[arg0]]
+  %0 = tensor.rank %arg0 : tensor<*xf32>
+  // CHECK: return %[[r]] : index
+  return %0 : index
+}

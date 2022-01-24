@@ -463,6 +463,35 @@ struct InsertSliceOpInterface
   }
 };
 
+/// Bufferization of tensor.rank. Replace with memref.rank.
+struct RankOpInterface
+    : public BufferizableOpInterface::ExternalModel<RankOpInterface,
+                                                    tensor::RankOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const BufferizationState &state) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return false;
+  }
+
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return OpResult();
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationState &state) const {
+    auto rankOp = cast<tensor::RankOp>(op);
+    Value v = *state.getBuffer(rewriter, rankOp->getOpOperand(0) /*source*/);
+    replaceOpWithNewBufferizedOp<memref::RankOp>(rewriter, op, rankOp.getType(),
+                                                 v);
+    return success();
+  }
+};
+
 } // namespace
 } // namespace tensor
 } // namespace mlir
@@ -475,4 +504,5 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
   registry.addOpInterface<ExtractOp, ExtractOpInterface>();
   registry.addOpInterface<InsertOp, InsertOpInterface>();
   registry.addOpInterface<InsertSliceOp, InsertSliceOpInterface>();
+  registry.addOpInterface<RankOp, RankOpInterface>();
 }
