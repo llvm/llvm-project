@@ -190,3 +190,54 @@ MaybeLocalRepr presburger_utils::computeSingleVarRepr(
   }
   return repr;
 }
+
+void presburger_utils::removeDuplicateDivs(
+    std::vector<SmallVector<int64_t, 8>> &divs,
+    SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
+    llvm::function_ref<bool(unsigned i, unsigned j)> merge) {
+
+  // Find and merge duplicate divisions.
+  // TODO: Add division normalization to support divisions that differ by
+  // a constant.
+  // TODO: Add division ordering such that a division representation for local
+  // identifier at position `i` only depends on local identifiers at position <
+  // `i`. This would make sure that all divisions depending on other local
+  // variables that can be merged, are merged.
+  for (unsigned i = 0; i < divs.size(); ++i) {
+    // Check if a division representation exists for the `i^th` local id.
+    if (denoms[i] == 0)
+      continue;
+    // Check if a division exists which is a duplicate of the division at `i`.
+    for (unsigned j = i + 1; j < divs.size(); ++j) {
+      // Check if a division representation exists for the `j^th` local id.
+      if (denoms[j] == 0)
+        continue;
+      // Check if the denominators match.
+      if (denoms[i] != denoms[j])
+        continue;
+      // Check if the representations are equal.
+      if (divs[i] != divs[j])
+        continue;
+
+      // Merge divisions at position `j` into division at position `i`. If
+      // merge fails, do not merge these divs.
+      bool mergeResult = merge(i, j);
+      if (!mergeResult)
+        continue;
+
+      // Update division information to reflect merging.
+      for (unsigned k = 0, g = divs.size(); k < g; ++k) {
+        SmallVector<int64_t, 8> &div = divs[k];
+        if (denoms[k] != 0) {
+          div[localOffset + i] += div[localOffset + j];
+          div.erase(div.begin() + localOffset + j);
+        }
+      }
+
+      divs.erase(divs.begin() + j);
+      denoms.erase(denoms.begin() + j);
+      // Since `j` can never be zero, we do not need to worry about overflows.
+      --j;
+    }
+  }
+}
