@@ -132,6 +132,10 @@ mlir::bufferization::createFinalizingBufferizePass() {
   return std::make_unique<FinalizingBufferizePass>();
 }
 
+//===----------------------------------------------------------------------===//
+// BufferizableOpInterface-based Bufferization
+//===----------------------------------------------------------------------===//
+
 static bool isaTensor(Type t) { return t.isa<TensorType>(); }
 
 /// Return true if the given op has a tensor result or a tensor operand.
