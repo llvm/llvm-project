@@ -770,7 +770,7 @@ Optional<SmallVector<int64_t, 8>> IntegerPolyhedron::findIntegerSample() const {
   // 6) Return transform * concat(boundedSample, coneSample).
   SmallVector<int64_t, 8> &sample = boundedSample.getValue();
   sample.append(coneSample.begin(), coneSample.end());
-  return transform.preMultiplyColumn(sample);
+  return transform.postMultiplyWithColumn(sample);
 }
 
 /// Helper to evaluate an affine expression at a point.
