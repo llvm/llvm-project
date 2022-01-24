@@ -328,12 +328,14 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
       return true;
     }
 
-    lldb::ThreadSP thread_sp =
-        std::make_shared<ScriptedThread>(*this, error, val->GetAsGeneric());
+    auto thread_or_error = ScriptedThread::Create(*this, val->GetAsGeneric());
 
-    if (!thread_sp || error.Fail())
-      return GetInterface().ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,
-                                                   error.AsCString(), error);
+    if (!thread_or_error)
+      return GetInterface().ErrorWithMessage<bool>(
+          LLVM_PRETTY_FUNCTION, toString(thread_or_error.takeError()), error);
+
+    ThreadSP thread_sp = thread_or_error.get();
+    lldbassert(thread_sp && "Couldn't initialize scripted thread.");
 
     RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
     if (!reg_ctx_sp)

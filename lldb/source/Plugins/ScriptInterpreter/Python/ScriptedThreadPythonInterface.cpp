@@ -32,7 +32,7 @@ ScriptedThreadPythonInterface::ScriptedThreadPythonInterface(
 StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
     const llvm::StringRef class_name, ExecutionContext &exe_ctx,
     StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
-  if (class_name.empty())
+  if (class_name.empty() && !script_obj)
     return {};
 
   ProcessSP process_sp = exe_ctx.GetProcessSP();
