@@ -584,6 +584,42 @@ func @omp_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>, %exp
   return
 }
 
+// CHECK-LABEL: omp_atomic_capture
+// CHECK-SAME: (%[[v:.*]]: memref<i32>, %[[x:.*]]: memref<i32>, %[[expr:.*]]: i32)
+func @omp_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
+  // CHECK: omp.atomic.capture{
+  // CHECK-NEXT: omp.atomic.update %[[x]] = %[[expr]] add %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.atomic.capture{
+    omp.atomic.update %x = %expr add %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>
+    omp.terminator
+  }
+  // CHECK: omp.atomic.capture{
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: omp.atomic.update %[[x]] = %[[expr]] add %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.atomic.capture{
+    omp.atomic.read %v = %x : memref<i32>
+    omp.atomic.update %x = %expr add %x : memref<i32>, i32
+    omp.terminator
+  }
+  // CHECK: omp.atomic.capture{
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: omp.atomic.write %[[x]] = %[[expr]] : memref<i32>, i32
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.atomic.capture{
+    omp.atomic.read %v = %x : memref<i32>
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: omp_sectionsop
 func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
                      %data_var3 : memref<i32>, %redn_var : !llvm.ptr<f32>) {

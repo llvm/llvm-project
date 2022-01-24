@@ -650,6 +650,122 @@ func @omp_atomic_update5(%x: memref<i32>, %expr: i32) {
 
 // -----
 
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  // expected-error @below {{expected three operations in omp.atomic.capture region}}
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : memref<i32>
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.read %v = %x : memref<i32>
+    omp.atomic.read %v = %x : memref<i32>
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.atomic.update %x = %x sub %expr : memref<i32>, i32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{invalid sequence of operations in the capture region}}
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{updated variable in omp.atomic.update must be captured in second operation}}
+    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.atomic.read %v = %y : memref<i32>
+    omp.terminator
+  }
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
+    omp.atomic.read %v = %y : memref<i32>
+    omp.atomic.update %x = %x add %expr : memref<i32>, i32
+    omp.terminator
+  }
+}
+
+// -----
+
+func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>, %expr: i32) {
+  omp.atomic.capture {
+    // expected-error @below {{captured variable in omp.atomic.read must be updated in second operation}}
+    omp.atomic.read %v = %x : memref<i32>
+    omp.atomic.write %y = %expr : memref<i32>, i32
+    omp.terminator
+  }
+}
+
+// -----
+
 func @omp_sections(%data_var1 : memref<i32>, %data_var2 : memref<i32>, %data_var3 : memref<i32>) -> () {
   // expected-error @below {{operand used in both private and firstprivate clauses}}
   omp.sections private(%data_var1 : memref<i32>) firstprivate(%data_var1 : memref<i32>) {
