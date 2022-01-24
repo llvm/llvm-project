@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NanoMipsTargetTransformInfo.h"
 #include "MipsTargetMachine.h"
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
@@ -307,6 +308,11 @@ void MipsPassConfig::addPostRegAlloc() {
 
 TargetTransformInfo
 MipsTargetMachine::getTargetTransformInfo(const Function &F) {
+  if (Subtarget->hasNanoMips()) {
+    LLVM_DEBUG(errs() << "nanoMips Target Transform Info Pass Added\n");
+    return TargetTransformInfo(NanoMipsTTIImpl(this, F));
+  }
+
   if (Subtarget->allowMixed16_32()) {
     LLVM_DEBUG(errs() << "No Target Transform Info Pass Added\n");
     // FIXME: This is no longer necessary as the TTI returned is per-function.
