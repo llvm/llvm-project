@@ -1,3 +1,5 @@
+// Do not edit! -*- read-only -*-
+// See README.txt for instructions
 //===------------------------- ItaniumDemangle.h ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -11,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEMANGLE_ITANIUMDEMANGLE_H
-#define LLVM_DEMANGLE_ITANIUMDEMANGLE_H
+#ifndef DEMANGLE_ITANIUMDEMANGLE_H
+#define DEMANGLE_ITANIUMDEMANGLE_H
 
 // FIXME: (possibly) incomplete list of features that clang mangles that this
 // file does not yet support:
@@ -5749,4 +5751,4 @@ struct ManglingParser : AbstractManglingParser<ManglingParser<Alloc>, Alloc> {
 
 DEMANGLE_NAMESPACE_END
 
-#endif // LLVM_DEMANGLE_ITANIUMDEMANGLE_H
+#endif // DEMANGLE_ITANIUMDEMANGLE_H
