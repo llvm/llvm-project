@@ -959,17 +959,15 @@ define i1 @bool_reduction_v2i64(<2 x i64> %x, <2 x i64> %y) {
 define i1 @bool_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: bool_reduction_v4i32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    movmskps %xmm0, %eax
-; SSE-NEXT:    cmpl $15, %eax
+; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    ptest %xmm0, %xmm0
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: bool_reduction_v4i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    cmpl $15, %eax
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    setne %al
 ; AVX-NEXT:    retq
 ;
