@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Refactor/RefactoringActions.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace clang {
 namespace tooling {
