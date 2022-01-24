@@ -34,16 +34,16 @@ func @main() {
   // CHECK-NEXT:   %[[A:.*]] = memref.alloca() {alignment = 128 : i64} : memref<64xf32>
   // CHECK-NEXT:   %[[B:.*]] = memref.alloca() {alignment = 128 : i64} : memref<64xf32>
   // CHECK-NEXT:   %[[C:.*]] = memref.alloca() {alignment = 128 : i64} : memref<f32>
+  // CHECK-NEXT:   %[[cA:.*]] = memref.cast %[[A]] : memref<64xf32> to memref<64xf32, #[[$DYN_1D_MAP]]>
+  // CHECK-NEXT:   %[[cB:.*]] = memref.cast %[[B]] : memref<64xf32> to memref<64xf32, #[[$DYN_1D_MAP]]>
+  // CHECK-NEXT:   %[[cC:.*]] = memref.cast %[[C]] : memref<f32> to memref<f32, #[[$DYN_0D_MAP]]>
   %A = linalg.init_tensor [64] : tensor<64xf32>
   %B = linalg.init_tensor [64] : tensor<64xf32>
   %C = linalg.init_tensor [] : tensor<f32>
 
   // CHECK-NEXT:   linalg.fill(%[[C1]], %[[A]]) : f32, memref<64xf32>
-  // CHECK-NEXT:   %[[cA:.*]] = memref.cast %[[A]] : memref<64xf32> to memref<64xf32, #[[$DYN_1D_MAP]]>
   // CHECK-NEXT:   linalg.fill(%[[C2]], %[[B]]) : f32, memref<64xf32>
-  // CHECK-NEXT:   %[[cB:.*]] = memref.cast %[[B]] : memref<64xf32> to memref<64xf32, #[[$DYN_1D_MAP]]>
   // CHECK-NEXT:   linalg.fill(%[[C0]], %[[C]]) : f32, memref<f32>
-  // CHECK-NEXT:   %[[cC:.*]] = memref.cast %[[C]] : memref<f32> to memref<f32, #[[$DYN_0D_MAP]]>
   %AA = linalg.fill(%v1, %A) : f32, tensor<64xf32> -> tensor<64xf32>
   %BB = linalg.fill(%v2, %B) : f32, tensor<64xf32> -> tensor<64xf32>
   %CC = linalg.fill(%v0, %C) : f32, tensor<f32> -> tensor<f32>
