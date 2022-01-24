@@ -127,9 +127,14 @@ unsigned DwarfCompileUnit::getOrCreateSourceID(const DIFile *File) {
   if (!File)
     return Asm->OutStreamer->emitDwarfFileDirective(0, "", "", None, None,
                                                     CUID);
-  return Asm->OutStreamer->emitDwarfFileDirective(
-      0, File->getDirectory(), File->getFilename(), DD->getMD5AsBytes(File),
-      File->getSource(), CUID);
+
+  if (LastFile != File) {
+    LastFile = File;
+    LastFileID = Asm->OutStreamer->emitDwarfFileDirective(
+        0, File->getDirectory(), File->getFilename(), DD->getMD5AsBytes(File),
+        File->getSource(), CUID);
+  }
+  return LastFileID;
 }
 
 DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
