@@ -388,12 +388,12 @@ protected:
   /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool determineAndHandleAssignments(ValueHandler &Handler,
-                                     ValueAssigner &Assigner,
-                                     SmallVectorImpl<ArgInfo> &Args,
-                                     MachineIRBuilder &MIRBuilder,
-                                     CallingConv::ID CallConv, bool IsVarArg,
-                                     Register ThisReturnReg = Register()) const;
+  bool
+  determineAndHandleAssignments(ValueHandler &Handler, ValueAssigner &Assigner,
+                                SmallVectorImpl<ArgInfo> &Args,
+                                MachineIRBuilder &MIRBuilder,
+                                CallingConv::ID CallConv, bool IsVarArg,
+                                ArrayRef<Register> ThisReturnRegs = None) const;
 
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
@@ -402,7 +402,7 @@ protected:
                          CCState &CCState,
                          SmallVectorImpl<CCValAssign> &ArgLocs,
                          MachineIRBuilder &MIRBuilder,
-                         Register ThisReturnReg = Register()) const;
+                         ArrayRef<Register> ThisReturnRegs = None) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
