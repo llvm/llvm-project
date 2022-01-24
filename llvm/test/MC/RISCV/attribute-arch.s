@@ -131,6 +131,9 @@
 .attribute arch, "rv32i_zbkc1p0"
 # CHECK: attribute      5, "rv32i2p0_zbkc1p0"
 
+.attribute arch, "rv32i_zbkx1p0"
+# CHECK: attribute      5, "rv32i2p0_zbkx1p0"
+
 .attribute arch, "rv32i_zknd1p0"
 # CHECK: attribute      5, "rv32i2p0_zknd1p0"
 
@@ -150,13 +153,13 @@
 # CHECK: attribute      5, "rv32i2p0_zkr1p0"
 
 .attribute arch, "rv32i_zkn1p0"
-# CHECK: attribute      5, "rv32i2p0_zbkb1p0_zbkc1p0_zkn1p0_zknd1p0_zkne1p0_zknh1p0"
+# CHECK: attribute      5, "rv32i2p0_zbkb1p0_zbkc1p0_zbkx1p0_zkn1p0_zknd1p0_zkne1p0_zknh1p0"
 
 .attribute arch, "rv32i_zks1p0"
-# CHECK: attribute      5, "rv32i2p0_zbkb1p0_zbkc1p0_zks1p0_zksed1p0_zksh1p0"
+# CHECK: attribute      5, "rv32i2p0_zbkb1p0_zbkc1p0_zbkx1p0_zks1p0_zksed1p0_zksh1p0"
 
 .attribute arch, "rv32i_zkt1p0"
 # CHECK: attribute      5, "rv32i2p0_zkt1p0"
 
 .attribute arch, "rv32i_zk1p0"
-# CHECK: attribute      5, "rv32i2p0_zbkb1p0_zbkc1p0_zk1p0_zkn1p0_zknd1p0_zkne1p0_zknh1p0_zkr1p0_zkt1p0"
+# CHECK: attribute      5, "rv32i2p0_zbkb1p0_zbkc1p0_zbkx1p0_zk1p0_zkn1p0_zknd1p0_zkne1p0_zknh1p0_zkr1p0_zkt1p0"
