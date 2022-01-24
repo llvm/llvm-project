@@ -388,7 +388,6 @@ cc_library(
         "//mlir:AffineBufferizableOpInterfaceImpl",
         "//mlir:ArithBufferizableOpInterfaceImpl",
         "//mlir:ArithmeticDialect",
-        "//mlir:BufferizableOpInterface",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationTransforms",
         "//mlir:GPUDialect",
