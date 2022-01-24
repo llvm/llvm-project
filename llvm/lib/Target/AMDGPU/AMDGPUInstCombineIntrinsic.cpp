@@ -182,6 +182,23 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
     }
   }
 
+  // Optimize _offset away when 'offset' is zero
+  if (const auto *OffsetMappingInfo =
+          AMDGPU::getMIMGOffsetMappingInfo(ImageDimIntr->BaseOpcode)) {
+    if (auto *ConstantOffset =
+            dyn_cast<ConstantInt>(II.getOperand(ImageDimIntr->OffsetIndex))) {
+      if (ConstantOffset->isZero()) {
+        const AMDGPU::ImageDimIntrinsicInfo *NewImageDimIntr =
+            AMDGPU::getImageDimIntrinsicByBaseOpcode(
+                OffsetMappingInfo->NoOffset, ImageDimIntr->Dim);
+        return modifyIntrinsicCall(
+            II, NewImageDimIntr->Intr, IC, [&](auto &Args, auto &ArgTys) {
+              Args.erase(Args.begin() + ImageDimIntr->OffsetIndex);
+            });
+      }
+    }
+  }
+
   // Try to use A16 or G16
   if (!ST->hasA16() && !ST->hasG16())
     return None;

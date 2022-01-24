@@ -147,6 +147,22 @@ def MIMGBiasMappingTable : GenericTable {
   let PrimaryKeyName = "getMIMGBiasMappingInfo";
 }
 
+class MIMGOffsetMapping<MIMGBaseOpcode offset, MIMGBaseOpcode nooffset> {
+  MIMGBaseOpcode Offset = offset;
+  MIMGBaseOpcode NoOffset = nooffset;
+}
+
+def MIMGOffsetMappingTable : GenericTable {
+  let FilterClass = "MIMGOffsetMapping";
+  let CppTypeName = "MIMGOffsetMappingInfo";
+  let Fields = ["Offset", "NoOffset"];
+  string TypeOf_Offset = "MIMGBaseOpcode";
+  string TypeOf_NoOffset = "MIMGBaseOpcode";
+
+  let PrimaryKey = ["Offset"];
+  let PrimaryKeyName = "getMIMGOffsetMappingInfo";
+}
+
 class MIMGG16Mapping<MIMGBaseOpcode g, MIMGBaseOpcode g16> {
   MIMGBaseOpcode G = g;
   MIMGBaseOpcode G16 = g16;
@@ -1173,6 +1189,48 @@ def : MIMGBiasMapping<IMAGE_GATHER4_B_O, IMAGE_GATHER4_O>;
 def : MIMGBiasMapping<IMAGE_GATHER4_B_CL_O, IMAGE_GATHER4_CL_O>;
 def : MIMGBiasMapping<IMAGE_GATHER4_C_B_O, IMAGE_GATHER4_C_O>;
 def : MIMGBiasMapping<IMAGE_GATHER4_C_B_CL_O, IMAGE_GATHER4_C_CL_O>;
+
+// Offset to NoOffset Optimization Mapping
+def : MIMGOffsetMapping<IMAGE_SAMPLE_O, IMAGE_SAMPLE>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CL_O, IMAGE_SAMPLE_CL>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_D_O, IMAGE_SAMPLE_D>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_D_CL_O, IMAGE_SAMPLE_D_CL>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_D_O_G16, IMAGE_SAMPLE_D_G16>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_D_CL_O_G16, IMAGE_SAMPLE_D_CL_G16>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_L_O, IMAGE_SAMPLE_L>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_B_O, IMAGE_SAMPLE_B>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_B_CL_O, IMAGE_SAMPLE_B_CL>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_LZ_O, IMAGE_SAMPLE_LZ>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_O, IMAGE_SAMPLE_C>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CL_O, IMAGE_SAMPLE_C_CL>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_O, IMAGE_SAMPLE_C_D>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_CL_O, IMAGE_SAMPLE_C_D_CL>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_O_G16, IMAGE_SAMPLE_C_D_G16>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_D_CL_O_G16, IMAGE_SAMPLE_C_D_CL_G16>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_L_O, IMAGE_SAMPLE_C_L>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_B_CL_O, IMAGE_SAMPLE_C_B_CL>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_B_O, IMAGE_SAMPLE_C_B>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_LZ_O, IMAGE_SAMPLE_C_LZ>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_O, IMAGE_GATHER4>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_CL_O, IMAGE_GATHER4_CL>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_L_O, IMAGE_GATHER4_L>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_B_O, IMAGE_GATHER4_B>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_B_CL_O, IMAGE_GATHER4_B_CL>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_LZ_O, IMAGE_GATHER4_LZ>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_C_O, IMAGE_GATHER4_C>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_C_CL_O, IMAGE_GATHER4_C_CL>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_C_L_O, IMAGE_GATHER4_C_L>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_C_B_O, IMAGE_GATHER4_C_B>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_C_B_CL_O, IMAGE_GATHER4_C_B_CL>;
+def : MIMGOffsetMapping<IMAGE_GATHER4_C_LZ_O, IMAGE_GATHER4_C_LZ>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_O, IMAGE_SAMPLE_CD>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_CL_O, IMAGE_SAMPLE_CD_CL>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_O, IMAGE_SAMPLE_C_CD>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_CL_O, IMAGE_SAMPLE_C_CD_CL>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_O_G16, IMAGE_SAMPLE_CD_G16>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_CD_CL_O_G16, IMAGE_SAMPLE_CD_CL_G16>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_O_G16, IMAGE_SAMPLE_C_CD_G16>;
+def : MIMGOffsetMapping<IMAGE_SAMPLE_C_CD_CL_O_G16, IMAGE_SAMPLE_C_CD_CL_G16>;
 
 // G to G16 Optimization Mapping
 def : MIMGG16Mapping<IMAGE_SAMPLE_D, IMAGE_SAMPLE_D_G16>;
