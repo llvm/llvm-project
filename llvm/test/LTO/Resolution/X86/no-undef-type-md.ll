@@ -1,19 +1,19 @@
 ; RUN: opt <%s -o %t0.o -thinlto-bc -thinlto-split-lto-unit
 ; RUN: llvm-as -o %t1.o %S/Inputs/no-undef-type-md.ll
-; RUN: llvm-lto2 run -o a.out \
+; RUN: llvm-lto2 run -o %t-obj.o \
 ; RUN: %t0.o \
 ; RUN: -r=%t0.o,a, \
 ; RUN: -r=%t0.o,b,pl \
 ; RUN: %t1.o \
 ; RUN: -r=%t1.o,a,pl \
 ; RUN: | FileCheck --allow-empty --check-prefix=ERROR %s
-; RUN llvm-nm a.out.0 a.out.1 -S | FileCheck %s
+; RUN: llvm-nm %t-obj.o.0 %t-obj.o.1 -S | FileCheck %s
 
 ; ERROR-NOT: expected a Function or null
 ; ERROR-NOT: i32 (%0*, i32*)* undef
 
-; CHECK: a.out.0:
-; CHECK: a.out.1:
+; CHECK: -obj.o.0:
+; CHECK: -obj.o.1:
 
 ; ModuleID = 'test.cpp.o'
 source_filename = "test.cpp"
