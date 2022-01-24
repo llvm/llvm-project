@@ -609,6 +609,13 @@ public:
   Register addFlatScratchInit(const SIRegisterInfo &TRI);
   Register addImplicitBufferPtr(const SIRegisterInfo &TRI);
 
+  /// Increment user SGPRs used for padding the argument list only.
+  Register addReservedUserSGPR() {
+    Register Next = getNextUserSGPR();
+    ++NumUserSGPRs;
+    return Next;
+  }
+
   // Add system SGPRs.
   Register addWorkGroupIDX() {
     ArgInfo.WorkGroupIDX = ArgDescriptor::createRegister(getNextSystemSGPR());

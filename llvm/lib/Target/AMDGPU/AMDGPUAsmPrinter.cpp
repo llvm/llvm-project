@@ -900,8 +900,14 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   else if (MFI->hasWorkItemIDY())
     TIDIGCompCnt = 1;
 
+  // The private segment wave byte offset is the last of the system SGPRs. We
+  // initially assumed it was allocated, and may have used it. It shouldn't harm
+  // anything to disable it if we know the stack isn't used here. We may still
+  // have emitted code reading it to initialize scratch, but if that's unused
+  // reading garbage should be OK.
+  const bool EnablePrivateSegment = ProgInfo.ScratchBlocks > 0;
   ProgInfo.ComputePGMRSrc2 =
-      S_00B84C_SCRATCH_EN(ProgInfo.ScratchBlocks > 0) |
+      S_00B84C_SCRATCH_EN(EnablePrivateSegment) |
       S_00B84C_USER_SGPR(MFI->getNumUserSGPRs()) |
       // For AMDHSA, TRAP_HANDLER must be zero, as it is populated by the CP.
       S_00B84C_TRAP_HANDLER(STM.isAmdHsaOS() ? 0 : STM.isTrapHandlerEnabled()) |

@@ -2099,6 +2099,24 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
                                            SIMachineFunctionInfo &Info,
                                            CallingConv::ID CallConv,
                                            bool IsShader) const {
+  if (Subtarget->hasUserSGPRInit16Bug()) {
+    // Pad up the used user SGPRs with dead inputs.
+    unsigned CurrentUserSGPRs = Info.getNumUserSGPRs();
+
+    // Note we do not count the PrivateSegmentWaveByteOffset. We do not want to
+    // rely on it to reach 16 since if we end up having no stack usage, it will
+    // not really be added.
+    unsigned NumRequiredSystemSGPRs = Info.hasWorkGroupIDX() +
+                                      Info.hasWorkGroupIDY() +
+                                      Info.hasWorkGroupIDZ() +
+                                      Info.hasWorkGroupInfo();
+    for (unsigned i = NumRequiredSystemSGPRs + CurrentUserSGPRs; i < 16; ++i) {
+      Register Reg = Info.addReservedUserSGPR();
+      MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
+      CCInfo.AllocateReg(Reg);
+    }
+  }
+
   if (Info.hasWorkGroupIDX()) {
     Register Reg = Info.addWorkGroupIDX();
     MF.addLiveIn(Reg, &AMDGPU::SGPR_32RegClass);
@@ -2143,6 +2161,8 @@ void SITargetLowering::allocateSystemSGPRs(CCState &CCInfo,
     MF.addLiveIn(PrivateSegmentWaveByteOffsetReg, &AMDGPU::SGPR_32RegClass);
     CCInfo.AllocateReg(PrivateSegmentWaveByteOffsetReg);
   }
+
+  assert(!Subtarget->hasUserSGPRInit16Bug() || Info.getNumPreloadedSGPRs() >= 16);
 }
 
 static void reservePrivateMemoryRegs(const TargetMachine &TM,
