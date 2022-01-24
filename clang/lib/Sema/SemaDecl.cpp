@@ -1628,6 +1628,39 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
   return false;
 }
 
+// [module.interface]p6:
+// A redeclaration of an entity X is implicitly exported if X was introduced by
+// an exported declaration; otherwise it shall not be exported.
+bool Sema::CheckRedeclarationExported(NamedDecl *New, NamedDecl *Old) {
+  bool IsNewExported = New->isInExportDeclContext();
+  bool IsOldExported = Old->isInExportDeclContext();
+
+  // It should be irrevelant if both of them are not exported.
+  if (!IsNewExported && !IsOldExported)
+    return false;
+
+  if (IsOldExported)
+    return false;
+
+  assert(IsNewExported);
+
+  Diag(New->getLocation(), diag::err_redeclaration_non_exported) << New;
+  Diag(Old->getLocation(), diag::note_previous_declaration);
+  return true;
+}
+
+// A wrapper function for checking the semantic restrictions of
+// a redeclaration within a module.
+bool Sema::CheckRedeclarationInModule(NamedDecl *New, NamedDecl *Old) {
+  if (CheckRedeclarationModuleOwnership(New, Old))
+    return true;
+
+  if (CheckRedeclarationExported(New, Old))
+    return true;
+
+  return false;
+}
+
 static bool isUsingDecl(NamedDecl *D) {
   return isa<UsingShadowDecl>(D) ||
          isa<UnresolvedUsingTypenameDecl>(D) ||
@@ -3390,7 +3423,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     }
   }
 
-  if (CheckRedeclarationModuleOwnership(New, Old))
+  if (CheckRedeclarationInModule(New, Old))
     return true;
 
   if (!getLangOpts().CPlusPlus) {
@@ -4269,7 +4302,7 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     return New->setInvalidDecl();
   }
 
-  if (CheckRedeclarationModuleOwnership(New, Old))
+  if (CheckRedeclarationInModule(New, Old))
     return;
 
   // Variables with external linkage are analyzed in FinalizeDeclaratorGroup.
@@ -5759,7 +5792,15 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
     else if (isa<BlockDecl>(Cur))
       Diag(Loc, diag::err_invalid_declarator_in_block)
         << Name << SS.getRange();
-    else
+    else if (isa<ExportDecl>(Cur)) {
+      if (!isa<NamespaceDecl>(DC))
+        Diag(Loc, diag::err_export_non_namespace_scope_name)
+            << Name << SS.getRange();
+      else
+        // The cases that DC is not NamespaceDecl should be handled in
+        // CheckRedeclarationExported.
+        return false;
+    } else
       Diag(Loc, diag::err_invalid_declarator_scope)
       << Name << cast<NamedDecl>(Cur) << cast<NamedDecl>(DC) << SS.getRange();
 
@@ -16535,7 +16576,7 @@ CreateNewDecl:
     SetMemberAccessSpecifier(New, PrevDecl, AS);
 
   if (PrevDecl)
-    CheckRedeclarationModuleOwnership(New, PrevDecl);
+    CheckRedeclarationInModule(New, PrevDecl);
 
   if (TUK == TUK_Definition && (!SkipBody || !SkipBody->ShouldSkip))
     New->startDefinition();

@@ -2063,7 +2063,7 @@ DeclResult Sema::CheckClassTemplate(
   }
 
   if (PrevClassTemplate)
-    CheckRedeclarationModuleOwnership(NewTemplate, PrevClassTemplate);
+    CheckRedeclarationInModule(NewTemplate, PrevClassTemplate);
 
   if (Invalid) {
     NewTemplate->setInvalidDecl();
