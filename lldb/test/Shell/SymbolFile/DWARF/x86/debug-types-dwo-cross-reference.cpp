@@ -7,8 +7,8 @@
 // RUN:   -fdebug-types-section -gsplit-dwarf -c -o %t1.o -DONE
 // RUN: %clang %s -target x86_64-pc-linux -fno-standalone-debug -g \
 // RUN:   -fdebug-types-section -gsplit-dwarf -c -o %t2.o -DTWO
-// RUN: llvm-dwarfdump %t1.dwo -debug-types | FileCheck --check-prefix=ONEUNIT %s
-// RUN: llvm-dwarfdump %t2.dwo -debug-types | FileCheck --check-prefix=ONEUNIT %s
+// RUN: llvm-dwarfdump %t1.dwo -debug-types -debug-info | FileCheck --check-prefix=ONEUNIT %s
+// RUN: llvm-dwarfdump %t2.dwo -debug-types -debug-info | FileCheck --check-prefix=ONEUNIT %s
 // RUN: ld.lld %t1.o %t2.o -o %t
 // RUN: %lldb %t -o "target var a b **b.a" -b | FileCheck %s
 
