@@ -27,8 +27,7 @@ class CommandObjectSettingsSet : public CommandObjectRaw {
 public:
   CommandObjectSettingsSet(CommandInterpreter &interpreter)
       : CommandObjectRaw(interpreter, "settings set",
-                         "Set the value of the specified debugger setting."),
-        m_options() {
+                         "Set the value of the specified debugger setting.") {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
     CommandArgumentData var_name_arg;
@@ -87,7 +86,7 @@ insert-before or insert-after.");
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -304,8 +303,7 @@ public:
             "Write matching debugger settings and their "
             "current values to a file that can be read in with "
             "\"settings read\". Defaults to writing all settings.",
-            nullptr),
-        m_options() {
+            nullptr) {
     CommandArgumentEntry arg1;
     CommandArgumentData var_name_arg;
 
@@ -327,7 +325,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 
@@ -417,8 +415,7 @@ public:
       : CommandObjectParsed(
             interpreter, "settings read",
             "Read settings previously saved to a file with \"settings write\".",
-            nullptr),
-        m_options() {}
+            nullptr) {}
 
   ~CommandObjectSettingsRead() override = default;
 
@@ -426,7 +423,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() {}
+    CommandOptions() {}
 
     ~CommandOptions() override = default;
 

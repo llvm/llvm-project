@@ -7803,6 +7803,11 @@ def err_expected_class_or_namespace : Error<"%0 is not a class"
   "%select{ or namespace|, namespace, or enumeration}1">;
 def err_invalid_declarator_scope : Error<"cannot define or redeclare %0 here "
   "because namespace %1 does not enclose namespace %2">;
+def err_export_non_namespace_scope_name : Error<
+  "cannot export %0 as it is not at namespace scope">;
+def err_redeclaration_non_exported : Error <
+  "cannot export redeclaration %0 here since the previous declaration is not "
+  "exported">;
 def err_invalid_declarator_global_scope : Error<
   "definition or redeclaration of %0 cannot name the global scope">;
 def err_invalid_declarator_in_function : Error<
@@ -9368,6 +9373,9 @@ def warn_printf_ObjCflags_without_ObjCConversion: Warning<
   InGroup<Format>;
 def warn_printf_invalid_objc_flag: Warning<
     "'%0' is not a valid object format flag">,
+    InGroup<Format>;
+def warn_printf_narg_not_supported : Warning<
+    "'%%n' specifier not supported on this platform">,
     InGroup<Format>;
 def warn_scanf_scanlist_incomplete : Warning<
   "no closing ']' for '%%[' in scanf format string">,

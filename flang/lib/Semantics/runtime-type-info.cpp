@@ -1065,7 +1065,7 @@ void RuntimeTableBuilder::IncorporateDefinedIoGenericInterfaces(
     GenericKind::DefinedIo definedIo, const Scope *scope) {
   for (; !scope->IsGlobal(); scope = &scope->parent()) {
     if (auto asst{scope->find(name)}; asst != scope->end()) {
-      const Symbol &generic{*asst->second};
+      const Symbol &generic{asst->second->GetUltimate()};
       const auto &genericDetails{generic.get<GenericDetails>()};
       CHECK(std::holds_alternative<GenericKind::DefinedIo>(
           genericDetails.kind().u));

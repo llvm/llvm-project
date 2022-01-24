@@ -45,6 +45,10 @@ struct VPlanTransforms {
   /// in the vectorized loop. There is no need to vectorize the cast - the same
   /// value can be used for both the phi and casts in the vector loop.
   static void removeRedundantInductionCasts(VPlan &Plan);
+
+  /// Try to replace VPWidenCanonicalIVRecipes with a widened canonical IV
+  /// recipe, if it exists.
+  static void removeRedundantCanonicalIVs(VPlan &Plan);
 };
 
 } // namespace llvm

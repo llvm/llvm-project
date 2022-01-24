@@ -580,13 +580,13 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   DataEdit edit;
   edit.descriptor = DataEdit::ListDirected;
   edit.repeat = 1; // may be overridden below
-  edit.modes = connection.modes;
+  edit.modes = io.mutableModes();
   if (hitSlash_) { // everything after '/' is nullified
     edit.descriptor = DataEdit::ListDirectedNullValue;
     return edit;
   }
   char32_t comma{','};
-  if (io.mutableModes().editingFlags & decimalComma) {
+  if (edit.modes.editingFlags & decimalComma) {
     comma = ';';
   }
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
@@ -619,6 +619,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     // Consume comma & whitespace after previous item.
     // This includes the comma between real and imaginary components
     // in list-directed/NAMELIST complex input.
+    // (When DECIMAL='COMMA', the comma is actually a semicolon.)
     io.HandleRelativePosition(1);
     ch = io.GetNextNonBlank();
   }

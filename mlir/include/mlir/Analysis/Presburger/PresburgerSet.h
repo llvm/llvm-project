@@ -36,10 +36,10 @@ public:
   unsigned getNumPolys() const;
 
   /// Return the number of real dimensions.
-  unsigned getNumDims() const;
+  unsigned getNumDimIds() const;
 
   /// Return the number of symbolic dimensions.
-  unsigned getNumSyms() const;
+  unsigned getNumSymbolIds() const;
 
   /// Return a reference to the list of IntegerPolyhedrons.
   ArrayRef<IntegerPolyhedron> getAllIntegerPolyhedron() const;
@@ -82,9 +82,11 @@ public:
   bool isEqual(const PresburgerSet &set) const;
 
   /// Return a universe set of the specified type that contains all points.
-  static PresburgerSet getUniverse(unsigned nDim = 0, unsigned nSym = 0);
+  static PresburgerSet getUniverse(unsigned numDims = 0,
+                                   unsigned numSymbols = 0);
   /// Return an empty set of the specified type that contains no points.
-  static PresburgerSet getEmptySet(unsigned nDim = 0, unsigned nSym = 0);
+  static PresburgerSet getEmptySet(unsigned numDims = 0,
+                                   unsigned numSymbols = 0);
 
   /// Return true if all the sets in the union are known to be integer empty
   /// false otherwise.
@@ -102,19 +104,19 @@ public:
 
 private:
   /// Construct an empty PresburgerSet.
-  PresburgerSet(unsigned nDim = 0, unsigned nSym = 0)
-      : nDim(nDim), nSym(nSym) {}
+  PresburgerSet(unsigned numDims = 0, unsigned numSymbols = 0)
+      : numDims(numDims), numSymbols(numSymbols) {}
 
   /// Return the set difference poly \ set.
   static PresburgerSet getSetDifference(IntegerPolyhedron poly,
                                         const PresburgerSet &set);
 
   /// Number of identifiers corresponding to real dimensions.
-  unsigned nDim;
+  unsigned numDims;
 
   /// Number of symbolic dimensions, unknown but constant for analysis, as in
   /// IntegerPolyhedron.
-  unsigned nSym;
+  unsigned numSymbols;
 
   /// The list of integerPolyhedrons that this set is the union of.
   SmallVector<IntegerPolyhedron, 2> integerPolyhedrons;

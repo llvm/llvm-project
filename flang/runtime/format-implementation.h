@@ -34,59 +34,6 @@ FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
 }
 
 template <typename CONTEXT>
-int FormatControl<CONTEXT>::GetMaxParenthesisNesting(
-    IoErrorHandler &handler, const CharType *format, std::size_t formatLength) {
-  int maxNesting{0};
-  int nesting{0};
-  const CharType *end{format + formatLength};
-  std::optional<CharType> quote;
-  int repeat{0};
-  for (const CharType *p{format}; p < end; ++p) {
-    if (quote) {
-      if (*p == *quote) {
-        quote.reset();
-      }
-    } else if (*p >= '0' && *p <= '9') {
-      repeat = 10 * repeat + *p - '0';
-    } else if (*p != ' ') {
-      switch (*p) {
-      case '\'':
-      case '"':
-        quote = *p;
-        break;
-      case 'h':
-      case 'H': // 9HHOLLERITH
-        p += repeat;
-        if (p >= end) {
-          handler.SignalError(IostatErrorInFormat,
-              "Hollerith (%dH) too long in FORMAT", repeat);
-          return maxNesting;
-        }
-        break;
-      case ' ':
-        break;
-      case '(':
-        ++nesting;
-        maxNesting = std::max(nesting, maxNesting);
-        break;
-      case ')':
-        nesting = std::max(nesting - 1, 0);
-        break;
-      }
-      repeat = 0;
-    }
-  }
-  if (quote) {
-    handler.SignalError(
-        IostatErrorInFormat, "Unbalanced quotation marks in FORMAT string");
-  } else if (nesting) {
-    handler.SignalError(
-        IostatErrorInFormat, "Unbalanced parentheses in FORMAT string");
-  }
-  return maxNesting;
-}
-
-template <typename CONTEXT>
 int FormatControl<CONTEXT>::GetIntField(
     IoErrorHandler &handler, CharType firstCh) {
   CharType ch{firstCh ? firstCh : PeekNext()};
@@ -98,7 +45,11 @@ int FormatControl<CONTEXT>::GetIntField(
   int result{0};
   bool negate{ch == '-'};
   if (negate || ch == '+') {
-    firstCh = '\0';
+    if (firstCh) {
+      firstCh = '\0';
+    } else {
+      ++offset_;
+    }
     ch = PeekNext();
   }
   while (ch >= '0' && ch <= '9') {
@@ -222,6 +173,15 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
 template <typename CONTEXT>
 int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
   int unlimitedLoopCheck{-1};
+  // Do repetitions remain on an unparenthesized data edit?
+  while (height_ > 1 && format_[stack_[height_ - 1].start] != '(') {
+    offset_ = stack_[height_ - 1].start;
+    int repeat{stack_[height_ - 1].remaining};
+    --height_;
+    if (repeat > 0) {
+      return repeat;
+    }
+  }
   while (true) {
     std::optional<int> repeat;
     bool unlimited{false};
@@ -242,16 +202,18 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       unlimited = true;
       ch = GetNextChar(context);
       if (ch != '(') {
-        context.SignalError(IostatErrorInFormat,
-            "Invalid FORMAT: '*' may appear only before '('");
+        ReportBadFormat(context,
+            "Invalid FORMAT: '*' may appear only before '('",
+            maybeReversionPoint);
         return 0;
       }
     }
     ch = Capitalize(ch);
     if (ch == '(') {
       if (height_ >= maxHeight_) {
-        context.SignalError(IostatErrorInFormat,
-            "FORMAT stack overflow: too many nested parentheses");
+        ReportBadFormat(context,
+            "FORMAT stack overflow: too many nested parentheses",
+            maybeReversionPoint);
         return 0;
       }
       stack_[height_].start = offset_ - 1; // the '('
@@ -271,11 +233,11 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
         // Subtle point (F'2018 13.4 para 9): tha last parenthesized group
         // at height 1 becomes the restart point after control reaches the
         // end of the format, including its repeat count.
-        stack_[0].start = maybeReversionPoint - 1;
+        stack_[0].start = maybeReversionPoint;
       }
       ++height_;
     } else if (height_ == 0) {
-      context.SignalError(IostatErrorInFormat, "FORMAT lacks initial '('");
+      ReportBadFormat(context, "FORMAT lacks initial '('", maybeReversionPoint);
       return 0;
     } else if (ch == ')') {
       if (height_ == 1) {
@@ -284,12 +246,16 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
         }
         context.AdvanceRecord(); // implied / before rightmost )
       }
-      auto restart{stack_[height_ - 1].start + 1};
+      auto restart{stack_[height_ - 1].start};
+      if (format_[restart] == '(') {
+        ++restart;
+      }
       if (stack_[height_ - 1].remaining == Iteration::unlimited) {
         offset_ = restart;
         if (offset_ == unlimitedLoopCheck) {
-          context.SignalError(IostatErrorInFormat,
-              "Unlimited repetition in FORMAT lacks data edit descriptors");
+          ReportBadFormat(context,
+              "Unlimited repetition in FORMAT lacks data edit descriptors",
+              restart);
         }
       } else if (stack_[height_ - 1].remaining-- > 0) {
         offset_ = restart;
@@ -304,8 +270,9 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
         ++offset_;
       }
       if (offset_ >= formatLength_) {
-        context.SignalError(IostatErrorInFormat,
-            "FORMAT missing closing quote on character literal");
+        ReportBadFormat(context,
+            "FORMAT missing closing quote on character literal",
+            maybeReversionPoint);
         return 0;
       }
       ++offset_;
@@ -322,8 +289,8 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
     } else if (ch == 'H') {
       // 9HHOLLERITH
       if (!repeat || *repeat < 1 || offset_ + *repeat > formatLength_) {
-        context.SignalError(
-            IostatErrorInFormat, "Invalid width on Hollerith in FORMAT");
+        ReportBadFormat(context, "Invalid width on Hollerith in FORMAT",
+            maybeReversionPoint);
         return 0;
       }
       context.Emit(format_ + offset_, static_cast<std::size_t>(*repeat));
@@ -364,8 +331,8 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       // TODO: any other raw characters?
       context.Emit(format_ + offset_ - 1, 1);
     } else {
-      context.SignalError(IostatErrorInFormat,
-          "Invalid character '%c' in FORMAT", static_cast<char>(ch));
+      ReportBadFormat(
+          context, "Invalid character in FORMAT", maybeReversionPoint);
       return 0;
     }
   }
@@ -386,7 +353,7 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
       ++offset_;
     }
   } else if (edit.descriptor == 'D' && Capitalize(PeekNext()) == 'T') {
-    // DT'iotype'(v_list) user-defined derived type I/O
+    // DT['iotype'][(v_list)] user-defined derived type I/O
     edit.descriptor = DataEdit::DefinedDerivedType;
     ++offset_;
     if (auto quote{static_cast<char>(PeekNext())};
@@ -410,11 +377,9 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
         }
       }
       if (!ok) {
-        context.SignalError(
-            IostatErrorInFormat, "Unclosed DT'iotype' in FORMAT");
+        ReportBadFormat(context, "Unclosed DT'iotype' in FORMAT", start);
       } else if (tooLong) {
-        context.SignalError(
-            IostatErrorInFormat, "Excessive DT'iotype' in FORMAT");
+        ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
       }
     }
     if (PeekNext() == '(') {
@@ -434,11 +399,9 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
         }
       }
       if (!ok) {
-        context.SignalError(
-            IostatErrorInFormat, "Unclosed DT(v_list) in FORMAT");
+        ReportBadFormat(context, "Unclosed DT(v_list) in FORMAT", start);
       } else if (tooLong) {
-        context.SignalError(
-            IostatErrorInFormat, "Excessive DT(v_list) in FORMAT");
+        ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
       }
     }
   }
@@ -460,26 +423,12 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
     }
   }
   edit.modes = context.mutableModes();
-
   // Handle repeated nonparenthesized edit descriptors
+  edit.repeat = std::min(repeat, maxRepeat); // 0 if maxRepeat==0
   if (repeat > maxRepeat) {
     stack_[height_].start = start; // after repeat count
-    stack_[height_].remaining = repeat; // full count
+    stack_[height_].remaining = repeat - edit.repeat;
     ++height_;
-  }
-  edit.repeat = std::min(1, maxRepeat); // 0 if maxRepeat==0
-  if (height_ > 1) { // Subtle: stack_[0].start doesn't necessarily point to '('
-    int start{stack_[height_ - 1].start};
-    if (format_[start] != '(') {
-      if (stack_[height_ - 1].remaining > maxRepeat) {
-        edit.repeat = maxRepeat;
-        stack_[height_ - 1].remaining -= maxRepeat;
-        offset_ = start; // repeat same edit descriptor next time
-      } else {
-        edit.repeat = stack_[height_ - 1].remaining;
-        --height_;
-      }
-    }
   }
   return edit;
 }

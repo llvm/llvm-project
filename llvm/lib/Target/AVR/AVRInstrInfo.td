@@ -1394,7 +1394,7 @@ let canFoldAsLoad = 1, isReMaterializable = 1 in {
   // ldd Rd,   P+q
   // ldd Rd+1, P+q+1
   let Constraints = "@earlyclobber $dst" in def LDDWRdPtrQ
-      : Pseudo<(outs DREGS_WITHOUT_YZ_WORKAROUND
+      : Pseudo<(outs DREGS
                 : $dst),
                (ins memri
                 : $memri),
@@ -2389,6 +2389,10 @@ def Asr16 : ShiftPseudo<(outs DREGS
                                             : $dst, (AVRasrLoop i16
                                                      : $src, i8
                                                      : $cnt))]>;
+
+// lowered to a copy from R1, which contains the value zero.
+let usesCustomInserter=1 in
+def CopyR1 : Pseudo<(outs GPR8:$rd), (ins), "clrz\t$rd", [(set i8:$rd, 0)]>;
 
 //===----------------------------------------------------------------------===//
 // Non-Instruction Patterns

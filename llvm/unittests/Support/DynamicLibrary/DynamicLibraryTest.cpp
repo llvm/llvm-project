@@ -66,11 +66,13 @@ TEST(DynamicLibrary, Overload) {
     EXPECT_TRUE(Err.empty());
 
     GetString GS = FuncPtr<GetString>(DL.getAddressOfSymbol("TestA"));
-    EXPECT_TRUE(GS != nullptr && GS != &TestA);
+    EXPECT_NE(GS, nullptr);
+    EXPECT_NE(GS, &TestA);
     EXPECT_EQ(StdString(GS()), "LibCall");
 
     GS = FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol("TestA"));
-    EXPECT_TRUE(GS != nullptr && GS != &TestA);
+    EXPECT_NE(GS, nullptr);
+    EXPECT_NE(GS, &TestA);
     EXPECT_EQ(StdString(GS()), "LibCall");
 
     DL = DynamicLibrary::getPermanentLibrary(nullptr, &Err);
@@ -79,32 +81,37 @@ TEST(DynamicLibrary, Overload) {
 
     // Test overloading local symbols does not occur by default
     GS = FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol("TestA"));
-    EXPECT_TRUE(GS != nullptr && GS == &TestA);
+    EXPECT_NE(GS, nullptr);
+    EXPECT_EQ(GS, &TestA);
     EXPECT_EQ(StdString(GS()), "ProcessCall");
 
     GS = FuncPtr<GetString>(DL.getAddressOfSymbol("TestA"));
-    EXPECT_TRUE(GS != nullptr && GS == &TestA);
+    EXPECT_NE(GS, nullptr);
+    EXPECT_EQ(GS, &TestA);
     EXPECT_EQ(StdString(GS()), "ProcessCall");
 
     // Test overloading by forcing library priority when searching for a symbol
     DynamicLibrary::SearchOrder = DynamicLibrary::SO_LoadedFirst;
     GS = FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol("TestA"));
-    EXPECT_TRUE(GS != nullptr && GS != &TestA);
+    EXPECT_NE(GS, nullptr);
+    EXPECT_NE(GS, &TestA);
     EXPECT_EQ(StdString(GS()), "LibCall");
 
     DynamicLibrary::AddSymbol("TestA", PtrFunc(&OverloadTestA));
     GS = FuncPtr<GetString>(DL.getAddressOfSymbol("TestA"));
-    EXPECT_TRUE(GS != nullptr && GS != &OverloadTestA);
+    EXPECT_NE(GS, nullptr);
+    EXPECT_NE(GS, &OverloadTestA);
 
     GS = FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol("TestA"));
-    EXPECT_TRUE(GS != nullptr && GS == &OverloadTestA);
+    EXPECT_NE(GS, nullptr);
+    EXPECT_EQ(GS, &OverloadTestA);
     EXPECT_EQ(StdString(GS()), "OverloadCall");
   }
   EXPECT_TRUE(FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol(
                   "TestA")) == nullptr);
 
   // Check serach ordering is reset to default after call to llvm_shutdown
-  EXPECT_TRUE(DynamicLibrary::SearchOrder == DynamicLibrary::SO_Linker);
+  EXPECT_EQ(DynamicLibrary::SearchOrder, DynamicLibrary::SO_Linker);
 }
 
 TEST(DynamicLibrary, Shutdown) {
@@ -120,15 +127,15 @@ TEST(DynamicLibrary, Shutdown) {
 
     SetStrings SS_0 = FuncPtr<SetStrings>(
         DynamicLibrary::SearchForAddressOfSymbol("SetStrings"));
-    EXPECT_TRUE(SS_0 != nullptr);
+    EXPECT_NE(SS_0, nullptr);
 
     SS_0(A, B);
     EXPECT_EQ(B, "Local::Local(PipSqueak)");
 
     TestOrder TO_0 = FuncPtr<TestOrder>(
         DynamicLibrary::SearchForAddressOfSymbol("TestOrder"));
-    EXPECT_TRUE(TO_0 != nullptr);
-    
+    EXPECT_NE(TO_0, nullptr);
+
     DynamicLibrary DL2 =
         DynamicLibrary::getPermanentLibrary(LibPath(C).c_str(), &Err);
     EXPECT_TRUE(DL2.isValid());
@@ -137,13 +144,13 @@ TEST(DynamicLibrary, Shutdown) {
     // Should find latest version of symbols in SecondLib
     SetStrings SS_1 = FuncPtr<SetStrings>(
         DynamicLibrary::SearchForAddressOfSymbol("SetStrings"));
-    EXPECT_TRUE(SS_1 != nullptr);
-    EXPECT_TRUE(SS_0 != SS_1);
+    EXPECT_NE(SS_1, nullptr);
+    EXPECT_NE(SS_0, SS_1);
 
     TestOrder TO_1 = FuncPtr<TestOrder>(
         DynamicLibrary::SearchForAddressOfSymbol("TestOrder"));
-    EXPECT_TRUE(TO_1 != nullptr);
-    EXPECT_TRUE(TO_0 != TO_1);
+    EXPECT_NE(TO_1, nullptr);
+    EXPECT_NE(TO_0, TO_1);
 
     B.clear();
     SS_1(C, B);
@@ -154,8 +161,9 @@ TEST(DynamicLibrary, Shutdown) {
   }
   EXPECT_EQ(A, "Global::~Global");
   EXPECT_EQ(B, "Local::~Local");
-  EXPECT_TRUE(FuncPtr<SetStrings>(DynamicLibrary::SearchForAddressOfSymbol(
-                  "SetStrings")) == nullptr);
+  EXPECT_EQ(FuncPtr<SetStrings>(
+                DynamicLibrary::SearchForAddressOfSymbol("SetStrings")),
+            nullptr);
 
   // Test unload/destruction ordering
   EXPECT_EQ(Order.size(), 2UL);

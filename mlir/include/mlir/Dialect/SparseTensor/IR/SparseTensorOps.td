@@ -351,4 +351,24 @@ def SparseTensor_ReleaseOp : SparseTensor_Op<"release", []>,
   let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
 }
 
+def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
+    Arguments<(ins AnyType:$tensor, AnyType:$dest)> {
+  string summary = "Outputs a sparse tensor to the given destination";
+  string description = [{
+    Outputs the contents of a sparse tensor to the destination defined by an
+    opaque pointer provided by `dest`. For targets that have access to a file
+    system, for example, this pointer may specify a filename (or file) for output.
+    The form of the operation is kept deliberately very general to allow for
+    alternative implementations in the future, such as sending the contents to
+    a buffer defined by a pointer.
+
+    Example:
+
+    ```mlir
+    sparse_tensor.out %t, %dest : tensor<1024x1024xf64, #CSR>, !Dest
+    ```
+  }];
+  let assemblyFormat = "$tensor `,` $dest attr-dict `:` type($tensor) `,` type($dest)";
+}
+
 #endif // SPARSETENSOR_OPS

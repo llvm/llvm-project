@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=riscv64 -target-feature +experimental-v -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple=riscv64 -target-feature +v -fsyntax-only -verify
 
 void test() {
   __builtin_rvv_vsetvli(1, 7, 0); // expected-error {{argument value 7 is outside the valid range [0, 3]}}

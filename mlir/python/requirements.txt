@@ -1,3 +1,4 @@
 numpy
 pybind11>=2.8.0
 PyYAML
+dataclasses

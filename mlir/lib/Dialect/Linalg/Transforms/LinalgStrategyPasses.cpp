@@ -100,7 +100,7 @@ struct LinalgStrategyTilePass
                                              filter);
     else
       tilingPattern.add<LinalgTilingPattern>(ctx, options, filter);
-    if (anchorOpName == linalg::PadTensorOp::getOperationName())
+    if (anchorOpName == tensor::PadOp::getOperationName())
       populatePadTensorTilingPatterns(tilingPattern, options);
     (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
   }
@@ -302,12 +302,12 @@ struct LinalgStrategyVectorizePass
                                        std::move(vectorizationPatterns));
 
     // Apply the pad tensor op vectorization separately to avoid running the
-    // GenericPadTensorOpVectorizationPattern too early.
+    // GenericPadOpVectorizationPattern too early.
     // TODO: Improve once we have better infrastructure to control pattern
     // application.
     if (vectorizePadding) {
       RewritePatternSet patterns(funcOp.getContext());
-      linalg::populatePadTensorOpVectorizationPatterns(patterns);
+      linalg::populatePadOpVectorizationPatterns(patterns);
       (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
     }
   }

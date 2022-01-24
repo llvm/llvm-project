@@ -14,7 +14,6 @@
 #include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/BinaryStreamError.h"
 #include "llvm/Support/Error.h"
-#include <algorithm>
 #include <cstdint>
 #include <memory>
 

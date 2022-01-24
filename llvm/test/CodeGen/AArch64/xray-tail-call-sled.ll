@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -o - -mtriple=aarch64-linux-gnu < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu < %s | FileCheck %s
 
 define i32 @callee() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK:       .p2align	2

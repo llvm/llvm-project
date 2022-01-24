@@ -84,6 +84,7 @@ private:
   bool HasStdExtZfhmin = false;
   bool HasStdExtZfh = false;
   bool HasStdExtZbkb = false;
+  bool HasStdExtZbkc = false;
   bool HasRV64 = false;
   bool IsRV32E = false;
   bool EnableLinkerRelax = false;
@@ -158,6 +159,7 @@ public:
   bool hasStdExtZfhmin() const { return HasStdExtZfhmin; }
   bool hasStdExtZfh() const { return HasStdExtZfh; }
   bool hasStdExtZbkb() const { return HasStdExtZbkb; }
+  bool hasStdExtZbkc() const { return HasStdExtZbkc; }
   bool is64Bit() const { return HasRV64; }
   bool isRV32E() const { return IsRV32E; }
   bool enableLinkerRelax() const { return EnableLinkerRelax; }

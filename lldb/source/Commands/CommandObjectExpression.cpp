@@ -24,7 +24,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-CommandObjectExpression::CommandOptions::CommandOptions() : OptionGroup() {}
+CommandObjectExpression::CommandOptions::CommandOptions() {}
 
 CommandObjectExpression::CommandOptions::~CommandOptions() = default;
 
@@ -200,10 +200,10 @@ CommandObjectExpression::CommandObjectExpression(
                        "",
                        eCommandProcessMustBePaused | eCommandTryTargetAPILock),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
-      m_option_group(), m_format_options(eFormatDefault),
+      m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false,
                     true),
-      m_command_options(), m_expr_line_count(0), m_expr_lines() {
+      m_command_options(), m_expr_line_count(0) {
   SetHelpLong(
       R"(
 Single and multi-line expressions:

@@ -3323,7 +3323,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // or import .....;
     if (Left.is(Keywords.kw_import) && Right.isOneOf(tok::less, tok::ellipsis))
       return true;
-    // No space between module :.
+    // Space between `module :` and `import :`.
     if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
         Right.is(TT_ModulePartitionColon))
       return true;

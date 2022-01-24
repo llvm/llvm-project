@@ -1,18 +1,18 @@
 ; REQUIRES: asserts
 ; RUN: opt -loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+experimental-v,+d -debug-only=loop-vectorize \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize \
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=1 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL1
 ; RUN: opt -loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+experimental-v,+d -debug-only=loop-vectorize \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize \
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=2 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL2
 ; RUN: opt -loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+experimental-v,+d -debug-only=loop-vectorize \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize \
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=4 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL4
 ; RUN: opt -loop-vectorize -mtriple riscv64-linux-gnu \
-; RUN:   -mattr=+experimental-v,+d -debug-only=loop-vectorize \
+; RUN:   -mattr=+v,+d -debug-only=loop-vectorize \
 ; RUN:   -riscv-v-vector-bits-min=128 -riscv-v-register-bit-width-lmul=8 \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL8
 

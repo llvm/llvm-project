@@ -34,6 +34,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <cassert>
 #include <cstdint>
 #include <system_error>

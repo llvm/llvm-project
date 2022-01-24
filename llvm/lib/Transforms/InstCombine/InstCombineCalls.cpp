@@ -352,9 +352,27 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
 // * Dereferenceable address & few lanes -> scalarize speculative load/selects
 // * Adjacent vector addresses -> masked.load
 // * Narrow width by halfs excluding zero/undef lanes
-// * Vector splat address w/known mask -> scalar load
 // * Vector incrementing address -> vector masked load
 Instruction *InstCombinerImpl::simplifyMaskedGather(IntrinsicInst &II) {
+  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
+  if (!ConstMask)
+    return nullptr;
+
+  // Vector splat address w/known mask -> scalar load
+  // Fold the gather to load the source vector first lane
+  // because it is reloading the same value each time
+  if (ConstMask->isAllOnesValue())
+    if (auto *SplatPtr = getSplatValue(II.getArgOperand(0))) {
+      auto *VecTy = cast<VectorType>(II.getType());
+      const Align Alignment =
+          cast<ConstantInt>(II.getArgOperand(1))->getAlignValue();
+      LoadInst *L = Builder.CreateAlignedLoad(VecTy->getElementType(), SplatPtr,
+                                              Alignment, "load.scalar");
+      Value *Shuf =
+          Builder.CreateVectorSplat(VecTy->getElementCount(), L, "broadcast");
+      return replaceInstUsesWith(II, cast<Instruction>(Shuf));
+    }
+
   return nullptr;
 }
 
@@ -476,7 +494,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     // ctlz/cttz i1 Op0 --> not Op0
     if (match(Op1, m_Zero()))
       return BinaryOperator::CreateNot(Op0);
-    // If zero is undef, then the input can be assumed to be "true", so the
+    // If zero is poison, then the input can be assumed to be "true", so the
     // instruction simplifies to "false".
     assert(match(Op1, m_One()) && "Expected ctlz/cttz operand to be 0 or 1");
     return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
@@ -501,7 +519,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     }
 
     // Zext doesn't change the number of trailing zeros, so narrow:
-    // cttz(zext(x)) -> zext(cttz(x)) if the 'ZeroIsUndef' parameter is 'true'.
+    // cttz(zext(x)) -> zext(cttz(x)) if the 'ZeroIsPoison' parameter is 'true'.
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) && match(Op1, m_One())) {
       auto *Cttz = IC.Builder.CreateBinaryIntrinsic(Intrinsic::cttz, X,
                                                     IC.Builder.getTrue());
@@ -538,7 +556,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   }
 
   // If the input to cttz/ctlz is known to be non-zero,
-  // then change the 'ZeroIsUndef' parameter to 'true'
+  // then change the 'ZeroIsPoison' parameter to 'true'
   // because we know the zero behavior can't affect the result.
   if (!Known.One.isZero() ||
       isKnownNonZero(Op0, IC.getDataLayout(), 0, &IC.getAssumptionCache(), &II,

@@ -124,6 +124,11 @@ New checks
   Finds cases where code could use ``data()`` rather than the address of the
   element at index 0 in a container.
 
+- New :doc:`readability-duplicate-include
+  <clang-tidy/checks/readability-duplicate-include>` check.
+
+  Looks for duplicate includes and removes them.  
+
 - New :doc:`readability-identifier-length
   <clang-tidy/checks/readability-identifier-length>` check.
 
@@ -158,6 +163,12 @@ Changes in existing checks
 
 - Removed default setting ``cppcoreguidelines-explicit-virtual-functions.IgnoreDestructors = "true"``,
   to match the current state of the C++ Core Guidelines.
+
+- Removed suggestion ``use gsl::at`` from warning message in the
+  ``cppcoreguidelines-pro-bounds-constant-array-index`` check, since that is not
+  a requirement from the C++ Core Guidelines. This allows people to choose
+  their own safe indexing strategy. The fix-it is kept for those who want to
+  use the GSL library.
 
 - Updated :doc:`google-readability-casting
   <clang-tidy/checks/google-readability-casting>` to diagnose and fix functional

@@ -38,6 +38,7 @@ LLVM and API reference documentation.
    ScudoHardenedAllocator
    MemTagSanitizer
    Security
+   SecurityTransparencyReports
    SegmentedStacks
    StackMaps
    SpeculativeLoadHardening

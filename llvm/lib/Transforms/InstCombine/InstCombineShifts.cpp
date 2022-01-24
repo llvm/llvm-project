@@ -369,6 +369,9 @@ static Instruction *foldShiftOfShiftedLogic(BinaryOperator &I,
 }
 
 Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
+  if (Instruction *Phi = foldBinopWithPhiOperands(I))
+    return Phi;
+
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   assert(Op0->getType() == Op1->getType());
 

@@ -17,8 +17,6 @@
 // FIXME: vector is used because that's what clang uses for subtarget feature
 // lists, but SmallVector would probably be better
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/AArch64TargetParser.h"
-#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/RISCVISAInfo.h"
 #include <vector>
 

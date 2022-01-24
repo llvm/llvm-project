@@ -14,6 +14,7 @@ include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
 
 class Tensor_Op<string mnemonic, list<OpTrait> traits = []>
@@ -777,6 +778,191 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
   let extraClassDeclaration = commonExtraClassDeclaration;
 }
 
+//===----------------------------------------------------------------------===//
+// PadOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
+    SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
+  let summary = "tensor pad operation";
+  let description = [{
+    `tensor.pad` is an operation that pads the `source` tensor
+    with given `low` and `high` padding config.
+
+    The PadOp operation supports the following arguments:
+
+    * source: the "base" tensor on which to pad.
+    * low: A list contains the padding along the start of each
+           dimension, i.e `low`.
+    * high: A list contains the padding along the end of each
+            dimension, i.e. `high`.
+    * nofold: indicates that the operation should not be folded when source and
+              result types are equal.
+
+    The result tensor dimensions are `low` + `dim` + `high` along that
+    dimension. The number of elements of `low` and `high` must match
+    the rank of the input tensor. They can be either a constant or a
+    dynamic value.
+
+    The region of the `tensor.pad` operation returns the value to use
+    for the padding. The arguments of the region represent the index
+    of the source being accessed. There should be as many arguments as
+    the rank of the `source` tensor. The value `yield`-ed by the
+    region is used as the value of the view at the given position.
+
+    If `nofold` is set, the padding operation will not be folded away even
+    if the source type and the padded type have the same static shape. This can
+    be used, e.g., for packing or promotion to faster memory.
+
+    Example 1:
+
+    ```mlir
+      %pad_value = ... : f32
+      %0 = tensor.pad %0 low[1, 2] high[2, 3] {
+      ^bb0(%arg0 : index, %arg1 : index):
+        tensor.yield %pad_value : f32
+      } : tensor<?x?xf32> to tensor<?x?xf32>
+    ```
+
+    Example 2:
+
+    ```mlir
+      %pad_value = ... : f32
+      %0 = tensor.pad %arg0 low[2, %arg1, 3, 3] high[3, 3, %arg1, 2] {
+      ^bb0(%arg2: index, %arg3: index, %arg4: index, %arg5: index):
+          tensor.yield %pad_value : f32
+      } : tensor<1x2x2x?xf32> to tensor<6x?x?x?xf32>
+    ```
+
+    Example 3:
+
+    ```mlir
+      %pad_value = ... : f32
+      %0 = tensor.pad %arg0 low[0, 0] high[%ub0, %ub1] {
+      ^bb0(%arg1: index, %arg2: index):
+        tensor.yield %pad_value : f32
+      } : tensor<2x3xf32> to tensor<?x?xf32>
+    ```
+
+    Example 4:
+
+    ```mlir
+      // Force a padded value to be always exist with `nofold`.
+      %pad_value = ... : f32
+      %0 = tensor.pad %arg0 nofold low[0, 0] high[0, 0] {
+      ^bb0(%arg1: index, %arg2: index):
+        tensor.yield %pad_value : f32
+      } : tensor<2x3xf32> to tensor<2x3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    AnyTensor:$source,
+    Variadic<Index>:$low,
+    Variadic<Index>:$high,
+    I64ArrayAttr:$static_low,
+    I64ArrayAttr:$static_high,
+    UnitAttr:$nofold);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let results = (outs AnyTensor:$result);
+
+  // TODO: Remove custom<InferType> when AllTypesMatch supports opt. operands.
+  let assemblyFormat = [{
+    $source
+    (`nofold` $nofold^)?
+    `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
+    `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
+    $region attr-dict `:` type($source) `to` type($result)
+  }];
+
+  let extraClassDeclaration = [{
+    static StringRef getStaticLowAttrName() {
+      return "static_low";
+    }
+
+    static StringRef getStaticHighAttrName() {
+      return "static_high";
+    }
+
+    RankedTensorType getSourceType() {
+      return source().getType().cast<RankedTensorType>();
+    }
+    RankedTensorType getResultType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+
+    // Infer the shape of the result tensor given the type of the source tensor
+    // and paddings. Known result dimensions that cannot necessarily be inferred
+    // from low/high padding sizes can be optionally specified. Those will be
+    // considered when computing the result type.
+    static RankedTensorType inferResultType(
+                                RankedTensorType sourceType,
+                                ArrayRef<int64_t> staticLow,
+                                ArrayRef<int64_t> staticHigh,
+                                ArrayRef<int64_t> resultShape = {});
+
+    // Return the pad value if it is a constant. Return null value otherwise.
+    Value getConstantPaddingValue();
+
+    // Return a vector of all the static or dynamic values (low/high padding) of
+    // the op.
+    inline SmallVector<OpFoldResult> getMixedPadImpl(ArrayAttr staticAttrs,
+                                                     ValueRange values) {
+      SmallVector<OpFoldResult> res;
+      unsigned numDynamic = 0;
+      unsigned count = staticAttrs.size();
+      for (unsigned idx = 0; idx < count; ++idx) {
+        if (ShapedType::isDynamic(staticAttrs[idx].cast<IntegerAttr>().getInt()))
+          res.push_back(values[numDynamic++]);
+        else
+          res.push_back(staticAttrs[idx]);
+      }
+      return res;
+    }
+    SmallVector<OpFoldResult> getMixedLowPad() {
+      return getMixedPadImpl(static_low(), low());
+    }
+    SmallVector<OpFoldResult> getMixedHighPad() {
+      return getMixedPadImpl(static_high(), high());
+    }
+    // Return true if low padding is guaranteed to be 0.
+    bool hasZeroLowPad() {
+      return llvm::all_of(getMixedLowPad(), [](OpFoldResult ofr) {
+        return getConstantIntValue(ofr) == static_cast<int64_t>(0);
+      });
+    }
+    // Return true if high padding is guaranteed to be 0.
+    bool hasZeroHighPad() {
+      return llvm::all_of(getMixedHighPad(), [](OpFoldResult ofr) {
+        return getConstantIntValue(ofr) == static_cast<int64_t>(0);
+      });
+    }
+  }];
+
+  let builders = [
+    // Build a PadOp with mixed static and dynamic entries.
+    OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$staticLow,
+      "ArrayRef<int64_t>":$staticHigh, "ValueRange":$low, "ValueRange":$high,
+      CArg<"bool", "false">:$nofold,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a PadOp with all dynamic entries.
+    OpBuilder<(ins "Value":$source, "ValueRange":$low, "ValueRange":$high,
+      CArg<"bool", "false">:$nofold,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a PadOp with mixed static and dynamic entries and custom
+    // result type. If the type passed is nullptr, it is inferred.
+    OpBuilder<(ins "Type":$resultType, "Value":$source,
+      "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
+      CArg<"bool", "false">:$nofold,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+  ];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+}
+
 
 //===----------------------------------------------------------------------===//
 // YieldOp
@@ -784,16 +970,17 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
 
 def Tensor_YieldOp : Tensor_Op<"yield",
     [NoSideEffect, ReturnLike, Terminator,
-     HasParent<"::mlir::tensor::GenerateOp">]> {
+     HasParent<"::mlir::tensor::GenerateOp, ::mlir::tensor::PadOp">]> {
   let summary = "Yield a value from a region";
   let description = [{
      This operation is used to yield a single value from a within a region. It
      is used to create dynamically sized tensors
-     (see `tensor.generate` op).
+     (see `tensor.generate` and `tensor.pad` ops).
   }];
 
   let arguments = (ins AnyType:$value);
   let assemblyFormat = "$value attr-dict `:` type($value)";
+
   // Dummy builder to appease code in templated ensureTerminator that
   // GenerateOp's auto-generated parser calls.
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];

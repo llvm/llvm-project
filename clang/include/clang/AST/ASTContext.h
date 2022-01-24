@@ -99,7 +99,6 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class DiagnosticsEngine;
 class ParentMapContext;
-class DynTypedNode;
 class DynTypedNodeList;
 class Expr;
 enum class FloatModeKind;

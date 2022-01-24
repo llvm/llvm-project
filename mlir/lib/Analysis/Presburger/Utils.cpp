@@ -25,7 +25,10 @@ static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
                                    unsigned &divisor) {
   if (divisor == 0 || dividend.empty())
     return;
-  int64_t gcd = llvm::greatestCommonDivisor(dividend.front(), int64_t(divisor));
+  // We take the absolute value of dividend's coefficients to make sure that
+  // `gcd` is positive.
+  int64_t gcd =
+      llvm::greatestCommonDivisor(std::abs(dividend.front()), int64_t(divisor));
 
   // The reason for ignoring the constant term is as follows.
   // For a division:
@@ -35,7 +38,7 @@ static void normalizeDivisionByGCD(SmallVectorImpl<int64_t> &dividend,
   // Since `{a/m}/d` in the dividend satisfies 0 <= {a/m}/d < 1/d, it will not
   // influence the result of the floor division and thus, can be ignored.
   for (size_t i = 1, m = dividend.size() - 1; i < m; i++) {
-    gcd = llvm::greatestCommonDivisor(dividend[i], gcd);
+    gcd = llvm::greatestCommonDivisor(std::abs(dividend[i]), gcd);
     if (gcd == 1)
       return;
   }
