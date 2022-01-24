@@ -1032,6 +1032,12 @@ protected:
       return false;
     }
 
+    ABISP abi = m_exe_ctx.GetProcessPtr()->GetABI();
+    if (abi) {
+      low_addr = abi->FixDataAddress(low_addr);
+      high_addr = abi->FixDataAddress(high_addr);
+    }
+
     if (high_addr <= low_addr) {
       result.AppendError(
           "starting address must be smaller than ending address");

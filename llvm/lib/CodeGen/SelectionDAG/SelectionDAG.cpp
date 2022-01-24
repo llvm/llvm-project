@@ -5610,21 +5610,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   assert(N1.getOpcode() != ISD::DELETED_NODE &&
          N2.getOpcode() != ISD::DELETED_NODE &&
          "Operand is DELETED_NODE!");
-  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
-  ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2);
-  ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
-  ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
-
   // Canonicalize constant to RHS if commutative.
   if (TLI->isCommutativeBinOp(Opcode)) {
-    if (N1C && !N2C) {
-      std::swap(N1C, N2C);
+    bool IsN1C = isConstantIntBuildVectorOrConstantInt(N1);
+    bool IsN2C = isConstantIntBuildVectorOrConstantInt(N2);
+    bool IsN1CFP = isConstantFPBuildVectorOrConstantFP(N1);
+    bool IsN2CFP = isConstantFPBuildVectorOrConstantFP(N2);
+    if ((IsN1C && !IsN2C) || (IsN1CFP && !IsN2CFP))
       std::swap(N1, N2);
-    } else if (N1CFP && !N2CFP) {
-      std::swap(N1CFP, N2CFP);
-      std::swap(N1, N2);
-    }
   }
+
+  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
+  ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2);
 
   switch (Opcode) {
   default: break;

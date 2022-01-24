@@ -12,4 +12,4 @@ target_link_libraries(external-hello-world
 )
 
 add_subdirectory(PrintFlangFunctionNames)
-add_subdirectory(flang-omp-report-plugin)
+add_subdirectory(FlangOmpReport)

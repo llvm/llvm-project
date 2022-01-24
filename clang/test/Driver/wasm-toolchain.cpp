@@ -14,35 +14,35 @@
 
 // A basic C++ link command-line with unknown OS.
 
-// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo --stdlib=c++ %s 2>&1 \
+// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo --stdlib=libc++ %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK %s
 // LINK: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C++ link command-line with optimization with unknown OS.
 
-// RUN: %clangxx -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s --stdlib=c++ 2>&1 \
+// RUN: %clangxx -### -O2 -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s --stdlib=libc++ 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK_OPT %s
 // LINK_OPT: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_OPT: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C++ link command-line with known OS.
 
-// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo --stdlib=c++ %s 2>&1 \
+// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo --stdlib=libc++ %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK_KNOWN %s
 // LINK_KNOWN: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C++ link command-line with optimization with known OS.
 
-// RUN: %clangxx -### -O2 -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo %s --stdlib=c++ 2>&1 \
+// RUN: %clangxx -### -O2 -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo %s --stdlib=libc++ 2>&1 \
 // RUN:   | FileCheck -check-prefix=LINK_OPT_KNOWN %s
 // LINK_OPT_KNOWN: clang{{.*}}" "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_OPT_KNOWN: wasm-ld{{.*}}" "-L/foo/lib/wasm32-wasi" "crt1.o" "[[temp]]" "-lc++" "-lc++abi" "-lc" "{{.*[/\\]}}libclang_rt.builtins-wasm32.a" "-o" "a.out"
 
 // A basic C++ compile command-line with known OS.
 
-// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo --stdlib=c++ %s 2>&1 \
+// RUN: %clangxx -### -no-canonical-prefixes -target wasm32-wasi --sysroot=/foo --stdlib=libc++ %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=COMPILE %s
 // COMPILE: clang{{.*}}" "-cc1"
 // COMPILE: "-resource-dir" "[[RESOURCE_DIR:[^"]*]]"
