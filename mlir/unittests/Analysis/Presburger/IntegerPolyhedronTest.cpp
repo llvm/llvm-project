@@ -636,8 +636,9 @@ static void checkDivisionRepresentation(
   // denominator for a division is zero, we ignore its dividend.
   EXPECT_TRUE(dividends.size() == expectedDividends.size());
   for (unsigned i = 0, e = dividends.size(); i < e; ++i)
-    if (denominators[i] != 0)
+    if (denominators[i] != 0) {
       EXPECT_TRUE(expectedDividends[i] == dividends[i]);
+    }
 }
 
 TEST(IntegerPolyhedronTest, computeLocalReprSimple) {
