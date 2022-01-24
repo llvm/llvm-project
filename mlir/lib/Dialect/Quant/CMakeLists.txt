@@ -22,6 +22,5 @@ add_mlir_dialect_library(MLIRQuant
   MLIRPass
   MLIRSideEffectInterfaces
   MLIRSupport
-  MLIRStandard
   MLIRTransformUtils
   )

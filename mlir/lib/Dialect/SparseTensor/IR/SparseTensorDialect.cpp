@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -194,8 +193,9 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult isInBounds(Value dim, Value tensor) {
-  if (auto constantOp = dim.getDefiningOp<arith::ConstantOp>()) {
-    unsigned d = constantOp.getValue().cast<IntegerAttr>().getInt();
+  IntegerAttr constantAttr;
+  if (matchPattern(dim, m_Constant(&constantAttr))) {
+    unsigned d = constantAttr.getInt();
     if (d >= tensor.getType().cast<RankedTensorType>().getRank())
       return failure();
   }
@@ -227,11 +227,12 @@ static LogicalResult verify(InitOp op) {
   for (unsigned i = 0; i < rank; i++) {
     if (shape[i] == ShapedType::kDynamicSize)
       continue;
-    auto constantOp = op.sizes()[i].getDefiningOp<arith::ConstantOp>();
-    if (!constantOp ||
-        constantOp.getValue().cast<IntegerAttr>().getInt() != shape[i])
+    IntegerAttr constantAttr;
+    if (!matchPattern(op.sizes()[i], m_Constant(&constantAttr)) ||
+        constantAttr.getInt() != shape[i]) {
       return op.emitError("unexpected mismatch with static dimension size ")
              << shape[i];
+    }
   }
   return success();
 }
