@@ -177,14 +177,13 @@ def riscv_vrgatherei16_vv_vl : SDNode<"RISCVISD::VRGATHEREI16_VV_VL",
                                                            SDTCisSameNumEltsAs<0, 3>,
                                                            SDTCisVT<4, XLenVT>]>>;
 
-def riscv_vselect_vl : SDNode<"RISCVISD::VSELECT_VL",
-                              SDTypeProfile<1, 4, [SDTCisVec<0>,
-                                                   SDTCisVec<1>,
-                                                   SDTCisSameNumEltsAs<0, 1>,
-                                                   SDTCVecEltisVT<1, i1>,
-                                                   SDTCisSameAs<0, 2>,
-                                                   SDTCisSameAs<2, 3>,
-                                                   SDTCisVT<4, XLenVT>]>>;
+def SDT_RISCVSelect_VL  : SDTypeProfile<1, 4, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisSameNumEltsAs<0, 1>, SDTCVecEltisVT<1, i1>,
+  SDTCisSameAs<0, 2>, SDTCisSameAs<2, 3>, SDTCisVT<4, XLenVT>
+]>;
+
+def riscv_vselect_vl  : SDNode<"RISCVISD::VSELECT_VL", SDT_RISCVSelect_VL>;
+def riscv_vp_merge_vl : SDNode<"RISCVISD::VP_MERGE_VL", SDT_RISCVSelect_VL>;
 
 def SDT_RISCVMaskBinOp_VL : SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
                                                  SDTCisSameAs<0, 2>,
@@ -976,6 +975,30 @@ foreach vti = AllIntegerVectors in {
                                           VLOpFrag)),
             (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
                  vti.RegClass:$rs2, simm5:$rs1, (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
+
+  def : Pat<(vti.Vector (riscv_vp_merge_vl (vti.Mask V0),
+                                           vti.RegClass:$rs1,
+                                           vti.RegClass:$rs2,
+                                           VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX#"_TU")
+                 vti.RegClass:$rs2, vti.RegClass:$rs2, vti.RegClass:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
+
+  def : Pat<(vti.Vector (riscv_vp_merge_vl (vti.Mask V0),
+                                           (SplatPat XLenVT:$rs1),
+                                           vti.RegClass:$rs2,
+                                           VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX#"_TU")
+                 vti.RegClass:$rs2, vti.RegClass:$rs2, GPR:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
+
+  def : Pat<(vti.Vector (riscv_vp_merge_vl (vti.Mask V0),
+                                           (SplatPat_simm5 simm5:$rs1),
+                                           vti.RegClass:$rs2,
+                                           VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX#"_TU")
+                 vti.RegClass:$rs2, vti.RegClass:$rs2, simm5:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
 }
 
 // 12.16. Vector Integer Move Instructions
@@ -1222,6 +1245,31 @@ foreach fvti = AllFloatVectors in {
                                            VLOpFrag)),
             (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
                  fvti.RegClass:$rs2, 0, (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
+
+  def : Pat<(fvti.Vector (riscv_vp_merge_vl (fvti.Mask V0),
+                                            fvti.RegClass:$rs1,
+                                            fvti.RegClass:$rs2,
+                                            VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX#"_TU")
+                 fvti.RegClass:$rs2, fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask V0),
+                 GPR:$vl, fvti.Log2SEW)>;
+
+  def : Pat<(fvti.Vector (riscv_vp_merge_vl (fvti.Mask V0),
+                                            (SplatFPOp fvti.ScalarRegClass:$rs1),
+                                            fvti.RegClass:$rs2,
+                                            VLOpFrag)),
+            (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX#"_TU")
+                 fvti.RegClass:$rs2, fvti.RegClass:$rs2,
+                 (fvti.Scalar fvti.ScalarRegClass:$rs1),
+                 (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
+
+  def : Pat<(fvti.Vector (riscv_vp_merge_vl (fvti.Mask V0),
+                                            (SplatFPOp (fvti.Scalar fpimm0)),
+                                            fvti.RegClass:$rs2,
+                                            VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX#"_TU")
+                 fvti.RegClass:$rs2, fvti.RegClass:$rs2, 0, (fvti.Mask V0),
+                 GPR:$vl, fvti.Log2SEW)>;
 
   // 14.16. Vector Floating-Point Move Instruction
   // If we're splatting fpimm0, use vmv.v.x vd, x0.
