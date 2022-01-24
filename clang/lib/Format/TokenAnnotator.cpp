@@ -2353,9 +2353,10 @@ private:
 void TokenAnnotator::setCommentLineLevels(
     SmallVectorImpl<AnnotatedLine *> &Lines) {
   const AnnotatedLine *NextNonCommentLine = nullptr;
-  for (AnnotatedLine *AL : llvm::reverse(Lines)) {
+  for (AnnotatedLine *Line : llvm::reverse(Lines)) {
+    assert(Line->First);
     bool CommentLine = true;
-    for (const FormatToken *Tok = AL->First; Tok; Tok = Tok->Next) {
+    for (const FormatToken *Tok = Line->First; Tok; Tok = Tok->Next) {
       if (!Tok->is(tok::comment)) {
         CommentLine = false;
         break;
@@ -2367,20 +2368,21 @@ void TokenAnnotator::setCommentLineLevels(
     if (NextNonCommentLine && CommentLine &&
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
-            AL->First->OriginalColumn) {
+            Line->First->OriginalColumn) {
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      AL->Level = (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
-                   (NextNonCommentLine->Type == LT_PreprocessorDirective ||
-                    NextNonCommentLine->Type == LT_ImportStatement))
-                      ? 0
-                      : NextNonCommentLine->Level;
+      Line->Level =
+          (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+           (NextNonCommentLine->Type == LT_PreprocessorDirective ||
+            NextNonCommentLine->Type == LT_ImportStatement))
+              ? 0
+              : NextNonCommentLine->Level;
     } else {
-      NextNonCommentLine = AL->First->isNot(tok::r_brace) ? AL : nullptr;
+      NextNonCommentLine = Line->First->isNot(tok::r_brace) ? Line : nullptr;
     }
 
-    setCommentLineLevels(AL->Children);
+    setCommentLineLevels(Line->Children);
   }
 }
 
