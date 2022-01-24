@@ -15,6 +15,8 @@
 #include <concepts>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T, class U>
 constexpr bool CheckCommonReferenceWith() noexcept {
   static_assert(std::common_reference_with<T, U&>);

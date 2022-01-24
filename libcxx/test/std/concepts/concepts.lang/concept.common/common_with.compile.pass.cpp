@@ -15,6 +15,8 @@
 #include <concepts>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class T, class U>
 constexpr bool CheckCommonWith() noexcept {
   constexpr bool result = std::common_with<T, U>;
