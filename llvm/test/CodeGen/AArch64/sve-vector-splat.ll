@@ -73,12 +73,22 @@ define <vscale x 4 x i32> @sve_splat_4xi32_imm() {
   ret <vscale x 4 x i32> %splat
 }
 
-define <vscale x 2 x i64> @sve_splat_2xi64_imm() {
-; CHECK-LABEL: sve_splat_2xi64_imm:
+define <vscale x 2 x i64> @sve_splat_2xi64_dup_imm() {
+; CHECK-LABEL: sve_splat_2xi64_dup_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #1 // =0x1
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 2 x i64> undef, i64 1, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  ret <vscale x 2 x i64> %splat
+}
+
+define <vscale x 2 x i64> @sve_splat_2xi64_dupm_imm() {
+; CHECK-LABEL: sve_splat_2xi64_dupm_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, #0xffff00000000
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 2 x i64> undef, i64 281470681743360, i32 0 ; 0xffff00000000
   %splat = shufflevector <vscale x 2 x i64> %ins, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
   ret <vscale x 2 x i64> %splat
 }
@@ -173,8 +183,7 @@ define <vscale x 2 x i32> @sve_splat_2xi32(i32 %val) {
 define <vscale x 2 x i32> @sve_splat_2xi32_imm() {
 ; CHECK-LABEL: sve_splat_2xi32_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-1
-; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    mov z0.d, #0xffffffff
 ; CHECK-NEXT:    ret
   %ins = insertelement <vscale x 2 x i32> undef, i32 -1, i32 0
   %splat = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
@@ -530,9 +539,9 @@ define <vscale x 4 x float> @splat_nxv4f32_imm_out_of_range() {
 define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI50_0
+; CHECK-NEXT:    adrp x8, .LCPI51_0
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI50_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI51_0
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %1 = insertelement <vscale x 2 x double> undef, double 3.33, i32 0
