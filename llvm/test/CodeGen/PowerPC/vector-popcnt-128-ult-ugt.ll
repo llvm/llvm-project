@@ -11986,7 +11986,7 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; PWR7-NEXT:    lxvw4x 35, 0, 3
 ; PWR7-NEXT:    xxlnor 34, 34, 34
 ; PWR7-NEXT:    vperm 3, 2, 2, 3
-; PWR7-NEXT:    xxland 34, 35, 34
+; PWR7-NEXT:    xxlor 34, 35, 34
 ; PWR7-NEXT:    blr
 ;
 ; PWR8-LABEL: ugt_1_v2i64:

@@ -3508,8 +3508,9 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
       int ShuffV[] = {1, 0, 3, 2};
       SDValue Shuff =
           DAG.getVectorShuffle(MVT::v4i32, dl, SetCC32, SetCC32, ShuffV);
-      return DAG.getBitcast(
-          MVT::v2i64, DAG.getNode(ISD::AND, dl, MVT::v4i32, Shuff, SetCC32));
+      return DAG.getBitcast(MVT::v2i64,
+                            DAG.getNode(CC == ISD::SETEQ ? ISD::AND : ISD::OR,
+                                        dl, MVT::v4i32, Shuff, SetCC32));
     }
 
     // We handle most of these in the usual way.
