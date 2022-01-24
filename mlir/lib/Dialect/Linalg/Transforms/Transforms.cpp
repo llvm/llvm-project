@@ -528,20 +528,29 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
   // Hoist the padding.
   for (const auto &en : enumerate(depths)) {
     OpOperand &opOperand = paddedOp->getOpOperand(en.index());
-    auto padTensorOp = opOperand.get().getDefiningOp<tensor::PadOp>();
-    if (!padTensorOp || en.value() == 0)
+    auto padOp = opOperand.get().getDefiningOp<tensor::PadOp>();
+    if (!padOp || en.value() == 0)
       continue;
     tensor::PadOp hoistedOp;
-    FailureOr<Value> newResult =
-        hoistPaddingOnTensors(padTensorOp, en.value(), hoistedOp);
+    SmallVector<GenericOp> transposeOps;
+    SmallVector<int64_t> transposeVector =
+        options.paddingTransposeComputationFunction(opOperand);
+
+    FailureOr<Value> newResult = hoistPaddingOnTensors(
+        padOp, en.value(), transposeVector, hoistedOp, transposeOps);
     if (failed(newResult))
       continue;
-    rewriter.replaceOp(padTensorOp, newResult.getValue());
+    rewriter.replaceOp(padOp, newResult.getValue());
+
+    // Do not apply hoist padding to the newly introduced transpose operations.
+    for (GenericOp transposeOp : transposeOps)
+      filter.replaceLinalgTransformationFilter(rewriter, transposeOp);
   }
 
   // Replace the original operation to pad.
   rewriter.replaceOp(linalgOp, newResults.getValue());
   filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
+
   return paddedOp;
 }
 

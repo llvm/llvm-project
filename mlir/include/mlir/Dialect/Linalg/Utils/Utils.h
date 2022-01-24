@@ -117,17 +117,23 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
 /// Example:
 /// ```
 /// %0 = tensor.extract_slice %arg0 [%iv0, %iv1] [%sz0, %sz1]
-/// %1 = linalg.pad_tensor %0 low[0, 0] high[...] { linalg.yield %cst }
+/// %1 = tensor.pad %0 low[0, 0] high[...] { tensor.yield %cst }
 /// %2 = linalg.matmul ins(...) outs(%1)
 /// %3 = tensor.extract_slice %2 [0, 0] [%sz0, %sz1]
 /// ```
 /// makeComposedPadHighOp(source=%3, pad=%cst) returns %2
 /// makeComposedPadHighOp(source=%3, pad=%other_cst) returns %4
 /// ```
-/// %4 = linalg.pad_tensor %3 low[0, 0] high[...] { linalg.yield %other_cst }
+/// %4 = tensor.pad %3 low[0, 0] high[...] { tensor.yield %other_cst }
 /// ```
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold);
+
+/// Returns a GenericOp that tansposes `inputTensor` into `outputTensor` using
+/// `transposeVector` to permute the `inputTensor` dimensions.
+GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
+                          Value outputTensor,
+                          ArrayRef<int64_t> transposeVector);
 
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
