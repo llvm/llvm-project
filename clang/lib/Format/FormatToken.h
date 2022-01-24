@@ -51,6 +51,7 @@ namespace format {
   TYPE(FunctionAnnotationRParen)                                               \
   TYPE(FunctionDeclarationName)                                                \
   TYPE(FunctionLBrace)                                                         \
+  TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
   TYPE(IfMacro)                                                                \
   TYPE(ImplicitStringLiteral)                                                  \
