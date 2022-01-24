@@ -148,7 +148,8 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands,
            "::llvm::SmallVectorImpl<::mlir::InvocationBounds> &"
              :$invocationBounds), [{}],
-       [{ invocationBounds.append($_op->getNumRegions(), {0, ::llvm::None}); }]
+       [{ invocationBounds.append($_op->getNumRegions(),
+                                  ::mlir::InvocationBounds::getUnknown()); }]
     >,
   ];
 

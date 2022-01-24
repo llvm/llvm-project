@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements utilityies for control-flow sinking. Control-flow
+// This file implements utilities for control-flow sinking. Control-flow
 // sinking moves operations whose only uses are in conditionally-executed blocks
 // into those blocks so that they aren't executed on paths where their results
 // are not needed.
@@ -40,7 +40,7 @@ public:
 
   /// Given a list of regions, find operations to sink and sink them. Return the
   /// number of operations sunk.
-  size_t sinkRegions(ArrayRef<Region *> regions) &&;
+  size_t sinkRegions(ArrayRef<Region *> regions);
 
 private:
   /// Given a region and an op which dominates the region, returns true if all
@@ -93,9 +93,9 @@ void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
     if (allUsersDominatedBy(op, region) && shouldMoveIntoRegion(op, region)) {
       // Move the op into the region's entry block. If the op is part of a
       // subgraph, dependee ops would have been moved first, so inserting before
-      // the start of the block will ensure dominance is preserved. Ops can only
-      // be safely moved into the entry block as the region's other blocks may
-      // for a loop.
+      // the start of the block will ensure SSA dominance is preserved locally
+      // in the subgraph. Ops can only be safely moved into the entry block as
+      // the region's other blocks may for a loop.
       op->moveBefore(&region->front(), region->front().begin());
       ++numSunk;
       // Add the op to the work queue.
@@ -119,7 +119,7 @@ void Sinker::sinkRegion(Region *region) {
   }
 }
 
-size_t Sinker::sinkRegions(ArrayRef<Region *> regions) && {
+size_t Sinker::sinkRegions(ArrayRef<Region *> regions) {
   for (Region *region : regions)
     if (!region->empty())
       sinkRegion(region);
@@ -137,7 +137,8 @@ void mlir::getSinglyExecutedRegionsToSink(RegionBranchOpInterface branch,
   // Collect constant operands.
   SmallVector<Attribute> operands(branch->getNumOperands(), Attribute());
   for (auto &it : llvm::enumerate(branch->getOperands()))
-    matchPattern(it.value(), m_Constant(&operands[it.index()]));
+    (void)matchPattern(it.value(), m_Constant(&operands[it.index()]));
+
   // Get the invocation bounds.
   SmallVector<InvocationBounds> bounds;
   branch.getRegionInvocationBounds(operands, bounds);
