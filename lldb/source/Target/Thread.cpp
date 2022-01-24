@@ -13,6 +13,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
@@ -2004,4 +2005,27 @@ ThreadSP Thread::GetCurrentExceptionBacktrace() {
   }
 
   return ThreadSP();
+}
+
+lldb::ValueObjectSP Thread::GetSiginfoValue() {
+  ProcessSP process_sp = GetProcess();
+  assert(process_sp);
+  Target &target = process_sp->GetTarget();
+  PlatformSP platform_sp = target.GetPlatform();
+  assert(platform_sp);
+  ArchSpec arch = target.GetArchitecture();
+
+  CompilerType type = platform_sp->GetSiginfoType(arch.GetTriple());
+  if (!type.IsValid())
+    return ValueObjectConstResult::Create(&target, Status("no siginfo_t for the platform"));
+
+  llvm::Optional<uint64_t> type_size = type.GetByteSize(nullptr);
+  assert(type_size);
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data = GetSiginfo(type_size.getValue());
+  if (!data)
+    return ValueObjectConstResult::Create(&target, Status(data.takeError()));
+
+  DataExtractor data_extractor{data.get()->getBufferStart(), data.get()->getBufferSize(),
+    process_sp->GetByteOrder(), arch.GetAddressByteSize()};
+  return ValueObjectConstResult::Create(&target, type, ConstString("__lldb_siginfo"), data_extractor);
 }

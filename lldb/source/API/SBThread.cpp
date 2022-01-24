@@ -1317,3 +1317,12 @@ lldb_private::Thread *SBThread::operator->() {
 lldb_private::Thread *SBThread::get() {
   return m_opaque_sp->GetThreadSP().get();
 }
+
+SBValue SBThread::GetSiginfo() {
+  LLDB_INSTRUMENT_VA(this);
+
+  ThreadSP thread_sp = m_opaque_sp->GetThreadSP();
+  if (!thread_sp)
+    return SBValue();
+  return thread_sp->GetSiginfoValue();
+}
