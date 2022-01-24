@@ -44460,12 +44460,27 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   // MOVMSK(PCMPEQ(X,Y)) == -1 -> PTESTZ(SUB(X,Y),SUB(X,Y)).
   // MOVMSK(PCMPEQ(X,Y)) != -1 -> !PTESTZ(SUB(X,Y),SUB(X,Y)).
   if (IsAllOf && Subtarget.hasSSE41()) {
+    MVT TestVT = VecVT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
     SDValue BC = peekThroughBitcasts(Vec);
     if (BC.getOpcode() == X86ISD::PCMPEQ) {
-      MVT TestVT = VecVT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
       SDValue V = DAG.getNode(ISD::SUB, SDLoc(BC), BC.getValueType(),
                               BC.getOperand(0), BC.getOperand(1));
       V = DAG.getBitcast(TestVT, V);
+      return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
+    }
+    // Check for 256-bit split vector cases.
+    if (BC.getOpcode() == ISD::AND &&
+        BC.getOperand(0).getOpcode() == X86ISD::PCMPEQ &&
+        BC.getOperand(1).getOpcode() == X86ISD::PCMPEQ) {
+      SDValue LHS = BC.getOperand(0);
+      SDValue RHS = BC.getOperand(1);
+      LHS = DAG.getNode(ISD::SUB, SDLoc(LHS), LHS.getValueType(),
+                        LHS.getOperand(0), LHS.getOperand(1));
+      RHS = DAG.getNode(ISD::SUB, SDLoc(RHS), RHS.getValueType(),
+                        RHS.getOperand(0), RHS.getOperand(1));
+      LHS = DAG.getBitcast(TestVT, LHS);
+      RHS = DAG.getBitcast(TestVT, RHS);
+      SDValue V = DAG.getNode(ISD::OR, SDLoc(EFLAGS), TestVT, LHS, RHS);
       return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
     }
   }
