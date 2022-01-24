@@ -361,6 +361,7 @@ private:
     bool AnyImportAffected = false;
     bool FormattingOff = false;
     for (auto *Line : AnnotatedLines) {
+      assert(Line->First);
       Current = Line->First;
       LineEnd = Line->Last;
       // clang-format comments toggle formatting on/off.

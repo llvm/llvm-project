@@ -374,11 +374,10 @@ bool PPCTTIImpl::mightUseCTR(BasicBlock *BB, TargetLibraryInfo *LibInfo,
   // clobbers ctr.
   auto asmClobbersCTR = [](InlineAsm *IA) {
     InlineAsm::ConstraintInfoVector CIV = IA->ParseConstraints();
-    for (unsigned i = 0, ie = CIV.size(); i < ie; ++i) {
-      InlineAsm::ConstraintInfo &C = CIV[i];
+    for (const InlineAsm::ConstraintInfo &C : CIV) {
       if (C.Type != InlineAsm::isInput)
-        for (unsigned j = 0, je = C.Codes.size(); j < je; ++j)
-          if (StringRef(C.Codes[j]).equals_insensitive("{ctr}"))
+        for (const auto &Code : C.Codes)
+          if (StringRef(Code).equals_insensitive("{ctr}"))
             return true;
     }
     return false;
@@ -1301,8 +1300,8 @@ bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
                             LoopInfo *LI, DominatorTree *DT,
                             AssumptionCache *AC, TargetLibraryInfo *LibInfo) {
   // Process nested loops first.
-  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I)
-    if (canSaveCmp(*I, BI, SE, LI, DT, AC, LibInfo))
+  for (Loop *I : *L)
+    if (canSaveCmp(I, BI, SE, LI, DT, AC, LibInfo))
       return false; // Stop search.
 
   HardwareLoopInfo HWLoopInfo(L);

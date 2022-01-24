@@ -28,8 +28,7 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
     std::unique_ptr<InlineAdvisor> OriginalAdvisor,
     const ReplayInlinerSettings &ReplaySettings, bool EmitRemarks)
     : InlineAdvisor(M, FAM), OriginalAdvisor(std::move(OriginalAdvisor)),
-      HasReplayRemarks(false), ReplaySettings(ReplaySettings),
-      EmitRemarks(EmitRemarks) {
+      ReplaySettings(ReplaySettings), EmitRemarks(EmitRemarks) {
 
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ReplaySettings.ReplayFile);
   std::error_code EC = BufferOrErr.getError();

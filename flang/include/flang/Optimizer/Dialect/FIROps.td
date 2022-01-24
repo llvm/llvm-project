@@ -1633,7 +1633,7 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoSideEffect]> {
     Compute the internal coordinate address starting from a boxed value or
     unboxed memory reference. Returns a memory reference. When computing the
     coordinate of an array element, the rank of the array must be known and
-    the number of indexing expressions must equal the rank of the array.
+    the number of indexing expressions must not exceed the rank of the array.
 
     This operation will apply the access map from a boxed value implicitly.
 

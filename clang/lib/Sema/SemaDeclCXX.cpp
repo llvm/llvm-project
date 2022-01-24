@@ -13012,7 +13012,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
       NewDecl->setInvalidDecl();
     else if (OldDecl) {
       NewDecl->setPreviousDecl(OldDecl);
-      CheckRedeclarationModuleOwnership(NewDecl, OldDecl);
+      CheckRedeclarationInModule(NewDecl, OldDecl);
     }
 
     NewND = NewDecl;
