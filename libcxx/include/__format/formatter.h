@@ -38,26 +38,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // to support compilers with partial C++20 support.
 #if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
-// Currently not implemented specializations throw an exception when used. This
-// does not conform to the Standard. However not all Standard defined formatters
-// have been implemented yet. Until that time the current behavior is intended.
-// TODO FMT Disable the default template.
+/// The default formatter template.
+///
+/// [format.formatter.spec]/5
+/// If F is a disabled specialization of formatter, these values are false:
+/// - is_default_constructible_v<F>,
+/// - is_copy_constructible_v<F>,
+/// - is_move_constructible_v<F>,
+/// - is_copy_assignable<F>, and
+/// - is_move_assignable<F>.
 template <class _Tp, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter {
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI auto parse(auto& __parse_ctx)
-      -> decltype(__parse_ctx.begin()) {
-    __throw();
-  }
-
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI auto format(_Tp, auto& __ctx)
-      -> decltype(__ctx.out()) {
-    __throw();
-  }
-
-private:
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void __throw() {
-    __throw_format_error("Argument type not implemented yet");
-  }
+  formatter() = delete;
+  formatter(const formatter&) = delete;
+  formatter& operator=(const formatter&) = delete;
 };
 
 namespace __format_spec {
