@@ -1,3 +1,5 @@
+// Do not edit! -*- read-only -*-
+// See README.txt for instructions
 //===--- Utility.h ----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -10,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEMANGLE_UTILITY_H
-#define LLVM_DEMANGLE_UTILITY_H
+#ifndef DEMANGLE_UTILITY_H
+#define DEMANGLE_UTILITY_H
 
 #include "StringView.h"
 #include <array>
