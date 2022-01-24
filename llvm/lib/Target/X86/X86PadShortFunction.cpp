@@ -129,10 +129,9 @@ bool PadShortFunc::runOnMachineFunction(MachineFunction &MF) {
   bool MadeChange = false;
 
   // Pad the identified basic blocks with NOOPs
-  for (DenseMap<MachineBasicBlock*, unsigned int>::iterator I = ReturnBBs.begin();
-       I != ReturnBBs.end(); ++I) {
-    MachineBasicBlock *MBB = I->first;
-    unsigned Cycles = I->second;
+  for (const auto &ReturnBB : ReturnBBs) {
+    MachineBasicBlock *MBB = ReturnBB.first;
+    unsigned Cycles = ReturnBB.second;
 
     // Function::hasOptSize is already checked above.
     bool OptForSize = llvm::shouldOptimizeForSize(MBB, PSI, MBFI);

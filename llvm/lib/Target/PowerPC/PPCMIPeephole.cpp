@@ -258,12 +258,12 @@ void PPCMIPeephole::UpdateTOCSaves(
   }
 
   bool Keep = true;
-  for (auto It = TOCSaves.begin(); It != TOCSaves.end(); It++ ) {
-    MachineInstr *CurrInst = It->first;
+  for (auto &I : TOCSaves) {
+    MachineInstr *CurrInst = I.first;
     // If new instruction dominates an existing one, mark existing one as
     // redundant.
-    if (It->second && MDT->dominates(MI, CurrInst))
-      It->second = false;
+    if (I.second && MDT->dominates(MI, CurrInst))
+      I.second = false;
     // Check if the new instruction is redundant.
     if (MDT->dominates(CurrInst, MI)) {
       Keep = false;
