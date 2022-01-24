@@ -17,7 +17,10 @@ def RocketModel : SchedMachineModel {
   let LoadLatency = 3;
   let MispredictPenalty = 3;
   let CompleteModel = false;
-  let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasVInstructions, HasVInstructionsI64];
+  let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZknd, 
+                             HasStdExtZkne, HasStdExtZknh, HasStdExtZksed,
+                             HasStdExtZksh, HasStdExtZkr, HasVInstructions,
+                             HasVInstructionsI64];
 }
 
 //===----------------------------------------------------------------------===//

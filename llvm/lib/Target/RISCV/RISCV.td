@@ -178,6 +178,84 @@ def HasStdExtZbcOrZbkc
                                    "'Zbc' (Carry-Less 'B' Instructions) or "
                                    "'Zbkc' (Carry-less multiply instructions for Cryptography)">;
 
+def FeatureStdExtZknd
+    : SubtargetFeature<"zknd", "HasStdExtZknd", "true",
+                       "'Zknd' (NIST Suite: AES Decryption)">;
+def HasStdExtZknd : Predicate<"Subtarget->hasStdExtZknd()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZknd),
+                             "'Zknd' (NIST Suite: AES Decryption)">;
+
+def FeatureStdExtZkne
+    : SubtargetFeature<"zkne", "HasStdExtZkne", "true",
+                       "'Zkne' (NIST Suite: AES Encryption)">;
+def HasStdExtZkne : Predicate<"Subtarget->hasStdExtZkne()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZkne),
+                             "'Zkne' (NIST Suite: AES Encryption)">;
+
+// Some instructions belong to both Zknd and Zkne subextensions.
+// They should be enabled if either has been specified.
+def HasStdExtZkndOrZkne
+    : Predicate<"Subtarget->hasStdExtZknd() || Subtarget->hasStdExtZkne()">,
+                AssemblerPredicate<(any_of FeatureStdExtZknd, FeatureStdExtZkne),
+                                   "'Zknd' (NIST Suite: AES Decryption) or "
+                                   "'Zkne' (NIST Suite: AES Encryption)">;
+
+def FeatureStdExtZknh
+    : SubtargetFeature<"zknh", "HasStdExtZknh", "true",
+                       "'Zknh' (NIST Suite: Hash Function Instructions)">;
+def HasStdExtZknh : Predicate<"Subtarget->hasStdExtZknh()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZknh),
+                             "'Zknh' (NIST Suite: Hash Function Instructions)">;
+
+def FeatureStdExtZksed
+    : SubtargetFeature<"zksed", "HasStdExtZksed", "true",
+                       "'Zksed' (ShangMi Suite: SM4 Block Cipher Instructions)">;
+def HasStdExtZksed : Predicate<"Subtarget->hasStdExtZksed()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZksed),
+                             "'Zksed' (ShangMi Suite: SM4 Block Cipher Instructions)">;
+
+def FeatureStdExtZksh
+    : SubtargetFeature<"zksh", "HasStdExtZksh", "true",
+                       "'Zksh' (ShangMi Suite: SM3 Hash Function Instructions)">;
+def HasStdExtZksh : Predicate<"Subtarget->hasStdExtZksh()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZksh),
+                             "'Zksh' (ShangMi Suite: SM3 Hash Function Instructions)">;
+
+def FeatureStdExtZkr
+    : SubtargetFeature<"zkr", "HasStdExtZkr", "true",
+                       "'Zkr' (Entropy Source Extension)">;
+def HasStdExtZkr : Predicate<"Subtarget->hasStdExtZkr()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZkr),
+                             "'Zkr' (Entropy Source Extension)">;
+
+def FeatureStdExtZkn
+    : SubtargetFeature<"zkn", "HasStdExtZkn", "true",
+                       "'Zkn' (NIST Algorithm Suite)",
+                       [FeatureStdExtZbkb,
+                        FeatureStdExtZbkc,
+                        FeatureStdExtZkne,
+                        FeatureStdExtZknd,
+                        FeatureStdExtZknh]>;
+
+def FeatureStdExtZks
+    : SubtargetFeature<"zks", "HasStdExtZks", "true",
+                       "'Zks' (ShangMi Algorithm Suite)",
+                       [FeatureStdExtZbkb,
+                        FeatureStdExtZbkc,
+                        FeatureStdExtZksed,
+                        FeatureStdExtZksh]>;
+
+def FeatureStdExtZkt
+    : SubtargetFeature<"zkt", "HasStdExtZkt", "true",
+                       "'Zkt' (Data Independent Execution Latency)">;
+
+def FeatureStdExtZk
+    : SubtargetFeature<"zk", "HasStdExtZk", "true",
+                       "'Zk' (Standard scalar cryptography extension)",
+                       [FeatureStdExtZkn,
+                        FeatureStdExtZkr,
+                        FeatureStdExtZkt]>;
+
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
                        "Disable RVC Hint Instructions.">;
