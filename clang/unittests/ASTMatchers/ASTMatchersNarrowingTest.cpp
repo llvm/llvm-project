@@ -1841,6 +1841,25 @@ TEST_P(ASTMatchersTest, IsConstexpr_MatchesIfConstexpr) {
       notMatches("void baz() { if (1 > 0) {} }", ifStmt(isConstexpr())));
 }
 
+TEST_P(ASTMatchersTest, IsConstinit) {
+  if (!GetParam().isCXX20OrLater())
+    return;
+
+  EXPECT_TRUE(matches("constinit int foo = 1;",
+                      varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(matches("extern constinit int foo;",
+                      varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(matches("constinit const char* foo = \"bar\";",
+                      varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(
+      notMatches("[[clang::require_constant_initialization]] int foo = 1;",
+                 varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(notMatches("constexpr int foo = 1;",
+                         varDecl(hasName("foo"), isConstinit())));
+  EXPECT_TRUE(notMatches("static inline int foo = 1;",
+                         varDecl(hasName("foo"), isConstinit())));
+}
+
 TEST_P(ASTMatchersTest, HasInitStatement_MatchesSelectionInitializers) {
   EXPECT_TRUE(notMatches("void baz() { if (1 > 0) {} }",
                          ifStmt(hasInitStatement(anything()))));
