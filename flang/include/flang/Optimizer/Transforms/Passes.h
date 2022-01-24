@@ -35,6 +35,8 @@ std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass> createMemoryAllocationPass();
+std::unique_ptr<mlir::Pass>
+createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

@@ -87,6 +87,13 @@ inline void addAVC(mlir::PassManager &pm) {
       pm, disableFirAvc, fir::createArrayValueCopyPass);
 }
 
+inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
+  addNestedPassConditionally<mlir::FuncOp>(pm, disableFirMao, [&]() {
+    return fir::createMemoryAllocationPass(
+        dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold);
+  });
+}
+
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 inline void addCodeGenRewritePass(mlir::PassManager &pm) {
   addPassConditionally(
@@ -121,6 +128,7 @@ inline void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm) {
   fir::addAVC(pm);
   pm.addNestedPass<mlir::FuncOp>(fir::createCharacterConversionPass());
   pm.addPass(mlir::createCanonicalizerPass(config));
+  fir::addMemoryAllocationOpt(pm);
 
   // The default inliner pass adds the canonicalizer pass with the default
   // configuration. Create the inliner pass with tco config.
