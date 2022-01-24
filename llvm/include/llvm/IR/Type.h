@@ -366,7 +366,16 @@ public:
     return ContainedTys[0];
   }
 
+  /// This method is deprecated without replacement. Pointer element types are
+  /// not available with opaque pointers.
   Type *getPointerElementType() const {
+    return getNonOpaquePointerElementType();
+  }
+
+  /// Only use this method in code that is not reachable with opaque pointers,
+  /// or part of deprecated methods that will be removed as part of the opaque
+  /// pointers transition.
+  Type *getNonOpaquePointerElementType() const {
     assert(getTypeID() == PointerTyID);
     assert(NumContainedTys &&
            "Attempting to get element type of opaque pointer");
