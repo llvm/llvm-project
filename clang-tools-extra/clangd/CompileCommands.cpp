@@ -463,12 +463,25 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
 #define PREFIX(NAME, VALUE) static const char *const NAME[] = VALUE;
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELP, METAVAR, VALUES)                                          \
-  if (DriverID::OPT_##ALIAS != DriverID::OPT_INVALID && ALIASARGS == nullptr)  \
-    AddAlias(DriverID::OPT_##ID, DriverID::OPT_##ALIAS);                       \
   Prefixes[DriverID::OPT_##ID] = PREFIX;
 #include "clang/Driver/Options.inc"
 #undef OPTION
 #undef PREFIX
+
+    struct {
+      DriverID ID;
+      DriverID AliasID;
+      void *AliasArgs;
+    } AliasTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELP, METAVAR, VALUES)                                          \
+  {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, (void *)ALIASARGS},
+#include "clang/Driver/Options.inc"
+#undef OPTION
+    };
+    for (auto &E : AliasTable)
+      if (E.AliasID != DriverID::OPT_INVALID && E.AliasArgs == nullptr)
+        AddAlias(E.ID, E.AliasID);
 
     auto Result = std::make_unique<TableTy>();
     // Iterate over distinct options (represented by the canonical alias).
