@@ -10,6 +10,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include <functional>
 #include <vector>
 
 namespace llvm {
