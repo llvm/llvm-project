@@ -121,7 +121,7 @@ struct IRInstructionData
   /// and is used when checking when two instructions are considered similar.
   /// If either instruction is not legal, the instructions are automatically not
   /// considered similar.
-  bool Legal;
+  bool Legal = false;
 
   /// This is only relevant if we are wrapping a CmpInst where we needed to
   /// change the predicate of a compare instruction from a greater than form

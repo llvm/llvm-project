@@ -865,7 +865,7 @@ private:
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
-  AliasAnalysis *AA;
+  AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
   Function &F;
 
@@ -892,7 +892,7 @@ private:
   std::unique_ptr<ClobberWalkerBase<AliasAnalysis>> WalkerBase;
   std::unique_ptr<CachingWalker<AliasAnalysis>> Walker;
   std::unique_ptr<SkipSelfWalker<AliasAnalysis>> SkipWalker;
-  unsigned NextID;
+  unsigned NextID = 0;
 };
 
 /// Enables verification of MemorySSA.

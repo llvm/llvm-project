@@ -50,7 +50,7 @@ namespace {
 
   public:
     static char ID; // Class identification, replacement for typeinfo
-    CostModelAnalysis() : FunctionPass(ID), F(nullptr), TTI(nullptr) {
+    CostModelAnalysis() : FunctionPass(ID) {
       initializeCostModelAnalysisPass(
         *PassRegistry::getPassRegistry());
     }
@@ -69,9 +69,9 @@ namespace {
     void print(raw_ostream &OS, const Module*) const override;
 
     /// The function that we analyze.
-    Function *F;
+    Function *F = nullptr;
     /// Target information.
-    const TargetTransformInfo *TTI;
+    const TargetTransformInfo *TTI = nullptr;
   };
 }  // End of anonymous namespace
 

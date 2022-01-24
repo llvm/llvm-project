@@ -62,7 +62,7 @@ void IRInstructionData::initializeInstruction() {
 }
 
 IRInstructionData::IRInstructionData(IRInstructionDataList &IDList)
-    : Inst(nullptr), Legal(false), IDL(&IDList) {}
+    : IDL(&IDList) {}
 
 void IRInstructionData::setBranchSuccessors(
     DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger) {

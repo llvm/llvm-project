@@ -146,7 +146,7 @@ class DivergenceInfo {
   // analysis can run indefinitely. We set ContainsIrreducible and no
   // analysis is actually performed on the function. All values in
   // this function are conservatively reported as divergent instead.
-  bool ContainsIrreducible;
+  bool ContainsIrreducible = false;
   std::unique_ptr<SyncDependenceAnalysis> SDA;
   std::unique_ptr<DivergenceAnalysisImpl> DA;
 

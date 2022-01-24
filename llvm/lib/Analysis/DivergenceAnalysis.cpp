@@ -348,7 +348,7 @@ DivergenceInfo::DivergenceInfo(Function &F, const DominatorTree &DT,
                                const PostDominatorTree &PDT, const LoopInfo &LI,
                                const TargetTransformInfo &TTI,
                                bool KnownReducible)
-    : F(F), ContainsIrreducible(false) {
+    : F(F) {
   if (!KnownReducible) {
     using RPOTraversal = ReversePostOrderTraversal<const Function *>;
     RPOTraversal FuncRPOT(&F);

@@ -169,10 +169,7 @@ public:
   };
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L)
-      : PSE(PSE), InnermostLoop(L), AccessIdx(0), MaxSafeDepDistBytes(0),
-        MaxSafeVectorWidthInBits(-1U),
-        FoundNonConstantDistanceDependence(false),
-        Status(VectorizationSafetyStatus::Safe), RecordDependences(true) {}
+      : PSE(PSE), InnermostLoop(L) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -264,30 +261,30 @@ private:
   SmallVector<Instruction *, 16> InstMap;
 
   /// The program order index to be used for the next instruction.
-  unsigned AccessIdx;
+  unsigned AccessIdx = 0;
 
   // We can access this many bytes in parallel safely.
-  uint64_t MaxSafeDepDistBytes;
+  uint64_t MaxSafeDepDistBytes = 0;
 
   /// Number of elements (from consecutive iterations) that are safe to
   /// operate on simultaneously, multiplied by the size of the element in bits.
   /// The size of the element is taken from the memory access that is most
   /// restrictive.
-  uint64_t MaxSafeVectorWidthInBits;
+  uint64_t MaxSafeVectorWidthInBits = -1U;
 
   /// If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.
-  bool FoundNonConstantDistanceDependence;
+  bool FoundNonConstantDistanceDependence = false;
 
   /// Result of the dependence checks, indicating whether the checked
   /// dependences are safe for vectorization, require RT checks or are known to
   /// be unsafe.
-  VectorizationSafetyStatus Status;
+  VectorizationSafetyStatus Status = VectorizationSafetyStatus::Safe;
 
   //// True if Dependences reflects the dependences in the
   //// loop.  If false we exceeded MaxDependences and
   //// Dependences is invalid.
-  bool RecordDependences;
+  bool RecordDependences = true;
 
   /// Memory dependences collected during the analysis.  Only valid if
   /// RecordDependences is true.
@@ -395,7 +392,7 @@ public:
           AliasSetId(AliasSetId), Expr(Expr) {}
   };
 
-  RuntimePointerChecking(ScalarEvolution *SE) : Need(false), SE(SE) {}
+  RuntimePointerChecking(ScalarEvolution *SE) : SE(SE) {}
 
   /// Reset the state of the pointer runtime information.
   void reset() {
@@ -444,7 +441,7 @@ public:
                    unsigned Depth = 0) const;
 
   /// This flag indicates if we need to add the runtime check.
-  bool Need;
+  bool Need = false;
 
   /// Information about the pointers that may require checking.
   SmallVector<PointerInfo, 2> Pointers;
@@ -620,17 +617,17 @@ private:
 
   Loop *TheLoop;
 
-  unsigned NumLoads;
-  unsigned NumStores;
+  unsigned NumLoads = 0;
+  unsigned NumStores = 0;
 
-  uint64_t MaxSafeDepDistBytes;
+  uint64_t MaxSafeDepDistBytes = -1;
 
   /// Cache the result of analyzeLoop.
-  bool CanVecMem;
-  bool HasConvergentOp;
+  bool CanVecMem = false;
+  bool HasConvergentOp = false;
 
   /// Indicator that there are non vectorizable stores to a uniform address.
-  bool HasDependenceInvolvingLoopInvariantAddress;
+  bool HasDependenceInvolvingLoopInvariantAddress = false;
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.

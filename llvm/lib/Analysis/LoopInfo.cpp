@@ -695,11 +695,10 @@ class UnloopUpdater {
 
   // Flag the presence of an irreducible backedge whose destination is a block
   // directly contained by the original unloop.
-  bool FoundIB;
+  bool FoundIB = false;
 
 public:
-  UnloopUpdater(Loop *UL, LoopInfo *LInfo)
-      : Unloop(*UL), LI(LInfo), DFS(UL), FoundIB(false) {}
+  UnloopUpdater(Loop *UL, LoopInfo *LInfo) : Unloop(*UL), LI(LInfo), DFS(UL) {}
 
   void updateBlockParents();
 
