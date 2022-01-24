@@ -2860,6 +2860,7 @@ for.end:
 
 define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; CHECK-LABEL: @i8_loop(
+; CHECK-NEXT: entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2881,18 +2882,19 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[TMP0]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[TMP6:%.*]]
-; CHECK:       6:
+; CHECK:       loop:
 ; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP7:%.*]], [[TMP6]] ]
 ; CHECK-NEXT:    [[B_0:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[TMP8:%.*]], [[TMP6]] ]
 ; CHECK-NEXT:    [[TMP7]] = and i32 [[A_0]], 4
 ; CHECK-NEXT:    [[TMP8]] = add i8 [[B_0]], -1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i8 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[TMP10]], label [[TMP6]], !llvm.loop [[LOOP29:![0-9]+]]
-; CHECK:       10:
+; CHECK:       exit:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP7]], [[TMP6]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[DOTLCSSA]]
 ;
 ; IND-LABEL: @i8_loop(
+; IND-NEXT:  entry:
 ; IND-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2905,12 +2907,13 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; IND-NEXT:    br i1 true, label [[TMP3:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
 ; IND-NEXT:    br label [[TMP2:%.*]]
-; IND:       2:
+; IND:       loop:
 ; IND-NEXT:    br i1 undef, label [[TMP3]], label [[TMP2]], !llvm.loop [[LOOP29:![0-9]+]]
-; IND:       3:
+; IND:       exit:
 ; IND-NEXT:    ret i32 0
 ;
 ; UNROLL-LABEL: @i8_loop(
+; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2923,12 +2926,13 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; UNROLL-NEXT:    br i1 true, label [[TMP3:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[TMP2:%.*]]
-; UNROLL:       2:
+; UNROLL:       loop:
 ; UNROLL-NEXT:    br i1 undef, label [[TMP3]], label [[TMP2]], !llvm.loop [[LOOP29:![0-9]+]]
-; UNROLL:       3:
+; UNROLL:       exit:
 ; UNROLL-NEXT:    ret i32 0
 ;
 ; UNROLL-NO-IC-LABEL: @i8_loop(
+; UNROLL-NO-IC-NEXT:  entry:
 ; UNROLL-NO-IC-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2954,18 +2958,19 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[TMP0:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[TMP0]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[TMP8:%.*]]
-; UNROLL-NO-IC:       8:
+; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP9:%.*]], [[TMP8]] ]
 ; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[TMP10:%.*]], [[TMP8]] ]
 ; UNROLL-NO-IC-NEXT:    [[TMP9]] = and i32 [[A_0]], 4
 ; UNROLL-NO-IC-NEXT:    [[TMP10]] = add i8 [[B_0]], -1
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = icmp eq i8 [[TMP10]], 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP11]], label [[TMP12]], label [[TMP8]], !llvm.loop [[LOOP29:![0-9]+]]
-; UNROLL-NO-IC:       12:
+; UNROLL-NO-IC:       exit:
 ; UNROLL-NO-IC-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP9]], [[TMP8]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-IC-NEXT:    ret i32 [[DOTLCSSA]]
 ;
 ; INTERLEAVE-LABEL: @i8_loop(
+; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -2978,28 +2983,30 @@ define i32 @i8_loop() nounwind readnone ssp uwtable {
 ; INTERLEAVE-NEXT:    br i1 true, label [[TMP3:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    br label [[TMP2:%.*]]
-; INTERLEAVE:       2:
+; INTERLEAVE:       loop:
 ; INTERLEAVE-NEXT:    br i1 undef, label [[TMP3]], label [[TMP2]], !llvm.loop [[LOOP29:![0-9]+]]
-; INTERLEAVE:       3:
+; INTERLEAVE:       exit:
 ; INTERLEAVE-NEXT:    ret i32 0
 ;
-  br label %1
+entry:
+  br label %loop
 
-; <label>:1                                       ; preds = %1, %0
-  %a.0 = phi i32 [ 1, %0 ], [ %2, %1 ]
-  %b.0 = phi i8 [ 0, %0 ], [ %3, %1 ]
-  %2 = and i32 %a.0, 4
-  %3 = add i8 %b.0, -1
-  %4 = icmp eq i8 %3, 0
-  br i1 %4, label %5, label %1
+loop:
+  %a.0 = phi i32 [ 1, %entry ], [ %a.0.and, %loop ]
+  %b.0 = phi i8 [ 0, %entry ], [ %b.next, %loop ]
+  %a.0.and = and i32 %a.0, 4
+  %b.next = add i8 %b.0, -1
+  %ec = icmp eq i8 %b.next, 0
+  br i1 %ec, label %exit, label %loop
 
-; <label>:5                                       ; preds = %1
-  ret i32 %2
+exit:
+  ret i32 %a.0.and
 }
 
 
 define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; CHECK-LABEL: @i16_loop(
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3021,18 +3028,19 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[TMP0]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[TMP6:%.*]]
-; CHECK:       6:
+; CHECK:       loop:
 ; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP7:%.*]], [[TMP6]] ]
 ; CHECK-NEXT:    [[B_0:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[TMP8:%.*]], [[TMP6]] ]
 ; CHECK-NEXT:    [[TMP7]] = and i32 [[A_0]], 4
 ; CHECK-NEXT:    [[TMP8]] = add i16 [[B_0]], -1
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i16 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[TMP10]], label [[TMP6]], !llvm.loop [[LOOP31:![0-9]+]]
-; CHECK:       10:
+; CHECK:       exit:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP7]], [[TMP6]] ], [ [[TMP5]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[DOTLCSSA]]
 ;
 ; IND-LABEL: @i16_loop(
+; IND-NEXT:  entry:
 ; IND-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3045,12 +3053,13 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; IND-NEXT:    br i1 true, label [[TMP3:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
 ; IND-NEXT:    br label [[TMP2:%.*]]
-; IND:       2:
+; IND:       loop:
 ; IND-NEXT:    br i1 undef, label [[TMP3]], label [[TMP2]], !llvm.loop [[LOOP31:![0-9]+]]
-; IND:       3:
+; IND:       exit:
 ; IND-NEXT:    ret i32 0
 ;
 ; UNROLL-LABEL: @i16_loop(
+; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3063,12 +3072,13 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; UNROLL-NEXT:    br i1 true, label [[TMP3:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[TMP2:%.*]]
-; UNROLL:       2:
+; UNROLL:       loop:
 ; UNROLL-NEXT:    br i1 undef, label [[TMP3]], label [[TMP2]], !llvm.loop [[LOOP31:![0-9]+]]
-; UNROLL:       3:
+; UNROLL:       exit:
 ; UNROLL-NEXT:    ret i32 0
 ;
 ; UNROLL-NO-IC-LABEL: @i16_loop(
+; UNROLL-NO-IC-NEXT:  entry:
 ; UNROLL-NO-IC-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3094,18 +3104,19 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[TMP0:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[TMP0]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[TMP8:%.*]]
-; UNROLL-NO-IC:       8:
+; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP9:%.*]], [[TMP8]] ]
 ; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[TMP10:%.*]], [[TMP8]] ]
 ; UNROLL-NO-IC-NEXT:    [[TMP9]] = and i32 [[A_0]], 4
 ; UNROLL-NO-IC-NEXT:    [[TMP10]] = add i16 [[B_0]], -1
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = icmp eq i16 [[TMP10]], 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP11]], label [[TMP12]], label [[TMP8]], !llvm.loop [[LOOP31:![0-9]+]]
-; UNROLL-NO-IC:       12:
+; UNROLL-NO-IC:       exit:
 ; UNROLL-NO-IC-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP9]], [[TMP8]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-IC-NEXT:    ret i32 [[DOTLCSSA]]
 ;
 ; INTERLEAVE-LABEL: @i16_loop(
+; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3118,23 +3129,24 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 ; INTERLEAVE-NEXT:    br i1 true, label [[TMP3:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    br label [[TMP2:%.*]]
-; INTERLEAVE:       2:
+; INTERLEAVE:       loop:
 ; INTERLEAVE-NEXT:    br i1 undef, label [[TMP3]], label [[TMP2]], !llvm.loop [[LOOP31:![0-9]+]]
-; INTERLEAVE:       3:
+; INTERLEAVE:       exit:
 ; INTERLEAVE-NEXT:    ret i32 0
 ;
-  br label %1
+entry:
+  br label %loop
 
-; <label>:1                                       ; preds = %1, %0
-  %a.0 = phi i32 [ 1, %0 ], [ %2, %1 ]
-  %b.0 = phi i16 [ 0, %0 ], [ %3, %1 ]
-  %2 = and i32 %a.0, 4
-  %3 = add i16 %b.0, -1
-  %4 = icmp eq i16 %3, 0
-  br i1 %4, label %5, label %1
+loop:
+  %a.0 = phi i32 [ 1, %entry ], [ %a.0.and, %loop ]
+  %b.0 = phi i16 [ 0, %entry ], [ %b.0.next, %loop ]
+  %a.0.and = and i32 %a.0, 4
+  %b.0.next = add i16 %b.0, -1
+  %ec = icmp eq i16 %b.0.next, 0
+  br i1 %ec, label %exit, label %loop
 
-; <label>:5                                       ; preds = %1
-  ret i32 %2
+exit:
+  ret i32 %a.0.and
 }
 
 ; This loop has a backedge taken count of i32_max. We need to check for this
@@ -3144,6 +3156,7 @@ define i32 @i16_loop() nounwind readnone ssp uwtable {
 
 define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; CHECK-LABEL: @max_i32_backedgetaken(
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3164,18 +3177,19 @@ define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[TMP0]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[TMP5:%.*]]
-; CHECK:       5:
+; CHECK:       loop:
 ; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP6:%.*]], [[TMP5]] ]
 ; CHECK-NEXT:    [[B_0:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[TMP7:%.*]], [[TMP5]] ]
 ; CHECK-NEXT:    [[TMP6]] = and i32 [[A_0]], 4
 ; CHECK-NEXT:    [[TMP7]] = add i32 [[B_0]], -1
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9]], label [[TMP5]], !llvm.loop [[LOOP33:![0-9]+]]
-; CHECK:       9:
+; CHECK:       exit:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP6]], [[TMP5]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[DOTLCSSA]]
 ;
 ; IND-LABEL: @max_i32_backedgetaken(
+; IND-NEXT:  entry:
 ; IND-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IND:       vector.ph:
 ; IND-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3185,15 +3199,16 @@ define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; IND-NEXT:    br i1 undef, label [[TMP4:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
 ; IND-NEXT:    br label [[TMP1:%.*]]
-; IND:       1:
+; IND:       loop:
 ; IND-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[TMP2:%.*]], [[TMP1]] ]
 ; IND-NEXT:    [[TMP2]] = add i32 [[B_0]], -1
 ; IND-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; IND-NEXT:    br i1 [[TMP3]], label [[TMP4]], label [[TMP1]], !llvm.loop [[LOOP33:![0-9]+]]
-; IND:       4:
+; IND:       exit:
 ; IND-NEXT:    ret i32 0
 ;
 ; UNROLL-LABEL: @max_i32_backedgetaken(
+; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3203,15 +3218,16 @@ define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; UNROLL-NEXT:    br i1 undef, label [[TMP4:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
 ; UNROLL-NEXT:    br label [[TMP1:%.*]]
-; UNROLL:       1:
+; UNROLL:       loop:
 ; UNROLL-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[TMP2:%.*]], [[TMP1]] ]
 ; UNROLL-NEXT:    [[TMP2]] = add i32 [[B_0]], -1
 ; UNROLL-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; UNROLL-NEXT:    br i1 [[TMP3]], label [[TMP4]], label [[TMP1]], !llvm.loop [[LOOP33:![0-9]+]]
-; UNROLL:       4:
+; UNROLL:       exit:
 ; UNROLL-NEXT:    ret i32 0
 ;
 ; UNROLL-NO-IC-LABEL: @max_i32_backedgetaken(
+; UNROLL-NO-IC-NEXT:  entry:
 ; UNROLL-NO-IC-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NO-IC:       vector.ph:
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3236,18 +3252,19 @@ define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[TMP0:%.*]] ]
 ; UNROLL-NO-IC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 1, [[TMP0]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[TMP7:%.*]]
-; UNROLL-NO-IC:       7:
+; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[A_0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP8:%.*]], [[TMP7]] ]
 ; UNROLL-NO-IC-NEXT:    [[B_0:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[TMP9:%.*]], [[TMP7]] ]
 ; UNROLL-NO-IC-NEXT:    [[TMP8]] = and i32 [[A_0]], 4
 ; UNROLL-NO-IC-NEXT:    [[TMP9]] = add i32 [[B_0]], -1
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP10]], label [[TMP11]], label [[TMP7]], !llvm.loop [[LOOP33:![0-9]+]]
-; UNROLL-NO-IC:       11:
+; UNROLL-NO-IC:       exit:
 ; UNROLL-NO-IC-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP8]], [[TMP7]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-IC-NEXT:    ret i32 [[DOTLCSSA]]
 ;
 ; INTERLEAVE-LABEL: @max_i32_backedgetaken(
+; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE:       vector.ph:
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -3257,26 +3274,27 @@ define i32 @max_i32_backedgetaken() nounwind readnone ssp uwtable {
 ; INTERLEAVE-NEXT:    br i1 undef, label [[TMP4:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
 ; INTERLEAVE-NEXT:    br label [[TMP1:%.*]]
-; INTERLEAVE:       1:
+; INTERLEAVE:       loop:
 ; INTERLEAVE-NEXT:    [[B_0:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[TMP2:%.*]], [[TMP1]] ]
 ; INTERLEAVE-NEXT:    [[TMP2]] = add i32 [[B_0]], -1
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; INTERLEAVE-NEXT:    br i1 [[TMP3]], label [[TMP4]], label [[TMP1]], !llvm.loop [[LOOP33:![0-9]+]]
-; INTERLEAVE:       4:
+; INTERLEAVE:       exit:
 ; INTERLEAVE-NEXT:    ret i32 0
 ;
-  br label %1
+entry:
+  br label %loop
 
-; <label>:1                                       ; preds = %1, %0
-  %a.0 = phi i32 [ 1, %0 ], [ %2, %1 ]
-  %b.0 = phi i32 [ 0, %0 ], [ %3, %1 ]
-  %2 = and i32 %a.0, 4
-  %3 = add i32 %b.0, -1
-  %4 = icmp eq i32 %3, 0
-  br i1 %4, label %5, label %1
+loop:
+  %a.0 = phi i32 [ 1, %entry ], [ %a.0.and, %loop ]
+  %b.0 = phi i32 [ 0, %entry ], [ %b.next, %loop ]
+  %a.0.and = and i32 %a.0, 4
+  %b.next = add i32 %b.0, -1
+  %ec = icmp eq i32 %b.next, 0
+  br i1 %ec, label %exit, label %loop
 
-; <label>:5                                       ; preds = %1
-  ret i32 %2
+exit:
+  ret i32 %a.0.and
 }
 
 ; When generating the overflow check we must sure that the induction start value
