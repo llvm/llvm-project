@@ -40,6 +40,7 @@ public:
   void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
   RuntimeLibType GetDefaultRuntimeLibType() const override;
+  unsigned GetDefaultDwarfVersion() const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
   bool
   IsAArch64OutlineAtomicsDefault(const llvm::opt::ArgList &Args) const override;

@@ -58,6 +58,16 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
 
     {"zbkb", RISCVExtensionVersion{1, 0}},
     {"zbkc", RISCVExtensionVersion{1, 0}},
+    {"zknd", RISCVExtensionVersion{1, 0}},
+    {"zkne", RISCVExtensionVersion{1, 0}},
+    {"zknh", RISCVExtensionVersion{1, 0}},
+    {"zksed", RISCVExtensionVersion{1, 0}},
+    {"zksh", RISCVExtensionVersion{1, 0}},
+    {"zkr", RISCVExtensionVersion{1, 0}},
+    {"zkn", RISCVExtensionVersion{1, 0}},
+    {"zks", RISCVExtensionVersion{1, 0}},
+    {"zkt", RISCVExtensionVersion{1, 0}},
+    {"zk", RISCVExtensionVersion{1, 0}},
 
     {"v", RISCVExtensionVersion{1, 0}},
     {"zvl32b", RISCVExtensionVersion{1, 0}},
@@ -691,9 +701,11 @@ Error RISCVISAInfo::checkDependency() {
   bool HasE = Exts.count("e") == 1;
   bool HasD = Exts.count("d") == 1;
   bool HasF = Exts.count("f") == 1;
-  bool HasVector = Exts.count("zve32x") == 1;
+  bool HasZve32x = Exts.count("zve32x") == 1;
   bool HasZve32f = Exts.count("zve32f") == 1;
   bool HasZve64d = Exts.count("zve64d") == 1;
+  bool HasV = Exts.count("v") == 1;
+  bool HasVector = HasZve32x || HasV;
   bool HasZvl = MinVLen != 0;
 
   if (HasE && !IsRv32)
@@ -726,6 +738,12 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "zvl*b requires v or zve* extension to also be specified");
 
+  // Could not implement Zve* extension and the V extension at the same time.
+  if (HasZve32x && HasV)
+    return createStringError(
+        errc::invalid_argument,
+        "It is illegal to specify the v extension with zve* extensions");
+
   // Additional dependency checks.
   // TODO: The 'q' extension requires rv64.
   // TODO: It is illegal to specify 'e' extensions with 'f' and 'd'.
@@ -733,7 +751,7 @@ Error RISCVISAInfo::checkDependency() {
   return Error::success();
 }
 
-static const char *ImpliedExtsV[] = {"zvl128b", "zve64d", "f", "d"};
+static const char *ImpliedExtsV[] = {"zvl128b", "f", "d"};
 static const char *ImpliedExtsZfh[] = {"zfhmin"};
 static const char *ImpliedExtsZve64d[] = {"zve64f"};
 static const char *ImpliedExtsZve64f[] = {"zve64x", "zve32f"};
@@ -751,6 +769,9 @@ static const char *ImpliedExtsZvl512b[] = {"zvl256b"};
 static const char *ImpliedExtsZvl256b[] = {"zvl128b"};
 static const char *ImpliedExtsZvl128b[] = {"zvl64b"};
 static const char *ImpliedExtsZvl64b[] = {"zvl32b"};
+static const char *ImpliedExtsZk[] = {"zkn", "zkt", "zkr"};
+static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zkne", "zknd", "zknh"};
+static const char *ImpliedExtsZks[] = {"zbkb", "zbkc", "zksed", "zksh"};
 
 struct ImpliedExtsEntry {
   StringLiteral Name;
@@ -766,6 +787,9 @@ struct ImpliedExtsEntry {
 static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"v"}, {ImpliedExtsV}},
     {{"zfh"}, {ImpliedExtsZfh}},
+    {{"zk"}, {ImpliedExtsZk}},
+    {{"zkn"}, {ImpliedExtsZkn}},
+    {{"zks"}, {ImpliedExtsZks}},
     {{"zve32f"}, {ImpliedExtsZve32f}},
     {{"zve32x"}, {ImpliedExtsZve32x}},
     {{"zve64d"}, {ImpliedExtsZve64d}},
@@ -855,6 +879,11 @@ void RISCVISAInfo::updateMaxELen() {
       unsigned ZveELen;
       ExtName.getAsInteger(10, ZveELen);
       MaxELen = std::max(MaxELen, ZveELen);
+    }
+    if (ExtName == "v") {
+      MaxELenFp = 64;
+      MaxELen = 64;
+      return;
     }
   }
 }

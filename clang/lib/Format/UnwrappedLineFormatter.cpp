@@ -1213,6 +1213,7 @@ unsigned UnwrappedLineFormatter::format(
            Joiner.getNextMergedLine(DryRun, IndentTracker);
        Line; PrevPrevLine = PreviousLine, PreviousLine = Line, Line = NextLine,
                            FirstLine = false) {
+    assert(Line->First);
     const AnnotatedLine &TheLine = *Line;
     unsigned Indent = IndentTracker.getIndent();
 
@@ -1240,7 +1241,7 @@ unsigned UnwrappedLineFormatter::format(
 
     if (ShouldFormat && TheLine.Type != LT_Invalid) {
       if (!DryRun) {
-        bool LastLine = Line->First->is(tok::eof);
+        bool LastLine = TheLine.First->is(tok::eof);
         formatFirstToken(TheLine, PreviousLine, PrevPrevLine, Lines, Indent,
                          LastLine ? LastStartColumn : NextStartColumn + Indent);
       }

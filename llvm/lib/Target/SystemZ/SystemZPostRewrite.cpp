@@ -170,15 +170,15 @@ bool SystemZPostRewrite::expandCondMove(MachineBasicBlock &MBB,
   MF.insert(std::next(MachineFunction::iterator(MBB)), RestMBB);
   RestMBB->splice(RestMBB->begin(), &MBB, MI, MBB.end());
   RestMBB->transferSuccessors(&MBB);
-  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
-    RestMBB->addLiveIn(*I);
+  for (MCPhysReg R : LiveRegs)
+    RestMBB->addLiveIn(R);
 
   // Create a new block MoveMBB to hold the move instruction.
   MachineBasicBlock *MoveMBB = MF.CreateMachineBasicBlock(BB);
   MF.insert(std::next(MachineFunction::iterator(MBB)), MoveMBB);
   MoveMBB->addLiveIn(SrcReg);
-  for (auto I = LiveRegs.begin(); I != LiveRegs.end(); ++I)
-    MoveMBB->addLiveIn(*I);
+  for (MCPhysReg R : LiveRegs)
+    MoveMBB->addLiveIn(R);
 
   // At the end of MBB, create a conditional branch to RestMBB if the
   // condition is false, otherwise fall through to MoveMBB.

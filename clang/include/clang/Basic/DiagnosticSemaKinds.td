@@ -11471,7 +11471,7 @@ def warn_tcb_enforcement_violation : Warning<
 
 // RISC-V builtin required extension warning
 def err_riscv_builtin_requires_extension : Error<
-  "builtin requires '%0' extension support to be enabled">;
+  "builtin requires at least one of the following extensions support to be enabled : %0">;
 def err_riscv_builtin_invalid_lmul : Error<
   "LMUL argument must be in the range [0,3] or [5,7]">;
 } // end of sema component.
