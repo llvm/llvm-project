@@ -28,7 +28,8 @@ void ScriptedThread::CheckInterpreterAndScriptObject() const {
   lldbassert(GetInterface() && "Invalid Scripted Thread Interface.");
 }
 
-ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error)
+ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error,
+                               StructuredData::Generic *script_object)
     : Thread(process, LLDB_INVALID_THREAD_ID), m_scripted_process(process),
       m_scripted_thread_interface_sp(
           m_scripted_process.GetInterface().CreateScriptedThreadInterface()) {
@@ -54,18 +55,23 @@ ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error)
 
   ExecutionContext exe_ctx(process);
 
-  StructuredData::GenericSP object_sp =
-      scripted_thread_interface->CreatePluginObject(
-          class_name->c_str(), exe_ctx,
-          process.m_scripted_process_info.GetArgsSP());
-  if (!object_sp || !object_sp->IsValid()) {
-    error.SetErrorString("Failed to create valid script object");
+  m_script_object_sp = scripted_thread_interface->CreatePluginObject(
+      class_name->c_str(), exe_ctx, process.m_scripted_process_info.GetArgsSP(),
+      script_object);
+
+  if (!m_script_object_sp) {
+    error.SetErrorString("Failed to create script object");
     return;
   }
 
-  m_script_object_sp = object_sp;
+  if (!m_script_object_sp->IsValid()) {
+    m_script_object_sp = nullptr;
+    error.SetErrorString("Created script object is invalid");
+    return;
+  }
 
-  SetID(scripted_thread_interface->GetThreadID());
+  lldb::tid_t tid = scripted_thread_interface->GetThreadID();
+  SetID(tid);
 }
 
 ScriptedThread::~ScriptedThread() { DestroyThread(); }

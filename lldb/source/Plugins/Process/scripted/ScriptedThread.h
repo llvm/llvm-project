@@ -26,7 +26,8 @@ namespace lldb_private {
 
 class ScriptedThread : public lldb_private::Thread {
 public:
-  ScriptedThread(ScriptedProcess &process, Status &error);
+  ScriptedThread(ScriptedProcess &process, Status &error,
+                 StructuredData::Generic *script_object = nullptr);
 
   ~ScriptedThread() override;
 

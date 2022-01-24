@@ -23,7 +23,8 @@ class ScriptedProcessInterface : virtual public ScriptedInterface {
 public:
   StructuredData::GenericSP
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp) override {
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) override {
     return nullptr;
   }
 
@@ -77,7 +78,8 @@ class ScriptedThreadInterface : virtual public ScriptedInterface {
 public:
   StructuredData::GenericSP
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp) override {
+                     StructuredData::DictionarySP args_sp,
+                     StructuredData::Generic *script_obj = nullptr) override {
     return nullptr;
   }
 
