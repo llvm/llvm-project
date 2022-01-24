@@ -484,13 +484,18 @@ using TileSizeComputationFunction =
 using PaddingValueComputationFunction =
     std::function<FailureOr<Value>(OpBuilder &, OpOperand &)>;
 
-/// Callback returning true if the pad tensor operation defining the given
-/// OpOperand shall be marked as nofold to enable packing.
+/// Callback returning true if the PadOp defining the given OpOperand shall be
+/// marked as nofold to enable packing.
 using PaddingNoFoldComputationFunction = std::function<bool(OpOperand &)>;
 
-/// Callback returning the number of loops to hoist the pad tensor operation
-/// defining the given OpOperand.
+/// Callback returning the number of loops to hoist the PadOp defining the given
+/// OpOperand.
 using PaddingHoistComputationFunction = std::function<int64_t(OpOperand &)>;
+
+/// Callback returning the transpose vector used to permute the result tensor
+/// dimensions of the PadOp defining the given OpOperand.
+using PaddingTransposeComputationFunction =
+    std::function<SmallVector<int64_t>(OpOperand &)>;
 
 struct LinalgPaddingOptions {
   /// Callback returning the padding value to use for a given OpOperand or
@@ -506,10 +511,10 @@ struct LinalgPaddingOptions {
     return *this;
   }
 
-  /// Callback returning true if the pad tensor operation defining the given
-  /// OpOperand shall be marked as nofold to enable packing. A padding operation
-  /// is only marked nofold if `paddingNoFoldComputationFunction` is set and
-  /// returns true. Otherwise, the nofold attribute is set to false.
+  /// Callback returning true if the PadOp defining the given OpOperand shall be
+  /// marked as nofold to enable packing. A padding operation is only marked
+  /// nofold if `paddingNoFoldComputationFunction` is set and returns true.
+  /// Otherwise, the nofold attribute is set to false.
   PaddingNoFoldComputationFunction paddingNoFoldComputationFunction = nullptr;
 
   LinalgPaddingOptions &
@@ -518,13 +523,24 @@ struct LinalgPaddingOptions {
     return *this;
   }
 
-  /// Callback returning the number of loops to hoist the pad tensor operation
-  /// defining the given OpOperand.
+  /// Callback returning the number of loops to hoist the PadOp defining the
+  /// given OpOperand.
   PaddingHoistComputationFunction paddingHoistComputationFunction = nullptr;
 
   LinalgPaddingOptions &
   setPaddingHoistComputationFunction(PaddingHoistComputationFunction fun) {
     paddingHoistComputationFunction = std::move(fun);
+    return *this;
+  }
+
+  /// Callback returning the transpose vector used to permute the result tensor
+  /// dimensions of the PadOp defining the given OpOperand.
+  PaddingTransposeComputationFunction paddingTransposeComputationFunction =
+      nullptr;
+
+  LinalgPaddingOptions &setPaddingTransposeComputationFunction(
+      PaddingTransposeComputationFunction fun) {
+    paddingTransposeComputationFunction = std::move(fun);
     return *this;
   }
 };

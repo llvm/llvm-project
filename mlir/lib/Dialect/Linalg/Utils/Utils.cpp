@@ -340,11 +340,11 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     OpResult opResult = current.cast<OpResult>();
     current = linalgOp.getOutputOperand(opResult.getResultNumber())->get();
   }
-  auto padTensorOp = current ? current.getDefiningOp<tensor::PadOp>() : nullptr;
+  auto padOp = current ? current.getDefiningOp<tensor::PadOp>() : nullptr;
 
   // Exit if the search fails to match a tensor::PadOp at the end of the matched
   // LinalgOp sequence.
-  if (!padTensorOp)
+  if (!padOp)
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the padded result type does not match.
@@ -352,39 +352,75 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the LinalgOps are not high padded.
-  if (llvm::any_of(padTensorOp.getMixedLowPad(), [](OpFoldResult ofr) {
+  if (llvm::any_of(padOp.getMixedLowPad(), [](OpFoldResult ofr) {
         return getConstantIntValue(ofr) != static_cast<int64_t>(0);
       }))
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
-  // Exit if `padTensorOpSliceOp`, which defines the slice used by
-  // `padTensorOp`, is rank-reducing.
-  auto padTensorOpSliceOp =
-      padTensorOp.source().getDefiningOp<tensor::ExtractSliceOp>();
-  if (!padTensorOpSliceOp || sliceOp.getMixedSizes().size() !=
-                                 padTensorOpSliceOp.getMixedSizes().size())
+  // Exit if `padOpSliceOp`, which defines the slice used by
+  // `padOp`, is rank-reducing.
+  auto padOpSliceOp = padOp.source().getDefiningOp<tensor::ExtractSliceOp>();
+  if (!padOpSliceOp ||
+      sliceOp.getMixedSizes().size() != padOpSliceOp.getMixedSizes().size())
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
-  // of the slice padded by `padTensorOp`.
-  if (llvm::any_of(llvm::zip(sliceOp.getMixedSizes(),
-                             padTensorOpSliceOp.getMixedSizes()),
-                   [](std::tuple<OpFoldResult, OpFoldResult> it) {
-                     return !isEqualConstantIntOrValue(std::get<0>(it),
-                                                       std::get<1>(it));
-                   }))
+  // of the slice padded by `padOp`.
+  if (llvm::any_of(
+          llvm::zip(sliceOp.getMixedSizes(), padOpSliceOp.getMixedSizes()),
+          [](std::tuple<OpFoldResult, OpFoldResult> it) {
+            return !isEqualConstantIntOrValue(std::get<0>(it), std::get<1>(it));
+          }))
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Exit if the padding values do not match.
-  Attribute padTensorOpPadAttr, padAttr;
-  Value padTensorOpPad = padTensorOp.getConstantPaddingValue();
-  if (!padTensorOpPad ||
-      !matchPattern(padTensorOpPad, m_Constant(&padTensorOpPadAttr)) ||
-      !matchPattern(pad, m_Constant(&padAttr)) || padTensorOpPadAttr != padAttr)
+  Attribute padOpPadAttr, padAttr;
+  Value padOpPad = padOp.getConstantPaddingValue();
+  if (!padOpPad || !matchPattern(padOpPad, m_Constant(&padOpPadAttr)) ||
+      !matchPattern(pad, m_Constant(&padAttr)) || padOpPadAttr != padAttr)
     return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
 
   // Return the padded result if the padding values and sizes match.
   return sliceOp.source();
+}
+
+GenericOp makeTransposeOp(OpBuilder &b, Location loc, Value inputTensor,
+                          Value outputTensor,
+                          ArrayRef<int64_t> transposeVector) {
+  auto resultTensorType = outputTensor.getType().cast<RankedTensorType>();
+  Type elementType = resultTensorType.getElementType();
+
+  assert(isPermutation(transposeVector) &&
+         "expect transpose vector to be a permutation");
+  assert(transposeVector.size() ==
+             static_cast<size_t>(resultTensorType.getRank()) &&
+         "expect transpose vector size to match result tensor rank");
+
+  // Compute the transpose and the indentity indexing maps.
+  SmallVector<AffineMap> indexingMaps = {
+      inversePermutation(AffineMap::getPermutationMap(
+          SmallVector<unsigned>(transposeVector.begin(), transposeVector.end()),
+          b.getContext())),
+      AffineMap::getMultiDimIdentityMap(transposeVector.size(),
+                                        b.getContext())};
+  SmallVector<llvm::StringRef> iteratorTypes(transposeVector.size(),
+                                             getParallelIteratorTypeName());
+
+  // Create a GenericOp to transpose `inputTensor` into `outputTensor`.
+  auto transposeOp = b.create<GenericOp>(
+      loc, resultTensorType, inputTensor, outputTensor,
+      b.getAffineMapArrayAttr(indexingMaps), b.getStrArrayAttr(iteratorTypes),
+      /*doc=*/nullptr,
+      /*library_call=*/nullptr);
+  Region &body = transposeOp.getRegion();
+  body.push_back(new Block());
+  body.front().addArguments({elementType, elementType}, {loc, loc});
+
+  // Create the body of the transpose operation.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPointToEnd(&body.front());
+  b.create<YieldOp>(loc, transposeOp.getRegion().front().getArgument(0));
+  return transposeOp;
 }
 
 /// Specialization to build an scf "for" nest.
