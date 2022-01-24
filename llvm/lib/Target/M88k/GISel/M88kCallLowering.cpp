@@ -181,8 +181,27 @@ Register OutgoingArgHandler::getStackAddress(uint64_t Size, int64_t Offset,
 void M88kIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                 Register PhysReg,
                                                 CCValAssign VA) {
+  assert(VA.isRegLoc() && "Value shouldn't be assigned to reg");
+  assert(VA.getLocReg() == PhysReg && "Assigning to the wrong reg?");
+
+  uint64_t ValSize = VA.getValVT().getFixedSizeInBits();
+  uint64_t LocSize = VA.getLocVT().getFixedSizeInBits();
+
+  assert(ValSize <= 64 && "Unsupported value size");
+  assert(LocSize <= 64 && "Unsupported location size");
+
   markPhysRegUsed(PhysReg);
-  IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
+  if (ValSize == LocSize) {
+    MIRBuilder.buildCopy(ValVReg, PhysReg);
+  } else {
+    assert(ValSize < LocSize && "Extensions not supported");
+
+    // We cannot create a truncating copy, nor a trunc of a physical register.
+    // Therefore, we need to copy the content of the physical register into a
+    // virtual one and then truncate that.
+    auto PhysRegToVReg = MIRBuilder.buildCopy(LLT::scalar(LocSize), PhysReg);
+    MIRBuilder.buildTrunc(ValVReg, PhysRegToVReg);
+  }
 }
 
 void M88kIncomingValueHandler::assignValueToAddress(Register ValVReg,

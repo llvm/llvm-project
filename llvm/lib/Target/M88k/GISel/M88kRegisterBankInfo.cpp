@@ -193,6 +193,38 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                             getValueMapping(PMI_GPR32),
                             getValueMapping(PMI_GPR32)}),
         /*NumOperands*/ MI.getNumOperands());
+  case TargetOpcode::G_MERGE_VALUES: {
+    // We only support G_MERGE_VALUES for creating a double precision floating
+    // point value out of two GPRs.
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
+    LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
+    if (Ty.getSizeInBits() != 64 || Ty1.getSizeInBits() != 32 ||
+        Ty2.getSizeInBits() != 32)
+      return getInvalidInstructionMapping();
+    return getInstructionMapping(
+        DefaultMappingID, /*Cost=*/1,
+        getOperandsMapping({getValueMapping(PMI_GPR32),
+                            getValueMapping(PMI_GPR32),
+                            getValueMapping(PMI_GPR32)}),
+        /*NumOperands*/ MI.getNumOperands());
+  }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    // We only support G_UNMERGE_VALUES for splitting a double precision
+    // floating point value into two GPRs.
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    LLT Ty1 = MRI.getType(MI.getOperand(1).getReg());
+    LLT Ty2 = MRI.getType(MI.getOperand(2).getReg());
+    if (Ty.getSizeInBits() != 32 || Ty1.getSizeInBits() != 32 ||
+        Ty2.getSizeInBits() != 64)
+      return getInvalidInstructionMapping();
+    return getInstructionMapping(
+        DefaultMappingID, /*Cost=*/1,
+        getOperandsMapping({getValueMapping(PMI_GPR32),
+                            getValueMapping(PMI_GPR32),
+                            getValueMapping(PMI_GPR32)}),
+        /*NumOperands*/ MI.getNumOperands());
+  }
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
