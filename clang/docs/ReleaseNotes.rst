@@ -331,6 +331,8 @@ AST Matchers
   underlying type.
 - Added the ``isConsteval`` matcher to match ``consteval`` function
   declarations as well as `if consteval` and `if ! consteval` statements.
+- Added the ``isConstinit`` matcher to match ``constinit`` variable
+  declarations.
 
 clang-format
 ------------
