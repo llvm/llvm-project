@@ -9324,11 +9324,11 @@ static __inline__ long long __DEFAULT_FN_ATTRS512 _mm512_reduce_mul_epi64(__m512
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512 _mm512_reduce_and_epi64(__m512i __W) {
-  return __builtin_ia32_reduce_and_q512(__W);
+  return __builtin_reduce_and((__v8di)__W);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512 _mm512_reduce_or_epi64(__m512i __W) {
-  return __builtin_ia32_reduce_or_q512(__W);
+  return __builtin_reduce_or((__v8di)__W);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512
@@ -9346,13 +9346,13 @@ _mm512_mask_reduce_mul_epi64(__mmask8 __M, __m512i __W) {
 static __inline__ long long __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_and_epi64(__mmask8 __M, __m512i __W) {
   __W = _mm512_mask_mov_epi64(_mm512_set1_epi64(~0ULL), __M, __W);
-  return __builtin_ia32_reduce_and_q512(__W);
+  return __builtin_reduce_and((__v8di)__W);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_or_epi64(__mmask8 __M, __m512i __W) {
   __W = _mm512_maskz_mov_epi64(__M, __W);
-  return __builtin_ia32_reduce_or_q512(__W);
+  return __builtin_reduce_or((__v8di)__W);
 }
 
 // -0.0 is used to ignore the start value since it is the neutral value of
@@ -9390,12 +9390,12 @@ _mm512_reduce_mul_epi32(__m512i __W) {
 
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_reduce_and_epi32(__m512i __W) {
-  return __builtin_ia32_reduce_and_d512((__v16si)__W);
+  return __builtin_reduce_and((__v16si)__W);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_reduce_or_epi32(__m512i __W) {
-  return __builtin_ia32_reduce_or_d512((__v16si)__W);
+  return __builtin_reduce_or((__v16si)__W);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS512
@@ -9413,13 +9413,13 @@ _mm512_mask_reduce_mul_epi32( __mmask16 __M, __m512i __W) {
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_and_epi32( __mmask16 __M, __m512i __W) {
   __W = _mm512_mask_mov_epi32(_mm512_set1_epi32(~0U), __M, __W);
-  return __builtin_ia32_reduce_and_d512((__v16si)__W);
+  return __builtin_reduce_and((__v16si)__W);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_or_epi32(__mmask16 __M, __m512i __W) {
   __W = _mm512_maskz_mov_epi32(__M, __W);
-  return __builtin_ia32_reduce_or_d512((__v16si)__W);
+  return __builtin_reduce_or((__v16si)__W);
 }
 
 static __inline__ float __DEFAULT_FN_ATTRS512
@@ -9446,89 +9446,89 @@ _mm512_mask_reduce_mul_ps(__mmask16 __M, __m512 __W) {
 
 static __inline__ long long __DEFAULT_FN_ATTRS512
 _mm512_reduce_max_epi64(__m512i __V) {
-  return __builtin_ia32_reduce_smax_q512(__V);
+  return __builtin_reduce_max((__v8di)__V);
 }
 
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS512
 _mm512_reduce_max_epu64(__m512i __V) {
-  return __builtin_ia32_reduce_umax_q512(__V);
+  return __builtin_reduce_max((__v8du)__V);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512
 _mm512_reduce_min_epi64(__m512i __V) {
-  return __builtin_ia32_reduce_smin_q512(__V);
+  return __builtin_reduce_min((__v8di)__V);
 }
 
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS512
 _mm512_reduce_min_epu64(__m512i __V) {
-  return __builtin_ia32_reduce_umin_q512(__V);
+  return __builtin_reduce_min((__v8du)__V);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_max_epi64(__mmask8 __M, __m512i __V) {
   __V = _mm512_mask_mov_epi64(_mm512_set1_epi64(-__LONG_LONG_MAX__ - 1LL), __M, __V);
-  return __builtin_ia32_reduce_smax_q512(__V);
+  return __builtin_reduce_max((__v8di)__V);
 }
 
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_max_epu64(__mmask8 __M, __m512i __V) {
   __V = _mm512_maskz_mov_epi64(__M, __V);
-  return __builtin_ia32_reduce_umax_q512(__V);
+  return __builtin_reduce_max((__v8du)__V);
 }
 
 static __inline__ long long __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_min_epi64(__mmask8 __M, __m512i __V) {
   __V = _mm512_mask_mov_epi64(_mm512_set1_epi64(__LONG_LONG_MAX__), __M, __V);
-  return __builtin_ia32_reduce_smin_q512(__V);
+  return __builtin_reduce_min((__v8di)__V);
 }
 
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_min_epu64(__mmask8 __M, __m512i __V) {
   __V = _mm512_mask_mov_epi64(_mm512_set1_epi64(~0ULL), __M, __V);
-  return __builtin_ia32_reduce_umin_q512(__V);
+  return __builtin_reduce_min((__v8du)__V);
 }
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_reduce_max_epi32(__m512i __V) {
-  return __builtin_ia32_reduce_smax_d512((__v16si)__V);
+  return __builtin_reduce_max((__v16si)__V);
 }
 
 static __inline__ unsigned int __DEFAULT_FN_ATTRS512
 _mm512_reduce_max_epu32(__m512i __V) {
-  return __builtin_ia32_reduce_umax_d512((__v16si)__V);
+  return __builtin_reduce_max((__v16su)__V);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_reduce_min_epi32(__m512i __V) {
-  return __builtin_ia32_reduce_smin_d512((__v16si)__V);
+  return __builtin_reduce_min((__v16si)__V);
 }
 
 static __inline__ unsigned int __DEFAULT_FN_ATTRS512
 _mm512_reduce_min_epu32(__m512i __V) {
-  return __builtin_ia32_reduce_umin_d512((__v16si)__V);
+  return __builtin_reduce_min((__v16su)__V);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_max_epi32(__mmask16 __M, __m512i __V) {
   __V = _mm512_mask_mov_epi32(_mm512_set1_epi32(-__INT_MAX__ - 1), __M, __V);
-  return __builtin_ia32_reduce_smax_d512((__v16si)__V);
+  return __builtin_reduce_max((__v16si)__V);
 }
 
 static __inline__ unsigned int __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_max_epu32(__mmask16 __M, __m512i __V) {
   __V = _mm512_maskz_mov_epi32(__M, __V);
-  return __builtin_ia32_reduce_umax_d512((__v16si)__V);
+  return __builtin_reduce_max((__v16su)__V);
 }
 
 static __inline__ int __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_min_epi32(__mmask16 __M, __m512i __V) {
   __V = _mm512_mask_mov_epi32(_mm512_set1_epi32(__INT_MAX__), __M, __V);
-  return __builtin_ia32_reduce_smin_d512((__v16si)__V);
+  return __builtin_reduce_min((__v16si)__V);
 }
 
 static __inline__ unsigned int __DEFAULT_FN_ATTRS512
 _mm512_mask_reduce_min_epu32(__mmask16 __M, __m512i __V) {
   __V = _mm512_mask_mov_epi32(_mm512_set1_epi32(~0U), __M, __V);
-  return __builtin_ia32_reduce_umin_d512((__v16si)__V);
+  return __builtin_reduce_min((__v16su)__V);
 }
 
 static __inline__ double __DEFAULT_FN_ATTRS512
