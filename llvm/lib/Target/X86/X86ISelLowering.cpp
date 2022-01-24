@@ -5490,10 +5490,9 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 /// materialize the FP immediate as a load from a constant pool.
 bool X86TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                      bool ForCodeSize) const {
-  for (unsigned i = 0, e = LegalFPImmediates.size(); i != e; ++i) {
-    if (Imm.bitwiseIsEqual(LegalFPImmediates[i]))
+  for (const APFloat &FPImm : LegalFPImmediates)
+    if (Imm.bitwiseIsEqual(FPImm))
       return true;
-  }
   return false;
 }
 
@@ -33438,9 +33437,7 @@ bool X86TargetLowering::areJTsAllowed(const Function *Fn) const {
 static bool isEFLAGSLiveAfter(MachineBasicBlock::iterator Itr,
                               MachineBasicBlock *BB) {
   // Scan forward through BB for a use/def of EFLAGS.
-  for (MachineBasicBlock::iterator miI = std::next(Itr), miE = BB->end();
-         miI != miE; ++miI) {
-    const MachineInstr& mi = *miI;
+  for (const MachineInstr &mi : llvm::make_range(std::next(Itr), BB->end())) {
     if (mi.readsRegister(X86::EFLAGS))
       return true;
     // If we found a def, we can stop searching.
