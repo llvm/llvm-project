@@ -1192,6 +1192,26 @@ def : Pat <
   (v2f16 (EXTRACT_SUBREG v4f16:$vec, sub1))
 >;
 
+def : Pat <
+  (extract_subvector v8i16:$vec, (i32 0)),
+  (v4i16 (EXTRACT_SUBREG v8i16:$vec, sub0_sub1))
+>;
+
+def : Pat <
+  (extract_subvector v8i16:$vec, (i32 4)),
+  (v4i16 (EXTRACT_SUBREG v8i16:$vec, sub2_sub3))
+>;
+
+def : Pat <
+  (extract_subvector v8f16:$vec, (i32 0)),
+  (v4f16 (EXTRACT_SUBREG v8f16:$vec, sub0_sub1))
+>;
+
+def : Pat <
+  (extract_subvector v8f16:$vec, (i32 4)),
+  (v4f16 (EXTRACT_SUBREG v8f16:$vec, sub2_sub3))
+>;
+
 foreach Index = 0-31 in {
   def Extract_Element_v32i32_#Index : Extract_Element <
     i32, v32i32, Index, !cast<SubRegIndex>(sub#Index)
@@ -1287,6 +1307,26 @@ def : BitConvert <v2i64, v2f64, VReg_128>;
 def : BitConvert <v2f64, v2i64, VReg_128>;
 def : BitConvert <v4f32, v2i64, VReg_128>;
 def : BitConvert <v2i64, v4f32, VReg_128>;
+def : BitConvert <v8i16, v4i32, SReg_128>;
+def : BitConvert <v4i32, v8i16, SReg_128>;
+def : BitConvert <v8f16, v4f32, VReg_128>;
+def : BitConvert <v8f16, v4i32, VReg_128>;
+def : BitConvert <v4f32, v8f16, VReg_128>;
+def : BitConvert <v4i32, v8f16, VReg_128>;
+def : BitConvert <v8i16, v8f16, VReg_128>;
+def : BitConvert <v8f16, v8i16, VReg_128>;
+def : BitConvert <v4f32, v8i16, VReg_128>;
+def : BitConvert <v8i16, v4f32, VReg_128>;
+def : BitConvert <v8i16, v8f16, SReg_128>;
+def : BitConvert <v8i16, v2i64, SReg_128>;
+def : BitConvert <v8i16, v2f64, SReg_128>;
+def : BitConvert <v8f16, v2i64, SReg_128>;
+def : BitConvert <v8f16, v2f64, SReg_128>;
+def : BitConvert <v8f16, v8i16, SReg_128>;
+def : BitConvert <v2i64, v8i16, SReg_128>;
+def : BitConvert <v2f64, v8i16, SReg_128>;
+def : BitConvert <v2i64, v8f16, SReg_128>;
+def : BitConvert <v2f64, v8f16, SReg_128>;
 
 // 160-bit bitcast
 def : BitConvert <v5i32, v5f32, SReg_160>;
