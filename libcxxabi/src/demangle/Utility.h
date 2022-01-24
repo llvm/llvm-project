@@ -14,10 +14,11 @@
 #define DEMANGLE_UTILITY_H
 
 #include "StringView.h"
+#include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <iterator>
+#include <exception>
 #include <limits>
 
 DEMANGLE_NAMESPACE_BEGIN
@@ -48,8 +49,8 @@ class OutputBuffer {
       return;
     }
 
-    char Temp[21];
-    char *TempPtr = std::end(Temp);
+    std::array<char, 21> Temp;
+    char *TempPtr = Temp.data() + Temp.size();
 
     while (N) {
       *--TempPtr = char('0' + N % 10);
@@ -59,7 +60,7 @@ class OutputBuffer {
     // Add negative sign...
     if (isNeg)
       *--TempPtr = '-';
-    this->operator<<(StringView(TempPtr, std::end(Temp)));
+    this->operator<<(StringView(TempPtr, Temp.data() + Temp.size()));
   }
 
 public:
