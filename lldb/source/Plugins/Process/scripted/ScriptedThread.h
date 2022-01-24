@@ -59,6 +59,7 @@ private:
   std::shared_ptr<DynamicRegisterInfo> GetDynamicRegisterInfo();
 
   const ScriptedProcess &m_scripted_process;
+  lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;
   std::shared_ptr<DynamicRegisterInfo> m_register_info_sp = nullptr;
   lldb_private::StructuredData::ObjectSP m_script_object_sp = nullptr;
 };

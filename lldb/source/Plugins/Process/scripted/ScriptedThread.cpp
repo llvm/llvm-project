@@ -29,7 +29,9 @@ void ScriptedThread::CheckInterpreterAndScriptObject() const {
 }
 
 ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error)
-    : Thread(process, LLDB_INVALID_THREAD_ID), m_scripted_process(process) {
+    : Thread(process, LLDB_INVALID_THREAD_ID), m_scripted_process(process),
+      m_scripted_thread_interface_sp(
+          m_scripted_process.GetInterface().CreateScriptedThreadInterface()) {
   if (!process.IsValid()) {
     error.SetErrorString("Invalid scripted process");
     return;
@@ -190,7 +192,7 @@ void ScriptedThread::RefreshStateAfterStop() {
 }
 
 lldb::ScriptedThreadInterfaceSP ScriptedThread::GetInterface() const {
-  return m_scripted_process.GetInterface().GetScriptedThreadInterface();
+  return m_scripted_thread_interface_sp;
 }
 
 std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {

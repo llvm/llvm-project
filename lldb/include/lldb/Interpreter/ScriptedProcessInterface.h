@@ -68,11 +68,9 @@ public:
 
 protected:
   friend class ScriptedThread;
-  virtual lldb::ScriptedThreadInterfaceSP GetScriptedThreadInterface() {
+  virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
     return nullptr;
   }
-
-  lldb::ScriptedThreadInterfaceSP m_scripted_thread_interface_sp = nullptr;
 };
 
 class ScriptedThreadInterface : virtual public ScriptedInterface {

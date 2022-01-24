@@ -165,12 +165,8 @@ ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
 }
 
 lldb::ScriptedThreadInterfaceSP
-ScriptedProcessPythonInterface::GetScriptedThreadInterface() {
-  if (!m_scripted_thread_interface_sp)
-    m_scripted_thread_interface_sp =
-        std::make_shared<ScriptedThreadPythonInterface>(m_interpreter);
-
-  return m_scripted_thread_interface_sp;
+ScriptedProcessPythonInterface::CreateScriptedThreadInterface() {
+  return std::make_shared<ScriptedThreadPythonInterface>(m_interpreter);
 }
 
 #endif

@@ -57,7 +57,7 @@ public:
   llvm::Optional<std::string> GetScriptedThreadPluginName() override;
 
 private:
-  lldb::ScriptedThreadInterfaceSP GetScriptedThreadInterface() override;
+  lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 };
 } // namespace lldb_private
 
