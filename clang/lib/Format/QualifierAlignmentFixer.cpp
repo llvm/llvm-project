@@ -261,10 +261,8 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
       // Move to the end of any template class members e.g.
       // `Foo<int>::iterator`.
       if (Next && Next->startsSequence(TT_TemplateCloser, tok::coloncolon,
-                                       tok::identifier)) {
-        Next = Next->Next->Next;
+                                       tok::identifier))
         return Tok;
-      }
       assert(Next && "Missing template opener");
       Next = Next->Next;
     }
