@@ -460,6 +460,11 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
 
   ProgramStateRef stateTrue, stateFalse;
 
+  // Assume different address spaces cannot overlap.
+  if (First.Expression->getType()->getPointeeType().getAddressSpace() !=
+      Second.Expression->getType()->getPointeeType().getAddressSpace())
+    return state;
+
   // Get the buffer values and make sure they're known locations.
   const LocationContext *LCtx = C.getLocationContext();
   SVal firstVal = state->getSVal(First.Expression, LCtx);
