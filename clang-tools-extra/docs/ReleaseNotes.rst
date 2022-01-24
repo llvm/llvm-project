@@ -118,6 +118,12 @@ New checks
 
   Reports identifier with unicode right-to-left characters.
 
+- New :doc:`readability-container-contains
+  <clang-tidy/checks/readability-container-contains>` check.
+
+  Finds usages of ``container.count()`` and ``container.find() == container.end()`` which should
+  be replaced by a call to the ``container.contains()`` method introduced in C++20.
+
 - New :doc:`readability-container-data-pointer
   <clang-tidy/checks/readability-container-data-pointer>` check.
 
