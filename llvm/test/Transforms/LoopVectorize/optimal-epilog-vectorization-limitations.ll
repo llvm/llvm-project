@@ -3,39 +3,6 @@
 
 target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
 
-; Currently we cannot handle reduction loops.
-; CHECK: LV: Checking a loop in "f1"
-; CHECK: LEV: Unable to vectorize epilogue because the loop is not a supported candidate.
-
-define signext i32 @f1(i8* noalias %A, i32 signext %n) {
-entry:
-  %cmp1 = icmp sgt i32 %n, 0
-  br i1 %cmp1, label %for.body.preheader, label %for.end
-
-for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %n to i64
-  br label %for.body
-
-for.body:                                         ; preds = %for.body.preheader, %for.body
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %sum.02 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nuw nsw i32 %sum.02, %conv
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond, label %for.body, label %for.end.loopexit
-
-for.end.loopexit:                                 ; preds = %for.body
-  %add.lcssa = phi i32 [ %add, %for.body ]
-  br label %for.end
-
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %for.end.loopexit ]
-  ret i32 %sum.0.lcssa
-}
-
 ; Currently we cannot handle live-out variables that are recurrences.
 ; CHECK: LV: Checking a loop in "f2"
 ; CHECK: LEV: Unable to vectorize epilogue because the loop is not a supported candidate.
