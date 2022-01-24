@@ -85,6 +85,16 @@ private:
   bool HasStdExtZfh = false;
   bool HasStdExtZbkb = false;
   bool HasStdExtZbkc = false;
+  bool HasStdExtZknd = false;
+  bool HasStdExtZkne = false;
+  bool HasStdExtZknh = false;
+  bool HasStdExtZksed = false;
+  bool HasStdExtZksh = false;
+  bool HasStdExtZkr = false;
+  bool HasStdExtZkn = false;
+  bool HasStdExtZks = false;
+  bool HasStdExtZkt = false;
+  bool HasStdExtZk = false;
   bool HasRV64 = false;
   bool IsRV32E = false;
   bool EnableLinkerRelax = false;
@@ -160,6 +170,12 @@ public:
   bool hasStdExtZfh() const { return HasStdExtZfh; }
   bool hasStdExtZbkb() const { return HasStdExtZbkb; }
   bool hasStdExtZbkc() const { return HasStdExtZbkc; }
+  bool hasStdExtZknd() const { return HasStdExtZknd; }
+  bool hasStdExtZkne() const { return HasStdExtZkne; }
+  bool hasStdExtZknh() const { return HasStdExtZknh; }
+  bool hasStdExtZksed() const { return HasStdExtZksed; }
+  bool hasStdExtZksh() const { return HasStdExtZksh; }
+  bool hasStdExtZkr() const { return HasStdExtZkr; }
   bool is64Bit() const { return HasRV64; }
   bool isRV32E() const { return IsRV32E; }
   bool enableLinkerRelax() const { return EnableLinkerRelax; }
