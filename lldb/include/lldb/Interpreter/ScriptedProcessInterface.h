@@ -41,6 +41,8 @@ public:
     return {};
   }
 
+  virtual StructuredData::DictionarySP GetThreadsInfo() { return nullptr; }
+
   virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
     return nullptr;
   }

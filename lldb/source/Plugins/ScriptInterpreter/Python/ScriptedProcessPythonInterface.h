@@ -39,6 +39,8 @@ public:
   GetMemoryRegionContainingAddress(lldb::addr_t address,
                                    Status &error) override;
 
+  StructuredData::DictionarySP GetThreadsInfo() override;
+
   StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) override;
 
   StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) override;

@@ -19,6 +19,7 @@ class ScriptedProcess:
     memory_regions = None
     stack_memory_dump = None
     loaded_images = None
+    threads = {}
 
     @abstractmethod
     def __init__(self, target, args):
@@ -50,6 +51,16 @@ class ScriptedProcess:
                 None if out of bounds.
         """
         pass
+
+    def get_threads_info(self):
+        """ Get the dictionary describing the process' Scripted Threads.
+
+        Returns:
+            Dict: The dictionary of threads, with the thread ID as the key and
+            a Scripted Thread instance as the value.
+            The dictionary can be empty.
+        """
+        return self.threads
 
     @abstractmethod
     def get_thread_with_id(self, tid):
