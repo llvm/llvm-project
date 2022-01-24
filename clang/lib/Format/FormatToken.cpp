@@ -189,6 +189,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
 
   bool HasSeparatingComment = false;
   for (unsigned i = 0, e = Commas.size() + 1; i != e; ++i) {
+    assert(ItemBegin);
     // Skip comments on their own line.
     while (ItemBegin->HasUnescapedNewline && ItemBegin->isTrailingComment()) {
       ItemBegin = ItemBegin->Next;
