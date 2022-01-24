@@ -5119,6 +5119,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "BSWAP types must be a multiple of 16 bits!");
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
+    // bswap(bswap(X)) -> X.
+    if (OpOpcode == ISD::BSWAP)
+      return Operand.getOperand(0);
     break;
   case ISD::BITREVERSE:
     assert(VT.isInteger() && VT == Operand.getValueType() &&
