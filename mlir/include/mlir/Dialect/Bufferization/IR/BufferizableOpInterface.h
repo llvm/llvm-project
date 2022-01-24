@@ -36,8 +36,8 @@ class BufferizationState;
 
 /// Options for ComprehensiveBufferize.
 struct BufferizationOptions {
-  using AllocationFn = std::function<FailureOr<Value>(
-      OpBuilder &, Location, MemRefType, ArrayRef<Value>)>;
+  using AllocationFn = std::function<FailureOr<Value>(OpBuilder &, Location,
+                                                      MemRefType, ValueRange)>;
   using DeallocationFn =
       std::function<LogicalResult(OpBuilder &, Location, Value)>;
   using MemCpyFn =
@@ -298,15 +298,23 @@ UnrankedMemRefType getUnrankedMemRefType(Type elementType,
 MemRefType getDynamicMemRefType(RankedTensorType tensorType,
                                 unsigned addressSpace = 0);
 
-/// Creates a memref allocation.
+/// Creates a memref allocation with the given type and dynamic extents.
 FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                             ArrayRef<Value> dynShape,
+                             ValueRange dynShape,
+                             const BufferizationOptions &options);
+
+/// Creates a memref allocation with the given type and dynamic extents. If
+/// `createDealloc`, a deallocation op is inserted at the point where the
+/// allocation goes out of scope.
+FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
+                             ValueRange dynShape, bool deallocMemref,
                              const BufferizationOptions &options);
 
 /// Creates a memref allocation for the given shaped value. This function may
 /// perform additional optimizations such as buffer allocation hoisting. If
 /// `createDealloc`, a deallocation op is inserted at the point where the
 /// allocation goes out of scope.
+// TODO: Allocation hoisting should be a cleanup pass.
 FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
                              bool deallocMemref,
                              const BufferizationOptions &options);
