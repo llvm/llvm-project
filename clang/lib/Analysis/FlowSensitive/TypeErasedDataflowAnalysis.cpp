@@ -93,7 +93,7 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
         MaybePredState.getValue();
     if (MaybeState.hasValue()) {
       Analysis.joinTypeErased(MaybeState->Lattice, PredState.Lattice);
-      MaybeState->Env.join(PredState.Env);
+      MaybeState->Env.join(PredState.Env, Analysis);
     } else {
       MaybeState = PredState;
     }

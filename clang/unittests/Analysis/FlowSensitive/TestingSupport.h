@@ -165,6 +165,13 @@ llvm::Error checkDataflow(
                        VirtualMappedFiles);
 }
 
+/// Returns the `ValueDecl` for the given identifier.
+///
+/// Requirements:
+///
+///  `Name` must be unique in `ASTCtx`.
+const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
+
 } // namespace test
 } // namespace dataflow
 } // namespace clang

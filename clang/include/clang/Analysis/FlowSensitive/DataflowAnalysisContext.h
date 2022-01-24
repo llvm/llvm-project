@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include <cassert>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -32,15 +33,21 @@ namespace dataflow {
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
 public:
+  DataflowAnalysisContext()
+      : TrueVal(&takeOwnership(std::make_unique<BoolValue>())),
+        FalseVal(&takeOwnership(std::make_unique<BoolValue>())) {}
+
   /// Takes ownership of `Loc` and returns a reference to it.
   ///
   /// Requirements:
   ///
   ///  `Loc` must not be null.
-  StorageLocation &takeOwnership(std::unique_ptr<StorageLocation> Loc) {
+  template <typename T>
+  typename std::enable_if<std::is_base_of<StorageLocation, T>::value, T &>::type
+  takeOwnership(std::unique_ptr<T> Loc) {
     assert(Loc != nullptr);
     Locs.push_back(std::move(Loc));
-    return *Locs.back().get();
+    return *cast<T>(Locs.back().get());
   }
 
   /// Takes ownership of `Val` and returns a reference to it.
@@ -48,10 +55,12 @@ public:
   /// Requirements:
   ///
   ///  `Val` must not be null.
-  Value &takeOwnership(std::unique_ptr<Value> Val) {
+  template <typename T>
+  typename std::enable_if<std::is_base_of<Value, T>::value, T &>::type
+  takeOwnership(std::unique_ptr<T> Val) {
     assert(Val != nullptr);
     Vals.push_back(std::move(Val));
-    return *Vals.back().get();
+    return *cast<T>(Vals.back().get());
   }
 
   /// Assigns `Loc` as the storage location of `D`.
@@ -104,6 +113,12 @@ public:
     return ThisPointeeLoc;
   }
 
+  /// Returns a symbolic boolean value that models a boolean literal equal to
+  /// `Value`.
+  BoolValue &getBoolLiteralValue(bool Value) const {
+    return Value ? *TrueVal : *FalseVal;
+  }
+
 private:
   // Storage for the state of a program.
   std::vector<std::unique_ptr<StorageLocation>> Locs;
@@ -120,6 +135,8 @@ private:
   StorageLocation *ThisPointeeLoc = nullptr;
 
   // FIXME: Add support for boolean expressions.
+  BoolValue *TrueVal;
+  BoolValue *FalseVal;
 };
 
 } // namespace dataflow

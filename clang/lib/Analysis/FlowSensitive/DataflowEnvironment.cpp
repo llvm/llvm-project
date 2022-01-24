@@ -73,7 +73,8 @@ bool Environment::operator==(const Environment &Other) const {
   return DeclToLoc == Other.DeclToLoc && LocToVal == Other.LocToVal;
 }
 
-LatticeJoinEffect Environment::join(const Environment &Other) {
+LatticeJoinEffect Environment::join(const Environment &Other,
+                                    Environment::Merger &Merger) {
   assert(DACtx == Other.DACtx);
 
   auto Effect = LatticeJoinEffect::Unchanged;
@@ -88,10 +89,32 @@ LatticeJoinEffect Environment::join(const Environment &Other) {
   if (ExprToLocSizeBefore != ExprToLoc.size())
     Effect = LatticeJoinEffect::Changed;
 
-  // FIXME: Add support for joining distinct values that are assigned to the
-  // same storage locations in `LocToVal` and `Other.LocToVal`.
+  llvm::DenseMap<const StorageLocation *, Value *> MergedLocToVal;
+  for (auto &Entry : LocToVal) {
+    const StorageLocation *Loc = Entry.first;
+    assert(Loc != nullptr);
+
+    Value *Val = Entry.second;
+    assert(Val != nullptr);
+
+    auto It = Other.LocToVal.find(Loc);
+    if (It == Other.LocToVal.end())
+      continue;
+    assert(It->second != nullptr);
+
+    if (It->second == Val) {
+      MergedLocToVal.insert({Loc, Val});
+      continue;
+    }
+
+    // FIXME: Consider destroying `MergedValue` immediately if `Merger::merge`
+    // returns false to avoid storing unneeded values in `DACtx`.
+    if (Value *MergedVal = createValue(Loc->getType()))
+      if (Merger.merge(Loc->getType(), *Val, *It->second, *MergedVal, *this))
+        MergedLocToVal.insert({Loc, MergedVal});
+  }
   const unsigned LocToValSizeBefore = LocToVal.size();
-  LocToVal = intersectDenseMaps(LocToVal, Other.LocToVal);
+  LocToVal = std::move(MergedLocToVal);
   if (LocToValSizeBefore != LocToVal.size())
     Effect = LatticeJoinEffect::Changed;
 
@@ -265,15 +288,6 @@ Value *Environment::createValueUnlessSelfReferential(
   }
 
   return nullptr;
-}
-
-StorageLocation &
-Environment::takeOwnership(std::unique_ptr<StorageLocation> Loc) {
-  return DACtx->takeOwnership(std::move(Loc));
-}
-
-Value &Environment::takeOwnership(std::unique_ptr<Value> Val) {
-  return DACtx->takeOwnership(std::move(Val));
 }
 
 StorageLocation &Environment::skip(StorageLocation &Loc, SkipPast SP) const {
