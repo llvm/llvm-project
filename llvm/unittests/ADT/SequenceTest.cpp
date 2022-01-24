@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

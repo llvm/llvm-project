@@ -19,6 +19,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorOr.h"
 
 namespace clang {

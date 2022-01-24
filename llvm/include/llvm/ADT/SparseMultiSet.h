@@ -20,7 +20,7 @@
 #ifndef LLVM_ADT_SPARSEMULTISET_H
 #define LLVM_ADT_SPARSEMULTISET_H
 
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/identity.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include <cassert>

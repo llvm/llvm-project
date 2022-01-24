@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_TIMEPROFILER_H
 
 #include "llvm/Support/Error.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace llvm {
 

@@ -13,6 +13,7 @@
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/raw_ostream.h"
 

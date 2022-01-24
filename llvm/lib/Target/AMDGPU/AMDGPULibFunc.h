@@ -10,6 +10,7 @@
 #define _AMDGPU_LIBFUNC_H_
 
 #include "llvm/ADT/StringRef.h"
+#include <memory>
 
 namespace llvm {
 
