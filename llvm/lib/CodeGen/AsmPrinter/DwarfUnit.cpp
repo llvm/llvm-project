@@ -1840,6 +1840,8 @@ void DwarfTypeUnit::finishNonUnitTypeDIE(DIE& D, const DICompositeType *CTy) {
   StringRef Name = CTy->getName();
   if (!Name.empty())
     addString(D, dwarf::DW_AT_name, Name);
+  if (Name.startswith("_STN") || !Name.contains('<'))
+    addTemplateParams(D, CTy->getTemplateParams());
   // If the type is in an anonymous namespace, we can't reference it from a TU
   // (since the type would be CU local and the TU doesn't specify which TU has
   // the appropriate type definition) - so flag this emission as such and skip
