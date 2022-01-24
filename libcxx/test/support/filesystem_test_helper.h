@@ -148,7 +148,13 @@ struct scoped_test_env
         std::string cmd = "chmod -R 777 " + test_root.string();
 #endif // defined(__MVS__)
         int ret = std::system(cmd.c_str());
+#if !defined(_AIX)
+        // On AIX the chmod command will return non-zero when trying to set
+        // the permissions on a directory that contains a bad symlink. This triggers
+        // the assert, despite being able to delete everything with the following
+        // `rm -r` command.
         assert(ret == 0);
+#endif
 
         cmd = "rm -rf " + test_root.string();
         ret = std::system(cmd.c_str());
