@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SIGNALHANDLERCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "clang/Analysis/CallGraph.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang {
@@ -31,9 +32,12 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
+  bool isFunctionAsyncSafe(const FunctionDecl *FD) const;
+  bool isSystemCallAsyncSafe(const FunctionDecl *FD) const;
   void reportBug(const FunctionDecl *CalledFunction, const Expr *CallOrRef,
                  const CallExpr *SignalCall, const FunctionDecl *HandlerDecl);
-  bool isSystemCallAllowed(const FunctionDecl *FD) const;
+
+  CallGraph CG;
 
   AsyncSafeFunctionSetType AsyncSafeFunctionSet;
   llvm::StringSet<> &ConformingFunctions;

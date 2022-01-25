@@ -51,6 +51,37 @@ void handler_extern(int) {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'f_extern' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
 }
 
+void test_false_condition(int) {
+  if (0)
+    printf("1234");
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
+}
+
+void test_multiple_calls(int) {
+  f_extern();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'f_extern' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
+  printf("1234");
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
+  f_extern();
+  // first 'f_extern' call found only
+}
+
+void f_recursive();
+
+void test_recursive(int) {
+  f_recursive();
+  printf("");
+  // first 'printf' call (in other function) found only
+}
+
+void f_recursive() {
+  f_extern();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'f_extern' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
+  printf("");
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
+  f_recursive(2);
+}
+
 void test() {
   signal(SIGINT, handler_abort);
   signal(SIGINT, handler_signal);
@@ -66,4 +97,8 @@ void test() {
 
   signal(SIGINT, SIG_IGN);
   signal(SIGINT, SIG_DFL);
+
+  signal(SIGINT, test_false_condition);
+  signal(SIGINT, test_multiple_calls);
+  signal(SIGINT, test_recursive);
 }
