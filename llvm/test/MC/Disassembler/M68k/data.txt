@@ -1,0 +1,6 @@
+# RUN: llvm-mc -disassemble -triple m68k %s | FileCheck %s
+
+# CHECK: move.l %a1, %a0
+0x20 0x49
+# CHECK: lea (50,%a0), %a1
+0x43 0xe8 0x00 0x32
