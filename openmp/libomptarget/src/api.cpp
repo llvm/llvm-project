@@ -43,8 +43,6 @@ EXTERN int omp_get_device_num(void) {
 }
 
 EXTERN void *omp_target_alloc(size_t size, int device_num) {
-  if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    return targetAllocExplicit(size, device_num, TARGET_ALLOC_SHARED, __func__);
   return targetAllocExplicit(size, device_num, TARGET_ALLOC_DEFAULT, __func__);
 }
 

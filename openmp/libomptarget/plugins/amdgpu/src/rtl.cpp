@@ -2514,6 +2514,17 @@ int32_t __tgt_rtl_query_coarse_grain_mem_region(const void *ptr, int64_t size) {
 
   return coarse_grain_mem_tab->contains((const uintptr_t)ptr, size);
 }
+
+// Make ptr accessible by all agents
+int32_t __tgt_rtl_enable_access_to_all_agents(const void *ptr, int32_t) {
+  if (!ptr)
+    return OFFLOAD_FAIL;
+  hsa_status_t err = hsa_amd_agents_allow_access(
+      DeviceInfo.HSAAgents.size(), DeviceInfo.HSAAgents.data(), nullptr, ptr);
+  if (err != HSA_STATUS_SUCCESS)
+    return OFFLOAD_FAIL;
+  return OFFLOAD_SUCCESS;
+}
 }
 
 extern "C" {

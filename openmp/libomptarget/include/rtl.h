@@ -64,7 +64,7 @@ struct RTLInfoTy {
   typedef int32_t(destroy_event_ty)(int32_t, void *);
   typedef int(set_coarse_grain_mem_region_ty)(void *, int64_t);
   typedef int32_t(query_coarse_grain_mem_region_ty)(void *, int64_t);
-
+  typedef int32_t(enable_access_to_all_agents_ty)(void *, int32_t);
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
                                 // i.e. the OpenMP index of the first device
@@ -109,6 +109,7 @@ struct RTLInfoTy {
   destroy_event_ty *destroy_event = nullptr;
   set_coarse_grain_mem_region_ty *set_coarse_grain_mem_region = nullptr;
   query_coarse_grain_mem_region_ty *query_coarse_grain_mem_region = nullptr;
+  enable_access_to_all_agents_ty *enable_access_to_all_agents = nullptr;
 
   // Are there images associated with this RTL.
   bool isUsed = false;

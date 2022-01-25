@@ -410,6 +410,18 @@ int32_t __tgt_rtl_query_coarse_grain_mem_region(const void *ptr, int64_t size) {
 #define __tgt_rtl_query_coarse_grain_mem_region(...)                           \
   __tgt_rtl_query_coarse_grain_mem_region_impl(__VA_ARGS__)
 
+static int32_t __tgt_rtl_enable_access_to_all_agents_impl(const void *ptr,
+                                                          int32_t device_id);
+int32_t __tgt_rtl_enable_access_to_all_agents(const void *ptr,
+                                              int32_t device_id) {
+  auto t = detail::log<int32_t>(__func__, ptr, device_id);
+  int32_t r = __tgt_rtl_enable_access_to_all_agents_impl(ptr, device_id);
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_enable_access_to_all_agents(...)                             \
+  __tgt_rtl_enable_access_to_all_agents_impl(__VA_ARGS__)
+
 #ifdef __cplusplus
 }
 #endif

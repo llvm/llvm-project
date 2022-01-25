@@ -269,6 +269,8 @@ void RTLsTy::LoadRTLs() {
       dlsym(dynlib_handle, "__tgt_rtl_set_coarse_grain_mem_region");
     *((void **)&R.query_coarse_grain_mem_region) =
       dlsym(dynlib_handle, "__tgt_rtl_query_coarse_grain_mem_region");
+    *((void **)&R.enable_access_to_all_agents) =
+        dlsym(dynlib_handle, "__tgt_rtl_enable_access_to_all_agents");
   }
   delete[] libomptarget_dir_name;
 
