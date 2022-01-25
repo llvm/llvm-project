@@ -11,24 +11,28 @@
 using namespace lldb_private;
 
 static constexpr Log::Category g_categories[] = {
-    {{"async"}, {"log asynchronous activity"}, KDP_LOG_ASYNC},
-    {{"break"}, {"log breakpoints"}, KDP_LOG_BREAKPOINTS},
-    {{"comm"}, {"log communication activity"}, KDP_LOG_COMM},
+    {{"async"}, {"log asynchronous activity"}, KDPLog::Async},
+    {{"break"}, {"log breakpoints"}, KDPLog::Breakpoints},
+    {{"comm"}, {"log communication activity"}, KDPLog::Comm},
     {{"data-long"},
      {"log memory bytes for memory reads and writes for all transactions"},
-     KDP_LOG_MEMORY_DATA_LONG},
+     KDPLog::MemoryDataLong},
     {{"data-short"},
      {"log memory bytes for memory reads and writes for short transactions "
       "only"},
-     KDP_LOG_MEMORY_DATA_SHORT},
-    {{"memory"}, {"log memory reads and writes"}, KDP_LOG_MEMORY},
-    {{"packets"}, {"log gdb remote packets"}, KDP_LOG_PACKETS},
-    {{"process"}, {"log process events and activities"}, KDP_LOG_PROCESS},
-    {{"step"}, {"log step related activities"}, KDP_LOG_STEP},
-    {{"thread"}, {"log thread events and activities"}, KDP_LOG_THREAD},
-    {{"watch"}, {"log watchpoint related activities"}, KDP_LOG_WATCHPOINTS},
+     KDPLog::MemoryDataShort},
+    {{"memory"}, {"log memory reads and writes"}, KDPLog::Memory},
+    {{"packets"}, {"log gdb remote packets"}, KDPLog::Packets},
+    {{"process"}, {"log process events and activities"}, KDPLog::Process},
+    {{"step"}, {"log step related activities"}, KDPLog::Step},
+    {{"thread"}, {"log thread events and activities"}, KDPLog::Thread},
+    {{"watch"}, {"log watchpoint related activities"}, KDPLog::Watchpoints},
 };
 
-Log::Channel ProcessKDPLog::g_channel(g_categories, KDP_LOG_DEFAULT);
+static Log::Channel g_channel(g_categories, KDPLog::Packets);
+
+template <> Log::Channel &lldb_private::LogChannelFor<KDPLog>() {
+  return g_channel;
+}
 
 void ProcessKDPLog::Initialize() { Log::Register("kdp-remote", g_channel); }
