@@ -59,8 +59,8 @@ define i8* @test_no_simplify1() {
 
 define i8* @test_no_simplify2(i8* %dst, i8* %src) {
 ; CHECK-LABEL: @test_no_simplify2(
-; CHECK-NEXT:    %ret = musttail call i8* @stpcpy(i8* %dst, i8* %src)
-; CHECK-NEXT:    ret i8* %ret
+; CHECK-NEXT:    [[RET:%.*]] = musttail call i8* @stpcpy(i8* [[DST:%.*]], i8* [[SRC:%.*]])
+; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %ret = musttail call i8* @stpcpy(i8* %dst, i8* %src)
   ret i8* %ret
@@ -87,13 +87,9 @@ define i32 @PR51200(i8** %p, i32* %p2) {
 ; CHECK-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[P2:%.*]] to i8*
 ; CHECK-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* [[CSTR]], i8* [[CSTR1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[STPCPY]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint i8** [[P]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw i64 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr exact i64 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; CHECK-NEXT:    ret i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint i8** [[P]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %call = call i32 (i8**, i32*, ...) @sprintf(i8** %p, i32* bitcast ([3 x i8]* @percent_s to i32*), i32* %p2)
   ret i32 %call
