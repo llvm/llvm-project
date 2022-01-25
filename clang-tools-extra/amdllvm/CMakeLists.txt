@@ -26,8 +26,7 @@ if(UNIX AND LIBCXX_ENABLE_STATIC AND LIBCXXABI_ENABLE_STATIC)
 
   if(NOT CLANG_LINKS_TO_CREATE)
     set(CLANG_LINKS_TO_CREATE clang clang++ clang-cl clang-cpp clang-${CLANG_VERSION_MAJOR} flang
-                              opt llc lld llvm-ar llvm-as llvm-dis llvm-link llvm-lto llvm-mc 
-                              llvm-objdump clang-tidy)
+                              lld)
   endif()
 
   foreach(link ${CLANG_LINKS_TO_CREATE})
