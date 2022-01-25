@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRMemRefTransforms
   FoldSubViewOps.cpp
+  NormalizeMemRefs.cpp
   ResolveShapedTypeResultDims.cpp
 
   ADDITIONAL_HEADER_DIRS
