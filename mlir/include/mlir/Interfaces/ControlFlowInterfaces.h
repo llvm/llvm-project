@@ -91,7 +91,7 @@ public:
   /// Create invocation bounds. The lower bound must be at least 0 and only the
   /// upper bound can be unknown.
   InvocationBounds(unsigned lb, Optional<unsigned> ub) : lower(lb), upper(ub) {
-    assert(!ub || ub >= lb && "upper bound cannot be less than lower bound");
+    assert((!ub || ub >= lb) && "upper bound cannot be less than lower bound");
   }
 
   /// Return the lower bound.
