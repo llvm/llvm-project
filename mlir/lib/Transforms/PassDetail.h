@@ -27,10 +27,6 @@ namespace memref {
 class MemRefDialect;
 } // namespace memref
 
-namespace bufferization {
-class BufferizationDialect;
-} // namespace bufferization
-
 #define GEN_PASS_CLASSES
 #include "mlir/Transforms/Passes.h.inc"
 

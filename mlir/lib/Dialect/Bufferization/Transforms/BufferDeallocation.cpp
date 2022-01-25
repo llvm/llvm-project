@@ -54,12 +54,13 @@
 
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Transforms/BufferUtils.h"
 #include "llvm/ADT/SetOperations.h"
 
 using namespace mlir;
+using namespace mlir::bufferization;
 
 /// Walks over all immediate return-like terminators in the given region.
 static LogicalResult

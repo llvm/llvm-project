@@ -19,9 +19,9 @@
 namespace mlir {
 namespace bufferization {
 class BufferizeTypeConverter;
+class GlobalCreator;
 } // namespace bufferization
 
-class GlobalCreator;
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 
@@ -38,7 +38,7 @@ std::unique_ptr<Pass> createFuncBufferizePass();
 /// Add patterns to bufferize tensor constants into global memrefs to the given
 /// pattern list.
 void populateTensorConstantBufferizePatterns(
-    GlobalCreator &globalCreator,
+    bufferization::GlobalCreator &globalCreator,
     bufferization::BufferizeTypeConverter &typeConverter,
     RewritePatternSet &patterns);
 

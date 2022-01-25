@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 
@@ -139,6 +139,7 @@ struct BufferResultsToOutParamsPass
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::createBufferResultsToOutParamsPass() {
+std::unique_ptr<Pass>
+mlir::bufferization::createBufferResultsToOutParamsPass() {
   return std::make_unique<BufferResultsToOutParamsPass>();
 }

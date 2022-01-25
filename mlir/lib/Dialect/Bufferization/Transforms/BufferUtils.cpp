@@ -10,18 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/BufferUtils.h"
-#include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SetOperations.h"
 
 using namespace mlir;
+using namespace mlir::bufferization;
 
 //===----------------------------------------------------------------------===//
 // BufferPlacementAllocs
@@ -138,4 +138,50 @@ bool BufferPlacementTransformationBase::isLoop(Operation *op) {
   }
 
   return false;
+}
+
+//===----------------------------------------------------------------------===//
+// BufferPlacementTransformationBase
+//===----------------------------------------------------------------------===//
+
+memref::GlobalOp GlobalCreator::getGlobalFor(arith::ConstantOp constantOp) {
+  auto type = constantOp.getType().cast<RankedTensorType>();
+
+  BufferizeTypeConverter typeConverter;
+
+  // If we already have a global for this constant value, no need to do
+  // anything else.
+  auto it = globals.find(constantOp.getValue());
+  if (it != globals.end())
+    return cast<memref::GlobalOp>(it->second);
+
+  // Create a builder without an insertion point. We will insert using the
+  // symbol table to guarantee unique names.
+  OpBuilder globalBuilder(moduleOp.getContext());
+  SymbolTable symbolTable(moduleOp);
+
+  // Create a pretty name.
+  SmallString<64> buf;
+  llvm::raw_svector_ostream os(buf);
+  interleave(type.getShape(), os, "x");
+  os << "x" << type.getElementType();
+
+  // Add an optional alignment to the global memref.
+  IntegerAttr memrefAlignment =
+      alignment > 0 ? IntegerAttr::get(globalBuilder.getI64Type(), alignment)
+                    : IntegerAttr();
+
+  auto global = globalBuilder.create<memref::GlobalOp>(
+      constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
+      /*sym_visibility=*/globalBuilder.getStringAttr("private"),
+      /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
+      /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
+      /*constant=*/true,
+      /*alignment=*/memrefAlignment);
+  symbolTable.insert(global);
+  // The symbol table inserts at the end of the module, but globals are a bit
+  // nicer if they are at the beginning.
+  global->moveBefore(&moduleOp.front());
+  globals[constantOp.getValue()] = global;
+  return global;
 }
