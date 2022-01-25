@@ -3231,6 +3231,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VSELECT:
   case ISD::SELECT:
   case ISD::VP_SELECT:
+  case ISD::VP_MERGE:
     Res = WidenVecRes_Select(N);
     break;
   case ISD::SELECT_CC:         Res = WidenVecRes_SELECT_CC(N); break;
@@ -4782,7 +4783,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_Select(SDNode *N) {
   SDValue InOp1 = GetWidenedVector(N->getOperand(1));
   SDValue InOp2 = GetWidenedVector(N->getOperand(2));
   assert(InOp1.getValueType() == WidenVT && InOp2.getValueType() == WidenVT);
-  return Opcode == ISD::VP_SELECT
+  return Opcode == ISD::VP_SELECT || Opcode == ISD::VP_MERGE
              ? DAG.getNode(Opcode, SDLoc(N), WidenVT, Cond1, InOp1, InOp2,
                            N->getOperand(3))
              : DAG.getNode(Opcode, SDLoc(N), WidenVT, Cond1, InOp1, InOp2);
