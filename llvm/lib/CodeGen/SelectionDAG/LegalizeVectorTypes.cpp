@@ -231,9 +231,16 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_StrictFPOp(SDNode *N) {
   // Now process the remaining operands.
   for (unsigned i = 1; i < NumOpers; ++i) {
     SDValue Oper = N->getOperand(i);
+    EVT OperVT = Oper.getValueType();
 
-    if (Oper.getValueType().isVector())
-      Oper = GetScalarizedVector(Oper);
+    if (OperVT.isVector()) {
+      if (getTypeAction(OperVT) == TargetLowering::TypeScalarizeVector)
+        Oper = GetScalarizedVector(Oper);
+      else
+        Oper = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
+                           OperVT.getVectorElementType(), Oper,
+                           DAG.getVectorIdxConstant(0, dl));
+    }
 
     Opers[i] = Oper;
   }
