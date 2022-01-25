@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=aarch64 -mattr=+predres -disassemble < %s      | FileCheck %s
 # RUN: llvm-mc -triple=aarch64 -mattr=+v8.5a    -disassemble < %s      | FileCheck %s
-# RUN: llvm-mc -triple=aarch64 -mattr=+v8r -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+v8r -disassemble < %s | FileCheck %s --check-prefix=NOSB
 # RUN: llvm-mc -triple=aarch64 -mattr=-predres -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOSB
 
 [0x80 0x73 0x0b 0xd5]

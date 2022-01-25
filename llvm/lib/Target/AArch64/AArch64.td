@@ -528,16 +528,13 @@ def HasV8_0rOps : SubtargetFeature<
   [//v8.1
   FeatureCRC, FeaturePAN, FeatureRDM, FeatureLSE, FeatureCONTEXTIDREL2,
   //v8.2
-  FeaturePerfMon, FeatureRAS, FeaturePsUAO, FeatureSM4,
-  FeatureSHA3, FeatureCCPP, FeatureFullFP16, FeaturePAN_RWV,
+  FeatureRAS, FeaturePsUAO, FeatureCCPP, FeaturePAN_RWV,
   //v8.3
   FeatureComplxNum, FeatureCCIDX, FeatureJS,
   FeaturePAuth, FeatureRCPC,
   //v8.4
-  FeatureDotProd, FeatureFP16FML, FeatureTRACEV8_4,
-  FeatureTLB_RMI, FeatureFlagM, FeatureDIT, FeatureSEL2, FeatureRCPC_IMMO,
-  //v8.5
-  FeatureSSBS, FeaturePredRes, FeatureSB, FeatureSpecRestrict]>;
+  FeatureDotProd, FeatureTRACEV8_4, FeatureTLB_RMI,
+  FeatureFlagM, FeatureDIT, FeatureSEL2, FeatureRCPC_IMMO]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description
@@ -969,7 +966,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> A710 = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureETE, FeatureMTE, FeatureFP16FML,
                                  FeatureSVE2BitPerm, FeatureBF16, FeatureMatMulInt8];
-  list<SubtargetFeature> R82  = [HasV8_0rOps];
+  list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
+                                 FeatureFP16FML, FeatureSSBS, FeaturePredRes,
+                                 FeatureSB, FeatureSpecRestrict];
   list<SubtargetFeature> X1   = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureRCPC, FeaturePerfMon,
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd];
