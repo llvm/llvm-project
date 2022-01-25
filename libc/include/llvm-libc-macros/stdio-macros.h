@@ -1,4 +1,4 @@
-//===-- C standard library header stdio.h ---------------------------------===//
+//===-- Definition of macros from stdio.h ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_STDIO_H
-#define LLVM_LIBC_STDIO_H
+#ifndef __LLVM_LIBC_MACROS_STDIO_MACROS_H
+#define __LLVM_LIBC_MACROS_STDIO_MACROS_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/stdio-macros.h>
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 
-%%public_api()
-
-#endif // LLVM_LIBC_STDIO_H
+#endif // __LLVM_LIBC_MACROS_STDIO_MACROS_H

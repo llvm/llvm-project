@@ -7,3 +7,9 @@ add_header(
   DEPENDS
     .linux.fcntl_macros
 )
+
+add_header(
+  stdio_macros
+  HDR
+    stdio-macros.h
+)
