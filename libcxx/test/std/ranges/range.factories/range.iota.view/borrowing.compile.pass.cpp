@@ -14,12 +14,8 @@
 //   inline constexpr bool enable_borrowed_range<iota_view<W, Bound>> = true;
 
 #include <ranges>
-#include <cassert>
-#include <concepts>
 
-#include "test_macros.h"
-#include "types.h"
-
-static_assert(std::ranges::enable_borrowed_range<std::ranges::iota_view<int, int>>);
-static_assert(std::ranges::enable_borrowed_range<std::ranges::iota_view<int, std::unreachable_sentinel_t>>);
-static_assert(std::ranges::enable_borrowed_range<std::ranges::iota_view<int, IntComparableWith<int>>>);
+static_assert(std::ranges::borrowed_range<std::ranges::iota_view<int, int>>);
+static_assert(std::ranges::borrowed_range<std::ranges::iota_view<int, std::unreachable_sentinel_t>>);
+static_assert(std::ranges::borrowed_range<std::ranges::iota_view<int*, int*>>);
+static_assert(std::ranges::borrowed_range<std::ranges::iota_view<int*, std::unreachable_sentinel_t>>);

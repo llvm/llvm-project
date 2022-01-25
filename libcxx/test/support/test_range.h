@@ -62,4 +62,21 @@ struct test_view : std::ranges::view_base {
   sentinel end() const;
 };
 
+struct BorrowedRange {
+  int *begin() const;
+  int *end() const;
+  BorrowedRange(BorrowedRange&&) = delete;
+};
+template<> inline constexpr bool std::ranges::enable_borrowed_range<BorrowedRange> = true;
+static_assert(!std::ranges::view<BorrowedRange>);
+static_assert(std::ranges::borrowed_range<BorrowedRange>);
+
+using BorrowedView = std::ranges::empty_view<int>;
+static_assert(std::ranges::view<BorrowedView>);
+static_assert(std::ranges::borrowed_range<BorrowedView>);
+
+using NonBorrowedView = std::ranges::single_view<int>;
+static_assert(std::ranges::view<NonBorrowedView>);
+static_assert(!std::ranges::borrowed_range<NonBorrowedView>);
+
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

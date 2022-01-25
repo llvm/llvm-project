@@ -10,14 +10,14 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// class std::ranges::subrange;
+// template<class T>
+//   inline constexpr bool enable_borrowed_range<empty_view<T>> = true;
 
 #include <ranges>
 
-#include "test_iterators.h"
+#include "test_range.h"
 
-namespace ranges = std::ranges;
-
-static_assert(ranges::borrowed_range<ranges::subrange<int*>>);
-static_assert(ranges::borrowed_range<ranges::subrange<int*, int const*>>);
-static_assert(ranges::borrowed_range<ranges::subrange<int*, sentinel_wrapper<int*>, ranges::subrange_kind::unsized>>);
+static_assert(std::ranges::borrowed_range<std::ranges::empty_view<int>>);
+static_assert(std::ranges::borrowed_range<std::ranges::empty_view<int*>>);
+static_assert(std::ranges::borrowed_range<std::ranges::empty_view<BorrowedView>>);
+static_assert(std::ranges::borrowed_range<std::ranges::empty_view<NonBorrowedView>>);
