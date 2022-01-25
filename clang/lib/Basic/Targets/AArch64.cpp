@@ -226,6 +226,8 @@ void AArch64TargetInfo::getTargetDefinesARMV87A(const LangOptions &Opts,
 
 void AArch64TargetInfo::getTargetDefinesARMV88A(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
+  // FIXME: this does not handle the case where MOPS is disabled using +nomops
+  Builder.defineMacro("__ARM_FEATURE_MOPS", "1");
   // Also include the Armv8.7 defines
   getTargetDefinesARMV87A(Opts, Builder);
 }
@@ -434,6 +436,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasRandGen)
     Builder.defineMacro("__ARM_FEATURE_RNG", "1");
+
+  if (HasMOPS)
+    Builder.defineMacro("__ARM_FEATURE_MOPS", "1");
 
   switch (ArchKind) {
   default:
@@ -662,6 +667,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFlagM = true;
     if (Feature == "+hbc")
       HasHBC = true;
+    if (Feature == "+mops")
+      HasMOPS = true;
   }
 
   setDataLayout();
