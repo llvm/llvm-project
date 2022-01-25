@@ -1379,3 +1379,24 @@ func @tensor_generate_static_and_dynamic(%arg0: index) -> tensor<16x?xindex> {
   // CHECK: }
   return %result : tensor<16x?xindex>
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_from_elements_2d(
+//  CHECK-SAME:     %[[ELEM0:.*]]: index, %[[ELEM1:.*]]: index
+func @tensor_from_elements_2d(%arg0: index, %arg1: index) -> tensor<3x2xindex> {
+  // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK-DAG: %[[MEMREF:.*]] = memref.alloc() {{.*}} : memref<3x2xindex>
+  //     CHECK: store %[[ELEM0]], %[[MEMREF]][%[[C0]], %[[C0]]]
+  //     CHECK: store %[[ELEM1]], %[[MEMREF]][%[[C0]], %[[C1]]]
+  //     CHECK: store %[[ELEM0]], %[[MEMREF]][%[[C1]], %[[C0]]]
+  //     CHECK: store %[[ELEM1]], %[[MEMREF]][%[[C1]], %[[C1]]]
+  //     CHECK: store %[[ELEM0]], %[[MEMREF]][%[[C2]], %[[C0]]]
+  //     CHECK: store %[[ELEM1]], %[[MEMREF]][%[[C2]], %[[C1]]]
+  %0 = tensor.from_elements %arg0, %arg1, %arg0, %arg1, %arg0, %arg1
+         : tensor<3x2xindex>
+  //     CHECK: return %[[MEMREF]]
+  return %0 : tensor<3x2xindex>
+}
