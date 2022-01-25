@@ -1178,3 +1178,25 @@ func @pad_nofold_static_zero(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tenso
 
   return %0 : tensor<2x3x4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_collapse_shape_from_elements
+func @fold_collapse_shape_from_elements(%arg0: i32) -> tensor<i32> {
+  // CHECK: %[[FROM:.+]] = tensor.from_elements %arg0 : tensor<i32>
+  // CHECK: return %[[FROM]] : tensor<i32>
+  %0 = tensor.from_elements %arg0 : tensor<1xi32>
+  %1 = tensor.collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
+  return %1 : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_expand_shape_from_elements
+func @fold_expand_shape_from_elements(%arg0: i32) -> tensor<1xi32> {
+  // CHECK: %[[FROM:.+]] = tensor.from_elements %arg0 : tensor<1xi32>
+  // CHECK: return %[[FROM]] : tensor<1xi32>
+  %0 = tensor.from_elements %arg0 : tensor<i32>
+  %1 = tensor.expand_shape %0 [] : tensor<i32> into tensor<1xi32>
+  return %1 : tensor<1xi32>
+}

@@ -798,20 +798,45 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
   }
 };
 
+/// Reshape of a FromElements can be replaced with a FromElements of the result
+/// type
+template <typename TensorReshapeOp>
+struct FoldReshapeWithFromElements : OpRewritePattern<TensorReshapeOp> {
+  using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
+                                PatternRewriter &rewriter) const override {
+    auto fromElements =
+        reshapeOp.src().template getDefiningOp<FromElementsOp>();
+    if (!fromElements)
+      return failure();
+
+    auto shapedTy = reshapeOp.getType().template cast<ShapedType>();
+
+    if (!shapedTy.hasStaticShape())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<FromElementsOp>(reshapeOp, reshapeOp.getType(),
+                                                fromElements.elements());
+    return success();
+  }
+};
+
 } // namespace
 
 void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<CollapseReshapeOps<ExpandShapeOp>,
               CollapseMixedReshapeOps<ExpandShapeOp, CollapseShapeOp>,
-              FoldReshapeWithConstant<ExpandShapeOp>>(context);
+              FoldReshapeWithConstant<ExpandShapeOp>,
+              FoldReshapeWithFromElements<ExpandShapeOp>>(context);
 }
 
 void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<CollapseReshapeOps<CollapseShapeOp>,
               CollapseMixedReshapeOps<CollapseShapeOp, ExpandShapeOp>,
-              FoldReshapeWithConstant<CollapseShapeOp>>(context);
+              FoldReshapeWithConstant<CollapseShapeOp>,
+              FoldReshapeWithFromElements<CollapseShapeOp>>(context);
 }
 
 OpFoldResult ExpandShapeOp::fold(ArrayRef<Attribute> operands) {
