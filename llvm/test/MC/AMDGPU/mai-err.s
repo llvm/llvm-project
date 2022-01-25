@@ -39,19 +39,19 @@ v_accvgpr_write_b32 a0, 65
 v_accvgpr_write_b32 a0, v0
 // GFX900: error: instruction not supported on this GPU
 
-v_mfma_f32_32x32x1f32 v[0:31], v0, v1, a[1:32]
+v_mfma_f32_32x32x1f32 v[0:31], v0, v1, a[0:31]
 // GFX908: error: invalid operand for instruction
 // GFX900: error: instruction not supported on this GPU
 
-v_mfma_f32_32x32x1f32 a[0:31], v0, v1, v[1:32]
+v_mfma_f32_32x32x1f32 a[0:31], v0, v1, v[0:31]
 // GFX908: error: invalid operand for instruction
 // GFX900: error: instruction not supported on this GPU
 
-v_mfma_f32_32x32x1f32 a[0:31], s0, v1, a[1:32]
+v_mfma_f32_32x32x1f32 a[0:31], s0, v1, a[0:31]
 // GFX908: error: invalid operand for instruction
 // GFX900: error: instruction not supported on this GPU
 
-v_mfma_f32_32x32x1f32 a[0:31], 1, v1, a[1:32]
+v_mfma_f32_32x32x1f32 a[0:31], 1, v1, a[0:31]
 // GFX908: error: invalid operand for instruction
 // GFX900: error: instruction not supported on this GPU
 
@@ -697,4 +697,12 @@ v_mfma_f32_16x16x8bf16 a[0:3], a0, a1, -2.0
 
 v_mfma_f32_16x16x8bf16 a[0:3], a0, a1, -2.0 cbsz:3 abid:2 blgp:7
 // GFX908: error: inline constants are not allowed for this operand
+// GFX900: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[2:33]
+// GFX908: error: source 2 operand must not partially overlap with dst
+// GFX900: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x1f32 a[0:15], v0, v1, a[2:17]
+// GFX908: error: source 2 operand must not partially overlap with dst
 // GFX900: error: instruction not supported on this GPU
