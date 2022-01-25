@@ -164,6 +164,11 @@ struct RTLsTy {
   // (i.e. the library attempts to load the RTLs (plugins) only once).
   std::once_flag initFlag;
   void LoadRTLs(); // not thread-safe
+
+  std::vector<std::string> archsSupportingManagedMemory = {
+      "gfx908", "gfx90a", "sm_35", "sm_50", "sm_60", "sm_70", "sm_61"};
+  // Return whether the current system supports omp_get_target_memory_space
+  bool SystemSupportManagedMemory();
 };
 
 /// Map between the host entry begin and the translation table. Each

@@ -689,3 +689,10 @@ void RTLsTy::UnregisterLib(__tgt_bin_desc *desc) {
 
   DP("Done unregistering library!\n");
 }
+
+bool RTLsTy::SystemSupportManagedMemory() {
+  for (auto it : archsSupportingManagedMemory)
+    if (isHomogeneousSystemOf(it))
+      return true;
+  return false;
+}

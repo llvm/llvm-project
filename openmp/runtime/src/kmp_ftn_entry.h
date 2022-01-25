@@ -385,6 +385,21 @@ int FTN_STDCALL FTN_CONTROL_TOOL(int command, int modifier, void *arg) {
 }
 
 /* OpenMP 5.0 Memory Management support */
+omp_memspace_handle_t FTN_STDCALL FTN_GET_MEMSPACE(
+    int ndevs, int device_ids[], omp_memspace_handle_t KMP_DEREF m) {
+#ifdef KMP_STUB
+  return NULL;
+#else
+  return __kmpc_get_memory_space(ndevs, device_ids, KMP_DEREF m);
+#endif
+}
+
+void FTN_STDCALL FTN_DESTROY_MEMSPACE(omp_memspace_handle_t ms) {
+#ifndef KMP_STUB
+  __kmpc_destroy_memory_space(ms);
+#endif
+}
+
 omp_allocator_handle_t FTN_STDCALL
 FTN_INIT_ALLOCATOR(omp_memspace_handle_t KMP_DEREF m, int KMP_DEREF ntraits,
                    omp_alloctrait_t tr[]) {

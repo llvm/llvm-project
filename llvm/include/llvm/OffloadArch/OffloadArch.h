@@ -62,4 +62,8 @@ std::string getTriple(uint16_t VendorID, uint16_t DeviceID);
 /// Utility to return contents of a file as a string
 std::string getFileContents(std::string fname);
 
+///  \return true if the system only has devices with architecture \in arch
+///  false otherwise
+bool isHomogeneousSystemOf(std::string arch);
+
 #endif

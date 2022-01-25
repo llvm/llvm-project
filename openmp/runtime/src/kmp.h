@@ -971,6 +971,8 @@ extern omp_memspace_handle_t const omp_low_lat_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_host_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_device_mem_space;
+extern omp_memspace_handle_t const kmp_max_mem_space;
+extern omp_memspace_handle_t __kmp_def_mem_space;
 
 typedef struct {
   omp_alloctrait_key_t key;
@@ -999,7 +1001,11 @@ extern omp_allocator_handle_t __kmp_def_allocator;
 
 extern int __kmp_memkind_available;
 
-typedef omp_memspace_handle_t kmp_memspace_t; // placeholder
+typedef struct kmp_memspace_t {
+  omp_memspace_handle_t memspace;
+  int num_devs;
+  int *devids;
+} kmp_memspace_t;
 
 typedef struct kmp_allocator_t {
   omp_memspace_handle_t memspace;
@@ -1011,6 +1017,10 @@ typedef struct kmp_allocator_t {
   kmp_uint64 pool_used;
 } kmp_allocator_t;
 
+extern omp_memspace_handle_t
+__kmpc_get_memory_space(size_t num_devices, int device_ids[],
+                        omp_memspace_handle_t base_memory_space);
+void __kmpc_destroy_memory_space(omp_memspace_handle_t ms);
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
                                                     omp_memspace_handle_t,
                                                     int ntraits,

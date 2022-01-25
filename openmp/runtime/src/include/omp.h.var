@@ -435,6 +435,8 @@
       KMP_MEMSPACE_MAX_HANDLE = UINTPTR_MAX
     } omp_memspace_handle_t;
 #   endif
+    extern omp_memspace_handle_t __KAI_KMPC_CONVENTION omp_get_memory_space(size_t num_devices, int device_ids[], omp_memspace_handle_t base_memory_space);
+    extern void omp_destroy_memory_space(omp_memspace_handle_t ms);
     extern omp_allocator_handle_t __KAI_KMPC_CONVENTION omp_init_allocator(omp_memspace_handle_t m,
                                                        int ntraits, omp_alloctrait_t traits[]);
     extern void __KAI_KMPC_CONVENTION omp_destroy_allocator(omp_allocator_handle_t allocator);

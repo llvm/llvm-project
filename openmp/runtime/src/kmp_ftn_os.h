@@ -128,6 +128,8 @@
 #define FTN_GET_MASTER_THREAD_ID omp_ext_get_master_thread_id
 #define FTN_GET_ACTIVE_THREAD_MASK omp_ext_get_active_threads_mask
 #define FTN_CONTROL_TOOL omp_control_tool
+#define FTN_GET_MEMSPACE omp_get_memory_space
+#define FTN_DESTROY_MEMSPACE omp_destroy_memory_space
 #define FTN_INIT_ALLOCATOR omp_init_allocator
 #define FTN_DESTROY_ALLOCATOR omp_destroy_allocator
 #define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator
@@ -269,6 +271,8 @@
 #define FTN_GET_MASTER_THREAD_ID omp_ext_get_master_thread_id_
 #define FTN_GET_ACTIVE_THREAD_MASK omp_ext_get_active_threads_mask_
 #define FTN_CONTROL_TOOL omp_control_tool_
+#define FTN_GET_MEMSPACE omp_get_memory_space_
+#define FTN_DESTROY_MEMSPACE omp_destroy_memory_space_
 #define FTN_INIT_ALLOCATOR omp_init_allocator_
 #define FTN_DESTROY_ALLOCATOR omp_destroy_allocator_
 #define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator_
