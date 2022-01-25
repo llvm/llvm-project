@@ -18,7 +18,7 @@
 #include <memory>
 
 namespace cir {
-class CIRContext;
+class CIRGenerator;
 } // namespace cir
 namespace clang {
 
@@ -37,7 +37,7 @@ class CIRBasedWarnings {
 private:
   Sema &S;
   AnalysisBasedWarnings::Policy DefaultPolicy;
-  std::unique_ptr<cir::CIRContext> CIRCtx;
+  std::unique_ptr<cir::CIRGenerator> CIRGen;
 
   //class InterProceduralData;
   //std::unique_ptr<InterProceduralData> IPData;

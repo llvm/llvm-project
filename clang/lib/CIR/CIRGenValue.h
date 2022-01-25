@@ -14,10 +14,11 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENVALUE_H
 #define LLVM_CLANG_LIB_CIR_CIRGENVALUE_H
 
+#include "CIRGenFunction.h"
+
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
-#include "clang/CIR/CIRCodeGenFunction.h"
 #include "llvm/ADT/PointerIntPair.h"
 
 namespace cir {
