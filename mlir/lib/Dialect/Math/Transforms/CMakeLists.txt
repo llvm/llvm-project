@@ -14,4 +14,5 @@ add_mlir_dialect_library(MLIRMathTransforms
   MLIRStandard
   MLIRTransforms
   MLIRX86Vector
+  MLIRVector
   )

@@ -20,6 +20,7 @@ add_mlir_dialect_library(MLIRSCFTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffine
+  MLIRAffineAnalysis
   MLIRArithmetic
   MLIRBufferizationTransforms
   MLIRIR
