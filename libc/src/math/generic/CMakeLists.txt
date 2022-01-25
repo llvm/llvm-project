@@ -972,6 +972,7 @@ add_entrypoint_object(
     ../hypotf.h
   DEPENDS
     libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
     -O3
 )
