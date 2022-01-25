@@ -149,8 +149,15 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   if (!SetPrintfSequenceAddrsFromRuntimeInfo(runtime))
     return false;
 
-  if (!SetErrorStoreAddrFromRuntimeInfo(runtime))
-    return false;
+  // JIRA: SW-64
+  // TODO: We would like to be able to check this, rather than ignoring the
+  // result. At present, however, we cannot as there are some situations where
+  // we *don't* want to fail. This needs to be refactored so that we either a)
+  // warn the user, or b) integrate the failure in the same way as the
+  // SetPrintfSequence... does.
+  // if (!SetErrorStoreAddrFromRuntimeInfo(runtime))
+  //   return false;
+  SetErrorStoreAddrFromRuntimeInfo(runtime);
 
   return true;
 }
