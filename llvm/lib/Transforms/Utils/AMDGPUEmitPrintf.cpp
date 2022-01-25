@@ -28,7 +28,7 @@ static bool isCString(const Value *Arg) {
   if (!PtrTy)
     return false;
 
-  auto IntTy = dyn_cast<IntegerType>(PtrTy->getElementType());
+  auto IntTy = dyn_cast<IntegerType>(PtrTy->getPointerElementType());
   if (!IntTy)
     return false;
 

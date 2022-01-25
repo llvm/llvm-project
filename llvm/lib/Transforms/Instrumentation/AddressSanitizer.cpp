@@ -1559,7 +1559,7 @@ void AddressSanitizer::getInterestingMemoryOperands(
       auto BasePtr = CI->getOperand(OpOffset);
       if (ignoreAccess(LI, BasePtr))
         return;
-      auto Ty = cast<PointerType>(BasePtr->getType())->getElementType();
+      auto Ty = BasePtr->getType()->getPointerElementType();
       MaybeAlign Alignment = Align(1);
       // Otherwise no alignment guarantees. We probably got Undef.
       if (auto *Op = dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
@@ -1656,8 +1656,7 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
                                         unsigned Granularity, uint32_t TypeSize,
                                         bool IsWrite, Value *SizeArgument,
                                         bool UseCalls, uint32_t Exp) {
-  auto *VTy = cast<FixedVectorType>(
-      cast<PointerType>(Addr->getType())->getElementType());
+  auto *VTy = cast<FixedVectorType>(Addr->getType()->getPointerElementType());
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto Zero = ConstantInt::get(IntptrTy, 0);

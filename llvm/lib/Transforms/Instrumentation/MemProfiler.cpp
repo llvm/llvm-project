@@ -384,7 +384,7 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
       }
 
       auto *BasePtr = CI->getOperand(0 + OpOffset);
-      auto *Ty = cast<PointerType>(BasePtr->getType())->getElementType();
+      auto *Ty = BasePtr->getType()->getPointerElementType();
       Access.TypeSize = DL.getTypeStoreSizeInBits(Ty);
       if (auto *AlignmentConstant =
               dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
@@ -419,8 +419,7 @@ void MemProfiler::instrumentMaskedLoadOrStore(const DataLayout &DL, Value *Mask,
                                               Instruction *I, Value *Addr,
                                               unsigned Alignment,
                                               uint32_t TypeSize, bool IsWrite) {
-  auto *VTy = cast<FixedVectorType>(
-      cast<PointerType>(Addr->getType())->getElementType());
+  auto *VTy = cast<FixedVectorType>(Addr->getType()->getPointerElementType());
   uint64_t ElemTypeSize = DL.getTypeStoreSizeInBits(VTy->getScalarType());
   unsigned Num = VTy->getNumElements();
   auto *Zero = ConstantInt::get(IntptrTy, 0);

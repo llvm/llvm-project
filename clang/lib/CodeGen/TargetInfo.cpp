@@ -8937,8 +8937,7 @@ private:
                                        unsigned ToAS) const {
     // Single value types.
     if (Ty->isPointerTy() && Ty->getPointerAddressSpace() == FromAS)
-      return llvm::PointerType::get(
-          cast<llvm::PointerType>(Ty)->getElementType(), ToAS);
+      return llvm::PointerType::get(Ty->getPointerElementType(), ToAS);
     return Ty;
   }
 
@@ -9334,7 +9333,7 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
     return llvm::ConstantPointerNull::get(PT);
 
   auto &Ctx = CGM.getContext();
-  auto NPT = llvm::PointerType::get(PT->getElementType(),
+  auto NPT = llvm::PointerType::get(PT->getPointerElementType(),
       Ctx.getTargetAddressSpace(LangAS::opencl_generic));
   return llvm::ConstantExpr::getAddrSpaceCast(
       llvm::ConstantPointerNull::get(NPT), PT);
@@ -10271,8 +10270,7 @@ ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
     auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
     auto GlobalAS = getContext().getTargetAddressSpace(LangAS::cuda_device);
     if (LTy->isPointerTy() && LTy->getPointerAddressSpace() == DefaultAS) {
-      LTy = llvm::PointerType::get(
-          cast<llvm::PointerType>(LTy)->getElementType(), GlobalAS);
+      LTy = llvm::PointerType::get(LTy->getPointerElementType(), GlobalAS);
       return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
     }
   }

@@ -313,7 +313,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         PointerType *PtrTy = dyn_cast<PointerType>(OpTy);
         if (!PtrTy)
           report_fatal_error("Indirect operand for inline asm not a pointer!");
-        OpTy = PtrTy->getElementType();
+        OpTy = PtrTy->getPointerElementType();
       }
 
       // FIXME: Support aggregate input operands
