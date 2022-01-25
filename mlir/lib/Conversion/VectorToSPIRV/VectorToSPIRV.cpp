@@ -247,6 +247,23 @@ struct VectorInsertStridedSliceOpConvert final
   }
 };
 
+class VectorSplatPattern final : public OpConversionPattern<vector::SplatOp> {
+public:
+  using OpConversionPattern<vector::SplatOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::SplatOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType dstVecType = op.getType();
+    if (!spirv::CompositeType::isValid(dstVecType))
+      return failure();
+    SmallVector<Value, 4> source(dstVecType.getNumElements(), adaptor.input());
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstVecType,
+                                                             source);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
@@ -255,6 +272,6 @@ void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                VectorExtractElementOpConvert, VectorExtractOpConvert,
                VectorExtractStridedSliceOpConvert, VectorFmaOpConvert,
                VectorInsertElementOpConvert, VectorInsertOpConvert,
-               VectorInsertStridedSliceOpConvert>(typeConverter,
-                                                  patterns.getContext());
+               VectorInsertStridedSliceOpConvert, VectorSplatPattern>(
+      typeConverter, patterns.getContext());
 }

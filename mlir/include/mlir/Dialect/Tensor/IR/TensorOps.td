@@ -968,6 +968,52 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// SplatOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_SplatOp : Tensor_Op<"splat", [
+    NoSideEffect,
+    TypesMatchWith<"operand type matches element type of result",
+                   "aggregate", "input",
+                   "$_self.cast<TensorType>().getElementType()">
+  ]> {
+  let summary = "tensor splat or broadcast operation";
+  let description = [{
+    Broadcast the operand to all elements of the result tensor. The operand is
+    required to be of integer/index/float type, and the result tensor must be
+    statically shaped.
+
+    Example:
+
+    ```mlir
+    %s = arith.constant 10.1 : f32
+    %t = tensor.splat %s : tensor<8x16xi32>
+    ```
+
+    TODO: This operation is easy to extend to broadcast to dynamically shaped
+          tensors:
+
+    ```mlir
+    // Broadcasts %s to a 2-d dynamically shaped tensor, with %m, %n binding
+    // to the sizes of the two dynamic dimensions.
+    %m = "foo"() : () -> (index)
+    %n = "bar"() : () -> (index)
+    %t = tensor.splat %s [%m, %n] : tensor<?x?xi32>
+    ```
+  }];
+
+  let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
+                                 "integer/index/float type">:$input);
+  let results = (outs AnyStaticShapeTensor:$aggregate);
+
+  let builders = [
+    OpBuilder<(ins "Value":$element, "Type":$aggregateType),
+    [{ build($_builder, $_state, aggregateType, element); }]>];
+  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
+
+  let hasFolder = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // YieldOp

@@ -1801,6 +1801,19 @@ OpFoldResult PadOp::fold(ArrayRef<Attribute>) {
 }
 
 //===----------------------------------------------------------------------===//
+// SplatOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult SplatOp::fold(ArrayRef<Attribute> operands) {
+  auto constOperand = operands.front();
+  if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
+    return {};
+
+  // SplatElementsAttr::get treats single value for second arg as being a splat.
+  return SplatElementsAttr::get(getType(), {constOperand});
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

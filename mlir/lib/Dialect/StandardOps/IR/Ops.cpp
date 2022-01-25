@@ -864,34 +864,6 @@ LogicalResult SelectOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult SplatOp::verify() {
-  // TODO: we could replace this by a trait.
-  if (getOperand().getType() != getType().cast<ShapedType>().getElementType())
-    return emitError("operand should be of elemental type of result type");
-
-  return success();
-}
-
-// Constant folding hook for SplatOp.
-OpFoldResult SplatOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.size() == 1 && "splat takes one operand");
-
-  auto constOperand = operands.front();
-  if (!constOperand || !constOperand.isa<IntegerAttr, FloatAttr>())
-    return {};
-
-  auto shapedType = getType().cast<ShapedType>();
-  assert(shapedType.getElementType() == constOperand.getType() &&
-         "incorrect input attribute type for folding");
-
-  // SplatElementsAttr::get treats single value for second arg as being a splat.
-  return SplatElementsAttr::get(shapedType, {constOperand});
-}
-
-//===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
 

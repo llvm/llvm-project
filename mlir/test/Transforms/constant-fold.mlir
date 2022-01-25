@@ -789,18 +789,6 @@ func @custom_insertion_position() {
   return
 }
 
-// CHECK-LABEL: func @splat_fold
-func @splat_fold() -> (vector<4xf32>, tensor<4xf32>) {
-  %c = arith.constant 1.0 : f32
-  %v = splat %c : vector<4xf32>
-  %t = splat %c : tensor<4xf32>
-  return %v, %t : vector<4xf32>, tensor<4xf32>
-
-  // CHECK-NEXT: [[V:%.*]] = arith.constant dense<1.000000e+00> : vector<4xf32>
-  // CHECK-NEXT: [[T:%.*]] = arith.constant dense<1.000000e+00> : tensor<4xf32>
-  // CHECK-NEXT: return [[V]], [[T]] : vector<4xf32>, tensor<4xf32>
-}
-
 // -----
 
 // CHECK-LABEL: func @subview_scalar_fold

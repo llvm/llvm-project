@@ -295,18 +295,6 @@ func @test_dimop(%arg0: tensor<4x4x?xf32>) {
   return
 }
 
-// CHECK-LABEL: func @test_splat_op
-// CHECK-SAME: [[S:%arg[0-9]+]]: f32
-func @test_splat_op(%s : f32) {
-  %v = splat %s : vector<8xf32>
-  // CHECK: splat [[S]] : vector<8xf32>
-  %t = splat %s : tensor<8xf32>
-  // CHECK: splat [[S]] : tensor<8xf32>
-  %u = "std.splat"(%s) : (f32) -> vector<4xf32>
-  // CHECK: splat [[S]] : vector<4xf32>
-  return
-}
-
 // CHECK-LABEL: func @tensor_load_store
 func @tensor_load_store(%0 : memref<4x4xi32>, %1 : tensor<4x4xi32>) {
   // CHECK-SAME: (%[[MEMREF:.*]]: memref<4x4xi32>,

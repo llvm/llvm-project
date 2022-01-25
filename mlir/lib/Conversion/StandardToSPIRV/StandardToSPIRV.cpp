@@ -55,16 +55,6 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Converts std.splat to spv.CompositeConstruct.
-class SplatPattern final : public OpConversionPattern<SplatOp> {
-public:
-  using OpConversionPattern<SplatOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(SplatOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override;
-};
-
 /// Converts std.br to spv.Branch.
 struct BranchOpPattern final : public OpConversionPattern<BranchOp> {
   using OpConversionPattern<BranchOp>::OpConversionPattern;
@@ -179,22 +169,6 @@ SelectOpPattern::matchAndRewrite(SelectOp op, OpAdaptor adaptor,
 }
 
 //===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult
-SplatPattern::matchAndRewrite(SplatOp op, OpAdaptor adaptor,
-                              ConversionPatternRewriter &rewriter) const {
-  auto dstVecType = op.getType().dyn_cast<VectorType>();
-  if (!dstVecType || !spirv::CompositeType::isValid(dstVecType))
-    return failure();
-  SmallVector<Value, 4> source(dstVecType.getNumElements(), adaptor.getInput());
-  rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, dstVecType,
-                                                           source);
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // BranchOpPattern
 //===----------------------------------------------------------------------===//
 
@@ -237,8 +211,8 @@ void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       spirv::ElementwiseOpPattern<arith::MinSIOp, spirv::GLSLSMinOp>,
       spirv::ElementwiseOpPattern<arith::MinUIOp, spirv::GLSLUMinOp>,
 
-      ReturnOpPattern, SelectOpPattern, SplatPattern, BranchOpPattern,
-      CondBranchOpPattern>(typeConverter, context);
+      ReturnOpPattern, SelectOpPattern, BranchOpPattern, CondBranchOpPattern>(
+      typeConverter, context);
 }
 
 void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,

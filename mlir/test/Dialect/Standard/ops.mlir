@@ -50,10 +50,3 @@ func @switch_i64(%flag : i64, %caseOperand : i32) {
   ^bb3(%bb3arg : i32):
     return
 }
-
-// CHECK-LABEL: func @vector_splat_0d(
-func @vector_splat_0d(%a: f32) -> vector<f32> {
-  // CHECK: splat %{{.*}} : vector<f32>
-  %0 = splat %a : vector<f32>
-  return %0 : vector<f32>
-}

@@ -1219,3 +1219,15 @@ func @propogate_index_cast(%arg0: tensor<1xi32>) -> index {
   %1 = tensor.extract %0[%c0] : tensor<1xindex>
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @splat_fold
+func @splat_fold() -> tensor<4xf32> {
+  %c = arith.constant 1.0 : f32
+  %t = tensor.splat %c : tensor<4xf32>
+  return %t : tensor<4xf32>
+
+  // CHECK-NEXT: [[T:%.*]] = arith.constant dense<1.000000e+00> : tensor<4xf32>
+  // CHECK-NEXT: return [[T]] : tensor<4xf32>
+}

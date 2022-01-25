@@ -363,3 +363,18 @@ func @pad_yield_type(%arg0: tensor<?x4xi32>, %arg1: i8) -> tensor<?x9xi32> {
   return %0 : tensor<?x9xi32>
 }
 
+// -----
+
+func @invalid_splat(%v : f32) {
+  // expected-error@+1 {{invalid kind of type specified}}
+  tensor.splat %v : memref<8xf32>
+  return
+}
+
+// -----
+
+func @invalid_splat(%v : vector<8xf32>) {
+  // expected-error@+1 {{must be integer/index/float type}}
+  %w = tensor.splat %v : tensor<8xvector<8xf32>>
+  return
+}

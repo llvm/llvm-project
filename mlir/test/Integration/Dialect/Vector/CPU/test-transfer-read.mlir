@@ -45,7 +45,7 @@ func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
 
 func @transfer_write_1d(%A : memref<?xf32>, %base: index) {
   %f0 = arith.constant 0.0 : f32
-  %vf0 = splat %f0 : vector<4xf32>
+  %vf0 = vector.splat %f0 : vector<4xf32>
   vector.transfer_write %vf0, %A[%base]
       {permutation_map = affine_map<(d0) -> (d0)>} :
     vector<4xf32>, memref<?xf32>

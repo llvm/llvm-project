@@ -22,7 +22,7 @@ func @print_vector_0d(%a: vector<f32>) {
 }
 
 func @splat_0d(%a: f32) {
-  %1 = splat %a : vector<f32>
+  %1 = vector.splat %a : vector<f32>
   // CHECK: ( 42 )
   vector.print %1: vector<f32>
   return

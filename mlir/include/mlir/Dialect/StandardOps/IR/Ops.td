@@ -508,55 +508,6 @@ def SelectOp : Std_Op<"select", [NoSideEffect,
 }
 
 //===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-def SplatOp : Std_Op<"splat", [NoSideEffect,
-     TypesMatchWith<"operand type matches element type of result",
-                    "aggregate", "input",
-                    "$_self.cast<ShapedType>().getElementType()">]> {
-  let summary = "splat or broadcast operation";
-  let description = [{
-    Broadcast the operand to all elements of the result vector or tensor. The
-    operand has to be of integer/index/float type. When the result is a tensor,
-    it has to be statically shaped.
-
-    Example:
-
-    ```mlir
-    %s = load %A[%i] : memref<128xf32>
-    %v = splat %s : vector<4xf32>
-    %t = splat %s : tensor<8x16xi32>
-    ```
-
-    TODO: This operation is easy to extend to broadcast to dynamically shaped
-    tensors in the same way dynamically shaped memrefs are handled.
-
-    ```mlir
-    // Broadcasts %s to a 2-d dynamically shaped tensor, with %m, %n binding
-    // to the sizes of the two dynamic dimensions.
-    %m = "foo"() : () -> (index)
-    %n = "bar"() : () -> (index)
-    %t = splat %s [%m, %n] : tensor<?x?xi32>
-    ```
-  }];
-
-  let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
-                                 "integer/index/float type">:$input);
-  let results = (outs AnyTypeOf<[AnyVectorOfAnyRank,
-                                 AnyStaticShapeTensor]>:$aggregate);
-
-  let builders = [
-    OpBuilder<(ins "Value":$element, "Type":$aggregateType),
-    [{ build($_builder, $_state, aggregateType, element); }]>];
-
-  let hasFolder = 1;
-  let hasVerifier = 1;
-
-  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
-}
-
-//===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
