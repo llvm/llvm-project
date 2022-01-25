@@ -247,6 +247,7 @@ namespace {
 
     void allocateInstruction(MachineInstr &MI);
     void handleDebugValue(MachineInstr &MI);
+    void handleDebugDef(MachineInstr &MI);
     void handleBundle(MachineInstr &MI);
 
     bool usePhysReg(MachineInstr &MI, MCPhysReg PhysReg);
@@ -1434,6 +1435,46 @@ void RegAllocFast::handleDebugValue(MachineInstr &MI) {
   }
 }
 
+void RegAllocFast::handleDebugDef(MachineInstr &MI) {
+  MachineOperand &MO = MI.getDebugOperand(0);
+
+  // Ignore DBG_VALUEs that aren't based on virtual registers. These are
+  // mostly constants and frame indices.
+  if (!MO.isReg())
+    return;
+  Register Reg = MO.getReg();
+  if (!Register::isVirtualRegister(Reg))
+    return;
+
+  // Already spilled to a stackslot?
+  int SS = StackSlotForVirtReg[Reg];
+  if (SS != -1) {
+    // Modify DBG_VALUE now that the value is in a spill slot.
+    MO.ChangeToFrameIndex(SS);
+    LLVM_DEBUG(dbgs() << "Rewrite DBG_VALUE for spilled memory: " << MI);
+    return;
+  }
+
+  // FIXME: This isn't particularly common at -O0, and at least the phys-reg
+  // case requires work in the DIOpReferrer lowering, so for now just drop
+  // debug info in these cases.
+  MO.setReg(Register());
+  /*
+  // See if this virtual register has already been allocated to a physical
+  // register or spilled to a stack slot.
+  LiveRegMap::iterator LRI = findLiveVirtReg(Reg);
+  if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
+    setPhysReg(MI, MO, LRI->PhysReg);
+  } else {
+    DanglingDbgValues[Reg].push_back(&MI);
+  }
+
+  // If Reg hasn't been spilled, put this DBG_VALUE in LiveDbgValueMap so
+  // that future spills of Reg will have DBG_VALUEs.
+  LiveDbgValueMap[Reg].push_back(&MI);
+  */
+}
+
 void RegAllocFast::handleBundle(MachineInstr &MI) {
   MachineBasicBlock::instr_iterator BundledMI = MI.getIterator();
   ++BundledMI;
@@ -1480,6 +1521,11 @@ void RegAllocFast::allocateBasicBlock(MachineBasicBlock &MBB) {
     // affect codegen of the other instructions in any way.
     if (MI.isDebugValue()) {
       handleDebugValue(MI);
+      continue;
+    }
+
+    if (MI.isDebugDef()) {
+      handleDebugDef(MI);
       continue;
     }
 

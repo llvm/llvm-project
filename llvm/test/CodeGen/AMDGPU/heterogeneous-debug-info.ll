@@ -33,9 +33,8 @@
 ; AFTER-ISEL-NOT: DBG_
 
 ; AFTER-PEI-NOT: DBG_
-; AFTER-PEI: renamable $[[ARG_0_COPY_VGPR:vgpr[0-9]+]] = COPY killed $vgpr0, implicit $exec
-; AFTER-PEI-NOT: DBG_
-; AFTER-PEI: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], renamable $[[ARG_0_COPY_VGPR]]
+; FIXME: Support non-stack-slot DBG_DEF referrers
+; AFTER-PEI: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], $noreg
 ; AFTER-PEI-NOT: DBG_
 ; AFTER-PEI: DBG_KILL ![[ENTRY_LIFETIME_VAR_I]]
 ; AFTER-PEI-NOT: DBG_
@@ -45,12 +44,7 @@
 ; AFTER-PEI-NOT: DBG_
 
 ; AFTER-LDV-NOT: DBG_
-; AFTER-LDV: $[[ARG_0_COPY_VGPR:vgpr[0-9]+]] = V_MOV_B32_e32 killed $vgpr0, implicit $exec, implicit $exec
-; AFTER-LDV-NOT: DBG_
-
-; FIXME Why is this left renamable? Is something not fixing it up because it is a debug instr?
-; AFTER-LDV: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], renamable $[[ARG_0_COPY_VGPR]]
-
+; AFTER-LDV: DBG_DEF ![[ENTRY_LIFETIME_VAR_I]], $noreg
 ; AFTER-LDV-NOT: DBG_
 ; AFTER-LDV: DBG_KILL ![[ENTRY_LIFETIME_VAR_I]]
 ; AFTER-LDV-NOT: DBG_

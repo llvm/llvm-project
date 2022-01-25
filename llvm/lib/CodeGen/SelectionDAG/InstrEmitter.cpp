@@ -961,6 +961,7 @@ InstrEmitter::EmitDbgDefKill(SDDbgDefKill *SDDK,
       MIB.addReg(Def->getReg());
     } else {
       LLVM_DEBUG(dbgs() << "Dropping debug info for " << SDDK << "\n");
+      return nullptr;
     }
   }
 
