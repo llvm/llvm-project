@@ -618,6 +618,7 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, _CharT __y);
 
 _LIBCPP_EXTERN_TEMPLATE(_LIBCPP_FUNC_VIS string operator+<char, char_traits<char>, allocator<char> >(char const*, string const&))
 
+#ifndef _LIBCPP_ABI_NO_BASIC_STRING_BASE_CLASS
 template <bool>
 struct __basic_string_common;
 
@@ -627,6 +628,7 @@ struct __basic_string_common<true> {
     _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_length_error() const;
     _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_out_of_range() const;
 };
+#endif
 
 template <class _Iter>
 struct __string_is_trivial_iterator : public false_type {};
@@ -680,7 +682,9 @@ class
     _LIBCPP_PREFERRED_NAME(u32string)
 #endif
     basic_string
+#ifndef _LIBCPP_ABI_NO_BASIC_STRING_BASE_CLASS
     : private __basic_string_common<true> // This base class is historical, but it needs to remain for ABI compatibility
+#endif
 {
 public:
     typedef basic_string                                 __self;
@@ -1729,20 +1733,12 @@ private:
 
     _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
     void __throw_length_error() const {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        __basic_string_common<true>::__throw_length_error();
-#else
-        _VSTD::abort();
-#endif
+        _VSTD::__throw_length_error("basic_string");
     }
 
     _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
     void __throw_out_of_range() const {
-#ifndef _LIBCPP_NO_EXCEPTIONS
-        __basic_string_common<true>::__throw_out_of_range();
-#else
-        _VSTD::abort();
-#endif
+        _VSTD::__throw_out_of_range("basic_string");
     }
 
     friend basic_string operator+<>(const basic_string&, const basic_string&);
