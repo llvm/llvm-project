@@ -62,16 +62,6 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 constexpr const ::llvm::StringLiteral
     LinalgDialect::kMemoizedIndexingMapsAttrName;
 
-/// Attribute name used to mark the bufferization layout for region
-/// arguments during linalg comprehensive bufferization.
-constexpr const ::llvm::StringLiteral
-    bufferization::BufferizableOpInterface::kBufferLayoutAttrName;
-
-/// Attribute name used to mark region arguments that can be bufferized
-/// in-place during linalg comprehensive bufferization.
-constexpr const ::llvm::StringLiteral
-    bufferization::BufferizableOpInterface::kInplaceableAttrName;
-
 /// Trait to check if T provides a `regionBuilder` method.
 template <typename T, typename... Args>
 using has_region_builder = decltype(T::regionBuilder);
