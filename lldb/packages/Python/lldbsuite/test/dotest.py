@@ -357,7 +357,7 @@ def parseOptionsAndInitTestdirs():
 
     if args.executable:
         # lldb executable is passed explicitly
-        lldbtest_config.lldbExec = os.path.realpath(args.executable)
+        lldbtest_config.lldbExec = os.path.abspath(args.executable)
         if not is_exe(lldbtest_config.lldbExec):
             lldbtest_config.lldbExec = which(args.executable)
         if not is_exe(lldbtest_config.lldbExec):
