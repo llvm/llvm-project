@@ -653,6 +653,20 @@ public:
   /// Returns the clang bytecode interpreter context.
   interp::Context &getInterpContext();
 
+  struct CUDAConstantEvalContext {
+    /// Do not allow wrong-sided variables in constant expressions.
+    bool NoWrongSidedVars = false;
+  } CUDAConstantEvalCtx;
+  struct CUDAConstantEvalContextRAII {
+    ASTContext &Ctx;
+    CUDAConstantEvalContext SavedCtx;
+    CUDAConstantEvalContextRAII(ASTContext &Ctx_, bool NoWrongSidedVars)
+        : Ctx(Ctx_), SavedCtx(Ctx_.CUDAConstantEvalCtx) {
+      Ctx_.CUDAConstantEvalCtx.NoWrongSidedVars = NoWrongSidedVars;
+    }
+    ~CUDAConstantEvalContextRAII() { Ctx.CUDAConstantEvalCtx = SavedCtx; }
+  };
+
   /// Returns the dynamic AST node parent map context.
   ParentMapContext &getParentMapContext();
 

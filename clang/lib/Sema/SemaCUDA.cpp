@@ -590,6 +590,8 @@ bool HasAllowedCUDADeviceStaticInitializer(Sema &S, VarDecl *VD,
   };
   auto IsConstantInit = [&](const Expr *Init) {
     assert(Init);
+    ASTContext::CUDAConstantEvalContextRAII EvalCtx(S.Context,
+                                                    /*NoWronSidedVars=*/true);
     return Init->isConstantInitializer(S.Context,
                                        VD->getType()->isReferenceType());
   };

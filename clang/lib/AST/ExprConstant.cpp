@@ -983,6 +983,8 @@ namespace {
       discardCleanups();
     }
 
+    ASTContext &getCtx() const override { return Ctx; }
+
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
       EvaluatingDecl = Base;
@@ -1115,8 +1117,6 @@ namespace {
     }
 
     Expr::EvalStatus &getEvalStatus() const override { return EvalStatus; }
-
-    ASTContext &getCtx() const override { return Ctx; }
 
     // If we have a prior diagnostic, it will be noting that the expression
     // isn't a constant expression. This diagnostic is more important,
@@ -2216,6 +2216,19 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
       if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>())
         // FIXME: Diagnostic!
         return false;
+
+      // In CUDA/HIP device compilation, only device side variables have
+      // constant addresses.
+      if (Info.getCtx().getLangOpts().CUDA &&
+          Info.getCtx().getLangOpts().CUDAIsDevice &&
+          Info.getCtx().CUDAConstantEvalCtx.NoWrongSidedVars) {
+        if ((!Var->hasAttr<CUDADeviceAttr>() &&
+             !Var->hasAttr<CUDAConstantAttr>() &&
+             !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
+             !Var->getType()->isCUDADeviceBuiltinTextureType()) ||
+            Var->hasAttr<HIPManagedAttr>())
+          return false;
+      }
     }
     if (const auto *FD = dyn_cast<const FunctionDecl>(BaseVD)) {
       // __declspec(dllimport) must be handled very carefully:
