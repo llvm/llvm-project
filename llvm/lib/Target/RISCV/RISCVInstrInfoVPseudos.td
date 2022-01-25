@@ -424,8 +424,9 @@ def RISCVVIntrinsicsTable : GenericTable {
   let PrimaryKeyName = "getRISCVVIntrinsicInfo";
 }
 
-class RISCVVLE<bit M, bit Str, bit F, bits<3> S, bits<3> L> {
+class RISCVVLE<bit M, bit TU, bit Str, bit F, bits<3> S, bits<3> L> {
   bits<1> Masked = M;
+  bits<1> IsTU = TU;
   bits<1> Strided = Str;
   bits<1> FF = F;
   bits<3> Log2SEW = S;
@@ -436,8 +437,8 @@ class RISCVVLE<bit M, bit Str, bit F, bits<3> S, bits<3> L> {
 def RISCVVLETable : GenericTable {
   let FilterClass = "RISCVVLE";
   let CppTypeName = "VLEPseudo";
-  let Fields = ["Masked", "Strided", "FF", "Log2SEW", "LMUL", "Pseudo"];
-  let PrimaryKey = ["Masked", "Strided", "FF", "Log2SEW", "LMUL"];
+  let Fields = ["Masked", "IsTU", "Strided", "FF", "Log2SEW", "LMUL", "Pseudo"];
+  let PrimaryKey = ["Masked", "IsTU", "Strided", "FF", "Log2SEW", "LMUL"];
   let PrimaryKeyName = "getVLEPseudo";
 }
 
@@ -457,8 +458,9 @@ def RISCVVSETable : GenericTable {
   let PrimaryKeyName = "getVSEPseudo";
 }
 
-class RISCVVLX_VSX<bit M, bit O, bits<3> S, bits<3> L, bits<3> IL> {
+class RISCVVLX_VSX<bit M, bit TU, bit O, bits<3> S, bits<3> L, bits<3> IL> {
   bits<1> Masked = M;
+  bits<1> IsTU = TU;
   bits<1> Ordered = O;
   bits<3> Log2SEW = S;
   bits<3> LMUL = L;
@@ -466,15 +468,15 @@ class RISCVVLX_VSX<bit M, bit O, bits<3> S, bits<3> L, bits<3> IL> {
   Pseudo Pseudo = !cast<Pseudo>(NAME);
 }
 
-class RISCVVLX<bit M, bit O, bits<3> S, bits<3> L, bits<3> IL> :
-  RISCVVLX_VSX<M, O, S, L, IL>;
+class RISCVVLX<bit M, bit TU, bit O, bits<3> S, bits<3> L, bits<3> IL> :
+  RISCVVLX_VSX<M, TU, O, S, L, IL>;
 class RISCVVSX<bit M, bit O, bits<3> S, bits<3> L, bits<3> IL> :
-  RISCVVLX_VSX<M, O, S, L, IL>;
+  RISCVVLX_VSX<M, /*TU*/0, O, S, L, IL>;
 
 class RISCVVLX_VSXTable : GenericTable {
   let CppTypeName = "VLX_VSXPseudo";
-  let Fields = ["Masked", "Ordered", "Log2SEW", "LMUL", "IndexLMUL", "Pseudo"];
-  let PrimaryKey = ["Masked", "Ordered", "Log2SEW", "LMUL", "IndexLMUL"];
+  let Fields = ["Masked", "IsTU", "Ordered", "Log2SEW", "LMUL", "IndexLMUL", "Pseudo"];
+  let PrimaryKey = ["Masked", "IsTU", "Ordered", "Log2SEW", "LMUL", "IndexLMUL"];
 }
 
 def RISCVVLXTable : RISCVVLX_VSXTable {
@@ -629,7 +631,7 @@ class VPseudoUSLoadNoMask<VReg RetClass, int EEW, bit isFF> :
       Pseudo<(outs RetClass:$rd),
              (ins GPR:$rs1, AVL:$vl, ixlenimm:$sew),[]>,
       RISCVVPseudo,
-      RISCVVLE</*Masked*/0, /*Strided*/0, /*FF*/isFF, log2<EEW>.val, VLMul> {
+      RISCVVLE</*Masked*/0, /*TU*/0, /*Strided*/0, /*FF*/isFF, log2<EEW>.val, VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -639,13 +641,29 @@ class VPseudoUSLoadNoMask<VReg RetClass, int EEW, bit isFF> :
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+class VPseudoUSLoadNoMaskTU<VReg RetClass, int EEW, bit isFF> :
+      Pseudo<(outs RetClass:$rd),
+             (ins RetClass:$dest, GPR:$rs1, AVL:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo,
+      RISCVVLE</*Masked*/0, /*TU*/1, /*Strided*/0, /*FF*/isFF, log2<EEW>.val, VLMul> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasDummyMask = 1;
+  let HasMergeOp = 1;
+  let Constraints = "$rd = $dest";
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoUSLoadMask<VReg RetClass, int EEW, bit isFF> :
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
               (ins GetVRegNoV0<RetClass>.R:$merge,
                    GPR:$rs1,
                    VMaskOp:$vm, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy),[]>,
       RISCVVPseudo,
-      RISCVVLE</*Masked*/1, /*Strided*/0, /*FF*/isFF, log2<EEW>.val, VLMul> {
+      RISCVVLE</*Masked*/1, /*TU*/1, /*Strided*/0, /*FF*/isFF, log2<EEW>.val, VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -661,7 +679,7 @@ class VPseudoSLoadNoMask<VReg RetClass, int EEW>:
       Pseudo<(outs RetClass:$rd),
              (ins GPR:$rs1, GPR:$rs2, AVL:$vl, ixlenimm:$sew),[]>,
       RISCVVPseudo,
-      RISCVVLE</*Masked*/0, /*Strided*/1, /*FF*/0, log2<EEW>.val, VLMul> {
+      RISCVVLE</*Masked*/0, /*TU*/0, /*Strided*/1, /*FF*/0, log2<EEW>.val, VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -671,13 +689,29 @@ class VPseudoSLoadNoMask<VReg RetClass, int EEW>:
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+class VPseudoSLoadNoMaskTU<VReg RetClass, int EEW>:
+      Pseudo<(outs RetClass:$rd),
+             (ins RetClass:$dest, GPR:$rs1, GPR:$rs2, AVL:$vl, ixlenimm:$sew),[]>,
+      RISCVVPseudo,
+      RISCVVLE</*Masked*/0, /*TU*/1, /*Strided*/1, /*FF*/0, log2<EEW>.val, VLMul> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasDummyMask = 1;
+  let HasMergeOp = 1;
+  let Constraints = "$rd = $dest";
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoSLoadMask<VReg RetClass, int EEW>:
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
               (ins GetVRegNoV0<RetClass>.R:$merge,
                    GPR:$rs1, GPR:$rs2,
                    VMaskOp:$vm, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy),[]>,
       RISCVVPseudo,
-      RISCVVLE</*Masked*/1, /*Strided*/1, /*FF*/0, log2<EEW>.val, VLMul> {
+      RISCVVLE</*Masked*/1, /*TU*/1, /*Strided*/1, /*FF*/0, log2<EEW>.val, VLMul> {
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -692,9 +726,10 @@ class VPseudoSLoadMask<VReg RetClass, int EEW>:
 class VPseudoILoadNoMask<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
                          bit Ordered, bit EarlyClobber>:
       Pseudo<(outs RetClass:$rd),
-             (ins GPR:$rs1, IdxClass:$rs2, AVL:$vl, ixlenimm:$sew),[]>,
+             (ins GPR:$rs1, IdxClass:$rs2, AVL:$vl,
+              ixlenimm:$sew),[]>,
       RISCVVPseudo,
-      RISCVVLX</*Masked*/0, Ordered, log2<EEW>.val, VLMul, LMUL> {
+      RISCVVLX</*Masked*/0, /*TU*/0, Ordered, log2<EEW>.val, VLMul, LMUL> {
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -705,6 +740,24 @@ class VPseudoILoadNoMask<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+class VPseudoILoadNoMaskTU<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
+                           bit Ordered, bit EarlyClobber>:
+      Pseudo<(outs RetClass:$rd),
+             (ins RetClass:$dest, GPR:$rs1, IdxClass:$rs2, AVL:$vl,
+              ixlenimm:$sew),[]>,
+      RISCVVPseudo,
+      RISCVVLX</*Masked*/0, /*TU*/1, Ordered, log2<EEW>.val, VLMul, LMUL> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasDummyMask = 1;
+  let HasMergeOp = 1;
+  let Constraints = !if(!eq(EarlyClobber, 1), "@earlyclobber $rd, $rd = $dest", "$rd = $dest");
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoILoadMask<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
                        bit Ordered, bit EarlyClobber>:
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
@@ -712,7 +765,7 @@ class VPseudoILoadMask<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
                    GPR:$rs1, IdxClass:$rs2,
                    VMaskOp:$vm, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy),[]>,
       RISCVVPseudo,
-      RISCVVLX</*Masked*/1, Ordered, log2<EEW>.val, VLMul, LMUL> {
+      RISCVVLX</*Masked*/1, /*TU*/1, Ordered, log2<EEW>.val, VLMul, LMUL> {
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1347,6 +1400,9 @@ multiclass VPseudoUSLoad {
         def "E" # eew # "_V_" # LInfo :
           VPseudoUSLoadNoMask<vreg, eew, false>,
           VLESched<eew>;
+        def "E" # eew # "_V_" # LInfo # "_TU":
+          VPseudoUSLoadNoMaskTU<vreg, eew, false>,
+          VLESched<eew>;
         def "E" # eew # "_V_" # LInfo # "_MASK" :
           VPseudoUSLoadMask<vreg, eew, false>,
           VLESched<eew>;
@@ -1363,6 +1419,9 @@ multiclass VPseudoFFLoad {
       let VLMul = lmul.value in {
         def "E" # eew # "FF_V_" # LInfo :
           VPseudoUSLoadNoMask<vreg, eew, true>,
+          VLFSched<eew>;
+        def "E" # eew # "FF_V_" # LInfo # "_TU":
+          VPseudoUSLoadNoMaskTU<vreg, eew, true>,
           VLFSched<eew>;
         def "E" # eew # "FF_V_" # LInfo # "_MASK" :
           VPseudoUSLoadMask<vreg, eew, true>,
@@ -1387,6 +1446,8 @@ multiclass VPseudoSLoad {
       defvar vreg = lmul.vrclass;
       let VLMul = lmul.value in {
         def "E" # eew # "_V_" # LInfo : VPseudoSLoadNoMask<vreg, eew>,
+                                        VLSSched<eew>;
+        def "E" # eew # "_V_" # LInfo # "_TU": VPseudoSLoadNoMaskTU<vreg, eew>,
                                         VLSSched<eew>;
         def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoSLoadMask<vreg, eew>,
                                                   VLSSched<eew>;
@@ -1413,6 +1474,9 @@ multiclass VPseudoILoad<bit Ordered> {
           let VLMul = lmul.value in {
             def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo :
               VPseudoILoadNoMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>,
+              VLXSched<eew, Order>;
+            def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_TU":
+              VPseudoILoadNoMaskTU<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>,
               VLXSched<eew, Order>;
             def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" :
               VPseudoILoadMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>,

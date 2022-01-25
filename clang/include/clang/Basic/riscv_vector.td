@@ -595,6 +595,7 @@ let HasNoMaskedOverloaded = false,
     ManualCodegen = [{
       IntrinsicTypes = {ResultType, Ops[1]->getType()};
       Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
     }],
     ManualCodegenMask= [{
       // Move mask to right before vl.
@@ -628,6 +629,7 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
         Value *NewVL = Ops[1];
         Ops.erase(Ops.begin() + 1);
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
         llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
         llvm::Value *LoadValue = Builder.CreateCall(F, Ops, "");
         llvm::Value *V = Builder.CreateExtractValue(LoadValue, {0});
@@ -677,6 +679,7 @@ multiclass RVVVLSEBuiltin<list<string> types> {
       ManualCodegen = [{
         IntrinsicTypes = {ResultType, Ops[2]->getType()};
         Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
       }],
       ManualCodegenMask= [{
         // Move mask to right before vl.
@@ -698,6 +701,7 @@ multiclass RVVIndexedLoad<string op> {
   let ManualCodegen = [{
         IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType()};
         Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
       }],
       ManualCodegenMask = [{
         // Move mask to right before vl.

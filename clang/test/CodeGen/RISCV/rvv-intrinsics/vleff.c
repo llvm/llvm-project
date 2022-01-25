@@ -9,7 +9,7 @@
 // CHECK-RV64-LABEL: @test_vle8ff_v_i8mf8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i8>, i64 } @llvm.riscv.vleff.nxv1i8.i64(<vscale x 1 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i8>, i64 } @llvm.riscv.vleff.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -22,7 +22,7 @@ vint8mf8_t test_vle8ff_v_i8mf8 (const int8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_i8mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 2 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i8>, i64 } @llvm.riscv.vleff.nxv2i8.i64(<vscale x 2 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i8>, i64 } @llvm.riscv.vleff.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -35,7 +35,7 @@ vint8mf4_t test_vle8ff_v_i8mf4 (const int8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_i8mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 4 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i8>, i64 } @llvm.riscv.vleff.nxv4i8.i64(<vscale x 4 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i8>, i64 } @llvm.riscv.vleff.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -48,7 +48,7 @@ vint8mf2_t test_vle8ff_v_i8mf2 (const int8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_i8m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 8 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff.nxv8i8.i64(<vscale x 8 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -61,7 +61,7 @@ vint8m1_t test_vle8ff_v_i8m1 (const int8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_i8m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 16 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i8>, i64 } @llvm.riscv.vleff.nxv16i8.i64(<vscale x 16 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i8>, i64 } @llvm.riscv.vleff.nxv16i8.i64(<vscale x 16 x i8> undef, <vscale x 16 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -74,7 +74,7 @@ vint8m2_t test_vle8ff_v_i8m2 (const int8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_i8m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 32 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x i8>, i64 } @llvm.riscv.vleff.nxv32i8.i64(<vscale x 32 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x i8>, i64 } @llvm.riscv.vleff.nxv32i8.i64(<vscale x 32 x i8> undef, <vscale x 32 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -87,7 +87,7 @@ vint8m4_t test_vle8ff_v_i8m4 (const int8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_i8m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 64 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 64 x i8>, i64 } @llvm.riscv.vleff.nxv64i8.i64(<vscale x 64 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 64 x i8>, i64 } @llvm.riscv.vleff.nxv64i8.i64(<vscale x 64 x i8> undef, <vscale x 64 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 64 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 64 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -100,7 +100,7 @@ vint8m8_t test_vle8ff_v_i8m8 (const int8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_u8mf8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i8>, i64 } @llvm.riscv.vleff.nxv1i8.i64(<vscale x 1 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i8>, i64 } @llvm.riscv.vleff.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -113,7 +113,7 @@ vuint8mf8_t test_vle8ff_v_u8mf8 (const uint8_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle8ff_v_u8mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 2 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i8>, i64 } @llvm.riscv.vleff.nxv2i8.i64(<vscale x 2 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i8>, i64 } @llvm.riscv.vleff.nxv2i8.i64(<vscale x 2 x i8> undef, <vscale x 2 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -126,7 +126,7 @@ vuint8mf4_t test_vle8ff_v_u8mf4 (const uint8_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle8ff_v_u8mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 4 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i8>, i64 } @llvm.riscv.vleff.nxv4i8.i64(<vscale x 4 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i8>, i64 } @llvm.riscv.vleff.nxv4i8.i64(<vscale x 4 x i8> undef, <vscale x 4 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -139,7 +139,7 @@ vuint8mf2_t test_vle8ff_v_u8mf2 (const uint8_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle8ff_v_u8m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 8 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff.nxv8i8.i64(<vscale x 8 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i8>, i64 } @llvm.riscv.vleff.nxv8i8.i64(<vscale x 8 x i8> undef, <vscale x 8 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -152,7 +152,7 @@ vuint8m1_t test_vle8ff_v_u8m1 (const uint8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_u8m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 16 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i8>, i64 } @llvm.riscv.vleff.nxv16i8.i64(<vscale x 16 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i8>, i64 } @llvm.riscv.vleff.nxv16i8.i64(<vscale x 16 x i8> undef, <vscale x 16 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -165,7 +165,7 @@ vuint8m2_t test_vle8ff_v_u8m2 (const uint8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_u8m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 32 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x i8>, i64 } @llvm.riscv.vleff.nxv32i8.i64(<vscale x 32 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x i8>, i64 } @llvm.riscv.vleff.nxv32i8.i64(<vscale x 32 x i8> undef, <vscale x 32 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -178,7 +178,7 @@ vuint8m4_t test_vle8ff_v_u8m4 (const uint8_t *base, size_t *new_vl, size_t vl) {
 // CHECK-RV64-LABEL: @test_vle8ff_v_u8m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 64 x i8>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 64 x i8>, i64 } @llvm.riscv.vleff.nxv64i8.i64(<vscale x 64 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 64 x i8>, i64 } @llvm.riscv.vleff.nxv64i8.i64(<vscale x 64 x i8> undef, <vscale x 64 x i8>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 64 x i8>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 64 x i8>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -373,7 +373,7 @@ vuint8m8_t test_vle8ff_v_u8m8_m (vbool1_t mask, vuint8m8_t maskedoff, const uint
 // CHECK-RV64-LABEL: @test_vle16ff_v_i16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 1 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i16>, i64 } @llvm.riscv.vleff.nxv1i16.i64(<vscale x 1 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i16>, i64 } @llvm.riscv.vleff.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -386,7 +386,7 @@ vint16mf4_t test_vle16ff_v_i16mf4 (const int16_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle16ff_v_i16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 2 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i16>, i64 } @llvm.riscv.vleff.nxv2i16.i64(<vscale x 2 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i16>, i64 } @llvm.riscv.vleff.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -399,7 +399,7 @@ vint16mf2_t test_vle16ff_v_i16mf2 (const int16_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle16ff_v_i16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 4 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i16>, i64 } @llvm.riscv.vleff.nxv4i16.i64(<vscale x 4 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i16>, i64 } @llvm.riscv.vleff.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -412,7 +412,7 @@ vint16m1_t test_vle16ff_v_i16m1 (const int16_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle16ff_v_i16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 8 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i16>, i64 } @llvm.riscv.vleff.nxv8i16.i64(<vscale x 8 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i16>, i64 } @llvm.riscv.vleff.nxv8i16.i64(<vscale x 8 x i16> undef, <vscale x 8 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -425,7 +425,7 @@ vint16m2_t test_vle16ff_v_i16m2 (const int16_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle16ff_v_i16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 16 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i16>, i64 } @llvm.riscv.vleff.nxv16i16.i64(<vscale x 16 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i16>, i64 } @llvm.riscv.vleff.nxv16i16.i64(<vscale x 16 x i16> undef, <vscale x 16 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -438,7 +438,7 @@ vint16m4_t test_vle16ff_v_i16m4 (const int16_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle16ff_v_i16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 32 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x i16>, i64 } @llvm.riscv.vleff.nxv32i16.i64(<vscale x 32 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x i16>, i64 } @llvm.riscv.vleff.nxv32i16.i64(<vscale x 32 x i16> undef, <vscale x 32 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -451,7 +451,7 @@ vint16m8_t test_vle16ff_v_i16m8 (const int16_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle16ff_v_u16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 1 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i16>, i64 } @llvm.riscv.vleff.nxv1i16.i64(<vscale x 1 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i16>, i64 } @llvm.riscv.vleff.nxv1i16.i64(<vscale x 1 x i16> undef, <vscale x 1 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -464,7 +464,7 @@ vuint16mf4_t test_vle16ff_v_u16mf4 (const uint16_t *base, size_t *new_vl, size_t
 // CHECK-RV64-LABEL: @test_vle16ff_v_u16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 2 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i16>, i64 } @llvm.riscv.vleff.nxv2i16.i64(<vscale x 2 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i16>, i64 } @llvm.riscv.vleff.nxv2i16.i64(<vscale x 2 x i16> undef, <vscale x 2 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -477,7 +477,7 @@ vuint16mf2_t test_vle16ff_v_u16mf2 (const uint16_t *base, size_t *new_vl, size_t
 // CHECK-RV64-LABEL: @test_vle16ff_v_u16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 4 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i16>, i64 } @llvm.riscv.vleff.nxv4i16.i64(<vscale x 4 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i16>, i64 } @llvm.riscv.vleff.nxv4i16.i64(<vscale x 4 x i16> undef, <vscale x 4 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -490,7 +490,7 @@ vuint16m1_t test_vle16ff_v_u16m1 (const uint16_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle16ff_v_u16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 8 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i16>, i64 } @llvm.riscv.vleff.nxv8i16.i64(<vscale x 8 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i16>, i64 } @llvm.riscv.vleff.nxv8i16.i64(<vscale x 8 x i16> undef, <vscale x 8 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -503,7 +503,7 @@ vuint16m2_t test_vle16ff_v_u16m2 (const uint16_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle16ff_v_u16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 16 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i16>, i64 } @llvm.riscv.vleff.nxv16i16.i64(<vscale x 16 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i16>, i64 } @llvm.riscv.vleff.nxv16i16.i64(<vscale x 16 x i16> undef, <vscale x 16 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -516,7 +516,7 @@ vuint16m4_t test_vle16ff_v_u16m4 (const uint16_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle16ff_v_u16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i16* [[BASE:%.*]] to <vscale x 32 x i16>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x i16>, i64 } @llvm.riscv.vleff.nxv32i16.i64(<vscale x 32 x i16>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x i16>, i64 } @llvm.riscv.vleff.nxv32i16.i64(<vscale x 32 x i16> undef, <vscale x 32 x i16>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x i16>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x i16>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -685,7 +685,7 @@ vuint16m8_t test_vle16ff_v_u16m8_m (vbool2_t mask, vuint16m8_t maskedoff, const 
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i32>, i64 } @llvm.riscv.vleff.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i32>, i64 } @llvm.riscv.vleff.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -698,7 +698,7 @@ vint32mf2_t test_vle32ff_v_i32mf2 (const int32_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i32>, i64 } @llvm.riscv.vleff.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i32>, i64 } @llvm.riscv.vleff.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -711,7 +711,7 @@ vint32m1_t test_vle32ff_v_i32m1 (const int32_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, i64 } @llvm.riscv.vleff.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, i64 } @llvm.riscv.vleff.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -724,7 +724,7 @@ vint32m2_t test_vle32ff_v_i32m2 (const int32_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i32>, i64 } @llvm.riscv.vleff.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i32>, i64 } @llvm.riscv.vleff.nxv8i32.i64(<vscale x 8 x i32> undef, <vscale x 8 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -737,7 +737,7 @@ vint32m4_t test_vle32ff_v_i32m4 (const int32_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle32ff_v_i32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i32>, i64 } @llvm.riscv.vleff.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i32>, i64 } @llvm.riscv.vleff.nxv16i32.i64(<vscale x 16 x i32> undef, <vscale x 16 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -750,7 +750,7 @@ vint32m8_t test_vle32ff_v_i32m8 (const int32_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 1 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i32>, i64 } @llvm.riscv.vleff.nxv1i32.i64(<vscale x 1 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i32>, i64 } @llvm.riscv.vleff.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -763,7 +763,7 @@ vuint32mf2_t test_vle32ff_v_u32mf2 (const uint32_t *base, size_t *new_vl, size_t
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 2 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i32>, i64 } @llvm.riscv.vleff.nxv2i32.i64(<vscale x 2 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i32>, i64 } @llvm.riscv.vleff.nxv2i32.i64(<vscale x 2 x i32> undef, <vscale x 2 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -776,7 +776,7 @@ vuint32m1_t test_vle32ff_v_u32m1 (const uint32_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 4 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, i64 } @llvm.riscv.vleff.nxv4i32.i64(<vscale x 4 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i32>, i64 } @llvm.riscv.vleff.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -789,7 +789,7 @@ vuint32m2_t test_vle32ff_v_u32m2 (const uint32_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 8 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i32>, i64 } @llvm.riscv.vleff.nxv8i32.i64(<vscale x 8 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i32>, i64 } @llvm.riscv.vleff.nxv8i32.i64(<vscale x 8 x i32> undef, <vscale x 8 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -802,7 +802,7 @@ vuint32m4_t test_vle32ff_v_u32m4 (const uint32_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle32ff_v_u32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i32* [[BASE:%.*]] to <vscale x 16 x i32>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i32>, i64 } @llvm.riscv.vleff.nxv16i32.i64(<vscale x 16 x i32>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x i32>, i64 } @llvm.riscv.vleff.nxv16i32.i64(<vscale x 16 x i32> undef, <vscale x 16 x i32>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i32>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x i32>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -815,7 +815,7 @@ vuint32m8_t test_vle32ff_v_u32m8 (const uint32_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 1 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x float>, i64 } @llvm.riscv.vleff.nxv1f32.i64(<vscale x 1 x float>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x float>, i64 } @llvm.riscv.vleff.nxv1f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x float>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x float>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -828,7 +828,7 @@ vfloat32mf2_t test_vle32ff_v_f32mf2 (const float *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 2 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x float>, i64 } @llvm.riscv.vleff.nxv2f32.i64(<vscale x 2 x float>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x float>, i64 } @llvm.riscv.vleff.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x float>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x float>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -841,7 +841,7 @@ vfloat32m1_t test_vle32ff_v_f32m1 (const float *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 4 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x float>, i64 } @llvm.riscv.vleff.nxv4f32.i64(<vscale x 4 x float>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x float>, i64 } @llvm.riscv.vleff.nxv4f32.i64(<vscale x 4 x float> undef, <vscale x 4 x float>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -854,7 +854,7 @@ vfloat32m2_t test_vle32ff_v_f32m2 (const float *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 8 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x float>, i64 } @llvm.riscv.vleff.nxv8f32.i64(<vscale x 8 x float>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x float>, i64 } @llvm.riscv.vleff.nxv8f32.i64(<vscale x 8 x float> undef, <vscale x 8 x float>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x float>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x float>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -867,7 +867,7 @@ vfloat32m4_t test_vle32ff_v_f32m4 (const float *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle32ff_v_f32m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast float* [[BASE:%.*]] to <vscale x 16 x float>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x float>, i64 } @llvm.riscv.vleff.nxv16f32.i64(<vscale x 16 x float>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x float>, i64 } @llvm.riscv.vleff.nxv16f32.i64(<vscale x 16 x float> undef, <vscale x 16 x float>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x float>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x float>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1075,7 +1075,7 @@ vfloat32m8_t test_vle32ff_v_f32m8_m (vbool4_t mask, vfloat32m8_t maskedoff, cons
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i64>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1088,7 +1088,7 @@ vint64m1_t test_vle64ff_v_i64m1 (const int64_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i64>, i64 } @llvm.riscv.vleff.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i64>, i64 } @llvm.riscv.vleff.nxv2i64.i64(<vscale x 2 x i64> undef, <vscale x 2 x i64>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1101,7 +1101,7 @@ vint64m2_t test_vle64ff_v_i64m2 (const int64_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i64>, i64 } @llvm.riscv.vleff.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i64>, i64 } @llvm.riscv.vleff.nxv4i64.i64(<vscale x 4 x i64> undef, <vscale x 4 x i64>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i64>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i64>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1114,7 +1114,7 @@ vint64m4_t test_vle64ff_v_i64m4 (const int64_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle64ff_v_i64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i64>, i64 } @llvm.riscv.vleff.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i64>, i64 } @llvm.riscv.vleff.nxv8i64.i64(<vscale x 8 x i64> undef, <vscale x 8 x i64>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i64>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i64>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1127,7 +1127,7 @@ vint64m8_t test_vle64ff_v_i64m8 (const int64_t *base, size_t *new_vl, size_t vl)
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 1 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x i64>, i64 } @llvm.riscv.vleff.nxv1i64.i64(<vscale x 1 x i64> undef, <vscale x 1 x i64>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i64>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x i64>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1140,7 +1140,7 @@ vuint64m1_t test_vle64ff_v_u64m1 (const uint64_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 2 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i64>, i64 } @llvm.riscv.vleff.nxv2i64.i64(<vscale x 2 x i64>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x i64>, i64 } @llvm.riscv.vleff.nxv2i64.i64(<vscale x 2 x i64> undef, <vscale x 2 x i64>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x i64>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1153,7 +1153,7 @@ vuint64m2_t test_vle64ff_v_u64m2 (const uint64_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 4 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i64>, i64 } @llvm.riscv.vleff.nxv4i64.i64(<vscale x 4 x i64>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x i64>, i64 } @llvm.riscv.vleff.nxv4i64.i64(<vscale x 4 x i64> undef, <vscale x 4 x i64>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i64>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x i64>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1166,7 +1166,7 @@ vuint64m4_t test_vle64ff_v_u64m4 (const uint64_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle64ff_v_u64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i64* [[BASE:%.*]] to <vscale x 8 x i64>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i64>, i64 } @llvm.riscv.vleff.nxv8i64.i64(<vscale x 8 x i64>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x i64>, i64 } @llvm.riscv.vleff.nxv8i64.i64(<vscale x 8 x i64> undef, <vscale x 8 x i64>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i64>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x i64>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1179,7 +1179,7 @@ vuint64m8_t test_vle64ff_v_u64m8 (const uint64_t *base, size_t *new_vl, size_t v
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 1 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x double>, i64 } @llvm.riscv.vleff.nxv1f64.i64(<vscale x 1 x double>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x double>, i64 } @llvm.riscv.vleff.nxv1f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x double>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x double>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1192,7 +1192,7 @@ vfloat64m1_t test_vle64ff_v_f64m1 (const double *base, size_t *new_vl, size_t vl
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 2 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x double>, i64 } @llvm.riscv.vleff.nxv2f64.i64(<vscale x 2 x double>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x double>, i64 } @llvm.riscv.vleff.nxv2f64.i64(<vscale x 2 x double> undef, <vscale x 2 x double>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x double>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1205,7 +1205,7 @@ vfloat64m2_t test_vle64ff_v_f64m2 (const double *base, size_t *new_vl, size_t vl
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 4 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x double>, i64 } @llvm.riscv.vleff.nxv4f64.i64(<vscale x 4 x double>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x double>, i64 } @llvm.riscv.vleff.nxv4f64.i64(<vscale x 4 x double> undef, <vscale x 4 x double>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x double>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x double>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1218,7 +1218,7 @@ vfloat64m4_t test_vle64ff_v_f64m4 (const double *base, size_t *new_vl, size_t vl
 // CHECK-RV64-LABEL: @test_vle64ff_v_f64m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast double* [[BASE:%.*]] to <vscale x 8 x double>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x double>, i64 } @llvm.riscv.vleff.nxv8f64.i64(<vscale x 8 x double>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x double>, i64 } @llvm.riscv.vleff.nxv8f64.i64(<vscale x 8 x double> undef, <vscale x 8 x double>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x double>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x double>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1387,7 +1387,7 @@ vfloat64m8_t test_vle64ff_v_f64m8_m (vbool8_t mask, vfloat64m8_t maskedoff, cons
 // CHECK-RV64-LABEL: @test_vle16ff_v_f16mf4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 1 x half>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x half>, i64 } @llvm.riscv.vleff.nxv1f16.i64(<vscale x 1 x half>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 1 x half>, i64 } @llvm.riscv.vleff.nxv1f16.i64(<vscale x 1 x half> undef, <vscale x 1 x half>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x half>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 1 x half>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1400,7 +1400,7 @@ vfloat16mf4_t test_vle16ff_v_f16mf4 (const _Float16 *base, size_t *new_vl, size_
 // CHECK-RV64-LABEL: @test_vle16ff_v_f16mf2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 2 x half>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x half>, i64 } @llvm.riscv.vleff.nxv2f16.i64(<vscale x 2 x half>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 2 x half>, i64 } @llvm.riscv.vleff.nxv2f16.i64(<vscale x 2 x half> undef, <vscale x 2 x half>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x half>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 2 x half>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1413,7 +1413,7 @@ vfloat16mf2_t test_vle16ff_v_f16mf2 (const _Float16 *base, size_t *new_vl, size_
 // CHECK-RV64-LABEL: @test_vle16ff_v_f16m1(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 4 x half>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x half>, i64 } @llvm.riscv.vleff.nxv4f16.i64(<vscale x 4 x half>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 4 x half>, i64 } @llvm.riscv.vleff.nxv4f16.i64(<vscale x 4 x half> undef, <vscale x 4 x half>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x half>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x half>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1426,7 +1426,7 @@ vfloat16m1_t test_vle16ff_v_f16m1 (const _Float16 *base, size_t *new_vl, size_t 
 // CHECK-RV64-LABEL: @test_vle16ff_v_f16m2(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 8 x half>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x half>, i64 } @llvm.riscv.vleff.nxv8f16.i64(<vscale x 8 x half>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 8 x half>, i64 } @llvm.riscv.vleff.nxv8f16.i64(<vscale x 8 x half> undef, <vscale x 8 x half>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 8 x half>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1439,7 +1439,7 @@ vfloat16m2_t test_vle16ff_v_f16m2 (const _Float16 *base, size_t *new_vl, size_t 
 // CHECK-RV64-LABEL: @test_vle16ff_v_f16m4(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 16 x half>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x half>, i64 } @llvm.riscv.vleff.nxv16f16.i64(<vscale x 16 x half>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 16 x half>, i64 } @llvm.riscv.vleff.nxv16f16.i64(<vscale x 16 x half> undef, <vscale x 16 x half>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x half>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 16 x half>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8
@@ -1452,7 +1452,7 @@ vfloat16m4_t test_vle16ff_v_f16m4 (const _Float16 *base, size_t *new_vl, size_t 
 // CHECK-RV64-LABEL: @test_vle16ff_v_f16m8(
 // CHECK-RV64-NEXT:  entry:
 // CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast half* [[BASE:%.*]] to <vscale x 32 x half>*
-// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x half>, i64 } @llvm.riscv.vleff.nxv32f16.i64(<vscale x 32 x half>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call { <vscale x 32 x half>, i64 } @llvm.riscv.vleff.nxv32f16.i64(<vscale x 32 x half> undef, <vscale x 32 x half>* [[TMP0]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 32 x half>, i64 } [[TMP1]], 0
 // CHECK-RV64-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 32 x half>, i64 } [[TMP1]], 1
 // CHECK-RV64-NEXT:    store i64 [[TMP3]], i64* [[NEW_VL:%.*]], align 8

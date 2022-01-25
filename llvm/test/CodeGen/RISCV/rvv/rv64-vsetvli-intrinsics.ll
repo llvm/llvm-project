@@ -113,7 +113,7 @@ define i64 @test_vsetvlimax_opt_e64m4() nounwind {
   ret i64 %vl
 }
 
-declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32>*, i64)
+declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32>, <vscale x 4 x i32>*, i64)
 
 ; Check that we remove the redundant vsetvli when followed by another operation
 define <vscale x 4 x i32> @redundant_vsetvli(i64 %avl, <vscale x 4 x i32>* %ptr) nounwind {
@@ -123,7 +123,7 @@ define <vscale x 4 x i32> @redundant_vsetvli(i64 %avl, <vscale x 4 x i32>* %ptr)
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %vl = call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 2, i64 1)
-  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32>* %ptr, i64 %vl)
+  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32>* %ptr, i64 %vl)
   ret <vscale x 4 x i32> %x
 }
 
@@ -140,6 +140,6 @@ define <vscale x 4 x i32> @repeated_vsetvli(i64 %avl, <vscale x 4 x i32>* %ptr) 
 ; CHECK-NEXT:    ret
   %vl0 = call i64 @llvm.riscv.vsetvli.i64(i64 %avl, i64 2, i64 1)
   %vl1 = call i64 @llvm.riscv.vsetvli.i64(i64 %vl0, i64 2, i64 1)
-  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32>* %ptr, i64 %vl1)
+  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32> undef, <vscale x 4 x i32>* %ptr, i64 %vl1)
   ret <vscale x 4 x i32> %x
 }

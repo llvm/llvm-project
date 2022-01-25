@@ -2452,8 +2452,12 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
           SDValue IntID =
               DAG.getTargetConstant(Intrinsic::riscv_vlse, DL, XLenVT);
-          SDValue Ops[] = {Ld->getChain(), IntID, NewAddr,
-                           DAG.getRegister(RISCV::X0, XLenVT), VL};
+          SDValue Ops[] = {Ld->getChain(),
+                           IntID,
+                           DAG.getUNDEF(ContainerVT),
+                           NewAddr,
+                           DAG.getRegister(RISCV::X0, XLenVT),
+                           VL};
           SDValue NewLoad = DAG.getMemIntrinsicNode(
               ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops, SVT,
               DAG.getMachineFunction().getMachineMemOperand(
@@ -4574,7 +4578,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     auto *Load = cast<MemIntrinsicSDNode>(Op);
     SmallVector<SDValue, 8> Ops{Load->getChain(), IntID};
-    if (!IsUnmasked)
+    if (IsUnmasked)
+      Ops.push_back(DAG.getUNDEF(ContainerVT));
+    else
       Ops.push_back(PassThru);
     Ops.push_back(Op.getOperand(3)); // Ptr
     Ops.push_back(Op.getOperand(4)); // Stride
@@ -5432,7 +5438,9 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
   unsigned IntID =
       IsUnmasked ? Intrinsic::riscv_vle : Intrinsic::riscv_vle_mask;
   SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
-  if (!IsUnmasked)
+  if (IsUnmasked)
+    Ops.push_back(DAG.getUNDEF(ContainerVT));
+  else
     Ops.push_back(PassThru);
   Ops.push_back(BasePtr);
   if (!IsUnmasked)
@@ -5813,7 +5821,9 @@ SDValue RISCVTargetLowering::lowerMaskedGather(SDValue Op,
   unsigned IntID =
       IsUnmasked ? Intrinsic::riscv_vluxei : Intrinsic::riscv_vluxei_mask;
   SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
-  if (!IsUnmasked)
+  if (IsUnmasked)
+    Ops.push_back(DAG.getUNDEF(ContainerVT));
+  else
     Ops.push_back(PassThru);
   Ops.push_back(BasePtr);
   Ops.push_back(Index);
