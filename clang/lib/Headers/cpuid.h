@@ -200,7 +200,7 @@
 #define bit_AMXINT8       0x02000000
 
 /* Features in %eax for leaf 7 sub-leaf 1 */
-#define bit_AVXVNNI       0x00000008
+#define bit_AVXVNNI       0x00000010
 #define bit_AVX512BF16    0x00000020
 #define bit_HRESET        0x00400000
 
