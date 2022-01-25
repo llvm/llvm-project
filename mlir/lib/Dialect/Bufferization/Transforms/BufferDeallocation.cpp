@@ -349,7 +349,7 @@ private:
     Region *argRegion = block->getParent();
     Operation *parentOp = argRegion->getParentOp();
     RegionBranchOpInterface regionInterface;
-    if (!argRegion || &argRegion->front() != block ||
+    if (&argRegion->front() != block ||
         !(regionInterface = dyn_cast<RegionBranchOpInterface>(parentOp)))
       return success();
 
