@@ -54,13 +54,13 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
     if (F.isPresplitCoroutine())
       continue;
 
-    if (!F.isDeclaration() && F.hasFnAttribute(Attribute::AlwaysInline) &&
-        isInlineViable(F).isSuccess()) {
+    if (!F.isDeclaration() && isInlineViable(F).isSuccess()) {
       Calls.clear();
 
       for (User *U : F.users())
         if (auto *CB = dyn_cast<CallBase>(U))
-          if (CB->getCalledFunction() == &F)
+          if (CB->getCalledFunction() == &F &&
+              CB->hasFnAttr(Attribute::AlwaysInline))
             Calls.insert(CB);
 
       for (CallBase *CB : Calls) {
@@ -92,10 +92,12 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
         Changed = true;
       }
 
-      // Remember to try and delete this function afterward. This both avoids
-      // re-walking the rest of the module and avoids dealing with any iterator
-      // invalidation issues while deleting functions.
-      InlinedFunctions.push_back(&F);
+      if (F.hasFnAttribute(Attribute::AlwaysInline)) {
+        // Remember to try and delete this function afterward. This both avoids
+        // re-walking the rest of the module and avoids dealing with any
+        // iterator invalidation issues while deleting functions.
+        InlinedFunctions.push_back(&F);
+      }
     }
   }
 
