@@ -1716,8 +1716,10 @@ public:
 
   /// This may be '*', in which case this should fold to true.
   bool hasVersion() const { return !VersionToCheck.Version.empty(); }
-  VersionTuple getVersion() { return VersionToCheck.Version; }
-  VersionTuple getVersionAsWritten() { return VersionToCheck.SourceVersion; }
+  VersionTuple getVersion() const { return VersionToCheck.Version; }
+  VersionTuple getVersionAsWritten() const {
+    return VersionToCheck.SourceVersion;
+  }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());
