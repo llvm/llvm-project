@@ -16,7 +16,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
   double one;
   // The fptan instruction pushes the number 1 on to the FP stack after
   // computing tan. So, we read out the one before popping the actual result.
-  __asm__ __volatile__("fptan" : "=t"(one) : "f"(x));
+  __asm__ __volatile__("fptan" : "=t"(one) : "f"(x) : "cc");
   __asm__ __volatile__("fstpl %0" : "=m"(result));
   return result;
 }
