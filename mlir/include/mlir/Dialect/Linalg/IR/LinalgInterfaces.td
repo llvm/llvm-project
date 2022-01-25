@@ -643,6 +643,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the block argument for an `opOperand`.
+      }],
+      /*retTy=*/"BlockArgument",
+      /*methodName=*/"getTiedBlockArgument",
+      /*args=*/(ins "OpOperand *":$opOperand),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        assert(opOperand->getOwner() == this->getOperation());
+        return getBlock()->getArgument(opOperand->getOperandNumber());
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the input or output indexing map for `opOperand`.
       }],
       /*retTy=*/"AffineMap",
@@ -670,6 +683,24 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         assert(resultIndex >= 0 &&
                resultIndex < this->getOperation()->getNumResults() );
         return this->getOperation()->getResult(resultIndex);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the value yielded by the region corresponding to an output
+        `opOperand`.
+      }],
+      /*retTy=*/"OpOperand *",
+      /*methodName=*/"getTiedYieldValue",
+      /*args=*/(ins "OpOperand*":$opOperand),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        assert(opOperand->getOwner() == this->getOperation());
+        int64_t resultIndex = opOperand->getOperandNumber() - getNumInputs();
+        assert(resultIndex >= 0 &&
+               resultIndex < this->getOperation()->getNumResults());
+        Operation *yieldOp = getBlock()->getTerminator();
+        return &yieldOp->getOpOperand(resultIndex);
       }]
     >,
     //===------------------------------------------------------------------===//
