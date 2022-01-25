@@ -1430,7 +1430,7 @@ define internal void @__omp_outlined__6(i32* noalias %.global_tid., i32* noalias
 ; AMDGPU-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @x.1, i32 0, i32 0) to i8*) to i32*
 ; AMDGPU-NEXT:    br label [[REGION_CHECK_TID:%.*]]
 ; AMDGPU:       region.check.tid:
-; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; AMDGPU-NEXT:    [[TMP0:%.*]] = call fastcc i32 @__kmpc_get_hardware_thread_id_in_block()
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; AMDGPU-NEXT:    br i1 [[TMP1]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
 ; AMDGPU:       region.guarded:
@@ -1466,7 +1466,7 @@ define internal void @__omp_outlined__6(i32* noalias %.global_tid., i32* noalias
 ; NVPTX-NEXT:    [[X_ON_STACK:%.*]] = bitcast i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @x1, i32 0, i32 0) to i8*) to i32*
 ; NVPTX-NEXT:    br label [[REGION_CHECK_TID:%.*]]
 ; NVPTX:       region.check.tid:
-; NVPTX-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; NVPTX-NEXT:    [[TMP0:%.*]] = call fastcc i32 @__kmpc_get_hardware_thread_id_in_block()
 ; NVPTX-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; NVPTX-NEXT:    br i1 [[TMP1]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
 ; NVPTX:       region.guarded:
@@ -2327,6 +2327,8 @@ entry:
   call void @__omp_outlined__9(i32* %.addr1, i32* %.zero.addr) #6
   ret void
 }
+
+declare fastcc i32 @__kmpc_get_hardware_thread_id_in_block();
 
 attributes #0 = { alwaysinline convergent norecurse nounwind }
 attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }
