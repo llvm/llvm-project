@@ -2186,7 +2186,11 @@ cc_library(
             "lib/Dialect/Affine/Utils/*.h",
         ],
     ),
-    hdrs = ["include/mlir/Dialect/Affine/Utils.h"],
+    hdrs = [
+        "include/mlir/Dialect/Affine/LoopFusionUtils.h",
+        "include/mlir/Dialect/Affine/LoopUtils.h",
+        "include/mlir/Dialect/Affine/Utils.h",
+    ],
     includes = ["include"],
     deps = [
         ":Affine",
@@ -2194,7 +2198,10 @@ cc_library(
         ":Analysis",
         ":IR",
         ":MemRefDialect",
+        ":SCFDialect",
+        ":Support",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
@@ -2466,6 +2473,7 @@ cc_library(
     deps = [
         ":IR",
         ":LoopLikeInterfaceIncGen",
+        "//llvm:Support",
     ],
 )
 
@@ -3152,6 +3160,7 @@ cc_library(
         ":ArithmeticDialect",
         ":Async",
         ":DLTIDialect",
+        ":AffineUtils",
         ":GPUDialect",
         ":GPUPassIncGen",
         ":MemRefDialect",
@@ -6599,6 +6608,7 @@ cc_library(
     deps = [
         ":ArithmeticDialect",
         ":BufferizationDialect",
+        ":BufferizationTransforms",
         ":IR",
         ":MemRefDialect",
         ":Support",
@@ -7836,6 +7846,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Affine",
+        ":AffineUtils",
         ":ArithmeticDialect",
         ":IR",
         ":InferTypeOpInterface",
@@ -8013,6 +8024,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":LoopLikeInterface",
         ":MemRefDialect",
         ":Pass",
         ":StandardOps",
