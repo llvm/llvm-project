@@ -42215,12 +42215,10 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
       EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
       Movmsk = DAG.getBitcast(MovmskVT, Match);
     } else {
-      // For all_of(setcc(vec,0,eq))
+      // For all_of(setcc(x,y,eq))
       // - avoid vXi64 comparisons without PCMPEQQ (SSE41+), use PCMPEQD.
       // - avoid vXi16 comparisons, use PMOVMSKB(PCMPEQB()).
-      if (BinOp == ISD::AND &&
-          Match.getOpcode() == ISD::SETCC &&
-          ISD::isBuildVectorAllZeros(Match.getOperand(1).getNode()) &&
+      if (BinOp == ISD::AND && Match.getOpcode() == ISD::SETCC &&
           cast<CondCodeSDNode>(Match.getOperand(2))->get() ==
               ISD::CondCode::SETEQ) {
         SDValue Vec = Match.getOperand(0);
