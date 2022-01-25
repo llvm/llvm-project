@@ -1359,3 +1359,23 @@ func @tensor_rank(%arg0: tensor<*xf32>) -> index {
   // CHECK: return %[[r]] : index
   return %0 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_generate_static_and_dynamic(
+//  CHECK-SAME:     %[[arg0:.*]]: index
+func @tensor_generate_static_and_dynamic(%arg0: index) -> tensor<16x?xindex> {
+  // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[c16:.*]] = arith.constant 16 : index
+  // CHECK: %[[alloc:.*]] = memref.alloc(%[[arg0]]) {{.*}} : memref<16x?xindex>
+  // CHECK: scf.parallel (%[[arg1:.*]], %[[arg2:.*]]) = (%[[c0]], %[[c0]]) to (%[[c16]], %[[arg0]]) {{.*}} {
+  %result = tensor.generate %arg0 {
+  ^bb0(%i: index, %j: index):
+    %sum = arith.addi %i, %j : index
+    // CHECK: memref.store {{.*}}, %[[alloc]][%[[arg1]], %[[arg2]]]
+    // CHECK: scf.yield
+    tensor.yield %sum : index
+  } : tensor<16x?xindex>
+  // CHECK: }
+  return %result : tensor<16x?xindex>
+}
