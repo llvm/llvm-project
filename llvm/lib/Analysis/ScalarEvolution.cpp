@@ -11468,6 +11468,48 @@ bool ScalarEvolution::isImpliedViaMerge(ICmpInst::Predicate Pred,
   return true;
 }
 
+bool ScalarEvolution::isImpliedCondOperandsViaShift(ICmpInst::Predicate Pred,
+                                                    const SCEV *LHS,
+                                                    const SCEV *RHS,
+                                                    const SCEV *FoundLHS,
+                                                    const SCEV *FoundRHS) {
+  // We want to imply LHS < RHS from LHS < (RHS >> shiftvalue).  First, make
+  // sure that we are dealing with same LHS.
+  if (RHS == FoundRHS) {
+    std::swap(LHS, RHS);
+    std::swap(FoundLHS, FoundRHS);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+  if (LHS != FoundLHS)
+    return false;
+
+  auto *SUFoundRHS = dyn_cast<SCEVUnknown>(FoundRHS);
+  if (!SUFoundRHS)
+    return false;
+
+  Value *Shiftee, *ShiftValue;
+
+  using namespace PatternMatch;
+  if (match(SUFoundRHS->getValue(),
+            m_LShr(m_Value(Shiftee), m_Value(ShiftValue)))) {
+    auto *ShifteeS = getSCEV(Shiftee);
+    // Prove one of the following:
+    // LHS <u (shiftee >> shiftvalue) && shiftee <=u RHS ---> LHS <u RHS
+    // LHS <=u (shiftee >> shiftvalue) && shiftee <=u RHS ---> LHS <=u RHS
+    // LHS <s (shiftee >> shiftvalue) && shiftee <=s RHS && shiftee >=s 0
+    //   ---> LHS <s RHS
+    // LHS <=s (shiftee >> shiftvalue) && shiftee <=s RHS && shiftee >=s 0
+    //   ---> LHS <=s RHS
+    if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_ULE)
+      return isKnownPredicate(ICmpInst::ICMP_ULE, ShifteeS, RHS);
+    if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE)
+      if (isKnownNonNegative(ShifteeS))
+        return isKnownPredicate(ICmpInst::ICMP_SLE, ShifteeS, RHS);
+  }
+
+  return false;
+}
+
 bool ScalarEvolution::isImpliedCondOperands(ICmpInst::Predicate Pred,
                                             const SCEV *LHS, const SCEV *RHS,
                                             const SCEV *FoundLHS,
@@ -11477,6 +11519,9 @@ bool ScalarEvolution::isImpliedCondOperands(ICmpInst::Predicate Pred,
     return true;
 
   if (isImpliedCondOperandsViaNoOverflow(Pred, LHS, RHS, FoundLHS, FoundRHS))
+    return true;
+
+  if (isImpliedCondOperandsViaShift(Pred, LHS, RHS, FoundLHS, FoundRHS))
     return true;
 
   if (isImpliedCondOperandsViaAddRecStart(Pred, LHS, RHS, FoundLHS, FoundRHS,
