@@ -8018,6 +8018,7 @@ cc_library(
     deps = [
         ":AllocationOpInterface",
         ":Analysis",
+        ":ArithmeticDialect",
         ":BufferizationDialect",
         ":BufferizationPassIncGen",
         ":ControlFlowInterfaces",
