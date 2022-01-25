@@ -14,6 +14,7 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "OffloadWrapper.h"
 #include "clang/Basic/Version.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -963,9 +964,6 @@ Error linkDeviceFiles(ArrayRef<DeviceFile> DeviceFiles,
 // Compile the module to an object file using the appropriate target machine for
 // the host triple.
 Expected<std::string> compileModule(Module &M) {
-  if (M.getTargetTriple().empty())
-    M.setTargetTriple(HostTriple);
-
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
   if (!T)
@@ -1003,40 +1001,29 @@ Expected<std::string> compileModule(Module &M) {
   return static_cast<std::string>(ObjectFile);
 }
 
-/// Creates an object file containing the device image stored in the filename \p
-/// ImageFile that can be linked with the host.
-Expected<std::string> wrapDeviceImage(StringRef ImageFile) {
-  // TODO: Call these utilities as a library intead of executing them here.
-  ErrorOr<std::string> WrapperPath =
-      sys::findProgramByName("clang-offload-wrapper");
-  if (!WrapperPath)
-    return createStringError(WrapperPath.getError(),
-                             "Unable to find 'clang-offload-wrapper' in path");
+/// Creates the object file containing the device image and runtime registration
+/// code from the device images stored in \p Images.
+Expected<std::string> wrapDeviceImages(ArrayRef<std::string> Images) {
+  SmallVector<std::unique_ptr<MemoryBuffer>, 4> SavedBuffers;
+  SmallVector<ArrayRef<char>, 4> ImagesToWrap;
 
-  // Create a new file to write the wrapped bitcode file to.
-  SmallString<128> BitcodeFile;
-  if (Error Err = createOutputFile(sys::path::filename(ExecutableName) +
-                                       "-offload-wrapper",
-                                   "bc", BitcodeFile))
-    return std::move(Err);
-
-  SmallVector<StringRef, 4> WrapperArgs;
-  WrapperArgs.push_back(*WrapperPath);
-  WrapperArgs.push_back("-target");
-  WrapperArgs.push_back(HostTriple);
-  WrapperArgs.push_back("-o");
-  WrapperArgs.push_back(BitcodeFile);
-  WrapperArgs.push_back(ImageFile);
-
-  if (sys::ExecuteAndWait(*WrapperPath, WrapperArgs))
-    return createStringError(inconvertibleErrorCode(),
-                             "'clang-offload-wrapper' failed");
+  for (StringRef ImageFilename : Images) {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ImageOrError =
+        llvm::MemoryBuffer::getFileOrSTDIN(ImageFilename);
+    if (std::error_code EC = ImageOrError.getError())
+      return createFileError(ImageFilename, EC);
+    ImagesToWrap.emplace_back((*ImageOrError)->getBufferStart(),
+                              (*ImageOrError)->getBufferSize());
+    SavedBuffers.emplace_back(std::move(*ImageOrError));
+  }
 
   LLVMContext Context;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseIRFile(BitcodeFile, Err, Context);
+  Module M("offload.wrapper.module", Context);
+  M.setTargetTriple(HostTriple);
+  if (Error Err = wrapBinaries(M, ImagesToWrap))
+    return std::move(Err);
 
-  return compileModule(*M);
+  return compileModule(M);
 }
 
 Optional<std::string> findFile(StringRef Dir, const Twine &Name) {
@@ -1162,13 +1149,10 @@ int main(int argc, const char **argv) {
 
   // Wrap each linked device image into a linkable host binary and add it to the
   // link job's inputs.
-  for (const auto &Image : LinkedImages) {
-    auto FileOrErr = wrapDeviceImage(Image);
-    if (!FileOrErr)
-      return reportError(FileOrErr.takeError());
-
-    LinkerArgs.push_back(*FileOrErr);
-  }
+  auto FileOrErr = wrapDeviceImages(LinkedImages);
+  if (!FileOrErr)
+    return reportError(FileOrErr.takeError());
+  LinkerArgs.push_back(*FileOrErr);
 
   // Run the host linking job.
   if (Error Err = runLinker(LinkerUserPath, LinkerArgs))
