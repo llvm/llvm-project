@@ -2398,10 +2398,10 @@ always better.
 
 .. _ds_bit:
 
-Bit storage containers (BitVector, SparseBitVector, CoalescingBitVector)
+Bit storage containers
 ------------------------------------------------------------------------
 
-There are three bit storage containers, and choosing when to use each is
+There are several bit storage containers, and choosing when to use each is
 relatively straightforward.
 
 One additional option is ``std::vector<bool>``: we discourage its use for two
