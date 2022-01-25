@@ -22,9 +22,7 @@
 using namespace mlir;
 
 namespace {
-/// A basic control-flow sink pass. This pass analyzes the regions of operations
-/// that implement `RegionBranchOpInterface` that are reachable and executed at
-/// most once and sinks candidate operations that are side-effect free.
+/// A control-flow sink pass.
 struct ControlFlowSink : public ControlFlowSinkBase<ControlFlowSink> {
   void runOnOperation() override;
 };
@@ -59,10 +57,13 @@ void ControlFlowSink::runOnOperation() {
   auto &domInfo = getAnalysis<DominanceInfo>();
   getOperation()->walk([&](RegionBranchOpInterface branch) {
     SmallVector<Region *> regionsToSink;
+    // Get the regions are that known to be executed at most once.
     getSinglyExecutedRegionsToSink(branch, regionsToSink);
-    numSunk = mlir::controlFlowSink(
-        regionsToSink, domInfo,
-        [](Operation *op, Region *) { return isSideEffectFree(op); });
+    // Sink side-effect free operations.
+    numSunk =
+        controlFlowSink(regionsToSink, domInfo, [](Operation *op, Region *) {
+          return isSideEffectFree(op);
+        });
   });
 }
 

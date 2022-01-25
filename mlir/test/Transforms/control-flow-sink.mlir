@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -control-flow-sink %s | FileCheck %s
+// RUN: mlir-opt -control-flow-sink %s | FileCheck %s
 
 // Test that operations can be sunk.
 
@@ -34,8 +34,6 @@ func @test_simple_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
   }
   return %4 : i32
 }
-
-// -----
 
 // Test that a region op can be sunk.
 
@@ -76,8 +74,6 @@ func @test_region_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
   return %2 : i32
 }
 
-// -----
-
 // Test that an entire subgraph can be sunk.
 
 // CHECK-LABEL: @test_subgraph_sink
@@ -113,8 +109,6 @@ func @test_subgraph_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
   return %6 : i32
 }
 
-// -----
-
 // Test that ops can be sunk into regions with multiple blocks.
 
 // CHECK-LABEL: @test_multiblock_region_sink
@@ -143,8 +137,6 @@ func @test_multiblock_region_sink(%arg0: i1, %arg1: i32, %arg2: i32) -> i32 {
   %4 = arith.addi %0, %3 : i32
   return %4 : i32
 }
-
-// -----
 
 // Test that ops can be sunk recursively into nested regions.
 
@@ -184,8 +176,6 @@ func @test_nested_region_sink(%arg0: i1, %arg1: i32) -> i32 {
   }
   return %1 : i32
 }
-
-// -----
 
 // Test that ops are only moved into the entry block, even when their only uses
 // are further along.

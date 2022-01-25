@@ -310,14 +310,16 @@ def Canonicalizer : Pass<"canonicalize"> {
 def ControlFlowSink : Pass<"control-flow-sink"> {
   let summary = "Sink operations into conditional blocks";
   let description = [{
-    This pass implements a simple control-flow sink on operations that implement
+    This pass implements control-flow sink on operations that implement
     `RegionBranchOpInterface` by moving dominating operations whose only uses
-    are in a single conditionally-executed region into that region so that
+    are in a conditionally-executed regions into those regions so that
     executions paths where their results are not needed do not perform
     unnecessary computations.
 
     This is similar (but opposite) to loop-invariant code motion, which hoists
-    operations out of regions executed more than once.
+    operations out of regions executed more than once. The implementation of
+    control-flow sink uses a simple and conversative cost model: operations are
+    never duplicated and are only moved into singly-executed regions.
 
     It is recommended to run canonicalization first to remove unreachable
     blocks: ops in unreachable blocks may prevent other operations from being
