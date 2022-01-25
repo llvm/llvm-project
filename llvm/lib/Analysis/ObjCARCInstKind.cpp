@@ -32,8 +32,8 @@ raw_ostream &llvm::objcarc::operator<<(raw_ostream &OS,
     return OS << "ARCInstKind::Retain";
   case ARCInstKind::RetainRV:
     return OS << "ARCInstKind::RetainRV";
-  case ARCInstKind::ClaimRV:
-    return OS << "ARCInstKind::ClaimRV";
+  case ARCInstKind::UnsafeClaimRV:
+    return OS << "ARCInstKind::UnsafeClaimRV";
   case ARCInstKind::RetainBlock:
     return OS << "ARCInstKind::RetainBlock";
   case ARCInstKind::Release:
@@ -127,7 +127,7 @@ ARCInstKind llvm::objcarc::GetFunctionClass(const Function *F) {
   case Intrinsic::objc_clang_arc_use:
     return ARCInstKind::IntrinsicUser;
   case Intrinsic::objc_unsafeClaimAutoreleasedReturnValue:
-    return ARCInstKind::ClaimRV;
+    return ARCInstKind::UnsafeClaimRV;
   case Intrinsic::objc_retainedObject:
     return ARCInstKind::NoopCast;
   case Intrinsic::objc_unretainedObject:
@@ -334,7 +334,7 @@ bool llvm::objcarc::IsUser(ARCInstKind Class) {
   case ARCInstKind::StoreStrong:
   case ARCInstKind::Call:
   case ARCInstKind::None:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
     return false;
   }
   llvm_unreachable("covered switch isn't covered?");
@@ -370,7 +370,7 @@ bool llvm::objcarc::IsRetain(ARCInstKind Class) {
   case ARCInstKind::Call:
   case ARCInstKind::User:
   case ARCInstKind::None:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
     return false;
   }
   llvm_unreachable("covered switch isn't covered?");
@@ -384,7 +384,7 @@ bool llvm::objcarc::IsAutorelease(ARCInstKind Class) {
     return true;
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
   case ARCInstKind::RetainBlock:
   case ARCInstKind::Release:
   case ARCInstKind::AutoreleasepoolPush:
@@ -416,7 +416,7 @@ bool llvm::objcarc::IsForwarding(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
   case ARCInstKind::Autorelease:
   case ARCInstKind::AutoreleaseRV:
   case ARCInstKind::NoopCast:
@@ -451,7 +451,7 @@ bool llvm::objcarc::IsNoopOnNull(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
   case ARCInstKind::Release:
   case ARCInstKind::Autorelease:
   case ARCInstKind::AutoreleaseRV:
@@ -486,7 +486,7 @@ bool llvm::objcarc::IsNoopOnGlobal(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
   case ARCInstKind::Release:
   case ARCInstKind::Autorelease:
   case ARCInstKind::AutoreleaseRV:
@@ -522,7 +522,7 @@ bool llvm::objcarc::IsAlwaysTail(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
   case ARCInstKind::AutoreleaseRV:
     return true;
   case ARCInstKind::Release:
@@ -563,7 +563,7 @@ bool llvm::objcarc::IsNeverTail(ARCInstKind Class) {
     return true;
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
   case ARCInstKind::AutoreleaseRV:
   case ARCInstKind::Release:
   case ARCInstKind::RetainBlock:
@@ -598,7 +598,7 @@ bool llvm::objcarc::IsNoThrow(ARCInstKind Class) {
   switch (Class) {
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
   case ARCInstKind::Release:
   case ARCInstKind::Autorelease:
   case ARCInstKind::AutoreleaseRV:
@@ -643,7 +643,7 @@ bool llvm::objcarc::CanInterruptRV(ARCInstKind Class) {
     return true;
   case ARCInstKind::Retain:
   case ARCInstKind::RetainRV:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
   case ARCInstKind::Release:
   case ARCInstKind::AutoreleasepoolPush:
   case ARCInstKind::RetainBlock:
@@ -696,7 +696,7 @@ bool llvm::objcarc::CanDecrementRefCount(ARCInstKind Kind) {
   case ARCInstKind::StoreStrong:
   case ARCInstKind::CallOrUser:
   case ARCInstKind::Call:
-  case ARCInstKind::ClaimRV:
+  case ARCInstKind::UnsafeClaimRV:
     return true;
   }
 
