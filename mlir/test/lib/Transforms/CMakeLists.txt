@@ -2,10 +2,6 @@
 add_mlir_library(MLIRTestTransforms
   TestConstantFold.cpp
   TestInlining.cpp
-  TestLoopFusion.cpp
-  TestLoopMapping.cpp
-  TestLoopParametricTiling.cpp
-  TestLoopUnrolling.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

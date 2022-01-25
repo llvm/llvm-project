@@ -11,10 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/LoopUtils.h"
-#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 
@@ -31,8 +30,7 @@ public:
   }
   StringRef getDescription() const final {
     return "test application of parametric tiling to the outer loops so that "
-           "the "
-           "ranges of outer loops become static";
+           "the ranges of outer loops become static";
   }
   SimpleParametricLoopTilingPass() = default;
   SimpleParametricLoopTilingPass(const SimpleParametricLoopTilingPass &) {}

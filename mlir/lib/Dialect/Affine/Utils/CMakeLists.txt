@@ -1,4 +1,6 @@
 add_mlir_dialect_library(MLIRAffineUtils
+  LoopFusionUtils.cpp
+  LoopUtils.cpp
   Utils.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -7,5 +9,6 @@ add_mlir_dialect_library(MLIRAffineUtils
   LINK_LIBS PUBLIC
   MLIRAffine
   MLIRAnalysis
+  MLIRMemRef
   MLIRTransformUtils
   )

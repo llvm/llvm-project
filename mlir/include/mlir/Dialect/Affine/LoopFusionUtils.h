@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TRANSFORMS_LOOPFUSIONUTILS_H
-#define MLIR_TRANSFORMS_LOOPFUSIONUTILS_H
+#ifndef MLIR_DIALECT_AFFINE_LOOPFUSIONUTILS_H
+#define MLIR_DIALECT_AFFINE_LOOPFUSIONUTILS_H
 
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
@@ -167,4 +167,4 @@ void gatherProducerConsumerMemrefs(ArrayRef<Operation *> srcOps,
                                    DenseSet<Value> &producerConsumerMemrefs);
 } // namespace mlir
 
-#endif // MLIR_TRANSFORMS_LOOPFUSIONUTILS_H
+#endif // MLIR_DIALECT_AFFINE_LOOPFUSIONUTILS_H

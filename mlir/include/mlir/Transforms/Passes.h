@@ -22,12 +22,7 @@
 
 namespace mlir {
 
-class AffineForOp;
 class GreedyRewriteConfig;
-
-/// Fusion mode to attempt. The default mode `Greedy` does both
-/// producer-consumer and sibling fusion.
-enum FusionMode { Greedy, ProducerConsumer, Sibling };
 
 //===----------------------------------------------------------------------===//
 // Passes
@@ -56,30 +51,9 @@ std::unique_ptr<Pass> createControlFlowSinkPass();
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
 
-/// Creates a loop fusion pass which fuses loops according to type of fusion
-/// specified in `fusionMode`. Buffers of size less than or equal to
-/// `localBufSizeThreshold` are promoted to memory space `fastMemorySpace`.
-std::unique_ptr<OperationPass<FuncOp>>
-createLoopFusionPass(unsigned fastMemorySpace = 0,
-                     uint64_t localBufSizeThreshold = 0,
-                     bool maximalFusion = false,
-                     enum FusionMode fusionMode = FusionMode::Greedy);
-
 /// Creates a loop invariant code motion pass that hoists loop invariant
 /// instructions out of the loop.
 std::unique_ptr<Pass> createLoopInvariantCodeMotionPass();
-
-/// Creates a pass to pipeline explicit movement of data across levels of the
-/// memory hierarchy.
-std::unique_ptr<OperationPass<FuncOp>> createPipelineDataTransferPass();
-
-/// Creates a pass that transforms perfectly nested loops with independent
-/// bounds into a single loop.
-std::unique_ptr<OperationPass<FuncOp>> createLoopCoalescingPass();
-
-/// Creates a pass that transforms a single ParallelLoop over N induction
-/// variables into another ParallelLoop over less than N induction variables.
-std::unique_ptr<Pass> createParallelLoopCollapsingPass();
 
 /// Creates a pass to strip debug information from a function.
 std::unique_ptr<Pass> createStripDebugInfoPass();
