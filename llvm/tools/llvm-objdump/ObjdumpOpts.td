@@ -246,7 +246,7 @@ def weak_bind : Flag<["--"], "weak-bind">,
   Group<grp_mach_o>;
 
 def chained_fixups : Flag<["--"], "chained_fixups">,
-  HelpText<"Print raw chained fixup data present in a final linked binary built with chained fixups.">,
+  HelpText<"Print raw chained fixup data present in a final linked binary built with chained fixups. (requires --macho)">,
   Group<grp_mach_o>;
 
 def g : Flag<["-"], "g">,

@@ -2761,7 +2761,7 @@ int main(int argc, char **argv) {
         (Bind || DataInCode || DylibId || DylibsUsed || ExportsTrie ||
          FirstPrivateHeader || FunctionStarts || IndirectSymbols || InfoPlist ||
          LazyBind || LinkOptHints || ObjcMetaData || Rebase || Rpaths ||
-         UniversalHeaders || WeakBind || !FilterSections.empty()))) {
+         UniversalHeaders || WeakBind || Chained_fixups || !FilterSections.empty()))) {
     T->printHelp(ToolName);
     return 2;
   }

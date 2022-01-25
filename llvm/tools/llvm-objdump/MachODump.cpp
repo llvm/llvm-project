@@ -10456,8 +10456,60 @@ static void printMachOWeakBindTable(object::MachOObjectFile *Obj) {
 // fixup chain dumping
 //===----------------------------------------------------------------------===//
 
-static void printChainedFixups(object::MachOObjectFile *obj) {
-  // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_fixups_header
+static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
+  MachO::linkedit_data_command Ld;
+  Error Err = Error::success();
+
+  // find LC_DYLD_CHAINED_FIXUPS Load Command
+  for (const auto &Command : Obj->load_commands()) {
+    if (Command.C.cmd == MachO::LC_DYLD_CHAINED_FIXUPS) {
+      Ld = Obj->getLinkeditDataLoadCommand(Command);
+      break;
+    }
+  }
+  // no LC_DYLD_CHAINED_FIXUPS found
+  if (Ld.dataoff == 0) {
+    outs() << "no chained fixups\n";
+    return;
+  }
+
+  uint32_t Offset = Ld.dataoff;
+  uint32_t size = Ld.datasize;
+
+  // parse dyld_chained_fixups_header
+  MachO::dyld_chained_fixups_header Header;
+  memcpy(&Header, Obj->getData().substr(Offset, sizeof(Header)).data(), sizeof(Header));
+
+  std::string importsFormat;
+  switch (Header.imports_format) {
+  case MachO::DYLD_CHAINED_IMPORT:
+    importsFormat = "(DYLD_CHAINED_IMPORT)";
+    break;
+  case MachO::DYLD_CHAINED_IMPORT_ADDEND:
+    importsFormat = "(DYLD_CHAINED_IMPORT_ADDEND)";
+    break;
+  case MachO::DYLD_CHAINED_IMPORT_ADDEND64:
+    importsFormat = "(DYLD_CHAINED_IMPORT_ADDEND64)";
+    break;
+  default:
+    importsFormat = "UNKNOWN";
+    break;
+  }
+
+  outs() << "chained fixups header (LC_DYLD_CHAINED_FIXUPS)\n"
+         << "  fixups_version = " << Header.fixups_version << "\n"
+         << "  starts_offset  = " << Header.starts_offset << "\n"
+         << "  imports_offset = " << Header.imports_offset << "\n"
+         << "  symbols_offset = " << Header.symbols_offset << "\n"
+         << "  imports_count = " << Header.imports_count << "\n"
+         << "  imports_format = " << Header.imports_format << " " << importsFormat << "\n"
+         << "  symbols_format = " << Header.symbols_format << "\n";
+
+  // parse dyld_chained_starts_in_image
+//  MachO::dyld_chained_starts_in_image Image;
+//  memcpy(&Image, Obj->getData().substr(Offset+Header.starts_offset, sizeof(Image)).data(), sizeof(Image));
+
+
 
 
   // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_starts_in_image
@@ -10465,6 +10517,10 @@ static void printChainedFixups(object::MachOObjectFile *obj) {
   // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_starts_in_segment
 
   // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_import
+
+  if (Err){
+    reportError(std::move(Err), Obj->getFileName());
+  }
 }
 
 // get_dyld_bind_info_symbolname() is used for disassembly and passed an
@@ -10541,7 +10597,7 @@ void objdump::printBindTable(ObjectFile *o) {
 
 void objdump::printChainedFixups(ObjectFile *o){
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
-    printChainedFixups(MachO);
+    printMachOChainedFixups(MachO);
   else
     WithColor::error()
         << "This operation is only currently supported "

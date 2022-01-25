@@ -4662,6 +4662,8 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {
   return makeArrayRef(Ptr, DyldInfo.export_size);
 }
 
+// TODO: add getDyldChainedFixupsHeader
+
 ArrayRef<uint8_t> MachOObjectFile::getUuid() const {
   if (!UuidLoadCmd)
     return None;

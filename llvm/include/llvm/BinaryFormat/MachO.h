@@ -295,6 +295,53 @@ enum ExportSymbolKind {
   EXPORT_SYMBOL_FLAGS_KIND_ABSOLUTE = 0x02u
 };
 
+// TODO(zhongkaining.paxos@bytedance.com): still remaining fixup chain related structs not implemented yet
+
+// header of the LC_DYLD_CHAINED_FIXUPS payload
+struct dyld_chained_fixups_header
+{
+  uint32_t    fixups_version;    // 0
+  uint32_t    starts_offset;     // offset of dyld_chained_starts_in_image in chain_data
+  uint32_t    imports_offset;    // offset of imports table in chain_data
+  uint32_t    symbols_offset;    // offset of symbol strings in chain_data
+  uint32_t    imports_count;     // number of imported symbol names
+  uint32_t    imports_format;    // DYLD_CHAINED_IMPORT*
+  uint32_t    symbols_format;    // 0 => uncompressed, 1 => zlib compressed
+};
+
+// values for dyld_chained_fixups_header.imports_format
+enum {
+  DYLD_CHAINED_IMPORT          = 1,
+  DYLD_CHAINED_IMPORT_ADDEND   = 2,
+  DYLD_CHAINED_IMPORT_ADDEND64 = 3,
+};
+
+// This struct is embedded in LC_DYLD_CHAINED_FIXUPS payload
+struct dyld_chained_starts_in_image
+{
+  uint32_t    seg_count;
+  uint32_t    seg_info_offset[1];  // each entry is offset into this struct for that segment
+                               // followed by pool of dyld_chain_starts_in_segment data
+};
+
+// This struct is embedded in dyld_chain_starts_in_image
+// and passed down to the kernel for page-in linking
+struct dyld_chained_starts_in_segment
+{
+  uint32_t    size;               // size of this (amount kernel needs to copy)
+  uint16_t    page_size;          // 0x1000 or 0x4000
+  uint16_t    pointer_format;     // DYLD_CHAINED_PTR_*
+  uint64_t    segment_offset;     // offset in memory to start of segment
+  uint32_t    max_valid_pointer;  // for 32-bit OS, any value beyond this is not a pointer
+  uint16_t    page_count;         // how many pages are in array
+  uint16_t    page_start[1];      // each entry is offset in each page of first element in chain
+                              // or DYLD_CHAINED_PTR_START_NONE if no fixups on page
+                              // uint16_t    chain_starts[1];    // some 32-bit formats may require multiple starts per page.
+                              // for those, if high bit is set in page_starts[], then it
+                              // is index into chain_starts[] which is a list of starts
+                              // the last of which has the high bit set
+};
+
 enum {
   // Constant masks for the "n_type" field in llvm::MachO::nlist and
   // llvm::MachO::nlist_64
