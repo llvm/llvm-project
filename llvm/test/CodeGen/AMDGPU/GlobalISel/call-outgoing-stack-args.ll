@@ -25,7 +25,6 @@ define amdgpu_kernel void @kernel_caller_stack() {
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 11
 ; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 12
-; MUBUF-NEXT:    buffer_store_dword v0, v0, s[0:3], 0 offen
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_v16i32_v16i32_v4i32@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_v16i32_v16i32_v4i32@rel32@hi+12
@@ -38,7 +37,6 @@ define amdgpu_kernel void @kernel_caller_stack() {
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s3
 ; FLATSCR-NEXT:    s_mov_b32 s32, 0
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v0, s32
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 9
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:4
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 10
@@ -256,7 +254,6 @@ define void @func_caller_stack() {
 ; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
 ; MUBUF-NEXT:    v_mov_b32_e32 v1, 12
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
-; MUBUF-NEXT:    buffer_store_dword v0, v0, s[0:3], 0 offen
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_v16i32_v16i32_v4i32@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_v16i32_v16i32_v4i32@rel32@hi+12
@@ -281,7 +278,6 @@ define void @func_caller_stack() {
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s33, 2
 ; FLATSCR-NEXT:    s_mov_b32 s33, s32
 ; FLATSCR-NEXT:    s_add_i32 s32, s32, 16
-; FLATSCR-NEXT:    scratch_store_dword off, v0, s32
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 9
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:4
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 10
