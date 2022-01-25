@@ -1,11 +1,14 @@
-; RUN: opt < %s -inline-threshold=0 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
+; RUN: opt < %s -inline-threshold=0 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CALL
 ;
 ; Ensure the threshold has no impact on these decisions.
-; RUN: opt < %s -inline-threshold=20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-; RUN: opt < %s -inline-threshold=-20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
+; RUN: opt < %s -inline-threshold=20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CALL
+; RUN: opt < %s -inline-threshold=-20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-CALL
 ;
 ; The new pass manager doesn't re-use any threshold based infrastructure for
-; the always inliner, but test that we get the correct result.
+; the always inliner, but test that we get the correct result. The new PM
+; always inliner also doesn't support inlining call-site alwaysinline
+; annotations. It isn't clear that this is a reasonable use case for
+; 'alwaysinline'.
 ; RUN: opt < %s -inline-threshold=0 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
 ; RUN: opt < %s -inline-threshold=20000000 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
 ; RUN: opt < %s -inline-threshold=-20000000 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
@@ -21,6 +24,12 @@ define i32 @outer1() {
 
    %r = call i32 @inner1()
    ret i32 %r
+}
+
+; The always inliner can't DCE arbitrary internal functions. PR2945
+define internal i32 @pr2945() nounwind {
+; CHECK-LABEL: @pr2945(
+  ret i32 0
 }
 
 define internal void @inner2(i32 %N) alwaysinline {
@@ -137,9 +146,10 @@ define i32 @inner7() {
   ret i32 1
 }
 define i32 @outer7() {
-; CHECK-LABEL: @outer7(
-; CHECK-NOT: call
-; CHECK: ret
+; CHECK-CALL-LABEL: @outer7(
+; CHECK-CALL-NOT: call
+; CHECK-CALL: ret
+
    %r = call i32 @inner7() alwaysinline
    ret i32 %r
 }

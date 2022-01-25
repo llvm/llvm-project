@@ -54,13 +54,13 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
     if (F.isPresplitCoroutine())
       continue;
 
-    if (!F.isDeclaration() && isInlineViable(F).isSuccess()) {
+    if (!F.isDeclaration() && F.hasFnAttribute(Attribute::AlwaysInline) &&
+        isInlineViable(F).isSuccess()) {
       Calls.clear();
 
       for (User *U : F.users())
         if (auto *CB = dyn_cast<CallBase>(U))
-          if (CB->getCalledFunction() == &F &&
-              CB->hasFnAttr(Attribute::AlwaysInline))
+          if (CB->getCalledFunction() == &F)
             Calls.insert(CB);
 
       for (CallBase *CB : Calls) {
