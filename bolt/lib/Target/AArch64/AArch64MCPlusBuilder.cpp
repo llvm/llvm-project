@@ -709,6 +709,67 @@ public:
     return IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE;
   }
 
+  ///  Matches PLT entry pattern and returns the associated GOT entry address.
+  ///  Typical PLT entry looks like the following:
+  ///
+  ///    adrp    x16, 230000
+  ///    ldr     x17, [x16, #3040]
+  ///    add     x16, x16, #0xbe0
+  ///    br      x17
+  ///
+  uint64_t analyzePLTEntry(MCInst &Instruction, InstructionIterator Begin,
+                           InstructionIterator End,
+                           uint64_t BeginPC) const override {
+    // Check branch instruction
+    MCInst *Branch = &Instruction;
+    assert(Branch->getOpcode() == AArch64::BR && "Unexpected opcode");
+
+    DenseMap<const MCInst *, SmallVector<llvm::MCInst *, 4>> UDChain =
+        computeLocalUDChain(Branch, Begin, End);
+
+    // Match ldr instruction
+    SmallVector<MCInst *, 4> &BranchUses = UDChain[Branch];
+    if (BranchUses.size() < 1 || BranchUses[0] == nullptr)
+      return 0;
+
+    // Check ldr instruction
+    const MCInst *Ldr = BranchUses[0];
+    if (Ldr->getOpcode() != AArch64::LDRXui)
+      return 0;
+
+    // Get ldr value
+    const unsigned ScaleLdr = 8; // LDRX operates on 8 bytes segments
+    assert(Ldr->getOperand(2).isImm() && "Unexpected ldr operand");
+    const uint64_t Offset = Ldr->getOperand(2).getImm() * ScaleLdr;
+
+    // Match adrp instruction
+    SmallVector<MCInst *, 4> &LdrUses = UDChain[Ldr];
+    if (LdrUses.size() < 2 || LdrUses[1] == nullptr)
+      return 0;
+
+    // Check adrp instruction
+    MCInst *Adrp = LdrUses[1];
+    if (Adrp->getOpcode() != AArch64::ADRP)
+      return 0;
+
+    // Get adrp instruction PC
+    const unsigned InstSize = 4;
+    uint64_t AdrpPC = BeginPC;
+    for (InstructionIterator It = Begin; It != End; ++It) {
+      if (&(*It) == Adrp)
+        break;
+      AdrpPC += InstSize;
+    }
+
+    // Get adrp value
+    uint64_t Base;
+    assert(Adrp->getOperand(1).isImm() && "Unexpected adrp operand");
+    bool Ret = evaluateMemOperandTarget(*Adrp, Base, AdrpPC, InstSize);
+    assert(Ret && "Failed to evaluate adrp");
+
+    return Base + Offset;
+  }
+
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     switch (Opcode) {
     default:
