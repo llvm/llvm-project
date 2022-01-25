@@ -1640,7 +1640,7 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   mlir::Value
   getTypeDescriptor(BOX box, mlir::ConversionPatternRewriter &rewriter,
                     mlir::Location loc, fir::RecordType recType) const {
-    std::string name = recType.getLoweredName();
+    std::string name = recType.translateNameToFrontendMangledName();
     auto module = box->template getParentOfType<mlir::ModuleOp>();
     if (auto global = module.template lookupSymbol<fir::GlobalOp>(name)) {
       auto ty = mlir::LLVM::LLVMPointerType::get(
