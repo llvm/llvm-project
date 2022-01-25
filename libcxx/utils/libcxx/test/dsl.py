@@ -175,6 +175,22 @@ def programOutput(config, program, args=None):
     actualOut = actualOut.group(1) if actualOut else ""
     return actualOut
 
+@_memoizeExpensiveOperation(lambda c, p, args=None: (c.substitutions, c.environment, p, args))
+def programSucceeds(config, program, args=None):
+  """
+  Compiles a program for the test target, run it on the test target and return
+  whether it completed successfully.
+
+  Note that execution of the program is done through the %{exec} substitution,
+  which means that the program may be run on a remote host depending on what
+  %{exec} does.
+  """
+  try:
+    programOutput(config, program, args)
+  except ConfigurationRuntimeError:
+    return False
+  return True
+
 @_memoizeExpensiveOperation(lambda c, f: (c.substitutions, c.environment, f))
 def hasCompileFlag(config, flag):
   """
@@ -229,11 +245,7 @@ def hasAnyLocale(config, locales):
       }
     #endif
   """
-  try:
-    programOutput(config, program, args=[pipes.quote(l) for l in locales])
-  except ConfigurationRuntimeError:
-    return False
-  return True
+  return programSucceeds(config, program, args=[pipes.quote(l) for l in locales])
 
 @_memoizeExpensiveOperation(lambda c, flags='': (c.substitutions, c.environment, flags))
 def compilerMacros(config, flags=''):
