@@ -14,24 +14,24 @@ declare void @llvm.objc.copyWeak(i8**, i8**)
 define void @test0(i8* %p, i8** %q) {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
-; CHECK-NEXT:    store i8* undef, i8** null, align 8
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
+; CHECK-NEXT:    store i1 true, i1* undef, align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
