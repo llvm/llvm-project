@@ -1096,14 +1096,15 @@ TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
 
   Type *Arg2Type = OutlinedFn->getArg(2)->getType();
   EXPECT_TRUE(Arg2Type->isPointerTy());
-  EXPECT_EQ(Arg2Type->getPointerElementType(), I32Ty);
+  EXPECT_TRUE(cast<PointerType>(Arg2Type)->isOpaqueOrPointeeTypeMatches(I32Ty));
 
   // Arguments that need to be passed through pointers and reloaded will get
   // used earlier in the functions and therefore will appear first in the
   // argument list after outlining.
   Type *Arg3Type = OutlinedFn->getArg(3)->getType();
   EXPECT_TRUE(Arg3Type->isPointerTy());
-  EXPECT_EQ(Arg3Type->getPointerElementType(), StructTy);
+  EXPECT_TRUE(
+      cast<PointerType>(Arg3Type)->isOpaqueOrPointeeTypeMatches(StructTy));
 
   Type *Arg4Type = OutlinedFn->getArg(4)->getType();
   EXPECT_EQ(Arg4Type, I32PtrTy);
@@ -3814,10 +3815,10 @@ TEST_F(OpenMPIRBuilderTest, CreateMapperAllocas) {
   EXPECT_TRUE(MapperAllocas.ArgsBase->getAllocatedType()
                   ->getArrayElementType()
                   ->isPointerTy());
-  EXPECT_TRUE(MapperAllocas.ArgsBase->getAllocatedType()
-                  ->getArrayElementType()
-                  ->getPointerElementType()
-                  ->isIntegerTy(8));
+  EXPECT_TRUE(
+      cast<PointerType>(
+          MapperAllocas.ArgsBase->getAllocatedType()->getArrayElementType())
+          ->isOpaqueOrPointeeTypeMatches(Builder.getInt8Ty()));
 
   EXPECT_TRUE(MapperAllocas.Args->getAllocatedType()->isArrayTy());
   ArrType = dyn_cast<ArrayType>(MapperAllocas.Args->getAllocatedType());
@@ -3825,10 +3826,9 @@ TEST_F(OpenMPIRBuilderTest, CreateMapperAllocas) {
   EXPECT_TRUE(MapperAllocas.Args->getAllocatedType()
                   ->getArrayElementType()
                   ->isPointerTy());
-  EXPECT_TRUE(MapperAllocas.Args->getAllocatedType()
-                  ->getArrayElementType()
-                  ->getPointerElementType()
-                  ->isIntegerTy(8));
+  EXPECT_TRUE(cast<PointerType>(
+                  MapperAllocas.Args->getAllocatedType()->getArrayElementType())
+                  ->isOpaqueOrPointeeTypeMatches(Builder.getInt8Ty()));
 
   EXPECT_TRUE(MapperAllocas.ArgSizes->getAllocatedType()->isArrayTy());
   ArrType = dyn_cast<ArrayType>(MapperAllocas.ArgSizes->getAllocatedType());
