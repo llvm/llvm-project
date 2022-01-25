@@ -5,6 +5,7 @@ add_mlir_library(MLIRTransforms
   BufferResultsToOutParams.cpp
   BufferUtils.cpp
   Canonicalizer.cpp
+  ControlFlowSink.cpp
   CSE.cpp
   Inliner.cpp
   LocationSnapshot.cpp

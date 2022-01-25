@@ -74,6 +74,9 @@ createCanonicalizerPass(const GreedyRewriteConfig &config,
                         ArrayRef<std::string> disabledPatterns = llvm::None,
                         ArrayRef<std::string> enabledPatterns = llvm::None);
 
+/// Creates a pass to perform control-flow sinking.
+std::unique_ptr<Pass> createControlFlowSinkPass();
+
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
 
