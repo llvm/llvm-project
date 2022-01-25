@@ -397,6 +397,20 @@ EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {
         omptarget_nvptx_threadPrivateContext);
   }
 }
+
+EXTERN
+int32_t __kmpc_target_init_v1(ident_t *Ident, int8_t Mode,
+                              int8_t UseGenericStateMachine,
+                              int8_t RequiresFullRuntime) {
+  return __kmpc_target_init(Ident, Mode, UseGenericStateMachine,
+                            RequiresFullRuntime);
+}
+
+EXTERN
+void __kmpc_target_deinit_v1(ident_t *Ident, int8_t Mode,
+                             int8_t RequiresFullRuntime) {
+  return __kmpc_target_deinit(Ident, Mode, RequiresFullRuntime);
+}
 #endif // FORTRAN_NO_LONGER_NEEDS
 
 #pragma omp end declare target
