@@ -126,21 +126,19 @@ struct numpunct<wchar_t> : std::numpunct<wchar_t> {
 #endif
 
 template <class CharT, class... Args>
-void test(std::basic_string<CharT> expected, std::basic_string<CharT> fmt,
-          const Args&... args) {
+void test(std::basic_string<CharT> expected, std::basic_string<CharT> fmt, const Args&... args) {
   // *** format ***
   {
     std::basic_string<CharT> out = std::format(fmt, args...);
     if constexpr (std::same_as<CharT, char>)
       if (out != expected)
-        std::cerr << "\nFormat string   " << fmt << "\nExpected output "
-                  << expected << "\nActual output   " << out << '\n';
+        std::cerr << "\nFormat string   " << fmt << "\nExpected output " << expected << "\nActual output   " << out
+                  << '\n';
     assert(out == expected);
   }
   // *** vformat ***
   {
-    std::basic_string<CharT> out =
-        std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
+    std::basic_string<CharT> out = std::vformat(fmt, std::make_format_args<context_t<CharT>>(args...));
     assert(out == expected);
   }
   // *** format_to ***
@@ -153,16 +151,14 @@ void test(std::basic_string<CharT> expected, std::basic_string<CharT> fmt,
   // *** vformat_to ***
   {
     std::basic_string<CharT> out(expected.size(), CharT(' '));
-    auto it = std::vformat_to(out.begin(), fmt,
-                              std::make_format_args<context_t<CharT>>(args...));
+    auto it = std::vformat_to(out.begin(), fmt, std::make_format_args<context_t<CharT>>(args...));
     assert(it == out.end());
     assert(out == expected);
   }
   // *** format_to_n ***
   {
     std::basic_string<CharT> out;
-    std::format_to_n_result result =
-        std::format_to_n(std::back_inserter(out), 1000, fmt, args...);
+    std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 1000, fmt, args...);
     using diff_type = decltype(result.size);
     diff_type formatted_size = std::formatted_size(fmt, args...);
     diff_type size = std::min<diff_type>(1000, formatted_size);
@@ -178,21 +174,19 @@ void test(std::basic_string<CharT> expected, std::basic_string<CharT> fmt,
 }
 
 template <class CharT, class... Args>
-void test(std::basic_string<CharT> expected, std::locale loc,
-          std::basic_string<CharT> fmt, const Args&... args) {
+void test(std::basic_string<CharT> expected, std::locale loc, std::basic_string<CharT> fmt, const Args&... args) {
   // *** format ***
   {
     std::basic_string<CharT> out = std::format(loc, fmt, args...);
     if constexpr (std::same_as<CharT, char>)
       if (out != expected)
-        std::cerr << "\nFormat string   " << fmt << "\nExpected output "
-                  << expected << "\nActual output   " << out << '\n';
+        std::cerr << "\nFormat string   " << fmt << "\nExpected output " << expected << "\nActual output   " << out
+                  << '\n';
     assert(out == expected);
   }
   // *** vformat ***
   {
-    std::basic_string<CharT> out = std::vformat(
-        loc, fmt, std::make_format_args<context_t<CharT>>(args...));
+    std::basic_string<CharT> out = std::vformat(loc, fmt, std::make_format_args<context_t<CharT>>(args...));
     assert(out == expected);
   }
   // *** format_to ***
@@ -205,16 +199,14 @@ void test(std::basic_string<CharT> expected, std::locale loc,
   // *** vformat_to ***
   {
     std::basic_string<CharT> out(expected.size(), CharT(' '));
-    auto it = std::vformat_to(out.begin(), loc, fmt,
-                              std::make_format_args<context_t<CharT>>(args...));
+    auto it = std::vformat_to(out.begin(), loc, fmt, std::make_format_args<context_t<CharT>>(args...));
     assert(it == out.end());
     assert(out == expected);
   }
   // *** format_to_n ***
   {
     std::basic_string<CharT> out;
-    std::format_to_n_result result =
-        std::format_to_n(std::back_inserter(out), 1000, loc, fmt, args...);
+    std::format_to_n_result result = std::format_to_n(std::back_inserter(out), 1000, loc, fmt, args...);
     using diff_type = decltype(result.size);
     diff_type formatted_size = std::formatted_size(loc, fmt, args...);
     diff_type size = std::min<diff_type>(1000, formatted_size);
@@ -239,13 +231,13 @@ struct numpunct_unicode<char> : std::numpunct<char> {
   string_type do_falsename() const override { return "ungültig"; }
 };
 
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
 template <>
 struct numpunct_unicode<wchar_t> : std::numpunct<wchar_t> {
   string_type do_truename() const override { return L"gültig"; }
   string_type do_falsename() const override { return L"ungültig"; }
 };
-#endif
+#  endif
 #endif // TEST_HAS_NO_UNICODE
 
 template <class CharT>
@@ -268,8 +260,7 @@ void test_bool() {
   test(STR("false"), std::locale(LOCALE_en_US_UTF_8), STR("{:L}"), false);
 
 #ifndef TEST_HAS_NO_UNICODE
-  std::locale loc_unicode =
-      std::locale(std::locale(), new numpunct_unicode<CharT>());
+  std::locale loc_unicode = std::locale(std::locale(), new numpunct_unicode<CharT>());
 
   test(STR("gültig"), loc_unicode, STR("{:L}"), true);
   test(STR("ungültig"), loc_unicode, STR("{:L}"), false);
