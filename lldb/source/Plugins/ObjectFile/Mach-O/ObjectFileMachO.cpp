@@ -9,10 +9,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <mach/mach_init.h>
-#include <mach/vm_map.h>
-#include <lldb/Host/SafeMachO.h>
-
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_i386.h"
@@ -60,6 +56,9 @@
 #include <TargetConditionals.h>
 // GetLLDBSharedCacheUUID() needs to call dlsym()
 #include <dlfcn.h>
+#include <mach/mach_init.h>
+#include <mach/vm_map.h>
+#include <lldb/Host/SafeMachO.h>
 #endif
 
 #ifndef __APPLE__
