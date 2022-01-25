@@ -343,7 +343,7 @@ enum IdRtn { // Message ID, width(4) [3:0] but with bit 7 set.
   ID_RTN_GET_DDID = 129,
   ID_RTN_GET_TMA = 130,
   ID_RTN_GET_REALTIME = 131,
-  ID_RTN_SAVEWAVE = 132,
+  ID_RTN_SAVE_WAVE = 132,
   ID_RTN_GET_TBA = 133,
   ID_RTN_LAST_,
   ID_RTN_FIRST_ = ID_RTN_GET_DOORBELL

@@ -474,7 +474,7 @@ body: |
     ; CHECK-LABEL: {{^}}sendmsg_rtn:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_mov_b32_e32 v0, 0
-    ; CHECK-NEXT: s_sendmsg_rtn_b32 s0, sendmsg(MSG_GET_DOORBELL)
+    ; CHECK-NEXT: s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
     ; CHECK-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
     ; CHECK-NEXT: s_add_u32 s0, s0, s0
     ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
