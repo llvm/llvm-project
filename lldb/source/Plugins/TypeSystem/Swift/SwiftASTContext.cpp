@@ -919,14 +919,6 @@ SwiftASTContext::SwiftASTContext(std::string description,
       m_compiler_invocation_ap(new swift::CompilerInvocation()) {
   m_description = description;
 
-  // Set the dependency tracker.
-  if (auto g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-    m_dependency_tracker = std::make_unique<swift::DependencyTracker>(
-        swift::IntermoduleDepTrackingMode::IncludeSystem,
-        fp.GetFileCollector());
-  }
-
   // Set the clang modules cache path.
   m_compiler_invocation_ap->setClangModuleCachePath(
       GetClangModulesCacheProperty());
