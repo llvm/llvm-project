@@ -18,7 +18,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 namespace llvm {
 
@@ -123,7 +122,7 @@ public:
   void indent(int Levels = 1) { IndentLevel += Levels; }
 
   void unindent(int Levels = 1) {
-    IndentLevel = std::max(0, IndentLevel - Levels);
+    IndentLevel = IndentLevel > Levels ? IndentLevel - Levels : 0;
   }
 
   void resetIndent() { IndentLevel = 0; }
