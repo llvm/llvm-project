@@ -136,8 +136,6 @@ int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
   fir::registerOptCodeGenPasses();
   fir::registerOptTransformPasses();
-  InitializeAllTargets();
-  mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
   mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
