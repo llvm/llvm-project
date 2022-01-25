@@ -20,4 +20,5 @@ add_mlir_conversion_library(MLIRStandardToSPIRV
   MLIRSupport
   MLIRTransformUtils
   MLIRStandard
+  MLIRTensor
   )

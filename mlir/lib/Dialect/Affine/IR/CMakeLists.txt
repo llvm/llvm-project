@@ -17,4 +17,5 @@ add_mlir_dialect_library(MLIRAffine
   MLIRMemRef
   MLIRSideEffectInterfaces
   MLIRStandard
+  MLIRTensor
   )
