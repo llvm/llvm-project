@@ -5,6 +5,12 @@
 // CHECK-LABEL: func @ops(
 // CHECK-SAME:            %[[F:.*]]: f32) {
 func @ops(%f: f32) {
+  // CHECK: complex.constant [1.{{.*}}, -1.{{.*}}] : complex<f64>
+  %cst_f64 = complex.constant [0.1, -1.0] : complex<f64>
+
+  // CHECK: complex.constant [1.{{.*}} : f32, -1.{{.*}} : f32] : complex<f32>
+  %cst_f32 = complex.constant [0.1 : f32, -1.0 : f32] : complex<f32>
+
   // CHECK: %[[C:.*]] = complex.create %[[F]], %[[F]] : complex<f32>
   %complex = complex.create %f, %f : complex<f32>
 
@@ -51,4 +57,3 @@ func @ops(%f: f32) {
   %diff = complex.sub %complex, %complex : complex<f32>
   return
 }
-

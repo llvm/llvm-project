@@ -10,6 +10,7 @@
 #define COMPLEX_OPS
 
 include "mlir/Dialect/Complex/IR/ComplexBase.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -73,6 +74,40 @@ def AddOp : ComplexArithmeticOp<"add"> {
     ```mlir
     %a = complex.add %b, %c : complex<f32>
     ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ConstantOp
+//===----------------------------------------------------------------------===//
+
+def ConstantOp : Complex_Op<"constant", [
+    ConstantLike, NoSideEffect,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
+  ]> {
+  let summary = "complex number constant operation";
+  let description = [{
+    The `complex.constant` operation creates a constant complex number from an
+    attribute containing the real and imaginary parts.
+
+    Example:
+
+    ```mlir
+    %a = complex.constant [0.1, -1.0] : complex<f64>
+    ```
+  }];
+
+  let arguments = (ins ArrayAttr:$value);
+  let results = (outs Complex<AnyFloat>:$complex);
+
+  let assemblyFormat = "$value attr-dict `:` type($complex)";
+  let hasFolder = 1;
+  let verifier = [{ return ::verify(*this); }];
+  
+  let extraClassDeclaration = [{
+    /// Returns true if a constant operation can be built with the given value
+    /// and result type.
+    static bool isBuildableWith(Attribute value, Type type);
   }];
 }
 

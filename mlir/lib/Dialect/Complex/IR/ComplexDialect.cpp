@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 
 using namespace mlir;
 
@@ -25,9 +24,10 @@ Operation *complex::ComplexDialect::materializeConstant(OpBuilder &builder,
                                                         Attribute value,
                                                         Type type,
                                                         Location loc) {
-  // TODO complex.constant
-  if (type.isa<ComplexType>())
-    return builder.create<ConstantOp>(loc, type, value);
+  if (complex::ConstantOp::isBuildableWith(value, type)) {
+    return builder.create<complex::ConstantOp>(loc, type,
+                                               value.cast<ArrayAttr>());
+  }
   if (arith::ConstantOp::isBuildableWith(value, type))
     return builder.create<arith::ConstantOp>(loc, type, value);
   return nullptr;
