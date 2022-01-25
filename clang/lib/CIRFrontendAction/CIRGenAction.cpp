@@ -23,7 +23,7 @@
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/CIR/CIRBuilder.h"
+#include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
@@ -73,7 +73,7 @@ class CIRGenConsumer : public clang::ASTConsumer {
   std::unique_ptr<raw_pwrite_stream> outputStream;
 
   ASTContext *astContext{nullptr};
-  std::unique_ptr<CIRContext> gen;
+  std::unique_ptr<CIRGenerator> gen;
 
 public:
   CIRGenConsumer(CIRGenAction::OutputType action,
@@ -87,7 +87,7 @@ public:
         headerSearchOptions(headerSearchOptions),
         codeGenOptions(codeGenOptions), targetOptions(targetOptions),
         langOptions(langOptions), outputStream(std::move(os)),
-        gen(std::make_unique<CIRContext>()) {
+        gen(std::make_unique<CIRGenerator>()) {
     // This is required to match the constructors used during
     // CodeGenAction. Ultimately, this is required because we want to use
     // the same utility functions in BackendUtil.h for handling llvm

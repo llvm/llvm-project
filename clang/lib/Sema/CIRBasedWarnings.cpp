@@ -37,7 +37,7 @@
 #include "llvm/Support/Casting.h"
 
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
-#include "clang/CIR/CIRBuilder.h"
+#include "clang/CIR/CIRGenerator.h"
 
 #include <algorithm>
 #include <deque>
@@ -67,8 +67,8 @@ sema::CIRBasedWarnings::CIRBasedWarnings(Sema &s) : S(s) {
   DefaultPolicy.enableConsumedAnalysis =
       isEnabled(D, warn_use_in_invalid_state);
 
-  CIRCtx = std::make_unique<cir::CIRContext>();
-  CIRCtx->Initialize(S.getASTContext());
+  CIRGen = std::make_unique<cir::CIRGenerator>();
+  CIRGen->Initialize(S.getASTContext());
 }
 
 // We need this here for unique_ptr with forward declared class.
@@ -114,7 +114,7 @@ void clang::sema::CIRBasedWarnings::IssueWarnings(
 
   // Unlike Clang CFG, we share CIR state between each analyzed function,
   // retrieve or create a new context.
-  CIRCtx->EmitFunction(FD);
+  CIRGen->EmitFunction(FD);
 }
 
 void clang::sema::CIRBasedWarnings::PrintStats() const {

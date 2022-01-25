@@ -1,4 +1,4 @@
-//===- CIRBuilder.h - CIR Generation from Clang AST -----------------------===//
+//===- CIRGenerator.h - CIR Generation from Clang AST ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_CIRBUILDER_H_
-#define CLANG_CIRBUILDER_H_
+#ifndef CLANG_CIRGENERATOR_H_
+#define CLANG_CIRGENERATOR_H_
 
 #include "clang/AST/ASTConsumer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -31,13 +31,13 @@ class FunctionDecl;
 } // namespace clang
 
 namespace cir {
-class CIRBuildImpl;
+class CIRGenModule;
 class CIRGenTypes;
 
-class CIRContext : public clang::ASTConsumer {
+class CIRGenerator : public clang::ASTConsumer {
 public:
-  CIRContext();
-  ~CIRContext();
+  CIRGenerator();
+  ~CIRGenerator();
   void Initialize(clang::ASTContext &Context) override;
   bool EmitFunction(const clang::FunctionDecl *FD);
 
@@ -53,11 +53,11 @@ public:
 
 private:
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
-  std::unique_ptr<CIRBuildImpl> builder;
+  std::unique_ptr<CIRGenModule> CGM;
 
   clang::ASTContext *astCtx;
 };
 
 } // namespace cir
 
-#endif // CLANG_CIRBUILDER_H_
+#endif // CLANG_CIRGENERATOR_H_

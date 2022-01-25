@@ -1,4 +1,4 @@
-//===- CIRBuilder.cpp - MLIR Generation from a Toy AST --------------------===//
+//===- CIRGenModule.cpp - Per-Module state for CIR generation -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a simple IR generation targeting MLIR from a Module AST
-// for the Toy language.
+// This is the internal per-translation-unit state used for CIR translation.
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenFunction.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/CIR/CIRBuilder.h"
-#include "clang/CIR/CIRCodeGenFunction.h"
+#include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/LowerToLLVM.h"
 
 #include "mlir/Dialect/CIR/IR/CIRAttrs.h"
@@ -75,8 +74,8 @@ using llvm::SmallVector;
 using llvm::StringRef;
 using llvm::Twine;
 
-CIRCodeGenFunction::CIRCodeGenFunction() = default;
-TypeEvaluationKind CIRCodeGenFunction::getEvaluationKind(QualType type) {
+CIRGenFunction::CIRGenFunction() = default;
+TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   type = type.getCanonicalType();
   while (true) {
     switch (type->getTypeClass()) {
@@ -142,16 +141,16 @@ namespace cir {
 /// This will emit operations that are specific to C(++)/ObjC(++) language,
 /// preserving the semantics of the language and (hopefully) allow to perform
 /// accurate analysis and transformation based on these high level semantics.
-class CIRBuildImpl {
+class CIRGenModule {
 public:
-  CIRBuildImpl(mlir::MLIRContext &context, clang::ASTContext &astctx)
+  CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx)
       : builder(&context), astCtx(astctx) {
     theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
     genTypes = std::make_unique<CIRGenTypes>(astCtx, this->getBuilder());
   }
-  CIRBuildImpl(CIRBuildImpl &) = delete;
-  CIRBuildImpl &operator=(CIRBuildImpl &) = delete;
-  ~CIRBuildImpl() = default;
+  CIRGenModule(CIRGenModule &) = delete;
+  CIRGenModule &operator=(CIRGenModule &) = delete;
+  ~CIRGenModule() = default;
 
   using SymTableTy = llvm::ScopedHashTable<const Decl *, mlir::Value>;
   using SymTableScopeTy = ScopedHashTableScope<const Decl *, mlir::Value>;
@@ -177,7 +176,7 @@ private:
 
   /// Per-function codegen information. Updated everytime buildCIR is called
   /// for FunctionDecls's.
-  CIRCodeGenFunction *CurCCGF = nullptr;
+  CIRGenFunction *CurCGF = nullptr;
 
   /// Per-module type mapping from clang AST to CIR.
   std::unique_ptr<CIRGenTypes> genTypes;
@@ -186,11 +185,11 @@ private:
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
   std::optional<mlir::Location> currSrcLoc;
   class SourceLocRAIIObject {
-    CIRBuildImpl &P;
+    CIRGenModule &P;
     std::optional<mlir::Location> OldVal;
 
   public:
-    SourceLocRAIIObject(CIRBuildImpl &p, mlir::Location Value) : P(p) {
+    SourceLocRAIIObject(CIRGenModule &p, mlir::Location Value) : P(p) {
       if (P.currSrcLoc)
         OldVal = P.currSrcLoc;
       P.currSrcLoc = Value;
@@ -265,14 +264,12 @@ public:
   mlir::OpBuilder &getBuilder() { return builder; }
 
   class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
-    LLVM_ATTRIBUTE_UNUSED CIRCodeGenFunction &CGF;
-    CIRBuildImpl &Builder;
+    LLVM_ATTRIBUTE_UNUSED CIRGenFunction &CGF;
+    CIRGenModule &CGM;
 
   public:
-    ScalarExprEmitter(CIRCodeGenFunction &cgf, CIRBuildImpl &builder)
-        : CGF(cgf), Builder(builder) {
-      (void)CGF;
-    }
+    ScalarExprEmitter(CIRGenFunction &cgf, CIRGenModule &cgm)
+        : CGF(cgf), CGM(cgm) {}
 
     mlir::Value Visit(Expr *E) {
       return StmtVisitor<ScalarExprEmitter, mlir::Value>::Visit(E);
@@ -280,10 +277,10 @@ public:
 
     /// Emits the address of the l-value, then loads and returns the result.
     mlir::Value buildLoadOfLValue(const Expr *E) {
-      LValue LV = Builder.buildLValue(E);
-      auto load = Builder.builder.create<mlir::cir::LoadOp>(
-          Builder.getLoc(E->getExprLoc()), Builder.getCIRType(E->getType()),
-          LV.getPointer(), mlir::UnitAttr::get(Builder.builder.getContext()));
+      LValue LV = CGM.buildLValue(E);
+      auto load = CGM.builder.create<mlir::cir::LoadOp>(
+          CGM.getLoc(E->getExprLoc()), CGM.getCIRType(E->getType()),
+          LV.getPointer(), mlir::UnitAttr::get(CGM.builder.getContext()));
       // FIXME: add some akin to EmitLValueAlignmentAssumption(E, V);
       return load;
     }
@@ -305,25 +302,24 @@ public:
       clang::CastKind Kind = CE->getCastKind();
       switch (Kind) {
       case CK_LValueToRValue:
-        assert(Builder.astCtx.hasSameUnqualifiedType(E->getType(), DestTy));
+        assert(CGM.astCtx.hasSameUnqualifiedType(E->getType(), DestTy));
         assert(E->isGLValue() && "lvalue-to-rvalue applied to r-value!");
         return Visit(const_cast<Expr *>(E));
       case CK_NullToPointer: {
         // FIXME: use MustVisitNullValue(E) and evaluate expr.
         // Note that DestTy is used as the MLIR type instead of a custom
         // nullptr type.
-        mlir::Type Ty = Builder.getCIRType(DestTy);
-        return Builder.builder.create<mlir::cir::ConstantOp>(
-            Builder.getLoc(E->getExprLoc()), Ty,
-            mlir::cir::NullAttr::get(Builder.builder.getContext(), Ty));
+        mlir::Type Ty = CGM.getCIRType(DestTy);
+        return CGM.builder.create<mlir::cir::ConstantOp>(
+            CGM.getLoc(E->getExprLoc()), Ty,
+            mlir::cir::NullAttr::get(CGM.builder.getContext(), Ty));
       }
       case CK_IntegralToBoolean: {
         return buildIntToBoolConversion(Visit(E),
-                                        Builder.getLoc(CE->getSourceRange()));
+                                        CGM.getLoc(CE->getSourceRange()));
       }
       default:
-        emitError(Builder.getLoc(CE->getExprLoc()),
-                  "cast kind not implemented: '")
+        emitError(CGM.getLoc(CE->getExprLoc()), "cast kind not implemented: '")
             << CE->getCastKindName() << "'";
         assert(0 && "not implemented");
         return nullptr;
@@ -332,14 +328,14 @@ public:
 
     mlir::Value VisitUnaryAddrOf(const UnaryOperator *E) {
       assert(!isa<MemberPointerType>(E->getType()) && "not implemented");
-      return Builder.buildLValue(E->getSubExpr()).getPointer();
+      return CGM.buildLValue(E->getSubExpr()).getPointer();
     }
 
     mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
-      mlir::Type Ty = Builder.getCIRType(E->getType());
-      return Builder.builder.create<mlir::cir::ConstantOp>(
-          Builder.getLoc(E->getExprLoc()), Ty,
-          Builder.builder.getBoolAttr(E->getValue()));
+      mlir::Type Ty = CGM.getCIRType(E->getType());
+      return CGM.builder.create<mlir::cir::ConstantOp>(
+          CGM.getLoc(E->getExprLoc()), Ty,
+          CGM.builder.getBoolAttr(E->getValue()));
     }
 
     struct BinOpInfo {
@@ -387,54 +383,54 @@ public:
     }
 
     mlir::Value buildMul(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Mul, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildDiv(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Div, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildRem(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Rem, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildAdd(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Add, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildSub(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Sub, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildShl(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Shl, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildShr(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Shr, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildAnd(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::And, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildXor(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty),
           mlir::cir::BinOpKind::Xor, Ops.LHS, Ops.RHS);
     }
     mlir::Value buildOr(const BinOpInfo &Ops) {
-      return Builder.builder.create<mlir::cir::BinOp>(
-          Builder.getLoc(Ops.Loc), Builder.getCIRType(Ops.Ty),
-          mlir::cir::BinOpKind::Or, Ops.LHS, Ops.RHS);
+      return CGM.builder.create<mlir::cir::BinOp>(
+          CGM.getLoc(Ops.Loc), CGM.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Or,
+          Ops.LHS, Ops.RHS);
     }
 
     // Binary operators and binary compound assignment operators.
@@ -513,8 +509,8 @@ public:
             llvm_unreachable("unsupported");
           }
 
-          return Builder.builder.create<mlir::cir::CmpOp>(
-              Builder.getLoc(BOInfo.Loc), Builder.getCIRType(BOInfo.Ty), Kind,
+          return CGM.builder.create<mlir::cir::CmpOp>(
+              CGM.getLoc(BOInfo.Loc), CGM.getCIRType(BOInfo.Ty), Kind,
               BOInfo.LHS, BOInfo.RHS);
         }
 
@@ -527,7 +523,7 @@ public:
         assert(0 && "not implemented");
       }
 
-      return buildScalarConversion(Result, Builder.astCtx.BoolTy, E->getType(),
+      return buildScalarConversion(Result, CGM.astCtx.BoolTy, E->getType(),
                                    E->getExprLoc());
     }
 
@@ -544,7 +540,7 @@ public:
     mlir::Value VisitExpr(Expr *E) {
       // Crashing here for "ScalarExprClassName"? Please implement
       // VisitScalarExprClassName(...) to get this working.
-      emitError(Builder.getLoc(E->getExprLoc()), "scalar exp no implemented: '")
+      emitError(CGM.getLoc(E->getExprLoc()), "scalar exp no implemented: '")
           << E->getStmtClassName() << "'";
       assert(0 && "shouldn't be here!");
       return {};
@@ -557,8 +553,8 @@ public:
       // as a logical value again.
       // TODO: optimize this common case here or leave it for later
       // CIR passes?
-      mlir::Type boolTy = Builder.getCIRType(Builder.astCtx.BoolTy);
-      return Builder.builder.create<mlir::cir::CastOp>(
+      mlir::Type boolTy = CGM.getCIRType(CGM.astCtx.BoolTy);
+      return CGM.builder.create<mlir::cir::CastOp>(
           loc, boolTy, mlir::cir::CastKind::int_to_bool, srcVal);
     }
 
@@ -595,8 +591,8 @@ public:
         assert(0 && "not implemented");
       }
 
-      SrcType = Builder.astCtx.getCanonicalType(SrcType);
-      DstType = Builder.astCtx.getCanonicalType(DstType);
+      SrcType = CGM.astCtx.getCanonicalType(SrcType);
+      DstType = CGM.astCtx.getCanonicalType(DstType);
       if (SrcType == DstType)
         return Src;
 
@@ -607,13 +603,12 @@ public:
       // Handle conversions to bool first, they are special: comparisons against
       // 0.
       if (DstType->isBooleanType())
-        return buildConversionToBool(Src, SrcType, Builder.getLoc(Loc));
+        return buildConversionToBool(Src, SrcType, CGM.getLoc(Loc));
 
-      mlir::Type DstTy = Builder.getCIRType(DstType);
+      mlir::Type DstTy = CGM.getCIRType(DstType);
 
       // Cast from half through float if half isn't a native type.
-      if (SrcType->isHalfType() &&
-          !Builder.astCtx.getLangOpts().NativeHalfType) {
+      if (SrcType->isHalfType() && !CGM.astCtx.getLangOpts().NativeHalfType) {
         assert(0 && "not implemented");
       }
 
@@ -658,8 +653,7 @@ public:
       // TODO: implement CGF.SanOpts.has(SanitizerKind::FloatCastOverflow)
 
       // Cast to half through float if half isn't a native type.
-      if (DstType->isHalfType() &&
-          !Builder.astCtx.getLangOpts().NativeHalfType) {
+      if (DstType->isHalfType() && !CGM.astCtx.getLangOpts().NativeHalfType) {
         assert(0 && "not implemented");
       }
 
@@ -673,10 +667,10 @@ public:
 
     // Leaves.
     mlir::Value VisitIntegerLiteral(const IntegerLiteral *E) {
-      mlir::Type Ty = Builder.getCIRType(E->getType());
-      return Builder.builder.create<mlir::cir::ConstantOp>(
-          Builder.getLoc(E->getExprLoc()), Ty,
-          Builder.builder.getIntegerAttr(Ty, E->getValue()));
+      mlir::Type Ty = CGM.getCIRType(E->getType());
+      return CGM.builder.create<mlir::cir::ConstantOp>(
+          CGM.getLoc(E->getExprLoc()), Ty,
+          CGM.builder.getIntegerAttr(Ty, E->getValue()));
     }
   };
 
@@ -908,7 +902,7 @@ public:
       assert(0 && "not implemented");
       return;
     }
-    switch (CIRCodeGenFunction::getEvaluationKind(type)) {
+    switch (CIRGenFunction::getEvaluationKind(type)) {
     case TEK_Scalar:
       buildScalarInit(init, D, lvalue);
       return;
@@ -1164,20 +1158,20 @@ public:
   /// Emit the computation of the specified expression of scalar type,
   /// ignoring the result.
   mlir::Value buildScalarExpr(const Expr *E) {
-    assert(E && CIRCodeGenFunction::hasScalarEvaluationKind(E->getType()) &&
+    assert(E && CIRGenFunction::hasScalarEvaluationKind(E->getType()) &&
            "Invalid scalar expression to emit");
 
-    return ScalarExprEmitter(*CurCCGF, *this).Visit(const_cast<Expr *>(E));
+    return ScalarExprEmitter(*CurCGF, *this).Visit(const_cast<Expr *>(E));
   }
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   mlir::Value buildScalarConversion(mlir::Value Src, QualType SrcTy,
                                     QualType DstTy, SourceLocation Loc) {
-    assert(CIRCodeGenFunction::hasScalarEvaluationKind(SrcTy) &&
-           CIRCodeGenFunction::hasScalarEvaluationKind(DstTy) &&
+    assert(CIRGenFunction::hasScalarEvaluationKind(SrcTy) &&
+           CIRGenFunction::hasScalarEvaluationKind(DstTy) &&
            "Invalid scalar expression to emit");
-    return ScalarExprEmitter(*CurCCGF, *this)
+    return ScalarExprEmitter(*CurCGF, *this)
         .buildScalarConversion(Src, SrcTy, DstTy, Loc);
   }
 
@@ -1185,7 +1179,7 @@ public:
     assert(!(astCtx.getLangOpts().ElideConstructors && S.getNRVOCandidate() &&
              S.getNRVOCandidate()->isNRVOVariable()) &&
            "unimplemented");
-    assert(!CurCCGF->FnRetQualTy->isReferenceType() && "unimplemented");
+    assert(!CurCGF->FnRetQualTy->isReferenceType() && "unimplemented");
 
     // Emit the result value, even if unused, to evaluate the side effects.
     const Expr *RV = S.getRetValue();
@@ -1194,7 +1188,7 @@ public:
     assert(!isa<ExprWithCleanups>(RV) && "unimplemented");
 
     mlir::Value V = nullptr;
-    switch (CIRCodeGenFunction::getEvaluationKind(RV->getType())) {
+    switch (CIRGenFunction::getEvaluationKind(RV->getType())) {
     case TEK_Scalar:
       V = buildScalarExpr(RV);
       // Builder.CreateStore(EmitScalarExpr(RV), ReturnValue);
@@ -1205,7 +1199,7 @@ public:
       return mlir::failure();
     }
 
-    CurCCGF->RetValue = V;
+    CurCGF->RetValue = V;
     // Otherwise, this return operation has zero operands.
     if (!V || (RV && RV->getType()->isVoidType())) {
       // FIXME: evaluate for side effects.
@@ -1292,7 +1286,7 @@ public:
   /// TODO: if this is an aggregate expression, add a AggValueSlot to indicate
   /// where the result should be returned.
   RValue buildAnyExpr(const Expr *E) {
-    switch (CIRCodeGenFunction::getEvaluationKind(E->getType())) {
+    switch (CIRGenFunction::getEvaluationKind(E->getType())) {
     case TEK_Scalar:
       return RValue::get(buildScalarExpr(E));
     case TEK_Complex:
@@ -1317,7 +1311,7 @@ public:
     // Note that in all of these cases, __block variables need the RHS
     // evaluated first just in case the variable gets moved by the RHS.
 
-    switch (CIRCodeGenFunction::getEvaluationKind(E->getType())) {
+    switch (CIRGenFunction::getEvaluationKind(E->getType())) {
     case TEK_Scalar: {
       assert(E->getLHS()->getType().getObjCLifetime() ==
                  clang::Qualifiers::ObjCLifetime::OCL_None &&
@@ -1932,15 +1926,16 @@ public:
     case Decl::Record:
       // There's nothing to do here, we emit everything pertaining to `Record`s
       // lazily.
-      // TODO: handle debug info here? See clang's CodeGenModule::EmitTopLevelDecl
+      // TODO: handle debug info here? See clang's
+      // CodeGenModule::EmitTopLevelDecl
       break;
     }
   }
 
   // Emit a new function and add it to the MLIR module.
   mlir::FuncOp buildFunction(const FunctionDecl *FD) {
-    CIRCodeGenFunction CCGF;
-    CurCCGF = &CCGF;
+    CIRGenFunction CGF;
+    CurCGF = &CGF;
 
     // Create a scope in the symbol table to hold variable declarations.
     SymTableScopeTy varScope(symbolTable);
@@ -1955,11 +1950,11 @@ public:
     for (auto *Param : FD->parameters())
       argTypes.push_back(getCIRType(Param->getType()));
 
-    CurCCGF->FnRetQualTy = FD->getReturnType();
+    CurCGF->FnRetQualTy = FD->getReturnType();
     auto funcType = builder.getFunctionType(
-        argTypes, CurCCGF->FnRetQualTy->isVoidType()
+        argTypes, CurCGF->FnRetQualTy->isVoidType()
                       ? mlir::TypeRange()
-                      : getCIRType(CurCCGF->FnRetQualTy));
+                      : getCIRType(CurCGF->FnRetQualTy));
     mlir::FuncOp function =
         mlir::FuncOp::create(fnLoc, FD->getName(), funcType);
     if (!function)
@@ -2025,10 +2020,10 @@ public:
 };
 } // namespace cir
 
-CIRContext::CIRContext() = default;
-CIRContext::~CIRContext() = default;
+CIRGenerator::CIRGenerator() = default;
+CIRGenerator::~CIRGenerator() = default;
 
-void CIRContext::Initialize(clang::ASTContext &astCtx) {
+void CIRGenerator::Initialize(clang::ASTContext &astCtx) {
   using namespace llvm;
 
   this->astCtx = &astCtx;
@@ -2037,25 +2032,25 @@ void CIRContext::Initialize(clang::ASTContext &astCtx) {
   mlirCtx->getOrLoadDialect<mlir::func::FuncDialect>();
   mlirCtx->getOrLoadDialect<mlir::cir::CIRDialect>();
   mlirCtx->getOrLoadDialect<mlir::memref::MemRefDialect>();
-  builder = std::make_unique<CIRBuildImpl>(*mlirCtx.get(), astCtx);
+  CGM = std::make_unique<CIRGenModule>(*mlirCtx.get(), astCtx);
 }
 
-void CIRContext::verifyModule() { builder->verifyModule(); }
+void CIRGenerator::verifyModule() { CGM->verifyModule(); }
 
-bool CIRContext::EmitFunction(const FunctionDecl *FD) {
-  auto func = builder->buildFunction(FD);
+bool CIRGenerator::EmitFunction(const FunctionDecl *FD) {
+  auto func = CGM->buildFunction(FD);
   assert(func && "should emit function");
   return func.getOperation() != nullptr;
 }
 
-mlir::ModuleOp CIRContext::getModule() { return builder->getModule(); }
+mlir::ModuleOp CIRGenerator::getModule() { return CGM->getModule(); }
 
-bool CIRContext::HandleTopLevelDecl(clang::DeclGroupRef D) {
+bool CIRGenerator::HandleTopLevelDecl(clang::DeclGroupRef D) {
   for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
-    builder->buildTopLevelDecl(*I);
+    CGM->buildTopLevelDecl(*I);
   }
 
   return true;
 }
 
-void CIRContext::HandleTranslationUnit(ASTContext &C) {}
+void CIRGenerator::HandleTranslationUnit(ASTContext &C) {}
