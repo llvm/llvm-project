@@ -143,8 +143,8 @@ struct AsmPrinterOptions {
 
   llvm::cl::opt<bool> printLocalScopeOpt{
       "mlir-print-local-scope", llvm::cl::init(false),
-      llvm::cl::desc("Print assuming in local scope by default"),
-      llvm::cl::Hidden};
+      llvm::cl::desc("Print with local scope and inline information (eliding "
+                     "aliases for attributes, types, and locations")};
 };
 } // namespace
 
