@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -18,6 +20,7 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
                                      Value *DstAddr, ConstantInt *CopyLen,
                                      Align SrcAlign, Align DstAlign,
                                      bool SrcIsVolatile, bool DstIsVolatile,
+                                     bool CanOverlap,
                                      const TargetTransformInfo &TTI) {
   // No need to expand zero length copies.
   if (CopyLen->isZero())
@@ -28,6 +31,10 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
   const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  MDBuilder MDB(Ctx);
+  MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
+  StringRef Name = "MemCopyAliasScope";
+  MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
 
   unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
@@ -68,12 +75,21 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
     // Loop Body
     Value *SrcGEP =
         LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopIndex);
-    Value *Load = LoopBuilder.CreateAlignedLoad(LoopOpType, SrcGEP,
-                                                PartSrcAlign, SrcIsVolatile);
+    LoadInst *Load = LoopBuilder.CreateAlignedLoad(LoopOpType, SrcGEP,
+                                                   PartSrcAlign, SrcIsVolatile);
+    if (!CanOverlap) {
+      // Set alias scope for loads.
+      Load->setMetadata(LLVMContext::MD_alias_scope,
+                        MDNode::get(Ctx, NewScope));
+    }
     Value *DstGEP =
         LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopIndex);
-    LoopBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign, DstIsVolatile);
-
+    StoreInst *Store = LoopBuilder.CreateAlignedStore(
+        Load, DstGEP, PartDstAlign, DstIsVolatile);
+    if (!CanOverlap) {
+      // Indicate that stores don't overlap loads.
+      Store->setMetadata(LLVMContext::MD_noalias, MDNode::get(Ctx, NewScope));
+    }
     Value *NewIndex =
         LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(TypeOfCopyLen, 1U));
     LoopIndex->addIncoming(NewIndex, LoopBB);
@@ -111,9 +127,13 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
                              : RBuilder.CreateBitCast(SrcAddr, SrcPtrType);
       Value *SrcGEP = RBuilder.CreateInBoundsGEP(
           OpTy, CastedSrc, ConstantInt::get(TypeOfCopyLen, GepIndex));
-      Value *Load =
+      LoadInst *Load =
           RBuilder.CreateAlignedLoad(OpTy, SrcGEP, PartSrcAlign, SrcIsVolatile);
-
+      if (!CanOverlap) {
+        // Set alias scope for loads.
+        Load->setMetadata(LLVMContext::MD_alias_scope,
+                          MDNode::get(Ctx, NewScope));
+      }
       // Cast destination to operand type and store.
       PointerType *DstPtrType = PointerType::get(OpTy, DstAS);
       Value *CastedDst = DstAddr->getType() == DstPtrType
@@ -121,8 +141,12 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
                              : RBuilder.CreateBitCast(DstAddr, DstPtrType);
       Value *DstGEP = RBuilder.CreateInBoundsGEP(
           OpTy, CastedDst, ConstantInt::get(TypeOfCopyLen, GepIndex));
-      RBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign, DstIsVolatile);
-
+      StoreInst *Store = RBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign,
+                                                     DstIsVolatile);
+      if (!CanOverlap) {
+        // Indicate that stores don't overlap loads.
+        Store->setMetadata(LLVMContext::MD_noalias, MDNode::get(Ctx, NewScope));
+      }
       BytesCopied += OperandSize;
     }
   }
@@ -134,7 +158,7 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
                                        Value *SrcAddr, Value *DstAddr,
                                        Value *CopyLen, Align SrcAlign,
                                        Align DstAlign, bool SrcIsVolatile,
-                                       bool DstIsVolatile,
+                                       bool DstIsVolatile, bool CanOverlap,
                                        const TargetTransformInfo &TTI) {
   BasicBlock *PreLoopBB = InsertBefore->getParent();
   BasicBlock *PostLoopBB =
@@ -143,6 +167,11 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
   Function *ParentFunc = PreLoopBB->getParent();
   const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
   LLVMContext &Ctx = PreLoopBB->getContext();
+  MDBuilder MDB(Ctx);
+  MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
+  StringRef Name = "MemCopyAliasScope";
+  MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
+
   unsigned SrcAS = cast<PointerType>(SrcAddr->getType())->getAddressSpace();
   unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
 
@@ -183,11 +212,19 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
   LoopIndex->addIncoming(ConstantInt::get(CopyLenType, 0U), PreLoopBB);
 
   Value *SrcGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, SrcAddr, LoopIndex);
-  Value *Load = LoopBuilder.CreateAlignedLoad(LoopOpType, SrcGEP, PartSrcAlign,
-                                              SrcIsVolatile);
+  LoadInst *Load = LoopBuilder.CreateAlignedLoad(LoopOpType, SrcGEP,
+                                                 PartSrcAlign, SrcIsVolatile);
+  if (!CanOverlap) {
+    // Set alias scope for loads.
+    Load->setMetadata(LLVMContext::MD_alias_scope, MDNode::get(Ctx, NewScope));
+  }
   Value *DstGEP = LoopBuilder.CreateInBoundsGEP(LoopOpType, DstAddr, LoopIndex);
-  LoopBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign, DstIsVolatile);
-
+  StoreInst *Store =
+      LoopBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign, DstIsVolatile);
+  if (!CanOverlap) {
+    // Indicate that stores don't overlap loads.
+    Store->setMetadata(LLVMContext::MD_noalias, MDNode::get(Ctx, NewScope));
+  }
   Value *NewIndex =
       LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(CopyLenType, 1U));
   LoopIndex->addIncoming(NewIndex, LoopBB);
@@ -237,12 +274,21 @@ void llvm::createMemCpyLoopUnknownSize(Instruction *InsertBefore,
     Value *FullOffset = ResBuilder.CreateAdd(RuntimeBytesCopied, ResidualIndex);
     Value *SrcGEP =
         ResBuilder.CreateInBoundsGEP(Int8Type, SrcAsInt8, FullOffset);
-    Value *Load = ResBuilder.CreateAlignedLoad(Int8Type, SrcGEP, PartSrcAlign,
-                                               SrcIsVolatile);
+    LoadInst *Load = ResBuilder.CreateAlignedLoad(Int8Type, SrcGEP,
+                                                  PartSrcAlign, SrcIsVolatile);
+    if (!CanOverlap) {
+      // Set alias scope for loads.
+      Load->setMetadata(LLVMContext::MD_alias_scope,
+                        MDNode::get(Ctx, NewScope));
+    }
     Value *DstGEP =
         ResBuilder.CreateInBoundsGEP(Int8Type, DstAsInt8, FullOffset);
-    ResBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign, DstIsVolatile);
-
+    StoreInst *Store = ResBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign,
+                                                     DstIsVolatile);
+    if (!CanOverlap) {
+      // Indicate that stores don't overlap loads.
+      Store->setMetadata(LLVMContext::MD_noalias, MDNode::get(Ctx, NewScope));
+    }
     Value *ResNewIndex =
         ResBuilder.CreateAdd(ResidualIndex, ConstantInt::get(CopyLenType, 1U));
     ResidualIndex->addIncoming(ResNewIndex, ResLoopBB);
@@ -426,7 +472,16 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
 }
 
 void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
-                              const TargetTransformInfo &TTI) {
+                              const TargetTransformInfo &TTI,
+                              ScalarEvolution *SE) {
+  bool CanOverlap = true;
+  if (SE) {
+    auto *SrcSCEV = SE->getSCEV(Memcpy->getRawSource());
+    auto *DestSCEV = SE->getSCEV(Memcpy->getRawDest());
+    if (SE->isKnownPredicateAt(CmpInst::ICMP_NE, SrcSCEV, DestSCEV, Memcpy))
+      CanOverlap = false;
+  }
+
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Memcpy->getLength())) {
     createMemCpyLoopKnownSize(
         /* InsertBefore */ Memcpy,
@@ -437,6 +492,7 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
         /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
         /* SrcIsVolatile */ Memcpy->isVolatile(),
         /* DstIsVolatile */ Memcpy->isVolatile(),
+        /* CanOverlap */ CanOverlap,
         /* TargetTransformInfo */ TTI);
   } else {
     createMemCpyLoopUnknownSize(
@@ -448,6 +504,7 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
         /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
         /* SrcIsVolatile */ Memcpy->isVolatile(),
         /* DstIsVolatile */ Memcpy->isVolatile(),
+        /* CanOverlap */ CanOverlap,
         /* TargetTransformInfo */ TTI);
   }
 }

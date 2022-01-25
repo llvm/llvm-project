@@ -119,19 +119,15 @@ TEST_F(MemTransferLowerTest, MemCpyKnownLength) {
         auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
         Instruction *Inst = &MemCpyBB->front();
         MemCpyInst *MemCpyI = cast<MemCpyInst>(Inst);
-        expandMemCpyAsLoop(MemCpyI, TTI);
+        auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+        expandMemCpyAsLoop(MemCpyI, TTI, &SE);
         auto *CopyLoopBB = getBasicBlockByName(F, "load-store-loop");
         Instruction *LoadInst =
             getInstructionByOpcode(*CopyLoopBB, Instruction::Load, 1);
-        EXPECT_NONFATAL_FAILURE(
-            EXPECT_NE(LoadInst->getMetadata(LLVMContext::MD_alias_scope),
-                      nullptr),
-            "");
+        EXPECT_NE(nullptr, LoadInst->getMetadata(LLVMContext::MD_alias_scope));
         Instruction *StoreInst =
             getInstructionByOpcode(*CopyLoopBB, Instruction::Store, 1);
-        EXPECT_NONFATAL_FAILURE(
-            EXPECT_NE(StoreInst->getMetadata(LLVMContext::MD_noalias), nullptr),
-            "");
+        EXPECT_NE(nullptr, StoreInst->getMetadata(LLVMContext::MD_noalias));
         return PreservedAnalyses::none();
       }));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
@@ -163,14 +159,15 @@ TEST_F(MemTransferLowerTest, VecMemCpyKnownLength) {
         auto *MemCpyBB = getBasicBlockByName(F, "memcpy");
         Instruction *Inst = &MemCpyBB->front();
         MemCpyInst *MemCpyI = cast<MemCpyInst>(Inst);
-        expandMemCpyAsLoop(MemCpyI, TTI);
+        auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+        expandMemCpyAsLoop(MemCpyI, TTI, &SE);
         return PreservedAnalyses::none();
       }));
   FPM.addPass(LoopVectorizePass(LoopVectorizeOptions()));
   FPM.addPass(ForwardingPass(
       [=](Function &F, FunctionAnalysisManager &FAM) -> PreservedAnalyses {
         auto *TargetBB = getBasicBlockByName(F, "vector.body");
-        EXPECT_NONFATAL_FAILURE(EXPECT_NE(TargetBB, nullptr), "");
+        EXPECT_NE(nullptr, TargetBB);
         return PreservedAnalyses::all();
       }));
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
