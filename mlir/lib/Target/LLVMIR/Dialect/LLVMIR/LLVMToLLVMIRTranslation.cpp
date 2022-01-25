@@ -280,11 +280,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     if (auto attr = op.getAttrOfType<FlatSymbolRefAttr>("callee"))
       return builder.CreateCall(
           moduleTranslation.lookupFunction(attr.getValue()), operandsRef);
-    auto *calleePtrType =
-        cast<llvm::PointerType>(operandsRef.front()->getType());
-    auto *calleeType =
-        cast<llvm::FunctionType>(calleePtrType->getElementType());
-    return builder.CreateCall(calleeType, operandsRef.front(),
+    auto *calleeType = operandsRef.front()->getType();
+    auto *calleeFunctionType =
+        cast<llvm::FunctionType>(calleeType->getPointerElementType());
+    return builder.CreateCall(calleeFunctionType, operandsRef.front(),
                               operandsRef.drop_front());
   };
 
@@ -349,12 +348,11 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)), operandsRef);
     } else {
-      auto *calleePtrType =
-          cast<llvm::PointerType>(operandsRef.front()->getType());
-      auto *calleeType =
-          cast<llvm::FunctionType>(calleePtrType->getElementType());
+      auto *calleeType = operandsRef.front()->getType();
+      auto *calleeFunctionType =
+          cast<llvm::FunctionType>(calleeType->getPointerElementType());
       result = builder.CreateInvoke(
-          calleeType, operandsRef.front(),
+          calleeFunctionType, operandsRef.front(),
           moduleTranslation.lookupBlock(invOp.getSuccessor(0)),
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
           operandsRef.drop_front());

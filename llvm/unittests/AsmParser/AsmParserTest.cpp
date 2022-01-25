@@ -252,7 +252,7 @@ TEST(AsmParserTest, TypeWithSlotMappingParsing) {
   ASSERT_TRUE(Ty->isPointerTy());
 
   PointerType *PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
+  Ty = PT->getPointerElementType();
   ASSERT_TRUE(Ty->isIntegerTy());
   ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
 
@@ -262,11 +262,11 @@ TEST(AsmParserTest, TypeWithSlotMappingParsing) {
   ASSERT_TRUE(Ty->isPointerTy());
 
   PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
+  Ty = PT->getPointerElementType();
   ASSERT_TRUE(Ty->isPointerTy());
 
   PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
+  Ty = PT->getPointerElementType();
   ASSERT_TRUE(Ty->isIntegerTy());
   ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
 
@@ -386,7 +386,7 @@ TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
   ASSERT_TRUE(Read == 4);
 
   PointerType *PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
+  Ty = PT->getPointerElementType();
   ASSERT_TRUE(Ty->isIntegerTy());
   ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
 
@@ -397,11 +397,11 @@ TEST(AsmParserTest, TypeAtBeginningWithSlotMappingParsing) {
   ASSERT_TRUE(Read == 5);
 
   PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
+  Ty = PT->getPointerElementType();
   ASSERT_TRUE(Ty->isPointerTy());
 
   PT = cast<PointerType>(Ty);
-  Ty = PT->getElementType();
+  Ty = PT->getPointerElementType();
   ASSERT_TRUE(Ty->isIntegerTy());
   ASSERT_TRUE(Ty->getPrimitiveSizeInBits() == 32);
 
