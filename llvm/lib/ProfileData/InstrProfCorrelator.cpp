@@ -125,12 +125,12 @@ InstrProfCorrelatorImpl<IntPtrT>::get(
 
 template <class IntPtrT>
 Error InstrProfCorrelatorImpl<IntPtrT>::correlateProfileData() {
-  assert(Data.empty() && CompressedNames.empty() && Names.empty());
+  assert(Data.empty() && Names.empty() && NamesVec.empty());
   correlateProfileDataImpl();
   auto Result =
-      collectPGOFuncNameStrings(Names, /*doCompression=*/true, CompressedNames);
+      collectPGOFuncNameStrings(NamesVec, /*doCompression=*/false, Names);
   CounterOffsets.clear();
-  Names.clear();
+  NamesVec.clear();
   return Result;
 }
 
@@ -155,7 +155,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addProbe(StringRef FunctionName,
       maybeSwap<uint32_t>(NumCounters),
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
   });
-  Names.push_back(FunctionName.str());
+  NamesVec.push_back(FunctionName.str());
 }
 
 template <class IntPtrT>
