@@ -331,7 +331,22 @@ public:
       destination.insert(nameAndRegistrationIt.second.first,
                          nameAndRegistrationIt.first,
                          nameAndRegistrationIt.second.second);
-    destination.interfaces.insert(interfaces.begin(), interfaces.end());
+    // Merge interfaces.
+    for (auto it : interfaces) {
+      TypeID dialect = it.first;
+      auto destInterfaces = destination.interfaces.find(dialect);
+      if (destInterfaces == destination.interfaces.end()) {
+        destination.interfaces[dialect] = it.second;
+        continue;
+      }
+      // The destination already has delayed interface registrations for this
+      // dialect. Merge registrations into the destination registry.
+      destInterfaces->second.dialectInterfaces.append(
+          it.second.dialectInterfaces.begin(),
+          it.second.dialectInterfaces.end());
+      destInterfaces->second.objectInterfaces.append(
+          it.second.objectInterfaces.begin(), it.second.objectInterfaces.end());
+    }
   }
 
   /// Return the names of dialects known to this registry.
