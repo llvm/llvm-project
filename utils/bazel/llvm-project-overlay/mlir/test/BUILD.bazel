@@ -332,6 +332,8 @@ cc_library(
         "//mlir:IR",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
+        "//mlir:SCFDialect",
+        "//mlir:StandardOps",
         "//mlir:Support",
         "//mlir:Transforms",
         "//mlir:VectorOps",
