@@ -8153,9 +8153,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   if (getToolChain().getDriver().isUsingLTO(/* IsOffload */ true)) {
     // Pass in target features for each toolchain.
     auto OpenMPTCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
-    for (auto TI = OpenMPTCRange.first, TE = OpenMPTCRange.second; TI != TE;
-         ++TI) {
-      const ToolChain *TC = TI->second;
+    for (auto &I :
+         llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
+      const ToolChain *TC = I.second;
       const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
       ArgStringList FeatureArgs;
       TC->addClangTargetOptions(TCArgs, FeatureArgs, Action::OFK_OpenMP);
@@ -8165,9 +8165,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     }
 
     // Pass in the bitcode library to be linked during LTO.
-    for (auto TI = OpenMPTCRange.first, TE = OpenMPTCRange.second; TI != TE;
-         ++TI) {
-      const ToolChain *TC = TI->second;
+    for (auto &I : llvm::make_range(OpenMPTCRange.first, OpenMPTCRange.second)) {
+      const ToolChain *TC = I.second;
       const Driver &D = TC->getDriver();
       const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
       StringRef Arch = TCArgs.getLastArgValue(options::OPT_march_EQ);
@@ -8232,7 +8231,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   for (const auto &A : Args.getAllArgValues(options::OPT_Xcuda_ptxas))
-    CmdArgs.push_back(Args.MakeArgString("-ptxas-option=" + A));
+    CmdArgs.push_back(Args.MakeArgString("-ptxas-args=" + A));
 
   // Forward remarks passes to the LLVM backend in the wrapper.
   if (const Arg *A = Args.getLastArg(options::OPT_Rpass_EQ))
