@@ -70,7 +70,9 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
 }
 
 static bool python_is_finalizing() {
-#if PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
+#if PY_MAJOR_VERSION == 2
+  return false;
+#elif PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 7
   return _Py_Finalizing != nullptr;
 #else
   return _Py_IsFinalizing();
@@ -279,7 +281,9 @@ PythonObject PythonObject::GetAttributeValue(llvm::StringRef attr) const {
 }
 
 StructuredData::ObjectSP PythonObject::CreateStructuredObject() const {
+#if PY_MAJOR_VERSION >= 3
   assert(PyGILState_Check());
+#endif
   switch (GetObjectType()) {
   case PyObjectType::Dictionary:
     return PythonDictionary(PyRefType::Borrowed, m_py_obj)
