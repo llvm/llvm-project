@@ -19,6 +19,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/DebugInfo/Symbolize/DIPrinter.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/Debuginfod/DIFetcher.h"
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -262,8 +263,6 @@ static FunctionNameKind decideHowToPrintFunctions(const opt::InputArgList &Args,
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  // The HTTPClient must be initialized for use by the debuginfod client.
-  HTTPClient::initialize();
   sys::InitializeCOMRAII COM(sys::COMThreadingMode::MultiThreaded);
 
   bool IsAddr2Line = sys::path::stem(argv[0]).contains("addr2line");
@@ -330,6 +329,12 @@ int main(int argc, char **argv) {
   }
 
   LLVMSymbolizer Symbolizer(Opts);
+
+  // Look up symbols using the debuginfod client.
+  Symbolizer.addDIFetcher(std::make_unique<DebuginfodDIFetcher>());
+  // The HTTPClient must be initialized for use by the debuginfod client.
+  HTTPClient::initialize();
+
   std::unique_ptr<DIPrinter> Printer;
   if (Style == OutputStyle::GNU)
     Printer = std::make_unique<GNUPrinter>(outs(), errs(), Config);

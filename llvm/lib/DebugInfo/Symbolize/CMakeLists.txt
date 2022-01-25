@@ -1,4 +1,5 @@
 add_llvm_component_library(LLVMSymbolize
+  DIFetcher.cpp
   DIPrinter.cpp
   SymbolizableObjectFile.cpp
   Symbolize.cpp
@@ -9,7 +10,6 @@ add_llvm_component_library(LLVMSymbolize
   LINK_COMPONENTS
   DebugInfoDWARF
   DebugInfoPDB
-  Debuginfod
   Object
   Support
   Demangle

@@ -13,6 +13,7 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZE_H
 
+#include "llvm/DebugInfo/Symbolize/DIFetcher.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -83,6 +84,10 @@ public:
   DemangleName(const std::string &Name,
                const SymbolizableModule *DbiModuleDescriptor);
 
+  void addDIFetcher(std::unique_ptr<DIFetcher> Fetcher) {
+    DIFetchers.push_back(std::move(Fetcher));
+  }
+
 private:
   // Bundles together object file with code/data and object file with
   // corresponding debug info. These objects can be the same.
@@ -126,6 +131,12 @@ private:
                                   const ELFObjectFileBase *Obj,
                                   const std::string &ArchName);
 
+  bool findDebugBinary(const std::string &OrigPath,
+                       const std::string &DebuglinkName, uint32_t CRCHash,
+                       std::string &Result);
+
+  bool findDebugBinary(const ArrayRef<uint8_t> BuildID, std::string &Result);
+
   /// Returns pair of pointers to object and debug object.
   Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
                                              const std::string &ArchName);
@@ -152,6 +163,8 @@ private:
       ObjectForUBPathAndArch;
 
   Options Opts;
+
+  SmallVector<std::unique_ptr<DIFetcher>> DIFetchers;
 };
 
 } // end namespace symbolize
