@@ -160,7 +160,7 @@ static Expected<const Edge &> getRISCVPCRelHi20(const Edge &E) {
 }
 
 static uint32_t extractBits(uint32_t Num, unsigned Low, unsigned Size) {
-  return (Num & (((1ULL << (Size + 1)) - 1) << Low)) >> Low;
+  return (Num & (((1ULL << Size) - 1) << Low)) >> Low;
 }
 
 inline Error checkAlignment(llvm::orc::ExecutorAddr loc, uint64_t v, int n,
@@ -212,11 +212,10 @@ private:
       if (AlignmentIssue) {
         return AlignmentIssue;
       }
-      int64_t Lo = Value & 0xFFF;
-      uint32_t Imm31_25 = extractBits(Lo, 5, 6) << 25 | extractBits(Lo, 12, 1)
-                                                            << 31;
-      uint32_t Imm11_7 = extractBits(Lo, 1, 4) << 8 | extractBits(Lo, 11, 1)
-                                                          << 7;
+      uint32_t Imm31_25 =
+          extractBits(Value, 5, 6) << 25 | extractBits(Value, 12, 1) << 31;
+      uint32_t Imm11_7 =
+          extractBits(Value, 1, 4) << 8 | extractBits(Value, 11, 1) << 7;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
       break;
