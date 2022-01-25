@@ -192,7 +192,7 @@ Changes in existing checks
   option to control whether to warn on narrowing integer to floating-point
   conversions.
 
-- Improved :doc:`performance-move-const-arg` check.
+- Improved :doc:`performance-move-const-arg <clang-tidy/checks/performance-move-const-arg>` check.
 
   Removed a wrong FixIt for trivially copyable objects wrapped by ``std::move()`` and passed to an rvalue reference parameter. Removal of ``std::move()`` would break the code.
 
