@@ -13,7 +13,6 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -226,21 +225,28 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
 
     // Check that `launch_func` refers to a well-formed kernel function.
     Operation *kernelFunc = module.lookupSymbol(launchOp.kernelAttr());
-    auto kernelGPUFunction = dyn_cast_or_null<gpu::GPUFuncOp>(kernelFunc);
-    auto kernelLLVMFunction = dyn_cast_or_null<LLVM::LLVMFuncOp>(kernelFunc);
-    if (!kernelGPUFunction && !kernelLLVMFunction)
+    if (!kernelFunc)
       return launchOp.emitOpError("kernel function '")
              << launchOp.kernel() << "' is undefined";
+    auto kernelConvertedFunction = dyn_cast<FunctionOpInterface>(kernelFunc);
+    if (!kernelConvertedFunction) {
+      InFlightDiagnostic diag = launchOp.emitOpError()
+                                << "referenced kernel '" << launchOp.kernel()
+                                << "' is not a function";
+      diag.attachNote(kernelFunc->getLoc()) << "see the kernel definition here";
+      return diag;
+    }
+
     if (!kernelFunc->getAttrOfType<mlir::UnitAttr>(
             GPUDialect::getKernelFuncAttrName()))
       return launchOp.emitOpError("kernel function is missing the '")
              << GPUDialect::getKernelFuncAttrName() << "' attribute";
 
-    // TODO: if the kernel function has been converted to
-    // the LLVM dialect but the caller hasn't (which happens during the
-    // separate compilation), do not check type correspondence as it would
-    // require the verifier to be aware of the LLVM type conversion.
-    if (kernelLLVMFunction)
+    // TODO: If the kernel isn't a GPU function (which happens during separate
+    // compilation), do not check type correspondence as it would require the
+    // verifier to be aware of the type conversion.
+    auto kernelGPUFunction = dyn_cast<gpu::GPUFuncOp>(kernelFunc);
+    if (!kernelGPUFunction)
       return success();
 
     unsigned actualNumArguments = launchOp.getNumKernelOperands();
