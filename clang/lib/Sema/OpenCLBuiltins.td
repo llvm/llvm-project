@@ -80,11 +80,14 @@ def FuncExtKhrLocalInt32ExtendedAtomics  : FunctionExtension<"cl_khr_local_int32
 def FuncExtKhrInt64BaseAtomics           : FunctionExtension<"cl_khr_int64_base_atomics">;
 def FuncExtKhrInt64ExtendedAtomics       : FunctionExtension<"cl_khr_int64_extended_atomics">;
 def FuncExtKhrMipmapImage                : FunctionExtension<"cl_khr_mipmap_image">;
+def FuncExtKhrMipmapImageReadWrite       : FunctionExtension<"cl_khr_mipmap_image __opencl_c_read_write_images">;
 def FuncExtKhrMipmapImageWrites          : FunctionExtension<"cl_khr_mipmap_image_writes">;
 def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
+def FuncExtKhrGlMsaaSharingReadWrite     : FunctionExtension<"cl_khr_gl_msaa_sharing __opencl_c_read_write_images">;
 
 def FuncExtOpenCLCPipes                  : FunctionExtension<"__opencl_c_pipes">;
 def FuncExtOpenCLCWGCollectiveFunctions  : FunctionExtension<"__opencl_c_work_group_collective_functions">;
+def FuncExtOpenCLCReadWriteImages        : FunctionExtension<"__opencl_c_read_write_images">;
 def FuncExtFloatAtomicsFp16GlobalLoadStore  : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_load_store">;
 def FuncExtFloatAtomicsFp16LocalLoadStore   : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_local_atomic_load_store">;
 def FuncExtFloatAtomicsFp16GenericLoadStore : FunctionExtension<"cl_ext_float_atomics __opencl_c_ext_fp16_global_atomic_load_store __opencl_c_ext_fp16_local_atomic_load_store">;
@@ -1390,30 +1393,35 @@ foreach coordTy = [Int, Float] in {
 }
 
 // --- Table 23: Sampler-less Read Functions ---
+multiclass ImageReadSamplerless<string aQual> {
+  foreach imgTy = [Image2d, Image1dArray] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
+  }
+  foreach imgTy = [Image3d, Image2dArray] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
+  }
+  foreach imgTy = [Image1d, Image1dBuffer] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
+  }
+  def : Builtin<"read_imagef", [Float, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>], Attr.Pure>;
+  def : Builtin<"read_imagef", [Float, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>], Attr.Pure>;
+}
+
 let MinVersion = CL12 in {
-  foreach aQual = ["RO", "RW"] in {
-    foreach imgTy = [Image2d, Image1dArray] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
-    }
-    foreach imgTy = [Image3d, Image2dArray] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>], Attr.Pure>;
-    }
-    foreach imgTy = [Image1d, Image1dBuffer] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, Int], Attr.Pure>;
-    }
-    def : Builtin<"read_imagef", [Float, ImageType<Image2dDepth, aQual>, VectorType<Int, 2>], Attr.Pure>;
-    def : Builtin<"read_imagef", [Float, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>], Attr.Pure>;
+  defm : ImageReadSamplerless<"RO">;
+  let Extension = FuncExtOpenCLCReadWriteImages in {
+    defm : ImageReadSamplerless<"RW">;
   }
 }
 
 // --- Table 24: Image Write Functions ---
-foreach aQual = ["WO", "RW"] in {
+multiclass ImageWrite<string aQual> {
   foreach imgTy = [Image2d] in {
     def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<Float, 4>]>;
     def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, VectorType<Int, 4>]>;
@@ -1443,8 +1451,13 @@ foreach aQual = ["WO", "RW"] in {
   def : Builtin<"write_imagef", [Void, ImageType<Image2dArrayDepth, aQual>, VectorType<Int, 4>, Float]>;
 }
 
+defm : ImageWrite<"WO">;
+let Extension = FuncExtOpenCLCReadWriteImages in {
+  defm : ImageWrite<"RW">;
+}
+
 // --- Table 25: Image Query Functions ---
-foreach aQual = ["RO", "WO", "RW"] in {
+multiclass ImageQuery<string aQual> {
   foreach imgTy = [Image1d, Image1dBuffer, Image2d, Image3d,
                    Image1dArray, Image2dArray, Image2dDepth,
                    Image2dArrayDepth] in {
@@ -1468,6 +1481,12 @@ foreach aQual = ["RO", "WO", "RW"] in {
   }
 }
 
+defm : ImageQuery<"RO">;
+defm : ImageQuery<"WO">;
+let Extension = FuncExtOpenCLCReadWriteImages in {
+  defm : ImageQuery<"RW">;
+}
+
 // OpenCL extension v2.0 s5.1.9: Built-in Image Read Functions
 // --- Table 8 ---
 foreach aQual = ["RO"] in {
@@ -1488,7 +1507,7 @@ foreach aQual = ["RO"] in {
 // OpenCL extension v2.0 s5.1.10: Built-in Image Sampler-less Read Functions
 // --- Table 9 ---
 let MinVersion = CL12 in {
-  foreach aQual = ["RO", "RW"] in {
+  multiclass ImageReadHalf<string aQual> {
     foreach name = ["read_imageh"] in {
       foreach imgTy = [Image2d, Image1dArray] in {
         def : Builtin<name, [VectorType<Half, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>], Attr.Pure>;
@@ -1501,10 +1520,14 @@ let MinVersion = CL12 in {
       }
     }
   }
+  defm : ImageReadHalf<"RO">;
+  let Extension = FuncExtOpenCLCReadWriteImages in {
+    defm : ImageReadHalf<"RW">;
+  }
 }
 // OpenCL extension v2.0 s5.1.11: Built-in Image Write Functions
 // --- Table 10 ---
-foreach aQual = ["WO", "RW"] in {
+multiclass ImageWriteHalf<string aQual> {
   foreach name = ["write_imageh"] in {
     def : Builtin<name, [Void, ImageType<Image2d, aQual>, VectorType<Int, 2>, VectorType<Half, 4>]>;
     def : Builtin<name, [Void, ImageType<Image2dArray, aQual>, VectorType<Int, 4>, VectorType<Half, 4>]>;
@@ -1514,6 +1537,12 @@ foreach aQual = ["WO", "RW"] in {
     def : Builtin<name, [Void, ImageType<Image3d, aQual>, VectorType<Int, 4>, VectorType<Half, 4>]>;
   }
 }
+
+defm : ImageWriteHalf<"WO">;
+let Extension = FuncExtOpenCLCReadWriteImages in {
+  defm : ImageWriteHalf<"RW">;
+}
+
 
 
 //--------------------------------------------------------------------
@@ -1688,12 +1717,22 @@ let Extension = FuncExtKhrMipmapImage in {
       }
     }
   }
-  // Added to section 6.13.14.5
-  foreach aQual = ["RO", "WO", "RW"] in {
-    foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
-      def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
-    }
+}
+
+// Added to section 6.13.14.5
+multiclass ImageQueryNumMipLevels<string aQual> {
+  foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
+    def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
   }
+}
+
+let Extension = FuncExtKhrMipmapImage in {
+  defm : ImageQueryNumMipLevels<"RO">;
+  defm : ImageQueryNumMipLevels<"WO">;
+}
+
+let Extension = FuncExtKhrMipmapImageReadWrite in {
+  defm : ImageQueryNumMipLevels<"RW">;
 }
 
 // Write functions are enabled using a separate extension.
@@ -1734,39 +1773,48 @@ let Extension = FuncExtKhrMipmapImageWrites in {
 
 //--------------------------------------------------------------------
 // OpenCL Extension v2.0 s18.3 - Creating OpenCL Memory Objects from OpenGL MSAA Textures
-let Extension = FuncExtKhrGlMsaaSharing in {
-  // --- Table 6.13.14.3 ---
-  foreach aQual = ["RO", "RW"] in {
-    foreach imgTy = [Image2dMsaa] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
-    }
-    foreach imgTy = [Image2dArrayMsaa] in {
-      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
-      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
-      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
-    }
-    foreach name = ["read_imagef"] in {
-      def : Builtin<name, [Float, ImageType<Image2dMsaaDepth, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
-      def : Builtin<name, [Float, ImageType<Image2dArrayMsaaDepth, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
-    }
+// --- Table 6.13.14.3 ---
+multiclass ImageReadMsaa<string aQual> {
+  foreach imgTy = [Image2dMsaa] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
   }
+  foreach imgTy = [Image2dArrayMsaa] in {
+    def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+    def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+    def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+  }
+  foreach name = ["read_imagef"] in {
+    def : Builtin<name, [Float, ImageType<Image2dMsaaDepth, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+    def : Builtin<name, [Float, ImageType<Image2dArrayMsaaDepth, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+  }
+}
 
-  // --- Table 6.13.14.5 ---
-  foreach aQual = ["RO", "WO", "RW"] in {
-    foreach imgTy = [Image2dMsaa, Image2dArrayMsaa, Image2dMsaaDepth, Image2dArrayMsaaDepth] in {
-      foreach name = ["get_image_width", "get_image_height",
-                      "get_image_channel_data_type", "get_image_channel_order",
-                      "get_image_num_samples"] in {
-        def : Builtin<name, [Int, ImageType<imgTy, aQual>], Attr.Const>;
-      }
-      def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
+// --- Table 6.13.14.5 ---
+multiclass ImageQueryMsaa<string aQual> {
+  foreach imgTy = [Image2dMsaa, Image2dArrayMsaa, Image2dMsaaDepth, Image2dArrayMsaaDepth] in {
+    foreach name = ["get_image_width", "get_image_height",
+                    "get_image_channel_data_type", "get_image_channel_order",
+                    "get_image_num_samples"] in {
+      def : Builtin<name, [Int, ImageType<imgTy, aQual>], Attr.Const>;
     }
-    foreach imgTy = [Image2dArrayMsaa, Image2dArrayMsaaDepth] in {
-      def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>], Attr.Const>;
-    }
+    def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
   }
+  foreach imgTy = [Image2dArrayMsaa, Image2dArrayMsaaDepth] in {
+    def : Builtin<"get_image_array_size", [Size, ImageType<imgTy, aQual>], Attr.Const>;
+  }
+}
+
+let Extension = FuncExtKhrGlMsaaSharing in {
+  defm : ImageReadMsaa<"RO">;
+  defm : ImageQueryMsaa<"RO">;
+  defm : ImageQueryMsaa<"WO">;
+}
+
+let Extension = FuncExtKhrGlMsaaSharingReadWrite in {
+  defm : ImageReadMsaa<"RW">;
+  defm : ImageQueryMsaa<"RW">;
 }
 
 //--------------------------------------------------------------------
