@@ -1,3 +1,4 @@
+add_subdirectory(llvm-libc-macros)
 add_subdirectory(llvm-libc-types)
 
 add_header(
@@ -12,6 +13,16 @@ add_gen_header(
   GEN_HDR ctype.h
   DEPENDS
     .llvm_libc_common_h
+)
+
+add_gen_header(
+  fcntl
+  DEF_FILE fcntl.h.def
+  GEN_HDR fcntl.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.fcntl_macros
+    .llvm-libc-types.mode_t
 )
 
 add_gen_header(

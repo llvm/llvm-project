@@ -62,6 +62,10 @@ def AssertAPI : PublicAPI<"assert.h"> {
 def CTypeAPI : PublicAPI<"ctype.h"> {
 }
 
+def FCntlAPI : PublicAPI<"fcntl.h"> {
+  let Types = ["mode_t"];
+}
+
 def IntTypesAPI : PublicAPI<"inttypes.h"> {
   let Types = ["imaxdiv_t"];
 }

@@ -1,4 +1,43 @@
 add_entrypoint_object(
+  close
+  SRCS
+    close.cpp
+  HDRS
+    ../close.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  fsync
+  SRCS
+    fsync.cpp
+  HDRS
+    ../fsync.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  read
+  SRCS
+    read.cpp
+  HDRS
+    ../read.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
   write
   SRCS
     write.cpp
