@@ -837,10 +837,7 @@ void ReductionCodeGen::emitAggregateType(CodeGenFunction &CGF, unsigned N) {
   }
   llvm::Value *Size;
   llvm::Value *SizeInChars;
-  auto *ElemType = OrigAddresses[N]
-                       .first.getPointer(CGF)
-                       ->getType()
-                       ->getPointerElementType();
+  auto *ElemType = OrigAddresses[N].first.getAddress(CGF).getElementType();
   auto *ElemSizeOf = llvm::ConstantExpr::getSizeOf(ElemType);
   if (AsArraySection) {
     Size = CGF.Builder.CreatePtrDiff(OrigAddresses[N].second.getPointer(CGF),
