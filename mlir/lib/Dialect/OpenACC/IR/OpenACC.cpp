@@ -7,12 +7,11 @@
 // =============================================================================
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -175,14 +174,17 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     // Early return if there is no condition.
-    if (!op.ifCond())
+    Value ifCond = op.ifCond();
+    if (!ifCond)
       return success();
 
-    auto constOp = op.ifCond().template getDefiningOp<arith::ConstantOp>();
-    if (constOp && constOp.getValue().template cast<IntegerAttr>().getInt())
-      rewriter.updateRootInPlace(op, [&]() { op.ifCondMutable().erase(0); });
-    else if (constOp)
-      rewriter.eraseOp(op);
+    IntegerAttr constAttr;
+    if (matchPattern(ifCond, m_Constant(&constAttr))) {
+      if (constAttr.getInt())
+        rewriter.updateRootInPlace(op, [&]() { op.ifCondMutable().erase(0); });
+      else
+        rewriter.eraseOp(op);
+    }
 
     return success();
   }
