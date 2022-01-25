@@ -245,6 +245,10 @@ def weak_bind : Flag<["--"], "weak-bind">,
   HelpText<"Display mach-o weak binding info">,
   Group<grp_mach_o>;
 
+def chained_fixups : Flag<["--"], "chained_fixups">,
+  HelpText<"Print raw chained fixup data present in a final linked binary built with chained fixups.">,
+  Group<grp_mach_o>;
+
 def g : Flag<["-"], "g">,
   HelpText<"Print line information from debug info if available">,
   Group<grp_mach_o>;

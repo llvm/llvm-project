@@ -67,6 +67,7 @@ bool objdump::FirstPrivateHeader;
 bool objdump::ExportsTrie;
 bool objdump::Rebase;
 bool objdump::Rpaths;
+bool objdump::Chained_fixups;
 bool objdump::Bind;
 bool objdump::LazyBind;
 bool objdump::WeakBind;
@@ -100,6 +101,7 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
   Bind = InputArgs.hasArg(OBJDUMP_bind);
   LazyBind = InputArgs.hasArg(OBJDUMP_lazy_bind);
   WeakBind = InputArgs.hasArg(OBJDUMP_weak_bind);
+  Chained_fixups = InputArgs.hasArg(OBJDUMP_chained_fixups);
   UseDbg = InputArgs.hasArg(OBJDUMP_g);
   DSYMFile = InputArgs.getLastArgValue(OBJDUMP_dsym_EQ).str();
   FullLeadingAddr = InputArgs.hasArg(OBJDUMP_full_leading_addr);
@@ -1994,6 +1996,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     printLazyBindTable(MachOOF);
   if (WeakBind)
     printWeakBindTable(MachOOF);
+  if (Chained_fixups)
+    printChainedFixups(MachOOF);
 
   if (DwarfDumpType != DIDT_Null) {
     std::unique_ptr<DIContext> DICtx = DWARFContext::create(*MachOOF);
@@ -10448,6 +10452,21 @@ static void printMachOWeakBindTable(object::MachOObjectFile *Obj) {
     reportError(std::move(Err), Obj->getFileName());
 }
 
+//===----------------------------------------------------------------------===//
+// fixup chain dumping
+//===----------------------------------------------------------------------===//
+
+static void printChainedFixups(object::MachOObjectFile *obj) {
+  // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_fixups_header
+
+
+  // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_starts_in_image
+
+  // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_starts_in_segment
+
+  // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_import
+}
+
 // get_dyld_bind_info_symbolname() is used for disassembly and passed an
 // address, ReferenceValue, in the Mach-O file and looks in the dyld bind
 // information for that address. If the address is found its binding symbol
@@ -10514,6 +10533,15 @@ void objdump::printBindTable(ObjectFile *o) {
   outs() << "\nBind table:\n";
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOBindTable(MachO);
+  else
+    WithColor::error()
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
+}
+
+void objdump::printChainedFixups(ObjectFile *o){
+  if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
+    printChainedFixups(MachO);
   else
     WithColor::error()
         << "This operation is only currently supported "

@@ -34,6 +34,7 @@ void parseMachOOptions(const llvm::opt::InputArgList &InputArgs);
 
 // MachO specific options
 extern bool Bind;
+extern bool Chained_fixups;
 extern bool DataInCode;
 extern std::string DisSymName;
 extern bool DylibId;
@@ -71,6 +72,8 @@ void printRebaseTable(object::ObjectFile *O);
 void printBindTable(object::ObjectFile *O);
 void printLazyBindTable(object::ObjectFile *O);
 void printWeakBindTable(object::ObjectFile *O);
+
+void printChainedFixups(object::ObjectFile *O);
 
 } // namespace objdump
 } // namespace llvm
