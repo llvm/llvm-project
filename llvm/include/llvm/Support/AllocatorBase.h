@@ -21,6 +21,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemAlloc.h"
+#include <type_traits>
 
 namespace llvm {
 
