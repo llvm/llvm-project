@@ -197,9 +197,9 @@ public:
       : __stream_(nullptr), __root_(root) {
     if ((__stream_ = ::opendir(root.c_str())) == nullptr) {
       ec = detail::capture_errno();
-      const bool allow_eacess =
+      const bool allow_eacces =
           bool(opts & directory_options::skip_permission_denied);
-      if (allow_eacess && ec.value() == EACCES)
+      if (allow_eacces && ec.value() == EACCES)
         ec.clear();
       return;
     }
