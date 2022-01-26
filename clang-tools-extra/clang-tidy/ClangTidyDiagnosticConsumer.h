@@ -110,8 +110,8 @@ public:
   /// This does not handle suppression of notes following a suppressed
   /// diagnostic; that is left to the caller as it requires maintaining state in
   /// between calls to this function.
-  /// If any NOLINT is malformed, e.g. a BEGIN without a subsequent END, an
-  /// error about it will be returned in output \param NoLintErrors.
+  /// If any NOLINT is malformed, e.g. a BEGIN without a subsequent END, output
+  /// \param NoLintErrors will return an error about it.
   /// If \param AllowIO is false, the function does not attempt to read source
   /// files from disk which are not already mapped into memory; such files are
   /// treated as not containing a suppression comment.
