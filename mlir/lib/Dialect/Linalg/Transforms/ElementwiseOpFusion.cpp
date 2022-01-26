@@ -915,11 +915,9 @@ struct FoldProducerReshapeOpByLinearization
       // the operands of the consumers that arent fused are the same.
       SmallVector<AffineMap> fusedIndexMaps = genericOp.getIndexingMaps();
 
-      // Accepted consumer maps are either identity or permutation.
-      auto invMap = inversePermutation(fusedIndexMaps[en.index()]);
-
       // Compute the indexing map to use for the result of the producer.
-      AffineMap modifiedMap = linearizeCollapsedDims(invMap, reshapeOp);
+      AffineMap modifiedMap =
+          linearizeCollapsedDims(fusedIndexMaps[en.index()], reshapeOp);
       // The modified map cannot have symbols.
       if (modifiedMap.getNumSymbols())
         return failure();
@@ -1166,11 +1164,9 @@ struct FoldConsumerReshapeOpByLinearization
     // those for the operands of the producer.
     SmallVector<AffineMap> fusedIndexMaps = producer.getIndexingMaps();
 
-    auto invMap = inversePermutation(
-        producer.getTiedIndexingMap(producer.getOutputOperand(0)));
-
     // Compute the indexing map to use for the operand of the producer.
-    AffineMap modifiedMap = linearizeCollapsedDims(invMap, reshapeOp);
+    AffineMap modifiedMap = linearizeCollapsedDims(
+        producer.getTiedIndexingMap(producer.getOutputOperand(0)), reshapeOp);
     for (AffineExpr expr : modifiedMap.getResults()) {
       if (!expr.isPureAffine()) {
         return rewriter.notifyMatchFailure(
