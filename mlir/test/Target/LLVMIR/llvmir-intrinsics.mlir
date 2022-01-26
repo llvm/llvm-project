@@ -446,6 +446,15 @@ llvm.func @coro_size() {
   llvm.return
 }
 
+// CHECK-LABEL: @coro_align
+llvm.func @coro_align() {
+  // CHECK: call i64 @llvm.coro.align.i64
+  %0 = llvm.intr.coro.align : i64
+  // CHECK: call i32 @llvm.coro.align.i32
+  %1 = llvm.intr.coro.align : i32
+  llvm.return
+}
+
 // CHECK-LABEL: @coro_save
 llvm.func @coro_save(%arg0: !llvm.ptr<i8>) {
   // CHECK: call token @llvm.coro.save
