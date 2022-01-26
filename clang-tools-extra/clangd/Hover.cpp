@@ -126,7 +126,17 @@ std::string getNamespaceScope(const Decl *D) {
   return "";
 }
 
-std::string printDefinition(const Decl *D, const PrintingPolicy &PP) {
+std::string printDefinition(const Decl *D, PrintingPolicy PP,
+                            const syntax::TokenBuffer &TB) {
+  if (auto *VD = llvm::dyn_cast<VarDecl>(D)) {
+    if (auto *IE = VD->getInit()) {
+      // Initializers might be huge and result in lots of memory allocations in
+      // some catostrophic cases. Such long lists are not useful in hover cards
+      // anyway.
+      if (200 < TB.expandedTokens(IE->getSourceRange()).size())
+        PP.SuppressInitializers = true;
+    }
+  }
   std::string Definition;
   llvm::raw_string_ostream OS(Definition);
   D->print(OS, PP);
@@ -568,7 +578,8 @@ std::string synthesizeDocumentation(const NamedDecl *ND) {
 
 /// Generate a \p Hover object given the declaration \p D.
 HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
-                           const SymbolIndex *Index) {
+                           const SymbolIndex *Index,
+                           const syntax::TokenBuffer &TB) {
   HoverInfo HI;
   const ASTContext &Ctx = D->getASTContext();
 
@@ -630,7 +641,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
       HI.Value = toString(ECD->getInitVal(), 10);
   }
 
-  HI.Definition = printDefinition(D, PP);
+  HI.Definition = printDefinition(D, PP, TB);
   return HI;
 }
 
@@ -1029,7 +1040,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
       auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias,
                                             AST.getHeuristicResolver());
       if (!Decls.empty()) {
-        HI = getHoverContents(Decls.front(), PP, Index);
+        HI = getHoverContents(Decls.front(), PP, Index, TB);
         // Layout info only shown when hovering on the field/class itself.
         if (Decls.front() == N->ASTNode.get<Decl>())
           addLayoutInfo(*Decls.front(), *HI);
