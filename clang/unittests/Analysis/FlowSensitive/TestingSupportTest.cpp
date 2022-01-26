@@ -79,12 +79,12 @@ void checkDataflow(
                        ASTContext &)>
         Expectations) {
   ASSERT_THAT_ERROR(
-      test::checkDataflow<NoopAnalysis>(Code, Target,
-                                        [](ASTContext &Context, Environment &) {
-                                          return NoopAnalysis(Context);
-                                        },
-                                        std::move(Expectations),
-                                        {"-fsyntax-only", "-std=c++17"}),
+      test::checkDataflow<NoopAnalysis>(
+          Code, Target,
+          [](ASTContext &Context, Environment &) {
+            return NoopAnalysis(Context, /*ApplyBuiltinTransfer=*/false);
+          },
+          std::move(Expectations), {"-fsyntax-only", "-std=c++17"}),
       llvm::Succeeded());
 }
 

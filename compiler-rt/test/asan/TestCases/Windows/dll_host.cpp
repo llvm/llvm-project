@@ -59,8 +59,20 @@ int main(int argc, char **argv) {
 
   HMODULE h = LoadLibrary(dll_name);
   if (!h) {
-    printf("Could not load DLL: %s (code: %lu)!\n",
-           dll_name, GetLastError());
+    DWORD err = GetLastError();
+    printf("Could not load DLL: %s (code: %lu)!\n", dll_name, err);
+
+    LPSTR buf;
+
+    FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                       FORMAT_MESSAGE_IGNORE_INSERTS,
+                   NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buf, 0,
+                   NULL);
+
+    printf("Error: %s\n", buf);
+
+    LocalFree(buf);
+
     return 102;
   }
 

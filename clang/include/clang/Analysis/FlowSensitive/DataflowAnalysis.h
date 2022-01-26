@@ -62,6 +62,8 @@ public:
   using Lattice = LatticeT;
 
   explicit DataflowAnalysis(ASTContext &Context) : Context(Context) {}
+  explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
+      : TypeErasedDataflowAnalysis(ApplyBuiltinTransfer), Context(Context) {}
 
   ASTContext &getASTContext() final { return Context; }
 

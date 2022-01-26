@@ -119,7 +119,8 @@ transferCFGStmt(const CFGStmt &CfgStmt, TypeErasedDataflowAnalysis &Analysis,
   const Stmt *S = CfgStmt.getStmt();
   assert(S != nullptr);
 
-  transfer(*S, State.Env);
+  if (Analysis.applyBuiltinTransfer())
+    transfer(*S, State.Env);
   Analysis.transferTypeErased(S, State.Lattice, State.Env);
 
   if (HandleTransferredStmt != nullptr)
@@ -178,7 +179,8 @@ TypeErasedDataflowAnalysisState transferBlock(
                       HandleTransferredStmt);
       break;
     case CFGElement::Initializer:
-      transferCFGInitializer(*Element.getAs<CFGInitializer>(), State);
+      if (Analysis.applyBuiltinTransfer())
+        transferCFGInitializer(*Element.getAs<CFGInitializer>(), State);
       break;
     default:
       // FIXME: Evaluate other kinds of `CFGElement`.
