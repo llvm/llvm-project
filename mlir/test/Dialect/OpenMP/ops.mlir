@@ -330,15 +330,30 @@ func @omp_wsloop_pretty_multiple(%lb1 : i32, %ub1 : i32, %step1 : i32, %lb2 : i3
 // CHECK-LABEL: omp_target
 func @omp_target(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
 
-    // Test with optional operands; if_expr, device, thread_limit, and nowait.
-    // CHECK: omp.target
+    // Test with optional operands; if_expr, device, thread_limit, private, firstprivate and nowait.
+    // CHECK: omp.target if({{.*}}) device({{.*}}) thread_limit({{.*}}) nowait
     "omp.target"(%if_cond, %device, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {operand_segment_sizes = dense<[1,1,1]>: vector<3xi32>, nowait } : ( i1, si32, si32  ) -> ()
+    }) {operand_segment_sizes = dense<[1,1,1]>: vector<3xi32>, nowait } : ( i1, si32, si32 ) -> ()
 
     // CHECK: omp.barrier
     omp.barrier
+
+    return
+}
+
+// CHECK-LABEL: omp_target_pretty
+func @omp_target_pretty(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
+    // CHECK: omp.target if({{.*}}) device({{.*}})
+    omp.target if(%if_cond : i1) device(%device : si32) {
+      omp.terminator
+    }
+
+    // CHECK: omp.target if({{.*}}) device({{.*}}) nowait
+    omp.target if(%if_cond : i1) device(%device : si32) thread_limit(%num_threads : si32) nowait {
+      omp.terminator
+    }
 
     return
 }

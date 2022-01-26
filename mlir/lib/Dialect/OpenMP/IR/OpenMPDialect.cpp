@@ -198,6 +198,24 @@ static void printParallelOp(OpAsmPrinter &p, ParallelOp op) {
   p.printRegion(op.getRegion());
 }
 
+static void printTargetOp(OpAsmPrinter &p, TargetOp op) {
+  p << " ";
+  if (auto ifCond = op.if_expr())
+    p << "if(" << ifCond << " : " << ifCond.getType() << ") ";
+
+  if (auto device = op.device())
+    p << "device(" << device << " : " << device.getType() << ") ";
+
+  if (auto threads = op.thread_limit())
+    p << "thread_limit(" << threads << " : " << threads.getType() << ") ";
+
+  if (op.nowait()) {
+    p << "nowait ";
+  }
+
+  p.printRegion(op.getRegion());
+}
+
 //===----------------------------------------------------------------------===//
 // Parser and printer for Linear Clause
 //===----------------------------------------------------------------------===//
@@ -523,6 +541,8 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 enum ClauseType {
   ifClause,
   numThreadsClause,
+  deviceClause,
+  threadLimitClause,
   privateClause,
   firstprivateClause,
   lastprivateClause,
@@ -611,6 +631,8 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
   // Containers for storing operands, types and attributes for various clauses
   std::pair<OpAsmParser::OperandType, Type> ifCond;
   std::pair<OpAsmParser::OperandType, Type> numThreads;
+  std::pair<OpAsmParser::OperandType, Type> device;
+  std::pair<OpAsmParser::OperandType, Type> threadLimit;
 
   SmallVector<OpAsmParser::OperandType> privates, firstprivates, lastprivates,
       shareds, copyins;
@@ -681,6 +703,18 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
           parser.parseColonType(numThreads.second) || parser.parseRParen())
         return failure();
       clauseSegments[pos[numThreadsClause]] = 1;
+    } else if (clauseKeyword == "device") {
+      if (checkAllowed(deviceClause) || parser.parseLParen() ||
+          parser.parseOperand(device.first) ||
+          parser.parseColonType(device.second) || parser.parseRParen())
+        return failure();
+      clauseSegments[pos[deviceClause]] = 1;
+    } else if (clauseKeyword == "thread_limit") {
+      if (checkAllowed(threadLimitClause) || parser.parseLParen() ||
+          parser.parseOperand(threadLimit.first) ||
+          parser.parseColonType(threadLimit.second) || parser.parseRParen())
+        return failure();
+      clauseSegments[pos[threadLimitClause]] = 1;
     } else if (clauseKeyword == "private") {
       if (checkAllowed(privateClause) ||
           parseOperandAndTypeList(parser, privates, privateTypes))
@@ -812,6 +846,18 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
                                    result.operands)))
     return failure();
 
+  // Add device parameter.
+  if (done[deviceClause] && clauseSegments[pos[deviceClause]] &&
+      failed(
+          parser.resolveOperand(device.first, device.second, result.operands)))
+    return failure();
+
+  // Add thread_limit parameter.
+  if (done[threadLimitClause] && clauseSegments[pos[threadLimitClause]] &&
+      failed(parser.resolveOperand(threadLimit.first, threadLimit.second,
+                                   result.operands)))
+    return failure();
+
   // Add private parameters.
   if (done[privateClause] && clauseSegments[pos[privateClause]] &&
       failed(parser.resolveOperands(privates, privateTypes,
@@ -939,6 +985,33 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
 
   result.addAttribute("operand_segment_sizes",
                       parser.getBuilder().getI32VectorAttr(segments));
+
+  Region *body = result.addRegion();
+  SmallVector<OpAsmParser::OperandType> regionArgs;
+  SmallVector<Type> regionArgTypes;
+  if (parser.parseRegion(*body, regionArgs, regionArgTypes))
+    return failure();
+  return success();
+}
+
+/// Parses a target operation.
+///
+/// operation ::= `omp.target` clause-list
+/// clause-list ::= clause | clause clause-list
+/// clause ::= if | device | thread_limit | nowait
+///
+static ParseResult parseTargetOp(OpAsmParser &parser, OperationState &result) {
+  SmallVector<ClauseType> clauses = {ifClause, deviceClause, threadLimitClause,
+                                     nowaitClause};
+
+  SmallVector<int> segments;
+
+  if (failed(parseClauses(parser, result, clauses, segments)))
+    return failure();
+
+  result.addAttribute(
+      TargetOp::AttrSizedOperandSegments::getOperandSegmentSizeAttr(),
+      parser.getBuilder().getI32VectorAttr(segments));
 
   Region *body = result.addRegion();
   SmallVector<OpAsmParser::OperandType> regionArgs;

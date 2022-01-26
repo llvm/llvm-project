@@ -418,6 +418,9 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
                        UnitAttr:$nowait);
 
   let regions = (region AnyRegion:$region);
+
+  let parser = [{ return parseTargetOp(parser, result); }];
+  let printer = [{ return printTargetOp(p, *this); }];
 }
 
 
