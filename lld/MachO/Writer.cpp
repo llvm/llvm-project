@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
-#include "CallGraphSort.h"
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -15,6 +14,7 @@
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
