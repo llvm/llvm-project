@@ -46,6 +46,10 @@ declare_args() {
 
   # Iterate unordered llvm containers in reverse.
   llvm_enable_reverse_iteration = false
+
+  # glibc is at least 2.33 which has mallinfo2.
+  # TODO: remove this once nobody using the gn build is building against an old glibc.
+  llvm_have_mallinfo2 = false
 }
 
 write_cmake_config("abi-breaking") {
@@ -142,7 +146,6 @@ write_cmake_config("config") {
       "HAVE_LINK_H=1",
       "HAVE_LSEEK64=1",
       "HAVE_MALLINFO=1",
-      "HAVE_MALLINFO2=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
   } else {
@@ -151,7 +154,6 @@ write_cmake_config("config") {
       "HAVE_LINK_H=",
       "HAVE_LSEEK64=",
       "HAVE_MALLINFO=",
-      "HAVE_MALLINFO2=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
   }
@@ -321,6 +323,12 @@ write_cmake_config("config") {
     values += [ "LLVM_ENABLE_LIBXML2=1" ]
   } else {
     values += [ "LLVM_ENABLE_LIBXML2=" ]
+  }
+
+  if (llvm_have_mallinfo2) {
+    values += [ "HAVE_MALLINFO2=1" ]
+  } else {
+    values += [ "HAVE_MALLINFO2=" ]
   }
 }
 
