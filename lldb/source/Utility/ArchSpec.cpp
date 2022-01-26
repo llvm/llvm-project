@@ -254,12 +254,12 @@ struct ArchDefinition {
 };
 
 void ArchSpec::ListSupportedArchNames(StringList &list) {
-  for (uint32_t i = 0; i < llvm::size(g_core_definitions); ++i)
+  for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
     list.AppendString(g_core_definitions[i].name);
 }
 
 void ArchSpec::AutoComplete(CompletionRequest &request) {
-  for (uint32_t i = 0; i < llvm::size(g_core_definitions); ++i)
+  for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
     request.TryCompleteCurrentArg(g_core_definitions[i].name);
 }
 
@@ -340,7 +340,7 @@ static const ArchDefinitionEntry g_macho_arch_entries[] = {
 // clang-format on
 
 static const ArchDefinition g_macho_arch_def = {
-    eArchTypeMachO, llvm::size(g_macho_arch_entries),
+    eArchTypeMachO, llvm::array_lengthof(g_macho_arch_entries),
     g_macho_arch_entries, "mach-o"};
 
 //===----------------------------------------------------------------------===//
@@ -409,7 +409,7 @@ static const ArchDefinitionEntry g_elf_arch_entries[] = {
 
 static const ArchDefinition g_elf_arch_def = {
     eArchTypeELF,
-    llvm::size(g_elf_arch_entries),
+    llvm::array_lengthof(g_elf_arch_entries),
     g_elf_arch_entries,
     "elf",
 };
@@ -435,7 +435,7 @@ static const ArchDefinitionEntry g_coff_arch_entries[] = {
 
 static const ArchDefinition g_coff_arch_def = {
     eArchTypeCOFF,
-    llvm::size(g_coff_arch_entries),
+    llvm::array_lengthof(g_coff_arch_entries),
     g_coff_arch_entries,
     "pe-coff",
 };
@@ -446,7 +446,7 @@ static const ArchDefinition *g_arch_definitions[] = {
     &g_macho_arch_def, &g_elf_arch_def, &g_coff_arch_def};
 
 static const size_t k_num_arch_definitions =
-    llvm::size(g_arch_definitions);
+    llvm::array_lengthof(g_arch_definitions);
 
 //===----------------------------------------------------------------------===//
 // Static helper functions.
@@ -463,7 +463,7 @@ static const ArchDefinition *FindArchDefinition(ArchitectureType arch_type) {
 
 // Get an architecture definition by name.
 static const CoreDefinition *FindCoreDefinition(llvm::StringRef name) {
-  for (unsigned int i = 0; i < llvm::size(g_core_definitions); ++i) {
+  for (unsigned int i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
     if (name.equals_insensitive(g_core_definitions[i].name))
       return &g_core_definitions[i];
   }
@@ -471,7 +471,7 @@ static const CoreDefinition *FindCoreDefinition(llvm::StringRef name) {
 }
 
 static inline const CoreDefinition *FindCoreDefinition(ArchSpec::Core core) {
-  if (core < llvm::size(g_core_definitions))
+  if (core < llvm::array_lengthof(g_core_definitions))
     return &g_core_definitions[core];
   return nullptr;
 }

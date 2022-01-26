@@ -310,7 +310,7 @@ static const uint16_t FMAOpIdxInfo[][6] = {
 // Check if an opcode is a FMA instruction. If it is, return the index in array
 // FMAOpIdxInfo. Otherwise, return -1.
 int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
-  for (unsigned I = 0; I < size(FMAOpIdxInfo); I++)
+  for (unsigned I = 0; I < array_lengthof(FMAOpIdxInfo); I++)
     if (FMAOpIdxInfo[I][InfoArrayIdxFMAInst] == Opcode)
       return I;
   return -1;
@@ -2331,7 +2331,7 @@ bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
 
   bool Found = false;
   for (const MachineOperand &MO : MI.operands()) {
-    for (unsigned c = 0; c < size(RCs) && !Found; ++c) {
+    for (unsigned c = 0; c < array_lengthof(RCs) && !Found; ++c) {
       const TargetRegisterClass *RC = RCs[c];
       if (MO.isReg()) {
         if (MO.isDef() && RC->contains(MO.getReg())) {

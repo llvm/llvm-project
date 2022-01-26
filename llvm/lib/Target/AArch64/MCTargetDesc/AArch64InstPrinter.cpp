@@ -706,7 +706,7 @@ static const LdStNInstrDesc LdStNInstInfo[] = {
 
 static const LdStNInstrDesc *getLdStNInstrDesc(unsigned Opcode) {
   unsigned Idx;
-  for (Idx = 0; Idx != size(LdStNInstInfo); ++Idx)
+  for (Idx = 0; Idx != array_lengthof(LdStNInstInfo); ++Idx)
     if (LdStNInstInfo[Idx].Opcode == Opcode)
       return &LdStNInstInfo[Idx];
 

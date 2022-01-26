@@ -97,7 +97,7 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_SecRel_8", 0, 64, 0},
   };
 
-  assert((size_t)Kind <= size(Builtins) && "Unknown fixup kind");
+  assert((size_t)Kind <= array_lengthof(Builtins) && "Unknown fixup kind");
   return Builtins[Kind];
 }
 

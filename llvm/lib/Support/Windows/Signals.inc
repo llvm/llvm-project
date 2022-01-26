@@ -242,7 +242,7 @@ static bool printStackTraceWithLLVMSymbolizer(llvm::raw_ostream &OS,
     if (StackFrame.AddrFrame.Offset == 0)
       break;
     StackTrace[Depth++] = (void *)(uintptr_t)StackFrame.AddrPC.Offset;
-    if (Depth >= size(StackTrace))
+    if (Depth >= array_lengthof(StackTrace))
       break;
   }
 

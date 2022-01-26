@@ -1175,7 +1175,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
   O.indent(2) << "  makeArrayRef(OpToPatterns),\n";
   O.indent(2) << "  makeArrayRef(Patterns),\n";
   O.indent(2) << "  makeArrayRef(Conds),\n";
-  O.indent(2) << "  StringRef(AsmStrings, size(AsmStrings)),\n";
+  O.indent(2) << "  StringRef(AsmStrings, array_lengthof(AsmStrings)),\n";
   if (MCOpPredicates.empty())
     O.indent(2) << "  nullptr,\n";
   else

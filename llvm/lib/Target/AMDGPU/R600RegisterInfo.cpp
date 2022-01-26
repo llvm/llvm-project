@@ -29,7 +29,7 @@ unsigned R600RegisterInfo::getSubRegFromChannel(unsigned Channel) {
     R600::sub12, R600::sub13, R600::sub14, R600::sub15
   };
 
-  assert(Channel < size(SubRegFromChannelTable));
+  assert(Channel < array_lengthof(SubRegFromChannelTable));
   return SubRegFromChannelTable[Channel];
 }
 

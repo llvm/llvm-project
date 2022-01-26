@@ -168,7 +168,7 @@ void CompositeType::getCapabilities(
         auto vecSize = getNumElements();
         if (vecSize == 8 || vecSize == 16) {
           static const Capability caps[] = {Capability::Vector16};
-          ArrayRef<Capability> ref(caps, llvm::size(caps));
+          ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
           capabilities.push_back(ref);
         }
         return type.getElementType().cast<ScalarType>().getCapabilities(
@@ -242,7 +242,7 @@ void CooperativeMatrixNVType::getExtensions(
     Optional<StorageClass> storage) {
   getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
   static const Extension exts[] = {Extension::SPV_NV_cooperative_matrix};
-  ArrayRef<Extension> ref(exts, llvm::size(exts));
+  ArrayRef<Extension> ref(exts, llvm::array_lengthof(exts));
   extensions.push_back(ref);
 }
 
@@ -251,7 +251,7 @@ void CooperativeMatrixNVType::getCapabilities(
     Optional<StorageClass> storage) {
   getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
   static const Capability caps[] = {Capability::CooperativeMatrixNV};
-  ArrayRef<Capability> ref(caps, llvm::size(caps));
+  ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
   capabilities.push_back(ref);
 }
 
@@ -468,7 +468,7 @@ void RuntimeArrayType::getCapabilities(
     Optional<StorageClass> storage) {
   {
     static const Capability caps[] = {Capability::Shader};
-    ArrayRef<Capability> ref(caps, llvm::size(caps));
+    ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
     capabilities.push_back(ref);
   }
   getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
@@ -517,7 +517,7 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
   case StorageClass::Uniform:
     if (getIntOrFloatBitWidth() == 8) {
       static const Extension exts[] = {Extension::SPV_KHR_8bit_storage};
-      ArrayRef<Extension> ref(exts, llvm::size(exts));
+      ArrayRef<Extension> ref(exts, llvm::array_lengthof(exts));
       extensions.push_back(ref);
     }
     LLVM_FALLTHROUGH;
@@ -525,7 +525,7 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
   case StorageClass::Output:
     if (getIntOrFloatBitWidth() == 16) {
       static const Extension exts[] = {Extension::SPV_KHR_16bit_storage};
-      ArrayRef<Extension> ref(exts, llvm::size(exts));
+      ArrayRef<Extension> ref(exts, llvm::array_lengthof(exts));
       extensions.push_back(ref);
     }
     break;
@@ -547,11 +547,11 @@ void ScalarType::getCapabilities(
   case StorageClass::storage: {                                                \
     if (bitwidth == 8) {                                                       \
       static const Capability caps[] = {Capability::cap8};                     \
-      ArrayRef<Capability> ref(caps, llvm::size(caps));              \
+      ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));              \
       capabilities.push_back(ref);                                             \
     } else if (bitwidth == 16) {                                               \
       static const Capability caps[] = {Capability::cap16};                    \
-      ArrayRef<Capability> ref(caps, llvm::size(caps));              \
+      ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));              \
       capabilities.push_back(ref);                                             \
     }                                                                          \
     /* No requirements for other bitwidths */                                  \
@@ -571,7 +571,7 @@ void ScalarType::getCapabilities(
     case StorageClass::Output: {
       if (bitwidth == 16) {
         static const Capability caps[] = {Capability::StorageInputOutput16};
-        ArrayRef<Capability> ref(caps, llvm::size(caps));
+        ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
         capabilities.push_back(ref);
       }
       return;
@@ -588,7 +588,7 @@ void ScalarType::getCapabilities(
 #define WIDTH_CASE(type, width)                                                \
   case width: {                                                                \
     static const Capability caps[] = {Capability::type##width};                \
-    ArrayRef<Capability> ref(caps, llvm::size(caps));                \
+    ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));                \
     capabilities.push_back(ref);                                               \
   } break
 
@@ -1147,7 +1147,7 @@ void MatrixType::getCapabilities(
     Optional<StorageClass> storage) {
   {
     static const Capability caps[] = {Capability::Matrix};
-    ArrayRef<Capability> ref(caps, llvm::size(caps));
+    ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
     capabilities.push_back(ref);
   }
   // Add any capabilities associated with the underlying vectors (i.e., columns)

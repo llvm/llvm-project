@@ -170,7 +170,7 @@ static std::vector<std::string> ComputeLibsForComponents(
 
   // Build a map of component names to information.
   StringMap<AvailableComponent *> ComponentMap;
-  for (unsigned i = 0; i != size(AvailableComponents); ++i) {
+  for (unsigned i = 0; i != array_lengthof(AvailableComponents); ++i) {
     AvailableComponent *AC = &AvailableComponents[i];
     ComponentMap[AC->Name] = AC;
   }
@@ -540,7 +540,7 @@ int main(int argc, char **argv) {
         /// built, print LLVM_DYLIB_COMPONENTS instead of everything
         /// in the manifest.
         std::vector<std::string> Components;
-        for (unsigned j = 0; j != size(AvailableComponents); ++j) {
+        for (unsigned j = 0; j != array_lengthof(AvailableComponents); ++j) {
           // Only include non-installed components when in a development tree.
           if (!AvailableComponents[j].IsInstalled && !IsInDevelopmentTree)
             continue;

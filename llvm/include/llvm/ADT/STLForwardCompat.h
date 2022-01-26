@@ -63,16 +63,6 @@ struct in_place_index_t // NOLINT(readability-identifier-naming)
   explicit in_place_index_t() = default;
 };
 
-template <class C>
-constexpr auto size(const C& c) -> decltype(c.size()) { // NOLINT(readability-identifier-naming)
-  return c.size();
-}
-
-template <class T, std::size_t N>
-constexpr std::size_t size(const T (&array)[N]) noexcept { // NOLINT(readability-identifier-naming)
-  return N;
-}
-
 //===----------------------------------------------------------------------===//
 //     Features from C++20
 //===----------------------------------------------------------------------===//

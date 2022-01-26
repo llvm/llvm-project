@@ -5772,11 +5772,11 @@ private:
                                   /*SupportsMapper=*/true, &MapperQualifierLoc,
                                   &MapperIdInfo),
         MapType(MapType), MapTypeIsImplicit(MapTypeIsImplicit), MapLoc(MapLoc) {
-    assert(llvm::size(MapTypeModifiers) == MapModifiers.size() &&
+    assert(llvm::array_lengthof(MapTypeModifiers) == MapModifiers.size() &&
            "Unexpected number of map type modifiers.");
     llvm::copy(MapModifiers, std::begin(MapTypeModifiers));
 
-    assert(llvm::size(MapTypeModifiersLoc) ==
+    assert(llvm::array_lengthof(MapTypeModifiersLoc) ==
                MapModifiersLoc.size() &&
            "Unexpected number of map type modifier locations.");
     llvm::copy(MapModifiersLoc, std::begin(MapTypeModifiersLoc));
@@ -6694,11 +6694,11 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
       : OMPMappableExprListClause(llvm::omp::OMPC_to, Locs, Sizes,
                                   /*SupportsMapper=*/true, &MapperQualifierLoc,
                                   &MapperIdInfo) {
-    assert(llvm::size(MotionModifiers) == TheMotionModifiers.size() &&
+    assert(llvm::array_lengthof(MotionModifiers) == TheMotionModifiers.size() &&
            "Unexpected number of motion modifiers.");
     llvm::copy(TheMotionModifiers, std::begin(MotionModifiers));
 
-    assert(llvm::size(MotionModifiersLoc) ==
+    assert(llvm::array_lengthof(MotionModifiersLoc) ==
                TheMotionModifiersLoc.size() &&
            "Unexpected number of motion modifier locations.");
     llvm::copy(TheMotionModifiersLoc, std::begin(MotionModifiersLoc));
@@ -6896,11 +6896,11 @@ class OMPFromClause final
       : OMPMappableExprListClause(llvm::omp::OMPC_from, Locs, Sizes,
                                   /*SupportsMapper=*/true, &MapperQualifierLoc,
                                   &MapperIdInfo) {
-    assert(llvm::size(MotionModifiers) == TheMotionModifiers.size() &&
+    assert(llvm::array_lengthof(MotionModifiers) == TheMotionModifiers.size() &&
            "Unexpected number of motion modifiers.");
     llvm::copy(TheMotionModifiers, std::begin(MotionModifiers));
 
-    assert(llvm::size(MotionModifiersLoc) ==
+    assert(llvm::array_lengthof(MotionModifiersLoc) ==
                TheMotionModifiersLoc.size() &&
            "Unexpected number of motion modifier locations.");
     llvm::copy(TheMotionModifiersLoc, std::begin(MotionModifiersLoc));
