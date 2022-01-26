@@ -26,16 +26,27 @@ class M88kGenRegisterBankInfo : public RegisterBankInfo {
 protected:
   enum PartialMappingIdx {
     PMI_None = -1,
-    PMI_FPR32 = 1,
-    PMI_FPR64,
-    PMI_FPR80,
-    PMI_GPR32,
-    PMI_Min = PMI_FPR32,
+    PMI_XR32 = 1,
+    PMI_XR64,
+    PMI_XR80,
+    PMI_GR32,
+    PMI_GR64,
+    PMI_Min = PMI_XR32,
   };
 
   static RegisterBankInfo::PartialMapping PartMappings[];
   static RegisterBankInfo::ValueMapping ValMappings[];
   static PartialMappingIdx BankIDToCopyMapIdx[];
+
+  enum ValueMappingIdx {
+    InvalidIdx = 0,
+    First3OpsIdx = 1,
+    Last3OpsIdx = 13,
+    DistanceBetweenRegBanks = 3,
+    FirstCrossRegCpyIdx = 16,
+    LastCrossRegCpyIdx = 22,
+    DistanceBetweenCrossRegCpy = 2,
+  };
 
   /// Get the pointer to the ValueMapping representing the RegisterBank
   /// at \p RBIdx.
@@ -73,6 +84,8 @@ public:
 
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;
+
+  void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 };
 } // end namespace llvm
 #endif

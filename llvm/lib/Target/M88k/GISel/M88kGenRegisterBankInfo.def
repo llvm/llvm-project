@@ -13,13 +13,16 @@
 namespace llvm {
 RegisterBankInfo::PartialMapping M88kGenRegisterBankInfo::PartMappings[]{
     /* StartIdx, Length, RegBank */
-    // 0: FPR 32-bit value.
-    {0, 32, M88k::GRRegBank},
-    // 1: FPR 64-bit value.
-    {0, 32, M88k::GRRegBank},
-    // 2: FPR 80-bit value.
+    // 0: XR 32-bit value.
     {0, 32, M88k::XRRegBank},
+    // 1: XR 64-bit value.
+    {0, 64, M88k::XRRegBank},
+    // 2: XR 80-bit value.
+    {0, 80, M88k::XRRegBank},
     // 3: GPR 32-bit value.
+    {0, 32, M88k::GRRegBank},
+    // 4: 2x GPR 32-bit value.
+    {32, 32, M88k::GRRegBank},
     {0, 32, M88k::GRRegBank},
 };
 
@@ -30,65 +33,92 @@ RegisterBankInfo::ValueMapping M88kGenRegisterBankInfo::ValMappings[]{
     {nullptr, 0},
     // 3-operands instructions (all binary operations should end up with one of
     // those mapping).
-    // 1: FPR 32-bit value.
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR32 - PMI_Min], 1},
-    // 4: FPR 64-bit value.
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
-    // 7: FPR 80-bit value.
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR80 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR80 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR80 - PMI_Min], 1},
-    // 10: GPR 32-bit value.
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    // 13: GPR -> XPR copy.
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR80 - PMI_Min], 1},
-    // 15: XPR -> GPR copy.
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_FPR80 - PMI_Min], 1},
-    {&M88kGenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    // 1: XR 32-bit value.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR32 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR32 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR32 - PMI_Min], 1},
+    // 4: XR 64-bit value.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR64 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR64 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR64 - PMI_Min], 1},
+    // 7: XR 80-bit value.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR80 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR80 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR80 - PMI_Min], 1},
+    // 10: GR 32-bit value.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
+    // 13: 2x GR 32-bit value. <-- This must match Last3OpsIdx.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 2},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 2},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 2},
+    // 16: GR 32-bit <- XR 32-bit copy. <-- This must match FirstCrossRegCpyIdx.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR32 - PMI_Min], 1},
+    // 18: XR 32-bit <- GR 32-bit copy.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR32 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
+    // 20: 2x GR 32-bit <- XR 64-bit copy.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 2},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR64 - PMI_Min], 1},
+    // 22: XR 64-bit <- 2x GR 32-bit copy. <-- This must match
+    // LastCrossRegCpyIdx.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_XR64 - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 2},
 };
 
-// TODO Too simple!
 const RegisterBankInfo::ValueMapping *
 M88kGenRegisterBankInfo::getValueMapping(PartialMappingIdx RBIdx) {
   assert(RBIdx != PartialMappingIdx::PMI_None && "No mapping needed for that");
 
-  unsigned ValMappingIdx = RBIdx - PMI_Min;
+  unsigned ValMappingIdx =
+      First3OpsIdx + DistanceBetweenRegBanks * (RBIdx - PMI_Min);
+  assert(ValMappingIdx >= First3OpsIdx && ValMappingIdx <= Last3OpsIdx &&
+         "Mapping out of bound");
 
-  return &ValMappings[1 + 3*ValMappingIdx];
+  return &ValMappings[ValMappingIdx];
 }
 
-M88kGenRegisterBankInfo::PartialMappingIdx
-    M88kGenRegisterBankInfo::BankIDToCopyMapIdx[]{
-        PMI_GPR32, // GRRegBank
-        PMI_FPR80, // XRRegBank
-    };
-
-
-// TODO Too simple!
 const RegisterBankInfo::ValueMapping *
-M88kGenRegisterBankInfo::getCopyMapping(unsigned DstBankID,
-                                           unsigned SrcBankID, unsigned Size) {
+M88kGenRegisterBankInfo::getCopyMapping(unsigned DstBankID, unsigned SrcBankID,
+                                        unsigned Size) {
   assert(DstBankID < M88k::NumRegisterBanks && "Invalid bank ID");
   assert(SrcBankID < M88k::NumRegisterBanks && "Invalid bank ID");
-  PartialMappingIdx DstRBIdx = BankIDToCopyMapIdx[DstBankID];
-  PartialMappingIdx SrcRBIdx = BankIDToCopyMapIdx[SrcBankID];
-  assert(DstRBIdx != PMI_None && "No such mapping");
-  assert(SrcRBIdx != PMI_None && "No such mapping");
 
-  if (DstRBIdx == SrcRBIdx)
-    return getValueMapping(DstRBIdx);
+  if (DstBankID == SrcBankID) {
+    if (DstBankID == M88k::GRRegBankID) {
+      switch (Size) {
+      case 32:
+        return getValueMapping(PMI_GR32);
+      case 64:
+        return getValueMapping(PMI_GR64);
+      default:
+        llvm_unreachable("GR cannot handle that size");
+      }
+    } else {
+      switch (Size) {
+      case 32:
+        return getValueMapping(PMI_XR32);
+      case 64:
+        return getValueMapping(PMI_XR64);
+      case 80:
+        return getValueMapping(PMI_XR64);
+      default:
+        llvm_unreachable("GR cannot handle that size");
+      }
+    }
+  }
 
-  assert(Size <= 64 && "GPR cannot handle that size");
-  if (DstRBIdx == M88k::GRRegBankID)
-    return &ValMappings[13];
-  return &ValMappings[15];
+  assert(Size == 32 || Size == 64 && "GR cannot handle that size");
+  unsigned ValMappingIdx =
+      FirstCrossRegCpyIdx +
+      (DstBankID == M88k::XRRegBankID) * DistanceBetweenCrossRegCpy +
+      (Size == 64) * 2 * DistanceBetweenCrossRegCpy;
+  assert(ValMappingIdx >= FirstCrossRegCpyIdx &&
+         ValMappingIdx <= LastCrossRegCpyIdx && "Mapping out of bound");
+
+  return &ValMappings[ValMappingIdx];
 }
 
-} // End llvm namespace.
+} // namespace llvm
