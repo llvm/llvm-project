@@ -1433,13 +1433,13 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
 /// Attempt to reconstruct the ValueObject for the address contained in a
 /// given register plus an offset.
 ///
-/// \params [in] frame
+/// \param [in] frame
 ///   The current stack frame.
 ///
-/// \params [in] reg
+/// \param [in] reg
 ///   The register.
 ///
-/// \params [in] offset
+/// \param [in] offset
 ///   The offset from the register.
 ///
 /// \param [in] disassembler
