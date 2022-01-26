@@ -477,7 +477,7 @@ static const char *const FixedInstrs[] = {
     nullptr};
 
 unsigned CodeGenTarget::getNumFixedInstructions() {
-  return array_lengthof(FixedInstrs) - 1;
+  return size(FixedInstrs) - 1;
 }
 
 /// Return all of the instructions defined by the target, ordered by

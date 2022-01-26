@@ -1033,7 +1033,7 @@ static const MCPhysReg RegList16[] = {
     AVR::R16R15, AVR::R15R14, AVR::R14R13, AVR::R13R12, AVR::R12R11,
     AVR::R11R10, AVR::R10R9,  AVR::R9R8};
 
-static_assert(array_lengthof(RegList8) == array_lengthof(RegList16),
+static_assert(size(RegList8) == size(RegList16),
               "8-bit and 16-bit register arrays must be of equal length");
 
 /// Analyze incoming and outgoing function arguments. We need custom C++ code
@@ -1074,7 +1074,7 @@ analyzeArguments(TargetLowering::CallLoweringInfo *CLI, const Function *F,
     unsigned RegIdx = RegLastIdx + TotalBytes;
     RegLastIdx = RegIdx;
     // If there are not enough registers, use the stack
-    if (RegIdx >= array_lengthof(RegList8)) {
+    if (RegIdx >= size(RegList8)) {
       UseStack = true;
     }
     for (; i != j; ++i) {

@@ -53,7 +53,7 @@ Error RISCVAttributeParser::stackAlign(unsigned tag) {
 
 Error RISCVAttributeParser::handler(uint64_t tag, bool &handled) {
   handled = false;
-  for (unsigned AHI = 0, AHE = array_lengthof(displayRoutines); AHI != AHE;
+  for (unsigned AHI = 0, AHE = size(displayRoutines); AHI != AHE;
        ++AHI) {
     if (uint64_t(displayRoutines[AHI].attribute) == tag) {
       if (Error e = (this->*displayRoutines[AHI].routine)(tag))

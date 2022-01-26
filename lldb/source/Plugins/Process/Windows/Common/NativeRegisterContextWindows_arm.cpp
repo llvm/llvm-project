@@ -69,9 +69,9 @@ static_assert(((sizeof g_fpr_regnums_arm / sizeof g_fpr_regnums_arm[0]) - 1) ==
 
 static const RegisterSet g_reg_sets_arm[] = {
     {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_regnums_arm) - 1, g_gpr_regnums_arm},
+     llvm::size(g_gpr_regnums_arm) - 1, g_gpr_regnums_arm},
     {"Floating Point Registers", "fpr",
-     llvm::array_lengthof(g_fpr_regnums_arm) - 1, g_fpr_regnums_arm},
+     llvm::size(g_fpr_regnums_arm) - 1, g_fpr_regnums_arm},
 };
 
 enum { k_num_register_sets = 2 };

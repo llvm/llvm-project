@@ -2288,7 +2288,7 @@ void MachOObjectFile::getRelocationTypeName(
         "ARM64_RELOC_ADDEND"
       };
 
-      if (RType >= array_lengthof(Table))
+      if (RType >= size(Table))
         res = "Unknown";
       else
         res = Table[RType];

@@ -8786,7 +8786,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   }
 
   // FPR16, FPR32, and FPR64 alias each other.
-  if (State.getFirstUnallocated(ArgFPR32s) == array_lengthof(ArgFPR32s)) {
+  if (State.getFirstUnallocated(ArgFPR32s) == size(ArgFPR32s)) {
     UseGPRForF16_F32 = true;
     UseGPRForF64 = true;
   }
@@ -8815,7 +8815,7 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
       DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
-    if (RegIdx != array_lengthof(ArgGPRs) && RegIdx % 2 == 1)
+    if (RegIdx != size(ArgGPRs) && RegIdx % 2 == 1)
       State.AllocateReg(ArgGPRs);
   }
 

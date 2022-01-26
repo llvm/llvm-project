@@ -49,9 +49,9 @@ static const uint32_t g_fpr_regnums_x86_64[] = {
 
 static const RegisterSet g_reg_sets_x86_64[] = {
     {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_regnums_x86_64) - 1, g_gpr_regnums_x86_64},
+     llvm::size(g_gpr_regnums_x86_64) - 1, g_gpr_regnums_x86_64},
     {"Floating Point Registers", "fpr",
-     llvm::array_lengthof(g_fpr_regnums_x86_64) - 1, g_fpr_regnums_x86_64}};
+     llvm::size(g_fpr_regnums_x86_64) - 1, g_fpr_regnums_x86_64}};
 
 enum { k_num_register_sets = 2 };
 

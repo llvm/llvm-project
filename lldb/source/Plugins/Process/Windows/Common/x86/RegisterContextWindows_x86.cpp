@@ -118,7 +118,7 @@ RegisterInfo g_register_infos[] = {
      nullptr,
     },
 };
-static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
+static size_t k_num_register_infos = llvm::size(g_register_infos);
 
 // Array of lldb register numbers used to define the set of all General Purpose
 // Registers
@@ -130,7 +130,7 @@ uint32_t g_gpr_reg_indices[] = {eRegisterIndexEax, eRegisterIndexEbx,
 
 RegisterSet g_register_sets[] = {
     {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_reg_indices), g_gpr_reg_indices},
+     llvm::size(g_gpr_reg_indices), g_gpr_reg_indices},
 };
 }
 
@@ -142,7 +142,7 @@ RegisterContextWindows_x86::RegisterContextWindows_x86(
 RegisterContextWindows_x86::~RegisterContextWindows_x86() {}
 
 size_t RegisterContextWindows_x86::GetRegisterCount() {
-  return llvm::array_lengthof(g_register_infos);
+  return llvm::size(g_register_infos);
 }
 
 const RegisterInfo *
@@ -153,7 +153,7 @@ RegisterContextWindows_x86::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextWindows_x86::GetRegisterSetCount() {
-  return llvm::array_lengthof(g_register_sets);
+  return llvm::size(g_register_sets);
 }
 
 const RegisterSet *RegisterContextWindows_x86::GetRegisterSet(size_t reg_set) {

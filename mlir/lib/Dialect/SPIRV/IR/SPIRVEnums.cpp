@@ -59,16 +59,16 @@ ArrayRef<spirv::Extension> spirv::getImpliedExtensions(spirv::Version version) {
   case Version::V_1_3: {
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     static const Extension exts[] = {V_1_3_IMPLIED_EXTS};
-    return ArrayRef<spirv::Extension>(exts, llvm::array_lengthof(exts));
+    return ArrayRef<spirv::Extension>(exts, llvm::size(exts));
   }
   case Version::V_1_4: {
     static const Extension exts[] = {V_1_3_IMPLIED_EXTS, V_1_4_IMPLIED_EXTS};
-    return ArrayRef<spirv::Extension>(exts, llvm::array_lengthof(exts));
+    return ArrayRef<spirv::Extension>(exts, llvm::size(exts));
   }
   case Version::V_1_5: {
     static const Extension exts[] = {V_1_3_IMPLIED_EXTS, V_1_4_IMPLIED_EXTS,
                                      V_1_5_IMPLIED_EXTS};
-    return ArrayRef<spirv::Extension>(exts, llvm::array_lengthof(exts));
+    return ArrayRef<spirv::Extension>(exts, llvm::size(exts));
   }
   }
 

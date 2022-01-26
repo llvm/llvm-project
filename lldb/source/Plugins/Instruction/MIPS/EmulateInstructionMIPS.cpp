@@ -954,7 +954,7 @@ EmulateInstructionMIPS::GetOpcodeForInstruction(const char *op_name) {
       {"JALRS_MM", &EmulateInstructionMIPS::Emulate_JALRS, "JALRS rt, rs"},
   };
 
-  static const size_t k_num_mips_opcodes = llvm::array_lengthof(g_opcodes);
+  static const size_t k_num_mips_opcodes = llvm::size(g_opcodes);
 
   for (size_t i = 0; i < k_num_mips_opcodes; ++i) {
     if (!strcasecmp(g_opcodes[i].op_name, op_name))
