@@ -39,17 +39,17 @@ class Vector_Op<string mnemonic, list<OpTrait> traits = []> :
 }
 
 // The "kind" of combining function for contractions and reductions.
-def COMBINING_KIND_ADD : BitEnumAttrCase<"ADD", 0x1, "add">;
-def COMBINING_KIND_MUL : BitEnumAttrCase<"MUL", 0x2, "mul">;
-def COMBINING_KIND_MINUI : BitEnumAttrCase<"MINUI", 0x4, "minui">;
-def COMBINING_KIND_MINSI : BitEnumAttrCase<"MINSI", 0x8, "minsi">;
-def COMBINING_KIND_MINF : BitEnumAttrCase<"MINF", 0x10, "minf">;
-def COMBINING_KIND_MAXUI : BitEnumAttrCase<"MAXUI", 0x20, "maxui">;
-def COMBINING_KIND_MAXSI : BitEnumAttrCase<"MAXSI", 0x40, "maxsi">;
-def COMBINING_KIND_MAXF : BitEnumAttrCase<"MAXF", 0x80, "maxf">;
-def COMBINING_KIND_AND : BitEnumAttrCase<"AND", 0x100, "and">;
-def COMBINING_KIND_OR  : BitEnumAttrCase<"OR", 0x200, "or">;
-def COMBINING_KIND_XOR : BitEnumAttrCase<"XOR", 0x400, "xor">;
+def COMBINING_KIND_ADD : BitEnumAttrCaseBit<"ADD", 0, "add">;
+def COMBINING_KIND_MUL : BitEnumAttrCaseBit<"MUL", 1, "mul">;
+def COMBINING_KIND_MINUI : BitEnumAttrCaseBit<"MINUI", 2, "minui">;
+def COMBINING_KIND_MINSI : BitEnumAttrCaseBit<"MINSI", 3, "minsi">;
+def COMBINING_KIND_MINF : BitEnumAttrCaseBit<"MINF", 4, "minf">;
+def COMBINING_KIND_MAXUI : BitEnumAttrCaseBit<"MAXUI", 5, "maxui">;
+def COMBINING_KIND_MAXSI : BitEnumAttrCaseBit<"MAXSI", 6, "maxsi">;
+def COMBINING_KIND_MAXF : BitEnumAttrCaseBit<"MAXF", 7, "maxf">;
+def COMBINING_KIND_AND : BitEnumAttrCaseBit<"AND", 8, "and">;
+def COMBINING_KIND_OR  : BitEnumAttrCaseBit<"OR", 9, "or">;
+def COMBINING_KIND_XOR : BitEnumAttrCaseBit<"XOR", 10, "xor">;
 
 def CombiningKind : BitEnumAttr<
     "CombiningKind",
