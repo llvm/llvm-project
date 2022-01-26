@@ -456,7 +456,7 @@ public:
     const AutoType *AT = D->getReturnType()->getContainedAutoType();
     if (AT && !AT->getDeducedType().isNull()) {
       DeducedType = AT->getDeducedType();
-    } else if (auto DT = dyn_cast<DecltypeType>(D->getReturnType())) {
+    } else if (auto *DT = dyn_cast<DecltypeType>(D->getReturnType())) {
       // auto in a trailing return type just points to a DecltypeType and
       // getContainedAutoType does not unwrap it.
       if (!DT->getUnderlyingType().isNull())

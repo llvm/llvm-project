@@ -28,43 +28,59 @@ void ScriptedThread::CheckInterpreterAndScriptObject() const {
   lldbassert(GetInterface() && "Invalid Scripted Thread Interface.");
 }
 
-ScriptedThread::ScriptedThread(ScriptedProcess &process, Status &error)
-    : Thread(process, LLDB_INVALID_THREAD_ID), m_scripted_process(process) {
-  if (!process.IsValid()) {
-    error.SetErrorString("Invalid scripted process");
-    return;
-  }
+llvm::Expected<std::shared_ptr<ScriptedThread>>
+ScriptedThread::Create(ScriptedProcess &process,
+                       StructuredData::Generic *script_object) {
+  if (!process.IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Invalid scripted process.");
 
   process.CheckInterpreterAndScriptObject();
 
-  auto scripted_thread_interface = GetInterface();
-  if (!scripted_thread_interface) {
-    error.SetErrorString("Failed to get scripted thread interface.");
-    return;
-  }
+  auto scripted_thread_interface =
+      process.GetInterface().CreateScriptedThreadInterface();
+  if (!scripted_thread_interface)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to create scripted thread interface.");
 
-  llvm::Optional<std::string> class_name =
-      process.GetInterface().GetScriptedThreadPluginName();
-  if (!class_name || class_name->empty()) {
-    error.SetErrorString("Failed to get scripted thread class name.");
-    return;
+  llvm::StringRef thread_class_name;
+  if (!script_object) {
+    llvm::Optional<std::string> class_name =
+        process.GetInterface().GetScriptedThreadPluginName();
+    if (!class_name || class_name->empty())
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Failed to get scripted thread class name.");
+    thread_class_name = *class_name;
   }
 
   ExecutionContext exe_ctx(process);
-
-  StructuredData::GenericSP object_sp =
+  StructuredData::GenericSP owned_script_object_sp =
       scripted_thread_interface->CreatePluginObject(
-          class_name->c_str(), exe_ctx,
-          process.m_scripted_process_info.GetArgsSP());
-  if (!object_sp || !object_sp->IsValid()) {
-    error.SetErrorString("Failed to create valid script object");
-    return;
-  }
+          thread_class_name, exe_ctx,
+          process.m_scripted_process_info.GetArgsSP(), script_object);
 
-  m_script_object_sp = object_sp;
+  if (!owned_script_object_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to create script object.");
+  if (!owned_script_object_sp->IsValid())
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Created script object is invalid.");
 
-  SetID(scripted_thread_interface->GetThreadID());
+  lldb::tid_t tid = scripted_thread_interface->GetThreadID();
+
+  return std::make_shared<ScriptedThread>(process, scripted_thread_interface,
+                                          tid, owned_script_object_sp);
 }
+
+ScriptedThread::ScriptedThread(ScriptedProcess &process,
+                               ScriptedThreadInterfaceSP interface_sp,
+                               lldb::tid_t tid,
+                               StructuredData::GenericSP script_object_sp)
+    : Thread(process, tid), m_scripted_process(process),
+      m_scripted_thread_interface_sp(interface_sp),
+      m_script_object_sp(script_object_sp) {}
 
 ScriptedThread::~ScriptedThread() { DestroyThread(); }
 
@@ -137,6 +153,11 @@ bool ScriptedThread::CalculateStopInfo() {
   StructuredData::DictionarySP dict_sp = GetInterface()->GetStopReason();
 
   Status error;
+  if (!dict_sp)
+    return GetInterface()->ErrorWithMessage<bool>(
+        LLVM_PRETTY_FUNCTION, "Failed to get scripted thread stop info.", error,
+        LIBLLDB_LOG_THREAD);
+
   lldb::StopInfoSP stop_info_sp;
   lldb::StopReason stop_reason_type;
 
@@ -150,12 +171,12 @@ bool ScriptedThread::CalculateStopInfo() {
   if (!dict_sp->GetValueForKeyAsDictionary("data", data_dict))
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
-        "Couldn't find value for key 'type' in stop reason dictionary.", error,
+        "Couldn't find value for key 'data' in stop reason dictionary.", error,
         LIBLLDB_LOG_THREAD);
 
   switch (stop_reason_type) {
   case lldb::eStopReasonNone:
-    break;
+    return true;
   case lldb::eStopReasonBreakpoint: {
     lldb::break_id_t break_id;
     data_dict->GetValueForKeyAsInteger("break_id", break_id,
@@ -172,6 +193,13 @@ bool ScriptedThread::CalculateStopInfo() {
     stop_info_sp =
         StopInfo::CreateStopReasonWithSignal(*this, signal, description.data());
   } break;
+  case lldb::eStopReasonException: {
+    llvm::StringRef description;
+    data_dict->GetValueForKeyAsString("desc", description);
+
+    stop_info_sp =
+        StopInfo::CreateStopReasonWithException(*this, description.data());
+  } break;
   default:
     return GetInterface()->ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
@@ -180,6 +208,9 @@ bool ScriptedThread::CalculateStopInfo() {
             .str(),
         error, LIBLLDB_LOG_THREAD);
   }
+
+  if (!stop_info_sp)
+    return false;
 
   SetStopInfo(stop_info_sp);
   return true;
@@ -190,7 +221,7 @@ void ScriptedThread::RefreshStateAfterStop() {
 }
 
 lldb::ScriptedThreadInterfaceSP ScriptedThread::GetInterface() const {
-  return m_scripted_process.GetInterface().GetScriptedThreadInterface();
+  return m_scripted_thread_interface_sp;
 }
 
 std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {

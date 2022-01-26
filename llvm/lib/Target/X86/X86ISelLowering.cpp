@@ -42215,18 +42215,19 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
       EVT MovmskVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
       Movmsk = DAG.getBitcast(MovmskVT, Match);
     } else {
-      // For all_of(setcc(vec,0,eq)) - avoid vXi64 comparisons if we don't have
-      // PCMPEQQ (SSE41+), use PCMPEQD instead.
-      if (BinOp == ISD::AND && !Subtarget.hasSSE41() &&
-          Match.getOpcode() == ISD::SETCC &&
-          ISD::isBuildVectorAllZeros(Match.getOperand(1).getNode()) &&
+      // For all_of(setcc(x,y,eq))
+      // - avoid vXi64 comparisons without PCMPEQQ (SSE41+), use PCMPEQD.
+      // - avoid vXi16 comparisons, use PMOVMSKB(PCMPEQB()).
+      if (BinOp == ISD::AND && Match.getOpcode() == ISD::SETCC &&
           cast<CondCodeSDNode>(Match.getOperand(2))->get() ==
               ISD::CondCode::SETEQ) {
         SDValue Vec = Match.getOperand(0);
-        if (Vec.getValueType().getScalarType() == MVT::i64 &&
-            (2 * NumElts) <= MaxElts) {
+        EVT VecSVT = Vec.getValueType().getScalarType();
+        if ((VecSVT == MVT::i16 && !Subtarget.hasBWI()) ||
+            (VecSVT == MVT::i64 && !Subtarget.hasSSE41())) {
           NumElts *= 2;
-          EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumElts);
+          VecSVT = VecSVT.getHalfSizedIntegerVT(*DAG.getContext());
+          EVT CmpVT = EVT::getVectorVT(*DAG.getContext(), VecSVT, NumElts);
           MatchVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElts);
           Match = DAG.getSetCC(
               DL, MatchVT, DAG.getBitcast(CmpVT, Match.getOperand(0)),
@@ -44457,12 +44458,30 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
 
   // MOVMSK(PCMPEQ(X,0)) == -1 -> PTESTZ(X,X).
   // MOVMSK(PCMPEQ(X,0)) != -1 -> !PTESTZ(X,X).
+  // MOVMSK(PCMPEQ(X,Y)) == -1 -> PTESTZ(SUB(X,Y),SUB(X,Y)).
+  // MOVMSK(PCMPEQ(X,Y)) != -1 -> !PTESTZ(SUB(X,Y),SUB(X,Y)).
   if (IsAllOf && Subtarget.hasSSE41()) {
+    MVT TestVT = VecVT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
     SDValue BC = peekThroughBitcasts(Vec);
-    if (BC.getOpcode() == X86ISD::PCMPEQ &&
-        ISD::isBuildVectorAllZeros(BC.getOperand(1).getNode())) {
-      MVT TestVT = VecVT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
-      SDValue V = DAG.getBitcast(TestVT, BC.getOperand(0));
+    if (BC.getOpcode() == X86ISD::PCMPEQ) {
+      SDValue V = DAG.getNode(ISD::SUB, SDLoc(BC), BC.getValueType(),
+                              BC.getOperand(0), BC.getOperand(1));
+      V = DAG.getBitcast(TestVT, V);
+      return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
+    }
+    // Check for 256-bit split vector cases.
+    if (BC.getOpcode() == ISD::AND &&
+        BC.getOperand(0).getOpcode() == X86ISD::PCMPEQ &&
+        BC.getOperand(1).getOpcode() == X86ISD::PCMPEQ) {
+      SDValue LHS = BC.getOperand(0);
+      SDValue RHS = BC.getOperand(1);
+      LHS = DAG.getNode(ISD::SUB, SDLoc(LHS), LHS.getValueType(),
+                        LHS.getOperand(0), LHS.getOperand(1));
+      RHS = DAG.getNode(ISD::SUB, SDLoc(RHS), RHS.getValueType(),
+                        RHS.getOperand(0), RHS.getOperand(1));
+      LHS = DAG.getBitcast(TestVT, LHS);
+      RHS = DAG.getBitcast(TestVT, RHS);
+      SDValue V = DAG.getNode(ISD::OR, SDLoc(EFLAGS), TestVT, LHS, RHS);
       return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
     }
   }
@@ -44500,7 +44519,14 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
         VecOp1.getConstantOperandAPInt(1) == 8 &&
         (IsAnyOf || (SignExt0 && SignExt1))) {
       SDLoc DL(EFLAGS);
-      SDValue Result = DAG.getBitcast(MVT::v32i8, VecOp0.getOperand(0));
+      SDValue Result = peekThroughBitcasts(VecOp0.getOperand(0));
+      if (IsAllOf && Result.getOpcode() == X86ISD::PCMPEQ) {
+        SDValue V = DAG.getNode(ISD::SUB, DL, Result.getValueType(),
+                                Result.getOperand(0), Result.getOperand(1));
+        V = DAG.getBitcast(MVT::v4i64, V);
+        return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
+      }
+      Result = DAG.getBitcast(MVT::v32i8, Result);
       Result = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, Result);
       unsigned CmpMask = IsAnyOf ? 0 : 0xFFFFFFFF;
       if (!SignExt0 || !SignExt1) {
@@ -48963,7 +48989,7 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
     // originally concatenated from subvectors.
     SmallVector<SDValue> ConcatOps;
     if (VT.getSizeInBits() > 128 || !collectConcatOps(In.getNode(), ConcatOps))
-    return SDValue();
+      return SDValue();
   }
 
   unsigned NumPackedSignBits = std::min<unsigned>(SVT.getSizeInBits(), 16);

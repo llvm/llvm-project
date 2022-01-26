@@ -200,12 +200,13 @@ define amdgpu_kernel void @v_test_add_v2i16_zext_to_v2i32(<2 x i32> addrspace(1)
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_add_v2i16_zext_to_v2i64:
+; GFX9PLUS: v_mov_b32_e32 [[MASK:v[0-9+]]], 0xffff
 ; GFX9PLUS: global_load_dword [[A:v[0-9]+]]
 ; GFX9PLUS: global_load_dword [[B:v[0-9]+]]
 
 ; GFX9PLUS: v_pk_add_u16 [[ADD:v[0-9]+]], [[A]], [[B]]
-; GFX9PLUS-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], 0xffff, [[ADD]]
-; GFX9PLUS-DAG: v_lshrrev_b32_e32 v[[ELT1:[0-9]+]], 16, [[ADD]]
+; GFX9PLUS-DAG: v_and_b32_e32 v[[ELT0:[0-9]+]], [[MASK]], [[ADD]]
+; GFX9PLUS-DAG: v_and_b32_sdwa v{{[0-9]+}}, [[MASK]], v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9PLUS: buffer_store_dwordx4
 
 ; VI-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0{{$}}

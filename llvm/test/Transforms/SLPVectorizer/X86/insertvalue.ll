@@ -275,12 +275,12 @@ define void @julia_load_struct_of_float(%pseudovec* %a, %pseudovec* %b, %pseudov
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[C_STRUCT0:%.*]] = insertvalue [[PSEUDOVEC]] undef, float [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
-; CHECK-NEXT:    [[C_STRUCT1:%.*]] = insertvalue [[PSEUDOVEC]] %c_struct0, float [[TMP6]], 1
+; CHECK-NEXT:    [[C_STRUCT1:%.*]] = insertvalue [[PSEUDOVEC]] [[C_STRUCT0]], float [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP4]], i32 2
-; CHECK-NEXT:    [[C_STRUCT2:%.*]] = insertvalue [[PSEUDOVEC]] %c_struct1, float [[TMP7]], 2
+; CHECK-NEXT:    [[C_STRUCT2:%.*]] = insertvalue [[PSEUDOVEC]] [[C_STRUCT1]], float [[TMP7]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[TMP4]], i32 3
-; CHECK-NEXT:    [[C_STRUCT3:%.*]] = insertvalue [[PSEUDOVEC]] %c_struct2, float [[TMP8]], 3
-; CHECK-NEXT:    store [[PSEUDOVEC]] %c_struct3, %pseudovec* [[C:%.*]], align 4
+; CHECK-NEXT:    [[C_STRUCT3:%.*]] = insertvalue [[PSEUDOVEC]] [[C_STRUCT2]], float [[TMP8]], 3
+; CHECK-NEXT:    store [[PSEUDOVEC]] [[C_STRUCT3]], %pseudovec* [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 top:

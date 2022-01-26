@@ -1542,6 +1542,10 @@ def LLVM_CoroSizeOp : LLVM_IntrOp<"coro.size", [0], [], [], 1> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
+def LLVM_CoroAlignOp : LLVM_IntrOp<"coro.align", [0], [], [], 1> {
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
 def LLVM_CoroSaveOp : LLVM_IntrOp<"coro.save", [], [], [], 1> {
   let arguments = (ins LLVM_i8Ptr:$handle);
   let assemblyFormat = "$handle attr-dict `:` type($res)";

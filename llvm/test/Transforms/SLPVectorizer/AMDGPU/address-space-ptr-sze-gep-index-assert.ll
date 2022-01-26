@@ -12,8 +12,8 @@ define void @slp_scev_assert(i32 %idx, i64 %tmp3) #0 {
 ; CHECK-NEXT:    [[TMP:%.*]] = addrspacecast i8 addrspace(5)* undef to i8*
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8 addrspace(5)* undef, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, i8* [[TMP]], i64 [[TMP3:%.*]]
-; CHECK-NEXT:    store i8 0, i8 addrspace(5)* [[TMP2]]
-; CHECK-NEXT:    store i8 0, i8* [[TMP4]]
+; CHECK-NEXT:    store i8 0, i8 addrspace(5)* [[TMP2]], align 1
+; CHECK-NEXT:    store i8 0, i8* [[TMP4]], align 1
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -39,8 +39,8 @@ define void @multi_as_reduction_different_sized(i32 addrspace(3)* %lds, i32 %idx
 ; CHECK-NEXT:    [[LOAD_FLAT_1:%.*]] = load i32, i32* [[FLAT_1]], align 4
 ; CHECK-NEXT:    [[SUB0:%.*]] = sub i32 [[LOAD_FLAT_0]], [[LOAD_LDS_0]]
 ; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 [[LOAD_FLAT_1]], [[LOAD_LDS_1]]
-; CHECK-NEXT:    store i32 [[SUB0]], i32* undef
-; CHECK-NEXT:    store i32 [[SUB1]], i32* undef
+; CHECK-NEXT:    store i32 [[SUB0]], i32* undef, align 4
+; CHECK-NEXT:    store i32 [[SUB1]], i32* undef, align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -80,8 +80,8 @@ define void @multi_as_reduction_same_size(i32 addrspace(1)* %global, i64 %idx0, 
 ; CHECK-NEXT:    [[LOAD_FLAT_1:%.*]] = load i32, i32* [[FLAT_1]], align 4
 ; CHECK-NEXT:    [[SUB0:%.*]] = sub i32 [[LOAD_FLAT_0]], [[LOAD_GLOBAL_0]]
 ; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 [[LOAD_FLAT_1]], [[LOAD_GLOBAL_1]]
-; CHECK-NEXT:    store i32 [[SUB0]], i32* undef
-; CHECK-NEXT:    store i32 [[SUB1]], i32* undef
+; CHECK-NEXT:    store i32 [[SUB0]], i32* undef, align 4
+; CHECK-NEXT:    store i32 [[SUB1]], i32* undef, align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -122,8 +122,8 @@ define void @multi_as_reduction_different_sized_noncanon(i32 addrspace(3)* %lds,
 ; CHECK-NEXT:    [[LOAD_FLAT_1:%.*]] = load i32, i32* [[FLAT_1]], align 4
 ; CHECK-NEXT:    [[SUB0:%.*]] = sub i32 [[LOAD_FLAT_0]], [[LOAD_LDS_0]]
 ; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 [[LOAD_FLAT_1]], [[LOAD_LDS_1]]
-; CHECK-NEXT:    store i32 [[SUB0]], i32* undef
-; CHECK-NEXT:    store i32 [[SUB1]], i32* undef
+; CHECK-NEXT:    store i32 [[SUB0]], i32* undef, align 4
+; CHECK-NEXT:    store i32 [[SUB1]], i32* undef, align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -148,9 +148,17 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: slp_crash_on_addrspacecast
-; CHECK: ret void
 define void @slp_crash_on_addrspacecast() {
+; CHECK-LABEL: @slp_crash_on_addrspacecast(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, i64 addrspace(3)* undef, i32 undef
+; CHECK-NEXT:    [[P0:%.*]] = addrspacecast i64 addrspace(3)* [[TMP0]] to i64*
+; CHECK-NEXT:    store i64 undef, i64* [[P0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, i64 addrspace(3)* undef, i32 undef
+; CHECK-NEXT:    [[P1:%.*]] = addrspacecast i64 addrspace(3)* [[TMP1]] to i64*
+; CHECK-NEXT:    store i64 undef, i64* [[P1]], align 8
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = getelementptr inbounds i64, i64 addrspace(3)* undef, i32 undef
   %p0 = addrspacecast i64 addrspace(3)* %0 to i64*

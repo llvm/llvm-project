@@ -2342,14 +2342,15 @@ def RegionIfYieldOp : TEST_Op<"region_if_yield",
 }
 
 def RegionIfOp : TEST_Op<"region_if",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                 ["getRegionInvocationBounds"]>,
        SingleBlockImplicitTerminator<"RegionIfYieldOp">,
        RecursiveSideEffects]> {
   let description =[{
     Represents an abstract if-then-else-join pattern. In this context, the then
     and else regions jump to the join region, which finally returns to its
     parent op.
-    }];
+  }];
 
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseRegionIfOp(parser, result); }];
@@ -2370,6 +2371,14 @@ def RegionIfOp : TEST_Op<"region_if",
     }
     ::mlir::OperandRange getSuccessorEntryOperands(unsigned index);
   }];
+}
+
+def AnyCondOp : TEST_Op<"any_cond",
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                 ["getRegionInvocationBounds"]>,
+       RecursiveSideEffects]> {
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region AnyRegion:$region);
 }
 
 //===----------------------------------------------------------------------===//

@@ -4543,6 +4543,30 @@ defm : VPatBinaryV_VV_VX_VI<"int_riscv_vsrl", "PseudoVSRL", AllIntegerVectors,
 defm : VPatBinaryV_VV_VX_VI<"int_riscv_vsra", "PseudoVSRA", AllIntegerVectors,
                             uimm5>;
 
+foreach vti = AllIntegerVectors in {
+  // Emit shift by 1 as an add since it might be faster.
+  def : Pat<(vti.Vector (int_riscv_vsll (vti.Vector vti.RegClass:$rs1),
+                                        (XLenVT 1), VLOpFrag)),
+            (!cast<Instruction>("PseudoVADD_VV_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                              vti.RegClass:$rs1,
+                                                              GPR:$vl,
+                                                              vti.Log2SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vsll_mask (vti.Vector vti.RegClass:$merge),
+                                             (vti.Vector vti.RegClass:$rs1),
+                                             (XLenVT 1),
+                                             (vti.Mask V0),
+                                             VLOpFrag,
+                                             (XLenVT timm:$policy))),
+            (!cast<Instruction>("PseudoVADD_VV_"#vti.LMul.MX#"_MASK")
+                                                        vti.RegClass:$merge,
+                                                        vti.RegClass:$rs1,
+                                                        vti.RegClass:$rs1,
+                                                        (vti.Mask V0),
+                                                        GPR:$vl,
+                                                        vti.Log2SEW,
+                                                        (XLenVT timm:$policy))>;
+}
+
 //===----------------------------------------------------------------------===//
 // 12.7. Vector Narrowing Integer Right Shift Instructions
 //===----------------------------------------------------------------------===//

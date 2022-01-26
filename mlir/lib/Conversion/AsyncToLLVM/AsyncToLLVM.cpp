@@ -335,27 +335,31 @@ public:
     // Get coroutine frame size: @llvm.coro.size.i64.
     Value coroSize =
         rewriter.create<LLVM::CoroSizeOp>(loc, rewriter.getI64Type());
-    // The coroutine lowering doesn't properly account for alignment of the
-    // frame, so align everything to 64 bytes which ought to be enough for
-    // everyone. https://llvm.org/PR53148
-    constexpr int64_t coroAlign = 64;
+    // Get coroutine frame alignment: @llvm.coro.align.i64.
+    Value coroAlign =
+        rewriter.create<LLVM::CoroAlignOp>(loc, rewriter.getI64Type());
+
+    // Round up the size to be multiple of the alignment. Since aligned_alloc
+    // requires the size parameter be an integral multiple of the alignment
+    // parameter.
     auto makeConstant = [&](uint64_t c) {
       return rewriter.create<LLVM::ConstantOp>(
           op->getLoc(), rewriter.getI64Type(), rewriter.getI64IntegerAttr(c));
     };
-    // Round up the size to the alignment. This is a requirement of
-    // aligned_alloc.
-    coroSize = rewriter.create<LLVM::AddOp>(op->getLoc(), coroSize,
-                                            makeConstant(coroAlign - 1));
-    coroSize = rewriter.create<LLVM::AndOp>(op->getLoc(), coroSize,
-                                            makeConstant(-coroAlign));
+    coroSize = rewriter.create<LLVM::AddOp>(op->getLoc(), coroSize, coroAlign);
+    coroSize =
+        rewriter.create<LLVM::SubOp>(op->getLoc(), coroSize, makeConstant(1));
+    Value NegCoroAlign =
+        rewriter.create<LLVM::SubOp>(op->getLoc(), makeConstant(0), coroAlign);
+    coroSize =
+        rewriter.create<LLVM::AndOp>(op->getLoc(), coroSize, NegCoroAlign);
 
     // Allocate memory for the coroutine frame.
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
         op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
     auto coroAlloc = rewriter.create<LLVM::CallOp>(
         loc, i8Ptr, SymbolRefAttr::get(allocFuncOp),
-        ValueRange{makeConstant(coroAlign), coroSize});
+        ValueRange{coroAlign, coroSize});
 
     // Begin a coroutine: @llvm.coro.begin.
     auto coroId = CoroBeginOpAdaptor(adaptor.getOperands()).id();

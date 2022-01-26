@@ -83,7 +83,7 @@ void BM_PathIterateMultipleTimes(benchmark::State &st, GenInputs gen) {
     PP /= Part;
   benchmark::DoNotOptimize(PP.native().data());
   while (st.KeepRunning()) {
-    for (auto &E : PP) {
+    for (auto const& E : PP) {
       benchmark::DoNotOptimize(E.native().data());
     }
     benchmark::ClobberMemory();
@@ -104,7 +104,7 @@ void BM_PathIterateOnce(benchmark::State &st, GenInputs gen) {
   benchmark::DoNotOptimize(PP.native().data());
   while (st.KeepRunning()) {
     const path P = PP.native();
-    for (auto &E : P) {
+    for (auto const& E : P) {
       benchmark::DoNotOptimize(E.native().data());
     }
     benchmark::ClobberMemory();

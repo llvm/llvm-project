@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Writer.h"
-#include "CallGraphSort.h"
 #include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
@@ -15,6 +14,7 @@
 #include "MapFile.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -22,8 +22,7 @@
 #include "UnwindInfoSection.h"
 
 #include "lld/Common/Arrays.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/LEB128.h"
@@ -611,7 +610,7 @@ static bool needsBinding(const Symbol *sym) {
 }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
-                                    const Reloc &r) {
+                                    const lld::macho::Reloc &r) {
   assert(sym->isLive());
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
@@ -644,7 +643,7 @@ void Writer::scanRelocations() {
       continue;
 
     for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
-      Reloc &r = *it;
+      lld::macho::Reloc &r = *it;
       if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
         // Skip over the following UNSIGNED relocation -- it's just there as the
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
@@ -850,6 +849,7 @@ template <class LP> void Writer::createLoadCommands() {
                               : 0));
 }
 
+#if 0 //<<<<<<< HEAD
 static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
                                 const InputFile *f) {
   // We don't use toString(InputFile *) here because it returns the full path
@@ -858,8 +858,8 @@ static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
   if (f->archiveName.empty())
     filename = path::filename(f->getName());
   else
-    filename = saver.save(path::filename(f->archiveName) + "(" +
-                          path::filename(f->getName()) + ")");
+    filename = saver().save(path::filename(f->archiveName) + "(" +
+                            path::filename(f->getName()) + ")");
   return std::max(entry.objectFiles.lookup(filename), entry.anyObjectFile);
 }
 
@@ -898,6 +898,7 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
   return sectionPriorities;
 }
 
+#endif //>>>>>>> 83d59e05b201... Re-land [LLD] Remove global state in lldCommon
 // Sorting only can happen once all outputs have been collected. Here we sort
 // segments, output sections within each segment, and input sections within each
 // output segment.
@@ -1216,7 +1217,7 @@ void macho::createSyntheticSections() {
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.
-  uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
+  uint8_t *arr = bAlloc().Allocate<uint8_t>(target->wordSize);
   memset(arr, 0, target->wordSize);
   in.imageLoaderCache = make<ConcatInputSection>(
       segment_names::data, section_names::data, /*file=*/nullptr,

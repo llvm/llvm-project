@@ -13,9 +13,8 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
@@ -111,7 +110,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
   // The --chroot option changes our virtual root directory.
   // This is useful when you are dealing with files created by --reproduce.
   if (!config->chroot.empty() && path.startswith("/"))
-    path = saver.save(config->chroot + path);
+    path = saver().save(config->chroot + path);
 
   log(path);
   config->dependencyFiles.insert(llvm::CachedHashString(path));
@@ -1518,8 +1517,8 @@ template <class ELFT> void SharedFile::parse() {
         }
         StringRef verName = stringTable.data() + verneeds[idx];
         versionedNameBuffer.clear();
-        name =
-            saver.save((name + "@" + verName).toStringRef(versionedNameBuffer));
+        name = saver().save(
+            (name + "@" + verName).toStringRef(versionedNameBuffer));
       }
       Symbol *s = symtab.addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
@@ -1561,7 +1560,7 @@ template <class ELFT> void SharedFile::parse() {
         reinterpret_cast<const Elf_Verdef *>(verdefs[idx])->getAux()->vda_name;
     versionedNameBuffer.clear();
     name = (name + "@" + verName).toStringRef(versionedNameBuffer);
-    symtab.addSymbol(SharedSymbol{*this, saver.save(name), sym.getBinding(),
+    symtab.addSymbol(SharedSymbol{*this, saver().save(name), sym.getBinding(),
                                   sym.st_other, sym.getType(), sym.st_value,
                                   sym.st_size, alignment, idx});
   }
@@ -1644,11 +1643,10 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // into consideration at LTO time (which very likely causes undefined
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
-  StringRef name =
-      archiveName.empty()
-          ? saver.save(path)
-          : saver.save(archiveName + "(" + path::filename(path) + " at " +
-                       utostr(offsetInArchive) + ")");
+  StringRef name = archiveName.empty()
+                       ? saver().save(path)
+                       : saver().save(archiveName + "(" + path::filename(path) +
+                                      " at " + utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK(lto::InputFile::create(mbref), this);
@@ -1684,7 +1682,7 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   if (sym) {
     name = sym->getName();
   } else {
-    name = saver.save(objSym.getName());
+    name = saver().save(objSym.getName());
     sym = symtab->insert(name);
   }
 
@@ -1734,8 +1732,8 @@ void BitcodeFile::parseLazy() {
   symbols.resize(obj->symbols().size());
   for (auto it : llvm::enumerate(obj->symbols()))
     if (!it.value().isUndefined())
-      symbols[it.index()] =
-          symtab.addSymbol(LazyObject{*this, saver.save(it.value().getName())});
+      symbols[it.index()] = symtab.addSymbol(
+          LazyObject{*this, saver().save(it.value().getName())});
 }
 
 void BinaryFile::parse() {
@@ -1752,6 +1750,8 @@ void BinaryFile::parse() {
   for (size_t i = 0; i < s.size(); ++i)
     if (!isAlnum(s[i]))
       s[i] = '_';
+
+  llvm::StringSaver &saver = lld::saver();
 
   symtab->addSymbol(Defined{nullptr, saver.save(s + "_start"), STB_GLOBAL,
                             STV_DEFAULT, STT_OBJECT, 0, 0, section});

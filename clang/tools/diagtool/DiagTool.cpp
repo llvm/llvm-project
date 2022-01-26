@@ -12,6 +12,7 @@
 
 #include "DiagTool.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include <vector>
 
 using namespace diagtool;

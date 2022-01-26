@@ -8,9 +8,10 @@
 
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -23,6 +24,7 @@
 #include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -480,25 +482,92 @@ private:
     Out << "---" << YAML << "\n";
   }
 
+  static void printEntryName(const Sema &TheSema, const Decl *Entity,
+                             llvm::raw_string_ostream &OS) {
+    auto *NamedTemplate = cast<NamedDecl>(Entity);
+
+    PrintingPolicy Policy = TheSema.Context.getPrintingPolicy();
+    // FIXME: Also ask for FullyQualifiedNames?
+    Policy.SuppressDefaultTemplateArgs = false;
+    NamedTemplate->getNameForDiagnostic(OS, Policy, true);
+
+    if (!OS.str().empty())
+      return;
+
+    Decl *Ctx = Decl::castFromDeclContext(NamedTemplate->getDeclContext());
+    NamedDecl *NamedCtx = dyn_cast_or_null<NamedDecl>(Ctx);
+
+    if (const auto *Decl = dyn_cast<TagDecl>(NamedTemplate)) {
+      if (const auto *R = dyn_cast<RecordDecl>(Decl)) {
+        if (R->isLambda()) {
+          OS << "lambda at ";
+          Decl->getLocation().print(OS, TheSema.getSourceManager());
+          return;
+        }
+      }
+      OS << "unnamed " << Decl->getKindName();
+      return;
+    }
+
+    if (const auto *Decl = dyn_cast<ParmVarDecl>(NamedTemplate)) {
+      OS << "unnamed function parameter " << Decl->getFunctionScopeIndex()
+         << " ";
+      if (Decl->getFunctionScopeDepth() > 0)
+        OS << "(at depth " << Decl->getFunctionScopeDepth() << ") ";
+      OS << "of ";
+      NamedCtx->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+      return;
+    }
+
+    if (const auto *Decl = dyn_cast<TemplateTypeParmDecl>(NamedTemplate)) {
+      if (const Type *Ty = Decl->getTypeForDecl()) {
+        if (const auto *TTPT = dyn_cast_or_null<TemplateTypeParmType>(Ty)) {
+          OS << "unnamed template type parameter " << TTPT->getIndex() << " ";
+          if (TTPT->getDepth() > 0)
+            OS << "(at depth " << TTPT->getDepth() << ") ";
+          OS << "of ";
+          NamedCtx->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+          return;
+        }
+      }
+    }
+
+    if (const auto *Decl = dyn_cast<NonTypeTemplateParmDecl>(NamedTemplate)) {
+      OS << "unnamed template non-type parameter " << Decl->getIndex() << " ";
+      if (Decl->getDepth() > 0)
+        OS << "(at depth " << Decl->getDepth() << ") ";
+      OS << "of ";
+      NamedCtx->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+      return;
+    }
+
+    if (const auto *Decl = dyn_cast<TemplateTemplateParmDecl>(NamedTemplate)) {
+      OS << "unnamed template template parameter " << Decl->getIndex() << " ";
+      if (Decl->getDepth() > 0)
+        OS << "(at depth " << Decl->getDepth() << ") ";
+      OS << "of ";
+      NamedCtx->getNameForDiagnostic(OS, TheSema.getLangOpts(), true);
+      return;
+    }
+
+    llvm_unreachable("Failed to retrieve a name for this entry!");
+    OS << "unnamed identifier";
+  }
+
   template <bool BeginInstantiation>
   static TemplightEntry getTemplightEntry(const Sema &TheSema,
                                           const CodeSynthesisContext &Inst) {
     TemplightEntry Entry;
     Entry.Kind = toString(Inst.Kind);
     Entry.Event = BeginInstantiation ? "Begin" : "End";
-    if (auto *NamedTemplate = dyn_cast_or_null<NamedDecl>(Inst.Entity)) {
-      llvm::raw_string_ostream OS(Entry.Name);
-      PrintingPolicy Policy = TheSema.Context.getPrintingPolicy();
-      // FIXME: Also ask for FullyQualifiedNames?
-      Policy.SuppressDefaultTemplateArgs = false;
-      NamedTemplate->getNameForDiagnostic(OS, Policy, true);
-      const PresumedLoc DefLoc =
+    llvm::raw_string_ostream OS(Entry.Name);
+    printEntryName(TheSema, Inst.Entity, OS);
+    const PresumedLoc DefLoc =
         TheSema.getSourceManager().getPresumedLoc(Inst.Entity->getLocation());
-      if(!DefLoc.isInvalid())
-        Entry.DefinitionLocation = std::string(DefLoc.getFilename()) + ":" +
-                                   std::to_string(DefLoc.getLine()) + ":" +
-                                   std::to_string(DefLoc.getColumn());
-    }
+    if (!DefLoc.isInvalid())
+      Entry.DefinitionLocation = std::string(DefLoc.getFilename()) + ":" +
+                                 std::to_string(DefLoc.getLine()) + ":" +
+                                 std::to_string(DefLoc.getColumn());
     const PresumedLoc PoiLoc =
         TheSema.getSourceManager().getPresumedLoc(Inst.PointOfInstantiation);
     if (!PoiLoc.isInvalid()) {

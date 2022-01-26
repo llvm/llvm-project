@@ -1,4 +1,4 @@
-import os,struct,signal
+import os,json,struct,signal
 
 from typing import Any, Dict
 
@@ -21,6 +21,14 @@ class StackCoreScriptedProcess(ScriptedProcess):
                 idx = int(self.backing_target_idx.GetStringValue(100))
             self.corefile_target = target.GetDebugger().GetTargetAtIndex(idx)
             self.corefile_process = self.corefile_target.GetProcess()
+            for corefile_thread in self.corefile_process:
+                structured_data = lldb.SBStructuredData()
+                structured_data.SetFromJSON(json.dumps({
+                    "backing_target_idx" : idx,
+                    "thread_idx" : corefile_thread.GetIndexID()
+                }))
+
+                self.threads[corefile_thread.GetThreadID()] = StackCoreScriptedThread(self, structured_data)
 
     def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
         mem_region = lldb.SBMemoryRegionInfo()
@@ -70,28 +78,60 @@ class StackCoreScriptedProcess(ScriptedProcess):
 class StackCoreScriptedThread(ScriptedThread):
     def __init__(self, process, args):
         super().__init__(process, args)
-        self.backing_target_idx = args.GetValueForKey("backing_target_idx")
+        backing_target_idx = args.GetValueForKey("backing_target_idx")
+        thread_idx = args.GetValueForKey("thread_idx")
+
+        def extract_value_from_structured_data(data, default_val):
+            if data and data.IsValid():
+                if data.GetType() == lldb.eStructuredDataTypeInteger:
+                    return data.GetIntegerValue(default_val)
+                if data.GetType() == lldb.eStructuredDataTypeString:
+                    return int(data.GetStringValue(100))
+            return None
+
+        #TODO: Change to Walrus operator (:=) with oneline if assignment
+        # Requires python 3.8
+        val = extract_value_from_structured_data(thread_idx, 0)
+        if val is not None:
+            self.idx = val
 
         self.corefile_target = None
         self.corefile_process = None
-        if (self.backing_target_idx and self.backing_target_idx.IsValid()):
-            if self.backing_target_idx.GetType() == lldb.eStructuredDataTypeInteger:
-                idx = self.backing_target_idx.GetIntegerValue(42)
-            if self.backing_target_idx.GetType() == lldb.eStructuredDataTypeString:
-                idx = int(self.backing_target_idx.GetStringValue(100))
-            self.corefile_target = self.target.GetDebugger().GetTargetAtIndex(idx)
+        self.corefile_thread = None
+
+        #TODO: Change to Walrus operator (:=) with oneline if assignment
+        # Requires python 3.8
+        val = extract_value_from_structured_data(backing_target_idx, 42)
+        if val is not None:
+            self.corefile_target = self.target.GetDebugger().GetTargetAtIndex(val)
             self.corefile_process = self.corefile_target.GetProcess()
+            self.corefile_thread = self.corefile_process.GetThreadByIndexID(self.idx)
+
+        if self.corefile_thread:
+            self.id = self.corefile_thread.GetThreadID()
 
     def get_thread_id(self) -> int:
-        return 0x19
+        return self.id
 
     def get_name(self) -> str:
-        return StackCoreScriptedThread.__name__ + ".thread-1"
+        return StackCoreScriptedThread.__name__ + ".thread-" + str(self.id)
 
     def get_stop_reason(self) -> Dict[str, Any]:
-        return { "type": lldb.eStopReasonSignal, "data": {
-            "signal": signal.SIGINT
-        } }
+        stop_reason = { "type": lldb.eStopReasonInvalid, "data": {  }}
+
+        if self.corefile_thread and self.corefile_thread.IsValid:
+            stop_reason["type"] = self.corefile_thread.GetStopReason()
+
+            if self.corefile_thread.GetStopReasonDataCount() > 0:
+                if stop_reason["type"] == lldb.eStopReasonBreakpoint:
+                    stop_reason["data"]["break_id"] = self.corefile_thread.GetStopReasonDataAtIndex(0)
+                    stop_reason["data"]["break_loc_id"] = self.corefile_thread.GetStopReasonDataAtIndex(1)
+                elif stop_reason["type"] == lldb.eStopReasonSignal:
+                    stop_reason["data"]["signal"] = signal.SIGINT
+                elif stop_reason["type"] == lldb.eStopReasonException:
+                    stop_reason["data"]["desc"] = self.corefile_thread.GetStopDescription(100)
+
+        return stop_reason
 
     def get_stackframes(self):
         class ScriptedStackFrame:
@@ -109,10 +149,9 @@ class StackCoreScriptedThread(ScriptedThread):
         return self.frame_zero[0:0]
 
     def get_register_context(self) -> str:
-        thread = self.corefile_process.GetSelectedThread()
-        if not thread or thread.GetNumFrames() == 0:
+        if not self.corefile_thread or self.corefile_thread.GetNumFrames() == 0:
             return None
-        frame = thread.GetFrameAtIndex(0)
+        frame = self.corefile_thread.GetFrameAtIndex(0)
 
         GPRs = None
         registerSet = frame.registers # Returns an SBValueList.

@@ -993,10 +993,10 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, LocTy NameLoc,
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
             "explicit pointee type doesn't match operand's pointee type", Ty,
-            PTy->getElementType()));
+            PTy->getNonOpaquePointerElementType()));
   }
 
-  if (!IsAlias && !PTy->getElementType()->isFunctionTy()) {
+  if (!IsAlias && !PTy->getPointerElementType()->isFunctionTy()) {
     return error(ExplicitTypeLoc,
                  "explicit pointee type should be a function type");
   }
@@ -3601,7 +3601,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
             ExplicitTypeLoc,
             typeComparisonErrorMessage(
                 "explicit pointee type doesn't match operand's pointee type",
-                Ty, BasePointerType->getElementType()));
+                Ty, BasePointerType->getNonOpaquePointerElementType()));
       }
 
       unsigned GEPWidth =
@@ -7371,7 +7371,7 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
             "explicit pointee type doesn't match operand's pointee type", Ty,
-            cast<PointerType>(Val->getType())->getElementType()));
+            Val->getType()->getNonOpaquePointerElementType()));
   }
   SmallPtrSet<Type *, 4> Visited;
   if (!Alignment && !Ty->isSized(&Visited))
@@ -7631,7 +7631,7 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
         ExplicitTypeLoc,
         typeComparisonErrorMessage(
             "explicit pointee type doesn't match operand's pointee type", Ty,
-            BasePointerType->getElementType()));
+            BasePointerType->getNonOpaquePointerElementType()));
   }
 
   SmallVector<Value*, 16> Indices;

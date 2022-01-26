@@ -178,8 +178,10 @@ set(files
   __format/formatter.h
   __format/formatter_bool.h
   __format/formatter_char.h
+  __format/formatter_floating_point.h
   __format/formatter_integer.h
   __format/formatter_integral.h
+  __format/formatter_pointer.h
   __format/formatter_string.h
   __format/parser_std_format_spec.h
   __functional/binary_function.h

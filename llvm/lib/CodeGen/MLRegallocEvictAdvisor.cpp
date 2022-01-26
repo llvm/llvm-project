@@ -42,11 +42,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "ml-regalloc"
-#ifdef LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL
-#define LLVM_HAVE_TF_AOT
-#endif
+
 // Generated header in release (AOT) mode
-#if defined LLVM_HAVE_TF_AOT
+#if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL)
 #include "RegallocEvictModel.h"
 #endif
 
@@ -104,7 +102,6 @@ INITIALIZE_PASS(RegAllocScoring, "regallocscoringpass",
 // ===================================
 // Common ML Advisor declarations
 // ===================================
-#if defined(LLVM_HAVE_TF_AOT) || defined(LLVM_HAVE_TF_API)
 namespace {
 // This is the maximum number of interfererring ranges. That's the number of
 // distinct AllocationOrder values, which comes from MCRegisterClass::RegsSize.
@@ -193,7 +190,9 @@ static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
 // of the output tensor.
 // The contract with the model is that the output will be guaranteed to be to a
 // mask == 1 position.
-const char *const DecisionName = "index_to_evict";
+// Using a macro here to avoid 'not used' warnings (and keep cond compilation to
+// a minimum)
+#define DecisionName "index_to_evict"
 
 // Named features index.
 enum FeatureIDs {
@@ -296,13 +295,12 @@ private:
 // ===================================
 // Release (AOT) - specifics
 // ===================================
-#ifdef LLVM_HAVE_TF_AOT
+#if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL)
 const std::array<std::string, FeatureIDs::FeatureCount> FeatureNames{
 #define _GETNAME(_, NAME, __, ___) #NAME,
     RA_EVICT_FEATURES_LIST(_GETNAME)
 #undef _GETNAME
 };
-
 class ReleaseModeEvictionAdvisorAnalysis final
     : public RegAllocEvictionAdvisorAnalysis {
 public:
@@ -331,7 +329,7 @@ private:
   }
   std::unique_ptr<ReleaseModeModelRunner<RegallocEvictModel>> Runner;
 };
-#endif // LLVM_HAVE_TF_AOT
+#endif
 
 // ===================================
 // Development mode-specifics
@@ -852,13 +850,11 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
 }
 #endif // #ifdef LLVM_HAVE_TF_API
 
-// Release mode specific implementations
-#if defined LLVM_HAVE_TF_AOT
+#if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL)
 RegAllocEvictionAdvisorAnalysis *llvm::createReleaseModeAdvisor() {
   return new ReleaseModeEvictionAdvisorAnalysis();
 }
-#endif // defined(LLVM_HAVE_TF_AOT)
-#endif // defined(LLVM_HAVE_TF_AOT) || defined(LLVM_HAVE_TF_API)
+#endif
 
 // In all cases except development mode, we don't need scoring.
 #if !defined(LLVM_HAVE_TF_API)

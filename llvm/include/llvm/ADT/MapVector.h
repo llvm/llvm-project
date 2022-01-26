@@ -18,7 +18,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <iterator>

@@ -71,7 +71,7 @@ void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
                                             FileID PrevFID) {
   if (Reason == EnterFile)
     Files.emplace_back();
-  else
+  else if (Reason == ExitFile)
     Files.pop_back();
 }
 

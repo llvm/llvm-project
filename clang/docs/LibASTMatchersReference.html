@@ -5628,6 +5628,19 @@ ifStmt(isConstexpr())
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isConstinit0')"><a name="isConstinit0Anchor">isConstinit</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isConstinit0"><pre>Matches constinit variable declarations.
+
+Given:
+  constinit int foo = 42;
+  constinit const char* bar = "baz";
+  int baz = 42;
+  [[clang::require_constant_initialization]] int xyz = 42;
+varDecl(isConstinit())
+  matches the declaration of `foo` and `bar`, but not `baz` and `xyz`.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isDefinition1')"><a name="isDefinition1Anchor">isDefinition</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isDefinition1"><pre>Matches if a declaration has a body attached.
 

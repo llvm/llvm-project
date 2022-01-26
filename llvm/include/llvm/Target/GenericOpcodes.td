@@ -1434,3 +1434,10 @@ def G_ASSERT_SEXT : GenericInstruction {
   let InOperandList = (ins type0:$src, untyped_imm_0:$sz);
   let hasSideEffects = false;
 }
+
+// Asserts that a value has at least the given alignment.
+def G_ASSERT_ALIGN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, untyped_imm_0:$align);
+  let hasSideEffects = false;
+}

@@ -22,40 +22,11 @@
 
 namespace mlir {
 
-class AffineForOp;
 class GreedyRewriteConfig;
-
-/// Fusion mode to attempt. The default mode `Greedy` does both
-/// producer-consumer and sibling fusion.
-enum FusionMode { Greedy, ProducerConsumer, Sibling };
 
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
-
-/// Creates a pass that moves allocations upwards to reduce the number of
-/// required copies that are inserted during the BufferDeallocation pass.
-std::unique_ptr<Pass> createBufferHoistingPass();
-
-/// Creates a pass that moves allocations upwards out of loops. This avoids
-/// reallocations inside of loops.
-std::unique_ptr<Pass> createBufferLoopHoistingPass();
-
-/// Creates a pass that promotes heap-based allocations to stack-based ones.
-/// Only buffers smaller than the provided size are promoted.
-/// Dynamic shaped buffers are promoted up to the given rank.
-std::unique_ptr<Pass>
-createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
-                                unsigned bitwidthOfIndexType = 64,
-                                unsigned maxRankOfAllocatedMemRef = 1);
-
-/// Creates a pass that promotes heap-based allocations to stack-based ones.
-/// Only buffers smaller with `isSmallAlloc(alloc) == true` are promoted.
-std::unique_ptr<Pass>
-createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
-
-/// Creates a pass that converts memref function results to out-params.
-std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 
 /// Creates an instance of the Canonicalizer pass, configured with default
 /// settings (which can be overridden by pass options on the command line).
@@ -74,33 +45,15 @@ createCanonicalizerPass(const GreedyRewriteConfig &config,
                         ArrayRef<std::string> disabledPatterns = llvm::None,
                         ArrayRef<std::string> enabledPatterns = llvm::None);
 
+/// Creates a pass to perform control-flow sinking.
+std::unique_ptr<Pass> createControlFlowSinkPass();
+
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
-
-/// Creates a loop fusion pass which fuses loops according to type of fusion
-/// specified in `fusionMode`. Buffers of size less than or equal to
-/// `localBufSizeThreshold` are promoted to memory space `fastMemorySpace`.
-std::unique_ptr<OperationPass<FuncOp>>
-createLoopFusionPass(unsigned fastMemorySpace = 0,
-                     uint64_t localBufSizeThreshold = 0,
-                     bool maximalFusion = false,
-                     enum FusionMode fusionMode = FusionMode::Greedy);
 
 /// Creates a loop invariant code motion pass that hoists loop invariant
 /// instructions out of the loop.
 std::unique_ptr<Pass> createLoopInvariantCodeMotionPass();
-
-/// Creates a pass to pipeline explicit movement of data across levels of the
-/// memory hierarchy.
-std::unique_ptr<OperationPass<FuncOp>> createPipelineDataTransferPass();
-
-/// Creates a pass that transforms perfectly nested loops with independent
-/// bounds into a single loop.
-std::unique_ptr<OperationPass<FuncOp>> createLoopCoalescingPass();
-
-/// Creates a pass that transforms a single ParallelLoop over N induction
-/// variables into another ParallelLoop over less than N induction variables.
-std::unique_ptr<Pass> createParallelLoopCollapsingPass();
 
 /// Creates a pass to strip debug information from a function.
 std::unique_ptr<Pass> createStripDebugInfoPass();
@@ -133,10 +86,6 @@ std::unique_ptr<Pass> createSCCPPass();
 /// Creates a pass which delete symbol operations that are unreachable. This
 /// pass may *only* be scheduled on an operation that defines a SymbolTable.
 std::unique_ptr<Pass> createSymbolDCEPass();
-
-/// Creates an interprocedural pass to normalize memrefs to have a trivial
-/// (identity) layout map.
-std::unique_ptr<OperationPass<ModuleOp>> createNormalizeMemRefsPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

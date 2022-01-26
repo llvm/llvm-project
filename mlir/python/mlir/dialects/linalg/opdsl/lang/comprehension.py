@@ -468,7 +468,7 @@ class TensorTypeFn(TensorExpression):
     self.arg.visit_tensor_exprs(callback)
 
   def __repr__(self):
-    return f"{repr(self.type_fn)}({type_var}, {self.arg})"
+    return f"{repr(self.type_fn)}({self.type_var}, {self.arg})"
 
 
 class const(TensorExpression):

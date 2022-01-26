@@ -336,6 +336,11 @@ struct MIMGBiasMappingInfo {
   MIMGBaseOpcode NoBias;
 };
 
+struct MIMGOffsetMappingInfo {
+  MIMGBaseOpcode Offset;
+  MIMGBaseOpcode NoOffset;
+};
+
 struct MIMGG16MappingInfo {
   MIMGBaseOpcode G;
   MIMGBaseOpcode G16;
@@ -349,6 +354,9 @@ const MIMGMIPMappingInfo *getMIMGMIPMappingInfo(unsigned MIP);
 
 LLVM_READONLY
 const MIMGBiasMappingInfo *getMIMGBiasMappingInfo(unsigned Bias);
+
+LLVM_READONLY
+const MIMGOffsetMappingInfo *getMIMGOffsetMappingInfo(unsigned Offset);
 
 LLVM_READONLY
 const MIMGG16MappingInfo *getMIMGG16MappingInfo(unsigned G);

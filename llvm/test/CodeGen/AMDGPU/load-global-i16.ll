@@ -5581,14 +5581,14 @@ define amdgpu_kernel void @global_zextload_v2i16_to_v2i64(<2 x i64> addrspace(1)
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s8, s2
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s9, s3
-; GCN-NOHSA-VI-NEXT:    buffer_load_dword v2, off, s[8:11], 0
+; GCN-NOHSA-VI-NEXT:    buffer_load_dword v0, off, s[8:11], 0
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s4, s0
 ; GCN-NOHSA-VI-NEXT:    s_mov_b32 s5, s1
 ; GCN-NOHSA-VI-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v0, 0xffff, v2
-; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; GCN-NOHSA-VI-NEXT:    s_endpgm
 ;

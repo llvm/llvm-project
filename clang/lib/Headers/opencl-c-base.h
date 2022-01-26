@@ -68,6 +68,7 @@
 // For the SPIR and SPIR-V target all features are supported.
 #if defined(__SPIR__) || defined(__SPIRV__)
 #define __opencl_c_atomic_scope_all_devices 1
+#define __opencl_c_read_write_images 1
 #endif // defined(__SPIR__)
 #endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 

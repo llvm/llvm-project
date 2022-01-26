@@ -2856,9 +2856,8 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
               SanitizerHandler::CFICheckFail, {}, {});
   }
 
-  return Builder.CreateBitCast(
-      Builder.CreateExtractValue(CheckedLoad, 0),
-      cast<llvm::PointerType>(VTable->getType())->getElementType());
+  return Builder.CreateBitCast(Builder.CreateExtractValue(CheckedLoad, 0),
+                               VTable->getType()->getPointerElementType());
 }
 
 void CodeGenFunction::EmitForwardingCallToLambda(

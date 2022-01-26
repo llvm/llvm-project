@@ -411,8 +411,8 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     assert(CountersDelta == 0 && NamesDelta == 0);
     Data = Correlator->getDataPointer();
     DataEnd = Data + Correlator->getDataSize();
-    NamesStart = Correlator->getCompressedNamesPointer();
-    NamesEnd = NamesStart + Correlator->getCompressedNamesSize();
+    NamesStart = Correlator->getNamesPointer();
+    NamesEnd = NamesStart + Correlator->getNamesSize();
   } else {
     Data = reinterpret_cast<const RawInstrProf::ProfileData<IntPtrT> *>(
         Start + DataOffset);

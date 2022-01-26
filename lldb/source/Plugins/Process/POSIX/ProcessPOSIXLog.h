@@ -13,27 +13,35 @@
 
 #include "lldb/Utility/Log.h"
 
-#define POSIX_LOG_PROCESS (1u << 1)
-#define POSIX_LOG_THREAD (1u << 2)
-#define POSIX_LOG_MEMORY (1u << 4) // Log memory reads/writes calls
-#define POSIX_LOG_PTRACE (1u << 5)
-#define POSIX_LOG_REGISTERS (1u << 6)
-#define POSIX_LOG_BREAKPOINTS (1u << 7)
-#define POSIX_LOG_WATCHPOINTS (1u << 8)
-#define POSIX_LOG_ALL (UINT32_MAX)
-#define POSIX_LOG_DEFAULT POSIX_LOG_PROCESS
-
 namespace lldb_private {
-class ProcessPOSIXLog {
-  static Log::Channel g_channel;
 
+enum class POSIXLog : Log::MaskType {
+  Breakpoints = Log::ChannelFlag<0>,
+  Memory = Log::ChannelFlag<1>,
+  Process = Log::ChannelFlag<2>,
+  Ptrace = Log::ChannelFlag<3>,
+  Registers = Log::ChannelFlag<4>,
+  Thread = Log::ChannelFlag<5>,
+  Watchpoints = Log::ChannelFlag<6>,
+  LLVM_MARK_AS_BITMASK_ENUM(Watchpoints)
+};
+
+#define POSIX_LOG_PROCESS ::lldb_private::POSIXLog::Process
+#define POSIX_LOG_THREAD ::lldb_private::POSIXLog::Thread
+#define POSIX_LOG_MEMORY ::lldb_private::POSIXLog::Memory
+#define POSIX_LOG_PTRACE ::lldb_private::POSIXLog::Ptrace
+#define POSIX_LOG_REGISTERS ::lldb_private::POSIXLog::Registers
+#define POSIX_LOG_BREAKPOINTS ::lldb_private::POSIXLog::Breakpoints
+#define POSIX_LOG_WATCHPOINTS ::lldb_private::POSIXLog::Watchpoints
+
+class ProcessPOSIXLog {
 public:
   static void Initialize();
 
-  static Log *GetLogIfAllCategoriesSet(uint32_t mask) {
-    return g_channel.GetLogIfAll(mask);
-  }
+  static Log *GetLogIfAllCategoriesSet(POSIXLog mask) { return GetLog(mask); }
 };
-}
+
+template <> Log::Channel &LogChannelFor<POSIXLog>();
+} // namespace lldb_private
 
 #endif // liblldb_ProcessPOSIXLog_h_

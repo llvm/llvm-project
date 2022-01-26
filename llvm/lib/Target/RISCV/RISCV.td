@@ -150,6 +150,19 @@ def HasStdExtZbkb : Predicate<"Subtarget->hasStdExtZbkb()">,
                              AssemblerPredicate<(all_of FeatureStdExtZbkb),
                              "'Zbkb' (Bitmanip instructions for Cryptography)">;
 
+def FeatureStdExtZbkx
+    : SubtargetFeature<"zbkx", "HasStdExtZbkx", "true",
+                       "'Zbkx' (Crossbar permutation instructions)">;
+def HasStdExtZbkx : Predicate<"Subtarget->hasStdExtZbkx()">,
+                             AssemblerPredicate<(all_of FeatureStdExtZbkx),
+                             "'Zbkx' (Crossbar permutation instructions)">;
+
+def HasStdExtZbpOrZbkx
+    : Predicate<"Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkx()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbp, FeatureStdExtZbkx),
+                                   "'Zbp' (Permutation 'Zb' Instructions) or "
+                                   "'Zbkx' (Crossbar permutation instructions)">;
+
 def HasStdExtZbpOrZbkb
     : Predicate<"Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkb()">,
                 AssemblerPredicate<(any_of FeatureStdExtZbp, FeatureStdExtZbkb),
@@ -233,6 +246,7 @@ def FeatureStdExtZkn
                        "'Zkn' (NIST Algorithm Suite)",
                        [FeatureStdExtZbkb,
                         FeatureStdExtZbkc,
+                        FeatureStdExtZbkx,
                         FeatureStdExtZkne,
                         FeatureStdExtZknd,
                         FeatureStdExtZknh]>;
@@ -242,6 +256,7 @@ def FeatureStdExtZks
                        "'Zks' (ShangMi Algorithm Suite)",
                        [FeatureStdExtZbkb,
                         FeatureStdExtZbkc,
+                        FeatureStdExtZbkx,
                         FeatureStdExtZksed,
                         FeatureStdExtZksh]>;
 

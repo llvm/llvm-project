@@ -373,9 +373,4 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
     MFI.computeMaxCallFrameSize(MF);
 }
 
-bool AArch64Subtarget::useSVEForFixedLengthVectors() const {
-  // Prefer NEON unless larger SVE registers are available.
-  return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
-}
-
 bool AArch64Subtarget::useAA() const { return UseAA; }

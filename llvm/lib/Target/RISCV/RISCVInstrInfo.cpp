@@ -1729,7 +1729,7 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
     CASE_WIDEOP_CHANGE_OPCODE_LMULS(WSUB_WV)
     CASE_WIDEOP_CHANGE_OPCODE_LMULS(WSUBU_WV)
     }
-    //clang-format on
+    // clang-format on
 
     MachineBasicBlock &MBB = *MI.getParent();
     MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))

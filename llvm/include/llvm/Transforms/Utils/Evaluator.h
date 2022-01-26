@@ -127,7 +127,7 @@ private:
   }
 
   /// Casts call result to a type of bitcast call expression
-  Constant *castCallResultIfNeeded(Value *CallExpr, Constant *RV);
+  Constant *castCallResultIfNeeded(Type *ReturnType, Constant *RV);
 
   /// Given call site return callee and list of its formal arguments
   Function *getCalleeWithFormalArgs(CallBase &CB,

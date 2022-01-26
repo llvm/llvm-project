@@ -48,15 +48,15 @@ inline Optional<Function *> getAttachedARCFunction(const CallBase *CB) {
   return cast<Function>(B->Inputs[0]);
 }
 
-/// Check whether the function is retainRV/claimRV.
+/// Check whether the function is retainRV/unsafeClaimRV.
 inline bool isRetainOrClaimRV(ARCInstKind Kind) {
-  return Kind == ARCInstKind::RetainRV || Kind == ARCInstKind::ClaimRV;
+  return Kind == ARCInstKind::RetainRV || Kind == ARCInstKind::UnsafeClaimRV;
 }
 
 /// This function returns the ARCInstKind of the function attached to operand
 /// bundle clang_arc_attachedcall. It returns None if the call doesn't have the
 /// operand bundle or the operand is null. Otherwise it returns either RetainRV
-/// or ClaimRV.
+/// or UnsafeClaimRV.
 inline ARCInstKind getAttachedARCFunctionKind(const CallBase *CB) {
   Optional<Function *> Fn = getAttachedARCFunction(CB);
   if (!Fn.hasValue())

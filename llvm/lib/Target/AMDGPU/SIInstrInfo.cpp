@@ -138,11 +138,6 @@ static bool readsExecAsData(const MachineInstr &MI) {
   default:
     break;
   case AMDGPU::V_READFIRSTLANE_B32:
-  case AMDGPU::V_CNDMASK_B64_PSEUDO:
-  case AMDGPU::V_CNDMASK_B32_dpp:
-  case AMDGPU::V_CNDMASK_B32_e32:
-  case AMDGPU::V_CNDMASK_B32_e64:
-  case AMDGPU::V_CNDMASK_B32_sdwa:
     return true;
   }
 

@@ -314,6 +314,8 @@ function(llvm_ExternalProject_Add name source_dir)
                -DPACKAGE_VERSION=${PACKAGE_VERSION}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+               -DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}
+               -DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}
                -DCMAKE_EXPORT_COMPILE_COMMANDS=1
                ${cmake_args}
                ${PASSTHROUGH_VARIABLES}

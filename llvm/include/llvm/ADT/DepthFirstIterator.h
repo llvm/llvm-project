@@ -38,7 +38,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -231,7 +230,7 @@ iterator_range<df_iterator<T>> depth_first(const T& G) {
 }
 
 // Provide global definitions of external depth first iterators...
-template <class T, class SetTy = std::set<typename GraphTraits<T>::NodeRef>>
+template <class T, class SetTy = df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
 struct df_ext_iterator : public df_iterator<T, SetTy, true> {
   df_ext_iterator(const df_iterator<T, SetTy, true> &V)
     : df_iterator<T, SetTy, true>(V) {}
@@ -280,7 +279,7 @@ iterator_range<idf_iterator<T>> inverse_depth_first(const T& G) {
 }
 
 // Provide global definitions of external inverse depth first iterators...
-template <class T, class SetTy = std::set<typename GraphTraits<T>::NodeRef>>
+template <class T, class SetTy = df_iterator_default_set<typename GraphTraits<T>::NodeRef>>
 struct idf_ext_iterator : public idf_iterator<T, SetTy, true> {
   idf_ext_iterator(const idf_iterator<T, SetTy, true> &V)
     : idf_iterator<T, SetTy, true>(V) {}

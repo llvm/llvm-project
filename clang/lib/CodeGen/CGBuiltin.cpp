@@ -14364,12 +14364,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::vector_reduce_add, Ops[0]->getType());
     return Builder.CreateCall(F, {Ops[0]});
   }
-  case X86::BI__builtin_ia32_reduce_and_d512:
-  case X86::BI__builtin_ia32_reduce_and_q512: {
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::vector_reduce_and, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
   case X86::BI__builtin_ia32_reduce_fadd_pd512:
   case X86::BI__builtin_ia32_reduce_fadd_ps512:
   case X86::BI__builtin_ia32_reduce_fadd_ph512:
@@ -14414,36 +14408,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_reduce_mul_q512: {
     Function *F =
         CGM.getIntrinsic(Intrinsic::vector_reduce_mul, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
-  case X86::BI__builtin_ia32_reduce_or_d512:
-  case X86::BI__builtin_ia32_reduce_or_q512: {
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::vector_reduce_or, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
-  case X86::BI__builtin_ia32_reduce_smax_d512:
-  case X86::BI__builtin_ia32_reduce_smax_q512: {
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::vector_reduce_smax, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
-  case X86::BI__builtin_ia32_reduce_smin_d512:
-  case X86::BI__builtin_ia32_reduce_smin_q512: {
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::vector_reduce_smin, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
-  case X86::BI__builtin_ia32_reduce_umax_d512:
-  case X86::BI__builtin_ia32_reduce_umax_q512: {
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::vector_reduce_umax, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0]});
-  }
-  case X86::BI__builtin_ia32_reduce_umin_d512:
-  case X86::BI__builtin_ia32_reduce_umin_q512: {
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::vector_reduce_umin, Ops[0]->getType());
     return Builder.CreateCall(F, {Ops[0]});
   }
 
@@ -17225,7 +17189,7 @@ static NVPTXMmaLdstInfo getNVPTXMmaLdstInfo(unsigned BuiltinID) {
   case NVPTX::BI__mma_tf32_m16n16k8_ld_a:
     return MMA_LDST(4, m16n16k8_load_a_tf32);
   case NVPTX::BI__mma_tf32_m16n16k8_ld_b:
-    return MMA_LDST(2, m16n16k8_load_b_tf32);
+    return MMA_LDST(4, m16n16k8_load_b_tf32);
   case NVPTX::BI__mma_tf32_m16n16k8_ld_c:
     return MMA_LDST(8, m16n16k8_load_c_f32);
 

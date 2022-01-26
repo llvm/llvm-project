@@ -3,6 +3,8 @@
 
 declare i64 @llvm.riscv.vsetvli.i64(i64, i64, i64)
 declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
+declare i64 @llvm.riscv.vsetvli.opt.i64(i64, i64, i64)
+declare i64 @llvm.riscv.vsetvlimax.opt.i64(i64, i64)
 
 define void @test_vsetvli_e8m1(i64 %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e8m1:
@@ -47,6 +49,68 @@ define void @test_vsetvlimax_e64m4() nounwind {
 ; CHECK-NEXT:    ret
   call i64 @llvm.riscv.vsetvlimax.i64(i64 3, i64 2)
   ret void
+}
+
+define i64 @test_vsetvli_opt_e8m1(i64 %avl) nounwind {
+; CHECK-LABEL: test_vsetvli_opt_e8m1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, a0, e8, m1, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call i64 @llvm.riscv.vsetvli.opt.i64(i64 %avl, i64 0, i64 0)
+  ret i64 %vl
+}
+
+; Check that we remove the intrinsic if it's unused.
+define void @test_vsetvli_opt_e8m1_nouse(i64 %avl) nounwind {
+; CHECK-LABEL: test_vsetvli_opt_e8m1_nouse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  call i64 @llvm.riscv.vsetvli.opt.i64(i64 %avl, i64 0, i64 0)
+  ret void
+}
+
+define i64 @test_vsetvli_opt_e16mf4(i64 %avl) nounwind {
+; CHECK-LABEL: test_vsetvli_opt_e16mf4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call i64 @llvm.riscv.vsetvli.opt.i64(i64 %avl, i64 1, i64 6)
+  ret i64 %vl
+}
+
+define i64 @test_vsetvli_opt_e32mf8_zero_avl() nounwind {
+; CHECK-LABEL: test_vsetvli_opt_e32mf8_zero_avl:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli a0, 0, e16, mf4, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call i64 @llvm.riscv.vsetvli.opt.i64(i64 0, i64 1, i64 6)
+  ret i64 %vl
+}
+
+define i64 @test_vsetvlimax_opt_e32m2() nounwind {
+; CHECK-LABEL: test_vsetvlimax_opt_e32m2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call i64 @llvm.riscv.vsetvlimax.opt.i64(i64 2, i64 1)
+  ret i64 %vl
+}
+
+define void @test_vsetvlimax_opt_e32m2_nouse() nounwind {
+; CHECK-LABEL: test_vsetvlimax_opt_e32m2_nouse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  call i64 @llvm.riscv.vsetvlimax.opt.i64(i64 2, i64 1)
+  ret void
+}
+
+define i64 @test_vsetvlimax_opt_e64m4() nounwind {
+; CHECK-LABEL: test_vsetvlimax_opt_e64m4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    ret
+  %vl = call i64 @llvm.riscv.vsetvlimax.opt.i64(i64 3, i64 2)
+  ret i64 %vl
 }
 
 declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i64(<vscale x 4 x i32>*, i64)
