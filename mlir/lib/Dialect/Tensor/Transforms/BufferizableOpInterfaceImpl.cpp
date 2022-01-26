@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
@@ -224,6 +225,65 @@ struct ExtractOpInterface
         *state.getBuffer(rewriter, extractOp->getOpOperand(0) /*tensor*/);
     replaceOpWithNewBufferizedOp<memref::LoadOp>(rewriter, op, srcMemref,
                                                  extractOp.indices());
+    return success();
+  }
+};
+
+/// Bufferization of tensor.generate.
+struct GenerateOpInterface
+    : public BufferizableOpInterface::ExternalModel<GenerateOpInterface,
+                                                    tensor::GenerateOp> {
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationState &state) const {
+    auto generateOp = cast<tensor::GenerateOp>(op);
+
+    // Allocate memory.
+    Location loc = op->getLoc();
+    MemRefType memrefType =
+        getContiguousMemRefType(generateOp.getType().cast<RankedTensorType>());
+    FailureOr<Value> maybeResult =
+        createAlloc(rewriter, loc, memrefType, generateOp.dynamicExtents(),
+                    /*deallocMemref=*/state.getOptions().createDeallocs,
+                    state.getOptions());
+    if (failed(maybeResult))
+      return failure();
+    Value result = *maybeResult;
+
+    // Collect loop bounds.
+    int64_t rank = memrefType.getRank();
+    Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    SmallVector<Value, 4> lowerBounds(rank, zero);
+    SmallVector<Value, 4> steps(rank, one);
+    SmallVector<Value, 4> upperBounds;
+    int nextDynamicIndex = 0;
+    for (int i = 0; i < rank; i++) {
+      Value upperBound = memrefType.isDynamicDim(i)
+                             ? generateOp.dynamicExtents()[nextDynamicIndex++]
+                             : rewriter.create<arith::ConstantIndexOp>(
+                                   loc, memrefType.getDimSize(i));
+      upperBounds.push_back(upperBound);
+    }
+
+    // Generate tensor elements with a parallel loop that stores into
+    // each element of the resulting memref. We use mergeBlockBefore to "move"
+    // this op's body into the scf.parallel's body.
+    auto parallel =
+        rewriter.create<scf::ParallelOp>(loc, lowerBounds, upperBounds, steps);
+    Block *parallelBody = parallel.getBody();
+    rewriter.mergeBlockBefore(generateOp.getBody(),
+                              parallelBody->getTerminator(),
+                              parallelBody->getArguments());
+    // Replace the inlined yield op with a store op. The scf.parallel's builder
+    // already populated an scf.yield at the end, so we don't need to worry
+    // about creating that.
+    Operation *elementYield = parallelBody->getTerminator()->getPrevNode();
+    rewriter.setInsertionPointAfter(elementYield);
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+        elementYield, elementYield->getOperands()[0], result,
+        parallelBody->getArguments());
+
+    replaceOpWithBufferizedValues(rewriter, op, result);
     return success();
   }
 };
@@ -502,6 +562,7 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
   registry.addOpInterface<DimOp, DimOpInterface>();
   registry.addOpInterface<ExtractSliceOp, ExtractSliceOpInterface>();
   registry.addOpInterface<ExtractOp, ExtractOpInterface>();
+  registry.addOpInterface<GenerateOp, GenerateOpInterface>();
   registry.addOpInterface<InsertOp, InsertOpInterface>();
   registry.addOpInterface<InsertSliceOp, InsertSliceOpInterface>();
   registry.addOpInterface<RankOp, RankOpInterface>();
