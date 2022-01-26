@@ -37,7 +37,6 @@ def Linalg_Dialect : Dialect {
     "AffineDialect",
     "math::MathDialect",
     "memref::MemRefDialect",
-    "StandardOpsDialect",
     "tensor::TensorDialect",
   ];
   let hasCanonicalizer = 1;

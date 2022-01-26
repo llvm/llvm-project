@@ -1,4 +1,4 @@
-//===- Utils.h - General transformation utilities ---------------*- C++ -*-===//
+//===- Utils.h - General Arithmetic transformation utilities ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 //
 // This header file defines prototypes for various transformation utilities for
-// the StandardOps dialect. These are not passes by themselves but are used
+// the Arithmetic dialect. These are not passes by themselves but are used
 // either by passes, optimization sequences, or in turn by other transformation
 // utilities.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_STANDARDOPS_UTILS_UTILS_H
-#define MLIR_DIALECT_STANDARDOPS_UTILS_UTILS_H
+#ifndef MLIR_DIALECT_ARITHMETIC_UTILS_UTILS_H
+#define MLIR_DIALECT_ARITHMETIC_UTILS_UTILS_H
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
@@ -105,4 +104,4 @@ private:
 };
 } // namespace mlir
 
-#endif // MLIR_DIALECT_STANDARDOPS_UTILS_UTILS_H
+#endif // MLIR_DIALECT_ARITHMETIC_UTILS_UTILS_H

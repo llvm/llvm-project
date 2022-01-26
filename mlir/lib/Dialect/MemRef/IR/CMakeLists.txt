@@ -14,11 +14,12 @@ add_mlir_dialect_library(MLIRMemRef
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
+  MLIRArithmeticUtils
+  MLIRControlFlowInterfaces
   MLIRDialect
   MLIRDialectUtils
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemRefUtils
-  MLIRStandard
   MLIRViewLikeInterface
 )
