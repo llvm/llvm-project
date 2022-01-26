@@ -10457,7 +10457,7 @@ static void printMachOWeakBindTable(object::MachOObjectFile *Obj) {
 //===----------------------------------------------------------------------===//
 
 static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
-  MachO::linkedit_data_command Ld;
+  MachO::linkedit_data_command Ld = MachO::linkedit_data_command{0, 0, 0, 0};
   Error Err = Error::success();
 
   // find LC_DYLD_CHAINED_FIXUPS Load Command & obtain loaded dylib info
@@ -10475,6 +10475,9 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
   // no LC_DYLD_CHAINED_FIXUPS found
   if (Ld.dataoff == 0) {
     outs() << "no chained fixups\n";
+    if (Err){
+      reportError(std::move(Err), Obj->getFileName());
+    }
     return;
   }
 
