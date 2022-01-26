@@ -10537,7 +10537,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
     uint32_t SegOffset;
     memcpyAtOffset(ImageOffset+sizeof(uint32_t)*(SegIdx+1), SegOffset);
     SegOffsets.push_back(SegOffset);
-    outs() << "    seg_offset [" << SegIdx << "] = "
+    outs() << "    seg_offset[" << SegIdx << "] = "
            << SegOffset << " (" << segments[SegIdx].segname << ")\n";
   }
 
@@ -10547,11 +10547,57 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
     if (SegOffset == 0) continue;
     MachO::dyld_chained_starts_in_segment Seg;
     memcpyAtOffset(ImageOffset+SegOffset, Seg);
+    std::string PointerFormat;
+    switch (Seg.pointer_format) {
+    case MachO::DYLD_CHAINED_PTR_ARM64E:
+      PointerFormat = "DYLD_CHAINED_PTR_ARM64E";
+      break;
+    case MachO::DYLD_CHAINED_PTR_64:
+      PointerFormat = "DYLD_CHAINED_PTR_64";
+      break;
+    case MachO::DYLD_CHAINED_PTR_32:
+      PointerFormat = "DYLD_CHAINED_PTR_32";
+      break;
+    case MachO::DYLD_CHAINED_PTR_32_CACHE:
+      PointerFormat = "DYLD_CHAINED_PTR_32_CACHE";
+      break;
+    case MachO::DYLD_CHAINED_PTR_32_FIRMWARE:
+      PointerFormat = "DYLD_CHAINED_PTR_32_FIRMWARE";
+      break;
+    case MachO::DYLD_CHAINED_PTR_64_OFFSET:
+      PointerFormat = "DYLD_CHAINED_PTR_64_OFFSET";
+      break;
+    // TODO: handle DYLD_CHAINED_PTR_ARM64E_OFFSET
+//    case MachO::DYLD_CHAINED_PTR_ARM64E_OFFSET:
+//      PointerFormat = "DYLD_CHAINED_PTR_ARM64E_OFFSET";
+//      break;
+    case MachO::DYLD_CHAINED_PTR_ARM64E_KERNEL:
+      PointerFormat = "DYLD_CHAINED_PTR_ARM64E_KERNEL";
+      break;
+    case MachO::DYLD_CHAINED_PTR_64_KERNEL_CACHE:
+      PointerFormat = "DYLD_CHAINED_PTR_64_KERNEL_CACHE";
+      break;
+    case MachO::DYLD_CHAINED_PTR_ARM64E_USERLAND:
+      PointerFormat = "DYLD_CHAINED_PTR_ARM64E_USERLAND";
+      break;
+    case MachO::DYLD_CHAINED_PTR_ARM64E_FIRMWARE:
+      PointerFormat = "DYLD_CHAINED_PTR_ARM64E_FIRMWARE";
+      break;
+    case MachO::DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE:
+      PointerFormat = "DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE";
+      break;
+    case MachO::DYLD_CHAINED_PTR_ARM64E_USERLAND24:
+      PointerFormat = "DYLD_CHAINED_PTR_ARM64E_USERLAND24";
+      break;
+    default:
+      PointerFormat = "UNKNOWN";
+      break;
+    }
     outs() << "chained starts in segment " << SegIdx << " (" << segments[SegIdx].segname << ")\n"
            << "  size = " << Seg.size << "\n"
-           << "  page_size = " << Seg.page_size << "\n" // TODO: show in hex
-           << "  pointer_format = " << Seg.pointer_format << "\n" // TODO: show in str
-           << "  segment_offset = " << Seg.segment_offset << "\n" // TODO: show in hex
+           << "  page_size = " << format("0x%016" PRIx64, Seg.page_size) << "\n"
+           << "  pointer_format = " << Seg.pointer_format << " (" << PointerFormat << ")\n"
+           << "  segment_offset = " << format("0x%016" PRIx64, Seg.segment_offset) << "\n"
            << "  max_valid_pointer = " << Seg.max_valid_pointer << "\n"
            << "  page_count = " << Seg.page_count << "\n";
      for (uint16_t PageIdx=0; PageIdx<Seg.page_count; PageIdx++){
@@ -10573,7 +10619,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
       MachO::dyld_chained_import Import;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(Import), Import);
       outs() << "  lib_ordinal = " << Import.lib_ordinal << "\n"
-             << "  weak_import =" << Import.weak_import << "\n"
+             << "  weak_import = " << Import.weak_import << "\n"
              << "  name_offset = " << Import.name_offset << " ("
              << StringRef(Obj->getData().data()+(SymbolOffset+Import.name_offset)) << ")" <<"\n";
       break;
@@ -10582,7 +10628,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
       MachO::dyld_chained_import_addend ImportAddend;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(ImportAddend), ImportAddend);
       outs() << "  lib_ordinal = " << ImportAddend.lib_ordinal << "\n"
-             << "  weak_import =" << ImportAddend.weak_import << "\n"
+             << "  weak_import = " << ImportAddend.weak_import << "\n"
              << "  name_offset = " << ImportAddend.name_offset << " ("
              << StringRef(Obj->getData().data()+(SymbolOffset+ImportAddend.name_offset)) << ")" <<"\n"
              << "  addend = " << ImportAddend.addend << "\n";
@@ -10592,7 +10638,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
       MachO::dyld_chained_import_addend64 ImportAddend64;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(ImportAddend64), ImportAddend64);
       outs() << "  lib_ordinal = " << ImportAddend64.lib_ordinal << "\n"
-             << "  weak_import =" << ImportAddend64.weak_import << "\n"
+             << "  weak_import = " << ImportAddend64.weak_import << "\n"
              << "  reserved =" << ImportAddend64.reserved << "\n"
              << "  name_offset = " << ImportAddend64.name_offset << " ("
              << StringRef(Obj->getData().data()+(SymbolOffset+ImportAddend64.name_offset)) << ")" <<"\n"

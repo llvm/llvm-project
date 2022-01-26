@@ -369,6 +369,23 @@ struct dyld_chained_import_addend64
   uint64_t    addend;
 };
 
+// values for dyld_chained_starts_in_segment.pointer_format
+enum {
+  DYLD_CHAINED_PTR_ARM64E                 =  1,    // stride 8, unauth target is vmaddr
+  DYLD_CHAINED_PTR_64                     =  2,    // target is vmaddr
+  DYLD_CHAINED_PTR_32                     =  3,
+  DYLD_CHAINED_PTR_32_CACHE               =  4,
+  DYLD_CHAINED_PTR_32_FIRMWARE            =  5,
+  DYLD_CHAINED_PTR_64_OFFSET              =  6,    // target is vm offset
+  DYLD_CHAINED_PTR_ARM64E_OFFSET          =  7,    // old name
+  DYLD_CHAINED_PTR_ARM64E_KERNEL          =  7,    // stride 4, unauth target is vm offset
+  DYLD_CHAINED_PTR_64_KERNEL_CACHE        =  8,
+  DYLD_CHAINED_PTR_ARM64E_USERLAND        =  9,    // stride 8, unauth target is vm offset
+  DYLD_CHAINED_PTR_ARM64E_FIRMWARE        = 10,    // stride 4, unauth target is vmaddr
+  DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE    = 11,    // stride 1, x86_64 kernel caches
+  DYLD_CHAINED_PTR_ARM64E_USERLAND24      = 12,    // stride 8, unauth target is vm offset, 24-bit bind
+};
+
 enum {
   // Constant masks for the "n_type" field in llvm::MachO::nlist and
   // llvm::MachO::nlist_64
