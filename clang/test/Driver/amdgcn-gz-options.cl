@@ -9,8 +9,3 @@
 // RUN: %clang -### -target amdgcn-amd-amdhsa -gz=zlib %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB %s
 // CHECK-OPT_GZ_EQ_ZLIB: {{.* "-cc1(as)?".* "--compress-debug-sections=zlib"}}
 // CHECK-OPT_GZ_EQ_ZLIB: "--compress-debug-sections=zlib"
-
-// RUN: %clang -### -target amdgcn-amd-amdhsa -gz=zlib-gnu -x assembler %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB_GNU %s
-// RUN: %clang -### -target amdgcn-amd-amdhsa -gz=zlib-gnu %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_ZLIB_GNU %s
-// CHECK-OPT_GZ_EQ_ZLIB_GNU: {{.* "-cc1(as)?".* "--compress-debug-sections=zlib-gnu"}}
-// CHECK-OPT_GZ_EQ_ZLIB_GNU: "--compress-debug-sections=zlib-gnu"
