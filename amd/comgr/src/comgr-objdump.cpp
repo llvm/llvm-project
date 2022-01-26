@@ -43,6 +43,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -2395,9 +2396,10 @@ llvm::DisassemHelper::disassembleAction(StringRef Input,
   size_t ArgC = ArgV.size();
   ArgV.push_back(nullptr);
   COMGR::clearLLVMOptions();
+  llvm::codegen::RegisterCodeGenFlags CGF;
   cl::ParseCommandLineOptions(ArgC, ArgV.data(), "llvm object file dumper\n",
                               &ErrS);
-  MCPU = lld::getCPUStr();
+  MCPU = llvm::codegen::getCPUStr();
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
       MemoryBuffer::getMemBuffer(Input);

@@ -605,7 +605,8 @@ static amd_comgr_status_t linkWithLLD(llvm::ArrayRef<const char *> Args,
   ArrayRef<const char *> ArgRefs = llvm::makeArrayRef(LLDArgs);
   static std::mutex MScreen;
   MScreen.lock();
-  bool LLDRet = lld::elf::link(ArgRefs, false, LogS, LogE);
+  bool LLDRet = lld::elf::link(ArgRefs, LogS, LogE, false, false);
+  lld::CommonLinkerContext::destroy();
   MScreen.unlock();
   if (!LLDRet) {
     return AMD_COMGR_STATUS_ERROR;

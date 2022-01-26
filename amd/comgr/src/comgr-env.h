@@ -36,6 +36,7 @@
 #ifndef COMGR_ENV_H
 #define COMGR_ENV_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace COMGR {
