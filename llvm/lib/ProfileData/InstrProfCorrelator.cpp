@@ -88,6 +88,15 @@ InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer) {
       instrprof_error::unable_to_correlate_profile, "not an object file");
 }
 
+Optional<size_t> InstrProfCorrelator::getDataSize() const {
+  if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint32_t>>(this)) {
+    return C->getDataSize();
+  } else if (auto *C = dyn_cast<InstrProfCorrelatorImpl<uint64_t>>(this)) {
+    return C->getDataSize();
+  }
+  return {};
+}
+
 namespace llvm {
 
 template <>

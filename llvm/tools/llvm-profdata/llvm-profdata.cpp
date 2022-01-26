@@ -2486,9 +2486,35 @@ static int showMemProfProfile(const std::string &Filename, raw_fd_ostream &OS) {
   return 0;
 }
 
+static int showDebugInfoCorrelation(const std::string &Filename,
+                                    bool ShowDetailedSummary,
+                                    bool ShowProfileSymbolList,
+                                    raw_fd_ostream &OS) {
+  std::unique_ptr<InstrProfCorrelator> Correlator;
+  if (auto Err = InstrProfCorrelator::get(Filename).moveInto(Correlator))
+    exitWithError(std::move(Err), Filename);
+  if (auto Err = Correlator->correlateProfileData())
+    exitWithError(std::move(Err), Filename);
+
+  InstrProfSymtab Symtab;
+  if (auto Err = Symtab.create(
+          StringRef(Correlator->getNamesPointer(), Correlator->getNamesSize())))
+    exitWithError(std::move(Err), Filename);
+
+  if (ShowProfileSymbolList)
+    Symtab.dumpNames(OS);
+  // TODO: Read "Profile Data Type" from debug info to compute and show how many
+  // counters the section holds.
+  if (ShowDetailedSummary)
+    OS << "Counters section size: 0x"
+       << Twine::utohexstr(Correlator->getCountersSectionSize()) << " bytes\n";
+  OS << "Found " << Correlator->getDataSize() << " functions\n";
+
+  return 0;
+}
+
 static int show_main(int argc, const char *argv[]) {
-  cl::opt<std::string> Filename(cl::Positional, cl::Required,
-                                cl::desc("<profdata-file>"));
+  cl::opt<std::string> Filename(cl::Positional, cl::desc("<profdata-file>"));
 
   cl::opt<bool> ShowCounts("counts", cl::init(false),
                            cl::desc("Show counter values for shown functions"));
@@ -2549,8 +2575,17 @@ static int show_main(int argc, const char *argv[]) {
                "extbinary format"));
   cl::opt<bool> ShowBinaryIds("binary-ids", cl::init(false),
                               cl::desc("Show binary ids in the profile. "));
+  cl::opt<std::string> DebugInfoFilename(
+      "debug-info", cl::init(""),
+      cl::desc("Read and extract profile metadata from debug info and show "
+               "the functions it found."));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
+
+  if (Filename.empty() && DebugInfoFilename.empty())
+    exitWithError(
+        "the positional argument '<profdata-file>' is required unless '--" +
+        DebugInfoFilename.ArgStr + "' is provided");
 
   if (Filename == OutputFilename) {
     errs() << sys::path::filename(argv[0])
@@ -2565,6 +2600,10 @@ static int show_main(int argc, const char *argv[]) {
 
   if (ShowAllFunctions && !ShowFunction.empty())
     WithColor::warning() << "-function argument ignored: showing all functions\n";
+
+  if (!DebugInfoFilename.empty())
+    return showDebugInfoCorrelation(DebugInfoFilename, ShowDetailedSummary,
+                                    ShowProfileSymbolList, OS);
 
   if (ProfileKind == instr)
     return showInstrProfile(
