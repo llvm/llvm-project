@@ -1,4 +1,4 @@
-; RUN: opt < %s -sroa -S | FileCheck %s
+; RUN: opt < %s -passes=sroa -S | FileCheck %s
 ;
 ; Make sure that SROA doesn't lose nonnull metadata
 ; on loads from allocas that get optimized out.

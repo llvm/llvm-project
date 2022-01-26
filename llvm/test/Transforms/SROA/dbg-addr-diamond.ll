@@ -1,4 +1,4 @@
-; RUN: opt -use-dbg-addr -sroa -S < %s | FileCheck %s
+; RUN: opt -use-dbg-addr -passes=sroa -S < %s | FileCheck %s
 
 ; ModuleID = '<stdin>'
 source_filename = "newvars.c"
