@@ -2587,6 +2587,15 @@ bool NewGVN::OpIsSafeForPHIOfOpsHelper(
   }
 
   auto *OrigI = cast<Instruction>(V);
+  // When we hit an instruction that reads memory (load, call, etc), we must
+  // consider any store that may happen in the loop. For now, we assume the
+  // worst: there is a store in the loop that alias with this read.
+  // The case where the load is outside the loop is already covered by the
+  // dominator check above.
+  // TODO: relax this condition
+  if (OrigI->mayReadFromMemory())
+    return false;
+
   for (auto *Op : OrigI->operand_values()) {
     if (!isa<Instruction>(Op))
       continue;
