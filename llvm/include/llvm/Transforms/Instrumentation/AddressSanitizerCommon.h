@@ -26,6 +26,7 @@ class InterestingMemoryOperand {
 public:
   Use *PtrUse;
   bool IsWrite;
+  Type *OpType;
   uint64_t TypeSize;
   MaybeAlign Alignment;
   // The mask Value, if we're looking at a masked load/store.
@@ -34,7 +35,8 @@ public:
   InterestingMemoryOperand(Instruction *I, unsigned OperandNo, bool IsWrite,
                            class Type *OpType, MaybeAlign Alignment,
                            Value *MaybeMask = nullptr)
-      : IsWrite(IsWrite), Alignment(Alignment), MaybeMask(MaybeMask) {
+      : IsWrite(IsWrite), OpType(OpType), Alignment(Alignment),
+        MaybeMask(MaybeMask) {
     const DataLayout &DL = I->getModule()->getDataLayout();
     TypeSize = DL.getTypeStoreSizeInBits(OpType);
     PtrUse = &I->getOperandUse(OperandNo);
