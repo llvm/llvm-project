@@ -4020,8 +4020,15 @@ LLVMValueRef LLVMBuildIsNotNull(LLVMBuilderRef B, LLVMValueRef Val,
 LLVMValueRef LLVMBuildPtrDiff(LLVMBuilderRef B, LLVMValueRef LHS,
                               LLVMValueRef RHS, const char *Name) {
   Value *L = unwrap(LHS);
-  Type *ElemTy = L->getType()->getPointerElementType();
+  Type *ElemTy = L->getType()->getNonOpaquePointerElementType();
   return wrap(unwrap(B)->CreatePtrDiff(ElemTy, L, unwrap(RHS), Name));
+}
+
+LLVMValueRef LLVMBuildPtrDiff2(LLVMBuilderRef B, LLVMTypeRef ElemTy,
+                               LLVMValueRef LHS, LLVMValueRef RHS,
+                               const char *Name) {
+  return wrap(unwrap(B)->CreatePtrDiff(unwrap(ElemTy), unwrap(LHS),
+                                       unwrap(RHS), Name));
 }
 
 LLVMValueRef LLVMBuildAtomicRMW(LLVMBuilderRef B,LLVMAtomicRMWBinOp op,
