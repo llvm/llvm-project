@@ -10618,29 +10618,38 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
   for (uint32_t ImportIdx=0; ImportIdx<Header.imports_count; ImportIdx++) {
     switch (Header.imports_format) {
     case MachO::DYLD_CHAINED_IMPORT:
-      outs() << "dyld_chained_import[" << ImportIdx << "]\n"; // TODO: add address
       MachO::dyld_chained_import Import;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(Import), Import);
-      outs() << "  lib_ordinal = " << Import.lib_ordinal << " (" << dylibName(Import.lib_ordinal) << ")\n"
+      uint32_t ImportValues[1];
+      memcpy(ImportValues, &Import, sizeof(Import));
+      outs() << "dyld chained import[" << ImportIdx << "] = "
+             << format("0x%08" PRIx64, ImportValues[0]) << "\n"
+             << "  lib_ordinal = " << Import.lib_ordinal << " (" << dylibName(Import.lib_ordinal) << ")\n"
              << "  weak_import = " << Import.weak_import << "\n"
              << "  name_offset = " << Import.name_offset << " ("
              << StringRef(Obj->getData().data()+(SymbolOffset+Import.name_offset)) << ")" <<"\n";
       break;
     case MachO::DYLD_CHAINED_IMPORT_ADDEND:
-      outs() << "dyld_chained_import_addend[" << ImportIdx << "]\n";
       MachO::dyld_chained_import_addend ImportAddend;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(ImportAddend), ImportAddend);
-      outs() << "  lib_ordinal = " << ImportAddend.lib_ordinal << " (" << dylibName(ImportAddend.lib_ordinal) << ")\n"
+      uint32_t ImportAddendValues[2];
+      memcpy(ImportAddendValues, &ImportAddend, sizeof(ImportAddend));
+      outs() << "dyld chained import addend[" << ImportIdx << "] = "
+             << format("0x%08" PRIx64, ImportAddendValues[0]) << format("0x%08" PRIx64, ImportAddendValues[1]) << "\n"
+             << "  lib_ordinal = " << ImportAddend.lib_ordinal << " (" << dylibName(ImportAddend.lib_ordinal) << ")\n"
              << "  weak_import = " << ImportAddend.weak_import << "\n"
              << "  name_offset = " << ImportAddend.name_offset << " ("
              << StringRef(Obj->getData().data()+(SymbolOffset+ImportAddend.name_offset)) << ")" <<"\n"
              << "  addend = " << ImportAddend.addend << "\n";
       break;
     case MachO::DYLD_CHAINED_IMPORT_ADDEND64:
-      outs() << "dyld_chained_import_addend64[" << ImportIdx << "]\n";
       MachO::dyld_chained_import_addend64 ImportAddend64;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(ImportAddend64), ImportAddend64);
-      outs() << "  lib_ordinal = " << ImportAddend64.lib_ordinal << " (" << dylibName(ImportAddend64.lib_ordinal) << ")\n"
+      uint64_t ImportAddend64Values[2];
+      memcpy(ImportAddend64Values, &ImportAddend64Values, sizeof(ImportAddend64));
+      outs() << "dyld chained import addend64[" << ImportIdx << "] = "
+             << format("0x%016" PRIx64, ImportAddend64Values[0]) << format("0x%016" PRIx64, ImportAddend64Values[1]) << "\n"
+             << "  lib_ordinal = " << ImportAddend64.lib_ordinal << " (" << dylibName(ImportAddend64.lib_ordinal) << ")\n"
              << "  weak_import = " << ImportAddend64.weak_import << "\n"
              << "  reserved =" << ImportAddend64.reserved << "\n"
              << "  name_offset = " << ImportAddend64.name_offset << " ("
