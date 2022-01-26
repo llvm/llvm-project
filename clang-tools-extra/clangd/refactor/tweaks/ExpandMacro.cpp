@@ -52,7 +52,7 @@ findTokenUnderCursor(const SourceManager &SM,
                      llvm::ArrayRef<syntax::Token> Spelled,
                      unsigned CursorOffset) {
   // Find the token that strats after the offset, then look at a previous one.
-  auto It = llvm::partition_point(Spelled, [&](const syntax::Token &T) {
+  auto *It = llvm::partition_point(Spelled, [&](const syntax::Token &T) {
     assert(T.location().isFileID());
     return SM.getFileOffset(T.location()) <= CursorOffset;
   });

@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
@@ -1537,6 +1536,68 @@ static LogicalResult verifyAtomicUpdateOp(AtomicUpdateOp op) {
           "memory-order must not be acq_rel or acquire for atomic updates");
     }
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCaptureOp
+//===----------------------------------------------------------------------===//
+
+/// Parser for AtomicCaptureOp
+static LogicalResult parseAtomicCaptureOp(OpAsmParser &parser,
+                                          OperationState &result) {
+  SmallVector<ClauseType> clauses = {memoryOrderClause, hintClause};
+  SmallVector<int> segments;
+  if (parseClauses(parser, result, clauses, segments) ||
+      parser.parseRegion(*result.addRegion()))
+    return failure();
+  return success();
+}
+
+/// Printer for AtomicCaptureOp
+static void printAtomicCaptureOp(OpAsmPrinter &p, AtomicCaptureOp op) {
+  if (op.memory_order())
+    p << "memory_order(" << op.memory_order() << ") ";
+  if (op.hintAttr())
+    printSynchronizationHint(p, op, op.hintAttr());
+  p.printRegion(op.region());
+}
+
+/// Verifier for AtomicCaptureOp
+static LogicalResult verifyAtomicCaptureOp(AtomicCaptureOp op) {
+  Block::OpListType &ops = op.region().front().getOperations();
+  if (ops.size() != 3)
+    return emitError(op.getLoc())
+           << "expected three operations in omp.atomic.capture region (one "
+              "terminator, and two atomic ops)";
+  auto &firstOp = ops.front();
+  auto &secondOp = *ops.getNextNode(firstOp);
+  auto firstReadStmt = dyn_cast<AtomicReadOp>(firstOp);
+  auto firstUpdateStmt = dyn_cast<AtomicUpdateOp>(firstOp);
+  auto secondReadStmt = dyn_cast<AtomicReadOp>(secondOp);
+  auto secondUpdateStmt = dyn_cast<AtomicUpdateOp>(secondOp);
+  auto secondWriteStmt = dyn_cast<AtomicWriteOp>(secondOp);
+
+  if (!((firstUpdateStmt && secondReadStmt) ||
+        (firstReadStmt && secondUpdateStmt) ||
+        (firstReadStmt && secondWriteStmt)))
+    return emitError(ops.front().getLoc())
+           << "invalid sequence of operations in the capture region";
+  if (firstUpdateStmt && secondReadStmt &&
+      firstUpdateStmt.x() != secondReadStmt.x())
+    return emitError(firstUpdateStmt.getLoc())
+           << "updated variable in omp.atomic.update must be captured in "
+              "second operation";
+  if (firstReadStmt && secondUpdateStmt &&
+      firstReadStmt.x() != secondUpdateStmt.x())
+    return emitError(firstReadStmt.getLoc())
+           << "captured variable in omp.atomic.read must be updated in second "
+              "operation";
+  if (firstReadStmt && secondWriteStmt &&
+      firstReadStmt.x() != secondWriteStmt.address())
+    return emitError(firstReadStmt.getLoc())
+           << "captured variable in omp.atomic.read must be updated in "
+              "second operation";
   return success();
 }
 

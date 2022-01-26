@@ -98,5 +98,65 @@ getSCFMinMaxExpr(Value value, SmallVectorImpl<Value> &dims,
                  SmallVectorImpl<Value> &symbols,
                  llvm::function_ref<bool(Operation *)> loopFilter = nullptr);
 
+/// Replace a perfect nest of "for" loops with a single linearized loop. Assumes
+/// `loops` contains a list of perfectly nested loops with bounds and steps
+/// independent of any loop induction variable involved in the nest.
+void coalesceLoops(MutableArrayRef<scf::ForOp> loops);
+
+/// Take the ParallelLoop and for each set of dimension indices, combine them
+/// into a single dimension. combinedDimensions must contain each index into
+/// loops exactly once.
+void collapseParallelLoops(scf::ParallelOp loops,
+                           ArrayRef<std::vector<unsigned>> combinedDimensions);
+
+/// Promotes the loop body of a scf::ForOp to its containing block if the loop
+/// was known to have a single iteration.
+LogicalResult promoteIfSingleIteration(scf::ForOp forOp);
+
+/// Unrolls this for operation by the specified unroll factor. Returns failure
+/// if the loop cannot be unrolled either due to restrictions or due to invalid
+/// unroll factors. Requires positive loop bounds and step. If specified,
+/// annotates the Ops in each unrolled iteration by applying `annotateFn`.
+LogicalResult loopUnrollByFactor(
+    scf::ForOp forOp, uint64_t unrollFactor,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+
+/// Tile a nest of standard for loops rooted at `rootForOp` by finding such
+/// parametric tile sizes that the outer loops have a fixed number of iterations
+/// as defined in `sizes`.
+using Loops = SmallVector<scf::ForOp, 8>;
+using TileLoops = std::pair<Loops, Loops>;
+TileLoops extractFixedOuterLoops(scf::ForOp rootFOrOp, ArrayRef<int64_t> sizes);
+
+/// Performs tiling fo imperfectly nested loops (with interchange) by
+/// strip-mining the `forOps` by `sizes` and sinking them, in their order of
+/// occurrence in `forOps`, under each of the `targets`.
+/// Returns the new AffineForOps, one per each of (`forOps`, `targets`) pair,
+/// nested immediately under each of `targets`.
+SmallVector<Loops, 8> tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
+                           ArrayRef<scf::ForOp> targets);
+
+/// Performs tiling (with interchange) by strip-mining the `forOps` by `sizes`
+/// and sinking them, in their order of occurrence in `forOps`, under `target`.
+/// Returns the new AffineForOps, one per `forOps`, nested immediately under
+/// `target`.
+Loops tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
+           scf::ForOp target);
+
+/// Tile a nest of scf::ForOp loops rooted at `rootForOp` with the given
+/// (parametric) sizes. Sizes are expected to be strictly positive values at
+/// runtime.  If more sizes than loops are provided, discard the trailing values
+/// in sizes.  Assumes the loop nest is permutable.
+/// Returns the newly created intra-tile loops.
+Loops tilePerfectlyNested(scf::ForOp rootForOp, ArrayRef<Value> sizes);
+
+/// Get perfectly nested sequence of loops starting at root of loop nest
+/// (the first op being another AffineFor, and the second op - a terminator).
+/// A loop is perfectly nested iff: the first op in the loop's body is another
+/// AffineForOp, and the second op is a terminator).
+void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
+                             scf::ForOp root);
+
 } // namespace mlir
+
 #endif // MLIR_DIALECT_SCF_UTILS_H_

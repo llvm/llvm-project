@@ -19,6 +19,5 @@ add_mlir_dialect_library(MLIRShape
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRSideEffectInterfaces
-  MLIRStandard
   MLIRTensor
   )

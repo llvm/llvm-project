@@ -1,0 +1,10 @@
+# RUN: llvm-mc -disassemble -triple m68k %s | FileCheck %s
+
+# CHECK: adda.l %a0, %a1
+0xd3 0xc8
+# CHECK: sub.w %d3, %d1
+0x92 0x43
+# CHECK: cmp.w %d1, %d0
+0xb0 0x41
+# CHECK: neg.w %d0
+0x44 0x40

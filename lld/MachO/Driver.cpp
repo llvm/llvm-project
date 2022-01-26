@@ -15,6 +15,7 @@
 #include "ObjC.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "SectionPriorities.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -128,7 +129,7 @@ static Optional<StringRef> findFramework(StringRef name) {
         // only append suffix if realpath() succeeds
         Twine suffixed = location + suffix;
         if (fs::exists(suffixed))
-          return resolvedFrameworks[key] = saver.save(suffixed.str());
+          return resolvedFrameworks[key] = saver().save(suffixed.str());
       }
       // Suffix lookup failed, fall through to the no-suffix case.
     }
@@ -165,7 +166,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
         path::append(buffer, path);
         // Do not warn about paths that are computed via the syslib roots
         if (fs::is_directory(buffer)) {
-          paths.push_back(saver.save(buffer.str()));
+          paths.push_back(saver().save(buffer.str()));
           found = true;
         }
       }
@@ -183,7 +184,7 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
       SmallString<261> buffer(root);
       path::append(buffer, path);
       if (fs::is_directory(buffer))
-        paths.push_back(saver.save(buffer.str()));
+        paths.push_back(saver().save(buffer.str()));
     }
   }
   return paths;
@@ -460,60 +461,6 @@ static void addFileList(StringRef path, bool isLazy) {
 // entry (the one nearest to the front of the list.)
 //
 // The file can also have line comments that start with '#'.
-static void parseOrderFile(StringRef path) {
-  Optional<MemoryBufferRef> buffer = readFile(path);
-  if (!buffer) {
-    error("Could not read order file at " + path);
-    return;
-  }
-
-  MemoryBufferRef mbref = *buffer;
-  size_t priority = std::numeric_limits<size_t>::max();
-  for (StringRef line : args::getLines(mbref)) {
-    StringRef objectFile, symbol;
-    line = line.take_until([](char c) { return c == '#'; }); // ignore comments
-    line = line.ltrim();
-
-    CPUType cpuType = StringSwitch<CPUType>(line)
-                          .StartsWith("i386:", CPU_TYPE_I386)
-                          .StartsWith("x86_64:", CPU_TYPE_X86_64)
-                          .StartsWith("arm:", CPU_TYPE_ARM)
-                          .StartsWith("arm64:", CPU_TYPE_ARM64)
-                          .StartsWith("ppc:", CPU_TYPE_POWERPC)
-                          .StartsWith("ppc64:", CPU_TYPE_POWERPC64)
-                          .Default(CPU_TYPE_ANY);
-
-    if (cpuType != CPU_TYPE_ANY && cpuType != target->cpuType)
-      continue;
-
-    // Drop the CPU type as well as the colon
-    if (cpuType != CPU_TYPE_ANY)
-      line = line.drop_until([](char c) { return c == ':'; }).drop_front();
-
-    constexpr std::array<StringRef, 2> fileEnds = {".o:", ".o):"};
-    for (StringRef fileEnd : fileEnds) {
-      size_t pos = line.find(fileEnd);
-      if (pos != StringRef::npos) {
-        // Split the string around the colon
-        objectFile = line.take_front(pos + fileEnd.size() - 1);
-        line = line.drop_front(pos + fileEnd.size());
-        break;
-      }
-    }
-    symbol = line.trim();
-
-    if (!symbol.empty()) {
-      SymbolPriorityEntry &entry = config->priorities[symbol];
-      if (!objectFile.empty())
-        entry.objectFiles.insert(std::make_pair(objectFile, priority));
-      else
-        entry.anyObjectFile = std::max(entry.anyObjectFile, priority);
-    }
-
-    --priority;
-  }
-}
-
 // We expect sub-library names of the form "libfoo", which will match a dylib
 // with a path of .*/libfoo.{dylib, tbd}.
 // XXX ld64 seems to ignore the extension entirely when matching sub-libraries;
@@ -1081,25 +1028,6 @@ static void gatherInputSections() {
   assert(inputOrder <= UnspecifiedInputOrder);
 }
 
-static void extractCallGraphProfile() {
-  TimeTraceScope timeScope("Extract call graph profile");
-  for (const InputFile *file : inputFiles) {
-    auto *obj = dyn_cast_or_null<ObjFile>(file);
-    if (!obj)
-      continue;
-    for (const CallGraphEntry &entry : obj->callGraph) {
-      assert(entry.fromIndex < obj->symbols.size() &&
-             entry.toIndex < obj->symbols.size());
-      auto *fromSym = dyn_cast_or_null<Defined>(obj->symbols[entry.fromIndex]);
-      auto *toSym = dyn_cast_or_null<Defined>(obj->symbols[entry.toIndex]);
-
-      if (!fromSym || !toSym)
-        continue;
-      config->callGraphProfile[{fromSym->isec, toSym->isec}] += entry.count;
-    }
-  }
-}
-
 static void foldIdenticalLiterals() {
   // We always create a cStringSection, regardless of whether dedupLiterals is
   // true. If it isn't, we simply create a non-deduplicating CStringSection.
@@ -1126,14 +1054,14 @@ static void referenceStubBinder() {
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
 }
 
-bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
-                 raw_ostream &stdoutOS, raw_ostream &stderrOS) {
-  lld::stdoutOS = &stdoutOS;
-  lld::stderrOS = &stderrOS;
+bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+                 llvm::raw_ostream &stderrOS, bool exitEarly,
+                 bool disableOutput) {
+  // This driver-specific context will be freed later by lldMain().
+  auto *ctx = new CommonLinkerContext;
 
-  errorHandler().cleanupCallback = []() {
-    freeArena();
-
+  ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  ctx->e.cleanupCallback = []() {
     resolvedFrameworks.clear();
     resolvedLibraries.clear();
     cachedReads.clear();
@@ -1154,17 +1082,15 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     InputFile::resetIdCount();
   };
 
-  errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
-  stderrOS.enable_colors(stderrOS.has_colors());
+  ctx->e.logName = args::getFilenameWithoutExe(argsArr[0]);
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
 
-  errorHandler().errorLimitExceededMsg =
-      "too many errors emitted, stopping now "
-      "(use --error-limit=0 to see all errors)";
-  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
-  errorHandler().verbose = args.hasArg(OPT_verbose);
+  ctx->e.errorLimitExceededMsg = "too many errors emitted, stopping now "
+                                 "(use --error-limit=0 to see all errors)";
+  ctx->e.errorLimit = args::getInteger(args, OPT_error_limit_eq, 20);
+  ctx->e.verbose = args.hasArg(OPT_verbose);
 
   if (args.hasArg(OPT_help_hidden)) {
     parser.printHelp(argsArr[0], /*showHidden=*/true);
@@ -1208,7 +1134,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       // these are meaningful for our text based stripping
       if (config->osoPrefix.equals(".") || config->osoPrefix.endswith(sep))
         expanded += sep;
-      config->osoPrefix = saver.save(expanded.str());
+      config->osoPrefix = saver().save(expanded.str());
     }
   }
 
@@ -1496,7 +1422,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
-      parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
+      parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                        arg->getSpelling());
 
     for (const Arg *arg : args.filtered(OPT_mllvm))
@@ -1587,11 +1513,5 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     timeTraceProfilerCleanup();
   }
-
-  if (canExitEarly)
-    exitLld(errorCount() ? 1 : 0);
-
-  bool ret = errorCount() == 0;
-  errorHandler().reset();
-  return ret;
+  return errorCount() == 0;
 }

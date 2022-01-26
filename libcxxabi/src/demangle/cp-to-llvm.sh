@@ -5,7 +5,8 @@
 
 set -e
 
-FILES="ItaniumDemangle.h StringView.h Utility.h README.txt"
+cd $(dirname $0)
+HDRS="ItaniumDemangle.h StringView.h Utility.h"
 LLVM_DEMANGLE_DIR=$1
 
 if [[ -z "$LLVM_DEMANGLE_DIR" ]]; then
@@ -21,7 +22,14 @@ read -p "This will overwrite the copies of $FILES in $LLVM_DEMANGLE_DIR; are you
 echo
 
 if [[ $ANSWER =~ ^[Yy]$ ]]; then
-    for I in $FILES ; do
-        cp $I $LLVM_DEMANGLE_DIR/$I
+    cp -f README.txt $LLVM_DEMANGLE_DIR
+    chmod -w $LLVM_DEMANGLE_DIR/README.txt
+    for I in $HDRS ; do
+	rm -f $LLVM_DEMANGLE_DIR/$I
+	cat - $I >$LLVM_DEMANGLE_DIR/$I <<EOF
+// Do not edit! -*- read-only -*-
+// See README.txt for instructions
+EOF
+	chmod -w $LLVM_DEMANGLE_DIR/$I
     done
 fi

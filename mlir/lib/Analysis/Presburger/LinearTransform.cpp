@@ -112,7 +112,7 @@ LinearTransform::makeTransformToColumnEchelon(Matrix m) {
 }
 
 SmallVector<int64_t, 8>
-LinearTransform::postMultiplyRow(ArrayRef<int64_t> rowVec) const {
+LinearTransform::preMultiplyWithRow(ArrayRef<int64_t> rowVec) const {
   assert(rowVec.size() == matrix.getNumRows() &&
          "row vector dimension should match transform output dimension");
 
@@ -124,7 +124,7 @@ LinearTransform::postMultiplyRow(ArrayRef<int64_t> rowVec) const {
 }
 
 SmallVector<int64_t, 8>
-LinearTransform::preMultiplyColumn(ArrayRef<int64_t> colVec) const {
+LinearTransform::postMultiplyWithColumn(ArrayRef<int64_t> colVec) const {
   assert(matrix.getNumColumns() == colVec.size() &&
          "column vector dimension should match transform input dimension");
 
@@ -144,7 +144,7 @@ LinearTransform::applyTo(const IntegerPolyhedron &poly) const {
 
     int64_t c = eq.back();
 
-    SmallVector<int64_t, 8> newEq = postMultiplyRow(eq.drop_back());
+    SmallVector<int64_t, 8> newEq = preMultiplyWithRow(eq.drop_back());
     newEq.push_back(c);
     result.addEquality(newEq);
   }
@@ -154,7 +154,7 @@ LinearTransform::applyTo(const IntegerPolyhedron &poly) const {
 
     int64_t c = ineq.back();
 
-    SmallVector<int64_t, 8> newIneq = postMultiplyRow(ineq.drop_back());
+    SmallVector<int64_t, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
     newIneq.push_back(c);
     result.addInequality(newIneq);
   }

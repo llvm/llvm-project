@@ -38,10 +38,13 @@ What's New in Libc++ 14.0.0?
 New Features
 ------------
 
-- There's initial support for the C++20 header ``<format>``. The implementation
-  is incomplete. Some functions are known to be inefficient; both in memory
-  usage and performance. The implementation is considered experimental and isn't
-  considered ABI stable.
+- There's support for the C++20 header ``<format>``. Some parts are still
+  missing, most notably the compile-time format string validation. Some
+  functions are known to be inefficient, both in memory usage and performance.
+  The implementation isn't API- or ABI-stable and therefore considered
+  experimental. (Some not-yet-implemented papers require an API-break.)
+  Vendors can still disable this header by turning the CMake option
+  `LIBCXX_ENABLE_INCOMPLETE_FEATURES` off.
 
 - There's a new CMake option ``LIBCXX_ENABLE_UNICODE`` to disable Unicode
   support in the ``<format>`` header. This only affects the estimation of the
@@ -111,6 +114,18 @@ API Changes
 - Removed the nonstandard default constructor from ``std::chrono::month_weekday``.
   You must now explicitly initialize with a ``chrono::month`` and
   ``chrono::weekday_indexed`` instead of "meh, whenever".
+
+- C++20 requires that ``std::basic_string::reserve(n)`` never reduce the capacity
+  of the string. (For that, use ``shrink_to_fit()``.) Prior to this release, libc++'s
+  ``std::basic_string::reserve(n)`` could reduce capacity in C++17 and before, but
+  not in C++20 and later. This caused ODR violations when mixing code compiled under
+  different Standard modes. After this change, libc++'s ``std::basic_string::reserve(n)``
+  never reduces capacity, even in C++17 and before.
+  C++20 deprecates the zero-argument overload of ``std::basic_string::reserve()``,
+  but specifically permits it to reduce capacity. To avoid breaking existing code
+  assuming that ``std::basic_string::reserve()`` will shrink, libc++ maintains
+  the behavior to shrink, even though that makes ``std::basic_string::reserve()`` not
+  a synonym for ``std::basic_string::reserve(0)`` in any Standard mode anymore.
 
 ABI Changes
 -----------

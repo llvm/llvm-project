@@ -169,7 +169,7 @@ OpDescriptor llvm::fuzzerop::splitBlockDescriptor(unsigned Weight) {
 
 OpDescriptor llvm::fuzzerop::gepDescriptor(unsigned Weight) {
   auto buildGEP = [](ArrayRef<Value *> Srcs, Instruction *Inst) {
-    Type *Ty = cast<PointerType>(Srcs[0]->getType())->getElementType();
+    Type *Ty = Srcs[0]->getType()->getPointerElementType();
     auto Indices = makeArrayRef(Srcs).drop_front(1);
     return GetElementPtrInst::Create(Ty, Srcs[0], Indices, "G", Inst);
   };

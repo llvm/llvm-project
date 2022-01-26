@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matvec pad hoist-paddings=1,1,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=MATVEC
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matvec pad hoist-paddings=1,1,0 transpose-paddings=1:0,0,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=TRANSP
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad hoist-paddings=1,2,1 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=MATMUL
 
 //  MATVEC-DAG: #[[DIV4:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 4)>
@@ -30,7 +31,7 @@ func @static_size_divisible(%arg0: tensor<24x12xf32>,
     //  MATVEC-DAG:   %[[T4:.*]] = tensor.extract_slice %[[T0]][%[[IDX0]]
     %2 = tensor.extract_slice %arg1[%arg3] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = tensor.pad %2 nofold low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  
+    ^bb0(%arg5: index):
       tensor.yield %cst : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -81,11 +82,11 @@ func @static_size_not_divisible(%arg0: tensor<24x12xf32>,
     %3 = tensor.extract_slice %arg1[%arg3] [%1] [1] : tensor<12xf32> to tensor<?xf32>
     %4 = affine.apply #map1(%1)
     %5 = tensor.pad %2 low[%c0, %c0] high[%c0, %4]  {
-    ^bb0(%arg5: index, %arg6: index):  
+    ^bb0(%arg5: index, %arg6: index):
       tensor.yield %cst : f32
     } : tensor<24x?xf32> to tensor<24x5xf32>
     %6 = tensor.pad %3 low[%c0] high[%4]  {
-    ^bb0(%arg5: index):  
+    ^bb0(%arg5: index):
       tensor.yield %cst : f32
     } : tensor<?xf32> to tensor<5xf32>
 
@@ -141,11 +142,11 @@ func @dynamic_size(%arg0: tensor<24x?xf32>,
     %4 = tensor.extract_slice %arg1[%arg3] [%2] [1] : tensor<?xf32> to tensor<?xf32>
     %5 = affine.apply #map1(%2)
     %6 = tensor.pad %3 low[%c0, %c0] high[%c0, %5]  {
-    ^bb0(%arg5: index, %arg6: index):  
+    ^bb0(%arg5: index, %arg6: index):
       tensor.yield %cst : f32
     } : tensor<24x?xf32> to tensor<24x4xf32>
     %7 = tensor.pad %4 nofold low[%c0] high[%5]  {
-    ^bb0(%arg5: index):  
+    ^bb0(%arg5: index):
       tensor.yield %cst : f32
     } : tensor<?xf32> to tensor<4xf32>
 
@@ -177,7 +178,7 @@ func @non_constant_padding(%arg0: tensor<24x12xf32>,
     //      MATVEC:  %[[T1:.*]] = tensor.pad %[[T0]]
     %2 = tensor.extract_slice %arg1[%arg3] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = tensor.pad %2 nofold low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  
+    ^bb0(%arg5: index):
       %5 = arith.index_cast %arg3 : index to i32
       %6 = arith.sitofp %5 : i32 to f32
       tensor.yield %6 : f32
@@ -214,7 +215,7 @@ func @non_constant_op_padding(%arg0: tensor<24x12xf32>,
     %2 = tensor.extract_slice %arg1[%arg3] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = tensor.extract %arg1[%arg3] : tensor<12xf32>
     %4 = tensor.pad %2 nofold low[%c0] high[%c0]  {
-    ^bb0(%arg5: index):  
+    ^bb0(%arg5: index):
       tensor.yield %3 : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -251,7 +252,7 @@ func @non_index_operand(%arg0: tensor<24x12xf32>,
     %2 = tensor.extract_slice %arg1[%arg4] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = arith.index_cast %arg3 : i32 to index
     %4 = tensor.pad %2 nofold low[%3] high[%3]  {
-    ^bb0(%arg6: index):  
+    ^bb0(%arg6: index):
       tensor.yield %cst : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -288,7 +289,7 @@ func @memory_effect(%arg0: tensor<24x12xf32>,
     %2 = tensor.extract_slice %arg1[%arg4] [4] [1] : tensor<12xf32> to tensor<4xf32>
     %3 = memref.load %arg3[%c0] : memref<?xindex>
     %4 = tensor.pad %2 nofold low[%3] high[%3]  {
-    ^bb0(%arg6: index):  
+    ^bb0(%arg6: index):
       tensor.yield %cst : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -328,7 +329,7 @@ func @index_result_loop(%arg0: tensor<24x12xf32>,
       scf.yield %6 : index
     }
     %4 = tensor.pad %2 nofold low[%3] high[%3]  {
-    ^bb0(%arg6: index):  
+    ^bb0(%arg6: index):
       tensor.yield %cst : f32
     } : tensor<4xf32> to tensor<4xf32>
 
@@ -373,7 +374,7 @@ func @tile_and_fuse(%arg0: tensor<12x6xf32>,
 
     // Check the fused and padded fill op does not prevent hoisting.
     %4 = tensor.pad %2 nofold low[%c0, %c0] high[%3, %c0]  {
-    ^bb0(%arg5: index, %arg6: index):  
+    ^bb0(%arg5: index, %arg6: index):
       tensor.yield %cst : f32
     } : tensor<?x24xf32> to tensor<5x24xf32>
     %5 = linalg.fill(%cst, %4) : f32, tensor<5x24xf32> -> tensor<5x24xf32>
@@ -394,18 +395,18 @@ func @tile_and_fuse(%arg0: tensor<12x6xf32>,
       %10 = tensor.extract_slice %arg1[%arg5, 0] [3, 24] [1, 1] : tensor<6x24xf32> to tensor<3x24xf32>
       %11 = tensor.extract_slice %arg6[0, 0] [%1, 24] [1, 1] : tensor<?x24xf32> to tensor<?x24xf32>
       %12 = tensor.pad %9 nofold low[%c0, %c0] high[%3, %c0]  {
-      ^bb0(%arg7: index, %arg8: index):  
+      ^bb0(%arg7: index, %arg8: index):
         tensor.yield %cst : f32
       } : tensor<?x3xf32> to tensor<5x3xf32>
       %13 = tensor.pad %10 nofold low[%c0, %c0] high[%c0, %c0]  {
-      ^bb0(%arg7: index, %arg8: index):  
+      ^bb0(%arg7: index, %arg8: index):
         tensor.yield %cst : f32
       } : tensor<3x24xf32> to tensor<3x24xf32>
 
       // Check the output padding is not hoisted.
       //      MATMUL:   %[[T8:.*]] = tensor.pad
       %14 = tensor.pad %11 nofold low[%c0, %c0] high[%3, %c0]  {
-      ^bb0(%arg7: index, %arg8: index):  
+      ^bb0(%arg7: index, %arg8: index):
         tensor.yield %cst : f32
       } : tensor<?x24xf32> to tensor<5x24xf32>
 
@@ -420,4 +421,60 @@ func @tile_and_fuse(%arg0: tensor<12x6xf32>,
     scf.yield %8 : tensor<12x24xf32>
   }
   return %0 : tensor<12x24xf32>
+}
+
+// -----
+
+#map0 = affine_map<(d0)[s0] -> (4, -d0 + s0)>
+#map1 = affine_map<(d0) -> (-d0 + 4)>
+
+//      TRANSP:  transpose
+// TRANSP-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<24x?xf32>
+func @transpose(%arg0: tensor<24x?xf32>,
+                %arg1: tensor<?xf32>,
+                %arg2: tensor<24xf32>) -> tensor<24xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %0 = tensor.dim %arg0, %c1 : tensor<24x?xf32>
+
+  // Transpose the padded matrix.
+  //      TRANSP:  %[[T0:.*]] = scf.for %[[PIV0:[0-9a-z]+]] = {{.*}}iter_args(%[[T1:.*]] =
+  //        TRANSP:   %[[T2:.*]] = tensor.pad
+  //        TRANSP:   %[[T3:.*]] = tensor.extract_slice %[[T1]]
+  //        TRANSP:   %[[T4:.*]] = linalg.generic
+  //   TRANSP-SAME:     ins(%[[T2]] : tensor<24x4xf32>
+  //   TRANSP-SAME:     outs(%[[T3]] : tensor<4x24xf32>
+  //        TRANSP:   %[[T5:.*]] = tensor.insert_slice %[[T4]] into %[[T1]]
+  //        TRANSP:   scf.yield %[[T5:.*]]
+
+  //      TRANSP:  scf.for %[[IV0:[0-9a-zA-Z]*]] =
+  %1 = scf.for %arg3 = %c0 to %0 step %c4 iter_args(%arg4 = %arg2) -> (tensor<24xf32>) {
+    %2 = affine.min #map0(%arg3)[%0]
+    %3 = tensor.extract_slice %arg0[0, %arg3] [24, %2] [1, 1] : tensor<24x?xf32> to tensor<24x?xf32>
+
+    // Index the packed vector and transpose back.
+    //      TRANSP:   %[[T6:.*]] = tensor.extract_slice %[[T0]]
+    //      TRANSP:   %[[T7:.*]] = linalg.init_tensor
+    //      TRANSP:   %[[T8:.*]] = linalg.generic
+    // TRANSP-SAME:     ins(%[[T6]] : tensor<4x24xf32>
+    // TRANSP-SAME:     outs(%[[T7]] : tensor<24x4xf32>
+    %4 = tensor.extract_slice %arg1[%arg3] [%2] [1] : tensor<?xf32> to tensor<?xf32>
+    %5 = affine.apply #map1(%2)
+    %6 = tensor.pad %3 low[%c0, %c0] high[%c0, %5]  {
+    ^bb0(%arg5: index, %arg6: index):  // no predecessors
+      tensor.yield %cst : f32
+    } : tensor<24x?xf32> to tensor<24x4xf32>
+    %7 = tensor.pad %4 nofold low[%c0] high[%5]  {
+    ^bb0(%arg5: index):  // no predecessors
+      tensor.yield %cst : f32
+    } : tensor<?xf32> to tensor<4xf32>
+
+    // Check matvec uses the packed input vector.
+    //      TRANSP:    = linalg.matvec ins(%[[T8]]
+    %8 = linalg.matvec ins(%6, %7 : tensor<24x4xf32>, tensor<4xf32>) outs(%arg4 : tensor<24xf32>) -> tensor<24xf32>
+    scf.yield %8 : tensor<24xf32>
+  }
+  return %1 : tensor<24xf32>
 }

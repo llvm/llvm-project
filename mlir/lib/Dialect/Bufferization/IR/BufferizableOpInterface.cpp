@@ -32,6 +32,16 @@ namespace bufferization {
 using namespace mlir;
 using namespace bufferization;
 
+/// Attribute name used to mark the bufferization layout for region
+/// arguments during linalg comprehensive bufferization.
+constexpr const ::llvm::StringLiteral
+    bufferization::BufferizableOpInterface::kBufferLayoutAttrName;
+
+/// Attribute name used to mark region arguments that can be bufferized
+/// in-place during linalg comprehensive bufferization.
+constexpr const ::llvm::StringLiteral
+    bufferization::BufferizableOpInterface::kInplaceableAttrName;
+
 //===----------------------------------------------------------------------===//
 // BufferizationOptions
 //===----------------------------------------------------------------------===//
@@ -302,7 +312,7 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
       // The existing uses of the OpResult still expect a tensor. Insert a
       // ToTensorOp. Throughout bufferization, this ToTensorOp will gradually
       // loose all of its users and eventually DCE away.
-      setInsertionPointAfter(rewriter, replacement);
+      rewriter.setInsertionPointAfter(op);
       replacement = rewriter.create<bufferization::ToTensorOp>(
           replacement.getLoc(), replacement);
     }

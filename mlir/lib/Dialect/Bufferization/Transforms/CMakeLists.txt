@@ -1,6 +1,9 @@
 add_mlir_dialect_library(MLIRBufferizationTransforms
   Bufferize.cpp
   BufferDeallocation.cpp
+  BufferOptimizations.cpp
+  BufferResultsToOutParams.cpp
+  BufferUtils.cpp
   OneShotAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -10,7 +13,6 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRBufferizationPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRBufferizableOpInterface
   MLIRBufferization
   MLIRControlFlowInterfaces
   MLIRInferTypeOpInterface

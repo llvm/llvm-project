@@ -13,7 +13,6 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H
 #define FORTRAN_OPTIMIZER_SUPPORT_INITFIR_H
 
-#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
@@ -35,9 +34,17 @@ namespace fir::support {
 #define FLANG_DIALECT_LIST                                                     \
   FLANG_NONCODEGEN_DIALECT_LIST, FIRCodeGenDialect, mlir::LLVM::LLVMDialect
 
+inline void registerNonCodegenDialects(mlir::DialectRegistry &registry) {
+  registry.insert<FLANG_NONCODEGEN_DIALECT_LIST>();
+}
+
 /// Register all the dialects used by flang.
 inline void registerDialects(mlir::DialectRegistry &registry) {
   registry.insert<FLANG_DIALECT_LIST>();
+}
+
+inline void loadNonCodegenDialects(mlir::MLIRContext &context) {
+  context.loadDialect<FLANG_NONCODEGEN_DIALECT_LIST>();
 }
 
 /// Forced load of all the dialects used by flang.  Lowering is not an MLIR
@@ -74,6 +81,9 @@ inline void registerMLIRPassesForFortranTools() {
 
   mlir::registerConvertAffineToStandardPass();
 }
+
+/// Register the interfaces needed to lower to LLVM IR.
+void registerLLVMTranslation(mlir::MLIRContext &context);
 
 } // namespace fir::support
 

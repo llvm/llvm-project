@@ -25,22 +25,27 @@ std::pair<tooling::Replacements, unsigned> DefinitionBlockSeparator::analyze(
   assert(Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave);
   AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
   tooling::Replacements Result;
-  separateBlocks(AnnotatedLines, Result);
+  separateBlocks(AnnotatedLines, Result, Tokens);
   return {Result, 0};
 }
 
 void DefinitionBlockSeparator::separateBlocks(
-    SmallVectorImpl<AnnotatedLine *> &Lines, tooling::Replacements &Result) {
+    SmallVectorImpl<AnnotatedLine *> &Lines, tooling::Replacements &Result,
+    FormatTokenLexer &Tokens) {
   const bool IsNeverStyle =
       Style.SeparateDefinitionBlocks == FormatStyle::SDS_Never;
-  auto LikelyDefinition = [this](const AnnotatedLine *Line) {
+  const AdditionalKeywords &ExtraKeywords = Tokens.getKeywords();
+  auto LikelyDefinition = [this, ExtraKeywords](const AnnotatedLine *Line,
+                                                bool ExcludeEnum = false) {
     if ((Line->MightBeFunctionDecl && Line->mightBeFunctionDefinition()) ||
         Line->startsWithNamespace())
       return true;
     FormatToken *CurrentToken = Line->First;
     while (CurrentToken) {
-      if (CurrentToken->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_enum) ||
-          (Style.isJavaScript() && CurrentToken->TokenText == "function"))
+      if (CurrentToken->isOneOf(tok::kw_class, tok::kw_struct) ||
+          (Style.isJavaScript() && CurrentToken->is(ExtraKeywords.kw_function)))
+        return true;
+      if (!ExcludeEnum && CurrentToken->is(tok::kw_enum))
         return true;
       CurrentToken = CurrentToken->Next;
     }
@@ -63,18 +68,25 @@ void DefinitionBlockSeparator::separateBlocks(
     AnnotatedLine *TargetLine;
     auto OpeningLineIndex = CurrentLine->MatchingOpeningBlockLineIndex;
     AnnotatedLine *OpeningLine = nullptr;
+    const auto IsAccessSpecifierToken = [](const FormatToken *Token) {
+      return Token->isAccessSpecifier() || Token->isObjCAccessSpecifier();
+    };
     const auto InsertReplacement = [&](const int NewlineToInsert) {
       assert(TargetLine);
       assert(TargetToken);
 
       // Do not handle EOF newlines.
-      if (TargetToken->is(tok::eof) && NewlineToInsert > 0)
+      if (TargetToken->is(tok::eof))
+        return;
+      if (IsAccessSpecifierToken(TargetToken) ||
+          (OpeningLineIndex > 0 &&
+           IsAccessSpecifierToken(Lines[OpeningLineIndex - 1]->First)))
         return;
       if (!TargetLine->Affected)
         return;
       Whitespaces.replaceWhitespace(*TargetToken, NewlineToInsert,
-                                    TargetToken->SpacesRequiredBefore - 1,
-                                    TargetToken->StartsColumn);
+                                    TargetToken->OriginalColumn,
+                                    TargetToken->OriginalColumn);
     };
     const auto IsPPConditional = [&](const size_t LineIndex) {
       const auto &Line = Lines[LineIndex];
@@ -89,26 +101,57 @@ void DefinitionBlockSeparator::separateBlocks(
              Lines[OpeningLineIndex - 1]->Last->opensScope() ||
              IsPPConditional(OpeningLineIndex - 1);
     };
-    const auto HasEnumOnLine = [CurrentLine]() {
+    const auto HasEnumOnLine = [&]() {
       FormatToken *CurrentToken = CurrentLine->First;
+      bool FoundEnumKeyword = false;
       while (CurrentToken) {
         if (CurrentToken->is(tok::kw_enum))
+          FoundEnumKeyword = true;
+        else if (FoundEnumKeyword && CurrentToken->is(tok::l_brace))
           return true;
         CurrentToken = CurrentToken->Next;
       }
-      return false;
+      return FoundEnumKeyword && I + 1 < Lines.size() &&
+             Lines[I + 1]->First->is(tok::l_brace);
     };
 
     bool IsDefBlock = false;
     const auto MayPrecedeDefinition = [&](const int Direction = -1) {
+      assert(Direction >= -1);
+      assert(Direction <= 1);
       const size_t OperateIndex = OpeningLineIndex + Direction;
       assert(OperateIndex < Lines.size());
       const auto &OperateLine = Lines[OperateIndex];
-      return (Style.isCSharp() && OperateLine->First->is(TT_AttributeSquare)) ||
-             OperateLine->First->is(tok::comment);
+      if (LikelyDefinition(OperateLine))
+        return false;
+
+      if (OperateLine->First->is(tok::comment))
+        return true;
+
+      // A single line identifier that is not in the last line.
+      if (OperateLine->First->is(tok::identifier) &&
+          OperateLine->First == OperateLine->Last &&
+          OperateIndex + 1 < Lines.size()) {
+        // UnwrappedLineParser's recognition of free-standing macro like
+        // Q_OBJECT may also recognize some uppercased type names that may be
+        // used as return type as that kind of macros, which is a bit hard to
+        // distinguish one from another purely from token patterns. Here, we
+        // try not to add new lines below those identifiers.
+        AnnotatedLine *NextLine = Lines[OperateIndex + 1];
+        if (NextLine->MightBeFunctionDecl &&
+            NextLine->mightBeFunctionDefinition() &&
+            NextLine->First->NewlinesBefore == 1 &&
+            OperateLine->First->is(TT_FunctionLikeOrFreestandingMacro))
+          return true;
+      }
+
+      if ((Style.isCSharp() && OperateLine->First->is(TT_AttributeSquare)))
+        return true;
+      return false;
     };
 
-    if (HasEnumOnLine()) {
+    if (HasEnumOnLine() &&
+        !LikelyDefinition(CurrentLine, /*ExcludeEnum=*/true)) {
       // We have no scope opening/closing information for enum.
       IsDefBlock = true;
       OpeningLineIndex = I;
@@ -132,8 +175,13 @@ void DefinitionBlockSeparator::separateBlocks(
     } else if (CurrentLine->First->closesScope()) {
       if (OpeningLineIndex > Lines.size())
         continue;
-      // Handling the case that opening bracket has its own line.
-      OpeningLineIndex -= Lines[OpeningLineIndex]->First->is(tok::l_brace);
+      // Handling the case that opening brace has its own line, with checking
+      // whether the last line already had an opening brace to guard against
+      // misrecognition.
+      if (OpeningLineIndex > 0 &&
+          Lines[OpeningLineIndex]->First->is(tok::l_brace) &&
+          Lines[OpeningLineIndex - 1]->Last->isNot(tok::l_brace))
+        --OpeningLineIndex;
       OpeningLine = Lines[OpeningLineIndex];
       // Closing a function definition.
       if (LikelyDefinition(OpeningLine)) {
@@ -168,15 +216,13 @@ void DefinitionBlockSeparator::separateBlocks(
           ++OpeningLineIndex;
         TargetLine = Lines[OpeningLineIndex];
         if (!LikelyDefinition(TargetLine)) {
+          OpeningLineIndex = I + 1;
           TargetLine = Lines[I + 1];
           TargetToken = TargetLine->First;
           InsertReplacement(NewlineCount);
         }
-      } else if (IsNeverStyle) {
-        TargetLine = Lines[I + 1];
-        TargetToken = TargetLine->First;
-        InsertReplacement(OpeningLineIndex != 0);
-      }
+      } else if (IsNeverStyle)
+        InsertReplacement(/*NewlineToInsert=*/1);
     }
   }
   for (const auto &R : Whitespaces.generateReplacements())

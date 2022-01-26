@@ -2015,8 +2015,6 @@ TARGET_BUILTIN(__builtin_ia32_selectsd_128, "V2dUcV2dV2d", "ncV:128:", "avx512f"
 // generic reduction intrinsics
 TARGET_BUILTIN(__builtin_ia32_reduce_add_d512, "iV16i", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_reduce_add_q512, "OiV8Oi", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_and_d512, "iV16i", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_and_q512, "OiV8Oi", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_reduce_fadd_pd512, "ddV8d", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_reduce_fadd_ps512, "ffV16f", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_reduce_fadd_ph512, "xxV32x", "ncV:512:", "avx512fp16")
@@ -2039,16 +2037,6 @@ TARGET_BUILTIN(__builtin_ia32_reduce_fmul_ph256, "xxV16x", "ncV:256:", "avx512fp
 TARGET_BUILTIN(__builtin_ia32_reduce_fmul_ph128, "xxV8x", "ncV:128:", "avx512fp16,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_reduce_mul_d512, "iV16i", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_reduce_mul_q512, "OiV8Oi", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_or_d512, "iV16i", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_or_q512, "OiV8Oi", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_smax_d512, "iV16i", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_smax_q512, "OiV8Oi", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_smin_d512, "iV16i", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_smin_q512, "OiV8Oi", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_umax_d512, "iV16i", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_umax_q512, "OiV8Oi", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_umin_d512, "iV16i", "ncV:512:", "avx512f")
-TARGET_BUILTIN(__builtin_ia32_reduce_umin_q512, "OiV8Oi", "ncV:512:", "avx512f")
 
 // MONITORX/MWAITX
 TARGET_BUILTIN(__builtin_ia32_monitorx, "vvC*UiUi", "n", "mwaitx")

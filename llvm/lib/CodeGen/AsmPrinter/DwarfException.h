@@ -98,6 +98,8 @@ class LLVM_LIBRARY_VISIBILITY AIXException : public DwarfCFIExceptionBase {
 public:
   AIXException(AsmPrinter *A);
 
+  void markFunctionEnd() override;
+
   void endModule() override {}
   void beginFunction(const MachineFunction *MF) override {}
 

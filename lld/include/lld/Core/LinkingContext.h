@@ -9,6 +9,7 @@
 #ifndef LLD_CORE_LINKING_CONTEXT_H
 #define LLD_CORE_LINKING_CONTEXT_H
 
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Core/Node.h"
 #include "lld/Core/Reader.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -34,7 +35,7 @@ class SharedLibraryFile;
 /// The base class LinkingContext contains the options needed by core linking.
 /// Subclasses of LinkingContext have additional options needed by specific
 /// Writers.
-class LinkingContext {
+class LinkingContext : public CommonLinkerContext {
 public:
   virtual ~LinkingContext();
 

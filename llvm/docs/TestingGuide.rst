@@ -294,7 +294,7 @@ which first check the ``NOTE:`` line exists and matches the script name.
 These are the most common scripts and their purposes/applications in generating
 assertions:
 
-.. code-block::
+.. code-block:: none
 
   update_analyze_test_checks.py
   opt --analyze --costmodel

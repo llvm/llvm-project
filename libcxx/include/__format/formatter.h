@@ -38,26 +38,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // to support compilers with partial C++20 support.
 #if !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
-// Currently not implemented specializations throw an exception when used. This
-// does not conform to the Standard. However not all Standard defined formatters
-// have been implemented yet. Until that time the current behavior is intended.
-// TODO FMT Disable the default template.
+/// The default formatter template.
+///
+/// [format.formatter.spec]/5
+/// If F is a disabled specialization of formatter, these values are false:
+/// - is_default_constructible_v<F>,
+/// - is_copy_constructible_v<F>,
+/// - is_move_constructible_v<F>,
+/// - is_copy_assignable<F>, and
+/// - is_move_assignable<F>.
 template <class _Tp, class _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter {
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI auto parse(auto& __parse_ctx)
-      -> decltype(__parse_ctx.begin()) {
-    __throw();
-  }
-
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI auto format(_Tp, auto& __ctx)
-      -> decltype(__ctx.out()) {
-    __throw();
-  }
-
-private:
-  _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI void __throw() {
-    __throw_format_error("Argument type not implemented yet");
-  }
+  formatter() = delete;
+  formatter(const formatter&) = delete;
+  formatter& operator=(const formatter&) = delete;
 };
 
 namespace __format_spec {
@@ -187,6 +181,34 @@ __write(output_iterator<const _CharT&> auto __out_it, const _CharT* __first,
       __padding_size(__size, __width, __alignment);
   __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before, __fill);
   __out_it = _VSTD::copy(__first, __last, _VSTD::move(__out_it));
+  return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after, __fill);
+}
+
+/**
+ * @overload
+ *
+ * Writes additional zero's for the precision before the exponent.
+ * This is used when the precision requested in the format string is larger
+ * than the maximum precision of the floating-point type. These precision
+ * digits are always 0.
+ *
+ * @param __exponent           The location of the exponent character.
+ * @param __num_trailing_zeros The number of 0's to write before the exponent
+ *                             character.
+ */
+template <class _CharT, class _Fill>
+_LIBCPP_HIDE_FROM_ABI auto __write(output_iterator<const _CharT&> auto __out_it, const _CharT* __first,
+                                   const _CharT* __last, size_t __size, size_t __width, _Fill __fill,
+                                   __format_spec::_Flags::_Alignment __alignment, const _CharT* __exponent,
+                                   size_t __num_trailing_zeros) -> decltype(__out_it) {
+  _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT(__num_trailing_zeros > 0, "The overload not writing trailing zeros should have been used");
+
+  __padding_size_result __padding = __padding_size(__size + __num_trailing_zeros, __width, __alignment);
+  __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before, __fill);
+  __out_it = _VSTD::copy(__first, __exponent, _VSTD::move(__out_it));
+  __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __num_trailing_zeros, _CharT('0'));
+  __out_it = _VSTD::copy(__exponent, __last, _VSTD::move(__out_it));
   return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after, __fill);
 }
 

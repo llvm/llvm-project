@@ -102,9 +102,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
   let methods = [
     InterfaceMethod<[{
         Returns the operands of this operation used as the entry arguments when
-        entering the region at `index`, which was specified as a successor of this
-        operation by `getSuccessorRegions`. These operands should correspond 1-1
-        with the successor inputs specified in `getSuccessorRegions`.
+        entering the region at `index`, which was specified as a successor of
+        this operation by `getSuccessorRegions`. These operands should
+        correspond 1-1 with the successor inputs specified in
+        `getSuccessorRegions`.
       }],
       "::mlir::OperandRange", "getSuccessorEntryOperands",
       (ins "unsigned":$index), [{}], /*defaultImplementation=*/[{
@@ -127,9 +128,29 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         successor region must be non-empty.
       }],
       "void", "getSuccessorRegions",
-      (ins "::mlir::Optional<unsigned>":$index, "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+      (ins "::mlir::Optional<unsigned>":$index,
+           "::mlir::ArrayRef<::mlir::Attribute>":$operands,
            "::mlir::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
-    >
+    >,
+    InterfaceMethod<[{
+        Populates `invocationBounds` with the minimum and maximum number of
+        times this operation will invoke the attached regions (assuming the
+        regions yield normally, i.e. do not abort or invoke an infinite loop).
+        The minimum number of invocations is at least 0. If the maximum number
+        of invocations cannot be statically determined, then it will not have a
+        value (i.e., it is set to `llvm::None`).
+
+        `operands` is a set of optional attributes that either correspond to a
+        constant values for each operand of this operation, or null if that
+        operand is not a constant.
+      }],
+      "void", "getRegionInvocationBounds",
+      (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+           "::llvm::SmallVectorImpl<::mlir::InvocationBounds> &"
+             :$invocationBounds), [{}],
+       [{ invocationBounds.append($_op->getNumRegions(),
+                                  ::mlir::InvocationBounds::getUnknown()); }]
+    >,
   ];
 
   let verify = [{

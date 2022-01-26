@@ -863,7 +863,7 @@ bool SIInsertWaitcnts::applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
       Wait.ExpCnt = ~0u;
 
       LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
-                        << "Old Instr: " << MI << "New Instr: " << *WaitcntInstr
+                        << "Old Instr: " << *MI << "New Instr: " << *WaitcntInstr
                         << '\n');
     } else {
       WaitcntInstr->eraseFromParent();
@@ -886,7 +886,7 @@ bool SIInsertWaitcnts::applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
       Wait.VsCnt = ~0u;
 
       LLVM_DEBUG(dbgs() << "generateWaitcntInstBefore\n"
-                        << "Old Instr: " << MI
+                        << "Old Instr: " << *MI
                         << "New Instr: " << *WaitcntVsCntInstr << '\n');
     } else {
       WaitcntVsCntInstr->eraseFromParent();

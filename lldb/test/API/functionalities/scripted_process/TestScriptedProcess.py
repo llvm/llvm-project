@@ -41,6 +41,7 @@ class ScriptedProcesTestCase(TestBase):
         self.expect('script dir(ScriptedProcess)',
                     substrs=["launch"])
 
+    @skipUnlessDarwin
     def test_invalid_scripted_register_context(self):
         """Test that we can launch an lldb scripted process with an invalid
         Scripted Thread, with invalid register context."""
@@ -77,7 +78,7 @@ class ScriptedProcesTestCase(TestBase):
 
         self.assertIn("Failed to get scripted thread registers data.", log)
 
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(['x86_64', 'arm64', 'arm64e']))
     def test_scripted_process_and_scripted_thread(self):
         """Test that we can launch an lldb scripted process using the SBAPI,
         check its process ID, read string from memory, check scripted thread
@@ -124,13 +125,16 @@ class ScriptedProcesTestCase(TestBase):
                 break
 
         self.assertTrue(GPRs, "Invalid General Purpose Registers Set")
-        self.assertEqual(GPRs.GetNumChildren(), 21)
+        self.assertGreater(GPRs.GetNumChildren(), 0)
         for idx, reg in enumerate(GPRs, start=1):
+            if idx > 21:
+                break
             self.assertEqual(idx, int(reg.value, 16))
 
     def create_stack_skinny_corefile(self, file):
         self.build()
-        target, process, thread, _ = lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.c"))
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(self, "// break here",
+                                                                       lldb.SBFileSpec("main.cpp"))
         self.assertTrue(process.IsValid(), "Process is invalid.")
         # FIXME: Use SBAPI to save the process corefile.
         self.runCmd("process save-core -s stack  " + file)
@@ -186,14 +190,14 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 42)
 
-        self.assertEqual(process.GetNumThreads(), 1)
-        thread = process.GetSelectedThread()
+        self.assertEqual(process.GetNumThreads(), 3)
+        thread = process.GetThreadAtIndex(2)
         self.assertTrue(thread, "Invalid thread.")
-        self.assertEqual(thread.GetName(), "StackCoreScriptedThread.thread-1")
+        self.assertEqual(thread.GetName(), "StackCoreScriptedThread.thread-2")
 
-        self.assertEqual(thread.GetNumFrames(), 3)
+        self.assertEqual(thread.GetNumFrames(), 6)
         frame = thread.GetSelectedFrame()
         self.assertTrue(frame, "Invalid frame.")
-        self.assertEqual(frame.GetFunctionName(), "bar")
+        self.assertIn("bar", frame.GetFunctionName())
         self.assertEqual(int(frame.FindValue("i", lldb.eValueTypeVariableArgument).GetValue()), 42)
         self.assertEqual(int(frame.FindValue("j", lldb.eValueTypeVariableLocal).GetValue()), 42 * 42)

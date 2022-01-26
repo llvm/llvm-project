@@ -29,13 +29,28 @@ cl::opt<bool>
                     cl::ReallyHidden,
                     cl::desc("disable similarity matching, and outlining, "
                              "across branches for debugging purposes."));
-} // namespace llvm
+
+cl::opt<bool>
+    DisableIndirectCalls("no-ir-sim-indirect-calls", cl::init(false),
+                         cl::ReallyHidden,
+                         cl::desc("disable outlining indirect calls."));
+
+cl::opt<bool>
+    MatchCallsByName("ir-sim-calls-by-name", cl::init(false), cl::ReallyHidden,
+                     cl::desc("only allow matching call instructions if the "
+                              "name and type signature match."));
+
+cl::opt<bool>
+    DisableIntrinsics("no-ir-sim-intrinsics", cl::init(false), cl::ReallyHidden,
+                      cl::desc("Don't match or outline intrinsics"));
 
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
                                      IRInstructionDataList &IDList)
     : Inst(&I), Legal(Legality), IDL(&IDList) {
   initializeInstruction();
 }
+
+} // namespace llvm
 
 void IRInstructionData::initializeInstruction() {
   // We check for whether we have a comparison instruction.  If it is, we
@@ -88,6 +103,15 @@ void IRInstructionData::setBranchSuccessors(
   }
 }
 
+void IRInstructionData::setCalleeName(bool MatchByName) {
+  CallInst *CI = dyn_cast<CallInst>(Inst);
+  assert(CI && "Instruction must be call");
+
+  CalleeName = "";
+  if (!CI->isIndirectCall() && MatchByName)
+    CalleeName = CI->getCalledFunction()->getName().str();
+}
+
 CmpInst::Predicate IRInstructionData::predicateForConsistency(CmpInst *CI) {
   switch (CI->getPredicate()) {
   case CmpInst::FCMP_OGT:
@@ -114,10 +138,13 @@ CmpInst::Predicate IRInstructionData::getPredicate() const {
   return cast<CmpInst>(Inst)->getPredicate();
 }
 
-static StringRef getCalledFunctionName(CallInst &CI) {
-  assert(CI.getCalledFunction() != nullptr && "Called Function is nullptr?");
+StringRef IRInstructionData::getCalleeName() const {
+  assert(isa<CallInst>(Inst) &&
+         "Can only get a name from a call instruction");
 
-  return CI.getCalledFunction()->getName();
+  assert(CalleeName.hasValue() && "CalleeName has not been set");
+
+  return *CalleeName;
 }
 
 bool IRSimilarity::isClose(const IRInstructionData &A,
@@ -172,13 +199,11 @@ bool IRSimilarity::isClose(const IRInstructionData &A,
                   });
   }
 
-  // If the instructions are functions, we make sure that the function name is
-  // the same.  We already know that the types are since is isSameOperationAs is
-  // true.
+  // If the instructions are functions calls, we make sure that the function
+  // name is the same.  We already know that the types are since is
+  // isSameOperationAs is true.
   if (isa<CallInst>(A.Inst) && isa<CallInst>(B.Inst)) {
-    CallInst *CIA = cast<CallInst>(A.Inst);
-    CallInst *CIB = cast<CallInst>(B.Inst);
-    if (getCalledFunctionName(*CIA).compare(getCalledFunctionName(*CIB)) != 0)
+    if (A.getCalleeName().str().compare(B.getCalleeName().str()) != 0)
       return false;
   }
 
@@ -245,6 +270,9 @@ unsigned IRInstructionMapper::mapToLegalUnsigned(
 
   if (isa<BranchInst>(*It))
     ID->setBranchSuccessors(BasicBlockToInteger);
+
+  if (isa<CallInst>(*It))
+    ID->setCalleeName(EnableMatchCallsByName);
 
   // Add to the instruction list
   bool WasInserted;
@@ -1077,6 +1105,9 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> IntegerMapping;
   Mapper.InstClassifier.EnableBranches = this->EnableBranches;
+  Mapper.InstClassifier.EnableIndirectCalls = EnableIndirectCalls;
+  Mapper.EnableMatchCallsByName = EnableMatchingCallsByName;
+  Mapper.InstClassifier.EnableIntrinsics = EnableIntrinsics;
 
   populateMapper(Modules, InstrList, IntegerMapping);
   findCandidates(InstrList, IntegerMapping);
@@ -1087,6 +1118,9 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
 SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
   resetSimilarityCandidates();
   Mapper.InstClassifier.EnableBranches = this->EnableBranches;
+  Mapper.InstClassifier.EnableIndirectCalls = EnableIndirectCalls;
+  Mapper.EnableMatchCallsByName = EnableMatchingCallsByName;
+  Mapper.InstClassifier.EnableIntrinsics = EnableIntrinsics;
 
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> IntegerMapping;
@@ -1107,7 +1141,8 @@ IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
 }
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
-  IRSI.reset(new IRSimilarityIdentifier(!DisableBranches));
+  IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
+                                        MatchCallsByName, !DisableIntrinsics));
   return false;
 }
 
@@ -1124,8 +1159,8 @@ bool IRSimilarityIdentifierWrapperPass::runOnModule(Module &M) {
 AnalysisKey IRSimilarityAnalysis::Key;
 IRSimilarityIdentifier IRSimilarityAnalysis::run(Module &M,
                                                  ModuleAnalysisManager &) {
-
-  auto IRSI = IRSimilarityIdentifier(!DisableBranches);
+  auto IRSI = IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
+                                     MatchCallsByName, !DisableIntrinsics);
   IRSI.findSimilarity(M);
   return IRSI;
 }

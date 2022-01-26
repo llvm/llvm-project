@@ -11,32 +11,44 @@
 
 #include "lldb/Utility/Log.h"
 
-#define KDP_LOG_PROCESS (1u << 1)
-#define KDP_LOG_THREAD (1u << 2)
-#define KDP_LOG_PACKETS (1u << 3)
-#define KDP_LOG_MEMORY (1u << 4) // Log memory reads/writes calls
-#define KDP_LOG_MEMORY_DATA_SHORT                                              \
-  (1u << 5) // Log short memory reads/writes bytes
-#define KDP_LOG_MEMORY_DATA_LONG (1u << 6) // Log all memory reads/writes bytes
-#define KDP_LOG_BREAKPOINTS (1u << 7)
-#define KDP_LOG_WATCHPOINTS (1u << 8)
-#define KDP_LOG_STEP (1u << 9)
-#define KDP_LOG_COMM (1u << 10)
-#define KDP_LOG_ASYNC (1u << 11)
-#define KDP_LOG_ALL (UINT32_MAX)
-#define KDP_LOG_DEFAULT KDP_LOG_PACKETS
 
 namespace lldb_private {
-class ProcessKDPLog {
-  static Log::Channel g_channel;
 
+enum class KDPLog : Log::MaskType {
+  Async = Log::ChannelFlag<0>,
+  Breakpoints = Log::ChannelFlag<1>,
+  Comm = Log::ChannelFlag<2>,
+  MemoryDataLong = Log::ChannelFlag<3>,  // Log all memory reads/writes bytes
+  MemoryDataShort = Log::ChannelFlag<4>, // Log short memory reads/writes bytes
+  Memory = Log::ChannelFlag<5>,          // Log memory reads/writes calls
+  Packets = Log::ChannelFlag<6>,
+  Process = Log::ChannelFlag<7>,
+  Step = Log::ChannelFlag<8>,
+  Thread = Log::ChannelFlag<9>,
+  Watchpoints = Log::ChannelFlag<10>,
+  LLVM_MARK_AS_BITMASK_ENUM(Watchpoints)
+};
+#define KDP_LOG_PROCESS ::lldb_private::KDPLog::Process
+#define KDP_LOG_THREAD ::lldb_private::KDPLog::Thread
+#define KDP_LOG_PACKETS ::lldb_private::KDPLog::Packets
+#define KDP_LOG_MEMORY ::lldb_private::KDPLog::Memory
+#define KDP_LOG_MEMORY_DATA_SHORT ::lldb_private::KDPLog::MemoryDataShort
+#define KDP_LOG_MEMORY_DATA_LONG ::lldb_private::KDPLog::MemoryDataLong
+#define KDP_LOG_BREAKPOINTS ::lldb_private::KDPLog::Breakpoints
+#define KDP_LOG_WATCHPOINTS ::lldb_private::KDPLog::Watchpoints
+#define KDP_LOG_STEP ::lldb_private::KDPLog::Step
+#define KDP_LOG_COMM ::lldb_private::KDPLog::Comm
+#define KDP_LOG_ASYNC ::lldb_private::KDPLog::Async
+#define KDP_LOG_DEFAULT KDP_LOG_PACKETS
+
+class ProcessKDPLog {
 public:
   static void Initialize();
 
-  static Log *GetLogIfAllCategoriesSet(uint32_t mask) {
-    return g_channel.GetLogIfAll(mask);
-  }
+  static Log *GetLogIfAllCategoriesSet(KDPLog mask) { return GetLog(mask); }
 };
+
+template <> Log::Channel &LogChannelFor<KDPLog>();
 }
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_PROCESSKDPLOG_H
