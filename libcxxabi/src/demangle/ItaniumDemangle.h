@@ -16,10 +16,6 @@
 #ifndef DEMANGLE_ITANIUMDEMANGLE_H
 #define DEMANGLE_ITANIUMDEMANGLE_H
 
-// FIXME: (possibly) incomplete list of features that clang mangles that this
-// file does not yet support:
-//   - C++ modules TS
-
 #include "DemangleConfig.h"
 #include "StringView.h"
 #include "Utility.h"
@@ -58,6 +54,8 @@
   X(QualifiedName)                                                             \
   X(NestedName)                                                                \
   X(LocalName)                                                                 \
+  X(ModuleName)                                                                \
+  X(ModuleEntity)                                                              \
   X(VectorType)                                                                \
   X(PixelVectorType)                                                           \
   X(BinaryFPType)                                                              \
@@ -997,6 +995,44 @@ struct NestedName : Node {
     Qual->print(OB);
     OB += "::";
     Name->print(OB);
+  }
+};
+
+struct ModuleName : Node {
+  ModuleName *Parent;
+  Node *Name;
+  bool IsPartition;
+
+  ModuleName(ModuleName *Parent_, Node *Name_, bool IsPartition_ = false)
+      : Node(KModuleName), Parent(Parent_), Name(Name_),
+        IsPartition(IsPartition_) {}
+
+  template <typename Fn> void match(Fn F) const { F(Parent, Name); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    if (Parent)
+      Parent->print(OB);
+    if (Parent || IsPartition)
+      OB += IsPartition ? ':' : '.';
+    Name->print(OB);
+  }
+};
+
+struct ModuleEntity : Node {
+  ModuleName *Module;
+  Node *Name;
+
+  ModuleEntity(ModuleName *Module_, Node *Name_)
+      : Node(KModuleEntity), Module(Module_), Name(Name_) {}
+
+  template <typename Fn> void match(Fn F) const { F(Module, Name); }
+
+  StringView getBaseName() const override { return Name->getBaseName(); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    Name->print(OB);
+    OB += '@';
+    Module->print(OB);
   }
 };
 
@@ -2547,10 +2583,11 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseName(NameState *State = nullptr);
   Node *parseLocalName(NameState *State);
   Node *parseOperatorName(NameState *State);
-  Node *parseUnqualifiedName(NameState *State, Node *Scope);
+  bool parseModuleNameOpt(ModuleName *&Module);
+  Node *parseUnqualifiedName(NameState *State, Node *Scope, ModuleName *Module);
   Node *parseUnnamedTypeName(NameState *State);
   Node *parseSourceName(NameState *State);
-  Node *parseUnscopedName(NameState *State);
+  Node *parseUnscopedName(NameState *State, bool *isSubstName);
   Node *parseNestedName(NameState *State);
   Node *parseCtorDtorName(Node *&SoFar, NameState *State);
 
@@ -2641,18 +2678,10 @@ Node *AbstractManglingParser<Derived, Alloc>::parseName(NameState *State) {
     return getDerived().parseLocalName(State);
 
   Node *Result = nullptr;
-  bool IsSubst = look() == 'S' && look(1) != 't';
-  if (IsSubst) {
-    // A substitution must lead to:
-    //        ::= <unscoped-template-name> <template-args>
-    Result = getDerived().parseSubstitution();
-  } else {
-    // An unscoped name can be one of:
-    //        ::= <unscoped-name>
-    //        ::= <unscoped-template-name> <template-args>
-    Result = getDerived().parseUnscopedName(State);
-  }
-  if (Result == nullptr)
+  bool IsSubst = false;
+
+  Result = getDerived().parseUnscopedName(State, &IsSubst);
+  if (!Result)
     return nullptr;
 
   if (look() == 'I') {
@@ -2715,7 +2744,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
 // [*] extension
 template <typename Derived, typename Alloc>
 Node *
-AbstractManglingParser<Derived, Alloc>::parseUnscopedName(NameState *State) {
+AbstractManglingParser<Derived, Alloc>::parseUnscopedName(NameState *State,
+                                                          bool *IsSubst) {
+
   Node *Std = nullptr;
   if (consumeIf("St")) {
     Std = make<NameType>("std");
@@ -2724,24 +2755,46 @@ AbstractManglingParser<Derived, Alloc>::parseUnscopedName(NameState *State) {
   }
   consumeIf('L');
 
-  return getDerived().parseUnqualifiedName(State, Std);
+  Node *Res = nullptr;
+  ModuleName *Module = nullptr;
+  if (look() == 'S') {
+    Node *S = getDerived().parseSubstitution();
+    if (!S)
+      return nullptr;
+    if (S->getKind() == Node::KModuleName)
+      Module = static_cast<ModuleName *>(S);
+    else if (IsSubst && Std == nullptr) {
+      Res = S;
+      *IsSubst = true;
+    } else {
+      return nullptr;
+    }
+  }
+
+  if (Res == nullptr)
+    Res = getDerived().parseUnqualifiedName(State, Std, Module);
+
+  return Res;
 }
 
-// <unqualified-name> ::= <operator-name> [abi-tags]
-//                    ::= <ctor-dtor-name> [<abi-tags>]
-//                    ::= <source-name> [<abi-tags>]
-//                    ::= <unnamed-type-name> [<abi-tags>]
-//                    ::= DC <source-name>+ E      # structured binding declaration
+// <unqualified-name> ::= [<module-name>] <operator-name> [<abi-tags>]
+//                    ::= [<module-name>] <ctor-dtor-name> [<abi-tags>]
+//                    ::= [<module-name>] <source-name> [<abi-tags>]
+//                    ::= [<module-name>] <unnamed-type-name> [<abi-tags>]
+//			# structured binding declaration
+//                    ::= [<module-name>] DC <source-name>+ E
 template <typename Derived, typename Alloc>
-Node *
-AbstractManglingParser<Derived, Alloc>::parseUnqualifiedName(NameState *State,
-                                                             Node *Scope) {
+Node *AbstractManglingParser<Derived, Alloc>::parseUnqualifiedName(
+    NameState *State, Node *Scope, ModuleName *Module) {
+  if (getDerived().parseModuleNameOpt(Module))
+    return nullptr;
+
   Node *Result;
-  if (look() == 'U')
+  if (look() == 'U') {
     Result = getDerived().parseUnnamedTypeName(State);
-  else if (look() >= '1' && look() <= '9')
+  } else if (look() >= '1' && look() <= '9') {
     Result = getDerived().parseSourceName(State);
-  else if (consumeIf("DC")) {
+  } else if (consumeIf("DC")) {
     // Structured binding
     size_t BindingsBegin = Names.size();
     do {
@@ -2753,17 +2806,42 @@ AbstractManglingParser<Derived, Alloc>::parseUnqualifiedName(NameState *State,
     Result = make<StructuredBindingName>(popTrailingNodeArray(BindingsBegin));
   } else if (look() == 'C' || look() == 'D') {
     // A <ctor-dtor-name>.
-    if (Scope == nullptr)
+    if (Scope == nullptr || Module != nullptr)
       return nullptr;
     Result = getDerived().parseCtorDtorName(Scope, State);
   } else {
     Result = getDerived().parseOperatorName(State);
   }
+
+  if (Module)
+    Result = make<ModuleEntity>(Module, Result);
   if (Result != nullptr)
     Result = getDerived().parseAbiTags(Result);
   if (Result != nullptr && Scope != nullptr)
     Result = make<NestedName>(Scope, Result);
+
   return Result;
+}
+
+// <module-name> ::= <module-subname>
+// 	 	 ::= <module-name> <module-subname>
+//		 ::= <substitution>  # passed in by caller
+// <module-subname> ::= W <source-name>
+//		    ::= W P <source-name>
+template <typename Derived, typename Alloc>
+bool AbstractManglingParser<Derived, Alloc>::parseModuleNameOpt(
+    ModuleName *&Module) {
+  while (consumeIf('W')) {
+    bool IsPartition = consumeIf('P');
+    Node *Sub = getDerived().parseSourceName(nullptr);
+    if (!Sub)
+      return true;
+    Module =
+        static_cast<ModuleName *>(make<ModuleName>(Module, Sub, IsPartition));
+    Subs.push_back(Module);
+  }
+
+  return false;
 }
 
 // <unnamed-type-name> ::= Ut [<nonnegative number>] _
@@ -3139,25 +3217,35 @@ AbstractManglingParser<Derived, Alloc>::parseNestedName(NameState *State) {
       if (SoFar != nullptr)
         return nullptr; // Cannot have a prefix.
       SoFar = getDerived().parseDecltype();
-    } else if (look() == 'S') {
-      //          ::= <substitution>
-      if (SoFar != nullptr)
-        return nullptr; // Cannot have a prefix.
-      if (look(1) == 't') {
-        // parseSubstition does not handle 'St'.
-        First += 2;
-        SoFar = make<NameType>("std");
-      } else {
-        SoFar = getDerived().parseSubstitution();
-      }
-      if (SoFar == nullptr)
-        return nullptr;
-      continue; // Do not push a new substitution.
     } else {
-      consumeIf('L'); // extension
+      ModuleName *Module = nullptr;
+      bool IsLocal = consumeIf('L'); // extension
+
+      if (look() == 'S') {
+        //          ::= <substitution>
+        Node *S = nullptr;
+        if (look(1) == 't') {
+          First += 2;
+          S = make<NameType>("std");
+        } else {
+          S = getDerived().parseSubstitution();
+        }
+        if (!S)
+          return nullptr;
+        if (S->getKind() == Node::KModuleName) {
+          Module = static_cast<ModuleName *>(S);
+        } else if (SoFar != nullptr || IsLocal) {
+          return nullptr; // Cannot have a prefix.
+        } else {
+          SoFar = S;
+          continue; // Do not push a new substitution.
+        }
+      }
+
       //          ::= [<prefix>] <unqualified-name>
-      SoFar = getDerived().parseUnqualifiedName(State, SoFar);
+      SoFar = getDerived().parseUnqualifiedName(State, SoFar, Module);
     }
+
     if (SoFar == nullptr)
       return nullptr;
     Subs.push_back(SoFar);
@@ -3970,8 +4058,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
   //             ::= <substitution>  # See Compression below
   case 'S': {
     if (look(1) != 't') {
-      Result = getDerived().parseSubstitution();
-      if (Result == nullptr)
+      bool IsSubst = false;
+      Result = getDerived().parseUnscopedName(nullptr, &IsSubst);
+      if (!Result)
         return nullptr;
 
       // Sub could be either of:
@@ -3984,12 +4073,14 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
       // If this is followed by some <template-args>, and we're permitted to
       // parse them, take the second production.
 
-      if (TryToParseTemplateArgs && look() == 'I') {
+      if (look() == 'I' && (!IsSubst || TryToParseTemplateArgs)) {
+        if (!IsSubst)
+          Subs.push_back(Result);
         Node *TA = getDerived().parseTemplateArgs();
         if (TA == nullptr)
           return nullptr;
         Result = make<NameWithTemplateArgs>(Result, TA);
-      } else {
+      } else if (IsSubst) {
         // If all we parsed was a substitution, don't re-insert into the
         // substitution table.
         return Result;
@@ -4738,14 +4829,17 @@ bool AbstractManglingParser<Alloc, Derived>::parseCallOffset() {
 //                    # second call-offset is result adjustment
 //                ::= T <call-offset> <base encoding>
 //                    # base is the nominal target function of thunk
-//                ::= GV <object name> # Guard variable for one-time initialization
+//                # Guard variable for one-time initialization
+//                ::= GV <object name>
 //                                     # No <type>
 //                ::= TW <object name> # Thread-local wrapper
 //                ::= TH <object name> # Thread-local initialization
 //                ::= GR <object name> _             # First temporary
 //                ::= GR <object name> <seq-id> _    # Subsequent temporaries
-//      extension ::= TC <first type> <number> _ <second type> # construction vtable for second-in-first
+//                # construction vtable for second-in-first
+//      extension ::= TC <first type> <number> _ <second type>
 //      extension ::= GR <object name> # reference temporary for object
+//      extension ::= GI <module name> # module global initializer
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
   switch (look()) {
@@ -4871,6 +4965,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseSpecialName() {
       if (!consumeIf('_') && ParsedSeqId)
         return nullptr;
       return make<SpecialName>("reference temporary for ", Name);
+    }
+    // GI <module-name> v
+    case 'I': {
+      First += 2;
+      ModuleName *Module = nullptr;
+      if (getDerived().parseModuleNameOpt(Module))
+        return nullptr;
+      if (Module == nullptr)
+        return nullptr;
+      return make<SpecialName>("initializer for module ", Module);
     }
     }
   }
