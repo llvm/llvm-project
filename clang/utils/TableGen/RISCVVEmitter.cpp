@@ -141,11 +141,12 @@ using RISCVPredefinedMacroT = uint8_t;
 
 enum RISCVPredefinedMacro : RISCVPredefinedMacroT {
   Basic = 0,
-  Zfh = 1 << 1,
-  RV64 = 1 << 2,
-  VectorMaxELen64 = 1 << 3,
-  VectorMaxELenFp32 = 1 << 4,
-  VectorMaxELenFp64 = 1 << 5,
+  V = 1 << 1,
+  Zfh = 1 << 2,
+  RV64 = 1 << 3,
+  VectorMaxELen64 = 1 << 4,
+  VectorMaxELenFp32 = 1 << 5,
+  VectorMaxELenFp64 = 1 << 6,
 };
 
 // TODO refactor RVVIntrinsic class design after support all intrinsic
@@ -808,6 +809,11 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   for (auto Feature : RequiredFeatures) {
     if (Feature == "RV64")
       RISCVPredefinedMacros |= RISCVPredefinedMacro::RV64;
+    // Note: Full multiply instruction (mulh, mulhu, mulhsu, smul) for EEW=64
+    // require V.
+    if (Feature == "FullMultiply" &&
+        (RISCVPredefinedMacros & RISCVPredefinedMacro::VectorMaxELen64))
+      RISCVPredefinedMacros |= RISCVPredefinedMacro::V;
   }
 
   // Init OutputType and InputTypes
@@ -1314,6 +1320,8 @@ bool RVVEmitter::emitMacroRestrictionStr(RISCVPredefinedMacroT PredefinedMacros,
     return false;
   OS << "#if ";
   ListSeparator LS(" && ");
+  if (PredefinedMacros & RISCVPredefinedMacro::V)
+    OS << LS << "defined(__riscv_v)";
   if (PredefinedMacros & RISCVPredefinedMacro::Zfh)
     OS << LS << "defined(__riscv_zfh)";
   if (PredefinedMacros & RISCVPredefinedMacro::RV64)
