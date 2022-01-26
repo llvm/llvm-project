@@ -205,6 +205,7 @@ static bool treatLikePointer(QualType Ty, PLTClass C, ASTContext &Context) {
   case PLTClass::Pointer:
     return isKnownPointerLikeType(Ty, Context);
   }
+  llvm_unreachable("Unknown PLTClass enum");
 }
 
 // FIXME: move over the other `maybe` functionality from Stencil. Should all be
