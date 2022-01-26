@@ -59,8 +59,8 @@ class Scope {
   using mapType = std::map<SourceName, MutableSymbolRef>;
 
 public:
-  ENUM_CLASS(Kind, Global, Module, MainProgram, Subprogram, BlockData,
-      DerivedType, Block, Forall, ImpliedDos)
+  ENUM_CLASS(Kind, Global, IntrinsicModules, Module, MainProgram, Subprogram,
+      BlockData, DerivedType, Block, Forall, ImpliedDos)
   using ImportKind = common::ImportKind;
 
   // Create the Global scope -- the root of the scope tree
@@ -87,6 +87,10 @@ public:
   }
   Kind kind() const { return kind_; }
   bool IsGlobal() const { return kind_ == Kind::Global; }
+  bool IsIntrinsicModules() const { return kind_ == Kind::IntrinsicModules; }
+  bool IsTopLevel() const {
+    return kind_ == Kind::Global || kind_ == Kind::IntrinsicModules;
+  }
   bool IsModule() const {
     return kind_ == Kind::Module &&
         !symbol_->get<ModuleDetails>().isSubmodule();

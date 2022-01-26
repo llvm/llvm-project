@@ -149,6 +149,7 @@ public:
     return *this;
   }
 
+  void ClearSearchPath();
   void AppendSearchPathDirectory(std::string); // new last directory
   const SourceFile *Open(std::string path, llvm::raw_ostream &error,
       std::optional<std::string> &&prependPath = std::nullopt);
