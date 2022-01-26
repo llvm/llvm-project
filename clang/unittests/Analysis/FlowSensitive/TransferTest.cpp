@@ -1952,4 +1952,37 @@ TEST_F(TransferTest, AggregateInitialization) {
   }
 }
 
+TEST_F(TransferTest, AssignToUnionMember) {
+  std::string Code = R"(
+    union A {
+      int Foo;
+    };
+
+    void target(int Bar) {
+      A Baz;
+      Baz.Foo = Bar;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+                ASSERT_THAT(BazDecl, NotNull());
+                ASSERT_TRUE(BazDecl->getType()->isUnionType());
+
+                const auto *BazLoc = dyn_cast_or_null<AggregateStorageLocation>(
+                    Env.getStorageLocation(*BazDecl, SkipPast::None));
+                ASSERT_THAT(BazLoc, NotNull());
+
+                // FIXME: Add support for union types.
+                EXPECT_THAT(Env.getValue(*BazLoc), IsNull());
+              });
+}
+
 } // namespace
