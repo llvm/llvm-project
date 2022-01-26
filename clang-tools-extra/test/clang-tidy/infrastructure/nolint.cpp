@@ -28,10 +28,55 @@ class C4 { C4(int i); }; // NOLINT(google-explicit-constructor)
 
 class C5 { C5(int i); }; // NOLINT(some-check, google-explicit-constructor)
 
-class C6 { C6(int i); }; // NOLINT without-brackets-skip-all, another-check
+class C6 { C6(int i); }; // NOLINT without-brackets-skip-all
 
-class C7 { C7(int i); }; // NOLINTNEXTLINE doesn't get misconstrued as a NOLINT
+// Other NOLINT* types (e.g. NEXTLINE) should not be misconstrued as a NOLINT:
+class C7 { C7(int i); }; // NOLINTNEXTLINE
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: single-argument constructors must be marked explicit
+
+// NOLINT must be UPPERCASE:
+// NOLINTnextline
+class C8 { C8(int i); }; // nolint
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: single-argument constructors must be marked explicit
+
+// Unrecognized marker:
+// NOLINTNEXTLINEXYZ
+class C9 { C9(int i); }; // NOLINTXYZ
+// CHECK-MESSAGES: :[[@LINE-1]]:12: warning: single-argument constructors must be marked explicit
+
+// C-style comments are supported:
+class C10 { C10(int i); }; /* NOLINT */
+/* NOLINT */ class C11 { C11(int i); };
+
+// Multiple NOLINTs in the same comment:
+class C12 { C12(int i); }; // NOLINT(some-other-check) NOLINT(google-explicit-constructor)
+class C13 { C13(int i); }; // NOLINT(google-explicit-constructor) NOLINT(some-other-check)
+class C14 { C14(int i); }; // NOLINTNEXTLINE(some-other-check) NOLINT(google-explicit-constructor)
+
+// NOLINTNEXTLINE(google-explicit-constructor) NOLINT(some-other-check)
+class C15 { C15(int i); }; 
+
+// Any text after a NOLINT expression is treated as a comment:
+class C16 { C16(int i); }; // NOLINT: suppress check because <reason>
+class C17 { C17(int i); }; // NOLINT(google-explicit-constructor): suppress check because <reason>
+
+// NOLINT must appear in its entirety on one line:
+class C18 { C18(int i); }; /* NOL
+INT */
+// CHECK-MESSAGES: :[[@LINE-2]]:13: warning: single-argument constructors must be marked explicit
+
+/* NO
+LINT */ class C19 { C19(int i); };
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: single-argument constructors must be marked explicit
+
+// Spaces between items in the comma-separated check list are ignroed:
+class C20 { C20(int i); }; // NOLINT( google-explicit-constructor )
+class C21 { C21(int i); }; // NOLINT( google-explicit-constructor , some-other-check )
+class C22 { C22(int i); }; // NOLINT(google-explicit- constructor)
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: single-argument constructors must be marked explicit
+
+// If there is a space between "NOLINT" and the bracket, it is treated as a regular NOLINT: 
+class C23 { C23(int i); }; // NOLINT (some-other-check)
 
 void f() {
   int i;
@@ -71,4 +116,4 @@ int array2[10];  // NOLINT(cppcoreguidelines-avoid-c-arrays)
 int array3[10];  // NOLINT(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 int array4[10];  // NOLINT(*-avoid-c-arrays)
 
-// CHECK-MESSAGES: Suppressed 23 warnings (23 NOLINT)
+// CHECK-MESSAGES: Suppressed 34 warnings (34 NOLINT)
