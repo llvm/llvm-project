@@ -971,10 +971,6 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
       continue;
     }
 
-    // Don't merge volatiles.
-    if (MBBI->hasOrderedMemoryRef())
-      return false;
-
     int Swizzled =
         AMDGPU::getNamedOperandIdx(MBBI->getOpcode(), AMDGPU::OpName::swz);
     if (Swizzled != -1 && MBBI->getOperand(Swizzled).getImm())
