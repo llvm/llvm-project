@@ -10490,17 +10490,16 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
     return;
   }
 
-  uint32_t Offset = Ld.dataoff;
-  uint32_t size = Ld.datasize;
+  uint32_t HeaderOffset = Ld.dataoff;
 
   auto memcpyAtOffset = [&](uint32_t Offset, auto &T) -> void{
-    const char * ptr = Obj->getData().substr(Offset, sizeof(T)).data();
-    memcpy(&T, ptr, sizeof(T));
+    const char * Ptr = Obj->getData().substr(Offset, sizeof(T)).data();
+    memcpy(&T, Ptr, sizeof(T));
   };
 
   // parse dyld_chained_fixups_header
   MachO::dyld_chained_fixups_header Header;
-  memcpyAtOffset(Offset, Header);
+  memcpyAtOffset(HeaderOffset, Header);
 
   std::string ImportsFormat;
   switch (Header.imports_format) {
@@ -10529,50 +10528,74 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
 
   // parse dyld_chained_starts_in_image
   MachO::dyld_chained_starts_in_image Image;
-  memcpyAtOffset(Offset+Header.starts_offset, Image);
-
+  uint32_t ImageOffset = HeaderOffset + Header.starts_offset;
+  memcpyAtOffset(ImageOffset, Image);
   outs() << "chained starts in image\n"
          << "  seg_count = " << Image.seg_count << "\n";
-  for (int segIdx=0; segIdx<Image.seg_count; segIdx++){
-    MachO::segment_command_64 seg = segments[segIdx];
-    uint32_t segOffset;
-    memcpyAtOffset(Offset+Header.starts_offset+sizeof(uint32_t)*(segIdx+1), segOffset);
-
-    outs() << "   seg_offset [" << segIdx << "] = "
-           << segOffset << " (" << seg.segname << ")\n";
+  SmallVector<uint32_t> SegOffsets;
+  for (uint32_t SegIdx=0; SegIdx<Image.seg_count; SegIdx++){
+    uint32_t SegOffset;
+    memcpyAtOffset(ImageOffset+sizeof(uint32_t)*(SegIdx+1), SegOffset);
+    SegOffsets.push_back(SegOffset);
+    outs() << "    seg_offset [" << SegIdx << "] = "
+           << SegOffset << " (" << segments[SegIdx].segname << ")\n";
   }
 
-  // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_starts_in_segment
+  // parse dyld_chained_starts_in_segment
+  for (uint32_t SegIdx = 0; SegIdx<Image.seg_count; SegIdx++){
+    uint32_t SegOffset = SegOffsets[SegIdx];
+    if (SegOffset == 0) continue;
+    MachO::dyld_chained_starts_in_segment Seg;
+    memcpyAtOffset(ImageOffset+SegOffset, Seg);
+    outs() << "chained starts in segment " << SegIdx << " (" << segments[SegIdx].segname << ")\n"
+           << "  size = " << Seg.size << "\n"
+           << "  page_size = " << Seg.page_size << "\n" // TODO: show in hex
+           << "  pointer_format = " << Seg.pointer_format << "\n" // TODO: show in str
+           << "  segment_offset = " << Seg.segment_offset << "\n" // TODO: show in hex
+           << "  max_valid_pointer = " << Seg.max_valid_pointer << "\n"
+           << "  page_count = " << Seg.page_count << "\n";
+     for (uint16_t PageIdx=0; PageIdx<Seg.page_count; PageIdx++){
+       uint16_t PageStart;
+       memcpyAtOffset(ImageOffset+SegOffset+sizeof(uint16_t)*(PageIdx+11), PageStart);
+       outs() << "    page_offset [" << PageIdx << "] = " << PageStart << "\n";
+     }
+  }
 
 
-  // dump dyld_chained_import
+  // parse dyld_chained_import
+  // TODO: handle zlib compressed symbol names
+  uint32_t ImportsOffset = HeaderOffset+Header.imports_offset;
+  uint32_t SymbolOffset = HeaderOffset+Header.symbols_offset;
   for (uint32_t ImportIdx=0; ImportIdx<Header.imports_count; ImportIdx++) {
     switch (Header.imports_format) {
     case MachO::DYLD_CHAINED_IMPORT:
       outs() << "dyld_chained_import[" << ImportIdx << "]\n"; // TODO: add address
       MachO::dyld_chained_import Import;
-      memcpyAtOffset(Offset+Header.imports_offset+ImportIdx*sizeof(Import), Import);
-      outs() << "  lib_ordinal = " << Import.lib_ordinal << "\n" // TODO: add dylib name
+      memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(Import), Import);
+      outs() << "  lib_ordinal = " << Import.lib_ordinal << "\n"
              << "  weak_import =" << Import.weak_import << "\n"
-             << "  name_offset = " << Import.name_offset << " (" << StringRef(Obj->getData().data()+(Offset+Header.symbols_offset+Import.name_offset)) << ")" <<"\n";
+             << "  name_offset = " << Import.name_offset << " ("
+             << StringRef(Obj->getData().data()+(SymbolOffset+Import.name_offset)) << ")" <<"\n";
       break;
     case MachO::DYLD_CHAINED_IMPORT_ADDEND:
       outs() << "dyld_chained_import_addend[" << ImportIdx << "]\n";
       MachO::dyld_chained_import_addend ImportAddend;
-      memcpyAtOffset(Offset+Header.imports_offset+ImportIdx*sizeof(ImportAddend), ImportAddend);
+      memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(ImportAddend), ImportAddend);
       outs() << "  lib_ordinal = " << ImportAddend.lib_ordinal << "\n"
              << "  weak_import =" << ImportAddend.weak_import << "\n"
-             << "  name_offset = " << ImportAddend.name_offset << " (" << StringRef(Obj->getData().data()+(Offset+Header.symbols_offset+ImportAddend.name_offset)) << ")" <<"\n"
+             << "  name_offset = " << ImportAddend.name_offset << " ("
+             << StringRef(Obj->getData().data()+(SymbolOffset+ImportAddend.name_offset)) << ")" <<"\n"
              << "  addend = " << ImportAddend.addend << "\n";
       break;
     case MachO::DYLD_CHAINED_IMPORT_ADDEND64:
       outs() << "dyld_chained_import_addend64[" << ImportIdx << "]\n";
       MachO::dyld_chained_import_addend64 ImportAddend64;
-      memcpyAtOffset(Offset+Header.imports_offset+ImportIdx*sizeof(ImportAddend64), ImportAddend64);
+      memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(ImportAddend64), ImportAddend64);
       outs() << "  lib_ordinal = " << ImportAddend64.lib_ordinal << "\n"
              << "  weak_import =" << ImportAddend64.weak_import << "\n"
              << "  reserved =" << ImportAddend64.reserved << "\n"
-             << "  name_offset = " << ImportAddend64.name_offset << " (" << StringRef(Obj->getData().data()+(Offset+Header.symbols_offset+ImportAddend64.name_offset)) << ")" <<"\n"
+             << "  name_offset = " << ImportAddend64.name_offset << " ("
+             << StringRef(Obj->getData().data()+(SymbolOffset+ImportAddend64.name_offset)) << ")" <<"\n"
              << "  addend = " << ImportAddend64.addend << "\n";
       break;
     default:
