@@ -31,6 +31,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/AMDGPUMetadataVerifier.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ELF.h"

@@ -28,12 +28,13 @@
 #ifndef LLVM_BINARYFORMAT_MSGPACKWRITER_H
 #define LLVM_BINARYFORMAT_MSGPACKWRITER_H
 
-#include "llvm/BinaryFormat/MsgPack.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/MemoryBufferRef.h"
 
 namespace llvm {
+
+class raw_ostream;
+
 namespace msgpack {
 
 /// Writes MessagePack objects to an output stream, one at a time.
