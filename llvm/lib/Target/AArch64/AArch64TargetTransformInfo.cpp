@@ -1590,6 +1590,15 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
     { ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
 
+    // Bitcasts from float to integer
+    { ISD::BITCAST, MVT::nxv2f16, MVT::nxv2i16, 0 },
+    { ISD::BITCAST, MVT::nxv4f16, MVT::nxv4i16, 0 },
+    { ISD::BITCAST, MVT::nxv2f32, MVT::nxv2i32, 0 },
+
+    // Bitcasts from integer to float
+    { ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0 },
+    { ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0 },
+    { ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0 },
   };
 
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
