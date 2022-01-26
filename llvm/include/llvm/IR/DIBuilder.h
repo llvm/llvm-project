@@ -220,6 +220,19 @@ namespace llvm {
     /// \param Name        Type name.
     /// \param SizeInBits  Size of the type.
     DIStringType *createStringType(StringRef Name, uint64_t SizeInBits);
+    
+    /// Create debugging information entry for Fortran
+    /// assumed length string type.
+    /// \param Name          Type name.
+    /// \param stringLength  Metadata refrencing string length.
+    DIStringType *createStringType(StringRef Name, Metadata *stringLength);
+    
+    /// Create debugging information entry for Fortran
+    /// assumed length string type.
+    /// \param Name          Type name.
+    /// \param stringLength  String length expressed in DIExpression form
+    DIStringType *createStringTypeExp(StringRef Name,
+                                      DIExpression *stringLengthExp);
 
     /// Create debugging information entry for a qualified
     /// type, e.g. 'const int'.

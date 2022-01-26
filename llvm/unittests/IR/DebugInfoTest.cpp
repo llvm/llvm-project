@@ -247,6 +247,18 @@ TEST(DIBuilder, CreateSetType) {
   EXPECT_TRUE(isa_and_nonnull<DIDerivedType>(SetType));
 }
 
+TEST(DIBuilder, CreateStringType) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M(new Module("MyModule", Ctx));
+  DIBuilder DIB(*M);
+  StringRef StrName = "string";
+  DIStringType *StringType = DIB.createStringType(StrName,nullptr);
+
+  EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringType));
+  EXPECT_EQ(StringType->getName(),"string");
+  EXPECT_EQ(StringType->getStringLength(),nullptr);
+}
+
 TEST(DIBuilder, DIEnumerator) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));

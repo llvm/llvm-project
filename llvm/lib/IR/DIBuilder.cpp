@@ -293,6 +293,20 @@ DIStringType *DIBuilder::createStringType(StringRef Name, uint64_t SizeInBits) {
                            SizeInBits, 0);
 }
 
+DIStringType *DIBuilder::createStringType(StringRef Name,
+                                          Metadata *stringLength) {
+  assert(!Name.empty() && "Unable to create type without name");
+  return DIStringType::get(VMContext, dwarf::DW_TAG_string_type, Name,
+                           stringLength, nullptr, 0, 0, 0);
+}
+
+DIStringType *DIBuilder::createStringTypeExp(StringRef Name,
+                                             DIExpression *stringLengthExp) {
+  assert(!Name.empty() && "Unable to create type without name");
+  return DIStringType::get(VMContext, dwarf::DW_TAG_string_type, Name, nullptr,
+                           stringLengthExp, 0, 0, 0);
+}
+
 DIDerivedType *DIBuilder::createQualifiedType(unsigned Tag, DIType *FromTy) {
   return DIDerivedType::get(VMContext, Tag, "", nullptr, 0, nullptr, FromTy, 0,
                             0, 0, None, DINode::FlagZero);
