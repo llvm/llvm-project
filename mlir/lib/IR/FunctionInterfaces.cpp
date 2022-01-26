@@ -200,7 +200,7 @@ void mlir::function_interface_impl::insertFunctionResults(
 }
 
 void mlir::function_interface_impl::eraseFunctionArguments(
-    Operation *op, const llvm::BitVector &argIndices, Type newType) {
+    Operation *op, const BitVector &argIndices, Type newType) {
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
@@ -223,7 +223,7 @@ void mlir::function_interface_impl::eraseFunctionArguments(
 }
 
 void mlir::function_interface_impl::eraseFunctionResults(
-    Operation *op, const llvm::BitVector &resultIndices, Type newType) {
+    Operation *op, const BitVector &resultIndices, Type newType) {
   // There are 2 things that need to be updated:
   // - Function type.
   // - Result attrs.
@@ -263,7 +263,7 @@ TypeRange mlir::function_interface_impl::insertTypesInto(
 
 TypeRange
 mlir::function_interface_impl::filterTypesOut(TypeRange types,
-                                              const llvm::BitVector &indices,
+                                              const BitVector &indices,
                                               SmallVectorImpl<Type> &storage) {
   if (indices.none())
     return types;

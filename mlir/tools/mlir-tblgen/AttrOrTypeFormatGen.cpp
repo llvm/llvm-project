@@ -577,7 +577,7 @@ private:
   const AttrOrTypeDef &def;
 
   /// Seen attribute or type parameters.
-  llvm::BitVector seenParams;
+  BitVector seenParams;
 };
 } // namespace
 

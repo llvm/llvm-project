@@ -42,6 +42,7 @@ class Twine;
 
 // Containers.
 template <typename T> class ArrayRef;
+class BitVector;
 namespace detail {
 template <typename KeyT, typename ValueT> struct DenseMapPair;
 } // namespace detail
@@ -91,6 +92,7 @@ using llvm::Twine;
 //
 // Containers.
 using llvm::ArrayRef;
+using llvm::BitVector;
 template <typename T, typename Enable = void>
 using DenseMapInfo = llvm::DenseMapInfo<T, Enable>;
 template <typename KeyT, typename ValueT,

@@ -87,7 +87,7 @@ struct TestFuncEraseArg
     auto module = getOperation();
 
     for (FuncOp func : module.getOps<FuncOp>()) {
-      llvm::BitVector indicesToErase(func.getNumArguments());
+      BitVector indicesToErase(func.getNumArguments());
       for (auto argIndex : llvm::seq<int>(0, func.getNumArguments()))
         if (func.getArgAttr(argIndex, "test.erase_this_arg"))
           indicesToErase.set(argIndex);
@@ -107,7 +107,7 @@ struct TestFuncEraseResult
     auto module = getOperation();
 
     for (FuncOp func : module.getOps<FuncOp>()) {
-      llvm::BitVector indicesToErase(func.getNumResults());
+      BitVector indicesToErase(func.getNumResults());
       for (auto resultIndex : llvm::seq<int>(0, func.getNumResults()))
         if (func.getResultAttr(resultIndex, "test.erase_this_result"))
           indicesToErase.set(resultIndex);

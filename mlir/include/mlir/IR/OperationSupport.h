@@ -666,7 +666,7 @@ public:
 
   /// Erase the operands held by the storage that have their corresponding bit
   /// set in `eraseIndices`.
-  void eraseOperands(const llvm::BitVector &eraseIndices);
+  void eraseOperands(const BitVector &eraseIndices);
 
   /// Get the operation operands held by the storage.
   MutableArrayRef<OpOperand> getOperands() { return {operandStorage, size()}; }

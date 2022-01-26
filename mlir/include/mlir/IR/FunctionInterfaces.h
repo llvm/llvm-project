@@ -83,11 +83,11 @@ void insertFunctionResults(Operation *op, ArrayRef<unsigned> resultIndices,
                            unsigned originalNumResults, Type newType);
 
 /// Erase the specified arguments and update the function type attribute.
-void eraseFunctionArguments(Operation *op, const llvm::BitVector &argIndices,
+void eraseFunctionArguments(Operation *op, const BitVector &argIndices,
                             Type newType);
 
 /// Erase the specified results and update the function type attribute.
-void eraseFunctionResults(Operation *op, const llvm::BitVector &resultIndices,
+void eraseFunctionResults(Operation *op, const BitVector &resultIndices,
                           Type newType);
 
 /// Set a FunctionOpInterface operation's type signature.
@@ -101,7 +101,7 @@ TypeRange insertTypesInto(TypeRange oldTypes, ArrayRef<unsigned> indices,
 
 /// Filters out any elements referenced by `indices`. If any types are removed,
 /// `storage` is used to hold the new type list. Returns the new type list.
-TypeRange filterTypesOut(TypeRange types, const llvm::BitVector &indices,
+TypeRange filterTypesOut(TypeRange types, const BitVector &indices,
                          SmallVectorImpl<Type> &storage);
 
 //===----------------------------------------------------------------------===//
