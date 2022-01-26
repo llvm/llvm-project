@@ -910,12 +910,6 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
   }
   const unsigned InstSubclass = getInstSubclass(Opc, *TII);
 
-  // Do not merge VMEM buffer instructions with "swizzled" bit set.
-  int Swizzled =
-      AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), AMDGPU::OpName::swz);
-  if (Swizzled != -1 && CI.I->getOperand(Swizzled).getImm())
-    return false;
-
   DenseSet<Register> RegDefsToMove;
   DenseSet<Register> PhysRegUsesToMove;
   addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
@@ -970,11 +964,6 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
                             InstsToMove);
       continue;
     }
-
-    int Swizzled =
-        AMDGPU::getNamedOperandIdx(MBBI->getOpcode(), AMDGPU::OpName::swz);
-    if (Swizzled != -1 && MBBI->getOperand(Swizzled).getImm())
-      return false;
 
     // Handle a case like
     //   DS_WRITE_B32 addr, v, idx0
@@ -2012,6 +2001,12 @@ SILoadStoreOptimizer::collectMergeableInsts(
 
     const InstClassEnum InstClass = getInstClass(MI.getOpcode(), *TII);
     if (InstClass == UNKNOWN)
+      continue;
+
+    // Do not merge VMEM buffer instructions with "swizzled" bit set.
+    int Swizzled =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::swz);
+    if (Swizzled != -1 && MI.getOperand(Swizzled).getImm())
       continue;
 
     CombineInfo CI;
