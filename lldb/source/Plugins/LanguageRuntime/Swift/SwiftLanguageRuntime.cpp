@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/Swift/LLDBMemoryReader.h"
 #include "SwiftLanguageRuntimeImpl.h"
 
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
@@ -583,10 +584,8 @@ void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
   }
 }
 
-bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
-    ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type) {
-  assert(obj_file.GetType() == ObjectFile::eTypeJIT &&
-         "Not a JIT object file!");
+static std::unique_ptr<swift::SwiftObjectFileFormat>
+GetObjectFileFormat(llvm::Triple::ObjectFormatType obj_format_type) {
   std::unique_ptr<swift::SwiftObjectFileFormat> obj_file_format;
   switch (obj_format_type) {
   case llvm::Triple::MachO:
@@ -603,17 +602,27 @@ bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
       log->Printf("%s: Could not find out swift reflection section names for "
                   "object format type.",
                   __FUNCTION__);
-    return false;
   }
+  return obj_file_format;
+}
+
+bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
+    ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type) {
+  assert(obj_file.GetType() == ObjectFile::eTypeJIT &&
+         "Not a JIT object file!");
+  auto obj_file_format = GetObjectFileFormat(obj_format_type);
+
+  if (!obj_file_format)
+    return false;
 
   return m_reflection_ctx->addImage(
       [&](swift::ReflectionSectionKind section_kind)
           -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
         auto section_name =
-            ConstString(obj_file_format->getSectionName(section_kind));
+            obj_file_format->getSectionName(section_kind);
         for (auto section : *obj_file.GetSectionList()) {
           JITSection *jit_section = llvm::dyn_cast<JITSection>(section.get());
-          if (jit_section && section->GetName() == section_name) {
+          if (jit_section && section->GetName().AsCString() == section_name) {
             DataExtractor extractor;
             auto section_size = section->GetSectionData(extractor);
             if (!section_size)
@@ -635,6 +644,78 @@ bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
       });
 }
 
+bool SwiftLanguageRuntimeImpl::AddObjectFileToReflectionContext(
+    ModuleSP module, ObjectFile &obj_file) {
+  auto obj_format_type =
+        module->GetArchitecture().GetTriple().getObjectFormat();
+
+  auto obj_file_format = GetObjectFileFormat(obj_format_type);
+  if (!obj_file_format)
+    return false;
+
+  llvm::Optional<llvm::StringRef> maybe_segment_name =
+      obj_file_format->getSegmentName();
+  if (!maybe_segment_name)
+    return false;
+
+  llvm::StringRef segment_name = *maybe_segment_name;
+  auto lldb_memory_reader = GetMemoryReader();
+  auto maybe_start_and_end = 
+      lldb_memory_reader->addModuleToAddressMap(module);
+  if (!maybe_start_and_end)
+    return false;
+
+  uint64_t start_address, end_address;
+  std::tie(start_address, end_address) = *maybe_start_and_end;
+
+  auto *section_list = obj_file.GetSectionList();
+  auto segment_iter = llvm::find_if(*section_list, [&](auto segment) {
+    return segment->GetName() == segment_name.begin();
+  });
+
+  if (segment_iter == section_list->end())
+    return false;
+
+  auto *segment = segment_iter->get();
+
+  return m_reflection_ctx->addImage(
+      [&](swift::ReflectionSectionKind section_kind)
+          -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
+        auto section_name =
+            obj_file_format->getSectionName(section_kind);
+        for (auto section : segment->GetChildren()) {
+          // Iterate over the sections until we find the reflection section we
+          // need.
+          if (section->GetName().AsCString() == section_name) {
+            DataExtractor extractor;
+            auto size = section->GetSectionData(extractor);
+            auto data = extractor.GetData();
+            size = section->GetFileSize();
+            if (!data.begin())
+              return {};
+
+            // Alloc a buffer and copy over the reflection section's contents.
+            // This buffer will be owned by reflection context.
+            auto *Buf = malloc(size);
+            std::memcpy(Buf, data.begin(), size);
+
+            // The section's address is the start address for this image
+            // added with the section's virtual address. We need to use the
+            // virtual address instead of the file offset because the offsets
+            // encoded in the reflection section are calculated in the virtual
+            // address space.
+            auto address = start_address + section->GetFileAddress();
+            assert(address <= end_address && "Address outside of range!");
+
+            swift::remote::RemoteRef<void> remote_ref(address, Buf);
+            return {remote_ref, size};
+            ;
+          }
+        }
+        return {};
+      });
+}
+
 bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
     const lldb::ModuleSP &module_sp) {
   // This function is called from within SetupReflection so it cannot
@@ -647,9 +728,10 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
   auto *obj_file = module_sp->GetObjectFile();
   if (!obj_file)
     return false;
+  auto &target = m_process.GetTarget();
   Address start_address = obj_file->GetBaseAddress();
   auto load_ptr = static_cast<uintptr_t>(
-      start_address.GetLoadAddress(&(m_process.GetTarget())));
+      start_address.GetLoadAddress(&target));
   if (obj_file->GetType() == ObjectFile::eTypeJIT) {
     auto object_format_type =
         module_sp->GetArchitecture().GetTriple().getObjectFormat();
@@ -670,6 +752,8 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
   if (!found)
     return true;
 
+  auto read_from_file_cache =
+      GetMemoryReader()->readMetadataFromFileCacheEnabled();
   // When dealing with ELF, we need to pass in the contents of the on-disk
   // file, since the Section Header Table is not present in the child process
   if (obj_file->GetPluginName().equals("elf")) {
@@ -680,6 +764,10 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
     m_reflection_ctx->readELF(
         swift::remote::RemoteAddress(load_ptr),
         llvm::Optional<llvm::sys::MemoryBlock>(file_buffer));
+  } else if (read_from_file_cache &&
+             obj_file->GetPluginName().equals("mach-o")) {
+    if (!AddObjectFileToReflectionContext(module_sp, *obj_file))
+      m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
   } else {
     m_reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
   }

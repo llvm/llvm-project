@@ -3,6 +3,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 
+#include "llvm/Support/MathExtras.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -134,15 +136,26 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
   LLDB_LOGV(log, "[MemoryReader] asked to read {0} bytes at address {1:x}",
             size, address.getAddressData());
 
+  llvm::Optional<Address> maybeAddr =
+      resolveRemoteAddress(address.getAddressData());
+  if (!maybeAddr) {
+    LLDB_LOGV(log, "[MemoryReader] could not resolve address {1:x}",
+              address.getAddressData());
+    return false;
+  }
+  auto addr = *maybeAddr;
+
   if (size > m_max_read_amount) {
     LLDB_LOGV(log, "[MemoryReader] memory read exceeds maximum allowed size");
     return false;
   }
-
   Target &target(m_process.GetTarget());
-  Address addr(address.getAddressData());
   Status error;
-  if (size > target.ReadMemory(addr, dest, size, error, true)) {
+  // We only want to allow the file-cache optimization if we resolved the 
+  // address to section + offset.
+  const bool force_live_memory =
+      !readMetadataFromFileCacheEnabled() || !addr.IsSectionOffset();
+  if (size > target.ReadMemory(addr, dest, size, error, force_live_memory)) {
     LLDB_LOGV(log,
               "[MemoryReader] memory read returned fewer bytes than asked for");
     return false;
@@ -171,11 +184,19 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
                                   std::string &dest) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0:x}",
+  LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0x}",
             address.getAddressData());
 
+  llvm::Optional<Address> maybeAddr =
+      resolveRemoteAddress(address.getAddressData());
+  if (!maybeAddr) {
+    LLDB_LOGV(log, "[MemoryReader] could not resolve address {1:x}",
+              address.getAddressData());
+    return false;
+  }
+  auto addr = *maybeAddr;
+
   Target &target(m_process.GetTarget());
-  Address addr(address.getAddressData());
   Status error;
   // We only want to allow the file-cache optimization if we resolved the 
   // address to section + offset.
@@ -198,11 +219,10 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
     LLDB_LOGV(log, "[MemoryReader] memory read returned data: \"{0}\"",
               format_string(dest));
     return true;
-  } else {
-    LLDB_LOGV(log, "[MemoryReader] memory read returned error: {0}",
-              error.AsCString());
-    return false;
   }
+  LLDB_LOGV(log, "[MemoryReader] memory read returned error: {0}",
+            error.AsCString());
+  return false;
 }
 
 void LLDBMemoryReader::pushLocalBuffer(uint64_t local_buffer,
@@ -218,4 +238,120 @@ void LLDBMemoryReader::popLocalBuffer() {
   m_local_buffer_size = 0;
 }
 
+llvm::Optional<std::pair<uint64_t, uint64_t>>
+LLDBMemoryReader::addModuleToAddressMap(ModuleSP module) {
+  if (!readMetadataFromFileCacheEnabled())
+    return {};
+
+  // The first available address is the mask, since subsequent images are mapped
+  // in ascending order, all of them will contain this mask.
+  uint64_t module_start_address = LLDB_FILE_ADDRESS_BIT;
+  if (!m_range_module_map.empty())
+    // We map the images contiguously one after the other, all with the tag bit
+    // set.
+    // The address that maps the last module is exactly the address the new
+    // module should start at.
+    module_start_address = m_range_module_map.back().first;
+
+#ifndef NDEBUG
+  static std::initializer_list<uint64_t> objc_bits = {
+      SWIFT_ABI_ARM_IS_OBJC_BIT,
+      SWIFT_ABI_X86_64_IS_OBJC_BIT,
+      SWIFT_ABI_ARM64_IS_OBJC_BIT};
+
+  for (auto objc_bit : objc_bits) 
+    assert((module_start_address & objc_bit) != objc_bit &&
+           "LLDB file address bit clashes with an obj-c bit!");
+#endif
+
+  SectionList *section_list = module->GetObjectFile()->GetSectionList();
+
+  auto section_list_size = section_list->GetSize();
+  if (section_list_size == 0)
+    return {};
+
+  auto last_section =
+      section_list->GetSectionAtIndex(section_list->GetSize() - 1);
+  // The virtual file address + the size of last section gives us the total size
+  // of this image in memory.
+  uint64_t size = last_section->GetFileAddress() + last_section->GetByteSize();
+  auto module_end_address = module_start_address + size;
+
+  // The address for the next image is the next pointer aligned address
+  // available after the end of the current image.
+  uint64_t next_module_start_address = llvm::alignTo(module_end_address, 8);
+  m_range_module_map.emplace_back(next_module_start_address, module);
+  return {{module_start_address, module_end_address}};
+}
+
+llvm::Optional<Address>
+LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+  if (!m_process.GetTarget().GetSwiftReadMetadataFromFileCache())
+    return Address(address);
+
+  // If the address contains our mask, this is an image we registered.
+  if (!(address & LLDB_FILE_ADDRESS_BIT))
+    return Address(address);
+
+  // Dummy pair with the address we're looking for.
+  auto comparison_pair = std::make_pair(address, ModuleSP());
+
+  // Explicitly compare only the addresses, never the modules in the pairs.
+  auto pair_iterator = std::lower_bound(
+      m_range_module_map.begin(), m_range_module_map.end(), comparison_pair,
+      [](auto &a, auto &b) { return a.first < b.first; });
+
+  // If the address is larger than anything we have mapped the address is out
+  if (pair_iterator == m_range_module_map.end()) {
+    LLDB_LOG(log,
+              "[MemoryReader] Address {1:x} is larger than the upper bound "
+              "address of the mapped in modules",
+              address);
+    return {};
+  }
+
+  ModuleSP module = pair_iterator->second;
+  uint64_t file_address;
+  if (pair_iterator == m_range_module_map.begin())
+    // Since this is the first registered module,
+    // clearing the tag bit will give the virtual file address.
+    file_address = address & ~LLDB_FILE_ADDRESS_BIT;
+  else
+    // The end of the previous section is the start of the current one.
+    file_address = address - std::prev(pair_iterator)->first;
+
+  LLDB_LOGV(log,
+            "[MemoryReader] Successfully resolved mapped address {1:x} "
+            "into file address {1:x}",
+            address, file_address);
+  auto *object_file = module->GetObjectFile();
+  if (!object_file)
+    return {};
+
+  Address resolved(file_address, object_file->GetSectionList());
+  if (!resolved.IsValid()) {
+    LLDB_LOG(log,
+             "[MemoryReader] Could not make a real address out of file "
+             "address {1:x} and object file {}",
+             file_address, object_file->GetFileSpec().GetFilename());
+    return {};
+  }
+
+  LLDB_LOGV(log,
+            "[MemoryReader] Unsuccessfully resolved mapped address {1:x} "
+            "into file address {1:x}",
+            address, address);
+  return resolved;
+}
+
+bool LLDBMemoryReader::readMetadataFromFileCacheEnabled() const {
+  auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
+
+  // 32 doesn't have a flag bit we can reliably use, so reading from filecache
+  // is disabled on it.
+  return m_process.GetTarget().GetSwiftReadMetadataFromFileCache() &&
+         triple.isArch64Bit();
+}
 } // namespace lldb_private

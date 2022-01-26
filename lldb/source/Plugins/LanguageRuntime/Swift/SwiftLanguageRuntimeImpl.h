@@ -13,6 +13,7 @@
 #ifndef liblldb_SwiftLanguageRuntimeImpl_h_
 #define liblldb_SwiftLanguageRuntimeImpl_h_
 
+#include "LLDBMemoryReader.h"
 #include "SwiftLanguageRuntime.h"
 #include "swift/Reflection/TypeLowering.h"
 #include "llvm/Support/Memory.h"
@@ -292,7 +293,7 @@ protected:
 
   const CompilerType &GetBoxMetadataType();
 
-  std::shared_ptr<swift::remote::MemoryReader> GetMemoryReader();
+  std::shared_ptr<LLDBMemoryReader> GetMemoryReader();
 
   void PushLocalBuffer(uint64_t local_buffer, uint64_t local_buffer_size);
 
@@ -311,7 +312,7 @@ protected:
   llvm::StringSet<> m_library_negative_cache;
   std::mutex m_negative_cache_mutex;
 
-  std::shared_ptr<swift::remote::MemoryReader> m_memory_reader_sp;
+  std::shared_ptr<LLDBMemoryReader> m_memory_reader_sp;
 
   llvm::DenseMap<std::pair<swift::ASTContext *, lldb::addr_t>,
                  SwiftLanguageRuntime::MetadataPromiseSP>
@@ -387,6 +388,12 @@ private:
   /// \return true on success.
   bool AddJitObjectFileToReflectionContext(
       ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type);
+
+  /// Add the reflections sections to the reflection context by extracting
+  /// the directly from the object file.
+  /// \return true on success.
+  bool AddObjectFileToReflectionContext(
+      lldb::ModuleSP module, ObjectFile &obj_file);
 
   /// Cache for the debug-info-originating type infos.
   /// \{

@@ -394,7 +394,8 @@ const CompilerType &SwiftLanguageRuntimeImpl::GetBoxMetadataType() {
 
   return m_box_metadata_type;
 }
-std::shared_ptr<swift::remote::MemoryReader>
+
+std::shared_ptr<LLDBMemoryReader>
 SwiftLanguageRuntimeImpl::GetMemoryReader() {
   if (!m_memory_reader_sp)
     m_memory_reader_sp.reset(new LLDBMemoryReader(m_process));
