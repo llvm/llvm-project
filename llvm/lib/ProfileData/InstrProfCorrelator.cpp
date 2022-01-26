@@ -167,13 +167,19 @@ DwarfInstrProfCorrelator<IntPtrT>::getLocation(const DWARFDie &Die) const {
     return {};
   }
   auto &DU = *Die.getDwarfUnit();
+  auto AddressSize = DU.getAddressByteSize();
   for (auto &Location : *Locations) {
-    auto AddressSize = DU.getAddressByteSize();
     DataExtractor Data(Location.Expr, DICtx->isLittleEndian(), AddressSize);
     DWARFExpression Expr(Data, AddressSize);
-    for (auto &Op : Expr)
-      if (Op.getCode() == dwarf::DW_OP_addr)
+    for (auto &Op : Expr) {
+      if (Op.getCode() == dwarf::DW_OP_addr) {
         return Op.getRawOperand(0);
+      } else if (Op.getCode() == dwarf::DW_OP_addrx) {
+        uint64_t Index = Op.getRawOperand(0);
+        if (auto SA = DU.getAddrOffsetSectionItem(Index))
+          return SA->Address;
+      }
+    }
   }
   return {};
 }
