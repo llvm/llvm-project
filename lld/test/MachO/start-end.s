@@ -276,7 +276,7 @@
 # SEG-NEXT:   vmaddr 0x[[#%x, ASDFSTART:]]
 # SEG-NEXT:   vmsize 0x0000000000000000
 
-# SEG: _main
+# SEG: _main:
 
 ## segment$start$__TEXT / segment$end$__TEXT
 # SEG:      [[#%x, PC1:]]:
