@@ -91,3 +91,24 @@ template <typename T>
 T TemplVar; // expected-note {{previous declaration is here}}
 export template <typename T>
 T TemplVar; // expected-error {{cannot export redeclaration 'TemplVar' here since the previous declaration is not exported}}
+
+// Test the compiler wouldn't complain about the redeclaration of friend in exported class.
+namespace Friend {
+template <typename T>
+class bar;
+class gua;
+template <typename T>
+void hello();
+void hi();
+export class foo;
+bool operator<(const foo &a, const foo &b);
+export class foo {
+  template <typename T>
+  friend class bar;
+  friend class gua;
+  template <typename T>
+  friend void hello();
+  friend void hi();
+  friend bool operator<(const foo &a, const foo &b);
+};
+} // namespace Friend
