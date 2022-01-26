@@ -1,6 +1,6 @@
 ;; This test is really dependent on propagating a lot of memory info around, but in the end, not
 ;; screwing up a single add.
-; RUN: opt < %s -basic-aa -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %struct.Letter = type { i32, i32, i32, i32 }
