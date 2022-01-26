@@ -497,7 +497,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   if (Matrix->checkInterference(VirtReg, PhysReg) > LiveRegMatrix::IK_VirtReg)
     return false;
 
-  bool IsLocal = LIS->intervalIsInOneMBB(VirtReg);
+  bool IsLocal = VirtReg.empty() || LIS->intervalIsInOneMBB(VirtReg);
 
   // Find VirtReg's cascade number. This will be unassigned if VirtReg was never
   // involved in an eviction before. If a cascade number was assigned, deny

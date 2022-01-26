@@ -827,6 +827,8 @@ CancelKill:
 
 MachineBasicBlock*
 LiveIntervals::intervalIsInOneMBB(const LiveInterval &LI) const {
+  assert(!LI.empty() && "LiveInterval is empty.");
+
   // A local live range must be fully contained inside the block, meaning it is
   // defined and killed at instructions, not at block boundaries. It is not
   // live in or out of any block.
