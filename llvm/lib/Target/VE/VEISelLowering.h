@@ -40,6 +40,8 @@ enum NodeType : unsigned {
   TS1AM,                  // A TS1AM instruction used for 1/2 bytes swap.
   VEC_BROADCAST,          // A vector broadcast instruction.
                           //   0: scalar value, 1: VL
+  REPL_I32,
+  REPL_F32, // Replicate subregister to other half.
 
 // VVP_* nodes.
 #define ADD_VVP_OP(VVP_NAME, ...) VVP_NAME,

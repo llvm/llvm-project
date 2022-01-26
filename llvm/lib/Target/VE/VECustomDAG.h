@@ -25,6 +25,8 @@ Optional<unsigned> getVVPOpcode(unsigned Opcode);
 
 bool isVVPBinaryOp(unsigned Opcode);
 
+bool isPackedVectorType(EVT SomeVT);
+
 class VECustomDAG {
   SelectionDAG &DAG;
   SDLoc DL;

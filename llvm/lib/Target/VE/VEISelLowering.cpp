@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "VECustomDAG.h"
 #include "VEISelLowering.h"
 #include "MCTargetDesc/VEMCExpr.h"
+#include "VECustomDAG.h"
 #include "VEInstrBuilder.h"
 #include "VEMachineFunctionInfo.h"
 #include "VERegisterInfo.h"
@@ -899,6 +899,8 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     TARGET_NODE_CASE(RET_FLAG)
     TARGET_NODE_CASE(TS1AM)
     TARGET_NODE_CASE(VEC_BROADCAST)
+    TARGET_NODE_CASE(REPL_I32)
+    TARGET_NODE_CASE(REPL_F32)
 
     // Register the VVP_* SDNodes.
 #define ADD_VVP_OP(VVP_NAME, ...) TARGET_NODE_CASE(VVP_NAME)
@@ -1642,8 +1644,7 @@ static SDValue getSplatValue(SDNode *N) {
 SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                             SelectionDAG &DAG) const {
   VECustomDAG CDAG(DAG, Op);
-  unsigned NumEls = Op.getValueType().getVectorNumElements();
-  MVT ElemVT = Op.getSimpleValueType().getVectorElementType();
+  MVT ResultVT = Op.getSimpleValueType();
 
   // If there is just one element, expand to INSERT_VECTOR_ELT.
   unsigned UniqueIdx;
@@ -1651,17 +1652,17 @@ SDValue VETargetLowering::lowerBUILD_VECTOR(SDValue Op,
     SDValue AccuV = CDAG.getUNDEF(Op.getValueType());
     auto ElemV = Op->getOperand(UniqueIdx);
     SDValue IdxV = CDAG.getConstant(UniqueIdx, MVT::i64);
-    return CDAG.getNode(ISD::INSERT_VECTOR_ELT, Op.getValueType(),
-                        {AccuV, ElemV, IdxV});
+    return CDAG.getNode(ISD::INSERT_VECTOR_ELT, ResultVT, {AccuV, ElemV, IdxV});
   }
 
   // Else emit a broadcast.
   if (SDValue ScalarV = getSplatValue(Op.getNode())) {
-    // lower to VEC_BROADCAST
-    MVT LegalResVT = MVT::getVectorVT(ElemVT, 256);
-
-    auto AVL = CDAG.getConstant(NumEls, MVT::i32);
-    return CDAG.getBroadcast(LegalResVT, Op.getOperand(0), AVL);
+    unsigned NumEls = ResultVT.getVectorNumElements();
+    // TODO: Legalize packed-mode AVL.
+    //       For now, cap the AVL at 256.
+    auto CappedLength = std::min<unsigned>(256, NumEls);
+    auto AVL = CDAG.getConstant(CappedLength, MVT::i32);
+    return CDAG.getBroadcast(ResultVT, Op.getOperand(0), AVL);
   }
 
   // Expand
