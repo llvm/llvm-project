@@ -27,7 +27,6 @@ class Region;
 class RewriterBase;
 class TypeConverter;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 class Operation;
 class Value;
 class ValueRange;

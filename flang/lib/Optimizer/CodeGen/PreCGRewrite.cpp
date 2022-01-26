@@ -260,7 +260,7 @@ public:
       return !(embox.getShape() ||
                embox.getType().cast<BoxType>().getEleTy().isa<SequenceType>());
     });
-    mlir::OwningRewritePatternList patterns(&context);
+    mlir::RewritePatternSet patterns(&context);
     patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion>(
         &context);
     if (mlir::failed(

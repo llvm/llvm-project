@@ -1289,8 +1289,8 @@ LogicalResult peelAndCanonicalizeTiledLoop(RewriterBase &rewriter,
 /// global transformations, in a staged fashion:
 ///   1. the first stage consists of a list of FrozenRewritePatternSet. Each
 ///   FrozenRewritePatternSet in this list is applied once, in order.
-///   2. the second stage consists of a single OwningRewritePattern that is
-///   applied greedily until convergence.
+///   2. the second stage consists of a single RewritePattern that is applied
+///      greedily until convergence.
 ///   3. the third stage consists of applying a lambda, generally used for
 ///   non-local transformation effects. This allows creating custom fused
 ///   transformations where patterns can be ordered and applied at a finer

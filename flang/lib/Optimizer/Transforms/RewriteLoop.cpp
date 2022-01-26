@@ -296,7 +296,7 @@ class CfgConversion : public CFGConversionBase<CfgConversion> {
 public:
   void runOnOperation() override {
     auto *context = &getContext();
-    mlir::OwningRewritePatternList patterns(context);
+    mlir::RewritePatternSet patterns(context);
     patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
         context, forceLoopToExecuteOnce);
     mlir::ConversionTarget target(*context);

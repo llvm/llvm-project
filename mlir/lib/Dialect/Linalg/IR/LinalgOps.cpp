@@ -1753,7 +1753,7 @@ struct TiledLoopResultsFolder : public OpRewritePattern<linalg::TiledLoopOp> {
 };
 } // namespace
 
-void TiledLoopOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void TiledLoopOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.insert<TiledLoopInputsFolder, TiledLoopResultsFolder,
                  DimOfTiledLoopInsOutsFolder<tensor::DimOp>,

@@ -3266,7 +3266,7 @@ public:
 
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
-    mlir::OwningRewritePatternList pattern(context);
+    mlir::RewritePatternSet pattern(context);
     pattern.insert<
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
         AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,

@@ -16,7 +16,6 @@ namespace mlir {
 class LLVMTypeConverter;
 class ConversionTarget;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 template <typename OpT>
 class OperationPass;

@@ -67,7 +67,7 @@ using ScalableMaskedDivFOpLowering =
 
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
 void mlir::populateArmSVELegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // Populate conversion patterns
 
   // clang-format off

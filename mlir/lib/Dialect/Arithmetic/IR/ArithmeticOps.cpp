@@ -209,7 +209,7 @@ OpFoldResult arith::AddIOp::fold(ArrayRef<Attribute> operands) {
 }
 
 void arith::AddIOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<AddIAddConstant, AddISubConstantRHS, AddISubConstantLHS>(
       context);
 }
@@ -231,7 +231,7 @@ OpFoldResult arith::SubIOp::fold(ArrayRef<Attribute> operands) {
 }
 
 void arith::SubIOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<SubIRHSAddConstant, SubILHSAddConstant, SubIRHSSubConstantRHS,
                   SubIRHSSubConstantLHS, SubILHSSubConstantRHS,
                   SubILHSSubConstantLHS>(context);
@@ -567,7 +567,7 @@ OpFoldResult arith::XOrIOp::fold(ArrayRef<Attribute> operands) {
 }
 
 void arith::XOrIOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<XOrINotCmpI>(context);
 }
 
@@ -846,7 +846,7 @@ bool arith::ExtSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 void arith::ExtSIOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<ExtSIOfExtUI>(context);
 }
 
@@ -926,7 +926,7 @@ bool arith::TruncFOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 //===----------------------------------------------------------------------===//
 
 void arith::AndIOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<AndOfExtUI, AndOfExtSI>(context);
 }
 
@@ -935,7 +935,7 @@ void arith::AndIOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 void arith::OrIOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<OrOfExtUI, OrOfExtSI>(context);
 }
 
@@ -1074,7 +1074,7 @@ OpFoldResult arith::IndexCastOp::fold(ArrayRef<Attribute> operands) {
 }
 
 void arith::IndexCastOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<IndexCastOfIndexCast, IndexCastOfExtSI>(context);
 }
 
@@ -1123,7 +1123,7 @@ OpFoldResult arith::BitcastOp::fold(ArrayRef<Attribute> operands) {
 }
 
 void arith::BitcastOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   patterns.insert<BitcastOfBitcast>(context);
 }
 

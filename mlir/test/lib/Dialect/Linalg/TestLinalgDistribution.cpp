@@ -53,7 +53,7 @@ struct TestLinalgDistribution
 
 void TestLinalgDistribution::runOnOperation() {
   auto funcOp = getOperation();
-  OwningRewritePatternList distributeTiledLoopsPatterns(&getContext());
+  RewritePatternSet distributeTiledLoopsPatterns(&getContext());
   populateLinalgDistributeTiledLoopPattern(
       distributeTiledLoopsPatterns, getDistributionOptions(),
       LinalgTransformationFilter(

@@ -14,7 +14,6 @@ namespace mlir {
 class LLVMConversionTarget;
 class LLVMTypeConverter;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 /// Collect a set of patterns to lower ArmSVE ops to ops that map to LLVM
 /// intrinsics.

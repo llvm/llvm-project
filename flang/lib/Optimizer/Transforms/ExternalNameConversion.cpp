@@ -148,7 +148,7 @@ void ExternalNameConversionPass::runOnOperation() {
   auto op = getOperation();
   auto *context = &getContext();
 
-  mlir::OwningRewritePatternList patterns(context);
+  mlir::RewritePatternSet patterns(context);
   patterns.insert<MangleNameOnCallOp, MangleNameOnCallOp, MangleNameOnFuncOp,
                   MangleNameForCommonBlock, MangleNameOnAddrOfOp,
                   MangleNameOnEmboxProcOp>(context);

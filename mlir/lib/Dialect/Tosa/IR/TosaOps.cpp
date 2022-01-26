@@ -129,7 +129,7 @@ struct ConcatOptimization : public OpRewritePattern<tosa::ConcatOp> {
   }
 };
 
-void ConcatOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.insert<ConcatOptimization>(context);
 }
@@ -187,7 +187,7 @@ struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
   }
 };
 
-void ReshapeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.insert<ReshapeReshapeOptimization>(context);
   results.insert<ReshapeConstOptimization>(context);
@@ -284,7 +284,7 @@ struct NoOpOptimization : public OpRewritePattern<tosa::TransposeOp> {
   }
 };
 
-void TransposeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.insert<ConstantTransposeOptimization>(context);
   results.insert<NoOpOptimization>(context);
@@ -322,7 +322,7 @@ struct AddZeroOptimization : public OpRewritePattern<tosa::AddOp> {
   }
 };
 
-void AddOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AddOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.insert<AddZeroOptimization>(context);
 }
@@ -371,7 +371,7 @@ struct MulOneOptimization : public OpRewritePattern<tosa::MulOp> {
   }
 };
 
-void MulOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void MulOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.insert<MulOneOptimization>(context);
 }
@@ -418,7 +418,7 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
   }
 };
 
-void PadOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.insert<MaterializePadValue>(context);
 }
@@ -453,7 +453,7 @@ struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
   }
 };
 
-void MaxPool2dOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.insert<MaxPool2dIsNoOp>(context);
 }
@@ -556,7 +556,7 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
   }
 };
 
-void ClampOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.insert<ClampIsNoOp>(context);
   results.insert<ClampClampOptimization>(context);

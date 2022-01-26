@@ -17,7 +17,6 @@ struct LogicalResult;
 class Pass;
 
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 /// Collect a set of patterns to lower from scf.for, scf.if, and
 /// loop.terminator to CFG operations within the Standard dialect, in particular

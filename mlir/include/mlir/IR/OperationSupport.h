@@ -49,14 +49,12 @@ class Pattern;
 class Region;
 class ResultRange;
 class RewritePattern;
+class RewritePatternSet;
 class Type;
 class Value;
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-
-class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 //===----------------------------------------------------------------------===//
 // OperationName
