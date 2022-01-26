@@ -209,7 +209,7 @@ target_include_directories(amd_comgr
 set(AMD_COMGR_CONFIG_NAME amd_comgr-config.cmake)
 set(AMD_COMGR_TARGETS_NAME amd_comgr-targets.cmake)
 set(AMD_COMGR_VERSION_NAME amd_comgr-config-version.cmake)
-set(AMD_COMGR_PACKAGE_PREFIX lib/cmake/amd_comgr)
+set(AMD_COMGR_PACKAGE_PREFIX ${CMAKE_INSTALL_LIBDIR}/cmake/amd_comgr)
 
 # Generate the build-tree package.
 set(AMD_COMGR_PREFIX_CODE)
