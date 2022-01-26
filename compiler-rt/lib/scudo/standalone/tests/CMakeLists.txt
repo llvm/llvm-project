@@ -33,10 +33,10 @@ endif()
 set(SCUDO_TEST_ARCH ${SCUDO_STANDALONE_SUPPORTED_ARCH})
 
 # gtests requires c++
-set(LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS})
-foreach(lib ${SANITIZER_TEST_CXX_LIBRARIES})
-  list(APPEND LINK_FLAGS -l${lib})
-endforeach()
+set(LINK_FLAGS
+  ${COMPILER_RT_UNITTEST_LINK_FLAGS}
+  ${SANITIZER_TEST_CXX_LIBRARIES}
+  )
 list(APPEND LINK_FLAGS -pthread)
 # Linking against libatomic is required with some compilers
 check_library_exists(atomic __atomic_load_8 "" COMPILER_RT_HAS_LIBATOMIC)
