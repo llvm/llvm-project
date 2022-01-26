@@ -304,7 +304,8 @@ Cookie IONAME(BeginOpenUnit)( // OPEN(without NEWUNIT=)
 Cookie IONAME(BeginOpenNewUnit)( // OPEN(NEWUNIT=j)
     const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
-  ExternalFileUnit &unit{ExternalFileUnit::NewUnit(terminator)};
+  ExternalFileUnit &unit{
+      ExternalFileUnit::NewUnit(terminator, false /*not child I/O*/)};
   return &unit.BeginIoStatement<OpenStatementState>(
       unit, false /*was an existing file*/, sourceFile, sourceLine);
 }

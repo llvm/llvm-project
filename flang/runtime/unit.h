@@ -50,7 +50,7 @@ public:
   static ExternalFileUnit *LookUp(const char *path);
   static ExternalFileUnit &CreateNew(int unit, const Terminator &);
   static ExternalFileUnit *LookUpForClose(int unit);
-  static ExternalFileUnit &NewUnit(const Terminator &, bool forChildIo = false);
+  static ExternalFileUnit &NewUnit(const Terminator &, bool forChildIo);
   static void CloseAll(IoErrorHandler &);
   static void FlushAll(IoErrorHandler &);
 
