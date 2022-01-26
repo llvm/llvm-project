@@ -7,6 +7,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 %struct.__jmp_buf_tag = type { [6 x i32], i32, [32 x i32] }
+@_ZTIi = external constant i8*
 
 ; There is a function call (@foo) that can either throw an exception or longjmp
 ; and there is also a setjmp call. When @foo throws, we have to check both for
@@ -220,6 +221,54 @@ return:                                           ; preds = %entry, %if.end
 ; CHECK-NEXT: unreachable
 }
 
+; int jmpval = setjmp(buf);
+; if (jmpval != 0)
+;   return;
+; try {
+;   throw 3;
+; } catch (...) {
+; }
+define void @setjmp_with_throw_try_catch() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: @setjmp_with_throw_try_catch
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #0
+  %cmp = icmp ne i32 %call, 0
+  br i1 %cmp, label %try.cont, label %if.end
+
+if.end:                                           ; preds = %entry
+  %exception = call i8* @__cxa_allocate_exception(i32 4) #2
+  %0 = bitcast i8* %exception to i32*
+  store i32 3, i32* %0, align 16
+  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #1
+          to label %unreachable unwind label %lpad
+; When invoke @__cxa_throw is converted to a call to the invoke wrapper,
+; "noreturn" attribute should be removed, and there should be no 'free' call
+; before the call. We insert a 'free' call that frees 'setjmpTable' before every
+; function-exiting instruction. And invoke wrapper calls shouldn't be treated as
+; noreturn instructions, because they are supposed to return.
+; CHECK:   if.end:
+; CHECK-NOT: tail call void @free
+; CHECK-NOT: call cc99 void @"__invoke_void_i8*_i8*_i8*"(void (i8*, i8*, i8*)* @__cxa_throw, i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #
+; CHECK:     call cc99 void @"__invoke_void_i8*_i8*_i8*"(void (i8*, i8*, i8*)* @__cxa_throw, i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null)
+
+lpad:                                             ; preds = %if.end
+  %1 = landingpad { i8*, i32 }
+          catch i8* null
+  %2 = extractvalue { i8*, i32 } %1, 0
+  %3 = extractvalue { i8*, i32 } %1, 1
+  %4 = call i8* @__cxa_begin_catch(i8* %2) #2
+  call void @__cxa_end_catch()
+  br label %try.cont
+
+try.cont:                                         ; preds = %entry, %lpad
+  ret void
+
+unreachable:                                      ; preds = %if.end
+  unreachable
+}
+
 declare void @foo()
 ; Function Attrs: returns_twice
 declare i32 @setjmp(%struct.__jmp_buf_tag*)
@@ -229,6 +278,8 @@ declare i32 @__gxx_personality_v0(...)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__cxa_throw(i8*, i8*, i8*)
+declare i8* @__cxa_allocate_exception(i32)
 
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
+attributes #2 = { nounwind }

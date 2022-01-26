@@ -560,6 +560,9 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
       NEltArg = NEltArg.getValue() + 1;
     FnAttrs.addAllocSizeAttr(SizeArg, NEltArg);
   }
+  // In case the callee has 'noreturn' attribute, We need to remove it, because
+  // we expect invoke wrappers to return.
+  FnAttrs.removeAttribute(Attribute::NoReturn);
 
   // Reconstruct the AttributesList based on the vector we constructed.
   AttributeList NewCallAL = AttributeList::get(
