@@ -63,9 +63,6 @@
 // CHECK-ELFv1-IEEE: "-mabi=ieeelongdouble"
 // CHECK-ELFv1-IEEE: "-target-abi" "elfv1"
 
-// Check -mabi=ibmlongdouble is the default.
-// RUN: %clang -target powerpc64le-linux-gnu %s -### 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK-ELFv2-IBM128 %s
 // RUN: %clang -target powerpc64le-linux-gnu %s -mabi=ibmlongdouble -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ELFv2-IBM128 %s
 
