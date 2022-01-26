@@ -331,10 +331,7 @@ void MetadataStreamerYamlV2::emitKernelArg(const Argument &Arg) {
     if (!PtrTy->isOpaquePointerTy() &&
         PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
       // FIXME: Should report this for all address spaces
-      // FIXME: Handle opaque-pointers: deduce the right alignment of the
-      // argument
-      PointeeAlign = DL.getValueOrABITypeAlignment(
-          Arg.getParamAlign(), PtrTy->getPointerElementType());
+      PointeeAlign = Arg.getParamAlign().valueOrOne();
     }
   }
 
@@ -736,10 +733,8 @@ void MetadataStreamerMsgPackV3::emitKernelArg(const Argument &Arg,
 
   // FIXME: Need to distinguish in memory alignment from pointer alignment.
   if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
-    if (!PtrTy->isOpaque() && PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-      PointeeAlign = DL.getValueOrABITypeAlignment(
-          Arg.getParamAlign(), PtrTy->getPointerElementType());
-    }
+    if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+      PointeeAlign = Arg.getParamAlign().valueOrOne();
   }
 
   // There's no distinction between byval aggregates and raw aggregates.
