@@ -10460,21 +10460,30 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
   MachO::linkedit_data_command Ld = MachO::linkedit_data_command{0, 0, 0, 0};
   Error Err = Error::success();
 
+  // TODO(zhongkaining.paxos@bytedance.com): add support for segment_command
+  SmallVector<MachO::segment_command_64> segments;
+  SmallVector<MachO::dylib_command> dylibs;
+
   // find LC_DYLD_CHAINED_FIXUPS Load Command & obtain loaded dylib info
   for (const auto &Command : Obj->load_commands()) {
     if (Command.C.cmd == MachO::LC_DYLD_CHAINED_FIXUPS) {
       Ld = Obj->getLinkeditDataLoadCommand(Command);
     }
-    if (Command.C.cmd == MachO::LC_LOAD_DYLIB || Command.C.cmd == MachO::LC_LOAD_WEAK_DYLIB
-        || Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB || Command.C.cmd == MachO::LC_LOAD_UPWARD_DYLIB) {
-      // TODO: get dylib load command
-
+    if (Command.C.cmd == MachO::LC_SEGMENT_64) {
+      segments.emplace_back(Obj->getSegment64LoadCommand(Command));
+    }
+    if (Command.C.cmd == MachO::LC_LOAD_DYLIB ||
+        Command.C.cmd == MachO::LC_ID_DYLIB ||
+        Command.C.cmd == MachO::LC_LOAD_WEAK_DYLIB ||
+        Command.C.cmd == MachO::LC_REEXPORT_DYLIB ||
+        Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB ||
+        Command.C.cmd == MachO::LC_LOAD_UPWARD_DYLIB) {
+      dylibs.emplace_back(Obj->getDylibIDLoadCommand(Command));
       continue;
     }
   }
   // no LC_DYLD_CHAINED_FIXUPS found
   if (Ld.dataoff == 0) {
-    outs() << "no chained fixups\n";
     if (Err){
       reportError(std::move(Err), Obj->getFileName());
     }
@@ -10522,9 +10531,19 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
   MachO::dyld_chained_starts_in_image Image;
   memcpyAtOffset(Offset+Header.starts_offset, Image);
 
-  outs() << "chained starts in image\n";
+  outs() << "chained starts in image\n"
+         << "  seg_count = " << Image.seg_count << "\n";
+  for (int segIdx=0; segIdx<Image.seg_count; segIdx++){
+    MachO::segment_command_64 seg = segments[segIdx];
+    uint32_t segOffset;
+    memcpyAtOffset(Offset+Header.starts_offset+sizeof(uint32_t)*(segIdx+1), segOffset);
+
+    outs() << "   seg_offset [" << segIdx << "] = "
+           << segOffset << " (" << seg.segname << ")\n";
+  }
 
   // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_starts_in_segment
+
 
   // dump dyld_chained_import
   for (uint32_t ImportIdx=0; ImportIdx<Header.imports_count; ImportIdx++) {
