@@ -7596,10 +7596,6 @@ const SCEV *ScalarEvolution::getConstantMaxTripCountFromArray(const Loop *L) {
       auto *ArrSize = dyn_cast<ConstantInt>(AllocateInst->getArraySize());
       if (!Ty || !ArrSize || !ArrSize->isOne())
         continue;
-      // Also make sure step was increased the same with sizeof allocated
-      // element type.
-      if (Ty->getElementType() != GEP->getType()->getPointerElementType())
-        continue;
 
       // FIXME: Since gep indices are silently zext to the indexing type,
       // we will have a narrow gep index which wraps around rather than
