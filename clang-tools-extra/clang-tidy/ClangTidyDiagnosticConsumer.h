@@ -11,7 +11,6 @@
 
 #include "ClangTidyOptions.h"
 #include "ClangTidyProfiling.h"
-#include "NoLintDirectiveHandler.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
@@ -96,32 +95,12 @@ public:
   DiagnosticBuilder diag(StringRef CheckName, StringRef Message,
                          DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
 
-  DiagnosticBuilder diag(const tooling::Diagnostic &Error);
+  DiagnosticBuilder diag(const ClangTidyError &Error);
 
   /// Report any errors to do with reading the configuration using this method.
   DiagnosticBuilder
   configurationDiag(StringRef Message,
                     DiagnosticIDs::Level Level = DiagnosticIDs::Warning);
-
-  /// Check whether a given diagnostic should be suppressed due to the presence
-  /// of a "NOLINT" suppression comment.
-  /// This is exposed so that other tools that present clang-tidy diagnostics
-  /// (such as clangd) can respect the same suppression rules as clang-tidy.
-  /// This does not handle suppression of notes following a suppressed
-  /// diagnostic; that is left to the caller as it requires maintaining state in
-  /// between calls to this function.
-  /// If any NOLINT is malformed, e.g. a BEGIN without a subsequent END, an
-  /// error about it will be returned in output \param NoLintErrors.
-  /// If \param AllowIO is false, the function does not attempt to read source
-  /// files from disk which are not already mapped into memory; such files are
-  /// treated as not containing a suppression comment.
-  /// \param EnableNoLintBlocks controls whether to honor NOLINTBEGIN/NOLINTEND
-  /// blocks; if false, only considers line-level disabling.
-  bool
-  shouldSuppressDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                           const Diagnostic &Info,
-                           SmallVectorImpl<tooling::Diagnostic> &NoLintErrors,
-                           bool AllowIO = true, bool EnableNoLintBlocks = true);
 
   /// Sets the \c SourceManager of the used \c DiagnosticsEngine.
   ///
@@ -229,9 +208,29 @@ private:
   std::string ProfilePrefix;
 
   bool AllowEnablingAnalyzerAlphaCheckers;
-
-  NoLintDirectiveHandler NoLintHandler;
 };
+
+/// Check whether a given diagnostic should be suppressed due to the presence
+/// of a "NOLINT" suppression comment.
+/// This is exposed so that other tools that present clang-tidy diagnostics
+/// (such as clangd) can respect the same suppression rules as clang-tidy.
+/// This does not handle suppression of notes following a suppressed diagnostic;
+/// that is left to the caller as it requires maintaining state in between calls
+/// to this function.
+/// If `AllowIO` is false, the function does not attempt to read source files
+/// from disk which are not already mapped into memory; such files are treated
+/// as not containing a suppression comment.
+/// \param EnableNolintBlocks controls whether to honor NOLINTBEGIN/NOLINTEND
+/// blocks; if false, only considers line-level disabling.
+/// If suppression is not possible due to improper use of "NOLINT" comments -
+/// for example, the use of a "NOLINTBEGIN" comment that is not followed by a
+/// "NOLINTEND" comment - a diagnostic regarding the improper use is returned
+/// via the output argument `SuppressionErrors`.
+bool shouldSuppressDiagnostic(
+    DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info,
+    ClangTidyContext &Context,
+    SmallVectorImpl<ClangTidyError> &SuppressionErrors, bool AllowIO = true,
+    bool EnableNolintBlocks = true);
 
 /// Gets the Fix attached to \p Diagnostic.
 /// If there isn't a Fix attached to the diagnostic and \p AnyFix is true, Check
