@@ -34,7 +34,7 @@ define double @minimum_double(double %a) #0 {
 }
 
 ; CHECK-LABEL: minimum_v2half
-define <2 x half> @minimum_v2half(<2 x half> %a, <2 x half> %b) #0 {
+define <2 x half> @minimum_v2half(<2 x half> %a) #0 {
   ; CHECK-NONAN-DAG: setp
   ; CHECK-NONAN-DAG: setp
   ; CHECK-NONAN-DAG: selp.b16
@@ -78,7 +78,7 @@ define double @maximum_double(double %a) #0 {
 }
 
 ; CHECK-LABEL: maximum_v2half
-define <2 x half> @maximum_v2half(<2 x half> %a, <2 x half> %b) #0 {
+define <2 x half> @maximum_v2half(<2 x half> %a) #0 {
   ; CHECK-NONAN-DAG: setp
   ; CHECK-NONAN-DAG: setp
   ; CHECK-NONAN-DAG: selp.b16
@@ -88,5 +88,3 @@ define <2 x half> @maximum_v2half(<2 x half> %a, <2 x half> %b) #0 {
   %x = select <2 x i1> %p, <2 x half> %a, <2 x half> zeroinitializer
   ret <2 x half> %x
 }
-
-attributes #0 = { "no-signed-zeros-fp-math"="true" }

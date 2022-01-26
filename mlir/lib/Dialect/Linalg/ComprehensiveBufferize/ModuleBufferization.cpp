@@ -308,16 +308,15 @@ static FuncOp getCalledFunction(CallOpInterface callOp) {
 /// dynamic buffer type supported.
 /// A later pass across all CallOps in the module can decide whether to simplify
 /// the types of to version according to some cost model.
-static FunctionType getBufferizedFunctionType(MLIRContext *ctx,
-                                              TypeRange argumentTypes,
-                                              TypeRange resultTypes) {
-  auto rewrite = [](Type t) -> Type {
+static FunctionType
+getBufferizedFunctionType(MLIRContext *ctx, TypeRange argumentTypes,
+                          TypeRange resultTypes,
+                          const BufferizationOptions &options) {
+  auto rewrite = [&](Type t) -> Type {
     // TODO: non-zero address space.
     // TODO: layout information if relevant.
-    if (auto rankedTensorType = t.dyn_cast<RankedTensorType>())
-      return getDynamicMemRefType(rankedTensorType);
     if (auto tensorType = t.dyn_cast<TensorType>())
-      return getUnrankedMemRefType(tensorType.getElementType());
+      return getMemRefType(tensorType, options);
     return t;
   };
   auto argTypes = llvm::to_vector<4>(llvm::map_range(argumentTypes, rewrite));
@@ -398,7 +397,8 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
       return funcOp->emitError() << "cannot bufferize bodiless function that "
                                  << "returns a tensor";
     FunctionType bufferizedFuncType = getBufferizedFunctionType(
-        funcOp.getContext(), funcOp.getType().getInputs(), TypeRange{});
+        funcOp.getContext(), funcOp.getType().getInputs(), TypeRange{},
+        state.getOptions());
     funcOp.setType(bufferizedFuncType);
     return success();
   }
@@ -431,7 +431,8 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
   // 2. Rewrite the terminator without the inPlace bufferizable values.
   ValueRange retValues{returnValues};
   FunctionType bufferizedFuncType = getBufferizedFunctionType(
-      funcOp.getContext(), funcOp.getType().getInputs(), retValues.getTypes());
+      funcOp.getContext(), funcOp.getType().getInputs(), retValues.getTypes(),
+      state.getOptions());
   OpBuilder b(returnOp);
   b.create<ReturnOp>(returnOp.getLoc(), returnValues);
   returnOp->erase();
@@ -457,16 +458,22 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
     Value memref = frontBlock.addArgument(memrefType, bbArg.getLoc());
     OpBuilder b(funcOp->getContext());
     b.setInsertionPointToStart(&frontBlock);
-    // Replace all uses of bbArg through a ToMemRefOp by a memref::CastOp.
+    // Replace all uses of bbArg through a ToMemRefOp.
     for (auto &use : llvm::make_early_inc_range(bbArg.getUses())) {
       if (auto toMemrefOp =
               dyn_cast<bufferization::ToMemrefOp>(use.getOwner())) {
-        assert(memref::CastOp::areCastCompatible(
-                   memref.getType(), toMemrefOp.memref().getType()) &&
-               "bufferizeFuncOpBoundary: cast incompatible");
-        auto castOp = b.create<memref::CastOp>(
-            funcOp.getLoc(), toMemrefOp.memref().getType(), memref);
-        toMemrefOp.memref().replaceAllUsesWith(castOp);
+        if (memref.getType() != toMemrefOp.memref().getType()) {
+          // Type has changed, insert a cast.
+          assert(memref::CastOp::areCastCompatible(
+                     memref.getType(), toMemrefOp.memref().getType()) &&
+                 "bufferizeFuncOpBoundary: cast incompatible");
+          auto castOp = b.create<memref::CastOp>(
+              funcOp.getLoc(), toMemrefOp.memref().getType(), memref);
+          toMemrefOp.memref().replaceAllUsesWith(castOp);
+        } else {
+          // Type did not change, replace directly.
+          toMemrefOp.memref().replaceAllUsesWith(memref);
+        }
       }
     }
     // Replace all remaining uses by a to_tensor.
@@ -816,7 +823,7 @@ struct CallOpInterface
     // Get the bufferized FunctionType for funcOp or construct it if not yet
     // available.
     FunctionType bufferizedFuncType = getBufferizedFunctionType(
-        funcOp.getContext(), argumentTypes, resultTypes);
+        funcOp.getContext(), argumentTypes, resultTypes, state.getOptions());
 
     // 3. Rewrite tensor operands as memrefs based on `bufferizedFuncType`.
     for (OpOperand &opOperand : callOp->getOpOperands()) {

@@ -88,7 +88,7 @@ void Log::Enable(const std::shared_ptr<llvm::raw_ostream> &stream_sp,
                  uint32_t options, uint32_t flags) {
   llvm::sys::ScopedWriter lock(m_mutex);
 
-  uint32_t mask = m_mask.fetch_or(flags, std::memory_order_relaxed);
+  MaskType mask = m_mask.fetch_or(flags, std::memory_order_relaxed);
   if (mask | flags) {
     m_options.store(options, std::memory_order_relaxed);
     m_stream_sp = stream_sp;
@@ -99,7 +99,7 @@ void Log::Enable(const std::shared_ptr<llvm::raw_ostream> &stream_sp,
 void Log::Disable(uint32_t flags) {
   llvm::sys::ScopedWriter lock(m_mutex);
 
-  uint32_t mask = m_mask.fetch_and(~flags, std::memory_order_relaxed);
+  MaskType mask = m_mask.fetch_and(~flags, std::memory_order_relaxed);
   if (!(mask & ~flags)) {
     m_stream_sp.reset();
     m_channel.log_ptr.store(nullptr, std::memory_order_relaxed);

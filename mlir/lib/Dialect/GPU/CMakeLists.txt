@@ -66,6 +66,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRParallelLoopMapperEnumsGen
 
   LINK_LIBS PUBLIC
+  MLIRAffineUtils
   MLIRArithmetic
   MLIRAsync
   MLIRDataLayoutInterfaces

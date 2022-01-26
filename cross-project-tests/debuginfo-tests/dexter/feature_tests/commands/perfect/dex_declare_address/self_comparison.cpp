@@ -2,8 +2,6 @@
 //      Test that a \DexDeclareAddress value can be used to check the change in
 //      value of a variable over time, relative to its initial value.
 //
-// REQUIRES: system-linux
-//
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: self_comparison.cpp
 

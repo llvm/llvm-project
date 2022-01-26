@@ -171,7 +171,7 @@ public:
   /// functions looking up symbolic information for a given pc value multiple
   /// times.
   ///
-  /// \params [in] resolve_scope
+  /// \param [in] resolve_scope
   ///   Flags from the SymbolContextItem enumerated type which specify what
   ///   type of symbol context is needed by this caller.
   ///
@@ -408,10 +408,10 @@ public:
 
   /// Create a ValueObject for a given Variable in this StackFrame.
   ///
-  /// \params [in] variable_sp
+  /// \param [in] variable_sp
   ///   The Variable to base this ValueObject on
   ///
-  /// \params [in] use_dynamic
+  /// \param [in] use_dynamic
   ///     Whether the correct dynamic type of the variable should be
   ///     determined before creating the ValueObject, or if the static type
   ///     is sufficient.  One of the DynamicValueType enumerated values.
@@ -437,7 +437,7 @@ public:
   /// the current instruction.  The ExpressionPath should indicate how to get
   /// to this value using "frame variable."
   ///
-  /// \params [in] addr
+  /// \param [in] addr
   ///   The raw address.
   ///
   /// \return
@@ -448,10 +448,10 @@ public:
   /// given register plus an offset.  The ExpressionPath should indicate how
   /// to get to this value using "frame variable."
   ///
-  /// \params [in] reg
+  /// \param [in] reg
   ///   The name of the register.
   ///
-  /// \params [in] offset
+  /// \param [in] offset
   ///   The offset from the register.  Particularly important for sp...
   ///
   /// \return
@@ -465,7 +465,7 @@ public:
   /// PC in the stack frame and traverse through all parent blocks stopping at
   /// inlined function boundaries.
   ///
-  /// \params [in] name
+  /// \param [in] name
   ///   The name of the variable.
   ///
   /// \return

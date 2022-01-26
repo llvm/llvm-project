@@ -9,13 +9,15 @@
 #ifndef LLVM_TEXTAPI_TARGET_H
 #define LLVM_TEXTAPI_TARGET_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/ArchitectureSet.h"
 #include "llvm/TextAPI/Platform.h"
 
 namespace llvm {
+
+class Triple;
+
 namespace MachO {
 
 // This is similar to a llvm Triple, but the triple doesn't have all the

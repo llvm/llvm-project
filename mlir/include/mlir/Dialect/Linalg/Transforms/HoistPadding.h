@@ -19,12 +19,17 @@ class PadOp;
 } // namespace tensor
 
 namespace linalg {
+class GenericOp;
 
 /// Mechanically hoist padding operations on tensors by `numLoops` into a new,
 /// generally larger tensor. This achieves packing of multiple padding ops into
-/// a larger tensor. On success, `padTensorOp` is replaced by the cloned version
+/// a larger tensor. On success, `opToHoist` is replaced by the cloned version
 /// in the packing loop so the caller can continue reasoning about the padding
-/// operation.
+/// operation. If `transposeVector` is non-empty, hoist padding introduces a
+/// GenericOp to transpose the padded tensor before inserting it into the packed
+/// tensor. A `transposeVector` can change the storage order of the padded
+/// tensor but does not change the order of the pack or compute loops.
+///
 ///
 /// Example in pseudo-mlir:
 /// =======================
@@ -33,7 +38,7 @@ namespace linalg {
 /// ```
 ///    scf.for (%i, %j, %k)
 ///      %st0 = tensor.extract_slice f(%i, %k) : ... to tensor<?x?xf32>
-///      %0 = linalg.pad_tensor %st0 low[0, 0] high[...] {
+///      %0 = tensor.pad %st0 low[0, 0] high[...] {
 ///      ^bb0( ... ):
 ///        linalg.yield %pad
 ///      } : tensor<?x?xf32> to tensor<4x8xf32>
@@ -47,7 +52,7 @@ namespace linalg {
 ///      %packed_init = linalg.init_tensor range(%j) : tensor<?x4x8xf32>
 ///      %packed = scf.for (%k) iter_args(%p : %packed_init) {
 ///        %st0 = tensor.extract_slice f(%i, %k) : ... to tensor<?x?xf32>
-///        %0 = linalg.pad_tensor %st0 low[0, 0] high[...] {
+///        %0 = tensor.pad %st0 low[0, 0] high[...] {
 ///        ^bb0( ... ):
 ///          linalg.yield %pad
 ///        } : tensor<?x?xf32> to tensor<4x8xf32>
@@ -62,8 +67,9 @@ namespace linalg {
 ///      }
 ///    }
 /// ```
-FailureOr<Value> hoistPaddingOnTensors(tensor::PadOp opToHoist, int numLoops,
-                                       tensor::PadOp &hoistedOp);
+FailureOr<Value> hoistPaddingOnTensors(
+    tensor::PadOp opToHoist, int numLoops, ArrayRef<int64_t> transposeVector,
+    tensor::PadOp &hoistedOp, SmallVectorImpl<GenericOp> &transposeOps);
 
 } // namespace linalg
 } // namespace mlir

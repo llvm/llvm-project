@@ -22,9 +22,11 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <memory>
+#include <tuple>
 
 namespace clang {
 namespace dataflow {
@@ -414,8 +416,38 @@ public:
       Env.setValue(Loc, *Val);
   }
 
-  // FIXME: Add support for:
-  // - CXXBoolLiteralExpr
+  void VisitInitListExpr(const InitListExpr *S) {
+    QualType Type = S->getType();
+
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+
+    auto *Val = Env.createValue(Type);
+    if (Val == nullptr)
+      return;
+
+    Env.setValue(Loc, *Val);
+
+    if (Type->isStructureOrClassType()) {
+      for (auto IT : llvm::zip(Type->getAsRecordDecl()->fields(), S->inits())) {
+        const FieldDecl *Field = std::get<0>(IT);
+        assert(Field != nullptr);
+
+        const Expr *Init = std::get<1>(IT);
+        assert(Init != nullptr);
+
+        if (Value *InitVal = Env.getValue(*Init, SkipPast::None))
+          cast<StructValue>(Val)->setChild(*Field, *InitVal);
+      }
+    }
+    // FIXME: Implement array initialization.
+  }
+
+  void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *S) {
+    auto &Loc = Env.createStorageLocation(*S);
+    Env.setStorageLocation(*S, Loc);
+    Env.setValue(Loc, Env.getBoolLiteralValue(S->getValue()));
+  }
 
 private:
   Environment &Env;

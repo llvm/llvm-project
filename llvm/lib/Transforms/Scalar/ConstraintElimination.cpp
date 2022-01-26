@@ -108,7 +108,7 @@ static SmallVector<std::pair<int64_t, Value *>, 4> decompose(Value *V) {
   if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))))
     return {{-1 * CI->getSExtValue(), nullptr}, {1, Op0}};
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1))))
-    return {{0, nullptr}, {1, Op0}, {1, Op1}};
+    return {{0, nullptr}, {1, Op0}, {-1, Op1}};
 
   return {{0, nullptr}, {1, V}};
 }

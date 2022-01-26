@@ -20,13 +20,13 @@
 
 int main(int, char**) {
     {
-        std::allocator<int> alloc;
+        std::allocator<bool> alloc;
         const std::vector<bool> vb(alloc);
         assert(vb.get_allocator() == alloc);
     }
     {
-        other_allocator<int> alloc(1);
-        const std::vector<bool, other_allocator<int> > vb(alloc);
+        other_allocator<bool> alloc(1);
+        const std::vector<bool, other_allocator<bool> > vb(alloc);
         assert(vb.get_allocator() == alloc);
     }
 

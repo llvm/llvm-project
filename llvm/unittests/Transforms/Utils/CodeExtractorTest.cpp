@@ -188,7 +188,7 @@ TEST(CodeExtractor, ExitBlockOrderingPhis) {
   EXPECT_TRUE(NextReturn);
   ConstantInt *CINext = dyn_cast<ConstantInt>(NextReturn->getReturnValue());
   EXPECT_TRUE(CINext->getLimitedValue() == 0u);
-  
+
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }
@@ -245,7 +245,7 @@ TEST(CodeExtractor, ExitBlockOrdering) {
   EXPECT_TRUE(NextReturn);
   ConstantInt *CINext = dyn_cast<ConstantInt>(NextReturn->getReturnValue());
   EXPECT_TRUE(CINext->getLimitedValue() == 0u);
-  
+
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }
@@ -501,6 +501,56 @@ TEST(CodeExtractor, RemoveBitcastUsesFromOuterLifetimeMarkers) {
 
   Function *Outlined = CE.extractCodeRegion(CEAC);
   EXPECT_TRUE(Outlined);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
+TEST(CodeExtractor, PartialAggregateArgs) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"ir(
+    target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+    target triple = "x86_64-unknown-linux-gnu"
+
+    declare void @use(i32)
+
+    define void @foo(i32 %a, i32 %b, i32 %c) {
+    entry:
+      br label %extract
+
+    extract:
+      call void @use(i32 %a)
+      call void @use(i32 %b)
+      call void @use(i32 %c)
+      br label %exit
+
+    exit:
+      ret void
+    }
+  )ir",
+                                                Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 1> Blocks{getBlockByName(Func, "extract")};
+
+  // Create the CodeExtractor with arguments aggregation enabled.
+  CodeExtractor CE(Blocks, /* DominatorTree */ nullptr,
+                   /* AggregateArgs */ true);
+  EXPECT_TRUE(CE.isEligible());
+
+  CodeExtractorAnalysisCache CEAC(*Func);
+  SetVector<Value *> Inputs, Outputs, SinkingCands, HoistingCands;
+  BasicBlock *CommonExit = nullptr;
+  CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
+  CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
+  // Exclude the first input from the argument aggregate.
+  CE.excludeArgFromAggregate(Inputs[0]);
+
+  Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
+  EXPECT_TRUE(Outlined);
+  // Expect 2 arguments in the outlined function: the excluded input and the
+  // struct aggregate for the remaining inputs.
+  EXPECT_EQ(Outlined->arg_size(), 2U);
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }

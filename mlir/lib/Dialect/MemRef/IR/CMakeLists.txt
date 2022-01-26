@@ -20,6 +20,5 @@ add_mlir_dialect_library(MLIRMemRef
   MLIRIR
   MLIRMemRefUtils
   MLIRStandard
-  MLIRTensor
   MLIRViewLikeInterface
 )

@@ -1414,8 +1414,9 @@ bool InductionDescriptor::isInductionPHI(
 
   // Always use i8 element type for opaque pointer inductions.
   PointerType *PtrTy = cast<PointerType>(PhiTy);
-  Type *ElementType = PtrTy->isOpaque() ? Type::getInt8Ty(PtrTy->getContext())
-                                        : PtrTy->getElementType();
+  Type *ElementType = PtrTy->isOpaque()
+                          ? Type::getInt8Ty(PtrTy->getContext())
+                          : PtrTy->getNonOpaquePointerElementType();
   if (!ElementType->isSized())
     return false;
 

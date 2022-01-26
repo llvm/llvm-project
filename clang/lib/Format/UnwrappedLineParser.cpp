@@ -1682,6 +1682,8 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
 
       // See if the following token should start a new unwrapped line.
       StringRef Text = FormatTok->TokenText;
+
+      FormatToken *PreviousToken = FormatTok;
       nextToken();
 
       // JS doesn't have macros, and within classes colons indicate fields, not
@@ -1710,6 +1712,7 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
 
         if (FollowedByNewline && (Text.size() >= 5 || FunctionLike) &&
             tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
+          PreviousToken->setType(TT_FunctionLikeOrFreestandingMacro);
           addUnwrappedLine();
           return;
         }
@@ -1853,6 +1856,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     return false;
 
   bool SeenArrow = false;
+  bool InTemplateParameterList = false;
 
   while (FormatTok->isNot(tok::l_brace)) {
     if (FormatTok->isSimpleTypeSpecifier()) {
@@ -1868,6 +1872,14 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::l_square:
       parseSquare();
       break;
+    case tok::kw_class:
+    case tok::kw_template:
+    case tok::kw_typename:
+      assert(FormatTok->Previous);
+      if (FormatTok->Previous->is(tok::less))
+        InTemplateParameterList = true;
+      nextToken();
+      break;
     case tok::amp:
     case tok::star:
     case tok::kw_const:
@@ -1877,11 +1889,8 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::identifier:
     case tok::numeric_constant:
     case tok::coloncolon:
-    case tok::kw_class:
     case tok::kw_mutable:
     case tok::kw_noexcept:
-    case tok::kw_template:
-    case tok::kw_typename:
       nextToken();
       break;
     // Specialization of a template with an integer parameter can contain
@@ -1918,7 +1927,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::ellipsis:
     case tok::kw_true:
     case tok::kw_false:
-      if (SeenArrow) {
+      if (SeenArrow || InTemplateParameterList) {
         nextToken();
         break;
       }
@@ -3078,8 +3087,15 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         if (!tryToParseBracedList())
           break;
       }
-      if (FormatTok->is(tok::l_square) && !tryToParseLambda())
-        break;
+      if (FormatTok->is(tok::l_square)) {
+        FormatToken *Previous = FormatTok->Previous;
+        if (!Previous || Previous->isNot(tok::r_paren)) {
+          // Don't try parsing a lambda if we had a closing parenthesis before,
+          // it was probably a pointer to an array: int (*)[].
+          if (!tryToParseLambda())
+            break;
+        }
+      }
       if (FormatTok->Tok.is(tok::semi))
         return;
       if (Style.isCSharp() && FormatTok->is(Keywords.kw_where)) {

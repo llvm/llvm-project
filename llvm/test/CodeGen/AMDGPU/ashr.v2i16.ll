@@ -29,16 +29,15 @@ define amdgpu_kernel void @s_ashr_v2i16(<2 x i16> addrspace(1)* %out, i32, <2 x 
 }
 
 ; GCN-LABEL: {{^}}v_ashr_v2i16:
-; GCN: {{buffer|flat|global}}_load_dword [[LHS:v[0-9]+]]
-; GCN: {{buffer|flat|global}}_load_dword [[RHS:v[0-9]+]]
-; GFX9: v_pk_ashrrev_i16 [[RESULT:v[0-9]+]], [[RHS]], [[LHS]]
+; GCN: {{buffer|flat|global}}_load_dwordx2 v[[[LHS:[0-9]+]]:[[RHS:[0-9]+]]]
+; GFX9: v_pk_ashrrev_i16 [[RESULT:v[0-9]+]], v[[RHS]], v[[LHS]]
 
 ; VI: v_ashrrev_i16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_ashrrev_i16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI: v_or_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
 ; CI-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 16
-; CI: v_ashrrev_i32_e32 v{{[0-9]+}}, 16, [[LHS]]
+; CI: v_ashrrev_i32_e32 v{{[0-9]+}}, 16, v[[LHS]]
 ; CI: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v{{[0-9]+}}
 ; CI: v_ashrrev_i32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CI: v_ashrrev_i32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
@@ -117,8 +116,7 @@ define amdgpu_kernel void @ashr_v_imm_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 }
 
 ; GCN-LABEL: {{^}}v_ashr_v4i16:
-; GCN: {{buffer|flat|global}}_load_dwordx2
-; GCN: {{buffer|flat|global}}_load_dwordx2
+; GCN: {{buffer|flat|global}}_load_dwordx4
 ; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX9: v_pk_ashrrev_i16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 

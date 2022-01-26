@@ -451,64 +451,63 @@ define <2 x i128> @v_ashr_v2i128_vv(<2 x i128> %lhs, <2 x i128> %rhs) {
 define amdgpu_kernel void @s_shl_v2i128ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-LABEL: s_shl_v2i128ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x8
-; GCN-NEXT:    s_load_dwordx8 s[16:23], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx16 s[4:19], s[4:5], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v10, 16
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    v_mov_b32_e32 v11, 0
+; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[8:9], 64
-; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[10:11], 0
-; GCN-NEXT:    s_sub_i32 s6, 64, s8
-; GCN-NEXT:    s_sub_i32 s4, s8, 64
-; GCN-NEXT:    s_lshr_b64 s[6:7], s[16:17], s6
-; GCN-NEXT:    s_lshl_b64 s[24:25], s[18:19], s8
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[16:17], s4
-; GCN-NEXT:    s_or_b64 s[6:7], s[24:25], s[6:7]
-; GCN-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
-; GCN-NEXT:    s_or_b64 s[0:1], s[8:9], s[10:11]
-; GCN-NEXT:    v_mov_b32_e32 v0, s5
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
-; GCN-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[0:1], 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT:    v_mov_b32_e32 v1, s19
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v0, v1, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s6
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT:    v_mov_b32_e32 v1, s18
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v0, v1, s[0:1]
 ; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[12:13], 64
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[14:15], 0
-; GCN-NEXT:    s_sub_i32 s6, 64, s12
-; GCN-NEXT:    s_sub_i32 s4, s12, 64
-; GCN-NEXT:    s_lshr_b64 s[6:7], s[20:21], s6
-; GCN-NEXT:    s_lshl_b64 s[10:11], s[22:23], s12
-; GCN-NEXT:    s_lshl_b64 s[4:5], s[20:21], s4
-; GCN-NEXT:    s_or_b64 s[6:7], s[10:11], s[6:7]
-; GCN-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
-; GCN-NEXT:    s_or_b64 s[2:3], s[12:13], s[14:15]
-; GCN-NEXT:    v_mov_b32_e32 v0, s5
+; GCN-NEXT:    s_sub_i32 s22, 64, s12
+; GCN-NEXT:    s_sub_i32 s20, s12, 64
+; GCN-NEXT:    s_lshr_b64 s[22:23], s[4:5], s22
+; GCN-NEXT:    s_lshl_b64 s[24:25], s[6:7], s12
+; GCN-NEXT:    s_lshl_b64 s[20:21], s[4:5], s20
+; GCN-NEXT:    s_or_b64 s[22:23], s[24:25], s[22:23]
+; GCN-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
+; GCN-NEXT:    s_or_b64 s[0:1], s[12:13], s[14:15]
+; GCN-NEXT:    v_mov_b32_e32 v0, s21
+; GCN-NEXT:    v_mov_b32_e32 v1, s23
+; GCN-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[0:1], 0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v1, s7
+; GCN-NEXT:    v_cndmask_b32_e64 v3, v0, v1, s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s20
+; GCN-NEXT:    v_mov_b32_e32 v1, s22
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s6
+; GCN-NEXT:    v_cndmask_b32_e64 v2, v0, v1, s[0:1]
+; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[16:17], 64
+; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[18:19], 0
+; GCN-NEXT:    s_sub_i32 s13, 64, s16
+; GCN-NEXT:    s_sub_i32 s6, s16, 64
+; GCN-NEXT:    s_lshr_b64 s[14:15], s[8:9], s13
+; GCN-NEXT:    s_lshl_b64 s[20:21], s[10:11], s16
+; GCN-NEXT:    s_lshl_b64 s[6:7], s[8:9], s6
+; GCN-NEXT:    s_or_b64 s[14:15], s[20:21], s[14:15]
+; GCN-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; GCN-NEXT:    s_or_b64 s[2:3], s[16:17], s[18:19]
+; GCN-NEXT:    v_mov_b32_e32 v0, s7
+; GCN-NEXT:    v_mov_b32_e32 v1, s15
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[2:3], 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v1, s23
+; GCN-NEXT:    v_mov_b32_e32 v1, s11
 ; GCN-NEXT:    v_cndmask_b32_e64 v7, v0, v1, s[2:3]
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s6
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-NEXT:    v_mov_b32_e32 v1, s14
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v1, s22
+; GCN-NEXT:    v_mov_b32_e32 v1, s10
 ; GCN-NEXT:    v_cndmask_b32_e64 v6, v0, v1, s[2:3]
-; GCN-NEXT:    s_lshl_b64 s[2:3], s[16:17], s8
+; GCN-NEXT:    s_lshl_b64 s[2:3], s[4:5], s12
 ; GCN-NEXT:    v_mov_b32_e32 v0, s3
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v0, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    s_lshl_b64 s[2:3], s[20:21], s12
+; GCN-NEXT:    s_lshl_b64 s[2:3], s[8:9], s16
 ; GCN-NEXT:    v_mov_b32_e32 v4, s3
 ; GCN-NEXT:    v_cndmask_b32_e64 v5, 0, v4, s[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v4, s2
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, 0, v4, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GCN-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
 ; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
@@ -521,64 +520,63 @@ define amdgpu_kernel void @s_shl_v2i128ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 define amdgpu_kernel void @s_lshr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-LABEL: s_lshr_v2i128_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x8
-; GCN-NEXT:    s_load_dwordx8 s[16:23], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx16 s[4:19], s[4:5], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v10, 16
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    v_mov_b32_e32 v11, 0
+; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[8:9], 64
-; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[10:11], 0
-; GCN-NEXT:    s_sub_i32 s6, 64, s8
-; GCN-NEXT:    s_sub_i32 s4, s8, 64
-; GCN-NEXT:    s_lshl_b64 s[6:7], s[18:19], s6
-; GCN-NEXT:    s_lshr_b64 s[24:25], s[16:17], s8
-; GCN-NEXT:    s_lshr_b64 s[4:5], s[18:19], s4
-; GCN-NEXT:    s_or_b64 s[6:7], s[24:25], s[6:7]
-; GCN-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
-; GCN-NEXT:    s_or_b64 s[0:1], s[8:9], s[10:11]
-; GCN-NEXT:    v_mov_b32_e32 v0, s5
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
-; GCN-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[0:1], 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT:    v_mov_b32_e32 v1, s17
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v2, s6
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; GCN-NEXT:    v_mov_b32_e32 v2, s16
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
 ; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[12:13], 64
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[14:15], 0
-; GCN-NEXT:    s_sub_i32 s6, 64, s12
-; GCN-NEXT:    s_sub_i32 s4, s12, 64
-; GCN-NEXT:    s_lshl_b64 s[6:7], s[22:23], s6
-; GCN-NEXT:    s_lshr_b64 s[10:11], s[20:21], s12
-; GCN-NEXT:    s_lshr_b64 s[4:5], s[22:23], s4
-; GCN-NEXT:    s_or_b64 s[6:7], s[10:11], s[6:7]
+; GCN-NEXT:    s_sub_i32 s22, 64, s12
+; GCN-NEXT:    s_sub_i32 s20, s12, 64
+; GCN-NEXT:    s_lshl_b64 s[22:23], s[6:7], s22
+; GCN-NEXT:    s_lshr_b64 s[24:25], s[4:5], s12
+; GCN-NEXT:    s_lshr_b64 s[20:21], s[6:7], s20
+; GCN-NEXT:    s_or_b64 s[22:23], s[24:25], s[22:23]
+; GCN-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
+; GCN-NEXT:    s_or_b64 s[0:1], s[12:13], s[14:15]
+; GCN-NEXT:    v_mov_b32_e32 v0, s21
+; GCN-NEXT:    v_mov_b32_e32 v1, s23
+; GCN-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[0:1], 0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s20
+; GCN-NEXT:    v_mov_b32_e32 v2, s22
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
+; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[16:17], 64
+; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[18:19], 0
+; GCN-NEXT:    s_sub_i32 s13, 64, s16
+; GCN-NEXT:    s_sub_i32 s4, s16, 64
+; GCN-NEXT:    s_lshl_b64 s[14:15], s[10:11], s13
+; GCN-NEXT:    s_lshr_b64 s[20:21], s[8:9], s16
+; GCN-NEXT:    s_lshr_b64 s[4:5], s[10:11], s4
+; GCN-NEXT:    s_or_b64 s[14:15], s[20:21], s[14:15]
 ; GCN-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
-; GCN-NEXT:    s_or_b64 s[2:3], s[12:13], s[14:15]
+; GCN-NEXT:    s_or_b64 s[2:3], s[16:17], s[18:19]
 ; GCN-NEXT:    v_mov_b32_e32 v2, s5
-; GCN-NEXT:    v_mov_b32_e32 v3, s7
+; GCN-NEXT:    v_mov_b32_e32 v3, s15
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[2:3], 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v3, s21
+; GCN-NEXT:    v_mov_b32_e32 v3, s9
 ; GCN-NEXT:    v_cndmask_b32_e64 v5, v2, v3, s[2:3]
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4
-; GCN-NEXT:    v_mov_b32_e32 v3, s6
+; GCN-NEXT:    v_mov_b32_e32 v3, s14
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v3, s20
+; GCN-NEXT:    v_mov_b32_e32 v3, s8
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v2, v3, s[2:3]
-; GCN-NEXT:    s_lshr_b64 s[2:3], s[18:19], s8
+; GCN-NEXT:    s_lshr_b64 s[2:3], s[6:7], s12
 ; GCN-NEXT:    v_mov_b32_e32 v2, s3
 ; GCN-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
-; GCN-NEXT:    s_lshr_b64 s[2:3], s[22:23], s12
+; GCN-NEXT:    s_lshr_b64 s[2:3], s[10:11], s16
 ; GCN-NEXT:    v_mov_b32_e32 v6, s3
 ; GCN-NEXT:    v_cndmask_b32_e64 v7, 0, v6, s[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v6, s2
 ; GCN-NEXT:    v_cndmask_b32_e64 v6, 0, v6, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GCN-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
 ; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
@@ -591,61 +589,61 @@ define amdgpu_kernel void @s_lshr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 define amdgpu_kernel void @s_ashr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-LABEL: s_ashr_v2i128_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x8
-; GCN-NEXT:    s_load_dwordx8 s[16:23], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx16 s[4:19], s[4:5], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v10, 16
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    v_mov_b32_e32 v11, 0
+; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[8:9], 64
-; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[10:11], 0
-; GCN-NEXT:    s_sub_i32 s6, 64, s8
-; GCN-NEXT:    s_sub_i32 s4, s8, 64
-; GCN-NEXT:    s_lshl_b64 s[6:7], s[18:19], s6
-; GCN-NEXT:    s_lshr_b64 s[24:25], s[16:17], s8
-; GCN-NEXT:    s_ashr_i64 s[4:5], s[18:19], s4
-; GCN-NEXT:    s_or_b64 s[6:7], s[24:25], s[6:7]
-; GCN-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
-; GCN-NEXT:    s_or_b64 s[0:1], s[8:9], s[10:11]
-; GCN-NEXT:    v_mov_b32_e32 v0, s5
-; GCN-NEXT:    v_mov_b32_e32 v1, s7
-; GCN-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[0:1], 0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GCN-NEXT:    v_mov_b32_e32 v1, s17
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v2, s6
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
-; GCN-NEXT:    v_mov_b32_e32 v2, s16
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
 ; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[12:13], 64
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[14:15], 0
-; GCN-NEXT:    s_sub_i32 s6, 64, s12
-; GCN-NEXT:    s_sub_i32 s4, s12, 64
-; GCN-NEXT:    s_lshl_b64 s[6:7], s[22:23], s6
-; GCN-NEXT:    s_lshr_b64 s[10:11], s[20:21], s12
-; GCN-NEXT:    s_ashr_i64 s[4:5], s[22:23], s4
-; GCN-NEXT:    s_or_b64 s[6:7], s[10:11], s[6:7]
+; GCN-NEXT:    s_sub_i32 s22, 64, s12
+; GCN-NEXT:    s_sub_i32 s20, s12, 64
+; GCN-NEXT:    s_lshl_b64 s[22:23], s[6:7], s22
+; GCN-NEXT:    s_lshr_b64 s[24:25], s[4:5], s12
+; GCN-NEXT:    s_ashr_i64 s[20:21], s[6:7], s20
+; GCN-NEXT:    s_or_b64 s[22:23], s[24:25], s[22:23]
+; GCN-NEXT:    s_and_b64 vcc, s[2:3], s[0:1]
+; GCN-NEXT:    s_or_b64 s[0:1], s[12:13], s[14:15]
+; GCN-NEXT:    v_mov_b32_e32 v0, s21
+; GCN-NEXT:    v_mov_b32_e32 v1, s23
+; GCN-NEXT:    v_cmp_eq_u64_e64 s[0:1], s[0:1], 0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v0, v1, s[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s20
+; GCN-NEXT:    v_mov_b32_e32 v2, s22
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v2, s[0:1]
+; GCN-NEXT:    v_cmp_lt_u64_e64 s[0:1], s[16:17], 64
+; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[18:19], 0
+; GCN-NEXT:    s_sub_i32 s13, 64, s16
+; GCN-NEXT:    s_sub_i32 s4, s16, 64
+; GCN-NEXT:    s_lshl_b64 s[14:15], s[10:11], s13
+; GCN-NEXT:    s_lshr_b64 s[20:21], s[8:9], s16
+; GCN-NEXT:    s_ashr_i64 s[4:5], s[10:11], s4
+; GCN-NEXT:    s_or_b64 s[14:15], s[20:21], s[14:15]
 ; GCN-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
-; GCN-NEXT:    s_or_b64 s[2:3], s[12:13], s[14:15]
+; GCN-NEXT:    s_or_b64 s[2:3], s[16:17], s[18:19]
 ; GCN-NEXT:    v_mov_b32_e32 v2, s5
-; GCN-NEXT:    v_mov_b32_e32 v3, s7
+; GCN-NEXT:    v_mov_b32_e32 v3, s15
 ; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[2:3], 0
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v3, s21
+; GCN-NEXT:    v_mov_b32_e32 v3, s9
 ; GCN-NEXT:    v_cndmask_b32_e64 v5, v2, v3, s[2:3]
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4
-; GCN-NEXT:    v_mov_b32_e32 v3, s6
+; GCN-NEXT:    v_mov_b32_e32 v3, s14
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v3, s20
+; GCN-NEXT:    v_mov_b32_e32 v3, s8
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v2, v3, s[2:3]
-; GCN-NEXT:    s_ashr_i32 s4, s19, 31
-; GCN-NEXT:    s_ashr_i64 s[2:3], s[18:19], s8
+; GCN-NEXT:    s_ashr_i32 s4, s7, 31
+; GCN-NEXT:    s_ashr_i64 s[2:3], s[6:7], s12
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN-NEXT:    v_mov_b32_e32 v3, s3
 ; GCN-NEXT:    v_mov_b32_e32 v6, s2
-; GCN-NEXT:    s_ashr_i32 s4, s23, 31
-; GCN-NEXT:    s_ashr_i64 s[2:3], s[22:23], s12
+; GCN-NEXT:    s_ashr_i32 s4, s11, 31
+; GCN-NEXT:    s_ashr_i64 s[2:3], s[10:11], s16
 ; GCN-NEXT:    v_cndmask_b32_e32 v3, v2, v3, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v6, s4
@@ -653,7 +651,6 @@ define amdgpu_kernel void @s_ashr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_mov_b32_e32 v12, s2
 ; GCN-NEXT:    v_cndmask_b32_e64 v7, v6, v7, s[0:1]
 ; GCN-NEXT:    v_cndmask_b32_e64 v6, v6, v12, s[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
 ; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GCN-NEXT:    s_endpgm

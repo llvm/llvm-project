@@ -95,6 +95,10 @@ struct OutlinableRegion {
   /// required for the following basic blocks in this case.
   bool EndsInBranch = false;
 
+  /// The PHIBlocks with their corresponding return block based on the return
+  /// value as the key.
+  DenseMap<Value *, BasicBlock *> PHIBlocks;
+
   /// Mapping of the argument number in the deduplicated function
   /// to a given constant, which is used when creating the arguments to the call
   /// to the newly created deduplicated function.  This is handled separately
@@ -182,7 +186,14 @@ public:
   IROutliner(function_ref<TargetTransformInfo &(Function &)> GTTI,
              function_ref<IRSimilarityIdentifier &(Module &)> GIRSI,
              function_ref<OptimizationRemarkEmitter &(Function &)> GORE)
-      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {}
+      : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {
+    
+    // Check that the DenseMap implementation has not changed.
+    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
+           "DenseMapInfo<unsigned>'s empty key isn't -1!");
+    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
+           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+  }
   bool run(Module &M);
 
 private:
@@ -331,8 +342,7 @@ private:
     bool visitBranchInst(BranchInst &BI) { 
       return EnableBranches;
     }
-    // TODO: Determine a scheme to resolve when the labels are similar enough.
-    bool visitPHINode(PHINode &PN) { return false; }
+    bool visitPHINode(PHINode &PN) { return EnableBranches; }
     // TODO: Handle allocas.
     bool visitAllocaInst(AllocaInst &AI) { return false; }
     // VAArg instructions are not allowed since this could cause difficulty when
@@ -354,7 +364,15 @@ private:
     // that they have a name in these cases.
     bool visitCallInst(CallInst &CI) {
       Function *F = CI.getCalledFunction();
-      if (!F || CI.isIndirectCall() || !F->hasName())
+      bool IsIndirectCall = CI.isIndirectCall();
+      if (IsIndirectCall && !EnableIndirectCalls)
+        return false;
+      if (!F && !IsIndirectCall)
+        return false;
+      // Returning twice can cause issues with the state of the function call
+      // that were not expected when the function was used, so we do not include
+      // the call in outlined functions.
+      if (CI.canReturnTwice())
         return false;
       return true;
     }
@@ -373,6 +391,10 @@ private:
     // The flag variable that marks whether we should allow branch instructions
     // to be outlined.
     bool EnableBranches = false;
+
+    // The flag variable that marks whether we should allow indirect calls
+    // to be outlined.
+    bool EnableIndirectCalls = true;
   };
 
   /// A InstVisitor used to exclude certain instructions from being outlined.

@@ -342,13 +342,13 @@ renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source,
 // Because canonical declaration points to template decl instead of
 // specialization.
 const FunctionDecl *findTarget(const FunctionDecl *FD) {
-  auto CanonDecl = FD->getCanonicalDecl();
+  auto *CanonDecl = FD->getCanonicalDecl();
   if (!FD->isFunctionTemplateSpecialization() || CanonDecl == FD)
     return CanonDecl;
   // For specializations CanonicalDecl is the TemplatedDecl, which is not the
   // target we want to inline into. Instead we traverse previous decls to find
   // the first forward decl for this specialization.
-  auto PrevDecl = FD;
+  auto *PrevDecl = FD;
   while (PrevDecl->getPreviousDecl() != CanonDecl) {
     PrevDecl = PrevDecl->getPreviousDecl();
     assert(PrevDecl && "Found specialization without template decl");

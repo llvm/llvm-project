@@ -146,7 +146,7 @@ static inline SourcePred sizedPtrType() {
       return false;
 
     if (const auto *PtrT = dyn_cast<PointerType>(V->getType()))
-      return PtrT->getElementType()->isSized();
+      return PtrT->getPointerElementType()->isSized();
     return false;
   };
   auto Make = [](ArrayRef<Value *>, ArrayRef<Type *> Ts) {

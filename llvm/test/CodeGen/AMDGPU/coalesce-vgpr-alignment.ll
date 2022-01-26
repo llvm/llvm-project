@@ -23,7 +23,6 @@ bb:
 ; GCN-LABEL: {{^}}test_vector_creation:
 ; GCN:     global_load_dwordx2 v[{{[0-9]*[02468]}}:{{[0-9]+}}],
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]*}}[[LO:[02468]]], v{{[0-9]+}}
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]*}}[[HI:[13579]]], v{{[0-9]+}}
 ; GCN:     global_store_dwordx4 v[{{[0-9]*[02468]:[0-9]*[13579]}}], v[{{[0-9]*[02468]:[0-9]*[13579]}}]
 define amdgpu_kernel void @test_vector_creation() {
 entry:

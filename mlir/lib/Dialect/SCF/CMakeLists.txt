@@ -12,7 +12,6 @@ add_mlir_dialect_library(MLIRSCF
   MLIRBufferization
   MLIRIR
   MLIRLoopLikeInterface
-  MLIRMemRef
   MLIRSideEffectInterfaces
   MLIRStandard
   )

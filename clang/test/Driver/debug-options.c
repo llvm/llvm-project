@@ -132,6 +132,13 @@
 // RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff -gcolumn-info \
 // RUN:             2>&1 | FileCheck -check-prefix=CI %s
 
+// WebAssembly.
+// WebAssembly should default to DWARF4.
+// RUN: %clang -### -c -g %s -target wasm32 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DWARF4 %s
+// RUN: %clang -### -c -g %s -target wasm64 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_DWARF4 %s
+
 // RUN: %clang -### -c -gdwarf-2 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 //

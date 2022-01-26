@@ -77,6 +77,8 @@ enum NodeType : unsigned {
   SBC, // adc, sbc instructions
 
   // Predicated instructions where inactive lanes produce undefined results.
+  ABDS_PRED,
+  ABDU_PRED,
   ADD_PRED,
   FADD_PRED,
   FDIV_PRED,

@@ -5,8 +5,8 @@ define float @jacobi(float* %p, float %x, float %y, float %z) {
 ; CHECK-LABEL: @jacobi(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr float, float* [[P:%.*]], i64 1
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr float, float* [[P]], i64 2
-; CHECK-NEXT:    [[P1:%.*]] = load float, float* [[GEP1]]
-; CHECK-NEXT:    [[P2:%.*]] = load float, float* [[GEP2]]
+; CHECK-NEXT:    [[P1:%.*]] = load float, float* [[GEP1]], align 4
+; CHECK-NEXT:    [[P2:%.*]] = load float, float* [[GEP2]], align 4
 ; CHECK-NEXT:    [[MUL1:%.*]] = fmul float [[P1]], [[X:%.*]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = fmul float [[P2]], [[Y:%.*]]
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd float [[MUL1]], [[Z:%.*]]

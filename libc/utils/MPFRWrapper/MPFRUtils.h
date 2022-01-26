@@ -32,6 +32,7 @@ enum class Operation : int {
   Floor,
   Log,
   Log2,
+  Log10,
   Mod2PI,
   ModPIOver2,
   ModPIOver4,

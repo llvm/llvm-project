@@ -529,7 +529,7 @@ Status ProcessGDBRemote::WillAttachToProcessWithName(const char *process_name,
 }
 
 Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
-  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+  Log *log = GetLog(GDBRLog::Process);
 
   Status error(WillLaunchOrAttach());
   if (error.Fail())
@@ -606,8 +606,7 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
                 ReadModuleFromMemory(FileSpec(namebuf), standalone_value);
           }
 
-          Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(
-              LIBLLDB_LOG_DYNAMIC_LOADER));
+          Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
           if (module_sp.get()) {
             target.GetImages().AppendIfNeeded(module_sp, false);
 

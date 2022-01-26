@@ -53,8 +53,8 @@ for.cond.cleanup:
 
 ; We can hoist the store out of the loop here; if f() unwinds,
 ; the lifetime of %a ends.
-define void @test2(i1 zeroext %y) uwtable {
-; CHECK-LABEL: @test2(
+define void @test_alloca(i1 zeroext %y) uwtable {
+; CHECK-LABEL: @test_alloca(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, i32* [[A]], align 4
@@ -78,6 +78,96 @@ define void @test2(i1 zeroext %y) uwtable {
 ;
 entry:
   %a = alloca i32
+  br label %for.body
+
+for.body:
+  %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %0 = load i32, i32* %a, align 4
+  %add = add nsw i32 %0, 1
+  store i32 %add, i32* %a, align 4
+  br i1 %y, label %if.then, label %for.inc
+
+if.then:
+  tail call void @f()
+  br label %for.inc
+
+for.inc:
+  %inc = add nuw nsw i32 %i.03, 1
+  %exitcond = icmp eq i32 %inc, 10000
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+}
+
+; byval memory cannot be accessed on unwind either.
+define void @test_byval(i32* byval(i32) %a, i1 zeroext %y) uwtable {
+; CHECK-LABEL: @test_byval(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, i32* [[A:%.*]], align 4
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
+; CHECK-NEXT:    br i1 [[Y:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @f()
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_03]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_INC]] ]
+; CHECK-NEXT:    store i32 [[ADD_LCSSA]], i32* [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]
+  %0 = load i32, i32* %a, align 4
+  %add = add nsw i32 %0, 1
+  store i32 %add, i32* %a, align 4
+  br i1 %y, label %if.then, label %for.inc
+
+if.then:
+  tail call void @f()
+  br label %for.inc
+
+for.inc:
+  %inc = add nuw nsw i32 %i.03, 1
+  %exitcond = icmp eq i32 %inc, 10000
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+}
+
+; TODO: sret could be specified to not be accessed on unwind either.
+define void @test_sret(i32* noalias sret(i32) %a, i1 zeroext %y) uwtable {
+; CHECK-LABEL: @test_sret(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A:%.*]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    store i32 [[ADD]], i32* [[A]], align 4
+; CHECK-NEXT:    br i1 [[Y:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC]]
+; CHECK:       if.then:
+; CHECK-NEXT:    tail call void @f()
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_03]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+;
+entry:
   br label %for.body
 
 for.body:

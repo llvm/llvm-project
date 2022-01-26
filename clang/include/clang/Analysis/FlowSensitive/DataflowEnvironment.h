@@ -26,6 +26,9 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace clang {
 namespace dataflow {
@@ -48,6 +51,25 @@ enum class SkipPast {
 /// Holds the state of the program (store and heap) at a given program point.
 class Environment {
 public:
+  /// Supplements `Environment` with non-standard join operations.
+  class Merger {
+  public:
+    virtual ~Merger() = default;
+
+    /// Given distinct `Val1` and `Val2`, modifies `MergedVal` to approximate
+    /// both `Val1` and `Val2`. This could be a strict lattice join or a more
+    /// general widening operation. If this function returns true, `MergedVal`
+    /// will be assigned to a storage location of type `Type` in `Env`.
+    ///
+    /// Requirements:
+    ///
+    ///  `Val1` and `Val2` must be distinct.
+    virtual bool merge(QualType Type, const Value &Val1, const Value &Val2,
+                       Value &MergedVal, Environment &Env) {
+      return false;
+    }
+  };
+
   /// Creates an environment that uses `DACtx` to store objects that encompass
   /// the state of a program.
   explicit Environment(DataflowAnalysisContext &DACtx) : DACtx(&DACtx) {}
@@ -64,7 +86,7 @@ public:
 
   bool operator==(const Environment &) const;
 
-  LatticeJoinEffect join(const Environment &);
+  LatticeJoinEffect join(const Environment &, Environment::Merger &);
 
   // FIXME: Rename `createOrGetStorageLocation` to `getOrCreateStorageLocation`,
   // `getStableStorageLocation`, or something more appropriate.
@@ -142,12 +164,34 @@ public:
   Value *getValue(const Expr &E, SkipPast SP) const;
 
   /// Transfers ownership of `Loc` to the analysis context and returns a
-  /// reference to `Loc`.
-  StorageLocation &takeOwnership(std::unique_ptr<StorageLocation> Loc);
+  /// reference to it.
+  ///
+  /// Requirements:
+  ///
+  ///  `Loc` must not be null.
+  template <typename T>
+  typename std::enable_if<std::is_base_of<StorageLocation, T>::value, T &>::type
+  takeOwnership(std::unique_ptr<T> Loc) {
+    return DACtx->takeOwnership(std::move(Loc));
+  }
 
   /// Transfers ownership of `Val` to the analysis context and returns a
-  /// reference to `Val`.
-  Value &takeOwnership(std::unique_ptr<Value> Val);
+  /// reference to it.
+  ///
+  /// Requirements:
+  ///
+  ///  `Val` must not be null.
+  template <typename T>
+  typename std::enable_if<std::is_base_of<Value, T>::value, T &>::type
+  takeOwnership(std::unique_ptr<T> Val) {
+    return DACtx->takeOwnership(std::move(Val));
+  }
+
+  /// Returns a symbolic boolean value that models a boolean literal equal to
+  /// `Value`
+  BoolValue &getBoolLiteralValue(bool Value) const {
+    return DACtx->getBoolLiteralValue(Value);
+  }
 
 private:
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise

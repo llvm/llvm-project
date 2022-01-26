@@ -909,8 +909,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification5) {
     "  void A(int a) noexcept(true);"
     "};",
     "A",
-    "void A(int a) noexcept(trueA(int a) noexcept(true)"));
-    // WRONG; Should be: "void A(int a) noexcept(true);"
+    "void A(int a) noexcept(true)"));
 }
 
 TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification6) {
@@ -919,8 +918,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification6) {
     "  void A(int a) noexcept(1 < 2);"
     "};",
     "A",
-    "void A(int a) noexcept(1 < 2A(int a) noexcept(1 < 2)"));
-    // WRONG; Should be: "void A(int a) noexcept(1 < 2);"
+    "void A(int a) noexcept(1 < 2)"));
 }
 
 TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification7) {
@@ -930,8 +928,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification7) {
     "  void A(int a) noexcept(N < 2);"
     "};",
     "A",
-    "void A(int a) noexcept(N < 2A(int a) noexcept(N < 2)"));
-    // WRONG; Should be: "void A(int a) noexcept(N < 2);"
+    "void A(int a) noexcept(N < 2)"));
 }
 
 TEST(DeclPrinter, TestVarDecl1) {
@@ -1334,6 +1331,41 @@ TEST(DeclPrinter, TestTemplateArgumentList16) {
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "T2", "typename T2 = bool"));
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT1", "int NT1"));
   ASSERT_TRUE(PrintedDeclCXX11Matches(Code, "NT2", "int NT2 = 5"));
+}
+
+TEST(DeclPrinter, TestFunctionParamUglified) {
+  llvm::StringLiteral Code = R"cpp(
+    class __c;
+    void _A(__c *__param);
+  )cpp";
+  auto Clean = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+  };
+
+  ASSERT_TRUE(PrintedDeclCXX17Matches(Code, namedDecl(hasName("_A")).bind("id"),
+                                      "void _A(__c *__param)"));
+  ASSERT_TRUE(PrintedDeclCXX17Matches(Code, namedDecl(hasName("_A")).bind("id"),
+                                      "void _A(__c *param)", Clean));
+}
+
+TEST(DeclPrinter, TestTemplateParamUglified) {
+  llvm::StringLiteral Code = R"cpp(
+    template <typename _Tp, int __n, template <typename> class _Container>
+    struct _A{};
+  )cpp";
+  auto Clean = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+  };
+
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      Code, classTemplateDecl(hasName("_A")).bind("id"),
+      "template <typename _Tp, int __n, template <typename> class _Container> "
+      "struct _A {}"));
+  ASSERT_TRUE(PrintedDeclCXX17Matches(
+      Code, classTemplateDecl(hasName("_A")).bind("id"),
+      "template <typename Tp, int n, template <typename> class Container> "
+      "struct _A {}",
+      Clean));
 }
 
 TEST(DeclPrinter, TestStaticAssert1) {

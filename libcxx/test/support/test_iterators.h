@@ -118,38 +118,6 @@ public:
 };
 
 template <class It>
-class non_default_constructible_iterator
-{
-    It it_;
-
-    template <class U> friend class non_default_constructible_iterator;
-public:
-    typedef          std::input_iterator_tag                   iterator_category;
-    typedef typename std::iterator_traits<It>::value_type      value_type;
-    typedef typename std::iterator_traits<It>::difference_type difference_type;
-    typedef It                                                 pointer;
-    typedef typename std::iterator_traits<It>::reference       reference;
-
-    non_default_constructible_iterator() = delete;
-
-    TEST_CONSTEXPR explicit non_default_constructible_iterator(It it) : it_(it) {}
-    template <class U>
-        TEST_CONSTEXPR non_default_constructible_iterator(const non_default_constructible_iterator<U>& u) : it_(u.it_) {}
-
-    TEST_CONSTEXPR reference operator*() const {return *it_;}
-    TEST_CONSTEXPR pointer operator->() const {return it_;}
-
-    TEST_CONSTEXPR_CXX14 non_default_constructible_iterator& operator++() {++it_; return *this;}
-    TEST_CONSTEXPR_CXX14 non_default_constructible_iterator operator++(int) {return non_default_constructible_iterator(it_++);}
-
-    friend TEST_CONSTEXPR bool operator==(const non_default_constructible_iterator& x, const non_default_constructible_iterator& y) {return x.it_ == y.it_;}
-    friend TEST_CONSTEXPR bool operator!=(const non_default_constructible_iterator& x, const non_default_constructible_iterator& y) {return x.it_ != y.it_;}
-
-    template <class T>
-    void operator,(T const &) = delete;
-};
-
-template <class It>
 class bidirectional_iterator
 {
     It it_;
