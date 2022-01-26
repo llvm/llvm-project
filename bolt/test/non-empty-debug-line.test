@@ -3,7 +3,7 @@
 
 REQUIRES: system-linux
 
-RUN: %clang %S/Inputs/hello.c -gdwarf-4 -o %t
+RUN: %clang %cflags %S/Inputs/hello.c -g -o %t
 RUN: llvm-bolt %t -o %t1 -update-debug-sections -funcs=_start
 RUN: llvm-readobj -S %t > %t2
 RUN: llvm-readobj -S %t1 >> %t2

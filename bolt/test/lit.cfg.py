@@ -60,8 +60,8 @@ llvm_config.config.environment['LLD'] = config.bolt_lld
 llvm_config.use_clang()
 llvm_config.use_llvm_tool('lld', required=True, search_env='LLD')
 
-config.substitutions.append(('%cflags', '-no-pie'))
-config.substitutions.append(('%cxxflags', '-no-pie'))
+config.substitutions.append(('%cflags', '-no-pie -gdwarf-4'))
+config.substitutions.append(('%cxxflags', '-no-pie -gdwarf-4'))
 
 link_fdata_cmd = os.path.join(config.test_source_root, 'link_fdata.py')
 

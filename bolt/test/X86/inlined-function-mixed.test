@@ -2,7 +2,7 @@
 # debug info does not cause a crash.
 
 RUN: %clangxx %S/Inputs/inlined.cpp -c -o %T/inlined.o
-RUN: %clangxx %S/Inputs/inlinee.cpp -c -o %T/inlinee.o -gdwarf-4
+RUN: %clangxx %cxxflags %S/Inputs/inlinee.cpp -c -o %T/inlinee.o -g
 RUN: %clangxx %T/inlined.o %T/inlinee.o -o %t
 
 RUN: llvm-bolt %t -o %t.bolt -update-debug-sections -reorder-blocks=reverse \
