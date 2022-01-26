@@ -23,6 +23,13 @@ extern "C" {
 // integer kind.
 std::int32_t RTNAME(ArgumentCount)();
 
+// 16.9.82 GET_COMMAND
+// Try to get the value of the whole command. All of the parameters are
+// optional.
+// Return a STATUS as described in the standard.
+std::int32_t RTNAME(GetCommand)(const Descriptor *command = nullptr,
+    const Descriptor *length = nullptr, const Descriptor *errmsg = nullptr);
+
 // 16.9.83 GET_COMMAND_ARGUMENT
 // We're breaking up the interface into several different functions, since most
 // of the parameters are optional.
