@@ -51,3 +51,18 @@ TEST(UniqueCStringMap, NoDefaultConstructor) {
   EXPECT_THAT(Map.GetValues(Bar, Values), 0);
   EXPECT_THAT(Values, testing::IsEmpty());
 }
+
+TEST(UniqueCStringMap, ValueCompare) {
+  UniqueCStringMap<int> Map;
+
+  ConstString Foo("foo");
+
+  Map.Append(Foo, 0);
+  Map.Append(Foo, 5);
+  Map.Append(Foo, -5);
+
+  Map.Sort(std::less<int>());
+  std::vector<int> Values;
+  EXPECT_THAT(Map.GetValues(Foo, Values), 3);
+  EXPECT_THAT(Values, testing::ElementsAre(-5, 0, 5));
+}
