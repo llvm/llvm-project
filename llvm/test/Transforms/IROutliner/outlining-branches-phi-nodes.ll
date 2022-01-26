@@ -38,8 +38,6 @@ block_5:
   store i32 %add2, i32* %output, align 4
   store i32 %mul2, i32* %result, align 4
   br label %block_6
-dummy:
-  ret void
 block_6:
   %diff = phi i32 [%aval, %block_4], [%a2val, %block_5]
   ret void
@@ -78,8 +76,6 @@ block_5:
   store i32 %add2, i32* %output, align 4
   store i32 %mul2, i32* %result, align 4
   br label %block_6
-dummy:
-  ret void
 block_6:
   %diff = phi i32 [%aval, %block_4], [%a2val, %block_5]
   ret void
@@ -106,8 +102,6 @@ block_6:
 ; CHECK-NEXT:    [[DIFF_CE_RELOAD:%.*]] = load i32, i32* [[DIFF_CE_LOC]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    br label [[BLOCK_6:%.*]]
-; CHECK: dummy:
-; CHECK-NEXT:  ret void
 ; CHECK:       block_6:
 ; CHECK-NEXT:    [[DIFF:%.*]] = phi i32 [ [[DIFF_CE_RELOAD]], [[BLOCK_2]] ]
 ; CHECK-NEXT:    ret void
@@ -134,8 +128,6 @@ block_6:
 ; CHECK-NEXT:    [[DIFF_CE_RELOAD:%.*]] = load i32, i32* [[DIFF_CE_LOC]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 -1, i8* [[LT_CAST]])
 ; CHECK-NEXT:    br label [[BLOCK_6:%.*]]
-; CHECK: dummy:
-; CHECK-NEXT:  ret void
 ; CHECK:       block_6:
 ; CHECK-NEXT:    [[DIFF:%.*]] = phi i32 [ [[DIFF_CE_RELOAD]], [[BLOCK_2]] ]
 ; CHECK-NEXT:    ret void
