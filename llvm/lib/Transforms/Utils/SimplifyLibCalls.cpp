@@ -2516,7 +2516,8 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       // sprintf(dest, "%s", str) -> stpcpy(dest, str) - dest
       // Handle mismatched pointer types (goes away with typeless pointers?).
       V = B.CreatePointerCast(V, Dest->getType());
-      Value *PtrDiff = B.CreatePtrDiff(V, Dest);
+      Value *PtrDiff = B.CreatePtrDiff(
+          Dest->getType()->getPointerElementType(), V, Dest);
       return B.CreateIntCast(PtrDiff, CI->getType(), false);
     }
 
