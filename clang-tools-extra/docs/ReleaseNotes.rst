@@ -133,7 +133,7 @@ New checks
 - New :doc:`readability-duplicate-include
   <clang-tidy/checks/readability-duplicate-include>` check.
 
-  Looks for duplicate includes and removes them.  
+  Looks for duplicate includes and removes them.
 
 - New :doc:`readability-identifier-length
   <clang-tidy/checks/readability-identifier-length>` check.
@@ -167,7 +167,13 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- :doc:`bugprone-assert-side-effect <clang-tidy/checks/bugprone-assert-side-effect>`
+  check now supports an ``IgnoredFunctions`` option to explicitly consider
+  the specified semicolon-separated functions list as not having any
+  side-effects. Regular expressions for the list items are also accepted.
+
 - Removed default setting ``cppcoreguidelines-explicit-virtual-functions.IgnoreDestructors = "true"``,
+  from :doc:`cppcoreguidelines-explicit-virtual-functions <clang-tidy/checks/cppcoreguidelines-explicit-virtual-functions>`
   to match the current state of the C++ Core Guidelines.
 
 - Removed suggestion ``use gsl::at`` from warning message in the
@@ -185,10 +191,10 @@ Changes in existing checks
 
 - Fixed a false positive in :doc:`bugprone-throw-keyword-missing
   <clang-tidy/checks/bugprone-throw-keyword-missing>` when creating an exception object
-  using placement new
+  using placement new.
 
 - :doc:`cppcoreguidelines-narrowing-conversions <clang-tidy/checks/cppcoreguidelines-narrowing-conversions>`
-  check now supports a `WarnOnIntegerToFloatingPointNarrowingConversion`
+  check now supports a ``WarnOnIntegerToFloatingPointNarrowingConversion``
   option to control whether to warn on narrowing integer to floating-point
   conversions.
 
