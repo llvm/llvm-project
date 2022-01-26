@@ -45,6 +45,22 @@ sure you don't forget anything:
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
 - Did you run the ``libcxx-generate-files`` target and verify its output?
 
+The review process
+==================
+
+After uploading your patch, you should see that the "libc++" review group is automatically
+added as a reviewer for your patch. Once the group is marked as having approved your patch,
+you can commit it. However, if you get an approval very quickly for a significant patch,
+please try to wait a couple of business days before committing to give the opportunity for
+other reviewers to chime in. If you need someone else to commit the patch for you, please
+mention it and provide your ``Name <email@domain>`` for us to attribute the commit properly.
+
+Note that the rule for accepting as the "libc++" review group is to wait for two members
+of the group to have approved the patch, excluding the patch author. This is not a hard
+rule -- for very simple patches, use your judgement. The `"libc++" review group <https://reviews.llvm.org/project/members/64/>`__
+consists of frequent libc++ contributors with a good understanding of the project's
+guidelines -- if you would like to be added to it, please reach out on Discord.
+
 Post-release check list
 =======================
 
