@@ -330,11 +330,32 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                                    inlineAsmOp.getConstraints(),
                                    inlineAsmOp.getHasSideEffects(),
                                    inlineAsmOp.getIsAlignStack());
-    llvm::Value *result = builder.CreateCall(
+    llvm::CallInst *inst = builder.CreateCall(
         inlineAsmInst,
         moduleTranslation.lookupValues(inlineAsmOp.getOperands()));
+    if (auto maybeOperandAttrs = inlineAsmOp.getOperandAttrs()) {
+      llvm::AttributeList attrList;
+      for (const auto &it : llvm::enumerate(*maybeOperandAttrs)) {
+        Attribute attr = it.value();
+        if (!attr)
+          continue;
+        DictionaryAttr dAttr = attr.cast<DictionaryAttr>();
+        TypeAttr tAttr =
+            dAttr.get(InlineAsmOp::getElementTypeAttrName()).cast<TypeAttr>();
+        llvm::AttrBuilder b(moduleTranslation.getLLVMContext());
+        llvm::Type *ty = moduleTranslation.convertType(tAttr.getValue());
+        b.addTypeAttr(llvm::Attribute::ElementType, ty);
+        // shift to account for the returned value (this is always 1 aggregate
+        // value in LLVM).
+        int shift = (opInst.getNumResults() > 0) ? 1 : 0;
+        attrList = attrList.addAttributesAtIndex(
+            moduleTranslation.getLLVMContext(), it.index() + shift, b);
+      }
+      inst->setAttributes(attrList);
+    }
+
     if (opInst.getNumResults() != 0)
-      moduleTranslation.mapValue(opInst.getResult(0), result);
+      moduleTranslation.mapValue(opInst.getResult(0), inst);
     return success();
   }
 
