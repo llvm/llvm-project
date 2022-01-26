@@ -979,9 +979,8 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
     CallInst *CI = cast<CallInst>(Inst);
     if (IsNullOrUndef(CI->getArgOperand(0))) {
       Changed = true;
-      Type *Ty = CI->getArgOperand(0)->getType();
-      new StoreInst(UndefValue::get(Ty->getPointerElementType()),
-                    Constant::getNullValue(Ty), CI);
+      new StoreInst(ConstantInt::getTrue(CI->getContext()),
+                    UndefValue::get(Type::getInt1PtrTy(CI->getContext())), CI);
       Value *NewValue = UndefValue::get(CI->getType());
       LLVM_DEBUG(
           dbgs() << "A null pointer-to-weak-pointer is undefined behavior."
@@ -999,9 +998,8 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(
     if (IsNullOrUndef(CI->getArgOperand(0)) ||
         IsNullOrUndef(CI->getArgOperand(1))) {
       Changed = true;
-      Type *Ty = CI->getArgOperand(0)->getType();
-      new StoreInst(UndefValue::get(Ty->getPointerElementType()),
-                    Constant::getNullValue(Ty), CI);
+      new StoreInst(ConstantInt::getTrue(CI->getContext()),
+                    UndefValue::get(Type::getInt1PtrTy(CI->getContext())), CI);
 
       Value *NewValue = UndefValue::get(CI->getType());
       LLVM_DEBUG(
