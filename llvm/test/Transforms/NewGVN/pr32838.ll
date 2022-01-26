@@ -3,7 +3,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 ;; Ensure we don't infinite loop when all phi arguments are really unreachable or self-defined
-define void @fn1(i64 %arg) {
+define void @fn1(i64 noundef %arg) {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[COND_TRUE:%.*]]
@@ -47,7 +47,7 @@ cond.true:
 temp:
   ret void
 }
-define void @fn2(i64 %arg) {
+define void @fn2(i64 noundef %arg) {
 ; CHECK-LABEL: @fn2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[COND_TRUE:%.*]]

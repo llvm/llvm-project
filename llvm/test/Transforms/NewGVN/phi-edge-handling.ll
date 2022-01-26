@@ -119,6 +119,27 @@ define i8 @value_undef(i1 %cond, i8 %v) {
 ; CHECK:       B:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       EXIT:
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ undef, [[A]] ], [ [[V:%.*]], [[B]] ]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  br i1 %cond, label %A, label %B
+A:
+  br label %EXIT
+B:
+  br label %EXIT
+EXIT:
+  %r = phi i8 [undef, %A], [%v, %B]
+  ret i8 %r
+}
+
+define i8 @value_undef_noundef(i1 %cond, i8 noundef %v) {
+; CHECK-LABEL: @value_undef_noundef(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       EXIT:
 ; CHECK-NEXT:    ret i8 [[V:%.*]]
 ;
   br i1 %cond, label %A, label %B
