@@ -41,10 +41,7 @@ public:
   /// Finalize the underlying module, e.g., by outlining regions.
   /// \param Fn                    The function to be finalized. If not used,
   ///                              all functions are finalized.
-  /// \param AllowExtractorSinking Flag to include sinking instructions,
-  ///                              emitted by CodeExtractor, in the
-  ///                              outlined region. Default is false.
-  void finalize(Function *Fn = nullptr, bool AllowExtractorSinking = false);
+  void finalize(Function *Fn = nullptr);
 
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
@@ -772,6 +769,7 @@ public:
     using PostOutlineCBTy = std::function<void(Function &)>;
     PostOutlineCBTy PostOutlineCB;
     BasicBlock *EntryBB, *ExitBB;
+    SmallVector<Value *, 2> ExcludeArgsFromAggregate;
 
     /// Collect all blocks in between EntryBB and ExitBB in both the given
     /// vector and set.

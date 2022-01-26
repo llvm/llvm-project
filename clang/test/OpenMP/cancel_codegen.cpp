@@ -1321,6 +1321,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-LABEL: define {{[^@]+}}@main
 // CHECK3-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK3-NEXT:  entry:
+// CHECK3-NEXT:    [[STRUCTARG:%.*]] = alloca { i32*, i8*** }, align 8
 // CHECK3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
@@ -1350,7 +1351,11 @@ for (int i = 0; i < argc; ++i) {
 // CHECK3-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK3:       omp_parallel:
-// CHECK3-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* @main..omp_par to void (i32*, i32*, ...)*), i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]])
+// CHECK3-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[STRUCTARG]], i32 0, i32 0
+// CHECK3-NEXT:    store i32* [[ARGC_ADDR]], i32** [[GEP_ARGC_ADDR]], align 8
+// CHECK3-NEXT:    [[GEP_ARGV_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[STRUCTARG]], i32 0, i32 1
+// CHECK3-NEXT:    store i8*** [[ARGV_ADDR]], i8**** [[GEP_ARGV_ADDR]], align 8
+// CHECK3-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, { i32*, i8*** }*)* @main..omp_par to void (i32*, i32*, ...)*), { i32*, i8*** }* [[STRUCTARG]])
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 // CHECK3:       omp.par.outlined.exit:
 // CHECK3-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -1553,58 +1558,62 @@ for (int i = 0; i < argc; ++i) {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@main..omp_par
-// CHECK3-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], i32* [[ARGC_ADDR:%.*]], i8*** [[ARGV_ADDR:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK3-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], { i32*, i8*** }* [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK3-NEXT:  omp.par.entry:
+// CHECK3-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[TMP0]], i32 0, i32 0
+// CHECK3-NEXT:    [[LOADGEP_ARGC_ADDR:%.*]] = load i32*, i32** [[GEP_ARGC_ADDR]], align 8
+// CHECK3-NEXT:    [[GEP_ARGV_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[TMP0]], i32 0, i32 1
+// CHECK3-NEXT:    [[LOADGEP_ARGV_ADDR:%.*]] = load i8***, i8**** [[GEP_ARGV_ADDR]], align 8
 // CHECK3-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[TMP0:%.*]] = load i32, i32* [[TID_ADDR]], align 4
-// CHECK3-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TID_ADDR]], align 4
+// CHECK3-NEXT:    store i32 [[TMP1]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK3-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK3-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK3:       omp.par.region:
-// CHECK3-NEXT:    [[TMP1:%.*]] = load float, float* @flag, align 4
-// CHECK3-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP1]], 0.000000e+00
-// CHECK3-NEXT:    br i1 [[TOBOOL]], label [[TMP13:%.*]], label [[TMP2:%.*]]
-// CHECK3:       2:
-// CHECK3-NEXT:    br label [[TMP3:%.*]]
+// CHECK3-NEXT:    [[TMP2:%.*]] = load float, float* @flag, align 4
+// CHECK3-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP2]], 0.000000e+00
+// CHECK3-NEXT:    br i1 [[TOBOOL]], label [[TMP14:%.*]], label [[TMP3:%.*]]
 // CHECK3:       3:
-// CHECK3-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK3-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP4]] to i8
-// CHECK3-NEXT:    [[TMP5:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[TMP5]], i64 0
-// CHECK3-NEXT:    [[TMP6:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, i8* [[TMP6]], i64 0
+// CHECK3-NEXT:    br label [[TMP4:%.*]]
+// CHECK3:       4:
+// CHECK3-NEXT:    [[TMP5:%.*]] = load i32, i32* [[LOADGEP_ARGC_ADDR]], align 4
+// CHECK3-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP5]] to i8
+// CHECK3-NEXT:    [[TMP6:%.*]] = load i8**, i8*** [[LOADGEP_ARGV_ADDR]], align 8
+// CHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[TMP6]], i64 0
+// CHECK3-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8
+// CHECK3-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 0
 // CHECK3-NEXT:    store i8 [[CONV]], i8* [[ARRAYIDX3]], align 1
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM4:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK3-NEXT:    [[TMP7:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
-// CHECK3-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
-// CHECK3-NEXT:    br i1 [[TMP8]], label [[DOTCONT:%.*]], label [[DOTCNCL5:%.*]]
+// CHECK3-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
+// CHECK3-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+// CHECK3-NEXT:    br i1 [[TMP9]], label [[DOTCONT:%.*]], label [[DOTCNCL5:%.*]]
 // CHECK3:       .cncl5:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK3:       .cont:
-// CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP10:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8*, i8** [[TMP10]], i64 0
-// CHECK3-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[ARRAYIDX6]], align 8
-// CHECK3-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, i8* [[TMP11]], i64 0
-// CHECK3-NEXT:    [[TMP12:%.*]] = load i8, i8* [[ARRAYIDX7]], align 1
-// CHECK3-NEXT:    [[CONV8:%.*]] = sext i8 [[TMP12]] to i32
-// CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV8]], [[TMP9]]
+// CHECK3-NEXT:    [[TMP10:%.*]] = load i32, i32* [[LOADGEP_ARGC_ADDR]], align 4
+// CHECK3-NEXT:    [[TMP11:%.*]] = load i8**, i8*** [[LOADGEP_ARGV_ADDR]], align 8
+// CHECK3-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8*, i8** [[TMP11]], i64 0
+// CHECK3-NEXT:    [[TMP12:%.*]] = load i8*, i8** [[ARRAYIDX6]], align 8
+// CHECK3-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, i8* [[TMP12]], i64 0
+// CHECK3-NEXT:    [[TMP13:%.*]] = load i8, i8* [[ARRAYIDX7]], align 1
+// CHECK3-NEXT:    [[CONV8:%.*]] = sext i8 [[TMP13]] to i32
+// CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV8]], [[TMP10]]
 // CHECK3-NEXT:    [[CONV9:%.*]] = trunc i32 [[ADD]] to i8
 // CHECK3-NEXT:    store i8 [[CONV9]], i8* [[ARRAYIDX7]], align 1
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
-// CHECK3:       13:
+// CHECK3:       14:
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK3-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM1]], i32 1)
-// CHECK3-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP14]], 0
-// CHECK3-NEXT:    br i1 [[TMP15]], label [[DOTSPLIT:%.*]], label [[DOTCNCL:%.*]]
+// CHECK3-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM1]], i32 1)
+// CHECK3-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 0
+// CHECK3-NEXT:    br i1 [[TMP16]], label [[DOTSPLIT:%.*]], label [[DOTCNCL:%.*]]
 // CHECK3:       .cncl:
 // CHECK3-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK3-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK3-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK3:       .split:
-// CHECK3-NEXT:    br label [[TMP3]]
+// CHECK3-NEXT:    br label [[TMP4]]
 // CHECK3:       omp.par.outlined.exit.exitStub:
 // CHECK3-NEXT:    ret void
 //
@@ -1948,6 +1957,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4-LABEL: define {{[^@]+}}@main
 // CHECK4-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK4-NEXT:  entry:
+// CHECK4-NEXT:    [[STRUCTARG:%.*]] = alloca { i32*, i8*** }, align 8
 // CHECK4-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
@@ -1977,7 +1987,11 @@ for (int i = 0; i < argc; ++i) {
 // CHECK4-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK4-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK4:       omp_parallel:
-// CHECK4-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* @main..omp_par to void (i32*, i32*, ...)*), i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]])
+// CHECK4-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[STRUCTARG]], i32 0, i32 0
+// CHECK4-NEXT:    store i32* [[ARGC_ADDR]], i32** [[GEP_ARGC_ADDR]], align 8
+// CHECK4-NEXT:    [[GEP_ARGV_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[STRUCTARG]], i32 0, i32 1
+// CHECK4-NEXT:    store i8*** [[ARGV_ADDR]], i8**** [[GEP_ARGV_ADDR]], align 8
+// CHECK4-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, { i32*, i8*** }*)* @main..omp_par to void (i32*, i32*, ...)*), { i32*, i8*** }* [[STRUCTARG]])
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 // CHECK4:       omp.par.outlined.exit:
 // CHECK4-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -2180,58 +2194,62 @@ for (int i = 0; i < argc; ++i) {
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@main..omp_par
-// CHECK4-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], i32* [[ARGC_ADDR:%.*]], i8*** [[ARGV_ADDR:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK4-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], { i32*, i8*** }* [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK4-NEXT:  omp.par.entry:
+// CHECK4-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[TMP0]], i32 0, i32 0
+// CHECK4-NEXT:    [[LOADGEP_ARGC_ADDR:%.*]] = load i32*, i32** [[GEP_ARGC_ADDR]], align 8
+// CHECK4-NEXT:    [[GEP_ARGV_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[TMP0]], i32 0, i32 1
+// CHECK4-NEXT:    [[LOADGEP_ARGV_ADDR:%.*]] = load i8***, i8**** [[GEP_ARGV_ADDR]], align 8
 // CHECK4-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
-// CHECK4-NEXT:    [[TMP0:%.*]] = load i32, i32* [[TID_ADDR]], align 4
-// CHECK4-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
+// CHECK4-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TID_ADDR]], align 4
+// CHECK4-NEXT:    store i32 [[TMP1]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK4:       omp.par.region:
-// CHECK4-NEXT:    [[TMP1:%.*]] = load float, float* @flag, align 4
-// CHECK4-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP1]], 0.000000e+00
-// CHECK4-NEXT:    br i1 [[TOBOOL]], label [[TMP13:%.*]], label [[TMP2:%.*]]
-// CHECK4:       2:
-// CHECK4-NEXT:    br label [[TMP3:%.*]]
+// CHECK4-NEXT:    [[TMP2:%.*]] = load float, float* @flag, align 4
+// CHECK4-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP2]], 0.000000e+00
+// CHECK4-NEXT:    br i1 [[TOBOOL]], label [[TMP14:%.*]], label [[TMP3:%.*]]
 // CHECK4:       3:
-// CHECK4-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK4-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP4]] to i8
-// CHECK4-NEXT:    [[TMP5:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[TMP5]], i64 0
-// CHECK4-NEXT:    [[TMP6:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8
-// CHECK4-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, i8* [[TMP6]], i64 0
+// CHECK4-NEXT:    br label [[TMP4:%.*]]
+// CHECK4:       4:
+// CHECK4-NEXT:    [[TMP5:%.*]] = load i32, i32* [[LOADGEP_ARGC_ADDR]], align 4
+// CHECK4-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP5]] to i8
+// CHECK4-NEXT:    [[TMP6:%.*]] = load i8**, i8*** [[LOADGEP_ARGV_ADDR]], align 8
+// CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[TMP6]], i64 0
+// CHECK4-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8
+// CHECK4-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 0
 // CHECK4-NEXT:    store i8 [[CONV]], i8* [[ARRAYIDX3]], align 1
 // CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM4:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK4-NEXT:    [[TMP7:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
-// CHECK4-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
-// CHECK4-NEXT:    br i1 [[TMP8]], label [[DOTCONT:%.*]], label [[DOTCNCL5:%.*]]
+// CHECK4-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
+// CHECK4-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+// CHECK4-NEXT:    br i1 [[TMP9]], label [[DOTCONT:%.*]], label [[DOTCNCL5:%.*]]
 // CHECK4:       .cncl5:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK4:       .cont:
-// CHECK4-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK4-NEXT:    [[TMP10:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK4-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8*, i8** [[TMP10]], i64 0
-// CHECK4-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[ARRAYIDX6]], align 8
-// CHECK4-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, i8* [[TMP11]], i64 0
-// CHECK4-NEXT:    [[TMP12:%.*]] = load i8, i8* [[ARRAYIDX7]], align 1
-// CHECK4-NEXT:    [[CONV8:%.*]] = sext i8 [[TMP12]] to i32
-// CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV8]], [[TMP9]]
+// CHECK4-NEXT:    [[TMP10:%.*]] = load i32, i32* [[LOADGEP_ARGC_ADDR]], align 4
+// CHECK4-NEXT:    [[TMP11:%.*]] = load i8**, i8*** [[LOADGEP_ARGV_ADDR]], align 8
+// CHECK4-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8*, i8** [[TMP11]], i64 0
+// CHECK4-NEXT:    [[TMP12:%.*]] = load i8*, i8** [[ARRAYIDX6]], align 8
+// CHECK4-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, i8* [[TMP12]], i64 0
+// CHECK4-NEXT:    [[TMP13:%.*]] = load i8, i8* [[ARRAYIDX7]], align 1
+// CHECK4-NEXT:    [[CONV8:%.*]] = sext i8 [[TMP13]] to i32
+// CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV8]], [[TMP10]]
 // CHECK4-NEXT:    [[CONV9:%.*]] = trunc i32 [[ADD]] to i8
 // CHECK4-NEXT:    store i8 [[CONV9]], i8* [[ARRAYIDX7]], align 1
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
-// CHECK4:       13:
+// CHECK4:       14:
 // CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK4-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM1]], i32 1)
-// CHECK4-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP14]], 0
-// CHECK4-NEXT:    br i1 [[TMP15]], label [[DOTSPLIT:%.*]], label [[DOTCNCL:%.*]]
+// CHECK4-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM1]], i32 1)
+// CHECK4-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 0
+// CHECK4-NEXT:    br i1 [[TMP16]], label [[DOTSPLIT:%.*]], label [[DOTCNCL:%.*]]
 // CHECK4:       .cncl:
 // CHECK4-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK4-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK4-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK4:       .split:
-// CHECK4-NEXT:    br label [[TMP3]]
+// CHECK4-NEXT:    br label [[TMP4]]
 // CHECK4:       omp.par.outlined.exit.exitStub:
 // CHECK4-NEXT:    ret void
 //
@@ -3815,6 +3833,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9-LABEL: define {{[^@]+}}@main
 // CHECK9-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK9-NEXT:  entry:
+// CHECK9-NEXT:    [[STRUCTARG:%.*]] = alloca { i32*, i8*** }, align 8
 // CHECK9-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
@@ -3844,7 +3863,11 @@ for (int i = 0; i < argc; ++i) {
 // CHECK9-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK9-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK9:       omp_parallel:
-// CHECK9-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* @main..omp_par to void (i32*, i32*, ...)*), i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]])
+// CHECK9-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[STRUCTARG]], i32 0, i32 0
+// CHECK9-NEXT:    store i32* [[ARGC_ADDR]], i32** [[GEP_ARGC_ADDR]], align 8
+// CHECK9-NEXT:    [[GEP_ARGV_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[STRUCTARG]], i32 0, i32 1
+// CHECK9-NEXT:    store i8*** [[ARGV_ADDR]], i8**** [[GEP_ARGV_ADDR]], align 8
+// CHECK9-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, { i32*, i8*** }*)* @main..omp_par to void (i32*, i32*, ...)*), { i32*, i8*** }* [[STRUCTARG]])
 // CHECK9-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 // CHECK9:       omp.par.outlined.exit:
 // CHECK9-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -4047,58 +4070,62 @@ for (int i = 0; i < argc; ++i) {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@main..omp_par
-// CHECK9-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], i32* [[ARGC_ADDR:%.*]], i8*** [[ARGV_ADDR:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK9-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], { i32*, i8*** }* [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK9-NEXT:  omp.par.entry:
+// CHECK9-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[TMP0]], i32 0, i32 0
+// CHECK9-NEXT:    [[LOADGEP_ARGC_ADDR:%.*]] = load i32*, i32** [[GEP_ARGC_ADDR]], align 8
+// CHECK9-NEXT:    [[GEP_ARGV_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[TMP0]], i32 0, i32 1
+// CHECK9-NEXT:    [[LOADGEP_ARGV_ADDR:%.*]] = load i8***, i8**** [[GEP_ARGV_ADDR]], align 8
 // CHECK9-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
-// CHECK9-NEXT:    [[TMP0:%.*]] = load i32, i32* [[TID_ADDR]], align 4
-// CHECK9-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TID_ADDR]], align 4
+// CHECK9-NEXT:    store i32 [[TMP1]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK9-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK9-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK9:       omp.par.region:
-// CHECK9-NEXT:    [[TMP1:%.*]] = load float, float* @flag, align 4
-// CHECK9-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP1]], 0.000000e+00
-// CHECK9-NEXT:    br i1 [[TOBOOL]], label [[TMP13:%.*]], label [[TMP2:%.*]]
-// CHECK9:       2:
-// CHECK9-NEXT:    br label [[TMP3:%.*]]
+// CHECK9-NEXT:    [[TMP2:%.*]] = load float, float* @flag, align 4
+// CHECK9-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP2]], 0.000000e+00
+// CHECK9-NEXT:    br i1 [[TOBOOL]], label [[TMP14:%.*]], label [[TMP3:%.*]]
 // CHECK9:       3:
-// CHECK9-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK9-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP4]] to i8
-// CHECK9-NEXT:    [[TMP5:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[TMP5]], i64 0
-// CHECK9-NEXT:    [[TMP6:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8
-// CHECK9-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, i8* [[TMP6]], i64 0
+// CHECK9-NEXT:    br label [[TMP4:%.*]]
+// CHECK9:       4:
+// CHECK9-NEXT:    [[TMP5:%.*]] = load i32, i32* [[LOADGEP_ARGC_ADDR]], align 4
+// CHECK9-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP5]] to i8
+// CHECK9-NEXT:    [[TMP6:%.*]] = load i8**, i8*** [[LOADGEP_ARGV_ADDR]], align 8
+// CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[TMP6]], i64 0
+// CHECK9-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8
+// CHECK9-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 0
 // CHECK9-NEXT:    store i8 [[CONV]], i8* [[ARRAYIDX3]], align 1
 // CHECK9-NEXT:    [[OMP_GLOBAL_THREAD_NUM4:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK9-NEXT:    [[TMP7:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
-// CHECK9-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
-// CHECK9-NEXT:    br i1 [[TMP8]], label [[DOTCONT:%.*]], label [[DOTCNCL5:%.*]]
+// CHECK9-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
+// CHECK9-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+// CHECK9-NEXT:    br i1 [[TMP9]], label [[DOTCONT:%.*]], label [[DOTCNCL5:%.*]]
 // CHECK9:       .cncl5:
 // CHECK9-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK9:       .cont:
-// CHECK9-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK9-NEXT:    [[TMP10:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK9-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8*, i8** [[TMP10]], i64 0
-// CHECK9-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[ARRAYIDX6]], align 8
-// CHECK9-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, i8* [[TMP11]], i64 0
-// CHECK9-NEXT:    [[TMP12:%.*]] = load i8, i8* [[ARRAYIDX7]], align 1
-// CHECK9-NEXT:    [[CONV8:%.*]] = sext i8 [[TMP12]] to i32
-// CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV8]], [[TMP9]]
+// CHECK9-NEXT:    [[TMP10:%.*]] = load i32, i32* [[LOADGEP_ARGC_ADDR]], align 4
+// CHECK9-NEXT:    [[TMP11:%.*]] = load i8**, i8*** [[LOADGEP_ARGV_ADDR]], align 8
+// CHECK9-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8*, i8** [[TMP11]], i64 0
+// CHECK9-NEXT:    [[TMP12:%.*]] = load i8*, i8** [[ARRAYIDX6]], align 8
+// CHECK9-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, i8* [[TMP12]], i64 0
+// CHECK9-NEXT:    [[TMP13:%.*]] = load i8, i8* [[ARRAYIDX7]], align 1
+// CHECK9-NEXT:    [[CONV8:%.*]] = sext i8 [[TMP13]] to i32
+// CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV8]], [[TMP10]]
 // CHECK9-NEXT:    [[CONV9:%.*]] = trunc i32 [[ADD]] to i8
 // CHECK9-NEXT:    store i8 [[CONV9]], i8* [[ARRAYIDX7]], align 1
 // CHECK9-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK9:       omp.par.pre_finalize:
 // CHECK9-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
-// CHECK9:       13:
+// CHECK9:       14:
 // CHECK9-NEXT:    [[OMP_GLOBAL_THREAD_NUM1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK9-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM1]], i32 1)
-// CHECK9-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP14]], 0
-// CHECK9-NEXT:    br i1 [[TMP15]], label [[DOTSPLIT:%.*]], label [[DOTCNCL:%.*]]
+// CHECK9-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM1]], i32 1)
+// CHECK9-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 0
+// CHECK9-NEXT:    br i1 [[TMP16]], label [[DOTSPLIT:%.*]], label [[DOTCNCL:%.*]]
 // CHECK9:       .cncl:
 // CHECK9-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK9-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK9-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 // CHECK9-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK9:       .split:
-// CHECK9-NEXT:    br label [[TMP3]]
+// CHECK9-NEXT:    br label [[TMP4]]
 // CHECK9:       omp.par.outlined.exit.exitStub:
 // CHECK9-NEXT:    ret void
 //
@@ -4442,6 +4469,7 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10-LABEL: define {{[^@]+}}@main
 // CHECK10-SAME: (i32 noundef [[ARGC:%.*]], i8** noundef [[ARGV:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK10-NEXT:  entry:
+// CHECK10-NEXT:    [[STRUCTARG:%.*]] = alloca { i32*, i8*** }, align 8
 // CHECK10-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[ARGC_ADDR:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    [[ARGV_ADDR:%.*]] = alloca i8**, align 8
@@ -4471,7 +4499,11 @@ for (int i = 0; i < argc; ++i) {
 // CHECK10-NEXT:    [[P_STRIDE30:%.*]] = alloca i32, align 4
 // CHECK10-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK10:       omp_parallel:
-// CHECK10-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i8***)* @main..omp_par to void (i32*, i32*, ...)*), i32* [[ARGC_ADDR]], i8*** [[ARGV_ADDR]])
+// CHECK10-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[STRUCTARG]], i32 0, i32 0
+// CHECK10-NEXT:    store i32* [[ARGC_ADDR]], i32** [[GEP_ARGC_ADDR]], align 8
+// CHECK10-NEXT:    [[GEP_ARGV_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[STRUCTARG]], i32 0, i32 1
+// CHECK10-NEXT:    store i8*** [[ARGV_ADDR]], i8**** [[GEP_ARGV_ADDR]], align 8
+// CHECK10-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB1]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, { i32*, i8*** }*)* @main..omp_par to void (i32*, i32*, ...)*), { i32*, i8*** }* [[STRUCTARG]])
 // CHECK10-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
 // CHECK10:       omp.par.outlined.exit:
 // CHECK10-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
@@ -4674,58 +4706,62 @@ for (int i = 0; i < argc; ++i) {
 //
 //
 // CHECK10-LABEL: define {{[^@]+}}@main..omp_par
-// CHECK10-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], i32* [[ARGC_ADDR:%.*]], i8*** [[ARGV_ADDR:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK10-SAME: (i32* noalias [[TID_ADDR:%.*]], i32* noalias [[ZERO_ADDR:%.*]], { i32*, i8*** }* [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 // CHECK10-NEXT:  omp.par.entry:
+// CHECK10-NEXT:    [[GEP_ARGC_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[TMP0]], i32 0, i32 0
+// CHECK10-NEXT:    [[LOADGEP_ARGC_ADDR:%.*]] = load i32*, i32** [[GEP_ARGC_ADDR]], align 8
+// CHECK10-NEXT:    [[GEP_ARGV_ADDR:%.*]] = getelementptr { i32*, i8*** }, { i32*, i8*** }* [[TMP0]], i32 0, i32 1
+// CHECK10-NEXT:    [[LOADGEP_ARGV_ADDR:%.*]] = load i8***, i8**** [[GEP_ARGV_ADDR]], align 8
 // CHECK10-NEXT:    [[TID_ADDR_LOCAL:%.*]] = alloca i32, align 4
-// CHECK10-NEXT:    [[TMP0:%.*]] = load i32, i32* [[TID_ADDR]], align 4
-// CHECK10-NEXT:    store i32 [[TMP0]], i32* [[TID_ADDR_LOCAL]], align 4
+// CHECK10-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TID_ADDR]], align 4
+// CHECK10-NEXT:    store i32 [[TMP1]], i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK10-NEXT:    [[TID:%.*]] = load i32, i32* [[TID_ADDR_LOCAL]], align 4
 // CHECK10-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK10:       omp.par.region:
-// CHECK10-NEXT:    [[TMP1:%.*]] = load float, float* @flag, align 4
-// CHECK10-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP1]], 0.000000e+00
-// CHECK10-NEXT:    br i1 [[TOBOOL]], label [[TMP13:%.*]], label [[TMP2:%.*]]
-// CHECK10:       2:
-// CHECK10-NEXT:    br label [[TMP3:%.*]]
+// CHECK10-NEXT:    [[TMP2:%.*]] = load float, float* @flag, align 4
+// CHECK10-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP2]], 0.000000e+00
+// CHECK10-NEXT:    br i1 [[TOBOOL]], label [[TMP14:%.*]], label [[TMP3:%.*]]
 // CHECK10:       3:
-// CHECK10-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK10-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP4]] to i8
-// CHECK10-NEXT:    [[TMP5:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK10-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[TMP5]], i64 0
-// CHECK10-NEXT:    [[TMP6:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8
-// CHECK10-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, i8* [[TMP6]], i64 0
+// CHECK10-NEXT:    br label [[TMP4:%.*]]
+// CHECK10:       4:
+// CHECK10-NEXT:    [[TMP5:%.*]] = load i32, i32* [[LOADGEP_ARGC_ADDR]], align 4
+// CHECK10-NEXT:    [[CONV:%.*]] = trunc i32 [[TMP5]] to i8
+// CHECK10-NEXT:    [[TMP6:%.*]] = load i8**, i8*** [[LOADGEP_ARGV_ADDR]], align 8
+// CHECK10-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8*, i8** [[TMP6]], i64 0
+// CHECK10-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[ARRAYIDX]], align 8
+// CHECK10-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, i8* [[TMP7]], i64 0
 // CHECK10-NEXT:    store i8 [[CONV]], i8* [[ARRAYIDX3]], align 1
 // CHECK10-NEXT:    [[OMP_GLOBAL_THREAD_NUM4:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK10-NEXT:    [[TMP7:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
-// CHECK10-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
-// CHECK10-NEXT:    br i1 [[TMP8]], label [[DOTCONT:%.*]], label [[DOTCNCL5:%.*]]
+// CHECK10-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB3:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM4]])
+// CHECK10-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+// CHECK10-NEXT:    br i1 [[TMP9]], label [[DOTCONT:%.*]], label [[DOTCNCL5:%.*]]
 // CHECK10:       .cncl5:
 // CHECK10-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
 // CHECK10:       .cont:
-// CHECK10-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARGC_ADDR]], align 4
-// CHECK10-NEXT:    [[TMP10:%.*]] = load i8**, i8*** [[ARGV_ADDR]], align 8
-// CHECK10-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8*, i8** [[TMP10]], i64 0
-// CHECK10-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[ARRAYIDX6]], align 8
-// CHECK10-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, i8* [[TMP11]], i64 0
-// CHECK10-NEXT:    [[TMP12:%.*]] = load i8, i8* [[ARRAYIDX7]], align 1
-// CHECK10-NEXT:    [[CONV8:%.*]] = sext i8 [[TMP12]] to i32
-// CHECK10-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV8]], [[TMP9]]
+// CHECK10-NEXT:    [[TMP10:%.*]] = load i32, i32* [[LOADGEP_ARGC_ADDR]], align 4
+// CHECK10-NEXT:    [[TMP11:%.*]] = load i8**, i8*** [[LOADGEP_ARGV_ADDR]], align 8
+// CHECK10-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i8*, i8** [[TMP11]], i64 0
+// CHECK10-NEXT:    [[TMP12:%.*]] = load i8*, i8** [[ARRAYIDX6]], align 8
+// CHECK10-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i8, i8* [[TMP12]], i64 0
+// CHECK10-NEXT:    [[TMP13:%.*]] = load i8, i8* [[ARRAYIDX7]], align 1
+// CHECK10-NEXT:    [[CONV8:%.*]] = sext i8 [[TMP13]] to i32
+// CHECK10-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV8]], [[TMP10]]
 // CHECK10-NEXT:    [[CONV9:%.*]] = trunc i32 [[ADD]] to i8
 // CHECK10-NEXT:    store i8 [[CONV9]], i8* [[ARRAYIDX7]], align 1
 // CHECK10-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK10:       omp.par.pre_finalize:
 // CHECK10-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
-// CHECK10:       13:
+// CHECK10:       14:
 // CHECK10-NEXT:    [[OMP_GLOBAL_THREAD_NUM1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK10-NEXT:    [[TMP14:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM1]], i32 1)
-// CHECK10-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[TMP14]], 0
-// CHECK10-NEXT:    br i1 [[TMP15]], label [[DOTSPLIT:%.*]], label [[DOTCNCL:%.*]]
+// CHECK10-NEXT:    [[TMP15:%.*]] = call i32 @__kmpc_cancel(%struct.ident_t* @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM1]], i32 1)
+// CHECK10-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 0
+// CHECK10-NEXT:    br i1 [[TMP16]], label [[DOTSPLIT:%.*]], label [[DOTCNCL:%.*]]
 // CHECK10:       .cncl:
 // CHECK10-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
-// CHECK10-NEXT:    [[TMP16:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK10-NEXT:    [[TMP17:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 // CHECK10-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB]]
 // CHECK10:       .split:
-// CHECK10-NEXT:    br label [[TMP3]]
+// CHECK10-NEXT:    br label [[TMP4]]
 // CHECK10:       omp.par.outlined.exit.exitStub:
 // CHECK10-NEXT:    ret void
 //

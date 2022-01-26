@@ -174,7 +174,7 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
-void OpenMPIRBuilder::finalize(Function *Fn, bool AllowExtractorSinking) {
+void OpenMPIRBuilder::finalize(Function *Fn) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
   SmallVector<OutlineInfo, 16> DeferredOutlines;
@@ -193,7 +193,7 @@ void OpenMPIRBuilder::finalize(Function *Fn, bool AllowExtractorSinking) {
     Function *OuterFn = OI.getFunction();
     CodeExtractorAnalysisCache CEAC(*OuterFn);
     CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
-                            /* AggregateArgs */ false,
+                            /* AggregateArgs */ true,
                             /* BlockFrequencyInfo */ nullptr,
                             /* BranchProbabilityInfo */ nullptr,
                             /* AssumptionCache */ nullptr,
@@ -206,6 +206,9 @@ void OpenMPIRBuilder::finalize(Function *Fn, bool AllowExtractorSinking) {
                       << " Exit: " << OI.ExitBB->getName() << "\n");
     assert(Extractor.isEligible() &&
            "Expected OpenMP outlining to be possible!");
+
+    for (auto *V : OI.ExcludeArgsFromAggregate)
+      Extractor.excludeArgFromAggregate(V);
 
     Function *OutlinedFn = Extractor.extractCodeRegion(CEAC);
 
@@ -225,25 +228,25 @@ void OpenMPIRBuilder::finalize(Function *Fn, bool AllowExtractorSinking) {
       BasicBlock &ArtificialEntry = OutlinedFn->getEntryBlock();
       assert(ArtificialEntry.getUniqueSuccessor() == OI.EntryBB);
       assert(OI.EntryBB->getUniquePredecessor() == &ArtificialEntry);
-      if (AllowExtractorSinking) {
-        // Move instructions from the to-be-deleted ArtificialEntry to the entry
-        // basic block of the parallel region. CodeExtractor may have sunk
-        // allocas/bitcasts for values that are solely used in the outlined
-        // region and do not escape.
-        assert(!ArtificialEntry.empty() &&
-               "Expected instructions to sink in the outlined region");
-        for (BasicBlock::iterator It = ArtificialEntry.begin(),
-                                  End = ArtificialEntry.end();
-             It != End;) {
-          Instruction &I = *It;
-          It++;
+      // Move instructions from the to-be-deleted ArtificialEntry to the entry
+      // basic block of the parallel region. CodeExtractor generates
+      // instructions to unwrap the aggregate argument and may sink
+      // allocas/bitcasts for values that are solely used in the outlined region
+      // and do not escape.
+      assert(!ArtificialEntry.empty() &&
+             "Expected instructions to add in the outlined region entry");
+      for (BasicBlock::reverse_iterator It = ArtificialEntry.rbegin(),
+                                        End = ArtificialEntry.rend();
+           It != End;) {
+        Instruction &I = *It;
+        It++;
 
-          if (I.isTerminator())
-            continue;
+        if (I.isTerminator())
+          continue;
 
-          I.moveBefore(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
-        }
+        I.moveBefore(*OI.EntryBB, OI.EntryBB->getFirstInsertionPt());
       }
+
       OI.EntryBB->moveBefore(&ArtificialEntry);
       ArtificialEntry.eraseFromParent();
     }
@@ -811,8 +814,10 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_global_thread_num);
 
   auto PrivHelper = [&](Value &V) {
-    if (&V == TIDAddr || &V == ZeroAddr)
+    if (&V == TIDAddr || &V == ZeroAddr) {
+      OI.ExcludeArgsFromAggregate.push_back(&V);
       return;
+    }
 
     SetVector<Use *> Uses;
     for (Use &U : V.uses())
