@@ -9,13 +9,15 @@
 #include "src/math/logf.h"
 #include "common_constants.h" // Lookup table for (1/f)
 #include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/common.h"
 
-// This is a correctly-rounded algorithm for log(x) in single precision with
-// round-to-nearest, tie-to-even mode from the RLIBM project at:
+// This is an algorithm for log(x) in single precision which is correctly
+// rounded for all rounding modes, based on the implementation of log(x) from
+// the RLIBM project at:
 // https://people.cs.rutgers.edu/~sn349/rlibm
 
 // Step 1 - Range reduction:
@@ -101,6 +103,42 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
+
+  switch (FPBits(x).uintval()) {
+  case 0x41178febU: // x = 0x1.2f1fd6p+3f
+    if (fputil::get_round() == FE_TONEAREST)
+      return 0x1.1fcbcep+1f;
+    break;
+  case 0x4c5d65a5U: // x = 0x1.bacb4ap+25f
+    if (fputil::get_round() == FE_TONEAREST)
+      return 0x1.1e0696p+4f;
+    break;
+  case 0x65d890d3U: // x = 0x1.b121a6p+76f
+    if (fputil::get_round() == FE_TONEAREST)
+      return 0x1.a9a3f2p+5f;
+    break;
+  case 0x6f31a8ecU: // x = 0x1.6351d8p+95f
+    if (fputil::get_round() == FE_TONEAREST)
+      return 0x1.08b512p+6f;
+    break;
+  case 0x3f800001U: // x = 0x1.000002p+0f
+    if (fputil::get_round() == FE_UPWARD)
+      return 0x1p-23f;
+    return 0x1.fffffep-24f;
+  case 0x500ffb03U: // x = 0x1.1ff606p+33f
+    if (fputil::get_round() != FE_UPWARD)
+      return 0x1.6fdd34p+4f;
+    break;
+  case 0x7a17f30aU: // x = 0x1.2fe614p+117f
+    if (fputil::get_round() != FE_UPWARD)
+      return 0x1.451436p+6f;
+    break;
+  case 0x5cd69e88U: // x = 0x1.ad3d1p+58f
+    if (fputil::get_round() != FE_UPWARD)
+      return 0x1.45c146p+5f;
+    break;
+  }
+
   int m = 0;
 
   if (xbits.uintval() < FPBits::MIN_NORMAL ||
@@ -130,26 +168,14 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
   double d = static_cast<float>(xbits) - static_cast<float>(f);
   d *= ONE_OVER_F[f_index];
 
-  double r = __llvm_libc::fputil::polyeval(
-      d, 0x1.0000000008169p+0, -0x1.0000004f78405p-1, 0x1.555654d2bc769p-2,
-      -0x1.00a570d090322p-2, 0x1.e158d823f89cap-3);
-
   double extra_factor =
-      __llvm_libc::fputil::fma(static_cast<double>(m), LOG_2, LOG_F[f_index]);
-  switch (FPBits(x).uintval()) {
-  case 0x3f80d19f:
-    return 0x1.a1e82cp-8f;
-  case 0x41178feb:
-    return 0x1.1fcbcep+1f;
-  case 0x4c5d65a5:
-    return 0x1.1e0696p+4f;
-  case 0x65d890d3:
-    return 0x1.a9a3f2p+5f;
-  case 0x6f31a8ec:
-    return 0x1.08b512p+6f;
-  default:
-    return static_cast<float>(__llvm_libc::fputil::fma(d, r, extra_factor));
-  }
+      fputil::fma(static_cast<double>(m), LOG_2, LOG_F[f_index]);
+
+  double r = __llvm_libc::fputil::polyeval(
+      d, extra_factor, 0x1.fffffffffffacp-1, -0x1.fffffffef9cb2p-2,
+      0x1.5555513bc679ap-2, -0x1.fff4805ea441p-3, 0x1.930180dbde91ap-3);
+
+  return static_cast<float>(r);
 }
 
 #pragma clang diagnostic pop
