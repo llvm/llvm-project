@@ -3905,19 +3905,58 @@ bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
   return (LHSKnownZeros | *RHS).countTrailingOnes() >= ShAmtBits;
 }
 
+// Return the wave level SGPR base address if this is a wave address.
+static Register getWaveAddress(const MachineInstr *Def) {
+  return Def->getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS
+             ? Def->getOperand(1).getReg()
+             : Register();
+}
+
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectMUBUFScratchOffset(
     MachineOperand &Root) const {
-  MachineInstr *MI = Root.getParent();
-  MachineBasicBlock *MBB = MI->getParent();
+  Register Reg = Root.getReg();
+  const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
+
+  const MachineInstr *Def = MRI->getVRegDef(Reg);
+  if (Register WaveBase = getWaveAddress(Def)) {
+    return {{
+        [=](MachineInstrBuilder &MIB) { // rsrc
+          MIB.addReg(Info->getScratchRSrcReg());
+        },
+        [=](MachineInstrBuilder &MIB) { // soffset
+          MIB.addReg(WaveBase);
+        },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); } // offset
+    }};
+  }
 
   int64_t Offset = 0;
+
+  // FIXME: Copy check is a hack
+  Register BasePtr;
+  if (mi_match(Reg, *MRI, m_GPtrAdd(m_Reg(BasePtr), m_Copy(m_ICst(Offset))))) {
+    if (!SIInstrInfo::isLegalMUBUFImmOffset(Offset))
+      return {};
+    const MachineInstr *BasePtrDef = MRI->getVRegDef(BasePtr);
+    Register WaveBase = getWaveAddress(BasePtrDef);
+    if (!WaveBase)
+      return {};
+
+    return {{
+        [=](MachineInstrBuilder &MIB) { // rsrc
+          MIB.addReg(Info->getScratchRSrcReg());
+        },
+        [=](MachineInstrBuilder &MIB) { // soffset
+          MIB.addReg(WaveBase);
+        },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); } // offset
+    }};
+  }
+
   if (!mi_match(Root.getReg(), *MRI, m_ICst(Offset)) ||
       !SIInstrInfo::isLegalMUBUFImmOffset(Offset))
     return {};
-
-  const MachineFunction *MF = MBB->getParent();
-  const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
   return {{
       [=](MachineInstrBuilder &MIB) { // rsrc

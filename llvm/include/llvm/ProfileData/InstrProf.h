@@ -293,7 +293,6 @@ enum class instrprof_error {
   missing_debug_info_for_correlation,
   unexpected_debug_info_for_correlation,
   unable_to_correlate_profile,
-  unsupported_debug_format,
   unknown_function,
   invalid_prof,
   hash_mismatch,

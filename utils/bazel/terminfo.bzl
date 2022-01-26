@@ -113,6 +113,7 @@ def _llvm_terminfo_system_impl(repository_ctx):
         # these would be provided as lists, but Bazel doesn't currently
         # support that. See: https://github.com/bazelbuild/bazel/issues/12178
         linkopts_candidates = [[x] for x in repository_ctx.attr.candidate_system_linkopts]
+        linkopts = None
 
         # For each candidate, try to use it to link our test source file.
         for linkopts_candidate in linkopts_candidates:

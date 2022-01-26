@@ -62,6 +62,7 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Driver/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -326,7 +327,8 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__migrate)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
+             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast)) ||
+             (PhaseArg = DAL.getLastArg(options::OPT_extract_api))) {
     FinalPhase = phases::Compile;
 
   // -S only runs up to the backend.
@@ -4069,7 +4071,8 @@ Action *Driver::ConstructPhaseAction(
         OutputTy = types::TY_ModuleFile;
     }
 
-    if (Args.hasArg(options::OPT_fsyntax_only)) {
+    if (Args.hasArg(options::OPT_fsyntax_only) ||
+        Args.hasArg(options::OPT_extract_api)) {
       // Syntax checks should not emit a PCH file
       OutputTy = types::TY_Nothing;
     }
@@ -4097,6 +4100,8 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
+    if (Args.hasArg(options::OPT_extract_api))
+      return C.MakeAction<CompileJobAction>(Input, types::TY_API_INFO);
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {

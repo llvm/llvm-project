@@ -10,8 +10,8 @@
 #
 ##===----------------------------------------------------------------------===##
 
-set(LIBOMPTARGET_BUILD_AMDGCN_BCLIB TRUE CACHE BOOL
-  "Can be set to false to disable building this library.")
+set(LIBOMPTARGET_BUILD_AMDGCN_BCLIB FALSE CACHE BOOL
+  "Can be set to true to enable building this library.")
 
 if (NOT LIBOMPTARGET_BUILD_AMDGCN_BCLIB)
   libomptarget_say("Not building AMDGCN device RTL: Disabled by LIBOMPTARGET_BUILD_AMDGCN_BCLIB")
