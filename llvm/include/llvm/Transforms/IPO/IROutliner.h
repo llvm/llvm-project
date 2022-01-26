@@ -367,6 +367,11 @@ private:
       Function *F = CI.getCalledFunction();
       if (!F || CI.isIndirectCall() || !F->hasName())
         return false;
+      // Returning twice can cause issues with the state of the function call
+      // that were not expected when the function was used, so we do not include
+      // the call in outlined functions.
+      if (CI.canReturnTwice())
+        return false;
       return true;
     }
     // TODO: Handle FreezeInsts.  Since a frozen value could be frozen inside
