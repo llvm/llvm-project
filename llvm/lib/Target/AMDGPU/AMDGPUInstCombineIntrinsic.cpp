@@ -58,24 +58,37 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
 
 // Check if a value can be converted to a 16-bit value without losing
 // precision.
-static bool canSafelyConvertTo16Bit(Value &V) {
+// The value is expected to be either a float (IsFloat = true) or an unsigned
+// integer (IsFloat = false).
+static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
   Type *VTy = V.getType();
   if (VTy->isHalfTy() || VTy->isIntegerTy(16)) {
     // The value is already 16-bit, so we don't want to convert to 16-bit again!
     return false;
   }
-  if (ConstantFP *ConstFloat = dyn_cast<ConstantFP>(&V)) {
-    // We need to check that if we cast the index down to a half, we do not lose
-    // precision.
-    APFloat FloatValue(ConstFloat->getValueAPF());
-    bool LosesInfo = true;
-    FloatValue.convert(APFloat::IEEEhalf(), APFloat::rmTowardZero, &LosesInfo);
-    return !LosesInfo;
+  if (IsFloat) {
+    if (ConstantFP *ConstFloat = dyn_cast<ConstantFP>(&V)) {
+      // We need to check that if we cast the index down to a half, we do not
+      // lose precision.
+      APFloat FloatValue(ConstFloat->getValueAPF());
+      bool LosesInfo = true;
+      FloatValue.convert(APFloat::IEEEhalf(), APFloat::rmTowardZero,
+                         &LosesInfo);
+      return !LosesInfo;
+    }
+  } else {
+    if (ConstantInt *ConstInt = dyn_cast<ConstantInt>(&V)) {
+      // We need to check that if we cast the index down to an i16, we do not
+      // lose precision.
+      APInt IntValue(ConstInt->getValue());
+      return IntValue.getActiveBits() <= 16;
+    }
   }
+
   Value *CastSrc;
-  if (match(&V, m_FPExt(PatternMatch::m_Value(CastSrc))) ||
-      match(&V, m_SExt(PatternMatch::m_Value(CastSrc))) ||
-      match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)))) {
+  bool IsExt = IsFloat ? match(&V, m_FPExt(PatternMatch::m_Value(CastSrc)))
+                       : match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)));
+  if (IsExt) {
     Type *CastSrcTy = CastSrc->getType();
     if (CastSrcTy->isHalfTy() || CastSrcTy->isIntegerTy(16))
       return true;
@@ -203,6 +216,10 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
   if (!ST->hasA16() && !ST->hasG16())
     return None;
 
+  // Address is interpreted as float if the instruction has a sampler or as
+  // unsigned int if there is no sampler.
+  bool HasSampler =
+      AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode)->Sampler;
   bool FloatCoord = false;
   // true means derivatives can be converted to 16 bit, coordinates not
   bool OnlyDerivatives = false;
@@ -211,7 +228,7 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
        OperandIndex < ImageDimIntr->VAddrEnd; OperandIndex++) {
     Value *Coord = II.getOperand(OperandIndex);
     // If the values are not derived from 16-bit values, we cannot optimize.
-    if (!canSafelyConvertTo16Bit(*Coord)) {
+    if (!canSafelyConvertTo16Bit(*Coord, HasSampler)) {
       if (OperandIndex < ImageDimIntr->CoordStart ||
           ImageDimIntr->GradientStart == ImageDimIntr->CoordStart) {
         return None;
@@ -232,7 +249,9 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
   // Check if there is a bias parameter and if it can be converted to f16
   if (!OnlyDerivatives && ImageDimIntr->NumBiasArgs != 0) {
     Value *Bias = II.getOperand(ImageDimIntr->BiasIndex);
-    if (!canSafelyConvertTo16Bit(*Bias))
+    assert(HasSampler &&
+           "Only image instructions with a sampler can have a bias");
+    if (!canSafelyConvertTo16Bit(*Bias, HasSampler))
       OnlyDerivatives = true;
   }
 
