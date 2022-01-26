@@ -8964,6 +8964,10 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   if (SDValue MULH = combineShiftToMULH(N, DAG, TLI))
     return MULH;
 
+  // Attempt to convert a sra of a load into a narrower sign-extending load.
+  if (SDValue NarrowLoad = reduceLoadWidth(N))
+    return NarrowLoad;
+
   return SDValue();
 }
 
@@ -12151,10 +12155,10 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   if (Opc == ISD::SIGN_EXTEND_INREG) {
     ExtType = ISD::SEXTLOAD;
     ExtVT = cast<VTSDNode>(N->getOperand(1))->getVT();
-  } else if (Opc == ISD::SRL) {
-    // Another special-case: SRL is basically zero-extending a narrower value,
-    // or it may be shifting a higher subword, half or byte into the lowest
-    // bits.
+  } else if (Opc == ISD::SRL || Opc == ISD::SRA) {
+    // Another special-case: SRL/SRA is basically zero/sign-extending a narrower
+    // value, or it may be shifting a higher subword, half or byte into the
+    // lowest bits.
 
     // Only handle shift with constant shift amount, and the shiftee must be a
     // load.
@@ -12168,13 +12172,16 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     uint64_t MemoryWidth = LN->getMemoryVT().getScalarSizeInBits();
     if (MemoryWidth <= ShAmt)
       return SDValue();
-    // Attempt to fold away the SRL by using ZEXTLOAD.
-    ExtType = ISD::ZEXTLOAD;
+    // Attempt to fold away the SRL by using ZEXTLOAD and SRA by using SEXTLOAD.
+    ExtType = Opc == ISD::SRL ? ISD::ZEXTLOAD : ISD::SEXTLOAD;
     ExtVT = EVT::getIntegerVT(*DAG.getContext(), MemoryWidth - ShAmt);
     // If original load is a SEXTLOAD then we can't simply replace it by a
     // ZEXTLOAD (we could potentially replace it by a more narrow SEXTLOAD
-    // followed by a ZEXT, but that is not handled at the moment).
-    if (LN->getExtensionType() == ISD::SEXTLOAD)
+    // followed by a ZEXT, but that is not handled at the moment). Similarly if
+    // the original load is a ZEXTLOAD and we want to use a SEXTLOAD.
+    if ((LN->getExtensionType() == ISD::SEXTLOAD ||
+         LN->getExtensionType() == ISD::ZEXTLOAD) &&
+        LN->getExtensionType() != ExtType)
       return SDValue();
   } else if (Opc == ISD::AND) {
     // An AND with a constant mask is the same as a truncate + zero-extend.
