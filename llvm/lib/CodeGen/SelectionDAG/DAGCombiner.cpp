@@ -4470,15 +4470,15 @@ SDValue DAGCombiner::visitMULHS(SDNode *N) {
       return FoldedVOp;
 
     // fold (mulhs x, 0) -> 0
-    // do not return N0/N1, because undef node may exist.
-    if (ISD::isConstantSplatVectorAllZeros(N0.getNode()) ||
-        ISD::isConstantSplatVectorAllZeros(N1.getNode()))
+    // do not return N1, because undef node may exist.
+    if (ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       return DAG.getConstant(0, DL, VT);
   }
 
   // fold (mulhs x, 0) -> 0
   if (isNullConstant(N1))
     return N1;
+
   // fold (mulhs x, 1) -> (sra x, size(x)-1)
   if (isOneConstant(N1))
     return DAG.getNode(ISD::SRA, DL, N0.getValueType(), N0,
@@ -4530,18 +4530,19 @@ SDValue DAGCombiner::visitMULHU(SDNode *N) {
       return FoldedVOp;
 
     // fold (mulhu x, 0) -> 0
-    // do not return N0/N1, because undef node may exist.
-    if (ISD::isConstantSplatVectorAllZeros(N0.getNode()) ||
-        ISD::isConstantSplatVectorAllZeros(N1.getNode()))
+    // do not return N1, because undef node may exist.
+    if (ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       return DAG.getConstant(0, DL, VT);
   }
 
   // fold (mulhu x, 0) -> 0
   if (isNullConstant(N1))
     return N1;
+
   // fold (mulhu x, 1) -> 0
   if (isOneConstant(N1))
     return DAG.getConstant(0, DL, N0.getValueType());
+
   // fold (mulhu x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, DL, VT);
@@ -5815,18 +5816,12 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
       return FoldedVOp;
 
     // fold (and x, 0) -> 0, vector edition
-    if (ISD::isConstantSplatVectorAllZeros(N0.getNode()))
-      // do not return N0, because undef node may exist in N0
-      return DAG.getConstant(APInt::getZero(N0.getScalarValueSizeInBits()),
-                             SDLoc(N), N0.getValueType());
     if (ISD::isConstantSplatVectorAllZeros(N1.getNode()))
       // do not return N1, because undef node may exist in N1
       return DAG.getConstant(APInt::getZero(N1.getScalarValueSizeInBits()),
                              SDLoc(N), N1.getValueType());
 
     // fold (and x, -1) -> x, vector edition
-    if (ISD::isConstantSplatVectorAllOnes(N0.getNode()))
-      return N1;
     if (ISD::isConstantSplatVectorAllOnes(N1.getNode()))
       return N0;
 
