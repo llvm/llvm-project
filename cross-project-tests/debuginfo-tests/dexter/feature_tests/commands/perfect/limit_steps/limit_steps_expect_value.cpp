@@ -1,8 +1,6 @@
 // Purpose:
 //      Ensure that limited stepping breaks for all expected values.
 //
-// REQUIRES: system-linux
-//
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: limit_steps_expect_value.cpp
 

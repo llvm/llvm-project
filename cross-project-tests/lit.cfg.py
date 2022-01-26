@@ -111,17 +111,22 @@ def configure_dexter_substitutions():
   if platform.system() == 'Windows':
     # The Windows builder script uses lld.
     dependencies = ['clang', 'lld-link']
-    dexter_regression_test_builder = '--builder clang-cl_vs2015'
-    dexter_regression_test_debugger = '--debugger dbgeng'
-    dexter_regression_test_cflags = '--cflags "/Zi /Od"'
-    dexter_regression_test_ldflags = '--ldflags "/Zi"'
+    dexter_regression_test_builder = 'clang-cl_vs2015'
+    dexter_regression_test_debugger = 'dbgeng'
+    dexter_regression_test_cflags = '/Zi /Od'
+    dexter_regression_test_ldflags = '/Zi'
   else:
     # Use lldb as the debugger on non-Windows platforms.
     dependencies = ['clang', 'lldb']
-    dexter_regression_test_builder = '--builder clang'
-    dexter_regression_test_debugger = "--debugger lldb"
-    dexter_regression_test_cflags = '--cflags "-O0 -glldb"'
+    dexter_regression_test_builder = 'clang'
+    dexter_regression_test_debugger = 'lldb'
+    dexter_regression_test_cflags = '-O0 -glldb'
     dexter_regression_test_ldflags = ''
+
+  tools.append(ToolSubst('%dexter_regression_test_builder', dexter_regression_test_builder))
+  tools.append(ToolSubst('%dexter_regression_test_debugger', dexter_regression_test_debugger))
+  tools.append(ToolSubst('%dexter_regression_test_cflags', dexter_regression_test_cflags))
+  tools.append(ToolSubst('%dexter_regression_test_ldflags', dexter_regression_test_cflags))
 
   # Typical command would take the form:
   # ./path_to_py/python.exe ./path_to_dex/dexter.py test --fail-lt 1.0 -w --builder clang --debugger lldb --cflags '-O0 -g'
@@ -132,15 +137,15 @@ def configure_dexter_substitutions():
     '"{}"'.format(dexter_path),
     'test',
     '--fail-lt 1.0 -w',
-    dexter_regression_test_debugger])
+    '--debugger', dexter_regression_test_debugger])
   tools.append(ToolSubst('%dexter_regression_base', dexter_regression_test_base))
 
   # Include build flags for %dexter_regression_test.
   dexter_regression_test_build = ' '.join([
     dexter_regression_test_base,
-    dexter_regression_test_builder,
-    dexter_regression_test_cflags,
-    dexter_regression_test_ldflags])
+    '--builder', dexter_regression_test_builder,
+    '--cflags "',  dexter_regression_test_cflags + '"',
+    '--ldflags "', dexter_regression_test_ldflags + '"'])
   tools.append(ToolSubst('%dexter_regression_test', dexter_regression_test_build))
   return dependencies
 

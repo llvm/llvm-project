@@ -2,8 +2,6 @@
 //      Test that \DexLimitSteps keyword argument hit_count correctly limits
 //      the number of times the command can trigger.
 //
-// REQUIRES: system-linux
-//
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: hit_count.cpp
 

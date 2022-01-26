@@ -2,8 +2,6 @@
 //      Test that a \DexDeclareAddress value can be used to compare the
 //      addresses of two local variables that refer to the same address.
 //
-// REQUIRES: system-linux
-//
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: expression_address.cpp
 

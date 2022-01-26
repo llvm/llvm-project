@@ -4,8 +4,6 @@
 //      specific number of times.
 //      Tests using the default controller (no \DexLimitSteps).
 //
-// REQUIRES: system-linux
-//
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: default_hit_count.cpp
 
@@ -15,4 +13,4 @@ int main() {
 }
 
 // DexFinishTest(on_line=ref('finish_line'), hit_count=5)
-// DexExpectWatchValue('x', 0, 1, 2, 3, 4, 5)
+// DexExpectWatchValue('x', 0, 1, 2, 3, 4, 5, on_line=ref('finish_line'))
