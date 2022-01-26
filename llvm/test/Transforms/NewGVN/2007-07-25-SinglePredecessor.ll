@@ -1,4 +1,4 @@
-; RUN: opt < %s -newgvn | llvm-dis
+; RUN: opt < %s -passes=newgvn | llvm-dis
 
 	%struct.ggBRDF = type { i32 (...)** }
 	%struct.ggBox3 = type { %struct.ggPoint3, %struct.ggPoint3 }

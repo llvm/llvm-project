@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -newgvn | FileCheck %s
+; RUN: opt -S < %s -passes=newgvn | FileCheck %s
 
 ; CHECK-LABEL: for.cond:
 ; CHECK-NEXT:    %lv = load i32, i32* bitcast (i64* @a to i32*)

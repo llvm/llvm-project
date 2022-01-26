@@ -1,4 +1,4 @@
-; RUN: opt < %s -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 ;
 
 %0 = type { i64, i1 }
