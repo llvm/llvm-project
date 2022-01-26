@@ -262,7 +262,7 @@ struct IRInstructionData
           llvm::hash_value(ID.Inst->getType()),
           llvm::hash_value(ID.getPredicate()),
           llvm::hash_combine_range(OperTypes.begin(), OperTypes.end()));
-    else if (CallInst *CI = dyn_cast<CallInst>(ID.Inst)) {
+    else if (isa<CallInst>(ID.Inst)) {
       std::string FunctionName = *ID.CalleeName;
       return llvm::hash_combine(
           llvm::hash_value(ID.Inst->getOpcode()),
