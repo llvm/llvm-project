@@ -843,8 +843,6 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
-      return failure();
     // Check all indexing maps are identity.
     if (llvm::any_of(genericOp.getIndexingMaps(),
                      [](AffineMap map) { return !map.isIdentity(); }))
@@ -858,6 +856,17 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
     auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
     if (!yieldOp)
       return failure();
+
+    // In the buffer case, we need to check exact buffer equality.
+    if (genericOp.hasBufferSemantics()) {
+      if (genericOp.getNumInputs() == 1 && genericOp.getNumOutputs() == 1 &&
+          genericOp.getInputOperand(0)->get() ==
+              genericOp.getOutputOperand(0)->get()) {
+        rewriter.eraseOp(genericOp);
+        return success();
+      }
+      return failure();
+    }
 
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
@@ -876,6 +885,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
                                                       resultType, returnedArg);
       returnedArgs.push_back(returnedArg);
     }
+
     if (returnedArgs.size() != genericOp->getNumResults())
       return failure();
     rewriter.replaceOp(genericOp, returnedArgs);
