@@ -651,8 +651,7 @@ define i1 @andn_seqz_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBP-LABEL: andn_seqz_i32:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    and a0, a0, a1
-; RV64ZBP-NEXT:    xor a0, a0, a1
+; RV64ZBP-NEXT:    andn a0, a1, a0
 ; RV64ZBP-NEXT:    seqz a0, a0
 ; RV64ZBP-NEXT:    ret
   %and = and i32 %a, %b
@@ -676,8 +675,7 @@ define i1 @andn_seqz_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV64ZBP-LABEL: andn_seqz_i64:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    and a0, a0, a1
-; RV64ZBP-NEXT:    xor a0, a0, a1
+; RV64ZBP-NEXT:    andn a0, a1, a0
 ; RV64ZBP-NEXT:    seqz a0, a0
 ; RV64ZBP-NEXT:    ret
   %and = and i64 %a, %b
@@ -701,8 +699,7 @@ define i1 @andn_snez_i32(i32 signext %a, i32 signext %b) nounwind {
 ;
 ; RV64ZBP-LABEL: andn_snez_i32:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    and a0, a0, a1
-; RV64ZBP-NEXT:    xor a0, a0, a1
+; RV64ZBP-NEXT:    andn a0, a1, a0
 ; RV64ZBP-NEXT:    snez a0, a0
 ; RV64ZBP-NEXT:    ret
   %and = and i32 %a, %b
@@ -726,8 +723,7 @@ define i1 @andn_snez_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV64ZBP-LABEL: andn_snez_i64:
 ; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    and a0, a0, a1
-; RV64ZBP-NEXT:    xor a0, a0, a1
+; RV64ZBP-NEXT:    andn a0, a1, a0
 ; RV64ZBP-NEXT:    snez a0, a0
 ; RV64ZBP-NEXT:    ret
   %and = and i64 %a, %b

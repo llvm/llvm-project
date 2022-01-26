@@ -1232,7 +1232,8 @@ bool RISCVTargetLowering::hasAndNotCompare(SDValue Y) const {
   if (VT.isVector())
     return false;
 
-  return Subtarget.hasStdExtZbb() && !isa<ConstantSDNode>(Y);
+  return (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbp()) &&
+         !isa<ConstantSDNode>(Y);
 }
 
 /// Check if sinking \p I's operands to I's basic block is profitable, because
