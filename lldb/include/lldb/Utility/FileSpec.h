@@ -334,8 +334,6 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object occupies in memory.
-  ///
-  /// \see ConstString::StaticMemorySize ()
   size_t MemorySize() const;
 
   /// Change the file specified with a new path.

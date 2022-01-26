@@ -159,18 +159,6 @@ public:
     return nullptr;
   }
 
-  // Return the size in bytes that this object and any items in its collection
-  // of uniqued strings + data count values takes in memory.
-  size_t MemorySize() const {
-    size_t mem_size = sizeof(Pool);
-    for (const auto &pool : m_string_pools) {
-      llvm::sys::SmartScopedReader<false> rlock(pool.m_mutex);
-      for (const auto &entry : pool.m_string_map)
-        mem_size += sizeof(StringPoolEntryType) + entry.getKey().size();
-    }
-    return mem_size;
-  }
-
   ConstString::MemoryStats GetMemoryStats() const {
     ConstString::MemoryStats stats;
     for (const auto &pool : m_string_pools) {
@@ -336,11 +324,6 @@ void ConstString::SetCStringWithLength(const char *cstr, size_t cstr_len) {
 void ConstString::SetTrimmedCStringWithLength(const char *cstr,
                                               size_t cstr_len) {
   m_string = StringPool().GetConstTrimmedCStringWithLength(cstr, cstr_len);
-}
-
-size_t ConstString::StaticMemorySize() {
-  // Get the size of the static string pool
-  return StringPool().MemorySize();
 }
 
 ConstString::MemoryStats ConstString::GetMemoryStats() {
