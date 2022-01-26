@@ -58,7 +58,6 @@ static_library("clang-tidy") {
     "ClangTidyProfiling.cpp",
     "ExpandModularHeadersPPCallbacks.cpp",
     "GlobList.cpp",
-    "NoLintDirectiveHandler.cpp",
   ]
 }
 
