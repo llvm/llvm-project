@@ -29,6 +29,7 @@ struct CompressedData {
   std::unique_ptr<SmallVector<uint8_t, 0>[]> shards;
   uint32_t numShards = 0;
   uint32_t checksum = 0;
+  uint64_t uncompressedSize;
 };
 
 // This represents a section in an output file.
@@ -118,7 +119,6 @@ public:
 
 private:
   // Used for implementation of --compress-debug-sections option.
-  SmallVector<uint8_t, 0> zDebugHeader;
   CompressedData compressed;
 
   std::array<uint8_t, 4> getFiller();

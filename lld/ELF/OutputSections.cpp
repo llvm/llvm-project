@@ -330,13 +330,6 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   llvm::TimeTraceScope timeScope("Compress debug sections");
 
-  // Create a section header.
-  zDebugHeader.resize(sizeof(Elf_Chdr));
-  auto *hdr = reinterpret_cast<Elf_Chdr *>(zDebugHeader.data());
-  hdr->ch_type = ELFCOMPRESS_ZLIB;
-  hdr->ch_size = size;
-  hdr->ch_addralign = alignment;
-
   // Write uncompressed data to a temporary zero-initialized buffer.
   auto buf = std::make_unique<uint8_t[]>(size);
   writeTo<ELFT>(buf.get());
@@ -369,6 +362,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   // Update section size and combine Alder-32 checksums.
   uint32_t checksum = 1;       // Initial Adler-32 value
+  compressed.uncompressedSize = size;
   size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
   for (size_t i = 0; i != numShards; ++i) {
     size += shardsOut[i].size();
@@ -405,9 +399,11 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
   // we've already compressed section contents. If that's the case,
   // just write it down.
   if (compressed.shards) {
-    memcpy(buf, zDebugHeader.data(), zDebugHeader.size());
-    buf += zDebugHeader.size();
-    size -= zDebugHeader.size();
+    auto *chdr = reinterpret_cast<typename ELFT::Chdr *>(buf);
+    chdr->ch_type = ELFCOMPRESS_ZLIB;
+    chdr->ch_size = compressed.uncompressedSize;
+    chdr->ch_addralign = alignment;
+    buf += sizeof(*chdr);
 
     // Compute shard offsets.
     auto offsets = std::make_unique<size_t[]>(compressed.numShards);
@@ -422,7 +418,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *buf) {
              compressed.shards[i].size());
     });
 
-    write32be(buf + size - 4, compressed.checksum);
+    write32be(buf + (size - sizeof(*chdr) - 4), compressed.checksum);
     return;
   }
 
