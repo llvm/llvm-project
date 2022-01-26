@@ -360,7 +360,7 @@ private:
     bool visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return true; }
     // TODO: Handle specific intrinsics individually from those that can be
     // handled.
-    bool IntrinsicInst(IntrinsicInst &II) { return EnableIntrinsics; }
+    bool IntrinsicInst(IntrinsicInst &II) { return false; }
     // We only handle CallInsts that are not indirect, since we cannot guarantee
     // that they have a name in these cases.
     bool visitCallInst(CallInst &CI) {
@@ -396,10 +396,6 @@ private:
     // The flag variable that marks whether we should allow indirect calls
     // to be outlined.
     bool EnableIndirectCalls = true;
-
-    // The flag variable that marks whether we should allow intrinsics
-    // instructions to be outlined.
-    bool EnableIntrinsics = false;
   };
 
   /// A InstVisitor used to exclude certain instructions from being outlined.
