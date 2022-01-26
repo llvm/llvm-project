@@ -237,8 +237,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
-  if (!Success)
+  if (!Success) {
+    Clang->getDiagnosticClient().finish();
     return 1;
+  }
 
   // Execute the frontend actions.
   {
