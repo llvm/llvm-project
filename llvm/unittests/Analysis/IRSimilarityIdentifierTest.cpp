@@ -933,8 +933,8 @@ TEST(IRInstructionMapper, GetElementPtrDifferentInBounds) {
   ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
 }
 
-// Checks that indirect call instructions are mapped to be illegal since we
-// cannot guarantee the same function in two different cases.
+// Checks that indirect call instructions are mapped to be illegal when it is
+// specified to disallow them.
 TEST(IRInstructionMapper, CallsIllegalIndirect) {
   StringRef ModuleString = R"(
                           define i32 @f(void()* %func) {
@@ -951,10 +951,37 @@ TEST(IRInstructionMapper, CallsIllegalIndirect) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIndirectCalls = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
+}
+
+// Checks that indirect call instructions are mapped to be legal when it is not
+// specified to disallow them.
+TEST(IRInstructionMapper, CallsLegalIndirect) {
+  StringRef ModuleString = R"(
+                          define i32 @f(void()* %func) {
+                          bb0:
+                             call void %func()
+                             call void %func()
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableIndirectCalls = true;
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
 }
 
 // Checks that a call instruction is mapped to be legal.  Here we check that
@@ -986,7 +1013,36 @@ TEST(IRInstructionMapper, CallsSameTypeSameName) {
 }
 
 // Here we check that a calls with different names, but the same arguments types
-// are mapped to different value.
+// are mapped to different value when specified that the name must match.
+TEST(IRInstructionMapper, CallsSameArgTypeDifferentNameDisallowed) {
+  StringRef ModuleString = R"(
+                          declare i32 @f1(i32, i32)
+                          declare i32 @f2(i32, i32)
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = call i32 @f1(i32 %a, i32 %b)
+                             %1 = call i32 @f2(i32 %a, i32 %b)
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.EnableMatchCallsByName = true;
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+}
+
+// Here we check that a calls with different names, but the same arguments types
+// are mapped to the same value when it is not specifed that they must match.
 TEST(IRInstructionMapper, CallsSameArgTypeDifferentName) {
   StringRef ModuleString = R"(
                           declare i32 @f1(i32, i32)
@@ -1006,11 +1062,12 @@ TEST(IRInstructionMapper, CallsSameArgTypeDifferentName) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.EnableMatchCallsByName = false;
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
-  ASSERT_NE(UnsignedVec[0], UnsignedVec[1]);
+  ASSERT_EQ(UnsignedVec[0], UnsignedVec[1]);
 }
 
 // Here we check that a calls with different names, and different arguments

@@ -365,7 +365,10 @@ private:
     // that they have a name in these cases.
     bool visitCallInst(CallInst &CI) {
       Function *F = CI.getCalledFunction();
-      if (!F || CI.isIndirectCall() || !F->hasName())
+      bool IsIndirectCall = CI.isIndirectCall();
+      if (IsIndirectCall && !EnableIndirectCalls)
+        return false;
+      if (!F && !IsIndirectCall)
         return false;
       // Returning twice can cause issues with the state of the function call
       // that were not expected when the function was used, so we do not include
@@ -389,6 +392,10 @@ private:
     // The flag variable that marks whether we should allow branch instructions
     // to be outlined.
     bool EnableBranches = false;
+
+    // The flag variable that marks whether we should allow indirect calls
+    // to be outlined.
+    bool EnableIndirectCalls = true;
   };
 
   /// A InstVisitor used to exclude certain instructions from being outlined.
