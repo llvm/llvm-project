@@ -1,4 +1,4 @@
-//===- ComposeSubView.h - Combining composed subview ops --------*- C++ -*-===//
+//===- ComposeSubView.h - Combining composed memref ops ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,19 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_STANDARDOPS_TRANSFORMS_COMPOSESUBVIEW_H_
-#define MLIR_DIALECT_STANDARDOPS_TRANSFORMS_COMPOSESUBVIEW_H_
+#ifndef MLIR_DIALECT_MEMREF_TRANSFORMS_COMPOSESUBVIEW_H_
+#define MLIR_DIALECT_MEMREF_TRANSFORMS_COMPOSESUBVIEW_H_
 
 namespace mlir {
-
-// Forward declarations.
 class MLIRContext;
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 
+namespace memref {
+
 void populateComposeSubViewPatterns(OwningRewritePatternList &patterns,
                                     MLIRContext *context);
 
+} // namespace memref
 } // namespace mlir
 
-#endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_COMPOSESUBVIEW_H_
+#endif // MLIR_DIALECT_MEMREF_TRANSFORMS_COMPOSESUBVIEW_H_

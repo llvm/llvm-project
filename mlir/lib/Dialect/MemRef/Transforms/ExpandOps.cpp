@@ -17,8 +17,8 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -120,13 +120,13 @@ public:
   }
 };
 
-struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
+struct ExpandOpsPass : public ExpandOpsBase<ExpandOpsPass> {
   void runOnOperation() override {
     MLIRContext &ctx = getContext();
 
     RewritePatternSet patterns(&ctx);
-    populateStdExpandOpsPatterns(patterns);
-    ConversionTarget target(getContext());
+    memref::populateExpandOpsPatterns(patterns);
+    ConversionTarget target(ctx);
 
     target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
                            StandardOpsDialect>();
@@ -146,11 +146,11 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
 
 } // namespace
 
-void mlir::populateStdExpandOpsPatterns(RewritePatternSet &patterns) {
+void mlir::memref::populateExpandOpsPatterns(RewritePatternSet &patterns) {
   patterns.add<AtomicRMWOpConverter, MemRefReshapeOpConverter>(
       patterns.getContext());
 }
 
-std::unique_ptr<Pass> mlir::createStdExpandOpsPass() {
-  return std::make_unique<StdExpandOpsPass>();
+std::unique_ptr<Pass> mlir::memref::createExpandOpsPass() {
+  return std::make_unique<ExpandOpsPass>();
 }

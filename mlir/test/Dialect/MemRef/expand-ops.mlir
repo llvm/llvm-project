@@ -1,4 +1,4 @@
-// RUN: mlir-opt -std-expand %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -memref-expand %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @atomic_rmw_to_generic
 // CHECK-SAME: ([[F:%.*]]: memref<10xf32>, [[f:%.*]]: f32, [[i:%.*]]: index)

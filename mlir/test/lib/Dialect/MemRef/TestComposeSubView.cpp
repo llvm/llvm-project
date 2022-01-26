@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/StandardOps/Transforms/ComposeSubView.h"
+#include "mlir/Dialect/MemRef/Transforms/ComposeSubView.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -35,7 +35,7 @@ void TestComposeSubViewPass::getDependentDialects(
 
 void TestComposeSubViewPass::runOnOperation() {
   OwningRewritePatternList patterns(&getContext());
-  populateComposeSubViewPatterns(patterns, &getContext());
+  memref::populateComposeSubViewPatterns(patterns, &getContext());
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 } // namespace
