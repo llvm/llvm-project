@@ -132,7 +132,7 @@ if(LLVM_BUILD_EXTERNAL_COMPILER_RT AND EXISTS ${COMPILER_RT_SRC_ROOT}/)
   if(LLVM_INCLUDE_TESTS)
     # Add binaries that compiler-rt tests depend on.
     set(COMPILER_RT_TEST_DEPENDENCIES
-      FileCheck count not llvm-nm llvm-objdump llvm-symbolizer)
+      FileCheck count not llvm-nm llvm-objdump llvm-symbolizer llvm-jitlink)
 
     # Add top-level targets for various compiler-rt test suites.
     set(COMPILER_RT_TEST_SUITES check-fuzzer check-asan check-hwasan check-asan-dynamic check-dfsan
