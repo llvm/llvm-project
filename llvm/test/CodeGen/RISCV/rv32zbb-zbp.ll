@@ -580,8 +580,7 @@ define i1 @andn_seqz_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV32ZBP-LABEL: andn_seqz_i32:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    and a0, a0, a1
-; RV32ZBP-NEXT:    xor a0, a0, a1
+; RV32ZBP-NEXT:    andn a0, a1, a0
 ; RV32ZBP-NEXT:    seqz a0, a0
 ; RV32ZBP-NEXT:    ret
   %and = and i32 %a, %b
@@ -636,8 +635,7 @@ define i1 @andn_snez_i32(i32 %a, i32 %b) nounwind {
 ;
 ; RV32ZBP-LABEL: andn_snez_i32:
 ; RV32ZBP:       # %bb.0:
-; RV32ZBP-NEXT:    and a0, a0, a1
-; RV32ZBP-NEXT:    xor a0, a0, a1
+; RV32ZBP-NEXT:    andn a0, a1, a0
 ; RV32ZBP-NEXT:    snez a0, a0
 ; RV32ZBP-NEXT:    ret
   %and = and i32 %a, %b

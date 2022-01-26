@@ -193,6 +193,11 @@ static void emitSymToStrFnForBitEnum(const Record &enumDef, raw_ostream &os) {
 
   os << formatv("  auto val = static_cast<{0}>(symbol);\n",
                 enumAttr.getUnderlyingType());
+  // If we have unknown bit set, return an empty string to signal errors.
+  int64_t validBits = enumDef.getValueAsInt("validBits");
+  os << formatv("  assert({0}u == ({0}u | val) && \"invalid bits set in bit "
+                "enum\");\n",
+                validBits);
   if (allBitsUnsetCase) {
     os << "  // Special case for all bits unset.\n";
     os << formatv("  if (val == 0) return \"{0}\";\n\n",
@@ -201,13 +206,11 @@ static void emitSymToStrFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   os << "  ::llvm::SmallVector<::llvm::StringRef, 2> strs;\n";
   for (const auto &enumerant : enumerants) {
     // Skip the special enumerant for None.
-    if (auto val = enumerant.getValue())
-      os << formatv("  if ({0}u & val) {{ strs.push_back(\"{1}\"); "
-                    "val &= ~{0}u; }\n",
-                    val, enumerant.getStr());
+    if (int64_t val = enumerant.getValue())
+      os << formatv(
+          "  if ({0}u == ({0}u & val)) {{ strs.push_back(\"{1}\"); }\n ", val,
+          enumerant.getStr());
   }
-  // If we have unknown bit set, return an empty string to signal errors.
-  os << "\n  if (val) return \"\";\n";
   os << formatv("  return ::llvm::join(strs, \"{0}\");\n", separator);
 
   os << "}\n\n";

@@ -21,14 +21,14 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def FMFnnan     : BitEnumAttrCase<"nnan", 0x1>;
-def FMFninf     : BitEnumAttrCase<"ninf", 0x2>;
-def FMFnsz      : BitEnumAttrCase<"nsz", 0x4>;
-def FMFarcp     : BitEnumAttrCase<"arcp", 0x8>;
-def FMFcontract : BitEnumAttrCase<"contract", 0x10>;
-def FMFafn      : BitEnumAttrCase<"afn", 0x20>;
-def FMFreassoc  : BitEnumAttrCase<"reassoc", 0x40>;
-def FMFfast     : BitEnumAttrCase<"fast", 0x80>;
+def FMFnnan     : BitEnumAttrCaseBit<"nnan", 0>;
+def FMFninf     : BitEnumAttrCaseBit<"ninf", 1>;
+def FMFnsz      : BitEnumAttrCaseBit<"nsz", 2>;
+def FMFarcp     : BitEnumAttrCaseBit<"arcp", 3>;
+def FMFcontract : BitEnumAttrCaseBit<"contract", 4>;
+def FMFafn      : BitEnumAttrCaseBit<"afn", 5>;
+def FMFreassoc  : BitEnumAttrCaseBit<"reassoc", 6>;
+def FMFfast     : BitEnumAttrCaseBit<"fast", 7>;
 
 def FastmathFlags_DoNotUse : BitEnumAttr<
     "FastmathFlags",

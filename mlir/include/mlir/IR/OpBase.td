@@ -1323,12 +1323,30 @@ class I64EnumAttrCase<string sym, int val, string str = sym>
 // A bit enum case stored with 32-bit IntegerAttr. `val` here is *not* the
 // ordinal number of the bit that is set. It is the 32-bit integer with only
 // one bit set.
-class BitEnumAttrCase<string sym, int val, string str = sym> :
-    EnumAttrCaseInfo<sym, val, str>,
-    SignlessIntegerAttrBase<I32, "case " # str> {
-  let predicate = CPred<
-    "$_self.cast<::mlir::IntegerAttr>().getValue().getZExtValue() & "
-    # val # "u">;
+class BitEnumAttrCase<string sym, int val, string str = sym>
+    : EnumAttrCaseInfo<sym, val, str>,
+      SignlessIntegerAttrBase<I32, "case " #str>;
+
+// The special bit enum case for no bits set (i.e. value = 0).
+class BitEnumAttrCaseNone<string sym, string str = sym>
+    : BitEnumAttrCase<sym, 0, str>;
+
+// The bit enum case for a single bit, specified by the bit position.
+// The pos argument refers to the index of the bit, and is currently
+// limited to be in the range [0, 31].
+class BitEnumAttrCaseBit<string sym, int pos, string str = sym>
+    : BitEnumAttrCase<sym, !shl(1, pos), str> {
+  assert !and(!ge(pos, 0), !le(pos, 31)),
+      "bit position must be between 0 and 31";
+}
+
+// A bit enum case for a group/list of previously declared single bits,
+// providing a convenient alias for that group.
+class BitEnumAttrCaseGroup<string sym, list<BitEnumAttrCaseBit> cases,
+                           string str = sym>
+    : BitEnumAttrCase<
+          sym, !foldl(0, cases, value, bitcase, !or(value, bitcase.value)),
+          str> {
 }
 
 // Additional information for an enum attribute.
@@ -1452,7 +1470,7 @@ class I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases> :
 // A bit enum stored with 32-bit IntegerAttr.
 //
 // Op attributes of this kind are stored as IntegerAttr. Extra verification will
-// be generated on the integer to make sure only allowed bit are set. Besides,
+// be generated on the integer to make sure only allowed bits are set. Besides,
 // helper methods are generated to parse a string separated with a specified
 // delimiter to a symbol and vice versa.
 class BitEnumAttrBase<list<BitEnumAttrCase> cases, string summary> :
@@ -1469,6 +1487,9 @@ class BitEnumAttrBase<list<BitEnumAttrCase> cases, string summary> :
 class BitEnumAttr<string name, string summary, list<BitEnumAttrCase> cases> :
     EnumAttrInfo<name, cases, BitEnumAttrBase<cases, summary>> {
   let underlyingType = "uint32_t";
+
+  // Determine "valid" bits from enum cases for error checking
+  int validBits = !foldl(0, cases, value, bitcase, !or(value, bitcase.value));
 
   // We need to return a string because we may concatenate symbols for multiple
   // bits together.

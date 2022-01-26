@@ -545,6 +545,11 @@ private:
   friend class RewriteInstanceDiff;
 };
 
+MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
+                                   const MCInstrAnalysis *Analysis,
+                                   const MCInstrInfo *Info,
+                                   const MCRegisterInfo *RegInfo);
+
 } // namespace bolt
 } // namespace llvm
 

@@ -319,27 +319,6 @@ namespace bolt {
 
 extern const char *BoltRevision;
 
-extern MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
-                                             const MCInstrInfo *,
-                                             const MCRegisterInfo *);
-extern MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *,
-                                                 const MCInstrInfo *,
-                                                 const MCRegisterInfo *);
-
-} // namespace bolt
-} // namespace llvm
-
-namespace {
-
-bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
-  auto Itr =
-      std::find_if(opts::ReorderData.begin(), opts::ReorderData.end(),
-                   [&](const std::string &SectionName) {
-                     return (Section && Section->getName() == SectionName);
-                   });
-  return Itr != opts::ReorderData.end();
-}
-
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
@@ -355,6 +334,20 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 #endif
 
   llvm_unreachable("architecture unsupported by MCPlusBuilder");
+}
+
+} // namespace bolt
+} // namespace llvm
+
+namespace {
+
+bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
+  auto Itr =
+      std::find_if(opts::ReorderData.begin(), opts::ReorderData.end(),
+                   [&](const std::string &SectionName) {
+                     return (Section && Section->getName() == SectionName);
+                   });
+  return Itr != opts::ReorderData.end();
 }
 
 } // anonymous namespace
