@@ -991,7 +991,7 @@ public:
   ///     manually set following this function call).
   ///
   /// \return
-  ///     \b true if the architecture was successfully set, \bfalse otherwise.
+  ///     \b true if the architecture was successfully set, \b false otherwise.
   bool SetArchitecture(const ArchSpec &arch_spec, bool set_platform = false);
 
   bool MergeArchitecture(const ArchSpec &arch_spec);
