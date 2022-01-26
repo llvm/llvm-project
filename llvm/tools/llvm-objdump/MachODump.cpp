@@ -10460,11 +10460,16 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
   MachO::linkedit_data_command Ld;
   Error Err = Error::success();
 
-  // find LC_DYLD_CHAINED_FIXUPS Load Command
+  // find LC_DYLD_CHAINED_FIXUPS Load Command & obtain loaded dylib info
   for (const auto &Command : Obj->load_commands()) {
     if (Command.C.cmd == MachO::LC_DYLD_CHAINED_FIXUPS) {
       Ld = Obj->getLinkeditDataLoadCommand(Command);
-      break;
+    }
+    if (Command.C.cmd == MachO::LC_LOAD_DYLIB || Command.C.cmd == MachO::LC_LOAD_WEAK_DYLIB
+        || Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB || Command.C.cmd == MachO::LC_LOAD_UPWARD_DYLIB) {
+      // TODO: get dylib load command
+
+      continue;
     }
   }
   // no LC_DYLD_CHAINED_FIXUPS found
@@ -10480,19 +10485,19 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
   MachO::dyld_chained_fixups_header Header;
   memcpy(&Header, Obj->getData().substr(Offset, sizeof(Header)).data(), sizeof(Header));
 
-  std::string importsFormat;
+  std::string ImportsFormat;
   switch (Header.imports_format) {
   case MachO::DYLD_CHAINED_IMPORT:
-    importsFormat = "(DYLD_CHAINED_IMPORT)";
+    ImportsFormat = "(DYLD_CHAINED_IMPORT)";
     break;
   case MachO::DYLD_CHAINED_IMPORT_ADDEND:
-    importsFormat = "(DYLD_CHAINED_IMPORT_ADDEND)";
+    ImportsFormat = "(DYLD_CHAINED_IMPORT_ADDEND)";
     break;
   case MachO::DYLD_CHAINED_IMPORT_ADDEND64:
-    importsFormat = "(DYLD_CHAINED_IMPORT_ADDEND64)";
+    ImportsFormat = "(DYLD_CHAINED_IMPORT_ADDEND64)";
     break;
   default:
-    importsFormat = "UNKNOWN";
+    ImportsFormat = "UNKNOWN";
     break;
   }
 
@@ -10502,21 +10507,53 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
          << "  imports_offset = " << Header.imports_offset << "\n"
          << "  symbols_offset = " << Header.symbols_offset << "\n"
          << "  imports_count = " << Header.imports_count << "\n"
-         << "  imports_format = " << Header.imports_format << " " << importsFormat << "\n"
+         << "  imports_format = " << Header.imports_format << " " << ImportsFormat << "\n"
          << "  symbols_format = " << Header.symbols_format << "\n";
 
   // parse dyld_chained_starts_in_image
-//  MachO::dyld_chained_starts_in_image Image;
-//  memcpy(&Image, Obj->getData().substr(Offset+Header.starts_offset, sizeof(Image)).data(), sizeof(Image));
+  MachO::dyld_chained_starts_in_image Image;
+  memcpy(&Image, Obj->getData().substr(Offset+Header.starts_offset, sizeof(Image)).data(), sizeof(Image));
 
-
-
-
-  // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_starts_in_image
+  outs() << "chained starts in image\n";
 
   // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_starts_in_segment
 
-  // TODO(zhongkaining.paxos@bytedance.com): dump dyld_chained_import
+  // dump dyld_chained_import
+  for (uint32_t ImportIdx=0; ImportIdx<Header.imports_count; ImportIdx++) {
+    switch (Header.imports_format) {
+    case MachO::DYLD_CHAINED_IMPORT:
+      outs() << "dyld_chained_import[" << ImportIdx << "]\n"; // TODO: add address
+      MachO::dyld_chained_import Import;
+      memcpy(&Import, Obj->getData().substr(Offset+Header.imports_offset+ImportIdx*sizeof(Import), sizeof(Import)).data(), sizeof(Import));
+      outs() << "  lib_ordinal = " << Import.lib_ordinal << "\n" // TODO: add dylib name
+             << "  weak_import =" << Import.weak_import << "\n"
+             << "  name_offset = " << Import.name_offset << " (" << StringRef(Obj->getData().data()+(Offset+Header.symbols_offset+Import.name_offset)) << ")" <<"\n";
+      break;
+    case MachO::DYLD_CHAINED_IMPORT_ADDEND:
+      outs() << "dyld_chained_import_addend[" << ImportIdx << "]\n";
+      MachO::dyld_chained_import_addend ImportAddend;
+      memcpy(&ImportAddend, Obj->getData().substr(Offset+Header.imports_offset+ImportIdx*sizeof(ImportAddend), sizeof(ImportAddend)).data(), sizeof(ImportAddend));
+      outs() << "  lib_ordinal = " << ImportAddend.lib_ordinal << "\n"
+             << "  weak_import =" << ImportAddend.weak_import << "\n"
+             << "  name_offset = " << ImportAddend.name_offset << " (" << StringRef(Obj->getData().data()+(Offset+Header.symbols_offset+ImportAddend.name_offset)) << ")" <<"\n"
+             << "  addend = " << ImportAddend.addend << "\n";
+      break;
+    case MachO::DYLD_CHAINED_IMPORT_ADDEND64:
+      outs() << "dyld_chained_import_addend64[" << ImportIdx << "]\n";
+      MachO::dyld_chained_import_addend64 ImportAddend64;
+      memcpy(&ImportAddend64, Obj->getData().substr(Offset+Header.imports_offset+ImportIdx*sizeof(ImportAddend64), sizeof(ImportAddend64)).data(), sizeof(ImportAddend64));
+
+      outs() << "  lib_ordinal = " << ImportAddend64.lib_ordinal << "\n"
+             << "  weak_import =" << ImportAddend64.weak_import << "\n"
+             << "  reserved =" << ImportAddend64.reserved << "\n"
+             << "  name_offset = " << ImportAddend64.name_offset << " (" << StringRef(Obj->getData().data()+(Offset+Header.symbols_offset+ImportAddend64.name_offset)) << ")" <<"\n"
+             << "  addend = " << ImportAddend64.addend << "\n";
+      break;
+    default:
+      outs() << "unknown format\n";
+      break;
+    }
+  }
 
   if (Err){
     reportError(std::move(Err), Obj->getFileName());

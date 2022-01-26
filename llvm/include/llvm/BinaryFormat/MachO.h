@@ -342,6 +342,33 @@ struct dyld_chained_starts_in_segment
                               // the last of which has the high bit set
 };
 
+// DYLD_CHAINED_IMPORT
+struct dyld_chained_import
+{
+  uint32_t    lib_ordinal :  8,
+      weak_import :  1,
+      name_offset : 23;
+};
+
+// DYLD_CHAINED_IMPORT_ADDEND
+struct dyld_chained_import_addend
+{
+  uint32_t    lib_ordinal :  8,
+      weak_import :  1,
+      name_offset : 23;
+  int32_t     addend;
+};
+
+// DYLD_CHAINED_IMPORT_ADDEND64
+struct dyld_chained_import_addend64
+{
+  uint64_t    lib_ordinal : 16,
+      weak_import :  1,
+      reserved    : 15,
+      name_offset : 32;
+  uint64_t    addend;
+};
+
 enum {
   // Constant masks for the "n_type" field in llvm::MachO::nlist and
   // llvm::MachO::nlist_64
