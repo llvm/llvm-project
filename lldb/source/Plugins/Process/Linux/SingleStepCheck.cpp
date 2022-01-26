@@ -65,7 +65,7 @@ bool WorkaroundNeeded() {
   // turn, and verify that single-stepping works on that cpu. A workaround is
   // needed if we find at least one broken cpu.
 
-  Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
+  Log *log = GetLog(POSIXLog::Thread);
   ::pid_t child_pid = fork();
   if (child_pid == -1) {
     LLDB_LOG(log, "failed to fork(): {0}", Status(errno, eErrorTypePOSIX));
@@ -144,7 +144,7 @@ bool WorkaroundNeeded() {
 } // end anonymous namespace
 
 std::unique_ptr<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
-  Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
+  Log *log = GetLog(POSIXLog::Thread);
 
   static bool workaround_needed = WorkaroundNeeded();
   if (!workaround_needed) {
@@ -176,7 +176,7 @@ std::unique_ptr<SingleStepWorkaround> SingleStepWorkaround::Get(::pid_t tid) {
 }
 
 SingleStepWorkaround::~SingleStepWorkaround() {
-  Log *log = ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD);
+  Log *log = GetLog(POSIXLog::Thread);
   LLDB_LOG(log, "Removing workaround");
   if (sched_setaffinity(m_tid, sizeof m_original_set, &m_original_set) != 0) {
     LLDB_LOG(log, "Unable to reset cpu affinity for thread {0}: {1}", m_tid,

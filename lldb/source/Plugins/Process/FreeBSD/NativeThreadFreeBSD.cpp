@@ -75,7 +75,7 @@ Status NativeThreadFreeBSD::Suspend() {
 
 void NativeThreadFreeBSD::SetStoppedBySignal(uint32_t signo,
                                              const siginfo_t *info) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
   LLDB_LOG(log, "tid = {0} in called with signal {1}", GetID(), signo);
 
   SetStopped();
@@ -178,7 +178,7 @@ void NativeThreadFreeBSD::SetStepping() {
 }
 
 std::string NativeThreadFreeBSD::GetName() {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
 
   std::vector<struct kinfo_proc> kp;
   int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID | KERN_PROC_INC_THREAD,
@@ -213,7 +213,7 @@ lldb::StateType NativeThreadFreeBSD::GetState() { return m_state; }
 
 bool NativeThreadFreeBSD::GetStopReason(ThreadStopInfo &stop_info,
                                         std::string &description) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
+  Log *log = GetLog(POSIXLog::Thread);
   description.clear();
 
   switch (m_state) {
@@ -316,7 +316,7 @@ NativeThreadFreeBSD::CopyWatchpointsFrom(NativeThreadFreeBSD &source) {
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 NativeThreadFreeBSD::GetSiginfo() const {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
+  Log *log = GetLog(POSIXLog::Process);
 
   struct ptrace_lwpinfo info;
   const auto siginfo_err = NativeProcessFreeBSD::PtraceWrapper(
