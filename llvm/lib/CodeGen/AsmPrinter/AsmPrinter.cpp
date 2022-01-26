@@ -1647,8 +1647,18 @@ void AsmPrinter::emitGlobalAlias(Module &M, const GlobalAlias &GA) {
 
   // Set the symbol type to function if the alias has a function type.
   // This affects codegen when the aliasee is not a function.
-  if (IsFunction)
+  if (IsFunction) {
     OutStreamer->emitSymbolAttribute(Name, MCSA_ELF_TypeFunction);
+    if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+      OutStreamer->BeginCOFFSymbolDef(Name);
+      OutStreamer->EmitCOFFSymbolStorageClass(
+          GA.hasLocalLinkage() ? COFF::IMAGE_SYM_CLASS_STATIC
+                               : COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->EmitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_FUNCTION
+                                      << COFF::SCT_COMPLEX_TYPE_SHIFT);
+      OutStreamer->EndCOFFSymbolDef();
+    }
+  }
 
   emitVisibility(Name, GA.getVisibility());
 
