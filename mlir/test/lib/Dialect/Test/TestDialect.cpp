@@ -729,7 +729,7 @@ static void print(OpAsmPrinter &p, WrappingRegionOp op) {
 static ParseResult parsePrettyPrintedRegionOp(OpAsmParser &parser,
                                               OperationState &result) {
 
-  llvm::SMLoc loc = parser.getCurrentLocation();
+  SMLoc loc = parser.getCurrentLocation();
   Location currLocation = parser.getEncodedSourceLoc(loc);
 
   // Parse the operands.

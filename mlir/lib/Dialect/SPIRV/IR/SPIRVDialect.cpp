@@ -155,7 +155,7 @@ Optional<unsigned> parseAndVerify<unsigned>(SPIRVDialect const &dialect,
 static Type parseAndVerifyType(SPIRVDialect const &dialect,
                                DialectAsmParser &parser) {
   Type type;
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  SMLoc typeLoc = parser.getCurrentLocation();
   if (parser.parseType(type))
     return Type();
 
@@ -199,7 +199,7 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
 static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
                                      DialectAsmParser &parser) {
   Type type;
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  SMLoc typeLoc = parser.getCurrentLocation();
   if (parser.parseType(type))
     return Type();
 
@@ -235,7 +235,7 @@ static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
 static Type parseAndVerifySampledImageType(SPIRVDialect const &dialect,
                                            DialectAsmParser &parser) {
   Type type;
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  SMLoc typeLoc = parser.getCurrentLocation();
   if (parser.parseType(type))
     return Type();
 
@@ -263,7 +263,7 @@ static LogicalResult parseOptionalArrayStride(const SPIRVDialect &dialect,
   if (parser.parseKeyword("stride") || parser.parseEqual())
     return failure();
 
-  llvm::SMLoc strideLoc = parser.getCurrentLocation();
+  SMLoc strideLoc = parser.getCurrentLocation();
   Optional<unsigned> optStride = parseAndVerify<unsigned>(dialect, parser);
   if (!optStride)
     return failure();
@@ -288,7 +288,7 @@ static Type parseArrayType(SPIRVDialect const &dialect,
     return Type();
 
   SmallVector<int64_t, 1> countDims;
-  llvm::SMLoc countLoc = parser.getCurrentLocation();
+  SMLoc countLoc = parser.getCurrentLocation();
   if (parser.parseDimensionList(countDims, /*allowDynamic=*/false))
     return Type();
   if (countDims.size() != 1) {
@@ -326,7 +326,7 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
     return Type();
 
   SmallVector<int64_t, 2> dims;
-  llvm::SMLoc countLoc = parser.getCurrentLocation();
+  SMLoc countLoc = parser.getCurrentLocation();
   if (parser.parseDimensionList(dims, /*allowDynamic=*/false))
     return Type();
 
@@ -367,7 +367,7 @@ static Type parsePointerType(SPIRVDialect const &dialect,
     return Type();
 
   StringRef storageClassSpec;
-  llvm::SMLoc storageClassLoc = parser.getCurrentLocation();
+  SMLoc storageClassLoc = parser.getCurrentLocation();
   if (parser.parseComma() || parser.parseKeyword(&storageClassSpec))
     return Type();
 
@@ -409,7 +409,7 @@ static Type parseMatrixType(SPIRVDialect const &dialect,
     return Type();
 
   SmallVector<int64_t, 1> countDims;
-  llvm::SMLoc countLoc = parser.getCurrentLocation();
+  SMLoc countLoc = parser.getCurrentLocation();
   if (parser.parseDimensionList(countDims, /*allowDynamic=*/false))
     return Type();
   if (countDims.size() != 1) {
@@ -442,7 +442,7 @@ template <typename ValTy>
 static Optional<ValTy> parseAndVerify(SPIRVDialect const &dialect,
                                       DialectAsmParser &parser) {
   StringRef enumSpec;
-  llvm::SMLoc enumLoc = parser.getCurrentLocation();
+  SMLoc enumLoc = parser.getCurrentLocation();
   if (parser.parseKeyword(&enumSpec)) {
     return llvm::None;
   }
@@ -568,7 +568,7 @@ static ParseResult parseStructMemberDecorations(
     SmallVectorImpl<StructType::MemberDecorationInfo> &memberDecorationInfo) {
 
   // Check if the first element is offset.
-  llvm::SMLoc offsetLoc = parser.getCurrentLocation();
+  SMLoc offsetLoc = parser.getCurrentLocation();
   StructType::OffsetInfo offset = 0;
   OptionalParseResult offsetParseResult = parser.parseOptionalInteger(offset);
   if (offsetParseResult.hasValue()) {
@@ -875,7 +875,7 @@ void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
 /// of the parsed keyword, and returns failure if any error occurs.
 static ParseResult parseKeywordList(
     DialectAsmParser &parser,
-    function_ref<LogicalResult(llvm::SMLoc, StringRef)> processKeyword) {
+    function_ref<LogicalResult(SMLoc, StringRef)> processKeyword) {
   if (parser.parseLSquare())
     return failure();
 
@@ -992,10 +992,10 @@ static Attribute parseVerCapExtAttr(DialectAsmParser &parser) {
   ArrayAttr capabilitiesAttr;
   {
     SmallVector<Attribute, 4> capabilities;
-    llvm::SMLoc errorloc;
+    SMLoc errorloc;
     StringRef errorKeyword;
 
-    auto processCapability = [&](llvm::SMLoc loc, StringRef capability) {
+    auto processCapability = [&](SMLoc loc, StringRef capability) {
       if (auto capSymbol = spirv::symbolizeCapability(capability)) {
         capabilities.push_back(
             builder.getI32IntegerAttr(static_cast<uint32_t>(*capSymbol)));
@@ -1015,10 +1015,10 @@ static Attribute parseVerCapExtAttr(DialectAsmParser &parser) {
   ArrayAttr extensionsAttr;
   {
     SmallVector<Attribute, 1> extensions;
-    llvm::SMLoc errorloc;
+    SMLoc errorloc;
     StringRef errorKeyword;
 
-    auto processExtension = [&](llvm::SMLoc loc, StringRef extension) {
+    auto processExtension = [&](SMLoc loc, StringRef extension) {
       if (spirv::symbolizeExtension(extension)) {
         extensions.push_back(builder.getStringAttr(extension));
         return success();

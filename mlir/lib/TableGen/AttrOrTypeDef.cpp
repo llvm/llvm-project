@@ -147,7 +147,7 @@ Optional<StringRef> AttrOrTypeDef::getExtraDecls() const {
   return value.empty() ? Optional<StringRef>() : value;
 }
 
-ArrayRef<llvm::SMLoc> AttrOrTypeDef::getLoc() const { return def->getLoc(); }
+ArrayRef<SMLoc> AttrOrTypeDef::getLoc() const { return def->getLoc(); }
 
 bool AttrOrTypeDef::skipDefaultBuilders() const {
   return def->getValueAsBit("skipDefaultBuilders");

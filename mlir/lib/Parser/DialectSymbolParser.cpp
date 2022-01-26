@@ -20,7 +20,6 @@
 using namespace mlir;
 using namespace mlir::detail;
 using llvm::MemoryBuffer;
-using llvm::SMLoc;
 using llvm::SourceMgr;
 
 namespace {
@@ -157,7 +156,7 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
       return (p.emitError("expected string literal data in dialect symbol"),
               nullptr);
     symbolData = p.getToken().getStringValue();
-    loc = llvm::SMLoc::getFromPointer(p.getToken().getLoc().getPointer() + 1);
+    loc = SMLoc::getFromPointer(p.getToken().getLoc().getPointer() + 1);
     p.consumeToken(Token::string);
 
     // Consume the '>'.
@@ -169,7 +168,7 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
     auto dotHalves = identifier.split('.');
     dialectName = dotHalves.first;
     auto prettyName = dotHalves.second;
-    loc = llvm::SMLoc::getFromPointer(prettyName.data());
+    loc = SMLoc::getFromPointer(prettyName.data());
 
     // If the dialect's symbol is followed immediately by a <, then lex the body
     // of it into prettyName.
@@ -183,7 +182,7 @@ static Symbol parseExtendedSymbol(Parser &p, Token::Kind identifierTok,
   }
 
   // Record the name location of the type remapped to the top level buffer.
-  llvm::SMLoc locInTopLevelBuffer = p.remapLocationToTopLevelBuffer(loc);
+  SMLoc locInTopLevelBuffer = p.remapLocationToTopLevelBuffer(loc);
   p.getState().symbols.nestedParserLocs.push_back(locInTopLevelBuffer);
 
   // Call into the provided symbol construction function.
@@ -239,7 +238,7 @@ Attribute Parser::parseExtendedAttr(Type type) {
   Attribute attr = parseExtendedSymbol<Attribute>(
       *this, Token::hash_identifier, state.symbols.attributeAliasDefinitions,
       [&](StringRef dialectName, StringRef symbolData,
-          llvm::SMLoc loc) -> Attribute {
+          SMLoc loc) -> Attribute {
         // Parse an optional trailing colon type.
         Type attrType = type;
         if (consumeIf(Token::colon) && !(attrType = parseType()))
@@ -282,7 +281,7 @@ Type Parser::parseExtendedType() {
   return parseExtendedSymbol<Type>(
       *this, Token::exclamation_identifier, state.symbols.typeAliasDefinitions,
       [&](StringRef dialectName, StringRef symbolData,
-          llvm::SMLoc loc) -> Type {
+          SMLoc loc) -> Type {
         // If we found a registered dialect, then ask it to parse the type.
         auto *dialect = state.context->getOrLoadDialect(dialectName);
 

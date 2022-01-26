@@ -29,7 +29,6 @@
 using namespace mlir;
 using namespace mlir::detail;
 using llvm::MemoryBuffer;
-using llvm::SMLoc;
 using llvm::SourceMgr;
 
 //===----------------------------------------------------------------------===//
@@ -198,7 +197,7 @@ OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
 ParseResult Parser::parseFloatFromIntegerLiteral(
     Optional<APFloat> &result, const Token &tok, bool isNegative,
     const llvm::fltSemantics &semantics, size_t typeSizeInBits) {
-  llvm::SMLoc loc = tok.getLoc();
+  SMLoc loc = tok.getLoc();
   StringRef spelling = tok.getSpelling();
   bool isHex = spelling.size() > 1 && spelling[1] == 'x';
   if (!isHex) {
@@ -373,7 +372,7 @@ public:
 
   /// Parse a region body into 'region'.
   ParseResult
-  parseRegionBody(Region &region, llvm::SMLoc startLoc,
+  parseRegionBody(Region &region, SMLoc startLoc,
                   ArrayRef<std::pair<SSAUseInfo, Type>> entryArguments,
                   ArrayRef<Location> argLocations, bool isIsolatedNameScope);
 
@@ -934,7 +933,7 @@ ParseResult OperationParser::parseOperation() {
     // Add this operation to the assembly state if it was provided to populate.
     if (state.asmState) {
       unsigned resultIt = 0;
-      SmallVector<std::pair<unsigned, llvm::SMLoc>> asmResultGroups;
+      SmallVector<std::pair<unsigned, SMLoc>> asmResultGroups;
       asmResultGroups.reserve(resultIDs.size());
       for (ResultRecord &record : resultIDs) {
         asmResultGroups.emplace_back(resultIt, std::get<2>(record));
@@ -1281,7 +1280,7 @@ public:
   }
 
   /// Emit a diagnostic at the specified location and return failure.
-  InFlightDiagnostic emitError(llvm::SMLoc loc, const Twine &message) override {
+  InFlightDiagnostic emitError(SMLoc loc, const Twine &message) override {
     return AsmParserImpl<OpAsmParser>::emitError(loc, "custom op '" + opName +
                                                           "' " + message);
   }
@@ -1692,7 +1691,7 @@ FailureOr<OperationName> OperationParser::parseCustomOperationName() {
 
 Operation *
 OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
-  llvm::SMLoc opLoc = getToken().getLoc();
+  SMLoc opLoc = getToken().getLoc();
 
   FailureOr<OperationName> opNameInfo = parseCustomOperationName();
   if (failed(opNameInfo))
@@ -1849,7 +1848,7 @@ ParseResult OperationParser::parseRegion(
 }
 
 ParseResult OperationParser::parseRegionBody(
-    Region &region, llvm::SMLoc startLoc,
+    Region &region, SMLoc startLoc,
     ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
     ArrayRef<Location> argLocations, bool isIsolatedNameScope) {
   assert(argLocations.empty() || argLocations.size() == entryArguments.size());
@@ -2252,7 +2251,7 @@ LogicalResult mlir::parseSourceFile(llvm::StringRef filename,
                      "could not open input file " + filename);
 
   // Load the MLIR source file.
-  sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
+  sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), SMLoc());
   return parseSourceFile(sourceMgr, block, context, sourceFileLoc, asmState);
 }
 

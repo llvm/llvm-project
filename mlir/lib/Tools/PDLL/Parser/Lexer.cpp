@@ -94,7 +94,7 @@ Lexer::~Lexer() {
 LogicalResult Lexer::pushInclude(StringRef filename) {
   std::string includedFile;
   int bufferID = srcMgr.AddIncludeFile(
-      filename.str(), llvm::SMLoc::getFromPointer(curPtr), includedFile);
+      filename.str(), SMLoc::getFromPointer(curPtr), includedFile);
   if (!bufferID) return failure();
 
   curBufferID = bufferID;
@@ -103,18 +103,18 @@ LogicalResult Lexer::pushInclude(StringRef filename) {
   return success();
 }
 
-Token Lexer::emitError(llvm::SMRange loc, const Twine &msg) {
+Token Lexer::emitError(SMRange loc, const Twine &msg) {
   diagEngine.emitError(loc, msg);
   return formToken(Token::error, loc.Start.getPointer());
 }
-Token Lexer::emitErrorAndNote(llvm::SMRange loc, const Twine &msg,
-                              llvm::SMRange noteLoc, const Twine &note) {
+Token Lexer::emitErrorAndNote(SMRange loc, const Twine &msg,
+                              SMRange noteLoc, const Twine &note) {
   diagEngine.emitError(loc, msg)->attachNote(note, noteLoc);
   return formToken(Token::error, loc.Start.getPointer());
 }
 Token Lexer::emitError(const char *loc, const Twine &msg) {
-  return emitError(llvm::SMRange(llvm::SMLoc::getFromPointer(loc),
-                                 llvm::SMLoc::getFromPointer(loc + 1)),
+  return emitError(SMRange(SMLoc::getFromPointer(loc),
+                                 SMLoc::getFromPointer(loc + 1)),
                    msg);
 }
 
@@ -161,7 +161,7 @@ Token Lexer::lexToken() {
         Token eof = formToken(Token::eof, tokStart);
 
         // Check to see if we are in an included file.
-        llvm::SMLoc parentIncludeLoc = srcMgr.getParentIncludeLoc(curBufferID);
+        SMLoc parentIncludeLoc = srcMgr.getParentIncludeLoc(curBufferID);
         if (parentIncludeLoc.isValid()) {
           curBufferID = srcMgr.FindBufferContainingLoc(parentIncludeLoc);
           curBuffer = srcMgr.getMemoryBuffer(curBufferID)->getBuffer();

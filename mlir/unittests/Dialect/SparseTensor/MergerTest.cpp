@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 
+using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 namespace {

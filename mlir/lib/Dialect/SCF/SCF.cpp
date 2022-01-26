@@ -2189,7 +2189,7 @@ static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   FunctionType functionType;
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  SMLoc typeLoc = parser.getCurrentLocation();
   if (failed(parser.parseColonType(functionType)))
     return failure();
 

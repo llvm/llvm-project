@@ -35,19 +35,19 @@ public:
   /// values, Blocks, and Symbols.
   struct SMDefinition {
     SMDefinition() = default;
-    SMDefinition(llvm::SMRange loc) : loc(loc) {}
+    SMDefinition(SMRange loc) : loc(loc) {}
 
     /// The source location of the definition.
-    llvm::SMRange loc;
+    SMRange loc;
     /// The source location of all uses of the definition.
-    SmallVector<llvm::SMRange> uses;
+    SmallVector<SMRange> uses;
   };
 
   /// This class represents the information for an operation definition within
   /// an input file.
   struct OperationDefinition {
     struct ResultGroupDefinition {
-      ResultGroupDefinition(unsigned index, llvm::SMRange loc)
+      ResultGroupDefinition(unsigned index, SMRange loc)
           : startIndex(index), definition(loc) {}
 
       /// The result number that starts this group.
@@ -56,31 +56,31 @@ public:
       SMDefinition definition;
     };
 
-    OperationDefinition(Operation *op, llvm::SMRange loc, llvm::SMLoc endLoc)
+    OperationDefinition(Operation *op, SMRange loc, SMLoc endLoc)
         : op(op), loc(loc), scopeLoc(loc.Start, endLoc) {}
 
     /// The operation representing this definition.
     Operation *op;
 
     /// The source location for the operation, i.e. the location of its name.
-    llvm::SMRange loc;
+    SMRange loc;
 
     /// The full source range of the operation definition, i.e. a range
     /// encompassing the start and end of the full operation definition.
-    llvm::SMRange scopeLoc;
+    SMRange scopeLoc;
 
     /// Source definitions for any result groups of this operation.
     SmallVector<ResultGroupDefinition> resultGroups;
 
     /// If this operation is a symbol operation, this vector contains symbol
     /// uses of this operation.
-    SmallVector<llvm::SMRange> symbolUses;
+    SmallVector<SMRange> symbolUses;
   };
 
   /// This class represents the information for a block definition within the
   /// input file.
   struct BlockDefinition {
-    BlockDefinition(Block *block, llvm::SMRange loc = {})
+    BlockDefinition(Block *block, SMRange loc = {})
         : block(block), definition(loc) {}
 
     /// The block representing this definition.
@@ -124,7 +124,7 @@ public:
 
   /// Returns (heuristically) the range of an identifier given a SMLoc
   /// corresponding to the start of an identifier location.
-  static llvm::SMRange convertIdLocToRange(llvm::SMLoc loc);
+  static SMRange convertIdLocToRange(SMLoc loc);
 
   //===--------------------------------------------------------------------===//
   // Populate State
@@ -142,8 +142,8 @@ public:
 
   /// Finalize the most recently started operation definition.
   void finalizeOperationDefinition(
-      Operation *op, llvm::SMRange nameLoc, llvm::SMLoc endLoc,
-      ArrayRef<std::pair<unsigned, llvm::SMLoc>> resultGroups = llvm::None);
+      Operation *op, SMRange nameLoc, SMLoc endLoc,
+      ArrayRef<std::pair<unsigned, SMLoc>> resultGroups = llvm::None);
 
   /// Start a definition for a region nested under the current operation.
   void startRegionDefinition();
@@ -152,18 +152,18 @@ public:
   void finalizeRegionDefinition();
 
   /// Add a definition of the given entity.
-  void addDefinition(Block *block, llvm::SMLoc location);
-  void addDefinition(BlockArgument blockArg, llvm::SMLoc location);
+  void addDefinition(Block *block, SMLoc location);
+  void addDefinition(BlockArgument blockArg, SMLoc location);
 
   /// Add a source uses of the given value.
-  void addUses(Value value, ArrayRef<llvm::SMLoc> locations);
-  void addUses(Block *block, ArrayRef<llvm::SMLoc> locations);
+  void addUses(Value value, ArrayRef<SMLoc> locations);
+  void addUses(Block *block, ArrayRef<SMLoc> locations);
 
   /// Add source uses for all the references nested under `refAttr`. The
   /// provided `locations` should match 1-1 with the number of references in
   /// `refAttr`, i.e.:
   ///   nestedReferences.size() + /*leafReference=*/1 == refLocations.size()
-  void addUses(SymbolRefAttr refAttr, ArrayRef<llvm::SMRange> refLocations);
+  void addUses(SymbolRefAttr refAttr, ArrayRef<SMRange> refLocations);
 
   /// Refine the `oldValue` to the `newValue`. This is used to indicate that
   /// `oldValue` was a placeholder, and the uses of it should really refer to

@@ -32,7 +32,7 @@ struct SymbolState {
   /// active nested parsers. Given that some nested parsers, i.e. custom dialect
   /// parsers, operate on a temporary memory buffer, this provides an anchor
   /// point for emitting diagnostics.
-  SmallVector<llvm::SMLoc, 1> nestedParserLocs;
+  SmallVector<SMLoc, 1> nestedParserLocs;
 
   /// The top-level lexer that contains the original memory buffer provided by
   /// the user. This is used by nested parsers to get a properly encoded source

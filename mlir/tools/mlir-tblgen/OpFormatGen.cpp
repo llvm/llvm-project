@@ -2223,27 +2223,27 @@ private:
       std::vector<std::unique_ptr<Element>>::const_iterator>;
 
   /// Verify the state of operation attributes within the format.
-  LogicalResult verifyAttributes(llvm::SMLoc loc);
+  LogicalResult verifyAttributes(SMLoc loc);
   /// Verify the attribute elements at the back of the given stack of iterators.
   LogicalResult verifyAttributes(
-      llvm::SMLoc loc,
+      SMLoc loc,
       SmallVectorImpl<std::pair<ElementsIterT, ElementsIterT>> &iteratorStack);
 
   /// Verify the state of operation operands within the format.
   LogicalResult
-  verifyOperands(llvm::SMLoc loc,
+  verifyOperands(SMLoc loc,
                  llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
 
   /// Verify the state of operation regions within the format.
-  LogicalResult verifyRegions(llvm::SMLoc loc);
+  LogicalResult verifyRegions(SMLoc loc);
 
   /// Verify the state of operation results within the format.
   LogicalResult
-  verifyResults(llvm::SMLoc loc,
+  verifyResults(SMLoc loc,
                 llvm::StringMap<TypeResolutionInstance> &variableTyResolver);
 
   /// Verify the state of operation successors within the format.
-  LogicalResult verifySuccessors(llvm::SMLoc loc);
+  LogicalResult verifySuccessors(SMLoc loc);
 
   /// Given the values of an `AllTypesMatch` trait, check for inferable type
   /// resolution.
@@ -2281,31 +2281,31 @@ private:
       std::vector<std::unique_ptr<Element>> &childElements,
       Optional<unsigned> &anchorIdx);
   LogicalResult verifyOptionalChildElement(Element *element,
-                                           llvm::SMLoc childLoc, bool isAnchor);
+                                           SMLoc childLoc, bool isAnchor);
 
   /// Parse the various different directives.
   LogicalResult parseAttrDictDirective(std::unique_ptr<Element> &element,
-                                       llvm::SMLoc loc, ParserContext context,
+                                       SMLoc loc, ParserContext context,
                                        bool withKeyword);
   LogicalResult parseCustomDirective(std::unique_ptr<Element> &element,
-                                     llvm::SMLoc loc, ParserContext context);
+                                     SMLoc loc, ParserContext context);
   LogicalResult parseCustomDirectiveParameter(
       std::vector<std::unique_ptr<Element>> &parameters);
   LogicalResult parseFunctionalTypeDirective(std::unique_ptr<Element> &element,
                                              FormatToken tok,
                                              ParserContext context);
   LogicalResult parseOperandsDirective(std::unique_ptr<Element> &element,
-                                       llvm::SMLoc loc, ParserContext context);
+                                       SMLoc loc, ParserContext context);
   LogicalResult parseQualifiedDirective(std::unique_ptr<Element> &element,
                                         FormatToken tok, ParserContext context);
   LogicalResult parseReferenceDirective(std::unique_ptr<Element> &element,
-                                        llvm::SMLoc loc, ParserContext context);
+                                        SMLoc loc, ParserContext context);
   LogicalResult parseRegionsDirective(std::unique_ptr<Element> &element,
-                                      llvm::SMLoc loc, ParserContext context);
+                                      SMLoc loc, ParserContext context);
   LogicalResult parseResultsDirective(std::unique_ptr<Element> &element,
-                                      llvm::SMLoc loc, ParserContext context);
+                                      SMLoc loc, ParserContext context);
   LogicalResult parseSuccessorsDirective(std::unique_ptr<Element> &element,
-                                         llvm::SMLoc loc,
+                                         SMLoc loc,
                                          ParserContext context);
   LogicalResult parseTypeDirective(std::unique_ptr<Element> &element,
                                    FormatToken tok, ParserContext context);
@@ -2329,11 +2329,11 @@ private:
     consumeToken();
     return ::mlir::success();
   }
-  LogicalResult emitError(llvm::SMLoc loc, const Twine &msg) {
+  LogicalResult emitError(SMLoc loc, const Twine &msg) {
     lexer.emitError(loc, msg);
     return ::mlir::failure();
   }
-  LogicalResult emitErrorAndNote(llvm::SMLoc loc, const Twine &msg,
+  LogicalResult emitErrorAndNote(SMLoc loc, const Twine &msg,
                                  const Twine &note) {
     lexer.emitErrorAndNote(loc, msg, note);
     return ::mlir::failure();
@@ -2362,7 +2362,7 @@ private:
 } // namespace
 
 LogicalResult FormatParser::parse() {
-  llvm::SMLoc loc = curToken.getLoc();
+  SMLoc loc = curToken.getLoc();
 
   // Parse each of the format elements into the main format.
   while (curToken.getKind() != FormatToken::eof) {
@@ -2415,7 +2415,7 @@ LogicalResult FormatParser::parse() {
   return ::mlir::success();
 }
 
-LogicalResult FormatParser::verifyAttributes(llvm::SMLoc loc) {
+LogicalResult FormatParser::verifyAttributes(SMLoc loc) {
   // Check that there are no `:` literals after an attribute without a constant
   // type. The attribute grammar contains an optional trailing colon type, which
   // can lead to unexpected and generally unintended behavior. Given that, it is
@@ -2441,7 +2441,7 @@ LogicalResult FormatParser::verifyAttributes(llvm::SMLoc loc) {
 }
 /// Verify the attribute elements at the back of the given stack of iterators.
 LogicalResult FormatParser::verifyAttributes(
-    llvm::SMLoc loc,
+    SMLoc loc,
     SmallVectorImpl<std::pair<ElementsIterT, ElementsIterT>> &iteratorStack) {
   auto &stackIt = iteratorStack.back();
   ElementsIterT &it = stackIt.first, e = stackIt.second;
@@ -2497,7 +2497,7 @@ LogicalResult FormatParser::verifyAttributes(
 }
 
 LogicalResult FormatParser::verifyOperands(
-    llvm::SMLoc loc,
+    SMLoc loc,
     llvm::StringMap<TypeResolutionInstance> &variableTyResolver) {
   // Check that all of the operands are within the format, and their types can
   // be inferred.
@@ -2544,7 +2544,7 @@ LogicalResult FormatParser::verifyOperands(
   return ::mlir::success();
 }
 
-LogicalResult FormatParser::verifyRegions(llvm::SMLoc loc) {
+LogicalResult FormatParser::verifyRegions(SMLoc loc) {
   // Check that all of the regions are within the format.
   if (hasAllRegions)
     return ::mlir::success();
@@ -2563,7 +2563,7 @@ LogicalResult FormatParser::verifyRegions(llvm::SMLoc loc) {
 }
 
 LogicalResult FormatParser::verifyResults(
-    llvm::SMLoc loc,
+    SMLoc loc,
     llvm::StringMap<TypeResolutionInstance> &variableTyResolver) {
   // If we format all of the types together, there is nothing to check.
   if (fmt.allResultTypes)
@@ -2611,7 +2611,7 @@ LogicalResult FormatParser::verifyResults(
   return ::mlir::success();
 }
 
-LogicalResult FormatParser::verifySuccessors(llvm::SMLoc loc) {
+LogicalResult FormatParser::verifySuccessors(SMLoc loc) {
   // Check that all of the successors are within the format.
   if (hasAllSuccessors)
     return ::mlir::success();
@@ -2715,7 +2715,7 @@ LogicalResult FormatParser::parseVariable(std::unique_ptr<Element> &element,
   consumeToken();
 
   StringRef name = varTok.getSpelling().drop_front();
-  llvm::SMLoc loc = varTok.getLoc();
+  SMLoc loc = varTok.getLoc();
 
   // Check that the parsed argument is something actually registered on the
   // op.
@@ -2861,7 +2861,7 @@ LogicalResult FormatParser::parseLiteral(std::unique_ptr<Element> &element,
 
 LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
                                           ParserContext context) {
-  llvm::SMLoc curLoc = curToken.getLoc();
+  SMLoc curLoc = curToken.getLoc();
   if (context != TopLevelContext)
     return emitError(curLoc, "optional groups can only be used as top-level "
                              "elements");
@@ -2884,7 +2884,7 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
                           "of optional group")))
       return failure();
     do {
-      llvm::SMLoc childLoc = curToken.getLoc();
+      SMLoc childLoc = curToken.getLoc();
       elseElements.push_back({});
       if (failed(parseElement(elseElements.back(), TopLevelContext)) ||
           failed(verifyOptionalChildElement(elseElements.back().get(), childLoc,
@@ -2924,7 +2924,7 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
 LogicalResult FormatParser::parseOptionalChildElement(
     std::vector<std::unique_ptr<Element>> &childElements,
     Optional<unsigned> &anchorIdx) {
-  llvm::SMLoc childLoc = curToken.getLoc();
+  SMLoc childLoc = curToken.getLoc();
   childElements.push_back({});
   if (failed(parseElement(childElements.back(), TopLevelContext)))
     return ::mlir::failure();
@@ -2944,7 +2944,7 @@ LogicalResult FormatParser::parseOptionalChildElement(
 }
 
 LogicalResult FormatParser::verifyOptionalChildElement(Element *element,
-                                                       llvm::SMLoc childLoc,
+                                                       SMLoc childLoc,
                                                        bool isAnchor) {
   return TypeSwitch<Element *, LogicalResult>(element)
       // All attributes can be within the optional group, but only optional
@@ -3004,7 +3004,7 @@ LogicalResult FormatParser::verifyOptionalChildElement(Element *element,
 
 LogicalResult
 FormatParser::parseAttrDictDirective(std::unique_ptr<Element> &element,
-                                     llvm::SMLoc loc, ParserContext context,
+                                     SMLoc loc, ParserContext context,
                                      bool withKeyword) {
   if (context == TypeDirectiveContext)
     return emitError(loc, "'attr-dict' directive can only be used as a "
@@ -3028,8 +3028,8 @@ FormatParser::parseAttrDictDirective(std::unique_ptr<Element> &element,
 
 LogicalResult
 FormatParser::parseCustomDirective(std::unique_ptr<Element> &element,
-                                   llvm::SMLoc loc, ParserContext context) {
-  llvm::SMLoc curLoc = curToken.getLoc();
+                                   SMLoc loc, ParserContext context) {
+  SMLoc curLoc = curToken.getLoc();
   if (context != TopLevelContext)
     return emitError(loc, "'custom' is only valid as a top-level directive");
 
@@ -3079,7 +3079,7 @@ FormatParser::parseCustomDirective(std::unique_ptr<Element> &element,
 
 LogicalResult FormatParser::parseCustomDirectiveParameter(
     std::vector<std::unique_ptr<Element>> &parameters) {
-  llvm::SMLoc childLoc = curToken.getLoc();
+  SMLoc childLoc = curToken.getLoc();
   parameters.push_back({});
   if (failed(parseElement(parameters.back(), CustomDirectiveContext)))
     return ::mlir::failure();
@@ -3096,7 +3096,7 @@ LogicalResult FormatParser::parseCustomDirectiveParameter(
 
 LogicalResult FormatParser::parseFunctionalTypeDirective(
     std::unique_ptr<Element> &element, FormatToken tok, ParserContext context) {
-  llvm::SMLoc loc = tok.getLoc();
+  SMLoc loc = tok.getLoc();
   if (context != TopLevelContext)
     return emitError(
         loc, "'functional-type' is only valid as a top-level directive");
@@ -3119,7 +3119,7 @@ LogicalResult FormatParser::parseFunctionalTypeDirective(
 
 LogicalResult
 FormatParser::parseOperandsDirective(std::unique_ptr<Element> &element,
-                                     llvm::SMLoc loc, ParserContext context) {
+                                     SMLoc loc, ParserContext context) {
   if (context == RefDirectiveContext) {
     if (!fmt.allOperands)
       return emitError(loc, "'ref' of 'operands' is not bound by a prior "
@@ -3136,7 +3136,7 @@ FormatParser::parseOperandsDirective(std::unique_ptr<Element> &element,
 
 LogicalResult
 FormatParser::parseReferenceDirective(std::unique_ptr<Element> &element,
-                                      llvm::SMLoc loc, ParserContext context) {
+                                      SMLoc loc, ParserContext context) {
   if (context != CustomDirectiveContext)
     return emitError(loc, "'ref' is only valid within a `custom` directive");
 
@@ -3154,7 +3154,7 @@ FormatParser::parseReferenceDirective(std::unique_ptr<Element> &element,
 
 LogicalResult
 FormatParser::parseRegionsDirective(std::unique_ptr<Element> &element,
-                                    llvm::SMLoc loc, ParserContext context) {
+                                    SMLoc loc, ParserContext context) {
   if (context == TypeDirectiveContext)
     return emitError(loc, "'regions' is only valid as a top-level directive");
   if (context == RefDirectiveContext) {
@@ -3174,7 +3174,7 @@ FormatParser::parseRegionsDirective(std::unique_ptr<Element> &element,
 
 LogicalResult
 FormatParser::parseResultsDirective(std::unique_ptr<Element> &element,
-                                    llvm::SMLoc loc, ParserContext context) {
+                                    SMLoc loc, ParserContext context) {
   if (context != TypeDirectiveContext)
     return emitError(loc, "'results' directive can can only be used as a child "
                           "to a 'type' directive");
@@ -3184,7 +3184,7 @@ FormatParser::parseResultsDirective(std::unique_ptr<Element> &element,
 
 LogicalResult
 FormatParser::parseSuccessorsDirective(std::unique_ptr<Element> &element,
-                                       llvm::SMLoc loc, ParserContext context) {
+                                       SMLoc loc, ParserContext context) {
   if (context == TypeDirectiveContext)
     return emitError(loc,
                      "'successors' is only valid as a top-level directive");
@@ -3206,7 +3206,7 @@ FormatParser::parseSuccessorsDirective(std::unique_ptr<Element> &element,
 LogicalResult
 FormatParser::parseTypeDirective(std::unique_ptr<Element> &element,
                                  FormatToken tok, ParserContext context) {
-  llvm::SMLoc loc = tok.getLoc();
+  SMLoc loc = tok.getLoc();
   if (context == TypeDirectiveContext)
     return emitError(loc, "'type' cannot be used as a child of another `type`");
 
@@ -3247,7 +3247,7 @@ FormatParser::parseQualifiedDirective(std::unique_ptr<Element> &element,
 LogicalResult
 FormatParser::parseTypeDirectiveOperand(std::unique_ptr<Element> &element,
                                         bool isRefChild) {
-  llvm::SMLoc loc = curToken.getLoc();
+  SMLoc loc = curToken.getLoc();
   if (failed(parseElement(element, TypeDirectiveContext)))
     return ::mlir::failure();
   if (isa<LiteralElement>(element.get()))
@@ -3306,7 +3306,7 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
   // Parse the format description.
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(
-      llvm::MemoryBuffer::getMemBuffer(op.getAssemblyFormat()), llvm::SMLoc());
+      llvm::MemoryBuffer::getMemBuffer(op.getAssemblyFormat()), SMLoc());
   OperationFormat format(op);
   if (failed(FormatParser(mgr, format, op).parse())) {
     // Exit the process if format errors are treated as fatal.

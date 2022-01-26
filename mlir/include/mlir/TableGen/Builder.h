@@ -62,7 +62,7 @@ public:
   };
 
   /// Construct a builder from the given Record instance.
-  Builder(const llvm::Record *record, ArrayRef<llvm::SMLoc> loc);
+  Builder(const llvm::Record *record, ArrayRef<SMLoc> loc);
 
   /// Return a list of parameters used in this build method.
   ArrayRef<Parameter> getParameters() const { return parameters; }

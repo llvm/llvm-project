@@ -170,7 +170,7 @@ Attribute emitc::OpaqueAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseLess())
     return Attribute();
   std::string value;
-  llvm::SMLoc loc = parser.getCurrentLocation();
+  SMLoc loc = parser.getCurrentLocation();
   if (parser.parseOptionalString(&value)) {
     parser.emitError(loc) << "expected string";
     return Attribute();
@@ -197,7 +197,7 @@ Type emitc::OpaqueType::parse(AsmParser &parser) {
   if (parser.parseLess())
     return Type();
   std::string value;
-  llvm::SMLoc loc = parser.getCurrentLocation();
+  SMLoc loc = parser.getCurrentLocation();
   if (parser.parseOptionalString(&value) || value.empty()) {
     parser.emitError(loc) << "expected non empty string";
     return Type();

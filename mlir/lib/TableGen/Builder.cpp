@@ -39,7 +39,7 @@ Optional<StringRef> Builder::Parameter::getDefaultValue() const {
 // Builder
 //===----------------------------------------------------------------------===//
 
-Builder::Builder(const llvm::Record *record, ArrayRef<llvm::SMLoc> loc)
+Builder::Builder(const llvm::Record *record, ArrayRef<SMLoc> loc)
     : def(record) {
   // Initialize the parameters of the builder.
   const llvm::DagInit *dag = def->getValueAsDag("dagParams");

@@ -121,7 +121,7 @@ static OwningModuleRef parseMLIRInput(StringRef inputFilename,
   }
 
   llvm::SourceMgr sourceMgr;
-  sourceMgr.AddNewSourceBuffer(std::move(file), llvm::SMLoc());
+  sourceMgr.AddNewSourceBuffer(std::move(file), SMLoc());
   return OwningModuleRef(parseSourceFile(sourceMgr, context));
 }
 

@@ -357,7 +357,7 @@ SerializeToHsacoPass::assembleIsa(const std::string &isa) {
 
   llvm::SourceMgr srcMgr;
   srcMgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(isa),
-                            llvm::SMLoc());
+                            SMLoc());
 
   const llvm::MCTargetOptions mcOptions;
   std::unique_ptr<llvm::MCRegisterInfo> mri(

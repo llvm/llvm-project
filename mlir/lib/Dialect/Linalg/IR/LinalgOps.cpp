@@ -1104,7 +1104,7 @@ static void print(OpAsmPrinter &p, linalg::YieldOp op) {
 static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 2> opInfo;
   SmallVector<Type, 2> types;
-  llvm::SMLoc loc = parser.getCurrentLocation();
+  SMLoc loc = parser.getCurrentLocation();
   return failure(parser.parseOperandList(opInfo) ||
                  parser.parseOptionalAttrDict(result.attributes) ||
                  (!opInfo.empty() && parser.parseColonTypeList(types)) ||
@@ -1318,7 +1318,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 4> inputs, inputRegionArgs;
   SmallVector<Type, 4> inputTypes;
   if (succeeded(parser.parseOptionalKeyword("ins"))) {
-    llvm::SMLoc inputsOperandsLoc = parser.getCurrentLocation();
+    SMLoc inputsOperandsLoc = parser.getCurrentLocation();
 
     if (parser.parseAssignmentListWithTypes(inputRegionArgs, inputs,
                                             inputTypes))
@@ -1333,7 +1333,7 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 4> outputs, outputRegionArgs;
   SmallVector<Type, 4> outputTypes;
   if (succeeded(parser.parseOptionalKeyword("outs"))) {
-    llvm::SMLoc outputsOperandsLoc = parser.getCurrentLocation();
+    SMLoc outputsOperandsLoc = parser.getCurrentLocation();
 
     if (parser.parseAssignmentListWithTypes(outputRegionArgs, outputs,
                                             outputTypes))
@@ -1943,7 +1943,7 @@ static ParseResult
 parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
                              SmallVectorImpl<Type> &inputTypes,
                              SmallVectorImpl<Type> &outputTypes) {
-  llvm::SMLoc inputsOperandsLoc, outputsOperandsLoc;
+  SMLoc inputsOperandsLoc, outputsOperandsLoc;
   SmallVector<OpAsmParser::OperandType, 4> inputsOperands, outputsOperands;
 
   parser.parseOptionalAttrDict(result.attributes);

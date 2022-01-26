@@ -12,9 +12,8 @@
 
 #include "Token.h"
 #include "llvm/ADT/StringExtras.h"
+
 using namespace mlir;
-using llvm::SMLoc;
-using llvm::SMRange;
 
 SMLoc Token::getLoc() const { return SMLoc::getFromPointer(spelling.data()); }
 

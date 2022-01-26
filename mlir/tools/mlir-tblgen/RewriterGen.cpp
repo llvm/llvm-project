@@ -229,7 +229,7 @@ private:
   // Pattern instantiation location followed by the location of multiclass
   // prototypes used. This is intended to be used as a whole to
   // PrintFatalError() on errors.
-  ArrayRef<llvm::SMLoc> loc;
+  ArrayRef<SMLoc> loc;
 
   // Op's TableGen Record to wrapper object.
   RecordOperatorMap *opMap;

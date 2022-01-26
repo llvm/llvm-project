@@ -37,7 +37,6 @@
 
 using namespace mlir;
 using namespace llvm;
-using llvm::SMLoc;
 
 /// Perform the actions on the input file indicated by the command line flags
 /// within the specified context.

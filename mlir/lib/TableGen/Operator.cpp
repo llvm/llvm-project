@@ -612,7 +612,7 @@ auto Operator::getSameTypeAsResult(int index) const -> ArrayRef<ArgOrType> {
   return resultTypeMapping[index];
 }
 
-ArrayRef<llvm::SMLoc> Operator::getLoc() const { return def.getLoc(); }
+ArrayRef<SMLoc> Operator::getLoc() const { return def.getLoc(); }
 
 bool Operator::hasDescription() const {
   return def.getValue("description") != nullptr;

@@ -102,9 +102,9 @@ public:
   std::string getSymbolReference() const;
 
   // Location processing.
-  llvm::SMLoc getLoc() const;
-  llvm::SMLoc getEndLoc() const;
-  llvm::SMRange getLocRange() const;
+  SMLoc getLoc() const;
+  SMLoc getEndLoc() const;
+  SMRange getLocRange() const;
 
   /// Given a punctuation or keyword token kind, return the spelling of the
   /// token as a string.  Warning: This will abort on markers, identifiers and

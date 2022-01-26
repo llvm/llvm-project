@@ -37,7 +37,7 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
 
   // Add the original buffer to the source manager.
   llvm::SourceMgr fileSourceMgr;
-  fileSourceMgr.AddNewSourceBuffer(std::move(originalBuffer), llvm::SMLoc());
+  fileSourceMgr.AddNewSourceBuffer(std::move(originalBuffer), SMLoc());
 
   // Flag near misses by iterating over all the sub-buffers found when splitting
   // with the prefix of the splitMarker. Use a sliding window where we only add
@@ -60,7 +60,7 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
       prev = buffer.drop_front(checkLen);
     } else {
       // TODO: Consider making this a failure.
-      auto splitLoc = llvm::SMLoc::getFromPointer(buffer.data());
+      auto splitLoc = SMLoc::getFromPointer(buffer.data());
       fileSourceMgr.PrintMessage(llvm::errs(), splitLoc,
                                  llvm::SourceMgr::DK_Warning,
                                  "near miss with file split marker");
@@ -74,7 +74,7 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
   // Process each chunk in turn.
   bool hadFailure = false;
   for (auto &subBuffer : sourceBuffers) {
-    auto splitLoc = llvm::SMLoc::getFromPointer(subBuffer.data());
+    auto splitLoc = SMLoc::getFromPointer(subBuffer.data());
     unsigned splitLine = fileSourceMgr.getLineAndColumn(splitLoc).first;
     auto subMemBuffer = llvm::MemoryBuffer::getMemBufferCopy(
         subBuffer, Twine("within split at ") +

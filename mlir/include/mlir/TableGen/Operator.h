@@ -222,7 +222,7 @@ public:
   const_trait_iterator trait_end() const;
   llvm::iterator_range<const_trait_iterator> getTraits() const;
 
-  ArrayRef<llvm::SMLoc> getLoc() const;
+  ArrayRef<SMLoc> getLoc() const;
 
   // Query functions for the documentation of the operator.
   bool hasDescription() const;

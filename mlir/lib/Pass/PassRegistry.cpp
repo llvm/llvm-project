@@ -371,9 +371,9 @@ LogicalResult TextualPipeline::initialize(StringRef text,
   pipelineMgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBuffer(text, "MLIR Textual PassPipeline Parser",
                                        /*RequiresNullTerminator=*/false),
-      llvm::SMLoc());
+      SMLoc());
   auto errorHandler = [&](const char *rawLoc, Twine msg) {
-    pipelineMgr.PrintMessage(errorStream, llvm::SMLoc::getFromPointer(rawLoc),
+    pipelineMgr.PrintMessage(errorStream, SMLoc::getFromPointer(rawLoc),
                              llvm::SourceMgr::DK_Error, msg);
     return failure();
   };

@@ -900,7 +900,7 @@ static void print(OpAsmPrinter &p, vector::ExtractOp op) {
 }
 
 static ParseResult parseExtractOp(OpAsmParser &parser, OperationState &result) {
-  llvm::SMLoc attributeLoc, typeLoc;
+  SMLoc attributeLoc, typeLoc;
   NamedAttrList attrs;
   OpAsmParser::OperandType vector;
   Type type;
@@ -2695,7 +2695,7 @@ static void print(OpAsmPrinter &p, TransferReadOp op) {
 static ParseResult parseTransferReadOp(OpAsmParser &parser,
                                        OperationState &result) {
   auto &builder = parser.getBuilder();
-  llvm::SMLoc typesLoc;
+  SMLoc typesLoc;
   OpAsmParser::OperandType sourceInfo;
   SmallVector<OpAsmParser::OperandType, 8> indexInfo;
   OpAsmParser::OperandType paddingInfo;
@@ -3075,7 +3075,7 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 static ParseResult parseTransferWriteOp(OpAsmParser &parser,
                                         OperationState &result) {
   auto &builder = parser.getBuilder();
-  llvm::SMLoc typesLoc;
+  SMLoc typesLoc;
   OpAsmParser::OperandType vectorInfo, sourceInfo;
   SmallVector<OpAsmParser::OperandType, 8> indexInfo;
   SmallVector<Type, 2> types;

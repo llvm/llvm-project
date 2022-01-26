@@ -695,7 +695,7 @@ static Type getElementType(Type type, Attribute indices, Location loc) {
 }
 
 static Type getElementType(Type type, Attribute indices, OpAsmParser &parser,
-                           llvm::SMLoc loc) {
+                           SMLoc loc) {
   auto errorFn = [&](StringRef err) -> InFlightDiagnostic {
     return parser.emitError(loc, err);
   };
@@ -721,7 +721,7 @@ static ParseResult parseAtomicUpdateOp(OpAsmParser &parser,
   SmallVector<OpAsmParser::OperandType, 2> operandInfo;
   OpAsmParser::OperandType ptrInfo, valueInfo;
   Type type;
-  llvm::SMLoc loc;
+  SMLoc loc;
   if (parseEnumStrAttr(scope, parser, state, kMemoryScopeAttrName) ||
       parseEnumStrAttr(memoryScope, parser, state, kSemanticsAttrName) ||
       parser.parseOperandList(operandInfo, (hasValue ? 2 : 1)) ||
@@ -1508,7 +1508,7 @@ static ParseResult parseCompositeExtractOp(OpAsmParser &parser,
   OpAsmParser::OperandType compositeInfo;
   Attribute indicesAttr;
   Type compositeType;
-  llvm::SMLoc attrLocation;
+  SMLoc attrLocation;
 
   if (parser.parseOperand(compositeInfo) ||
       parser.getCurrentLocation(&attrLocation) ||

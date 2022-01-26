@@ -35,25 +35,25 @@ class VariableDecl;
 /// contains a string name as well as the source location for that name.
 struct Name {
   static const Name &create(Context &ctx, StringRef name,
-                            llvm::SMRange location);
+                            SMRange location);
 
   /// Return the raw string name.
   StringRef getName() const { return name; }
 
   /// Get the location of this name.
-  llvm::SMRange getLoc() const { return location; }
+  SMRange getLoc() const { return location; }
 
 private:
   Name() = delete;
   Name(const Name &) = delete;
   Name &operator=(const Name &) = delete;
-  Name(StringRef name, llvm::SMRange location)
+  Name(StringRef name, SMRange location)
       : name(name), location(location) {}
 
   /// The string name of the decl.
   StringRef name;
   /// The location of the decl name.
-  llvm::SMRange location;
+  SMRange location;
 };
 
 //===----------------------------------------------------------------------===//
@@ -118,7 +118,7 @@ public:
 
   protected:
     template <typename... Args>
-    explicit NodeBase(llvm::SMRange loc, Args &&...args)
+    explicit NodeBase(SMRange loc, Args &&...args)
         : BaseT(TypeID::get<T>(), loc, std::forward<Args>(args)...) {}
   };
 
@@ -126,20 +126,20 @@ public:
   TypeID getTypeID() const { return typeID; }
 
   /// Return the location of this node.
-  llvm::SMRange getLoc() const { return loc; }
+  SMRange getLoc() const { return loc; }
 
   /// Print this node to the given stream.
   void print(raw_ostream &os) const;
 
 protected:
-  Node(TypeID typeID, llvm::SMRange loc) : typeID(typeID), loc(loc) {}
+  Node(TypeID typeID, SMRange loc) : typeID(typeID), loc(loc) {}
 
 private:
   /// A unique type identifier for this node.
   TypeID typeID;
 
   /// The location of this node.
-  llvm::SMRange loc;
+  SMRange loc;
 };
 
 //===----------------------------------------------------------------------===//
@@ -164,7 +164,7 @@ public:
 class CompoundStmt final : public Node::NodeBase<CompoundStmt, Stmt>,
                            private llvm::TrailingObjects<CompoundStmt, Stmt *> {
 public:
-  static CompoundStmt *create(Context &ctx, llvm::SMRange location,
+  static CompoundStmt *create(Context &ctx, SMRange location,
                               ArrayRef<Stmt *> children);
 
   /// Return the children of this compound statement.
@@ -178,7 +178,7 @@ public:
   ArrayRef<Stmt *>::iterator end() const { return getChildren().end(); }
 
 private:
-  CompoundStmt(llvm::SMRange location, unsigned numChildren)
+  CompoundStmt(SMRange location, unsigned numChildren)
       : Base(location), numChildren(numChildren) {}
 
   /// The number of held children statements.
@@ -196,14 +196,14 @@ private:
 /// to define variables.
 class LetStmt final : public Node::NodeBase<LetStmt, Stmt> {
 public:
-  static LetStmt *create(Context &ctx, llvm::SMRange loc,
+  static LetStmt *create(Context &ctx, SMRange loc,
                          VariableDecl *varDecl);
 
   /// Return the variable defined by this statement.
   VariableDecl *getVarDecl() const { return varDecl; }
 
 private:
-  LetStmt(llvm::SMRange loc, VariableDecl *varDecl)
+  LetStmt(SMRange loc, VariableDecl *varDecl)
       : Base(loc), varDecl(varDecl) {}
 
   /// The variable defined by this statement.
@@ -225,7 +225,7 @@ public:
   Expr *getRootOpExpr() const { return rootOp; }
 
 protected:
-  OpRewriteStmt(TypeID typeID, llvm::SMRange loc, Expr *rootOp)
+  OpRewriteStmt(TypeID typeID, SMRange loc, Expr *rootOp)
       : Stmt(typeID, loc), rootOp(rootOp) {}
 
 protected:
@@ -241,10 +241,10 @@ protected:
 /// PatternRewriter::eraseOp API.
 class EraseStmt final : public Node::NodeBase<EraseStmt, OpRewriteStmt> {
 public:
-  static EraseStmt *create(Context &ctx, llvm::SMRange loc, Expr *rootOp);
+  static EraseStmt *create(Context &ctx, SMRange loc, Expr *rootOp);
 
 private:
-  EraseStmt(llvm::SMRange loc, Expr *rootOp) : Base(loc, rootOp) {}
+  EraseStmt(SMRange loc, Expr *rootOp) : Base(loc, rootOp) {}
 };
 
 //===----------------------------------------------------------------------===//
@@ -256,7 +256,7 @@ private:
 class ReplaceStmt final : public Node::NodeBase<ReplaceStmt, OpRewriteStmt>,
                           private llvm::TrailingObjects<ReplaceStmt, Expr *> {
 public:
-  static ReplaceStmt *create(Context &ctx, llvm::SMRange loc, Expr *rootOp,
+  static ReplaceStmt *create(Context &ctx, SMRange loc, Expr *rootOp,
                              ArrayRef<Expr *> replExprs);
 
   /// Return the replacement values of this statement.
@@ -268,7 +268,7 @@ public:
   }
 
 private:
-  ReplaceStmt(llvm::SMRange loc, Expr *rootOp, unsigned numReplExprs)
+  ReplaceStmt(SMRange loc, Expr *rootOp, unsigned numReplExprs)
       : Base(loc, rootOp), numReplExprs(numReplExprs) {}
 
   /// The number of replacement values within this statement.
@@ -286,14 +286,14 @@ private:
 /// rewrites that span across multiple statements, which may be unconnected.
 class RewriteStmt final : public Node::NodeBase<RewriteStmt, OpRewriteStmt> {
 public:
-  static RewriteStmt *create(Context &ctx, llvm::SMRange loc, Expr *rootOp,
+  static RewriteStmt *create(Context &ctx, SMRange loc, Expr *rootOp,
                              CompoundStmt *rewriteBody);
 
   /// Return the compound rewrite body.
   CompoundStmt *getRewriteBody() const { return rewriteBody; }
 
 private:
-  RewriteStmt(llvm::SMRange loc, Expr *rootOp, CompoundStmt *rewriteBody)
+  RewriteStmt(SMRange loc, Expr *rootOp, CompoundStmt *rewriteBody)
       : Base(loc, rootOp), rewriteBody(rewriteBody) {}
 
   /// The body of nested rewriters within this statement.
@@ -314,7 +314,7 @@ public:
   static bool classof(const Node *node);
 
 protected:
-  Expr(TypeID typeID, llvm::SMRange loc, Type type)
+  Expr(TypeID typeID, SMRange loc, Type type)
       : Stmt(typeID, loc), type(type) {}
 
 private:
@@ -330,7 +330,7 @@ private:
 /// textual assembly format of that attribute.
 class AttributeExpr : public Node::NodeBase<AttributeExpr, Expr> {
 public:
-  static AttributeExpr *create(Context &ctx, llvm::SMRange loc,
+  static AttributeExpr *create(Context &ctx, SMRange loc,
                                StringRef value);
 
   /// Get the raw value of this expression. This is the textual assembly format
@@ -338,7 +338,7 @@ public:
   StringRef getValue() const { return value; }
 
 private:
-  AttributeExpr(Context &ctx, llvm::SMRange loc, StringRef value)
+  AttributeExpr(Context &ctx, SMRange loc, StringRef value)
       : Base(loc, AttributeType::get(ctx)), value(value) {}
 
   /// The value referenced by this expression.
@@ -352,14 +352,14 @@ private:
 /// This expression represents a reference to a Decl node.
 class DeclRefExpr : public Node::NodeBase<DeclRefExpr, Expr> {
 public:
-  static DeclRefExpr *create(Context &ctx, llvm::SMRange loc, Decl *decl,
+  static DeclRefExpr *create(Context &ctx, SMRange loc, Decl *decl,
                              Type type);
 
   /// Get the decl referenced by this expression.
   Decl *getDecl() const { return decl; }
 
 private:
-  DeclRefExpr(llvm::SMRange loc, Decl *decl, Type type)
+  DeclRefExpr(SMRange loc, Decl *decl, Type type)
       : Base(loc, type), decl(decl) {}
 
   /// The decl referenced by this expression.
@@ -374,7 +374,7 @@ private:
 /// expression.
 class MemberAccessExpr : public Node::NodeBase<MemberAccessExpr, Expr> {
 public:
-  static MemberAccessExpr *create(Context &ctx, llvm::SMRange loc,
+  static MemberAccessExpr *create(Context &ctx, SMRange loc,
                                   const Expr *parentExpr, StringRef memberName,
                                   Type type);
 
@@ -385,7 +385,7 @@ public:
   StringRef getMemberName() const { return memberName; }
 
 private:
-  MemberAccessExpr(llvm::SMRange loc, const Expr *parentExpr,
+  MemberAccessExpr(SMRange loc, const Expr *parentExpr,
                    StringRef memberName, Type type)
       : Base(loc, type), parentExpr(parentExpr), memberName(memberName) {}
 
@@ -406,7 +406,7 @@ public:
   /// Return the member name used for the "all-results" access.
   static StringRef getMemberName() { return "$results"; }
 
-  static AllResultsMemberAccessExpr *create(Context &ctx, llvm::SMRange loc,
+  static AllResultsMemberAccessExpr *create(Context &ctx, SMRange loc,
                                             const Expr *parentExpr, Type type) {
     return cast<AllResultsMemberAccessExpr>(
         MemberAccessExpr::create(ctx, loc, parentExpr, getMemberName(), type));
@@ -431,7 +431,7 @@ class OperationExpr final
       private llvm::TrailingObjects<OperationExpr, Expr *,
                                     NamedAttributeDecl *> {
 public:
-  static OperationExpr *create(Context &ctx, llvm::SMRange loc,
+  static OperationExpr *create(Context &ctx, SMRange loc,
                                const OpNameDecl *nameDecl,
                                ArrayRef<Expr *> operands,
                                ArrayRef<Expr *> resultTypes,
@@ -445,7 +445,7 @@ public:
 
   /// Return the location of the name of the operation expression, or an invalid
   /// location if there isn't a name.
-  llvm::SMRange getNameLoc() const { return nameLoc; }
+  SMRange getNameLoc() const { return nameLoc; }
 
   /// Return the operands of this operation.
   MutableArrayRef<Expr *> getOperands() {
@@ -472,9 +472,9 @@ public:
   }
 
 private:
-  OperationExpr(llvm::SMRange loc, Type type, const OpNameDecl *nameDecl,
+  OperationExpr(SMRange loc, Type type, const OpNameDecl *nameDecl,
                 unsigned numOperands, unsigned numResultTypes,
-                unsigned numAttributes, llvm::SMRange nameLoc)
+                unsigned numAttributes, SMRange nameLoc)
       : Base(loc, type), nameDecl(nameDecl), numOperands(numOperands),
         numResultTypes(numResultTypes), numAttributes(numAttributes),
         nameLoc(nameLoc) {}
@@ -486,7 +486,7 @@ private:
   unsigned numOperands, numResultTypes, numAttributes;
 
   /// The location of the operation name in the expression if it has a name.
-  llvm::SMRange nameLoc;
+  SMRange nameLoc;
 
   /// TrailingObject utilities.
   friend llvm::TrailingObjects<OperationExpr, Expr *, NamedAttributeDecl *>;
@@ -503,7 +503,7 @@ private:
 class TupleExpr final : public Node::NodeBase<TupleExpr, Expr>,
                         private llvm::TrailingObjects<TupleExpr, Expr *> {
 public:
-  static TupleExpr *create(Context &ctx, llvm::SMRange loc,
+  static TupleExpr *create(Context &ctx, SMRange loc,
                            ArrayRef<Expr *> elements,
                            ArrayRef<StringRef> elementNames);
 
@@ -519,7 +519,7 @@ public:
   TupleType getType() const { return Base::getType().cast<TupleType>(); }
 
 private:
-  TupleExpr(llvm::SMRange loc, TupleType type) : Base(loc, type) {}
+  TupleExpr(SMRange loc, TupleType type) : Base(loc, type) {}
 
   /// TrailingObject utilities.
   friend class llvm::TrailingObjects<TupleExpr, Expr *>;
@@ -533,14 +533,14 @@ private:
 /// assembly format of that type.
 class TypeExpr : public Node::NodeBase<TypeExpr, Expr> {
 public:
-  static TypeExpr *create(Context &ctx, llvm::SMRange loc, StringRef value);
+  static TypeExpr *create(Context &ctx, SMRange loc, StringRef value);
 
   /// Get the raw value of this expression. This is the textual assembly format
   /// of the MLIR Type.
   StringRef getValue() const { return value; }
 
 private:
-  TypeExpr(Context &ctx, llvm::SMRange loc, StringRef value)
+  TypeExpr(Context &ctx, SMRange loc, StringRef value)
       : Base(loc, TypeType::get(ctx)), value(value) {}
 
   /// The value referenced by this expression.
@@ -561,7 +561,7 @@ public:
   static bool classof(const Node *node);
 
 protected:
-  Decl(TypeID typeID, llvm::SMRange loc, const Name *name = nullptr)
+  Decl(TypeID typeID, SMRange loc, const Name *name = nullptr)
       : Node(typeID, loc), name(name) {}
 
 private:
@@ -582,20 +582,20 @@ public:
   static bool classof(const Node *node);
 
 protected:
-  ConstraintDecl(TypeID typeID, llvm::SMRange loc, const Name *name = nullptr)
+  ConstraintDecl(TypeID typeID, SMRange loc, const Name *name = nullptr)
       : Decl(typeID, loc, name) {}
 };
 
 /// This class represents a reference to a constraint, and contains a constraint
 /// and the location of the reference.
 struct ConstraintRef {
-  ConstraintRef(const ConstraintDecl *constraint, llvm::SMRange refLoc)
+  ConstraintRef(const ConstraintDecl *constraint, SMRange refLoc)
       : constraint(constraint), referenceLoc(refLoc) {}
   explicit ConstraintRef(const ConstraintDecl *constraint)
       : ConstraintRef(constraint, constraint->getLoc()) {}
 
   const ConstraintDecl *constraint;
-  llvm::SMRange referenceLoc;
+  SMRange referenceLoc;
 };
 
 //===----------------------------------------------------------------------===//
@@ -611,7 +611,7 @@ public:
   static bool classof(const Node *node);
 
 protected:
-  CoreConstraintDecl(TypeID typeID, llvm::SMRange loc,
+  CoreConstraintDecl(TypeID typeID, SMRange loc,
                      const Name *name = nullptr)
       : ConstraintDecl(typeID, loc, name) {}
 };
@@ -624,7 +624,7 @@ protected:
 class AttrConstraintDecl
     : public Node::NodeBase<AttrConstraintDecl, CoreConstraintDecl> {
 public:
-  static AttrConstraintDecl *create(Context &ctx, llvm::SMRange loc,
+  static AttrConstraintDecl *create(Context &ctx, SMRange loc,
                                     Expr *typeExpr = nullptr);
 
   /// Return the optional type the attribute is constrained to.
@@ -632,7 +632,7 @@ public:
   const Expr *getTypeExpr() const { return typeExpr; }
 
 protected:
-  AttrConstraintDecl(llvm::SMRange loc, Expr *typeExpr)
+  AttrConstraintDecl(SMRange loc, Expr *typeExpr)
       : Base(loc), typeExpr(typeExpr) {}
 
   /// An optional type that the attribute is constrained to.
@@ -647,7 +647,7 @@ protected:
 class OpConstraintDecl
     : public Node::NodeBase<OpConstraintDecl, CoreConstraintDecl> {
 public:
-  static OpConstraintDecl *create(Context &ctx, llvm::SMRange loc,
+  static OpConstraintDecl *create(Context &ctx, SMRange loc,
                                   const OpNameDecl *nameDecl = nullptr);
 
   /// Return the name of the operation, or None if there isn't one.
@@ -657,7 +657,7 @@ public:
   const OpNameDecl *getNameDecl() const { return nameDecl; }
 
 protected:
-  explicit OpConstraintDecl(llvm::SMRange loc, const OpNameDecl *nameDecl)
+  explicit OpConstraintDecl(SMRange loc, const OpNameDecl *nameDecl)
       : Base(loc), nameDecl(nameDecl) {}
 
   /// The operation name of this constraint.
@@ -672,7 +672,7 @@ protected:
 class TypeConstraintDecl
     : public Node::NodeBase<TypeConstraintDecl, CoreConstraintDecl> {
 public:
-  static TypeConstraintDecl *create(Context &ctx, llvm::SMRange loc);
+  static TypeConstraintDecl *create(Context &ctx, SMRange loc);
 
 protected:
   using Base::Base;
@@ -686,7 +686,7 @@ protected:
 class TypeRangeConstraintDecl
     : public Node::NodeBase<TypeRangeConstraintDecl, CoreConstraintDecl> {
 public:
-  static TypeRangeConstraintDecl *create(Context &ctx, llvm::SMRange loc);
+  static TypeRangeConstraintDecl *create(Context &ctx, SMRange loc);
 
 protected:
   using Base::Base;
@@ -700,7 +700,7 @@ protected:
 class ValueConstraintDecl
     : public Node::NodeBase<ValueConstraintDecl, CoreConstraintDecl> {
 public:
-  static ValueConstraintDecl *create(Context &ctx, llvm::SMRange loc,
+  static ValueConstraintDecl *create(Context &ctx, SMRange loc,
                                      Expr *typeExpr);
 
   /// Return the optional type the value is constrained to.
@@ -708,7 +708,7 @@ public:
   const Expr *getTypeExpr() const { return typeExpr; }
 
 protected:
-  ValueConstraintDecl(llvm::SMRange loc, Expr *typeExpr)
+  ValueConstraintDecl(SMRange loc, Expr *typeExpr)
       : Base(loc), typeExpr(typeExpr) {}
 
   /// An optional type that the value is constrained to.
@@ -723,7 +723,7 @@ protected:
 class ValueRangeConstraintDecl
     : public Node::NodeBase<ValueRangeConstraintDecl, CoreConstraintDecl> {
 public:
-  static ValueRangeConstraintDecl *create(Context &ctx, llvm::SMRange loc,
+  static ValueRangeConstraintDecl *create(Context &ctx, SMRange loc,
                                           Expr *typeExpr);
 
   /// Return the optional type the value range is constrained to.
@@ -731,7 +731,7 @@ public:
   const Expr *getTypeExpr() const { return typeExpr; }
 
 protected:
-  ValueRangeConstraintDecl(llvm::SMRange loc, Expr *typeExpr)
+  ValueRangeConstraintDecl(SMRange loc, Expr *typeExpr)
       : Base(loc), typeExpr(typeExpr) {}
 
   /// An optional type that the value range is constrained to.
@@ -771,7 +771,7 @@ private:
 class OpNameDecl : public Node::NodeBase<OpNameDecl, Decl> {
 public:
   static OpNameDecl *create(Context &ctx, const Name &name);
-  static OpNameDecl *create(Context &ctx, llvm::SMRange loc);
+  static OpNameDecl *create(Context &ctx, SMRange loc);
 
   /// Return the name of this operation, or none if the name is unknown.
   Optional<StringRef> getName() const {
@@ -781,7 +781,7 @@ public:
 
 private:
   explicit OpNameDecl(const Name &name) : Base(name.getLoc(), &name) {}
-  explicit OpNameDecl(llvm::SMRange loc) : Base(loc) {}
+  explicit OpNameDecl(SMRange loc) : Base(loc) {}
 };
 
 //===----------------------------------------------------------------------===//
@@ -791,7 +791,7 @@ private:
 /// This Decl represents a single Pattern.
 class PatternDecl : public Node::NodeBase<PatternDecl, Decl> {
 public:
-  static PatternDecl *create(Context &ctx, llvm::SMRange location,
+  static PatternDecl *create(Context &ctx, SMRange location,
                              const Name *name, Optional<uint16_t> benefit,
                              bool hasBoundedRecursion,
                              const CompoundStmt *body);
@@ -811,7 +811,7 @@ public:
   }
 
 private:
-  PatternDecl(llvm::SMRange loc, const Name *name, Optional<uint16_t> benefit,
+  PatternDecl(SMRange loc, const Name *name, Optional<uint16_t> benefit,
               bool hasBoundedRecursion, const CompoundStmt *body)
       : Base(loc, name), benefit(benefit),
         hasBoundedRecursion(hasBoundedRecursion), patternBody(body) {}
@@ -884,7 +884,7 @@ private:
 class Module final : public Node::NodeBase<Module, Node>,
                      private llvm::TrailingObjects<Module, Decl *> {
 public:
-  static Module *create(Context &ctx, llvm::SMLoc loc,
+  static Module *create(Context &ctx, SMLoc loc,
                         ArrayRef<Decl *> children);
 
   /// Return the children of this module.
@@ -896,8 +896,8 @@ public:
   }
 
 private:
-  Module(llvm::SMLoc loc, unsigned numChildren)
-      : Base(llvm::SMRange{loc, loc}), numChildren(numChildren) {}
+  Module(SMLoc loc, unsigned numChildren)
+      : Base(SMRange{loc, loc}), numChildren(numChildren) {}
 
   /// The number of decls held by this module.
   unsigned numChildren;
