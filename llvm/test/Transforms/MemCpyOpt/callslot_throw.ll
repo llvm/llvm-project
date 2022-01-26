@@ -40,14 +40,12 @@ entry:
   ret void
 }
 
-; TODO: byval argument is not visible on unwind.
+; byval argument is not visible on unwind.
 define void @test_byval(i32* nocapture noalias dereferenceable(4) byval(i32) %x) {
 ; CHECK-LABEL: @test_byval(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @may_throw(i32* nonnull [[T]])
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[T]], align 4
-; CHECK-NEXT:    store i32 [[LOAD]], i32* [[X:%.*]], align 4
+; CHECK-NEXT:    call void @may_throw(i32* nonnull [[X:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
