@@ -16,14 +16,20 @@
 #include "InputFiles.h"
 #include "Symbols.h"
 #include "Target.h"
+#include "lld/Common/Args.h"
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
 using namespace llvm;
+using namespace llvm::MachO;
+using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
@@ -241,12 +247,133 @@ DenseMap<const InputSection *, size_t> CallGraphSort::run() {
   return orderMap;
 }
 
+static size_t getSymbolPriority(const SymbolPriorityEntry &entry,
+                                const InputFile *f) {
+  // We don't use toString(InputFile *) here because it returns the full path
+  // for object files, and we only want the basename.
+  StringRef filename;
+  if (f->archiveName.empty())
+    filename = path::filename(f->getName());
+  else
+    filename = saver().save(path::filename(f->archiveName) + "(" +
+                            path::filename(f->getName()) + ")");
+  return std::max(entry.objectFiles.lookup(filename), entry.anyObjectFile);
+}
+
+void macho::extractCallGraphProfile() {
+  TimeTraceScope timeScope("Extract call graph profile");
+  for (const InputFile *file : inputFiles) {
+    auto *obj = dyn_cast_or_null<ObjFile>(file);
+    if (!obj)
+      continue;
+    for (const CallGraphEntry &entry : obj->callGraph) {
+      assert(entry.fromIndex < obj->symbols.size() &&
+             entry.toIndex < obj->symbols.size());
+      auto *fromSym = dyn_cast_or_null<Defined>(obj->symbols[entry.fromIndex]);
+      auto *toSym = dyn_cast_or_null<Defined>(obj->symbols[entry.toIndex]);
+
+      if (!fromSym || !toSym)
+        continue;
+      config->callGraphProfile[{fromSym->isec, toSym->isec}] += entry.count;
+    }
+  }
+}
+
+void macho::parseOrderFile(StringRef path) {
+  Optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer) {
+    error("Could not read order file at " + path);
+    return;
+  }
+
+  MemoryBufferRef mbref = *buffer;
+  size_t priority = std::numeric_limits<size_t>::max();
+  for (StringRef line : args::getLines(mbref)) {
+    StringRef objectFile, symbol;
+    line = line.take_until([](char c) { return c == '#'; }); // ignore comments
+    line = line.ltrim();
+
+    CPUType cpuType = StringSwitch<CPUType>(line)
+                          .StartsWith("i386:", CPU_TYPE_I386)
+                          .StartsWith("x86_64:", CPU_TYPE_X86_64)
+                          .StartsWith("arm:", CPU_TYPE_ARM)
+                          .StartsWith("arm64:", CPU_TYPE_ARM64)
+                          .StartsWith("ppc:", CPU_TYPE_POWERPC)
+                          .StartsWith("ppc64:", CPU_TYPE_POWERPC64)
+                          .Default(CPU_TYPE_ANY);
+
+    if (cpuType != CPU_TYPE_ANY && cpuType != target->cpuType)
+      continue;
+
+    // Drop the CPU type as well as the colon
+    if (cpuType != CPU_TYPE_ANY)
+      line = line.drop_until([](char c) { return c == ':'; }).drop_front();
+
+    constexpr std::array<StringRef, 2> fileEnds = {".o:", ".o):"};
+    for (StringRef fileEnd : fileEnds) {
+      size_t pos = line.find(fileEnd);
+      if (pos != StringRef::npos) {
+        // Split the string around the colon
+        objectFile = line.take_front(pos + fileEnd.size() - 1);
+        line = line.drop_front(pos + fileEnd.size());
+        break;
+      }
+    }
+    symbol = line.trim();
+
+    if (!symbol.empty()) {
+      SymbolPriorityEntry &entry = config->priorities[symbol];
+      if (!objectFile.empty())
+        entry.objectFiles.insert(std::make_pair(objectFile, priority));
+      else
+        entry.anyObjectFile = std::max(entry.anyObjectFile, priority);
+    }
+
+    --priority;
+  }
+}
+
 // Sort sections by the profile data provided by __LLVM,__cg_profile sections.
 //
 // This first builds a call graph based on the profile data then merges sections
 // according to the C³ heuristic. All clusters are then sorted by a density
 // metric to further improve locality.
-DenseMap<const InputSection *, size_t> macho::computeCallGraphProfileOrder() {
+static DenseMap<const InputSection *, size_t> computeCallGraphProfileOrder() {
   TimeTraceScope timeScope("Call graph profile sort");
   return CallGraphSort().run();
+}
+
+// Each section gets assigned the priority of the highest-priority symbol it
+// contains.
+DenseMap<const InputSection *, size_t> macho::buildInputSectionPriorities() {
+  if (config->callGraphProfileSort)
+    return computeCallGraphProfileOrder();
+  DenseMap<const InputSection *, size_t> sectionPriorities;
+
+  if (config->priorities.empty())
+    return sectionPriorities;
+
+  auto addSym = [&](Defined &sym) {
+    if (sym.isAbsolute())
+      return;
+
+    auto it = config->priorities.find(sym.getName());
+    if (it == config->priorities.end())
+      return;
+
+    SymbolPriorityEntry &entry = it->second;
+    size_t &priority = sectionPriorities[sym.isec];
+    priority =
+        std::max(priority, getSymbolPriority(entry, sym.isec->getFile()));
+  };
+
+  // TODO: Make sure this handles weak symbols correctly.
+  for (const InputFile *file : inputFiles) {
+    if (isa<ObjFile>(file))
+      for (Symbol *sym : file->symbols)
+        if (auto *d = dyn_cast_or_null<Defined>(sym))
+          addSym(*d);
+  }
+
+  return sectionPriorities;
 }
