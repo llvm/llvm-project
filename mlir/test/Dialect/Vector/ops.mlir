@@ -389,6 +389,8 @@ func @constant_vector_mask_0d() {
 func @constant_vector_mask() {
   // CHECK: vector.constant_mask [3, 2] : vector<4x3xi1>
   %0 = vector.constant_mask [3, 2] : vector<4x3xi1>
+  // CHECK: vector.constant_mask [0] : vector<[4]xi1>
+  %1 = vector.constant_mask [0] : vector<[4]xi1>
   return
 }
 

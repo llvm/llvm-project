@@ -4232,6 +4232,14 @@ LogicalResult ConstantMaskOp::verify() {
   if (anyZeros && !allZeros)
     return emitOpError("expected all mask dim sizes to be zeros, "
                        "as a result of conjunction with zero mask dim");
+  // Verify that if the mask type is scalable, dimensions should be zero because
+  // constant scalable masks can only be defined for the "none set" or "all set"
+  // cases, and there is no VLA way to define an "all set" case for
+  // `vector.constant_mask`. In the future, a convention could be established
+  // to decide if a specific dimension value could be considered as "all set".
+  if (resultType.isScalable() &&
+      mask_dim_sizes()[0].cast<IntegerAttr>().getInt() != 0)
+    return emitOpError("expected mask dim sizes for scalable masks to be 0");
   return success();
 }
 
@@ -4269,6 +4277,19 @@ public:
     };
     if (llvm::any_of(createMaskOp.operands(), isNotDefByConstant))
       return failure();
+
+    // CreateMaskOp for scalable vectors can be folded only if all dimensions
+    // are negative or zero.
+    if (auto vType = createMaskOp.getType().dyn_cast<VectorType>()) {
+      if (vType.isScalable())
+        for (auto opDim : createMaskOp.getOperands()) {
+          APInt intVal;
+          if (matchPattern(opDim, m_ConstantInt(&intVal)) &&
+              intVal.isStrictlyPositive())
+            return failure();
+        }
+    }
+
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
     for (auto it : llvm::zip(createMaskOp.operands(),

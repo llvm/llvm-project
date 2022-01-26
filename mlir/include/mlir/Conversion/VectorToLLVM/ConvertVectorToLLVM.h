@@ -63,9 +63,10 @@ void populateVectorToLLVMMatrixConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns);
 
 /// Collect a set of patterns to convert from the Vector dialect to LLVM.
+/// If `indexOptimizations` is set, assume indices fit in 32-bit.
 void populateVectorToLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool reassociateFPReductions = false);
+    bool reassociateFPReductions = false, bool indexOptimizations = false);
 
 /// Create a pass to convert vector operations to the LLVMIR dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertVectorToLLVMPass(

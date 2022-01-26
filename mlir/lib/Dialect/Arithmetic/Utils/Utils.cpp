@@ -59,6 +59,27 @@ Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
   return b.create<arith::ConstantIndexOp>(loc, attr.getValue().getSExtValue());
 }
 
+Value mlir::getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
+                                            Type targetType, Value value) {
+  if (targetType == value.getType())
+    return value;
+
+  bool targetIsIndex = targetType.isIndex();
+  bool valueIsIndex = value.getType().isIndex();
+  if (targetIsIndex ^ valueIsIndex)
+    return b.create<arith::IndexCastOp>(loc, targetType, value);
+
+  auto targetIntegerType = targetType.dyn_cast<IntegerType>();
+  auto valueIntegerType = value.getType().dyn_cast<IntegerType>();
+  assert(targetIntegerType && valueIntegerType &&
+         "unexpected cast between types other than integers and index");
+  assert(targetIntegerType.getSignedness() == valueIntegerType.getSignedness());
+
+  if (targetIntegerType.getWidth() > valueIntegerType.getWidth())
+    return b.create<arith::ExtSIOp>(loc, targetIntegerType, value);
+  return b.create<arith::TruncIOp>(loc, targetIntegerType, value);
+}
+
 SmallVector<Value>
 mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                       ArrayRef<OpFoldResult> valueOrAttrVec) {
