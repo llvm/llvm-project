@@ -37,10 +37,7 @@ Value mlir::x86vector::avx2::inline_asm::mm256BlendPsAsm(
   SmallVector<Value> asmVals{v1, v2};
   auto asmStr = llvm::formatv(asmTp, llvm::format_hex(mask, /*width=*/2)).str();
   auto asmOp = b.create<LLVM::InlineAsmOp>(
-      v1.getType(), /*operands=*/asmVals, /*asm_string=*/asmStr,
-      /*constraints=*/asmCstr, /*has_side_effects=*/false,
-      /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
-      /*operand_attrs=*/ArrayAttr());
+      v1.getType(), asmVals, asmStr, asmCstr, false, false, asmDialectAttr);
   return asmOp.getResult(0);
 }
 
