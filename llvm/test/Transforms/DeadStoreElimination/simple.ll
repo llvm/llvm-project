@@ -532,6 +532,20 @@ define void @test34(i32* noalias %p) {
   store i32 0, i32* %p
   ret void
 }
+; Same as previous case, but with an sret argument.
+; TODO: The first store could be eliminated if sret is not visible on unwind.
+define void @test34_sret(i32* noalias sret(i32) %p) {
+; CHECK-LABEL: @test34_sret(
+; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    call void @unknown_func()
+; CHECK-NEXT:    store i32 0, i32* [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i32 1, i32* %p
+  call void @unknown_func()
+  store i32 0, i32* %p
+  ret void
+}
 
 ; Remove redundant store even with an unwinding function in the same block
 define void @test35(i32* noalias %p) {
