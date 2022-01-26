@@ -71,6 +71,7 @@ run(testParseFail)
 def testInvalidNesting():
   with Context():
     try:
+      import mlir.all_passes_registration
       pm = PassManager.parse("builtin.func(normalize-memrefs)")
     except ValueError as e:
       # CHECK: Can't add pass 'NormalizeMemRefs' restricted to 'builtin.module' on a PassManager intended to run on 'builtin.func', did you intend to nest?

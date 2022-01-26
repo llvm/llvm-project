@@ -1139,6 +1139,9 @@ public:
   /// \note This does NOT include a check for union-ness.
   bool isEmpty() const { return data().Empty; }
 
+  void setInitMethod(bool Val) { data().HasInitMethod = Val; }
+  bool hasInitMethod() const { return data().HasInitMethod; }
+
   bool hasPrivateFields() const {
     return data().HasPrivateFields;
   }

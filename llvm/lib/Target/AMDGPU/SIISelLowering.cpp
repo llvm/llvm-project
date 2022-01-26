@@ -134,6 +134,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v2f16, &AMDGPU::SReg_32RegClass);
     addRegisterClass(MVT::v4i16, &AMDGPU::SReg_64RegClass);
     addRegisterClass(MVT::v4f16, &AMDGPU::SReg_64RegClass);
+    addRegisterClass(MVT::v8i16, &AMDGPU::SGPR_128RegClass);
+    addRegisterClass(MVT::v8f16, &AMDGPU::SGPR_128RegClass);
   }
 
   addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
@@ -269,7 +271,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                   MVT::v2i64, MVT::v2f64, MVT::v4i16, MVT::v4f16,
                   MVT::v3i64, MVT::v3f64, MVT::v6i32, MVT::v6f32,
                   MVT::v4i64, MVT::v4f64, MVT::v8i64, MVT::v8f64,
-                  MVT::v16i64, MVT::v16f64, MVT::v32i32, MVT::v32f32 }) {
+                  MVT::v8i16, MVT::v8f16, MVT::v16i64, MVT::v16f64,
+                  MVT::v32i32, MVT::v32f32 }) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
       switch (Op) {
       case ISD::LOAD:
@@ -611,7 +614,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     if (STI.hasMadF16())
       setOperationAction(ISD::FMAD, MVT::f16, Legal);
 
-    for (MVT VT : {MVT::v2i16, MVT::v2f16, MVT::v4i16, MVT::v4f16}) {
+    for (MVT VT : {MVT::v2i16, MVT::v2f16, MVT::v4i16, MVT::v4f16, MVT::v8i16,
+                   MVT::v8f16}) {
       for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
         switch (Op) {
         case ISD::LOAD:
@@ -673,6 +677,21 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, MVT::v4f16, Promote);
     AddPromotedToType(ISD::STORE, MVT::v4f16, MVT::v2i32);
 
+    setOperationAction(ISD::LOAD, MVT::v8i16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v8i16, MVT::v4i32);
+    setOperationAction(ISD::LOAD, MVT::v8f16, Promote);
+    AddPromotedToType(ISD::LOAD, MVT::v8f16, MVT::v4i32);
+
+    setOperationAction(ISD::STORE, MVT::v4i16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v4i16, MVT::v2i32);
+    setOperationAction(ISD::STORE, MVT::v4f16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v4f16, MVT::v2i32);
+
+    setOperationAction(ISD::STORE, MVT::v8i16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v8i16, MVT::v4i32);
+    setOperationAction(ISD::STORE, MVT::v8f16, Promote);
+    AddPromotedToType(ISD::STORE, MVT::v8f16, MVT::v4i32);
+
     setOperationAction(ISD::ANY_EXTEND, MVT::v2i32, Expand);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v2i32, Expand);
     setOperationAction(ISD::SIGN_EXTEND, MVT::v2i32, Expand);
@@ -681,6 +700,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ANY_EXTEND, MVT::v4i32, Expand);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v4i32, Expand);
     setOperationAction(ISD::SIGN_EXTEND, MVT::v4i32, Expand);
+
+    setOperationAction(ISD::ANY_EXTEND, MVT::v8i32, Expand);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::v8i32, Expand);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::v8i32, Expand);
 
     if (!Subtarget->hasVOP3PInsts()) {
       setOperationAction(ISD::BUILD_VECTOR, MVT::v2i16, Custom);
@@ -699,9 +722,20 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::FMINNUM_IEEE, MVT::v4f16, Custom);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::v4f16, Custom);
+    setOperationAction(ISD::FMINNUM_IEEE, MVT::v8f16, Custom);
+    setOperationAction(ISD::FMAXNUM_IEEE, MVT::v8f16, Custom);
 
     setOperationAction(ISD::FMINNUM, MVT::v4f16, Expand);
     setOperationAction(ISD::FMAXNUM, MVT::v4f16, Expand);
+    setOperationAction(ISD::FMINNUM, MVT::v8f16, Expand);
+    setOperationAction(ISD::FMAXNUM, MVT::v8f16, Expand);
+
+    for (MVT Vec16 : { MVT::v8i16, MVT::v8f16 }) {
+      setOperationAction(ISD::BUILD_VECTOR, Vec16, Custom);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec16, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, Vec16, Expand);
+      setOperationAction(ISD::SCALAR_TO_VECTOR, Vec16, Expand);
+    }
   }
 
   if (Subtarget->hasVOP3PInsts()) {
@@ -735,34 +769,42 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4f16, Custom);
     setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i16, Custom);
+    setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8f16, Custom);
+    setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8i16, Custom);
 
-    setOperationAction(ISD::SHL, MVT::v4i16, Custom);
-    setOperationAction(ISD::SRA, MVT::v4i16, Custom);
-    setOperationAction(ISD::SRL, MVT::v4i16, Custom);
-    setOperationAction(ISD::ADD, MVT::v4i16, Custom);
-    setOperationAction(ISD::SUB, MVT::v4i16, Custom);
-    setOperationAction(ISD::MUL, MVT::v4i16, Custom);
+    for (MVT VT : { MVT::v4i16, MVT::v8i16 }) {
+      // Split vector operations.
+      setOperationAction(ISD::SHL, VT, Custom);
+      setOperationAction(ISD::SRA, VT, Custom);
+      setOperationAction(ISD::SRL, VT, Custom);
+      setOperationAction(ISD::ADD, VT, Custom);
+      setOperationAction(ISD::SUB, VT, Custom);
+      setOperationAction(ISD::MUL, VT, Custom);
 
-    setOperationAction(ISD::SMIN, MVT::v4i16, Custom);
-    setOperationAction(ISD::SMAX, MVT::v4i16, Custom);
-    setOperationAction(ISD::UMIN, MVT::v4i16, Custom);
-    setOperationAction(ISD::UMAX, MVT::v4i16, Custom);
+      setOperationAction(ISD::SMIN, VT, Custom);
+      setOperationAction(ISD::SMAX, VT, Custom);
+      setOperationAction(ISD::UMIN, VT, Custom);
+      setOperationAction(ISD::UMAX, VT, Custom);
 
-    setOperationAction(ISD::UADDSAT, MVT::v4i16, Custom);
-    setOperationAction(ISD::SADDSAT, MVT::v4i16, Custom);
-    setOperationAction(ISD::USUBSAT, MVT::v4i16, Custom);
-    setOperationAction(ISD::SSUBSAT, MVT::v4i16, Custom);
+      setOperationAction(ISD::UADDSAT, VT, Custom);
+      setOperationAction(ISD::SADDSAT, VT, Custom);
+      setOperationAction(ISD::USUBSAT, VT, Custom);
+      setOperationAction(ISD::SSUBSAT, VT, Custom);
+    }
 
-    setOperationAction(ISD::FADD, MVT::v4f16, Custom);
-    setOperationAction(ISD::FMUL, MVT::v4f16, Custom);
-    setOperationAction(ISD::FMA, MVT::v4f16, Custom);
+    for (MVT VT : { MVT::v4f16, MVT::v8f16 }) {
+      // Split vector operations.
+      setOperationAction(ISD::FADD, VT, Custom);
+      setOperationAction(ISD::FMUL, VT, Custom);
+      setOperationAction(ISD::FMA, VT, Custom);
+      setOperationAction(ISD::FCANONICALIZE, VT, Custom);
+    }
 
     setOperationAction(ISD::FMAXNUM, MVT::v2f16, Custom);
     setOperationAction(ISD::FMINNUM, MVT::v2f16, Custom);
 
     setOperationAction(ISD::FMINNUM, MVT::v4f16, Custom);
     setOperationAction(ISD::FMAXNUM, MVT::v4f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v4f16, Custom);
 
     setOperationAction(ISD::FEXP, MVT::v2f16, Custom);
     setOperationAction(ISD::SELECT, MVT::v4i16, Custom);
@@ -799,7 +841,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FABS, MVT::v2f16, Custom);
   }
 
-  for (MVT VT : { MVT::v4i16, MVT::v4f16, MVT::v2i8, MVT::v4i8, MVT::v8i8 }) {
+  for (MVT VT : { MVT::v4i16, MVT::v4f16, MVT::v2i8, MVT::v4i8, MVT::v8i8,
+                  MVT::v8i16, MVT::v8f16 }) {
     setOperationAction(ISD::SELECT, VT, Custom);
   }
 
@@ -4637,7 +4680,8 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
   assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
-         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32);
+         VT == MVT::v8i16 || VT == MVT::v8f16 || VT == MVT::v8f32 ||
+         VT == MVT::v16f32 || VT == MVT::v32f32);
 
   SDValue Lo0, Hi0;
   std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
@@ -4658,21 +4702,26 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
                                               SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4f32 ||
-         VT == MVT::v8f32 || VT == MVT::v16f32 || VT == MVT::v32f32);
+  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v8i16 ||
+         VT == MVT::v8f16 || VT == MVT::v4f32 || VT == MVT::v8f32 ||
+         VT == MVT::v16f32 || VT == MVT::v32f32);
 
   SDValue Lo0, Hi0;
-  std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
+  SDValue Op0 = Op.getOperand(0);
+  std::tie(Lo0, Hi0) = Op0.getValueType().isVector()
+                         ? DAG.SplitVectorOperand(Op.getNode(), 0)
+                         : std::make_pair(Op0, Op0);
   SDValue Lo1, Hi1;
   std::tie(Lo1, Hi1) = DAG.SplitVectorOperand(Op.getNode(), 1);
   SDValue Lo2, Hi2;
   std::tie(Lo2, Hi2) = DAG.SplitVectorOperand(Op.getNode(), 2);
 
   SDLoc SL(Op);
+  auto ResVT = DAG.GetSplitDestVTs(VT);
 
-  SDValue OpLo = DAG.getNode(Opc, SL, Lo0.getValueType(), Lo0, Lo1, Lo2,
+  SDValue OpLo = DAG.getNode(Opc, SL, ResVT.first, Lo0, Lo1, Lo2,
                              Op->getFlags());
-  SDValue OpHi = DAG.getNode(Opc, SL, Hi0.getValueType(), Hi0, Hi1, Hi2,
+  SDValue OpHi = DAG.getNode(Opc, SL, ResVT.second, Hi0, Hi1, Hi2,
                              Op->getFlags());
 
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
@@ -5334,7 +5383,7 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   if (IsIEEEMode)
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
-  if (VT == MVT::v4f16)
+  if (VT == MVT::v4f16 || VT == MVT::v8f16)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -5736,7 +5785,6 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   EVT VecVT = Vec.getValueType();
   unsigned VecSize = VecVT.getSizeInBits();
   EVT EltVT = VecVT.getVectorElementType();
-  assert(VecSize <= 64);
 
   DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
 
@@ -5746,6 +5794,28 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   // XXX - Why doesn't this get called when vector_shuffle is expanded?
   if (SDValue Combined = performExtractVectorEltCombine(Op.getNode(), DCI))
     return Combined;
+
+  if (VecSize == 128) {
+    SDValue Lo, Hi;
+    EVT LoVT, HiVT;
+    SDValue V2 = DAG.getBitcast(MVT::v2i64, Vec);
+    std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VecVT);
+    Lo =
+        DAG.getBitcast(LoVT, DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i64,
+                                         V2, DAG.getConstant(0, SL, MVT::i32)));
+    Hi =
+        DAG.getBitcast(HiVT, DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i64,
+                                         V2, DAG.getConstant(1, SL, MVT::i32)));
+    EVT IdxVT = Idx.getValueType();
+    unsigned NElem = VecVT.getVectorNumElements();
+    assert(isPowerOf2_32(NElem));
+    SDValue IdxMask = DAG.getConstant(NElem / 2 - 1, SL, IdxVT);
+    SDValue NewIdx = DAG.getNode(ISD::AND, SL, IdxVT, Idx, IdxMask);
+    SDValue Half = DAG.getSelectCC(SL, Idx, IdxMask, Hi, Lo, ISD::SETUGT);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT, Half, NewIdx);
+  }
+
+  assert(VecSize <= 64);
 
   unsigned EltSize = EltVT.getSizeInBits();
   assert(isPowerOf2_32(EltSize));
@@ -5829,20 +5899,27 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
   SDLoc SL(Op);
   EVT VT = Op.getValueType();
 
-  if (VT == MVT::v4i16 || VT == MVT::v4f16) {
-    EVT HalfVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(), 2);
+  if (VT == MVT::v4i16 || VT == MVT::v4f16 ||
+      VT == MVT::v8i16 || VT == MVT::v8f16) {
+    EVT HalfVT = MVT::getVectorVT(VT.getVectorElementType().getSimpleVT(),
+                                  VT.getVectorNumElements() / 2);
+    MVT HalfIntVT = MVT::getIntegerVT(HalfVT.getSizeInBits());
 
     // Turn into pair of packed build_vectors.
     // TODO: Special case for constants that can be materialized with s_mov_b64.
-    SDValue Lo = DAG.getBuildVector(HalfVT, SL,
-                                    { Op.getOperand(0), Op.getOperand(1) });
-    SDValue Hi = DAG.getBuildVector(HalfVT, SL,
-                                    { Op.getOperand(2), Op.getOperand(3) });
+    SmallVector<SDValue, 4> LoOps, HiOps;
+    for (unsigned I = 0, E = VT.getVectorNumElements() / 2; I != E; ++I) {
+      LoOps.push_back(Op.getOperand(I));
+      HiOps.push_back(Op.getOperand(I + E));
+    }
+    SDValue Lo = DAG.getBuildVector(HalfVT, SL, LoOps);
+    SDValue Hi = DAG.getBuildVector(HalfVT, SL, HiOps);
 
-    SDValue CastLo = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Lo);
-    SDValue CastHi = DAG.getNode(ISD::BITCAST, SL, MVT::i32, Hi);
+    SDValue CastLo = DAG.getNode(ISD::BITCAST, SL, HalfIntVT, Lo);
+    SDValue CastHi = DAG.getNode(ISD::BITCAST, SL, HalfIntVT, Hi);
 
-    SDValue Blend = DAG.getBuildVector(MVT::v2i32, SL, { CastLo, CastHi });
+    SDValue Blend = DAG.getBuildVector(MVT::getVectorVT(HalfIntVT, 2), SL,
+                                       { CastLo, CastHi });
     return DAG.getNode(ISD::BITCAST, SL, VT, Blend);
   }
 
@@ -8498,6 +8575,9 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
+  if (VT.getSizeInBits() == 128)
+    return splitTernaryVectorOp(Op, DAG);
+
   assert(VT.getSizeInBits() == 64);
 
   SDLoc DL(Op);
@@ -9630,6 +9710,9 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
 
 SDValue SITargetLowering::performXorCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
+  if (SDValue RV = reassociateScalarOps(N, DCI.DAG))
+    return RV;
+
   EVT VT = N->getValueType(0);
   if (VT != MVT::i64)
     return SDValue();
@@ -10542,6 +10625,9 @@ SDValue SITargetLowering::reassociateScalarOps(SDNode *N,
   if (VT != MVT::i32 && VT != MVT::i64)
     return SDValue();
 
+  if (DAG.isBaseWithConstantOffset(SDValue(N, 0)))
+    return SDValue();
+
   unsigned Opc = N->getOpcode();
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -10562,12 +10648,6 @@ SDValue SITargetLowering::reassociateScalarOps(SDNode *N,
 
   if (Op1->isDivergent())
     std::swap(Op1, Op2);
-
-  // If either operand is constant this will conflict with
-  // DAGCombiner::ReassociateOps().
-  if (DAG.isConstantIntBuildVectorOrConstantInt(Op0) ||
-      DAG.isConstantIntBuildVectorOrConstantInt(Op1))
-    return SDValue();
 
   SDLoc SL(N);
   SDValue Add1 = DAG.getNode(Opc, SL, VT, Op0, Op1);
@@ -12568,4 +12648,28 @@ SITargetLowering::getTypeLegalizationCost(const DataLayout &DL,
 
   Cost.first += (Size + 255) / 256;
   return Cost;
+}
+
+bool SITargetLowering::hasMemSDNodeUser(SDNode *N) const {
+  SDNode::use_iterator I = N->use_begin(), E = N->use_end();
+  for (; I != E; ++I) {
+    if (MemSDNode *M = dyn_cast<MemSDNode>(*I)) {
+      if (getBasePtrIndex(M) == I.getOperandNo())
+        return true;
+    }
+  }
+  return false;
+}
+
+bool SITargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
+                                           SDValue N1) const {
+  if (!N0.hasOneUse())
+    return false;
+  // Take care of the oportunity to keep N0 uniform
+  if (N0->isDivergent() || !N1->isDivergent())
+    return true;
+  // Check if we have a good chance to form the memory access pattern with the
+  // base and offset
+  return (DAG.isBaseWithConstantOffset(N0) &&
+          hasMemSDNodeUser(*N0->use_begin()));
 }

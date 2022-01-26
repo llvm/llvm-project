@@ -408,6 +408,16 @@ public:
   ///     in memory.
   static size_t StaticMemorySize();
 
+  struct MemoryStats {
+    size_t GetBytesTotal() const { return bytes_total; }
+    size_t GetBytesUsed() const { return bytes_used; }
+    size_t GetBytesUnused() const { return bytes_total - bytes_used; }
+    size_t bytes_total = 0;
+    size_t bytes_used = 0;
+  };
+
+  static MemoryStats GetMemoryStats();
+
 protected:
   template <typename T, typename Enable> friend struct ::llvm::DenseMapInfo;
   /// Only used by DenseMapInfo.

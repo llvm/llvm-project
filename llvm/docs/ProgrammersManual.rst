@@ -2198,10 +2198,9 @@ membership.
 Other Set-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multiset and the various
-"hash_set" like containers (whether from C++ TR1 or from the SGI library).  We
-never use hash_set and unordered_set because they are generally very expensive
-(each insertion requires a malloc) and very non-portable.
+The STL provides several other options, such as std::multiset and
+std::unordered_set.  We never use containers like unordered_set because
+they are generally very expensive (each insertion requires a malloc).
 
 std::multiset is useful if you're not interested in elimination of duplicates,
 but has all the drawbacks of :ref:`std::set <dss_set>`.  A sorted vector
@@ -2389,10 +2388,9 @@ operations is logarithmic in the size of the original map.
 Other Map-Like Container Options
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The STL provides several other options, such as std::multimap and the various
-"hash_map" like containers (whether from C++ TR1 or from the SGI library).  We
-never use hash_set and unordered_set because they are generally very expensive
-(each insertion requires a malloc) and very non-portable.
+The STL provides several other options, such as std::multimap and
+std::unordered_map.  We never use containers like unordered_map because
+they are generally very expensive (each insertion requires a malloc).
 
 std::multimap is useful if you want to map a key to multiple values, but has all
 the drawbacks of std::map.  A sorted vector or some other approach is almost
@@ -2400,10 +2398,10 @@ always better.
 
 .. _ds_bit:
 
-Bit storage containers (BitVector, SparseBitVector, CoalescingBitVector)
+Bit storage containers
 ------------------------------------------------------------------------
 
-There are three bit storage containers, and choosing when to use each is
+There are several bit storage containers, and choosing when to use each is
 relatively straightforward.
 
 One additional option is ``std::vector<bool>``: we discourage its use for two

@@ -390,6 +390,18 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+bool PPCRegisterInfo::isAsmClobberable(const MachineFunction &MF,
+                                       MCRegister PhysReg) const {
+  // We cannot use getReservedRegs() to find the registers that are not asm
+  // clobberable because there are some reserved registers which can be
+  // clobbered by inline asm. For example, when LR is clobbered, the register is
+  // saved and restored. We will hardcode the registers that are not asm
+  // cloberable in this function.
+
+  // The stack pointer (R1/X1) is not clobberable by inline asm
+  return PhysReg != PPC::R1 && PhysReg != PPC::X1;
+}
+
 bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) const {
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   const PPCInstrInfo *InstrInfo =  Subtarget.getInstrInfo();

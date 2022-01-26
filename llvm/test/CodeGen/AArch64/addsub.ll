@@ -389,4 +389,21 @@ define i1 @uadd_add(i8 %a, i8 %b, i8* %p) {
   ret i1 %e1
 }
 
+; This is a unique edge case that will generate the following MIR
+;   MOVi32imm -1000000
+;   SUBREG_TO_REG 0, killed %1, %subreg.sub_32
+; When using a 64-bit unsigned for the "-1000000" immediate, the code
+; must make sure to zero out the top 32 bits since SUBREG_TO_REG is
+; zero extending the value
+define i64 @addl_0x80000000(i64 %a) {
+; CHECK-LABEL: addl_0x80000000:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #48576
+; CHECK-NEXT:    movk w8, #65520, lsl #16
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    ret
+  %b = add i64 %a, 4293967296
+  ret i64 %b
+}
+
 ; TODO: adds/subs

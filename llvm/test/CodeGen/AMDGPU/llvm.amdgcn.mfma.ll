@@ -186,8 +186,7 @@ bb:
 
 ; GCN-LABEL: {{^}}test_mfma_f32_4x4x4f16:
 ; GCN:              s_load_dwordx4
-; GCN:              s_load_dwordx2
-; GCN:              s_load_dwordx2
+; GCN:              s_load_dwordx4
 ; GFX908_A-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GFX908_A:         v_mfma_f32_4x4x4f16 [[RES:a\[[0-9]+:[0-9]+\]]], {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX908-COUNT-4:   v_accvgpr_read_b32

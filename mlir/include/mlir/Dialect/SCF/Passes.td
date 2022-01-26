@@ -52,6 +52,22 @@ def SCFParallelLoopFusion : Pass<"parallel-loop-fusion"> {
   let constructor = "mlir::createParallelLoopFusionPass()";
 }
 
+def SCFParallelLoopCollapsing : Pass<"parallel-loop-collapsing"> {
+  let summary = "Collapse parallel loops to use less induction variables";
+  let constructor = "mlir::createParallelLoopCollapsingPass()";
+  let options = [
+    ListOption<"clCollapsedIndices0", "collapsed-indices-0", "unsigned",
+               "Which loop indices to combine 0th loop index",
+               "llvm::cl::MiscFlags::CommaSeparated">,
+    ListOption<"clCollapsedIndices1", "collapsed-indices-1", "unsigned",
+               "Which loop indices to combine into the position 1 loop index",
+               "llvm::cl::MiscFlags::CommaSeparated">,
+    ListOption<"clCollapsedIndices2", "collapsed-indices-2", "unsigned",
+               "Which loop indices to combine into the position 2 loop index",
+               "llvm::cl::MiscFlags::CommaSeparated">,
+  ];
+}
+
 def SCFParallelLoopSpecialization
     : Pass<"parallel-loop-specialization", "FuncOp"> {
   let summary = "Specialize parallel loops for vectorization";

@@ -330,15 +330,30 @@ func @omp_wsloop_pretty_multiple(%lb1 : i32, %ub1 : i32, %step1 : i32, %lb2 : i3
 // CHECK-LABEL: omp_target
 func @omp_target(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
 
-    // Test with optional operands; if_expr, device, thread_limit, and nowait.
-    // CHECK: omp.target
+    // Test with optional operands; if_expr, device, thread_limit, private, firstprivate and nowait.
+    // CHECK: omp.target if({{.*}}) device({{.*}}) thread_limit({{.*}}) nowait
     "omp.target"(%if_cond, %device, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {operand_segment_sizes = dense<[1,1,1]>: vector<3xi32>, nowait } : ( i1, si32, si32  ) -> ()
+    }) {operand_segment_sizes = dense<[1,1,1]>: vector<3xi32>, nowait } : ( i1, si32, si32 ) -> ()
 
     // CHECK: omp.barrier
     omp.barrier
+
+    return
+}
+
+// CHECK-LABEL: omp_target_pretty
+func @omp_target_pretty(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
+    // CHECK: omp.target if({{.*}}) device({{.*}})
+    omp.target if(%if_cond : i1) device(%device : si32) {
+      omp.terminator
+    }
+
+    // CHECK: omp.target if({{.*}}) device({{.*}}) nowait
+    omp.target if(%if_cond : i1) device(%device : si32) thread_limit(%num_threads : si32) nowait {
+      omp.terminator
+    }
 
     return
 }
@@ -581,6 +596,42 @@ func @omp_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>, %exp
   omp.atomic.update %xBool =  %exprBool neqv %xBool : memref<i1>, i1
   // CHECK: omp.atomic.update %[[X]] = %[[EXPR]] add %[[X]] memory_order(seq_cst) hint(speculative) : memref<i32>, i32
   omp.atomic.update %x = %expr add %x hint(speculative) memory_order(seq_cst) : memref<i32>, i32
+  return
+}
+
+// CHECK-LABEL: omp_atomic_capture
+// CHECK-SAME: (%[[v:.*]]: memref<i32>, %[[x:.*]]: memref<i32>, %[[expr:.*]]: i32)
+func @omp_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
+  // CHECK: omp.atomic.capture{
+  // CHECK-NEXT: omp.atomic.update %[[x]] = %[[expr]] add %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.atomic.capture{
+    omp.atomic.update %x = %expr add %x : memref<i32>, i32
+    omp.atomic.read %v = %x : memref<i32>
+    omp.terminator
+  }
+  // CHECK: omp.atomic.capture{
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: omp.atomic.update %[[x]] = %[[expr]] add %[[x]] : memref<i32>, i32
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.atomic.capture{
+    omp.atomic.read %v = %x : memref<i32>
+    omp.atomic.update %x = %expr add %x : memref<i32>, i32
+    omp.terminator
+  }
+  // CHECK: omp.atomic.capture{
+  // CHECK-NEXT: omp.atomic.read %[[v]] = %[[x]] : memref<i32>
+  // CHECK-NEXT: omp.atomic.write %[[x]] = %[[expr]] : memref<i32>, i32
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.atomic.capture{
+    omp.atomic.read %v = %x : memref<i32>
+    omp.atomic.write %x = %expr : memref<i32>, i32
+    omp.terminator
+  }
   return
 }
 

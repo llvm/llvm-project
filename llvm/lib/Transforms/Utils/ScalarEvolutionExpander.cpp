@@ -173,7 +173,7 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
     auto *PtrTy = cast<PointerType>(Ty);
     if (DL.isNonIntegralPointerType(PtrTy)) {
       auto *Int8PtrTy = Builder.getInt8PtrTy(PtrTy->getAddressSpace());
-      assert(DL.getTypeAllocSize(Int8PtrTy->getElementType()) == 1 &&
+      assert(DL.getTypeAllocSize(Builder.getInt8Ty()) == 1 &&
              "alloc size of i8 must by 1 byte for the GEP to be correct");
       auto *GEP = Builder.CreateGEP(
           Builder.getInt8Ty(), Constant::getNullValue(Int8PtrTy), V, "uglygep");
@@ -471,7 +471,7 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     // indexes into the array implied by the pointer operand; the rest of
     // the indices index into the element or field type selected by the
     // preceding index.
-    Type *ElTy = PTy->getElementType();
+    Type *ElTy = PTy->getNonOpaquePointerElementType();
     for (;;) {
       // If the scale size is not 0, attempt to factor out a scale for
       // array indexing.
@@ -640,8 +640,8 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
     Value *Casted = V;
     if (V->getType() != PTy)
       Casted = InsertNoopCastOfTo(Casted, PTy);
-    Value *GEP = Builder.CreateGEP(PTy->getElementType(), Casted, GepIndices,
-                                   "scevgep");
+    Value *GEP = Builder.CreateGEP(PTy->getNonOpaquePointerElementType(),
+                                   Casted, GepIndices, "scevgep");
     Ops.push_back(SE.getUnknown(GEP));
   }
 
@@ -1981,22 +1981,14 @@ Value *SCEVExpander::expand(const SCEV *S) {
 
     if (VO.second) {
       if (PointerType *Vty = dyn_cast<PointerType>(V->getType())) {
-        Type *Ety = Vty->getPointerElementType();
         int64_t Offset = VO.second->getSExtValue();
-        int64_t ESize = SE.getTypeSizeInBits(Ety);
-        if ((Offset * 8) % ESize == 0) {
-          ConstantInt *Idx =
-            ConstantInt::getSigned(VO.second->getType(), -(Offset * 8) / ESize);
-          V = Builder.CreateGEP(Ety, V, Idx, "scevgep");
-        } else {
-          ConstantInt *Idx =
-            ConstantInt::getSigned(VO.second->getType(), -Offset);
-          unsigned AS = Vty->getAddressSpace();
-          V = Builder.CreateBitCast(V, Type::getInt8PtrTy(SE.getContext(), AS));
-          V = Builder.CreateGEP(Type::getInt8Ty(SE.getContext()), V, Idx,
-                                "uglygep");
-          V = Builder.CreateBitCast(V, Vty);
-        }
+        ConstantInt *Idx =
+          ConstantInt::getSigned(VO.second->getType(), -Offset);
+        unsigned AS = Vty->getAddressSpace();
+        V = Builder.CreateBitCast(V, Type::getInt8PtrTy(SE.getContext(), AS));
+        V = Builder.CreateGEP(Type::getInt8Ty(SE.getContext()), V, Idx,
+                              "uglygep");
+        V = Builder.CreateBitCast(V, Vty);
       } else {
         V = Builder.CreateSub(V, VO.second);
       }

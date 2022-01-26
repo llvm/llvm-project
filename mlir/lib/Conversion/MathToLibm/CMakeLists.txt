@@ -14,4 +14,5 @@ add_mlir_conversion_library(MLIRMathToLibm
   MLIRArithmetic
   MLIRMath
   MLIRStandardOpsTransforms
+  MLIRVector
   )

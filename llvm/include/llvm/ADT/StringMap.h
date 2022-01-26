@@ -14,6 +14,7 @@
 #define LLVM_ADT_STRINGMAP_H
 
 #include "llvm/ADT/StringMapEntry.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/AllocatorBase.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <initializer_list>

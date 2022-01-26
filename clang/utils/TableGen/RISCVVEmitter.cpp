@@ -141,11 +141,12 @@ using RISCVPredefinedMacroT = uint8_t;
 
 enum RISCVPredefinedMacro : RISCVPredefinedMacroT {
   Basic = 0,
-  Zfh = 1 << 1,
-  RV64 = 1 << 2,
-  VectorMaxELen64 = 1 << 3,
-  VectorMaxELenFp32 = 1 << 4,
-  VectorMaxELenFp64 = 1 << 5,
+  V = 1 << 1,
+  Zfh = 1 << 2,
+  RV64 = 1 << 3,
+  VectorMaxELen64 = 1 << 4,
+  VectorMaxELenFp32 = 1 << 5,
+  VectorMaxELenFp64 = 1 << 6,
 };
 
 // TODO refactor RVVIntrinsic class design after support all intrinsic
@@ -179,7 +180,7 @@ public:
                bool HasNoMaskedOverloaded, bool HasAutoDef,
                StringRef ManualCodegen, const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
-               const std::vector<StringRef> &RequiredExtensions, unsigned NF);
+               const std::vector<StringRef> &RequiredFeatures, unsigned NF);
   ~RVVIntrinsic() = default;
 
   StringRef getBuiltinName() const { return BuiltinName; }
@@ -772,7 +773,7 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            bool HasNoMaskedOverloaded, bool HasAutoDef,
                            StringRef ManualCodegen, const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes,
-                           const std::vector<StringRef> &RequiredExtensions,
+                           const std::vector<StringRef> &RequiredFeatures,
                            unsigned NF)
     : IRName(IRName), IsMask(IsMask), HasVL(HasVL), HasPolicy(HasPolicy),
       HasNoMaskedOverloaded(HasNoMaskedOverloaded), HasAutoDef(HasAutoDef),
@@ -805,9 +806,14 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
     if (T->isVector(64))
       RISCVPredefinedMacros |= RISCVPredefinedMacro::VectorMaxELen64;
   }
-  for (auto Extension : RequiredExtensions) {
-    if (Extension == "RV64")
+  for (auto Feature : RequiredFeatures) {
+    if (Feature == "RV64")
       RISCVPredefinedMacros |= RISCVPredefinedMacro::RV64;
+    // Note: Full multiply instruction (mulh, mulhu, mulhsu, smul) for EEW=64
+    // require V.
+    if (Feature == "FullMultiply" &&
+        (RISCVPredefinedMacros & RISCVPredefinedMacro::VectorMaxELen64))
+      RISCVPredefinedMacros |= RISCVPredefinedMacro::V;
   }
 
   // Init OutputType and InputTypes
@@ -1154,8 +1160,8 @@ void RVVEmitter::createRVVIntrinsics(
     StringRef ManualCodegenMask = R->getValueAsString("ManualCodegenMask");
     std::vector<int64_t> IntrinsicTypes =
         R->getValueAsListOfInts("IntrinsicTypes");
-    std::vector<StringRef> RequiredExtensions =
-        R->getValueAsListOfStrings("RequiredExtensions");
+    std::vector<StringRef> RequiredFeatures =
+        R->getValueAsListOfStrings("RequiredFeatures");
     StringRef IRName = R->getValueAsString("IRName");
     StringRef IRNameMask = R->getValueAsString("IRNameMask");
     unsigned NF = R->getValueAsInt("NF");
@@ -1223,7 +1229,7 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, MangledName, MangledSuffixStr, IRName,
             /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL, HasPolicy,
             HasNoMaskedOverloaded, HasAutoDef, ManualCodegen, Types.getValue(),
-            IntrinsicTypes, RequiredExtensions, NF));
+            IntrinsicTypes, RequiredFeatures, NF));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
@@ -1232,7 +1238,7 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, MangledName, MangledSuffixStr, IRNameMask,
               /*IsMask=*/true, HasMaskedOffOperand, HasVL, HasPolicy,
               HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
-              MaskTypes.getValue(), IntrinsicTypes, RequiredExtensions, NF));
+              MaskTypes.getValue(), IntrinsicTypes, RequiredFeatures, NF));
         }
       } // end for Log2LMULList
     }   // end for TypeRange
@@ -1314,6 +1320,8 @@ bool RVVEmitter::emitMacroRestrictionStr(RISCVPredefinedMacroT PredefinedMacros,
     return false;
   OS << "#if ";
   ListSeparator LS(" && ");
+  if (PredefinedMacros & RISCVPredefinedMacro::V)
+    OS << LS << "defined(__riscv_v)";
   if (PredefinedMacros & RISCVPredefinedMacro::Zfh)
     OS << LS << "defined(__riscv_zfh)";
   if (PredefinedMacros & RISCVPredefinedMacro::RV64)

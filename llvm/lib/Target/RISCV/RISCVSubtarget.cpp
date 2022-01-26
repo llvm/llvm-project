@@ -149,15 +149,16 @@ unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
                        "than the Zvl*b limitation");
 
   // FIXME: Change to >= 32 when VLEN = 32 is supported
-  assert(RVVVectorBitsMax >= 64 && RVVVectorBitsMax <= 65536 &&
-         isPowerOf2_32(RVVVectorBitsMax) &&
-         "V extension requires vector length to be in the range of 128 to "
-         "65536 and a power of 2!");
+  assert(
+      RVVVectorBitsMax >= 64 && RVVVectorBitsMax <= 65536 &&
+      isPowerOf2_32(RVVVectorBitsMax) &&
+      "V or Zve* extension requires vector length to be in the range of 64 to "
+      "65536 and a power of 2!");
   assert(RVVVectorBitsMax >= RVVVectorBitsMin &&
          "Minimum V extension vector length should not be larger than its "
          "maximum!");
   unsigned Max = std::max(RVVVectorBitsMin, RVVVectorBitsMax);
-  return PowerOf2Floor((Max < 128 || Max > 65536) ? 0 : Max);
+  return PowerOf2Floor((Max < 64 || Max > 65536) ? 0 : Max);
 }
 
 unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
@@ -170,18 +171,19 @@ unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
   // FIXME: Change to >= 32 when VLEN = 32 is supported
-  assert((RVVVectorBitsMin == 0 ||
-          (RVVVectorBitsMin >= 64 && RVVVectorBitsMax <= 65536 &&
-           isPowerOf2_32(RVVVectorBitsMin))) &&
-         "V extension requires vector length to be in the range of 128 to "
-         "65536 and a power of 2!");
+  assert(
+      (RVVVectorBitsMin == 0 ||
+       (RVVVectorBitsMin >= 64 && RVVVectorBitsMin <= 65536 &&
+        isPowerOf2_32(RVVVectorBitsMin))) &&
+      "V or Zve* extension requires vector length to be in the range of 64 to "
+      "65536 and a power of 2!");
   assert((RVVVectorBitsMax >= RVVVectorBitsMin || RVVVectorBitsMax == 0) &&
          "Minimum V extension vector length should not be larger than its "
          "maximum!");
   unsigned Min = RVVVectorBitsMin;
   if (RVVVectorBitsMax != 0)
     Min = std::min(RVVVectorBitsMin, RVVVectorBitsMax);
-  return PowerOf2Floor((Min < 128 || Min > 65536) ? 0 : Min);
+  return PowerOf2Floor((Min < 64 || Min > 65536) ? 0 : Min);
 }
 
 unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {

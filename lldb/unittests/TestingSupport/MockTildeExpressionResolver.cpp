@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MockTildeExpressionResolver.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
 
 using namespace lldb_private;

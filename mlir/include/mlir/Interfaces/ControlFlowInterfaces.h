@@ -83,6 +83,35 @@ private:
   ValueRange inputs;
 };
 
+/// This class represents upper and lower bounds on the number of times a region
+/// of a `RegionBranchOpInterface` can be invoked. The lower bound is at least
+/// zero, but the upper bound may not be known.
+class InvocationBounds {
+public:
+  /// Create invocation bounds. The lower bound must be at least 0 and only the
+  /// upper bound can be unknown.
+  InvocationBounds(unsigned lb, Optional<unsigned> ub) : lower(lb), upper(ub) {
+    assert((!ub || ub >= lb) && "upper bound cannot be less than lower bound");
+  }
+
+  /// Return the lower bound.
+  unsigned getLowerBound() const { return lower; }
+
+  /// Return the upper bound.
+  Optional<unsigned> getUpperBound() const { return upper; }
+
+  /// Returns the unknown invocation bounds, i.e., there is no information on
+  /// how many times a region may be invoked.
+  static InvocationBounds getUnknown() { return {0, llvm::None}; }
+
+private:
+  /// The minimum number of times the successor region will be invoked.
+  unsigned lower;
+  /// The maximum number of times the successor region will be invoked or `None`
+  /// if an upper bound is not known.
+  Optional<unsigned> upper;
+};
+
 /// Return `true` if `a` and `b` are in mutually exclusive regions as per
 /// RegionBranchOpInterface.
 bool insideMutuallyExclusiveRegions(Operation *a, Operation *b);

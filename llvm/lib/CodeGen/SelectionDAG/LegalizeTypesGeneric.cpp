@@ -540,7 +540,7 @@ void DAGTypeLegalizer::SplitRes_Select(SDNode *N, SDValue &Lo, SDValue &Hi) {
       std::tie(CL, CH) = DAG.SplitVector(Cond, dl);
   }
 
-  if (Opcode != ISD::VP_SELECT) {
+  if (Opcode != ISD::VP_SELECT && Opcode != ISD::VP_MERGE) {
     Lo = DAG.getNode(Opcode, dl, LL.getValueType(), CL, LL, RL);
     Hi = DAG.getNode(Opcode, dl, LH.getValueType(), CH, LH, RH);
     return;

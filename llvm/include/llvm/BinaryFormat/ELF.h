@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <cstring>
-#include <string>
 
 namespace llvm {
 namespace ELF {

@@ -433,7 +433,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
     PointerType *ArgType = cast<PointerType>(Arg.getType());
 
-    auto *EltTy = ArgType->getElementType();
+    auto *EltTy = ArgType->getPointerElementType();
     const auto Align =
         DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 

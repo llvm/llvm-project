@@ -115,7 +115,7 @@ define amdgpu_kernel void @fmul_f16() #0 {
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = fmul <4 x half> undef, undef
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = fmul <5 x half> undef, undef
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = fmul <16 x half> undef, undef
-; GFX9-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v17f16 = fmul <17 x half> undef, undef
+; GFX9-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v17f16 = fmul <17 x half> undef, undef
 ; GFX9-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-LABEL: 'fmul_f16'
@@ -135,7 +135,7 @@ define amdgpu_kernel void @fmul_f16() #0 {
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = fmul <4 x half> undef, undef
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = fmul <5 x half> undef, undef
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = fmul <16 x half> undef, undef
-; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v17f16 = fmul <17 x half> undef, undef
+; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %v17f16 = fmul <17 x half> undef, undef
 ; GFX9-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fmul_f16'

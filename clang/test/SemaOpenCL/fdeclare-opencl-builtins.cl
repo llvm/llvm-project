@@ -74,6 +74,7 @@ typedef struct {int a;} ndrange_t;
 #define cl_khr_subgroup_ballot 1
 #define cl_khr_subgroup_non_uniform_arithmetic 1
 #define cl_khr_subgroup_clustered_reduce 1
+#define __opencl_c_read_write_images 1
 #endif
 #endif
 

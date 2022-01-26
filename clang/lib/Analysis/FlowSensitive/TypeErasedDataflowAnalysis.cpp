@@ -93,7 +93,7 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
         MaybePredState.getValue();
     if (MaybeState.hasValue()) {
       Analysis.joinTypeErased(MaybeState->Lattice, PredState.Lattice);
-      MaybeState->Env.join(PredState.Env);
+      MaybeState->Env.join(PredState.Env, Analysis);
     } else {
       MaybeState = PredState;
     }
@@ -210,8 +210,8 @@ runTypeErasedDataflowAnalysis(const ControlFlowContext &CFCtx,
   // FIXME: Consider making the maximum number of iterations configurable.
   // FIXME: Set up statistics (see llvm/ADT/Statistic.h) to count average number
   // of iterations, number of functions that time out, etc.
-  unsigned Iterations = 0;
-  static constexpr unsigned MaxIterations = 1 << 16;
+  uint32_t Iterations = 0;
+  static constexpr uint32_t MaxIterations = 1 << 16;
   while (const CFGBlock *Block = Worklist.dequeue()) {
     if (++Iterations > MaxIterations) {
       llvm::errs() << "Maximum number of iterations reached, giving up.\n";

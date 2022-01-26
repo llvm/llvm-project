@@ -19,8 +19,11 @@
 
 int main(int, char**)
 {
+  ASSERT_NOEXCEPT(std::seed_seq());
+  {
     std::seed_seq s;
     assert(s.size() == 0);
+  }
 
   return 0;
 }

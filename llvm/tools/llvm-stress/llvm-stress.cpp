@@ -346,8 +346,7 @@ struct LoadModifier: public Modifier {
   void Act() override {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
-    PointerType *Tp = cast<PointerType>(Ptr->getType());
-    Value *V = new LoadInst(Tp->getElementType(), Ptr, "L",
+    Value *V = new LoadInst(Ptr->getType()->getPointerElementType(), Ptr, "L",
                             BB->getTerminator());
     PT->push_back(V);
   }
@@ -360,8 +359,7 @@ struct StoreModifier: public Modifier {
   void Act() override {
     // Try to use predefined pointers. If non-exist, use undef pointer value;
     Value *Ptr = getRandomPointerValue();
-    PointerType *Tp = cast<PointerType>(Ptr->getType());
-    Value *Val = getRandomValue(Tp->getElementType());
+    Value *Val = getRandomValue(Ptr->getType()->getPointerElementType());
     Type  *ValTy = Val->getType();
 
     // Do not store vectors of i1s because they are unsupported

@@ -418,6 +418,9 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
                        UnitAttr:$nowait);
 
   let regions = (region AnyRegion:$region);
+
+  let parser = [{ return parseTargetOp(parser, result); }];
+  let printer = [{ return printTargetOp(p, *this); }];
 }
 
 
@@ -706,6 +709,50 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update"> {
   let parser = [{ return parseAtomicUpdateOp(parser, result); }];
   let printer = [{ return printAtomicUpdateOp(p, *this); }];
   let verifier = [{ return verifyAtomicUpdateOp(*this); }];
+}
+
+def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
+    [SingleBlockImplicitTerminator<"TerminatorOp">]> {
+  let summary = "performs an atomic capture";
+  let description = [{
+    This operation performs an atomic capture.
+
+    `hint` is the value of hint (as used in the hint clause). It is a compile
+    time constant. As the name suggests, this is just a hint for optimization.
+
+    `memory_order` indicates the memory ordering behavior of the construct. It
+    can be one of `seq_cst`, `acq_rel`, `release`, `acquire` or `relaxed`.
+
+    The region has the following allowed forms:
+
+    ```
+      omp.atomic.capture {
+        omp.atomic.update ...
+        omp.atomic.read ...
+        omp.terminator
+      }
+
+      omp.atomic.capture {
+        omp.atomic.read ...
+        omp.atomic.update ...
+        omp.terminator
+      }
+
+      omp.atomic.capture {
+        omp.atomic.read ...
+        omp.atomic.write ...
+        omp.terminator
+      }
+    ```
+
+  }];
+
+  let arguments = (ins DefaultValuedAttr<I64Attr, "0">:$hint,
+                       OptionalAttr<MemoryOrderKind>:$memory_order);
+  let regions = (region SizedRegion<1>:$region);
+  let parser = [{ return parseAtomicCaptureOp(parser, result); }];
+  let printer = [{ return printAtomicCaptureOp(p, *this); }];
+  let verifier = [{ return verifyAtomicCaptureOp(*this); }];
 }
 
 //===----------------------------------------------------------------------===//

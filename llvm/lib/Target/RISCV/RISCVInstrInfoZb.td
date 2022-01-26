@@ -27,6 +27,7 @@
 // versions:
 //   Zbkb - 1.0
 //   Zbkc - 1.0
+//   Zbkx - 1.0
 //
 //===----------------------------------------------------------------------===//
 
@@ -359,9 +360,12 @@ def GORC : ALU_rr<0b0010100, 0b101, "gorc">, Sched<[]>;
 def GREV : ALU_rr<0b0110100, 0b101, "grev">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
+let Predicates = [HasStdExtZbpOrZbkx] in {
+def XPERMN : ALU_rr<0b0010100, 0b010, "xperm4">, Sched<[]>;
+def XPERMB : ALU_rr<0b0010100, 0b100, "xperm8">, Sched<[]>;
+} // Predicates = [HasStdExtZbpOrZbkx]
+
 let Predicates = [HasStdExtZbp] in {
-def XPERMN : ALU_rr<0b0010100, 0b010, "xperm.n">, Sched<[]>;
-def XPERMB : ALU_rr<0b0010100, 0b100, "xperm.b">, Sched<[]>;
 def XPERMH : ALU_rr<0b0010100, 0b110, "xperm.h">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
@@ -767,6 +771,13 @@ def : InstAlias<"grevw $rd, $rs1, $shamt",
 def : InstAlias<"gorcw $rd, $rs1, $shamt",
                 (GORCIW  GPR:$rd, GPR:$rs1, uimm5:$shamt), 0>;
 } // Predicates = [HasStdExtZbp, IsRV64]
+
+// Zbp is unratified and that it would likely adopt the already ratified Zbkx names.
+// Thus current Zbp instructions are defined as aliases for Zbkx instructions.
+let Predicates = [HasStdExtZbp] in {
+  def : InstAlias<"xperm.b $rd, $rs1, $rs2", (XPERMB GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : InstAlias<"xperm.n $rd, $rs1, $rs2", (XPERMN GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbs] in {
 def : InstAlias<"bset $rd, $rs1, $shamt",

@@ -15,8 +15,8 @@ target triple = "x86_64-apple-macosx10.8.0"
 define i32 @fn1() {
 ; CHECK-LABEL: @fn1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds (%struct.DState, %struct.DState* @b, i32 0, i32 0), align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds (%struct.DState, %struct.DState* @b, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_DSTATE:%.*]], %struct.DState* @b, i32 0, i32 0), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_DSTATE]], %struct.DState* @b, i32 0, i32 1), align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* @d, align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[SW_BB:%.*]], label [[SAVE_STATE_AND_RETURN:%.*]]
@@ -33,8 +33,8 @@ define i32 @fn1() {
 ; CHECK:       save_state_and_return:
 ; CHECK-NEXT:    [[T_0:%.*]] = phi i32 [ 0, [[IF_END]] ], [ [[TMP0]], [[ENTRY:%.*]] ], [ [[TMP0]], [[SW_BB]] ], [ [[TMP0]], [[SW_BB]] ]
 ; CHECK-NEXT:    [[F_0:%.*]] = phi i32 [ 0, [[IF_END]] ], [ [[TMP1]], [[ENTRY]] ], [ 0, [[SW_BB]] ], [ 0, [[SW_BB]] ]
-; CHECK-NEXT:    store i32 [[T_0]], i32* getelementptr inbounds (%struct.DState, %struct.DState* @b, i32 0, i32 0), align 4
-; CHECK-NEXT:    store i32 [[F_0]], i32* getelementptr inbounds (%struct.DState, %struct.DState* @b, i32 0, i32 1), align 4
+; CHECK-NEXT:    store i32 [[T_0]], i32* getelementptr inbounds ([[STRUCT_DSTATE]], %struct.DState* @b, i32 0, i32 0), align 4
+; CHECK-NEXT:    store i32 [[F_0]], i32* getelementptr inbounds ([[STRUCT_DSTATE]], %struct.DState* @b, i32 0, i32 1), align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

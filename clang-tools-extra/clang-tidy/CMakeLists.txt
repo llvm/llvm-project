@@ -17,6 +17,7 @@ add_clang_library(clangTidy
   ClangTidyProfiling.cpp
   ExpandModularHeadersPPCallbacks.cpp
   GlobList.cpp
+  NoLintDirectiveHandler.cpp
 
   DEPENDS
   ClangSACheckers

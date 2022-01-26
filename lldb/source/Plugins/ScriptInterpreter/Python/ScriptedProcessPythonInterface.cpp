@@ -32,7 +32,7 @@ ScriptedProcessPythonInterface::ScriptedProcessPythonInterface(
 
 StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
     llvm::StringRef class_name, ExecutionContext &exe_ctx,
-    StructuredData::DictionarySP args_sp) {
+    StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
   if (class_name.empty())
     return {};
 
@@ -46,9 +46,6 @@ StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
   PythonObject ret_val = LLDBSwigPythonCreateScriptedProcess(
       class_name.str().c_str(), m_interpreter.GetDictionaryName(), target_sp,
       args_impl, error_string);
-
-  if (!ret_val)
-    return {};
 
   m_object_instance_sp =
       StructuredData::GenericSP(new StructuredPythonObject(std::move(ret_val)));
@@ -90,6 +87,17 @@ ScriptedProcessPythonInterface::GetMemoryRegionContainingAddress(
   }
 
   return mem_region;
+}
+
+StructuredData::DictionarySP ScriptedProcessPythonInterface::GetThreadsInfo() {
+  Status error;
+  StructuredData::DictionarySP dict =
+      Dispatch<StructuredData::DictionarySP>("get_threads_info", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+    return {};
+
+  return dict;
 }
 
 StructuredData::DictionarySP
@@ -154,12 +162,8 @@ ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
 }
 
 lldb::ScriptedThreadInterfaceSP
-ScriptedProcessPythonInterface::GetScriptedThreadInterface() {
-  if (!m_scripted_thread_interface_sp)
-    m_scripted_thread_interface_sp =
-        std::make_shared<ScriptedThreadPythonInterface>(m_interpreter);
-
-  return m_scripted_thread_interface_sp;
+ScriptedProcessPythonInterface::CreateScriptedThreadInterface() {
+  return std::make_shared<ScriptedThreadPythonInterface>(m_interpreter);
 }
 
 #endif

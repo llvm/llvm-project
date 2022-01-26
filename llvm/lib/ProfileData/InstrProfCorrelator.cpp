@@ -125,12 +125,12 @@ InstrProfCorrelatorImpl<IntPtrT>::get(
 
 template <class IntPtrT>
 Error InstrProfCorrelatorImpl<IntPtrT>::correlateProfileData() {
-  assert(Data.empty() && CompressedNames.empty() && Names.empty());
+  assert(Data.empty() && Names.empty() && NamesVec.empty());
   correlateProfileDataImpl();
   auto Result =
-      collectPGOFuncNameStrings(Names, /*doCompression=*/true, CompressedNames);
+      collectPGOFuncNameStrings(NamesVec, /*doCompression=*/false, Names);
   CounterOffsets.clear();
-  Names.clear();
+  NamesVec.clear();
   return Result;
 }
 
@@ -155,7 +155,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addProbe(StringRef FunctionName,
       maybeSwap<uint32_t>(NumCounters),
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
   });
-  Names.push_back(FunctionName.str());
+  NamesVec.push_back(FunctionName.str());
 }
 
 template <class IntPtrT>
@@ -167,13 +167,19 @@ DwarfInstrProfCorrelator<IntPtrT>::getLocation(const DWARFDie &Die) const {
     return {};
   }
   auto &DU = *Die.getDwarfUnit();
+  auto AddressSize = DU.getAddressByteSize();
   for (auto &Location : *Locations) {
-    auto AddressSize = DU.getAddressByteSize();
     DataExtractor Data(Location.Expr, DICtx->isLittleEndian(), AddressSize);
     DWARFExpression Expr(Data, AddressSize);
-    for (auto &Op : Expr)
-      if (Op.getCode() == dwarf::DW_OP_addr)
+    for (auto &Op : Expr) {
+      if (Op.getCode() == dwarf::DW_OP_addr) {
         return Op.getRawOperand(0);
+      } else if (Op.getCode() == dwarf::DW_OP_addrx) {
+        uint64_t Index = Op.getRawOperand(0);
+        if (auto SA = DU.getAddrOffsetSectionItem(Index))
+          return SA->Address;
+      }
+    }
   }
   return {};
 }

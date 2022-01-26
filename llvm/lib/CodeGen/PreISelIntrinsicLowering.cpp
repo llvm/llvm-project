@@ -97,7 +97,7 @@ static bool lowerObjCCall(Function &F, const char *NewFn,
       objcarc::ARCInstKind Kind = objcarc::getAttachedARCFunctionKind(CB);
       (void)Kind;
       assert((Kind == objcarc::ARCInstKind::RetainRV ||
-              Kind == objcarc::ARCInstKind::ClaimRV) &&
+              Kind == objcarc::ARCInstKind::UnsafeClaimRV) &&
              "use expected to be the argument of operand bundle "
              "\"clang.arc.attachedcall\"");
       U.set(FCache.getCallee());

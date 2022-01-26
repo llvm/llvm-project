@@ -1,5 +1,6 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
+// UNSUPPORTED: system-windows
 
 //--- cdb_pch.json
 [

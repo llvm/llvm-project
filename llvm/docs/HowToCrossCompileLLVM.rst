@@ -58,7 +58,7 @@ specific Linux distribution, version or GCC layout, so you'll need to fudge.
 
 In addition to the ones above, you'll also need:
 
- * ``'-target arm-linux-gnueabihf'`` or whatever is the triple of your cross GCC.
+ * ``--target=arm-linux-gnueabihf`` or whatever is the triple of your cross GCC.
  * ``'--sysroot=/usr/arm-linux-gnueabihf'``, ``'--sysroot=/opt/gcc/arm-linux-gnueabihf'``
    or whatever is the location of your GCC's sysroot (where /lib, /bin etc are).
  * Appropriate use of ``-I`` and ``-L``, depending on how the cross GCC is installed,

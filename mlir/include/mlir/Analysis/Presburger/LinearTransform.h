@@ -39,11 +39,12 @@ public:
 
   // The given vector is interpreted as a row vector v. Post-multiply v with
   // this transform, say T, and return vT.
-  SmallVector<int64_t, 8> postMultiplyRow(ArrayRef<int64_t> rowVec) const;
+  SmallVector<int64_t, 8> preMultiplyWithRow(ArrayRef<int64_t> rowVec) const;
 
   // The given vector is interpreted as a column vector v. Pre-multiply v with
   // this transform, say T, and return Tv.
-  SmallVector<int64_t, 8> preMultiplyColumn(ArrayRef<int64_t> colVec) const;
+  SmallVector<int64_t, 8>
+  postMultiplyWithColumn(ArrayRef<int64_t> colVec) const;
 
 private:
   Matrix matrix;

@@ -233,7 +233,7 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
 
   assert(PType && "Expecting pointer type in handleByValParam");
 
-  Type *StructType = PType->getElementType();
+  Type *StructType = PType->getPointerElementType();
 
   auto IsALoadChain = [&](Value *Start) {
     SmallVector<Value *, 16> ValuesToCheck = {Start};
