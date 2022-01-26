@@ -862,6 +862,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH);
   RECORD(PP_CONDITIONAL_STACK);
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
+  RECORD(PP_INCLUDED_FILES);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -1773,7 +1774,7 @@ namespace {
     std::pair<unsigned, unsigned>
     EmitKeyDataLength(raw_ostream& Out, key_type_ref key, data_type_ref Data) {
       unsigned KeyLen = key.Filename.size() + 1 + 8 + 8;
-      unsigned DataLen = 1 + 2 + 4 + 4;
+      unsigned DataLen = 1 + 4 + 4;
       for (auto ModInfo : Data.KnownHeaders)
         if (Writer.getLocalOrImportedSubmoduleID(ModInfo.getModule()))
           DataLen += 4;
@@ -1805,7 +1806,6 @@ namespace {
                           | (Data.HFI.DirInfo << 1)
                           | Data.HFI.IndexHeaderMapHeader;
       LE.write<uint8_t>(Flags);
-      LE.write<uint16_t>(Data.HFI.NumIncludes);
 
       if (!Data.HFI.ControllingMacro)
         LE.write<uint32_t>(Data.HFI.ControllingMacroID);
@@ -2254,6 +2254,29 @@ static bool shouldIgnoreMacro(MacroDirective *MD, bool IsModule,
   return false;
 }
 
+void ASTWriter::writeIncludedFiles(raw_ostream &Out, const Preprocessor &PP) {
+  using namespace llvm::support;
+
+  const Preprocessor::IncludedFilesSet &IncludedFiles = PP.getIncludedFiles();
+
+  std::vector<uint32_t> IncludedInputFileIDs;
+  IncludedInputFileIDs.reserve(IncludedFiles.size());
+
+  for (const FileEntry *File : IncludedFiles) {
+    auto InputFileIt = InputFileIDs.find(File);
+    if (InputFileIt == InputFileIDs.end())
+      continue;
+    IncludedInputFileIDs.push_back(InputFileIt->second);
+  }
+
+  llvm::sort(IncludedInputFileIDs);
+
+  endian::Writer LE(Out, little);
+  LE.write<uint32_t>(IncludedInputFileIDs.size());
+  for (uint32_t ID : IncludedInputFileIDs)
+    LE.write<uint32_t>(ID);
+}
+
 /// Writes the block containing the serialized form of the
 /// preprocessor.
 void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
@@ -2461,6 +2484,20 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
                                        FirstMacroID - NUM_PREDEF_MACRO_IDS,
                                        MacroOffsetsBase - ASTBlockStartOffset};
     Stream.EmitRecordWithBlob(MacroOffsetAbbrev, Record, bytes(MacroOffsets));
+  }
+
+  {
+    auto Abbrev = std::make_shared<BitCodeAbbrev>();
+    Abbrev->Add(BitCodeAbbrevOp(PP_INCLUDED_FILES));
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+    unsigned IncludedFilesAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+    SmallString<2048> Buffer;
+    raw_svector_ostream Out(Buffer);
+    writeIncludedFiles(Out, PP);
+    RecordData::value_type Record[] = {PP_INCLUDED_FILES};
+    Stream.EmitRecordWithBlob(IncludedFilesAbbrev, Record, Buffer.data(),
+                              Buffer.size());
   }
 }
 

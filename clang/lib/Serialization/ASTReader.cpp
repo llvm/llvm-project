@@ -1887,10 +1887,6 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HFI.isPragmaOnce |= (Flags >> 4) & 0x01;
   HFI.DirInfo = (Flags >> 1) & 0x07;
   HFI.IndexHeaderMapHeader = Flags & 0x01;
-  // FIXME: Find a better way to handle this. Maybe just store a
-  // "has been included" flag?
-  HFI.NumIncludes = std::max(endian::readNext<uint16_t, little, unaligned>(d),
-                             HFI.NumIncludes);
   HFI.ControllingMacroID = Reader.getGlobalIdentifierID(
       M, endian::readNext<uint32_t, little, unaligned>(d));
   if (unsigned FrameworkOffset =
@@ -2962,6 +2958,22 @@ ASTReader::ReadControlBlock(ModuleFile &F,
   }
 }
 
+void ASTReader::readIncludedFiles(ModuleFile &F, StringRef Blob,
+                                  Preprocessor &PP) {
+  using namespace llvm::support;
+
+  const unsigned char *D = (const unsigned char *)Blob.data();
+  unsigned FileCount = endian::readNext<uint32_t, little, unaligned>(D);
+
+  for (unsigned I = 0; I < FileCount; ++I) {
+    size_t ID = endian::readNext<uint32_t, little, unaligned>(D);
+    InputFileInfo IFI = readInputFileInfo(F, ID);
+    if (llvm::ErrorOr<const FileEntry *> File =
+            PP.getFileManager().getFile(IFI.Filename))
+      PP.getIncludedFiles().insert(*File);
+  }
+}
+
 llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                                     unsigned ClientLoadCapabilities) {
   BitstreamCursor &Stream = F.Stream;
@@ -3699,6 +3711,10 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
       break;
     }
+
+    case PP_INCLUDED_FILES:
+      readIncludedFiles(F, Blob, PP);
+      break;
 
     case LATE_PARSED_TEMPLATE:
       LateParsedTemplates.emplace_back(

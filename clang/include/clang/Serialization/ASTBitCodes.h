@@ -695,6 +695,9 @@ enum ASTRecordTypes {
 
   /// Record code for \#pragma float_control options.
   FLOAT_CONTROL_PRAGMA_OPTIONS = 65,
+
+  /// Record code for included files.
+  PP_INCLUDED_FILES = 66,
 };
 
 /// Record types used within a source manager block.

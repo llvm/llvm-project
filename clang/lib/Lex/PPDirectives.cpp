@@ -2058,7 +2058,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // include cycle. Don't enter already processed files again as it can lead to
   // reaching the max allowed include depth again.
   if (Action == Enter && HasReachedMaxIncludeDepth && File &&
-      HeaderInfo.getFileInfo(&File->getFileEntry()).NumIncludes)
+      alreadyIncluded(*File))
     Action = IncludeLimitReached;
 
   // Determine whether we should try to import the module for this #include, if

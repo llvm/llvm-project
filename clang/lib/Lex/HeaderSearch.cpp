@@ -90,16 +90,10 @@ HeaderSearch::HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
 void HeaderSearch::PrintStats() {
   llvm::errs() << "\n*** HeaderSearch Stats:\n"
                << FileInfo.size() << " files tracked.\n";
-  unsigned NumOnceOnlyFiles = 0, MaxNumIncludes = 0, NumSingleIncludedFiles = 0;
-  for (unsigned i = 0, e = FileInfo.size(); i != e; ++i) {
+  unsigned NumOnceOnlyFiles = 0;
+  for (unsigned i = 0, e = FileInfo.size(); i != e; ++i)
     NumOnceOnlyFiles += (FileInfo[i].isPragmaOnce || FileInfo[i].isImport);
-    if (MaxNumIncludes < FileInfo[i].NumIncludes)
-      MaxNumIncludes = FileInfo[i].NumIncludes;
-    NumSingleIncludedFiles += FileInfo[i].NumIncludes == 1;
-  }
-  llvm::errs() << "  " << NumOnceOnlyFiles << " #import/#pragma once files.\n"
-               << "  " << NumSingleIncludedFiles << " included exactly once.\n"
-               << "  " << MaxNumIncludes << " max times a file is included.\n";
+  llvm::errs() << "  " << NumOnceOnlyFiles << " #import/#pragma once files.\n";
 
   llvm::errs() << "  " << NumIncluded << " #include/#include_next/#import.\n"
                << "    " << NumMultiIncludeFileOptzn
@@ -1243,7 +1237,6 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
   HFI.isImport |= OtherHFI.isImport;
   HFI.isPragmaOnce |= OtherHFI.isPragmaOnce;
   HFI.isModuleHeader |= OtherHFI.isModuleHeader;
-  HFI.NumIncludes += OtherHFI.NumIncludes;
 
   if (!HFI.ControllingMacro && !HFI.ControllingMacroID) {
     HFI.ControllingMacro = OtherHFI.ControllingMacro;
@@ -1404,7 +1397,7 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     FileInfo.isImport = true;
 
     // Has this already been #import'ed or #include'd?
-    if (FileInfo.NumIncludes && !TryEnterImported())
+    if (PP.alreadyIncluded(File) && !TryEnterImported())
       return false;
   } else {
     // Otherwise, if this is a #include of a file that was previously #import'd
@@ -1427,10 +1420,7 @@ bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
     }
   }
 
-  // Increment the number of times this file has been included.
-  ++FileInfo.NumIncludes;
-
-  IsFirstIncludeOfFile = FileInfo.NumIncludes == 1;
+  IsFirstIncludeOfFile = PP.markIncluded(File);
 
   return true;
 }
