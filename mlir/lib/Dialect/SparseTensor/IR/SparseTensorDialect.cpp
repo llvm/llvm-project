@@ -337,6 +337,19 @@ static LogicalResult verify(OutOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// Sparse Tensor Custom Linalg.Generic Operations.
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(LinalgOp op) {
+  // TODO: verify that block has correct number of arguments
+  return success();
+}
+
+static LogicalResult verify(YieldOp op) {
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TensorDialect Methods.
 //===----------------------------------------------------------------------===//
 

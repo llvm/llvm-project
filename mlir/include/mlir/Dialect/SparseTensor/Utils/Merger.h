@@ -60,6 +60,9 @@ enum Kind {
   kShrS, // signed
   kShrU, // unsigned
   kShlI,
+  // Custom binary
+  kIntersect,
+  kUnion,
 };
 
 /// Children subexpressions of tensor operations.
@@ -70,7 +73,7 @@ struct Children {
 
 /// Tensor expression. Represents a MLIR expression in tensor index notation.
 struct TensorExp {
-  TensorExp(Kind k, unsigned x, unsigned y, Value v);
+  TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *op);
 
   /// Tensor expression kind.
   Kind kind;
@@ -87,6 +90,8 @@ struct TensorExp {
   /// infer destination type) of a cast operation During code generation,
   /// this field may be used to cache "hoisted" loop invariant tensor loads.
   Value val;
+
+  Operation *operation;
 };
 
 /// Lattice point. Each lattice point consists of a conjunction of tensor
@@ -125,7 +130,7 @@ public:
         hasSparseOut(false), dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
 
   /// Adds a tensor expression. Returns its index.
-  unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value());
+  unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value(), Operation *op = nullptr);
   unsigned addExp(Kind k, unsigned e, Value v) { return addExp(k, e, -1u, v); }
   unsigned addExp(Kind k, Value v) { return addExp(k, -1u, -1u, v); }
 
@@ -139,15 +144,15 @@ public:
   /// of loop indices (effectively constructing a larger "intersection" of those
   /// indices) with a newly constructed tensor (sub)expression of given kind.
   /// Returns the index of the new lattice point.
-  unsigned conjLatPoint(Kind kind, unsigned p0, unsigned p1);
+  unsigned conjLatPoint(Kind kind, unsigned p0, unsigned p1, Operation *op = nullptr);
 
   /// Conjunctive merge of two lattice sets L0 and L1 is conjunction of
   /// cartesian product. Returns the index of the new set.
-  unsigned takeConj(Kind kind, unsigned s0, unsigned s1);
+  unsigned takeConj(Kind kind, unsigned s0, unsigned s1, Operation *op = nullptr);
 
   /// Disjunctive merge of two lattice sets L0 and L1 is (L0 /\_op L1, L0, L1).
   /// Returns the index of the new set.
-  unsigned takeDisj(Kind kind, unsigned s0, unsigned s1);
+  unsigned takeDisj(Kind kind, unsigned s0, unsigned s1, Operation *op = nullptr);
 
   /// Maps the unary operator over the lattice set of the operand, i.e. each
   /// lattice point on an expression E is simply copied over, but with OP E

@@ -8,9 +8,11 @@
 
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 
 #include "mlir/IR/Operation.h"
 #include "llvm/Support/Debug.h"
+#include <iostream>
 
 namespace mlir {
 namespace sparse_tensor {
@@ -19,8 +21,8 @@ namespace sparse_tensor {
 // Constructors.
 //===----------------------------------------------------------------------===//
 
-TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
-    : kind(k), val(v) {
+TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *op)
+    : kind(k), val(v), operation(op) {
   switch (kind) {
   case kTensor:
     assert(x != -1u && y == -1u && !v);
@@ -52,6 +54,12 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v)
     children.e0 = x;
     children.e1 = y;
     break;
+  case kIntersect:
+  case kUnion:
+    assert(x != -1u && y != -1u && op);
+    children.e0 = x;
+    children.e1 = y;
+    break;
   default:
     assert(x != -1u && y != -1u && !v);
     children.e0 = x;
@@ -72,9 +80,9 @@ LatPoint::LatPoint(const llvm::BitVector &b, unsigned e)
 // Lattice methods.
 //===----------------------------------------------------------------------===//
 
-unsigned Merger::addExp(Kind k, unsigned e0, unsigned e1, Value v) {
+unsigned Merger::addExp(Kind k, unsigned e0, unsigned e1, Value v, Operation *op) {
   unsigned e = tensorExps.size();
-  tensorExps.push_back(TensorExp(k, e0, e1, v));
+  tensorExps.push_back(TensorExp(k, e0, e1, v, op));
   return e;
 }
 
@@ -91,25 +99,25 @@ unsigned Merger::addSet() {
   return s;
 }
 
-unsigned Merger::conjLatPoint(Kind kind, unsigned p0, unsigned p1) {
+unsigned Merger::conjLatPoint(Kind kind, unsigned p0, unsigned p1, Operation *op) {
   unsigned p = latPoints.size();
   llvm::BitVector nb = llvm::BitVector(latPoints[p0].bits);
   nb |= latPoints[p1].bits;
-  unsigned e = addExp(kind, latPoints[p0].exp, latPoints[p1].exp);
+  unsigned e = addExp(kind, latPoints[p0].exp, latPoints[p1].exp, Value(), op);
   latPoints.push_back(LatPoint(nb, e));
   return p;
 }
 
-unsigned Merger::takeConj(Kind kind, unsigned s0, unsigned s1) {
+unsigned Merger::takeConj(Kind kind, unsigned s0, unsigned s1, Operation *op) {
   unsigned s = addSet();
   for (unsigned p0 : latSets[s0])
     for (unsigned p1 : latSets[s1])
-      latSets[s].push_back(conjLatPoint(kind, p0, p1));
+      latSets[s].push_back(conjLatPoint(kind, p0, p1, op));
   return s;
 }
 
-unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1) {
-  unsigned s = takeConj(kind, s0, s1);
+unsigned Merger::takeDisj(Kind kind, unsigned s0, unsigned s1, Operation *op) {
+  unsigned s = takeConj(kind, s0, s1, op);
   // Followed by all in s0.
   for (unsigned p : latSets[s0])
     latSets[s].push_back(p);
@@ -324,6 +332,10 @@ static const char *kindToOpSymbol(Kind kind) {
     return ">>";
   case kShlI:
     return "<<";
+  case kIntersect:
+    return "CustomLinalgIntersect";
+  case kUnion:
+    return "CustomLinalgUnion";
   }
   llvm_unreachable("unexpected kind for symbol");
 }
@@ -515,6 +527,18 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
     return takeConj(kind, // take binary conjunction
                     buildLattices(tensorExps[e].children.e0, i),
                     buildLattices(tensorExps[e].children.e1, i));
+  case kIntersect:
+    // Custom conjunction
+    return takeConj(kind, // take binary conjunction
+                    buildLattices(tensorExps[e].children.e0, i),
+                    buildLattices(tensorExps[e].children.e1, i),
+                    tensorExps[e].operation);
+  case kUnion:
+    // Custom disjunction
+    return takeDisj(kind, // take binary disjunction
+                    buildLattices(tensorExps[e].children.e0, i),
+                    buildLattices(tensorExps[e].children.e1, i),
+                    tensorExps[e].operation);
   }
   llvm_unreachable("unexpected expression kind");
 }
@@ -643,6 +667,15 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kShrU, e0, e1);
       if (isa<arith::ShLIOp>(def) && isInvariant(e1))
         return addExp(kShlI, e0, e1);
+      if (isa<sparse_tensor::LinalgOp>(def)) {
+        sparse_tensor::LinalgOp laop = v.getDefiningOp<sparse_tensor::LinalgOp>();
+        RegionRange regions = laop.formula();
+        Region *region = regions.front();
+        Block &formula = region->front();
+        Operation *term = formula.getTerminator();
+        Kind linalgCustomKind = laop.intersect() ? kIntersect : kUnion;
+        return addExp(linalgCustomKind, e0, e1, Value(), term);
+      }
     }
   }
   // Cannot build.
@@ -721,6 +754,18 @@ Value Merger::buildExp(PatternRewriter &rewriter, Location loc, unsigned e,
     return rewriter.create<arith::ShRUIOp>(loc, v0, v1);
   case kShlI:
     return rewriter.create<arith::ShLIOp>(loc, v0, v1);
+  case kIntersect:
+  case kUnion:
+    {
+      Operation *op = tensorExps[e].operation;
+      sparse_tensor::YieldOp spYield = llvm::dyn_cast_or_null<sparse_tensor::YieldOp>(op);
+      Operation *scfYield = rewriter.getBlock()->getTerminator();
+      rewriter.mergeBlockBefore(op->getBlock(), scfYield, {v0, v1});
+      Value retVal = spYield.values().front();
+      rewriter.eraseOp(spYield);
+      return retVal;
+    }
+
   }
   llvm_unreachable("unexpected expression kind in build");
 }

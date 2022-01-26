@@ -371,4 +371,53 @@ def SparseTensor_OutOp : SparseTensor_Op<"out", []>,
   let assemblyFormat = "$tensor `,` $dest attr-dict `:` type($tensor) `,` type($dest)";
 }
 
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Custom Linalg.Generic Operations.
+//===----------------------------------------------------------------------===//
+
+def SparseTensor_LinalgOp : SparseTensor_Op<"linalg", [NoSideEffect, SameTypeOperands]> {
+  let summary = "Custom operation within linalg.generic";
+  let description = [{
+      Special union or intersect operation for use within `linalg.generic`.
+      The actual operation is held in a block for embedding by the sparse tensor dialect.
+
+      Example:
+      ```mlir
+      %result = sparse_tensor.linalg union %a, %b: f64 to f64 {
+        ^bb0(%v0: f64, %v1: f64):
+          %cmp = arith.cmpf "olt", %v0, %v1 : f64
+          %smaller = select %cmp, %v0, %v1 : f64
+          return %smaller : f64
+      }
+      %result = sparse_tensor.linalg intersect %a, %b: f64 to i8 {
+        ^bb0(%v0, %v1: f64):
+          %cmp = arith.cmpf "oeq", %v0, %v1 : f64
+          %ret_i8 = arith.extui %cmp : i1 to i8
+          return %ret_i8 : i8
+      }
+      ```
+  }];
+
+  let arguments = (ins UnitAttr:$intersect, AnyType:$a, AnyType:$b);
+  let results = (outs AnyType:$output);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$formula);
+
+  let assemblyFormat = [{
+         (`intersect` $intersect^):(`union`)? $a `,` $b attr-dict `:` type($a) `to` type($output) $formula
+  }];
+}
+
+def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]> {
+  let summary = "Yield at end of custom linalg operation";
+  let description = [{
+      Stuff goes here
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$values);
+
+  let assemblyFormat = [{
+         $values attr-dict `:` type($values)
+  }];
+}
+
 #endif // SPARSETENSOR_OPS
