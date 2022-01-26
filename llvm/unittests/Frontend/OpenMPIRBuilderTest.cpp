@@ -1158,7 +1158,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
 
   Type *Arg2Type = OutlinedFn->getArg(2)->getType();
   EXPECT_TRUE(Arg2Type->isPointerTy());
-  EXPECT_EQ(Arg2Type->getPointerElementType(), ArgStructTy);
+  EXPECT_TRUE(cast<PointerType>(Arg2Type)
+                  ->isOpaqueOrPointeeTypeMatches(ArgStructTy));
 }
 
 TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
