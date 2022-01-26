@@ -3161,6 +3161,7 @@ cc_library(
         ":Async",
         ":DLTIDialect",
         ":AffineUtils",
+        ":ExecutionEngineUtils",
         ":GPUDialect",
         ":GPUPassIncGen",
         ":MemRefDialect",
@@ -8184,8 +8185,8 @@ cc_library(
     hdrs = glob(["include/mlir/Tools/PDLL/AST/*.h"]),
     includes = ["include"],
     deps = [
+        ":Support",
         "//llvm:Support",
-        "//mlir:Support",
     ],
 )
 
