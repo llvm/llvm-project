@@ -86,7 +86,7 @@ std::string getLocalScope(const Decl *D) {
       Policy.SuppressScope = true;
       return declaredType(D).getAsString(Policy);
     }
-    if (auto RD = dyn_cast<RecordDecl>(D))
+    if (auto *RD = dyn_cast<RecordDecl>(D))
       return ("(anonymous " + RD->getKindName() + ")").str();
     return std::string("");
   };

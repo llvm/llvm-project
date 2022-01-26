@@ -2695,7 +2695,7 @@ TEST(Hover, DocsFromMostSpecial) {
 
   TestTU TU = TestTU::withCode(T.code());
   auto AST = TU.build();
-  for (auto Comment : {"doc1", "doc2", "doc3"}) {
+  for (const auto *Comment : {"doc1", "doc2", "doc3"}) {
     for (const auto &P : T.points(Comment)) {
       auto H = getHover(AST, P, format::getLLVMStyle(), nullptr);
       ASSERT_TRUE(H);

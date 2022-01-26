@@ -249,7 +249,7 @@ TEST(FileIndexTest, HasSystemHeaderMappingsInPreamble) {
 }
 
 TEST(FileIndexTest, TemplateParamsInLabel) {
-  auto Source = R"cpp(
+  auto *Source = R"cpp(
 template <class Ty>
 class vector {
 };
