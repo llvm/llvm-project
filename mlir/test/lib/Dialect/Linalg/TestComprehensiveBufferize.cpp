@@ -91,6 +91,10 @@ struct TestComprehensiveFunctionBufferize
       *this, "dialect-filter",
       llvm::cl::desc("Bufferize only ops from the specified dialects"),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  Option<bool> fullyDynamicLayoutMaps{
+      *this, "fully-dynamic-layout-maps",
+      llvm::cl::desc("Use fully dynamic layout maps on memref types"),
+      llvm::cl::init(true)};
   Option<bool> createDeallocs{
       *this, "create-deallocs",
       llvm::cl::desc("Specify if buffers should be deallocated"),
@@ -108,6 +112,7 @@ void TestComprehensiveFunctionBufferize::runOnOperation() {
   options->allowUnknownOps = allowUnknownOps;
   options->testAnalysisOnly = testAnalysisOnly;
   options->analysisFuzzerSeed = analysisFuzzerSeed;
+  options->fullyDynamicLayoutMaps = fullyDynamicLayoutMaps;
   options->createDeallocs = createDeallocs;
 
   if (dialectFilter.hasValue()) {

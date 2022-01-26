@@ -98,6 +98,10 @@ struct BufferizationOptions {
   /// Should be used only with `testAnalysisOnly = true`.
   unsigned analysisFuzzerSeed = 0;
 
+  /// Specifies whether fully dynamic layout maps should be used on ranked
+  /// MemRef types. If false, MemRef types will have no layout maps.
+  bool fullyDynamicLayoutMaps = true;
+
   /// If set to `true`, does not modify the IR apart from adding attributes (for
   /// checking the results of the analysis) and post analysis steps.
   bool testAnalysisOnly = false;
@@ -282,21 +286,17 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
 }
 
 /// Return a contiguous MemRefType (i.e. with canonical/empty layout map)
-/// with the same shape as `shapedType` and specified `layout` and
-/// `addressSpace`.
+/// with the same shape as `shapedType` and specified `addressSpace`.
 MemRefType getContiguousMemRefType(ShapedType shapedType,
-                                   MemRefLayoutAttrInterface layout = {},
                                    Attribute memorySpace = {});
-
-/// Return an UnrankedMemRefType with the given element type and memory space.
-UnrankedMemRefType getUnrankedMemRefType(Type elementType,
-                                         Attribute memorySpace = {});
 
 /// Return a MemRefType to which the `tensorType` can be bufferized in a
 /// composable fashion. The layout must be the most dynamic possible and
 /// canonicalize away once bufferization is finished.
-MemRefType getDynamicMemRefType(RankedTensorType tensorType,
-                                unsigned addressSpace = 0);
+BaseMemRefType getMemRefType(TensorType tensorType,
+                             const BufferizationOptions &options,
+                             MemRefLayoutAttrInterface layout = {},
+                             Attribute memorySpace = {});
 
 /// Creates a memref allocation with the given type and dynamic extents.
 FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,

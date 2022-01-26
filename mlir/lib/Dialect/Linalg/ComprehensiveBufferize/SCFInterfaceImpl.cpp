@@ -74,11 +74,8 @@ struct ExecuteRegionOpInterface
     // Compute new result types.
     SmallVector<Type> newResultTypes;
     for (Type type : executeRegionOp->getResultTypes()) {
-      if (auto rankedTensorType = type.dyn_cast<RankedTensorType>()) {
-        newResultTypes.push_back(getDynamicMemRefType(rankedTensorType));
-      } else if (auto tensorType = type.dyn_cast<TensorType>()) {
-        newResultTypes.push_back(
-            getUnrankedMemRefType(tensorType.getElementType()));
+      if (auto tensorType = type.dyn_cast<TensorType>()) {
+        newResultTypes.push_back(getMemRefType(tensorType, state.getOptions()));
       } else {
         newResultTypes.push_back(type);
       }
@@ -186,11 +183,8 @@ struct IfOpInterface
     // Compute new types of the bufferized scf.if op.
     SmallVector<Type> newTypes;
     for (Type returnType : ifOp->getResultTypes()) {
-      if (returnType.isa<TensorType>()) {
-        assert(returnType.isa<RankedTensorType>() &&
-               "unsupported unranked tensor");
-        newTypes.push_back(
-            getDynamicMemRefType(returnType.cast<RankedTensorType>()));
+      if (auto tensorType = returnType.dyn_cast<TensorType>()) {
+        newTypes.push_back(getMemRefType(tensorType, state.getOptions()));
       } else {
         newTypes.push_back(returnType);
       }

@@ -210,8 +210,10 @@ static void ensureToMemrefOpIsValid(Value tensor, Type memrefType) {
 #endif
 }
 
-static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
-  assert(tensor.getType().isa<TensorType>() && "unexpected non-tensor type");
+static Value lookupBuffer(RewriterBase &rewriter, Value tensor,
+                          const BufferizationOptions &options) {
+  auto tensorType = tensor.getType().dyn_cast<TensorType>();
+  assert(tensorType && "unexpected non-tensor type");
 
   // Replace "%t = to_tensor %m" with %m.
   if (auto toTensorOp = tensor.getDefiningOp<bufferization::ToTensorOp>())
@@ -220,13 +222,7 @@ static Value lookupBuffer(RewriterBase &rewriter, Value tensor) {
   // Insert to_memref op.
   OpBuilder::InsertionGuard g(rewriter);
   setInsertionPointAfter(rewriter, tensor);
-  Type memrefType;
-  if (auto rankedTensorType = tensor.getType().dyn_cast<RankedTensorType>()) {
-    memrefType = getDynamicMemRefType(rankedTensorType);
-  } else {
-    memrefType = getUnrankedMemRefType(
-        tensor.getType().cast<TensorType>().getElementType());
-  }
+  Type memrefType = getMemRefType(tensorType, options);
   ensureToMemrefOpIsValid(tensor, memrefType);
   return rewriter.create<bufferization::ToMemrefOp>(tensor.getLoc(), memrefType,
                                                     tensor);
@@ -242,7 +238,7 @@ FailureOr<Value> BufferizationState::getBuffer(
   Operation *op = opOperand.getOwner();
   Location loc = op->getLoc();
   Value operand = opOperand.get();
-  Value operandBuffer = lookupBuffer(rewriter, operand);
+  Value operandBuffer = lookupBuffer(rewriter, operand, options);
 
   if (forceInPlace || isInPlace(opOperand))
     return operandBuffer;
@@ -513,27 +509,43 @@ bool bufferization::isFunctionArgument(Value value) {
   return isa<FuncOp>(bbArg.getOwner()->getParentOp());
 }
 
-MemRefType
-bufferization::getContiguousMemRefType(ShapedType shapedType,
-                                       MemRefLayoutAttrInterface layout,
-                                       Attribute memorySpace) {
+MemRefType bufferization::getContiguousMemRefType(ShapedType shapedType,
+                                                  Attribute memorySpace) {
+  MemRefLayoutAttrInterface layout = {};
   return MemRefType::get(shapedType.getShape(), shapedType.getElementType(),
                          layout, memorySpace);
 }
 
-UnrankedMemRefType bufferization::getUnrankedMemRefType(Type elementType,
-                                                        Attribute memorySpace) {
-  return UnrankedMemRefType::get(elementType, memorySpace);
-}
+BaseMemRefType bufferization::getMemRefType(TensorType tensorType,
+                                            const BufferizationOptions &options,
+                                            MemRefLayoutAttrInterface layout,
+                                            Attribute memorySpace) {
+  // Case 1: Unranked memref type.
+  if (auto unrankedTensorType = tensorType.dyn_cast<UnrankedTensorType>()) {
+    assert(!layout && "UnrankedTensorType cannot have a layout map");
+    return UnrankedMemRefType::get(unrankedTensorType.getElementType(),
+                                   memorySpace);
+  }
 
-MemRefType bufferization::getDynamicMemRefType(RankedTensorType tensorType,
-                                               unsigned addressSpace) {
+  // Case 2: Ranked memref type with specified layout. If fully dynamic layout
+  // maps are not requested, generate a type with `layout`, which is empty (no
+  // layout map) by default.
+  auto rankedTensorType = tensorType.cast<RankedTensorType>();
+  if (layout || !options.fullyDynamicLayoutMaps) {
+    return MemRefType::get(rankedTensorType.getShape(),
+                           rankedTensorType.getElementType(), layout,
+                           memorySpace);
+  }
+
+  // Case 3: Ranked memref type with unspecified layout. Choose the most dynamic
+  // one.
   // TODO: address space decisions to connect with the actual alloc.
   int64_t dynamicOffset = ShapedType::kDynamicStrideOrOffset;
-  SmallVector<int64_t> dynamicStrides(tensorType.getRank(),
+  SmallVector<int64_t> dynamicStrides(rankedTensorType.getRank(),
                                       ShapedType::kDynamicStrideOrOffset);
   AffineMap stridedLayout = makeStridedLinearLayoutMap(
-      dynamicStrides, dynamicOffset, tensorType.getContext());
-  return MemRefType::get(tensorType.getShape(), tensorType.getElementType(),
-                         stridedLayout, addressSpace);
+      dynamicStrides, dynamicOffset, rankedTensorType.getContext());
+  return MemRefType::get(rankedTensorType.getShape(),
+                         rankedTensorType.getElementType(), stridedLayout,
+                         memorySpace);
 }
