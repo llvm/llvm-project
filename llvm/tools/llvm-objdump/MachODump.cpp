@@ -10463,6 +10463,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
   // TODO(zhongkaining.paxos@bytedance.com): add support for segment_command
   SmallVector<MachO::segment_command_64> segments;
   SmallVector<MachO::dylib_command> dylibs;
+  SmallVector<MachOObjectFile::LoadCommandInfo> dylibInfo;
 
   // find LC_DYLD_CHAINED_FIXUPS Load Command & obtain loaded dylib info
   for (const auto &Command : Obj->load_commands()) {
@@ -10478,6 +10479,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
         Command.C.cmd == MachO::LC_REEXPORT_DYLIB ||
         Command.C.cmd == MachO::LC_LAZY_LOAD_DYLIB ||
         Command.C.cmd == MachO::LC_LOAD_UPWARD_DYLIB) {
+      dylibInfo.emplace_back(Command);
       dylibs.emplace_back(Obj->getDylibIDLoadCommand(Command));
       continue;
     }
@@ -10516,7 +10518,6 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
     ImportsFormat = "UNKNOWN";
     break;
   }
-
   outs() << "chained fixups header (LC_DYLD_CHAINED_FIXUPS)\n"
          << "  fixups_version = " << Header.fixups_version << "\n"
          << "  starts_offset  = " << Header.starts_offset << "\n"
@@ -10607,18 +10608,20 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
      }
   }
 
-
   // parse dyld_chained_import
   // TODO: handle zlib compressed symbol names
   uint32_t ImportsOffset = HeaderOffset+Header.imports_offset;
   uint32_t SymbolOffset = HeaderOffset+Header.symbols_offset;
+  auto dylibName = [&](uint32_t lib_ordinal){
+    return (const char*) (dylibInfo[lib_ordinal-1].Ptr)+dylibs[lib_ordinal-1].dylib.name;
+  };
   for (uint32_t ImportIdx=0; ImportIdx<Header.imports_count; ImportIdx++) {
     switch (Header.imports_format) {
     case MachO::DYLD_CHAINED_IMPORT:
       outs() << "dyld_chained_import[" << ImportIdx << "]\n"; // TODO: add address
       MachO::dyld_chained_import Import;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(Import), Import);
-      outs() << "  lib_ordinal = " << Import.lib_ordinal << "\n"
+      outs() << "  lib_ordinal = " << Import.lib_ordinal << " (" << dylibName(Import.lib_ordinal) << ")\n"
              << "  weak_import = " << Import.weak_import << "\n"
              << "  name_offset = " << Import.name_offset << " ("
              << StringRef(Obj->getData().data()+(SymbolOffset+Import.name_offset)) << ")" <<"\n";
@@ -10627,7 +10630,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
       outs() << "dyld_chained_import_addend[" << ImportIdx << "]\n";
       MachO::dyld_chained_import_addend ImportAddend;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(ImportAddend), ImportAddend);
-      outs() << "  lib_ordinal = " << ImportAddend.lib_ordinal << "\n"
+      outs() << "  lib_ordinal = " << ImportAddend.lib_ordinal << " (" << dylibName(ImportAddend.lib_ordinal) << ")\n"
              << "  weak_import = " << ImportAddend.weak_import << "\n"
              << "  name_offset = " << ImportAddend.name_offset << " ("
              << StringRef(Obj->getData().data()+(SymbolOffset+ImportAddend.name_offset)) << ")" <<"\n"
@@ -10637,7 +10640,7 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
       outs() << "dyld_chained_import_addend64[" << ImportIdx << "]\n";
       MachO::dyld_chained_import_addend64 ImportAddend64;
       memcpyAtOffset(ImportsOffset+ImportIdx*sizeof(ImportAddend64), ImportAddend64);
-      outs() << "  lib_ordinal = " << ImportAddend64.lib_ordinal << "\n"
+      outs() << "  lib_ordinal = " << ImportAddend64.lib_ordinal << " (" << dylibName(ImportAddend64.lib_ordinal) << ")\n"
              << "  weak_import = " << ImportAddend64.weak_import << "\n"
              << "  reserved =" << ImportAddend64.reserved << "\n"
              << "  name_offset = " << ImportAddend64.name_offset << " ("
