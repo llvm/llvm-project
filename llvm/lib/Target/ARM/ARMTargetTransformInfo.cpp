@@ -2109,9 +2109,6 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
       }
 
       Type *T  = I.getType();
-      if (T->isPointerTy())
-        T = T->getPointerElementType();
-
       if (T->getScalarSizeInBits() > 32) {
         LLVM_DEBUG(dbgs() << "Unsupported Type: "; T->dump());
         return false;
