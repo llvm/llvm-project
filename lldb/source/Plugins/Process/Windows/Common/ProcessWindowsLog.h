@@ -25,21 +25,10 @@ enum class WindowsLog : Log::MaskType {
   LLVM_MARK_AS_BITMASK_ENUM(Thread)
 };
 
-#define WINDOWS_LOG_PROCESS ::lldb_private::WindowsLog::Process
-#define WINDOWS_LOG_EXCEPTION ::lldb_private::WindowsLog::Exception
-#define WINDOWS_LOG_THREAD ::lldb_private::WindowsLog::Thread
-#define WINDOWS_LOG_MEMORY ::lldb_private::WindowsLog::Memory
-#define WINDOWS_LOG_BREAKPOINTS ::lldb_private::WindowsLog::Breakpoints
-#define WINDOWS_LOG_STEP ::lldb_private::WindowsLog::Step
-#define WINDOWS_LOG_REGISTERS ::lldb_private::WindowsLog::Registers
-#define WINDOWS_LOG_EVENT ::lldb_private::WindowsLog::Event
-
 class ProcessWindowsLog {
 public:
   static void Initialize();
   static void Terminate();
-
-  static Log *GetLogIfAny(WindowsLog mask) { return GetLog(mask); }
 };
 
 template <> Log::Channel &LogChannelFor<WindowsLog>();
