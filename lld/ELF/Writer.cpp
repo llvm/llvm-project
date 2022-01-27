@@ -1890,9 +1890,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
       finalizeSynthetic(part.ehFrame.get());
   }
 
-  if (config->hasDynSymTab)
-    for (Symbol *sym : symtab->symbols())
+  if (config->hasDynSymTab) {
+    parallelForEach(symtab->symbols(), [](Symbol *sym) {
       sym->isPreemptible = computeIsPreemptible(*sym);
+    });
+  }
 
   // Change values of linker-script-defined symbols from placeholders (assigned
   // by declareSymbols) to actual definitions.
