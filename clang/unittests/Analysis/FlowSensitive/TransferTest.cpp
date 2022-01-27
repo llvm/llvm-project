@@ -22,7 +22,6 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <cassert>
 #include <string>
 #include <utility>
 
@@ -30,6 +29,7 @@ namespace {
 
 using namespace clang;
 using namespace dataflow;
+using namespace test;
 using ::testing::_;
 using ::testing::ElementsAre;
 using ::testing::IsNull;
@@ -57,21 +57,6 @@ protected:
         llvm::Succeeded());
   }
 };
-
-/// Returns the `ValueDecl` for the given identifier.
-///
-/// Requirements:
-///
-///  `Name` must be unique in `ASTCtx`.
-static const ValueDecl *findValueDecl(ASTContext &ASTCtx,
-                                      llvm::StringRef Name) {
-  auto TargetNodes = ast_matchers::match(
-      ast_matchers::valueDecl(ast_matchers::hasName(Name)).bind("v"), ASTCtx);
-  assert(TargetNodes.size() == 1 && "Name must be unique");
-  auto *const Result = ast_matchers::selectFirst<ValueDecl>("v", TargetNodes);
-  assert(Result != nullptr);
-  return Result;
-}
 
 TEST_F(TransferTest, IntVarDecl) {
   std::string Code = R"(

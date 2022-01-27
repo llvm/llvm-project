@@ -40,7 +40,7 @@ struct TypeErasedLattice {
 };
 
 /// Type-erased base class for dataflow analyses built on a single lattice type.
-class TypeErasedDataflowAnalysis {
+class TypeErasedDataflowAnalysis : public Environment::Merger {
 public:
   virtual ~TypeErasedDataflowAnalysis() {}
 
