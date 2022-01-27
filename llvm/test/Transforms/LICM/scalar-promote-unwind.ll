@@ -100,16 +100,16 @@ for.cond.cleanup:
   ret void
 }
 
-; TODO: byval memory cannot be accessed on unwind either.
+; byval memory cannot be accessed on unwind either.
 define void @test_byval(i32* byval(i32) %a, i1 zeroext %y) uwtable {
 ; CHECK-LABEL: @test_byval(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A:%.*]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[A]], align 4
+; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @f()
@@ -119,6 +119,8 @@ define void @test_byval(i32* byval(i32) %a, i1 zeroext %y) uwtable {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 10000
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[ADD]], [[FOR_INC]] ]
+; CHECK-NEXT:    store i32 [[ADD_LCSSA]], i32* [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
