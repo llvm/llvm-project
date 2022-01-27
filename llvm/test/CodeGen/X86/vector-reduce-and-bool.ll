@@ -1202,21 +1202,12 @@ define i1 @icmp0_v16i16_v16i1(<16 x i16>) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: icmp0_v16i16_v16i1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vptest %xmm0, %xmm0
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: icmp0_v16i16_v16i1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vptest %ymm0, %ymm0
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX-LABEL: icmp0_v16i16_v16i1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest %ymm0, %ymm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: icmp0_v16i16_v16i1:
 ; AVX512F:       # %bb.0:
@@ -1268,21 +1259,12 @@ define i1 @icmp0_v32i8_v32i1(<32 x i8>) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: icmp0_v32i8_v32i1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vptest %xmm0, %xmm0
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: icmp0_v32i8_v32i1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vptest %ymm0, %ymm0
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX-LABEL: icmp0_v32i8_v32i1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest %ymm0, %ymm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: icmp0_v32i8_v32i1:
 ; AVX512F:       # %bb.0:
@@ -1504,9 +1486,7 @@ define i1 @icmp0_v32i16_v32i1(<32 x i16>) {
 ; AVX1-LABEL: icmp0_v32i16_v32i1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vptest %xmm0, %xmm0
+; AVX1-NEXT:    vptest %ymm0, %ymm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1586,9 +1566,7 @@ define i1 @icmp0_v64i8_v64i1(<64 x i8>) {
 ; AVX1-LABEL: icmp0_v64i8_v64i1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vorps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vptest %xmm0, %xmm0
+; AVX1-NEXT:    vptest %ymm0, %ymm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq

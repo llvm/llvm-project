@@ -17,8 +17,7 @@ define <vscale x 16 x i1> @reinterpret_bool_from_h(<vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: reinterpret_bool_from_h:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %pg)
   ret <vscale x 16 x i1> %out
@@ -28,8 +27,7 @@ define <vscale x 16 x i1> @reinterpret_bool_from_s(<vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: reinterpret_bool_from_s:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %pg)
   ret <vscale x 16 x i1> %out
@@ -39,8 +37,7 @@ define <vscale x 16 x i1> @reinterpret_bool_from_d(<vscale x 2 x i1> %pg) {
 ; CHECK-LABEL: reinterpret_bool_from_d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %pg)
   ret <vscale x 16 x i1> %out
