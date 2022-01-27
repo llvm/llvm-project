@@ -1248,6 +1248,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
 
       // There are no legal MVT::nxv16f## based types.
       if (VT != MVT::nxv16i1) {
@@ -11038,6 +11039,28 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
     if (!isTypeLegal(VT))
       return SDValue();
 
+    // Break down insert_subvector into simpler parts.
+    if (VT.getVectorElementType() == MVT::i1) {
+      unsigned NumElts = VT.getVectorMinNumElements();
+      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+
+      SDValue Lo, Hi;
+      Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec0,
+                       DAG.getVectorIdxConstant(0, DL));
+      Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec0,
+                       DAG.getVectorIdxConstant(NumElts / 2, DL));
+      if (Idx < (NumElts / 2)) {
+        SDValue NewLo = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Lo, Vec1,
+                                    DAG.getVectorIdxConstant(Idx, DL));
+        return DAG.getNode(AArch64ISD::UZP1, DL, VT, NewLo, Hi);
+      } else {
+        SDValue NewHi =
+            DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Hi, Vec1,
+                        DAG.getVectorIdxConstant(Idx - (NumElts / 2), DL));
+        return DAG.getNode(AArch64ISD::UZP1, DL, VT, Lo, NewHi);
+      }
+    }
+
     // Ensure the subvector is half the size of the main vector.
     if (VT.getVectorElementCount() != (InVT.getVectorElementCount() * 2))
       return SDValue();
@@ -12961,7 +12984,7 @@ bool AArch64TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
     return false;
 
-  return (Index == 0 || Index == ResVT.getVectorNumElements());
+  return (Index == 0 || Index == ResVT.getVectorMinNumElements());
 }
 
 /// Turn vector tests of the signbit in the form of:
@@ -14321,6 +14344,7 @@ static SDValue performConcatVectorsCombine(SDNode *N,
 static SDValue
 performInsertSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                               SelectionDAG &DAG) {
+  SDLoc DL(N);
   SDValue Vec = N->getOperand(0);
   SDValue SubVec = N->getOperand(1);
   uint64_t IdxVal = N->getConstantOperandVal(2);
@@ -14346,7 +14370,6 @@ performInsertSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // Fold insert_subvector -> concat_vectors
   // insert_subvector(Vec,Sub,lo) -> concat_vectors(Sub,extract(Vec,hi))
   // insert_subvector(Vec,Sub,hi) -> concat_vectors(extract(Vec,lo),Sub)
-  SDLoc DL(N);
   SDValue Lo, Hi;
   if (IdxVal == 0) {
     Lo = SubVec;
