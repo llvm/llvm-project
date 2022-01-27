@@ -341,8 +341,15 @@ if(${LIBOMP_USE_HWLOC})
     NAMES hwloc libhwloc
     HINTS ${LIBOMP_HWLOC_INSTALL_DIR}/lib)
   if(LIBOMP_HWLOC_LIBRARY)
+    # In case libhwloc is static, check_library_exists does not work on static libs
+    get_filename_component(LIBOMP_HWLOC_LIBRARY_EXT ${LIBOMP_HWLOC_LIBRARY} LAST_EXT)
+    string(COMPARE EQUAL ${LIBOMP_HWLOC_LIBRARY_EXT} ".a" LIBOMP_HWLOC_LIBRARY_IS_STATIC)
+    if(LIBOMP_HWLOC_LIBRARY_IS_STATIC)
+      set(LIBOMP_HAVE_LIBHWLOC TRUE)
+    else()
     check_library_exists(${LIBOMP_HWLOC_LIBRARY} hwloc_topology_init
       ${LIBOMP_HWLOC_INSTALL_DIR}/lib LIBOMP_HAVE_LIBHWLOC)
+    endif()
     get_filename_component(LIBOMP_HWLOC_LIBRARY_DIR ${LIBOMP_HWLOC_LIBRARY} PATH)
   endif()
   if(LIBOMP_HAVE_HWLOC_H AND LIBOMP_HAVE_LIBHWLOC AND LIBOMP_HWLOC_LIBRARY)
