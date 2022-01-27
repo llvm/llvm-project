@@ -483,7 +483,10 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   std::vector<std::string> SectionTable;
   std::vector<std::string> GCTable;
 
-  std::vector<Type*> TypeList;
+  std::vector<Type *> TypeList;
+  /// Stores pointer element type for a given type ID. This is used during
+  /// upgrades of typed pointer IR in opaque pointer mode.
+  std::vector<Type *> ElementTypeList;
   DenseMap<Function *, FunctionType *> FunctionTypes;
   BitcodeReaderValueList ValueList;
   Optional<MetadataLoader> MDLoader;
@@ -591,6 +594,7 @@ private:
   StructType *createIdentifiedStructType(LLVMContext &Context);
 
   Type *getTypeByID(unsigned ID);
+  Type *getElementTypeByID(unsigned ID);
 
   Value *getFnValueByID(unsigned ID, Type *Ty) {
     if (Ty && Ty->isMetadataTy())
@@ -1176,6 +1180,23 @@ Type *BitcodeReader::getTypeByID(unsigned ID) {
   return TypeList[ID] = createIdentifiedStructType(Context);
 }
 
+Type *BitcodeReader::getElementTypeByID(unsigned ID) {
+  if (ID >= TypeList.size())
+    return nullptr;
+
+  Type *Ty = TypeList[ID];
+  if (!Ty->isPointerTy())
+    return nullptr;
+
+  Type *ElemTy = ElementTypeList[ID];
+  if (!ElemTy)
+    return nullptr;
+
+  assert(cast<PointerType>(Ty)->isOpaqueOrPointeeTypeMatches(ElemTy) &&
+         "Incorrect element type");
+  return ElemTy;
+}
+
 StructType *BitcodeReader::createIdentifiedStructType(LLVMContext &Context,
                                                       StringRef Name) {
   auto *Ret = StructType::create(Context, Name);
@@ -1708,6 +1729,7 @@ Error BitcodeReader::parseTypeTableBody() {
     // Read a record.
     Record.clear();
     Type *ResultTy = nullptr;
+    Type *ElemTy = nullptr;
     Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
     if (!MaybeRecord)
       return MaybeRecord.takeError();
@@ -1720,6 +1742,7 @@ Error BitcodeReader::parseTypeTableBody() {
       if (Record.empty())
         return error("Invalid record");
       TypeList.resize(Record[0]);
+      ElementTypeList.resize(Record[0]);
       continue;
     case bitc::TYPE_CODE_VOID:      // VOID
       ResultTy = Type::getVoidTy(Context);
@@ -1782,6 +1805,7 @@ Error BitcodeReader::parseTypeTableBody() {
       if (!ResultTy ||
           !PointerType::isValidElementType(ResultTy))
         return error("Invalid type");
+      ElemTy = ResultTy;
       ResultTy = PointerType::get(ResultTy, AddressSpace);
       break;
     }
@@ -1932,7 +1956,9 @@ Error BitcodeReader::parseTypeTableBody() {
       return error(
           "Invalid TYPE table: Only named structs can be forward referenced");
     assert(ResultTy && "Didn't read a type?");
-    TypeList[NumRecords++] = ResultTy;
+    TypeList[NumRecords] = ResultTy;
+    ElementTypeList[NumRecords] = ElemTy;
+    ++NumRecords;
   }
 }
 
@@ -2348,6 +2374,7 @@ Error BitcodeReader::parseConstants() {
 
   // Read all the records for this value table.
   Type *CurTy = Type::getInt32Ty(Context);
+  Type *CurElemTy = nullptr;
   unsigned NextCstNo = ValueList.size();
 
   struct DelayedShufTy {
@@ -2459,6 +2486,7 @@ Error BitcodeReader::parseConstants() {
       if (TypeList[Record[0]] == VoidType)
         return error("Invalid constant type");
       CurTy = TypeList[Record[0]];
+      CurElemTy = getElementTypeByID(Record[0]);
       continue;  // Skip the ValueList manipulation.
     case bitc::CST_CODE_NULL:      // NULL
       if (CurTy->isVoidTy() || CurTy->isFunctionTy() || CurTy->isLabelTy())
@@ -2831,9 +2859,10 @@ Error BitcodeReader::parseConstants() {
       for (unsigned i = 0; i != ConstStrSize; ++i)
         ConstrStr += (char)Record[3+AsmStrSize+i];
       UpgradeInlineAsmString(&AsmStr);
-      // FIXME: support upgrading in opaque pointers mode.
-      V = InlineAsm::get(cast<FunctionType>(CurTy->getPointerElementType()),
-                         AsmStr, ConstrStr, HasSideEffects, IsAlignStack);
+      if (!CurElemTy)
+        return error("Missing element type for old-style inlineasm");
+      V = InlineAsm::get(cast<FunctionType>(CurElemTy), AsmStr, ConstrStr,
+                         HasSideEffects, IsAlignStack);
       break;
     }
     // This version adds support for the asm dialect keywords (e.g.,
@@ -2857,9 +2886,10 @@ Error BitcodeReader::parseConstants() {
       for (unsigned i = 0; i != ConstStrSize; ++i)
         ConstrStr += (char)Record[3+AsmStrSize+i];
       UpgradeInlineAsmString(&AsmStr);
-      // FIXME: support upgrading in opaque pointers mode.
-      V = InlineAsm::get(cast<FunctionType>(CurTy->getPointerElementType()),
-                         AsmStr, ConstrStr, HasSideEffects, IsAlignStack,
+      if (!CurElemTy)
+        return error("Missing element type for old-style inlineasm");
+      V = InlineAsm::get(cast<FunctionType>(CurElemTy), AsmStr, ConstrStr,
+                         HasSideEffects, IsAlignStack,
                          InlineAsm::AsmDialect(AsmDialect));
       break;
     }
@@ -2888,9 +2918,10 @@ Error BitcodeReader::parseConstants() {
       for (unsigned i = 0; i != ConstStrSize; ++i)
         ConstrStr += (char)Record[OpNum + AsmStrSize + i];
       UpgradeInlineAsmString(&AsmStr);
-      // FIXME: support upgrading in opaque pointers mode.
-      V = InlineAsm::get(cast<FunctionType>(CurTy->getPointerElementType()),
-                         AsmStr, ConstrStr, HasSideEffects, IsAlignStack,
+      if (!CurElemTy)
+        return error("Missing element type for old-style inlineasm");
+      V = InlineAsm::get(cast<FunctionType>(CurElemTy), AsmStr, ConstrStr,
+                         HasSideEffects, IsAlignStack,
                          InlineAsm::AsmDialect(AsmDialect), CanThrow);
       break;
     }
@@ -3288,7 +3319,9 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
     if (!Ty->isPointerTy())
       return error("Invalid type for value");
     AddressSpace = cast<PointerType>(Ty)->getAddressSpace();
-    Ty = Ty->getPointerElementType();
+    Ty = getElementTypeByID(Record[0]);
+    if (!Ty)
+      return error("Missing element type for old-style global");
   }
 
   uint64_t RawLinkage = Record[3];
@@ -3380,8 +3413,11 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   Type *FTy = getTypeByID(Record[0]);
   if (!FTy)
     return error("Invalid record");
-  if (auto *PTy = dyn_cast<PointerType>(FTy))
-    FTy = PTy->getPointerElementType();
+  if (isa<PointerType>(FTy)) {
+    FTy = getElementTypeByID(Record[0]);
+    if (!FTy)
+      return error("Missing element type for old-style function");
+  }
 
   if (!isa<FunctionType>(FTy))
     return error("Invalid type for value");
@@ -3536,7 +3572,8 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
   if (Record.size() < (3 + (unsigned)NewRecord))
     return error("Invalid record");
   unsigned OpNum = 0;
-  Type *Ty = getTypeByID(Record[OpNum++]);
+  unsigned TypeID = Record[OpNum++];
+  Type *Ty = getTypeByID(TypeID);
   if (!Ty)
     return error("Invalid record");
 
@@ -3545,8 +3582,10 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
     auto *PTy = dyn_cast<PointerType>(Ty);
     if (!PTy)
       return error("Invalid type for value");
-    Ty = PTy->getPointerElementType();
     AddrSpace = PTy->getAddressSpace();
+    Ty = getElementTypeByID(TypeID);
+    if (!Ty)
+      return error("Missing element type for old-style indirect symbol");
   } else {
     AddrSpace = Record[OpNum++];
   }
@@ -5005,10 +5044,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       const bool SwiftError = Bitfield::get<APV::SwiftError>(Rec);
       Type *Ty = getTypeByID(Record[0]);
       if (!Bitfield::get<APV::ExplicitType>(Rec)) {
-        auto *PTy = dyn_cast_or_null<PointerType>(Ty);
-        if (!PTy)
-          return error("Old-style alloca with a non-pointer type");
-        Ty = PTy->getPointerElementType();
+        Ty = getElementTypeByID(Record[0]);
+        if (!Ty)
+          return error("Missing element type for old-style alloca");
       }
       Type *OpTy = getTypeByID(Record[1]);
       Value *Size = getFnValueByID(Record[2], OpTy);
