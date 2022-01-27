@@ -7831,6 +7831,7 @@ cc_library(
         ":Affine",
         ":AffineUtils",
         ":ArithmeticDialect",
+        ":ArithmeticTransforms",
         ":IR",
         ":InferTypeOpInterface",
         ":MemRefDialect",

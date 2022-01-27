@@ -21,11 +21,18 @@ def RnumArg : AsmOperandClass {
   let DiagnosticType = "InvalidRnumArg";
 }
 
-def rnum : Operand<XLenVT>, ImmLeaf<XLenVT, [{return (Imm >= 0 && Imm <= 10);}]> {
+def rnum : Operand<i32>, TImmLeaf<i32, [{return (Imm >= 0 && Imm <= 10);}]> {
   let ParserMatchClass = RnumArg;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<4>";
   let OperandType = "OPERAND_RVKRNUM";
+  let OperandNamespace = "RISCVOp";
+}
+
+def byteselect : Operand<i8>, TImmLeaf<i8, [{return isUInt<2>(Imm);}]> {
+  let ParserMatchClass = UImmAsmOperand<2>;
+  let DecoderMethod = "decodeUImmOperand<2>";
+  let OperandType = "OPERAND_UIMM2";
   let OperandNamespace = "RISCVOp";
 }
 
@@ -42,7 +49,7 @@ class RVKUnary<bits<12> imm12_in, bits<3> funct3, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVKByteSelect<bits<5> funct5, string opcodestr>
     : RVInstR<{0b00, funct5}, 0b000, OPC_OP, (outs GPR:$rd),
-              (ins GPR:$rs1, GPR:$rs2, uimm2:$bs),
+              (ins GPR:$rs1, GPR:$rs2, byteselect:$bs),
               opcodestr, "$rd, $rs1, $rs2, $bs">{
   bits<2> bs;
   let Inst{31-30} = bs;
@@ -120,4 +127,77 @@ def SM4KS : RVKByteSelect<0b11010, "sm4ks">;
 let Predicates = [HasStdExtZksh] in {
 def SM3P0 : RVKUnary<0b000100001000, 0b001, "sm3p0">;
 def SM3P1 : RVKUnary<0b000100001001, 0b001, "sm3p1">;
+} // Predicates = [HasStdExtZksh]
+
+//===----------------------------------------------------------------------===//
+// Codegen patterns
+//===----------------------------------------------------------------------===//
+
+class PatGprGprByteSelect<SDPatternOperator OpNode, RVInst Inst>
+    : Pat<(OpNode GPR:$rs1, GPR:$rs2, i8:$imm),
+          (Inst GPR:$rs1, GPR:$rs2, byteselect:$imm)>;
+
+// Zknd
+let Predicates = [HasStdExtZknd, IsRV32] in {
+def : PatGprGprByteSelect<int_riscv_aes32dsi, AES32DSI>;
+def : PatGprGprByteSelect<int_riscv_aes32dsmi, AES32DSMI>;
+} // Predicates = [HasStdExtZknd, IsRV32]
+
+let Predicates = [HasStdExtZknd, IsRV64] in {
+def : PatGprGpr<int_riscv_aes64ds, AES64DS>;
+def : PatGprGpr<int_riscv_aes64dsm, AES64DSM>;
+def : PatGpr<int_riscv_aes64im, AES64IM>;
+} // Predicates = [HasStdExtZknd, IsRV64]
+
+let Predicates = [HasStdExtZkndOrZkne, IsRV64] in {
+def : PatGprGpr<int_riscv_aes64ks2, AES64KS2>;
+def : Pat<(int_riscv_aes64ks1i GPR:$rs1, i32:$rnum),
+          (AES64KS1I GPR:$rs1, rnum:$rnum)>;
+} // Predicates = [HasStdExtZkndOrZkne, IsRV64]
+
+// Zkne
+let Predicates = [HasStdExtZkne, IsRV32] in {
+def : PatGprGprByteSelect<int_riscv_aes32esi, AES32ESI>;
+def : PatGprGprByteSelect<int_riscv_aes32esmi, AES32ESMI>;
+} // Predicates = [HasStdExtZkne, IsRV32]
+
+let Predicates = [HasStdExtZkne, IsRV64] in {
+def : PatGprGpr<int_riscv_aes64es, AES64ES>;
+def : PatGprGpr<int_riscv_aes64esm, AES64ESM>;
+} // Predicates = [HasStdExtZkne, IsRV64]
+
+// Zknh
+let Predicates = [HasStdExtZknh] in {
+def : PatGpr<int_riscv_sha256sig0, SHA256SIG0>;
+def : PatGpr<int_riscv_sha256sig1, SHA256SIG1>;
+def : PatGpr<int_riscv_sha256sum0, SHA256SUM0>;
+def : PatGpr<int_riscv_sha256sum1, SHA256SUM1>;
+} // Predicates = [HasStdExtZknh]
+
+let Predicates = [HasStdExtZknh, IsRV32] in {
+def : PatGprGpr<int_riscv_sha512sig0l, SHA512SIG0L>;
+def : PatGprGpr<int_riscv_sha512sig0h, SHA512SIG0H>;
+def : PatGprGpr<int_riscv_sha512sig1l, SHA512SIG1L>;
+def : PatGprGpr<int_riscv_sha512sig1h, SHA512SIG1H>;
+def : PatGprGpr<int_riscv_sha512sum0r, SHA512SUM0R>;
+def : PatGprGpr<int_riscv_sha512sum1r, SHA512SUM1R>;
+} // Predicates = [HasStdExtZknh, IsRV32]
+
+let Predicates = [HasStdExtZknh, IsRV64] in {
+def : PatGpr<int_riscv_sha512sig0, SHA512SIG0>;
+def : PatGpr<int_riscv_sha512sig1, SHA512SIG1>;
+def : PatGpr<int_riscv_sha512sum0, SHA512SUM0>;
+def : PatGpr<int_riscv_sha512sum1, SHA512SUM1>;
+} // Predicates = [HasStdExtZknh, IsRV64]
+
+// Zksed
+let Predicates = [HasStdExtZksed] in {
+def : PatGprGprByteSelect<int_riscv_sm4ks, SM4KS>;
+def : PatGprGprByteSelect<int_riscv_sm4ed, SM4ED>;
+} // Predicates = [HasStdExtZksed]
+
+// Zksh
+let Predicates = [HasStdExtZksh] in {
+def : PatGpr<int_riscv_sm3p0, SM3P0>;
+def : PatGpr<int_riscv_sm3p1, SM3P1>;
 } // Predicates = [HasStdExtZksh]

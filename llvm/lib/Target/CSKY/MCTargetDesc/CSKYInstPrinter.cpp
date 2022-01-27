@@ -73,6 +73,13 @@ void CSKYInstPrinter::printRegName(raw_ostream &O, unsigned RegNo) const {
   O << getRegisterName(RegNo);
 }
 
+void CSKYInstPrinter::printFPRRegName(raw_ostream &O, unsigned RegNo) const {
+  if (PrintBranchImmAsAddress)
+    O << getRegisterName(RegNo, CSKY::NoRegAltName);
+  else
+    O << getRegisterName(RegNo);
+}
+
 void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O,
                                    const char *Modifier) {
@@ -200,4 +207,12 @@ void CSKYInstPrinter::printRegisterList(const MCInst *MI, unsigned OpNum,
 const char *CSKYInstPrinter::getRegisterName(unsigned RegNo) {
   return getRegisterName(RegNo, ArchRegNames ? CSKY::NoRegAltName
                                              : CSKY::ABIRegAltName);
+}
+
+void CSKYInstPrinter::printFPR(const MCInst *MI, unsigned OpNo,
+                               const MCSubtargetInfo &STI, raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+  assert(MO.isReg());
+
+  printFPRRegName(O, MO.getReg());
 }
