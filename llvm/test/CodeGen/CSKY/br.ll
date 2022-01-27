@@ -3015,7 +3015,8 @@ define i1 @brRI_i1_eq(i1 %x) {
 ; CHECK-LABEL: brRI_i1_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bez32 a0, .LBB117_2
+; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    bf32 .LBB117_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
@@ -3035,7 +3036,8 @@ define i1 @brR0_i1_eq(i1 %x) {
 ; CHECK-LABEL: brR0_i1_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bez32 a0, .LBB118_2
+; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    bf32 .LBB118_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
@@ -3309,7 +3311,8 @@ define i1 @brRI_i1_ule(i1 %x) {
 ; CHECK-LABEL: brRI_i1_ule:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bnez32 a0, .LBB130_2
+; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    bt32 .LBB130_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -3331,7 +3334,8 @@ define i1 @brR0_i1_ule(i1 %x) {
 ; CHECK-LABEL: brR0_i1_ule:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bnez32 a0, .LBB131_2
+; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    bt32 .LBB131_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -3449,7 +3453,8 @@ define i1 @brRI_i1_sge(i1 %x) {
 ; CHECK-LABEL: brRI_i1_sge:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bnez32 a0, .LBB136_2
+; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    bt32 .LBB136_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -3471,7 +3476,8 @@ define i1 @brR0_i1_sge(i1 %x) {
 ; CHECK-LABEL: brR0_i1_sge:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi32 a0, a0, 1
-; CHECK-NEXT:    bnez32 a0, .LBB137_2
+; CHECK-NEXT:    btsti32 a0, 0
+; CHECK-NEXT:    bt32 .LBB137_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16

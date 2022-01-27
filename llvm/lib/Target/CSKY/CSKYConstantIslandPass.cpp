@@ -551,6 +551,11 @@ void CSKYConstantIslands::initializeFunctionInfo(
             Bits = 16;
             Scale = 4;
             break;
+          case CSKY::f2FLRW_S:
+          case CSKY::f2FLRW_D:
+            Bits = 8;
+            Scale = 4;
+            break;
           case CSKY::GRS32:
             Bits = 17;
             Scale = 2;

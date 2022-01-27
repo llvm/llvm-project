@@ -24,6 +24,11 @@ namespace llvm {
 class CSKYSubtarget;
 
 class CSKYInstrInfo : public CSKYGenInstrInfo {
+  bool v2sf;
+  bool v2df;
+  bool v3sf;
+  bool v3df;
+
 protected:
   const CSKYSubtarget &STI;
 

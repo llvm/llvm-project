@@ -38,6 +38,18 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   // Register Class
   addRegisterClass(MVT::i32, &CSKY::GPRRegClass);
 
+  if (STI.useHardFloat()) {
+    if (STI.hasFPUv2SingleFloat())
+      addRegisterClass(MVT::f32, &CSKY::sFPR32RegClass);
+    else if (STI.hasFPUv3SingleFloat())
+      addRegisterClass(MVT::f32, &CSKY::FPR32RegClass);
+
+    if (STI.hasFPUv2DoubleFloat())
+      addRegisterClass(MVT::f64, &CSKY::sFPR64RegClass);
+    else if (STI.hasFPUv3DoubleFloat())
+      addRegisterClass(MVT::f64, &CSKY::FPR64RegClass);
+  }
+
   setOperationAction(ISD::ADDCARRY, MVT::i32, Legal);
   setOperationAction(ISD::SUBCARRY, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
@@ -93,6 +105,40 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
 
   if (!Subtarget.has3r2E3r3()) {
     setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Expand);
+  }
+
+  // Float
+
+  ISD::CondCode FPCCToExtend[] = {
+      ISD::SETONE, ISD::SETUEQ, ISD::SETUGT,
+      ISD::SETUGE, ISD::SETULT, ISD::SETULE,
+  };
+
+  ISD::NodeType FPOpToExpand[] = {ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
+                                  ISD::FPOW, ISD::FREM, ISD::FCOPYSIGN};
+
+  if (STI.useHardFloat()) {
+
+    MVT AllVTy[] = {MVT::f32, MVT::f64};
+
+    for (auto VT : AllVTy) {
+      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::SELECT_CC, VT, Expand);
+      setOperationAction(ISD::BR_CC, VT, Expand);
+
+      for (auto CC : FPCCToExtend)
+        setCondCodeAction(CC, VT, Expand);
+      for (auto Op : FPOpToExpand)
+        setOperationAction(Op, VT, Expand);
+    }
+
+    if (STI.hasFPUv2SingleFloat() || STI.hasFPUv3SingleFloat()) {
+      setOperationAction(ISD::ConstantFP, MVT::f32, Legal);
+    }
+    if (STI.hasFPUv2DoubleFloat() || STI.hasFPUv3DoubleFloat()) {
+      setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+      setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+    }
   }
 
   // Compute derived properties from the register classes.
