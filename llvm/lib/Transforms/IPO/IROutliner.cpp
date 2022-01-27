@@ -185,6 +185,44 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
   return FoundValueOpt.getValueOr(nullptr);
 }
 
+/// Rewrite the BranchInsts in the incoming blocks to \p PHIBlock that are found
+/// in \p Included to branch to BasicBlock \p Replace if they currently branch
+/// to the BasicBlock \p Find.  This is used to fix up the incoming basic blocks
+/// when PHINodes are included in outlined regions.
+///
+/// \param PHIBlock - The BasicBlock containing the PHINodes that need to be
+/// checked.
+/// \param Find - The successor block to be replaced.
+/// \param Replace - The new succesor block to branch to.
+/// \param Included - The set of blocks about to be outlined.
+static void replaceTargetsFromPHINode(BasicBlock *PHIBlock, BasicBlock *Find,
+                                      BasicBlock *Replace,
+                                      DenseSet<BasicBlock *> &Included) {
+  for (PHINode &PN : PHIBlock->phis()) {
+    for (unsigned Idx = 0, PNEnd = PN.getNumIncomingValues(); Idx != PNEnd;
+         ++Idx) {
+      // Check if the incoming block is included in the set of blocks being
+      // outlined.
+      BasicBlock *Incoming = PN.getIncomingBlock(Idx);
+      if (!Included.contains(Incoming))
+        continue;
+
+      BranchInst *BI = dyn_cast<BranchInst>(Incoming->getTerminator());
+      assert(BI && "Not a branch instruction?");
+      // Look over the branching instructions into this block to see if we
+      // used to branch to Find in this outlined block.
+      for (unsigned Succ = 0, End = BI->getNumSuccessors(); Succ != End;
+           Succ++) {
+        // If we have found the block to replace, we do so here.
+        if (BI->getSuccessor(Succ) != Find)
+          continue;
+        BI->setSuccessor(Succ, Replace);
+      }
+    }
+  }
+}
+
+
 void OutlinableRegion::splitCandidate() {
   assert(!CandidateSplit && "Candidate already split!");
 
@@ -215,6 +253,39 @@ void OutlinableRegion::splitCandidate() {
   StartBB = StartInst->getParent();
   PrevBB = StartBB;
 
+  DenseSet<BasicBlock *> BBSet;
+  Candidate->getBasicBlocks(BBSet);
+
+  // We iterate over the instructions in the region, if we find a PHINode, we
+  // check if there are predecessors outside of the region, if there are,
+  // we ignore this region since we are unable to handle the severing of the
+  // phi node right now. 
+  BasicBlock::iterator It = StartInst->getIterator();
+  while (PHINode *PN = dyn_cast<PHINode>(&*It)) {
+    unsigned NumPredsOutsideRegion = 0;
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
+      if (!BBSet.contains(PN->getIncomingBlock(i)))
+        ++NumPredsOutsideRegion;
+
+    if (NumPredsOutsideRegion > 1)
+      return;
+    
+    It++;
+  }
+
+  // If the region starts with a PHINode, but is not the initial instruction of
+  // the BasicBlock, we ignore this region for now.
+  if (isa<PHINode>(StartInst) && StartInst != &*StartBB->begin())
+    return;
+  
+  // If the region ends with a PHINode, but does not contain all of the phi node
+  // instructions of the region, we ignore it for now.
+  if (isa<PHINode>(BackInst)) {
+    EndBB = BackInst->getParent();
+    if (BackInst != &*std::prev(EndBB->getFirstInsertionPt()))
+      return;
+  }
+
   // The basic block gets split like so:
   // block:                 block:
   //   inst1                  inst1
@@ -241,12 +312,20 @@ void OutlinableRegion::splitCandidate() {
     FollowBB = EndBB->splitBasicBlock(EndInst, OriginalName + "_after_outline");
     EndBB->replaceSuccessorsPhiUsesWith(EndBB, FollowBB);
     FollowBB->replaceSuccessorsPhiUsesWith(PrevBB, FollowBB);
-    return;
+  } else {
+    EndBB = BackInst->getParent();
+    EndsInBranch = true;
+    FollowBB = nullptr;
   }
 
-  EndBB = BackInst->getParent();
-  EndsInBranch = true;
-  FollowBB = nullptr;
+  // Refind the basic block set.
+  BBSet.clear();
+  Candidate->getBasicBlocks(BBSet);
+  // For the phi nodes in the new starting basic block of the region, we
+  // reassign the targets of the basic blocks branching instructions.
+  replaceTargetsFromPHINode(StartBB, PrevBB, StartBB, BBSet);
+  if (FollowBB)
+    replaceTargetsFromPHINode(FollowBB, EndBB, FollowBB, BBSet);
 }
 
 void OutlinableRegion::reattachCandidate() {
@@ -268,14 +347,20 @@ void OutlinableRegion::reattachCandidate() {
   //   inst4
   assert(StartBB != nullptr && "StartBB for Candidate is not defined!");
 
-  // StartBB should only have one predecessor since we put an unconditional
-  // branch at the end of PrevBB when we split the BasicBlock.
-  PrevBB = StartBB->getSinglePredecessor();
-  assert(PrevBB != nullptr &&
-         "No Predecessor for the region start basic block!");
-
   assert(PrevBB->getTerminator() && "Terminator removed from PrevBB!");
   PrevBB->getTerminator()->eraseFromParent();
+
+  // If we reattaching after outlining, we iterate over the phi nodes to
+  // the initial block, and reassign the branch instructions of the incoming
+  // blocks to the block we are remerging into.
+  if (!ExtractedFunction) {
+    DenseSet<BasicBlock *> BBSet;
+    Candidate->getBasicBlocks(BBSet);
+
+    replaceTargetsFromPHINode(StartBB, StartBB, PrevBB, BBSet);
+    if (!EndsInBranch)
+      replaceTargetsFromPHINode(FollowBB, FollowBB, EndBB, BBSet);
+  }
 
   moveBBContents(*StartBB, *PrevBB);
 
@@ -1622,7 +1707,8 @@ replaceArgumentUses(OutlinableRegion &Region,
 
       // If this is storing a PHINode, we must make sure it is included in the
       // overall function.
-      if (!isa<PHINode>(ValueOperand)) {
+      if (!isa<PHINode>(ValueOperand) ||
+          Region.Candidate->getGVN(ValueOperand).hasValue()) {
         if (FirstFunction)
           continue;
         Value *CorrVal =
@@ -2161,7 +2247,7 @@ void IROutliner::pruneIncompatibleRegions(
   if (FirstCandidate.getLength() == 2) {
     if (isa<CallInst>(FirstCandidate.front()->Inst) &&
         isa<BranchInst>(FirstCandidate.back()->Inst))
-        return;
+      return;
   }
 
   unsigned CurrentEndIdx = 0;

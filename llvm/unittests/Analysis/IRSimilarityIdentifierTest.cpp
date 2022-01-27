@@ -757,26 +757,13 @@ TEST(IRInstructionMapper, BranchLegal) {
   ASSERT_TRUE(UnsignedVec[1] < UnsignedVec[2]);
 }
 
-// In most cases, the illegal instructions we are collecting don't require any
-// sort of setup.  In these cases, we can just only have illegal instructions,
-// and the mapper will create 0 length vectors, and we can check that.
-
-// In cases where we have legal instructions needed to set up the illegal
-// instruction, to check illegal instructions are assigned unsigned integers
-// from the maximum value decreasing to 0, it will be greater than a legal
-// instruction that comes after.  So to check that we have an illegal
-// instruction, we place a legal instruction after an illegal instruction, and
-// check that the illegal unsigned integer is greater than the unsigned integer
-// of the legal instruction.
-
-// Checks that a PHINode is mapped to be illegal since there is extra checking
-// needed to ensure that a branch in one region is bin an isomorphic
-// location in a different region.
-TEST(IRInstructionMapper, PhiIllegal) {
+// Checks that a PHINode is mapped to be legal.
+TEST(IRInstructionMapper, PhiLegal) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
                           bb0:
                              %0 = phi i1 [ 0, %bb0 ], [ %0, %bb1 ]
+                             %1 = add i32 %a, %b
                              ret i32 0
                           bb1:
                              ret i32 1
@@ -790,11 +777,52 @@ TEST(IRInstructionMapper, PhiIllegal) {
   SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
   SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
   IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  ASSERT_EQ(InstrList.size(), UnsignedVec.size());
+  ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(3));
+}
+
+// Checks that a PHINode is mapped to be legal.
+TEST(IRInstructionMapper, PhiIllegal) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             %0 = phi i1 [ 0, %bb0 ], [ %0, %bb1 ]
+                             %1 = add i32 %a, %b
+                             ret i32 0
+                          bb1:
+                             ret i32 1
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.initializeForBBs(*M);
   getVectors(*M, Mapper, InstrList, UnsignedVec);
 
   ASSERT_EQ(InstrList.size(), UnsignedVec.size());
   ASSERT_EQ(UnsignedVec.size(), static_cast<unsigned>(0));
 }
+
+// In most cases, the illegal instructions we are collecting don't require any
+// sort of setup.  In these cases, we can just only have illegal instructions,
+// and the mapper will create 0 length vectors, and we can check that.
+
+// In cases where we have legal instructions needed to set up the illegal
+// instruction, to check illegal instructions are assigned unsigned integers
+// from the maximum value decreasing to 0, it will be greater than a legal
+// instruction that comes after.  So to check that we have an illegal
+// instruction, we place a legal instruction after an illegal instruction, and
+// check that the illegal unsigned integer is greater than the unsigned integer
+// of the legal instruction.
 
 // Checks that an alloca instruction is mapped to be illegal.
 TEST(IRInstructionMapper, AllocaIllegal) {
@@ -2344,6 +2372,108 @@ TEST(IRSimilarityCandidate, DifferentBranchStructureOutside) {
   ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
 
   ASSERT_TRUE(longSimCandCompare(InstrList, true, 3, 0, 6));
+}
+
+// Checks that the same structure is recognized between two candidates,
+// when the phi predecessor are other blocks inside the same region,
+// the relative distance between the blocks must be the same.
+TEST(IRSimilarityCandidate, SamePHIStructureInternal) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             br label %bb2
+                          bb1:
+                             br label %bb2
+                          bb2:
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ] 
+                             %1 = add i32 %b, %a
+                             %2 = add i32 %a, %b
+                             ret i32 0
+                          }
+                          
+                          define i32 @f2(i32 %a, i32 %b) {
+                          bb0:
+                             br label %bb2
+                          bb1:
+                             br label %bb2
+                          bb2:
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ]
+                             %1 = add i32 %b, %a
+                             %2 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(11));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_TRUE(longSimCandCompare(InstrList, true, 4, 0, 6));
+}
+
+// Checks that the different structure is recognized between two candidates,
+// when the phi predecessor are other blocks inside the same region,
+// the relative distance between the blocks must be the same.
+TEST(IRSimilarityCandidate, DifferentPHIStructureInternal) {
+  StringRef ModuleString = R"(
+                          define i32 @f(i32 %a, i32 %b) {
+                          bb0:
+                             br label %bb2
+                          bb1:
+                             br label %bb2
+                          bb3:
+                             br label %bb2
+                          bb2:
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb1 ] 
+                             %1 = add i32 %b, %a
+                             %2 = add i32 %a, %b
+                             ret i32 0
+                          }
+                          
+                          define i32 @f2(i32 %a, i32 %b) {
+                          bb0:
+                             br label %bb2
+                          bb1:
+                             br label %bb2
+                          bb3:
+                             br label %bb2
+                          bb2:
+                             %0 = phi i32 [ %a, %bb0 ], [ %b, %bb3 ] 
+                             %1 = add i32 %b, %a
+                             %2 = add i32 %a, %b
+                             ret i32 0
+                          })";
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  std::vector<IRInstructionData *> InstrList;
+  std::vector<unsigned> UnsignedVec;
+
+  SpecificBumpPtrAllocator<IRInstructionData> InstDataAllocator;
+  SpecificBumpPtrAllocator<IRInstructionDataList> IDLAllocator;
+  IRInstructionMapper Mapper(&InstDataAllocator, &IDLAllocator);
+  Mapper.InstClassifier.EnableBranches = true;
+  Mapper.initializeForBBs(*M);
+  getVectors(*M, Mapper, InstrList, UnsignedVec);
+
+  // Check to make sure that we have a long enough region.
+  ASSERT_EQ(InstrList.size(), static_cast<unsigned>(13));
+  // Check that the instructions were added correctly to both vectors.
+  ASSERT_TRUE(InstrList.size() == UnsignedVec.size());
+
+  ASSERT_FALSE(longSimCandCompare(InstrList, true, 5, 0, 7));
 }
 
 // Checks that two sets of identical instructions are found to be the same.
