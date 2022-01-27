@@ -114,7 +114,7 @@
 `3498 <https://wg21.link/LWG3498>`__,"Inconsistent ``noexcept``-specifiers for ``basic_syncbuf``","October 2021","",""
 `3535 <https://wg21.link/LWG3535>`__,"``join_view::iterator::iterator_category`` and ``::iterator_concept`` lie","October 2021","","","|ranges|"
 `3554 <https://wg21.link/LWG3554>`__,"``chrono::parse`` needs ``const charT*`` and ``basic_string_view<charT>`` overloads","October 2021","","","|chrono|"
-`3557 <https://wg21.link/LWG3557>`__,"The ``static_cast`` expression in ``convertible_to`` has the wrong operand","October 2021","",""
+`3557 <https://wg21.link/LWG3557>`__,"The ``static_cast`` expression in ``convertible_to`` has the wrong operand","October 2021","|Complete|","14.0"
 `3559 <https://wg21.link/LWG3559>`__,"Semantic requirements of ``sized_range`` is circular","October 2021","","","|ranges|"
 `3560 <https://wg21.link/LWG3560>`__,"``ranges::equal`` and ``ranges::is_permutation`` should short-circuit for ``sized_ranges``","October 2021","","","|ranges|"
 `3561 <https://wg21.link/LWG3561>`__,"Issue with internal counter in ``discard_block_engine``","October 2021","",""
