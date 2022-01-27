@@ -308,6 +308,10 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     Header.Version |= VARIANT_MASK_CSIR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::BB))
     Header.Version |= VARIANT_MASK_INSTR_ENTRY;
+  if (static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage))
+    Header.Version |= VARIANT_MASK_BYTE_COVERAGE;
+  if (static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly))
+    Header.Version |= VARIANT_MASK_FUNCTION_ENTRY_ONLY;
 
   Header.Unused = 0;
   Header.HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);

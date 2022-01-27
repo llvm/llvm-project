@@ -87,11 +87,24 @@ public:
       return Error::success();
     }
 
+    // Returns true if merging is should fail assuming A and B are incompatible.
+    auto testIncompatible = [&](InstrProfKind A, InstrProfKind B) {
+      return (static_cast<bool>(ProfileKind & A) &&
+              static_cast<bool>(Other & B)) ||
+             (static_cast<bool>(ProfileKind & B) &&
+              static_cast<bool>(Other & A));
+    };
+
     // Check if the profiles are in-compatible. Clang frontend profiles can't be
     // merged with other profile types.
     if (static_cast<bool>((ProfileKind & InstrProfKind::FE) ^
                           (Other & InstrProfKind::FE))) {
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
+    }
+    if (testIncompatible(InstrProfKind::FunctionEntryOnly, InstrProfKind::BB)) {
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          "cannot merge FunctionEntryOnly profiles and BB profiles together");
     }
 
     // Now we update the profile type with the bits that are set.

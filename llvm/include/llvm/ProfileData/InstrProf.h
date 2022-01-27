@@ -285,7 +285,9 @@ enum class InstrProfKind {
   IR = 0x2, // An IR-level profile (default when -fprofile-generate is used).
   BB = 0x4, // A profile with entry basic block instrumentation.
   CS = 0x8, // A context sensitive IR-level profile.
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CS)
+  SingleByteCoverage = 0x10, // Use single byte probes for coverage.
+  FunctionEntryOnly = 0x20,  // Only instrument the function entry basic block.
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FunctionEntryOnly)
 };
 
 const std::error_category &instrprof_category();
@@ -1170,7 +1172,8 @@ void getMemOPSizeRangeFromOption(StringRef Str, int64_t &RangeStart,
 // aware this is an ir_level profile so it can set the version flag.
 GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
                                             bool InstrEntryBBEnabled,
-                                            bool DebugInfoCorrelate);
+                                            bool DebugInfoCorrelate,
+                                            bool PGOFunctionEntryCoverage);
 
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput);
