@@ -28,17 +28,17 @@ namespace {
 
 /// Converts `atomic_rmw` that cannot be lowered to a simple atomic op with
 /// AtomicRMWOpLowering pattern, e.g. with "minf" or "maxf" attributes, to
-/// `generic_atomic_rmw` with the expanded code.
+/// `memref.generic_atomic_rmw` with the expanded code.
 ///
 /// %x = atomic_rmw "maxf" %fval, %F[%i] : (f32, memref<10xf32>) -> f32
 ///
 /// will be lowered to
 ///
-/// %x = std.generic_atomic_rmw %F[%i] : memref<10xf32> {
+/// %x = memref.generic_atomic_rmw %F[%i] : memref<10xf32> {
 /// ^bb0(%current: f32):
 ///   %cmp = arith.cmpf "ogt", %current, %fval : f32
 ///   %new_value = select %cmp, %current, %fval : f32
-///   atomic_yield %new_value : f32
+///   memref.atomic_yield %new_value : f32
 /// }
 struct AtomicRMWOpConverter : public OpRewritePattern<memref::AtomicRMWOp> {
 public:
@@ -59,8 +59,8 @@ public:
     }
 
     auto loc = op.getLoc();
-    auto genericOp =
-        rewriter.create<GenericAtomicRMWOp>(loc, op.memref(), op.indices());
+    auto genericOp = rewriter.create<memref::GenericAtomicRMWOp>(
+        loc, op.memref(), op.indices());
     OpBuilder bodyBuilder =
         OpBuilder::atBlockEnd(genericOp.getBody(), rewriter.getListener());
 
@@ -68,7 +68,7 @@ public:
     Value rhs = op.value();
     Value cmp = bodyBuilder.create<arith::CmpFOp>(loc, predicate, lhs, rhs);
     Value select = bodyBuilder.create<SelectOp>(loc, cmp, lhs, rhs);
-    bodyBuilder.create<AtomicYieldOp>(loc, select);
+    bodyBuilder.create<memref::AtomicYieldOp>(loc, select);
 
     rewriter.replaceOp(op, genericOp.getResult());
     return success();
