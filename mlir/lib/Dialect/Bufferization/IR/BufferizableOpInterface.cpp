@@ -318,6 +318,25 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
   rewriter.eraseOp(op);
 }
 
+AlwaysCopyBufferizationState::AlwaysCopyBufferizationState(
+    const BufferizationOptions &options)
+    : BufferizationState(options) {}
+
+/// Return `true` if the given OpResult has been decided to bufferize inplace.
+bool AlwaysCopyBufferizationState::isInPlace(OpOperand &opOperand) const {
+  // OpOperands that bufferize to a memory write are out-of-place, i.e., an
+  // alloc and copy is inserted.
+  return !bufferizesToMemoryWrite(opOperand);
+}
+
+/// Return true if `v1` and `v2` bufferize to equivalent buffers.
+bool AlwaysCopyBufferizationState::areEquivalentBufferizedValues(
+    Value v1, Value v2) const {
+  // There is no analysis, so we do not know if the values are equivalent. The
+  // conservative answer is "false".
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Bufferization-specific scoped alloc/dealloc insertion support.
 //===----------------------------------------------------------------------===//
