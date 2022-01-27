@@ -100,7 +100,7 @@ LatticeJoinEffect Environment::join(const Environment &Other) {
 
 StorageLocation &Environment::createStorageLocation(QualType Type) {
   assert(!Type.isNull());
-  if (Type->isStructureOrClassType()) {
+  if (Type->isStructureOrClassType() || Type->isUnionType()) {
     // FIXME: Explore options to avoid eager initialization of fields as some of
     // them might not be needed for a particular analysis.
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
