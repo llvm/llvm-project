@@ -623,7 +623,8 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       Register SrcReg = OpInfo.Regs[0];
       unsigned SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
-      if (MRI->getType(ResRegs[i]).getSizeInBits() < SrcSize) {
+      LLT ResTy = MRI->getType(ResRegs[i]);
+      if (ResTy.isScalar() && ResTy.getSizeInBits() < SrcSize) {
         // First copy the non-typed virtual register into a generic virtual
         // register
         Register Tmp1Reg =
@@ -631,9 +632,14 @@ bool InlineAsmLowering::lowerInlineAsm(
         MIRBuilder.buildCopy(Tmp1Reg, SrcReg);
         // Need to truncate the result of the register
         MIRBuilder.buildTrunc(ResRegs[i], Tmp1Reg);
-      } else {
+      } else if (ResTy.getSizeInBits() == SrcSize) {
         MIRBuilder.buildCopy(ResRegs[i], SrcReg);
+      } else {
+        LLVM_DEBUG(dbgs() << "Unhandled output operand with "
+                             "mismatched register size\n");
+        return false;
       }
+
       break;
     }
     case TargetLowering::C_Immediate:
