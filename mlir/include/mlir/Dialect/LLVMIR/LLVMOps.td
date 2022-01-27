@@ -1934,7 +1934,8 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", []> {
         UnitAttr:$has_side_effects,
         UnitAttr:$is_align_stack,
         OptionalAttr<
-          DefaultValuedAttr<AsmATTOrIntel, "AsmDialect::AD_ATT">>:$asm_dialect);
+          DefaultValuedAttr<AsmATTOrIntel, "AsmDialect::AD_ATT">>:$asm_dialect,
+        OptionalAttr<ArrayAttr>:$operand_attrs);
 
   let results = (outs Optional<LLVM_Type>:$res);
 
@@ -1942,9 +1943,16 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", []> {
     (`has_side_effects` $has_side_effects^)?
     (`is_align_stack` $is_align_stack^)?
     (`asm_dialect` `=` $asm_dialect^)?
+    (`operand_attrs` `=` $operand_attrs^)?
     attr-dict
     $asm_string `,` $constraints
     operands `:` functional-type(operands, results)
    }];
+
+  let extraClassDeclaration = [{
+    static StringRef getElementTypeAttrName() {
+      return "elementtype";
+    }
+  }];
 }
 #endif // LLVMIR_OPS
