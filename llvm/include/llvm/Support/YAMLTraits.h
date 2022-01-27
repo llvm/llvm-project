@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_YAMLTRAITS_H
 #define LLVM_SUPPORT_YAMLTRAITS_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1521,7 +1522,7 @@ private:
   std::error_code                     EC;
   BumpPtrAllocator                    StringAllocator;
   document_iterator                   DocIterator;
-  std::vector<bool>                   BitValuesUsed;
+  llvm::BitVector                     BitValuesUsed;
   HNode *CurrentNode = nullptr;
   bool                                ScalarMatchFound = false;
   bool AllowUnknownKeys = false;

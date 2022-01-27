@@ -299,7 +299,7 @@ void Input::endEnumScalar() {
 bool Input::beginBitSetScalar(bool &DoClear) {
   BitValuesUsed.clear();
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
-    BitValuesUsed.insert(BitValuesUsed.begin(), SQ->Entries.size(), false);
+    BitValuesUsed.resize(SQ->Entries.size());
   } else {
     setError(CurrentNode, "expected sequence of bit values");
   }
