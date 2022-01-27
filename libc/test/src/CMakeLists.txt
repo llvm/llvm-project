@@ -35,6 +35,7 @@ add_subdirectory(string)
 add_subdirectory(stdlib)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
+  add_subdirectory(fcntl)
   add_subdirectory(sys)
   add_subdirectory(unistd)
 endif()

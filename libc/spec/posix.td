@@ -115,9 +115,19 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Enumerations
     [
       FunctionSpec<
+          "creat",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
+      >,
+      FunctionSpec<
           "open",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<VarArgType>]
+      >,
+      FunctionSpec<
+          "openat",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<VarArgType>]
       >,
     ]
   >;
