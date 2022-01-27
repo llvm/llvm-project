@@ -11,8 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/Transforms/ComposeSubView.h"
-
+#include "mlir/Dialect/MemRef/Transforms/ComposeSubView.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -21,7 +20,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-namespace mlir {
+using namespace mlir;
 
 namespace {
 
@@ -128,9 +127,7 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
 
 } // namespace
 
-void populateComposeSubViewPatterns(OwningRewritePatternList &patterns,
-                                    MLIRContext *context) {
+void mlir::memref::populateComposeSubViewPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
   patterns.insert<ComposeSubViewOpPattern>(context);
 }
-
-} // namespace mlir

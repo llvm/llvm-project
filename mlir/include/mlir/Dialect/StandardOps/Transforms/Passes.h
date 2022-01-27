@@ -45,16 +45,6 @@ void populateTensorConstantBufferizePatterns(
 /// Creates an instance of tensor constant bufferization pass.
 std::unique_ptr<Pass> createTensorConstantBufferizePass(unsigned alignment = 0);
 
-/// Creates an instance of the StdExpand pass that legalizes Std
-/// dialect ops to be convertible to LLVM. For example,
-/// `std.arith.ceildivsi` gets transformed to a number of std operations,
-/// which can be lowered to LLVM; `memref.reshape` gets converted to
-/// `memref_reinterpret_cast`.
-std::unique_ptr<Pass> createStdExpandOpsPass();
-
-/// Collects a set of patterns to rewrite ops within the Std dialect.
-void populateStdExpandOpsPatterns(RewritePatternSet &patterns);
-
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
