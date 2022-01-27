@@ -20,7 +20,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -34,6 +33,9 @@
 #include <vector>
 
 namespace llvm {
+
+class VersionTuple;
+
 namespace yaml {
 
 enum class NodeKind : uint8_t {
