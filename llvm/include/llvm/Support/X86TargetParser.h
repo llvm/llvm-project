@@ -17,7 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 
 namespace llvm {
-template <typename T> class SmallVectorImpl;;
+template <typename T> class SmallVectorImpl;
 class StringRef;
 
 namespace X86 {
