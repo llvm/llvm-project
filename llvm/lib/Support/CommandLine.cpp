@@ -2356,7 +2356,7 @@ protected:
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
       for (auto &Cat : Opt->Categories) {
-        assert(std::binary_search(SortedCategories.begin(), SortedCategories.end(), Cat, [](OptionCategory* A, OptionCategory* B) { return OptionCategoryCompare(&A, &B);}) &&
+        assert(find(SortedCategories, Cat) != SortedCategories.end() &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
       }
