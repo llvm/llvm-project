@@ -76,6 +76,11 @@ public:
   Optional<DestSourcePair>
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
+  void insertNoop(MachineBasicBlock &MBB,
+                  MachineBasicBlock::iterator MI) const override;
+
+  MCInst getNop() const override;
+
   // Return the M88kRegisterInfo, which this class owns.
   const M88kRegisterInfo &getRegisterInfo() const { return RI; }
 };

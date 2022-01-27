@@ -14,7 +14,6 @@
 #include "M88k.h"
 #include "MCTargetDesc/M88kBaseInfo.h"
 #include "MCTargetDesc/M88kMCTargetDesc.h"
-//#include "M88kInstrBuilder.h"
 #include "M88kSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -31,6 +30,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -354,4 +354,19 @@ M88kInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
       return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
   }
   return None;
+}
+
+void M88kInstrInfo::insertNoop(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI) const {
+  DebugLoc DL;
+  BuildMI(MBB, MI, DL, get(M88k::ORrr), M88k::R0)
+      .addReg(M88k::R0)
+      .addReg(M88k::R0);
+}
+
+MCInst M88kInstrInfo::getNop() const {
+  return MCInstBuilder(M88k::ORrr)
+      .addReg(M88k::R0)
+      .addReg(M88k::R0)
+      .addReg(M88k::R0);
 }
