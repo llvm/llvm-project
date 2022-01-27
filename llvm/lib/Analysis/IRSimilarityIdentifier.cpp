@@ -29,7 +29,6 @@ cl::opt<bool>
                     cl::ReallyHidden,
                     cl::desc("disable similarity matching, and outlining, "
                              "across branches for debugging purposes."));
-} // namespace llvm
 
 cl::opt<bool>
     DisableIndirectCalls("no-ir-sim-indirect-calls", cl::init(false),
@@ -40,7 +39,7 @@ cl::opt<bool>
     MatchCallsByName("ir-sim-calls-by-name", cl::init(false), cl::ReallyHidden,
                      cl::desc("only allow matching call instructions if the "
                               "name and type signature match."));
-
+} // namespace llvm
 
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
                                      IRInstructionDataList &IDList)

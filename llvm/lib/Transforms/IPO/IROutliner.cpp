@@ -38,11 +38,11 @@ using namespace IRSimilarity;
 // matching and outlining.
 namespace llvm {
 extern cl::opt<bool> DisableBranches;
-} // namespace llvm
 
 // A command flag to be used for debugging to indirect calls from similarity
 // matching and outlining.
 extern cl::opt<bool> DisableIndirectCalls;
+} // namespace llvm
 
 // Set to true if the user wants the ir outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
