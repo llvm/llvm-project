@@ -2082,10 +2082,15 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
 // Note that we may have also stripped an address space cast in between.
 Instruction *InstCombinerImpl::visitGEPOfBitcast(BitCastInst *BCI,
                                                  GetElementPtrInst &GEP) {
-  Type *GEPEltType = GEP.getSourceElementType();
-  Value *SrcOp = BCI->getOperand(0);
+  // With opaque pointers, there is no pointer element type we can use to
+  // adjust the GEP type.
   PointerType *SrcType = cast<PointerType>(BCI->getSrcTy());
-  Type *SrcEltType = SrcType->getPointerElementType();
+  if (SrcType->isOpaque())
+    return nullptr;
+
+  Type *GEPEltType = GEP.getSourceElementType();
+  Type *SrcEltType = SrcType->getNonOpaquePointerElementType();
+  Value *SrcOp = BCI->getOperand(0);
 
   // GEP directly using the source operand if this GEP is accessing an element
   // of a bitcasted pointer to vector or array of the same dimensions:
