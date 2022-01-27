@@ -1,0 +1,56 @@
+## NB: This is a yaml file because llvm gnu-style writing support in 14.0
+## (2022, D117744). In due time we may want to remove it from lldb as well.
+
+## Debug info generated from the following sources using clang-13
+## struct A {
+##  long a = 42;
+## };
+## extern constexpr short s = 47;
+## extern constexpr A a{};
+
+# REQUIRES: zlib
+
+# RUN: yaml2obj %s > %t
+# RUN: %lldb %t -o "target var s a" -b | FileCheck %s
+
+# CHECK: (const short) s = 47
+# CHECK: (const A) a = (a = 42)
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x401000
+Sections:
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x401000
+    AddressAlign:    0x8
+    Offset:          0x1000
+    Content:         2F000000000000002A00000000000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         20000000040000000000080100000000000000001A000000C088361D3BC5B7B700000000
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         01110010171B0EB44219B0420EB14207B34217000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         7100000004006B000000010101FB0E0D0001010101000000010000012F686F6D652F706176656C6F2F6C6C00006D6F6E6F2F6C6C64622F746573742F5368656C6C2F53796D626F6C46696C652F44574152462F7838362F676E752D7374796C652D636F6D7072657373696F6E2E6370700001000000
+  - Name:            .zdebug_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         5A4C49420000000000000084789C75C9310E82401005502E04BF33B62686D6440A6B979DC826B3FC89332B727BB980ED7B585805F6FC8812AA48AD68062D3AFC1B04A97E504E08F1C0B4C8F1D35E13752C2AB83E2EF711DFF309B716D602AFB5F51EBB4A3FB3DA5BDC0BD761361BF2C6EE0781C8302C
+  - Name:            .debug_addr
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         '00104000000000000810400000000000'
+...
