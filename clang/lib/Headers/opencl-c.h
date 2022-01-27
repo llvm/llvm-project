@@ -15688,7 +15688,7 @@ half4 __purefn __ovld read_imageh(read_write image1d_array_t image, int2 coord);
 half4 __purefn __ovld read_imageh(read_write image2d_array_t image, int4 coord);
 half4 __purefn __ovld read_imageh(read_write image1d_buffer_t image, int coord);
 #endif //cl_khr_fp16
-#endif //defined(__opencl_c_read_write_images
+#endif //defined(__opencl_c_read_write_images)
 
 /**
  * Write color value to location specified by coordinate
@@ -16049,9 +16049,11 @@ int __ovld get_image_num_mip_levels(write_only image2d_t image);
 int __ovld get_image_num_mip_levels(write_only image3d_t image);
 #endif
 
+#if defined(__opencl_c_read_write_images)
 int __ovld get_image_num_mip_levels(read_write image1d_t image);
 int __ovld get_image_num_mip_levels(read_write image2d_t image);
 int __ovld get_image_num_mip_levels(read_write image3d_t image);
+#endif //defined(__opencl_c_read_write_images)
 
 int __ovld get_image_num_mip_levels(read_only image1d_array_t image);
 int __ovld get_image_num_mip_levels(read_only image2d_array_t image);
@@ -16063,10 +16065,12 @@ int __ovld get_image_num_mip_levels(write_only image2d_array_t image);
 int __ovld get_image_num_mip_levels(write_only image2d_array_depth_t image);
 int __ovld get_image_num_mip_levels(write_only image2d_depth_t image);
 
+#if defined(__opencl_c_read_write_images)
 int __ovld get_image_num_mip_levels(read_write image1d_array_t image);
 int __ovld get_image_num_mip_levels(read_write image2d_array_t image);
 int __ovld get_image_num_mip_levels(read_write image2d_array_depth_t image);
 int __ovld get_image_num_mip_levels(read_write image2d_depth_t image);
+#endif //defined(__opencl_c_read_write_images)
 
 #endif //cl_khr_mipmap_image
 #endif //defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
