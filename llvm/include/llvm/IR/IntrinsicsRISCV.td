@@ -175,26 +175,37 @@ let TargetPrefix = "riscv" in {
                                            ImmArg<ArgIndex<0>>,
                                            ImmArg<ArgIndex<1>>]>;
 
-  // For unit stride load
+  // For unit stride mask load
   // Input: (pointer, vl)
-  class RISCVUSLoad
+  class RISCVUSMLoad
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMPointerType<LLVMMatchType<0>>,
                      llvm_anyint_ty],
                     [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic {
     let VLOperand = 1;
   }
+  // For unit stride load
+  // Input: (passthru, pointer, vl)
+  class RISCVUSLoad
+        : Intrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>,
+                     LLVMPointerType<LLVMMatchType<0>>,
+                     llvm_anyint_ty],
+                    [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic {
+    let VLOperand = 2;
+  }
   // For unit stride fault-only-first load
-  // Input: (pointer, vl)
+  // Input: (passthru, pointer, vl)
   // Output: (data, vl)
   // NOTE: We model this with default memory properties since we model writing
   // VL as a side effect. IntrReadMem, IntrHasSideEffects does not work.
   class RISCVUSLoadFF
         : Intrinsic<[llvm_anyvector_ty, llvm_anyint_ty],
-                    [LLVMPointerType<LLVMMatchType<0>>, LLVMMatchType<1>],
-                    [NoCapture<ArgIndex<0>>]>,
+                    [LLVMMatchType<0>,
+                     LLVMPointerType<LLVMMatchType<0>>, LLVMMatchType<1>],
+                    [NoCapture<ArgIndex<1>>]>,
                     RISCVVIntrinsic {
-    let VLOperand = 1;
+    let VLOperand = 2;
   }
   // For unit stride load with mask
   // Input: (maskedoff, pointer, mask, vl, ta)
@@ -222,14 +233,15 @@ let TargetPrefix = "riscv" in {
                     [NoCapture<ArgIndex<1>>, ImmArg<ArgIndex<4>>]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
-  // For strided load
-  // Input: (pointer, stride, vl)
+  // For strided load with passthru operand
+  // Input: (passthru, pointer, stride, vl)
   class RISCVSLoad
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMPointerType<LLVMMatchType<0>>,
+                    [LLVMMatchType<0>,
+                     LLVMPointerType<LLVMMatchType<0>>,
                      llvm_anyint_ty, LLVMMatchType<1>],
-                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+                    [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic {
+    let VLOperand = 3;
   }
   // For strided load with mask
   // Input: (maskedoff, pointer, stride, mask, vl, ta)
@@ -243,14 +255,15 @@ let TargetPrefix = "riscv" in {
                     RISCVVIntrinsic {
     let VLOperand = 4;
   }
-  // For indexed load
-  // Input: (pointer, index, vl)
+  // For indexed load with passthru operand
+  // Input: (passthru, pointer, index, vl)
   class RISCVILoad
         : Intrinsic<[llvm_anyvector_ty],
-                    [LLVMPointerType<LLVMMatchType<0>>,
+                    [LLVMMatchType<0>,
+                     LLVMPointerType<LLVMMatchType<0>>,
                      llvm_anyvector_ty, llvm_anyint_ty],
-                    [NoCapture<ArgIndex<0>>, IntrReadMem]>, RISCVVIntrinsic {
-    let VLOperand = 2;
+                    [NoCapture<ArgIndex<1>>, IntrReadMem]>, RISCVVIntrinsic {
+    let VLOperand = 3;
   }
   // For indexed load with mask
   // Input: (maskedoff, pointer, index, mask, vl, ta)
@@ -1124,7 +1137,7 @@ let TargetPrefix = "riscv" in {
   defm vsoxei : RISCVIStore;
   defm vsuxei : RISCVIStore;
 
-  def int_riscv_vlm : RISCVUSLoad;
+  def int_riscv_vlm : RISCVUSMLoad;
   def int_riscv_vsm : RISCVUSStore;
 
   defm vadd : RISCVBinaryAAX;

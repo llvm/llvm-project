@@ -168,7 +168,7 @@ entry:
   %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %input, i64 0, i64 0
   %2 = load i64, i64* %vl, align 8
   %3 = bitcast i32* %arraydecay to <vscale x 16 x i32>*
-  %4 = call <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32>* %3, i64 %2)
+  %4 = call <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32> undef, <vscale x 16 x i32>* %3, i64 %2)
   store <vscale x 16 x i32> %4, <vscale x 16 x i32>* %v0, align 4
   store i32 1, i32* %x0, align 4
   store i32 1, i32* %x1, align 4
@@ -211,6 +211,6 @@ declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
 
 declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
 
-declare <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32>* nocapture, i64)
+declare <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32>, <vscale x 16 x i32>* nocapture, i64)
 
 attributes #0 = { noinline nounwind optnone "frame-pointer"="all" }
