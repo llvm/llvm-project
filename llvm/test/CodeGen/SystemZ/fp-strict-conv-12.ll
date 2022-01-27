@@ -41,7 +41,7 @@ define i64 @f2(double %f) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    larl %r1, .LCPI1_0
-; CHECK-NEXT:    ldeb %f1, 0(%r1)
+; CHECK-NEXT:    ld %f1, 0(%r1)
 ; CHECK-NEXT:    kdbr %f0, %f1
 ; CHECK-NEXT:    jnl .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
