@@ -757,7 +757,7 @@ void mlir::tblgen::generateAttrOrTypeFormat(const AttrOrTypeDef &def,
   llvm::SourceMgr mgr;
   mgr.AddNewSourceBuffer(
       llvm::MemoryBuffer::getMemBuffer(*def.getAssemblyFormat()),
-      llvm::SMLoc());
+      SMLoc());
 
   /// Parse the custom assembly format>
   FormatParser fmtParser(mgr, def);

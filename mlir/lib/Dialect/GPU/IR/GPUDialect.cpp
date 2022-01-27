@@ -141,7 +141,7 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
     return AsyncTokenType::get(context);
 
   if (keyword == "mma_matrix") {
-    llvm::SMLoc beginLoc = parser.getNameLoc();
+    SMLoc beginLoc = parser.getNameLoc();
 
     // Parse '<'.
     if (parser.parseLess())

@@ -71,6 +71,8 @@ class APFloat;
 template <typename Fn> class function_ref;
 template <typename IteratorT> class iterator_range;
 class raw_ostream;
+class SMLoc;
+class SMRange;
 } // namespace llvm
 
 namespace mlir {
@@ -127,6 +129,8 @@ using llvm::APSInt;
 template <typename Fn> using function_ref = llvm::function_ref<Fn>;
 using llvm::iterator_range;
 using llvm::raw_ostream;
+using llvm::SMLoc;
+using llvm::SMRange;
 } // namespace mlir
 
 #endif // MLIR_SUPPORT_LLVM_H

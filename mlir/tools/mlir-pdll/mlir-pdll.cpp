@@ -33,7 +33,7 @@ processBuffer(raw_ostream &os, std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
               OutputType outputType, std::vector<std::string> &includeDirs) {
   llvm::SourceMgr sourceMgr;
   sourceMgr.setIncludeDirs(includeDirs);
-  sourceMgr.AddNewSourceBuffer(std::move(chunkBuffer), llvm::SMLoc());
+  sourceMgr.AddNewSourceBuffer(std::move(chunkBuffer), SMLoc());
 
   ast::Context astContext;
   FailureOr<ast::Module *> module = parsePDLAST(astContext, sourceMgr);

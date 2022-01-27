@@ -196,7 +196,7 @@ public:
   Optional<StringRef> getExtraDecls() const;
 
   // Get the code location (for error printing).
-  ArrayRef<llvm::SMLoc> getLoc() const;
+  ArrayRef<SMLoc> getLoc() const;
 
   // Returns true if the default get/getChecked methods should be skipped during
   // generation.
