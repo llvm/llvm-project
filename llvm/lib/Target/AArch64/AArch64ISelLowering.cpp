@@ -7308,103 +7308,88 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
                                               SelectionDAG &DAG) const {
+  if (!Subtarget->hasNEON())
+    return SDValue();
+
   EVT VT = Op.getValueType();
+  EVT IntVT = VT.changeTypeToInteger();
   SDLoc DL(Op);
 
   SDValue In1 = Op.getOperand(0);
   SDValue In2 = Op.getOperand(1);
   EVT SrcVT = In2.getValueType();
 
-  if (VT.isScalableVector()) {
-    if (VT != SrcVT)
-      return SDValue();
-
-    // copysign(x,y) -> (y & SIGN_MASK) | (x & ~SIGN_MASK)
-    //
-    // A possible alternative sequence involves using FNEG_MERGE_PASSTHRU;
-    // maybe useful for copysign operations with mismatched VTs.
-    //
-    // IntVT here is chosen so it's a legal type with the same element width
-    // as the input.
-    EVT IntVT =
-        getPackedSVEVectorVT(VT.getVectorElementType().changeTypeToInteger());
-    unsigned NumBits = VT.getScalarSizeInBits();
-    SDValue SignMask = DAG.getConstant(APInt::getSignMask(NumBits), DL, IntVT);
-    SDValue InvSignMask = DAG.getNOT(DL, SignMask, IntVT);
-    SDValue Sign = DAG.getNode(ISD::AND, DL, IntVT, SignMask,
-                               getSVESafeBitCast(IntVT, In2, DAG));
-    SDValue Magnitude = DAG.getNode(ISD::AND, DL, IntVT, InvSignMask,
-                                    getSVESafeBitCast(IntVT, In1, DAG));
-    SDValue IntResult = DAG.getNode(ISD::OR, DL, IntVT, Sign, Magnitude);
-    return getSVESafeBitCast(VT, IntResult, DAG);
-  }
-
-  if (!Subtarget->hasNEON())
-    return SDValue();
-
   if (SrcVT.bitsLT(VT))
     In2 = DAG.getNode(ISD::FP_EXTEND, DL, VT, In2);
   else if (SrcVT.bitsGT(VT))
     In2 = DAG.getNode(ISD::FP_ROUND, DL, VT, In2, DAG.getIntPtrConstant(0, DL));
 
-  EVT VecVT;
-  uint64_t EltMask;
-  SDValue VecVal1, VecVal2;
+  if (VT.isScalableVector())
+    IntVT =
+        getPackedSVEVectorVT(VT.getVectorElementType().changeTypeToInteger());
 
-  auto setVecVal = [&] (int Idx) {
-    if (!VT.isVector()) {
-      VecVal1 = DAG.getTargetInsertSubreg(Idx, DL, VecVT,
-                                          DAG.getUNDEF(VecVT), In1);
-      VecVal2 = DAG.getTargetInsertSubreg(Idx, DL, VecVT,
-                                          DAG.getUNDEF(VecVT), In2);
-    } else {
-      VecVal1 = DAG.getNode(ISD::BITCAST, DL, VecVT, In1);
-      VecVal2 = DAG.getNode(ISD::BITCAST, DL, VecVT, In2);
-    }
+  if (VT != In2.getValueType())
+    return SDValue();
+
+  auto BitCast = [this](EVT VT, SDValue Op, SelectionDAG &DAG) {
+    if (VT.isScalableVector())
+      return getSVESafeBitCast(VT, Op, DAG);
+
+    return DAG.getBitcast(VT, Op);
   };
 
-  if (VT == MVT::f32 || VT == MVT::v2f32 || VT == MVT::v4f32) {
-    VecVT = (VT == MVT::v2f32 ? MVT::v2i32 : MVT::v4i32);
-    EltMask = 0x80000000ULL;
-    setVecVal(AArch64::ssub);
-  } else if (VT == MVT::f64 || VT == MVT::v2f64) {
+  SDValue VecVal1, VecVal2;
+  EVT VecVT;
+  auto SetVecVal = [&](int Idx = -1) {
+    if (!VT.isVector()) {
+      VecVal1 =
+          DAG.getTargetInsertSubreg(Idx, DL, VecVT, DAG.getUNDEF(VecVT), In1);
+      VecVal2 =
+          DAG.getTargetInsertSubreg(Idx, DL, VecVT, DAG.getUNDEF(VecVT), In2);
+    } else {
+      VecVal1 = BitCast(VecVT, In1, DAG);
+      VecVal2 = BitCast(VecVT, In2, DAG);
+    }
+  };
+  if (VT.isVector()) {
+    VecVT = IntVT;
+    SetVecVal();
+  } else if (VT == MVT::f64) {
     VecVT = MVT::v2i64;
-
-    // We want to materialize a mask with the high bit set, but the AdvSIMD
-    // immediate moves cannot materialize that in a single instruction for
-    // 64-bit elements. Instead, materialize zero and then negate it.
-    EltMask = 0;
-
-    setVecVal(AArch64::dsub);
-  } else if (VT == MVT::f16 || VT == MVT::v4f16 || VT == MVT::v8f16) {
-    VecVT = (VT == MVT::v4f16 ? MVT::v4i16 : MVT::v8i16);
-    EltMask = 0x8000ULL;
-    setVecVal(AArch64::hsub);
+    SetVecVal(AArch64::dsub);
+  } else if (VT == MVT::f32) {
+    VecVT = MVT::v4i32;
+    SetVecVal(AArch64::ssub);
+  } else if (VT == MVT::f16) {
+    VecVT = MVT::v8i16;
+    SetVecVal(AArch64::hsub);
   } else {
     llvm_unreachable("Invalid type for copysign!");
   }
 
-  SDValue BuildVec = DAG.getConstant(EltMask, DL, VecVT);
+  unsigned BitWidth = In1.getScalarValueSizeInBits();
+  SDValue SignMaskV = DAG.getConstant(~APInt::getSignMask(BitWidth), DL, VecVT);
 
-  // If we couldn't materialize the mask above, then the mask vector will be
-  // the zero vector, and we need to negate it here.
+  // We want to materialize a mask with every bit but the high bit set, but the
+  // AdvSIMD immediate moves cannot materialize that in a single instruction for
+  // 64-bit elements. Instead, materialize all bits set and then negate that.
   if (VT == MVT::f64 || VT == MVT::v2f64) {
-    BuildVec = DAG.getNode(ISD::BITCAST, DL, MVT::v2f64, BuildVec);
-    BuildVec = DAG.getNode(ISD::FNEG, DL, MVT::v2f64, BuildVec);
-    BuildVec = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, BuildVec);
+    SignMaskV = DAG.getConstant(APInt::getAllOnes(BitWidth), DL, VecVT);
+    SignMaskV = DAG.getNode(ISD::BITCAST, DL, MVT::v2f64, SignMaskV);
+    SignMaskV = DAG.getNode(ISD::FNEG, DL, MVT::v2f64, SignMaskV);
+    SignMaskV = DAG.getNode(ISD::BITCAST, DL, MVT::v2i64, SignMaskV);
   }
 
-  SDValue Sel =
-      DAG.getNode(AArch64ISD::BIT, DL, VecVT, VecVal1, VecVal2, BuildVec);
-
+  SDValue BSP =
+      DAG.getNode(AArch64ISD::BSP, DL, VecVT, SignMaskV, VecVal1, VecVal2);
   if (VT == MVT::f16)
-    return DAG.getTargetExtractSubreg(AArch64::hsub, DL, VT, Sel);
+    return DAG.getTargetExtractSubreg(AArch64::hsub, DL, VT, BSP);
   if (VT == MVT::f32)
-    return DAG.getTargetExtractSubreg(AArch64::ssub, DL, VT, Sel);
-  else if (VT == MVT::f64)
-    return DAG.getTargetExtractSubreg(AArch64::dsub, DL, VT, Sel);
-  else
-    return DAG.getNode(ISD::BITCAST, DL, VT, Sel);
+    return DAG.getTargetExtractSubreg(AArch64::ssub, DL, VT, BSP);
+  if (VT == MVT::f64)
+    return DAG.getTargetExtractSubreg(AArch64::dsub, DL, VT, BSP);
+
+  return BitCast(VT, BSP, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerCTPOP(SDValue Op, SelectionDAG &DAG) const {
@@ -17943,6 +17928,32 @@ SDValue performFPExtendCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+SDValue performBSPExpandForSVE(SDNode *N, SelectionDAG &DAG,
+                               const AArch64Subtarget *Subtarget,
+                               bool fixedSVEVectorVT) {
+  EVT VT = N->getValueType(0);
+
+  // Don't expand for SVE2
+  if (!VT.isScalableVector() || Subtarget->hasSVE2() ||
+      Subtarget->hasStreamingSVE())
+    return SDValue();
+
+  // Don't expand for NEON
+  if (VT.isFixedLengthVector() && !fixedSVEVectorVT)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  SDValue Mask = N->getOperand(0);
+  SDValue In1 = N->getOperand(1);
+  SDValue In2 = N->getOperand(2);
+
+  SDValue InvMask = DAG.getNOT(DL, Mask, VT);
+  SDValue Sel = DAG.getNode(ISD::AND, DL, VT, Mask, In1);
+  SDValue SelInv = DAG.getNode(ISD::AND, DL, VT, InvMask, In2);
+  return DAG.getNode(ISD::OR, DL, VT, Sel, SelInv);
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -18044,6 +18055,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorShiftCombine(N, *this, DCI);
   case AArch64ISD::SUNPKLO:
     return performSunpkloCombine(N, DAG);
+  case AArch64ISD::BSP:
+    return performBSPExpandForSVE(
+        N, DAG, Subtarget, useSVEForFixedLengthVectorVT(N->getValueType(0)));
   case ISD::INSERT_VECTOR_ELT:
     return performInsertVectorEltCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
