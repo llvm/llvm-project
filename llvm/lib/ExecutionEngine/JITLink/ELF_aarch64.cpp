@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -51,7 +52,7 @@ private:
       if (static_cast<uint64_t>(Value) & 0x3)
         return make_error<JITLinkError>("Call target is not 32-bit aligned");
 
-      if (!fitsRangeSignedInt<27>(Value))
+      if (!isInt<28>(Value))
         return makeTargetOutOfRangeError(G, B, E);
 
       uint32_t RawInstr = *(little32_t *)FixupPtr;
@@ -64,10 +65,6 @@ private:
     }
     }
     return Error::success();
-  }
-
-  template <uint8_t Bits> static bool fitsRangeSignedInt(int64_t Value) {
-    return Value >= -(1ll << Bits) && Value < (1ll << Bits);
   }
 };
 
