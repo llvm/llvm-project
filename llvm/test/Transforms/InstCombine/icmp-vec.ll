@@ -6,6 +6,8 @@
 ; Normal types are ConstantDataVectors. Test the constant values adjacent to the
 ; min/max values that we're not allowed to transform.
 
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+
 define <2 x i1> @sge(<2 x i8> %x) {
 ; CHECK-LABEL: @sge(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 -128, i8 126>
