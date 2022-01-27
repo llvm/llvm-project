@@ -85,13 +85,16 @@ static Value *decomposeSimpleLinearExpr(Value *Val, unsigned &Scale,
 Instruction *InstCombinerImpl::PromoteCastOfAllocation(BitCastInst &CI,
                                                        AllocaInst &AI) {
   PointerType *PTy = cast<PointerType>(CI.getType());
+  // Opaque pointers don't have an element type we could replace with.
+  if (PTy->isOpaque())
+    return nullptr;
 
   IRBuilderBase::InsertPointGuard Guard(Builder);
   Builder.SetInsertPoint(&AI);
 
   // Get the type really allocated and the type casted to.
   Type *AllocElTy = AI.getAllocatedType();
-  Type *CastElTy = PTy->getPointerElementType();
+  Type *CastElTy = PTy->getNonOpaquePointerElementType();
   if (!AllocElTy->isSized() || !CastElTy->isSized()) return nullptr;
 
   // This optimisation does not work for cases where the cast type
