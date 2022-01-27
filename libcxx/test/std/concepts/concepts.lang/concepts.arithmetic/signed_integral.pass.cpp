@@ -16,6 +16,7 @@
 #include <type_traits>
 
 #include "arithmetic.h"
+#include "test_macros.h"
 
 template <typename T>
 constexpr bool CheckSignedIntegralQualifiers() {

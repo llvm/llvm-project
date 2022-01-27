@@ -14,6 +14,8 @@
 
 #include <random>
 
+#include "test_macros.h"
+
 static_assert(std::uniform_random_bit_generator<
               std::linear_congruential_engine<unsigned int, 0U, 1U, 2U> >);
 

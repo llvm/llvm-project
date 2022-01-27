@@ -15,6 +15,7 @@
 #include <compare>
 
 #include "compare_types.h"
+#include "test_macros.h"
 
 namespace fundamentals {
 // with default ordering
