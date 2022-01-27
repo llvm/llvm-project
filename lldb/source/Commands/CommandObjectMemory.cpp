@@ -91,6 +91,10 @@ public:
       error = m_offset.SetValueFromString(option_value);
       break;
 
+    case '\x01':
+      m_show_tags = true;
+      break;
+
     default:
       llvm_unreachable("Unimplemented option");
     }
@@ -104,6 +108,7 @@ public:
     m_force = false;
     m_offset.Clear();
     m_language_for_type.Clear();
+    m_show_tags = false;
   }
 
   Status FinalizeSettings(Target *target, OptionGroupFormat &format_options) {
@@ -277,6 +282,7 @@ public:
   bool m_force;
   OptionValueUInt64 m_offset;
   OptionValueLanguage m_language_for_type;
+  bool m_show_tags = false;
 };
 
 // Read memory from the inferior process
@@ -860,7 +866,7 @@ protected:
     size_t bytes_dumped = DumpDataExtractor(
         data, output_stream_p, 0, format, item_byte_size, item_count,
         num_per_line / target->GetArchitecture().GetDataByteSize(), addr, 0, 0,
-        exe_scope);
+        exe_scope, m_memory_options.m_show_tags);
     m_next_addr = addr + bytes_dumped;
     output_stream_p->EOL();
     return true;
