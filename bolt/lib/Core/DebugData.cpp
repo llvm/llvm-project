@@ -121,8 +121,7 @@ void DebugARangesSectionWriter::addCURanges(uint64_t CUOffset,
 }
 
 void DebugARangesSectionWriter::writeARangesSection(
-    raw_svector_ostream &RangesStream,
-    const std::unordered_map<uint32_t, uint32_t> CUMap) const {
+    raw_svector_ostream &RangesStream, const CUOffsetMap &CUMap) const {
   // For reference on the format of the .debug_aranges section, see the DWARF4
   // specification, section 6.1.4 Lookup by Address
   // http://www.dwarfstd.org/doc/DWARF4.pdf
@@ -148,9 +147,9 @@ void DebugARangesSectionWriter::writeARangesSection(
 
     assert(CUMap.count(Offset) && "Original CU offset is not found in CU Map");
     // Header field #3: debug info offset of the correspondent compile unit.
-    support::endian::write(RangesStream,
-                           static_cast<uint32_t>(CUMap.find(Offset)->second),
-                           support::little);
+    support::endian::write(
+        RangesStream, static_cast<uint32_t>(CUMap.find(Offset)->second.Offset),
+        support::little);
 
     // Header field #4: address size.
     // 8 since we only write ELF64 binaries for now.
@@ -473,23 +472,32 @@ std::string SimpleBinaryPatcher::patchBinary(StringRef BinaryContents) {
   return BinaryContentsStr;
 }
 
-std::unordered_map<uint32_t, uint32_t>
-DebugInfoBinaryPatcher::computeNewOffsets() {
-  std::unordered_map<uint32_t, uint32_t> CUMap;
+CUOffsetMap DebugInfoBinaryPatcher::computeNewOffsets(DWARFContext &DWCtx,
+                                                      bool IsDWOContext) {
+  CUOffsetMap CUMap;
   std::sort(DebugPatches.begin(), DebugPatches.end(),
             [](const UniquePatchPtrType &V1, const UniquePatchPtrType &V2) {
               return V1.get()->Offset < V2.get()->Offset;
             });
 
+  DWARFUnitVector::compile_unit_range CompileUnits =
+      IsDWOContext ? DWCtx.dwo_compile_units() : DWCtx.compile_units();
+
+  for (const std::unique_ptr<DWARFUnit> &CU : CompileUnits)
+    CUMap[CU->getOffset()] = {static_cast<uint32_t>(CU->getOffset()),
+                              static_cast<uint32_t>(CU->getLength())};
+
   // Calculating changes in .debug_info size from Patches to build a map of old
   // to updated reference destination offsets.
+  uint32_t PreviousOffset = 0;
+  int32_t PreviousChangeInSize = 0;
   for (UniquePatchPtrType &PatchBase : DebugPatches) {
     Patch *P = PatchBase.get();
     switch (P->Kind) {
     default:
       continue;
     case DebugPatchKind::PatchValue64to32: {
-      ChangeInSize -= 4;
+      PreviousChangeInSize -= 4;
       break;
     }
     case DebugPatchKind::PatchValueVariable: {
@@ -498,13 +506,14 @@ DebugInfoBinaryPatcher::computeNewOffsets() {
       std::string Temp;
       raw_string_ostream OS(Temp);
       encodeULEB128(DPV->Value, OS);
-      ChangeInSize += Temp.size() - DPV->OldValueSize;
+      PreviousChangeInSize += Temp.size() - DPV->OldValueSize;
       break;
     }
     case DebugPatchKind::DestinationReferenceLabel: {
       DestinationReferenceLabel *DRL =
           reinterpret_cast<DestinationReferenceLabel *>(P);
-      OldToNewOffset[DRL->Offset] = DRL->Offset + ChangeInSize;
+      OldToNewOffset[DRL->Offset] =
+          DRL->Offset + ChangeInSize + PreviousChangeInSize;
       break;
     }
     case DebugPatchKind::ReferencePatchValue: {
@@ -512,7 +521,7 @@ DebugInfoBinaryPatcher::computeNewOffsets() {
       // to reduce algorithmic complexity.
       DebugPatchReference *RDP = reinterpret_cast<DebugPatchReference *>(P);
       if (RDP->PatchInfo.IndirectRelative) {
-        ChangeInSize += 4 - RDP->PatchInfo.OldValueSize;
+        PreviousChangeInSize += 4 - RDP->PatchInfo.OldValueSize;
         assert(RDP->PatchInfo.OldValueSize <= 4 &&
                "Variable encoding reference greater than 4 bytes.");
       }
@@ -522,11 +531,16 @@ DebugInfoBinaryPatcher::computeNewOffsets() {
       DWARFUnitOffsetBaseLabel *BaseLabel =
           reinterpret_cast<DWARFUnitOffsetBaseLabel *>(P);
       uint32_t CUOffset = BaseLabel->Offset;
+      ChangeInSize += PreviousChangeInSize;
       uint32_t CUOffsetUpdate = CUOffset + ChangeInSize;
-      CUMap[CUOffset] = CUOffsetUpdate;
+      CUMap[CUOffset].Offset = CUOffsetUpdate;
+      CUMap[PreviousOffset].Length += PreviousChangeInSize;
+      PreviousChangeInSize = 0;
+      PreviousOffset = CUOffset;
     }
     }
   }
+  CUMap[PreviousOffset].Length += PreviousChangeInSize;
   return CUMap;
 }
 
