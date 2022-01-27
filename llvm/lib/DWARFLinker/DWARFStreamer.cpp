@@ -27,8 +27,7 @@
 
 namespace llvm {
 
-bool DwarfStreamer::init(Triple TheTriple,
-                         StringRef Swift5ReflectionSegmentName) {
+bool DwarfStreamer::init(Triple TheTriple) {
   std::string ErrorStr;
   std::string TripleName;
   StringRef Context = "dwarf streamer init";
@@ -55,9 +54,8 @@ bool DwarfStreamer::init(Triple TheTriple,
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context), false;
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                         nullptr, true, Swift5ReflectionSegmentName));
-  MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false, false));
+  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get()));
+  MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false));
   MC->setObjectFileInfo(MOFI.get());
 
   MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, MCOptions);
@@ -301,18 +299,6 @@ void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
   MCSection *SwiftASTSection = MOFI->getDwarfSwiftASTSection();
   SwiftASTSection->setAlignment(Align(32));
   MS->SwitchSection(SwiftASTSection);
-  MS->emitBytes(Buffer);
-}
-
-void DwarfStreamer::emitSwiftReflectionSection(
-    llvm::swift::Swift5ReflectionSectionKind ReflSectionKind, StringRef Buffer,
-    uint32_t Alignment, uint32_t Size) {
-  MCSection *ReflectionSection =
-      MOFI->getSwift5ReflectionSection(ReflSectionKind);
-  if (ReflectionSection == nullptr)
-    return;
-  ReflectionSection->setAlignment(Align(Alignment));
-  MS->SwitchSection(ReflectionSection);
   MS->emitBytes(Buffer);
 }
 
