@@ -34,7 +34,6 @@ std::unique_ptr<OperationPass<FuncOp>> createFinalizingBufferizePass();
 /// Dynamic shaped buffers are promoted up to the given rank.
 std::unique_ptr<Pass>
 createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
-                                unsigned bitwidthOfIndexType = 64,
                                 unsigned maxRankOfAllocatedMemRef = 1);
 
 /// Creates a pass that promotes heap-based allocations to stack-based ones.
