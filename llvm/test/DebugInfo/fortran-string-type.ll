@@ -7,7 +7,7 @@
 ; CHECK: !DIStringType(name: "character(*)", stringLength: !{{[0-9]+}}, stringLengthExpression: !DIExpression(), size: 32)
 ; CHECK: !DIStringType(name: "character(10)", size: 80, align: 8)
 ; CHECK: !DIBasicType(tag: DW_TAG_string_type
-; CHECK: !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8))
+; CHECK: !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref))
 
 !llvm.module.flags = !{!0, !1}
 !llvm.dbg.cu = !{!2}
@@ -26,4 +26,4 @@
 !11 = !DIBasicType(name: "integer*8", size: 64, align: 64, encoding: DW_ATE_signed)
 !12 = !DIStringType(name: "character(10)", size: 80, align: 8)
 !13 = !DIBasicType(tag: DW_TAG_string_type, name: "character")
-!14 = !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8))
+!14 = !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref))
