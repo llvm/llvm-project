@@ -422,7 +422,7 @@ body: |
 #     %0:_(p1) = COPY $vgpr0_vgpr1
 #     %1:_(s32) = COPY $vgpr2
 #     %2:_(s25) = G_TRUNC %1
-#     G_STORE %2, %0 :: (store 4, align 2, addrspace 1)
+#     G_STORE %2, %0 :: (store (s25), align 2, addrspace 1)
 # ...
 
 # ---
@@ -434,7 +434,7 @@ body: |
 #     %0:_(p1) = COPY $vgpr0_vgpr1
 #     %1:_(s32) = COPY $vgpr2
 #     %2:_(s25) = G_TRUNC %1
-#     G_STORE %2, %0 :: (store 4, align 1, addrspace 1)
+#     G_STORE %2, %0 :: (store (s25), align 1, addrspace 1)
 # ...
 
 ---
