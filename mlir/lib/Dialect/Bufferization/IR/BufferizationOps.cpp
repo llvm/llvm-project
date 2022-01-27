@@ -240,8 +240,7 @@ static LogicalResult foldToMemrefToTensorPair(RewriterBase &rewriter,
       if (resultType.getShape()[i] != ShapedType::kDynamicSize)
         continue;
       auto index = rewriter.createOrFold<arith::ConstantIndexOp>(loc, i);
-      Value size =
-          rewriter.create<memref::DimOp>(loc, memrefToTensor.memref(), index);
+      Value size = rewriter.create<tensor::DimOp>(loc, memrefToTensor, index);
       dynamicOperands.push_back(size);
     }
     // TODO: Use alloc/memcpy callback from BufferizationOptions if called via
@@ -308,11 +307,6 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
   results.add<DimOfCastOp, LoadOfToMemref, ToMemrefOfCast, TensorLoadToMemref>(
       context);
-}
-
-void bufferization::populateBufferizationOpFoldingPatterns(
-    RewritePatternSet &patterns, MLIRContext *context) {
-  patterns.add<TensorLoadToMemref>(context);
 }
 
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
