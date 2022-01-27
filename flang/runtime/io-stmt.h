@@ -220,7 +220,7 @@ public:
   // Skips spaces, advances records, and ignores NAMELIST comments
   std::optional<char32_t> GetNextNonBlank() {
     auto ch{GetCurrentChar()};
-    bool inNamelist{GetConnectionState().modes.inNamelist};
+    bool inNamelist{mutableModes().inNamelist};
     while (!ch || *ch == ' ' || *ch == '\t' || (inNamelist && *ch == '!')) {
       if (ch && (*ch == ' ' || *ch == '\t')) {
         HandleRelativePosition(1);
