@@ -49,8 +49,7 @@ define <vscale x 16 x i8> @and_b_zero(<vscale x 16 x i8> %a) {
 define <vscale x 2 x i1> @and_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_pred_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.d
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = and <vscale x 2 x i1> %a, %b
   ret <vscale x 2 x i1> %res
@@ -59,8 +58,7 @@ define <vscale x 2 x i1> @and_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b)
 define <vscale x 4 x i1> @and_pred_s(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: and_pred_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.s
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = and <vscale x 4 x i1> %a, %b
   ret <vscale x 4 x i1> %res
@@ -69,8 +67,7 @@ define <vscale x 4 x i1> @and_pred_s(<vscale x 4 x i1> %a, <vscale x 4 x i1> %b)
 define <vscale x 8 x i1> @and_pred_h(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: and_pred_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.h
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = and <vscale x 8 x i1> %a, %b
   ret <vscale x 8 x i1> %res
@@ -79,8 +76,7 @@ define <vscale x 8 x i1> @and_pred_h(<vscale x 8 x i1> %a, <vscale x 8 x i1> %b)
 define <vscale x 16 x i1> @and_pred_b(<vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and_pred_b:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    and p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = and <vscale x 16 x i1> %a, %b
   ret <vscale x 16 x i1> %res

@@ -734,7 +734,7 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm PFIRST  : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
   defm PNEXT   : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
 
-  defm AND_PPzPP   : sve_int_pred_log<0b0000, "and", int_aarch64_sve_and_z, and>;
+  defm AND_PPzPP   : sve_int_pred_log_and<0b0000, "and", int_aarch64_sve_and_z>;
   defm BIC_PPzPP   : sve_int_pred_log<0b0001, "bic", int_aarch64_sve_bic_z>;
   defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", int_aarch64_sve_eor_z, xor>;
   defm SEL_PPPP    : sve_int_pred_log<0b0011, "sel", vselect>;
