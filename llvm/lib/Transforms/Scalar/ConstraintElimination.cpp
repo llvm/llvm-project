@@ -437,7 +437,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         if (R.size() != 1)
           continue;
 
-        if (R.needsNewIndices(NewIndices) || R.get(0).size() == 1)
+        if (R.needsNewIndices(NewIndices))
           continue;
 
         if (CS.isConditionImplied(R.get(0).Coefficients)) {
