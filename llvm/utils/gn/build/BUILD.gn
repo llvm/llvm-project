@@ -444,6 +444,7 @@ config("crt_code") {
     "-funwind-tables",
     "-gline-tables-only",
     "-fvisibility=hidden",
+    "-fno-builtin",
   ]
   if (is_clang) {
     cflags += [

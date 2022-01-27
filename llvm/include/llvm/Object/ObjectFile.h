@@ -18,7 +18,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/BinaryFormat/Swift.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/SymbolicFile.h"
@@ -290,11 +289,6 @@ protected:
   virtual uint64_t getRelocationType(DataRefImpl Rel) const = 0;
   virtual void getRelocationTypeName(DataRefImpl Rel,
                                      SmallVectorImpl<char> &Result) const = 0;
-
-  virtual llvm::swift::Swift5ReflectionSectionKind
-  mapReflectionSectionNameToEnumValue(StringRef SectionName) const {
-    return llvm::swift::Swift5ReflectionSectionKind::Unknown;
-  };
 
   Expected<uint64_t> getSymbolValue(DataRefImpl Symb) const;
 

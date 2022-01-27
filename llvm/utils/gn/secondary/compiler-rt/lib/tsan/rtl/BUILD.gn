@@ -128,10 +128,6 @@ target(tsan_target_type, "rtl") {
     sources += [ "tsan_rtl_s390x.S" ]
   }
 
-  # FIXME: have SANITIZER_COMMON_CFLAGS thingy? should fno-builtin be in
-  # crt_code?
-  cflags += [ "-fno-builtin" ]
-
   # FIXME: link rt dl m pthread log
   # FIXME: dep on libcxx-headers?
   # FIXME: add_sanitizer_rt_version_list (cf hwasan)

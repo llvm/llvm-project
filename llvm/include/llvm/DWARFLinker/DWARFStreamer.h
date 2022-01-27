@@ -9,7 +9,6 @@
 #ifndef LLVM_DWARFLINKER_DWARFSTREAMER_H
 #define LLVM_DWARFLINKER_DWARFSTREAMER_H
 
-#include "llvm/BinaryFormat/Swift.h"
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DWARFLinker/DWARFLinker.h"
@@ -49,7 +48,7 @@ public:
       : OutFile(OutFile), OutFileType(OutFileType), Translator(Translator),
         ErrorHandler(Error), WarningHandler(Warning) {}
 
-  bool init(Triple TheTriple, StringRef Swift5ReflectionSegmentName);
+  bool init(Triple TheTriple);
 
   /// Dump the file to the disk.
   void finish();
@@ -85,11 +84,6 @@ public:
 
   /// Emit the swift_ast section stored in \p Buffer.
   void emitSwiftAST(StringRef Buffer);
-
-  /// Emit the swift reflection section stored in \p Buffer.
-  void emitSwiftReflectionSection(
-      llvm::swift::Swift5ReflectionSectionKind ReflSectionKind,
-      StringRef Buffer, uint32_t Alignment, uint32_t Size);
 
   /// Emit debug_ranges for \p FuncRange by translating the
   /// original \p Entries.
