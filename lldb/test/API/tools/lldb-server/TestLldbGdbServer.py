@@ -1044,7 +1044,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertTrue(len(supported_dict) > 0)
 
     @skipIf(compiler="clang", compiler_version=['<', '14.0'])
-    @skipIf(dwarf_version=['<',3'4'])
+    @skipIf(dwarf_version=['<','3'])
     def test_qSupported_auvx(self):
         expected = ('+' if lldbplatformutil.getPlatform()
                     in ["freebsd", "linux", "netbsd"] else '-')
@@ -1350,7 +1350,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
     @skipIf(compiler="clang", compiler_version=['<', '14.0'])
-    @skipIf(dwarf_version=['3', '4'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_launch_via_A(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1377,7 +1377,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
     @skipIf(compiler="clang", compiler_version=['<', '14.0'])
-    @skipIf(dwarf_version=['<',3'4'])
+    @skipIf(dwarf_version=['<','3'])
     def test_launch_via_vRun(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1421,7 +1421,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
     @skipIf(compiler="clang", compiler_version=['<', '14.0'])
-    @skipIf(dwarf_version=['3', '4'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_QEnvironment(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
