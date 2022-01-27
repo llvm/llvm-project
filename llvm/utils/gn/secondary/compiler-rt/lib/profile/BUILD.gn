@@ -25,10 +25,7 @@ static_library("profile") {
     cflags += [ "/wd4221" ]
   }
 
-  include_dirs = [
-    "..",
-    "../../include",
-  ]
+  include_dirs = [ "../../include" ]
 
   sources = [
     "GCDAProfiling.c",

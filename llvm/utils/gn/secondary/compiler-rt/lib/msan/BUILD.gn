@@ -39,9 +39,6 @@ static_library("msan") {
     "msan_thread.h",
   ]
 
-  # To be able to include sanitizer_common.
-  include_dirs = [ ".." ]
-
   # FIXME: have SANITIZER_COMMON_CFLAGS thingy? should fno-builtin be in
   # crt_code?
   cflags = [ "-fno-builtin" ]
