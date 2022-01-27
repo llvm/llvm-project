@@ -1681,11 +1681,8 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
   LogicalResult
   matchAndRewrite(tosa::ConcatOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    auto inputType = op.getOperand(0).getType().template cast<ShapedType>();
     auto resultType = op.getType().dyn_cast<RankedTensorType>();
-    if (!resultType || !resultType.hasStaticShape()) {
-      return rewriter.notifyMatchFailure(op,
-                                         "expected static shaped tensor type");
-    }
 
     Location loc = op.getLoc();
     int axis = op.axis();
@@ -1697,9 +1694,14 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
     strides.resize(rank, rewriter.create<arith::ConstantIndexOp>(loc, 1));
     offsets.resize(rank, rewriter.create<arith::ConstantIndexOp>(loc, 0));
 
+    SmallVector<Value> dynDims;
     for (int i = 0; i < rank; ++i) {
       sizes.push_back(rewriter.createOrFold<tensor::DimOp>(
           loc, adaptor.getOperands()[0], i));
+      if (inputType.isDynamicDim(i)) {
+        dynDims.push_back(
+            rewriter.create<tensor::DimOp>(loc, op.getOperand(0), i));
+      }
     }
 
     Value resultDimSize = sizes[axis];
@@ -1711,7 +1713,7 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
     sizes[axis] = resultDimSize;
 
     Value init = rewriter.create<linalg::InitTensorOp>(
-        loc, resultType.getShape(), resultType.getElementType());
+        loc, dynDims, resultType.getShape(), resultType.getElementType());
 
     Value zeroVal = rewriter.createOrFold<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(resultType.getElementType()));
@@ -1815,9 +1817,6 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
     auto elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
 
-    if (!inputTy.hasStaticShape() || !resultTy.hasStaticShape())
-      return failure();
-
     SmallVector<int64_t> multiples;
     getValuesFromIntArrayAttribute(op.multiples(), multiples);
 
@@ -1828,8 +1827,15 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
       genericShape.push_back(inputShape[i]);
     }
 
+    SmallVector<Value> dynDims;
+    for (int i = 0; i < inputTy.getRank(); i++) {
+      if (inputTy.isDynamicDim(i) || multiples[i] == -1) {
+        dynDims.push_back(rewriter.create<tensor::DimOp>(loc, input, i));
+      }
+    }
+
     auto initTensor = rewriter.create<linalg::InitTensorOp>(
-        op.getLoc(), ArrayRef<Value>({}), genericShape, elementTy);
+        op.getLoc(), dynDims, genericShape, elementTy);
 
     // We needs to map the input shape to the non-broadcasted dimensions.
     SmallVector<AffineExpr, 4> dimExprs;
@@ -1870,15 +1876,8 @@ public:
     auto padding = padOp.padding();
 
     ShapedType inputTy = input.getType().cast<ShapedType>();
-    ShapedType paddingTy = padding.getType().cast<ShapedType>();
     Type elementTy = inputTy.getElementType();
     int64_t rank = inputTy.getRank();
-
-    if (!inputTy.hasStaticShape() || !paddingTy.hasStaticShape()) {
-      return rewriter.notifyMatchFailure(
-          padOp,
-          "Pad converter requires static shaped input / padding values.");
-    }
 
     // Setup the default constantAttr.
 
@@ -1970,21 +1969,23 @@ public:
     int axis = argmaxOp.axis();
     auto resultMaxTy = RankedTensorType::get(resultTy.getShape(), inElementTy);
 
-    if (!inputTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(
-          argmaxOp,
-          "tosa.arg_max to linalg.* requires statically shaped input");
-
     if (!outElementTy.isa<IntegerType>())
       return rewriter.notifyMatchFailure(
           argmaxOp,
           "tosa.arg_max to linalg.* requires integer-like result type");
 
+    SmallVector<Value> dynDims;
+    for (int i = 0; i < inputTy.getRank(); i++) {
+      if (inputTy.isDynamicDim(i) && i != axis) {
+        dynDims.push_back(rewriter.create<tensor::DimOp>(loc, input, i));
+      }
+    }
+
     // First fill the output buffer for the index.
     auto initTensorIdx =
         rewriter
-            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>({}),
-                                          resultTy.getShape(), outElementTy)
+            .create<linalg::InitTensorOp>(loc, dynDims, resultTy.getShape(),
+                                          outElementTy)
             .result();
     auto fillValueIdx = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getIntegerAttr(outElementTy, 0));
@@ -1993,11 +1994,10 @@ public:
             .result();
 
     // Second fill the output buffer for the running max.
-    auto initTensorMax =
-        rewriter
-            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>({}),
-                                          resultTy.getShape(), inElementTy)
-            .result();
+    auto initTensorMax = rewriter
+                             .create<linalg::InitTensorOp>(
+                                 loc, dynDims, resultTy.getShape(), inElementTy)
+                             .result();
     auto fillValueMaxAttr =
         createInitialValueForReduceOp(argmaxOp, inElementTy, rewriter);
 
@@ -2138,18 +2138,22 @@ public:
     auto tableTy = table.getType().cast<ShapedType>();
     auto resultTy = op.getType().cast<ShapedType>();
 
-    if (!inputTy.hasStaticShape())
-      return rewriter.notifyMatchFailure(
-          op, "require input type to have static shape");
-
     auto inputElementTy = inputTy.getElementType();
     auto tableElementTy = tableTy.getElementType();
     auto resultElementTy = resultTy.getElementType();
 
+    SmallVector<Value> dynDims;
+    for (int i = 0; i < resultTy.getRank(); ++i) {
+      if (inputTy.isDynamicDim(i)) {
+        dynDims.push_back(
+            rewriter.create<tensor::DimOp>(loc, op.getOperand(0), i));
+      }
+    }
+
     auto initTensor =
         rewriter
-            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>{},
-                                          resultTy.getShape(), resultElementTy)
+            .create<linalg::InitTensorOp>(loc, dynDims, resultTy.getShape(),
+                                          resultElementTy)
             .result();
 
     SmallVector<AffineMap, 2> affineMaps = {

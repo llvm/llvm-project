@@ -308,7 +308,7 @@ bool RISCVISAInfo::compareExtension(const std::string &LHS,
 void RISCVISAInfo::toFeatures(
     std::vector<StringRef> &Features,
     std::function<StringRef(const Twine &)> StrAlloc) const {
-  for (auto &Ext : Exts) {
+  for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
 
     if (ExtName == "i")
@@ -825,7 +825,7 @@ void RISCVISAInfo::updateImplication() {
   // This loop may execute over 1 iteration since implication can be layered
   // Exits loop if no more implication is applied
   SmallSetVector<StringRef, 16> WorkList;
-  for (auto &Ext : Exts)
+  for (auto const &Ext : Exts)
     WorkList.insert(Ext.first);
 
   while (!WorkList.empty()) {
@@ -855,7 +855,7 @@ void RISCVISAInfo::updateFLen() {
 }
 
 void RISCVISAInfo::updateMinVLen() {
-  for (auto Ext : Exts) {
+  for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
     bool IsZvlExt = ExtName.consume_front("zvl") && ExtName.consume_back("b");
     if (IsZvlExt) {
@@ -868,7 +868,7 @@ void RISCVISAInfo::updateMinVLen() {
 
 void RISCVISAInfo::updateMaxELen() {
   // handles EEW restriction by sub-extension zve
-  for (auto Ext : Exts) {
+  for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
     bool IsZveExt = ExtName.consume_front("zve");
     if (IsZveExt) {
@@ -896,7 +896,7 @@ std::string RISCVISAInfo::toString() const {
   Arch << "rv" << XLen;
 
   ListSeparator LS("_");
-  for (auto &Ext : Exts) {
+  for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
     auto ExtInfo = Ext.second;
     Arch << LS << ExtName;
@@ -908,7 +908,7 @@ std::string RISCVISAInfo::toString() const {
 
 std::vector<std::string> RISCVISAInfo::toFeatureVector() const {
   std::vector<std::string> FeatureVector;
-  for (auto Ext : Exts) {
+  for (auto const &Ext : Exts) {
     std::string ExtName = Ext.first;
     if (ExtName == "i") // i is not recognized in clang -cc1
       continue;
