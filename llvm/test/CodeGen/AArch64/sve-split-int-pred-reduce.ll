@@ -46,7 +46,7 @@ define i1 @orv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p2.b
 ; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
-; CHECK-NEXT:    ptest p2, p0.b
+; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.or.nxv32i1(<vscale x 32 x i1> %a)
@@ -89,7 +89,7 @@ define i1 @sminv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p2.b
 ; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
-; CHECK-NEXT:    ptest p2, p0.b
+; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.smin.nxv32i1(<vscale x 32 x i1> %a)
@@ -103,7 +103,7 @@ define i1 @umaxv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p2.b
 ; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
-; CHECK-NEXT:    ptest p2, p0.b
+; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.umax.nxv32i1(<vscale x 32 x i1> %a)

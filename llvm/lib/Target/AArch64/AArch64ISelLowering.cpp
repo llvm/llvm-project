@@ -19364,7 +19364,12 @@ SDValue AArch64TargetLowering::LowerPredReductionToSVE(SDValue ReduceOp,
   default:
     return SDValue();
   case ISD::VECREDUCE_OR:
-    return getPTest(DAG, VT, Pg, Op, AArch64CC::ANY_ACTIVE);
+    if (isAllActivePredicate(Pg))
+      // The predicate can be 'Op' because
+      // vecreduce_or(Op & <all true>) <=> vecreduce_or(Op).
+      return getPTest(DAG, VT, Op, Op, AArch64CC::ANY_ACTIVE);
+    else
+      return getPTest(DAG, VT, Pg, Op, AArch64CC::ANY_ACTIVE);
   case ISD::VECREDUCE_AND: {
     Op = DAG.getNode(ISD::XOR, DL, OpVT, Op, Pg);
     return getPTest(DAG, VT, Pg, Op, AArch64CC::NONE_ACTIVE);
