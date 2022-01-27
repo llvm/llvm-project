@@ -4892,6 +4892,42 @@ static SDValue PerformMinMaxFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
                   : DAG.getSExtOrTrunc(Sat, DL, N2->getValueType(0));
 }
 
+static SDValue PerformUMinFpToSatCombine(SDValue N0, SDValue N1, SDValue N2,
+                                         SDValue N3, ISD::CondCode CC,
+                                         SelectionDAG &DAG) {
+  // We are looking for UMIN(FPTOUI(X), (2^n)-1), which may have come via a
+  // select/vselect/select_cc. The two operands pairs for the select (N2/N3) may
+  // be truncated versions of the the setcc (N0/N1).
+  if ((N0 != N2 &&
+       (N2.getOpcode() != ISD::TRUNCATE || N0 != N2.getOperand(0))) ||
+      N0.getOpcode() != ISD::FP_TO_UINT || CC != ISD::SETULT)
+    return SDValue();
+  ConstantSDNode *N1C = isConstOrConstSplat(N1);
+  ConstantSDNode *N3C = isConstOrConstSplat(N3);
+  if (!N1C || !N3C)
+    return SDValue();
+  const APInt &C1 = N1C->getAPIntValue();
+  const APInt &C3 = N3C->getAPIntValue();
+  if (!(C1 + 1).isPowerOf2() || C1.getBitWidth() < C3.getBitWidth() ||
+      C1 != C3.zextOrSelf(C1.getBitWidth()))
+    return SDValue();
+
+  unsigned BW = (C1 + 1).exactLogBase2();
+  EVT FPVT = N0.getOperand(0).getValueType();
+  EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), BW);
+  if (FPVT.isVector())
+    NewVT = EVT::getVectorVT(*DAG.getContext(), NewVT,
+                             FPVT.getVectorElementCount());
+  if (!DAG.getTargetLoweringInfo().shouldConvertFpToSat(ISD::FP_TO_UINT_SAT,
+                                                        FPVT, NewVT))
+    return SDValue();
+
+  SDValue Sat =
+      DAG.getNode(ISD::FP_TO_UINT_SAT, SDLoc(N0), NewVT, N0.getOperand(0),
+                  DAG.getValueType(NewVT.getScalarType()));
+  return DAG.getZExtOrTrunc(Sat, SDLoc(N0), N3.getValueType());
+}
+
 SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -4933,6 +4969,9 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (Opcode == ISD::SMIN || Opcode == ISD::SMAX)
     if (SDValue S = PerformMinMaxFpToSatCombine(
             N0, N1, N0, N1, Opcode == ISD::SMIN ? ISD::SETLT : ISD::SETGT, DAG))
+      return S;
+  if (Opcode == ISD::UMIN)
+    if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N0, N1, ISD::SETULT, DAG))
       return S;
 
   // Simplify the operands using demanded-bits information.
@@ -10313,6 +10352,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     }
 
     if (SDValue S = PerformMinMaxFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
+      return S;
+    if (SDValue S = PerformUMinFpToSatCombine(LHS, RHS, N1, N2, CC, DAG))
       return S;
 
     // If this select has a condition (setcc) with narrower operands than the
@@ -23371,6 +23412,8 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   }
 
   if (SDValue S = PerformMinMaxFpToSatCombine(N0, N1, N2, N3, CC, DAG))
+    return S;
+  if (SDValue S = PerformUMinFpToSatCombine(N0, N1, N2, N3, CC, DAG))
     return S;
 
   return SDValue();
