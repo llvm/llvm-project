@@ -17,12 +17,16 @@ namespace clang {
 namespace tidy {
 namespace readability {
 
+AST_MATCHER(NamedDecl, isInAnonymousNamespace) {
+  return Node.isInAnonymousNamespace();
+}
+
 void StaticDefinitionInAnonymousNamespaceCheck::registerMatchers(
     MatchFinder *Finder) {
   Finder->addMatcher(
       namedDecl(anyOf(functionDecl(isDefinition(), isStaticStorageClass()),
                       varDecl(isDefinition(), isStaticStorageClass())),
-                hasParent(namespaceDecl(isAnonymous())))
+                isInAnonymousNamespace())
           .bind("static-def"),
       this);
 }
