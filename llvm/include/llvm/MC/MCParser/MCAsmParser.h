@@ -262,6 +262,7 @@ public:
   bool parseOptionalToken(AsmToken::TokenKind T);
 
   bool parseComma() { return parseToken(AsmToken::Comma, "expected comma"); }
+  bool parseRParen() { return parseToken(AsmToken::RParen, "expected ')'"); }
   bool parseEOL();
   bool parseEOL(const Twine &ErrMsg);
 

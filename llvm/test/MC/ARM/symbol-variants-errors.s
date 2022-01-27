@@ -10,14 +10,13 @@ f1:
 @ check for missing closed paren
 f2:
   .word bar(got
-@CHECK: error: unexpected token in variant, expected ')'
+@CHECK: :[[#@LINE-1]]:16: error: expected ')'
 @CHECK:  .word bar(got
 @CHECK:               ^
 
 @ check for invalid symbol before variant end
 f3:
   .word bar(got+2)
-
-@CHECK: error: unexpected token in variant, expected ')'
+@CHECK: :[[#@LINE-1]]:16: error: expected ')'
 @CHECK:  .word bar(got+2)
 @CHECK:               ^
