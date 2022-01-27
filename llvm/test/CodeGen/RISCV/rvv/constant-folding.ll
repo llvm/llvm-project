@@ -21,7 +21,7 @@ define <2 x i16> @fixedlen(<2 x i32> %x) {
 ; RV32-NEXT:    lui a0, 1048568
 ; RV32-NEXT:    vand.vx v8, v8, a0
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vnsrl.wx v8, v8, zero
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: fixedlen:
@@ -32,7 +32,7 @@ define <2 x i16> @fixedlen(<2 x i32> %x) {
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    vand.vx v8, v8, a0
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vnsrl.wx v8, v8, zero
 ; RV64-NEXT:    ret
   %v41 = insertelement <2 x i32> undef, i32 16, i32 0
   %v42 = shufflevector <2 x i32> %v41, <2 x i32> undef, <2 x i32> zeroinitializer
@@ -51,7 +51,7 @@ define <vscale x 2 x i16> @scalable(<vscale x 2 x i32> %x) {
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vsrl.vi v8, v8, 16
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vnsrl.wi v8, v8, 0
+; CHECK-NEXT:    vnsrl.wx v8, v8, zero
 ; CHECK-NEXT:    lui a0, 1048568
 ; CHECK-NEXT:    vand.vx v8, v8, a0
 ; CHECK-NEXT:    ret
