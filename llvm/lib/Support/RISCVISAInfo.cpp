@@ -110,9 +110,9 @@ static bool stripExperimentalPrefix(StringRef &Ext) {
 // NOTE: This function is NOT able to take empty strings or strings that only
 // have version numbers and no extension name. It assumes the extension name
 // will be at least more than one character.
-static size_t findFirstNonVersionCharacter(const StringRef &Ext) {
-  if (Ext.size() == 0)
-    llvm_unreachable("Already guarded by if-statement in ::parseArchString");
+static size_t findFirstNonVersionCharacter(StringRef Ext) {
+   assert(!Ext.empty() &&
+          "Already guarded by if-statement in ::parseArchString");
 
   int Pos = Ext.size() - 1;
   while (Pos > 0 && isDigit(Ext[Pos]))
