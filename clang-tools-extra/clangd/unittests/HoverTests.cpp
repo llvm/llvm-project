@@ -1251,7 +1251,8 @@ TEST(Hover, All) {
   } Cases[] = {
       {"auto x = [['^A']]; // character literal",
        [](HoverInfo &HI) {
-         HI.Name = "expression", HI.Type = "char";
+         HI.Name = "expression";
+         HI.Type = "char";
          HI.Value = "65 (0x41)";
        }},
       {
