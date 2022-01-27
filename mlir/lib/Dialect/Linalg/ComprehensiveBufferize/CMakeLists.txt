@@ -1,6 +1,5 @@
 set(LLVM_OPTIONAL_SOURCES
   AffineInterfaceImpl.cpp
-  ArithInterfaceImpl.cpp
   LinalgInterfaceImpl.cpp
   ModuleBufferization.cpp
   SCFInterfaceImpl.cpp
@@ -14,17 +13,6 @@ add_mlir_dialect_library(MLIRAffineBufferizableOpInterfaceImpl
   LINK_LIBS PUBLIC
   MLIRAffine
   MLIRBufferization
-)
-
-add_mlir_dialect_library(MLIRArithBufferizableOpInterfaceImpl
-  ArithInterfaceImpl.cpp
-
-  LINK_LIBS PUBLIC
-  MLIRArithmetic
-  MLIRBufferization
-  MLIRIR
-  MLIRMemRef
-  MLIRStandardOpsTransforms
 )
 
 add_mlir_dialect_library(MLIRLinalgBufferizableOpInterfaceImpl

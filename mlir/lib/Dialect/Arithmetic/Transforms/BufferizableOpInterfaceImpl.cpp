@@ -1,4 +1,4 @@
-//===- ArithInterfaceImpl.cpp - Arith Impl. of BufferizableOpInterface ----===//
+//===- BufferizableOpInterfaceImpl.cpp - Impl. of BufferizableOpInterface -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/ArithInterfaceImpl.h"
-
+#include "mlir/Dialect/Arithmetic/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
@@ -18,9 +17,8 @@
 using namespace mlir::bufferization;
 
 namespace mlir {
-namespace linalg {
-namespace comprehensive_bufferize {
-namespace arith_ext {
+namespace arith {
+namespace {
 
 /// Bufferization of arith.constant. Replace with memref.get_global.
 struct ConstantOpInterface
@@ -100,14 +98,13 @@ struct IndexCastOpInterface
     return success();
   }
 };
-} // namespace arith_ext
-} // namespace comprehensive_bufferize
-} // namespace linalg
+
+} // namespace
+} // namespace arith
 } // namespace mlir
 
-void mlir::linalg::comprehensive_bufferize::arith_ext::
-    registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
-  registry.addOpInterface<arith::ConstantOp, arith_ext::ConstantOpInterface>();
-  registry
-      .addOpInterface<arith::IndexCastOp, arith_ext::IndexCastOpInterface>();
+void mlir::arith::registerBufferizableOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addOpInterface<ConstantOp, ConstantOpInterface>();
+  registry.addOpInterface<IndexCastOp, IndexCastOpInterface>();
 }
