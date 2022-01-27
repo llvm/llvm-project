@@ -18,7 +18,7 @@ body: |
 
     ; CHECK-LABEL: test_negwrd
 
-    ; CHECK:      $r15 = NEGRd $r15, implicit-def dead $sreg
+    ; CHECK:      $r15 = NEGRd killed $r15, implicit-def dead $sreg
     ; CHECK-NEXT: $r14 = NEGRd $r14
     ; CHECK-NEXT: $r15 = SBCRdRr $r15, $r1, implicit-def $sreg, implicit killed $sreg
 
