@@ -730,7 +730,7 @@ let Predicates = [HasSVEorStreamingSVE] in {
   defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs", null_frag>;
 
   def PTEST_PP : sve_int_ptest<0b010000, "ptest">;
-  def PFALSE   : sve_int_pfalse<0b000000, "pfalse">;
+  defm PFALSE  : sve_int_pfalse<0b000000, "pfalse">;
   defm PFIRST  : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
   defm PNEXT   : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
 
