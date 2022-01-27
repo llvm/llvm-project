@@ -1750,16 +1750,15 @@ template <class ELFT> void Writer<ELFT>::optimizeBasicBlockJumps() {
     if (!(osec->flags & SHF_EXECINSTR))
       continue;
     SmallVector<InputSection *, 0> sections = getInputSections(*osec);
-    std::vector<unsigned> result(sections.size());
+    size_t numDeleted = 0;
     // Delete all fall through jump instructions.  Also, check if two
     // consecutive jump instructions can be flipped so that a fall
     // through jmp instruction can be deleted.
     for (size_t i = 0, e = sections.size(); i != e; ++i) {
       InputSection *next = i + 1 < sections.size() ? sections[i + 1] : nullptr;
       InputSection &sec = *sections[i];
-      result[i] = target->deleteFallThruJmpInsn(sec, sec.file, next) ? 1 : 0;
+      numDeleted += target->deleteFallThruJmpInsn(sec, sec.file, next);
     }
-    size_t numDeleted = std::count(result.begin(), result.end(), 1);
     if (numDeleted > 0) {
       script->assignAddresses();
       LLVM_DEBUG(llvm::dbgs()
