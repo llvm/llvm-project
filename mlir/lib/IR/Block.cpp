@@ -187,13 +187,13 @@ void Block::eraseArgument(unsigned index) {
 }
 
 void Block::eraseArguments(ArrayRef<unsigned> argIndices) {
-  llvm::BitVector eraseIndices(getNumArguments());
+  BitVector eraseIndices(getNumArguments());
   for (unsigned i : argIndices)
     eraseIndices.set(i);
   eraseArguments(eraseIndices);
 }
 
-void Block::eraseArguments(const llvm::BitVector &eraseIndices) {
+void Block::eraseArguments(const BitVector &eraseIndices) {
   eraseArguments(
       [&](BlockArgument arg) { return eraseIndices.test(arg.getArgNumber()); });
 }

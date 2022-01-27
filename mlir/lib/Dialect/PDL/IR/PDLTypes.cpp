@@ -69,7 +69,7 @@ Type RangeType::parse(AsmParser &parser) {
   if (parser.parseLess())
     return Type();
 
-  llvm::SMLoc elementLoc = parser.getCurrentLocation();
+  SMLoc elementLoc = parser.getCurrentLocation();
   Type elementType = parsePDLType(parser);
   if (!elementType || parser.parseGreater())
     return Type();

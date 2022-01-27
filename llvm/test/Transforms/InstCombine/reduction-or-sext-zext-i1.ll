@@ -95,6 +95,29 @@ define i64 @reduce_or_zext_external_use(<8 x i1> %x) {
   ret i64 %res
 }
 
+define i1 @reduce_or_pointer_cast(i8* %arg, i8* %arg1) {
+; CHECK-LABEL: @reduce_or_pointer_cast(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[PTR1:%.*]] = bitcast i8* [[ARG1:%.*]] to <8 x i8>*
+; CHECK-NEXT:    [[PTR2:%.*]] = bitcast i8* [[ARG:%.*]] to <8 x i8>*
+; CHECK-NEXT:    [[LHS:%.*]] = load <8 x i8>, <8 x i8>* [[PTR1]], align 8
+; CHECK-NEXT:    [[RHS:%.*]] = load <8 x i8>, <8 x i8>* [[PTR2]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i8> [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i1> [[CMP]] to i8
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    ret i1 [[DOTNOT]]
+;
+bb:
+  %ptr1 = bitcast i8* %arg1 to <8 x i8>*
+  %ptr2 = bitcast i8* %arg to <8 x i8>*
+  %lhs = load <8 x i8>, <8 x i8>* %ptr1
+  %rhs = load <8 x i8>, <8 x i8>* %ptr2
+  %cmp = icmp ne <8 x i8> %lhs, %rhs
+  %any_ne = call i1 @llvm.vector.reduce.or.v8i32(<8 x i1> %cmp)
+  %all_eq = xor i1 %any_ne, 1
+  ret i1 %all_eq
+}
+
 declare i1 @llvm.vector.reduce.or.v8i32(<8 x i1> %a)
 declare i32 @llvm.vector.reduce.or.v4i32(<4 x i32> %a)
 declare i64 @llvm.vector.reduce.or.v8i64(<8 x i64> %a)

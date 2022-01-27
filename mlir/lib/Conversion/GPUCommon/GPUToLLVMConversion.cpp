@@ -848,7 +848,7 @@ mlir::createGpuToLLVMConversionPass() {
 }
 
 void mlir::populateGpuToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
     StringRef gpuBinaryAnnotation) {
   converter.addConversion(
       [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {

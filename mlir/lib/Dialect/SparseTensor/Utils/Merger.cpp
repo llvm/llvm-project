@@ -65,7 +65,7 @@ LatPoint::LatPoint(unsigned n, unsigned e, unsigned b)
   bits.set(b);
 }
 
-LatPoint::LatPoint(const llvm::BitVector &b, unsigned e)
+LatPoint::LatPoint(const BitVector &b, unsigned e)
     : bits(b), simple(), exp(e) {}
 
 //===----------------------------------------------------------------------===//
@@ -93,7 +93,7 @@ unsigned Merger::addSet() {
 
 unsigned Merger::conjLatPoint(Kind kind, unsigned p0, unsigned p1) {
   unsigned p = latPoints.size();
-  llvm::BitVector nb = llvm::BitVector(latPoints[p0].bits);
+  BitVector nb = BitVector(latPoints[p0].bits);
   nb |= latPoints[p1].bits;
   unsigned e = addExp(kind, latPoints[p0].exp, latPoints[p1].exp);
   latPoints.push_back(LatPoint(nb, e));
@@ -164,7 +164,7 @@ unsigned Merger::optimizeSet(unsigned s0) {
   return s;
 }
 
-llvm::BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
+BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
   // First determine if this lattice point is a *singleton*, i.e.,
   // the last point in a lattice, no other is less than this one.
   bool isSingleton = true;
@@ -175,7 +175,7 @@ llvm::BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
     }
   }
   // Now apply the two basic rules.
-  llvm::BitVector simple = latPoints[p0].bits;
+  BitVector simple = latPoints[p0].bits;
   bool reset = isSingleton && hasAnyDimOf(simple, kSparse);
   for (unsigned b = 0, be = simple.size(); b < be; b++) {
     if (simple[b] && !isDim(b, kSparse)) {
@@ -188,8 +188,8 @@ llvm::BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
 }
 
 bool Merger::latGT(unsigned i, unsigned j) const {
-  const llvm::BitVector &bitsi = latPoints[i].bits;
-  const llvm::BitVector &bitsj = latPoints[j].bits;
+  const BitVector &bitsi = latPoints[i].bits;
+  const BitVector &bitsj = latPoints[j].bits;
   assert(bitsi.size() == bitsj.size());
   if (bitsi.count() > bitsj.count()) {
     for (unsigned b = 0, be = bitsj.size(); b < be; b++)
@@ -201,12 +201,12 @@ bool Merger::latGT(unsigned i, unsigned j) const {
 }
 
 bool Merger::onlyDenseDiff(unsigned i, unsigned j) {
-  llvm::BitVector tmp = latPoints[j].bits;
+  BitVector tmp = latPoints[j].bits;
   tmp ^= latPoints[i].bits;
   return !hasAnyDimOf(tmp, kSparse);
 }
 
-bool Merger::hasAnyDimOf(const llvm::BitVector &bits, Dim d) const {
+bool Merger::hasAnyDimOf(const BitVector &bits, Dim d) const {
   for (unsigned b = 0, be = bits.size(); b < be; b++)
     if (bits[b] && isDim(b, d))
       return true;
@@ -386,7 +386,7 @@ void Merger::dumpSet(unsigned s) const {
   llvm::dbgs() << "}\n";
 }
 
-void Merger::dumpBits(const llvm::BitVector &bits) const {
+void Merger::dumpBits(const BitVector &bits) const {
   for (unsigned b = 0, be = bits.size(); b < be; b++) {
     if (bits[b]) {
       unsigned t = tensor(b);

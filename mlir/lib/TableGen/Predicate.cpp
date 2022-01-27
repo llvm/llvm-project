@@ -47,7 +47,7 @@ bool Pred::isCombined() const {
   return def && def->isSubClassOf("CombinedPred");
 }
 
-ArrayRef<llvm::SMLoc> Pred::getLoc() const { return def->getLoc(); }
+ArrayRef<SMLoc> Pred::getLoc() const { return def->getLoc(); }
 
 CPred::CPred(const llvm::Record *record) : Pred(record) {
   assert(def->isSubClassOf("CPred") &&

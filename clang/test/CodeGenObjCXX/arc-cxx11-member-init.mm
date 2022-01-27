@@ -23,10 +23,10 @@ class XClipboardDataSet
 @end
 
 // CHECK: [[mClipData:%.*]] = getelementptr inbounds %class.XClipboardDataSet, %class.XClipboardDataSet*
-// CHECK: [[ZERO:%.*]] = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_"
-// CHECK: [[ONE:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
-// CHECK: [[TWO:%.*]] = bitcast %struct._class_t* [[ZERO]] to i8*
-// CHECK: [[CALL:%.*]] = call noundef i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* noundef [[TWO]], i8* noundef [[ONE]])
+// CHECK: [[CLS:%.*]] = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_"
+// CHECK: [[RECV:%.*]] = bitcast %struct._class_t* [[CLS]] to i8*
+// CHECK: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_
+// CHECK: [[CALL:%.*]] = call noundef i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* noundef [[RECV]], i8* noundef [[SEL]])
 // CHECK: [[THREE:%.*]] = bitcast i8* [[CALL]] to [[T:%.*]]*
 // CHECK: store [[T]]* [[THREE]], [[T]]** [[mClipData]], align 8
 

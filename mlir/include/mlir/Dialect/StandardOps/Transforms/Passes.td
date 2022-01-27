@@ -18,11 +18,6 @@ def StdBufferize : Pass<"std-bufferize", "FuncOp"> {
                            "memref::MemRefDialect", "scf::SCFDialect"];
 }
 
-def StdExpandOps : Pass<"std-expand", "FuncOp"> {
-  let summary = "Legalize std operations to be convertible to LLVM.";
-  let constructor = "mlir::createStdExpandOpsPass()";
-}
-
 def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
   let summary = "Bufferize func/call/return ops";
   let description = [{

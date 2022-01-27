@@ -11,6 +11,12 @@
 
 include "mlir/Pass/PassBase.td"
 
+def ExpandOps : Pass<"memref-expand", "FuncOp"> {
+  let summary = "Legalize memref operations to be convertible to LLVM.";
+  let constructor = "mlir::memref::createExpandOpsPass()";
+  let dependentDialects = ["StandardOpsDialect"];
+}
+
 def FoldSubViewOps : Pass<"fold-memref-subview-ops"> {
   let summary = "Fold memref.subview ops into consumer load/store ops";
   let description = [{
