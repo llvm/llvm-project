@@ -1121,11 +1121,8 @@ StringRef AsmParser::parseStringToComma() {
 bool AsmParser::parseParenExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   if (parseExpression(Res))
     return true;
-  if (Lexer.isNot(AsmToken::RParen))
-    return TokError("expected ')' in parentheses expression");
   EndLoc = Lexer.getTok().getEndLoc();
-  Lex();
-  return false;
+  return parseRParen();
 }
 
 /// Parse a bracket expression and return it.
@@ -1214,9 +1211,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       Lex(); // eat '('.
       StringRef VName;
       parseIdentifier(VName);
-      // eat ')'.
-      if (parseToken(AsmToken::RParen,
-                     "unexpected token in variant, expected ')'"))
+      if (parseRParen())
         return true;
       Split = std::make_pair(Identifier, VName);
     }
@@ -1379,9 +1374,8 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     Lex(); // Eat the operator.
     if (parseExpression(Res, EndLoc))
       return true;
-    if (Lexer.isNot(AsmToken::RParen))
-      return TokError("expected ')'");
-    Lex(); // Eat the operator.
+    if (parseRParen())
+      return true;
     Res = getTargetParser().createTargetUnaryExpr(Res, FirstTokenKind, Ctx);
     return !Res;
   }
@@ -1553,8 +1547,7 @@ bool AsmParser::parseParenExprOfDepth(unsigned ParenDepth, const MCExpr *&Res,
     // This is the same behavior as parseParenExpression().
     if (ParenDepth - 1 > 0) {
       EndLoc = getTok().getEndLoc();
-      if (parseToken(AsmToken::RParen,
-                     "expected ')' in parentheses expression"))
+      if (parseRParen())
         return true;
     }
   }
