@@ -72,7 +72,7 @@ using LibraryHashTypes = TypeList<
       unsigned long,
       long long,
       unsigned long long,
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
       __int128_t,
       __uint128_t,
 #endif

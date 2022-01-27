@@ -14,10 +14,12 @@
 
 #include <random>
 
+#include "test_macros.h"
+
 static_assert(std::uniform_random_bit_generator<
               std::linear_congruential_engine<unsigned int, 0U, 1U, 2U> >);
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
 static_assert(std::uniform_random_bit_generator<
               std::subtract_with_carry_engine<__uint128_t, 1U, 2U, 3U> >);
 #endif

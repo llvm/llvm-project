@@ -14,8 +14,6 @@ include "mlir/Pass/PassBase.td"
 def ArithmeticBufferize : Pass<"arith-bufferize", "FuncOp"> {
   let summary = "Bufferize Arithmetic dialect ops.";
   let constructor = "mlir::arith::createArithmeticBufferizePass()";
-  let dependentDialects = ["bufferization::BufferizationDialect",
-                           "memref::MemRefDialect"];
 }
 
 def ArithmeticExpandOps : Pass<"arith-expand", "FuncOp"> {

@@ -733,7 +733,7 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
   format_test_integer<int, CharT>(check, check_exception);
   format_test_integer<long, CharT>(check, check_exception);
   format_test_integer<long long, CharT>(check, check_exception);
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   format_test_integer<__int128_t, CharT>(check, check_exception);
 #endif
   // *** check the minma and maxima ***
@@ -790,7 +790,7 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
   format_test_integer<unsigned, CharT>(check, check_exception);
   format_test_integer<unsigned long, CharT>(check, check_exception);
   format_test_integer<unsigned long long, CharT>(check, check_exception);
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   format_test_integer<__uint128_t, CharT>(check, check_exception);
 #endif
   // *** test the maxima ***
@@ -2564,7 +2564,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check(STR("hello 42"), STR("hello {}"), static_cast<int>(42));
   check(STR("hello 42"), STR("hello {}"), static_cast<long>(42));
   check(STR("hello 42"), STR("hello {}"), static_cast<long long>(42));
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   check(STR("hello 42"), STR("hello {}"), static_cast<__int128_t>(42));
   {
     // Note 128-bit support is only partly implemented test the range
@@ -2587,7 +2587,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
   check(STR("hello 42"), STR("hello {}"), static_cast<unsigned>(42));
   check(STR("hello 42"), STR("hello {}"), static_cast<unsigned long>(42));
   check(STR("hello 42"), STR("hello {}"), static_cast<unsigned long long>(42));
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   check(STR("hello 42"), STR("hello {}"), static_cast<__uint128_t>(42));
   {
     // Note 128-bit support is only partly implemented test the range

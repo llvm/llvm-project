@@ -405,9 +405,32 @@ define amdgpu_kernel void @use_global_to_constant32_addrspacecast(i8 addrspace(1
   ret void
 }
 
+; GCN-LABEL: {{^}}use_constant32bit_to_flat_addrspacecast_0:
+; GCN: s_load_dword [[PTR:s[0-9]+]],
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 0
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], [[PTR]]
+; GCN: flat_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+define amdgpu_kernel void @use_constant32bit_to_flat_addrspacecast_0(i32 addrspace(6)* %ptr) #0 {
+  %stof = addrspacecast i32 addrspace(6)* %ptr to i32*
+  %load = load volatile i32, i32* %stof
+  ret void
+}
+
+; GCN-LABEL: {{^}}use_constant32bit_to_flat_addrspacecast_1:
+; GCN: s_load_dword [[PTR:s[0-9]+]],
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], 0xffff8000
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], [[PTR]]
+; GCN: flat_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
+define amdgpu_kernel void @use_constant32bit_to_flat_addrspacecast_1(i32 addrspace(6)* %ptr) #3 {
+  %stof = addrspacecast i32 addrspace(6)* %ptr to i32*
+  %load = load volatile i32, i32* %stof
+  ret void
+}
+
 declare void @llvm.amdgcn.s.barrier() #1
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind convergent }
 attributes #2 = { nounwind readnone }
+attributes #3 = { nounwind "amdgpu-32bit-address-high-bits"="0xffff8000" }
