@@ -1216,6 +1216,7 @@ private:
   ///
   /// \param AllocIP	  Instruction to create AllocaInst before.
   /// \param X			    The target atomic pointer to be updated
+  /// \param XElemTy    The element type of the atomic pointer.
   /// \param Expr		    The value to update X with.
   /// \param AO			    Atomic ordering of the generated atomic
   ///                   instructions.
@@ -1232,12 +1233,11 @@ private:
   ///
   /// \returns A pair of the old value of X before the update, and the value
   ///          used for the update.
-  std::pair<Value *, Value *> emitAtomicUpdate(Instruction *AllocIP, Value *X,
-                                               Value *Expr, AtomicOrdering AO,
-                                               AtomicRMWInst::BinOp RMWOp,
-                                               AtomicUpdateCallbackTy &UpdateOp,
-                                               bool VolatileX,
-                                               bool IsXBinopExpr);
+  std::pair<Value *, Value *>
+  emitAtomicUpdate(Instruction *AllocIP, Value *X, Type *XElemTy, Value *Expr,
+                   AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
+                   AtomicUpdateCallbackTy &UpdateOp, bool VolatileX,
+                   bool IsXBinopExpr);
 
   /// Emit the binary op. described by \p RMWOp, using \p Src1 and \p Src2 .
   ///
@@ -1249,6 +1249,7 @@ public:
   /// a struct to pack relevant information while generating atomic Ops
   struct AtomicOpValue {
     Value *Var = nullptr;
+    Type *ElemTy = nullptr;
     bool IsSigned = false;
     bool IsVolatile = false;
   };
