@@ -863,6 +863,8 @@ public:
     return nullptr;
   }
 
+  virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
+
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
   /// vendor field is left as an "unspecified unknown".

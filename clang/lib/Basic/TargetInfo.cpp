@@ -422,6 +422,8 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
       Opts.OpenCLPipes =
           hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_pipes");
+      Opts.Blocks =
+          hasFeatureEnabled(OpenCLFeaturesMap, "__opencl_c_device_enqueue");
     }
   }
 
