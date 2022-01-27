@@ -974,15 +974,6 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
       continue;
 
     if (&*MBBI == &*Paired.I) {
-      // FIXME: nothing is illegal in a ds_write2 opcode with two AGPR data
-      //        operands. However we are reporting that ds_write2 shall have
-      //        only VGPR data so that machine copy propagation does not
-      //        create an illegal instruction with a VGPR and AGPR sources.
-      //        Consequenctially if we create such instruction the verifier
-      //        will complain.
-      if (CI.IsAGPR && CI.InstClass == DS_WRITE)
-        return false;
-
       // We need to go through the list of instructions that we plan to
       // move and make sure they are all safe to move down past the merged
       // instruction.
@@ -2012,6 +2003,16 @@ SILoadStoreOptimizer::collectMergeableInsts(
 
     if (!CI.hasMergeableAddress(*MRI))
       continue;
+
+    if (CI.InstClass == DS_WRITE && CI.IsAGPR) {
+      // FIXME: nothing is illegal in a ds_write2 opcode with two AGPR data
+      //        operands. However we are reporting that ds_write2 shall have
+      //        only VGPR data so that machine copy propagation does not
+      //        create an illegal instruction with a VGPR and AGPR sources.
+      //        Consequenctially if we create such instruction the verifier
+      //        will complain.
+      continue;
+    }
 
     LLVM_DEBUG(dbgs() << "Mergeable: " << MI);
 
