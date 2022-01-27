@@ -169,6 +169,12 @@ def HasStdExtZbpOrZbkb
                                    "'Zbp' (Permutation 'Zb' Instructions) or "
                                    "'Zbkb' (Bitmanip instructions for Cryptography)">;
 
+def HasStdExtZbbOrZbkb
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb()">,
+                AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb),
+                                   "'Zbb' (Basic Bit-Manipulation) or "
+                                   "'Zbkb' (Bitmanip instructions for Cryptography)">;
+
 def HasStdExtZbbOrZbpOrZbkb
     : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbp() || Subtarget->hasStdExtZbkb()">,
                 AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbp, FeatureStdExtZbkb),
