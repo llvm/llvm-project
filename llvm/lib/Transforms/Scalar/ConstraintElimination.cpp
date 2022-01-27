@@ -187,6 +187,10 @@ getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                          Value2Index, NewIndices);
 
   if (Pred == CmpInst::ICMP_EQ) {
+    if (match(Op1, m_Zero()))
+      return getConstraint(CmpInst::ICMP_ULE, Op0, Op1, Value2Index,
+                           NewIndices);
+
     auto A =
         getConstraint(CmpInst::ICMP_UGE, Op0, Op1, Value2Index, NewIndices);
     auto B =
