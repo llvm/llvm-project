@@ -306,6 +306,14 @@ public:
       return SelectionTree::Unselected;
     }
 
+    // The eof token is used as a sentinel.
+    // In general, source range from an AST node should not claim the eof token,
+    // but it could occur for unmatched-bracket cases.
+    // FIXME: fix it in TokenBuffer, expandedTokens(SourceRange) should not
+    // return the eof token.
+    if (ExpandedTokens.back().kind() == tok::eof)
+      ExpandedTokens = ExpandedTokens.drop_back();
+
     SelectionTree::Selection Result = NoTokens;
     while (!ExpandedTokens.empty()) {
       // Take consecutive tokens from the same context together for efficiency.
