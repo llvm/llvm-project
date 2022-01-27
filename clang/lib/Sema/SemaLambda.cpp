@@ -379,6 +379,38 @@ buildTypeForLambdaCallOperator(Sema &S, clang::CXXRecordDecl *Class,
   return MethodType;
 }
 
+// [C++2b] [expr.prim.lambda.closure] p4
+//  Given a lambda with a lambda-capture, the type of the explicit object
+//  parameter, if any, of the lambda's function call operator (possibly
+//  instantiated from a function call operator template) shall be either:
+//  - the closure type,
+//  - class type derived from the closure type, or
+//  - a reference to a possibly cv-qualified such type.
+void Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
+    CXXMethodDecl *Method) {
+  if (!isLambdaCallWithExplicitObjectParameter(Method))
+    return;
+  CXXRecordDecl *RD = Method->getParent();
+  if (Method->getType()->isDependentType())
+    return;
+  if (RD->getLambdaCaptureDefault() == LambdaCaptureDefault::LCD_None &&
+      RD->capture_size() == 0)
+    return;
+  QualType ExplicitObjectParameterType = Method->getParamDecl(0)
+                                             ->getType()
+                                             .getNonReferenceType()
+                                             .getUnqualifiedType()
+                                             .getDesugaredType(getASTContext());
+  QualType LambdaType = getASTContext().getRecordType(RD);
+  if (LambdaType == ExplicitObjectParameterType)
+    return;
+  if (IsDerivedFrom(RD->getLocation(), ExplicitObjectParameterType, LambdaType))
+    return;
+  Diag(Method->getParamDecl(0)->getLocation(),
+       diag::err_invalid_explicit_object_type_in_lambda)
+      << ExplicitObjectParameterType;
+}
+
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
     std::optional<CXXRecordDecl::LambdaNumbering> NumberingOverride) {
@@ -860,9 +892,17 @@ static TypeSourceInfo *getLambdaType(Sema &S, LambdaIntroducer &Intro,
   if (ParamInfo.getNumTypeObjects() == 0) {
     MethodTyInfo = getDummyLambdaType(S, Loc);
   } else {
+    // Check explicit parameters
+    S.CheckExplicitObjectLambda(ParamInfo);
+
     DeclaratorChunk::FunctionTypeInfo &FTI = ParamInfo.getFunctionTypeInfo();
+
+    bool HasExplicitObjectParameter =
+        ParamInfo.isExplicitObjectMemberFunction();
+
     ExplicitResultType = FTI.hasTrailingReturnType();
-    if (!FTI.hasMutableQualifier() && !IsLambdaStatic)
+    if (!FTI.hasMutableQualifier() && !IsLambdaStatic &&
+        !HasExplicitObjectParameter)
       FTI.getOrCreateMethodQualifiers().SetTypeQual(DeclSpec::TQ_const, Loc);
 
     if (ExplicitResultType && S.getLangOpts().HLSL) {
@@ -1686,7 +1726,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   // function that will be the result of the conversion with a
   // certain unique ID.
   // When it is static we just return the static call operator instead.
-  if (CallOperator->isInstance()) {
+  if (CallOperator->isImplicitObjectMemberFunction()) {
     DeclarationName InvokerName =
         &S.Context.Idents.get(getLambdaStaticInvokerName());
     // FIXME: Instead of passing in the CallOperator->getTypeSourceInfo()

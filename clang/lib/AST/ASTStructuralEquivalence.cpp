@@ -1403,6 +1403,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       Method1->getAccess() == Method2->getAccess() &&
       Method1->getOverloadedOperator() == Method2->getOverloadedOperator() &&
       Method1->isStatic() == Method2->isStatic() &&
+      Method1->isImplicitObjectMemberFunction() ==
+          Method2->isImplicitObjectMemberFunction() &&
       Method1->isConst() == Method2->isConst() &&
       Method1->isVolatile() == Method2->isVolatile() &&
       Method1->isVirtual() == Method2->isVirtual() &&

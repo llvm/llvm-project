@@ -771,7 +771,7 @@ void ConsumedStmtVisitor::VisitCXXBindTemporaryExpr(
 void ConsumedStmtVisitor::VisitCXXConstructExpr(const CXXConstructExpr *Call) {
   CXXConstructorDecl *Constructor = Call->getConstructor();
 
-  QualType ThisType = Constructor->getThisObjectType();
+  QualType ThisType = Constructor->getFunctionObjectParameterType();
 
   if (!isConsumableType(ThisType))
     return;
@@ -1199,7 +1199,7 @@ void ConsumedAnalyzer::determineExpectedReturnState(AnalysisDeclContext &AC,
                                                     const FunctionDecl *D) {
   QualType ReturnType;
   if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(D)) {
-    ReturnType = Constructor->getThisObjectType();
+    ReturnType = Constructor->getFunctionObjectParameterType();
   } else
     ReturnType = D->getCallResultType();
 

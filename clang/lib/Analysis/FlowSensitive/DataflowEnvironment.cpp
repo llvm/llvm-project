@@ -452,8 +452,8 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
       MethodDecl = dyn_cast<CXXMethodDecl>(Parent->getDeclContext());
 
     // FIXME: Initialize the ThisPointeeLoc of lambdas too.
-    if (MethodDecl && !MethodDecl->isStatic()) {
-      QualType ThisPointeeType = MethodDecl->getThisObjectType();
+    if (MethodDecl && MethodDecl->isImplicitObjectMemberFunction()) {
+      QualType ThisPointeeType = MethodDecl->getFunctionObjectParameterType();
       ThisPointeeLoc =
           &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
     }

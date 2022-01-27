@@ -383,6 +383,7 @@ protected:
     unsigned HasFoundDecl : 1;
     unsigned HadMultipleCandidates : 1;
     unsigned RefersToEnclosingVariableOrCapture : 1;
+    unsigned CapturedByCopyInLambdaWithExplicitObjectParameter : 1;
     unsigned NonOdrUseReason : 2;
     unsigned IsImmediateEscalating : 1;
 

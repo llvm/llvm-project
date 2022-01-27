@@ -81,6 +81,63 @@ using ::dr2521::operator""_div;
 #endif
 } // namespace dr2521
 
+
+#if __cplusplus >= 202302L
+namespace dr2553 { // dr2553: 18
+struct B {
+  virtual void f(this B&);   // expected-error {{an explicit object parameter cannot appear in a virtual function}} \
+                             // expected-note {{here}}
+  static void f(this B&);   // expected-error {{an explicit object parameter cannot appear in a static function}}
+  virtual void g(); // expected-note {{here}}
+};
+struct D : B {
+  void g(this D&); // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+};
+
+struct D2 : B {
+  void f(this B&); // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+};
+
+}
+#endif
+
+#if __cplusplus >= 202302L
+namespace dr2554 { // dr2554: 18 review
+struct B {
+  virtual void f(); // expected-note 3{{here}}
+};
+
+struct D : B {
+  void f(this D&); // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+};
+
+struct D2 : B {
+  void f(this B&); // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+};
+struct T {};
+struct D3 : B {
+  void f(this T&); // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+};
+
+}
+#endif
+
+#if __cplusplus >= 202302L
+namespace dr2561 { // dr2561: 18 review
+struct C {
+    constexpr C(auto) { }
+};
+void foo() {
+    constexpr auto b = [](this C) { return 1; };
+    constexpr int (*fp)(C) = b;
+    static_assert(fp(1) == 1);
+    static_assert((&decltype(b)::operator())(1) == 1);
+}
+
+}
+#endif
+
+
 namespace dr2565 { // dr2565: 16
 #if __cplusplus >= 202002L
   template<typename T>
