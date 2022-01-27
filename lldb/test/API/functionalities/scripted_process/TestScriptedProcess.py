@@ -142,6 +142,7 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(self.dbg.DeleteTarget(target), "Couldn't delete target")
 
     @skipUnlessDarwin
+    @skipIf(archs=no_match(['arm64', 'arm64e']))
     @skipIfOutOfTreeDebugserver
     def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
