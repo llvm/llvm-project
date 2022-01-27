@@ -4,6 +4,34 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+v,+m -target-abi=lp64d -riscv-v-vector-bits-min=128 \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
+declare <4 x i1> @llvm.vp.merge.v4i1(<4 x i1>, <4 x i1>, <4 x i1>, i32)
+
+define <4 x i1> @vpmerge_vv_v4i1(<4 x i1> %va, <4 x i1> %vb, <4 x i1> %m, i32 zeroext %evl) {
+; RV32-LABEL: vpmerge_vv_v4i1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV32-NEXT:    vid.v v10
+; RV32-NEXT:    vmsltu.vx v10, v10, a0
+; RV32-NEXT:    vmand.mm v9, v9, v10
+; RV32-NEXT:    vmandn.mm v8, v8, v9
+; RV32-NEXT:    vmand.mm v9, v0, v9
+; RV32-NEXT:    vmor.mm v0, v9, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vpmerge_vv_v4i1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV64-NEXT:    vid.v v10
+; RV64-NEXT:    vmsltu.vx v12, v10, a0
+; RV64-NEXT:    vmand.mm v9, v9, v12
+; RV64-NEXT:    vmandn.mm v8, v8, v9
+; RV64-NEXT:    vmand.mm v9, v0, v9
+; RV64-NEXT:    vmor.mm v0, v9, v8
+; RV64-NEXT:    ret
+  %v = call <4 x i1> @llvm.vp.merge.v4i1(<4 x i1> %m, <4 x i1> %va, <4 x i1> %vb, i32 %evl)
+  ret <4 x i1> %v
+}
+
 declare <2 x i8> @llvm.vp.merge.v2i8(<2 x i1>, <2 x i8>, <2 x i8>, i32)
 
 define <2 x i8> @vpmerge_vv_v2i8(<2 x i8> %va, <2 x i8> %vb, <2 x i1> %m, i32 zeroext %evl) {
