@@ -1,6 +1,9 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std -convert-vector-to-llvm="enable-amx" -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std \
+// RUN:  -tensor-constant-bufferize -convert-vector-to-llvm="enable-amx" \
+// RUN:  -convert-memref-to-llvm -convert-std-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" \
+// RUN:  --dlopen=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // Note: To run this test, your CPU must support AMX.
@@ -25,9 +28,7 @@ func @entry() -> i32 {
   %c16 = arith.constant 16: index
   %c32 = arith.constant 32: index
 
-  // Setup simple test data. Note that bf16 does not seem to work well with the
-  // tensor type yet, which is why we use vectors and transfer the data into memref.
-  // TODO: use tensors and bufferization.to_memref instead
+  // Setup simple test data.
   %0 = arith.constant dense<[
      [ 1.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ],
@@ -61,7 +62,7 @@ func @entry() -> i32 {
        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ],
      [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.1,
        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ]
-  ]> : vector<16x32xbf16>
+  ]> : tensor<16x32xbf16>
   %1 = arith.constant dense<[
      [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ],
@@ -95,14 +96,12 @@ func @entry() -> i32 {
        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ],
      [ 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.1, 1.0, 1.0, 1.0, 1.0, 1.0,
        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 ]
-  ]> : vector<16x32xbf16>
+  ]> : tensor<16x32xbf16>
 
   // Set up memory.
-  %a = memref.alloc() : memref<16x32xbf16>
-  %b = memref.alloc() : memref<16x32xbf16>
+  %a = bufferization.to_memref %0 : memref<16x32xbf16>
+  %b = bufferization.to_memref %1 : memref<16x32xbf16>
   %c = memref.alloc() : memref<16x16xf32>
-  vector.transfer_write %0, %a[%c0, %c0] : vector<16x32xbf16>, memref<16x32xbf16>
-  vector.transfer_write %1, %b[%c0, %c0] : vector<16x32xbf16>, memref<16x32xbf16>
 
   // Call kernel.
   call @kernel(%a, %b, %c) : (memref<16x32xbf16>, memref<16x32xbf16>, memref<16x16xf32>) -> ()
@@ -133,8 +132,6 @@ func @entry() -> i32 {
   }
 
   // Release resources.
-  memref.dealloc %a : memref<16x32xbf16>
-  memref.dealloc %b : memref<16x32xbf16>
   memref.dealloc %c : memref<16x16xf32>
   %i0 = arith.constant 0 : i32
   return %i0 : i32
