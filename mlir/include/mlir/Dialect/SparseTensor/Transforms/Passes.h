@@ -35,6 +35,9 @@ enum class SparseParallelizationStrategy {
   // TODO: support reduction parallelization too?
 };
 
+/// Converts command-line parallelization flag to the strategy enum.
+SparseParallelizationStrategy sparseParallelizationStrategy(int32_t flag);
+
 /// Defines a vectorization strategy. Any inner loop is a candidate (full SIMD
 /// for parallel loops and horizontal SIMD for reduction loops). A loop is
 /// actually vectorized if (1) allowed by the strategy, and (2) the emitted
@@ -44,6 +47,9 @@ enum class SparseVectorizationStrategy {
   kDenseInnerLoop,
   kAnyStorageInnerLoop
 };
+
+/// Converts command-line vectorization flag to the strategy enum.
+SparseVectorizationStrategy sparseVectorizationStrategy(int32_t flag);
 
 /// Sparsification options.
 struct SparsificationOptions {
@@ -70,6 +76,8 @@ void populateSparseTensorConversionPatterns(TypeConverter &typeConverter,
                                             RewritePatternSet &patterns);
 
 std::unique_ptr<Pass> createSparsificationPass();
+std::unique_ptr<Pass>
+createSparsificationPass(const SparsificationOptions &options);
 std::unique_ptr<Pass> createSparseTensorConversionPass();
 
 //===----------------------------------------------------------------------===//
