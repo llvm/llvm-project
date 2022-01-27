@@ -450,7 +450,7 @@ static inline hash_code hash_value(const SampleContextFrame &arg) {
                       arg.Location.Discriminator);
 }
 
-using SampleContextFrameVector = SmallVector<SampleContextFrame, 10>;
+using SampleContextFrameVector = SmallVector<SampleContextFrame, 1>;
 using SampleContextFrames = ArrayRef<SampleContextFrame>;
 
 struct SampleContextFrameHash {
