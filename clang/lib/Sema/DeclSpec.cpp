@@ -420,6 +420,18 @@ bool Declarator::isStaticMember() {
               getName().OperatorFunctionId.Operator));
 }
 
+bool Declarator::isExplicitObjectMemberFunction() {
+  if (!isFunctionDeclarator())
+    return false;
+  DeclaratorChunk::FunctionTypeInfo &Fun = getFunctionTypeInfo();
+  if (Fun.NumParams) {
+    auto *P = dyn_cast_or_null<ParmVarDecl>(Fun.Params[0].Param);
+    if (P && P->isExplicitObjectParameter())
+      return true;
+  }
+  return false;
+}
+
 bool Declarator::isCtorOrDtor() {
   return (getName().getKind() == UnqualifiedIdKind::IK_ConstructorName) ||
          (getName().getKind() == UnqualifiedIdKind::IK_DestructorName);
