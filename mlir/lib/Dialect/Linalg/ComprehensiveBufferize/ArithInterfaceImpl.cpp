@@ -57,6 +57,49 @@ struct ConstantOpInterface
   }
 };
 
+struct IndexCastOpInterface
+    : public BufferizableOpInterface::ExternalModel<IndexCastOpInterface,
+                                                    arith::IndexCastOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const BufferizationState &state) const {
+    return false;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return false;
+  }
+
+  OpResult getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                               const BufferizationState &state) const {
+    return op->getResult(0);
+  }
+
+  BufferRelation bufferRelation(Operation *op, OpResult opResult,
+                                const BufferizationState &state) const {
+    return BufferRelation::Equivalent;
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationState &state) const {
+    auto castOp = cast<arith::IndexCastOp>(op);
+
+    Value source = *state.getBuffer(rewriter, op->getOpOperand(0) /*in*/);
+    auto sourceType = source.getType().cast<BaseMemRefType>();
+
+    // Result type should have same layout and address space as the source type.
+    MemRefLayoutAttrInterface layout = {};
+    if (auto rankedMemRefType = sourceType.dyn_cast<MemRefType>())
+      layout = rankedMemRefType.getLayout();
+    Type resultType =
+        getMemRefType(castOp.getType().cast<TensorType>(), state.getOptions(),
+                      layout, sourceType.getMemorySpace());
+
+    replaceOpWithNewBufferizedOp<arith::IndexCastOp>(rewriter, op, source,
+                                                     resultType);
+    return success();
+  }
+};
 } // namespace arith_ext
 } // namespace comprehensive_bufferize
 } // namespace linalg
@@ -65,4 +108,6 @@ struct ConstantOpInterface
 void mlir::linalg::comprehensive_bufferize::arith_ext::
     registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry) {
   registry.addOpInterface<arith::ConstantOp, arith_ext::ConstantOpInterface>();
+  registry
+      .addOpInterface<arith::IndexCastOp, arith_ext::IndexCastOpInterface>();
 }
