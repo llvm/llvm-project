@@ -92,6 +92,7 @@ void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
     BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<BufferizeToTensorOp, BufferizeToMemrefOp>(typeConverter,
                                                          patterns.getContext());
+  populateBufferizationOpFoldingPatterns(patterns, patterns.getContext());
 }
 
 namespace {
