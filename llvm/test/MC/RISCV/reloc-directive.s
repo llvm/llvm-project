@@ -25,6 +25,7 @@
 
 # CHECK:      Section ({{.*}}) .rela.data {
 # CHECK-NEXT:   0x0 R_RISCV_32 - 0x6
+# CHECK-NEXT:   0x4 R_RISCV_32 - 0x6
 # CHECK-NEXT: }
 
 # CHECK:      Section ({{.*}}) .rela.debug_line {
@@ -55,6 +56,7 @@
   .reloc line, R_RISCV_32, 6
   .reloc probe, R_RISCV_32, 6
 
+  .reloc foo+4, R_RISCV_32, 6
 .data
 .globl foo
 foo:

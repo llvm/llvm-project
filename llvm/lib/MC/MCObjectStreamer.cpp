@@ -119,7 +119,8 @@ void MCObjectStreamer::resolvePendingFixups() {
       continue;
     }
     flushPendingLabels(PendingFixup.DF, PendingFixup.DF->getContents().size());
-    PendingFixup.Fixup.setOffset(PendingFixup.Sym->getOffset());
+    PendingFixup.Fixup.setOffset(PendingFixup.Sym->getOffset() +
+                                 PendingFixup.Fixup.getOffset());
 
     // If the location symbol to relocate is in MCEncodedFragmentWithFixups,
     // put the Fixup into location symbol's fragment. Otherwise
@@ -838,8 +839,9 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     return None;
   }
 
-  PendingFixups.emplace_back(&SRE.getSymbol(), DF,
-                             MCFixup::create(-1, Expr, Kind, Loc));
+  PendingFixups.emplace_back(
+      &SRE.getSymbol(), DF,
+      MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
   return None;
 }
 
