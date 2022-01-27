@@ -44,7 +44,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isInstance()) {
+    if (MD->isImplicitObjectMemberFunction()) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
       ParamOffsets.push_back(ParamOffset);

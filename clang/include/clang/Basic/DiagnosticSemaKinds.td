@@ -4681,12 +4681,14 @@ def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
     "%sub{select_ovl_candidate_kind}0,1,2 not viable: "
-    "requires%select{ at least| at most|}3 %4 argument%s4, but %5 "
+    "requires%select{ at least| at most|}3 %4 "
+    "%select{|non-object }6argument%s4, but %5 "
     "%plural{1:was|:were}5 provided">;
 
 def note_ovl_candidate_arity_one : Note<"candidate "
     "%sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "%select{requires at least|allows at most single|requires single}3 "
+    "%select{|non-object }6"
     "argument %4, but %plural{0:no|:%5}5 arguments were provided">;
 
 def note_ovl_candidate_deleted : Note<
@@ -4869,7 +4871,7 @@ def err_ovl_deleted_object_call : Error<
   "call to deleted function call operator in type %0">;
 def note_ovl_surrogate_cand : Note<"conversion candidate of type %0">;
 def err_member_call_without_object : Error<
-  "call to non-static member function without an object argument">;
+  "call to %select{non-static|explicit}0 member function without an object argument">;
 
 // C++ Address of Overloaded Function
 def err_addr_ovl_no_viable : Error<
@@ -7289,20 +7291,42 @@ def note_logical_not_silence_with_parens : Note<
   "add parentheses around left hand side expression to silence this warning">;
 
 def err_invalid_this_use : Error<
-  "invalid use of 'this' outside of a non-static member function">;
+  "invalid use of 'this' %select{outside of a non-static member function"
+  "|in a function with an explicit object parameter}0">;
 def err_this_static_member_func : Error<
   "'this' cannot be%select{| implicitly}0 used in a static member function "
   "declaration">;
-def err_invalid_member_use_in_static_method : Error<
-  "invalid use of member %0 in static member function">;
+def err_invalid_member_use_in_method : Error<
+  "invalid use of member %0 in %select{static|explicit object}1 member function">;
+
 def err_invalid_qualified_function_type : Error<
-  "%select{non-member function|static member function|deduction guide}0 "
+  "%select{non-member function|static member function|explicit object member function|deduction guide}0 "
   "%select{of type %2 |}1cannot have '%3' qualifier">;
 def err_compound_qualified_function_type : Error<
   "%select{block pointer|pointer|reference}0 to function type %select{%2 |}1"
   "cannot have '%3' qualifier">;
 def err_qualified_function_typeid : Error<
   "type operand %0 of 'typeid' cannot have '%1' qualifier">;
+
+def err_cxx20_deducing_this  : Error<
+  "explicit object parameters are incompatible with C++ standards before C++2b">;
+def err_explicit_object_default_arg: Error<
+  "the explicit object parameter cannot have a default argument">;
+def err_explicit_object_parameter_pack: Error<
+  "the explicit object parameter cannot be a function parameter pack">;
+def err_explicit_object_parameter_must_be_first: Error<
+  "an explicit object parameter can only appear as the first parameter "
+  "of the %select{function|lambda}0">;
+def err_explicit_object_parameter_nonmember: Error<
+  "an explicit object parameter cannot appear in a "
+  "%select{static|virtual|non-member}0 %select{function|lambda}1">;
+def err_explicit_object_parameter_constructor: Error<
+  "an explicit object parameter cannot appear in a %select{constructor|destructor}0">;
+def err_explicit_object_parameter_mutable: Error<
+  "a lambda with an explicit object parameter cannot be mutable">;
+def err_invalid_explicit_object_type_in_lambda: Error<
+  "invalid explicit object parameter type %0 in lambda with capture; "
+  "the type must be the same as, or derived from, the lambda">;
 
 def err_ref_qualifier_overload : Error<
   "cannot overload a member function %select{without a ref-qualifier|with "
@@ -8525,53 +8549,65 @@ def err_call_function_incomplete_return : Error<
 def err_call_incomplete_argument : Error<
   "argument type %0 is incomplete">;
 def err_typecheck_call_too_few_args : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected %1, have %2">;
 def err_typecheck_call_too_few_args_one : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }2arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "single argument %1 was not specified">;
 def err_typecheck_call_too_few_args_at_least : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected at least %1, have %2">;
 def err_typecheck_call_too_few_args_at_least_one : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }2arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "at least argument %1 must be specified">;
 def err_typecheck_call_too_few_args_suggest : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected %1, have %2; did you mean %3?">;
+  "expected %1, have %2; did you mean %4?">;
 def err_typecheck_call_too_few_args_at_least_suggest : Error<
-  "too few %select{|||execution configuration }0arguments to "
+  "too few %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected at least %1, have %2; did you mean %3?">;
+  "expected at least %1, have %2; did you mean %4?">;
 def err_typecheck_call_too_many_args : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected %1, have %2">;
 def err_typecheck_call_too_many_args_one : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected single argument %1, have %2 arguments">;
 def err_typecheck_call_too_many_args_at_most : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
   "expected at most %1, have %2">;
 def err_typecheck_call_too_many_args_at_most_one : Error<
   "too many %select{|||execution configuration }0arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected at most single argument %1, have %2 arguments">;
+  "expected at most single %select{|non-object }3argument %1, "
+  "have %2%select{|non-object}3 arguments">;
 def err_typecheck_call_too_many_args_suggest : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected %1, have %2; did you mean %3?">;
+  "expected %1, have %2; did you mean %4?">;
 def err_typecheck_call_too_many_args_at_most_suggest : Error<
-  "too many %select{|||execution configuration }0arguments to "
+  "too many %select{|||execution configuration }0"
+  "%select{|non-object }3arguments to "
   "%select{function|block|method|kernel function}0 call, "
-  "expected at most %1, have %2; did you mean %3?">;
+  "expected at most %1, have %2; did you mean %4?">;
 
 def err_arc_typecheck_convert_incompatible_pointer : Error<
   "incompatible pointer types passing retainable parameter of type %0"
@@ -9389,10 +9425,10 @@ def warn_cxx98_compat_explicit_conversion_functions : Warning<
 
 // C++11 defaulted functions
 def err_defaulted_special_member_params : Error<
-  "an explicitly-defaulted %select{|copy |move }0constructor cannot "
+  "an explicitly-defaulted %sub{select_special_member_kind}0 cannot "
   "have default arguments">;
 def err_defaulted_special_member_variadic : Error<
-  "an explicitly-defaulted %select{|copy |move }0constructor cannot "
+  "an explicitly-defaulted %sub{select_special_member_kind}0 cannot "
   "be variadic">;
 def err_defaulted_special_member_return_type : Error<
   "explicitly-defaulted %select{copy|move}0 assignment operator must "
@@ -9455,7 +9491,7 @@ def err_defaulted_comparison_template : Error<
   "comparison operator template cannot be defaulted">;
 def err_defaulted_comparison_num_args : Error<
   "%select{non-member|member}0 %sub{select_defaulted_comparison_kind}1"
-  " comparison operator must have %select{2|1}0 parameters">;
+  " must have %select{2|1}0 parameters">;
 def err_defaulted_comparison_param : Error<
   "invalid parameter type for defaulted %sub{select_defaulted_comparison_kind}0"
   "; found %1, expected %2%select{| or %4}3">;

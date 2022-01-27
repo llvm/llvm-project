@@ -491,6 +491,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
   DeclRefExprBits.HadMultipleCandidates = false;
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
+  DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   DeclRefExprBits.IsImmediateEscalating = false;
   DeclRefExprBits.Loc = L;
@@ -518,6 +519,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
     = (TemplateArgs || TemplateKWLoc.isValid()) ? 1 : 0;
   DeclRefExprBits.RefersToEnclosingVariableOrCapture =
       RefersToEnclosingVariableOrCapture;
+  DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   if (TemplateArgs) {
     auto Deps = TemplateArgumentDependence::None;

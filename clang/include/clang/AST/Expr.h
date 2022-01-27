@@ -1449,6 +1449,16 @@ public:
     DeclRefExprBits.IsImmediateEscalating = Set;
   }
 
+  bool isCapturedByCopyInLambdaWithExplicitObjectParameter() const {
+    return DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter;
+  }
+
+  void setCapturedByCopyInLambdaWithExplicitObjectParameter(
+      bool Set, const ASTContext &Context) {
+    DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = Set;
+    setDependence(computeDependence(this, Context));
+  }
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == DeclRefExprClass;
   }

@@ -1800,7 +1800,8 @@ bool Sema::CheckMessageArgumentTypes(
   // FIXME. This need be cleaned up.
   if (Args.size() < NumNamedArgs) {
     Diag(SelLoc, diag::err_typecheck_call_too_few_args)
-      << 2 << NumNamedArgs << static_cast<unsigned>(Args.size());
+        << 2 << NumNamedArgs << static_cast<unsigned>(Args.size())
+        << /*is non object*/ 0;
     return false;
   }
 
@@ -1898,7 +1899,7 @@ bool Sema::CheckMessageArgumentTypes(
       Diag(Args[NumNamedArgs]->getBeginLoc(),
            diag::err_typecheck_call_too_many_args)
           << 2 /*method*/ << NumNamedArgs << static_cast<unsigned>(Args.size())
-          << Method->getSourceRange()
+          << Method->getSourceRange() << /*is non object*/ 0
           << SourceRange(Args[NumNamedArgs]->getBeginLoc(),
                          Args.back()->getEndLoc());
     }

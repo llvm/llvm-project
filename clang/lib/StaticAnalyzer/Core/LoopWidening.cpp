@@ -84,7 +84,7 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
   // pointer should remain unchanged.  Ignore static methods, since they do not
   // have 'this' pointers.
   const CXXMethodDecl *CXXMD = dyn_cast<CXXMethodDecl>(STC->getDecl());
-  if (CXXMD && !CXXMD->isStatic()) {
+  if (CXXMD && CXXMD->isImplicitObjectMemberFunction()) {
     const CXXThisRegion *ThisR =
         MRMgr.getCXXThisRegion(CXXMD->getThisType(), STC);
     ITraits.setTrait(ThisR,

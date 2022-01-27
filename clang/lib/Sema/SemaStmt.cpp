@@ -689,7 +689,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     if (CMD->isStatic())
       Type.MemberType = FuncType::ft_static_member;
     else {
-      Type.This = CMD->getThisObjectType();
+      Type.This = CMD->getFunctionObjectParameterType();
       Type.MemberType = FuncType::ft_non_static_member;
     }
     Type.Func = CMD->getType()->castAs<FunctionProtoType>();

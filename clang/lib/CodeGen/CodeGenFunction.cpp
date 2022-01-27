@@ -1167,12 +1167,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
 
   EmitFunctionProlog(*CurFnInfo, CurFn, Args);
 
-  if (isa_and_nonnull<CXXMethodDecl>(D) &&
-      cast<CXXMethodDecl>(D)->isInstance()) {
-    CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
-    const CXXMethodDecl *MD = cast<CXXMethodDecl>(D);
-    if (MD->getParent()->isLambda() &&
-        MD->getOverloadedOperator() == OO_Call) {
+  if (const CXXMethodDecl *MD = dyn_cast_if_present<CXXMethodDecl>(D);
+      MD && !MD->isStatic()) {
+    bool IsInLambda =
+        MD->getParent()->isLambda() && MD->getOverloadedOperator() == OO_Call;
+    if (MD->isImplicitObjectMemberFunction())
+      CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
+    if (IsInLambda) {
       // We're in a lambda; figure out the captures.
       MD->getParent()->getCaptureFields(LambdaCaptureFields,
                                         LambdaThisCaptureField);
@@ -1202,7 +1203,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
           VLASizeMap[VAT->getSizeExpr()] = ExprArg;
         }
       }
-    } else {
+    } else if (MD->isImplicitObjectMemberFunction()) {
       // Not in a lambda; just use 'this' from the method.
       // FIXME: Should we generate a new load for each use of 'this'?  The
       // fast register allocator would be happier...
@@ -1313,7 +1314,7 @@ QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
   QualType ResTy = FD->getReturnType();
 
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (MD && MD->isInstance()) {
+  if (MD && MD->isImplicitObjectMemberFunction()) {
     if (CGM.getCXXABI().HasThisReturn(GD))
       ResTy = MD->getThisType();
     else if (CGM.getCXXABI().hasMostDerivedReturn(GD))

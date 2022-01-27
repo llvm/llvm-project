@@ -2647,9 +2647,8 @@ static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
 
 static LValue EmitCapturedFieldLValue(CodeGenFunction &CGF, const FieldDecl *FD,
                                       llvm::Value *ThisValue) {
-  QualType TagType = CGF.getContext().getTagDeclType(FD->getParent());
-  LValue LV = CGF.MakeNaturalAlignAddrLValue(ThisValue, TagType);
-  return CGF.EmitLValueForField(LV, FD);
+
+  return CGF.EmitLValueForLambdaField(FD, ThisValue);
 }
 
 /// Named Registers are named metadata pointing to the register name
@@ -4262,15 +4261,36 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
 
 /// Given that we are currently emitting a lambda, emit an l-value for
 /// one of its members.
-LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field) {
-  if (CurCodeDecl) {
-    assert(cast<CXXMethodDecl>(CurCodeDecl)->getParent()->isLambda());
-    assert(cast<CXXMethodDecl>(CurCodeDecl)->getParent() == Field->getParent());
+///
+LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
+                                                 llvm::Value *ThisValue) {
+  bool HasExplicitObjectParameter = false;
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(CurCodeDecl)) {
+    HasExplicitObjectParameter = MD->isExplicitObjectMemberFunction();
+    assert(MD->getParent()->isLambda());
+    assert(MD->getParent() == Field->getParent());
   }
-  QualType LambdaTagType =
-    getContext().getTagDeclType(Field->getParent());
-  LValue LambdaLV = MakeNaturalAlignAddrLValue(CXXABIThisValue, LambdaTagType);
+  LValue LambdaLV;
+  if (HasExplicitObjectParameter) {
+    const VarDecl *D = cast<CXXMethodDecl>(CurCodeDecl)->getParamDecl(0);
+    auto It = LocalDeclMap.find(D);
+    assert(It != LocalDeclMap.end() && "explicit parameter not loaded?");
+    Address AddrOfExplicitObject = It->getSecond();
+    if (D->getType()->isReferenceType())
+      LambdaLV = EmitLoadOfReferenceLValue(AddrOfExplicitObject, D->getType(),
+                                           AlignmentSource::Decl);
+    else
+      LambdaLV = MakeNaturalAlignAddrLValue(AddrOfExplicitObject.getPointer(),
+                                            D->getType().getNonReferenceType());
+  } else {
+    QualType LambdaTagType = getContext().getTagDeclType(Field->getParent());
+    LambdaLV = MakeNaturalAlignAddrLValue(ThisValue, LambdaTagType);
+  }
   return EmitLValueForField(LambdaLV, Field);
+}
+
+LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field) {
+  return EmitLValueForLambdaField(Field, CXXABIThisValue);
 }
 
 /// Get the field index in the debug info. The debug info structure/union
@@ -4987,9 +5007,12 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
   if (const auto *CE = dyn_cast<CUDAKernelCallExpr>(E))
     return EmitCUDAKernelCallExpr(CE, ReturnValue);
 
+  // A CXXOperatorCallExpr is created even for explicit object methods, but
+  // these should be treated like static function call.
   if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
-    if (const CXXMethodDecl *MD =
-          dyn_cast_or_null<CXXMethodDecl>(CE->getCalleeDecl()))
+    if (const auto *MD =
+            dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
+        MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
   CGCallee callee = EmitCallee(E->getCallee());

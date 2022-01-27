@@ -70,7 +70,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
   // If the function is a non-static member function, add the type
   // of the implicit object parameter before the formal parameters.
   if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    if (MD->isInstance()) {
+    if (MD->isImplicitObjectMemberFunction()) {
       // [over.match.funcs]4
       // For non-static member functions, the type of the implicit object
       // parameter is
@@ -78,7 +78,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
       //      ref-qualifier or with the & ref-qualifier
       //  -- "rvalue reference to cv X" for functions declared with the &&
       //      ref-qualifier
-      QualType T = MD->getThisObjectType();
+      QualType T = MD->getFunctionObjectParameterType();
       T = FnType->getRefQualifier() == RQ_RValue
               ? S.Context.getRValueReferenceType(T)
               : S.Context.getLValueReferenceType(T, /*SpelledAsLValue*/ true);
@@ -564,10 +564,10 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
   auto *FD = cast<FunctionDecl>(CurContext);
   bool IsThisDependentType = [&] {
-    if (auto *MD = dyn_cast_or_null<CXXMethodDecl>(FD))
-      return MD->isInstance() && MD->getThisObjectType()->isDependentType();
-    else
-      return false;
+    if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FD))
+      return MD->isImplicitObjectMemberFunction() &&
+             MD->getThisType()->isDependentType();
+    return false;
   }();
 
   QualType T = FD->getType()->isDependentType() || IsThisDependentType
@@ -592,7 +592,7 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
 
   // Add implicit object parameter.
   if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    if (MD->isInstance() && !isLambdaCallOperator(MD)) {
+    if (MD->isImplicitObjectMemberFunction() && !isLambdaCallOperator(MD)) {
       ExprResult ThisExpr = ActOnCXXThis(Loc);
       if (ThisExpr.isInvalid())
         return nullptr;
@@ -1367,7 +1367,7 @@ bool CoroutineStmtBuilder::makeReturnOnAllocFailure() {
 static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
                                  SmallVectorImpl<Expr *> &PlacementArgs) {
   if (auto *MD = dyn_cast<CXXMethodDecl>(&FD)) {
-    if (MD->isInstance() && !isLambdaCallOperator(MD)) {
+    if (MD->isImplicitObjectMemberFunction() && !isLambdaCallOperator(MD)) {
       ExprResult ThisExpr = S.ActOnCXXThis(Loc);
       if (ThisExpr.isInvalid())
         return false;
