@@ -172,7 +172,7 @@ public:
   void runOnOperation() override {
     auto *context = &getContext();
     auto func = getOperation();
-    mlir::OwningRewritePatternList patterns(context);
+    mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target(*context);
 
     useCommandLineOptions();

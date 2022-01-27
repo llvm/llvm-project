@@ -131,14 +131,6 @@ cl::opt<bool> HotText(
         "will put hot code into 2M pages. This requires relocation."),
     cl::ZeroOrMore, cl::cat(BoltCategory));
 
-cl::opt<std::string>
-InputFilename(
-  cl::Positional,
-  cl::desc("<executable>"),
-  cl::Required,
-  cl::cat(BoltCategory),
-  cl::sub(*cl::AllSubCommands));
-
 cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),

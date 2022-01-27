@@ -694,7 +694,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
       CmdArgs.push_back("--compress-debug-sections");
     } else {
       StringRef Value = A->getValue();
-      if (Value == "none" || Value == "zlib" || Value == "zlib-gnu") {
+      if (Value == "none" || Value == "zlib") {
         CmdArgs.push_back(
             Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
       } else {

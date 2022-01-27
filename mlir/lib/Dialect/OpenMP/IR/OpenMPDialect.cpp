@@ -573,7 +573,7 @@ static ParseResult parseClauseAttr(AsmParser &parser, OperationState &state,
                                    StringRef attrName, StringRef name) {
   using ClauseT = decltype(std::declval<ClauseAttr>().getValue());
   StringRef enumStr;
-  llvm::SMLoc loc = parser.getCurrentLocation();
+  SMLoc loc = parser.getCurrentLocation();
   if (parser.parseLParen() || parser.parseKeyword(&enumStr) ||
       parser.parseRParen())
     return failure();
@@ -619,7 +619,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
                                 SmallVectorImpl<int> &segments) {
 
   // Check done[clause] to see if it has been parsed already
-  llvm::BitVector done(ClauseType::COUNT, false);
+  BitVector done(ClauseType::COUNT, false);
 
   // See pos[clause] to get position of clause in operand segments
   SmallVector<int> pos(ClauseType::COUNT, -1);
@@ -749,7 +749,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
       clauseSegments[pos[allocateClause] + 1] = allocators.size();
     } else if (clauseKeyword == "default") {
       StringRef defval;
-      llvm::SMLoc loc = parser.getCurrentLocation();
+      SMLoc loc = parser.getCurrentLocation();
       if (checkAllowed(defaultClause) || parser.parseLParen() ||
           parser.parseKeyword(&defval) || parser.parseRParen())
         return failure();
@@ -937,7 +937,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
                               "invalid schedule kind");
     }
     if (!modifiers.empty()) {
-      llvm::SMLoc loc = parser.getCurrentLocation();
+      SMLoc loc = parser.getCurrentLocation();
       if (Optional<ScheduleModifier> mod =
               symbolizeScheduleModifier(modifiers[0])) {
         result.addAttribute(

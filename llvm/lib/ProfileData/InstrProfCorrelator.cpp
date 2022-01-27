@@ -23,7 +23,8 @@ Expected<object::SectionRef> getCountersSection(const object::ObjectFile &Obj) {
       if (SectionName.get() == INSTR_PROF_CNTS_SECT_NAME)
         return Section;
   return make_error<InstrProfError>(
-      instrprof_error::unable_to_correlate_profile);
+      instrprof_error::unable_to_correlate_profile,
+      "could not find counter section (" INSTR_PROF_CNTS_SECT_NAME ")");
 }
 
 const char *InstrProfCorrelator::FunctionNameAttributeName = "Function Name";
@@ -54,9 +55,9 @@ InstrProfCorrelator::get(StringRef DebugInfoFilename) {
     // TODO: Enable profile correlation when there are multiple objects in a
     // dSYM bundle.
     if (DsymObjectsOrErr->size() > 1)
-      return createStringError(
-          std::error_code(),
-          "Profile correlation using multiple objects is not yet supported");
+      return make_error<InstrProfError>(
+          instrprof_error::unable_to_correlate_profile,
+          "using multiple objects is not yet supported");
     DebugInfoFilename = *DsymObjectsOrErr->begin();
   }
   auto BufferOrErr =
@@ -84,7 +85,7 @@ InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer) {
       return InstrProfCorrelatorImpl<uint32_t>::get(std::move(*CtxOrErr), *Obj);
   }
   return make_error<InstrProfError>(
-      instrprof_error::unable_to_correlate_profile);
+      instrprof_error::unable_to_correlate_profile, "not an object file");
 }
 
 namespace llvm {
@@ -120,13 +121,19 @@ InstrProfCorrelatorImpl<IntPtrT>::get(
     return std::make_unique<DwarfInstrProfCorrelator<IntPtrT>>(std::move(DICtx),
                                                                std::move(Ctx));
   }
-  return make_error<InstrProfError>(instrprof_error::unsupported_debug_format);
+  return make_error<InstrProfError>(
+      instrprof_error::unable_to_correlate_profile,
+      "unsupported debug info format (only DWARF is supported)");
 }
 
 template <class IntPtrT>
 Error InstrProfCorrelatorImpl<IntPtrT>::correlateProfileData() {
   assert(Data.empty() && Names.empty() && NamesVec.empty());
   correlateProfileDataImpl();
+  if (Data.empty() || NamesVec.empty())
+    return make_error<InstrProfError>(
+        instrprof_error::unable_to_correlate_profile,
+        "could not find any profile metadata in debug info");
   auto Result =
       collectPGOFuncNameStrings(NamesVec, /*doCompression=*/false, Names);
   CounterOffsets.clear();

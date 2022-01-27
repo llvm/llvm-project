@@ -87,18 +87,10 @@ struct TestFuncEraseArg
     auto module = getOperation();
 
     for (FuncOp func : module.getOps<FuncOp>()) {
-      SmallVector<unsigned, 4> indicesToErase;
-      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments())) {
-        if (func.getArgAttr(argIndex, "test.erase_this_arg")) {
-          // Push back twice to test that duplicate arg indices are handled
-          // correctly.
-          indicesToErase.push_back(argIndex);
-          indicesToErase.push_back(argIndex);
-        }
-      }
-      // Reverse the order to test that unsorted index lists are handled
-      // correctly.
-      std::reverse(indicesToErase.begin(), indicesToErase.end());
+      BitVector indicesToErase(func.getNumArguments());
+      for (auto argIndex : llvm::seq<int>(0, func.getNumArguments()))
+        if (func.getArgAttr(argIndex, "test.erase_this_arg"))
+          indicesToErase.set(argIndex);
       func.eraseArguments(indicesToErase);
     }
   }
@@ -115,18 +107,10 @@ struct TestFuncEraseResult
     auto module = getOperation();
 
     for (FuncOp func : module.getOps<FuncOp>()) {
-      SmallVector<unsigned, 4> indicesToErase;
-      for (auto resultIndex : llvm::seq<int>(0, func.getNumResults())) {
-        if (func.getResultAttr(resultIndex, "test.erase_this_result")) {
-          // Push back twice to test that duplicate indices are handled
-          // correctly.
-          indicesToErase.push_back(resultIndex);
-          indicesToErase.push_back(resultIndex);
-        }
-      }
-      // Reverse the order to test that unsorted index lists are handled
-      // correctly.
-      std::reverse(indicesToErase.begin(), indicesToErase.end());
+      BitVector indicesToErase(func.getNumResults());
+      for (auto resultIndex : llvm::seq<int>(0, func.getNumResults()))
+        if (func.getResultAttr(resultIndex, "test.erase_this_result"))
+          indicesToErase.set(resultIndex);
       func.eraseResults(indicesToErase);
     }
   }

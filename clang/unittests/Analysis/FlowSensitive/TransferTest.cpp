@@ -40,11 +40,14 @@ class TransferTest : public ::testing::Test {
 protected:
   template <typename Matcher>
   void runDataflow(llvm::StringRef Code, Matcher Match,
-                   LangStandard::Kind Std = LangStandard::lang_cxx17) {
+                   LangStandard::Kind Std = LangStandard::lang_cxx17,
+                   bool ApplyBuiltinTransfer = true) {
     ASSERT_THAT_ERROR(
         test::checkDataflow<NoopAnalysis>(
             Code, "target",
-            [](ASTContext &C, Environment &) { return NoopAnalysis(C); },
+            [ApplyBuiltinTransfer](ASTContext &C, Environment &) {
+              return NoopAnalysis(C, ApplyBuiltinTransfer);
+            },
             [&Match](
                 llvm::ArrayRef<
                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
@@ -57,6 +60,31 @@ protected:
         llvm::Succeeded());
   }
 };
+
+TEST_F(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
+  std::string Code = R"(
+    void target() {
+      int Foo;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](llvm::ArrayRef<
+             std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+             Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        EXPECT_EQ(Env.getStorageLocation(*FooDecl, SkipPast::None), nullptr);
+      },
+      LangStandard::lang_cxx17,
+      /*ApplyBuiltinTransfer=*/false);
+}
 
 TEST_F(TransferTest, IntVarDecl) {
   std::string Code = R"(

@@ -12,7 +12,10 @@ visibility of definitions to a single translation unit.
 
   namespace {
     static int a = 1; // Warning.
-    static const b = 1; // Warning.
+    static const int b = 1; // Warning.
+    namespace inner {
+      static int c = 1; // Warning.
+    }
   }
 
 The check will apply a fix by removing the redundant ``static`` qualifier.

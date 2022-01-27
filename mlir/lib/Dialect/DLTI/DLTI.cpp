@@ -71,7 +71,7 @@ DataLayoutEntryAttr DataLayoutEntryAttr::parse(AsmParser &parser) {
 
   Type type = nullptr;
   std::string identifier;
-  llvm::SMLoc idLoc = parser.getCurrentLocation();
+  SMLoc idLoc = parser.getCurrentLocation();
   OptionalParseResult parsedType = parser.parseOptionalType(type);
   if (parsedType.hasValue() && failed(parsedType.getValue()))
     return {};

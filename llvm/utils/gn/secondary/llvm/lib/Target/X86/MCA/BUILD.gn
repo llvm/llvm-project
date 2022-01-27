@@ -4,9 +4,9 @@ static_library("MCA") {
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCParser",
     "//llvm/lib/MCA",
+    "//llvm/lib/Support",
     "//llvm/lib/Target/X86/MCTargetDesc",
     "//llvm/lib/Target/X86/TargetInfo",
-    "//llvm/lib/Support",
   ]
   include_dirs = [ ".." ]
   sources = [ "X86CustomBehaviour.cpp" ]

@@ -24,10 +24,10 @@ static void updateFuncOp(FuncOp func,
 
   // Collect information about the results will become appended arguments.
   SmallVector<Type, 6> erasedResultTypes;
-  SmallVector<unsigned, 6> erasedResultIndices;
+  BitVector erasedResultIndices(functionType.getNumResults());
   for (const auto &resultType : llvm::enumerate(functionType.getResults())) {
     if (resultType.value().isa<BaseMemRefType>()) {
-      erasedResultIndices.push_back(resultType.index());
+      erasedResultIndices.set(resultType.index());
       erasedResultTypes.push_back(resultType.value());
     }
   }
@@ -40,9 +40,11 @@ static void updateFuncOp(FuncOp func,
   func.setType(newFunctionType);
 
   // Transfer the result attributes to arg attributes.
-  for (int i = 0, e = erasedResultTypes.size(); i < e; i++)
+  auto erasedIndicesIt = erasedResultIndices.set_bits_begin();
+  for (int i = 0, e = erasedResultTypes.size(); i < e; ++i, ++erasedIndicesIt) {
     func.setArgAttrs(functionType.getNumInputs() + i,
-                     func.getResultAttrs(erasedResultIndices[i]));
+                     func.getResultAttrs(*erasedIndicesIt));
+  }
 
   // Erase the results.
   func.eraseResults(erasedResultIndices);

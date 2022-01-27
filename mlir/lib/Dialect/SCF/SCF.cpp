@@ -2189,7 +2189,7 @@ static ParseResult parseWhileOp(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   FunctionType functionType;
-  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  SMLoc typeLoc = parser.getCurrentLocation();
   if (failed(parser.parseColonType(functionType)))
     return failure();
 
@@ -2537,7 +2537,7 @@ struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
 };
 } // namespace
 
-void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.insert<WhileConditionTruth, WhileUnusedResult, WhileCmpCond,
                  WhileUnusedArg>(context);

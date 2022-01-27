@@ -17,31 +17,32 @@
 #include "test_macros.h"
 #include "../types.h"
 
-template<class It>
-concept HasBase = requires(It it) {
-  static_cast<It>(it).base();
-};
-
 constexpr bool test() {
   {
     using TransformView = std::ranges::transform_view<MoveOnlyView, PlusOneMutable>;
     TransformView tv;
-    auto begin = tv.begin();
-    ASSERT_SAME_TYPE(decltype(begin.base()), int*);
-    assert(begin.base() == globalBuff);
-    ASSERT_SAME_TYPE(decltype(std::move(begin).base()), int*);
-    assert(std::move(begin).base() == globalBuff);
+    auto it = tv.begin();
+    using It = decltype(it);
+    ASSERT_SAME_TYPE(decltype(static_cast<It&>(it).base()), int* const&);
+    ASSERT_SAME_TYPE(decltype(static_cast<It&&>(it).base()), int*);
+    ASSERT_SAME_TYPE(decltype(static_cast<const It&>(it).base()), int* const&);
+    ASSERT_SAME_TYPE(decltype(static_cast<const It&&>(it).base()), int* const&);
+    ASSERT_NOEXCEPT(it.base());
+    assert(base(it.base()) == globalBuff);
+    assert(base(std::move(it).base()) == globalBuff);
   }
   {
     using TransformView = std::ranges::transform_view<InputView, PlusOneMutable>;
     TransformView tv;
-    auto begin = tv.begin();
-    static_assert(!HasBase<decltype(begin)&>);
-    static_assert(HasBase<decltype(begin)&&>);
-    static_assert(!HasBase<const decltype(begin)&>);
-    static_assert(!HasBase<const decltype(begin)&&>);
-    std::same_as<cpp20_input_iterator<int *>> auto it = std::move(begin).base();
-    assert(base(it) == globalBuff);
+    auto it = tv.begin();
+    using It = decltype(it);
+    ASSERT_SAME_TYPE(decltype(static_cast<It&>(it).base()), const cpp20_input_iterator<int*>&);
+    ASSERT_SAME_TYPE(decltype(static_cast<It&&>(it).base()), cpp20_input_iterator<int*>);
+    ASSERT_SAME_TYPE(decltype(static_cast<const It&>(it).base()), const cpp20_input_iterator<int*>&);
+    ASSERT_SAME_TYPE(decltype(static_cast<const It&&>(it).base()), const cpp20_input_iterator<int*>&);
+    ASSERT_NOEXCEPT(it.base());
+    assert(base(it.base()) == globalBuff);
+    assert(base(std::move(it).base()) == globalBuff);
   }
   return true;
 }

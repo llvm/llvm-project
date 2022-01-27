@@ -221,8 +221,8 @@ template void test37<Test37>(Test37 *a);
 // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use({{.*}} [[T2]])
 
 // Make sure it's not immediately released before starting the iteration.
-// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-NEXT: [[T0:%.*]] = bitcast [[NSARRAY]]* [[T2]] to i8*
+// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-NEXT: @objc_msgSend
 
 // This bitcast is for the mutation check.
@@ -231,6 +231,7 @@ template void test37<Test37>(Test37 *a);
 
 // This bitcast is for the 'next' message send.
 // CHECK:      [[T0:%.*]] = bitcast [[NSARRAY]]* [[T2]] to i8*
+// CHECK-NEXT: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK-NEXT: @objc_msgSend
 
 // This bitcast is for the final release.

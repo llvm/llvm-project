@@ -166,8 +166,8 @@ def Builtin_Function : Builtin_Type<"Function", [
                                        TypeRange resultTypes);
 
     /// Returns a new function type without the specified arguments and results.
-    FunctionType getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
-                                          ArrayRef<unsigned> resultIndices);
+    FunctionType getWithoutArgsAndResults(const BitVector &argIndices,
+                                          const BitVector &resultIndices);
   }];
 }
 

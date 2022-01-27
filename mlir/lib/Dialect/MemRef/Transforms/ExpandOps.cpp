@@ -17,8 +17,8 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -28,17 +28,17 @@ namespace {
 
 /// Converts `atomic_rmw` that cannot be lowered to a simple atomic op with
 /// AtomicRMWOpLowering pattern, e.g. with "minf" or "maxf" attributes, to
-/// `generic_atomic_rmw` with the expanded code.
+/// `memref.generic_atomic_rmw` with the expanded code.
 ///
 /// %x = atomic_rmw "maxf" %fval, %F[%i] : (f32, memref<10xf32>) -> f32
 ///
 /// will be lowered to
 ///
-/// %x = std.generic_atomic_rmw %F[%i] : memref<10xf32> {
+/// %x = memref.generic_atomic_rmw %F[%i] : memref<10xf32> {
 /// ^bb0(%current: f32):
 ///   %cmp = arith.cmpf "ogt", %current, %fval : f32
 ///   %new_value = select %cmp, %current, %fval : f32
-///   atomic_yield %new_value : f32
+///   memref.atomic_yield %new_value : f32
 /// }
 struct AtomicRMWOpConverter : public OpRewritePattern<memref::AtomicRMWOp> {
 public:
@@ -59,8 +59,8 @@ public:
     }
 
     auto loc = op.getLoc();
-    auto genericOp =
-        rewriter.create<GenericAtomicRMWOp>(loc, op.memref(), op.indices());
+    auto genericOp = rewriter.create<memref::GenericAtomicRMWOp>(
+        loc, op.memref(), op.indices());
     OpBuilder bodyBuilder =
         OpBuilder::atBlockEnd(genericOp.getBody(), rewriter.getListener());
 
@@ -68,7 +68,7 @@ public:
     Value rhs = op.value();
     Value cmp = bodyBuilder.create<arith::CmpFOp>(loc, predicate, lhs, rhs);
     Value select = bodyBuilder.create<SelectOp>(loc, cmp, lhs, rhs);
-    bodyBuilder.create<AtomicYieldOp>(loc, select);
+    bodyBuilder.create<memref::AtomicYieldOp>(loc, select);
 
     rewriter.replaceOp(op, genericOp.getResult());
     return success();
@@ -120,13 +120,13 @@ public:
   }
 };
 
-struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
+struct ExpandOpsPass : public ExpandOpsBase<ExpandOpsPass> {
   void runOnOperation() override {
     MLIRContext &ctx = getContext();
 
     RewritePatternSet patterns(&ctx);
-    populateStdExpandOpsPatterns(patterns);
-    ConversionTarget target(getContext());
+    memref::populateExpandOpsPatterns(patterns);
+    ConversionTarget target(ctx);
 
     target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
                            StandardOpsDialect>();
@@ -146,11 +146,11 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
 
 } // namespace
 
-void mlir::populateStdExpandOpsPatterns(RewritePatternSet &patterns) {
+void mlir::memref::populateExpandOpsPatterns(RewritePatternSet &patterns) {
   patterns.add<AtomicRMWOpConverter, MemRefReshapeOpConverter>(
       patterns.getContext());
 }
 
-std::unique_ptr<Pass> mlir::createStdExpandOpsPass() {
-  return std::make_unique<StdExpandOpsPass>();
+std::unique_ptr<Pass> mlir::memref::createExpandOpsPass() {
+  return std::make_unique<ExpandOpsPass>();
 }

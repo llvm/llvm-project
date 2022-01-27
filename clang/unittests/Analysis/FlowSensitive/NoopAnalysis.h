@@ -39,8 +39,13 @@ inline std::ostream &operator<<(std::ostream &OS, const NoopLattice &) {
 
 class NoopAnalysis : public DataflowAnalysis<NoopAnalysis, NoopLattice> {
 public:
-  NoopAnalysis(ASTContext &Context)
-      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context) {}
+  /// `ApplyBuiltinTransfer` controls whether to run the built-in transfer
+  /// functions that model memory during the analysis. Their results are not
+  /// used by `NoopAnalysis`, but tests that need to inspect the environment
+  /// should enable them.
+  NoopAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
+      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context,
+                                                    ApplyBuiltinTransfer) {}
 
   static NoopLattice initialElement() { return {}; }
 

@@ -409,6 +409,9 @@ public:
   /// Check whether to enable x86 relax relocations by default.
   virtual bool useRelaxRelocations() const;
 
+  /// Check whether use IEEE binary128 as long double format by default.
+  bool defaultToIEEELongDouble() const;
+
   /// GetDefaultStackProtectorLevel - Get the default stack protector level for
   /// this tool chain.
   virtual LangOptions::StackProtectorMode

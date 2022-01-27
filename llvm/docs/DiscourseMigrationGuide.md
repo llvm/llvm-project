@@ -34,13 +34,75 @@ are the typical use cases:
 * You can reply to a post, including quoting other peoples texts
   ([tested](https://llvm.discourse.group/t/email-interaction-with-discourse/3306/4) on GMail).
 * [Quoting previous topics in an reply](https://meta.discourse.org/t/single-quote-block-dropped-in-email-reply/144802)
-* **TODO:** Creating new topics via email is
-  [supported](https://meta.discourse.org/t/start-a-new-topic-via-email/62977)
-  but not configured at the moment. We would need to set up an email address
-  per category and give Discourse POP3 access to that email account. This sounds
-  like a solvable issue.
 * You can filter incoming emails in your email client by category using the
   `List-ID` email header field.
+* You can create topics through email using the email address that is specific to the category. Each category description shows the email address to use, or you can use the mapping below.
+
+## Mapping of email addresses to Discourse categories
+
+Use these email addresses to create a topic by email in the specific discourse category. You **must** have a Discourse account associated with the email address you are sending from or the email will be rejected.
+
+<table border=1>
+<tr><th>Discourse Category</th><th>Email Address</th></tr>
+<tr><td>Beginner</td><td>beginners@discourse.llvm.org</td></tr>
+<tr><td>LLVM Project</td><td>llvmproject@discourse.llvm.org</td></tr>
+<tr><td>IR & Optimizations</td><td>IR.Optimizations@discourse.llvm.org</td></tr>
+<tr><td>IR & Optimizations - Loop Optimizations</td><td>IR.Optimizations-Loops@discourse.llvm.org</td></tr>
+<tr><td>Code Generation</td><td>codegen@discourse.llvm.org</td></tr>
+<tr><td>Code Generation - AMDGPU</td><td>codegen-amdgpu@discourse.llvm.org</td></tr>
+<tr><td>Code Generation - Common Infrastructure</td><td>codegen-common@discourse.llvm.org</td></tr>
+<tr><td>Code Generation - AArch64</td><td>codegen-aarch64@discourse.llvm.org</td></tr>
+<tr><td>Code Generation - Arm</td><td>codegen-arm@discourse.llvm.org</td></tr>
+<tr><td>Code Generation - PowerPC</td><td>codegen-powerpc@discourse.llvm.org</td></tr>
+<tr><td>Code Generation - RISCV</td><td>codegen-riscv@discourse.llvm.org</td></tr>
+<tr><td>Code Generation - WebAssembly</td><td>codegen-webassembly@discourse.llvm.org</td></tr>
+<tr><td>Code Generation - X86</td><td>codegen-x86@discourse.llvm.org</td></tr>
+<tr><td>Clang Frontend</td><td>clang@discourse.llvm.org</td></tr>
+<tr><td>Clang Frontend - Using Clang</td><td>clang-users@discourse.llvm.org</td></tr>
+<tr><td>Clang Frontend - clangd</td><td>clangd@discourse.llvm.org</td></tr>
+<tr><td>Clang Frontend - Building Clang</td><td>clang-build@discourse.llvm.org</td></tr>
+<tr><td>Clang Frontend - Static Analyzer</td><td>clang-staticanalyzer@discourse.llvm.org</td></tr>
+<tr><td>Runtimes</td><td>runtimes@discourse.llvm.org</td></tr>
+<tr><td>Runtimes - C++</td><td>runtimes-cxx@discourse.llvm.org</td></tr>
+<tr><td>Runtimes - Sanitizers</td><td>runtimes-sanitizers@discourse.llvm.org</td></tr>
+<tr><td>Runtimes - C</td><td>runtimes-c@discourse.llvm.org</td></tr>
+<tr><td>Runtimes - OpenMP</td><td>runtimes-openmp@discourse.llvm.org</td></tr>
+<tr><td>Runtimes - OpenCL</td><td>runtimes-opencl@discourse.llvm.org</td></tr>
+<tr><td>MLIR</td><td>mlir@discourse.llvm.org</td></tr>
+<tr><td>MLIR - Announce</td><td>mlir-announce@discourse.llvm.org</td></tr>
+<tr><td>MLIR - Newsletter</td><td>mlir-news@discourse.llvm.org</td></tr>
+<tr><td>MLIR - TCP-WG</td><td>mlir-tcpwg@discourse.llvm.org</td></tr>
+<tr><td>Subprojects</td><td>subprojects@discourse.llvm.org</td></tr>
+<tr><td>Subprojects - Polly</td><td>polly@discourse.llvm.org</td></tr>
+<tr><td>Subprojects - LLDB</td><td>lldb@discourse.llvm.org</td></tr>
+<tr><td>Subprojects - LLD</td><td>lld@discourse.llvm.org</td></tr>
+<tr><td>Subprojects - Flang</td><td> flang@discourse.llvm.org</td></tr>
+<tr><td>Subprojects - Bolt</td><td>bolt@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure</td><td>infra@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - Release Testers</td><td>infra-release-testers@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - Website</td><td>infra-website@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - Documentation</td><td> infra-docs@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - GitHub</td><td>infra-github@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - Code Review</td><td>infra-codereview@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - Discord</td><td>infra-discord@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - Mailing Lists and Forums</td><td>infra-mailinglists@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - IRC</td><td> infra-irc@discourse.llvm.org</td></tr>
+<tr><td>Project Infrastructure - Infrastructure Working Group</td><td>infra-iwg@discourse.llvm.org</td></tr>
+<tr><td>Community</td><td>community@discourse.llvm.org</td></tr>
+<tr><td>Community - Women in Compilers and Tools</td><td>wict@discourse.llvm.org</td></tr>
+<tr><td>Community - Job Postings</td><td>community-jobs@discourse.llvm.org</td></tr>
+<tr><td>Community - US LLVM Developers' Meeting</td><td>devmtg-US@discourse.llvm.org</td></tr>
+<tr><td>Community - EuroLLVM</td><td>devmtg-euro@discourse.llvm.org</td></tr>
+<tr><td>Community - GSOC</td><td>gsoc@discourse.llvm.org</td></tr>
+<tr><td>Community - Community.o</td><td>community-dot-o@discourse.llvm.org</td></tr>
+<tr><td>Community - LLVM Foundation</td><td>foundation@discourse.llvm.org</td></tr>
+<tr><td>Community - Newsletters</td><td>newsletters@discourse.llvm.org</td></tr>
+<tr><td>Incubator</td><td>incubator@discourse.llvm.org</td></tr>
+<tr><td>Incubator - CIRCT</td><td>circt@discourse.llvm.org</td></tr>
+<tr><td>Incubator - Torch-MLIR</td><td>torch-mlir@discourse.llvm.org</td></tr>
+<tr><td>Incubator - Enzyme</td><td>enzyme@discourse.llvm.org</td></tr>
+<tr><td>Feedback</td><td>feedback@discourse.llvm.org</td></tr>
+</table>
 
 ## Mapping of mailing lists to categories
 

@@ -111,7 +111,7 @@ public:
   void eraseArguments(ArrayRef<unsigned> argIndices);
   /// Erases the arguments that have their corresponding bit set in
   /// `eraseIndices` and removes them from the argument list.
-  void eraseArguments(const llvm::BitVector &eraseIndices);
+  void eraseArguments(const BitVector &eraseIndices);
   /// Erases arguments using the given predicate. If the predicate returns true,
   /// that argument is erased.
   void eraseArguments(function_ref<bool(BlockArgument)> shouldEraseFn);

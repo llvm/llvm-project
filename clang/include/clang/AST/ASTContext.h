@@ -2622,6 +2622,18 @@ public:
   /// template.
   bool hasSameTemplateName(TemplateName X, TemplateName Y);
 
+  /// Determine whether the two declarations refer to the same entity.
+  bool isSameEntity(NamedDecl *X, NamedDecl *Y);
+
+  /// Determine whether two template parameter lists are similar enough
+  /// that they may be used in declarations of the same template.
+  bool isSameTemplateParameterList(TemplateParameterList *X,
+                                   TemplateParameterList *Y);
+
+  /// Determine whether two template parameters are similar enough
+  /// that they may be used in declarations of the same template.
+  bool isSameTemplateParameter(NamedDecl *X, NamedDecl *Y);
+
   /// Retrieve the "canonical" template argument.
   ///
   /// The canonical template argument is the simplest template argument

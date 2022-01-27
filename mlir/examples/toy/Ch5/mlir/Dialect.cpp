@@ -100,7 +100,7 @@ void ToyDialect::initialize() {
 static mlir::ParseResult parseBinaryOp(mlir::OpAsmParser &parser,
                                        mlir::OperationState &result) {
   SmallVector<mlir::OpAsmParser::OperandType, 2> operands;
-  llvm::SMLoc operandsLoc = parser.getCurrentLocation();
+  SMLoc operandsLoc = parser.getCurrentLocation();
   Type type;
   if (parser.parseOperandList(operands, /*requiredOperandCount=*/2) ||
       parser.parseOptionalAttrDict(result.attributes) ||

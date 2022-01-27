@@ -4550,16 +4550,17 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(name, MDStringField, );                                             \
   OPTIONAL(stringLength, MDField, );                                           \
   OPTIONAL(stringLengthExpression, MDField, );                                 \
+  OPTIONAL(stringLocationExpression, MDField, );                               \
   OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(encoding, DwarfAttEncodingField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result = GET_OR_DISTINCT(DIStringType,
-                           (Context, tag.Val, name.Val, stringLength.Val,
-                            stringLengthExpression.Val, size.Val, align.Val,
-                            encoding.Val));
+  Result = GET_OR_DISTINCT(
+      DIStringType,
+      (Context, tag.Val, name.Val, stringLength.Val, stringLengthExpression.Val,
+       stringLocationExpression.Val, size.Val, align.Val, encoding.Val));
   return false;
 }
 

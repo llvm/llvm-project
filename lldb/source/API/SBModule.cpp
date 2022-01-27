@@ -88,6 +88,20 @@ void SBModule::Clear() {
   m_opaque_sp.reset();
 }
 
+bool SBModule::IsFileBacked() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  ModuleSP module_sp(GetSP());
+  if (!module_sp)
+    return false;
+
+  ObjectFile *obj_file = module_sp->GetObjectFile();
+  if (!obj_file)
+    return false;
+
+  return !obj_file->IsInMemory();
+}
+
 SBFileSpec SBModule::GetFileSpec() const {
   LLDB_INSTRUMENT_VA(this);
 

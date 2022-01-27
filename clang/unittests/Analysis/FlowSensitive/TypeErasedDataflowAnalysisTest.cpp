@@ -51,6 +51,8 @@ using ::testing::UnorderedElementsAre;
 template <typename AnalysisT>
 class AnalysisCallback : public ast_matchers::MatchFinder::MatchCallback {
 public:
+  AnalysisCallback(AnalysisT (*MakeAnalysis)(ASTContext &))
+      : MakeAnalysis(MakeAnalysis) {}
   void run(const ast_matchers::MatchFinder::MatchResult &Result) override {
     assert(BlockStates.empty());
 
@@ -63,12 +65,13 @@ public:
     auto CFCtx = llvm::cantFail(
         ControlFlowContext::build(nullptr, Body, Result.Context));
 
-    AnalysisT Analysis(*Result.Context);
+    AnalysisT Analysis = MakeAnalysis(*Result.Context);
     DataflowAnalysisContext DACtx;
     Environment Env(DACtx);
     BlockStates = runDataflowAnalysis(CFCtx, Analysis, Env);
   }
 
+  AnalysisT (*MakeAnalysis)(ASTContext &);
   std::vector<
       llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>
       BlockStates;
@@ -76,11 +79,11 @@ public:
 
 template <typename AnalysisT>
 std::vector<llvm::Optional<DataflowAnalysisState<typename AnalysisT::Lattice>>>
-runAnalysis(llvm::StringRef Code) {
+runAnalysis(llvm::StringRef Code, AnalysisT (*MakeAnalysis)(ASTContext &)) {
   std::unique_ptr<ASTUnit> AST =
       tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
 
-  AnalysisCallback<AnalysisT> Callback;
+  AnalysisCallback<AnalysisT> Callback(MakeAnalysis);
   ast_matchers::MatchFinder Finder;
   Finder.addMatcher(
       ast_matchers::functionDecl(ast_matchers::hasName("target")).bind("func"),
@@ -91,9 +94,8 @@ runAnalysis(llvm::StringRef Code) {
 }
 
 TEST(DataflowAnalysisTest, NoopAnalysis) {
-  auto BlockStates = runAnalysis<NoopAnalysis>(R"(
-    void target() {}
-  )");
+  auto BlockStates = runAnalysis<NoopAnalysis>(
+      "void target() {}", [](ASTContext &C) { return NoopAnalysis(C, false); });
   EXPECT_EQ(BlockStates.size(), 2u);
   EXPECT_TRUE(BlockStates[0].hasValue());
   EXPECT_TRUE(BlockStates[1].hasValue());
@@ -118,8 +120,9 @@ class NonConvergingAnalysis
     : public DataflowAnalysis<NonConvergingAnalysis, NonConvergingLattice> {
 public:
   explicit NonConvergingAnalysis(ASTContext &Context)
-      : DataflowAnalysis<NonConvergingAnalysis, NonConvergingLattice>(Context) {
-  }
+      : DataflowAnalysis<NonConvergingAnalysis, NonConvergingLattice>(
+            Context,
+            /*ApplyBuiltinTransfer=*/false) {}
 
   static NonConvergingLattice initialElement() { return {0}; }
 
@@ -129,11 +132,13 @@ public:
 };
 
 TEST(DataflowAnalysisTest, NonConvergingAnalysis) {
-  auto BlockStates = runAnalysis<NonConvergingAnalysis>(R"(
+  auto BlockStates = runAnalysis<NonConvergingAnalysis>(
+      R"(
     void target() {
       while(true) {}
     }
-  )");
+  )",
+      [](ASTContext &C) { return NonConvergingAnalysis(C); });
   EXPECT_EQ(BlockStates.size(), 4u);
   EXPECT_TRUE(BlockStates[0].hasValue());
   EXPECT_TRUE(BlockStates[1].hasValue());

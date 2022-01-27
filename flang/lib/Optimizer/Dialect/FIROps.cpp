@@ -784,8 +784,8 @@ static mlir::LogicalResult verify(fir::ConstcOp &op) {
 // ConvertOp
 //===----------------------------------------------------------------------===//
 
-void fir::ConvertOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
+void fir::ConvertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                 MLIRContext *context) {
   results.insert<ConvertConvertOptPattern, RedundantConvertOptPattern,
                  CombineConvertOptPattern, ForwardConstantConvertPattern>(
       context);
@@ -1508,7 +1508,7 @@ struct UndoComplexPattern : public mlir::RewritePattern {
 };
 
 void fir::InsertValueOp::getCanonicalizationPatterns(
-    mlir::OwningRewritePatternList &results, mlir::MLIRContext *context) {
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
   results.insert<UndoComplexPattern<mlir::arith::AddFOp, fir::AddcOp>,
                  UndoComplexPattern<mlir::arith::SubFOp, fir::SubcOp>>(context);
 }

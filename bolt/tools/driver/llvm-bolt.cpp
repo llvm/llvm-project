@@ -45,6 +45,11 @@ static cl::OptionCategory *BoltDiffCategories[] = {&BoltDiffCategory};
 static cl::OptionCategory *Perf2BoltCategories[] = {&AggregatorCategory,
                                                     &BoltOutputCategory};
 
+static cl::opt<std::string> InputFilename(cl::Positional,
+                                          cl::desc("<executable>"),
+                                          cl::Required, cl::cat(BoltCategory),
+                                          cl::sub(*cl::AllSubCommands));
+
 static cl::opt<std::string>
 InputDataFilename("data",
   cl::desc("<data file>"),

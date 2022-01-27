@@ -87,7 +87,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 static mlir::ParseResult parseBinaryOp(mlir::OpAsmParser &parser,
                                        mlir::OperationState &result) {
   SmallVector<mlir::OpAsmParser::OperandType, 2> operands;
-  llvm::SMLoc operandsLoc = parser.getCurrentLocation();
+  SMLoc operandsLoc = parser.getCurrentLocation();
   Type type;
   if (parser.parseOperandList(operands, /*requiredOperandCount=*/2) ||
       parser.parseOptionalAttrDict(result.attributes) ||
@@ -501,7 +501,7 @@ mlir::Type ToyDialect::parseType(mlir::DialectAsmParser &parser) const {
   SmallVector<mlir::Type, 1> elementTypes;
   do {
     // Parse the current element type.
-    llvm::SMLoc typeLoc = parser.getCurrentLocation();
+    SMLoc typeLoc = parser.getCurrentLocation();
     mlir::Type elementType;
     if (parser.parseType(elementType))
       return nullptr;

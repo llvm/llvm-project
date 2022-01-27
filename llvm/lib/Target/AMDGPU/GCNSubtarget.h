@@ -157,7 +157,6 @@ protected:
   bool HasGetWaveIdInst;
   bool HasSMemTimeInst;
   bool HasShaderCyclesRegister;
-  bool HasRegisterBanking;
   bool HasVOP3Literal;
   bool HasNoDataDepHazard;
   bool FlatAddressSpace;
@@ -743,10 +742,6 @@ public:
 
   bool hasShaderCyclesRegister() const {
     return HasShaderCyclesRegister;
-  }
-
-  bool hasRegisterBanking() const {
-    return HasRegisterBanking;
   }
 
   bool hasVOP3Literal() const {

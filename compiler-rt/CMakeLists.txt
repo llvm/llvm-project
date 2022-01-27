@@ -231,6 +231,15 @@ option(SANITIZER_USE_STATIC_CXX_ABI
   "Use static libc++abi." ${DEFAULT_SANITIZER_USE_STATIC_CXX_ABI})
 pythonize_bool(SANITIZER_USE_STATIC_CXX_ABI)
 
+set(DEFAULT_SANITIZER_USE_STATIC_TEST_CXX OFF)
+if (DEFINED LIBCXX_ENABLE_SHARED AND NOT LIBCXX_ENABLE_SHARED)
+  set(DEFAULT_SANITIZER_USE_STATIC_TEST_CXX ON)
+endif()
+
+option(SANITIZER_USE_STATIC_TEST_CXX
+  "Use static libc++ for tests." ${DEFAULT_SANITIZER_USE_STATIC_TEST_CXX})
+pythonize_bool(SANITIZER_USE_STATIC_TEST_CXX)
+
 set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY OFF)
 if (FUCHSIA)
   set(DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY ON)
@@ -522,9 +531,18 @@ elseif (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libstdc++")
 endif()
 
 if (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libc++")
-  append_libcxx_libs(SANITIZER_TEST_CXX)
+  if (SANITIZER_TEST_CXX_INTREE)
+    if (SANITIZER_USE_STATIC_TEST_CXX)
+      set(cxx_target cxx_static)
+    else()
+      set(cxx_target cxx_shared)
+    endif()
+    list(APPEND SANITIZER_TEST_CXX_LIBRARIES "$<$<BOOL:$<TARGET_NAME_IF_EXISTS:${cxx_target}>>:$<TARGET_LINKER_FILE:${cxx_target}>>")
+  else()
+    append_list_if(COMPILER_RT_HAS_LIBCXX -lc++ SANITIZER_TEST_CXX_LIBRARIES)
+  endif()
 elseif (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libstdc++")
-  append_list_if(COMPILER_RT_HAS_LIBSTDCXX stdc++ SANITIZER_TEST_CXX_LIBRARIES)
+  append_list_if(COMPILER_RT_HAS_LIBSTDCXX -lstdc++ SANITIZER_TEST_CXX_LIBRARIES)
 endif()
 
 # TODO: There's a lot of duplication across lib/*/tests/CMakeLists.txt files,

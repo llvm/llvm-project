@@ -9,6 +9,7 @@ declare void @llvm.debugtrap() #1
 ; HSA-NEXT:     .amdhsa_group_segment_fixed_size 0
 ; HSA-NEXT:     .amdhsa_private_segment_fixed_size 0
 ; HSA-NEXT:     .amdhsa_kernarg_size 8
+; HSA-NEXT:     .amdhsa_user_sgpr_count 8
 ; HSA-NEXT:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; HSA:      .end_amdhsa_kernel
 

@@ -57,6 +57,7 @@ define amdgpu_kernel void @indirect_call_known_no_special_inputs() {
 ; CHECK-NEXT:    s_endpgm
 
 ; CHECK: .amdhsa_kernarg_size 0
+; CHECK-NEXT: .amdhsa_user_sgpr_count 6
 ; CHECK-NEXT: .amdhsa_user_sgpr_private_segment_buffer 1
 ; CHECK-NEXT: .amdhsa_user_sgpr_dispatch_ptr 0
 ; CHECK-NEXT: .amdhsa_user_sgpr_queue_ptr 0

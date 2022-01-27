@@ -5,11 +5,16 @@
 ;; generates DW_AT_string_length attribute
 ;; !DIStringType(name: "character(*)", stringLength: !{{[0-9]+}})
 ;; !DIStringType(name: "character(*)", stringLengthExpr: !DIExpression(...))
+;;
+;; !DIStringType has an optional stringLocationExpr field. This
+;; tests also verifies that field gets emitted as DW_AT_data_location
+;; in the DIE.
 
 ; RUN: llc -filetype=obj  %s -o - | llvm-dwarfdump - | FileCheck %s
 ; CHECK:       DW_TAG_string_type
 ; CHECK:                          DW_AT_name  (".str.DEFERRED")
 ; CHECK-NEXT:                     DW_AT_string_length (DW_OP_push_object_address, DW_OP_plus_uconst 0x8)
+; CHECK-NEXT:                     DW_AT_data_location (DW_OP_push_object_address, DW_OP_deref)
 ; CHECK:       DW_TAG_string_type
 ; CHECK:                          DW_AT_name  ("character(*)!2")
 ; CHECK-NEXT:                     DW_AT_string_length
@@ -150,7 +155,7 @@ attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 !6 = distinct !DICompileUnit(language: DW_LANG_Fortran95, file: !3, producer: "Intel(R) Fortran 21.0-2142", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !7, globals: !8, splitDebugInlining: false, nameTableKind: None)
 !7 = !{}
 !8 = !{!0}
-!9 = !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8))
+!9 = !DIStringType(name: ".str.DEFERRED", stringLengthExpression: !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8), stringLocationExpression: !DIExpression(DW_OP_push_object_address, DW_OP_deref))
 !10 = !{i32 2, !"Debug Info Version", i32 3}
 !11 = !{i32 2, !"Dwarf Version", i32 4}
 !12 = !DILocation(line: 1, column: 9, scope: !2)

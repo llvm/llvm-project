@@ -216,7 +216,7 @@ public:
     auto *context = &getContext();
     auto func = getOperation();
     auto loc = func.getLoc();
-    mlir::OwningRewritePatternList patterns(context);
+    mlir::RewritePatternSet patterns(context);
     mlir::ConversionTarget target = *context;
     AbstractResultOptions options{passResultAsBox.getValue(),
                                   /*newArg=*/{}};
