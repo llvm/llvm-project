@@ -9,14 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_H
 
+#include "sqrt_80_bit_long_double.h"
 #include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
-
-#if defined(SPECIAL_X86_LONG_DOUBLE)
-#include "sqrt_80_bit_long_double.h"
-#endif // SPECIAL_X86_LONG_DOUBLE
 
 namespace __llvm_libc {
 namespace fputil {
