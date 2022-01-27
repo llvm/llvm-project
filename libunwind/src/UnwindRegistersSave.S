@@ -326,7 +326,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   teq $0, $0
 
-#elif defined(__powerpc__)
+#elif defined(__powerpc64__)
 
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)
