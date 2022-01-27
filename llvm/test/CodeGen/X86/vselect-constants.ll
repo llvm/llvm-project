@@ -298,6 +298,8 @@ define i32 @wrong_min_signbits(<2 x i16> %x) {
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,0,0,0]
 ; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    retq
