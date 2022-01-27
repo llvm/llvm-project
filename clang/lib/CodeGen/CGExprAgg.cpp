@@ -1834,8 +1834,8 @@ void AggExprEmitter::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
     // at the end of each iteration.
     CodeGenFunction::RunCleanupsScope CleanupsScope(CGF);
     CodeGenFunction::ArrayInitLoopExprScope Scope(CGF, index);
-    LValue elementLV =
-        CGF.MakeAddrLValue(Address(element, elementAlign), elementType);
+    LValue elementLV = CGF.MakeAddrLValue(
+        Address(element, llvmElementType, elementAlign), elementType);
 
     if (InnerLoop) {
       // If the subexpression is an ArrayInitLoopExpr, share its cleanup.
