@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-std \
-// RUN:   -std-expand -arith-expand -convert-vector-to-llvm \
+// RUN:   -memref-expand -arith-expand -convert-vector-to-llvm \
 // RUN:   -convert-memref-to-llvm -convert-std-to-llvm \
 // RUN:   -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void  \
