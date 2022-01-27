@@ -19,8 +19,6 @@ class ScriptedProcesTestCase(TestBase):
 
     def tearDown(self):
         TestBase.tearDown(self)
-        if "SKIP_SCRIPTED_PROCESS_LAUNCH" in os.environ:
-          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
 
     def test_python_plugin_package(self):
         """Test that the lldb python module has a `plugins.scripted_process`
@@ -55,6 +53,10 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(os.path.isfile(log_file))
 
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        def cleanup():
+          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+        self.addTearDownHook(cleanup)
+
         scripted_process_example_relpath = 'invalid_scripted_process.py'
         self.runCmd("command script import " + os.path.join(self.getSourceDir(),
                                                             scripted_process_example_relpath))
@@ -87,6 +89,10 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        def cleanup():
+          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+        self.addTearDownHook(cleanup)
+
         scripted_process_example_relpath = 'dummy_scripted_process.py'
         self.runCmd("command script import " + os.path.join(self.getSourceDir(),
                                                             scripted_process_example_relpath))
@@ -154,6 +160,10 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(error.Success(), "Reloading main module at offset 0 failed.")
 
         os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        def cleanup():
+          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+        self.addTearDownHook(cleanup)
+
         scripted_process_example_relpath = 'stack_core_scripted_process.py'
         self.runCmd("command script import " + os.path.join(self.getSourceDir(),
                                                             scripted_process_example_relpath))
