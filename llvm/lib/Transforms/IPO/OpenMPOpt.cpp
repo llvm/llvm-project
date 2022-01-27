@@ -1012,7 +1012,8 @@ private:
     // into a single parallel region is contained in a single basic block
     // without any other instructions. We use the OpenMPIRBuilder to outline
     // that block and call the resulting function via __kmpc_fork_call.
-    auto Merge = [&](SmallVectorImpl<CallInst *> &MergableCIs, BasicBlock *BB) {
+    auto Merge = [&](const SmallVectorImpl<CallInst *> &MergableCIs,
+                     BasicBlock *BB) {
       // TODO: Change the interface to allow single CIs expanded, e.g, to
       // include an outer loop.
       assert(MergableCIs.size() > 1 && "Assumed multiple mergable CIs");
