@@ -271,6 +271,29 @@ ehcleanup:                                        ; preds = %entry
   cleanupret from %0 unwind to caller
 }
 
+; This case was adapted from @cleanuppad_no_parent by removing allocas and
+; destructor calls, to generate a situation that there's only 'invoke @setjmp'
+; and no other longjmpable calls.
+define i32 @setjmp_only() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; CHECK-LABEL: @setjmp_only
+entry:
+  %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
+  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
+  %call = invoke i32 @setjmp(%struct.__jmp_buf_tag* noundef %arraydecay) #0
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  ret i32 %call
+; CHECK: invoke.cont:
+; The remaining setjmp call is converted to constant 0, because setjmp returns 0
+; when called directly.
+; CHECK:   ret i32 0
+
+ehcleanup:                                        ; preds = %entry
+  %0 = cleanuppad within none []
+  cleanupret from %0 unwind to caller
+}
+
 declare void @foo()
 ; Function Attrs: nounwind
 declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* %this) #2

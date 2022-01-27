@@ -140,10 +140,13 @@ entry:
   ; free cannot longjmp
   call void @free(i8* %ptr)
   ret i32 %call
+; CHECK: entry:
 ; CHECK-NOT: @malloc
 ; CHECK-NOT: %setjmpTable
 ; CHECK-NOT: @saveSetjmp
 ; CHECK-NOT: @testSetjmp
+; The remaining setjmp call is converted to constant 0, because setjmp returns 0
+; when called directly.
 ; CHECK: ret i32 0
 }
 
