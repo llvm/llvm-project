@@ -254,6 +254,10 @@ private:
   // Get the next trace record
   void *getNextTR(void *tr);
 
+  // Get the size of a trace record
+  // We support only ompt records today
+  size_t getTRSize() { return sizeof(ompt_record_ompt_t); }
+  
   // Given a buffer, return the latest cursor
   void *getBufferCursor(BufPtr);
 
