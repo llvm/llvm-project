@@ -140,9 +140,14 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         of invocations cannot be statically determined, then it will not have a
         value (i.e., it is set to `llvm::None`).
 
-        `operands` is a set of optional attributes that either correspond to a
-        constant values for each operand of this operation, or null if that
+        `operands` is a set of optional attributes that either correspond to
+        constant values for each operand of this operation or null if that
         operand is not a constant.
+
+        This method may be called speculatively on operations where the provided
+        operands are not necessarily the same as the operation's current
+        operands. This may occur in analyses that wish to determine "what would
+        be the region invocations if these were the operands?"
       }],
       "void", "getRegionInvocationBounds",
       (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands,

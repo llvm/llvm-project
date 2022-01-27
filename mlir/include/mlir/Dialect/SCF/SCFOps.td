@@ -315,7 +315,9 @@ def ForOp : SCF_Op<"for",
 }
 
 def IfOp : SCF_Op<"if",
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                 ["getNumRegionInvocations",
+                                  "getRegionInvocationBounds"]>,
        SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveSideEffects,
        NoRegionArguments]> {
   let summary = "if-then-else operation";
