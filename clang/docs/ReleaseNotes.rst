@@ -275,6 +275,9 @@ Arm and AArch64 Support in Clang
   architecture features, but will enable certain optimizations specific to
   Cortex-A57 CPUs and enable the use of a more accurate scheduling model.
 
+- The --aarch64-none-elf target now uses the BareMetal driver rather than the
+  GNU driver. Programs that depend on clang invoking GCC as the linker driver
+  should use GCC as the linker in the build system.
 
 Floating Point Support in Clang
 -------------------------------
