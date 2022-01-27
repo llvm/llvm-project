@@ -162,6 +162,10 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [LLVMMatchType<0>, llvm_anyint_ty, llvm_i32_ty],
                 [IntrNoMem]>;
 
+  class AdvSIMD_3IntArg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+                [IntrNoMem]>;
   class AdvSIMD_3VectorArg_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
@@ -257,6 +261,9 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_sqrdmulh : AdvSIMD_2IntArg_Intrinsic;
   def int_aarch64_neon_sqrdmulh_lane : AdvSIMD_2VectorArg_Lane_Intrinsic;
   def int_aarch64_neon_sqrdmulh_laneq : AdvSIMD_2VectorArg_Lane_Intrinsic;
+
+  def int_aarch64_neon_sqrdmlah : AdvSIMD_3IntArg_Intrinsic;
+  def int_aarch64_neon_sqrdmlsh : AdvSIMD_3IntArg_Intrinsic;
 
   // Vector Polynominal Multiply
   def int_aarch64_neon_pmul : AdvSIMD_2VectorArg_Intrinsic;
