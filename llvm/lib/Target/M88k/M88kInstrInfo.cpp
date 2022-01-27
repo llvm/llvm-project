@@ -340,3 +340,18 @@ void M88kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   BuildMI(MBB, MBBI, DL, get(Opc), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
 }
+
+Optional<DestSourcePair>
+M88kInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
+  if (MI.isMoveReg() ||
+      (MI.getOpcode() == M88k::ORri && MI.getOperand(2).getImm() == 0))
+    return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+
+  if (MI.getOpcode() == M88k::ORrr) {
+    if (MI.getOperand(2).getReg() == M88k::R0)
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    if (MI.getOperand(1).getReg() == M88k::R0)
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+  }
+  return None;
+}

@@ -1158,7 +1158,7 @@ def FLTxxs : F_SFU1FLT</*td=*/ 0b10,
                        [(set (f80 XR:$rd), (sint_to_fp (i32 GPR:$rs2)))]>;
 }
 
-let regfile = 1, Predicates = [IsMC881100] in {
+let regfile = 1, isMoveReg = 1, Predicates = [IsMC881100] in {
 def MOVrxs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b00, /*t2*/0b00,
                      (outs GPR:$rd), (ins XR:$rs2),
                      "mov.s",
@@ -1173,7 +1173,7 @@ def MOVxx : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b11,
 //                    [(set XR:$rd, XR:$rs2)]>;
 }
 
-let regfile = 0, Predicates = [IsMC881100] in {
+let regfile = 0, isMoveReg = 1, Predicates = [IsMC881100] in {
 def MOVxrs : F_SFU1D<0b1000, /*td*/ 0b00, /*t1*/0b01, /*t2*/0b00,
                      (outs XR:$rd), (ins GPR:$rs2),
                      "mov.s",
