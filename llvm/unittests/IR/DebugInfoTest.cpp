@@ -252,11 +252,11 @@ TEST(DIBuilder, CreateStringType) {
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
   DIBuilder DIB(*M);
   StringRef StrName = "string";
-  DIStringType *StringType = DIB.createStringType(StrName,nullptr);
+  DIStringType *StringType = DIB.createStringType(StrName, nullptr);
 
   EXPECT_TRUE(isa_and_nonnull<DIStringType>(StringType));
-  EXPECT_EQ(StringType->getName(),"string");
-  EXPECT_EQ(StringType->getStringLength(),nullptr);
+  EXPECT_EQ(StringType->getName(), "string");
+  EXPECT_EQ(StringType->getStringLength(), nullptr);
 }
 
 TEST(DIBuilder, DIEnumerator) {
