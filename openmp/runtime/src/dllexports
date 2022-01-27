@@ -553,6 +553,9 @@ kmp_set_disp_num_buffers                    890
     omp_realloc                             777
     omp_aligned_alloc                       778
     omp_aligned_calloc                      806
+    omp_get_interop_int                     2514
+    omp_get_interop_ptr                     2515
+    omp_get_interop_str                     2516
 
     omp_null_allocator                     DATA
     omp_default_mem_alloc                  DATA

@@ -1446,6 +1446,120 @@ int FTN_STDCALL FTN_GET_TEAMS_THREAD_LIMIT(void) {
 #endif
 }
 
+/// TODO: Include the `omp.h` of the current build
+/* OpenMP 5.1 interop */
+typedef intptr_t omp_intptr_t;
+
+/* 0..omp_get_num_interop_properties()-1 are reserved for implementation-defined
+ * properties */
+typedef enum omp_interop_property {
+  omp_ipr_fr_id = -1,
+  omp_ipr_fr_name = -2,
+  omp_ipr_vendor = -3,
+  omp_ipr_vendor_name = -4,
+  omp_ipr_device_num = -5,
+  omp_ipr_platform = -6,
+  omp_ipr_device = -7,
+  omp_ipr_device_context = -8,
+  omp_ipr_targetsync = -9,
+  omp_ipr_first = -9
+} omp_interop_property_t;
+
+#define omp_interop_none 0
+
+typedef enum omp_interop_rc {
+  omp_irc_no_value = 1,
+  omp_irc_success = 0,
+  omp_irc_empty = -1,
+  omp_irc_out_of_range = -2,
+  omp_irc_type_int = -3,
+  omp_irc_type_ptr = -4,
+  omp_irc_type_str = -5,
+  omp_irc_other = -6
+} omp_interop_rc_t;
+
+typedef enum omp_interop_fr {
+  omp_ifr_cuda = 1,
+  omp_ifr_cuda_driver = 2,
+  omp_ifr_opencl = 3,
+  omp_ifr_sycl = 4,
+  omp_ifr_hip = 5,
+  omp_ifr_level_zero = 6,
+  omp_ifr_last = 7
+} omp_interop_fr_t;
+
+typedef void *omp_interop_t;
+
+// libomptarget, if loaded, provides this function
+int FTN_STDCALL FTN_GET_NUM_INTEROP_PROPERTIES(const omp_interop_t interop) {
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+  return 0;
+#else
+  int (*fptr)(const omp_interop_t);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_num_interop_properties")))
+    return (*fptr)(interop);
+  return 0;
+#endif // KMP_MIC || KMP_OS_DARWIN || KMP_OS_WINDOWS || defined(KMP_STUB)
+}
+
+/// TODO Convert FTN_GET_INTEROP_XXX functions into a macro like interop.cpp
+// libomptarget, if loaded, provides this function
+intptr_t FTN_STDCALL FTN_GET_INTEROP_INT(const omp_interop_t interop,
+                                         omp_interop_property_t property_id,
+                                         int *err) {
+  intptr_t (*fptr)(const omp_interop_t, omp_interop_property_t, int *);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_interop_int")))
+    return (*fptr)(interop, property_id, err);
+  return 0;
+}
+
+// libomptarget, if loaded, provides this function
+void *FTN_STDCALL FTN_GET_INTEROP_PTR(const omp_interop_t interop,
+                                      omp_interop_property_t property_id,
+                                      int *err) {
+  void *(*fptr)(const omp_interop_t, omp_interop_property_t, int *);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_interop_ptr")))
+    return (*fptr)(interop, property_id, err);
+  return nullptr;
+}
+
+// libomptarget, if loaded, provides this function
+const char *FTN_STDCALL FTN_GET_INTEROP_STR(const omp_interop_t interop,
+                                            omp_interop_property_t property_id,
+                                            int *err) {
+  const char *(*fptr)(const omp_interop_t, omp_interop_property_t, int *);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_interop_str")))
+    return (*fptr)(interop, property_id, err);
+  return nullptr;
+}
+
+// libomptarget, if loaded, provides this function
+const char *FTN_STDCALL FTN_GET_INTEROP_NAME(
+    const omp_interop_t interop, omp_interop_property_t property_id) {
+  const char *(*fptr)(const omp_interop_t, omp_interop_property_t);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_interop_name")))
+    return (*fptr)(interop, property_id);
+  return nullptr;
+}
+
+// libomptarget, if loaded, provides this function
+const char *FTN_STDCALL FTN_GET_INTEROP_TYPE_DESC(
+    const omp_interop_t interop, omp_interop_property_t property_id) {
+  const char *(*fptr)(const omp_interop_t, omp_interop_property_t);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_interop_type_desc")))
+    return (*fptr)(interop, property_id);
+  return nullptr;
+}
+
+// libomptarget, if loaded, provides this function
+const char *FTN_STDCALL FTN_GET_INTEROP_RC_DESC(
+    const omp_interop_t interop, omp_interop_property_t property_id) {
+  const char *(*fptr)(const omp_interop_t, omp_interop_property_t);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_interop_rec_desc")))
+    return (*fptr)(interop, property_id);
+  return nullptr;
+}
+
 // display environment variables when requested
 void FTN_STDCALL FTN_DISPLAY_ENV(int verbose) {
 #ifndef KMP_STUB
