@@ -14,21 +14,13 @@
 //   inline constexpr bool enable_borrowed_range<common_view<T>> = enable_borrowed_range<T>;
 
 #include <ranges>
-#include <cassert>
 
-#include "test_iterators.h"
-
-struct View : std::ranges::view_base {
-  int *begin() const;
-  sentinel_wrapper<int*> end() const;
+// common_view can only wrap Ts that are `view<T> && !common_range<T>`, so we need to invent one.
+struct Uncommon : std::ranges::view_base {
+    int *begin() const;
+    std::unreachable_sentinel_t end() const;
 };
 
-struct BorrowableView : std::ranges::view_base {
-  int *begin() const;
-  sentinel_wrapper<int*> end() const;
-};
-template<>
-inline constexpr bool std::ranges::enable_borrowed_range<BorrowableView> = true;
-
-static_assert(!std::ranges::enable_borrowed_range<std::ranges::common_view<View>>);
-static_assert( std::ranges::enable_borrowed_range<std::ranges::common_view<BorrowableView>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::common_view<Uncommon>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::common_view<std::ranges::owning_view<Uncommon>>>);
+static_assert( std::ranges::borrowed_range<std::ranges::common_view<std::ranges::ref_view<Uncommon>>>);

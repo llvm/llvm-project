@@ -18,6 +18,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>
 #include <__ranges/empty.h>
+#include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
 #include <__utility/forward.h>
@@ -74,6 +75,8 @@ public:
   template<class _Range>
   ref_view(_Range&) -> ref_view<_Range>;
 
+  template<class _Tp>
+  inline constexpr bool enable_borrowed_range<ref_view<_Tp>> = true;
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

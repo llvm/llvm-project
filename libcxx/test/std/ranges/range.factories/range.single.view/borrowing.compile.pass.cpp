@@ -10,12 +10,13 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
-// template<class T>
-//   inline constexpr bool enable_borrowed_range<reverse_view<T>> = enable_borrowed_range<T>;
+// single_view does not specialize enable_borrowed_range
 
 #include <ranges>
 
 #include "test_range.h"
 
-static_assert( std::ranges::borrowed_range<std::ranges::reverse_view<BorrowedView>>);
-static_assert(!std::ranges::borrowed_range<std::ranges::reverse_view<NonBorrowedView>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::single_view<int>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::single_view<int*>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::single_view<BorrowedView>>);
+static_assert(!std::ranges::borrowed_range<std::ranges::single_view<NonBorrowedView>>);
