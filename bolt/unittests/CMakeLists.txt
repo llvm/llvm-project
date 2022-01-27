@@ -4,3 +4,5 @@ set_target_properties(BoltUnitTests PROPERTIES FOLDER "BOLT tests")
 function(add_bolt_unittest test_dirname)
   add_unittest(BoltUnitTests ${test_dirname} ${ARGN})
 endfunction()
+
+add_subdirectory(Core)

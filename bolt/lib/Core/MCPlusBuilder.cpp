@@ -443,49 +443,46 @@ const BitVector &MCPlusBuilder::getAliases(MCPhysReg Reg,
   // AliasMap caches a mapping of registers to the set of registers that
   // alias (are sub or superregs of itself, including itself).
   static std::vector<BitVector> AliasMap;
-  static std::vector<MCPhysReg> SuperReg;
+  static std::vector<BitVector> SmallerAliasMap;
 
   if (AliasMap.size() > 0) {
     if (OnlySmaller)
-      return AliasMap[Reg];
-    return AliasMap[SuperReg[Reg]];
+      return SmallerAliasMap[Reg];
+    return AliasMap[Reg];
   }
+
   // Build alias map
   for (MCPhysReg I = 0, E = RegInfo->getNumRegs(); I != E; ++I) {
     BitVector BV(RegInfo->getNumRegs(), false);
     BV.set(I);
-    AliasMap.emplace_back(std::move(BV));
-    SuperReg.emplace_back(I);
+    AliasMap.emplace_back(BV);
+    SmallerAliasMap.emplace_back(BV);
   }
+
+  // Cache all aliases for each register
+  for (MCPhysReg I = 1, E = RegInfo->getNumRegs(); I != E; ++I) {
+    for (MCRegAliasIterator AI(I, RegInfo, true); AI.isValid(); ++AI)
+      AliasMap[I].set(*AI);
+  }
+
+  // Propagate smaller alias info upwards. Skip reg 0 (mapped to NoRegister)
   std::queue<MCPhysReg> Worklist;
-  // Propagate alias info upwards. Skip reg 0 (mapped to NoRegister)
   for (MCPhysReg I = 1, E = RegInfo->getNumRegs(); I < E; ++I)
     Worklist.push(I);
   while (!Worklist.empty()) {
     MCPhysReg I = Worklist.front();
     Worklist.pop();
     for (MCSubRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
-      AliasMap[I] |= AliasMap[*SI];
+      SmallerAliasMap[I] |= SmallerAliasMap[*SI];
     for (MCSuperRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
       Worklist.push(*SI);
-  }
-  // Propagate parent reg downwards
-  for (MCPhysReg I = 1, E = RegInfo->getNumRegs(); I < E; ++I)
-    Worklist.push(I);
-  while (!Worklist.empty()) {
-    MCPhysReg I = Worklist.front();
-    Worklist.pop();
-    for (MCSubRegIterator SI(I, RegInfo); SI.isValid(); ++SI) {
-      SuperReg[*SI] = SuperReg[I];
-      Worklist.push(*SI);
-    }
   }
 
   LLVM_DEBUG({
     dbgs() << "Dumping reg alias table:\n";
     for (MCPhysReg I = 0, E = RegInfo->getNumRegs(); I != E; ++I) {
       dbgs() << "Reg " << I << ": ";
-      const BitVector &BV = AliasMap[SuperReg[I]];
+      const BitVector &BV = AliasMap[I];
       int Idx = BV.find_first();
       while (Idx != -1) {
         dbgs() << Idx << " ";
@@ -496,8 +493,8 @@ const BitVector &MCPlusBuilder::getAliases(MCPhysReg Reg,
   });
 
   if (OnlySmaller)
-    return AliasMap[Reg];
-  return AliasMap[SuperReg[Reg]];
+    return SmallerAliasMap[Reg];
+  return AliasMap[Reg];
 }
 
 uint8_t MCPlusBuilder::getRegSize(MCPhysReg Reg) const {
