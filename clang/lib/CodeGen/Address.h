@@ -66,7 +66,7 @@ public:
   llvm::Type *getElementType() const { return ElementType.getPointer(); }
   CharUnits getAlignment() const {
     unsigned AlignLog = (Pointer.getInt() << 3) | ElementType.getInt();
-    return CharUnits::fromQuantity(1UL << AlignLog);
+    return CharUnits::fromQuantity(CharUnits::QuantityType(1) << AlignLog);
   }
 };
 
