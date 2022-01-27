@@ -21,23 +21,23 @@
 //===----------------------------------------------------------------------===//
 
 /// Hooks for dynamic discovery of dialects.
-typedef void (*MlirContextRegisterDialectHook)(MlirContext context);
+typedef void (*MlirDialectRegistryInsertDialectHook)(
+    MlirDialectRegistry registry);
 typedef MlirDialect (*MlirContextLoadDialectHook)(MlirContext context);
 typedef MlirStringRef (*MlirDialectGetNamespaceHook)();
 
 /// Structure of dialect registration hooks.
 struct MlirDialectRegistrationHooks {
-  MlirContextRegisterDialectHook registerHook;
+  MlirDialectRegistryInsertDialectHook insertHook;
   MlirContextLoadDialectHook loadHook;
   MlirDialectGetNamespaceHook getNamespaceHook;
 };
 typedef struct MlirDialectRegistrationHooks MlirDialectRegistrationHooks;
 
 #define MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Name, Namespace, ClassName)      \
-  static void mlirContextRegister##Name##Dialect(MlirContext context) {        \
-    mlir::DialectRegistry registry;                                            \
-    registry.insert<ClassName>();                                              \
-    unwrap(context)->appendDialectRegistry(registry);                          \
+  static void mlirDialectRegistryInsert##Name##Dialect(                        \
+      MlirDialectRegistry registry) {                                          \
+    unwrap(registry)->insert<ClassName>();                                     \
   }                                                                            \
   static MlirDialect mlirContextLoad##Name##Dialect(MlirContext context) {     \
     return wrap(unwrap(context)->getOrLoadDialect<ClassName>());               \
@@ -47,8 +47,8 @@ typedef struct MlirDialectRegistrationHooks MlirDialectRegistrationHooks;
   }                                                                            \
   MlirDialectHandle mlirGetDialectHandle__##Namespace##__() {                  \
     static MlirDialectRegistrationHooks hooks = {                              \
-        mlirContextRegister##Name##Dialect, mlirContextLoad##Name##Dialect,    \
-        mlir##Name##DialectGetNamespace};                                      \
+        mlirDialectRegistryInsert##Name##Dialect,                              \
+        mlirContextLoad##Name##Dialect, mlir##Name##DialectGetNamespace};      \
     return MlirDialectHandle{&hooks};                                          \
   }
 

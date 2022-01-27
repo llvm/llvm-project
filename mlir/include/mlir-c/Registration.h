@@ -44,6 +44,11 @@ typedef struct MlirDialectHandle MlirDialectHandle;
 MLIR_CAPI_EXPORTED
 MlirStringRef mlirDialectHandleGetNamespace(MlirDialectHandle);
 
+/// Inserts the dialect associated with the provided dialect handle into the
+/// provided dialect registry
+MLIR_CAPI_EXPORTED void mlirDialectHandleInsertDialect(MlirDialectHandle,
+                                                       MlirDialectRegistry);
+
 /// Registers the dialect associated with the provided dialect handle.
 MLIR_CAPI_EXPORTED void mlirDialectHandleRegisterDialect(MlirDialectHandle,
                                                          MlirContext);
