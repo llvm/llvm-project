@@ -1548,6 +1548,7 @@ private:
   bool validateVccOperand(unsigned Reg) const;
   bool validateVOPLiteral(const MCInst &Inst, const OperandVector &Operands);
   bool validateMAIAccWrite(const MCInst &Inst, const OperandVector &Operands);
+  bool validateMFMA(const MCInst &Inst, const OperandVector &Operands);
   bool validateAGPRLdSt(const MCInst &Inst) const;
   bool validateVGPRAlign(const MCInst &Inst) const;
   bool validateGWS(const MCInst &Inst, const OperandVector &Operands);
@@ -3613,6 +3614,40 @@ bool AMDGPUAsmParser::validateMAIAccWrite(const MCInst &Inst,
   return true;
 }
 
+bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
+                                   const OperandVector &Operands) {
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+
+  if ((Desc.TSFlags & SIInstrFlags::IsMAI) == 0)
+    return true;
+
+  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+  if (Src2Idx == -1)
+    return true;
+
+  const MCOperand &Src2 = Inst.getOperand(Src2Idx);
+  if (!Src2.isReg())
+    return true;
+
+  MCRegister Src2Reg = Src2.getReg();
+  MCRegister DstReg = Inst.getOperand(0).getReg();
+  if (Src2Reg == DstReg)
+    return true;
+
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+  if (TRI->getRegClass(Desc.OpInfo[0].RegClass).getSizeInBits() <= 128)
+    return true;
+
+  if (isRegIntersect(Src2Reg, DstReg, TRI)) {
+    Error(getRegLoc(mc2PseudoReg(Src2Reg), Operands),
+          "source 2 operand must not partially overlap with dst");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateDivScale(const MCInst &Inst) {
   switch (Inst.getOpcode()) {
   default:
@@ -4295,6 +4330,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateMAIAccWrite(Inst, Operands)) {
+    return false;
+  }
+  if (!validateMFMA(Inst, Operands)) {
     return false;
   }
   if (!validateCoherencyBits(Inst, Operands, IDLoc)) {
