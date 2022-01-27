@@ -91,9 +91,9 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
 // we do that in batch using parallel-for.
 static DenseMap<Symbol *, std::string>
 getSymbolStrings(ArrayRef<Defined *> syms) {
-  std::vector<std::string> str(syms.size());
+  auto strs = std::make_unique<std::string[]>(syms.size());
   parallelForEachN(0, syms.size(), [&](size_t i) {
-    raw_string_ostream os(str[i]);
+    raw_string_ostream os(strs[i]);
     OutputSection *osec = syms[i]->getOutputSection();
     uint64_t vma = syms[i]->getVA();
     uint64_t lma = osec ? osec->getLMA() + vma - osec->getVA(0) : 0;
@@ -103,7 +103,7 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
 
   DenseMap<Symbol *, std::string> ret;
   for (size_t i = 0, e = syms.size(); i < e; ++i)
-    ret[syms[i]] = std::move(str[i]);
+    ret[syms[i]] = std::move(strs[i]);
   return ret;
 }
 
