@@ -764,7 +764,7 @@ struct SelectToExtUI : public OpRewritePattern<SelectOp> {
   }
 };
 
-void SelectOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void SelectOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.insert<SelectI1Simplify, SelectToExtUI>(context);
 }

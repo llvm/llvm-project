@@ -205,7 +205,7 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
 LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const BufferizationState &state) {
   // Bufferize the op and its nested ops.
-  OwningRewritePatternList patterns(op->getContext());
+  RewritePatternSet patterns(op->getContext());
   patterns.add<BufferizationPattern>(op->getContext(), state);
   if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
     return failure();

@@ -2537,7 +2537,7 @@ struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
 };
 } // namespace
 
-void WhileOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.insert<WhileConditionTruth, WhileUnusedResult, WhileCmpCond,
                  WhileUnusedArg>(context);

@@ -101,7 +101,7 @@ public:
     if (clOpts.runtimeName.empty()) {
       auto *context = &getContext();
       auto *func = getOperation();
-      mlir::OwningRewritePatternList patterns(context);
+      mlir::RewritePatternSet patterns(context);
       patterns.insert<CharacterConvertConversion>(context);
       mlir::ConversionTarget target(*context);
       target.addLegalDialect<mlir::AffineDialect, fir::FIROpsDialect,

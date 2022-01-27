@@ -18,8 +18,6 @@ class VectorTransferOpInterface;
 class RewritePatternSet;
 class RewriterBase;
 
-using OwningRewritePatternList = RewritePatternSet;
-
 namespace scf {
 class IfOp;
 } // namespace scf

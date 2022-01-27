@@ -16,11 +16,10 @@
 namespace mlir {
 class MLIRContext;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 namespace memref {
 
-void populateComposeSubViewPatterns(OwningRewritePatternList &patterns,
+void populateComposeSubViewPatterns(RewritePatternSet &patterns,
                                     MLIRContext *context);
 
 } // namespace memref

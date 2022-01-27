@@ -23,7 +23,6 @@ class GlobalCreator;
 } // namespace bufferization
 
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 void populateStdBufferizePatterns(
     bufferization::BufferizeTypeConverter &typeConverter,

@@ -34,7 +34,7 @@ void TestComposeSubViewPass::getDependentDialects(
 }
 
 void TestComposeSubViewPass::runOnOperation() {
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   memref::populateComposeSubViewPatterns(patterns, &getContext());
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }

@@ -18,7 +18,6 @@ class ModuleOp;
 template <typename T>
 class OperationPass;
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 void populateShapeToStandardConversionPatterns(RewritePatternSet &patterns);
 

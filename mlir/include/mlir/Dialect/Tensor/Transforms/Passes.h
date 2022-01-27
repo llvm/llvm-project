@@ -17,7 +17,6 @@ class BufferizeTypeConverter;
 } // namespace bufferization
 
 class RewritePatternSet;
-using OwningRewritePatternList = RewritePatternSet;
 
 void populateTensorBufferizePatterns(
     bufferization::BufferizeTypeConverter &typeConverter,
