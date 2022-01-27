@@ -71,7 +71,6 @@ public:
         TEST_CONSTEXPR cpp17_input_iterator(const cpp17_input_iterator<U, T>& u) : it_(u.it_) {}
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
-    TEST_CONSTEXPR pointer operator->() const {return it_;}
 
     TEST_CONSTEXPR_CXX14 cpp17_input_iterator& operator++() {++it_; return *this;}
     TEST_CONSTEXPR_CXX14 cpp17_input_iterator operator++(int) {return cpp17_input_iterator(it_++);}
@@ -107,7 +106,6 @@ public:
         TEST_CONSTEXPR forward_iterator(const forward_iterator<U>& u) : it_(u.it_) {}
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
-    TEST_CONSTEXPR pointer operator->() const {return it_;}
 
     TEST_CONSTEXPR_CXX14 forward_iterator& operator++() {++it_; return *this;}
     TEST_CONSTEXPR_CXX14 forward_iterator operator++(int) {return forward_iterator(it_++);}
@@ -140,7 +138,6 @@ public:
         TEST_CONSTEXPR bidirectional_iterator(const bidirectional_iterator<U>& u) : it_(u.it_) {}
 
     TEST_CONSTEXPR reference operator*() const {return *it_;}
-    TEST_CONSTEXPR pointer operator->() const {return it_;}
 
     TEST_CONSTEXPR_CXX14 bidirectional_iterator& operator++() {++it_; return *this;}
     TEST_CONSTEXPR_CXX14 bidirectional_iterator& operator--() {--it_; return *this;}
@@ -175,7 +172,6 @@ public:
         TEST_CONSTEXPR random_access_iterator(const random_access_iterator<U>& u) : it_(u.it_) {}
 
     TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
-    TEST_CONSTEXPR_CXX14 pointer operator->() const {return it_;}
     TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const {return it_[n];}
 
     TEST_CONSTEXPR_CXX14 random_access_iterator& operator++() {++it_; return *this;}
