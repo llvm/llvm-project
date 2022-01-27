@@ -1,4 +1,5 @@
-// UNSUPPORTED: dbgeng
+// The dbgeng driver doesn't support \DexCommandLine yet.
+// UNSUPPORTED: system-windows
 //
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: command_line.c:

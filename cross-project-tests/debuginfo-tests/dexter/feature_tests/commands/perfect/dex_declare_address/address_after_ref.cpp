@@ -2,8 +2,6 @@
 //      Test that a \DexDeclareAddress value can have its value defined after
 //      the first reference to that value.
 //
-// REQUIRES: system-linux
-//
 // RUN: %dexter_regression_test -- %s | FileCheck %s
 // CHECK: address_after_ref.cpp
 
