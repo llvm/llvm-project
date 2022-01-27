@@ -5632,6 +5632,15 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     }
   }
 
+  if (SrcAS == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
+      Op.getValueType() == MVT::i64) {
+    const SIMachineFunctionInfo *Info =
+        DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+    SDValue Hi = DAG.getConstant(Info->get32BitAddressHighBits(), SL, MVT::i32);
+    SDValue Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Hi);
+    return DAG.getNode(ISD::BITCAST, SL, MVT::i64, Vec);
+  }
+
   if (ASC->getDestAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT &&
       Src.getValueType() == MVT::i64)
     return DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
