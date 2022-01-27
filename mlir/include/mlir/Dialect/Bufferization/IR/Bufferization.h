@@ -20,6 +20,18 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizationOpsDialect.h.inc"
 
+namespace mlir {
+class RewritePatternSet;
+class MLIRContext;
+
+namespace bufferization {
+/// Populate patterns for folding to_memref and to_tensor ops.
+/// Note: to_memref(to_tensor(x)) without type changes are handled by a folder.
+void populateBufferizationOpFoldingPatterns(RewritePatternSet &patterns,
+                                            MLIRContext *context);
+} // namespace bufferization
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // Bufferization Dialect Operations
 //===----------------------------------------------------------------------===//
