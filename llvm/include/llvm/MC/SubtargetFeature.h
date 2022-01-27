@@ -104,7 +104,7 @@ public:
   }
 
   constexpr FeatureBitset &operator^=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = llvm::size(Bits); I != E; ++I) {
+    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
       Bits[I] ^= RHS.Bits[I];
     }
     return *this;
@@ -116,7 +116,7 @@ public:
   }
 
   constexpr FeatureBitset &operator&=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = llvm::size(Bits); I != E; ++I) {
+    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
       Bits[I] &= RHS.Bits[I];
     }
     return *this;
@@ -128,7 +128,7 @@ public:
   }
 
   constexpr FeatureBitset &operator|=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = llvm::size(Bits); I != E; ++I) {
+    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
       Bits[I] |= RHS.Bits[I];
     }
     return *this;

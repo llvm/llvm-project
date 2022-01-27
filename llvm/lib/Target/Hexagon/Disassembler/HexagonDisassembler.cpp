@@ -675,7 +675,7 @@ static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
     /* 28 */  0,          0,          UTIMERLO,   UTIMERHI
   };
 
-  if (RegNo >= size(CtrlRegDecoderTable))
+  if (RegNo >= array_lengthof(CtrlRegDecoderTable))
     return MCDisassembler::Fail;
 
   static_assert(NoRegister == 0, "Expecting NoRegister to be 0");
@@ -703,7 +703,7 @@ static DecodeStatus DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
     /* 28 */  0,          0,          UTIMER,     0
   };
 
-  if (RegNo >= size(CtrlReg64DecoderTable))
+  if (RegNo >= array_lengthof(CtrlReg64DecoderTable))
     return MCDisassembler::Fail;
 
   static_assert(NoRegister == 0, "Expecting NoRegister to be 0");
@@ -855,7 +855,7 @@ static DecodeStatus DecodeGuestRegsRegisterClass(MCInst &Inst, unsigned RegNo,
     /* 28 */ GPMUCNT2,  GPMUCNT3,   G30,        G31
   };
 
-  if (RegNo >= size(GuestRegDecoderTable))
+  if (RegNo >= array_lengthof(GuestRegDecoderTable))
     return MCDisassembler::Fail;
   if (GuestRegDecoderTable[RegNo] == Hexagon::NoRegister)
     return MCDisassembler::Fail;
@@ -881,7 +881,7 @@ static DecodeStatus DecodeGuestRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
     /* 28 */ G29_28,    0,          G31_30,     0
   };
 
-  if (RegNo >= size(GuestReg64DecoderTable))
+  if (RegNo >= array_lengthof(GuestReg64DecoderTable))
     return MCDisassembler::Fail;
   if (GuestReg64DecoderTable[RegNo] == Hexagon::NoRegister)
     return MCDisassembler::Fail;

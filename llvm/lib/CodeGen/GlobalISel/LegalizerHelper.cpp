@@ -4329,7 +4329,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
       // The input vector this mask element indexes into.
       unsigned Input = (unsigned)Idx / NewElts;
 
-      if (Input >= size(Inputs)) {
+      if (Input >= array_lengthof(Inputs)) {
         // The mask element does not index into any input vector.
         Ops.push_back(-1);
         continue;
@@ -4340,7 +4340,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
 
       // Find or create a shuffle vector operand to hold this input.
       unsigned OpNo;
-      for (OpNo = 0; OpNo < size(InputUsed); ++OpNo) {
+      for (OpNo = 0; OpNo < array_lengthof(InputUsed); ++OpNo) {
         if (InputUsed[OpNo] == Input) {
           // This input vector is already an operand.
           break;
@@ -4351,7 +4351,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
         }
       }
 
-      if (OpNo >= size(InputUsed)) {
+      if (OpNo >= array_lengthof(InputUsed)) {
         // More than two input vectors used!  Give up on trying to create a
         // shuffle vector.  Insert all elements into a BUILD_VECTOR instead.
         UseBuildVector = true;
@@ -4374,7 +4374,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
         // The input vector this mask element indexes into.
         unsigned Input = (unsigned)Idx / NewElts;
 
-        if (Input >= size(Inputs)) {
+        if (Input >= array_lengthof(Inputs)) {
           // The mask element is "undef" or indexes off the end of the input.
           SVOps.push_back(MIRBuilder.buildUndef(EltTy).getReg(0));
           continue;

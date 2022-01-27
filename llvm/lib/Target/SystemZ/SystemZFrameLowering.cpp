@@ -219,7 +219,7 @@ SystemZELFFrameLowering::SystemZELFFrameLowering()
   // Create a mapping from register number to save slot offset.
   // These offsets are relative to the start of the register save area.
   RegSpillOffsets.grow(SystemZ::NUM_TARGET_REGS);
-  for (unsigned I = 0, E = size(ELFSpillOffsetTable); I != E; ++I)
+  for (unsigned I = 0, E = array_lengthof(ELFSpillOffsetTable); I != E; ++I)
     RegSpillOffsets[ELFSpillOffsetTable[I].Reg] = ELFSpillOffsetTable[I].Offset;
 }
 
@@ -824,7 +824,7 @@ SystemZXPLINKFrameLowering::SystemZXPLINKFrameLowering()
   // Create a mapping from register number to save slot offset.
   // These offsets are relative to the start of the local are area.
   RegSpillOffsets.grow(SystemZ::NUM_TARGET_REGS);
-  for (unsigned I = 0, E = size(XPLINKSpillOffsetTable); I != E; ++I)
+  for (unsigned I = 0, E = array_lengthof(XPLINKSpillOffsetTable); I != E; ++I)
     RegSpillOffsets[XPLINKSpillOffsetTable[I].Reg] =
         XPLINKSpillOffsetTable[I].Offset;
 }

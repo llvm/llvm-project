@@ -659,7 +659,7 @@ TEST(StringRefTest, getAsInteger) {
   uint32_t U32;
   uint64_t U64;
 
-  for (size_t i = 0; i < size(Unsigned); ++i) {
+  for (size_t i = 0; i < array_lengthof(Unsigned); ++i) {
     bool U8Success = StringRef(Unsigned[i].Str).getAsInteger(0, U8);
     if (static_cast<uint8_t>(Unsigned[i].Expected) == Unsigned[i].Expected) {
       ASSERT_FALSE(U8Success);
@@ -691,7 +691,7 @@ TEST(StringRefTest, getAsInteger) {
   int32_t S32;
   int64_t S64;
 
-  for (size_t i = 0; i < size(Signed); ++i) {
+  for (size_t i = 0; i < array_lengthof(Signed); ++i) {
     bool S8Success = StringRef(Signed[i].Str).getAsInteger(0, S8);
     if (static_cast<int8_t>(Signed[i].Expected) == Signed[i].Expected) {
       ASSERT_FALSE(S8Success);
@@ -737,7 +737,7 @@ static const char* BadStrings[] = {
 
 TEST(StringRefTest, getAsUnsignedIntegerBadStrings) {
   unsigned long long U64;
-  for (size_t i = 0; i < size(BadStrings); ++i) {
+  for (size_t i = 0; i < array_lengthof(BadStrings); ++i) {
     bool IsBadNumber = StringRef(BadStrings[i]).getAsInteger(0, U64);
     ASSERT_TRUE(IsBadNumber);
   }
@@ -820,7 +820,7 @@ TEST(StringRefTest, consumeIntegerUnsigned) {
   uint32_t U32;
   uint64_t U64;
 
-  for (size_t i = 0; i < size(ConsumeUnsigned); ++i) {
+  for (size_t i = 0; i < array_lengthof(ConsumeUnsigned); ++i) {
     StringRef Str = ConsumeUnsigned[i].Str;
     bool U8Success = Str.consumeInteger(0, U8);
     if (static_cast<uint8_t>(ConsumeUnsigned[i].Expected) ==
@@ -868,7 +868,7 @@ TEST(StringRefTest, consumeIntegerSigned) {
   int32_t S32;
   int64_t S64;
 
-  for (size_t i = 0; i < size(ConsumeSigned); ++i) {
+  for (size_t i = 0; i < array_lengthof(ConsumeSigned); ++i) {
     StringRef Str = ConsumeSigned[i].Str;
     bool S8Success = Str.consumeInteger(0, S8);
     if (static_cast<int8_t>(ConsumeSigned[i].Expected) ==
@@ -945,7 +945,7 @@ static const char join_result3[] = "a::b::c";
 TEST(StringRefTest, joinStrings) {
   std::vector<StringRef> v1;
   std::vector<std::string> v2;
-  for (size_t i = 0; i < size(join_input); ++i) {
+  for (size_t i = 0; i < array_lengthof(join_input); ++i) {
     v1.push_back(join_input[i]);
     v2.push_back(join_input[i]);
   }

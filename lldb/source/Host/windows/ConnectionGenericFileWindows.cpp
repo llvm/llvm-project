@@ -188,7 +188,7 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
                     .count()
               : INFINITE;
       DWORD wait_result =
-          ::WaitForMultipleObjects(llvm::size(m_event_handles),
+          ::WaitForMultipleObjects(llvm::array_lengthof(m_event_handles),
                                    m_event_handles, FALSE, milliseconds);
       // All of the events are manual reset events, so make sure we reset them
       // to non-signalled.

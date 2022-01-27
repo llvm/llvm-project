@@ -2153,7 +2153,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
       // The input vector this mask element indexes into.
       unsigned Input = (unsigned)Idx / NewElts;
 
-      if (Input >= size(Inputs)) {
+      if (Input >= array_lengthof(Inputs)) {
         // The mask element does not index into any input vector.
         Ops.push_back(-1);
         continue;
@@ -2164,7 +2164,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
 
       // Find or create a shuffle vector operand to hold this input.
       unsigned OpNo;
-      for (OpNo = 0; OpNo < size(InputUsed); ++OpNo) {
+      for (OpNo = 0; OpNo < array_lengthof(InputUsed); ++OpNo) {
         if (InputUsed[OpNo] == Input) {
           // This input vector is already an operand.
           break;
@@ -2175,7 +2175,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
         }
       }
 
-      if (OpNo >= size(InputUsed)) {
+      if (OpNo >= array_lengthof(InputUsed)) {
         // More than two input vectors used!  Give up on trying to create a
         // shuffle vector.  Insert all elements into a BUILD_VECTOR instead.
         useBuildVector = true;
@@ -2198,7 +2198,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
         // The input vector this mask element indexes into.
         unsigned Input = (unsigned)Idx / NewElts;
 
-        if (Input >= size(Inputs)) {
+        if (Input >= array_lengthof(Inputs)) {
           // The mask element is "undef" or indexes off the end of the input.
           SVOps.push_back(DAG.getUNDEF(EltVT));
           continue;

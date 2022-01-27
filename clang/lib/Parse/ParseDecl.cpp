@@ -1365,7 +1365,7 @@ void Parser::ParseExternalSourceSymbolAttribute(
   ArgsUnion Args[] = {Language.get(), DefinedInExpr.get(),
                       GeneratedDeclaration};
   Attrs.addNew(&ExternalSourceSymbol, SourceRange(Loc, T.getCloseLocation()),
-               ScopeName, ScopeLoc, Args, llvm::size(Args), Syntax);
+               ScopeName, ScopeLoc, Args, llvm::array_lengthof(Args), Syntax);
 }
 
 /// Parse the contents of the "objc_bridge_related" attribute.
@@ -1493,7 +1493,7 @@ void Parser::ParseSwiftNewTypeAttribute(
 
   ArgsUnion Args[] = {SwiftType};
   Attrs.addNew(&AttrName, SourceRange(AttrNameLoc, T.getCloseLocation()),
-               ScopeName, ScopeLoc, Args, llvm::size(Args), Syntax);
+               ScopeName, ScopeLoc, Args, llvm::array_lengthof(Args), Syntax);
 }
 
 

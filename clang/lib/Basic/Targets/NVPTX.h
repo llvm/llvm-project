@@ -159,7 +159,7 @@ public:
   /// DWARF.
   Optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
-    if (AddressSpace >= llvm::size(NVPTXDWARFAddrSpaceMap) ||
+    if (AddressSpace >= llvm::array_lengthof(NVPTXDWARFAddrSpaceMap) ||
         NVPTXDWARFAddrSpaceMap[AddressSpace] < 0)
       return llvm::None;
     return NVPTXDWARFAddrSpaceMap[AddressSpace];

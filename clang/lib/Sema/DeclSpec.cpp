@@ -238,7 +238,7 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     // is already used (consider a function returning a function pointer) or too
     // small (function with too many parameters), go to the heap.
     if (!TheDeclarator.InlineStorageUsed &&
-        NumParams <= llvm::size(TheDeclarator.InlineParams)) {
+        NumParams <= llvm::array_lengthof(TheDeclarator.InlineParams)) {
       I.Fun.Params = TheDeclarator.InlineParams;
       new (I.Fun.Params) ParamInfo[NumParams];
       I.Fun.DeleteParams = false;
@@ -308,7 +308,7 @@ void Declarator::setDecompositionBindings(
   // Allocate storage for bindings and stash them away.
   if (Bindings.size()) {
     if (!InlineStorageUsed &&
-        Bindings.size() <= llvm::size(InlineBindings)) {
+        Bindings.size() <= llvm::array_lengthof(InlineBindings)) {
       BindingGroup.Bindings = InlineBindings;
       BindingGroup.DeleteBindings = false;
       InlineStorageUsed = true;

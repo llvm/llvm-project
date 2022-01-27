@@ -188,7 +188,7 @@ static OpenMPDirectiveKindExWrapper parseOpenMPDirectiveKind(Parser &P) {
   if (DKind == OMPD_unknown)
     return OMPD_unknown;
 
-  for (unsigned I = 0; I < llvm::size(F); ++I) {
+  for (unsigned I = 0; I < llvm::array_lengthof(F); ++I) {
     if (DKind != F[I][0])
       continue;
 

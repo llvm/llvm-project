@@ -560,18 +560,18 @@ SDValue ARCTargetLowering::LowerCallArguments(
                                         ARC::R4, ARC::R5, ARC::R6, ARC::R7};
     auto *AFI = MF.getInfo<ARCFunctionInfo>();
     unsigned FirstVAReg = CCInfo.getFirstUnallocated(ArgRegs);
-    if (FirstVAReg < size(ArgRegs)) {
+    if (FirstVAReg < array_lengthof(ArgRegs)) {
       int Offset = 0;
       // Save remaining registers, storing higher register numbers at a higher
       // address
-      // There are (size(ArgRegs) - FirstVAReg) registers which
+      // There are (array_lengthof(ArgRegs) - FirstVAReg) registers which
       // need to be saved.
       int VarFI =
-          MFI.CreateFixedObject((size(ArgRegs) - FirstVAReg) * 4,
+          MFI.CreateFixedObject((array_lengthof(ArgRegs) - FirstVAReg) * 4,
                                 CCInfo.getNextStackOffset(), true);
       AFI->setVarArgsFrameIndex(VarFI);
       SDValue FIN = DAG.getFrameIndex(VarFI, MVT::i32);
-      for (unsigned i = FirstVAReg; i < size(ArgRegs); i++) {
+      for (unsigned i = FirstVAReg; i < array_lengthof(ArgRegs); i++) {
         // Move argument from phys reg -> virt reg
         unsigned VReg = RegInfo.createVirtualRegister(&ARC::GPR32RegClass);
         RegInfo.addLiveIn(ArgRegs[i], VReg);

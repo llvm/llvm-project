@@ -34,13 +34,13 @@ int main(){
 
 // <rdar://problem/11949235>
 template<class T, unsigned N>
-inline unsigned size(T (&)[N]) {
+inline unsigned array_lengthof(T (&)[N]) {
   return N;
 }
 
 void testNonTypeTemplateInstantiation() {
   const char *S[] = { "a", "b" };
-  clang_analyzer_eval(size(S) == 2);
+  clang_analyzer_eval(array_lengthof(S) == 2);
 #ifndef NO_INLINE
   // expected-warning@-2 {{TRUE}}
 #else

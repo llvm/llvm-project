@@ -4465,7 +4465,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   int lastInsIndex = -1;
   if (isVarArg && MFI.hasVAStart()) {
     unsigned RegIdx = CCInfo.getFirstUnallocated(GPRArgRegs);
-    if (RegIdx != size(GPRArgRegs))
+    if (RegIdx != array_lengthof(GPRArgRegs))
       ArgRegBegin = std::min(ArgRegBegin, (unsigned)GPRArgRegs[RegIdx]);
   }
 
