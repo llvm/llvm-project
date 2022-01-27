@@ -25,11 +25,11 @@ static Foo gFoo;
 @end
 
 // CHECK: [[T0:%.*]] = load {{%.*}} [[S0:%.*]]
-// CHECK: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK:  [[T2:%.*]]  = bitcast {{%.*}} [[T0]] to i8*
+// CHECK: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK:  @objc_msgSend
 // CHECK: [[R0:%.*]] = load {{%.*}} [[U0:%.*]]
-// CHECK: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK:  [[R2:%.*]]  = bitcast {{%.*}} [[R0]] to i8*
+// CHECK: load i8*, i8** @OBJC_SELECTOR_REFERENCES_
 // CHECK:  @objc_msgSend
 

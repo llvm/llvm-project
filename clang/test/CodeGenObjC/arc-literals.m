@@ -51,8 +51,8 @@ void test_array(id a, id b) {
   // CHECK-NEXT: store i8* [[V1]], i8** [[T0]]
 
   // CHECK-NEXT: [[T0:%.*]] = load [[CLASS_T:%.*]]*, [[CLASS_T:%.*]]** @"OBJC_CLASSLIST
-  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[CLASS_T]]* [[T0]] to i8*
+  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
   // CHECK-NEXT: [[T2:%.*]] = bitcast [2 x i8*]* [[OBJECTS]] to i8**
   // CHECK-NEXT: [[T3:%.*]] = call i8* bitcast ({{.*@objc_msgSend.*}})(i8* [[T1]], i8* [[SEL]], i8** [[T2]], i64 2) [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK: call void (...) @llvm.objc.clang.arc.use(i8* [[V0]], i8* [[V1]])
@@ -93,8 +93,8 @@ void test_dictionary(id k1, id o1, id k2, id o2) {
 
   // Constructing the dictionary
   // CHECK-NEXT: [[T0:%.*]] = load [[CLASS_T:%.*]]*, [[CLASS_T:%.*]]** @"OBJC_CLASSLIST
-  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[CLASS_T]]* [[T0]] to i8*
+  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
   // CHECK-NEXT: [[T2:%.*]] = bitcast [2 x i8*]* [[OBJECTS]] to i8**
   // CHECK-NEXT: [[T3:%.*]] = bitcast [2 x i8*]* [[KEYS]] to i8**
   // CHECK-NEXT: [[T4:%.*]] = call i8* bitcast ({{.*@objc_msgSend.*}})(i8* [[T1]], i8* [[SEL]], i8** [[T2]], i8** [[T3]], i64 2) [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
@@ -126,8 +126,8 @@ void test_property(B *b) {
   // CHECK:      [[T0:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[OBJECTS:%.*]], i64 0, i64 0
 
   // Invoke 'prop'
-  // CHECK:      [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
-  // CHECK-NEXT: [[T1:%.*]] = bitcast
+  // CHECK:      [[T1:%.*]] = bitcast
+  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
   // CHECK-NEXT: [[V0:%.*]] = call [[B:%.*]]* bitcast ({{.*}} @objc_msgSend to {{.*}})(i8* [[T1]], i8* [[SEL]]) [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use([[B]]* [[V0]])
   // CHECK-NEXT: [[V1:%.*]] = bitcast [[B]]* [[V0]] to i8*
@@ -137,8 +137,8 @@ void test_property(B *b) {
 
   // Invoke arrayWithObjects:count:
   // CHECK-NEXT: [[T0:%.*]] = load [[CLASS_T]]*, [[CLASS_T]]** @"OBJC_CLASSLIST
-  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
   // CHECK-NEXT: [[T1:%.*]] = bitcast [[CLASS_T]]* [[T0]] to i8*
+  // CHECK-NEXT: [[SEL:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES
   // CHECK-NEXT: [[T2:%.*]] = bitcast [1 x i8*]* [[OBJECTS]] to i8**
   // CHECK-NEXT: [[T3:%.*]] = call i8* bitcast ({{.*}} @objc_msgSend to {{.*}}(i8* [[T1]], i8* [[SEL]], i8** [[T2]], i64 1) [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(i8* [[T3]])

@@ -30,8 +30,8 @@ int main (int argc, const char * argv[]) {
 
 // CHECK: [[SIXTEEN:%.*]]  = call i8* @llvm.objc.loadWeakRetained(i8** {{%.*}})
 // CHECK-NEXT:  [[SEVENTEEN:%.*]] = bitcast i8* [[SIXTEEN]] to {{%.*}}
-// CHECK-NEXT:  [[EIGHTEEN:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.6
 // CHECK-NEXT:  [[NINETEEN:%.*]] = bitcast %0* [[SEVENTEEN]] to i8*
+// CHECK-NEXT:  [[EIGHTEEN:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.6
 // CHECK-NEXT:  call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend
 // CHECK-NEXT:  [[TWENTY:%.*]] = bitcast %0* [[SEVENTEEN]] to i8*
 // CHECK-NEXT:  call void @llvm.objc.release(i8* [[TWENTY]])
