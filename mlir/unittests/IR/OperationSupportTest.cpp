@@ -164,7 +164,7 @@ TEST(OperandStorageTest, RangeErase) {
   // Create an operation with operands to erase.
   Operation *user =
       createOp(&context, {operand2, operand1, operand2, operand1});
-  llvm::BitVector eraseIndices(user->getNumOperands());
+  BitVector eraseIndices(user->getNumOperands());
 
   // Check erasing no operands.
   user->eraseOperands(eraseIndices);

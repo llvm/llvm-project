@@ -281,13 +281,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
 
     /// Erase a single argument at `argIndex`.
     void eraseArgument(unsigned argIndex) {
-      llvm::BitVector argsToErase($_op.getNumArguments());
+      BitVector argsToErase($_op.getNumArguments());
       argsToErase.set(argIndex);
       eraseArguments(argsToErase);
     }
 
     /// Erases the arguments listed in `argIndices`.
-    void eraseArguments(const llvm::BitVector &argIndices) {
+    void eraseArguments(const BitVector &argIndices) {
       Type newType = $_op.getTypeWithoutArgs(argIndices);
       function_interface_impl::eraseFunctionArguments(
         this->getOperation(), argIndices, newType);
@@ -295,13 +295,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
 
     /// Erase a single result at `resultIndex`.
     void eraseResult(unsigned resultIndex) {
-      llvm::BitVector resultsToErase($_op.getNumResults());
+      BitVector resultsToErase($_op.getNumResults());
       resultsToErase.set(resultIndex);
       eraseResults(resultsToErase);
     }
 
     /// Erases the results listed in `resultIndices`.
-    void eraseResults(const llvm::BitVector &resultIndices) {
+    void eraseResults(const BitVector &resultIndices) {
       Type newType = $_op.getTypeWithoutResults(resultIndices);
       function_interface_impl::eraseFunctionResults(
           this->getOperation(), resultIndices, newType);
@@ -326,7 +326,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// results. This is used to update the function's signature in the
     /// `eraseArguments` and `eraseResults` methods.
     Type getTypeWithoutArgsAndResults(
-      const llvm::BitVector &argIndices, const llvm::BitVector &resultIndices) {
+      const BitVector &argIndices, const BitVector &resultIndices) {
       SmallVector<Type> argStorage, resultStorage;
       TypeRange newArgTypes = function_interface_impl::filterTypesOut(
           $_op.getArgumentTypes(), argIndices, argStorage);
@@ -334,13 +334,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
           $_op.getResultTypes(), resultIndices, resultStorage);
       return $_op.cloneTypeWith(newArgTypes, newResultTypes);
     }
-    Type getTypeWithoutArgs(const llvm::BitVector &argIndices) {
+    Type getTypeWithoutArgs(const BitVector &argIndices) {
       SmallVector<Type> argStorage;
       TypeRange newArgTypes = function_interface_impl::filterTypesOut(
           $_op.getArgumentTypes(), argIndices, argStorage);
       return $_op.cloneTypeWith(newArgTypes, $_op.getResultTypes());
     }
-    Type getTypeWithoutResults(const llvm::BitVector &resultIndices) {
+    Type getTypeWithoutResults(const BitVector &resultIndices) {
       SmallVector<Type> resultStorage;
       TypeRange newResultTypes = function_interface_impl::filterTypesOut(
           $_op.getResultTypes(), resultIndices, resultStorage);

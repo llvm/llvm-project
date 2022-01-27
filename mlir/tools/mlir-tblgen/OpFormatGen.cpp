@@ -1880,7 +1880,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
 
   // Get a string containing all of the cases that can't be represented with a
   // keyword.
-  llvm::BitVector nonKeywordCases(cases.size());
+  BitVector nonKeywordCases(cases.size());
   bool hasStrCase = false;
   for (auto &it : llvm::enumerate(cases)) {
     hasStrCase = it.value().isStrCase();
