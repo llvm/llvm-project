@@ -88,9 +88,11 @@ let TargetPrefix = "riscv" in {
   // Zbb
   def int_riscv_orc_b : BitManipGPRIntrinsics;
 
-  // Zbc
+  // Zbc or Zbkc
   def int_riscv_clmul  : BitManipGPRGPRIntrinsics;
   def int_riscv_clmulh : BitManipGPRGPRIntrinsics;
+
+  // Zbc
   def int_riscv_clmulr : BitManipGPRGPRIntrinsics;
 
   // Zbe
@@ -123,6 +125,15 @@ let TargetPrefix = "riscv" in {
   // Zbt
   def int_riscv_fsl : BitManipGPRGPRGRIntrinsics;
   def int_riscv_fsr : BitManipGPRGPRGRIntrinsics;
+
+  // Zbkb
+  def int_riscv_brev8 : BitManipGPRIntrinsics;
+  def int_riscv_zip   : BitManipGPRIntrinsics;
+  def int_riscv_unzip : BitManipGPRIntrinsics;
+
+  // Zbkx
+  def int_riscv_xperm4  : BitManipGPRGPRIntrinsics;
+  def int_riscv_xperm8  : BitManipGPRGPRIntrinsics;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
@@ -1452,4 +1463,93 @@ let TargetPrefix = "riscv" in {
                     [llvm_anyvector_ty, llvm_anyptr_ty,
                      llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                     [NoCapture<ArgIndex<1>>, IntrWriteMem]>;
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
+// Scalar Cryptography
+//
+// These intrinsics will lower directly into the corresponding instructions
+// added by the scalar cyptography extension, if the extension is present.
+
+let TargetPrefix = "riscv" in {
+
+class ScalarCryptoGprIntrinsicAny
+    : Intrinsic<[llvm_anyint_ty],
+                [LLVMMatchType<0>],
+                [IntrNoMem, IntrSpeculatable]>;
+
+class ScalarCryptoByteSelect32
+    : Intrinsic<[llvm_i32_ty],
+                [llvm_i32_ty, llvm_i32_ty, llvm_i8_ty],
+                [IntrNoMem, IntrWillReturn, IntrSpeculatable,
+                 ImmArg<ArgIndex<2>>]>;
+
+class ScalarCryptoGprGprIntrinsic32
+    : Intrinsic<[llvm_i32_ty],
+                [llvm_i32_ty, llvm_i32_ty],
+                [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;
+
+class ScalarCryptoGprGprIntrinsic64
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_i64_ty, llvm_i64_ty],
+                [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;
+
+class ScalarCryptoGprIntrinsic64
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_i64_ty],
+                [IntrNoMem, IntrWillReturn, IntrSpeculatable]>;
+
+class ScalarCryptoByteSelectAny
+    : Intrinsic<[llvm_anyint_ty],
+                [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i8_ty],
+                [IntrNoMem, IntrSpeculatable, IntrWillReturn,
+                 ImmArg<ArgIndex<2>>, Returned<ArgIndex<0>>]>;
+
+// Zknd
+def int_riscv_aes32dsi  : ScalarCryptoByteSelect32;
+def int_riscv_aes32dsmi : ScalarCryptoByteSelect32;
+
+def int_riscv_aes64ds   : ScalarCryptoGprGprIntrinsic64;
+def int_riscv_aes64dsm  : ScalarCryptoGprGprIntrinsic64;
+
+def int_riscv_aes64im   : ScalarCryptoGprIntrinsic64;
+
+// Zkne
+def int_riscv_aes32esi  : ScalarCryptoByteSelect32;
+def int_riscv_aes32esmi : ScalarCryptoByteSelect32;
+
+def int_riscv_aes64es   : ScalarCryptoGprGprIntrinsic64;
+def int_riscv_aes64esm  : ScalarCryptoGprGprIntrinsic64;
+
+// Zknd & Zkne
+def int_riscv_aes64ks2  : ScalarCryptoGprGprIntrinsic64;
+def int_riscv_aes64ks1i : Intrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i32_ty],
+                                    [IntrNoMem, IntrSpeculatable,
+                                     IntrWillReturn, ImmArg<ArgIndex<1>>]>;
+
+// Zknh
+def int_riscv_sha256sig0 : ScalarCryptoGprIntrinsicAny;
+def int_riscv_sha256sig1 : ScalarCryptoGprIntrinsicAny;
+def int_riscv_sha256sum0 : ScalarCryptoGprIntrinsicAny;
+def int_riscv_sha256sum1 : ScalarCryptoGprIntrinsicAny;
+
+def int_riscv_sha512sig0l : ScalarCryptoGprGprIntrinsic32;
+def int_riscv_sha512sig0h : ScalarCryptoGprGprIntrinsic32;
+def int_riscv_sha512sig1l : ScalarCryptoGprGprIntrinsic32;
+def int_riscv_sha512sig1h : ScalarCryptoGprGprIntrinsic32;
+def int_riscv_sha512sum0r : ScalarCryptoGprGprIntrinsic32;
+def int_riscv_sha512sum1r : ScalarCryptoGprGprIntrinsic32;
+
+def int_riscv_sha512sig0 : ScalarCryptoGprIntrinsic64;
+def int_riscv_sha512sig1 : ScalarCryptoGprIntrinsic64;
+def int_riscv_sha512sum0 : ScalarCryptoGprIntrinsic64;
+def int_riscv_sha512sum1 : ScalarCryptoGprIntrinsic64;
+
+// Zksed
+def int_riscv_sm4ks      : ScalarCryptoByteSelectAny;
+def int_riscv_sm4ed      : ScalarCryptoByteSelectAny;
+
+// Zksh
+def int_riscv_sm3p0      : ScalarCryptoGprIntrinsicAny;
+def int_riscv_sm3p1      : ScalarCryptoGprIntrinsicAny;
 } // TargetPrefix = "riscv"
