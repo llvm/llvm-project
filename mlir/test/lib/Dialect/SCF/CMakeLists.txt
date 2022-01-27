@@ -10,5 +10,6 @@ add_mlir_library(MLIRSCFTestPasses
   MLIRPass
   MLIRSCF
   MLIRSCFTransforms
+  MLIRSCFUtils
   MLIRTransformUtils
   )

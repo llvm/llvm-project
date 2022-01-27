@@ -17,3 +17,4 @@ add_mlir_dialect_library(MLIRSCF
   )
 
 add_subdirectory(Transforms)
+add_subdirectory(Utils)
