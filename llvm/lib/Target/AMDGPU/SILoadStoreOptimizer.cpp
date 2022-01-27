@@ -105,6 +105,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     unsigned DMask;
     InstClassEnum InstClass;
     unsigned CPol = 0;
+    bool IsAGPR;
     bool UseST64;
     int AddrIdx[MaxAddressRegs];
     const MachineOperand *AddrReg[MaxAddressRegs];
@@ -490,6 +491,8 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
 
   if (InstClass == UNKNOWN)
     return;
+
+  IsAGPR = LSO.TRI->hasAGPRs(LSO.getDataRegClass(*MI));
 
   switch (InstClass) {
   case DS_READ:
@@ -912,9 +915,6 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
   DenseSet<Register> PhysRegUsesToMove;
   addDefsUsesToList(*CI.I, RegDefsToMove, PhysRegUsesToMove);
 
-  const TargetRegisterClass *DataRC = getDataRegClass(*CI.I);
-  bool IsAGPR = TRI->hasAGPRs(DataRC);
-
   MachineBasicBlock::iterator E = std::next(Paired.I);
   MachineBasicBlock::iterator MBBI = std::next(CI.I);
   MachineBasicBlock::iterator MBBE = CI.I->getParent()->end();
@@ -974,15 +974,13 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
       continue;
 
     if (&*MBBI == &*Paired.I) {
-      if (TRI->hasAGPRs(getDataRegClass(*MBBI)) != IsAGPR)
-        return false;
       // FIXME: nothing is illegal in a ds_write2 opcode with two AGPR data
       //        operands. However we are reporting that ds_write2 shall have
       //        only VGPR data so that machine copy propagation does not
       //        create an illegal instruction with a VGPR and AGPR sources.
       //        Consequenctially if we create such instruction the verifier
       //        will complain.
-      if (IsAGPR && CI.InstClass == DS_WRITE)
+      if (CI.IsAGPR && CI.InstClass == DS_WRITE)
         return false;
 
       // We need to go through the list of instructions that we plan to
@@ -1959,6 +1957,7 @@ void SILoadStoreOptimizer::addInstToMergeableList(const CombineInfo &CI,
                  std::list<std::list<CombineInfo> > &MergeableInsts) const {
   for (std::list<CombineInfo> &AddrList : MergeableInsts) {
     if (AddrList.front().InstClass == CI.InstClass &&
+        AddrList.front().IsAGPR == CI.IsAGPR &&
         AddrList.front().hasSameBaseAddress(*CI.I)) {
       AddrList.emplace_back(CI);
       return;
