@@ -1,5 +1,6 @@
 // Test __llvm_profile_get_filename when the on-line merging mode is enabled.
 //
+// RUN: echo get_filename_from_DSO > shr.exp
 // RUN: %clang_pgogen -fPIC -shared %shared_linker_xopts -o %t.dso %p/../Inputs/instrprof-get-filename-dso.c
 // RUN: %clang_pgogen -o %t %s %t.dso
 // RUN: env LLVM_PROFILE_FILE="%t-%m.profraw" %run %t
