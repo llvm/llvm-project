@@ -323,6 +323,7 @@ enum NodeType : unsigned {
   INSR,
   PTEST,
   PTRUE,
+  PFALSE,
 
   BITREVERSE_MERGE_PASSTHRU,
   BSWAP_MERGE_PASSTHRU,

@@ -91,6 +91,13 @@ define ptr @gep_constexpr_2(ptr %a) {
   ret ptr getelementptr (i8, ptr bitcast (i8* @g to ptr), i32 3)
 }
 
+define ptr addrspace(1) @gep_constexpr_3(ptr %a) {
+; CHECK-LABEL: @gep_constexpr_3(
+; CHECK-NEXT:    ret ptr addrspace(1) getelementptr (i8, ptr addrspace(1) addrspacecast (ptr @g to ptr addrspace(1)), i64 3)
+;
+  ret ptr addrspace(1) getelementptr ([0 x i8], ptr addrspace(1) addrspacecast (i8* @g to ptr addrspace(1)), i64 0, i32 3)
+}
+
 define ptr @load_bitcast_1(ptr %a) {
 ; CHECK-LABEL: @load_bitcast_1(
 ; CHECK-NEXT:    [[B1:%.*]] = load ptr, ptr [[A:%.*]], align 8

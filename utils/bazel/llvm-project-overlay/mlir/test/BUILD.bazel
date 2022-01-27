@@ -431,6 +431,20 @@ cc_library(
 )
 
 cc_library(
+    name = "TestMemRef",
+    srcs = glob(["lib/Dialect/MemRef/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:Affine",
+        "//mlir:MemRefTransforms",
+        "//mlir:Pass",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
     name = "TestSCF",
     srcs = glob(["lib/Dialect/SCF/*.cpp"]),
     defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],

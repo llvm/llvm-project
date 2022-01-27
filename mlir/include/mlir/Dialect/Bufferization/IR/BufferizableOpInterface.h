@@ -255,7 +255,7 @@ public:
   const BufferizationOptions &getOptions() const { return options; }
 
 protected:
-  BufferizationState(const BufferizationOptions &options);
+  explicit BufferizationState(const BufferizationOptions &options);
 
   // BufferizationState should be passed as a reference.
   BufferizationState(const BufferizationState &) = delete;
@@ -268,6 +268,24 @@ private:
 
   /// A reference to current bufferization options.
   const BufferizationOptions &options;
+};
+
+/// This a "no analysis, always copy" BufferizationState. In the absence of an
+/// analysis, a buffer must be copied each time it is written to. Therefore, all
+/// OpOperands that bufferize to a memory write must bufferize out-of-place.
+class AlwaysCopyBufferizationState : public BufferizationState {
+public:
+  explicit AlwaysCopyBufferizationState(const BufferizationOptions &options);
+
+  AlwaysCopyBufferizationState(const AlwaysCopyBufferizationState &) = delete;
+
+  virtual ~AlwaysCopyBufferizationState() = default;
+
+  /// Return `true` if the given OpResult has been decided to bufferize inplace.
+  bool isInPlace(OpOperand &opOperand) const override;
+
+  /// Return true if `v1` and `v2` bufferize to equivalent buffers.
+  bool areEquivalentBufferizedValues(Value v1, Value v2) const override;
 };
 
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
