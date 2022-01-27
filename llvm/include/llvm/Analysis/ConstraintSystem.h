@@ -73,7 +73,7 @@ public:
     return R;
   }
 
-  bool isConditionImplied(SmallVector<int64_t, 8> R);
+  bool isConditionImplied(SmallVector<int64_t, 8> R) const;
 
   void popLastConstraint() { Constraints.pop_back(); }
 
