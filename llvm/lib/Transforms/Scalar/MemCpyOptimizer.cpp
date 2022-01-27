@@ -313,15 +313,21 @@ INITIALIZE_PASS_END(MemCpyOptLegacyPass, "memcpyopt", "MemCpy Optimization",
 static bool mayBeVisibleThroughUnwinding(Value *V, Instruction *Start,
                                          Instruction *End) {
   assert(Start->getParent() == End->getParent() && "Must be in same block");
-  if (!Start->getFunction()->doesNotThrow() &&
-      !isa<AllocaInst>(getUnderlyingObject(V))) {
-    for (const Instruction &I :
-         make_range(Start->getIterator(), End->getIterator())) {
-      if (I.mayThrow())
-        return true;
-    }
-  }
-  return false;
+  // Function can't unwind, so it also can't be visible through unwinding.
+  if (Start->getFunction()->doesNotThrow())
+    return false;
+
+  // Object is not visible on unwind.
+  // TODO: Support RequiresNoCaptureBeforeUnwind case.
+  bool RequiresNoCaptureBeforeUnwind;
+  if (isNotVisibleOnUnwind(getUnderlyingObject(V),
+                           RequiresNoCaptureBeforeUnwind) &&
+      !RequiresNoCaptureBeforeUnwind)
+    return false;
+
+  // Check whether there are any unwinding instructions in the range.
+  return any_of(make_range(Start->getIterator(), End->getIterator()),
+                [](const Instruction &I) { return I.mayThrow(); });
 }
 
 void MemCpyOptPass::eraseInstruction(Instruction *I) {
