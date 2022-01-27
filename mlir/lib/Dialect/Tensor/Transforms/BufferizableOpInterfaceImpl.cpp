@@ -65,14 +65,8 @@ struct CastOpInterface
         layout = rankedMemRefType.getLayout();
 
     // Compute the new memref type.
-    Type resultMemRefType;
-    if (resultTensorType.isa<RankedTensorType>()) {
-      resultMemRefType =
-          getContiguousMemRefType(resultTensorType, layout, memorySpace);
-    } else {
-      resultMemRefType =
-          getUnrankedMemRefType(resultTensorType.getElementType(), memorySpace);
-    }
+    Type resultMemRefType = getMemRefType(resultTensorType, state.getOptions(),
+                                          layout, memorySpace);
 
     // Replace the op with a memref.cast.
     assert(memref::CastOp::areCastCompatible(resultBuffer->getType(),
@@ -263,8 +257,7 @@ struct FromElementsOpInterface
     Location loc = op->getLoc();
     auto tensorType = fromElementsOp.getType().cast<RankedTensorType>();
     auto shape = tensorType.getShape();
-    MemRefType resultType =
-        MemRefType::get(tensorType.getShape(), tensorType.getElementType());
+    MemRefType resultType = getContiguousMemRefType(tensorType);
     FailureOr<Value> maybeBuffer =
         createAlloc(rewriter, loc, resultType, {},
                     /*deallocMemref=*/state.getOptions().createDeallocs,

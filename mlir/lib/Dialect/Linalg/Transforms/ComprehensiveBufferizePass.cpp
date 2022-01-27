@@ -120,6 +120,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
   options->allowUnknownOps = allowUnknownOps;
   options->analysisFuzzerSeed = analysisFuzzerSeed;
   options->createDeallocs = createDeallocs;
+  options->fullyDynamicLayoutMaps = fullyDynamicLayoutMaps;
   options->printConflicts = printConflicts;
   options->testAnalysisOnly = testAnalysisOnly;
 
