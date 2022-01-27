@@ -397,29 +397,13 @@ define i32 @ptestz_v32i8_signbits(<32 x i8> %c, i32 %a, i32 %b) {
 ;
 
 define i32 @ptestz_v2i64_concat(<4 x i64> %c, <4 x i64> %d, i32 %a, i32 %b) {
-; AVX1-LABEL: ptestz_v2i64_concat:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpor %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vptest %xmm1, %xmm0
-; AVX1-NEXT:    cmovnel %esi, %eax
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: ptestz_v2i64_concat:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpor %xmm1, %xmm3, %xmm1
-; AVX2-NEXT:    vptest %xmm1, %xmm0
-; AVX2-NEXT:    cmovnel %esi, %eax
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; CHECK-LABEL: ptestz_v2i64_concat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    vptest %ymm1, %ymm0
+; CHECK-NEXT:    cmovnel %esi, %eax
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
   %t1 = shufflevector <4 x i64> %c, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
   %t2 = shufflevector <4 x i64> %c, <4 x i64> undef, <2 x i32> <i32 2, i32 3>
   %t3 = shufflevector <4 x i64> %d, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
