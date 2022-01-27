@@ -29,7 +29,6 @@ cl::opt<bool>
                     cl::ReallyHidden,
                     cl::desc("disable similarity matching, and outlining, "
                              "across branches for debugging purposes."));
-} // namespace llvm
 
 cl::opt<bool>
     DisableIndirectCalls("no-ir-sim-indirect-calls", cl::init(false),
@@ -41,12 +40,17 @@ cl::opt<bool>
                      cl::desc("only allow matching call instructions if the "
                               "name and type signature match."));
 
+cl::opt<bool>
+    DisableIntrinsics("no-ir-sim-intrinsics", cl::init(false), cl::ReallyHidden,
+                      cl::desc("Don't match or outline intrinsics"));
 
 IRInstructionData::IRInstructionData(Instruction &I, bool Legality,
                                      IRInstructionDataList &IDList)
     : Inst(&I), Legal(Legality), IDL(&IDList) {
   initializeInstruction();
 }
+
+} // namespace llvm
 
 void IRInstructionData::initializeInstruction() {
   // We check for whether we have a comparison instruction.  If it is, we
@@ -1103,6 +1107,7 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(
   Mapper.InstClassifier.EnableBranches = this->EnableBranches;
   Mapper.InstClassifier.EnableIndirectCalls = EnableIndirectCalls;
   Mapper.EnableMatchCallsByName = EnableMatchingCallsByName;
+  Mapper.InstClassifier.EnableIntrinsics = EnableIntrinsics;
 
   populateMapper(Modules, InstrList, IntegerMapping);
   findCandidates(InstrList, IntegerMapping);
@@ -1115,6 +1120,7 @@ SimilarityGroupList &IRSimilarityIdentifier::findSimilarity(Module &M) {
   Mapper.InstClassifier.EnableBranches = this->EnableBranches;
   Mapper.InstClassifier.EnableIndirectCalls = EnableIndirectCalls;
   Mapper.EnableMatchCallsByName = EnableMatchingCallsByName;
+  Mapper.InstClassifier.EnableIntrinsics = EnableIntrinsics;
 
   std::vector<IRInstructionData *> InstrList;
   std::vector<unsigned> IntegerMapping;
@@ -1136,7 +1142,7 @@ IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
   IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
-                                        MatchCallsByName));
+                                        MatchCallsByName, !DisableIntrinsics));
   return false;
 }
 
@@ -1153,9 +1159,8 @@ bool IRSimilarityIdentifierWrapperPass::runOnModule(Module &M) {
 AnalysisKey IRSimilarityAnalysis::Key;
 IRSimilarityIdentifier IRSimilarityAnalysis::run(Module &M,
                                                  ModuleAnalysisManager &) {
-
   auto IRSI = IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
-                                     MatchCallsByName);
+                                     MatchCallsByName, !DisableIntrinsics);
   IRSI.findSimilarity(M);
   return IRSI;
 }
