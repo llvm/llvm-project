@@ -450,6 +450,8 @@ public:
           ElseLoc(ElseLoc) {}
   };
 
+  using IncludedFilesSet = llvm::DenseSet<const FileEntry *>;
+
 private:
   friend class ASTReader;
   friend class MacroArgs;
@@ -764,6 +766,9 @@ private:
   /// The current submodule state. Will be \p NullSubmoduleState if we're not
   /// in a submodule.
   SubmoduleState *CurSubmoduleState;
+
+  /// The files that have been included.
+  IncludedFilesSet IncludedFiles;
 
   /// The set of known macros exported from modules.
   llvm::FoldingSet<ModuleMacro> ModuleMacros;
@@ -1223,6 +1228,22 @@ public:
   }
 
   /// \}
+
+  /// Mark the file as included.
+  /// Returns true if this is the first time the file was included.
+  bool markIncluded(const FileEntry *File) {
+    HeaderInfo.getFileInfo(File);
+    return IncludedFiles.insert(File).second;
+  }
+
+  /// Return true if this header has already been included.
+  bool alreadyIncluded(const FileEntry *File) const {
+    return IncludedFiles.count(File);
+  }
+
+  /// Get the set of included files.
+  IncludedFilesSet &getIncludedFiles() { return IncludedFiles; }
+  const IncludedFilesSet &getIncludedFiles() const { return IncludedFiles; }
 
   /// Return the name of the macro defined before \p Loc that has
   /// spelling \p Tokens.  If there are multiple macros with same spelling,
