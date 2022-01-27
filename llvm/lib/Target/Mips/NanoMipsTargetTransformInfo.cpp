@@ -17,6 +17,10 @@ using namespace llvm;
 
 InstructionCost NanoMipsTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
                                                TTI::TargetCostKind CostKind) {
+  if (Ty->getIntegerBitWidth() > 64) {
+    return 4 * TTI::TCC_Basic;
+  }
+
   uint64_t ImmZExt = Imm.getZExtValue();
   int64_t ImmSExt = Imm.getSExtValue();
 
