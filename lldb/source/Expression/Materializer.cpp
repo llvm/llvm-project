@@ -748,7 +748,7 @@ public:
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
 
-        lldb::offset_t offset;
+        lldb::offset_t offset = 0;
 
         ptr = extractor.GetAddress(&offset);
 
@@ -1043,7 +1043,7 @@ public:
         DumpHexBytes(&dump_stream, data.GetBytes(), data.GetByteSize(), 16,
                      load_addr);
 
-        lldb::offset_t offset;
+        lldb::offset_t offset = 0;
 
         ptr = extractor.GetAddress(&offset);
 
