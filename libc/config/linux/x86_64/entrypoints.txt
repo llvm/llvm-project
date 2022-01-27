@@ -79,6 +79,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
+
+    # unistd.h entrypoints
+    libc.src.unistd.write
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -229,9 +232,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.gmtime
     libc.src.time.gmtime_r
     libc.src.time.mktime
-
-    # unistd.h entrypoints
-    libc.src.unistd.write
   )
 endif()
 

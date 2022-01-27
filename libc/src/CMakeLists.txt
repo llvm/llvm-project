@@ -10,6 +10,7 @@ add_subdirectory(stdlib)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(sys)
+  add_subdirectory(unistd)
 endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
@@ -23,4 +24,3 @@ endif()
 add_subdirectory(stdio)
 add_subdirectory(threads)
 add_subdirectory(time)
-add_subdirectory(unistd)
