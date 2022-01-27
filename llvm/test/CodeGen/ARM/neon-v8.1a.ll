@@ -19,10 +19,23 @@ declare <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16>, <8 x i16>)
 declare <2 x i32> @llvm.ssub.sat.v2i32(<2 x i32>, <2 x i32>)
 declare <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32>, <4 x i32>)
 
+declare <4 x i16> @llvm.arm.neon.vqrdmlah.v4i16(<4 x i16>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.arm.neon.vqrdmlah.v2i32(<2 x i32>, <2 x i32>, <2 x i32>)
+declare <8 x i16> @llvm.arm.neon.vqrdmlah.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.arm.neon.vqrdmlah.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i16> @llvm.arm.neon.vqrdmlsh.v4i16(<4 x i16>, <4 x i16>, <4 x i16>)
+declare <2 x i32> @llvm.arm.neon.vqrdmlsh.v2i32(<2 x i32>, <2 x i32>, <2 x i32>)
+declare <8 x i16> @llvm.arm.neon.vqrdmlsh.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
+declare <4 x i32> @llvm.arm.neon.vqrdmlsh.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
+
+; The sadd intrinsics in this file previously transformed into sqrdmlah where they
+; shouldn't. They should produce vqrdmulh and vadd.
+
 define arm_aapcs_vfpcc <4 x i16> @test_vqrdmulah_v4i16(<4 x i16> %acc, <4 x i16> %mhs, <4 x i16> %rhs) {
 ; CHECK-LABEL: test_vqrdmulah_v4i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqrdmlah.s16 d0, d1, d2
+; CHECK-NEXT:    vqrdmulh.s16 d16, d1, d2
+; CHECK-NEXT:    vqadd.s16 d0, d0, d16
 ; CHECK-NEXT:    bx lr
    %prod = call <4 x i16> @llvm.arm.neon.vqrdmulh.v4i16(<4 x i16> %mhs,  <4 x i16> %rhs)
    %retval =  call <4 x i16> @llvm.sadd.sat.v4i16(<4 x i16> %acc,  <4 x i16> %prod)
@@ -32,7 +45,8 @@ define arm_aapcs_vfpcc <4 x i16> @test_vqrdmulah_v4i16(<4 x i16> %acc, <4 x i16>
 define arm_aapcs_vfpcc <8 x i16> @test_vqrdmulah_v8i16(<8 x i16> %acc, <8 x i16> %mhs, <8 x i16> %rhs) {
 ; CHECK-LABEL: test_vqrdmulah_v8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqrdmlah.s16 q0, q1, q2
+; CHECK-NEXT:    vqrdmulh.s16 q8, q1, q2
+; CHECK-NEXT:    vqadd.s16 q0, q0, q8
 ; CHECK-NEXT:    bx lr
    %prod = call <8 x i16> @llvm.arm.neon.vqrdmulh.v8i16(<8 x i16> %mhs, <8 x i16> %rhs)
    %retval =  call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %acc, <8 x i16> %prod)
@@ -42,7 +56,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vqrdmulah_v8i16(<8 x i16> %acc, <8 x i16>
 define arm_aapcs_vfpcc <2 x i32> @test_vqrdmulah_v2i32(<2 x i32> %acc, <2 x i32> %mhs, <2 x i32> %rhs) {
 ; CHECK-LABEL: test_vqrdmulah_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqrdmlah.s32 d0, d1, d2
+; CHECK-NEXT:    vqrdmulh.s32 d16, d1, d2
+; CHECK-NEXT:    vqadd.s32 d0, d0, d16
 ; CHECK-NEXT:    bx lr
    %prod = call <2 x i32> @llvm.arm.neon.vqrdmulh.v2i32(<2 x i32> %mhs, <2 x i32> %rhs)
    %retval =  call <2 x i32> @llvm.sadd.sat.v2i32(<2 x i32> %acc, <2 x i32> %prod)
@@ -52,7 +67,8 @@ define arm_aapcs_vfpcc <2 x i32> @test_vqrdmulah_v2i32(<2 x i32> %acc, <2 x i32>
 define arm_aapcs_vfpcc <4 x i32> @test_vqrdmulah_v4i32(<4 x i32> %acc, <4 x i32> %mhs, <4 x i32> %rhs) {
 ; CHECK-LABEL: test_vqrdmulah_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqrdmlah.s32 q0, q1, q2
+; CHECK-NEXT:    vqrdmulh.s32 q8, q1, q2
+; CHECK-NEXT:    vqadd.s32 q0, q0, q8
 ; CHECK-NEXT:    bx lr
    %prod = call <4 x i32> @llvm.arm.neon.vqrdmulh.v4i32(<4 x i32> %mhs, <4 x i32> %rhs)
    %retval =  call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %acc, <4 x i32> %prod)
@@ -62,7 +78,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vqrdmulah_v4i32(<4 x i32> %acc, <4 x i32>
 define arm_aapcs_vfpcc <4 x i16> @test_vqrdmulsh_v4i16(<4 x i16> %acc, <4 x i16> %mhs, <4 x i16> %rhs) {
 ; CHECK-LABEL: test_vqrdmulsh_v4i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqrdmlsh.s16 d0, d1, d2
+; CHECK-NEXT:    vqrdmulh.s16 d16, d1, d2
+; CHECK-NEXT:    vqsub.s16 d0, d0, d16
 ; CHECK-NEXT:    bx lr
    %prod = call <4 x i16> @llvm.arm.neon.vqrdmulh.v4i16(<4 x i16> %mhs,  <4 x i16> %rhs)
    %retval =  call <4 x i16> @llvm.ssub.sat.v4i16(<4 x i16> %acc, <4 x i16> %prod)
@@ -72,7 +89,8 @@ define arm_aapcs_vfpcc <4 x i16> @test_vqrdmulsh_v4i16(<4 x i16> %acc, <4 x i16>
 define arm_aapcs_vfpcc <8 x i16> @test_vqrdmulsh_v8i16(<8 x i16> %acc, <8 x i16> %mhs, <8 x i16> %rhs) {
 ; CHECK-LABEL: test_vqrdmulsh_v8i16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqrdmlsh.s16 q0, q1, q2
+; CHECK-NEXT:    vqrdmulh.s16 q8, q1, q2
+; CHECK-NEXT:    vqsub.s16 q0, q0, q8
 ; CHECK-NEXT:    bx lr
    %prod = call <8 x i16> @llvm.arm.neon.vqrdmulh.v8i16(<8 x i16> %mhs, <8 x i16> %rhs)
    %retval =  call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %acc, <8 x i16> %prod)
@@ -82,7 +100,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vqrdmulsh_v8i16(<8 x i16> %acc, <8 x i16>
 define arm_aapcs_vfpcc <2 x i32> @test_vqrdmulsh_v2i32(<2 x i32> %acc, <2 x i32> %mhs, <2 x i32> %rhs) {
 ; CHECK-LABEL: test_vqrdmulsh_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqrdmlsh.s32 d0, d1, d2
+; CHECK-NEXT:    vqrdmulh.s32 d16, d1, d2
+; CHECK-NEXT:    vqsub.s32 d0, d0, d16
 ; CHECK-NEXT:    bx lr
    %prod = call <2 x i32> @llvm.arm.neon.vqrdmulh.v2i32(<2 x i32> %mhs, <2 x i32> %rhs)
    %retval =  call <2 x i32> @llvm.ssub.sat.v2i32(<2 x i32> %acc, <2 x i32> %prod)
@@ -92,7 +111,8 @@ define arm_aapcs_vfpcc <2 x i32> @test_vqrdmulsh_v2i32(<2 x i32> %acc, <2 x i32>
 define arm_aapcs_vfpcc <4 x i32> @test_vqrdmulsh_v4i32(<4 x i32> %acc, <4 x i32> %mhs, <4 x i32> %rhs) {
 ; CHECK-LABEL: test_vqrdmulsh_v4i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vqrdmlsh.s32 q0, q1, q2
+; CHECK-NEXT:    vqrdmulh.s32 q8, q1, q2
+; CHECK-NEXT:    vqsub.s32 q0, q0, q8
 ; CHECK-NEXT:    bx lr
    %prod = call <4 x i32> @llvm.arm.neon.vqrdmulh.v4i32(<4 x i32> %mhs, <4 x i32> %rhs)
    %retval =  call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %acc, <4 x i32> %prod)
@@ -105,7 +125,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vqrdmulsh_v4i32(<4 x i32> %acc, <4 x i32>
 define arm_aapcs_vfpcc <4 x i16> @test_vqrdmulah_lane_s16(<4 x i16> %acc, <4 x i16> %x, <4 x i16> %v) {
 ; CHECK-LABEL: test_vqrdmulah_lane_s16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqrdmlah.s16 d0, d1, d2[3]
+; CHECK-NEXT:    vqrdmulh.s16 d16, d1, d2[3]
+; CHECK-NEXT:    vqadd.s16 d0, d0, d16
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <4 x i16> %v, <4 x i16> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
@@ -118,7 +139,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vqrdmulahq_lane_s16(<8 x i16> %acc, <8 x 
 ; CHECK-LABEL: test_vqrdmulahq_lane_s16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
-; CHECK-NEXT:    vqrdmlah.s16 q0, q1, d4[2]
+; CHECK-NEXT:    vqrdmulh.s16 q8, q1, d4[2]
+; CHECK-NEXT:    vqadd.s16 q0, q0, q8
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <4 x i16> %v, <4 x i16> undef, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
@@ -130,7 +152,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i32> @test_vqrdmulah_lane_s32(<2 x i32> %acc, <2 x i32> %x, <2 x i32> %v) {
 ; CHECK-LABEL: test_vqrdmulah_lane_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqrdmlah.s32 d0, d1, d2[1]
+; CHECK-NEXT:    vqrdmulh.s32 d16, d1, d2[1]
+; CHECK-NEXT:    vqadd.s32 d0, d0, d16
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <2 x i32> %v, <2 x i32> undef, <2 x i32> <i32 1, i32 1>
@@ -143,7 +166,8 @@ define arm_aapcs_vfpcc <4 x i32> @test_vqrdmulahq_lane_s32(<4 x i32> %acc,<4 x i
 ; CHECK-LABEL: test_vqrdmulahq_lane_s32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
-; CHECK-NEXT:    vqrdmlah.s32 q0, q1, d4[0]
+; CHECK-NEXT:    vqrdmulh.s32 q8, q1, d4[0]
+; CHECK-NEXT:    vqadd.s32 q0, q0, q8
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <2 x i32> %v, <2 x i32> undef, <4 x i32> zeroinitializer
@@ -155,7 +179,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i16> @test_vqrdmulsh_lane_s16(<4 x i16> %acc, <4 x i16> %x, <4 x i16> %v) {
 ; CHECK-LABEL: test_vqrdmulsh_lane_s16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqrdmlsh.s16 d0, d1, d2[3]
+; CHECK-NEXT:    vqrdmulh.s16 d16, d1, d2[3]
+; CHECK-NEXT:    vqsub.s16 d0, d0, d16
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <4 x i16> %v, <4 x i16> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
@@ -168,7 +193,8 @@ define arm_aapcs_vfpcc <8 x i16> @test_vqrdmulshq_lane_s16(<8 x i16> %acc, <8 x 
 ; CHECK-LABEL: test_vqrdmulshq_lane_s16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
-; CHECK-NEXT:    vqrdmlsh.s16 q0, q1, d4[2]
+; CHECK-NEXT:    vqrdmulh.s16 q8, q1, d4[2]
+; CHECK-NEXT:    vqsub.s16 q0, q0, q8
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <4 x i16> %v, <4 x i16> undef, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
@@ -180,7 +206,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i32> @test_vqrdmulsh_lane_s32(<2 x i32> %acc, <2 x i32> %x, <2 x i32> %v) {
 ; CHECK-LABEL: test_vqrdmulsh_lane_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vqrdmlsh.s32 d0, d1, d2[1]
+; CHECK-NEXT:    vqrdmulh.s32 d16, d1, d2[1]
+; CHECK-NEXT:    vqsub.s32 d0, d0, d16
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <2 x i32> %v, <2 x i32> undef, <2 x i32> <i32 1, i32 1>
@@ -193,11 +220,186 @@ define arm_aapcs_vfpcc <4 x i32> @test_vqrdmulshq_lane_s32(<4 x i32> %acc,<4 x i
 ; CHECK-LABEL: test_vqrdmulshq_lane_s32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
-; CHECK-NEXT:    vqrdmlsh.s32 q0, q1, d4[0]
+; CHECK-NEXT:    vqrdmulh.s32 q8, q1, d4[0]
+; CHECK-NEXT:    vqsub.s32 q0, q0, q8
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <2 x i32> %v, <2 x i32> undef, <4 x i32> zeroinitializer
   %prod = tail call <4 x i32> @llvm.arm.neon.vqrdmulh.v4i32(<4 x i32> %x, <4 x i32> %shuffle)
   %retval =  call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %acc, <4 x i32> %prod)
   ret <4 x i32> %retval
+}
+
+
+
+define arm_aapcs_vfpcc <4 x i16> @test_vqrdmlah_s16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
+; CHECK-LABEL: test_vqrdmlah_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlah.s16 d0, d1, d2
+; CHECK-NEXT:    bx lr
+entry:
+  %vqrdmlah_v3.i = tail call <4 x i16> @llvm.arm.neon.vqrdmlah.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) #3
+  ret <4 x i16> %vqrdmlah_v3.i
+}
+
+define arm_aapcs_vfpcc <2 x i32> @test_vqrdmlah_s32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: test_vqrdmlah_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlah.s32 d0, d1, d2
+; CHECK-NEXT:    bx lr
+entry:
+  %vqrdmlah_v3.i = tail call <2 x i32> @llvm.arm.neon.vqrdmlah.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) #3
+  ret <2 x i32> %vqrdmlah_v3.i
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vqrdmlahq_s16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
+; CHECK-LABEL: test_vqrdmlahq_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlah.s16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %vqrdmlahq_v3.i = tail call <8 x i16> @llvm.arm.neon.vqrdmlah.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) #3
+  ret <8 x i16> %vqrdmlahq_v3.i
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vqrdmlahq_s32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; CHECK-LABEL: test_vqrdmlahq_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlah.s32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %vqrdmlahq_v3.i = tail call <4 x i32> @llvm.arm.neon.vqrdmlah.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) #3
+  ret <4 x i32> %vqrdmlahq_v3.i
+}
+
+define arm_aapcs_vfpcc <4 x i16> @test_vqrdmlah_lane_s16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
+; CHECK-LABEL: test_vqrdmlah_lane_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlah.s16 d0, d1, d2[3]
+; CHECK-NEXT:    bx lr
+entry:
+  %lane = shufflevector <4 x i16> %c, <4 x i16> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %vqrdmlah_v3.i = tail call <4 x i16> @llvm.arm.neon.vqrdmlah.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %lane) #3
+  ret <4 x i16> %vqrdmlah_v3.i
+}
+
+define arm_aapcs_vfpcc <2 x i32> @test_vqrdmlah_lane_s32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: test_vqrdmlah_lane_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlah.s32 d0, d1, d2[1]
+; CHECK-NEXT:    bx lr
+entry:
+  %lane = shufflevector <2 x i32> %c, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %vqrdmlah_v3.i = tail call <2 x i32> @llvm.arm.neon.vqrdmlah.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %lane) #3
+  ret <2 x i32> %vqrdmlah_v3.i
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vqrdmlahq_lane_s16(<8 x i16> %a, <8 x i16> %b, <4 x i16> %c) {
+; CHECK-LABEL: test_vqrdmlahq_lane_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
+; CHECK-NEXT:    vqrdmlah.s16 q0, q1, d4[3]
+; CHECK-NEXT:    bx lr
+entry:
+  %lane = shufflevector <4 x i16> %c, <4 x i16> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  %vqrdmlahq_v3.i = tail call <8 x i16> @llvm.arm.neon.vqrdmlah.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %lane) #3
+  ret <8 x i16> %vqrdmlahq_v3.i
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vqrdmlahq_lane_s32(<4 x i32> %a, <4 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: test_vqrdmlahq_lane_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
+; CHECK-NEXT:    vqrdmlah.s32 q0, q1, d4[1]
+; CHECK-NEXT:    bx lr
+entry:
+  %lane = shufflevector <2 x i32> %c, <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %vqrdmlahq_v3.i = tail call <4 x i32> @llvm.arm.neon.vqrdmlah.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %lane) #3
+  ret <4 x i32> %vqrdmlahq_v3.i
+}
+
+define arm_aapcs_vfpcc <4 x i16> @test_vqrdmlsh_s16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
+; CHECK-LABEL: test_vqrdmlsh_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlsh.s16 d0, d1, d2
+; CHECK-NEXT:    bx lr
+entry:
+  %vqrdmlsh_v3.i = tail call <4 x i16> @llvm.arm.neon.vqrdmlsh.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) #3
+  ret <4 x i16> %vqrdmlsh_v3.i
+}
+
+define arm_aapcs_vfpcc <2 x i32> @test_vqrdmlsh_s32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: test_vqrdmlsh_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlsh.s32 d0, d1, d2
+; CHECK-NEXT:    bx lr
+entry:
+  %vqrdmlsh_v3.i = tail call <2 x i32> @llvm.arm.neon.vqrdmlsh.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) #3
+  ret <2 x i32> %vqrdmlsh_v3.i
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vqrdmlshq_s16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) {
+; CHECK-LABEL: test_vqrdmlshq_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlsh.s16 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %vqrdmlshq_v3.i = tail call <8 x i16> @llvm.arm.neon.vqrdmlsh.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c) #3
+  ret <8 x i16> %vqrdmlshq_v3.i
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vqrdmlshq_s32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; CHECK-LABEL: test_vqrdmlshq_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlsh.s32 q0, q1, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %vqrdmlshq_v3.i = tail call <4 x i32> @llvm.arm.neon.vqrdmlsh.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) #3
+  ret <4 x i32> %vqrdmlshq_v3.i
+}
+
+define arm_aapcs_vfpcc <4 x i16> @test_vqrdmlsh_lane_s16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %c) {
+; CHECK-LABEL: test_vqrdmlsh_lane_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlsh.s16 d0, d1, d2[3]
+; CHECK-NEXT:    bx lr
+entry:
+  %lane = shufflevector <4 x i16> %c, <4 x i16> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %vqrdmlsh_v3.i = tail call <4 x i16> @llvm.arm.neon.vqrdmlsh.v4i16(<4 x i16> %a, <4 x i16> %b, <4 x i16> %lane) #3
+  ret <4 x i16> %vqrdmlsh_v3.i
+}
+
+define arm_aapcs_vfpcc <2 x i32> @test_vqrdmlsh_lane_s32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: test_vqrdmlsh_lane_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vqrdmlsh.s32 d0, d1, d2[1]
+; CHECK-NEXT:    bx lr
+entry:
+  %lane = shufflevector <2 x i32> %c, <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+  %vqrdmlsh_v3.i = tail call <2 x i32> @llvm.arm.neon.vqrdmlsh.v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %lane) #3
+  ret <2 x i32> %vqrdmlsh_v3.i
+}
+
+define arm_aapcs_vfpcc <8 x i16> @test_vqrdmlshq_lane_s16(<8 x i16> %a, <8 x i16> %b, <4 x i16> %c) {
+; CHECK-LABEL: test_vqrdmlshq_lane_s16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
+; CHECK-NEXT:    vqrdmlsh.s16 q0, q1, d4[3]
+; CHECK-NEXT:    bx lr
+entry:
+  %lane = shufflevector <4 x i16> %c, <4 x i16> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>
+  %vqrdmlshq_v3.i = tail call <8 x i16> @llvm.arm.neon.vqrdmlsh.v8i16(<8 x i16> %a, <8 x i16> %b, <8 x i16> %lane) #3
+  ret <8 x i16> %vqrdmlshq_v3.i
+}
+
+define arm_aapcs_vfpcc <4 x i32> @test_vqrdmlshq_lane_s32(<4 x i32> %a, <4 x i32> %b, <2 x i32> %c) {
+; CHECK-LABEL: test_vqrdmlshq_lane_s32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
+; CHECK-NEXT:    vqrdmlsh.s32 q0, q1, d4[1]
+; CHECK-NEXT:    bx lr
+entry:
+  %lane = shufflevector <2 x i32> %c, <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %vqrdmlshq_v3.i = tail call <4 x i32> @llvm.arm.neon.vqrdmlsh.v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %lane) #3
+  ret <4 x i32> %vqrdmlshq_v3.i
 }
