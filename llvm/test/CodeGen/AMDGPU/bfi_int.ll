@@ -2,13 +2,12 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX7 %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX8 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1031 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -enable-var-scope -check-prefixes=R600 %s
 
 ; BFI_INT Definition pattern from ISA docs
 ; (y & x) | (z & ~x)
 ;
-define amdgpu_kernel void @bfi_def(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
-; GFX7-LABEL: bfi_def:
+define amdgpu_kernel void @s_bfi_def_i32(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+; GFX7-LABEL: s_bfi_def_i32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
 ; GFX7-NEXT:    s_load_dword s6, s[0:1], 0xd
@@ -23,7 +22,7 @@ define amdgpu_kernel void @bfi_def(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;
-; GFX8-LABEL: bfi_def:
+; GFX8-LABEL: s_bfi_def_i32:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
 ; GFX8-NEXT:    s_load_dword s4, s[0:1], 0x34
@@ -38,7 +37,7 @@ define amdgpu_kernel void @bfi_def(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
-; GFX10-LABEL: bfi_def:
+; GFX10-LABEL: s_bfi_def_i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_clause 0x2
 ; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
@@ -52,17 +51,6 @@ define amdgpu_kernel void @bfi_def(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
-;
-; R600-LABEL: bfi_def:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; R600-NEXT:     BFI_INT * T1.X, KC0[2].Z, KC0[2].W, KC0[3].X,
 entry:
   %0 = xor i32 %x, -1
   %1 = and i32 %z, %0
@@ -72,10 +60,37 @@ entry:
   ret void
 }
 
+define i32 @v_bfi_def_i32(i32 %x, i32 %y, i32 %z) {
+; GFX7-LABEL: v_bfi_def_i32:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v1, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_bfi_def_i32:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v1, v2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_bfi_def_i32:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_bfi_b32 v0, v0, v1, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = xor i32 %x, -1
+  %1 = and i32 %z, %0
+  %2 = and i32 %y, %x
+  %3 = or i32 %1, %2
+  ret i32 %3
+}
+
 ; SHA-256 Ch function
 ; z ^ (x & (y ^ z))
-define amdgpu_kernel void @bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
-; GFX7-LABEL: bfi_sha256_ch:
+define amdgpu_kernel void @s_bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+; GFX7-LABEL: s_bfi_sha256_ch:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
 ; GFX7-NEXT:    s_load_dword s6, s[0:1], 0xd
@@ -90,7 +105,7 @@ define amdgpu_kernel void @bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y,
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;
-; GFX8-LABEL: bfi_sha256_ch:
+; GFX8-LABEL: s_bfi_sha256_ch:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
 ; GFX8-NEXT:    s_load_dword s4, s[0:1], 0x34
@@ -105,7 +120,7 @@ define amdgpu_kernel void @bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y,
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
-; GFX10-LABEL: bfi_sha256_ch:
+; GFX10-LABEL: s_bfi_sha256_ch:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_clause 0x2
 ; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
@@ -119,17 +134,6 @@ define amdgpu_kernel void @bfi_sha256_ch(i32 addrspace(1)* %out, i32 %x, i32 %y,
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
-;
-; R600-LABEL: bfi_sha256_ch:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; R600-NEXT:     BFI_INT * T1.X, KC0[2].Z, KC0[2].W, KC0[3].X,
 entry:
   %0 = xor i32 %y, %z
   %1 = and i32 %x, %0
@@ -138,10 +142,180 @@ entry:
   ret void
 }
 
+define i32 @v_bfi_sha256_ch(i32 %x, i32 %y, i32 %z) {
+; GFX7-LABEL: v_bfi_sha256_ch:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v1, v2
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_bfi_sha256_ch:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v1, v2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_bfi_sha256_ch:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_bfi_b32 v0, v0, v1, v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = xor i32 %y, %z
+  %1 = and i32 %x, %0
+  %2 = xor i32 %z, %1
+  ret i32 %2
+}
+
+define amdgpu_ps float @v_s_s_bfi_sha256_ch(i32 %x, i32 inreg %y, i32 inreg %z) {
+; GFX7-LABEL: v_s_s_bfi_sha256_ch:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    v_bfi_b32 v0, v0, s0, v1
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_s_s_bfi_sha256_ch:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    v_bfi_b32 v0, v0, s0, v1
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_s_s_bfi_sha256_ch:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_bfi_b32 v0, v0, s0, s1
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %xor0 = xor i32 %y, %z
+  %and = and i32 %x, %xor0
+  %xor1 = xor i32 %z, %and
+  %cast = bitcast i32 %xor1 to float
+  ret float %cast
+}
+
+define amdgpu_ps float @s_v_s_bfi_sha256_ch(i32 inreg %x, i32 %y, i32 inreg %z) {
+; GFX7-LABEL: s_v_s_bfi_sha256_ch:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    v_bfi_b32 v0, s0, v0, v1
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_v_s_bfi_sha256_ch:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    v_bfi_b32 v0, s0, v0, v1
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_v_s_bfi_sha256_ch:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_bfi_b32 v0, s0, v0, s1
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %xor0 = xor i32 %y, %z
+  %and = and i32 %x, %xor0
+  %xor1 = xor i32 %z, %and
+  %cast = bitcast i32 %xor1 to float
+  ret float %cast
+}
+
+define amdgpu_ps float @s_s_v_bfi_sha256_ch(i32 inreg %x, i32 inreg %y, i32 %z) {
+; GFX7-LABEL: s_s_v_bfi_sha256_ch:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_mov_b32_e32 v1, s1
+; GFX7-NEXT:    v_bfi_b32 v0, s0, v1, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_s_v_bfi_sha256_ch:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-NEXT:    v_bfi_b32 v0, s0, v1, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_s_v_bfi_sha256_ch:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_bfi_b32 v0, s0, s1, v0
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %xor0 = xor i32 %y, %z
+  %and = and i32 %x, %xor0
+  %xor1 = xor i32 %z, %and
+  %cast = bitcast i32 %xor1 to float
+  ret float %cast
+}
+
+define amdgpu_ps float @s_v_v_bfi_sha256_ch(i32 inreg %x, i32 %y, i32 %z) {
+; GFX7-LABEL: s_v_v_bfi_sha256_ch:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_bfi_b32 v0, s0, v0, v1
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_v_v_bfi_sha256_ch:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_bfi_b32 v0, s0, v0, v1
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_v_v_bfi_sha256_ch:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_bfi_b32 v0, s0, v0, v1
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %xor0 = xor i32 %y, %z
+  %and = and i32 %x, %xor0
+  %xor1 = xor i32 %z, %and
+  %cast = bitcast i32 %xor1 to float
+  ret float %cast
+}
+
+define amdgpu_ps float @v_s_v_bfi_sha256_ch(i32 %x, i32 inreg %y, i32 %z) {
+; GFX7-LABEL: v_s_v_bfi_sha256_ch:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_bfi_b32 v0, v0, s0, v1
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_s_v_bfi_sha256_ch:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_bfi_b32 v0, v0, s0, v1
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_s_v_bfi_sha256_ch:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_bfi_b32 v0, v0, s0, v1
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %xor0 = xor i32 %y, %z
+  %and = and i32 %x, %xor0
+  %xor1 = xor i32 %z, %and
+  %cast = bitcast i32 %xor1 to float
+  ret float %cast
+}
+
+define amdgpu_ps float @v_v_s_bfi_sha256_ch(i32 %x, i32 %y, i32 inreg %z) {
+; GFX7-LABEL: v_v_s_bfi_sha256_ch:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v1, s0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_v_s_bfi_sha256_ch:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v1, s0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_v_s_bfi_sha256_ch:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_bfi_b32 v0, v0, v1, s0
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %xor0 = xor i32 %y, %z
+  %and = and i32 %x, %xor0
+  %xor1 = xor i32 %z, %and
+  %cast = bitcast i32 %xor1 to float
+  ret float %cast
+}
+
 ; SHA-256 Ma function
 ; ((x & z) | (y & (x | z)))
-define amdgpu_kernel void @bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
-; GFX7-LABEL: bfi_sha256_ma:
+define amdgpu_kernel void @s_bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y, i32 %z) {
+; GFX7-LABEL: s_bfi_sha256_ma:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
 ; GFX7-NEXT:    s_load_dword s6, s[0:1], 0xd
@@ -157,7 +331,7 @@ define amdgpu_kernel void @bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y,
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;
-; GFX8-LABEL: bfi_sha256_ma:
+; GFX8-LABEL: s_bfi_sha256_ma:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
 ; GFX8-NEXT:    s_load_dword s4, s[0:1], 0x34
@@ -173,7 +347,7 @@ define amdgpu_kernel void @bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y,
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
-; GFX10-LABEL: bfi_sha256_ma:
+; GFX10-LABEL: s_bfi_sha256_ma:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_clause 0x2
 ; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
@@ -188,18 +362,6 @@ define amdgpu_kernel void @bfi_sha256_ma(i32 addrspace(1)* %out, i32 %x, i32 %y,
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
-;
-; R600-LABEL: bfi_sha256_ma:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 3, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     XOR_INT * T0.W, KC0[2].Z, KC0[2].W,
-; R600-NEXT:     BFI_INT * T0.X, PV.W, KC0[3].X, KC0[2].W,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   %0 = and i32 %x, %z
   %1 = or i32 %x, %z
@@ -207,6 +369,36 @@ entry:
   %3 = or i32 %0, %2
   store i32 %3, i32 addrspace(1)* %out
   ret void
+}
+
+define i32 @v_bfi_sha256_ma(i32 %x, i32 %y, i32 %z) {
+; GFX7-LABEL: v_bfi_sha256_ma:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v2, v1
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: v_bfi_sha256_ma:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v2, v1
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_bfi_sha256_ma:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX10-NEXT:    v_bfi_b32 v0, v0, v2, v1
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = and i32 %x, %z
+  %1 = or i32 %x, %z
+  %2 = and i32 %y, %1
+  %3 = or i32 %0, %2
+  ret i32 %3
 }
 
 define <2 x i32> @v_bitselect_v2i32_pat1(<2 x i32> %a, <2 x i32> %b, <2 x i32> %mask) {
@@ -231,11 +423,6 @@ define <2 x i32> @v_bitselect_v2i32_pat1(<2 x i32> %a, <2 x i32> %b, <2 x i32> %
 ; GFX10-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_bitselect_v2i32_pat1:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
   %xor.0 = xor <2 x i32> %a, %mask
   %and = and <2 x i32> %xor.0, %b
   %bitselect = xor <2 x i32> %and, %mask
@@ -264,16 +451,179 @@ define i64 @v_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-NEXT:    v_bfi_b32 v0, v0, v2, v4
 ; GFX10-NEXT:    v_bfi_b32 v1, v1, v3, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_bitselect_i64_pat_0:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
   %and1 = and i64 %not.a, %mask
   %bitselect = or i64 %and0, %and1
   ret i64 %bitselect
+}
+
+define amdgpu_ps <2 x float> @v_s_s_bitselect_i64_pat_0(i64 %a, i64 inreg %b, i64 inreg %mask) {
+; GFX7-LABEL: v_s_s_bitselect_i64_pat_0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mov_b32_e32 v2, s3
+; GFX7-NEXT:    v_bfi_b32 v1, v1, s1, v2
+; GFX7-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-NEXT:    v_bfi_b32 v0, v0, s0, v2
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_s_s_bitselect_i64_pat_0:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-NEXT:    v_bfi_b32 v1, v1, s1, v2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_bfi_b32 v0, v0, s0, v2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_s_s_bitselect_i64_pat_0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, v0, s0, s2
+; GFX10-NEXT:    v_bfi_b32 v1, v1, s1, s3
+; GFX10-NEXT:    ; return to shader part epilog
+  %and0 = and i64 %a, %b
+  %not.a = xor i64 %a, -1
+  %and1 = and i64 %not.a, %mask
+  %bitselect = or i64 %and0, %and1
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @s_v_s_bitselect_i64_pat_0(i64 inreg %a, i64 %b, i64 inreg %mask) {
+; GFX7-LABEL: s_v_s_bitselect_i64_pat_0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mov_b32_e32 v2, s3
+; GFX7-NEXT:    v_bfi_b32 v1, s1, v1, v2
+; GFX7-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-NEXT:    v_bfi_b32 v0, s0, v0, v2
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_v_s_bitselect_i64_pat_0:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-NEXT:    v_bfi_b32 v1, s1, v1, v2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_bfi_b32 v0, s0, v0, v2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_v_s_bitselect_i64_pat_0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, s0, v0, s2
+; GFX10-NEXT:    v_bfi_b32 v1, s1, v1, s3
+; GFX10-NEXT:    ; return to shader part epilog
+  %and0 = and i64 %a, %b
+  %not.a = xor i64 %a, -1
+  %and1 = and i64 %not.a, %mask
+  %bitselect = or i64 %and0, %and1
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @s_s_v_bitselect_i64_pat_0(i64 inreg %a, i64 inreg %b, i64 %mask) {
+; GFX7-LABEL: s_s_v_bitselect_i64_pat_0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mov_b32_e32 v2, s3
+; GFX7-NEXT:    v_bfi_b32 v1, s1, v2, v1
+; GFX7-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-NEXT:    v_bfi_b32 v0, s0, v2, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_s_v_bitselect_i64_pat_0:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-NEXT:    v_bfi_b32 v1, s1, v2, v1
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_bfi_b32 v0, s0, v2, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_s_v_bitselect_i64_pat_0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, s0, s2, v0
+; GFX10-NEXT:    v_bfi_b32 v1, s1, s3, v1
+; GFX10-NEXT:    ; return to shader part epilog
+  %and0 = and i64 %a, %b
+  %not.a = xor i64 %a, -1
+  %and1 = and i64 %not.a, %mask
+  %bitselect = or i64 %and0, %and1
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @v_v_s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 inreg %mask) {
+; GFX7-LABEL: v_v_s_bitselect_i64_pat_0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_bfi_b32 v1, v1, v3, s1
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v2, s0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_v_s_bitselect_i64_pat_0:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_bfi_b32 v1, v1, v3, s1
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v2, s0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_v_s_bitselect_i64_pat_0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, v0, v2, s0
+; GFX10-NEXT:    v_bfi_b32 v1, v1, v3, s1
+; GFX10-NEXT:    ; return to shader part epilog
+  %and0 = and i64 %a, %b
+  %not.a = xor i64 %a, -1
+  %and1 = and i64 %not.a, %mask
+  %bitselect = or i64 %and0, %and1
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @v_s_v_bitselect_i64_pat_0(i64 %a, i64 inreg %b, i64 %mask) {
+; GFX7-LABEL: v_s_v_bitselect_i64_pat_0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_bfi_b32 v1, v1, s1, v3
+; GFX7-NEXT:    v_bfi_b32 v0, v0, s0, v2
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_s_v_bitselect_i64_pat_0:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_bfi_b32 v1, v1, s1, v3
+; GFX8-NEXT:    v_bfi_b32 v0, v0, s0, v2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_s_v_bitselect_i64_pat_0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, v0, s0, v2
+; GFX10-NEXT:    v_bfi_b32 v1, v1, s1, v3
+; GFX10-NEXT:    ; return to shader part epilog
+  %and0 = and i64 %a, %b
+  %not.a = xor i64 %a, -1
+  %and1 = and i64 %not.a, %mask
+  %bitselect = or i64 %and0, %and1
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @s_v_v_bitselect_i64_pat_0(i64 inreg %a, i64 %b, i64 %mask) {
+; GFX7-LABEL: s_v_v_bitselect_i64_pat_0:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_bfi_b32 v1, s1, v1, v3
+; GFX7-NEXT:    v_bfi_b32 v0, s0, v0, v2
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_v_v_bitselect_i64_pat_0:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_bfi_b32 v1, s1, v1, v3
+; GFX8-NEXT:    v_bfi_b32 v0, s0, v0, v2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_v_v_bitselect_i64_pat_0:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, s0, v0, v2
+; GFX10-NEXT:    v_bfi_b32 v1, s1, v1, v3
+; GFX10-NEXT:    ; return to shader part epilog
+  %and0 = and i64 %a, %b
+  %not.a = xor i64 %a, -1
+  %and1 = and i64 %not.a, %mask
+  %bitselect = or i64 %and0, %and1
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
 }
 
 define i64 @v_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
@@ -298,15 +648,97 @@ define i64 @v_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_bitselect_i64_pat_1:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b
   %bitselect = xor i64 %and, %mask
   ret i64 %bitselect
+}
+
+define amdgpu_ps <2 x float> @v_s_s_bitselect_i64_pat_1(i64 %a, i64 inreg %b, i64 inreg %mask) {
+; GFX7-LABEL: v_s_s_bitselect_i64_pat_1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mov_b32_e32 v2, s3
+; GFX7-NEXT:    v_bfi_b32 v1, s1, v1, v2
+; GFX7-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-NEXT:    v_bfi_b32 v0, s0, v0, v2
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_s_s_bitselect_i64_pat_1:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-NEXT:    v_bfi_b32 v1, s1, v1, v2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_bfi_b32 v0, s0, v0, v2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_s_s_bitselect_i64_pat_1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, s0, v0, s2
+; GFX10-NEXT:    v_bfi_b32 v1, s1, v1, s3
+; GFX10-NEXT:    ; return to shader part epilog
+  %xor.0 = xor i64 %a, %mask
+  %and = and i64 %xor.0, %b
+  %bitselect = xor i64 %and, %mask
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @s_s_v_bitselect_i64_pat_1(i64 inreg %a, i64 inreg %b, i64 %mask) {
+; GFX7-LABEL: s_s_v_bitselect_i64_pat_1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mov_b32_e32 v2, s1
+; GFX7-NEXT:    v_bfi_b32 v1, s3, v2, v1
+; GFX7-NEXT:    v_mov_b32_e32 v2, s0
+; GFX7-NEXT:    v_bfi_b32 v0, s2, v2, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_s_v_bitselect_i64_pat_1:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v2, s1
+; GFX8-NEXT:    v_bfi_b32 v1, s3, v2, v1
+; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    v_bfi_b32 v0, s2, v2, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_s_v_bitselect_i64_pat_1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, s2, s0, v0
+; GFX10-NEXT:    v_bfi_b32 v1, s3, s1, v1
+; GFX10-NEXT:    ; return to shader part epilog
+  %xor.0 = xor i64 %a, %mask
+  %and = and i64 %xor.0, %b
+  %bitselect = xor i64 %and, %mask
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @s_v_s_bitselect_i64_pat_1(i64 inreg %a, i64 %b, i64 inreg %mask) {
+; GFX7-LABEL: s_v_s_bitselect_i64_pat_1:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    v_mov_b32_e32 v2, s3
+; GFX7-NEXT:    v_bfi_b32 v1, v1, s1, v2
+; GFX7-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-NEXT:    v_bfi_b32 v0, v0, s0, v2
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_v_s_bitselect_i64_pat_1:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-NEXT:    v_bfi_b32 v1, v1, s1, v2
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_bfi_b32 v0, v0, s0, v2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_v_s_bitselect_i64_pat_1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_bfi_b32 v0, v0, s0, s2
+; GFX10-NEXT:    v_bfi_b32 v1, v1, s1, s3
+; GFX10-NEXT:    ; return to shader part epilog
+  %xor.0 = xor i64 %a, %mask
+  %and = and i64 %xor.0, %b
+  %bitselect = xor i64 %and, %mask
+  %cast = bitcast i64 %bitselect to <2 x float>
+  ret <2 x float> %cast
 }
 
 define i64 @v_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
@@ -331,11 +763,6 @@ define i64 @v_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_bitselect_i64_pat_2:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b
   %bitselect = xor i64 %and, %mask
@@ -370,17 +797,152 @@ define i64 @v_bfi_sha256_ma_i64(i64 %x, i64 %y, i64 %z) {
 ; GFX10-NEXT:    v_bfi_b32 v0, v0, v4, v2
 ; GFX10-NEXT:    v_bfi_b32 v1, v1, v5, v3
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_bfi_sha256_ma_i64:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 entry:
   %and0 = and i64 %x, %z
   %or0 = or i64 %x, %z
   %and1 = and i64 %y, %or0
   %or1 = or i64 %and0, %and1
   ret i64 %or1
+}
+
+define amdgpu_ps <2 x float> @v_s_s_bfi_sha256_ma_i64(i64 %x, i64 inreg %y, i64 inreg %z) {
+; GFX7-LABEL: v_s_s_bfi_sha256_ma_i64:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_xor_b32_e32 v1, s1, v1
+; GFX7-NEXT:    v_mov_b32_e32 v2, s1
+; GFX7-NEXT:    v_bfi_b32 v1, v1, s3, v2
+; GFX7-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX7-NEXT:    v_mov_b32_e32 v2, s0
+; GFX7-NEXT:    v_bfi_b32 v0, v0, s2, v2
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_s_s_bfi_sha256_ma_i64:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_xor_b32_e32 v1, s1, v1
+; GFX8-NEXT:    v_mov_b32_e32 v2, s1
+; GFX8-NEXT:    v_bfi_b32 v1, v1, s3, v2
+; GFX8-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX8-NEXT:    v_mov_b32_e32 v2, s0
+; GFX8-NEXT:    v_bfi_b32 v0, v0, s2, v2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_s_s_bfi_sha256_ma_i64:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX10-NEXT:    v_xor_b32_e32 v1, s1, v1
+; GFX10-NEXT:    v_bfi_b32 v0, v0, s2, s0
+; GFX10-NEXT:    v_bfi_b32 v1, v1, s3, s1
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %and0 = and i64 %x, %z
+  %or0 = or i64 %x, %z
+  %and1 = and i64 %y, %or0
+  %or1 = or i64 %and0, %and1
+  %cast = bitcast i64 %or1 to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @s_v_s_bfi_sha256_ma_i64(i64 inreg %x, i64 %y, i64 inreg %z) {
+; GFX7-LABEL: s_v_s_bfi_sha256_ma_i64:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_xor_b32_e32 v2, s1, v1
+; GFX7-NEXT:    v_bfi_b32 v1, v2, s3, v1
+; GFX7-NEXT:    v_xor_b32_e32 v2, s0, v0
+; GFX7-NEXT:    v_bfi_b32 v0, v2, s2, v0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_v_s_bfi_sha256_ma_i64:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_xor_b32_e32 v2, s1, v1
+; GFX8-NEXT:    v_bfi_b32 v1, v2, s3, v1
+; GFX8-NEXT:    v_xor_b32_e32 v2, s0, v0
+; GFX8-NEXT:    v_bfi_b32 v0, v2, s2, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_v_s_bfi_sha256_ma_i64:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_xor_b32_e32 v2, s0, v0
+; GFX10-NEXT:    v_xor_b32_e32 v3, s1, v1
+; GFX10-NEXT:    v_bfi_b32 v0, v2, s2, v0
+; GFX10-NEXT:    v_bfi_b32 v1, v3, s3, v1
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %and0 = and i64 %x, %z
+  %or0 = or i64 %x, %z
+  %and1 = and i64 %y, %or0
+  %or1 = or i64 %and0, %and1
+  %cast = bitcast i64 %or1 to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @s_s_v_bfi_sha256_ma_i64(i64 inreg %x, i64 inreg %y, i64 %z) {
+; GFX7-LABEL: s_s_v_bfi_sha256_ma_i64:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_mov_b32_e32 v2, s3
+; GFX7-NEXT:    v_xor_b32_e32 v2, s1, v2
+; GFX7-NEXT:    v_bfi_b32 v1, v2, v1, s3
+; GFX7-NEXT:    v_mov_b32_e32 v2, s2
+; GFX7-NEXT:    v_xor_b32_e32 v2, s0, v2
+; GFX7-NEXT:    v_bfi_b32 v0, v2, v0, s2
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_s_v_bfi_sha256_ma_i64:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_mov_b32_e32 v2, s3
+; GFX8-NEXT:    v_xor_b32_e32 v2, s1, v2
+; GFX8-NEXT:    v_bfi_b32 v1, v2, v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v2, s2
+; GFX8-NEXT:    v_xor_b32_e32 v2, s0, v2
+; GFX8-NEXT:    v_bfi_b32 v0, v2, v0, s2
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: s_s_v_bfi_sha256_ma_i64:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_xor_b32_e64 v2, s0, s2
+; GFX10-NEXT:    v_xor_b32_e64 v3, s1, s3
+; GFX10-NEXT:    v_bfi_b32 v0, v2, v0, s2
+; GFX10-NEXT:    v_bfi_b32 v1, v3, v1, s3
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %and0 = and i64 %x, %z
+  %or0 = or i64 %x, %z
+  %and1 = and i64 %y, %or0
+  %or1 = or i64 %and0, %and1
+  %cast = bitcast i64 %or1 to <2 x float>
+  ret <2 x float> %cast
+}
+
+define amdgpu_ps <2 x float> @v_s_v_bfi_sha256_ma_i64(i64 %x, i64 inreg %y, i64 %z) {
+; GFX7-LABEL: v_s_v_bfi_sha256_ma_i64:
+; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    v_xor_b32_e32 v1, s1, v1
+; GFX7-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX7-NEXT:    v_bfi_b32 v1, v1, v3, s1
+; GFX7-NEXT:    v_bfi_b32 v0, v0, v2, s0
+; GFX7-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: v_s_v_bfi_sha256_ma_i64:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    v_xor_b32_e32 v1, s1, v1
+; GFX8-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX8-NEXT:    v_bfi_b32 v1, v1, v3, s1
+; GFX8-NEXT:    v_bfi_b32 v0, v0, v2, s0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_s_v_bfi_sha256_ma_i64:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX10-NEXT:    v_xor_b32_e32 v1, s1, v1
+; GFX10-NEXT:    v_bfi_b32 v0, v0, v2, s0
+; GFX10-NEXT:    v_bfi_b32 v1, v1, v3, s1
+; GFX10-NEXT:    ; return to shader part epilog
+entry:
+  %and0 = and i64 %x, %z
+  %or0 = or i64 %x, %z
+  %and1 = and i64 %y, %or0
+  %or1 = or i64 %and0, %and1
+  %cast = bitcast i64 %or1 to <2 x float>
+  ret <2 x float> %cast
 }
 
 define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
@@ -431,24 +993,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_endpgm
-;
-; R600-LABEL: s_bitselect_i64_pat_0:
-; R600:       ; %bb.0:
-; R600-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     MOV * T0.W, KC0[3].Y,
-; R600-NEXT:     BFI_INT * T0.W, KC0[2].Y, KC0[2].W, PV.W,
-; R600-NEXT:     MOV * T1.W, KC0[3].Z,
-; R600-NEXT:     BFI_INT T1.W, KC0[2].Z, KC0[3].X, PV.W,
-; R600-NEXT:     ADDC_UINT * T2.W, T0.W, literal.x,
-; R600-NEXT:    10(1.401298e-44), 0(0.000000e+00)
-; R600-NEXT:     ADD_INT * T0.Y, PV.W, PS,
-; R600-NEXT:     ADD_INT T0.X, T0.W, literal.x,
-; R600-NEXT:     MOV * T1.X, literal.y,
-; R600-NEXT:    10(1.401298e-44), 0(0.000000e+00)
   %and0 = and i64 %a, %b
   %not.a = xor i64 %a, -1
   %and1 = and i64 %not.a, %mask
@@ -506,24 +1050,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_endpgm
-;
-; R600-LABEL: s_bitselect_i64_pat_1:
-; R600:       ; %bb.0:
-; R600-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     MOV * T0.W, KC0[3].Y,
-; R600-NEXT:     BFI_INT * T0.W, KC0[2].W, KC0[2].Y, PV.W,
-; R600-NEXT:     MOV * T1.W, KC0[3].Z,
-; R600-NEXT:     BFI_INT T1.W, KC0[3].X, KC0[2].Z, PV.W,
-; R600-NEXT:     ADDC_UINT * T2.W, T0.W, literal.x,
-; R600-NEXT:    10(1.401298e-44), 0(0.000000e+00)
-; R600-NEXT:     ADD_INT * T0.Y, PV.W, PS,
-; R600-NEXT:     ADD_INT T0.X, T0.W, literal.x,
-; R600-NEXT:     MOV * T1.X, literal.y,
-; R600-NEXT:    10(1.401298e-44), 0(0.000000e+00)
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b
   %bitselect = xor i64 %and, %mask
@@ -581,24 +1107,6 @@ define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_endpgm
-;
-; R600-LABEL: s_bitselect_i64_pat_2:
-; R600:       ; %bb.0:
-; R600-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     MOV * T0.W, KC0[3].Y,
-; R600-NEXT:     BFI_INT * T0.W, KC0[2].W, KC0[2].Y, PV.W,
-; R600-NEXT:     MOV * T1.W, KC0[3].Z,
-; R600-NEXT:     BFI_INT T1.W, KC0[3].X, KC0[2].Z, PV.W,
-; R600-NEXT:     ADDC_UINT * T2.W, T0.W, literal.x,
-; R600-NEXT:    10(1.401298e-44), 0(0.000000e+00)
-; R600-NEXT:     ADD_INT * T0.Y, PV.W, PS,
-; R600-NEXT:     ADD_INT T0.X, T0.W, literal.x,
-; R600-NEXT:     MOV * T1.X, literal.y,
-; R600-NEXT:    10(1.401298e-44), 0(0.000000e+00)
   %xor.0 = xor i64 %a, %mask
   %and = and i64 %xor.0, %b
   %bitselect = xor i64 %and, %mask
@@ -659,24 +1167,6 @@ define amdgpu_kernel void @s_bfi_sha256_ma_i64(i64 %x, i64 %y, i64 %z) {
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_endpgm
-;
-; R600-LABEL: s_bfi_sha256_ma_i64:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     XOR_INT * T0.W, KC0[2].Y, KC0[2].W,
-; R600-NEXT:     BFI_INT T0.W, PV.W, KC0[3].Y, KC0[2].W,
-; R600-NEXT:     XOR_INT * T1.W, KC0[2].Z, KC0[3].X,
-; R600-NEXT:     BFI_INT T1.W, PS, KC0[3].Z, KC0[3].X,
-; R600-NEXT:     ADDC_UINT * T2.W, PV.W, literal.x,
-; R600-NEXT:    10(1.401298e-44), 0(0.000000e+00)
-; R600-NEXT:     ADD_INT * T0.Y, PV.W, PS,
-; R600-NEXT:     ADD_INT T0.X, T0.W, literal.x,
-; R600-NEXT:     MOV * T1.X, literal.y,
-; R600-NEXT:    10(1.401298e-44), 0(0.000000e+00)
 entry:
   %and0 = and i64 %x, %z
   %or0 = or i64 %x, %z
