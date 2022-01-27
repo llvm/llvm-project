@@ -15,3 +15,5 @@ static void b(int i) {;}
 // ===============
 void h(i, c, d) int i; char *c, *d; {} // Don't mess with K&R style
 
+// Do not warn on naked functions.
+__attribute__((naked)) void nakedFunction(int a, int b) { ; }

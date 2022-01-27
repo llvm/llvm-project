@@ -17,14 +17,17 @@ void f1(void) {
 // warnings for the above cases.
 static void achor() {};
 
+// Do not warn on naked functions.
+__attribute__((naked)) static void nakedFunction(int a, int b) { }
+
 // CHECK: 5:12: warning: unused parameter 'y'
 // CHECK: 12:15: warning: unused parameter 'y'
-// CHECK-unused: 1 warning generated
+// CHECK-unused: 2 warnings generated
 
 // RUN: %clang_cc1 -fblocks -fsyntax-only -Weverything %s 2>&1 | FileCheck -check-prefix=CHECK-everything %s
 // RUN: not %clang_cc1 -fblocks -fsyntax-only -Weverything -Werror %s 2>&1 | FileCheck -check-prefix=CHECK-everything-error %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -Weverything -Wno-unused %s 2>&1 | FileCheck -check-prefix=CHECK-everything-no-unused %s
-// CHECK-everything: 6 warnings generated
+// CHECK-everything: 7 warnings generated
 // CHECK-everything-error: 5 errors generated
 // CHECK-everything-no-unused: 5 warnings generated
 
