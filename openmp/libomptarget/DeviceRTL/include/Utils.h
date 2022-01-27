@@ -12,6 +12,7 @@
 #ifndef OMPTARGET_DEVICERTL_UTILS_H
 #define OMPTARGET_DEVICERTL_UTILS_H
 
+#include "Synchronization.h"
 #include "Types.h"
 
 namespace _OMP {
@@ -71,6 +72,26 @@ template <typename Ty1, typename Ty2> inline Ty1 align_up(Ty1 V, Ty2 Align) {
 template <typename Ty1, typename Ty2> inline Ty1 align_down(Ty1 V, Ty2 Align) {
   return V - V % Align;
 }
+
+namespace {
+/// Helper class to perform an action only once.
+///
+/// Using this is probably costly even if it is not executed. It should be
+/// guarded such that release mode execution will not be impacted.
+template <uint32_t ID> struct SingletonFlagImpl {
+
+  /// Each SingletonFlag instantiation with the same ID has an internal flag.
+  /// This function will return true if the flag was not set before, otherwise
+  /// it will return false. In either case the flag is set afterwards.
+  static bool testAndSet() {
+    static uint32_t DoOnceFlag = 0;
+    return 1 != atomic::exchange(&DoOnceFlag, 1, __ATOMIC_ACQ_REL);
+  }
+};
+} // namespace
+
+/// Helper to hide the __COUNTER__ use away.
+#define SingletonFlag SingletonFlagImpl<__COUNTER__>
 
 #define OMP_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
 #define OMP_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)

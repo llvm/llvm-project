@@ -320,6 +320,10 @@ uint64_t atomic::add(uint64_t *Addr, uint64_t V, int Ordering) {
   return impl::atomicAdd(Addr, V, Ordering);
 }
 
+uint32_t atomic::exchange(uint32_t *Addr, uint32_t V, int Ordering) {
+  return impl::atomicExchange(Addr, V, Ordering);
+}
+
 extern "C" {
 void __kmpc_ordered(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
 

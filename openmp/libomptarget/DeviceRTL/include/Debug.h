@@ -13,6 +13,7 @@
 #define OMPTARGET_DEVICERTL_DEBUG_H
 
 #include "Configuration.h"
+#include "Utils.h"
 
 /// Assertion
 ///
@@ -25,9 +26,10 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
 
 #define ASSERT(expr)                                                           \
   {                                                                            \
-    if (config::isDebugMode(config::DebugKind::Assertion) && !(expr))          \
+    if (config::isDebugMode(config::DebugKind::Assertion) && !(expr) &&        \
+        utils::SingletonFlag::testAndSet())                                    \
       __assert_fail(#expr, __FILE__, __LINE__, __PRETTY_FUNCTION__);           \
-    else                                                                       \
+    else if (!config::isDebugMode(config::DebugKind::Assertion))               \
       __assert_assume(expr);                                                   \
   }
 
