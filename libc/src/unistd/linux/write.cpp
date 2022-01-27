@@ -12,7 +12,7 @@
 #include "src/__support/common.h"
 
 #include <errno.h>
-#include <sys/syscall.h>          // For syscall numbers.
+#include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
 

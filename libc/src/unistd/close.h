@@ -1,4 +1,4 @@
-//===-- Unittests for generic implementation of sqrt ----------------------===//
+//===-- Implementation header for close -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SqrtTest.h"
+#ifndef LLVM_LIBC_SRC_UNISTD_CLOSE_H
+#define LLVM_LIBC_SRC_UNISTD_CLOSE_H
 
-#include "src/__support/FPUtil/generic/sqrt.h"
+namespace __llvm_libc {
 
-LIST_SQRT_TESTS(double, __llvm_libc::fputil::sqrt<double>)
+int close(int fd);
+
+} // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_UNISTD_CLOSE_H

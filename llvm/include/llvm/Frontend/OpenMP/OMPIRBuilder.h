@@ -1003,6 +1003,55 @@ public:
                                       llvm::ConstantInt *Size,
                                       const llvm::Twine &Name = Twine(""));
 
+  /// Create a runtime call for __tgt_interop_init
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param InteropVar variable to be allocated
+  /// \param InteropType type of interop operation
+  /// \param Device devide to which offloading will occur
+  /// \param NumDependences  number of dependence variables
+  /// \param DependenceAddress pointer to dependence variables
+  /// \param HaveNowaitClause does nowait clause exist
+  ///
+  /// \returns CallInst to the __tgt_interop_init call
+  CallInst *createOMPInteropInit(const LocationDescription &Loc,
+                                 Value *InteropVar,
+                                 omp::OMPInteropType InteropType, Value *Device,
+                                 Value *NumDependences,
+                                 Value *DependenceAddress,
+                                 bool HaveNowaitClause);
+
+  /// Create a runtime call for __tgt_interop_destroy
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param InteropVar variable to be allocated
+  /// \param Device devide to which offloading will occur
+  /// \param NumDependences  number of dependence variables
+  /// \param DependenceAddress pointer to dependence variables
+  /// \param HaveNowaitClause does nowait clause exist
+  ///
+  /// \returns CallInst to the __tgt_interop_destroy call
+  CallInst *createOMPInteropDestroy(const LocationDescription &Loc,
+                                    Value *InteropVar, Value *Device,
+                                    Value *NumDependences,
+                                    Value *DependenceAddress,
+                                    bool HaveNowaitClause);
+
+  /// Create a runtime call for __tgt_interop_use
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param InteropVar variable to be allocated
+  /// \param Device devide to which offloading will occur
+  /// \param NumDependences  number of dependence variables
+  /// \param DependenceAddress pointer to dependence variables
+  /// \param HaveNowaitClause does nowait clause exist
+  ///
+  /// \returns CallInst to the __tgt_interop_use call
+  CallInst *createOMPInteropUse(const LocationDescription &Loc,
+                                Value *InteropVar, Value *Device,
+                                Value *NumDependences, Value *DependenceAddress,
+                                bool HaveNowaitClause);
+
   /// The `omp target` interface
   ///
   /// For more information about the usage of this interface,

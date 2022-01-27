@@ -736,7 +736,7 @@ HoverInfo getDeducedTypeHoverContents(QualType QT, const syntax::Token &Tok,
 bool isLiteral(const Expr *E) {
   // Unfortunately there's no common base Literal classes inherits from
   // (apart from Expr), therefore these exclusions.
-  return llvm::isa<CharacterLiteral>(E) || llvm::isa<CompoundLiteralExpr>(E) ||
+  return llvm::isa<CompoundLiteralExpr>(E) ||
          llvm::isa<CXXBoolLiteralExpr>(E) ||
          llvm::isa<CXXNullPtrLiteralExpr>(E) ||
          llvm::isa<FixedPointLiteral>(E) || llvm::isa<FloatingLiteral>(E) ||

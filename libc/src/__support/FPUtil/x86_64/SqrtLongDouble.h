@@ -6,17 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_LONG_DOUBLE_H
+#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_LONG_DOUBLE_H
 
-#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/architectures.h"
+
+#if !defined(LLVM_LIBC_ARCH_X86)
+#error "Invalid include"
+#endif
+
+#include "src/__support/CPP/TypeTraits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/Sqrt.h"
 
 namespace __llvm_libc {
 namespace fputil {
-namespace x86 {
 
-inline void normalize(int &exponent, __uint128_t &mantissa) {
+namespace internal {
+
+template <>
+inline void normalize<long double>(int &exponent, __uint128_t &mantissa) {
   // Use binary search to shift the leading 1 bit similar to float.
   // With MantissaWidth<long double> = 63, it will take
   // ceil(log2(63)) = 6 steps checking the mantissa bits.
@@ -34,9 +43,11 @@ inline void normalize(int &exponent, __uint128_t &mantissa) {
   }
 }
 
-// Correctly rounded SQRT for all rounding modes.
+} // namespace internal
+
+// Correctly rounded SQRT with round to nearest, ties to even.
 // Shift-and-add algorithm.
-static inline long double sqrt(long double x) {
+template <> inline long double sqrt<long double, 0>(long double x) {
   using UIntType = typename FPBits<long double>::UIntType;
   constexpr UIntType ONE = UIntType(1)
                            << int(MantissaWidth<long double>::VALUE);
@@ -67,7 +78,7 @@ static inline long double sqrt(long double x) {
     if (bits.get_implicit_bit()) {
       x_mant |= ONE;
     } else if (bits.get_unbiased_exponent() == 0) {
-      normalize(x_exp, x_mant);
+      internal::normalize<long double>(x_exp, x_mant);
     }
 
     // Step 1b: Make sure the exponent is even.
@@ -115,16 +126,9 @@ static inline long double sqrt(long double x) {
     y |= (static_cast<UIntType>(x_exp)
           << (MantissaWidth<long double>::VALUE + 1));
 
-    switch (get_round()) {
-    case FE_TONEAREST:
-      // Round to nearest, ties to even
-      if (rb && (lsb || (r != 0)))
-        ++y;
-      break;
-    case FE_UPWARD:
-      if (rb || (r != 0))
-        ++y;
-      break;
+    // Round to nearest, ties to even
+    if (rb && (lsb || (r != 0))) {
+      ++y;
     }
 
     // Extract output
@@ -137,8 +141,7 @@ static inline long double sqrt(long double x) {
   }
 }
 
-} // namespace x86
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_80_BIT_LONG_DOUBLE_H
+#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_SQRT_LONG_DOUBLE_H

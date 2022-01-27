@@ -1,4 +1,4 @@
-//===-- Unittests for generic implementation of sqrtl----------------------===//
+//===-- Definition of mode_t type -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SqrtTest.h"
+#ifndef __LLVM_LIBC_TYPES_MODE_T_H
+#define __LLVM_LIBC_TYPES_MODE_T_H
 
-#include "src/__support/FPUtil/generic/sqrt.h"
+typedef unsigned mode_t;
 
-LIST_SQRT_TESTS(long double, __llvm_libc::fputil::sqrt<long double>)
+#endif // __LLVM_LIBC_TYPES_MODE_T_H

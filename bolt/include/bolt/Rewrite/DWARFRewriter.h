@@ -93,14 +93,14 @@ class DWARFRewriter {
   makeFinalLocListsSection(SimpleBinaryPatcher &DebugInfoPatcher);
 
   /// Finalize debug sections in the main binary.
-  void finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher);
+  CUOffsetMap finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.
   void updateDebugAddressRanges();
 
   /// Rewrite .gdb_index section if present.
-  void updateGdbIndexSection();
+  void updateGdbIndexSection(CUOffsetMap &CUMap);
 
   /// Output .dwo files.
   void writeDWOFiles(std::unordered_map<uint64_t, std::string> &DWOIdToName);

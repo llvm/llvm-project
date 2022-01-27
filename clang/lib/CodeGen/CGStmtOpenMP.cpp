@@ -6568,6 +6568,60 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForSimdDirective(
                                    [](CodeGenFunction &) { return nullptr; });
 }
 
+void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
+  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+  llvm::Value *Device = nullptr;
+  if (const auto *C = S.getSingleClause<OMPDeviceClause>())
+    Device = EmitScalarExpr(C->getDevice());
+
+  llvm::Value *NumDependences = nullptr;
+  llvm::Value *DependenceAddress = nullptr;
+  if (const auto *DC = S.getSingleClause<OMPDependClause>()) {
+    OMPTaskDataTy::DependData Dependencies(DC->getDependencyKind(),
+                                           DC->getModifier());
+    Dependencies.DepExprs.append(DC->varlist_begin(), DC->varlist_end());
+    std::pair<llvm::Value *, Address> DependencePair =
+        CGM.getOpenMPRuntime().emitDependClause(*this, Dependencies,
+                                                DC->getBeginLoc());
+    NumDependences = DependencePair.first;
+    DependenceAddress = Builder.CreatePointerCast(
+        DependencePair.second.getPointer(), CGM.Int8PtrTy);
+  }
+
+  assert(!(S.hasClausesOfKind<OMPNowaitClause>() &&
+           !(S.getSingleClause<OMPInitClause>() ||
+             S.getSingleClause<OMPDestroyClause>() ||
+             S.getSingleClause<OMPUseClause>())) &&
+         "OMPNowaitClause clause is used separately in OMPInteropDirective.");
+
+  if (const auto *C = S.getSingleClause<OMPInitClause>()) {
+    llvm::Value *InteropvarPtr =
+        EmitLValue(C->getInteropVar()).getPointer(*this);
+    llvm::omp::OMPInteropType InteropType = llvm::omp::OMPInteropType::Unknown;
+    if (C->getIsTarget()) {
+      InteropType = llvm::omp::OMPInteropType::Target;
+    } else {
+      assert(C->getIsTargetSync() && "Expected interop-type target/targetsync");
+      InteropType = llvm::omp::OMPInteropType::TargetSync;
+    }
+    OMPBuilder.createOMPInteropInit(Builder, InteropvarPtr, InteropType, Device,
+                                    NumDependences, DependenceAddress,
+                                    S.hasClausesOfKind<OMPNowaitClause>());
+  } else if (const auto *C = S.getSingleClause<OMPDestroyClause>()) {
+    llvm::Value *InteropvarPtr =
+        EmitLValue(C->getInteropVar()).getPointer(*this);
+    OMPBuilder.createOMPInteropDestroy(Builder, InteropvarPtr, Device,
+                                       NumDependences, DependenceAddress,
+                                       S.hasClausesOfKind<OMPNowaitClause>());
+  } else if (const auto *C = S.getSingleClause<OMPUseClause>()) {
+    llvm::Value *InteropvarPtr =
+        EmitLValue(C->getInteropVar()).getPointer(*this);
+    OMPBuilder.createOMPInteropUse(Builder, InteropvarPtr, Device,
+                                   NumDependences, DependenceAddress,
+                                   S.hasClausesOfKind<OMPNowaitClause>());
+  }
+}
+
 static void emitTargetTeamsDistributeParallelForRegion(
     CodeGenFunction &CGF, const OMPTargetTeamsDistributeParallelForDirective &S,
     PrePostActionTy &Action) {
