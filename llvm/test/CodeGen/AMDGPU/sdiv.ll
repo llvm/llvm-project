@@ -440,15 +440,15 @@ define amdgpu_kernel void @sdiv_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ; GCN-NEXT:    v_mul_lo_u32 v6, v4, v2
 ; GCN-NEXT:    v_mul_lo_u32 v10, v5, v3
 ; GCN-NEXT:    v_add_i32_e32 v7, vcc, 1, v4
-; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, v6, v0
-; GCN-NEXT:    v_subrev_i32_e32 v1, vcc, v10, v1
+; GCN-NEXT:    v_sub_i32_e32 v0, vcc, v0, v6
+; GCN-NEXT:    v_sub_i32_e32 v1, vcc, v1, v10
 ; GCN-NEXT:    v_add_i32_e32 v11, vcc, 1, v5
 ; GCN-NEXT:    v_cmp_ge_u32_e64 s[0:1], v0, v2
 ; GCN-NEXT:    v_cmp_ge_u32_e64 s[2:3], v1, v3
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v4, v7, s[0:1]
-; GCN-NEXT:    v_subrev_i32_e32 v6, vcc, v2, v0
+; GCN-NEXT:    v_sub_i32_e32 v6, vcc, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v5, v5, v11, s[2:3]
-; GCN-NEXT:    v_subrev_i32_e32 v7, vcc, v3, v1
+; GCN-NEXT:    v_sub_i32_e32 v7, vcc, v1, v3
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, v6, s[0:1]
 ; GCN-NEXT:    v_add_i32_e32 v6, vcc, 1, v4
 ; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, v7, s[2:3]
@@ -514,15 +514,15 @@ define amdgpu_kernel void @sdiv_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ; TONGA-NEXT:    v_mul_lo_u32 v6, v4, v2
 ; TONGA-NEXT:    v_mul_lo_u32 v10, v5, v3
 ; TONGA-NEXT:    v_add_u32_e32 v7, vcc, 1, v4
-; TONGA-NEXT:    v_subrev_u32_e32 v0, vcc, v6, v0
-; TONGA-NEXT:    v_subrev_u32_e32 v1, vcc, v10, v1
+; TONGA-NEXT:    v_sub_u32_e32 v0, vcc, v0, v6
+; TONGA-NEXT:    v_sub_u32_e32 v1, vcc, v1, v10
 ; TONGA-NEXT:    v_add_u32_e32 v11, vcc, 1, v5
 ; TONGA-NEXT:    v_cmp_ge_u32_e64 s[0:1], v0, v2
 ; TONGA-NEXT:    v_cmp_ge_u32_e64 s[2:3], v1, v3
 ; TONGA-NEXT:    v_cndmask_b32_e64 v4, v4, v7, s[0:1]
-; TONGA-NEXT:    v_subrev_u32_e32 v6, vcc, v2, v0
+; TONGA-NEXT:    v_sub_u32_e32 v6, vcc, v0, v2
 ; TONGA-NEXT:    v_cndmask_b32_e64 v5, v5, v11, s[2:3]
-; TONGA-NEXT:    v_subrev_u32_e32 v7, vcc, v3, v1
+; TONGA-NEXT:    v_sub_u32_e32 v7, vcc, v1, v3
 ; TONGA-NEXT:    v_cndmask_b32_e64 v0, v0, v6, s[0:1]
 ; TONGA-NEXT:    v_add_u32_e32 v6, vcc, 1, v4
 ; TONGA-NEXT:    v_cndmask_b32_e64 v1, v1, v7, s[2:3]
@@ -533,8 +533,8 @@ define amdgpu_kernel void @sdiv_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ; TONGA-NEXT:    v_cndmask_b32_e32 v1, v5, v7, vcc
 ; TONGA-NEXT:    v_xor_b32_e32 v0, v0, v8
 ; TONGA-NEXT:    v_xor_b32_e32 v1, v1, v9
-; TONGA-NEXT:    v_sub_u32_e32 v0, vcc, v0, v8
-; TONGA-NEXT:    v_sub_u32_e32 v1, vcc, v1, v9
+; TONGA-NEXT:    v_subrev_u32_e32 v0, vcc, v8, v0
+; TONGA-NEXT:    v_subrev_u32_e32 v1, vcc, v9, v1
 ; TONGA-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; TONGA-NEXT:    s_endpgm
 ;
@@ -614,27 +614,26 @@ define amdgpu_kernel void @sdiv_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ;
 ; EG-LABEL: sdiv_v2i32:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
-; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 51, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 0, @8, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    TEX 0 @6
+; EG-NEXT:    ALU 51, @9, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_64 T1.XY, T0.X, 8, #1
-; EG-NEXT:     VTX_READ_64 T0.XY, T0.X, 0, #1
-; EG-NEXT:    ALU clause starting at 10:
+; EG-NEXT:     VTX_READ_128 T0.XYZW, T0.X, 0, #1
+; EG-NEXT:    ALU clause starting at 8:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
-; EG-NEXT:    ALU clause starting at 11:
-; EG-NEXT:     SETGT_INT * T0.W, 0.0, T1.Y,
-; EG-NEXT:     ADD_INT T1.W, T1.Y, PV.W,
-; EG-NEXT:     SETGT_INT * T2.W, 0.0, T1.X,
-; EG-NEXT:     XOR_INT * T1.W, PV.W, T0.W,
-; EG-NEXT:     SUB_INT T0.Z, 0.0, PV.W,
-; EG-NEXT:     ADD_INT T3.W, T1.X, T2.W,
-; EG-NEXT:     RECIP_UINT * T1.X, PV.W,
+; EG-NEXT:    ALU clause starting at 9:
+; EG-NEXT:     SETGT_INT * T1.W, 0.0, T0.W,
+; EG-NEXT:     ADD_INT T0.W, T0.W, PV.W,
+; EG-NEXT:     SETGT_INT * T2.W, 0.0, T0.Z,
+; EG-NEXT:     XOR_INT * T0.W, PV.W, T1.W,
+; EG-NEXT:     SUB_INT T1.Z, 0.0, PV.W,
+; EG-NEXT:     ADD_INT T3.W, T0.Z, T2.W,
+; EG-NEXT:     RECIP_UINT * T0.Z, PV.W,
 ; EG-NEXT:     XOR_INT T3.W, PV.W, T2.W,
-; EG-NEXT:     MULLO_INT * T0.Z, PV.Z, PS,
+; EG-NEXT:     MULLO_INT * T1.X, PV.Z, PS,
 ; EG-NEXT:     SUB_INT T4.W, 0.0, PV.W,
 ; EG-NEXT:     RECIP_UINT * T1.Y, PV.W,
 ; EG-NEXT:     SETGT_INT T5.W, 0.0, T0.X,
@@ -645,18 +644,18 @@ define amdgpu_kernel void @sdiv_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ; EG-NEXT:     ADD_INT T1.Y, T1.Y, PS,
 ; EG-NEXT:     XOR_INT T1.Z, PV.W, T5.W,
 ; EG-NEXT:     ADD_INT T4.W, T0.Y, PV.Z, BS:VEC_120/SCL_212
-; EG-NEXT:     MULHI * T0.X, T1.X, T0.Z,
-; EG-NEXT:     ADD_INT T0.Z, T1.X, PS,
+; EG-NEXT:     MULHI * T0.X, T0.Z, T1.X,
+; EG-NEXT:     ADD_INT T0.Z, T0.Z, PS,
 ; EG-NEXT:     XOR_INT T4.W, PV.W, T2.Z,
 ; EG-NEXT:     MULHI * T0.X, PV.Z, PV.Y,
 ; EG-NEXT:     MULHI * T0.Y, PV.W, PV.Z,
-; EG-NEXT:     MULLO_INT * T0.Z, PS, T1.W,
+; EG-NEXT:     MULLO_INT * T0.Z, PS, T0.W,
 ; EG-NEXT:     SUB_INT T4.W, T4.W, PS,
 ; EG-NEXT:     MULLO_INT * T0.Z, T0.X, T3.W,
 ; EG-NEXT:     SUB_INT T1.Y, T1.Z, PS,
 ; EG-NEXT:     ADD_INT T0.Z, T0.Y, 1,
-; EG-NEXT:     SETGE_UINT T6.W, PV.W, T1.W,
-; EG-NEXT:     SUB_INT * T7.W, PV.W, T1.W,
+; EG-NEXT:     SETGE_UINT T6.W, PV.W, T0.W,
+; EG-NEXT:     SUB_INT * T7.W, PV.W, T0.W,
 ; EG-NEXT:     CNDE_INT T1.X, PV.W, T4.W, PS, BS:VEC_021/SCL_122
 ; EG-NEXT:     CNDE_INT T0.Y, PV.W, T0.Y, PV.Z,
 ; EG-NEXT:     ADD_INT T0.Z, T0.X, 1,
@@ -665,9 +664,9 @@ define amdgpu_kernel void @sdiv_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ; EG-NEXT:     CNDE_INT T1.Y, PV.W, T1.Y, PS,
 ; EG-NEXT:     CNDE_INT T0.Z, PV.W, T0.X, PV.Z,
 ; EG-NEXT:     ADD_INT T4.W, PV.Y, 1,
-; EG-NEXT:     SETGE_UINT * T1.W, PV.X, T1.W,
+; EG-NEXT:     SETGE_UINT * T0.W, PV.X, T0.W,
 ; EG-NEXT:     CNDE_INT T0.Y, PS, T0.Y, PV.W,
-; EG-NEXT:     XOR_INT T1.Z, T2.Z, T0.W, BS:VEC_021/SCL_122
+; EG-NEXT:     XOR_INT T1.Z, T2.Z, T1.W, BS:VEC_021/SCL_122
 ; EG-NEXT:     ADD_INT T0.W, PV.Z, 1,
 ; EG-NEXT:     SETGE_UINT * T1.W, PV.Y, T3.W,
 ; EG-NEXT:     CNDE_INT T0.Z, PS, T0.Z, PV.W,
