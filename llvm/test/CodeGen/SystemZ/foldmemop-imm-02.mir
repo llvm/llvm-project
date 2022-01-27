@@ -12,10 +12,10 @@
 
 
 # CHECK-LABEL: fun0:
-# CHECK: 	mvhi	164(%r15), 0            # 4-byte Folded Spill
-# CHECK:	mvc	164(4,%r15), 0(%r2)     # 4-byte Folded Spill
+# CHECK: 	mvhi	160(%r15), 0            # 4-byte Folded Spill
+# CHECK:	mvc	160(4,%r15), 0(%r2)     # 4-byte Folded Spill
 # CHECK-LABEL: .LBB0_2:
-# CHECK:	clfhsi	164(%r15), 2            # 4-byte Folded Reload
+# CHECK:	clfhsi	160(%r15), 2            # 4-byte Folded Reload
 ---
 name:            fun0
 alignment:       16
@@ -66,10 +66,10 @@ body:             |
 
 
 # CHECK-LABEL: fun1:
-# CHECK: 	mvghi	168(%r15), 0            # 8-byte Folded Spill
-# CHECK:	mvc	168(8,%r15), 0(%r2)     # 8-byte Folded Spill
+# CHECK: 	mvghi	160(%r15), 0            # 8-byte Folded Spill
+# CHECK:	mvc	160(8,%r15), 0(%r2)     # 8-byte Folded Spill
 # CHECK-LABEL: .LBB1_2:
-# CHECK:	clghsi	168(%r15), 2            # 8-byte Folded Reload
+# CHECK:	clghsi	160(%r15), 2            # 8-byte Folded Reload
 ---
 name:            fun1
 alignment:       16
@@ -122,10 +122,10 @@ body:             |
 # 17-bit immediate can not be folded
 
 # CHECK-LABEL: fun2:
-# CHECK: 	mvhi	164(%r15), 0            # 4-byte Folded Spill
-# CHECK:	mvc	164(4,%r15), 0(%r2)     # 4-byte Folded Spill
+# CHECK: 	mvhi	160(%r15), 0            # 4-byte Folded Spill
+# CHECK:	mvc	160(4,%r15), 0(%r2)     # 4-byte Folded Spill
 # CHECK-LABEL: .LBB2_2:
-# CHECK:        l       %r0, 164(%r15)          # 4-byte Folded Reload
+# CHECK:        l       %r0, 160(%r15)          # 4-byte Folded Reload
 # CHECK:        clfi    %r0, 65536
 ---
 name:            fun2
@@ -179,10 +179,10 @@ body:             |
 # 17-bit immediate can not be folded
 
 # CHECK-LABEL: fun3:
-# CHECK: 	mvghi	168(%r15), 0            # 8-byte Folded Spill
-# CHECK:	mvc	168(8,%r15), 0(%r2)     # 8-byte Folded Spill
+# CHECK: 	mvghi	160(%r15), 0            # 8-byte Folded Spill
+# CHECK:	mvc	160(8,%r15), 0(%r2)     # 8-byte Folded Spill
 # CHECK-LABEL: .LBB3_2:
-# CHECK:        lg      %r0, 168(%r15)          # 8-byte Folded Reload
+# CHECK:        lg      %r0, 160(%r15)          # 8-byte Folded Reload
 # CHECK:        clgfi   %r0, 65536
 ---
 name:            fun3
