@@ -1970,4 +1970,39 @@ TEST_F(TransferTest, AssignToUnionMember) {
               });
 }
 
+TEST_F(TransferTest, AssignFromBoolLiteral) {
+  std::string Code = R"(
+    void target() {
+      bool Foo = true;
+      bool Bar = false;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const auto *FooVal =
+            dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        ASSERT_THAT(FooVal, NotNull());
+
+        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const auto *BarVal =
+            dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        ASSERT_THAT(BarVal, NotNull());
+
+        EXPECT_EQ(FooVal, &Env.getBoolLiteralValue(true));
+        EXPECT_EQ(BarVal, &Env.getBoolLiteralValue(false));
+      });
+}
+
 } // namespace
