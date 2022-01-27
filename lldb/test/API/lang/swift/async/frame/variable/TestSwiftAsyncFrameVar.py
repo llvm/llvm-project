@@ -9,6 +9,7 @@ class TestCase(lldbtest.TestBase):
 
     @swiftTest
     @skipIf(oslist=['windows', 'linux'])
+    @expectedFailureAll(bugnumber="rdar://88142757")
     def test(self):
         """Test `frame variable` in async functions"""
         self.build()
