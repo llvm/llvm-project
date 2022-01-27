@@ -122,8 +122,7 @@ void AppleDWARFIndex::GetTypes(
   if (!m_apple_types_up)
     return;
 
-  Log *log = LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
-                                          DWARF_LOG_LOOKUPS);
+  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   const bool has_tag = m_apple_types_up->GetHeader().header_data.ContainsAtom(
       DWARFMappedHash::eAtomTypeTag);
   const bool has_qualified_name_hash =

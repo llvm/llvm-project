@@ -138,7 +138,7 @@ llvm::Error DWARFDebugArangeSet::extract(const DWARFDataExtractor &data,
     }
   }
   if (num_terminators > 1) {
-    Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
+    Log *log = GetLog(DWARFLog::DebugInfo);
     LLDB_LOG(log,
              "warning: DWARFDebugArangeSet at %#" PRIx64 " contains %u "
              "terminator entries",
