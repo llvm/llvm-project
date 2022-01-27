@@ -309,6 +309,10 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
   // flags from all the reduction operations.
   FastMathFlags FMF = FastMathFlags::getFast();
 
+  // The first instruction in the use-def chain of the Phi node that requires
+  // exact floating point operations.
+  Instruction *ExactFPMathInst = nullptr;
+
   // A value in the reduction can be used:
   //  - By the reduction:
   //      - Reduction operation:
@@ -352,6 +356,9 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
     if (Cur != Start) {
       ReduxDesc =
           isRecurrenceInstr(TheLoop, Phi, Cur, Kind, ReduxDesc, FuncFMF);
+      ExactFPMathInst = ExactFPMathInst == nullptr
+                            ? ReduxDesc.getExactFPMathInst()
+                            : ExactFPMathInst;
       if (!ReduxDesc.isRecurrence())
         return false;
       // FIXME: FMF is allowed on phi, but propagation is not handled correctly.
@@ -480,8 +487,8 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
   if (!FoundStartPHI || !FoundReduxOp || !ExitInstruction)
     return false;
 
-  const bool IsOrdered = checkOrderedReduction(
-      Kind, ReduxDesc.getExactFPMathInst(), ExitInstruction, Phi);
+  const bool IsOrdered =
+      checkOrderedReduction(Kind, ExactFPMathInst, ExitInstruction, Phi);
 
   if (Start != Phi) {
     // If the starting value is not the same as the phi node, we speculatively
@@ -538,9 +545,8 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurKind Kind,
   // is saved as part of the RecurrenceDescriptor.
 
   // Save the description of this reduction variable.
-  RecurrenceDescriptor RD(RdxStart, ExitInstruction, Kind, FMF,
-                          ReduxDesc.getExactFPMathInst(), RecurrenceType,
-                          IsSigned, IsOrdered, CastInsts,
+  RecurrenceDescriptor RD(RdxStart, ExitInstruction, Kind, FMF, ExactFPMathInst,
+                          RecurrenceType, IsSigned, IsOrdered, CastInsts,
                           MinWidthCastToRecurrenceType);
   RedDes = RD;
 
