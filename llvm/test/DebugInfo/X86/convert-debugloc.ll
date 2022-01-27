@@ -64,11 +64,17 @@
 ; NOCONV:       DW_AT_location (
 ; NOCONV:         {{.*}}, DW_OP_dup, DW_OP_constu 0x7, DW_OP_shr, DW_OP_lit0, DW_OP_not, DW_OP_mul, DW_OP_constu 0x8, DW_OP_shl, DW_OP_or, DW_OP_stack_value)
 ; NOCONV:       DW_AT_name ("y")
+; NOCONV:     DW_TAG_variable
+; NOCONV:       DW_AT_location (
+; NOCONV:         DW_OP_constu 0x40, DW_OP_lit0, DW_OP_plus, DW_OP_lit1, DW_OP_constu 0x40, DW_OP_shl, DW_OP_lit1, DW_OP_minus, DW_OP_and, DW_OP_stack_value)
+; NOCONV:       DW_AT_name ("z")
 ; NOCONV:     NULL
 ; NOCONV:   DW_TAG_base_type
 ; NOCONV:     DW_AT_name ("signed char")
 ; NOCONV:   DW_TAG_base_type
 ; NOCONV:     DW_AT_name ("int")
+; NOCONV:   DW_TAG_base_type
+; NOCONV:     DW_AT_name ("unsigned long long")
 ; NOCONV:   NULL
 
 
@@ -81,6 +87,7 @@ entry:
 ;; will not attempt to eliminate.  At the moment, only "convert" ops are folded.
 ;; If you have to change the expression, the expected DWO_id also changes.
   call void @llvm.dbg.value(metadata i8 32, metadata !13, metadata !DIExpression(DW_OP_lit0, DW_OP_plus, DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_stack_value)), !dbg !15
+  call void @llvm.dbg.value(metadata i8 64, metadata !17, metadata !DIExpression(DW_OP_lit0, DW_OP_plus, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_LLVM_convert, 128, DW_ATE_unsigned, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_stack_value)), !dbg !15
   ret i8 %x, !dbg !16
 }
 
@@ -111,3 +118,5 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !15 = !DILocation(line: 3, column: 14, scope: !7)
 !16 = !DILocation(line: 4, column: 3, scope: !7)
+!17 = !DILocalVariable(name: "z", scope: !7, file: !1, line: 3, type: !18)
+!18 = !DIBasicType(name: "unsigned long long", size: 64, encoding: DW_ATE_unsigned)
