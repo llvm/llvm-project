@@ -749,7 +749,7 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
   // array into a template table, and populate the DispatchFunction
   // map from there.
 
-  for (size_t i = 0; i != llvm::array_lengthof(g_dispatch_functions); i++) {
+  for (size_t i = 0; i != llvm::size(g_dispatch_functions); i++) {
     ConstString name_const_str(g_dispatch_functions[i].name);
     const Symbol *msgSend_symbol =
         m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,
@@ -769,7 +769,7 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
   }
   
   // Similarly, cache the addresses of the "optimized dispatch" function.
-  for (size_t i = 0; i != llvm::array_lengthof(g_opt_dispatch_names); i++) {
+  for (size_t i = 0; i != llvm::size(g_opt_dispatch_names); i++) {
     ConstString name_const_str(g_opt_dispatch_names[i]);
     const Symbol *msgSend_symbol =
         m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,

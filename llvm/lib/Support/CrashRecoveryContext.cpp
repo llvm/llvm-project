@@ -348,7 +348,7 @@ static void uninstallExceptionOrSignalHandlers() {
 
 static const int Signals[] =
     { SIGABRT, SIGBUS, SIGFPE, SIGILL, SIGSEGV, SIGTRAP };
-static const unsigned NumSignals = array_lengthof(Signals);
+static const unsigned NumSignals = size(Signals);
 static struct sigaction PrevActions[NumSignals];
 
 static void CrashRecoverySignalHandler(int Signal) {

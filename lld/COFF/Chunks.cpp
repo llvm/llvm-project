@@ -947,7 +947,7 @@ MergeChunk::MergeChunk(uint32_t alignment)
 void MergeChunk::addSection(COFFLinkerContext &ctx, SectionChunk *c) {
   assert(isPowerOf2_32(c->getAlignment()));
   uint8_t p2Align = llvm::Log2_32(c->getAlignment());
-  assert(p2Align < array_lengthof(ctx.mergeChunkInstances));
+  assert(p2Align < size(ctx.mergeChunkInstances));
   auto *&mc = ctx.mergeChunkInstances[p2Align];
   if (!mc)
     mc = make<MergeChunk>(c->getAlignment());

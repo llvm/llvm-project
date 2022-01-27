@@ -898,13 +898,13 @@ std::string Triple::normalize(StringRef Str) {
   // If they are not there already, permute the components into their canonical
   // positions by seeing if they parse as a valid architecture, and if so moving
   // the component to the architecture position etc.
-  for (unsigned Pos = 0; Pos != array_lengthof(Found); ++Pos) {
+  for (unsigned Pos = 0; Pos != size(Found); ++Pos) {
     if (Found[Pos])
       continue; // Already in the canonical position.
 
     for (unsigned Idx = 0; Idx != Components.size(); ++Idx) {
       // Do not reparse any components that already matched.
-      if (Idx < array_lengthof(Found) && Found[Idx])
+      if (Idx < size(Found) && Found[Idx])
         continue;
 
       // Does this component parse as valid for the target position?
@@ -952,7 +952,7 @@ std::string Triple::normalize(StringRef Str) {
         // components to the right.
         for (unsigned i = Pos; !CurrentComponent.empty(); ++i) {
           // Skip over any fixed components.
-          while (i < array_lengthof(Found) && Found[i])
+          while (i < size(Found) && Found[i])
             ++i;
           // Place the component at the new position, getting the component
           // that was at this position - it will be moved right.
@@ -973,7 +973,7 @@ std::string Triple::normalize(StringRef Str) {
             if (CurrentComponent.empty())
               break;
             // Advance to the next component, skipping any fixed components.
-            while (++i < array_lengthof(Found) && Found[i])
+            while (++i < size(Found) && Found[i])
               ;
           }
           // The last component was pushed off the end - append it.
@@ -981,7 +981,7 @@ std::string Triple::normalize(StringRef Str) {
             Components.push_back(CurrentComponent);
 
           // Advance Idx to the component's new position.
-          while (++Idx < array_lengthof(Found) && Found[Idx])
+          while (++Idx < size(Found) && Found[Idx])
             ;
         } while (Idx < Pos); // Add more until the final position is reached.
       }

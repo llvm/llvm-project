@@ -207,7 +207,7 @@ static std::error_code GetFileNameFromHandle(HANDLE FileHandle,
   Success = ::GetMappedFileNameA(::GetCurrentProcess(),
                                 MappedFile,
                                 Filename,
-                                array_lengthof(Filename) - 1);
+                                size(Filename) - 1);
 
   if (!Success)
     return windows_error(::GetLastError());
@@ -242,12 +242,12 @@ static std::string FindProgram(const std::string &Program,
     DWORD length = ::SearchPathA(NULL,
                                  Program.c_str(),
                                  Extension,
-                                 array_lengthof(PathName),
+                                 size(PathName),
                                  PathName,
                                  NULL);
     if (length == 0)
       ec = windows_error(::GetLastError());
-    else if (length > array_lengthof(PathName)) {
+    else if (length > size(PathName)) {
       // This may have been the file, return with error.
       ec = windows_error(ERROR_BUFFER_OVERFLOW);
       break;

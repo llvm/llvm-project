@@ -151,7 +151,7 @@ static const DriverSuffix *FindDriverSuffix(StringRef ProgName, size_t &Pos) {
       {"flang", "--driver-mode=flang"},
   };
 
-  for (size_t i = 0; i < llvm::array_lengthof(DriverSuffixes); ++i) {
+  for (size_t i = 0; i < llvm::size(DriverSuffixes); ++i) {
     StringRef Suffix(DriverSuffixes[i].Suffix);
     if (ProgName.endswith(Suffix)) {
       Pos = ProgName.size() - Suffix.size();

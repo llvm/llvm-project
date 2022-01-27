@@ -345,7 +345,7 @@ TEST(CommandLineTest, AliasesWithArguments) {
     { "-tool", "-alias", "x" }
   };
 
-  for (size_t i = 0, e = array_lengthof(Inputs); i < e; ++i) {
+  for (size_t i = 0, e = size(Inputs); i < e; ++i) {
     StackOption<std::string> Actual("actual");
     StackOption<bool> Extra("extra");
     StackOption<std::string> Input(cl::Positional);
@@ -374,8 +374,8 @@ void testAliasRequired(int argc, const char *const *argv) {
 TEST(CommandLineTest, AliasRequired) {
   const char *opts1[] = { "-tool", "-option=x" };
   const char *opts2[] = { "-tool", "-o", "x" };
-  testAliasRequired(array_lengthof(opts1), opts1);
-  testAliasRequired(array_lengthof(opts2), opts2);
+  testAliasRequired(size(opts1), opts1);
+  testAliasRequired(size(opts2), opts2);
 }
 
 TEST(CommandLineTest, HideUnrelatedOptions) {
@@ -987,8 +987,8 @@ TEST(CommandLineTest, ResponseFileEOLs) {
                                       /*CurrentDir=*/StringRef(TestRoot), FS));
   const char *Expected[] = {"clang", "-Xclang", "-Wno-whatever", nullptr,
                             "input.cpp"};
-  ASSERT_EQ(array_lengthof(Expected), Argv.size());
-  for (size_t I = 0, E = array_lengthof(Expected); I < E; ++I) {
+  ASSERT_EQ(size(Expected), Argv.size());
+  for (size_t I = 0, E = size(Expected); I < E; ++I) {
     if (Expected[I] == nullptr) {
       ASSERT_EQ(Argv[I], nullptr);
     } else {

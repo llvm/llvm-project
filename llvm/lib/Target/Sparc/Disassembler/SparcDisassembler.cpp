@@ -235,7 +235,7 @@ static DecodeStatus DecodeASRRegsRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodePRRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
                                                const void *Decoder) {
-  if (RegNo >= array_lengthof(PRRegDecoderTable))
+  if (RegNo >= size(PRRegDecoderTable))
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createReg(PRRegDecoderTable[RegNo]));
   return MCDisassembler::Success;
