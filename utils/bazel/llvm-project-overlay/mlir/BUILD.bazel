@@ -5719,6 +5719,7 @@ cc_binary(
         "//mlir/test:TestIR",
         "//mlir/test:TestLinalg",
         "//mlir/test:TestMath",
+        "//mlir/test:TestMemRef",
         "//mlir/test:TestPass",
         "//mlir/test:TestReducer",
         "//mlir/test:TestRewrite",
