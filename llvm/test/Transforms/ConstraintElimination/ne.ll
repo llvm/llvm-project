@@ -56,7 +56,7 @@ define i1 @test_ne_eq_0(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[C_3]]
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[C_4]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], false
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp uge i8 [[A]], 1
@@ -75,7 +75,7 @@ define i1 @test_ne_eq_0(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_9:%.*]] = icmp eq i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_11:%.*]] = xor i1 [[RES_10]], [[C_9]]
 ; CHECK-NEXT:    [[C_10:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], [[C_10]]
+; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], true
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], false
 ; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[A]], 1
@@ -221,7 +221,7 @@ define i1 @test_ne_eq_1(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[C_11:%.*]] = icmp eq i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[RES_11:%.*]] = xor i1 [[RES_10]], [[C_11]]
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], [[F_1]]
+; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], false
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i8 [[A]], 0
 ; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], true
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp uge i8 [[A]], 1
