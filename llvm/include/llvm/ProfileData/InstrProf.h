@@ -16,6 +16,7 @@
 #define LLVM_PROFILEDATA_INSTRPROF_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -276,6 +277,16 @@ void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
 /// Check if we can use Comdat for profile variables. This will eliminate
 /// the duplicated profile variables for Comdat functions.
 bool needsComdatForCounter(const Function &F, const Module &M);
+
+/// An enum describing the attributes of an instrumented profile.
+enum class InstrProfKind {
+  Unknown = 0x0,
+  FE = 0x1, // A frontend clang profile, incompatible with other attrs.
+  IR = 0x2, // An IR-level profile (default when -fprofile-generate is used).
+  BB = 0x4, // A profile with entry basic block instrumentation.
+  CS = 0x8, // A context sensitive IR-level profile.
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/CS)
+};
 
 const std::error_category &instrprof_category();
 

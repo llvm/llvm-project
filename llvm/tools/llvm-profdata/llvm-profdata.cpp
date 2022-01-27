@@ -255,9 +255,7 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   }
 
   auto Reader = std::move(ReaderOrErr.get());
-  bool IsIRProfile = Reader->isIRLevelProfile();
-  bool HasCSIRProfile = Reader->hasCSIRLevelProfile();
-  if (Error E = WC->Writer.setIsIRLevelProfile(IsIRProfile, HasCSIRProfile)) {
+  if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
     consumeError(std::move(E));
     WC->Errors.emplace_back(
         make_error<StringError>(
@@ -266,7 +264,6 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
         Filename);
     return;
   }
-  WC->Writer.setInstrEntryBBEnabled(Reader->instrEntryBBEnabled());
 
   for (auto &I : *Reader) {
     if (Remapper)
