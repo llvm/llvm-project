@@ -46,8 +46,8 @@ struct ForwardView : std::ranges::view_base {
   constexpr explicit ForwardView(int* ptr = globalBuff) : ptr_(ptr) {}
   constexpr ForwardView(ForwardView&&) = default;
   constexpr ForwardView& operator=(ForwardView&&) = default;
-  constexpr auto begin() const { return ForwardIter(ptr_); }
-  constexpr auto end() const { return ForwardIter(ptr_ + 8); }
+  constexpr auto begin() const { return forward_iterator<int*>(ptr_); }
+  constexpr auto end() const { return forward_iterator<int*>(ptr_ + 8); }
 };
 static_assert(std::ranges::view<ForwardView>);
 static_assert(std::ranges::forward_range<ForwardView>);

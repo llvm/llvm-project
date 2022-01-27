@@ -81,7 +81,7 @@
 `3529 <https://wg21.link/LWG3529>`__,"``priority_queue(first, last)`` should construct ``c`` with ``(first, last)``","June 2021","",""
 `3530 <https://wg21.link/LWG3530>`__,"``BUILTIN-PTR-MEOW`` should not opt the type out of syntactic checks","June 2021","",""
 `3532 <https://wg21.link/LWG3532>`__,"``split_view<V, P>::inner-iterator<true>::operator++(int)`` should depend on ``Base``","June 2021","","","|ranges|"
-`3533 <https://wg21.link/LWG3533>`__,"Make ``base() const &`` consistent across iterator wrappers that supports ``input_iterators``","June 2021","","","|ranges|"
+`3533 <https://wg21.link/LWG3533>`__,"Make ``base() const &`` consistent across iterator wrappers that supports ``input_iterators``","June 2021","|Complete|","14.0","|ranges|"
 `3536 <https://wg21.link/LWG3536>`__,"Should ``chrono::from_stream()`` assign zero to duration for failure?","June 2021","","","|chrono|"
 `3539 <https://wg21.link/LWG3539>`__,"``format_to`` must not copy models of ``output_iterator<const charT&>``","June 2021","","","|format|"
 `3540 <https://wg21.link/LWG3540>`__,"§[format.arg] There should be no const in ``basic_format_arg(const T* p)``","June 2021","|Complete|","14.0","|format|"
