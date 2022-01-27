@@ -2482,7 +2482,8 @@ void UnwrappedLineParser::parseNamespace() {
     parseParens();
   } else {
     while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
-                              tok::l_square, tok::period)) {
+                              tok::l_square, tok::period) ||
+           (Style.isCSharp() && FormatTok->is(tok::kw_union))) {
       if (FormatTok->is(tok::l_square))
         parseSquare();
       else
@@ -2868,6 +2869,7 @@ bool UnwrappedLineParser::parseEnum() {
   // Just a declaration or something is wrong.
   if (FormatTok->isNot(tok::l_brace))
     return true;
+  FormatTok->setType(TT_RecordLBrace);
   FormatTok->setBlockKind(BK_Block);
 
   if (Style.Language == FormatStyle::LK_Java) {
@@ -3108,6 +3110,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
   }
   if (FormatTok->Tok.is(tok::l_brace)) {
+    FormatTok->setType(TT_RecordLBrace);
     if (ParseAsExpr) {
       parseChildBlock();
     } else {

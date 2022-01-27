@@ -96,6 +96,7 @@ namespace format {
   TYPE(PointerOrReference)                                                     \
   TYPE(PureVirtualSpecifier)                                                   \
   TYPE(RangeBasedForLoopColon)                                                 \
+  TYPE(RecordLBrace)                                                           \
   TYPE(RegexLiteral)                                                           \
   TYPE(SelectorName)                                                           \
   TYPE(StartOfName)                                                            \
