@@ -351,7 +351,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
   const size_t numShards = (size + shardSize - 1) / shardSize;
   auto shardsIn = std::make_unique<ArrayRef<uint8_t>[]>(numShards);
   for (size_t i = 0, start = 0, end; start != size; ++i, start = end) {
-    end = std::min(start + shardSize, size);
+    end = std::min(start + shardSize, (size_t)size);
     shardsIn[i] = makeArrayRef<uint8_t>(buf.get() + start, end - start);
   }
 
