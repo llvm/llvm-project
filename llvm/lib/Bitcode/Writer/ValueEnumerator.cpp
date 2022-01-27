@@ -386,8 +386,10 @@ ValueEnumerator::ValueEnumerator(const Module &M,
   }
 
   // Enumerate the ifuncs.
-  for (const GlobalIFunc &GIF : M.ifuncs())
+  for (const GlobalIFunc &GIF : M.ifuncs()) {
     EnumerateValue(&GIF);
+    EnumerateType(GIF.getValueType());
+  }
 
   // Remember what is the cutoff between globalvalue's and other constants.
   unsigned FirstConstant = Values.size();

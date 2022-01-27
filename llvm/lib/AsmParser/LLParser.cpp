@@ -985,17 +985,18 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, LocTy NameLoc,
     return error(AliaseeLoc, "An alias or ifunc must have pointer type");
   unsigned AddrSpace = PTy->getAddressSpace();
 
-  if (IsAlias && !PTy->isOpaqueOrPointeeTypeMatches(Ty)) {
-    return error(
-        ExplicitTypeLoc,
-        typeComparisonErrorMessage(
-            "explicit pointee type doesn't match operand's pointee type", Ty,
-            PTy->getNonOpaquePointerElementType()));
-  }
-
-  if (!IsAlias && !PTy->getPointerElementType()->isFunctionTy()) {
-    return error(ExplicitTypeLoc,
-                 "explicit pointee type should be a function type");
+  if (IsAlias) {
+    if (!PTy->isOpaqueOrPointeeTypeMatches(Ty))
+      return error(
+          ExplicitTypeLoc,
+          typeComparisonErrorMessage(
+              "explicit pointee type doesn't match operand's pointee type", Ty,
+              PTy->getNonOpaquePointerElementType()));
+  } else {
+    if (!PTy->isOpaque() &&
+        !PTy->getNonOpaquePointerElementType()->isFunctionTy())
+      return error(ExplicitTypeLoc,
+                   "explicit pointee type should be a function type");
   }
 
   GlobalValue *GVal = nullptr;
