@@ -385,14 +385,14 @@ def AffineLoopNormalize : Pass<"affine-loop-normalize", "FuncOp"> {
   let constructor = "mlir::createAffineLoopNormalizePass()";
 }
 
-def LoopCoalescing : Pass<"loop-coalescing", "FuncOp"> {
+def LoopCoalescing : Pass<"affine-loop-coalescing", "FuncOp"> {
   let summary = "Coalesce nested loops with independent bounds into a single "
                 "loop";
   let constructor = "mlir::createLoopCoalescingPass()";
   let dependentDialects = ["arith::ArithmeticDialect"];
 }
 
-def SimplifyAffineStructures : Pass<"simplify-affine-structures", "FuncOp"> {
+def SimplifyAffineStructures : Pass<"affine-simplify-structures", "FuncOp"> {
   let summary = "Simplify affine expressions in maps/sets and normalize "
                 "memrefs";
   let constructor = "mlir::createSimplifyAffineStructuresPass()";

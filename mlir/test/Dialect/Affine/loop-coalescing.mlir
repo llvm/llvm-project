@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -loop-coalescing %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -allow-unregistered-dialect -affine-loop-coalescing %s | FileCheck %s
 
 // CHECK-LABEL: @one_3d_nest
 func @one_3d_nest() {
