@@ -1369,10 +1369,11 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
 /// is a sequence of GEP indices into the pointed type that will land us at the
 /// specified offset. If so, fill them into NewIndices and return the resultant
 /// element type, otherwise return null.
-Type *
-InstCombinerImpl::FindElementAtOffset(PointerType *PtrTy, int64_t IntOffset,
-                                      SmallVectorImpl<Value *> &NewIndices) {
-  Type *Ty = PtrTy->getPointerElementType();
+static Type *findElementAtOffset(PointerType *PtrTy, int64_t IntOffset,
+                                 SmallVectorImpl<Value *> &NewIndices,
+                                 const DataLayout &DL) {
+  // Only used by visitGEPOfBitcast(), which is skipped for opaque pointers.
+  Type *Ty = PtrTy->getNonOpaquePointerElementType();
   if (!Ty->isSized())
     return nullptr;
 
@@ -1382,7 +1383,7 @@ InstCombinerImpl::FindElementAtOffset(PointerType *PtrTy, int64_t IntOffset,
     return nullptr;
 
   for (const APInt &Index : Indices)
-    NewIndices.push_back(Builder.getInt(Index));
+    NewIndices.push_back(ConstantInt::get(PtrTy->getContext(), Index));
   return Ty;
 }
 
@@ -2168,7 +2169,7 @@ Instruction *InstCombinerImpl::visitGEPOfBitcast(BitCastInst *BCI,
     // field at Offset in 'A's type.  If so, we can pull the cast through the
     // GEP.
     SmallVector<Value*, 8> NewIndices;
-    if (FindElementAtOffset(SrcType, Offset.getSExtValue(), NewIndices)) {
+    if (findElementAtOffset(SrcType, Offset.getSExtValue(), NewIndices, DL)) {
       Value *NGEP =
           GEP.isInBounds()
               ? Builder.CreateInBoundsGEP(SrcEltType, SrcOp, NewIndices)
