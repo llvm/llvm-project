@@ -324,19 +324,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 
-  // Register a callback that creates the debugify passes as needed.
-  PB.registerPipelineParsingCallback(
-      [](StringRef Name, ModulePassManager &MPM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        if (Name == "debugify") {
-          MPM.addPass(NewPMDebugifyPass());
-          return true;
-        } else if (Name == "check-debugify") {
-          MPM.addPass(NewPMCheckDebugifyPass());
-          return true;
-        }
-        return false;
-      });
   PB.registerPipelineParsingCallback(
       [](StringRef Name, ModulePassManager &MPM,
          ArrayRef<PassBuilder::PipelineElement>) {
