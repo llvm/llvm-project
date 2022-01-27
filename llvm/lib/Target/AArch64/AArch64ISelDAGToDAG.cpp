@@ -5147,5 +5147,5 @@ bool AArch64DAGToDAGISel::SelectAllActivePredicate(SDValue N) {
   const AArch64TargetLowering *TLI =
       static_cast<const AArch64TargetLowering *>(getTargetLowering());
 
-  return TLI->isAllActivePredicate(N);
+  return TLI->isAllActivePredicate(*CurDAG, N);
 }
