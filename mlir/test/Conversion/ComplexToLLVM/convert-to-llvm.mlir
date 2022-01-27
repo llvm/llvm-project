@@ -10,6 +10,13 @@ func @complex_create(%real: f32, %imag: f32) -> complex<f32> {
   return %cplx2 : complex<f32>
 }
 
+// CHECK-LABEL: func @complex_constant
+// CHECK-NEXT:    llvm.mlir.constant([1.000000e+00, 2.000000e+00]) : !llvm.struct<(f64, f64)>
+func @complex_constant() -> complex<f64> {
+  %cplx2 = complex.constant [1.000000e+00, 2.000000e+00] : complex<f64>
+  return %cplx2 : complex<f64>
+}
+
 // CHECK-LABEL: func @complex_extract
 // CHECK-SAME:    (%[[CPLX:.*]]: complex<f32>)
 // CHECK-NEXT:    %[[CAST0:.*]] = builtin.unrealized_conversion_cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
