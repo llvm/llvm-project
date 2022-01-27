@@ -14,21 +14,20 @@ define amdgpu_kernel void @kernel_caller_stack() {
 ; MUBUF:       ; %bb.0:
 ; MUBUF-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
 ; MUBUF-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; MUBUF-NEXT:    s_mov_b32 s32, 0
 ; MUBUF-NEXT:    s_add_u32 s0, s0, s7
+; MUBUF-NEXT:    s_mov_b32 s32, 0
 ; MUBUF-NEXT:    s_addc_u32 s1, s1, 0
-; MUBUF-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 9
-; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:4
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 10
-; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:8
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 11
-; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 12
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 9
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 10
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:8
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 11
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:12
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 12
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_v16i32_v16i32_v4i32@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_v16i32_v16i32_v4i32@rel32@hi+12
-; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:16
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    s_endpgm
 ;
@@ -112,42 +111,41 @@ define amdgpu_kernel void @kernel_caller_byval() {
 ; MUBUF-NEXT:    buffer_load_dword v14, off, s[0:3], 0 offset:64
 ; MUBUF-NEXT:    buffer_load_dword v15, off, s[0:3], 0 offset:68
 ; MUBUF-NEXT:    s_movk_i32 s32, 0x1400
-; MUBUF-NEXT:    v_lshrrev_b32_e64 v16, 6, s32
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_byval@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_byval@rel32@hi+12
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v0, v16, s[0:3], 0 offen
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v1, v16, s[0:3], 0 offen offset:4
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v2, v16, s[0:3], 0 offen offset:8
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v3, v16, s[0:3], 0 offen offset:12
+; MUBUF-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:12
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v4, v16, s[0:3], 0 offen offset:16
+; MUBUF-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:16
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v5, v16, s[0:3], 0 offen offset:20
+; MUBUF-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:20
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v6, v16, s[0:3], 0 offen offset:24
+; MUBUF-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:24
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v7, v16, s[0:3], 0 offen offset:28
+; MUBUF-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:28
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v8, v16, s[0:3], 0 offen offset:32
+; MUBUF-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:32
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v9, v16, s[0:3], 0 offen offset:36
+; MUBUF-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:36
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v10, v16, s[0:3], 0 offen offset:40
+; MUBUF-NEXT:    buffer_store_dword v10, off, s[0:3], s32 offset:40
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v11, v16, s[0:3], 0 offen offset:44
+; MUBUF-NEXT:    buffer_store_dword v11, off, s[0:3], s32 offset:44
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v12, v16, s[0:3], 0 offen offset:48
+; MUBUF-NEXT:    buffer_store_dword v12, off, s[0:3], s32 offset:48
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v13, v16, s[0:3], 0 offen offset:52
+; MUBUF-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:52
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v14, v16, s[0:3], 0 offen offset:56
+; MUBUF-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:56
 ; MUBUF-NEXT:    s_waitcnt vmcnt(15)
-; MUBUF-NEXT:    buffer_store_dword v15, v16, s[0:3], 0 offen offset:60
+; MUBUF-NEXT:    buffer_store_dword v15, off, s[0:3], s32 offset:60
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    s_endpgm
 ;
@@ -244,20 +242,19 @@ define void @func_caller_stack() {
 ; MUBUF-NEXT:    v_writelane_b32 v40, s33, 2
 ; MUBUF-NEXT:    s_mov_b32 s33, s32
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
-; MUBUF-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 9
-; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:4
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 10
-; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:8
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 11
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 9
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 10
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:8
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 11
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
-; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 12
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:12
+; MUBUF-NEXT:    v_mov_b32_e32 v0, 12
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_v16i32_v16i32_v4i32@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_v16i32_v16i32_v4i32@rel32@hi+12
-; MUBUF-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:16
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    v_readlane_b32 s4, v40, 0
 ; MUBUF-NEXT:    v_readlane_b32 s5, v40, 1
@@ -317,65 +314,64 @@ define void @func_caller_byval([16 x i32] addrspace(5)* %argptr) {
 ; MUBUF-NEXT:    v_writelane_b32 v40, s33, 2
 ; MUBUF-NEXT:    s_mov_b32 s33, s32
 ; MUBUF-NEXT:    s_addk_i32 s32, 0x400
-; MUBUF-NEXT:    v_lshrrev_b32_e64 v3, 6, s32
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 0
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
 ; MUBUF-NEXT:    s_getpc_b64 s[4:5]
 ; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_byval@rel32@lo+4
 ; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_byval@rel32@hi+12
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v1, v3, s[0:3], 0 offen
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:4
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:4
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen offset:8
 ; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen offset:12
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v1, v3, s[0:3], 0 offen offset:8
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:8
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:12
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:12
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen offset:16
 ; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen offset:20
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v1, v3, s[0:3], 0 offen offset:16
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:16
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:20
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:20
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen offset:24
 ; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen offset:28
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v1, v3, s[0:3], 0 offen offset:24
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:24
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:28
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:28
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen offset:32
 ; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen offset:36
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v1, v3, s[0:3], 0 offen offset:32
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:32
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:36
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:36
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen offset:40
 ; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen offset:44
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v1, v3, s[0:3], 0 offen offset:40
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:40
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:44
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:44
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen offset:48
 ; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen offset:52
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v1, v3, s[0:3], 0 offen offset:48
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:48
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:52
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:52
 ; MUBUF-NEXT:    buffer_load_dword v1, v0, s[0:3], 0 offen offset:56
 ; MUBUF-NEXT:    s_nop 0
 ; MUBUF-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen offset:60
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v1, v3, s[0:3], 0 offen offset:56
+; MUBUF-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:56
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
-; MUBUF-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen offset:60
+; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:60
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    v_readlane_b32 s4, v40, 0
 ; MUBUF-NEXT:    v_readlane_b32 s5, v40, 1
