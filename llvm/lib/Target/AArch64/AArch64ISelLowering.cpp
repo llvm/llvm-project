@@ -2200,6 +2200,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::INSR)
     MAKE_CASE(AArch64ISD::PTEST)
     MAKE_CASE(AArch64ISD::PTRUE)
+    MAKE_CASE(AArch64ISD::PFALSE)
     MAKE_CASE(AArch64ISD::LD1_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::LD1S_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::LDNF1_MERGE_ZERO)
@@ -9984,7 +9985,7 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
     // lowering code.
     if (auto *ConstVal = dyn_cast<ConstantSDNode>(SplatVal)) {
       if (ConstVal->isZero())
-        return SDValue(DAG.getMachineNode(AArch64::PFALSE, dl, VT), 0);
+        return DAG.getNode(AArch64ISD::PFALSE, dl, VT);
       if (ConstVal->isOne())
         return getPTrue(DAG, dl, VT, AArch64SVEPredPattern::all);
     }
