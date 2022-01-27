@@ -909,8 +909,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification5) {
     "  void A(int a) noexcept(true);"
     "};",
     "A",
-    "void A(int a) noexcept(trueA(int a) noexcept(true)"));
-    // WRONG; Should be: "void A(int a) noexcept(true);"
+    "void A(int a) noexcept(true)"));
 }
 
 TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification6) {
@@ -919,8 +918,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification6) {
     "  void A(int a) noexcept(1 < 2);"
     "};",
     "A",
-    "void A(int a) noexcept(1 < 2A(int a) noexcept(1 < 2)"));
-    // WRONG; Should be: "void A(int a) noexcept(1 < 2);"
+    "void A(int a) noexcept(1 < 2)"));
 }
 
 TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification7) {
@@ -930,8 +928,7 @@ TEST(DeclPrinter, TestFunctionDecl_ExceptionSpecification7) {
     "  void A(int a) noexcept(N < 2);"
     "};",
     "A",
-    "void A(int a) noexcept(N < 2A(int a) noexcept(N < 2)"));
-    // WRONG; Should be: "void A(int a) noexcept(N < 2);"
+    "void A(int a) noexcept(N < 2)"));
 }
 
 TEST(DeclPrinter, TestVarDecl1) {
