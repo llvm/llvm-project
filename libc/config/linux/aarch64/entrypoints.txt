@@ -20,6 +20,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
+    # fcntl.h entrypoints
+    libc.src.fcntl.creat
+    libc.src.fcntl.open
+    libc.src.fcntl.openat
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero
@@ -75,6 +80,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strtoll
     libc.src.stdlib.strtoul
     libc.src.stdlib.strtoull
+
+    # unistd.h entrypoints
+    libc.src.unistd.close
+    libc.src.unistd.fsync
+    libc.src.unistd.read
+    libc.src.unistd.write
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
