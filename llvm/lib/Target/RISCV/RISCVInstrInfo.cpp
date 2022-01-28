@@ -654,8 +654,8 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       BuildMI(MBB, MBBI, DL, get(RISCV::LUI), Result)
           .addImm(Inst.Imm)
           .setMIFlag(Flag);
-    } else if (Inst.Opc == RISCV::ADDUW) {
-      BuildMI(MBB, MBBI, DL, get(RISCV::ADDUW), Result)
+    } else if (Inst.Opc == RISCV::ADD_UW) {
+      BuildMI(MBB, MBBI, DL, get(RISCV::ADD_UW), Result)
           .addReg(SrcReg, RegState::Kill)
           .addReg(RISCV::X0)
           .setMIFlag(Flag);

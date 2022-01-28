@@ -20,7 +20,7 @@
 TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "__unistd_read_write.test";
-  int write_fd = __llvm_libc::open(TEST_FILE, O_WRONLY | O_CREAT);
+  int write_fd = __llvm_libc::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_EQ(errno, 0);
   ASSERT_GT(write_fd, 0);
   constexpr const char HELLO[] = "hello";

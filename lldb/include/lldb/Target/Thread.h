@@ -22,6 +22,7 @@
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
@@ -1184,6 +1185,8 @@ public:
 
   lldb::ThreadSP GetCurrentExceptionBacktrace();
 
+  lldb::ValueObjectSP GetSiginfoValue();
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1232,6 +1235,11 @@ protected:
   }
 
   void FrameSelectedCallback(lldb_private::StackFrame *frame);
+
+  virtual llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  GetSiginfo(size_t max_size) const {
+    return llvm::make_error<UnimplementedError>();
+  }
 
   // Classes that inherit from Process can see and modify these
   lldb::ProcessWP m_process_wp;    ///< The process that owns this thread.

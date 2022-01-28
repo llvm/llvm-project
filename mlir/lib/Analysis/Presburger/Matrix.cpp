@@ -178,6 +178,11 @@ void Matrix::copyRow(unsigned sourceRow, unsigned targetRow) {
     at(targetRow, c) = at(sourceRow, c);
 }
 
+void Matrix::fillRow(unsigned row, int64_t value) {
+  for (unsigned col = 0; col < nColumns; ++col)
+    at(row, col) = value;
+}
+
 void Matrix::addToRow(unsigned sourceRow, unsigned targetRow, int64_t scale) {
   if (scale == 0)
     return;
