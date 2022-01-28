@@ -7,9 +7,9 @@
 ; RUN:   | FileCheck %s -check-prefixes=RV32ZB
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV64ZB
-; RUN: llc -mtriple=riscv32 -mattr=+zbb -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+zbkb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV32ZB
-; RUN: llc -mtriple=riscv64 -mattr=+zbb -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+zbkb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV64ZB
 
 declare i16 @llvm.bswap.i16(i16)
