@@ -6099,7 +6099,8 @@ ASTContext::getNameForTemplate(TemplateName Name,
   llvm_unreachable("bad template name kind!");
 }
 
-TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name) const {
+TemplateName
+ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
   switch (Name.getKind()) {
   case TemplateName::QualifiedTemplate:
   case TemplateName::Template: {
@@ -6141,13 +6142,14 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name) const {
   llvm_unreachable("bad template name!");
 }
 
-bool ASTContext::hasSameTemplateName(TemplateName X, TemplateName Y) {
-  X = getCanonicalTemplateName(X);
-  Y = getCanonicalTemplateName(Y);
-  return X.getAsVoidPointer() == Y.getAsVoidPointer();
+bool ASTContext::hasSameTemplateName(const TemplateName &X,
+                                     const TemplateName &Y) const {
+  return getCanonicalTemplateName(X).getAsVoidPointer() ==
+         getCanonicalTemplateName(Y).getAsVoidPointer();
 }
 
-bool ASTContext::isSameTemplateParameter(NamedDecl *X, NamedDecl *Y) {
+bool ASTContext::isSameTemplateParameter(const NamedDecl *X,
+                                         const NamedDecl *Y) {
   if (X->getKind() != Y->getKind())
     return false;
 
@@ -6198,8 +6200,8 @@ bool ASTContext::isSameTemplateParameter(NamedDecl *X, NamedDecl *Y) {
                                      TY->getTemplateParameters());
 }
 
-bool ASTContext::isSameTemplateParameterList(TemplateParameterList *X,
-                                             TemplateParameterList *Y) {
+bool ASTContext::isSameTemplateParameterList(const TemplateParameterList *X,
+                                             const TemplateParameterList *Y) {
   if (X->size() != Y->size())
     return false;
 
@@ -6302,7 +6304,7 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
   return true;
 }
 
-bool ASTContext::isSameEntity(NamedDecl *X, NamedDecl *Y) {
+bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) {
   if (X == Y)
     return true;
 
@@ -6409,6 +6411,8 @@ bool ASTContext::isSameEntity(NamedDecl *X, NamedDecl *Y) {
       if (getLangOpts().CPlusPlus17 && XFPT && YFPT &&
           (isUnresolvedExceptionSpec(XFPT->getExceptionSpecType()) ||
            isUnresolvedExceptionSpec(YFPT->getExceptionSpecType())) &&
+          // FIXME: We could make isSameEntity const after we make
+          // hasSameFunctionTypeIgnoringExceptionSpec const.
           hasSameFunctionTypeIgnoringExceptionSpec(XT, YT))
         return true;
       return false;
