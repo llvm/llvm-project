@@ -20,10 +20,10 @@ define void @multiply_can_hoist_cast(<4 x double>* noalias %A, <4 x double> * %B
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x double>* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 32 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double>* [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -115,10 +115,10 @@ define void @multiply_can_hoist_multiple_insts(<4 x double>* noalias %A, <4 x do
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x double>* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 32 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double>* [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -212,10 +212,10 @@ define void @multiply_can_hoist_multiple_insts2(<4 x double>* noalias %A, <4 x d
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca <4 x double>, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x double>* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 32 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(32) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(32) [[TMP4]], i64 32, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x double>* [ [[B]], [[ENTRY:%.*]] ], [ [[B]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]

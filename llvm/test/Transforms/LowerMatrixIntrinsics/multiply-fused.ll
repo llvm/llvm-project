@@ -22,10 +22,10 @@ define void @multiply(<16 x double> * %A, <16 x double> * %B, <16 x double>* %C)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <16 x double>, align 128
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca <16 x double>, align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x double>* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x double>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 128 dereferenceable(128) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(128) [[TMP4]], i64 128, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(128) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(128) [[TMP4]], i64 128, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <16 x double>* [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -39,10 +39,10 @@ define void @multiply(<16 x double> * %A, <16 x double> * %B, <16 x double>* %C)
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[LOAD_END7]], [[STORE_BEGIN4]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; CHECK:       copy2:
-; CHECK-NEXT:    [[TMP8:%.*]] = alloca <16 x double>, align 128
+; CHECK-NEXT:    [[TMP8:%.*]] = alloca <16 x double>, align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <16 x double>* [[TMP8]] to i8*
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <16 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 128 dereferenceable(128) [[TMP9]], i8* noundef nonnull align 8 dereferenceable(128) [[TMP10]], i64 128, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(128) [[TMP9]], i8* noundef nonnull align 8 dereferenceable(128) [[TMP10]], i64 128, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi <16 x double>* [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT1]] ], [ [[TMP8]], [[COPY2]] ]

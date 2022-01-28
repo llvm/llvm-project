@@ -32,13 +32,14 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[LOAD_END]], [[STORE_BEGIN]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <6 x double>, align 64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <6 x double>* [[TMP2]] to i8*
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca  [6 x double], align 8
+; CHECK-NEXT:    [[BC:%.+]] = bitcast [6 x double]* [[TMP2]] to <6 x double>*
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [6 x double]* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <6 x double>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(48) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP4]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(48) [[TMP3]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP4]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <6 x double>* [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <6 x double>* [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[BC]], [[COPY]] ]
 ; CHECK-NEXT:    [[STORE_BEGIN4:%.*]] = ptrtoint <9 x double>* [[C]] to i64
 ; CHECK-NEXT:    [[STORE_END5:%.*]] = add nuw nsw i64 [[STORE_BEGIN4]], 72
 ; CHECK-NEXT:    [[LOAD_BEGIN6:%.*]] = ptrtoint <6 x double>* [[B]] to i64
@@ -49,13 +50,14 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i64 [[LOAD_END7]], [[STORE_BEGIN4]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; CHECK:       copy2:
-; CHECK-NEXT:    [[TMP8:%.*]] = alloca <6 x double>, align 64
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <6 x double>* [[TMP8]] to i8*
+; CHECK-NEXT:    [[TMP8:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    [[BC2:%.+]] = bitcast [6 x double]* [[TMP8]] to <6 x double>*
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast [6 x double]* [[TMP8]] to i8*
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <6 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(48) [[TMP9]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP10]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(48) [[TMP9]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP10]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <6 x double>* [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT1]] ], [ [[TMP8]], [[COPY2]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <6 x double>* [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT1]] ], [ [[BC2]], [[COPY2]] ]
 ; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <6 x double>* [[TMP5]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr <6 x double>, <6 x double>* [[TMP5]], i64 0, i64 3
@@ -169,13 +171,14 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP37:%.*]] = icmp ugt i64 [[LOAD_END97]], [[STORE_BEGIN94]]
 ; CHECK-NEXT:    br i1 [[TMP37]], label [[COPY92:%.*]], label [[NO_ALIAS93]]
 ; CHECK:       copy92:
-; CHECK-NEXT:    [[TMP38:%.*]] = alloca <6 x double>, align 64
-; CHECK-NEXT:    [[TMP39:%.*]] = bitcast <6 x double>* [[TMP38]] to i8*
+; CHECK-NEXT:    [[TMP38:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    [[BC3:%.+]] = bitcast [6 x double]* [[TMP38]] to <6 x double>*
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast [6 x double]* [[TMP38]] to i8*
 ; CHECK-NEXT:    [[TMP40:%.*]] = bitcast <6 x double>* [[A]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(48) [[TMP39]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP40]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(48) [[TMP39]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP40]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS93]]
 ; CHECK:       no_alias93:
-; CHECK-NEXT:    [[TMP41:%.*]] = phi <6 x double>* [ [[A]], [[END]] ], [ [[A]], [[ALIAS_CONT91]] ], [ [[TMP38]], [[COPY92]] ]
+; CHECK-NEXT:    [[TMP41:%.*]] = phi <6 x double>* [ [[A]], [[END]] ], [ [[A]], [[ALIAS_CONT91]] ], [ [[BC3]], [[COPY92]] ]
 ; CHECK-NEXT:    [[STORE_BEGIN101:%.*]] = ptrtoint <9 x double>* [[C]] to i64
 ; CHECK-NEXT:    [[STORE_END102:%.*]] = add nuw nsw i64 [[STORE_BEGIN101]], 72
 ; CHECK-NEXT:    [[LOAD_BEGIN103:%.*]] = ptrtoint <6 x double>* [[B]] to i64
@@ -186,13 +189,14 @@ define void @test(<6 x double> * %A, <6 x double> * %B, <9 x double>* %C, i1 %co
 ; CHECK-NEXT:    [[TMP43:%.*]] = icmp ugt i64 [[LOAD_END104]], [[STORE_BEGIN101]]
 ; CHECK-NEXT:    br i1 [[TMP43]], label [[COPY99:%.*]], label [[NO_ALIAS100]]
 ; CHECK:       copy99:
-; CHECK-NEXT:    [[TMP44:%.*]] = alloca <6 x double>, align 64
-; CHECK-NEXT:    [[TMP45:%.*]] = bitcast <6 x double>* [[TMP44]] to i8*
+; CHECK-NEXT:    [[TMP44:%.*]] = alloca [6 x double], align 8
+; CHECK-NEXT:    [[BC4:%.+]] = bitcast [6 x double]* [[TMP44]] to <6 x double>*
+; CHECK-NEXT:    [[TMP45:%.*]] = bitcast [6 x double]* [[TMP44]] to i8*
 ; CHECK-NEXT:    [[TMP46:%.*]] = bitcast <6 x double>* [[B]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 64 dereferenceable(48) [[TMP45]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP46]], i64 48, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 8 dereferenceable(48) [[TMP45]], i8* noundef nonnull align 8 dereferenceable(48) [[TMP46]], i64 48, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS100]]
 ; CHECK:       no_alias100:
-; CHECK-NEXT:    [[TMP47:%.*]] = phi <6 x double>* [ [[B]], [[NO_ALIAS93]] ], [ [[B]], [[ALIAS_CONT98]] ], [ [[TMP44]], [[COPY99]] ]
+; CHECK-NEXT:    [[TMP47:%.*]] = phi <6 x double>* [ [[B]], [[NO_ALIAS93]] ], [ [[B]], [[ALIAS_CONT98]] ], [ [[BC4]], [[COPY99]] ]
 ; CHECK-NEXT:    [[VEC_CAST106:%.*]] = bitcast <6 x double>* [[TMP41]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD107:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST106]], align 8
 ; CHECK-NEXT:    [[VEC_GEP108:%.*]] = getelementptr <6 x double>, <6 x double>* [[TMP41]], i64 0, i64 3
