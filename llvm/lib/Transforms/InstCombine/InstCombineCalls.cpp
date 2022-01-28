@@ -2468,10 +2468,28 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
 // Fence instruction simplification
 Instruction *InstCombinerImpl::visitFenceInst(FenceInst &FI) {
-  // Remove identical consecutive fences.
-  Instruction *Next = FI.getNextNonDebugInstruction();
-  if (auto *NFI = dyn_cast<FenceInst>(Next))
-    if (FI.isIdenticalTo(NFI))
+  auto *NFI = dyn_cast<FenceInst>(FI.getNextNonDebugInstruction());
+  // This check is solely here to handle arbitrary target-dependent syncscopes.
+  // TODO: Can remove if does not matter in practice.
+  if (NFI && FI.isIdenticalTo(NFI))
+    return eraseInstFromFunction(FI);
+
+  // Returns true if FI1 is identical or stronger fence than FI2.
+  auto isIdenticalOrStrongerFence = [](FenceInst *FI1, FenceInst *FI2) {
+    auto FI1SyncScope = FI1->getSyncScopeID();
+    // Consider same scope, where scope is global or single-thread.
+    if (FI1SyncScope != FI2->getSyncScopeID() ||
+        (FI1SyncScope != SyncScope::System &&
+         FI1SyncScope != SyncScope::SingleThread))
+      return false;
+
+    return isAtLeastOrStrongerThan(FI1->getOrdering(), FI2->getOrdering());
+  };
+  if (NFI && isIdenticalOrStrongerFence(NFI, &FI))
+    return eraseInstFromFunction(FI);
+
+  if (auto *PFI = dyn_cast_or_null<FenceInst>(FI.getPrevNonDebugInstruction()))
+    if (isIdenticalOrStrongerFence(PFI, &FI))
       return eraseInstFromFunction(FI);
   return nullptr;
 }
