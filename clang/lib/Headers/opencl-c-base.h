@@ -72,6 +72,12 @@
 #endif // defined(__SPIR__)
 #endif // (__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300)
 
+#if !defined(__opencl_c_generic_address_space)
+// Internal feature macro to provide named (global, local, private) address
+// space overloads for builtin functions that take a pointer argument.
+#define __opencl_c_named_address_space_builtins 1
+#endif // !defined(__opencl_c_generic_address_space)
+
 // built-in scalar data types:
 
 /**
