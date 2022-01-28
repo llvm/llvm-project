@@ -13,6 +13,7 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
 #define MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
 
+#include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/LogicalResult.h"
@@ -49,7 +50,6 @@ namespace mlir {
 /// example, `q` is existentially quantified. This can be thought of as the
 /// result of projecting out `q` from the previous example, i.e. we obtained {2,
 /// 4, 6} by projecting out the second dimension from {(2, 1), (4, 2), (6, 2)}.
-///
 class IntegerPolyhedron {
 public:
   /// All derived classes of IntegerPolyhedron.
@@ -199,6 +199,12 @@ public:
   /// Remove the (in)equalities at positions [start, end).
   void removeEqualityRange(unsigned start, unsigned end);
   void removeInequalityRange(unsigned start, unsigned end);
+
+  /// Get the lexicographically minimum rational point satisfying the
+  /// constraints. Returns an empty optional if the polyhedron is empty or if
+  /// the lexmin is unbounded. Symbols are not supported and will result in
+  /// assert-failure.
+  Optional<SmallVector<Fraction, 8>> getRationalLexMin() const;
 
   /// Swap the posA^th identifier with the posB^th identifier.
   virtual void swapId(unsigned posA, unsigned posB);

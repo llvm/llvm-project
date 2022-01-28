@@ -106,6 +106,8 @@ public:
 
   void copyRow(unsigned sourceRow, unsigned targetRow);
 
+  void fillRow(unsigned row, int64_t value);
+
   /// Add `scale` multiples of the source row to the target row.
   void addToRow(unsigned sourceRow, unsigned targetRow, int64_t scale);
 
