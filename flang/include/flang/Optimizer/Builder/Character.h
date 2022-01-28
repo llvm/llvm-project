@@ -22,7 +22,7 @@ namespace fir::factory {
 class CharacterExprHelper {
 public:
   /// Constructor.
-  explicit CharacterExprHelper(FirOpBuilder &builder, mlir::Location loc)
+  explicit CharacterExprHelper(fir::FirOpBuilder &builder, mlir::Location loc)
       : builder{builder}, loc{loc} {}
   CharacterExprHelper(const CharacterExprHelper &) = delete;
 

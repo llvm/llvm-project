@@ -11,7 +11,7 @@
 
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference.h"
-#include "flang/Lower/Support/BoxValue.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Value.h"
@@ -214,16 +214,6 @@ public:
                                llvm::ArrayRef<mlir::Value> lbounds,
                                bool force = false) {
     makeSym(sym, SymbolBox::CharFullDim(value, len, extents, lbounds), force);
-  }
-
-  /// Generalized derived type mapping.
-  void addDerivedSymbol(semantics::SymbolRef sym, mlir::Value value,
-                        mlir::Value size, llvm::ArrayRef<mlir::Value> extents,
-                        llvm::ArrayRef<mlir::Value> lbounds,
-                        llvm::ArrayRef<mlir::Value> params,
-                        bool force = false) {
-    makeSym(sym, SymbolBox::Derived(value, size, params, extents, lbounds),
-            force);
   }
 
   /// Find `symbol` and return its value if it appears in the current mappings.

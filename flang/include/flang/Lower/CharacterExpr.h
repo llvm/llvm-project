@@ -9,8 +9,8 @@
 #ifndef FORTRAN_LOWER_CHARACTEREXPR_H
 #define FORTRAN_LOWER_CHARACTEREXPR_H
 
-#include "flang/Lower/FIRBuilder.h"
-#include "flang/Lower/Support/BoxValue.h"
+#include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 
 namespace Fortran::lower {
 
@@ -18,7 +18,7 @@ namespace Fortran::lower {
 class CharacterExprHelper {
 public:
   /// Constructor.
-  explicit CharacterExprHelper(FirOpBuilder &builder, mlir::Location loc)
+  explicit CharacterExprHelper(fir::FirOpBuilder &builder, mlir::Location loc)
       : builder{builder}, loc{loc} {}
   CharacterExprHelper(const CharacterExprHelper &) = delete;
 
@@ -144,7 +144,7 @@ private:
   mlir::Value createBlankConstantCode(fir::CharacterType type);
 
 private:
-  FirOpBuilder &builder;
+  fir::FirOpBuilder &builder;
   mlir::Location loc;
 };
 
