@@ -46,9 +46,9 @@ class Value;
 /// instruction. If \p Updates is specified, collect all necessary DT updates
 /// into this vector. If \p KeepOneInputPHIs is true, one-input Phis in
 /// successors of blocks being deleted will be preserved.
-void DetatchDeadBlocks(ArrayRef <BasicBlock *> BBs,
-                       SmallVectorImpl<DominatorTree::UpdateType> *Updates,
-                       bool KeepOneInputPHIs = false);
+void detachDeadBlocks(ArrayRef <BasicBlock *> BBs,
+                      SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                      bool KeepOneInputPHIs = false);
 
 /// Delete the specified block, which must have no predecessors.
 void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
