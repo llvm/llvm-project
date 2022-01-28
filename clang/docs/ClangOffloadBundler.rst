@@ -290,7 +290,7 @@ clang-offload-bundler extracts compatible device binaries for a given target
 from the bundled device binaries in a heterogeneous device archive and creates
 a target specific device archive without bundling.
 
-clang-offlocad-bundler determines whether a device binary is compatible with a
+clang-offload-bundler determines whether a device binary is compatible with a
 target by comparing bundle ID's. Two bundle ID's are considered compatible if:
 
   * Their offload kind are the same
