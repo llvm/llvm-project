@@ -1049,18 +1049,20 @@ static DiagnosticSeverity getDiagnosticSeverity(SourceMgr::DiagKind DK) {
 /// Diagnostic information for SMDiagnostic reporting.
 class DiagnosticInfoSrcMgr : public DiagnosticInfo {
   const SMDiagnostic &Diagnostic;
+  StringRef ModName;
 
   // For inlineasm !srcloc translation.
   bool InlineAsmDiag;
   unsigned LocCookie;
 
 public:
-  DiagnosticInfoSrcMgr(const SMDiagnostic &Diagnostic,
+  DiagnosticInfoSrcMgr(const SMDiagnostic &Diagnostic, StringRef ModName,
                        bool InlineAsmDiag = true, unsigned LocCookie = 0)
       : DiagnosticInfo(DK_SrcMgr, getDiagnosticSeverity(Diagnostic.getKind())),
-        Diagnostic(Diagnostic), InlineAsmDiag(InlineAsmDiag),
+        Diagnostic(Diagnostic), ModName(ModName), InlineAsmDiag(InlineAsmDiag),
         LocCookie(LocCookie) {}
 
+  StringRef getModuleName() const { return ModName; }
   bool isInlineAsmDiag() const { return InlineAsmDiag; }
   const SMDiagnostic &getSMDiag() const { return Diagnostic; }
   unsigned getLocCookie() const { return LocCookie; }
