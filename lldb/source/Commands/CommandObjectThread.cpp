@@ -1320,6 +1320,53 @@ public:
   }
 };
 
+class CommandObjectThreadSiginfo : public CommandObjectIterateOverThreads {
+public:
+  CommandObjectThreadSiginfo(CommandInterpreter &interpreter)
+      : CommandObjectIterateOverThreads(
+            interpreter, "thread siginfo",
+            "Display the current siginfo object for a thread. Defaults to "
+            "the current thread.",
+            "thread siginfo",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
+
+  ~CommandObjectThreadSiginfo() override = default;
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
+        request, nullptr);
+  }
+
+  bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
+    ThreadSP thread_sp =
+        m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
+    if (!thread_sp) {
+      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64 "\n",
+                                   tid);
+      return false;
+    }
+
+    Stream &strm = result.GetOutputStream();
+    if (!thread_sp->GetDescription(strm, eDescriptionLevelFull, false, false)) {
+      result.AppendErrorWithFormat("error displaying info for thread: \"%d\"\n",
+                                   thread_sp->GetIndexID());
+      return false;
+    }
+    ValueObjectSP exception_object_sp = thread_sp->GetSiginfoValue();
+    if (exception_object_sp)
+      exception_object_sp->Dump(strm);
+    else
+      strm.Printf("(no siginfo)\n");
+    strm.PutChar('\n');
+
+    return true;
+  }
+};
+
 // CommandObjectThreadReturn
 #define LLDB_OPTIONS_thread_return
 #include "CommandOptions.inc"
@@ -2293,6 +2340,8 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                  CommandObjectSP(new CommandObjectThreadInfo(interpreter)));
   LoadSubCommand("exception", CommandObjectSP(new CommandObjectThreadException(
                                   interpreter)));
+  LoadSubCommand("siginfo",
+                 CommandObjectSP(new CommandObjectThreadSiginfo(interpreter)));
   LoadSubCommand("step-in",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-in",
