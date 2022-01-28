@@ -1322,6 +1322,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     BasicBlock *BB = CB->getParent();
     if (BB->getParent() != &F) // in other function
       continue;
+    if (CB->getOperandBundle(LLVMContext::OB_funclet))
+      report_fatal_error(
+          "setjmp within a catch clause is not supported in Wasm EH");
 
     CallInst *CI = nullptr;
     // setjmp cannot throw. So if it is an invoke, lower it to a call
