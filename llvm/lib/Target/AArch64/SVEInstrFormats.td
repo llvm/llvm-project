@@ -1633,15 +1633,16 @@ multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op,
                                !cast<Instruction>(NAME), PTRUE_D>;
 }
 
-multiclass sve_int_pred_log_and<bits<4> opc, string asm, SDPatternOperator op> :
+multiclass sve_int_pred_log_and<bits<4> opc, string asm, SDPatternOperator op,
+                                SDPatternOperator op_nopred> :
   sve_int_pred_log<opc, asm, op> {
-  def : Pat<(nxv16i1 (and nxv16i1:$Op1, nxv16i1:$Op2)),
+  def : Pat<(nxv16i1 (op_nopred nxv16i1:$Op1, nxv16i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
-  def : Pat<(nxv8i1 (and nxv8i1:$Op1, nxv8i1:$Op2)),
+  def : Pat<(nxv8i1 (op_nopred nxv8i1:$Op1, nxv8i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
-  def : Pat<(nxv4i1 (and nxv4i1:$Op1, nxv4i1:$Op2)),
+  def : Pat<(nxv4i1 (op_nopred nxv4i1:$Op1, nxv4i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
-  def : Pat<(nxv2i1 (and nxv2i1:$Op1, nxv2i1:$Op2)),
+  def : Pat<(nxv2i1 (op_nopred nxv2i1:$Op1, nxv2i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
 }
 
