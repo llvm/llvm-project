@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ARMAttributeParser.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 

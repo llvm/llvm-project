@@ -1535,12 +1535,12 @@ uint32_t test_crc32cd(uint32_t a, uint64_t b) {
 /* 10.1 Special register intrinsics */
 // AArch32-LABEL: @test_rsr(
 // AArch32-NEXT:  entry:
-// AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata !5)
+// AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata [[A32RSR32:!.*]])
 // AArch32-NEXT:    ret i32 [[TMP0]]
 //
 // AArch64-LABEL: @test_rsr(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata !8)
+// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[A64RSR:!.*]])
 // AArch64-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 // AArch64-NEXT:    ret i32 [[TMP1]]
 //
@@ -1554,12 +1554,12 @@ uint32_t test_rsr() {
 
 // AArch32-LABEL: @test_rsr64(
 // AArch32-NEXT:  entry:
-// AArch32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata !6)
+// AArch32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[A32RSR64:!.*]])
 // AArch32-NEXT:    ret i64 [[TMP0]]
 //
 // AArch64-LABEL: @test_rsr64(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata !8)
+// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[A64RSR]])
 // AArch64-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t test_rsr64() {
@@ -1572,13 +1572,13 @@ uint64_t test_rsr64() {
 
 // AArch32-LABEL: @test_rsrp(
 // AArch32-NEXT:  entry:
-// AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata !7)
+// AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata [[A32SYSREG:!.*]])
 // AArch32-NEXT:    [[TMP1:%.*]] = inttoptr i32 [[TMP0]] to i8*
 // AArch32-NEXT:    ret i8* [[TMP1]]
 //
 // AArch64-LABEL: @test_rsrp(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata !9)
+// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[A64SYSREG:!.*]])
 // AArch64-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to i8*
 // AArch64-NEXT:    ret i8* [[TMP1]]
 //
@@ -1588,13 +1588,13 @@ void *test_rsrp() {
 
 // AArch32-LABEL: @test_wsr(
 // AArch32-NEXT:  entry:
-// AArch32-NEXT:    call void @llvm.write_register.i32(metadata !5, i32 [[V:%.*]])
+// AArch32-NEXT:    call void @llvm.write_register.i32(metadata [[A32RSR32]], i32 [[V:%.*]])
 // AArch32-NEXT:    ret void
 //
 // AArch64-LABEL: @test_wsr(
 // AArch64-NEXT:  entry:
 // AArch64-NEXT:    [[TMP0:%.*]] = zext i32 [[V:%.*]] to i64
-// AArch64-NEXT:    call void @llvm.write_register.i64(metadata !8, i64 [[TMP0]])
+// AArch64-NEXT:    call void @llvm.write_register.i64(metadata [[A64RSR]], i64 [[TMP0]])
 // AArch64-NEXT:    ret void
 //
 void test_wsr(uint32_t v) {
@@ -1607,12 +1607,12 @@ void test_wsr(uint32_t v) {
 
 // AArch32-LABEL: @test_wsr64(
 // AArch32-NEXT:  entry:
-// AArch32-NEXT:    call void @llvm.write_register.i64(metadata !6, i64 [[V:%.*]])
+// AArch32-NEXT:    call void @llvm.write_register.i64(metadata [[A32RSR64]], i64 [[V:%.*]])
 // AArch32-NEXT:    ret void
 //
 // AArch64-LABEL: @test_wsr64(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    call void @llvm.write_register.i64(metadata !8, i64 [[V:%.*]])
+// AArch64-NEXT:    call void @llvm.write_register.i64(metadata [[A64RSR]], i64 [[V:%.*]])
 // AArch64-NEXT:    ret void
 //
 void test_wsr64(uint64_t v) {
@@ -1626,13 +1626,13 @@ void test_wsr64(uint64_t v) {
 // AArch32-LABEL: @test_wsrp(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[TMP0:%.*]] = ptrtoint i8* [[V:%.*]] to i32
-// AArch32-NEXT:    call void @llvm.write_register.i32(metadata !7, i32 [[TMP0]])
+// AArch32-NEXT:    call void @llvm.write_register.i32(metadata [[A32SYSREG]], i32 [[TMP0]])
 // AArch32-NEXT:    ret void
 //
 // AArch64-LABEL: @test_wsrp(
 // AArch64-NEXT:  entry:
 // AArch64-NEXT:    [[TMP0:%.*]] = ptrtoint i8* [[V:%.*]] to i64
-// AArch64-NEXT:    call void @llvm.write_register.i64(metadata !9, i64 [[TMP0]])
+// AArch64-NEXT:    call void @llvm.write_register.i64(metadata [[A64SYSREG]], i64 [[TMP0]])
 // AArch64-NEXT:    ret void
 //
 void test_wsrp(void *v) {
@@ -1642,7 +1642,7 @@ void test_wsrp(void *v) {
 // AArch32-LABEL: @test_rsrf(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[REF_TMP:%.*]] = alloca i32, align 4
-// AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata !5)
+// AArch32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.read_volatile_register.i32(metadata [[A32RSR32]])
 // AArch32-NEXT:    store i32 [[TMP0]], i32* [[REF_TMP]], align 4
 // AArch32-NEXT:    [[TMP1:%.*]] = bitcast i32* [[REF_TMP]] to float*
 // AArch32-NEXT:    [[TMP2:%.*]] = load float, float* [[TMP1]], align 4
@@ -1651,7 +1651,7 @@ void test_wsrp(void *v) {
 // AArch64-LABEL: @test_rsrf(
 // AArch64-NEXT:  entry:
 // AArch64-NEXT:    [[REF_TMP:%.*]] = alloca i32, align 4
-// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata !8)
+// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[A64RSR]])
 // AArch64-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
 // AArch64-NEXT:    store i32 [[TMP1]], i32* [[REF_TMP]], align 4
 // AArch64-NEXT:    [[TMP2:%.*]] = bitcast i32* [[REF_TMP]] to float*
@@ -1669,7 +1669,7 @@ float test_rsrf() {
 // AArch32-LABEL: @test_rsrf64(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    [[REF_TMP:%.*]] = alloca i64, align 8
-// AArch32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata !6)
+// AArch32-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[A32RSR64]])
 // AArch32-NEXT:    store i64 [[TMP0]], i64* [[REF_TMP]], align 8
 // AArch32-NEXT:    [[TMP1:%.*]] = bitcast i64* [[REF_TMP]] to double*
 // AArch32-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
@@ -1678,7 +1678,7 @@ float test_rsrf() {
 // AArch64-LABEL: @test_rsrf64(
 // AArch64-NEXT:  entry:
 // AArch64-NEXT:    [[REF_TMP:%.*]] = alloca i64, align 8
-// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata !8)
+// AArch64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata [[A64RSR]])
 // AArch64-NEXT:    store i64 [[TMP0]], i64* [[REF_TMP]], align 8
 // AArch64-NEXT:    [[TMP1:%.*]] = bitcast i64* [[REF_TMP]] to double*
 // AArch64-NEXT:    [[TMP2:%.*]] = load double, double* [[TMP1]], align 8
@@ -1698,7 +1698,7 @@ double test_rsrf64() {
 // AArch32-NEXT:    store float [[V:%.*]], float* [[V_ADDR]], align 4
 // AArch32-NEXT:    [[TMP0:%.*]] = bitcast float* [[V_ADDR]] to i32*
 // AArch32-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-// AArch32-NEXT:    call void @llvm.write_register.i32(metadata !5, i32 [[TMP1]])
+// AArch32-NEXT:    call void @llvm.write_register.i32(metadata [[A32RSR32]], i32 [[TMP1]])
 // AArch32-NEXT:    ret void
 //
 // AArch64-LABEL: @test_wsrf(
@@ -1708,7 +1708,7 @@ double test_rsrf64() {
 // AArch64-NEXT:    [[TMP0:%.*]] = bitcast float* [[V_ADDR]] to i32*
 // AArch64-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
 // AArch64-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-// AArch64-NEXT:    call void @llvm.write_register.i64(metadata !8, i64 [[TMP2]])
+// AArch64-NEXT:    call void @llvm.write_register.i64(metadata [[A64RSR]], i64 [[TMP2]])
 // AArch64-NEXT:    ret void
 //
 void test_wsrf(float v) {
@@ -1725,7 +1725,7 @@ void test_wsrf(float v) {
 // AArch32-NEXT:    store double [[V:%.*]], double* [[V_ADDR]], align 8
 // AArch32-NEXT:    [[TMP0:%.*]] = bitcast double* [[V_ADDR]] to i64*
 // AArch32-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 8
-// AArch32-NEXT:    call void @llvm.write_register.i64(metadata !6, i64 [[TMP1]])
+// AArch32-NEXT:    call void @llvm.write_register.i64(metadata [[A32RSR64]], i64 [[TMP1]])
 // AArch32-NEXT:    ret void
 //
 // AArch64-LABEL: @test_wsrf64(
@@ -1734,7 +1734,7 @@ void test_wsrf(float v) {
 // AArch64-NEXT:    store double [[V:%.*]], double* [[V_ADDR]], align 8
 // AArch64-NEXT:    [[TMP0:%.*]] = bitcast double* [[V_ADDR]] to i64*
 // AArch64-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 8
-// AArch64-NEXT:    call void @llvm.write_register.i64(metadata !8, i64 [[TMP1]])
+// AArch64-NEXT:    call void @llvm.write_register.i64(metadata [[A64RSR]], i64 [[TMP1]])
 // AArch64-NEXT:    ret void
 //
 void test_wsrf64(double v) {
@@ -1786,9 +1786,9 @@ int test_rndrrs(uint64_t *__addr) {
 }
 #endif
 
-// AArch32: !5 = !{!"cp1:2:c3:c4:5"}
-// AArch32: !6 = !{!"cp1:2:c3"}
-// AArch32: !7 = !{!"sysreg"}
+// AArch32: [[A32RSR32]] = !{!"cp1:2:c3:c4:5"}
+// AArch32: [[A32RSR64]] = !{!"cp1:2:c3"}
+// AArch32: [[A32SYSREG]] = !{!"sysreg"}
 
-// AArch64: !8 = !{!"1:2:3:4:5"}
-// AArch64: !9 = !{!"sysreg"}
+// AArch64: [[A64RSR]] = !{!"1:2:3:4:5"}
+// AArch64: [[A64SYSREG]] = !{!"sysreg"}

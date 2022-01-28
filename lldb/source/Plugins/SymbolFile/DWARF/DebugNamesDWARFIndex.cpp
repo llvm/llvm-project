@@ -77,7 +77,7 @@ void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
                                                llvm::StringRef name) {
   // Ignore SentinelErrors, log everything else.
   LLDB_LOG_ERROR(
-      LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS),
+      GetLog(DWARFLog::Lookups),
       handleErrors(std::move(error), [](const DebugNames::SentinelError &) {}),
       "Failed to parse index entries for index at {1:x}, name {2}: {0}",
       ni.getUnitOffset(), name);

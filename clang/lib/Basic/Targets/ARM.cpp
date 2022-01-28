@@ -371,11 +371,32 @@ bool ARMTargetInfo::setABI(const std::string &Name) {
   return false;
 }
 
-bool ARMTargetInfo::validateBranchProtection(StringRef Spec,
+bool ARMTargetInfo::isBranchProtectionSupportedArch(StringRef Arch) const {
+  llvm::ARM::ArchKind CPUArch = llvm::ARM::parseCPUArch(Arch);
+  if (CPUArch == llvm::ARM::ArchKind::INVALID)
+    CPUArch = llvm::ARM::parseArch(getTriple().getArchName());
+
+  if (CPUArch == llvm::ARM::ArchKind::INVALID)
+    return false;
+
+  StringRef ArchFeature = llvm::ARM::getArchName(CPUArch);
+  auto a =
+      llvm::Triple(ArchFeature, getTriple().getVendorName(),
+                   getTriple().getOSName(), getTriple().getEnvironmentName());
+
+  StringRef SubArch = llvm::ARM::getSubArch(CPUArch);
+  llvm::ARM::ProfileKind Profile = llvm::ARM::parseArchProfile(SubArch);
+  return a.isArmT32() && (Profile == llvm::ARM::ProfileKind::M);
+}
+
+bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
                                              BranchProtectionInfo &BPI,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
   if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+    return false;
+
+  if (!isBranchProtectionSupportedArch(Arch))
     return false;
 
   BPI.SignReturnAddr =

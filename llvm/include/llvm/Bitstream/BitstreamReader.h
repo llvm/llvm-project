@@ -20,8 +20,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include <algorithm>
 #include <cassert>
 #include <climits>
