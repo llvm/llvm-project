@@ -107,6 +107,13 @@ void lld::diagnosticHandler(const DiagnosticInfo &di) {
   SmallString<128> s;
   raw_svector_ostream os(s);
   DiagnosticPrinterRawOStream dp(os);
+
+  // For an inline asm diagnostic, prepend the module name to get something like
+  // "$module <inline asm>:1:5: ".
+  if (auto *dism = dyn_cast<DiagnosticInfoSrcMgr>(&di))
+    if (dism->isInlineAsmDiag())
+      os << dism->getModuleName() << ' ';
+
   di.print(dp);
   switch (di.getSeverity()) {
   case DS_Error:

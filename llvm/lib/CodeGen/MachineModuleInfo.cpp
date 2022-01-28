@@ -400,12 +400,14 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
   // FIXME: Do this for new pass manager.
   LLVMContext &Ctx = M.getContext();
   MMI.getContext().setDiagnosticHandler(
-      [&Ctx](const SMDiagnostic &SMD, bool IsInlineAsm, const SourceMgr &SrcMgr,
-             std::vector<const MDNode *> &LocInfos) {
+      [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
+                 const SourceMgr &SrcMgr,
+                 std::vector<const MDNode *> &LocInfos) {
         unsigned LocCookie = 0;
         if (IsInlineAsm)
           LocCookie = getLocCookie(SMD, SrcMgr, LocInfos);
-        Ctx.diagnose(DiagnosticInfoSrcMgr(SMD, IsInlineAsm, LocCookie));
+        Ctx.diagnose(
+            DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
   MMI.DbgInfoAvailable = !M.debug_compile_units().empty();
   return false;
