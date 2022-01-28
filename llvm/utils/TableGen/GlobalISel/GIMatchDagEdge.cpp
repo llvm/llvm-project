@@ -8,6 +8,7 @@
 
 #include "GIMatchDagEdge.h"
 #include "GIMatchDagInstr.h"
+#include "GIMatchDagOperands.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
