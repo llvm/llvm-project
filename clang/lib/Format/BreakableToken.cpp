@@ -555,7 +555,9 @@ unsigned BreakableBlockComment::getRemainingLength(unsigned LineIndex,
     // We never need a decoration when breaking just the trailing "*/" postfix.
     bool HasRemainingText = Offset < Content[LineIndex].size();
     if (!HasRemainingText) {
-      LineLength -= Decoration.size();
+      bool HasDecoration = Lines[LineIndex].ltrim().startswith(Decoration);
+      if (HasDecoration)
+        LineLength -= Decoration.size();
     }
   }
   return LineLength;

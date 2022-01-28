@@ -1143,8 +1143,7 @@ defm autolink : BoolFOption<"autolink",
 // languages and accept other values such as CPU/GPU architectures,
 // offload kinds and target aliases.
 def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>,
-  HelpText<"Specify comma-separated list of offloading target triples"
-           " (HIP only)">;
+  HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
 // C++ Coroutines TS
 defm coroutines_ts : BoolFOption<"coroutines-ts",

@@ -439,7 +439,8 @@ SerializeToHsacoPass::createHsaco(const SmallVectorImpl<char> &isaBinary) {
     // Invoke lld. Expect a true return value from lld.
     if (!lld::elf::link({"ld.lld", "-shared", tempIsaBinaryFilename.c_str(),
                          "-o", tempHsacoFilename.c_str()},
-                        /*canEarlyExit=*/false, llvm::outs(), llvm::errs())) {
+                        llvm::outs(), llvm::errs(), /*exitEarly=*/true,
+                        /*disableOutput=*/false)) {
       emitError(loc, "lld invocation error");
       return {};
     }
