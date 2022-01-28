@@ -461,15 +461,7 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
       ISAInfo->Exts.erase(ExtName.str());
   }
 
-  ISAInfo->updateImplication();
-  ISAInfo->updateFLen();
-  ISAInfo->updateMinVLen();
-  ISAInfo->updateMaxELen();
-
-  if (Error Result = ISAInfo->checkDependency())
-    return std::move(Result);
-
-  return std::move(ISAInfo);
+  return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
@@ -686,15 +678,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     }
   }
 
-  ISAInfo->updateImplication();
-  ISAInfo->updateFLen();
-  ISAInfo->updateMinVLen();
-  ISAInfo->updateMaxELen();
-
-  if (Error Result = ISAInfo->checkDependency())
-    return std::move(Result);
-
-  return std::move(ISAInfo);
+  return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
 }
 
 Error RISCVISAInfo::checkDependency() {
@@ -918,4 +902,16 @@ std::vector<std::string> RISCVISAInfo::toFeatureVector() const {
     FeatureVector.push_back(Feature);
   }
   return FeatureVector;
+}
+
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
+  ISAInfo->updateImplication();
+  ISAInfo->updateFLen();
+  ISAInfo->updateMinVLen();
+  ISAInfo->updateMaxELen();
+
+  if (Error Result = ISAInfo->checkDependency())
+    return std::move(Result);
+  return std::move(ISAInfo);
 }
