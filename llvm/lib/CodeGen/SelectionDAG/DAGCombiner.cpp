@@ -440,6 +440,7 @@ namespace {
     SDValue visitSRA(SDNode *N);
     SDValue visitSRL(SDNode *N);
     SDValue visitFunnelShift(SDNode *N);
+    SDValue visitSHLSAT(SDNode *N);
     SDValue visitRotate(SDNode *N);
     SDValue visitABS(SDNode *N);
     SDValue visitBSWAP(SDNode *N);
@@ -1652,6 +1653,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::ROTL:               return visitRotate(N);
   case ISD::FSHL:
   case ISD::FSHR:               return visitFunnelShift(N);
+  case ISD::SSHLSAT:
+  case ISD::USHLSAT:            return visitSHLSAT(N);
   case ISD::ABS:                return visitABS(N);
   case ISD::BSWAP:              return visitBSWAP(N);
   case ISD::BITREVERSE:         return visitBITREVERSE(N);
@@ -9342,6 +9345,22 @@ SDValue DAGCombiner::visitFunnelShift(SDNode *N) {
   // Simplify, based on bits shifted out of N0/N1.
   if (SimplifyDemandedBits(SDValue(N, 0)))
     return SDValue(N, 0);
+
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitSHLSAT(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (SDValue V = DAG.simplifyShift(N0, N1))
+    return V;
+
+  EVT VT = N0.getValueType();
+
+  // fold (*shlsat c1, c2) -> c1<<c2
+  if (SDValue C =
+          DAG.FoldConstantArithmetic(N->getOpcode(), SDLoc(N), VT, {N0, N1}))
+    return C;
 
   return SDValue();
 }
