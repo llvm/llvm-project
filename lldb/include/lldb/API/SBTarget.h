@@ -886,7 +886,6 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
-  friend class SBThread;
   friend class SBValue;
   friend class SBVariablesOptions;
 
