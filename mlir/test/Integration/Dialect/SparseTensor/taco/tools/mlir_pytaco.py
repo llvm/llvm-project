@@ -30,8 +30,6 @@ import os
 import threading
 
 # Import MLIR related modules.
-from mlir import all_passes_registration  # Register MLIR compiler passes.
-from mlir import execution_engine
 from mlir import ir
 from mlir import runtime
 from mlir.dialects import arith
@@ -40,7 +38,6 @@ from mlir.dialects import linalg
 from mlir.dialects import std
 from mlir.dialects import sparse_tensor
 from mlir.dialects.linalg.opdsl import lang
-from mlir.passmanager import PassManager
 
 from . import mlir_pytaco_utils as utils
 
@@ -51,13 +48,6 @@ _TACO_TENSOR_PREFIX = "A"
 # Bitwidths for pointers and indices.
 _POINTER_BIT_WIDTH = 0
 _INDEX_BIT_WIDTH = 0
-# The name for the environment variable that provides the full path for the
-# supporting library.
-_SUPPORTLIB_ENV_VAR = "SUPPORTLIB"
-# The default supporting library if the environment variable is not provided.
-_DEFAULT_SUPPORTLIB = "libmlir_c_runner_utils.so"
-# The JIT compiler optimization level.
-_OPT_LEVEL = 2
 # The entry point to the JIT compiled program.
 _ENTRY_NAME = "main"
 
@@ -132,33 +122,6 @@ def _mlir_type_from_taco_type(dtype: DType) -> ir.Type:
       Type.FLOAT64: ir.F64Type.get()
   }
   return dtype_to_irtype[dtype.kind]
-
-
-def _compile_mlir(module: ir.Module) -> ir.Module:
-  """Compiles an MLIR module and returns the compiled module."""
-  # TODO: Replace this with a pipeline implemented for
-  #   https://github.com/llvm/llvm-project/issues/51751.
-  pipeline = (
-      f"sparsification,"
-      f"sparse-tensor-conversion,"
-      f"builtin.func(linalg-bufferize,convert-linalg-to-loops,convert-vector-to-scf),"
-      f"convert-scf-to-std,"
-      f"func-bufferize,"
-      f"arith-bufferize,"
-      f"builtin.func(tensor-bufferize,std-bufferize,finalizing-bufferize),"
-      f"convert-vector-to-llvm{{reassociate-fp-reductions=1 enable-index-optimizations=1}},"
-      f"lower-affine,"
-      f"convert-memref-to-llvm,"
-      f"convert-std-to-llvm,"
-      f"reconcile-unrealized-casts")
-  PassManager.parse(pipeline).run(module)
-  return module
-
-
-@functools.lru_cache()
-def _get_support_lib_name() -> str:
-  """Returns the string for the supporting C shared library."""
-  return os.getenv(_SUPPORTLIB_ENV_VAR, _DEFAULT_SUPPORTLIB)
 
 
 def _ctype_pointer_from_array(array: np.ndarray) -> ctypes.pointer:
@@ -900,8 +863,7 @@ class Tensor:
     shape = np.array(self._shape, np.int64)
     indices = np.array(self._coords, np.int64)
     values = np.array(self._values, self._dtype.value)
-    ptr = utils.coo_tensor_to_sparse_tensor(_get_support_lib_name(), shape,
-                                            values, indices)
+    ptr = utils.coo_tensor_to_sparse_tensor(shape, values, indices)
     return ctypes.pointer(ctypes.cast(ptr, ctypes.c_void_p))
 
   def get_coordinates_and_values(
@@ -1316,18 +1278,12 @@ class IndexExpr(abc.ABC):
     input_accesses = []
     self._visit(_gather_input_accesses_index_vars, (input_accesses,))
 
-    support_lib = _get_support_lib_name()
     # Build and compile the module to produce the execution engine.
     with ir.Context(), ir.Location.unknown():
       module = ir.Module.create()
       self._emit_assignment(module, dst, dst_indices, expr_to_info,
                             input_accesses)
-      compiled_module = _compile_mlir(module)
-
-      # We currently rely on an environment to pass in the full path of a
-      # supporting library for the execution engine.
-      engine = execution_engine.ExecutionEngine(
-          compiled_module, opt_level=_OPT_LEVEL, shared_libs=[support_lib])
+      engine = utils.compile_and_build_engine(module)
 
     # Gather the pointers for the input buffers.
     input_pointers = [a.tensor.ctype_pointer() for a in input_accesses]
@@ -1351,7 +1307,6 @@ class IndexExpr(abc.ABC):
 
     # Check and return the sparse tensor output.
     rank, nse, shape, values, indices = utils.sparse_tensor_to_coo_tensor(
-        support_lib,
         ctypes.cast(arg_pointers[-1][0], ctypes.c_void_p),
         np.float64,
     )
