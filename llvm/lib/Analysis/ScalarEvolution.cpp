@@ -7017,7 +7017,7 @@ bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
   // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return isMustProgress(L) && loopHasNoSideEffects(L);
+  return isFinite(L) || (isMustProgress(L) && loopHasNoSideEffects(L));
 }
 
 const SCEV *ScalarEvolution::createSCEV(Value *V) {

@@ -28,6 +28,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: Loop %for.body: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK: Determining loop execution counts for: @test_gt
 ; CHECK: Loop %for.body: Unpredictable backedge-taken count.
+; CHECK: Determining loop execution counts for: @test_willreturn
+; CHECK: Loop %for.body: backedge-taken count is ((-1 + (1024 umax %N)) /u 1024)
+; CHECK: Determining loop execution counts for: @test_nowillreturn
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
+; TODO: investigate why willreturn is still needed on the callsite
+; CHECK: Determining loop execution counts for: @test_willreturn_nocallsite
+; CHECK: Loop %for.body: Unpredictable backedge-taken count.
 
 define void @test(i32 %N) mustprogress {
 entry:
@@ -193,6 +200,53 @@ for.body:
   %iv = phi i32 [ %iv.next, %for.body ], [ %S, %entry ]
   %iv.next = add i32 %iv, -2
   %cmp = icmp ugt i32 %iv.next, %N
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+}
+
+declare void @sideeffect()
+
+define void @test_willreturn(i32 %S, i32 %N) willreturn {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
+  %iv.next = add i32 %iv, 1024
+  call void @sideeffect() nounwind willreturn
+  %cmp = icmp ult i32 %iv.next, %N
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @test_nowillreturn(i32 %S, i32 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
+  %iv.next = add i32 %iv, 1024
+  call void @sideeffect() nounwind willreturn
+  %cmp = icmp ult i32 %iv.next, %N
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+}
+
+define void @test_willreturn_nocallsite(i32 %S, i32 %N) willreturn {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %iv.next, %for.body ], [ 0, %entry ]
+  %iv.next = add i32 %iv, 1024
+  call void @sideeffect() nounwind
+  %cmp = icmp ult i32 %iv.next, %N
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
