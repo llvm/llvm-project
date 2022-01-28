@@ -121,6 +121,126 @@ if.else:
   ret i1 %res.10
 }
 
+define i1 @test_sub_nuw(i8 %start, i8 %low, i8 %high) {
+; CHECK-LABEL: @test_sub_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = sub nuw i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_PTR_I]], [[HIGH:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[UC_3:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    [[START_1_1:%.*]] = sub nuw i8 [[START]], 1
+; CHECK-NEXT:    [[UC_4:%.*]] = icmp uge i8 [[START_1_1]], [[HIGH]]
+; CHECK-NEXT:    [[RES_11:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[START_3_1:%.*]] = add nuw i8 [[START]], 3
+; CHECK-NEXT:    [[T_0:%.*]] = icmp uge i8 [[START_3_1]], [[HIGH]]
+; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], true
+; CHECK-NEXT:    [[UC_5:%.*]] = icmp ugt i8 [[START_3_1]], [[HIGH]]
+; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], true
+; CHECK-NEXT:    [[SC_8:%.*]] = icmp sge i8 [[START_1_1]], [[HIGH]]
+; CHECK-NEXT:    [[RES_14:%.*]] = xor i1 [[RES_13]], [[SC_8]]
+; CHECK-NEXT:    [[SC_9:%.*]] = icmp sge i8 [[START_3_1]], [[HIGH]]
+; CHECK-NEXT:    [[RES_15:%.*]] = xor i1 [[RES_14]], [[SC_9]]
+; CHECK-NEXT:    ret i1 [[RES_15]]
+; CHECK:       if.else:
+; CHECK-NEXT:    [[F_0:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    [[START_1:%.*]] = sub nuw i8 [[START]], 1
+; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[START_1]], [[HIGH]]
+; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 [[F_0]], [[F_1]]
+; CHECK-NEXT:    [[SC_1:%.*]] = icmp sgt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[RES_0]], [[SC_1]]
+; CHECK-NEXT:    [[SC_2:%.*]] = icmp sge i8 [[START_1]], [[HIGH]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[SC_2]]
+; CHECK-NEXT:    [[START_2:%.*]] = sub nuw i8 [[START]], 2
+; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[START_2]], [[HIGH]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[F_2]]
+; CHECK-NEXT:    [[SC_3:%.*]] = icmp sge i8 [[START_2]], [[HIGH]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[SC_3]]
+; CHECK-NEXT:    [[SC_4:%.*]] = icmp sle i8 [[START_2]], [[START_1]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[SC_4]]
+; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
+; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[START_3]], [[HIGH]]
+; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], false
+; CHECK-NEXT:    [[SC_5:%.*]] = icmp sge i8 [[START_3]], [[START_1]]
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[SC_5]]
+; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
+; CHECK-NEXT:    [[UC_2:%.*]] = icmp uge i8 [[START_4]], [[HIGH]]
+; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], false
+; CHECK-NEXT:    [[SC_6:%.*]] = icmp sge i8 [[START_4]], [[START_1]]
+; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[SC_6]]
+; CHECK-NEXT:    [[SC_7:%.*]] = icmp sge i8 [[START_4]], [[HIGH]]
+; CHECK-NEXT:    [[RES_10:%.*]] = xor i1 [[RES_9]], [[SC_7]]
+; CHECK-NEXT:    ret i1 [[RES_10]]
+;
+entry:
+  %add.ptr.i = sub nuw i8 %start, 3
+  %c.1 = icmp uge i8 %add.ptr.i, %high
+  br i1 %c.1, label %if.then, label %if.else
+
+
+if.then:
+  %uc.3 = icmp ugt i8 %start, %high
+  %start.1.1 = sub nuw i8 %start, 1
+  %uc.4 = icmp uge i8 %start.1.1, %high
+  %res.11 = xor i1 %uc.3, %uc.4
+
+  %start.3.1 = add nuw i8 %start, 3
+  %t.0 = icmp uge i8 %start.3.1, %high
+  %res.12 = xor i1 %res.11, %t.0
+
+  %uc.5 = icmp ugt i8 %start.3.1, %high
+  %res.13 = xor i1 %res.12, %uc.5
+
+  %sc.8 = icmp sge i8 %start.1.1, %high
+  %res.14 = xor i1 %res.13, %sc.8
+
+  %sc.9 = icmp sge i8 %start.3.1, %high
+  %res.15 = xor i1 %res.14, %sc.9
+
+  ret i1 %res.15
+
+if.else:
+  %f.0 = icmp ugt i8 %start, %high
+  %start.1 = sub nuw i8 %start, 1
+  %f.1 = icmp uge i8 %start.1, %high
+  %res.0 = xor i1 %f.0, %f.1
+
+  %sc.1 = icmp sgt i8 %start, %high
+  %res.1 = xor i1 %res.0, %sc.1
+
+  %sc.2 = icmp sge i8 %start.1, %high
+  %res.2 = xor i1 %res.1, %sc.2
+
+  %start.2 = sub nuw i8 %start, 2
+  %f.2 = icmp uge i8 %start.2, %high
+  %res.3 = xor i1 %res.2, %f.2
+
+  %sc.3 = icmp sge i8 %start.2, %high
+  %res.4 = xor i1 %res.3, %sc.3
+
+  %sc.4 = icmp sle i8 %start.2, %start.1
+  %res.5 = xor i1 %res.4, %sc.4
+
+  %start.3 = sub nuw i8 %start, 3
+  %f.3 = icmp uge i8 %start.3, %high
+  %res.6 = xor i1 %res.5, %f.3
+
+  %sc.5 = icmp sge i8 %start.3, %start.1
+  %res.7 = xor i1 %res.6, %sc.5
+
+  %start.4 = sub nuw i8 %start, 4
+  %uc.2 = icmp uge i8 %start.4, %high
+  %res.8 = xor i1 %res.7, %uc.2
+
+  %sc.6 = icmp sge i8 %start.4, %start.1
+  %res.9 = xor i1 %res.8, %sc.6
+
+  %sc.7 = icmp sge i8 %start.4, %high
+  %res.10 = xor i1 %res.9, %sc.7
+
+  ret i1 %res.10
+}
+
 define i1 @test_and_ule_sge(i32 %x, i32 %y, i32 %z, i32 %a) {
 ; CHECK-LABEL: @test_and_ule_sge(
 ; CHECK-NEXT:  entry:
