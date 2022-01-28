@@ -70,8 +70,9 @@ public:
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
 
-  bool validateBranchProtection(StringRef, BranchProtectionInfo &,
-                                StringRef &) const override;
+  bool validateBranchProtection(StringRef Spec, StringRef Arch,
+                                BranchProtectionInfo &BPI,
+                                StringRef &Err) const override;
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;

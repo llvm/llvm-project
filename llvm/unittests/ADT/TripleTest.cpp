@@ -1702,4 +1702,148 @@ TEST(TripleTest, ParseARMArch) {
     EXPECT_EQ(Triple::AArch64SubArch_arm64e, T.getSubArch());
   }
 }
+
+TEST(TripleTest, isArmT32) {
+  // Not isArmT32
+  {
+    Triple T = Triple("thumbv6m");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv8m.base");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv7s");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv7k");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv7ve");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv6");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv6m");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv6k");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv6t2");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv5");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv5te");
+    EXPECT_FALSE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv4t");
+    EXPECT_FALSE(T.isArmT32());
+  }
+
+  // isArmT32
+  {
+    Triple T = Triple("arm");
+    EXPECT_TRUE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv7m");
+    EXPECT_TRUE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv7em");
+    EXPECT_TRUE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv8m.main");
+    EXPECT_TRUE(T.isArmT32());
+  }
+  {
+    Triple T = Triple("armv8.1m.main");
+    EXPECT_TRUE(T.isArmT32());
+  }
+}
+
+TEST(TripleTest, isArmMClass) {
+  // not M-class
+  {
+    Triple T = Triple("armv7s");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv7k");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv7ve");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv6");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv6k");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv6t2");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv5");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv5te");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv4t");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("arm");
+    EXPECT_FALSE(T.isArmMClass());
+  }
+
+  // is M-class
+  {
+    Triple T = Triple("armv6m");
+    EXPECT_TRUE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv7m");
+    EXPECT_TRUE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv7em");
+    EXPECT_TRUE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv8m.base");
+    EXPECT_TRUE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv8m.main");
+    EXPECT_TRUE(T.isArmMClass());
+  }
+  {
+    Triple T = Triple("armv8.1m.main");
+    EXPECT_TRUE(T.isArmMClass());
+  }
+}
 } // end anonymous namespace

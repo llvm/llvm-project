@@ -138,7 +138,7 @@ bool AArch64TargetInfo::setABI(const std::string &Name) {
   return true;
 }
 
-bool AArch64TargetInfo::validateBranchProtection(StringRef Spec,
+bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;

@@ -126,8 +126,10 @@ public:
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
 
-  bool validateBranchProtection(StringRef, BranchProtectionInfo &,
-                                StringRef &) const override;
+  bool isBranchProtectionSupportedArch(StringRef Arch) const override;
+  bool validateBranchProtection(StringRef Spec, StringRef Arch,
+                                BranchProtectionInfo &BPI,
+                                StringRef &Err) const override;
 
   // FIXME: This should be based on Arch attributes, not CPU names.
   bool

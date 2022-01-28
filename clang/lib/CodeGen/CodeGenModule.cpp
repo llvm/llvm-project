@@ -731,6 +731,7 @@ void CodeGenModule::Release() {
                               "tag-stack-memory-buildattr", 1);
 
   if (Arch == llvm::Triple::thumb || Arch == llvm::Triple::thumbeb ||
+      Arch == llvm::Triple::arm || Arch == llvm::Triple::armeb ||
       Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
       Arch == llvm::Triple::aarch64_be) {
     getModule().addModuleFlag(llvm::Module::Error, "branch-target-enforcement",
@@ -742,11 +743,9 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "sign-return-address-all",
                               LangOpts.isSignReturnAddressScopeAll());
 
-    if (Arch != llvm::Triple::thumb && Arch != llvm::Triple::thumbeb) {
-      getModule().addModuleFlag(llvm::Module::Error,
-                                "sign-return-address-with-bkey",
-                                !LangOpts.isSignReturnAddressWithAKey());
-    }
+    getModule().addModuleFlag(llvm::Module::Error,
+                              "sign-return-address-with-bkey",
+                              !LangOpts.isSignReturnAddressWithAKey());
   }
 
   if (!CodeGenOpts.MemoryProfileOutput.empty()) {

@@ -1289,9 +1289,15 @@ public:
     bool BranchTargetEnforcement = false;
   };
 
+  /// Determine if the Architecture in this TargetInfo supports branch
+  /// protection
+  virtual bool isBranchProtectionSupportedArch(StringRef Arch) const {
+    return false;
+  }
+
   /// Determine if this TargetInfo supports the given branch protection
   /// specification
-  virtual bool validateBranchProtection(StringRef Spec,
+  virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
                                         BranchProtectionInfo &BPI,
                                         StringRef &Err) const {
     Err = "";
