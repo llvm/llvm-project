@@ -90,9 +90,6 @@ public:
 
   StructuredData::ObjectSP FetchThreadExtendedInfo() override;
 
-  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  GetSiginfo(size_t max_size) const override;
-
 protected:
   friend class ProcessGDBRemote;
 

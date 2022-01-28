@@ -172,7 +172,6 @@ public:
 protected:
   friend class SBDebugger;
   friend class SBTarget;
-  friend class SBThread;
 
   lldb::PlatformSP GetSP() const;
 
