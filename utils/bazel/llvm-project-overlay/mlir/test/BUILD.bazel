@@ -457,6 +457,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
+        "//mlir:SCFUtils",
         "//mlir:StandardOps",
         "//mlir:TransformUtils",
     ],

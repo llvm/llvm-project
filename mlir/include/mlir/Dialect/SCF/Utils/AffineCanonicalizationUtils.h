@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SCF_AFFINECANONICALIZATIONUTILS_H_
-#define MLIR_DIALECT_SCF_AFFINECANONICALIZATIONUTILS_H_
+#ifndef MLIR_DIALECT_SCF_UTILS_AFFINECANONICALIZATIONUTILS_H_
+#define MLIR_DIALECT_SCF_UTILS_AFFINECANONICALIZATIONUTILS_H_
 
 #include "mlir/Support/LLVM.h"
 
@@ -71,4 +71,4 @@ LogicalResult rewritePeeledMinMaxOp(RewriterBase &rewriter, Operation *op,
 } // namespace scf
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SCF_AFFINECANONICALIZATIONUTILS_H_
+#endif // MLIR_DIALECT_SCF_UTILS_AFFINECANONICALIZATIONUTILS_H_
