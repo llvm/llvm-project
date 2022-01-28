@@ -17,11 +17,10 @@ define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    br i1 [[CMP0]], label [[BB4:%.*]], label [[FLOW]]
 ; OPT:       bb4:
 ; OPT-NEXT:    [[LOAD:%.*]] = load volatile i32, i32 addrspace(1)* undef, align 4
-; OPT-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MY_TMP]], [[LOAD]]
-; OPT-NEXT:    [[TMP0:%.*]] = xor i1 [[CMP1]], true
+; OPT-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[MY_TMP]], [[LOAD]]
 ; OPT-NEXT:    br label [[FLOW]]
 ; OPT:       Flow:
-; OPT-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP0]], [[BB4]] ], [ true, [[BB1]] ]
+; OPT-NEXT:    [[TMP1:%.*]] = phi i1 [ [[CMP1]], [[BB4]] ], [ true, [[BB1]] ]
 ; OPT-NEXT:    [[TMP2]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP1]], i64 [[PHI_BROKEN]])
 ; OPT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP2]])
 ; OPT-NEXT:    br i1 [[TMP3]], label [[BB9:%.*]], label [[BB1]]

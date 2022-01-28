@@ -54,7 +54,7 @@ ret.bb:                                          ; preds = %else, %main_body
 }
 
 ; GCN-LABEL: {{^}}uniform_br_nontrivial_ret_divergent_br_nontrivial_unreachable:
-; GCN: s_cbranch_vccz
+; GCN: s_cbranch_scc0
 
 ; GCN: ; %bb.{{[0-9]+}}: ; %Flow
 ; GCN: s_cbranch_execnz [[RETURN:.LBB[0-9]+_[0-9]+]]
