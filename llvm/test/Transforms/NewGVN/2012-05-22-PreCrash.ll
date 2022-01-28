@@ -1,4 +1,4 @@
-; RUN: opt < %s -newgvn
+; RUN: opt < %s -passes=newgvn
 ; PR12858
 
 define void @fn5(i16 signext %p1, i8 signext %p2) nounwind uwtable {

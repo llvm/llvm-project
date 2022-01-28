@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -newgvn | FileCheck %s
+; RUN: opt -S < %s -passes=newgvn | FileCheck %s
 
 declare void @llvm.sideeffect()
 
