@@ -2269,6 +2269,34 @@ def : GCNPat <
   (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1), $a), (i32 1))
 >;
 
+def IMMBitSelConst : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(1 << N->getZExtValue(), SDLoc(N),
+                                   MVT::i32);
+}]>;
+
+// Matching separate SRL and TRUNC instructions
+// with dependent operands (SRL dest is source of TRUNC)
+// generates three instructions. However, by using bit shifts,
+// the V_LSHRREV_B32_e64 result can be directly used in the
+// operand of the V_AND_B32_e64 instruction:
+// (trunc i32 (srl i32 $a, i32 $b)) ->
+// v_and_b32_e64 $a, (1 << $b), $a
+// v_cmp_ne_u32_e64 $a, 0, $a
+
+// Handle the VALU case.
+def : GCNPat <
+  (i1 (DivergentUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 (IMMBitSelConst $b)), $a),
+    (i32 0))
+>;
+
+// Handle the scalar case.
+def : GCNPat <
+  (i1 (UniformUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
+  (S_CMP_LG_U32 (S_AND_B32 (i32 (IMMBitSelConst $b)), $a),
+    (i32 0))
+>;
+
 def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> i64:$a)),
   (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1),
