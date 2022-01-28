@@ -2,6 +2,7 @@
 
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef int int3 __attribute__((ext_vector_type(3)));
+typedef unsigned unsigned3 __attribute__((ext_vector_type(3)));
 typedef unsigned unsigned4 __attribute__((ext_vector_type(4)));
 
 struct Foo {
@@ -32,7 +33,7 @@ void test_builtin_elementwise_abs(int i, double d, float4 v, int3 iv, unsigned u
   // expected-error@-1 {{1st argument must be a signed integer or floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
-void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, int *p) {
+void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_max(p, d);
   // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
 
@@ -50,6 +51,9 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, i
 
   i = __builtin_elementwise_max(v, iv);
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_max(uv, iv);
+  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
   s = __builtin_elementwise_max(i, s);
 
@@ -84,7 +88,7 @@ void test_builtin_elementwise_max(int i, short s, double d, float4 v, int3 iv, i
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
 }
 
-void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, int *p) {
+void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
   i = __builtin_elementwise_min(p, d);
   // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
 
@@ -102,6 +106,9 @@ void test_builtin_elementwise_min(int i, short s, double d, float4 v, int3 iv, i
 
   i = __builtin_elementwise_min(v, iv);
   // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_min(uv, iv);
+  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
 
   s = __builtin_elementwise_min(i, s);
 
