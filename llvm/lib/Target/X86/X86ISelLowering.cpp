@@ -805,8 +805,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::FMAXNUM, MVT::f80, Expand);
 
   // Some FP actions are always expanded for vector types.
-  for (auto VT : { MVT::v4f32, MVT::v8f32, MVT::v16f32,
-                   MVT::v2f64, MVT::v4f64, MVT::v8f64 }) {
+  for (auto VT : { MVT::v8f16, MVT::v16f16, MVT::v32f16,
+                   MVT::v4f32, MVT::v8f32,  MVT::v16f32,
+                   MVT::v2f64, MVT::v4f64,  MVT::v8f64 }) {
     setOperationAction(ISD::FSIN,      VT, Expand);
     setOperationAction(ISD::FSINCOS,   VT, Expand);
     setOperationAction(ISD::FCOS,      VT, Expand);
@@ -1958,6 +1959,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // AVX512_FP16 scalar operations
     setGroup(MVT::f16);
     addRegisterClass(MVT::f16,    &X86::FR16XRegClass);
+    setOperationAction(ISD::FREM,                 MVT::f16, Promote);
+    setOperationAction(ISD::STRICT_FREM,          MVT::f16, Promote);
     setOperationAction(ISD::SELECT_CC,            MVT::f16, Expand);
     setOperationAction(ISD::BR_CC,                MVT::f16, Expand);
     setOperationAction(ISD::SETCC,                MVT::f16, Custom);
