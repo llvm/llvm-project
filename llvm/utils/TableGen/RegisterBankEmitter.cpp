@@ -17,7 +17,6 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
-#include "CodeGenHwModes.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 

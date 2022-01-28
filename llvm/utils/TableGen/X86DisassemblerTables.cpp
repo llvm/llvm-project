@@ -15,9 +15,12 @@
 
 #include "X86DisassemblerTables.h"
 #include "X86DisassemblerShared.h"
-#include "llvm/ADT/STLExtras.h"
+#include "X86ModRMFilters.h"
+#include "llvm/ADT/STLArrayExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/raw_ostream.h"
 #include <map>
 
 using namespace llvm;

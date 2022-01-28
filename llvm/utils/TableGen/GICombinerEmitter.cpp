@@ -23,7 +23,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/Timer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
