@@ -1823,10 +1823,10 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     BasicBlock *UnwindDest = nullptr;
     if (auto Bundle = CI->getOperandBundle(LLVMContext::OB_funclet)) {
       Instruction *FromPad = cast<Instruction>(Bundle->Inputs[0]);
-      while (!UnwindDest && FromPad) {
+      while (!UnwindDest) {
         if (auto *CPI = dyn_cast<CatchPadInst>(FromPad)) {
           UnwindDest = CPI->getCatchSwitch()->getUnwindDest();
-          FromPad = nullptr; // stop searching
+          break;
         } else if (auto *CPI = dyn_cast<CleanupPadInst>(FromPad)) {
           // getCleanupRetUnwindDest() can return nullptr when
           // 1. This cleanuppad's matching cleanupret uwninds to caller
@@ -1834,7 +1834,10 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
           //    unreachable.
           // In case of 2, we need to traverse the parent pad chain.
           UnwindDest = getCleanupRetUnwindDest(CPI);
-          FromPad = cast<Instruction>(CPI->getParentPad());
+          Value *ParentPad = CPI->getParentPad();
+          if (isa<ConstantTokenNone>(ParentPad))
+            break;
+          FromPad = cast<Instruction>(ParentPad);
         }
       }
     }
