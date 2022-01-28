@@ -711,6 +711,22 @@ public:
       const llvm::fltSemantics *FPType = nullptr) const {
     return llvm::DenormalMode::getIEEE();
   }
+
+  // We want to expand the shortened versions of the triples passed in to
+  // the values used for the bitcode libraries.
+  static llvm::Triple getOpenMPTriple(StringRef TripleStr) {
+    llvm::Triple TT(TripleStr);
+    if (TT.getVendor() == llvm::Triple::UnknownVendor ||
+        TT.getOS() == llvm::Triple::UnknownOS) {
+      if (TT.getArch() == llvm::Triple::nvptx)
+        return llvm::Triple("nvptx-nvidia-cuda");
+      if (TT.getArch() == llvm::Triple::nvptx64)
+        return llvm::Triple("nvptx64-nvidia-cuda");
+      if (TT.getArch() == llvm::Triple::amdgcn)
+        return llvm::Triple("amdgcn-amd-amdhsa");
+    }
+    return TT;
+  }
 };
 
 /// Set a ToolChain's effective triple. Reset it when the registration object
