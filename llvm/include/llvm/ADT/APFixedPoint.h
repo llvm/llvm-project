@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+///
 /// \file
 /// Defines the fixed point number interface.
 /// This is a class for abstracting various operations performed on fixed point
 /// types.
-//
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_APFIXEDPOINT_H

@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the DebugEpochBase and DebugEpochBase::HandleBase classes.
-// These can be used to write iterators that are fail-fast when LLVM is built
-// with asserts enabled.
-//
+///
+/// \file
+/// This file defines the DebugEpochBase and DebugEpochBase::HandleBase classes.
+/// These can be used to write iterators that are fail-fast when LLVM is built
+/// with asserts enabled.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_EPOCHTRACKER_H

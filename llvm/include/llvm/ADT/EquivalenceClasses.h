@@ -5,10 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Generic implementation of equivalence classes through the use Tarjan's
-// efficient union-find algorithm.
-//
+///
+/// \file
+/// Generic implementation of equivalence classes through the use Tarjan's
+/// efficient union-find algorithm.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_EQUIVALENCECLASSES_H

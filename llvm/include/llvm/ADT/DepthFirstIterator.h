@@ -5,28 +5,30 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file builds on the ADT/GraphTraits.h file to build generic depth
-// first graph iterator.  This file exposes the following functions/types:
-//
-// df_begin/df_end/df_iterator
-//   * Normal depth-first iteration - visit a node and then all of its children.
-//
-// idf_begin/idf_end/idf_iterator
-//   * Depth-first iteration on the 'inverse' graph.
-//
-// df_ext_begin/df_ext_end/df_ext_iterator
-//   * Normal depth-first iteration - visit a node and then all of its children.
-//     This iterator stores the 'visited' set in an external set, which allows
-//     it to be more efficient, and allows external clients to use the set for
-//     other purposes.
-//
-// idf_ext_begin/idf_ext_end/idf_ext_iterator
-//   * Depth-first iteration on the 'inverse' graph.
-//     This iterator stores the 'visited' set in an external set, which allows
-//     it to be more efficient, and allows external clients to use the set for
-//     other purposes.
-//
+///
+/// \file
+/// This file builds on the ADT/GraphTraits.h file to build generic depth
+/// first graph iterator.  This file exposes the following functions/types:
+///
+/// df_begin/df_end/df_iterator
+///   * Normal depth-first iteration - visit a node and then all of its
+///     children.
+///
+/// idf_begin/idf_end/idf_iterator
+///   * Depth-first iteration on the 'inverse' graph.
+///
+/// df_ext_begin/df_ext_end/df_ext_iterator
+///   * Normal depth-first iteration - visit a node and then all of its
+///     children. This iterator stores the 'visited' set in an external set,
+///     which allows it to be more efficient, and allows external clients to
+///     use the set for other purposes.
+///
+/// idf_ext_begin/idf_ext_end/idf_ext_iterator
+///   * Depth-first iteration on the 'inverse' graph.
+///     This iterator stores the 'visited' set in an external set, which
+///     allows it to be more efficient, and allows external clients to use
+///     the set for other purposes.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_DEPTHFIRSTITERATOR_H

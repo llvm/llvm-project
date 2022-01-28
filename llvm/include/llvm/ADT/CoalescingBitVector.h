@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file A bitvector that uses an IntervalMap to coalesce adjacent elements
+/// \file
+/// A bitvector that uses an IntervalMap to coalesce adjacent elements
 /// into intervals.
 ///
 //===----------------------------------------------------------------------===//

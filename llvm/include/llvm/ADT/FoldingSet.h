@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines a hash set that can be used to remove duplication of nodes
-// in a graph.  This code was originally created by Chris Lattner for use with
-// SelectionDAGCSEMap, but was isolated to provide use across the llvm code set.
-//
+///
+/// \file
+/// This file defines a hash set that can be used to remove duplication of nodes
+/// in a graph.  This code was originally created by Chris Lattner for use with
+/// SelectionDAGCSEMap, but was isolated to provide use across the llvm code
+/// set.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_FOLDINGSET_H

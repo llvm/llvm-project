@@ -5,21 +5,22 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the 'Statistic' class, which is designed to be an easy way
-// to expose various metrics from passes.  These statistics are printed at the
-// end of a run (from llvm_shutdown), when the -stats command line option is
-// passed on the command line.
-//
-// This is useful for reporting information like the number of instructions
-// simplified, optimized or removed by various transformations, like this:
-//
-// static Statistic NumInstsKilled("gcse", "Number of instructions killed");
-//
-// Later, in the code: ++NumInstsKilled;
-//
-// NOTE: Statistics *must* be declared as global variables.
-//
+///
+/// \file
+/// This file defines the 'Statistic' class, which is designed to be an easy way
+/// to expose various metrics from passes.  These statistics are printed at the
+/// end of a run (from llvm_shutdown), when the -stats command line option is
+/// passed on the command line.
+///
+/// This is useful for reporting information like the number of instructions
+/// simplified, optimized or removed by various transformations, like this:
+///
+/// static Statistic NumInstsKilled("gcse", "Number of instructions killed");
+///
+/// Later, in the code: ++NumInstsKilled;
+///
+/// NOTE: Statistics *must* be declared as global variables.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_STATISTIC_H

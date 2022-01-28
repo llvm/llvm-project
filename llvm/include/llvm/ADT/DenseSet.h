@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file defines the DenseSet and SmallDenseSet classes.
-//
+///
+/// \file
+/// This file defines the DenseSet and SmallDenseSet classes.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_DENSESET_H

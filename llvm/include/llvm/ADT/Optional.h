@@ -5,11 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file provides Optional, a template class modeled in the spirit of
-//  OCaml's 'opt' variant.  The idea is to strongly type whether or not
-//  a value can be optional.
-//
+///
+/// \file
+///  This file provides Optional, a template class modeled in the spirit of
+///  OCaml's 'opt' variant.  The idea is to strongly type whether or not
+///  a value can be optional.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_OPTIONAL_H
