@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ENUM_ATTR
-#define ENUM_ATTR
+#ifndef ENUMATTR_TD
+#define ENUMATTR_TD
 
-include "mlir/IR/OpBase.td"
+include "mlir/IR/AttrTypeBase.td"
 
 // A C++ enum as an attribute parameter. The parameter implements a parser and
 // printer for the enum by dispatching calls to `stringToSymbol` and
@@ -96,4 +96,4 @@ class EnumAttr<Dialect dialect, EnumAttrInfo enumInfo, string name = "",
   let assemblyFormat = "$value";
 }
 
-#endif // ENUM_ATTR
+#endif // ENUMATTR_TD

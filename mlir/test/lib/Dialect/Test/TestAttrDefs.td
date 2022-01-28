@@ -15,6 +15,7 @@
 
 // To get the test dialect definition.
 include "TestDialect.td"
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SubElementInterfaces.td"
 

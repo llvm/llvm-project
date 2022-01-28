@@ -15,6 +15,7 @@
 #define FORTRAN_FIR_REWRITE_PATTERNS
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/Arithmetic/IR/ArithmeticOps.td"
 include "flang/Optimizer/Dialect/FIROps.td"
 

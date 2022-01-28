@@ -9,8 +9,8 @@
 #ifndef LLVMIR_ATTRDEFS
 #define LLVMIR_ATTRDEFS
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name> : AttrDef<LLVM_Dialect, name>;

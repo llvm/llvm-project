@@ -9,6 +9,7 @@
 #ifndef SPARSETENSOR_ATTRDEFS
 #define SPARSETENSOR_ATTRDEFS
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/IR/TensorEncoding.td"
 

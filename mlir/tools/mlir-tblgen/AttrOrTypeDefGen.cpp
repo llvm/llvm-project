@@ -652,8 +652,8 @@ protected:
 /// A specialized generator for AttrDefs.
 struct AttrDefGenerator : public DefGenerator {
   AttrDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
-      : DefGenerator(records.getAllDerivedDefinitions("AttrDef"), os, "Attr",
-                     "Attribute",
+      : DefGenerator(records.getAllDerivedDefinitionsIfDefined("AttrDef"), os,
+                     "Attr", "Attribute",
                      /*isAttrGenerator=*/true,
                      /*needsDialectParserPrinter=*/
                      !records.getAllDerivedDefinitions("DialectAttr").empty()) {
@@ -662,8 +662,9 @@ struct AttrDefGenerator : public DefGenerator {
 /// A specialized generator for TypeDefs.
 struct TypeDefGenerator : public DefGenerator {
   TypeDefGenerator(const llvm::RecordKeeper &records, raw_ostream &os)
-      : DefGenerator(records.getAllDerivedDefinitions("TypeDef"), os, "Type",
-                     "Type", /*isAttrGenerator=*/false,
+      : DefGenerator(records.getAllDerivedDefinitionsIfDefined("TypeDef"), os,
+                     "Type", "Type",
+                     /*isAttrGenerator=*/false,
                      /*needsDialectParserPrinter=*/
                      !records.getAllDerivedDefinitions("DialectType").empty()) {
   }

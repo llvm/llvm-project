@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_EMITC_IR_EMITCATTRIBUTES
 #define MLIR_DIALECT_EMITC_IR_EMITCATTRIBUTES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/EmitC/IR/EmitCBase.td"
 
 //===----------------------------------------------------------------------===//

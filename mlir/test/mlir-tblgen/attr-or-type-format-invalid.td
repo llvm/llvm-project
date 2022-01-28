@@ -1,5 +1,6 @@
 // RUN: mlir-tblgen -gen-typedef-defs -I %S/../../include -asmformat-error-is-fatal=false %s 2>&1 | FileCheck %s
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {

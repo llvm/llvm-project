@@ -13,6 +13,7 @@
 #ifndef FIR_DIALECT_FIR_TYPES
 #define FIR_DIALECT_FIR_TYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//

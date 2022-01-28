@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_ASYNC_IR_ASYNCTYPES
 #define MLIR_DIALECT_ASYNC_IR_ASYNCTYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/Async/IR/AsyncDialect.td"
 
 //===----------------------------------------------------------------------===//

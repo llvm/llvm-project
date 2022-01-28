@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-rewriters -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/PatternBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test";

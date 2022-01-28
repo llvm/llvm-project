@@ -7,6 +7,7 @@
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR7 %s 2>&1 | FileCheck --check-prefix=ERROR7 %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/PatternBase.td"
 
 // Check using the dialect name as the namespace
 def A_Dialect : Dialect {

@@ -1,3 +1,4 @@
+include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/Shape/IR/ShapeOps.td"
 include "mlir/Dialect/Tensor/IR/TensorOps.td"
 
