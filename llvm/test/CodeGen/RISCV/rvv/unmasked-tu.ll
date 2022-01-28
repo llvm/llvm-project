@@ -2984,3 +2984,254 @@ entry:
 
   ret <vscale x 1 x i8> %a
 }
+
+declare <vscale x 1 x i8> @llvm.riscv.vadc.nxv1i8.nxv1i8(
+  <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
+  <vscale x 1 x i1>,
+  iXLen);
+
+define <vscale x 1 x i8> @intrinsic_vadc_vvm_nxv1i8_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+; RV32-LABEL: intrinsic_vadc_vvm_nxv1i8_nxv1i8_nxv1i8:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; RV32-NEXT:    vadc.vvm v8, v9, v10, v0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vadc_vvm_nxv1i8_nxv1i8_nxv1i8:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; RV64-NEXT:    vadc.vvm v8, v9, v10, v0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x i8> @llvm.riscv.vadc.nxv1i8.nxv1i8(
+    <vscale x 1 x i8> %0,
+    <vscale x 1 x i8> %1,
+    <vscale x 1 x i8> %2,
+    <vscale x 1 x i1> %3,
+    iXLen %4)
+
+  ret <vscale x 1 x i8> %a
+}
+
+declare <vscale x 1 x i8> @llvm.riscv.vsbc.nxv1i8.nxv1i8(
+  <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
+  <vscale x 1 x i1>,
+  iXLen);
+
+define <vscale x 1 x i8> @intrinsic_vsbc_vvm_nxv1i8_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+; RV32-LABEL: intrinsic_vsbc_vvm_nxv1i8_nxv1i8_nxv1i8:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; RV32-NEXT:    vsbc.vvm v8, v9, v10, v0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vsbc_vvm_nxv1i8_nxv1i8_nxv1i8:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; RV64-NEXT:    vsbc.vvm v8, v9, v10, v0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x i8> @llvm.riscv.vsbc.nxv1i8.nxv1i8(
+    <vscale x 1 x i8> %0,
+    <vscale x 1 x i8> %1,
+    <vscale x 1 x i8> %2,
+    <vscale x 1 x i1> %3,
+    iXLen %4)
+
+  ret <vscale x 1 x i8> %a
+}
+
+declare <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(
+  <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
+  <vscale x 1 x i8>,
+  <vscale x 1 x i1>,
+  iXLen);
+
+define <vscale x 1 x i8> @intrinsic_vmerge_vvm_nxv1i8_nxv1i8_nxv1i8(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+; RV32-LABEL: intrinsic_vmerge_vvm_nxv1i8_nxv1i8_nxv1i8:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; RV32-NEXT:    vmerge.vvm v8, v9, v10, v0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vmerge_vvm_nxv1i8_nxv1i8_nxv1i8:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; RV64-NEXT:    vmerge.vvm v8, v9, v10, v0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x i8> @llvm.riscv.vmerge.nxv1i8.nxv1i8(
+    <vscale x 1 x i8> %0,
+    <vscale x 1 x i8> %1,
+    <vscale x 1 x i8> %2,
+    <vscale x 1 x i1> %3,
+    iXLen %4)
+
+  ret <vscale x 1 x i8> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vmerge.nxv8i64.i64(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i64>,
+  i64,
+  <vscale x 8 x i1>,
+  iXLen);
+
+define <vscale x 8 x i64> @intrinsic_vmerge_vxm_nxv8i64_nxv8i64_i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, i64 %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
+; RV32-LABEL: intrinsic_vmerge_vxm_nxv8i64_nxv8i64_i64:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v24, (a0), zero
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, mu
+; RV32-NEXT:    vmerge.vvm v8, v16, v24, v0
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vmerge_vxm_nxv8i64_nxv8i64_i64:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, tu, mu
+; RV64-NEXT:    vmerge.vxm v8, v16, a0, v0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vmerge.nxv8i64.i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i64> %1,
+    i64 %2,
+    <vscale x 8 x i1> %3,
+    iXLen %4)
+
+  ret <vscale x 8 x i64> %a
+}
+
+define <vscale x 8 x i64> @intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
+; RV32-LABEL: intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    li a1, 15
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    li a1, -1
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v24, (a0), zero
+; RV32-NEXT:    vsetvli zero, zero, e64, m8, tu, mu
+; RV32-NEXT:    vmerge.vvm v8, v16, v24, v0
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vmerge_vim_nxv8i64_nxv8i64_i64:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    srli a1, a1, 28
+; RV64-NEXT:    vsetvli zero, a0, e64, m8, tu, mu
+; RV64-NEXT:    vmerge.vxm v8, v16, a1, v0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vmerge.nxv8i64.i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i64> %1,
+    i64 68719476735,
+    <vscale x 8 x i1> %2,
+    iXLen %3)
+
+  ret <vscale x 8 x i64> %a
+}
+
+declare <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.f64(
+  <vscale x 8 x double>,
+  <vscale x 8 x double>,
+  double,
+  <vscale x 8 x i1>,
+  iXLen);
+
+define <vscale x 8 x double> @intrinsic_vfmerge_vfm_nxv8f64_nxv8f64_f64(<vscale x 8 x double> %0, <vscale x 8 x double> %1, double %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
+; RV32-LABEL: intrinsic_vfmerge_vfm_nxv8f64_nxv8f64_f64:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, tu, mu
+; RV32-NEXT:    vfmerge.vfm v8, v16, fa0, v0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vfmerge_vfm_nxv8f64_nxv8f64_f64:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e64, m8, tu, mu
+; RV64-NEXT:    vfmerge.vfm v8, v16, fa0, v0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.f64(
+    <vscale x 8 x double> %0,
+    <vscale x 8 x double> %1,
+    double %2,
+    <vscale x 8 x i1> %3,
+    iXLen %4)
+
+  ret <vscale x 8 x double> %a
+}
+
+declare <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
+  <vscale x 1 x half>,
+  <vscale x 1 x half>,
+  <vscale x 1 x half>,
+  <vscale x 1 x i1>,
+  iXLen);
+
+define <vscale x 1 x half> @intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
+; RV32-LABEL: intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; RV32-NEXT:    vmerge.vvm v8, v9, v10, v0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vfmerge_vvm_nxv1f16_nxv1f16_nxv1f16:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; RV64-NEXT:    vmerge.vvm v8, v9, v10, v0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.nxv1f16(
+    <vscale x 1 x half> %0,
+    <vscale x 1 x half> %1,
+    <vscale x 1 x half> %2,
+    <vscale x 1 x i1> %3,
+    iXLen %4)
+
+  ret <vscale x 1 x half> %a
+}
+
+declare <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.f16(
+  <vscale x 1 x half>,
+  <vscale x 1 x half>,
+  half,
+  <vscale x 1 x i1>,
+  iXLen);
+
+define <vscale x 1 x half> @intrinsic_vfmerge_vzm_nxv1f16_nxv1f16_f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
+; RV32-LABEL: intrinsic_vfmerge_vzm_nxv1f16_nxv1f16_f16:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; RV32-NEXT:    vmerge.vim v8, v9, 0, v0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: intrinsic_vfmerge_vzm_nxv1f16_nxv1f16_f16:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; RV64-NEXT:    vmerge.vim v8, v9, 0, v0
+; RV64-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x half> @llvm.riscv.vfmerge.nxv1f16.f16(
+    <vscale x 1 x half> %0,
+    <vscale x 1 x half> %1,
+    half zeroinitializer,
+    <vscale x 1 x i1> %2,
+    iXLen %3)
+
+  ret <vscale x 1 x half> %a
+}

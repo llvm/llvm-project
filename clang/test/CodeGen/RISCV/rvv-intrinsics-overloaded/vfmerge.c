@@ -7,7 +7,7 @@
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f32mf2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfmerge.nxv1f32.f32.i64(<vscale x 1 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vfmerge.nxv1f32.f32.i64(<vscale x 1 x float> undef, <vscale x 1 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vfmerge_vfm_f32mf2(vbool64_t mask, vfloat32mf2_t op1,
@@ -17,7 +17,7 @@ vfloat32mf2_t test_vfmerge_vfm_f32mf2(vbool64_t mask, vfloat32mf2_t op1,
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f32m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfmerge.nxv2f32.f32.i64(<vscale x 2 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfmerge.nxv2f32.f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vfmerge_vfm_f32m1(vbool32_t mask, vfloat32m1_t op1, float op2,
@@ -27,7 +27,7 @@ vfloat32m1_t test_vfmerge_vfm_f32m1(vbool32_t mask, vfloat32m1_t op1, float op2,
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f32m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vfmerge.nxv4f32.f32.i64(<vscale x 4 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.riscv.vfmerge.nxv4f32.f32.i64(<vscale x 4 x float> undef, <vscale x 4 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vfmerge_vfm_f32m2(vbool16_t mask, vfloat32m2_t op1, float op2,
@@ -37,7 +37,7 @@ vfloat32m2_t test_vfmerge_vfm_f32m2(vbool16_t mask, vfloat32m2_t op1, float op2,
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f32m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x float> @llvm.riscv.vfmerge.nxv8f32.f32.i64(<vscale x 8 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x float> @llvm.riscv.vfmerge.nxv8f32.f32.i64(<vscale x 8 x float> undef, <vscale x 8 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vfmerge_vfm_f32m4(vbool8_t mask, vfloat32m4_t op1, float op2,
@@ -47,7 +47,7 @@ vfloat32m4_t test_vfmerge_vfm_f32m4(vbool8_t mask, vfloat32m4_t op1, float op2,
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f32m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x float> @llvm.riscv.vfmerge.nxv16f32.f32.i64(<vscale x 16 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x float> @llvm.riscv.vfmerge.nxv16f32.f32.i64(<vscale x 16 x float> undef, <vscale x 16 x float> [[OP1:%.*]], float [[OP2:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP0]]
 //
 vfloat32m8_t test_vfmerge_vfm_f32m8(vbool4_t mask, vfloat32m8_t op1, float op2,
@@ -57,7 +57,7 @@ vfloat32m8_t test_vfmerge_vfm_f32m8(vbool4_t mask, vfloat32m8_t op1, float op2,
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f64m1(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vfmerge.nxv1f64.f64.i64(<vscale x 1 x double> [[OP1:%.*]], double [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x double> @llvm.riscv.vfmerge.nxv1f64.f64.i64(<vscale x 1 x double> undef, <vscale x 1 x double> [[OP1:%.*]], double [[OP2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vfmerge_vfm_f64m1(vbool64_t mask, vfloat64m1_t op1,
@@ -67,7 +67,7 @@ vfloat64m1_t test_vfmerge_vfm_f64m1(vbool64_t mask, vfloat64m1_t op1,
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f64m2(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vfmerge.nxv2f64.f64.i64(<vscale x 2 x double> [[OP1:%.*]], double [[OP2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.riscv.vfmerge.nxv2f64.f64.i64(<vscale x 2 x double> undef, <vscale x 2 x double> [[OP1:%.*]], double [[OP2:%.*]], <vscale x 2 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vfmerge_vfm_f64m2(vbool32_t mask, vfloat64m2_t op1,
@@ -77,7 +77,7 @@ vfloat64m2_t test_vfmerge_vfm_f64m2(vbool32_t mask, vfloat64m2_t op1,
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f64m4(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.riscv.vfmerge.nxv4f64.f64.i64(<vscale x 4 x double> [[OP1:%.*]], double [[OP2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x double> @llvm.riscv.vfmerge.nxv4f64.f64.i64(<vscale x 4 x double> undef, <vscale x 4 x double> [[OP1:%.*]], double [[OP2:%.*]], <vscale x 4 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vfmerge_vfm_f64m4(vbool16_t mask, vfloat64m4_t op1,
@@ -87,7 +87,7 @@ vfloat64m4_t test_vfmerge_vfm_f64m4(vbool16_t mask, vfloat64m4_t op1,
 
 // CHECK-RV64-LABEL: @test_vfmerge_vfm_f64m8(
 // CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.f64.i64(<vscale x 8 x double> [[OP1:%.*]], double [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x double> @llvm.riscv.vfmerge.nxv8f64.f64.i64(<vscale x 8 x double> undef, <vscale x 8 x double> [[OP1:%.*]], double [[OP2:%.*]], <vscale x 8 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
 vfloat64m8_t test_vfmerge_vfm_f64m8(vbool8_t mask, vfloat64m8_t op1, double op2,
