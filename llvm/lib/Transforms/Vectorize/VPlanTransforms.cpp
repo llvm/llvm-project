@@ -47,7 +47,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
         if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
           VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
-          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, *II);
+          NewRecipe =
+              new VPWidenIntOrFpInductionRecipe(Phi, Start, *II, false, true);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
