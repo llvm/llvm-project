@@ -124,7 +124,9 @@ cc_library(
     name = "__support_fputil_sqrt",
     hdrs = sqrt_hdrs,
     deps = [
+        ":__support_common",
         ":__support_fputil",
+        ":__support_standalone_cpp",
         ":libc_root",
     ],
 )
@@ -463,21 +465,21 @@ libc_math_function(
     name = "sqrt",
     additional_deps = [
         ":__support_fputil_sqrt",
-    ]
+    ],
 )
 
 libc_math_function(
     name = "sqrtf",
     additional_deps = [
         ":__support_fputil_sqrt",
-    ]
+    ],
 )
 
 libc_math_function(
     name = "sqrtl",
     additional_deps = [
         ":__support_fputil_sqrt",
-    ]
+    ],
 )
 
 libc_math_function(name = "copysign")
