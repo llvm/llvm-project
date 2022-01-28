@@ -1438,38 +1438,3 @@ void CIRGenModule::verifyModule() {
   if (failed(mlir::verify(theModule)))
     theModule.emitError("module verification error");
 }
-
-CIRGenerator::CIRGenerator() = default;
-CIRGenerator::~CIRGenerator() = default;
-
-void CIRGenerator::Initialize(clang::ASTContext &astCtx) {
-  using namespace llvm;
-
-  this->astCtx = &astCtx;
-
-  mlirCtx = std::make_unique<mlir::MLIRContext>();
-  mlirCtx->getOrLoadDialect<mlir::func::FuncDialect>();
-  mlirCtx->getOrLoadDialect<mlir::cir::CIRDialect>();
-  mlirCtx->getOrLoadDialect<mlir::memref::MemRefDialect>();
-  CGM = std::make_unique<CIRGenModule>(*mlirCtx.get(), astCtx);
-}
-
-void CIRGenerator::verifyModule() { CGM->verifyModule(); }
-
-bool CIRGenerator::EmitFunction(const FunctionDecl *FD) {
-  auto func = CGM->buildFunction(FD);
-  assert(func && "should emit function");
-  return func.getOperation() != nullptr;
-}
-
-mlir::ModuleOp CIRGenerator::getModule() { return CGM->getModule(); }
-
-bool CIRGenerator::HandleTopLevelDecl(clang::DeclGroupRef D) {
-  for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
-    CGM->buildTopLevelDecl(*I);
-  }
-
-  return true;
-}
-
-void CIRGenerator::HandleTranslationUnit(ASTContext &C) {}
