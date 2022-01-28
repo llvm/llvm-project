@@ -62,6 +62,20 @@
 # RUN: llvm-nm --print-armap %t.lib | \
 # RUN:   FileCheck %s --check-prefix=SINGLE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
 
+## Check that if two different files with the same names are explicitly
+## specified, the command gives a warning.
+# RUN: cp %t-input2.o %t/dirname
+# RUN: llvm-libtool-darwin -static -o %t.lib \
+# RUN:   %t/dirname/%basename_t.tmp-input2.o %t-input2.o 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-INPUT \
+# RUN:     -DFILE=%basename_t.tmp-input2.o \
+# RUN:     -DINPUTA=%t/dirname/%basename_t.tmp-input2.o \
+# RUN:     -DINPUTB=%t-input2.o
+
+# DUPLICATE-INPUT:     warning: file '[[FILE]]' was specified multiple times.
+# DUPLICATE-INPUT-DAG: [[INPUTA]]
+# DUPLICATE-INPUT-DAG: [[INPUTB]]
+
 ## -l option combined with an input file:
 # RUN: llvm-libtool-darwin -static -o %t.lib %t-input1.o -linput2 -L%t/dirname
 # RUN: llvm-ar t %t.lib | \
@@ -69,22 +83,21 @@
 # RUN: llvm-nm --print-armap %t.lib | \
 # RUN:   FileCheck %s --check-prefix=CHECK-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
 
+## Specify the same file with a -l option and an input file:
+# RUN: rm -rf %t/copy
+# RUN: mkdir -p %t/copy
+# RUN: cp %t-input1.o %t/copy
+# RUN: llvm-libtool-darwin -static -o %t.lib \
+# RUN:   %t/copy/%basename_t.tmp-input1.o -l%basename_t.tmp-input1.o -L%t/copy 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-L-INPUT -DFILE=%basename_t.tmp-input1.o
+
 ## Specify same -l option twice:
-## cctools' libtool raises a warning in this case.
-## The warning is not yet implemented for llvm-libtool-darwin.
-# RUN: llvm-libtool-darwin -static -o %t.lib -l%basename_t.tmp-input2.o -l%basename_t.tmp-input2.o -L%T
-# RUN: llvm-ar t %t.lib | \
-# RUN:   FileCheck %s --check-prefix=DOUBLE-NAMES --implicit-check-not={{.}} -DPREFIX=%basename_t.tmp
-# RUN: llvm-nm --print-armap %t.lib | \
-# RUN:   FileCheck %s --check-prefix=DOUBLE-SYMBOLS -DPREFIX=%basename_t.tmp --match-full-lines
+# RUN: llvm-libtool-darwin -static -o %t.lib -l%basename_t.tmp-input1.o \
+# RUN:  -l%basename_t.tmp-input1.o -L%t/copy 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DUPLICATE-L-INPUT \
+# RUN:     -DFILE=%basename_t.tmp-input1.o
 
-# DOUBLE-NAMES:      [[PREFIX]]-input2.o
-# DOUBLE-NAMES-NEXT: [[PREFIX]]-input2.o
-
-# DOUBLE-SYMBOLS:      Archive map
-# DOUBLE-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
-# DOUBLE-SYMBOLS-NEXT: _symbol2 in [[PREFIX]]-input2.o
-# DOUBLE-SYMBOLS-EMPTY:
+# DUPLICATE-L-INPUT:     warning: file '[[FILE]]' was specified multiple times.
 
 ## Check that an error is thrown when the input library cannot be found:
 # RUN: not llvm-libtool-darwin -static -o %t.lib -lfile-will-not-exist.o 2>&1 | \
