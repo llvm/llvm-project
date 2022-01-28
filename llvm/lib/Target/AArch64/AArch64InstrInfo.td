@@ -6280,18 +6280,18 @@ let hasSideEffects = 0 in {
 // On the other hand, there are quite a few valid combinatorial options due to
 // the commutativity of multiplication and the fact that (-x) * y = x * (-y).
 defm : SIMDFPIndexedTiedPatterns<"FMLA",
-           TriOpFrag<(fma node:$RHS, node:$MHS, node:$LHS)>>;
+           TriOpFrag<(any_fma node:$RHS, node:$MHS, node:$LHS)>>;
 defm : SIMDFPIndexedTiedPatterns<"FMLA",
-           TriOpFrag<(fma node:$MHS, node:$RHS, node:$LHS)>>;
+           TriOpFrag<(any_fma node:$MHS, node:$RHS, node:$LHS)>>;
 
 defm : SIMDFPIndexedTiedPatterns<"FMLS",
-           TriOpFrag<(fma node:$MHS, (fneg node:$RHS), node:$LHS)> >;
+           TriOpFrag<(any_fma node:$MHS, (fneg node:$RHS), node:$LHS)> >;
 defm : SIMDFPIndexedTiedPatterns<"FMLS",
-           TriOpFrag<(fma node:$RHS, (fneg node:$MHS), node:$LHS)> >;
+           TriOpFrag<(any_fma node:$RHS, (fneg node:$MHS), node:$LHS)> >;
 defm : SIMDFPIndexedTiedPatterns<"FMLS",
-           TriOpFrag<(fma (fneg node:$RHS), node:$MHS, node:$LHS)> >;
+           TriOpFrag<(any_fma (fneg node:$RHS), node:$MHS, node:$LHS)> >;
 defm : SIMDFPIndexedTiedPatterns<"FMLS",
-           TriOpFrag<(fma (fneg node:$MHS), node:$RHS, node:$LHS)> >;
+           TriOpFrag<(any_fma (fneg node:$MHS), node:$RHS, node:$LHS)> >;
 
 multiclass FMLSIndexedAfterNegPatterns<SDPatternOperator OpNode> {
   // 3 variants for the .2s version: DUPLANE from 128-bit, DUPLANE from 64-bit
@@ -6370,22 +6370,22 @@ multiclass FMLSIndexedAfterNegPatterns<SDPatternOperator OpNode> {
 }
 
 defm : FMLSIndexedAfterNegPatterns<
-           TriOpFrag<(fma node:$RHS, node:$MHS, node:$LHS)> >;
+           TriOpFrag<(any_fma node:$RHS, node:$MHS, node:$LHS)> >;
 defm : FMLSIndexedAfterNegPatterns<
-           TriOpFrag<(fma node:$MHS, node:$RHS, node:$LHS)> >;
+           TriOpFrag<(any_fma node:$MHS, node:$RHS, node:$LHS)> >;
 
 defm FMULX : SIMDFPIndexed<1, 0b1001, "fmulx", int_aarch64_neon_fmulx>;
 defm FMUL  : SIMDFPIndexed<0, 0b1001, "fmul", any_fmul>;
 
-def : Pat<(v2f32 (fmul V64:$Rn, (AArch64dup (f32 FPR32:$Rm)))),
+def : Pat<(v2f32 (any_fmul V64:$Rn, (AArch64dup (f32 FPR32:$Rm)))),
           (FMULv2i32_indexed V64:$Rn,
             (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR32:$Rm, ssub),
             (i64 0))>;
-def : Pat<(v4f32 (fmul V128:$Rn, (AArch64dup (f32 FPR32:$Rm)))),
+def : Pat<(v4f32 (any_fmul V128:$Rn, (AArch64dup (f32 FPR32:$Rm)))),
           (FMULv4i32_indexed V128:$Rn,
             (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR32:$Rm, ssub),
             (i64 0))>;
-def : Pat<(v2f64 (fmul V128:$Rn, (AArch64dup (f64 FPR64:$Rm)))),
+def : Pat<(v2f64 (any_fmul V128:$Rn, (AArch64dup (f64 FPR64:$Rm)))),
           (FMULv2i64_indexed V128:$Rn,
             (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR64:$Rm, dsub),
             (i64 0))>;
