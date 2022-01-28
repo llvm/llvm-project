@@ -163,9 +163,12 @@ if (current_toolchain == host_toolchain) {
 
   shared_library("asan_shared_library") {
     output_dir = crt_current_out_dir
-    output_name = "clang_rt.asan$crt_current_target_suffix"
-    if (current_os == "win") {
+    if (current_os == "mac") {
+      output_name = "clang_rt.asan_osx_dynamic"
+    } else if (current_os == "win") {
       output_name = "clang_rt.asan_dynamic$crt_current_target_suffix"
+    } else {
+      output_name = "clang_rt.asan$crt_current_target_suffix"
     }
     configs -= [ "//llvm/utils/gn/build:llvm_code" ]
     configs += [ "//llvm/utils/gn/build:crt_code" ]
