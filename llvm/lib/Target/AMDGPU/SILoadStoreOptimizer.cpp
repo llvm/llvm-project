@@ -390,7 +390,8 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
 }
 
 /// Determines instruction subclass from opcode. Only instructions
-/// of the same subclass can be merged together.
+/// of the same subclass can be merged together. The merged instruction may have
+/// a different subclass but must have the same class.
 static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   switch (Opc) {
   default:
@@ -893,22 +894,23 @@ SILoadStoreOptimizer::getDataRegClass(const MachineInstr &MI) const {
 bool SILoadStoreOptimizer::checkAndPrepareMerge(
     CombineInfo &CI, CombineInfo &Paired,
     SmallVectorImpl<MachineInstr *> &InstsToMove) {
+  // If another instruction has already been merged into CI, it may now be a
+  // type that we can't do any further merging into.
+  if (CI.InstClass == UNKNOWN || Paired.InstClass == UNKNOWN)
+    return false;
+  assert(CI.InstClass == Paired.InstClass);
 
   // Check both offsets (or masks for MIMG) can be combined and fit in the
   // reduced range.
-  if (CI.InstClass == MIMG && !dmasksCanBeCombined(CI, *TII, Paired))
-    return false;
-
-  if (CI.InstClass != MIMG &&
-      (!widthsFit(*STM, CI, Paired) || !offsetsCanBeCombined(CI, *STM, Paired)))
-    return false;
+  if (CI.InstClass == MIMG) {
+    if (!dmasksCanBeCombined(CI, *TII, Paired))
+      return false;
+  } else {
+    if (!widthsFit(*STM, CI, Paired) || !offsetsCanBeCombined(CI, *STM, Paired))
+      return false;
+  }
 
   const unsigned Opc = CI.I->getOpcode();
-  const InstClassEnum InstClass = getInstClass(Opc, *TII);
-
-  if (InstClass == UNKNOWN) {
-    return false;
-  }
   const unsigned InstSubclass = getInstSubclass(Opc, *TII);
 
   DenseSet<Register> RegDefsToMove;
@@ -930,7 +932,7 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
       return false;
     }
 
-    if ((getInstClass(MBBI->getOpcode(), *TII) != InstClass) ||
+    if ((getInstClass(MBBI->getOpcode(), *TII) != CI.InstClass) ||
         (getInstSubclass(MBBI->getOpcode(), *TII) != InstSubclass)) {
       // This is not a matching instruction, but we can keep looking as
       // long as one of these conditions are met:
