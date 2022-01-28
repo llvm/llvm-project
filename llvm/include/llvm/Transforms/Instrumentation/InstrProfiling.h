@@ -87,20 +87,31 @@ private:
   /// Count the number of instrumented value sites for the function.
   void computeNumValueSiteCounts(InstrProfValueProfileInst *Ins);
 
-  /// Replace instrprof_value_profile with a call to runtime library.
+  /// Replace instrprof.value.profile with a call to runtime library.
   void lowerValueProfileInst(InstrProfValueProfileInst *Ins);
 
-  /// Replace instrprof_increment with an increment of the appropriate value.
+  /// Replace instrprof.cover with a store instruction to the coverage byte.
+  void lowerCover(InstrProfCoverInst *Inc);
+
+  /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
 
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
+
+  /// Compute the address of the counter value that this profiling instruction
+  /// acts on.
+  Value *getCounterAddress(InstrProfInstBase *I);
 
   /// Get the region counters for an increment, creating them if necessary.
   ///
   /// If the counter array doesn't yet exist, the profile data variables
   /// referring to them will also be created.
   GlobalVariable *getOrCreateRegionCounters(InstrProfInstBase *Inc);
+
+  /// Create the region counters.
+  GlobalVariable *createRegionCounters(InstrProfInstBase *Inc, StringRef Name,
+                                       GlobalValue::LinkageTypes Linkage);
 
   /// Emit the section with compressed function names.
   void emitNameData();

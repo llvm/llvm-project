@@ -74,10 +74,6 @@ uint32_t add(uint32_t *Addr, uint32_t V, int Ordering);
 /// Atomically add \p V to \p *Addr with \p Ordering semantics.
 uint64_t add(uint64_t *Addr, uint64_t V, int Ordering);
 
-/// Atomically write \p V to \p *Addr with \p Ordering semantics and return the
-/// old value of \p *Addr.
-uint32_t exchange(uint32_t *Addr, uint32_t V, int Ordering);
-
 } // namespace atomic
 
 } // namespace _OMP

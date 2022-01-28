@@ -100,6 +100,12 @@ public:
   /// Return true if we must provide debug info to create PGO profiles.
   virtual bool useDebugInfoCorrelate() const { return false; }
 
+  /// Return true if the profile has single byte counters representing coverage.
+  virtual bool hasSingleByteCoverage() const = 0;
+
+  /// Return true if the profile only instruments function entries.
+  virtual bool functionEntryOnly() const = 0;
+
   /// Returns a BitsetEnum describing the attributes of the profile. To check
   /// individual attributes prefer using the helpers above.
   virtual InstrProfKind getProfileKind() const = 0;
@@ -206,6 +212,14 @@ public:
     return static_cast<bool>(ProfileKind & InstrProfKind::BB);
   }
 
+  bool hasSingleByteCoverage() const override {
+    return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
+  }
+
+  bool functionEntryOnly() const override {
+    return static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly);
+  }
+
   InstrProfKind getProfileKind() const override { return ProfileKind; }
 
   /// Read the header.
@@ -287,6 +301,14 @@ public:
     return (Version & VARIANT_MASK_DBG_CORRELATE) != 0;
   }
 
+  bool hasSingleByteCoverage() const override {
+    return (Version & VARIANT_MASK_BYTE_COVERAGE) != 0;
+  }
+
+  bool functionEntryOnly() const override {
+    return (Version & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
+  }
+
   /// Returns a BitsetEnum describing the attributes of the raw instr profile.
   InstrProfKind getProfileKind() const override {
     InstrProfKind ProfileKind = InstrProfKind::Unknown;
@@ -298,6 +320,12 @@ public:
     }
     if (Version & VARIANT_MASK_INSTR_ENTRY) {
       ProfileKind |= InstrProfKind::BB;
+    }
+    if (Version & VARIANT_MASK_BYTE_COVERAGE) {
+      ProfileKind |= InstrProfKind::SingleByteCoverage;
+    }
+    if (Version & VARIANT_MASK_FUNCTION_ENTRY_ONLY) {
+      ProfileKind |= InstrProfKind::FunctionEntryOnly;
     }
     return ProfileKind;
   }
@@ -359,7 +387,9 @@ private:
     return Symtab->getFuncName(swap(NameRef));
   }
 
-  int getCounterTypeSize() const { return sizeof(uint64_t); }
+  int getCounterTypeSize() const {
+    return hasSingleByteCoverage() ? sizeof(uint8_t) : sizeof(uint64_t);
+  }
 };
 
 using RawInstrProfReader32 = RawInstrProfReader<uint32_t>;
@@ -439,6 +469,8 @@ struct InstrProfReaderIndexBase {
   virtual bool isIRLevelProfile() const = 0;
   virtual bool hasCSIRLevelProfile() const = 0;
   virtual bool instrEntryBBEnabled() const = 0;
+  virtual bool hasSingleByteCoverage() const = 0;
+  virtual bool functionEntryOnly() const = 0;
   virtual InstrProfKind getProfileKind() const = 0;
   virtual Error populateSymtab(InstrProfSymtab &) = 0;
 };
@@ -492,6 +524,14 @@ public:
     return (FormatVersion & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
 
+  bool hasSingleByteCoverage() const override {
+    return (FormatVersion & VARIANT_MASK_BYTE_COVERAGE) != 0;
+  }
+
+  bool functionEntryOnly() const override {
+    return (FormatVersion & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
+  }
+
   InstrProfKind getProfileKind() const override {
     InstrProfKind ProfileKind = InstrProfKind::Unknown;
     if (FormatVersion & VARIANT_MASK_IR_PROF) {
@@ -502,6 +542,12 @@ public:
     }
     if (FormatVersion & VARIANT_MASK_INSTR_ENTRY) {
       ProfileKind |= InstrProfKind::BB;
+    }
+    if (FormatVersion & VARIANT_MASK_BYTE_COVERAGE) {
+      ProfileKind |= InstrProfKind::SingleByteCoverage;
+    }
+    if (FormatVersion & VARIANT_MASK_FUNCTION_ENTRY_ONLY) {
+      ProfileKind |= InstrProfKind::FunctionEntryOnly;
     }
     return ProfileKind;
   }
@@ -563,6 +609,12 @@ public:
   bool instrEntryBBEnabled() const override {
     return Index->instrEntryBBEnabled();
   }
+
+  bool hasSingleByteCoverage() const override {
+    return Index->hasSingleByteCoverage();
+  }
+
+  bool functionEntryOnly() const override { return Index->functionEntryOnly(); }
 
   /// Returns a BitsetEnum describing the attributes of the indexed instr
   /// profile.

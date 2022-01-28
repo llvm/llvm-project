@@ -1194,6 +1194,17 @@ public:
   ConstantInt *getIndex() const;
 };
 
+/// This represents the llvm.instrprof.cover intrinsic.
+class InstrProfCoverInst : public InstrProfInstBase {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::instrprof_cover;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This represents the llvm.instrprof.increment intrinsic.
 class InstrProfIncrementInst : public InstrProfInstBase {
 public:

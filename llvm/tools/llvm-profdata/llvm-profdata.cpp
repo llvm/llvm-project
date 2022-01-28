@@ -2092,7 +2092,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                             bool ShowAllFunctions, bool ShowCS,
                             uint64_t ValueCutoff, bool OnlyListBelow,
                             const std::string &ShowFunction, bool TextFormat,
-                            bool ShowBinaryIds, raw_fd_ostream &OS) {
+                            bool ShowBinaryIds, bool ShowCovered,
+                            raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
@@ -2148,6 +2149,13 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
 
     assert(Func.Counts.size() > 0 && "function missing entry counter");
     Builder.addRecord(Func);
+
+    if (ShowCovered) {
+      if (std::any_of(Func.Counts.begin(), Func.Counts.end(),
+                      [](uint64_t C) { return C; }))
+        OS << Func.Name << "\n";
+      continue;
+    }
 
     uint64_t FuncMax = 0;
     uint64_t FuncSum = 0;
@@ -2225,7 +2233,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (Reader->hasError())
     exitWithError(Reader->getError(), Filename);
 
-  if (TextFormat)
+  if (TextFormat || ShowCovered)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   bool IsIR = Reader->isIRLevelProfile();
@@ -2576,6 +2584,9 @@ static int show_main(int argc, const char *argv[]) {
       "debug-info", cl::init(""),
       cl::desc("Read and extract profile metadata from debug info and show "
                "the functions it found."));
+  cl::opt<bool> ShowCovered(
+      "covered", cl::init(false),
+      cl::desc("Show only the functions that have been executed."));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
@@ -2607,7 +2618,7 @@ static int show_main(int argc, const char *argv[]) {
         Filename, ShowCounts, TopNFunctions, ShowIndirectCallTargets,
         ShowMemOPSizes, ShowDetailedSummary, DetailedSummaryCutoffs,
         ShowAllFunctions, ShowCS, ValueCutoff, OnlyListBelow, ShowFunction,
-        TextFormat, ShowBinaryIds, OS);
+        TextFormat, ShowBinaryIds, ShowCovered, OS);
   if (ProfileKind == sample)
     return showSampleProfile(Filename, ShowCounts, TopNFunctions,
                              ShowAllFunctions, ShowDetailedSummary,
