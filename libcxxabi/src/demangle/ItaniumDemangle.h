@@ -1926,16 +1926,16 @@ public:
 
   void printLeft(OutputBuffer &OB) const override {
     if (IsGlobal)
-      OB += "::operator ";
+      OB += "::";
     OB += "new";
     if (IsArray)
       OB += "[]";
-    OB += ' ';
     if (!ExprList.empty()) {
       OB += "(";
       ExprList.printWithComma(OB);
       OB += ")";
     }
+    OB += ' ';
     Type->print(OB);
     if (!InitList.empty()) {
       OB += "(";
@@ -1961,7 +1961,8 @@ public:
       OB += "::";
     OB += "delete";
     if (IsArray)
-      OB += "[] ";
+      OB += "[]";
+    OB += ' ';
     Op->print(OB);
   }
 };
@@ -2495,7 +2496,6 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseExprPrimary();
   template <class Float> Node *parseFloatingLiteral();
   Node *parseFunctionParam();
-  Node *parseNewExpr();
   Node *parseConversionExpr();
   Node *parseBracedExpr();
   Node *parseFoldExpr();
@@ -4178,43 +4178,6 @@ Node *AbstractManglingParser<Derived, Alloc>::parseFunctionParam() {
   return nullptr;
 }
 
-// [gs] nw <expression>* _ <type> E                     # new (expr-list) type
-// [gs] nw <expression>* _ <type> <initializer>         # new (expr-list) type (init)
-// [gs] na <expression>* _ <type> E                     # new[] (expr-list) type
-// [gs] na <expression>* _ <type> <initializer>         # new[] (expr-list) type (init)
-// <initializer> ::= pi <expression>* E                 # parenthesized initialization
-template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parseNewExpr() {
-  bool Global = consumeIf("gs");
-  bool IsArray = look(1) == 'a';
-  if (!consumeIf("nw") && !consumeIf("na"))
-    return nullptr;
-  size_t Exprs = Names.size();
-  while (!consumeIf('_')) {
-    Node *Ex = getDerived().parseExpr();
-    if (Ex == nullptr)
-      return nullptr;
-    Names.push_back(Ex);
-  }
-  NodeArray ExprList = popTrailingNodeArray(Exprs);
-  Node *Ty = getDerived().parseType();
-  if (Ty == nullptr)
-    return Ty;
-  if (consumeIf("pi")) {
-    size_t InitsBegin = Names.size();
-    while (!consumeIf('E')) {
-      Node *Init = getDerived().parseExpr();
-      if (Init == nullptr)
-        return Init;
-      Names.push_back(Init);
-    }
-    NodeArray Inits = popTrailingNodeArray(InitsBegin);
-    return make<NewExpr>(ExprList, Ty, Inits, Global, IsArray);
-  } else if (!consumeIf('E'))
-    return nullptr;
-  return make<NewExpr>(ExprList, Ty, NodeArray(), Global, IsArray);
-}
-
 // cv <type> <expression>                               # conversion with one argument
 // cv <type> _ <expression>* E                          # conversion with a different number of arguments
 template <typename Derived, typename Alloc>
@@ -4817,8 +4780,35 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
   case 'n':
     switch (First[1]) {
     case 'a':
-    case 'w':
-      return getDerived().parseNewExpr();
+    case 'w': {
+      // [gs] nw <expression>* _ <type> [pi <expression>*] E   # new (expr-list) type [(init)]
+      // [gs] na <expression>* _ <type> [pi <expression>*] E   # new[] (expr-list) type [(init)]
+      bool IsArray = First[1] == 'a';
+      First += 2;
+      size_t Exprs = Names.size();
+      while (!consumeIf('_')) {
+        Node *Ex = getDerived().parseExpr();
+        if (Ex == nullptr)
+          return nullptr;
+        Names.push_back(Ex);
+      }
+      NodeArray ExprList = popTrailingNodeArray(Exprs);
+      Node *Ty = getDerived().parseType();
+      if (Ty == nullptr)
+        return nullptr;
+      bool HaveInits = consumeIf("pi");
+      size_t InitsBegin = Names.size();
+      while (!consumeIf('E')) {
+        if (!HaveInits)
+          return nullptr;
+        Node *Init = getDerived().parseExpr();
+        if (Init == nullptr)
+          return Init;
+        Names.push_back(Init);
+      }
+      NodeArray Inits = popTrailingNodeArray(InitsBegin);
+      return make<NewExpr>(ExprList, Ty, Inits, Global, IsArray);
+    }
     case 'e':
       First += 2;
       return getDerived().parseBinaryExpr("!=");
