@@ -31,7 +31,7 @@ static int getInstSeqCost(RISCVMatInt::InstSeq &Res, bool HasRVC) {
     case RISCV::LUI:
       Compressed = isInt<6>(Instr.Imm);
       break;
-    case RISCV::ADDUW:
+    case RISCV::ADD_UW:
       Compressed = false;
       break;
     }
@@ -123,10 +123,11 @@ static void generateInstSeqImpl(int64_t Val,
     }
   }
 
-  // Try to use SLLIUW for Hi52 when it is uint32 but not int32.
+  // Try to use SLLI_UW for Hi52 when it is uint32 but not int32.
   if (isUInt<32>((uint64_t)Hi52) && !isInt<32>((uint64_t)Hi52) &&
       ActiveFeatures[RISCV::FeatureStdExtZba]) {
-    // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with SLLIUW.
+    // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
+    // SLLI_UW.
     Hi52 = ((uint64_t)Hi52) | (0xffffffffull << 32);
     Unsigned = true;
   }
@@ -134,7 +135,7 @@ static void generateInstSeqImpl(int64_t Val,
   generateInstSeqImpl(Hi52, ActiveFeatures, Res);
 
   if (Unsigned)
-    Res.push_back(RISCVMatInt::Inst(RISCV::SLLIUW, ShiftAmount));
+    Res.push_back(RISCVMatInt::Inst(RISCV::SLLI_UW, ShiftAmount));
   else
     Res.push_back(RISCVMatInt::Inst(RISCV::SLLI, ShiftAmount));
   if (Lo12)
@@ -210,7 +211,7 @@ InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
       uint64_t LeadingOnesVal = Val | maskLeadingOnes<uint64_t>(LeadingZeros);
       TmpSeq.clear();
       generateInstSeqImpl(LeadingOnesVal, ActiveFeatures, TmpSeq);
-      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::ADDUW, 0));
+      TmpSeq.push_back(RISCVMatInt::Inst(RISCV::ADD_UW, 0));
 
       // Keep the new sequence if it is an improvement.
       if (TmpSeq.size() < Res.size()) {
