@@ -1,0 +1,44 @@
+RUN: rm -rf %t.dir && mkdir -p %t.dir/tmp
+RUN: cp %p/../Inputs/main.yaml %t.dir
+RUN: cp %p/../Inputs/test.yaml %t.dir
+RUN: cp %p/../Inputs/reflection_metadata.yaml %t.dir
+RUN: yaml2obj %p/../Inputs/main.yaml -o %t.dir/main
+RUN: yaml2obj %p/../Inputs/test.yaml -o %t.dir/tmp/test-1.o
+RUN: yaml2obj %p/../Inputs/reflection_metadata.yaml -o %t.dir/tmp/reflection_metadata-1.o
+
+RUN: dsymutil -oso-prepend-path=%t.dir %t.dir/main -o %t.dir/main.dSYM
+RUN: llvm-objdump -s %t.dir/main.dSYM/Contents/Resources/DWARF/main | FileCheck %s
+
+REQUIRES: host-byteorder-little-endian
+
+CHECK: Contents of section __DWARF,__swift5_typeref:
+CHECK-NEXT:  10000e000 53690000 01ffffff ff002473 346d6169  Si........$s4mai
+CHECK-NEXT:  10000e010 6e31304d 7950726f 746f636f 6c500000  n10MyProtocolP..
+CHECK-NEXT:  10000e020 01ffffff ff007800 42300000 53690000  ......x.B0..Si..
+CHECK-NEXT:  10000e030 01ffffff ff002473 346d6169 6e31304d  ......$s4main10M
+CHECK-NEXT:  10000e040 7950726f 746f636f 6c500000 01ffffff  yProtocolP......
+
+CHECK: Contents of section __DWARF,__swift5_reflstr:
+CHECK-NEXT:  10000e09b 496e6e65 7200696e 6e657200 496e6e65  Inner.inner.Inne
+CHECK-NEXT:  10000e0ab 72006900 6d73006d 6500696e 6e657200  r.i.ms.me.inner.
+CHECK-NEXT:  10000e0bb 43004900 74006d67 73006d67 65004743  C.I.t.mgs.mge.GC
+CHECK-NEXT:  10000e0cb 00
+
+CHECK: Contents of section __DWARF,__swift5_assocty:
+CHECK-NEXT:  10000e0cc 00000000 fcffffff 01000000 08000000  ................
+CHECK-NEXT:  10000e0dc f0ffffff ecffffff 00000000 fcffffff  ................
+CHECK-NEXT:  10000e0ec 01000000 08000000 f0ffffff ecffffff  ................
+
+CHECK: Contents of section __DWARF,__swift5_fieldmd:
+CHECK-NEXT:  10000e0fc 00000000 00000000 00000c00 01000000  ................
+CHECK-NEXT:  10000e10c 02000000 ecffffff e8ffffff 00000000  ................
+CHECK-NEXT:  10000e11c 00000000 00000c00 00000000 00000000  ................
+CHECK-NEXT:  10000e12c 00000000 04000c00 00000000 00000000  ................
+
+CHECK: Contents of section __DWARF,__swift5_capture:
+CHECK-NEXT:  10000e22c 01000000 01000000 02000000 f4ffffff  ................
+CHECK-NEXT:	 10000e23c f0ffffff ecffffff                    ........
+
+CHECK: Contents of section __DWARF,__swift5_builtin:
+CHECK-NEXT:  10000e244 00000000 09000000 08000100 10000000  ................
+CHECK-NEXT:  10000e254 fe000000                             ....
