@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-target-new-runtime -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK-DEFAULT
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-target-new-runtime -fopenmp-assume-threads-oversubscription -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK-THREADS
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-target-new-runtime -fopenmp-assume-teams-oversubscription -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK-TEAMS
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-target-new-runtime -fopenmp-assume-teams-oversubscription -fopenmp-is-device -o - | FileCheck %s --check-prefix=CHECK-RUNTIME
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -31,6 +32,10 @@
 // CHECK-TEAMS: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
 // CHECK-TEAMS: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
 // CHECK-TEAMS: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+//.
+// CHECK-RUNTIME-NOT: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK-RUNTIME-NOT: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
+// CHECK-RUNTIME-NOT: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
 //.
 void foo() {
 #pragma omp target
