@@ -401,6 +401,7 @@ static uptr AllocateMemoryForTrampoline(uptr image_address, size_t size) {
 // The following prologues cannot be patched because of the short jump
 // jumping to the patching region.
 
+#if SANITIZER_WINDOWS64
 // ntdll!wcslen in Win11
 //   488bc1          mov     rax,rcx
 //   0fb710          movzx   edx,word ptr [rax]
@@ -422,6 +423,7 @@ static const u8 kPrologueWithShortJump2[] = {
     0x4c, 0x8b, 0xc1, 0x8a, 0x01, 0x48, 0xff, 0xc1,
     0x84, 0xc0, 0x75, 0xf7,
 };
+#endif
 
 // Returns 0 on error.
 static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
