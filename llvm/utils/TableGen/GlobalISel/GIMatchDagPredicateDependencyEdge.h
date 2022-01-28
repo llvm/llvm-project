@@ -9,12 +9,14 @@
 #ifndef LLVM_UTILS_TABLEGEN_GIMATCHDAGPREDICATEEDGE_H
 #define LLVM_UTILS_TABLEGEN_GIMATCHDAGPREDICATEEDGE_H
 
-#include "GIMatchDagOperands.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class GIMatchDag;
 class GIMatchDagInstr;
 class GIMatchDagPredicate;
+class GIMatchDagOperand;
+
+class raw_ostream;
 
 /// Represents a dependency that must be met to evaluate a predicate.
 ///

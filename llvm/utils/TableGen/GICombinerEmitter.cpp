@@ -11,6 +11,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenTarget.h"
+#include "GlobalISel/CodeExpander.h"
+#include "GlobalISel/CodeExpansions.h"
+#include "GlobalISel/GIMatchDag.h"
+#include "GlobalISel/GIMatchDagPredicate.h"
+#include "GlobalISel/GIMatchTree.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
@@ -21,11 +27,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include "CodeGenTarget.h"
-#include "GlobalISel/CodeExpander.h"
-#include "GlobalISel/CodeExpansions.h"
-#include "GlobalISel/GIMatchDag.h"
-#include "GlobalISel/GIMatchTree.h"
 #include <cstdint>
 
 using namespace llvm;

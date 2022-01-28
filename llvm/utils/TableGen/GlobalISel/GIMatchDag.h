@@ -16,7 +16,6 @@
 #include "GIMatchDagPredicateDependencyEdge.h"
 
 namespace llvm {
-class GIMatchDag;
 
 /// This class manages lifetimes for data associated with the GIMatchDag object.
 class GIMatchDagContext {
