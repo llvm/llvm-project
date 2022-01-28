@@ -830,7 +830,10 @@ static bool canPaddingBeAccessed(Argument *arg) {
   return false;
 }
 
-bool ArgumentPromotionPass::areFunctionArgsABICompatible(
+/// Check if callers and the callee \p F agree how promoted arguments would be
+/// passed. The ones that they do not agree on are eliminated from the sets but
+/// the return value has to be observed as well.
+static bool areFunctionArgsABICompatible(
     const Function &F, const TargetTransformInfo &TTI,
     SmallPtrSetImpl<Argument *> &ArgsToPromote,
     SmallPtrSetImpl<Argument *> &ByValArgsToTransform) {
@@ -1003,7 +1006,7 @@ promoteArguments(Function *F, function_ref<AAResults &(Function &F)> AARGetter,
   if (ArgsToPromote.empty() && ByValArgsToTransform.empty())
     return nullptr;
 
-  if (!ArgumentPromotionPass::areFunctionArgsABICompatible(
+  if (!areFunctionArgsABICompatible(
           *F, TTI, ArgsToPromote, ByValArgsToTransform))
     return nullptr;
 
