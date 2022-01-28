@@ -494,4 +494,37 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
       });
 }
 
+TEST_F(WideningTest, DistinctPointersToTheSameLocation) {
+  std::string Code = R"(
+    void target(int Foo, bool Cond) {
+      int *Bar = &Foo;
+      while (Cond) {
+        Bar = &Foo;
+      }
+      (void)0;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
+                ASSERT_THAT(BarDecl, NotNull());
+
+                const auto *FooLoc = cast<ScalarStorageLocation>(
+                    Env.getStorageLocation(*FooDecl, SkipPast::None));
+                const auto *BarVal =
+                    cast<PointerValue>(Env.getValue(*BarDecl, SkipPast::None));
+                EXPECT_EQ(&BarVal->getPointeeLoc(), FooLoc);
+              });
+}
+
 } // namespace
