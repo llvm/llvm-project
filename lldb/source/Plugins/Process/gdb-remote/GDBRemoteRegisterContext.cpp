@@ -238,8 +238,7 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info) {
           if (GetRegisterIsValid(reg))
             return true;
         } else {
-          Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD |
-                                                                GDBR_LOG_PACKETS));
+          Log *log(GetLog(GDBRLog::Thread | GDBRLog::Packets));
           LLDB_LOGF(
               log,
               "error: GDBRemoteRegisterContext::ReadRegisterBytes tried "
@@ -454,8 +453,7 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
         return success;
       }
     } else {
-      Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD |
-                                                             GDBR_LOG_PACKETS));
+      Log *log(GetLog(GDBRLog::Thread | GDBRLog::Packets));
       if (log) {
         if (log->GetVerbose()) {
           StreamString strm;
@@ -560,8 +558,7 @@ bool GDBRemoteRegisterContext::ReadAllRegisterValues(
     return true;
   } else {
 
-    Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD |
-                                                           GDBR_LOG_PACKETS));
+    Log *log(GetLog(GDBRLog::Thread | GDBRLog::Packets));
     if (log) {
       if (log->GetVerbose()) {
         StreamString strm;
@@ -736,8 +733,7 @@ bool GDBRemoteRegisterContext::WriteAllRegisterValues(
       return num_restored > 0;
     }
   } else {
-    Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD |
-                                                           GDBR_LOG_PACKETS));
+    Log *log(GetLog(GDBRLog::Thread | GDBRLog::Packets));
     if (log) {
       if (log->GetVerbose()) {
         StreamString strm;
