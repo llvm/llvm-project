@@ -10,10 +10,10 @@
 #include "RTBuilder.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/CharacterExpr.h"
-#include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Utils.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/io-api.h"
@@ -246,8 +246,7 @@ genOutputItemList(Fortran::lower::AbstractConverter &converter,
       outputFuncArgs.push_back(builder.createConvert(
           loc, outputFunc.getType().getInput(2), dataLen.second));
     } else if (fir::isa_complex(itemType)) {
-      auto parts = Fortran::lower::ComplexExprHelper{builder, loc}.extractParts(
-          itemValue);
+      auto parts = fir::factory::Complex{builder, loc}.extractParts(itemValue);
       outputFuncArgs.push_back(parts.first);
       outputFuncArgs.push_back(parts.second);
     } else {
@@ -312,8 +311,7 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
     mlir::Type complexPartType;
     if (itemType.isa<fir::ComplexType>())
       complexPartType = builder.getRefType(
-          Fortran::lower::ComplexExprHelper{builder, loc}.getComplexPartType(
-              itemType));
+          fir::factory::Complex{builder, loc}.getComplexPartType(itemType));
     auto complexPartAddr = [&](int index) {
       return builder.create<fir::CoordinateOp>(
           loc, complexPartType, originalItemAddr,
