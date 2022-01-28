@@ -14580,7 +14580,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   unsigned NumElts = 1;
   EVT VT = N->getValueType(0);
   if (VT.isVector() && DAG.isSplatValue(N1))
-    NumElts = VT.getVectorNumElements();
+    NumElts = VT.getVectorMinNumElements();
 
   if (!MinUses || (N1->use_size() * NumElts) < MinUses)
     return SDValue();
