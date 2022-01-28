@@ -1,9 +1,9 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang -target arm-arm-none-eabi -march=armv7-m -S -emit-llvm -o - -mbranch-protection=none %s          | FileCheck %s --check-prefix=CHECK --check-prefix=NONE
-// RUN: %clang -target arm-arm-none-eabi -march=armv7-m -S -emit-llvm -o - -mbranch-protection=pac-ret       %s | FileCheck %s --check-prefix=CHECK --check-prefix=PART
-// RUN: %clang -target arm-arm-none-eabi -march=armv7-m -S -emit-llvm -o - -mbranch-protection=pac-ret+leaf  %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL
-// RUN: %clang -target arm-arm-none-eabi -march=armv7-m -S -emit-llvm -o - -mbranch-protection=pac-ret+b-key %s | FileCheck %s --check-prefix=CHECK --check-prefix=PART
-// RUN: %clang -target arm-arm-none-eabi -march=armv7-m -S -emit-llvm -o - -mbranch-protection=bti %s           | FileCheck %s --check-prefix=CHECK --check-prefix=BTE
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -S -emit-llvm -o - -mbranch-protection=none %s          | FileCheck %s --check-prefix=CHECK --check-prefix=NONE
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -S -emit-llvm -o - -mbranch-protection=pac-ret       %s | FileCheck %s --check-prefix=CHECK --check-prefix=PART
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -S -emit-llvm -o - -mbranch-protection=pac-ret+leaf  %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -S -emit-llvm -o - -mbranch-protection=pac-ret+b-key %s | FileCheck %s --check-prefix=CHECK --check-prefix=PART
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main -S -emit-llvm -o - -mbranch-protection=bti %s           | FileCheck %s --check-prefix=CHECK --check-prefix=BTE
 
 // Check there are no branch protection function attributes
 
