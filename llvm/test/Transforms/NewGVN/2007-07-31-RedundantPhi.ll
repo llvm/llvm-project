@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 
 @img_width = external global i16		; <i16*> [#uses=2]
 
