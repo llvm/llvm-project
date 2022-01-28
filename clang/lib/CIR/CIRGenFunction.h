@@ -13,16 +13,13 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENFUNCTION_H
 #define LLVM_CLANG_LIB_CIR_CIRGENFUNCTION_H
 
-#include "CIRGenValue.h"
-
 #include "mlir/IR/Value.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
-#include "clang/CIR/CIRGenerator.h"
 
 namespace clang {
 class Expr;
-}
+} // namespace clang
 
 using namespace clang;
 
