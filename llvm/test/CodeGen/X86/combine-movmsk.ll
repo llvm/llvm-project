@@ -306,3 +306,40 @@ define i32 @or_pmovmskb_pmovmskb(<16 x i8> %a0, <8 x i16> %a1) {
   %7 = or i32 %3, %6
   ret i32 %7
 }
+
+; TODO: We can't fold to ptest if we're not checking every pcmpeq result
+define i32 @movmskps_ptest_numelts_mismatch(<16 x i8> %a0) {
+; SSE2-LABEL: movmskps_ptest_numelts_mismatch:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %ecx
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    cmpl $15, %ecx
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    negl %eax
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: movmskps_ptest_numelts_mismatch:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    xorl %eax, %eax
+; SSE42-NEXT:    ptest %xmm0, %xmm0
+; SSE42-NEXT:    sete %al
+; SSE42-NEXT:    negl %eax
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: movmskps_ptest_numelts_mismatch:
+; AVX:       # %bb.0:
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    negl %eax
+; AVX-NEXT:    retq
+  %1 = icmp eq <16 x i8> %a0, zeroinitializer
+  %2 = sext <16 x i1> %1 to <16 x i8>
+  %3 = bitcast <16 x i8> %2 to <4 x float>
+  %4 = tail call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %3)
+  %5 = icmp eq i32 %4, 15
+  %6 = sext i1 %5 to i32
+  ret i32 %6
+}
