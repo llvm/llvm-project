@@ -12,6 +12,11 @@
 #include "flang/Common/Fortran.h"
 #include "mlir/IR/BuiltinOps.h"
 
+namespace fir {
+class KindMapping;
+class FirOpBuilder;
+} // namespace fir
+
 namespace Fortran {
 namespace common {
 template <typename>
@@ -39,7 +44,6 @@ struct Variable;
 
 using SomeExpr = Fortran::evaluate::Expr<Fortran::evaluate::SomeType>;
 using SymbolRef = Fortran::common::Reference<const Fortran::semantics::Symbol>;
-class FirOpBuilder;
 
 //===----------------------------------------------------------------------===//
 // AbstractConverter interface
@@ -114,7 +118,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// Get the OpBuilder
-  virtual Fortran::lower::FirOpBuilder &getFirOpBuilder() = 0;
+  virtual fir::FirOpBuilder &getFirOpBuilder() = 0;
   /// Get the ModuleOp
   virtual mlir::ModuleOp &getModuleOp() = 0;
   /// Get the MLIRContext

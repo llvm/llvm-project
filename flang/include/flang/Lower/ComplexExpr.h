@@ -9,14 +9,14 @@
 #ifndef FORTRAN_LOWER_COMPLEXEXPR_H
 #define FORTRAN_LOWER_COMPLEXEXPR_H
 
-#include "flang/Lower/FIRBuilder.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 
 namespace Fortran::lower {
 
 /// Helper to facilitate lowering of COMPLEX manipulations in FIR.
 class ComplexExprHelper {
 public:
-  explicit ComplexExprHelper(FirOpBuilder &builder, mlir::Location loc)
+  explicit ComplexExprHelper(fir::FirOpBuilder &builder, mlir::Location loc)
       : builder(builder), loc(loc) {}
   ComplexExprHelper(const ComplexExprHelper &) = delete;
 
@@ -78,7 +78,7 @@ protected:
   }
 
 private:
-  FirOpBuilder &builder;
+  fir::FirOpBuilder &builder;
   mlir::Location loc;
 };
 

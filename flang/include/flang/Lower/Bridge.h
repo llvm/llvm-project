@@ -19,6 +19,7 @@
 
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
 

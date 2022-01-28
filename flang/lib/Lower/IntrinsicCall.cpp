@@ -19,9 +19,9 @@
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
-#include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/Runtime.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
@@ -91,8 +91,7 @@ enum class ExtremumBehavior {
 struct IntrinsicLibrary {
 
   // Constructors.
-  explicit IntrinsicLibrary(Fortran::lower::FirOpBuilder &builder,
-                            mlir::Location loc)
+  explicit IntrinsicLibrary(fir::FirOpBuilder &builder, mlir::Location loc)
       : builder{builder}, loc{loc} {}
   IntrinsicLibrary() = delete;
   IntrinsicLibrary(const IntrinsicLibrary &) = delete;
@@ -113,9 +112,8 @@ struct IntrinsicLibrary {
   mlir::Value genRuntimeCall(llvm::StringRef name, mlir::Type,
                              llvm::ArrayRef<mlir::Value>);
 
-  using RuntimeCallGenerator =
-      std::function<mlir::Value(Fortran::lower::FirOpBuilder &, mlir::Location,
-                                llvm::ArrayRef<mlir::Value>)>;
+  using RuntimeCallGenerator = std::function<mlir::Value(
+      fir::FirOpBuilder &, mlir::Location, llvm::ArrayRef<mlir::Value>)>;
   RuntimeCallGenerator
   getRuntimeCallGenerator(llvm::StringRef name,
                           mlir::FunctionType soughtFuncType);
@@ -193,7 +191,7 @@ struct IntrinsicLibrary {
   getUnrestrictedIntrinsicSymbolRefAttr(llvm::StringRef name,
                                         mlir::FunctionType signature);
 
-  Fortran::lower::FirOpBuilder &builder;
+  fir::FirOpBuilder &builder;
   mlir::Location loc;
 };
 
@@ -492,8 +490,7 @@ private:
 
 /// Build mlir::FuncOp from runtime symbol description and add
 /// fir.runtime attribute.
-static mlir::FuncOp getFuncOp(mlir::Location loc,
-                              Fortran::lower::FirOpBuilder &builder,
+static mlir::FuncOp getFuncOp(mlir::Location loc, fir::FirOpBuilder &builder,
                               const RuntimeFunction &runtime) {
   auto function = builder.addNamedFunction(
       loc, runtime.symbol, runtime.typeGenerator(builder.getContext()));
@@ -506,7 +503,7 @@ static mlir::FuncOp getFuncOp(mlir::Location loc,
 /// result.
 /// If nothing is found, the mlir::FuncOp will contain a nullptr.
 mlir::FuncOp searchFunctionInLibrary(
-    mlir::Location loc, Fortran::lower::FirOpBuilder &builder,
+    mlir::Location loc, fir::FirOpBuilder &builder,
     const Fortran::common::StaticMultimapView<RuntimeFunction> &lib,
     llvm::StringRef name, mlir::FunctionType funcType,
     const RuntimeFunction **bestNearMatch,
@@ -533,7 +530,7 @@ mlir::FuncOp searchFunctionInLibrary(
 /// the caller is responsible to insert argument and return value conversions.
 /// If nothing is found, the mlir::FuncOp will contain a nullptr.
 static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
-                                       Fortran::lower::FirOpBuilder &builder,
+                                       fir::FirOpBuilder &builder,
                                        llvm::StringRef name,
                                        mlir::FunctionType funcType) {
   const RuntimeFunction *bestNearMatch = nullptr;
@@ -579,9 +576,9 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
 }
 
 /// Helpers to get function type from arguments and result type.
-static mlir::FunctionType
-getFunctionType(mlir::Type resultType, llvm::ArrayRef<mlir::Value> arguments,
-                Fortran::lower::FirOpBuilder &builder) {
+static mlir::FunctionType getFunctionType(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> arguments,
+                                          fir::FirOpBuilder &builder) {
   llvm::SmallVector<mlir::Type, 2> argumentTypes;
   for (auto &arg : arguments)
     argumentTypes.push_back(arg.getType());
@@ -591,8 +588,7 @@ getFunctionType(mlir::Type resultType, llvm::ArrayRef<mlir::Value> arguments,
 
 /// fir::ExtendedValue to mlir::Value translation layer
 
-fir::ExtendedValue toExtendedValue(mlir::Value val,
-                                   Fortran::lower::FirOpBuilder &builder,
+fir::ExtendedValue toExtendedValue(mlir::Value val, fir::FirOpBuilder &builder,
                                    mlir::Location loc) {
   assert(val && "optional unhandled here");
   auto type = val.getType();
@@ -629,8 +625,8 @@ fir::ExtendedValue toExtendedValue(mlir::Value val,
   return base;
 }
 
-mlir::Value toValue(const fir::ExtendedValue &val,
-                    Fortran::lower::FirOpBuilder &builder, mlir::Location loc) {
+mlir::Value toValue(const fir::ExtendedValue &val, fir::FirOpBuilder &builder,
+                    mlir::Location loc) {
   if (auto charBox = val.getCharBox()) {
     auto buffer = charBox->getBuffer();
     if (buffer.getType().isa<fir::BoxCharType>())
@@ -775,8 +771,8 @@ mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     // Create local context to emit code into the newly created function
     // This new function is not linked to a source file location, only
     // its calls will be.
-    auto localBuilder = std::make_unique<Fortran::lower::FirOpBuilder>(
-        function, builder.getKindMap());
+    auto localBuilder =
+        std::make_unique<fir::FirOpBuilder>(function, builder.getKindMap());
     localBuilder->setInsertionPointToStart(&function.front());
     // Location of code inside wrapper of the wrapper is independent from
     // the location of the intrinsic call.
@@ -876,9 +872,9 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
          actualFuncType.getNumInputs() == soughtFuncType.getNumInputs() &&
          actualFuncType.getNumResults() == 1 && "Bad intrinsic match");
 
-  return [funcOp, actualFuncType, soughtFuncType](
-             Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
-             llvm::ArrayRef<mlir::Value> args) {
+  return [funcOp, actualFuncType,
+          soughtFuncType](fir::FirOpBuilder &builder, mlir::Location loc,
+                          llvm::ArrayRef<mlir::Value> args) {
     llvm::SmallVector<mlir::Value, 2> convertedArguments;
     for (const auto &pair : llvm::zip(actualFuncType.getInputs(), args))
       convertedArguments.push_back(
@@ -1197,7 +1193,7 @@ mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
 // Compare two FIR values and return boolean result as i1.
 template <Extremum extremum, ExtremumBehavior behavior>
 static mlir::Value createExtremumCompare(mlir::Location loc,
-                                         Fortran::lower::FirOpBuilder &builder,
+                                         fir::FirOpBuilder &builder,
                                          mlir::Value left, mlir::Value right) {
   static constexpr auto integerPredicate =
       extremum == Extremum::Max ? mlir::arith::CmpIPredicate::sgt
@@ -1273,15 +1269,14 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
 //===----------------------------------------------------------------------===//
 
 fir::ExtendedValue
-Fortran::lower::genIntrinsicCall(Fortran::lower::FirOpBuilder &builder,
-                                 mlir::Location loc, llvm::StringRef name,
-                                 mlir::Type resultType,
+Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 llvm::StringRef name, mlir::Type resultType,
                                  llvm::ArrayRef<fir::ExtendedValue> args) {
   return IntrinsicLibrary{builder, loc}.genIntrinsicCall(name, resultType,
                                                          args);
 }
 
-mlir::Value Fortran::lower::genMax(Fortran::lower::FirOpBuilder &builder,
+mlir::Value Fortran::lower::genMax(fir::FirOpBuilder &builder,
                                    mlir::Location loc,
                                    llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "max requires at least one argument");
@@ -1290,7 +1285,7 @@ mlir::Value Fortran::lower::genMax(Fortran::lower::FirOpBuilder &builder,
                                                               args);
 }
 
-mlir::Value Fortran::lower::genMin(Fortran::lower::FirOpBuilder &builder,
+mlir::Value Fortran::lower::genMin(fir::FirOpBuilder &builder,
                                    mlir::Location loc,
                                    llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() > 0 && "min requires at least one argument");
@@ -1299,15 +1294,15 @@ mlir::Value Fortran::lower::genMin(Fortran::lower::FirOpBuilder &builder,
                                                               args);
 }
 
-mlir::Value Fortran::lower::genPow(Fortran::lower::FirOpBuilder &builder,
+mlir::Value Fortran::lower::genPow(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Type type,
                                    mlir::Value x, mlir::Value y) {
   return IntrinsicLibrary{builder, loc}.genRuntimeCall("pow", type, {x, y});
 }
 
 mlir::SymbolRefAttr Fortran::lower::getUnrestrictedIntrinsicSymbolRefAttr(
-    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
-    llvm::StringRef name, mlir::FunctionType signature) {
+    fir::FirOpBuilder &builder, mlir::Location loc, llvm::StringRef name,
+    mlir::FunctionType signature) {
   return IntrinsicLibrary{builder, loc}.getUnrestrictedIntrinsicSymbolRefAttr(
       name, signature);
 }

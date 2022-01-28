@@ -9,19 +9,19 @@
 #ifndef FORTRAN_LOWER_DOLOOPHELPER_H
 #define FORTRAN_LOWER_DOLOOPHELPER_H
 
-#include "flang/Lower/FIRBuilder.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 
 namespace Fortran::lower {
 
 /// Helper to build fir.do_loop Ops.
 class DoLoopHelper {
 public:
-  explicit DoLoopHelper(FirOpBuilder &builder, mlir::Location loc)
+  explicit DoLoopHelper(fir::FirOpBuilder &builder, mlir::Location loc)
       : builder(builder), loc(loc) {}
   DoLoopHelper(const DoLoopHelper &) = delete;
 
   /// Type of a callback to generate the loop body.
-  using BodyGenerator = std::function<void(FirOpBuilder &, mlir::Value)>;
+  using BodyGenerator = std::function<void(fir::FirOpBuilder &, mlir::Value)>;
 
   /// Build loop [\p lb, \p ub] with step \p step.
   /// If \p step is an empty value, 1 is used for the step.
@@ -36,7 +36,7 @@ public:
   void createLoop(mlir::Value count, const BodyGenerator &bodyGenerator);
 
 private:
-  FirOpBuilder &builder;
+  fir::FirOpBuilder &builder;
   mlir::Location loc;
 };
 
