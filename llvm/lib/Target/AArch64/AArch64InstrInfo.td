@@ -8100,17 +8100,17 @@ defm : InsertSubvectorUndef<i64>;
 def : Pat<(i64 (add (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
                     (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
            (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
-def : Pat<(f64 (fadd (vector_extract (v2f64 FPR128:$Rn), (i64 0)),
-                     (vector_extract (v2f64 FPR128:$Rn), (i64 1)))),
+def : Pat<(f64 (any_fadd (vector_extract (v2f64 FPR128:$Rn), (i64 0)),
+                         (vector_extract (v2f64 FPR128:$Rn), (i64 1)))),
            (f64 (FADDPv2i64p (v2f64 FPR128:$Rn)))>;
     // vector_extract on 64-bit vectors gets promoted to a 128 bit vector,
     // so we match on v4f32 here, not v2f32. This will also catch adding
     // the low two lanes of a true v4f32 vector.
-def : Pat<(fadd (vector_extract (v4f32 FPR128:$Rn), (i64 0)),
-                (vector_extract (v4f32 FPR128:$Rn), (i64 1))),
+def : Pat<(any_fadd (vector_extract (v4f32 FPR128:$Rn), (i64 0)),
+                    (vector_extract (v4f32 FPR128:$Rn), (i64 1))),
           (f32 (FADDPv2i32p (EXTRACT_SUBREG FPR128:$Rn, dsub)))>;
-def : Pat<(fadd (vector_extract (v8f16 FPR128:$Rn), (i64 0)),
-                (vector_extract (v8f16 FPR128:$Rn), (i64 1))),
+def : Pat<(any_fadd (vector_extract (v8f16 FPR128:$Rn), (i64 0)),
+                    (vector_extract (v8f16 FPR128:$Rn), (i64 1))),
           (f16 (FADDPv2i16p (EXTRACT_SUBREG FPR128:$Rn, dsub)))>;
 
 // Scalar 64-bit shifts in FPR64 registers.

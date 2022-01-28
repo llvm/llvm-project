@@ -100,3 +100,83 @@ entry:
   %1 = extractelement <2 x i64> %0, i32 0
   ret i64 %1
 }
+
+define float @faddp_2xfloat_strict(<2 x float> %a) #0 {
+; CHECK-LABEL: faddp_2xfloat_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    ret
+entry:
+  %shift = shufflevector <2 x float> %a, <2 x float> undef, <2 x i32> <i32 1, i32 undef>
+  %0 = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %a, <2 x float> %shift, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %1 = extractelement <2 x float> %0, i32 0
+  ret float %1
+}
+
+define float @faddp_4xfloat_strict(<4 x float> %a) #0 {
+; CHECK-LABEL: faddp_4xfloat_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    ret
+entry:
+  %shift = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %0 = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> %a, <4 x float> %shift, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %1 = extractelement <4 x float> %0, i32 0
+  ret float %1
+}
+
+define float @faddp_4xfloat_commute_strict(<4 x float> %a) #0 {
+; CHECK-LABEL: faddp_4xfloat_commute_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    ret
+entry:
+  %shift = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %0 = call <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float> %shift, <4 x float> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %1 = extractelement <4 x float> %0, i32 0
+  ret float %1
+}
+
+define float @faddp_2xfloat_commute_strict(<2 x float> %a) #0 {
+; CHECK-LABEL: faddp_2xfloat_commute_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    faddp s0, v0.2s
+; CHECK-NEXT:    ret
+entry:
+  %shift = shufflevector <2 x float> %a, <2 x float> undef, <2 x i32> <i32 1, i32 undef>
+  %0 = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float> %shift, <2 x float> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %1 = extractelement <2 x float> %0, i32 0
+  ret float %1
+}
+
+define double @faddp_2xdouble_strict(<2 x double> %a) #0 {
+; CHECK-LABEL: faddp_2xdouble_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    faddp d0, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %shift = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+  %0 = call <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double> %a, <2 x double> %shift, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %1 = extractelement <2 x double> %0, i32 0
+  ret double %1
+}
+
+define double @faddp_2xdouble_commute_strict(<2 x double> %a) #0 {
+; CHECK-LABEL: faddp_2xdouble_commute_strict:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    faddp d0, v0.2d
+; CHECK-NEXT:    ret
+entry:
+  %shift = shufflevector <2 x double> %a, <2 x double> undef, <2 x i32> <i32 1, i32 undef>
+  %0 = call <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double> %shift, <2 x double> %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %1 = extractelement <2 x double> %0, i32 0
+  ret double %1
+}
+
+attributes #0 = { strictfp }
+
+declare <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float>, <2 x float>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fadd.v4f32(<4 x float>, <4 x float>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double>, <2 x double>, metadata, metadata)
