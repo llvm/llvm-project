@@ -12,10 +12,7 @@ sys.path.append(_SCRIPT_PATH)
 from tools import mlir_pytaco_api as pt
 
 # Define the CSR format.
-#
-# TODO: accept "csr = pt.format([pt.dense, pt.compressed], [0, 1])"
-#
-csr = pt.format([pt.dense, pt.compressed])
+csr = pt.format([pt.dense, pt.compressed], [0, 1])
 
 # Read matrices A and B from file, infer size of output matrix C.
 A = pt.read(os.path.join(_SCRIPT_PATH, "data/A.mtx"), csr)
