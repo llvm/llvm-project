@@ -12,10 +12,12 @@
 
 #include "llvm/Remarks/RemarkLinker.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Remarks/BitstreamRemarkContainer.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Remarks/RemarkSerializer.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::remarks;
