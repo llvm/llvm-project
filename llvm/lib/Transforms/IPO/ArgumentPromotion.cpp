@@ -46,6 +46,7 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Argument.h"
@@ -610,12 +611,12 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
     return true;
   };
 
-  // First, iterate the entry block and mark loads of (geps of) arguments as
-  // safe.
+  // First, iterate functions that are guaranteed to execution on function
+  // entry and mark loads of (geps of) arguments as safe.
   BasicBlock &EntryBlock = Arg->getParent()->front();
   // Declare this here so we can reuse it
   IndicesVector Indices;
-  for (Instruction &I : EntryBlock)
+  for (Instruction &I : EntryBlock) {
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       Value *V = LI->getPointerOperand();
       if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(V)) {
@@ -648,6 +649,10 @@ static bool isSafeToPromoteArgument(Argument *Arg, Type *ByValTy, AAResults &AAR
         BaseTy = LI->getType();
       }
     }
+
+    if (!isGuaranteedToTransferExecutionToSuccessor(&I))
+      break;
+  }
 
   // Now, iterate all uses of the argument to see if there are any uses that are
   // not (GEP+)loads, or any (GEP+)loads that are not safe to promote.
