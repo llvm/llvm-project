@@ -1252,7 +1252,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
         setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v8i16, Legal);
         setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v16i8, Legal);
         setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Legal);
-        setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Legal);
       } else {
         setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v8i16, Custom);
         setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v16i8, Custom);
@@ -10762,6 +10761,26 @@ SDValue PPCTargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
 
   if (VT == MVT::v2f64 && C)
     return Op;
+
+  if (Subtarget.hasP9Vector()) {
+    // A f32 load feeding into a v4f32 insert_vector_elt is handled in this way
+    // because on P10, it allows this specific insert_vector_elt load pattern to
+    // utilize the refactored load and store infrastructure in order to exploit
+    // prefixed loads.
+    // On targets with inexpensive direct moves (Power9 and up), a
+    // (insert_vector_elt v4f32:$vec, (f32 load)) is always better as an integer
+    // load since a single precision load will involve conversion to double
+    // precision on the load followed by another conversion to single precision.
+    if ((VT == MVT::v4f32) && (V2.getValueType() == MVT::f32) &&
+        (isa<LoadSDNode>(V2))) {
+      SDValue BitcastVector = DAG.getBitcast(MVT::v4i32, V1);
+      SDValue BitcastLoad = DAG.getBitcast(MVT::i32, V2);
+      SDValue InsVecElt =
+          DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v4i32, BitcastVector,
+                      BitcastLoad, Op.getOperand(2));
+      return DAG.getBitcast(MVT::v4f32, InsVecElt);
+    }
+  }
 
   if (Subtarget.isISA3_1()) {
     if ((VT == MVT::v2i64 || VT == MVT::v2f64) && !Subtarget.isPPC64())

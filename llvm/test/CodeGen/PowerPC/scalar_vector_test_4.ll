@@ -214,15 +214,15 @@ entry:
 define <4 x float> @s2v_test_f1(float* nocapture readonly %f64, <4 x float> %vec)  {
 ; P9LE-LABEL: s2v_test_f1:
 ; P9LE:       # %bb.0: # %entry
-; P9LE-NEXT:    lfs f0, 0(r3)
-; P9LE-NEXT:    xscvdpspn vs0, f0
+; P9LE-NEXT:    lwz r3, 0(r3)
+; P9LE-NEXT:    mtfprwz f0, r3
 ; P9LE-NEXT:    xxinsertw v2, vs0, 12
 ; P9LE-NEXT:    blr
 ;
 ; P9BE-LABEL: s2v_test_f1:
 ; P9BE:       # %bb.0: # %entry
-; P9BE-NEXT:    lfs f0, 0(r3)
-; P9BE-NEXT:    xscvdpspn vs0, f0
+; P9BE-NEXT:    lwz r3, 0(r3)
+; P9BE-NEXT:    mtfprwz f0, r3
 ; P9BE-NEXT:    xxinsertw v2, vs0, 0
 ; P9BE-NEXT:    blr
 ;
