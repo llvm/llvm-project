@@ -479,9 +479,15 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
   Record.Counts.clear();
   Record.Counts.reserve(NumCounters);
   for (uint32_t I = 0; I < NumCounters; I++) {
-    const auto *CounterValue = reinterpret_cast<const uint64_t *>(
-        CountersStart + CounterBaseOffset + I * getCounterTypeSize());
-    Record.Counts.push_back(swap(*CounterValue));
+    const char *Ptr =
+        CountersStart + CounterBaseOffset + I * getCounterTypeSize();
+    if (hasSingleByteCoverage()) {
+      // A value of zero signifies the block is covered.
+      Record.Counts.push_back(*Ptr == 0 ? 1 : 0);
+    } else {
+      const auto *CounterValue = reinterpret_cast<const uint64_t *>(Ptr);
+      Record.Counts.push_back(swap(*CounterValue));
+    }
   }
 
   return success();

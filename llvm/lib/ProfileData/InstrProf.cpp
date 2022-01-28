@@ -1185,7 +1185,8 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
 // aware this is an ir_level profile so it can set the version flag.
 GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
                                             bool InstrEntryBBEnabled,
-                                            bool DebugInfoCorrelate) {
+                                            bool DebugInfoCorrelate,
+                                            bool PGOFunctionEntryCoverage) {
   const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
   Type *IntTy64 = Type::getInt64Ty(M.getContext());
   uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
@@ -1195,6 +1196,9 @@ GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
     ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
   if (DebugInfoCorrelate)
     ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
+  if (PGOFunctionEntryCoverage)
+    ProfileVersion |=
+        VARIANT_MASK_BYTE_COVERAGE | VARIANT_MASK_FUNCTION_ENTRY_ONLY;
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
