@@ -8,8 +8,8 @@
 
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ConvertType.h"
-#include "flang/Lower/DoLoopHelper.h"
 #include "flang/Lower/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/DoLoopHelper.h"
 
 //===----------------------------------------------------------------------===//
 // CharacterExprHelper implementation
@@ -179,7 +179,7 @@ void Fortran::lower::CharacterExprHelper::createStoreCharAt(
 void Fortran::lower::CharacterExprHelper::createCopy(
     const fir::CharBoxValue &dest, const fir::CharBoxValue &src,
     mlir::Value count) {
-  Fortran::lower::DoLoopHelper{builder, loc}.createLoop(
+  fir::factory::DoLoopHelper{builder, loc}.createLoop(
       count, [&](fir::FirOpBuilder &, mlir::Value index) {
         auto charVal = createLoadCharAt(src, index);
         createStoreCharAt(dest, index, charVal);
@@ -191,7 +191,7 @@ void Fortran::lower::CharacterExprHelper::createPadding(
   auto blank = createBlankConstant(getCharacterType(str));
   // Always create the loop, if upper < lower, no iteration will be
   // executed.
-  Fortran::lower::DoLoopHelper{builder, loc}.createLoop(
+  fir::factory::DoLoopHelper{builder, loc}.createLoop(
       lower, upper, [&](fir::FirOpBuilder &, mlir::Value index) {
         createStoreCharAt(str, index, blank);
       });
@@ -286,7 +286,7 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createConcatenate(
   auto upperBound = builder.create<mlir::arith::SubIOp>(loc, len, one);
   auto lhsLen =
       builder.createConvert(loc, builder.getIndexType(), lhs.getLen());
-  Fortran::lower::DoLoopHelper{builder, loc}.createLoop(
+  fir::factory::DoLoopHelper{builder, loc}.createLoop(
       lhs.getLen(), upperBound, one,
       [&](fir::FirOpBuilder &bldr, mlir::Value index) {
         auto rhsIndex = bldr.create<mlir::arith::SubIOp>(loc, index, lhsLen);
