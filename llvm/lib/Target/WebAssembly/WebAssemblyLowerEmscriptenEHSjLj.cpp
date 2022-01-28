@@ -874,15 +874,17 @@ static void nullifySetjmp(Function *F) {
   Function *SetjmpF = M.getFunction("setjmp");
   SmallVector<Instruction *, 1> ToErase;
 
-  for (User *U : SetjmpF->users()) {
-    auto *CI = dyn_cast<CallInst>(U);
-    // FIXME 'invoke' to setjmp can happen when we use Wasm EH + Wasm SjLj, but
-    // we don't support two being used together yet.
-    if (!CI)
-      report_fatal_error("Wasm EH + Wasm SjLj is not fully supported yet");
-    BasicBlock *BB = CI->getParent();
+  for (User *U : make_early_inc_range(SetjmpF->users())) {
+    auto *CB = dyn_cast<CallBase>(U);
+    BasicBlock *BB = CB->getParent();
     if (BB->getParent() != F) // in other function
       continue;
+    CallInst *CI = nullptr;
+    // setjmp cannot throw. So if it is an invoke, lower it to a call
+    if (auto *II = dyn_cast<InvokeInst>(CB))
+      CI = llvm::changeToCall(II);
+    else
+      CI = cast<CallInst>(CB);
     ToErase.push_back(CI);
     CI->replaceAllUsesWith(IRB.getInt32(0));
   }
