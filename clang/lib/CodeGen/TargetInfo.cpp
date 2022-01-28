@@ -8304,12 +8304,14 @@ public:
     // Check if global/static variable is defined in address space
     // 1~6 (__flash, __flash1, __flash2, __flash3, __flash4, __flash5)
     // but not constant.
-    LangAS AS = D->getType().getAddressSpace();
-    if (isTargetAddressSpace(AS) && 1 <= toTargetAddressSpace(AS) &&
-        toTargetAddressSpace(AS) <= 6 && !D->getType().isConstQualified())
-      CGM.getDiags().Report(D->getLocation(),
-                            diag::err_verify_nonconst_addrspace)
-          << "__flash*";
+    if (D) {
+      LangAS AS = D->getType().getAddressSpace();
+      if (isTargetAddressSpace(AS) && 1 <= toTargetAddressSpace(AS) &&
+          toTargetAddressSpace(AS) <= 6 && !D->getType().isConstQualified())
+        CGM.getDiags().Report(D->getLocation(),
+                              diag::err_verify_nonconst_addrspace)
+            << "__flash*";
+    }
     return TargetCodeGenInfo::getGlobalVarAddressSpace(CGM, D);
   }
 
