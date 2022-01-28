@@ -334,8 +334,6 @@ multiclass sve_int_ptrue<bits<3> opc, string asm, SDPatternOperator op> {
 
 def SDT_AArch64PTrue : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVT<1, i32>]>;
 def AArch64ptrue : SDNode<"AArch64ISD::PTRUE", SDT_AArch64PTrue>;
-def SDT_AArch64PFalse : SDTypeProfile<1, 0, [SDTCisVec<0>, SDTCVecEltisVT<0, i1>]>;
-def AArch64pfalse : SDNode<"AArch64ISD::PFALSE", SDT_AArch64PFalse>;
 
 let Predicates = [HasSVEorStreamingSVE] in {
   defm PTRUE  : sve_int_ptrue<0b000, "ptrue", AArch64ptrue>;
@@ -614,10 +612,10 @@ class sve_int_pfalse<bits<6> opc, string asm>
 multiclass sve_int_pfalse<bits<6> opc, string asm> {
   def NAME : sve_int_pfalse<opc, asm>;
 
-  def : Pat<(nxv16i1 (AArch64pfalse)), (!cast<Instruction>(NAME))>;
-  def : Pat<(nxv8i1 (AArch64pfalse)), (!cast<Instruction>(NAME))>;
-  def : Pat<(nxv4i1 (AArch64pfalse)), (!cast<Instruction>(NAME))>;
-  def : Pat<(nxv2i1 (AArch64pfalse)), (!cast<Instruction>(NAME))>;
+  def : Pat<(nxv16i1 (splat_vector (i32 0))), (!cast<Instruction>(NAME))>;
+  def : Pat<(nxv8i1 (splat_vector (i32 0))), (!cast<Instruction>(NAME))>;
+  def : Pat<(nxv4i1 (splat_vector (i32 0))), (!cast<Instruction>(NAME))>;
+  def : Pat<(nxv2i1 (splat_vector (i32 0))), (!cast<Instruction>(NAME))>;
 }
 
 class sve_int_ptest<bits<6> opc, string asm>

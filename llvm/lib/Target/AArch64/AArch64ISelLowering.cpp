@@ -2201,7 +2201,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::INSR)
     MAKE_CASE(AArch64ISD::PTEST)
     MAKE_CASE(AArch64ISD::PTRUE)
-    MAKE_CASE(AArch64ISD::PFALSE)
     MAKE_CASE(AArch64ISD::LD1_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::LD1S_MERGE_ZERO)
     MAKE_CASE(AArch64ISD::LDNF1_MERGE_ZERO)
@@ -9995,8 +9994,9 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
     // The only legal i1 vectors are SVE vectors, so we can use SVE-specific
     // lowering code.
     if (auto *ConstVal = dyn_cast<ConstantSDNode>(SplatVal)) {
+      // We can hande the zero case during isel.
       if (ConstVal->isZero())
-        return DAG.getNode(AArch64ISD::PFALSE, dl, VT);
+        return Op;
       if (ConstVal->isOne())
         return getPTrue(DAG, dl, VT, AArch64SVEPredPattern::all);
     }
@@ -15102,7 +15102,7 @@ static bool isAllInactivePredicate(SDValue N) {
   while (N.getOpcode() == AArch64ISD::REINTERPRET_CAST)
     N = N.getOperand(0);
 
-  return N.getOpcode() == AArch64ISD::PFALSE;
+  return ISD::isConstantSplatVectorAllZeros(N.getNode());
 }
 
 static bool isAllActivePredicate(SelectionDAG &DAG, SDValue N) {
