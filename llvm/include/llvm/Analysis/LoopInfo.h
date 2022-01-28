@@ -1336,6 +1336,10 @@ bool hasMustProgress(const Loop *L);
 /// be infinite without side effects without also being undefined)
 bool isMustProgress(const Loop *L);
 
+/// Return true if this loop can be assumed to run for a finite number of
+/// iterations.
+bool isFinite(const Loop *L);
+
 /// Return whether an MDNode might represent an access group.
 ///
 /// Access group metadata nodes have to be distinct and empty. Being
