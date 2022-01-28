@@ -666,7 +666,7 @@ INTERCEPTOR(int, fstat, int fd, void *buf) {
 #define MSAN_MAYBE_INTERCEPT_FSTAT
 #endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+#if SANITIZER_GLIBC
 INTERCEPTOR(int, __fxstat, int magic, int fd, void *buf) {
   ENSURE_MSAN_INITED();
   int res = REAL(__fxstat)(magic, fd, buf);
@@ -679,7 +679,7 @@ INTERCEPTOR(int, __fxstat, int magic, int fd, void *buf) {
 #define MSAN_MAYBE_INTERCEPT___FXSTAT
 #endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+#if SANITIZER_GLIBC
 INTERCEPTOR(int, __fxstat64, int magic, int fd, void *buf) {
   ENSURE_MSAN_INITED();
   int res = REAL(__fxstat64)(magic, fd, buf);
@@ -704,7 +704,7 @@ INTERCEPTOR(int, fstatat, int fd, char *pathname, void *buf, int flags) {
 #  define MSAN_MAYBE_INTERCEPT_FSTATAT
 #endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+#if SANITIZER_GLIBC
 INTERCEPTOR(int, __fxstatat, int magic, int fd, char *pathname, void *buf,
             int flags) {
   ENSURE_MSAN_INITED();
@@ -717,7 +717,7 @@ INTERCEPTOR(int, __fxstatat, int magic, int fd, char *pathname, void *buf,
 #  define MSAN_MAYBE_INTERCEPT___FXSTATAT
 #endif
 
-#if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
+#if SANITIZER_GLIBC
 INTERCEPTOR(int, __fxstatat64, int magic, int fd, char *pathname, void *buf,
             int flags) {
   ENSURE_MSAN_INITED();
