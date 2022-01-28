@@ -2429,4 +2429,62 @@ def VectorScaleOp : Vector_Op<"vscale",
   let verifier = ?;
 }
 
+//===----------------------------------------------------------------------===//
+// VectorScanOp
+//===----------------------------------------------------------------------===//
+
+def Vector_ScanOp :
+  Vector_Op<"scan", [NoSideEffect,
+    AllTypesMatch<["source", "dest"]>,
+    AllTypesMatch<["initial_value", "accumulated_value"]> ]>,
+    Arguments<(ins Vector_CombiningKindAttr:$kind,
+                   AnyVector:$source,
+                   AnyVectorOfAnyRank:$initial_value,
+                   I64Attr:$reduction_dim,
+                   BoolAttr:$inclusive)>,
+    Results<(outs AnyVector:$dest,
+                  AnyVectorOfAnyRank:$accumulated_value)> {
+  let summary = "Scan operation";
+  let description = [{
+    Performs an inclusive/exclusive scan on an n-D vector along a single
+    dimension returning an n-D result vector using the given
+    operation (add/mul/min/max for int/fp and and/or/xor for
+    int only) and a specified value for the initial value. The operator
+    returns the result of scan as well as the result of the last
+    reduction in the scan.
+
+    Example:
+
+    ```mlir
+    %1:2 = vector.scan <add>, %0, %acc {inclusive = false, reduction_dim = 1 : i64} :
+      vector<4x8x16x32xf32>, vector<4x16x32xf32>
+    ```
+  }];
+  let builders = [
+    OpBuilder<(ins "Value":$source, "Value":$initial_value,
+                   "CombiningKind":$kind,
+                   CArg<"int64_t", "0">:$reduction_dim,
+                   CArg<"bool", "true">:$inclusive)>
+  ];
+  let extraClassDeclaration = [{
+    static StringRef getKindAttrName() { return "kind"; }
+    static StringRef getReductionDimAttrName() { return "reduction_dim"; }
+    VectorType getSourceType() {
+      return source().getType().cast<VectorType>();
+    }
+    VectorType getDestType() {
+      return dest().getType().cast<VectorType>();
+    }
+    VectorType getAccumulatorType() {
+      return accumulated_value().getType().cast<VectorType>();
+    }
+    VectorType getInitialValueType() {
+      return initial_value().getType().cast<VectorType>();
+    }
+  }];
+  let assemblyFormat =
+    "$kind `,` $source `,` $initial_value attr-dict `:` "
+    "type($source) `,` type($initial_value) ";
+}
+
 #endif // VECTOR_OPS

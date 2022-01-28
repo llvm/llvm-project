@@ -1480,3 +1480,29 @@ func @insert_map_id(%v: vector<2x1xf32>, %v1: vector<4x32xf32>, %id : index) {
   %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<4x32xf32>
 }
 
+// -----
+
+func @scan_reduction_dim_constraint(%arg0: vector<2x3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
+  // expected-error@+1 {{'vector.scan' op reduction dimension 5 has to be less than 2}}
+  %0:2 = vector.scan <add>, %arg0, %arg1 {inclusive = true, reduction_dim = 5} :
+    vector<2x3xi32>, vector<3xi32>
+  return %0#1 : vector<3xi32>
+}
+
+// -----
+
+func @scan_ival_rank_constraint(%arg0: vector<2x3xi32>, %arg1: vector<1x3xi32>) -> vector<1x3xi32> {
+  // expected-error@+1 {{initial value rank 2 has to be equal to 1}}
+  %0:2 = vector.scan <add>, %arg0, %arg1 {inclusive = true, reduction_dim = 0} :
+    vector<2x3xi32>, vector<1x3xi32>
+  return %0#1 : vector<1x3xi32>
+}
+
+// -----
+
+func @scan_incompatible_shapes(%arg0: vector<2x3xi32>, %arg1: vector<5xi32>) -> vector<2x3xi32> {
+  // expected-error@+1 {{incompatible input/initial value shapes}}
+  %0:2 = vector.scan <add>, %arg0, %arg1 {inclusive = true, reduction_dim = 0} :
+    vector<2x3xi32>, vector<5xi32>
+  return %0#0 : vector<2x3xi32>
+}

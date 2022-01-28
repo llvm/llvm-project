@@ -717,3 +717,11 @@ func @get_vector_scale() -> index {
   %0 = vector.vscale
   return %0 : index
 }
+
+// CHECK-LABEL: @vector_scan
+func @vector_scan(%0: vector<4x8x16x32xf32>) -> vector<4x8x16x32xf32> {
+  %1 = arith.constant dense<0.0> : vector<4x16x32xf32>
+  %2:2 = vector.scan <add>, %0, %1 {reduction_dim = 1 : i64, inclusive = true} :
+    vector<4x8x16x32xf32>, vector<4x16x32xf32>
+  return %2#0 : vector<4x8x16x32xf32>
+}
