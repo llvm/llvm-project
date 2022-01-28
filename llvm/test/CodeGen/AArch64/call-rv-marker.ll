@@ -25,15 +25,29 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
 @g = dso_local global i8* null, align 8
 @fptr = dso_local global i8* ()* null, align 8
 
-define dso_local i8* @rv_marker_1() {
-; CHECK-LABEL:    rv_marker_1:
+define dso_local i8* @rv_marker_1_retain() {
+; CHECK-LABEL:    rv_marker_1_retain:
 ; CHECK:           .cfi_offset w30, -16
 ; CHECK-NEXT:      bl foo1
 ; SELDAG-NEXT:     mov x29, x29
+; SELDAG-NEXT:     bl objc_retainAutoreleasedReturnValue
 ; GISEL-NOT:       mov x29, x29
 ;
 entry:
-  %call = call i8* @foo1() [ "clang.arc.attachedcall"() ]
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
+  ret i8* %call
+}
+
+define dso_local i8* @rv_marker_1_unsafeClaim() {
+; CHECK-LABEL:    rv_marker_1_unsafeClaim:
+; CHECK:           .cfi_offset w30, -16
+; CHECK-NEXT:      bl foo1
+; SELDAG-NEXT:     mov x29, x29
+; SELDAG-NEXT:     bl objc_unsafeClaimAutoreleasedReturnValue
+; GISEL-NOT:       mov x29, x29
+;
+entry:
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_unsafeClaimAutoreleasedReturnValue) ]
   ret i8* %call
 }
 
@@ -43,13 +57,14 @@ define dso_local void @rv_marker_2_select(i32 %c) {
 ; GISEL:         csinc w0, w8, wzr, eq
 ; CHECK-NEXT:    bl  foo0
 ; SELDAG-NEXT:   mov x29, x29
+; SELDAG-NEXT:   bl objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT:    ldr x30, [sp], #16
 ; CHECK-NEXT:    b  foo2
 ;
 entry:
   %tobool.not = icmp eq i32 %c, 0
   %.sink = select i1 %tobool.not, i32 2, i32 1
-  %call1 = call i8* @foo0(i32 %.sink) [ "clang.arc.attachedcall"() ]
+  %call1 = call i8* @foo0(i32 %.sink) [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   tail call void @foo2(i8* %call1)
   ret void
 }
@@ -59,9 +74,10 @@ define dso_local void @rv_marker_3() personality i8* bitcast (i32 (...)* @__gxx_
 ; CHECK:         .cfi_offset w30, -32
 ; CHECK-NEXT:    bl  foo1
 ; SELDAG-NEXT:   mov x29, x29
+; SELDAG-NEXT:   bl objc_retainAutoreleasedReturnValue
 ;
 entry:
-  %call = call i8* @foo1() [ "clang.arc.attachedcall"() ]
+  %call = call i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   invoke void @objc_object(i8* %call) #5
           to label %invoke.cont unwind label %lpad
 
@@ -81,13 +97,14 @@ define dso_local void @rv_marker_4() personality i8* bitcast (i32 (...)* @__gxx_
 ; CHECK:       .Ltmp3:
 ; CHECK-NEXT:     bl  foo1
 ; SELDAG-NEXT:    mov x29, x29
+; SELDAG-NEXT:    bl objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT: .Ltmp4:
 ;
 entry:
   %s = alloca %struct.S, align 1
   %0 = getelementptr inbounds %struct.S, %struct.S* %s, i64 0, i32 0
   call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull %0) #2
-  %call = invoke i8* @foo1() [ "clang.arc.attachedcall"() ]
+  %call = invoke i8* @foo1() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
           to label %invoke.cont unwind label %lpad
 
 invoke.cont:                                      ; preds = %entry
@@ -122,12 +139,13 @@ define dso_local i8* @rv_marker_5_indirect_call() {
 ; CHECK-LABEL: rv_marker_5_indirect_call
 ; CHECK:         ldr [[ADDR:x[0-9]+]], [
 ; CHECK-NEXT:    blr [[ADDR]]
-; SLEDAG-NEXT:   mov x29, x29
+; SELDAG-NEXT:   mov x29, x29
+; SELDAG-NEXT:   bl objc_retainAutoreleasedReturnValue
 ; GISEL-NOT:     mov x29, x29
 ;
 entry:
   %0 = load i8* ()*, i8* ()** @fptr, align 8
-  %call = call i8* %0() [ "clang.arc.attachedcall"() ]
+  %call = call i8* %0() [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   tail call void @foo2(i8* %call)
   ret i8* %call
 }
@@ -141,9 +159,12 @@ define dso_local void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:   mov x2, [[TMP]]
 ; CHECK-NEXT:   bl  foo
 ; SELDAG-NEXT:  mov x29, x29
+; SELDAG-NEXT:  bl objc_retainAutoreleasedReturnValue
 ; GISEL-NOT:    mov x29, x29
-  call i8* @foo(i64 %c, i64 %b, i64 %a) [ "clang.arc.attachedcall"() ]
+  call i8* @foo(i64 %c, i64 %b, i64 %a) [ "clang.arc.attachedcall"(i8* (i8*)* @objc_retainAutoreleasedReturnValue) ]
   ret void
 }
 
+declare i8* @objc_retainAutoreleasedReturnValue(i8*)
+declare i8* @objc_unsafeClaimAutoreleasedReturnValue(i8*)
 declare i32 @__gxx_personality_v0(...)

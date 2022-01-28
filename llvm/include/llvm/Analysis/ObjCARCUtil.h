@@ -42,7 +42,7 @@ inline bool hasAttachedCallOpBundle(const CallBase *CB) {
 /// which is the address of the ARC runtime function.
 inline Optional<Function *> getAttachedARCFunction(const CallBase *CB) {
   auto B = CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall);
-  if (!B.hasValue() || B->Inputs.size() == 0)
+  if (!B)
     return None;
 
   return cast<Function>(B->Inputs[0]);

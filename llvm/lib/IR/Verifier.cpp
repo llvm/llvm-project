@@ -5811,14 +5811,10 @@ void Verifier::verifyAttachedCallBundle(const CallBase &Call,
          "void return type",
          Call);
 
-  Assert((BU.Inputs.empty() ||
-          (BU.Inputs.size() == 1 && isa<Function>(BU.Inputs.front()))),
-         "operand bundle \"clang.arc.attachedcall\" can take either no "
-         "arguments or one function as an argument",
+  Assert(BU.Inputs.size() == 1 && isa<Function>(BU.Inputs.front()),
+         "operand bundle \"clang.arc.attachedcall\" requires one function as "
+         "an argument",
          Call);
-
-  if (BU.Inputs.empty())
-    return;
 
   auto *Fn = cast<Function>(BU.Inputs.front());
   Intrinsic::ID IID = Fn->getIntrinsicID();

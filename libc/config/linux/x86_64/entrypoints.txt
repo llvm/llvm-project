@@ -21,7 +21,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.__errno_location
 
     # fcntl.h entrypoints
+    libc.src.fcntl.creat
     libc.src.fcntl.open
+    libc.src.fcntl.openat
 
     # string.h entrypoints
     libc.src.string.bcmp

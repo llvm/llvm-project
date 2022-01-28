@@ -79,7 +79,6 @@ add_llvm_unittest(ADTTests
   TwineTest.cpp
   TypeSwitchTest.cpp
   TypeTraitsTest.cpp
-  WaymarkingTest.cpp
   )
 
 target_link_libraries(ADTTests PRIVATE LLVMTestingSupport)
