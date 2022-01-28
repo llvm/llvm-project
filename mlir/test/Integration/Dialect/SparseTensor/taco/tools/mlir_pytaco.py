@@ -323,6 +323,10 @@ class Format:
 
     if self.ordering is None:
       self.ordering = ModeOrdering(list(range(self.rank())))
+    if isinstance(self.ordering, list):
+      if not _all_instance_of(self.ordering, int):
+        raise ValueError(f"Expected a list of integer: {self.ordering}")
+      self.ordering = ModeOrdering(self.ordering)
     if not isinstance(self.ordering, ModeOrdering):
       raise ValueError(f"Expected ModeOrdering: {self.ordering}")
 
