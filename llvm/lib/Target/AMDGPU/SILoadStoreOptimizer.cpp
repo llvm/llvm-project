@@ -938,12 +938,6 @@ bool SILoadStoreOptimizer::checkAndPrepareMerge(
       // 2. It is safe to move MBBI down past the instruction that I will
       //    be merged into.
 
-      if (MBBI->hasUnmodeledSideEffects()) {
-        // We can't re-order this instruction with respect to other memory
-        // operations, so we fail both conditions mentioned above.
-        return false;
-      }
-
       if (MBBI->mayLoadOrStore() &&
           (!memAccessesCanBeReordered(*CI.I, *MBBI, AA) ||
            !canMoveInstsAcrossMemOp(*MBBI, InstsToMove, AA))) {
@@ -1977,10 +1971,10 @@ SILoadStoreOptimizer::collectMergeableInsts(
     if (promoteConstantOffsetToImm(MI, Visited, AnchorList))
       Modified = true;
 
-    // Don't combine if volatile. We also won't be able to merge across this, so
-    // break the search. We can look after this barrier for separate merges.
-    if (MI.hasOrderedMemoryRef()) {
-      LLVM_DEBUG(dbgs() << "Breaking search on memory fence: " << MI);
+    // Treat volatile accesses, ordered accesses and unmodeled side effects as
+    // barriers. We can look after this barrier for separate merges.
+    if (MI.hasOrderedMemoryRef() || MI.hasUnmodeledSideEffects()) {
+      LLVM_DEBUG(dbgs() << "Breaking search on barrier: " << MI);
 
       // Search will resume after this instruction in a separate merge list.
       ++BlockI;
