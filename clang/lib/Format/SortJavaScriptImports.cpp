@@ -133,7 +133,10 @@ class JavaScriptImportSorter : public TokenAnalyzer {
 public:
   JavaScriptImportSorter(const Environment &Env, const FormatStyle &Style)
       : TokenAnalyzer(Env, Style),
-        FileContents(Env.getSourceManager().getBufferData(Env.getFileID())) {}
+        FileContents(Env.getSourceManager().getBufferData(Env.getFileID())) {
+    // FormatToken.Tok starts out in an uninitialized state.
+    invalidToken.Tok.startToken();
+  }
 
   std::pair<tooling::Replacements, unsigned>
   analyze(TokenAnnotator &Annotator,
@@ -232,7 +235,6 @@ private:
     if (!Current || Current == LineEnd->Next) {
       // Set the current token to an invalid token, so that further parsing on
       // this line fails.
-      invalidToken.Tok.setKind(tok::unknown);
       Current = &invalidToken;
     }
   }
