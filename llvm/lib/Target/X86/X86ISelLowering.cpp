@@ -44500,14 +44500,16 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   // MOVMSK(CONCAT(X,Y)) != 0 ->  MOVMSK(OR(X,Y)).
   // MOVMSK(CONCAT(X,Y)) == -1 ->  MOVMSK(AND(X,Y)).
   // MOVMSK(CONCAT(X,Y)) != -1 ->  MOVMSK(AND(X,Y)).
-  if (VecVT.is256BitVector()) {
+  if (VecVT.is256BitVector() && NumElts <= CmpBits) {
     SmallVector<SDValue> Ops;
     if (collectConcatOps(peekThroughBitcasts(Vec).getNode(), Ops) &&
         Ops.size() == 2) {
       SDLoc DL(EFLAGS);
-      EVT SubVT = Ops[0].getValueType();
+      EVT SubVT = Ops[0].getValueType().changeTypeToInteger();
       APInt CmpMask = APInt::getLowBitsSet(32, IsAnyOf ? 0 : NumElts / 2);
-      SDValue V = DAG.getNode(IsAnyOf ? ISD::OR : ISD::AND, DL, SubVT, Ops);
+      SDValue V = DAG.getNode(IsAnyOf ? ISD::OR : ISD::AND, DL, SubVT,
+                              DAG.getBitcast(SubVT, Ops[0]),
+                              DAG.getBitcast(SubVT, Ops[1]));
       V = DAG.getBitcast(VecVT.getHalfNumVectorElementsVT(), V);
       return DAG.getNode(X86ISD::CMP, DL, MVT::i32,
                          DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V),
