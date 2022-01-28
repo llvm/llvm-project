@@ -2551,7 +2551,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parseAbiTags(Node *N);
 
   /// Parse the <unresolved-name> production.
-  Node *parseUnresolvedName();
+  Node *parseUnresolvedName(bool Global);
   Node *parseSimpleId();
   Node *parseBaseUnresolvedName();
   Node *parseUnresolvedType();
@@ -3353,6 +3353,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseBaseUnresolvedName() {
 //                   ::= [gs] <base-unresolved-name>                     # x or (with "gs") ::x
 //                   ::= [gs] sr <unresolved-qualifier-level>+ E <base-unresolved-name>
 //                                                                       # A::x, N::y, A<T>::z; "gs" means leading "::"
+// [gs] has been parsed by caller.
 //                   ::= sr <unresolved-type> <base-unresolved-name>     # T::x / decltype(p)::x
 //  extension        ::= sr <unresolved-type> <template-args> <base-unresolved-name>
 //                                                                       # T::N::x /decltype(p)::N::x
@@ -3360,7 +3361,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseBaseUnresolvedName() {
 //
 // <unresolved-qualifier-level> ::= <simple-id>
 template <typename Derived, typename Alloc>
-Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName() {
+Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName(bool Global) {
   Node *SoFar = nullptr;
 
   // srN <unresolved-type> [<template-args>] <unresolved-qualifier-level>* E <base-unresolved-name>
@@ -3393,8 +3394,6 @@ Node *AbstractManglingParser<Derived, Alloc>::parseUnresolvedName() {
       return nullptr;
     return make<QualifiedName>(SoFar, Base);
   }
-
-  bool Global = consumeIf("gs");
 
   // [gs] <base-unresolved-name>                     # x or (with "gs") ::x
   if (!consumeIf("sr")) {
@@ -4695,7 +4694,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
       return make<DeleteExpr>(E, Global, /*is_array=*/false);
     }
     case 'n':
-      return getDerived().parseUnresolvedName();
+      return getDerived().parseUnresolvedName(Global);
     case 's': {
       First += 2;
       Node *LHS = getDerived().parseExpr();
@@ -4840,7 +4839,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
   case 'o':
     switch (First[1]) {
     case 'n':
-      return getDerived().parseUnresolvedName();
+      return getDerived().parseUnresolvedName(Global);
     case 'o':
       First += 2;
       return getDerived().parseBinaryExpr("||");
@@ -4951,7 +4950,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
       return make<ParameterPackExpansion>(Child);
     }
     case 'r':
-      return getDerived().parseUnresolvedName();
+      return getDerived().parseUnresolvedName(Global);
     case 't': {
       First += 2;
       Node *Ty = getDerived().parseType();
@@ -5084,7 +5083,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
   case '7':
   case '8':
   case '9':
-    return getDerived().parseUnresolvedName();
+    return getDerived().parseUnresolvedName(Global);
   }
   return nullptr;
 }
