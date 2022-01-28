@@ -366,19 +366,24 @@ exit:
   ret i32 %res
 }
 
-define i32 @test_pointer_phi_select_same_object_store(i32* %ptr, i32* %end)  {
-; CHECK-LABEL: @test_pointer_phi_select_same_object_store(
+define i32 @test_pointer_phi_select_same_object_store_1(i32* %ptr, i32* %end)  {
+; CHECK-LABEL: @test_pointer_phi_select_same_object_store_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START_PTR:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = phi i32* [ [[START_PTR]], [[ENTRY:%.*]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 0, i32* [[PTR]], align 4
+; CHECK-NEXT:    [[MIN_PTR:%.*]] = phi i32* [ [[PTR]], [[ENTRY]] ], [ [[MIN_SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 3, i32* [[MIN_PTR]], align 4
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[PTR_IV]], align 4
+; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], 3
+; CHECK-NEXT:    [[MIN_SELECT]] = select i1 [[CMP_I_I_I]], i32* [[PTR_IV]], i32* [[MIN_PTR]]
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, i32* [[PTR_IV]], i64 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32* [[PTR_IV_NEXT]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[MIN_SELECT]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %start.ptr = getelementptr inbounds i32, i32* %ptr, i64 1
@@ -387,7 +392,7 @@ entry:
 loop:
   %ptr.iv = phi i32* [ %start.ptr, %entry ], [ %ptr.iv.next, %loop ]
   %min.ptr = phi i32* [ %ptr, %entry ], [ %min.select, %loop ]
-  store i32 0, i32* %min.ptr
+  store i32 3, i32* %min.ptr
   %l.1 = load i32, i32* %ptr.iv, align 4
   %l.2 = load i32, i32* %min.ptr, align 4
   %cmp.i.i.i = icmp ult i32 %l.1, %l.2
@@ -401,10 +406,133 @@ exit:
   ret i32 %res
 }
 
+define i32 @test_pointer_phi_select_same_object_store_2(i32* %ptr, i32* %end)  {
+; CHECK-LABEL: @test_pointer_phi_select_same_object_store_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_PTR:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi i32* [ [[START_PTR]], [[ENTRY:%.*]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[MIN_PTR:%.*]] = phi i32* [ [[PTR]], [[ENTRY]] ], [ [[MIN_SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[PTR_IV]], align 4
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[MIN_PTR]], align 4
+; CHECK-NEXT:    store i32 3, i32* [[MIN_PTR]], align 4
+; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[MIN_SELECT]] = select i1 [[CMP_I_I_I]], i32* [[PTR_IV]], i32* [[MIN_PTR]]
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, i32* [[PTR_IV]], i64 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32* [[PTR_IV_NEXT]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[MIN_SELECT]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %start.ptr = getelementptr inbounds i32, i32* %ptr, i64 1
+  br label %loop
+
+loop:
+  %ptr.iv = phi i32* [ %start.ptr, %entry ], [ %ptr.iv.next, %loop ]
+  %min.ptr = phi i32* [ %ptr, %entry ], [ %min.select, %loop ]
+  %l.1 = load i32, i32* %ptr.iv, align 4
+  %l.2 = load i32, i32* %min.ptr, align 4
+  store i32 3, i32* %min.ptr
+  %cmp.i.i.i = icmp ult i32 %l.1, %l.2
+  %min.select  = select i1 %cmp.i.i.i, i32* %ptr.iv, i32* %min.ptr
+  %ptr.iv.next = getelementptr inbounds i32, i32* %ptr.iv, i64 1
+  %ec = icmp eq i32* %ptr.iv.next, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %res = load i32, i32* %min.select, align 4
+  ret i32 %res
+}
+
+define i32 @test_pointer_phi_select_same_object_store_3(i32* %ptr, i32* %end)  {
+; CHECK-LABEL: @test_pointer_phi_select_same_object_store_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_PTR:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi i32* [ [[START_PTR]], [[ENTRY:%.*]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[MIN_PTR:%.*]] = phi i32* [ [[PTR]], [[ENTRY]] ], [ [[MIN_SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[PTR_IV]], align 4
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[MIN_PTR]], align 4
+; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[MIN_SELECT]] = select i1 [[CMP_I_I_I]], i32* [[PTR_IV]], i32* [[MIN_PTR]]
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, i32* [[PTR_IV]], i64 1
+; CHECK-NEXT:    store i32 3, i32* [[MIN_PTR]], align 4
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32* [[PTR_IV_NEXT]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[MIN_SELECT]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %start.ptr = getelementptr inbounds i32, i32* %ptr, i64 1
+  br label %loop
+
+loop:
+  %ptr.iv = phi i32* [ %start.ptr, %entry ], [ %ptr.iv.next, %loop ]
+  %min.ptr = phi i32* [ %ptr, %entry ], [ %min.select, %loop ]
+  %l.1 = load i32, i32* %ptr.iv, align 4
+  %l.2 = load i32, i32* %min.ptr, align 4
+  %cmp.i.i.i = icmp ult i32 %l.1, %l.2
+  %min.select  = select i1 %cmp.i.i.i, i32* %ptr.iv, i32* %min.ptr
+  %ptr.iv.next = getelementptr inbounds i32, i32* %ptr.iv, i64 1
+  store i32 3, i32* %min.ptr
+  %ec = icmp eq i32* %ptr.iv.next, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %res = load i32, i32* %min.select, align 4
+  ret i32 %res
+}
+
 declare void @may_write()
 
-define i32 @test_pointer_phi_select_same_object_may_write_call(i32* %ptr, i32* %end)  {
-; CHECK-LABEL: @test_pointer_phi_select_same_object_may_write_call(
+define i32 @test_pointer_phi_select_same_object_may_write_call_1(i32* %ptr, i32* %end)  {
+; CHECK-LABEL: @test_pointer_phi_select_same_object_may_write_call_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_PTR:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi i32* [ [[START_PTR]], [[ENTRY:%.*]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[MIN_PTR:%.*]] = phi i32* [ [[PTR]], [[ENTRY]] ], [ [[MIN_SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    call void @may_write()
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[PTR_IV]], align 4
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[MIN_PTR]], align 4
+; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[MIN_SELECT]] = select i1 [[CMP_I_I_I]], i32* [[PTR_IV]], i32* [[MIN_PTR]]
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, i32* [[PTR_IV]], i64 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32* [[PTR_IV_NEXT]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[MIN_SELECT]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %start.ptr = getelementptr inbounds i32, i32* %ptr, i64 1
+  br label %loop
+
+loop:
+  %ptr.iv = phi i32* [ %start.ptr, %entry ], [ %ptr.iv.next, %loop ]
+  %min.ptr = phi i32* [ %ptr, %entry ], [ %min.select, %loop ]
+  call void @may_write()
+  %l.1 = load i32, i32* %ptr.iv, align 4
+  %l.2 = load i32, i32* %min.ptr, align 4
+  %cmp.i.i.i = icmp ult i32 %l.1, %l.2
+  %min.select  = select i1 %cmp.i.i.i, i32* %ptr.iv, i32* %min.ptr
+  %ptr.iv.next = getelementptr inbounds i32, i32* %ptr.iv, i64 1
+  %ec = icmp eq i32* %ptr.iv.next, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %res = load i32, i32* %min.select, align 4
+  ret i32 %res
+}
+
+define i32 @test_pointer_phi_select_same_object_may_write_call_2(i32* %ptr, i32* %end)  {
+; CHECK-LABEL: @test_pointer_phi_select_same_object_may_write_call_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[START_PTR:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -435,6 +563,47 @@ loop:
   call void @may_write()
   %cmp.i.i.i = icmp ult i32 %l.1, %l.2
   %min.select  = select i1 %cmp.i.i.i, i32* %ptr.iv, i32* %min.ptr
+  %ptr.iv.next = getelementptr inbounds i32, i32* %ptr.iv, i64 1
+  %ec = icmp eq i32* %ptr.iv.next, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %res = load i32, i32* %min.select, align 4
+  ret i32 %res
+}
+
+define i32 @test_pointer_phi_select_same_object_may_write_call_3(i32* %ptr, i32* %end)  {
+; CHECK-LABEL: @test_pointer_phi_select_same_object_may_write_call_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[START_PTR:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 1
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi i32* [ [[START_PTR]], [[ENTRY:%.*]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[MIN_PTR:%.*]] = phi i32* [ [[PTR]], [[ENTRY]] ], [ [[MIN_SELECT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, i32* [[PTR_IV]], align 4
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, i32* [[MIN_PTR]], align 4
+; CHECK-NEXT:    [[CMP_I_I_I:%.*]] = icmp ult i32 [[L_1]], [[L_2]]
+; CHECK-NEXT:    [[MIN_SELECT]] = select i1 [[CMP_I_I_I]], i32* [[PTR_IV]], i32* [[MIN_PTR]]
+; CHECK-NEXT:    call void @may_write()
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, i32* [[PTR_IV]], i64 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32* [[PTR_IV_NEXT]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = load i32, i32* [[MIN_SELECT]], align 4
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %start.ptr = getelementptr inbounds i32, i32* %ptr, i64 1
+  br label %loop
+
+loop:
+  %ptr.iv = phi i32* [ %start.ptr, %entry ], [ %ptr.iv.next, %loop ]
+  %min.ptr = phi i32* [ %ptr, %entry ], [ %min.select, %loop ]
+  %l.1 = load i32, i32* %ptr.iv, align 4
+  %l.2 = load i32, i32* %min.ptr, align 4
+  %cmp.i.i.i = icmp ult i32 %l.1, %l.2
+  %min.select  = select i1 %cmp.i.i.i, i32* %ptr.iv, i32* %min.ptr
+  call void @may_write()
   %ptr.iv.next = getelementptr inbounds i32, i32* %ptr.iv, i64 1
   %ec = icmp eq i32* %ptr.iv.next, %end
   br i1 %ec, label %exit, label %loop
