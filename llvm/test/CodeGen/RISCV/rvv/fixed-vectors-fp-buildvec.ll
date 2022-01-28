@@ -200,3 +200,84 @@ define void @buildvec_merge0_v4f32(<4 x float>* %x, float %f) {
   store <4 x float> %v3, <4 x float>* %x
   ret void
 }
+
+define <4 x half> @splat_c3_v4f16(<4 x half> %v) {
+; CHECK-LABEL: splat_c3_v4f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vrgather.vi v9, v8, 3
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %x = extractelement <4 x half> %v, i32 3
+  %ins = insertelement <4 x half> poison, half %x, i32 0
+  %splat = shufflevector <4 x half> %ins, <4 x half> poison, <4 x i32> zeroinitializer
+  ret <4 x half> %splat
+}
+
+define <4 x half> @splat_idx_v4f16(<4 x half> %v, i64 %idx) {
+; CHECK-LABEL: splat_idx_v4f16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vfmv.f.s ft0, v8
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vfmv.v.f v8, ft0
+; CHECK-NEXT:    ret
+  %x = extractelement <4 x half> %v, i64 %idx
+  %ins = insertelement <4 x half> poison, half %x, i32 0
+  %splat = shufflevector <4 x half> %ins, <4 x half> poison, <4 x i32> zeroinitializer
+  ret <4 x half> %splat
+}
+
+define <8 x float> @splat_c5_v8f32(<8 x float> %v) {
+; LMULMAX1-LABEL: splat_c5_v8f32:
+; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; LMULMAX1-NEXT:    vrgather.vi v8, v9, 1
+; LMULMAX1-NEXT:    vmv.v.v v9, v8
+; LMULMAX1-NEXT:    ret
+;
+; LMULMAX2-LABEL: splat_c5_v8f32:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; LMULMAX2-NEXT:    vrgather.vi v10, v8, 5
+; LMULMAX2-NEXT:    vmv.v.v v8, v10
+; LMULMAX2-NEXT:    ret
+  %x = extractelement <8 x float> %v, i32 5
+  %ins = insertelement <8 x float> poison, float %x, i32 0
+  %splat = shufflevector <8 x float> %ins, <8 x float> poison, <8 x i32> zeroinitializer
+  ret <8 x float> %splat
+}
+
+define <8 x float> @splat_idx_v8f32(<8 x float> %v, i64 %idx) {
+; LMULMAX1-LABEL: splat_idx_v8f32:
+; LMULMAX1:       # %bb.0:
+; LMULMAX1-NEXT:    addi sp, sp, -48
+; LMULMAX1-NEXT:    .cfi_def_cfa_offset 48
+; LMULMAX1-NEXT:    andi a0, a0, 7
+; LMULMAX1-NEXT:    slli a0, a0, 2
+; LMULMAX1-NEXT:    addi a1, sp, 16
+; LMULMAX1-NEXT:    add a0, a1, a0
+; LMULMAX1-NEXT:    addi a1, sp, 32
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; LMULMAX1-NEXT:    vse32.v v9, (a1)
+; LMULMAX1-NEXT:    addi a1, sp, 16
+; LMULMAX1-NEXT:    vse32.v v8, (a1)
+; LMULMAX1-NEXT:    vlse32.v v8, (a0), zero
+; LMULMAX1-NEXT:    vmv.v.v v9, v8
+; LMULMAX1-NEXT:    addi sp, sp, 48
+; LMULMAX1-NEXT:    ret
+;
+; LMULMAX2-LABEL: splat_idx_v8f32:
+; LMULMAX2:       # %bb.0:
+; LMULMAX2-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; LMULMAX2-NEXT:    vslidedown.vx v8, v8, a0
+; LMULMAX2-NEXT:    vfmv.f.s ft0, v8
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; LMULMAX2-NEXT:    vfmv.v.f v8, ft0
+; LMULMAX2-NEXT:    ret
+  %x = extractelement <8 x float> %v, i64 %idx
+  %ins = insertelement <8 x float> poison, float %x, i32 0
+  %splat = shufflevector <8 x float> %ins, <8 x float> poison, <8 x i32> zeroinitializer
+  ret <8 x float> %splat
+}
