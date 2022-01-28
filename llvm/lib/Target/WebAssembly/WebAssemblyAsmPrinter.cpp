@@ -181,17 +181,11 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   if (!Sym->getType()) {
     const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
-    SmallVector<EVT, 1> VTs;
-    ComputeValueVTs(TLI, GV->getParent()->getDataLayout(), GV->getValueType(),
-                    VTs);
-    if (VTs.size() != 1 ||
-        TLI.getNumRegisters(GV->getParent()->getContext(), VTs[0]) != 1)
-      report_fatal_error("Aggregate globals not yet implemented");
-    MVT VT = TLI.getRegisterType(GV->getParent()->getContext(), VTs[0]);
-    bool Mutable = true;
-    wasm::ValType Type = WebAssembly::toValType(VT);
-    Sym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-    Sym->setGlobalType(wasm::WasmGlobalType{uint8_t(Type), Mutable});
+    SmallVector<MVT, 1> VTs;
+    Type *GlobalVT = GV->getValueType();
+    computeLegalValueVTs(TLI, GV->getParent()->getContext(),
+                         GV->getParent()->getDataLayout(), GlobalVT, VTs);
+    WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }
 
   // If the GlobalVariable refers to a table, we handle it here instead of
