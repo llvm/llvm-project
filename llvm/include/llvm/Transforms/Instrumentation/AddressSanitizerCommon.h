@@ -66,7 +66,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   }
   SmallVector<Instruction *, 8> ReachableRetVec;
   unsigned NumCoveredExits = 0;
-  for (auto &RI : RetVec) {
+  for (auto *RI : RetVec) {
     if (!isPotentiallyReachable(Start, RI, nullptr, &DT))
       continue;
     ReachableRetVec.push_back(RI);
@@ -83,7 +83,7 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
     for (auto *End : Ends)
       Callback(End);
   } else {
-    for (auto &RI : ReachableRetVec)
+    for (auto *RI : ReachableRetVec)
       Callback(RI);
     // We may have inserted untag outside of the lifetime interval.
     // Signal the caller to remove the lifetime end call for this alloca.

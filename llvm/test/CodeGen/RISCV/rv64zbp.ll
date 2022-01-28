@@ -2713,44 +2713,6 @@ define i64 @shfl16(i64 %a, i64 %b) nounwind {
   ret i64 %or3
 }
 
-define signext i32 @pack_i32(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: pack_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    slliw a1, a1, 16
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBP-LABEL: pack_i32:
-; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    packw a0, a0, a1
-; RV64ZBP-NEXT:    ret
-  %shl = and i32 %a, 65535
-  %shl1 = shl i32 %b, 16
-  %or = or i32 %shl1, %shl
-  ret i32 %or
-}
-
-define i64 @pack_i64(i64 %a, i64 %b) nounwind {
-; RV64I-LABEL: pack_i64:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBP-LABEL: pack_i64:
-; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    pack a0, a0, a1
-; RV64ZBP-NEXT:    ret
-  %shl = and i64 %a, 4294967295
-  %shl1 = shl i64 %b, 32
-  %or = or i64 %shl1, %shl
-  ret i64 %or
-}
-
 define signext i32 @packu_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: packu_i32:
 ; RV64I:       # %bb.0:
@@ -2787,86 +2749,6 @@ define i64 @packu_i64(i64 %a, i64 %b) nounwind {
   %shr = lshr i64 %a, 32
   %shr1 = and i64 %b, -4294967296
   %or = or i64 %shr1, %shr
-  ret i64 %or
-}
-
-define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: packh_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    slli a1, a1, 56
-; RV64I-NEXT:    srli a1, a1, 48
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBP-LABEL: packh_i32:
-; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    packh a0, a0, a1
-; RV64ZBP-NEXT:    ret
-  %and = and i32 %a, 255
-  %and1 = shl i32 %b, 8
-  %shl = and i32 %and1, 65280
-  %or = or i32 %shl, %and
-  ret i32 %or
-}
-
-define i32 @packh_i32_2(i32 %a, i32 %b) nounwind {
-; RV64I-LABEL: packh_i32_2:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    andi a1, a1, 255
-; RV64I-NEXT:    slli a1, a1, 8
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBP-LABEL: packh_i32_2:
-; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    packh a0, a0, a1
-; RV64ZBP-NEXT:    ret
-  %and = and i32 %a, 255
-  %and1 = and i32 %b, 255
-  %shl = shl i32 %and1, 8
-  %or = or i32 %shl, %and
-  ret i32 %or
-}
-
-define i64 @packh_i64(i64 %a, i64 %b) nounwind {
-; RV64I-LABEL: packh_i64:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    slli a1, a1, 56
-; RV64I-NEXT:    srli a1, a1, 48
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBP-LABEL: packh_i64:
-; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    packh a0, a0, a1
-; RV64ZBP-NEXT:    ret
-  %and = and i64 %a, 255
-  %and1 = shl i64 %b, 8
-  %shl = and i64 %and1, 65280
-  %or = or i64 %shl, %and
-  ret i64 %or
-}
-
-define i64 @packh_i64_2(i64 %a, i64 %b) nounwind {
-; RV64I-LABEL: packh_i64_2:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 255
-; RV64I-NEXT:    andi a1, a1, 255
-; RV64I-NEXT:    slli a1, a1, 8
-; RV64I-NEXT:    or a0, a1, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBP-LABEL: packh_i64_2:
-; RV64ZBP:       # %bb.0:
-; RV64ZBP-NEXT:    packh a0, a0, a1
-; RV64ZBP-NEXT:    ret
-  %and = and i64 %a, 255
-  %and1 = and i64 %b, 255
-  %shl = shl i64 %and1, 8
-  %or = or i64 %shl, %and
   ret i64 %or
 }
 

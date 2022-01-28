@@ -22,7 +22,6 @@ func @simple(i64, i1) -> i64 {
     // CPP-DECLTOP-NEXT: int64_t [[C:[^ ]*]];
     // CPP-DECLTOP-NEXT: int64_t [[D:[^ ]*]];
     // CPP-DECLTOP-NEXT: int64_t [[E:[^ ]*]];
-    // CPP-DECLTOP-NEXT: [[BB0:[^ ]*]]:
     // CPP-DECLTOP-NEXT: if ([[COND]]) {
     // CPP-DECLTOP-NEXT: goto [[BB1:[^ ]*]];
     // CPP-DECLTOP-NEXT: } else {
@@ -51,7 +50,6 @@ func @block_labels0() {
     return
 }
 // CPP-DECLTOP: void block_labels0() {
-  // CPP-DECLTOP-NEXT: label1:
   // CPP-DECLTOP-NEXT: goto label2;
   // CPP-DECLTOP-NEXT: label2:
   // CPP-DECLTOP-NEXT: return;
@@ -66,7 +64,6 @@ func @block_labels1() {
     return
 }
 // CPP-DECLTOP: void block_labels1() {
-  // CPP-DECLTOP-NEXT: label1:
   // CPP-DECLTOP-NEXT: goto label2;
   // CPP-DECLTOP-NEXT: label2:
   // CPP-DECLTOP-NEXT: return;

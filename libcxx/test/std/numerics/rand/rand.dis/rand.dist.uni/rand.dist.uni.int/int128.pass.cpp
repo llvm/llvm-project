@@ -22,7 +22,7 @@
 
 int main(int, char**) {
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
 
   // Test that values outside of the 64-bit range can be produced.
   {
@@ -80,7 +80,7 @@ int main(int, char**) {
     }
   }
 
-#endif // _LIBCPP_HAS_NO_INT128
+#endif // TEST_HAS_NO_INT128
 
   return 0;
 }

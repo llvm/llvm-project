@@ -22,6 +22,7 @@
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 
@@ -1183,6 +1184,11 @@ public:
   lldb::ValueObjectSP GetCurrentException();
 
   lldb::ThreadSP GetCurrentExceptionBacktrace();
+
+  virtual llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  GetSiginfo(size_t max_size) const {
+    return llvm::make_error<UnimplementedError>();
+  }
 
 protected:
   friend class ThreadPlan;

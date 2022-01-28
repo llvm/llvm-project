@@ -56,9 +56,9 @@ static_assert(test(std::ranges::iter_swap, a + 0, a + 1));
 static_assert(test(std::partial_order, 1, 2));
 static_assert(test(std::strong_order, 1, 2));
 static_assert(test(std::weak_order, 1, 2));
-//static_assert(test(std::compare_partial_order_fallback, 1, 2));
-//static_assert(test(std::compare_strong_order_fallback, 1, 2));
-//static_assert(test(std::compare_weak_order_fallback, 1, 2));
+static_assert(test(std::compare_partial_order_fallback, 1, 2));
+static_assert(test(std::compare_strong_order_fallback, 1, 2));
+static_assert(test(std::compare_weak_order_fallback, 1, 2));
 
 // [range.access]
 static_assert(test(std::ranges::begin, a));

@@ -3,6 +3,170 @@
 
 declare void @llvm.assume(i1)
 
+define i1 @gep_constant_positive_index(i8* %dst, i8* %lower, i8* %upper) {
+; CHECK-LABEL: @gep_constant_positive_index(
+; CHECK-NEXT:    [[DST_ADD_4:%.*]] = getelementptr inbounds i8, i8* [[DST:%.*]], i64 4
+; CHECK-NEXT:    [[PRE_DST_LOWER:%.*]] = icmp uge i8* [[DST]], [[LOWER:%.*]]
+; CHECK-NEXT:    [[PRE_DST_UPPER:%.*]] = icmp ult i8* [[DST_ADD_4]], [[UPPER:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[PRE_DST_LOWER]], [[PRE_DST_UPPER]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP_DST_LOWER:%.*]] = icmp uge i8* [[DST]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_DST_UPPER:%.*]] = icmp ult i8* [[DST]], [[UPPER]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
+; CHECK-NEXT:    [[DST_ADD_3:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 3
+; CHECK-NEXT:    [[CMP_DST_ADD_3_LOWER:%.*]] = icmp uge i8* [[DST_ADD_3]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_DST_ADD_3_UPPER:%.*]] = icmp ult i8* [[DST_ADD_3]], [[UPPER]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], true
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], true
+; CHECK-NEXT:    [[CMP_DST_ADD_4_LOWER:%.*]] = icmp uge i8* [[DST_ADD_4]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_DST_ADD_4_UPPER:%.*]] = icmp ult i8* [[DST_ADD_4]], [[UPPER]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], true
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
+; CHECK-NEXT:    [[DST_ADD_5:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 5
+; CHECK-NEXT:    [[CMP_DST_ADD_5_LOWER:%.*]] = icmp uge i8* [[DST_ADD_5]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_DST_ADD_5_UPPER:%.*]] = icmp ult i8* [[DST_ADD_5]], [[UPPER]]
+; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], true
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[CMP_DST_ADD_5_UPPER]]
+; CHECK-NEXT:    ret i1 [[RES_7]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i1 false
+;
+  %dst.add.4 = getelementptr inbounds i8, i8* %dst, i64 4
+  %pre.dst.lower = icmp uge i8* %dst, %lower
+  %pre.dst.upper = icmp ult i8* %dst.add.4, %upper
+  %and = and i1 %pre.dst.lower, %pre.dst.upper
+  br i1 %and, label %then, label %else
+
+then:
+  %cmp.dst.lower = icmp uge i8* %dst, %lower
+  %cmp.dst.upper = icmp ult i8* %dst, %upper
+  %res.1 = xor i1 %cmp.dst.lower, %cmp.dst.upper
+
+  %dst.add.3 = getelementptr inbounds i8, i8* %dst, i64 3
+  %cmp.dst.add.3.lower = icmp uge i8* %dst.add.3, %lower
+  %cmp.dst.add.3.upper = icmp ult i8* %dst.add.3, %upper
+  %res.2 = xor i1 %res.1, %cmp.dst.add.3.lower
+  %res.3 = xor i1 %res.2, %cmp.dst.add.3.upper
+
+  %cmp.dst.add.4.lower = icmp uge i8* %dst.add.4, %lower
+  %cmp.dst.add.4.upper = icmp ult i8* %dst.add.4, %upper
+  %res.4 = xor i1 %res.3, %cmp.dst.add.4.lower
+  %res.5 = xor i1 %res.4, %cmp.dst.add.4.upper
+
+  %dst.add.5 = getelementptr inbounds i8, i8* %dst, i64 5
+  %cmp.dst.add.5.lower = icmp uge i8* %dst.add.5, %lower
+  %cmp.dst.add.5.upper = icmp ult i8* %dst.add.5, %upper
+  %res.6 = xor i1 %res.5, %cmp.dst.add.5.lower
+  %res.7 = xor i1 %res.6, %cmp.dst.add.5.upper
+
+  ret i1 %res.7
+
+else:
+  ret i1 false
+}
+
+define i1 @gep_constant_negative_index(i8* %dst, i8* %lower, i8* %upper) {
+; CHECK-LABEL: @gep_constant_negative_index(
+; CHECK-NEXT:    [[DST_SUB_4:%.*]] = getelementptr inbounds i8, i8* [[DST:%.*]], i64 -4
+; CHECK-NEXT:    [[PRE_DST_LOWER:%.*]] = icmp uge i8* [[DST]], [[LOWER:%.*]]
+; CHECK-NEXT:    [[PRE_DST_UPPER:%.*]] = icmp ult i8* [[DST_SUB_4]], [[UPPER:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[PRE_DST_LOWER]], [[PRE_DST_UPPER]]
+; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[CMP_DST_LOWER:%.*]] = icmp uge i8* [[DST]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_DST_UPPER:%.*]] = icmp ult i8* [[DST]], [[UPPER]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[CMP_DST_UPPER]]
+; CHECK-NEXT:    [[DST_SUB_3:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 -3
+; CHECK-NEXT:    [[CMP_DST_SUB_3_LOWER:%.*]] = icmp uge i8* [[DST_SUB_3]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_DST_SUB_3_UPPER:%.*]] = icmp ult i8* [[DST_SUB_3]], [[UPPER]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[CMP_DST_SUB_3_LOWER]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[CMP_DST_SUB_3_UPPER]]
+; CHECK-NEXT:    [[CMP_DST_SUB_4_LOWER:%.*]] = icmp uge i8* [[DST_SUB_4]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_DST_SUB_4_UPPER:%.*]] = icmp ult i8* [[DST_SUB_4]], [[UPPER]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[CMP_DST_SUB_4_LOWER]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], true
+; CHECK-NEXT:    [[DST_SUB_5:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 -5
+; CHECK-NEXT:    [[CMP_DST_SUB_5_LOWER:%.*]] = icmp uge i8* [[DST_SUB_5]], [[LOWER]]
+; CHECK-NEXT:    [[CMP_DST_SUB_5_UPPER:%.*]] = icmp ult i8* [[DST_SUB_5]], [[UPPER]]
+; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[CMP_DST_SUB_5_LOWER]]
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[CMP_DST_SUB_5_UPPER]]
+; CHECK-NEXT:    ret i1 [[RES_7]]
+; CHECK:       else:
+; CHECK-NEXT:    [[ELSE_CMP_DST_LOWER:%.*]] = icmp uge i8* [[DST]], [[LOWER]]
+; CHECK-NEXT:    [[ELSE_CMP_DST_UPPER:%.*]] = icmp ult i8* [[DST]], [[UPPER]]
+; CHECK-NEXT:    [[ELSE_RES_1:%.*]] = xor i1 [[ELSE_CMP_DST_LOWER]], [[ELSE_CMP_DST_UPPER]]
+; CHECK-NEXT:    [[ELSE_DST_SUB_3:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 -3
+; CHECK-NEXT:    [[ELSE_CMP_DST_SUB_3_LOWER:%.*]] = icmp uge i8* [[ELSE_DST_SUB_3]], [[LOWER]]
+; CHECK-NEXT:    [[ELSE_CMP_DST_SUB_3_UPPER:%.*]] = icmp ult i8* [[ELSE_DST_SUB_3]], [[UPPER]]
+; CHECK-NEXT:    [[ELSE_RES_2:%.*]] = xor i1 [[ELSE_RES_1]], [[ELSE_CMP_DST_SUB_3_LOWER]]
+; CHECK-NEXT:    [[ELSE_RES_3:%.*]] = xor i1 [[ELSE_RES_2]], [[ELSE_CMP_DST_SUB_3_UPPER]]
+; CHECK-NEXT:    [[ELSE_CMP_DST_SUB_4_LOWER:%.*]] = icmp uge i8* [[DST_SUB_4]], [[LOWER]]
+; CHECK-NEXT:    [[ELSE_CMP_DST_SUB_4_UPPER:%.*]] = icmp ult i8* [[DST_SUB_4]], [[UPPER]]
+; CHECK-NEXT:    [[ELSE_RES_4:%.*]] = xor i1 [[ELSE_RES_3]], [[ELSE_CMP_DST_SUB_4_LOWER]]
+; CHECK-NEXT:    [[ELSE_RES_5:%.*]] = xor i1 [[ELSE_RES_4]], [[ELSE_CMP_DST_SUB_4_UPPER]]
+; CHECK-NEXT:    [[ELSE_DST_SUB_5:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 -5
+; CHECK-NEXT:    [[ELSE_CMP_DST_SUB_5_LOWER:%.*]] = icmp uge i8* [[ELSE_DST_SUB_5]], [[LOWER]]
+; CHECK-NEXT:    [[ELSE_CMP_DST_SUB_5_UPPER:%.*]] = icmp ult i8* [[ELSE_DST_SUB_5]], [[UPPER]]
+; CHECK-NEXT:    [[ELSE_RES_6:%.*]] = xor i1 [[ELSE_RES_5]], [[ELSE_CMP_DST_SUB_5_LOWER]]
+; CHECK-NEXT:    [[ELSE_RES_7:%.*]] = xor i1 [[ELSE_RES_6]], [[ELSE_CMP_DST_SUB_5_UPPER]]
+; CHECK-NEXT:    ret i1 [[ELSE_RES_7]]
+;
+  %dst.sub.4 = getelementptr inbounds i8, i8* %dst, i64 -4
+  %pre.dst.lower = icmp uge i8* %dst, %lower
+  %pre.dst.upper = icmp ult i8* %dst.sub.4, %upper
+  %and = and i1 %pre.dst.lower, %pre.dst.upper
+  br i1 %and, label %then, label %else
+
+then:
+  %cmp.dst.lower = icmp uge i8* %dst, %lower
+  %cmp.dst.upper = icmp ult i8* %dst, %upper
+  %res.1 = xor i1 %cmp.dst.lower, %cmp.dst.upper
+
+  %dst.sub.3 = getelementptr inbounds i8, i8* %dst, i64 -3
+  %cmp.dst.sub.3.lower = icmp uge i8* %dst.sub.3, %lower
+  %cmp.dst.sub.3.upper = icmp ult i8* %dst.sub.3, %upper
+  %res.2 = xor i1 %res.1, %cmp.dst.sub.3.lower
+  %res.3 = xor i1 %res.2, %cmp.dst.sub.3.upper
+
+  %cmp.dst.sub.4.lower = icmp uge i8* %dst.sub.4, %lower
+  %cmp.dst.sub.4.upper = icmp ult i8* %dst.sub.4, %upper
+  %res.4 = xor i1 %res.3, %cmp.dst.sub.4.lower
+  %res.5 = xor i1 %res.4, %cmp.dst.sub.4.upper
+
+  %dst.sub.5 = getelementptr inbounds i8, i8* %dst, i64 -5
+  %cmp.dst.sub.5.lower = icmp uge i8* %dst.sub.5, %lower
+  %cmp.dst.sub.5.upper = icmp ult i8* %dst.sub.5, %upper
+  %res.6 = xor i1 %res.5, %cmp.dst.sub.5.lower
+  %res.7 = xor i1 %res.6, %cmp.dst.sub.5.upper
+
+  ret i1 %res.7
+
+else:
+  %else.cmp.dst.lower = icmp uge i8* %dst, %lower
+  %else.cmp.dst.upper = icmp ult i8* %dst, %upper
+  %else.res.1 = xor i1 %else.cmp.dst.lower, %else.cmp.dst.upper
+
+  %else.dst.sub.3 = getelementptr inbounds i8, i8* %dst, i64 -3
+  %else.cmp.dst.sub.3.lower = icmp uge i8* %else.dst.sub.3, %lower
+  %else.cmp.dst.sub.3.upper = icmp ult i8* %else.dst.sub.3, %upper
+  %else.res.2 = xor i1 %else.res.1, %else.cmp.dst.sub.3.lower
+  %else.res.3 = xor i1 %else.res.2, %else.cmp.dst.sub.3.upper
+
+  %else.cmp.dst.sub.4.lower = icmp uge i8* %dst.sub.4, %lower
+  %else.cmp.dst.sub.4.upper = icmp ult i8* %dst.sub.4, %upper
+  %else.res.4 = xor i1 %else.res.3, %else.cmp.dst.sub.4.lower
+  %else.res.5 = xor i1 %else.res.4, %else.cmp.dst.sub.4.upper
+
+  %else.dst.sub.5 = getelementptr inbounds i8, i8* %dst, i64 -5
+  %else.cmp.dst.sub.5.lower = icmp uge i8* %else.dst.sub.5, %lower
+  %else.cmp.dst.sub.5.upper = icmp ult i8* %else.dst.sub.5, %upper
+  %else.res.6 = xor i1 %else.res.5, %else.cmp.dst.sub.5.lower
+  %else.res.7 = xor i1 %else.res.6, %else.cmp.dst.sub.5.upper
+
+  ret i1 %else.res.7
+}
+
 define i1 @n_unknown(i32* %dst, i32 %n, i32 %i) {
 ; CHECK-LABEL: @n_unknown(
 ; CHECK-NEXT:  entry:

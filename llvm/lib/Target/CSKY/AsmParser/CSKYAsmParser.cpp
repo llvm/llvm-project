@@ -303,6 +303,14 @@ public:
 
   bool isRegSeq() const { return isRegSeqTemplate<CSKY::R0, CSKY::R31>(); }
 
+  bool isRegSeqV1() const {
+    return isRegSeqTemplate<CSKY::F0_32, CSKY::F15_32>();
+  }
+
+  bool isRegSeqV2() const {
+    return isRegSeqTemplate<CSKY::F0_32, CSKY::F31_32>();
+  }
+
   static bool isLegalRegList(unsigned from, unsigned to) {
     if (from == 0 && to == 0)
       return true;

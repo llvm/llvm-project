@@ -2692,10 +2692,13 @@ typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, char>::typ
 typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned char>::type      __libcpp_unsigned_lock_free;
 #else
     // No signed/unsigned lock-free types
+#define _LIBCPP_NO_LOCK_FREE_TYPES
 #endif
 
+#if !defined(_LIBCPP_NO_LOCK_FREE_TYPES)
 typedef atomic<__libcpp_signed_lock_free> atomic_signed_lock_free;
 typedef atomic<__libcpp_unsigned_lock_free> atomic_unsigned_lock_free;
+#endif
 
 #define ATOMIC_FLAG_INIT {false}
 #define ATOMIC_VAR_INIT(__v) {__v}

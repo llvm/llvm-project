@@ -32,6 +32,10 @@ Sub-Projects in the Implementation Effort
    :header-rows: 1
    :widths: auto
 
+.. note::
+
+   .. [#note-strongorder] ``std::strong_order(long double, long double)`` is not yet implemented.
+
 
 Misc. Items and TODOs
 ====================================

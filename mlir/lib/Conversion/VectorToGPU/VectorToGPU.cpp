@@ -60,13 +60,17 @@ getMemrefConstantHorizontalStride(ShapedType type) {
   auto memrefType = type.dyn_cast<MemRefType>();
   if (!memrefType)
     return false;
+  // If the memref is 0 or 1D the horizontal stride is 0.
+  if(memrefType.getRank() < 2)
+    return 0;
   int64_t offset = 0;
   SmallVector<int64_t, 2> strides;
   if (failed(getStridesAndOffset(memrefType, strides, offset)))
     return llvm::None;
-  if (strides[0] == ShapedType::kDynamicStrideOrOffset)
+  int64_t stride = strides[strides.size() - 2];
+  if (stride == ShapedType::kDynamicStrideOrOffset)
     return llvm::None;
-  return strides[0];
+  return stride;
 }
 
 // Return true if the transfer op can be converted to a MMA matrix load.

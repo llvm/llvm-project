@@ -276,6 +276,9 @@ private:
               FormatStyle::SFS_InlineOnly) {
             // Just checking TheLine->Level != 0 is not enough, because it
             // provokes treating functions inside indented namespaces as short.
+            if (Style.isJavaScript() && (*I)->Last->is(TT_FunctionLBrace))
+              return true;
+
             if ((*I)->Level != 0) {
               if (I == B)
                 return false;
@@ -288,23 +291,10 @@ private:
                   break;
 
               // Check if the found line starts a record.
-              auto *RecordTok = (*J)->First;
-              while (RecordTok) {
-                // TODO: Refactor to isRecord(RecordTok).
-                if (RecordTok->isOneOf(tok::kw_class, tok::kw_struct))
-                  return true;
-                if (Style.isCpp() && RecordTok->is(tok::kw_union))
-                  return true;
-                if (Style.isCSharp() && RecordTok->is(Keywords.kw_interface))
-                  return true;
-                if (Style.Language == FormatStyle::LK_Java &&
-                    RecordTok->is(tok::kw_enum))
-                  return true;
-                if (Style.isJavaScript() && RecordTok->is(Keywords.kw_function))
-                  return true;
-
-                RecordTok = RecordTok->Next;
-              }
+              for (const FormatToken *RecordTok = (*J)->Last; RecordTok;
+                   RecordTok = RecordTok->Previous)
+                if (RecordTok->is(tok::l_brace))
+                  return RecordTok->is(TT_RecordLBrace);
 
               return false;
             }

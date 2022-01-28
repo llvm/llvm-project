@@ -1224,7 +1224,6 @@ TEST(Hover, NoHover) {
           )cpp",
       // literals
       "auto x = t^rue;",
-      "auto x = '^A';",
       "auto x = ^(int){42};",
       "auto x = ^42.;",
       "auto x = ^42.0i;",
@@ -1250,6 +1249,12 @@ TEST(Hover, All) {
     const char *const Code;
     const std::function<void(HoverInfo &)> ExpectedBuilder;
   } Cases[] = {
+      {"auto x = [['^A']]; // character literal",
+       [](HoverInfo &HI) {
+         HI.Name = "expression";
+         HI.Type = "char";
+         HI.Value = "65 (0x41)";
+       }},
       {
           R"cpp(// Local variable
             int main() {
@@ -3172,6 +3177,20 @@ TEST(Hover, DisableShowAKA) {
   EXPECT_EQ(H->Type, HoverInfo::PrintedType("m_int"));
 }
 
+TEST(Hover, HideBigInitializers) {
+  Annotations T(R"cpp(
+  #define A(x) x, x, x, x
+  #define B(x) A(A(A(A(x))))
+  int a^rr[] = {B(0)};
+  )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+
+  ASSERT_TRUE(H);
+  EXPECT_EQ(H->Definition, "int arr[]");
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

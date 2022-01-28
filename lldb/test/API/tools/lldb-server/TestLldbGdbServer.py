@@ -28,6 +28,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_thread_suffix_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
@@ -41,6 +43,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.expect_gdbremote_sequence()
 
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_list_threads_in_stop_reply_supported(self):
         server = self.connect_to_debug_monitor()
         self.assertIsNotNone(server)
@@ -52,6 +56,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             True)
         self.expect_gdbremote_sequence()
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_c_packet_works(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
@@ -63,6 +69,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.expect_gdbremote_sequence()
 
     @skipIfWindows # No pty support to test any inferior output
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_inferior_print_exit(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior(
@@ -76,6 +84,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         context = self.expect_gdbremote_sequence()
         self.assertIsNotNone(context)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_first_launch_stop_reply_thread_matches_first_qC(self):
         self.build()
         procs = self.prep_debug_monitor_and_inferior()
@@ -91,6 +101,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         context = self.expect_gdbremote_sequence()
         self.assertEqual(context.get("thread_id_QC"), context.get("thread_id_?"))
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_attach_commandline_continue_app_exits(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -116,6 +128,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             lldbgdbserverutils.process_is_running(
                 procs["inferior"].pid, False))
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qRegisterInfo_returns_one_valid_result(self):
         self.build()
         self.prep_debug_monitor_and_inferior()
@@ -133,6 +147,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assert_valid_reg_info(
             lldbgdbserverutils.parse_reg_info_response(reg_info_packet))
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qRegisterInfo_returns_all_valid_results(self):
         self.build()
         self.prep_debug_monitor_and_inferior()
@@ -146,6 +162,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         for reg_info in self.parse_register_info_packets(context):
             self.assert_valid_reg_info(reg_info)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qRegisterInfo_contains_required_generics_debugserver(self):
         self.build()
         self.prep_debug_monitor_and_inferior()
@@ -175,6 +193,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Ensure we have a flags register.
         self.assertIn('flags', generic_regs)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qRegisterInfo_contains_at_least_one_register_set(self):
         self.build()
         self.prep_debug_monitor_and_inferior()
@@ -215,6 +235,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @expectedFailureAll(oslist=["windows"]) # no avx for now.
     @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qRegisterInfo_contains_avx_registers(self):
         self.build()
         self.prep_debug_monitor_and_inferior()
@@ -249,12 +271,16 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # We should have exactly one thread.
         self.assertEqual(len(threads), 1)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qThreadInfo_contains_thread_launch(self):
         self.build()
         self.set_inferior_startup_launch()
         self.qThreadInfo_contains_thread()
 
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qThreadInfo_contains_thread_attach(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -288,17 +314,23 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Those two should be the same.
         self.assertEqual(threads[0], QC_thread_id)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qThreadInfo_matches_qC_launch(self):
         self.build()
         self.set_inferior_startup_launch()
         self.qThreadInfo_matches_qC()
 
     @expectedFailureAll(oslist=["windows"]) # expect one more thread stopped
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qThreadInfo_matches_qC_attach(self):
         self.build()
         self.set_inferior_startup_attach()
         self.qThreadInfo_matches_qC()
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_p_returns_correct_data_size_for_each_qRegisterInfo_launch(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -392,6 +424,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @expectedFailureAll(oslist=["windows"]) # expect 4 threads
     @skipIf(compiler="clang", compiler_version=['<', '11.0'])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_Hg_switches_to_3_threads_launch(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -399,6 +433,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @expectedFailureAll(oslist=["windows"]) # expecting one more thread
     @skipIf(compiler="clang", compiler_version=['<', '11.0'])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_Hg_switches_to_3_threads_attach(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -407,6 +443,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @expectedFailureAll(oslist=["windows"]) # expect 4 threads
     @add_test_categories(["llgs"])
     @skipIf(compiler="clang", compiler_version=['<', '11.0'])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_Hg_switches_to_3_threads_attach_pass_correct_pid(self):
         self.build()
         self.set_inferior_startup_attach()
@@ -437,6 +475,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_Hg_fails_on_another_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -444,6 +484,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_Hg_fails_on_zero_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -451,6 +493,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @expectedFailureAll(oslist=["windows"])
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -571,6 +615,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     @skipIfWindows # no SIGSEGV support
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48419")
     @expectedFailureNetBSD
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_Hc_then_Csignal_signals_correct_thread_launch(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -584,6 +630,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                 lldbutil.get_signal_number('SIGSEGV'))
 
     @skipIfWindows # No pty support to test any inferior output
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_m_packet_reads_memory(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -638,6 +686,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         read_contents = seven.unhexlify(context.get("read_contents"))
         self.assertEqual(read_contents, MEMORY_CONTENTS)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qMemoryRegionInfo_is_supported(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -652,6 +702,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.expect_gdbremote_sequence()
 
     @skipIfWindows # No pty support to test any inferior output
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qMemoryRegionInfo_reports_code_address_as_executable(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -704,6 +756,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assert_address_within_memory_region(code_address, mem_region_dict)
 
     @skipIfWindows # No pty support to test any inferior output
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qMemoryRegionInfo_reports_stack_address_as_rw(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -757,6 +811,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             stack_address, mem_region_dict)
 
     @skipIfWindows # No pty support to test any inferior output
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qMemoryRegionInfo_reports_heap_address_as_rw(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -941,6 +997,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertIsNotNone(context)
 
     @skipIfWindows # No pty support to test any inferior output
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_software_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
@@ -952,6 +1010,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @skipUnlessPlatform(oslist=['linux'])
     @skipIf(archs=no_match(['arm', 'aarch64']))
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_hardware_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
@@ -976,17 +1036,23 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         # Retrieve the qSupported features.
         return self.parse_qSupported_response(context)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_returns_known_stub_features(self):
         supported_dict = self.get_qSupported_dict()
         self.assertIsNotNone(supported_dict)
         self.assertTrue(len(supported_dict) > 0)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<','3'])
     def test_qSupported_auvx(self):
         expected = ('+' if lldbplatformutil.getPlatform()
                     in ["freebsd", "linux", "netbsd"] else '-')
         supported_dict = self.get_qSupported_dict()
         self.assertEqual(supported_dict.get('qXfer:auxv:read', '-'), expected)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_libraries_svr4(self):
         expected = ('+' if lldbplatformutil.getPlatform()
                     in ["freebsd", "linux", "netbsd"] else '-')
@@ -994,6 +1060,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(supported_dict.get('qXfer:libraries-svr4:read', '-'),
                          expected)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_siginfo_read(self):
         expected = ('+' if lldbplatformutil.getPlatform()
                     in ["freebsd", "linux"] else '-')
@@ -1001,6 +1069,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(supported_dict.get('qXfer:siginfo:read', '-'),
                          expected)
 
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_QPassSignals(self):
         expected = ('+' if lldbplatformutil.getPlatform()
                     in ["freebsd", "linux", "netbsd"] else '-')
@@ -1008,6 +1078,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(supported_dict.get('QPassSignals', '-'), expected)
 
     @add_test_categories(["fork"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_fork_events(self):
         supported_dict = (
             self.get_qSupported_dict(['multiprocess+', 'fork-events+']))
@@ -1016,6 +1088,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
 
     @add_test_categories(["fork"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_fork_events_without_multiprocess(self):
         supported_dict = (
             self.get_qSupported_dict(['fork-events+']))
@@ -1024,6 +1098,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
 
     @add_test_categories(["fork"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_vfork_events(self):
         supported_dict = (
             self.get_qSupported_dict(['multiprocess+', 'vfork-events+']))
@@ -1032,6 +1108,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(supported_dict.get('vfork-events', '-'), '+')
 
     @add_test_categories(["fork"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_vfork_events_without_multiprocess(self):
         supported_dict = (
             self.get_qSupported_dict(['vfork-events+']))
@@ -1042,12 +1120,16 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     # We need to be able to self.runCmd to get cpuinfo,
     # which is not possible when using a remote platform.
     @skipIfRemote
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qSupported_memory_tagging(self):
         supported_dict = self.get_qSupported_dict()
         self.assertEqual(supported_dict.get("memory-tagging", '-'),
                          '+' if self.isAArch64MTE() else '-')
 
     @skipIfWindows # No pty support to test any inferior output
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_written_M_content_reads_back_correctly(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -1113,6 +1195,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     # Note: as of this moment, a hefty number of the GPR writes are failing with E32 (everything except rax-rdx, rdi, rsi, rbp).
     # Come back to this.  I have the test rigged to verify that at least some
     # of the bit-flip writes work.
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_P_writes_all_gpr_registers(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -1150,6 +1234,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
     # Note: as of this moment, a hefty number of the GPR writes are failing
     # with E32 (everything except rax-rdx, rdi, rsi, rbp).
     @skipIfWindows
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_P_and_p_thread_suffix_work(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -1263,6 +1349,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_launch_via_A(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1288,6 +1376,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<','3'])
     def test_launch_via_vRun(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1309,6 +1399,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
                          b'arg1\r\narg2\r\narg3\r\n')
 
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_launch_via_vRun_no_args(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1328,6 +1420,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_QEnvironment(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1356,6 +1450,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @skipIfWindows # No pty support to test any inferior output
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_QEnvironmentHexEncoded(self):
         self.build()
         exe_path = self.getBuildArtifact("a.out")
@@ -1385,6 +1481,8 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @skipUnlessPlatform(oslist=["freebsd", "linux"])
     @add_test_categories(["llgs"])
+    @skipIf(compiler="clang", compiler_version=['<', '14.0'])
+    @skipIf(dwarf_version=['<', '3'])
     def test_qXfer_siginfo_read(self):
         self.build()
         self.set_inferior_startup_launch()

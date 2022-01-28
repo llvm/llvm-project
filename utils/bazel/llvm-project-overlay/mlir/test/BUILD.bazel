@@ -389,8 +389,8 @@ cc_library(
         "//llvm:Support",
         "//mlir:Affine",
         "//mlir:AffineBufferizableOpInterfaceImpl",
-        "//mlir:ArithBufferizableOpInterfaceImpl",
         "//mlir:ArithmeticDialect",
+        "//mlir:ArithmeticTransforms",
         "//mlir:BufferizationDialect",
         "//mlir:BufferizationTransforms",
         "//mlir:GPUDialect",
@@ -427,6 +427,20 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:VectorOps",
         "//mlir:X86Vector",
+    ],
+)
+
+cc_library(
+    name = "TestMemRef",
+    srcs = glob(["lib/Dialect/MemRef/*.cpp"]),
+    defines = ["MLIR_CUDA_CONVERSIONS_ENABLED"],
+    includes = ["lib/Dialect/Test"],
+    deps = [
+        ":TestDialect",
+        "//mlir:Affine",
+        "//mlir:MemRefTransforms",
+        "//mlir:Pass",
+        "//mlir:Transforms",
     ],
 )
 

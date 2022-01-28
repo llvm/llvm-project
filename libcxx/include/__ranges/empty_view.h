@@ -10,6 +10,7 @@
 #define _LIBCPP___RANGES_EMPTY_VIEW_H
 
 #include <__config>
+#include <__ranges/enable_borrowed_range.h>
 #include <__ranges/view_interface.h>
 #include <type_traits>
 
@@ -32,6 +33,9 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI static constexpr size_t size() noexcept { return 0; }
     _LIBCPP_HIDE_FROM_ABI static constexpr bool empty() noexcept { return true; }
   };
+
+  template<class _Tp>
+  inline constexpr bool enable_borrowed_range<empty_view<_Tp>> = true;
 } // namespace ranges
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

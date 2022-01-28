@@ -1,0 +1,12 @@
+add_entrypoint_object(
+  open
+  SRCS
+    open.cpp
+  HDRS
+    ../open.h
+  DEPENDS
+    libc.include.errno
+    libc.include.fcntl
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.__errno_location
+)

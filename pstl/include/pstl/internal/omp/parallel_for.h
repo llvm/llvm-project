@@ -42,7 +42,7 @@ __parallel_for_body(_Index __first, _Index __last, _Fp __f)
 
 template <class _ExecutionPolicy, class _Index, class _Fp>
 void
-__parallel_for(_ExecutionPolicy&&, _Index __first, _Index __last, _Fp __f)
+__parallel_for(__pstl::__internal::__openmp_backend_tag, _ExecutionPolicy&&, _Index __first, _Index __last, _Fp __f)
 {
     if (omp_in_parallel())
     {

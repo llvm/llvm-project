@@ -667,6 +667,90 @@ define <2 x double> @v2f64_select_one(<2 x double> %a, <2 x double> %b, <2 x dou
   ret <2 x double> %s.1
 }
 
+define <4 x half> @v4f16_select_une(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; COST-LABEL: v4f16_select_une
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %cmp.1 = fcmp une <4 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction:   %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
+; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp une <4 x half> %a, %b
+; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
+;
+; CODE-LABEL: v4f16_select_une
+; CODE:       bb.0
+; CODE-NEXT:    fcmeq v{{.+}}.4h, v{{.+}}.4h, v{{.+}}.4h
+; CODE-NEXT:    bit   v{{.+}}.8b, v{{.+}}.8b, v{{.+}}.8b
+; CODE-NEXT:    ret
+;
+  %cmp.1 = fcmp une <4 x half> %a, %b
+  %s.1 = select <4 x i1> %cmp.1, <4 x half> %a, <4 x half> %c
+  ret <4 x half> %s.1
+}
+
+define <8 x half> @v8f16_select_une(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; COST-LABEL: v8f16_select_une
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 29 for instruction:   %cmp.1 = fcmp une <8 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found an estimated cost of 29 for instruction:   %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
+; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp une <8 x half> %a, %b
+; COST-FULLFP16-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
+;
+; CODE-LABEL: v8f16_select_une
+; CODE:       bb.0
+; CODE-NEXT:    fcmeq v{{.+}}.8h, v{{.+}}.8h, v{{.+}}.8h
+; CODE-NEXT:    bit   v{{.+}}.16b, v{{.+}}.16b, v{{.+}}.16b
+; CODE-NEXT:    ret
+;
+  %cmp.1 = fcmp une <8 x half> %a, %b
+  %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
+  ret <8 x half> %s.1
+}
+
+define <2 x float> @v2f32_select_une(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
+; COST-LABEL: v2f32_select_une
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp une <2 x float> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 5 for instruction:  %s.1 = select <2 x i1> %cmp.1, <2 x float> %a, <2 x float> %c
+;
+; CODE-LABEL: v2f32_select_une
+; CODE:       bb.0
+; CODE-NEXT:    fcmeq v{{.+}}.2s, v{{.+}}.2s, v{{.+}}.2s
+; CODE-NEXT:    bit   v{{.+}}.8b, v{{.+}}.8b, v{{.+}}.8b
+; CODE-NEXT:    ret
+;
+  %cmp.1 = fcmp une <2 x float> %a, %b
+  %s.1 = select <2 x i1> %cmp.1, <2 x float> %a, <2 x float> %c
+  ret <2 x float> %s.1
+}
+
+define <4 x float> @v4f32_select_une(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; COST-LABEL: v4f32_select_une
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp une <4 x float> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %s.1 = select <4 x i1> %cmp.1, <4 x float> %a, <4 x float> %c
+;
+; CODE-LABEL: v4f32_select_une
+; CODE:       bb.0
+; CODE-NEXT:    fcmeq v{{.+}}.4s, v{{.+}}.4s, v{{.+}}.4s
+; CODE-NEXT:    bit   v{{.+}}.16b, v{{.+}}.16b, v{{.+}}.16b
+; CODE-NEXT:    ret
+;
+  %cmp.1 = fcmp une <4 x float> %a, %b
+  %s.1 = select <4 x i1> %cmp.1, <4 x float> %a, <4 x float> %c
+  ret <4 x float> %s.1
+}
+
+define <2 x double> @v2f64_select_une(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
+; COST-LABEL: v2f64_select_une
+; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:  %cmp.1 = fcmp une <2 x double> %a, %b
+; COST-NEXT:  Cost Model: Found an estimated cost of 5 for instruction:  %s.1 = select <2 x i1> %cmp.1, <2 x double> %a, <2 x double> %c
+;
+; CODE-LABEL: v2f64_select_une
+; CODE:       bb.0
+; CODE-NEXT:    fcmeq v{{.+}}.2d, v{{.+}}.2d, v{{.+}}.2d
+; CODE-NEXT:    bit   v{{.+}}.16b, v{{.+}}.16b, v{{.+}}.16b
+; CODE-NEXT:    ret
+;
+  %cmp.1 = fcmp une <2 x double> %a, %b
+  %s.1 = select <2 x i1> %cmp.1, <2 x double> %a, <2 x double> %c
+  ret <2 x double> %s.1
+}
+
 define <2 x float> @v2f32_select_ord(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; COST-LABEL: v2f32_select_ord
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = fcmp ord <2 x float> %a, %b

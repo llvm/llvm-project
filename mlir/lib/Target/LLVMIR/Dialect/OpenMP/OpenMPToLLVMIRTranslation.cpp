@@ -930,9 +930,13 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
                                                     llvm::DebugLoc(diLoc));
   llvm::AtomicOrdering AO = convertAtomicOrdering(readOp.memory_order());
   llvm::Value *x = moduleTranslation.lookupValue(readOp.x());
+  Type xTy = readOp.x().getType().cast<omp::PointerLikeType>().getElementType();
   llvm::Value *v = moduleTranslation.lookupValue(readOp.v());
-  llvm::OpenMPIRBuilder::AtomicOpValue V = {v, false, false};
-  llvm::OpenMPIRBuilder::AtomicOpValue X = {x, false, false};
+  Type vTy = readOp.v().getType().cast<omp::PointerLikeType>().getElementType();
+  llvm::OpenMPIRBuilder::AtomicOpValue V = {
+      v, moduleTranslation.convertType(vTy), false, false};
+  llvm::OpenMPIRBuilder::AtomicOpValue X = {
+      x, moduleTranslation.convertType(xTy), false, false};
   builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO));
   return success();
 }
@@ -954,7 +958,8 @@ convertOmpAtomicWrite(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::AtomicOrdering ao = convertAtomicOrdering(writeOp.memory_order());
   llvm::Value *expr = moduleTranslation.lookupValue(writeOp.value());
   llvm::Value *dest = moduleTranslation.lookupValue(writeOp.address());
-  llvm::OpenMPIRBuilder::AtomicOpValue x = {dest, /*isSigned=*/false,
+  llvm::Type *ty = moduleTranslation.convertType(writeOp.value().getType());
+  llvm::OpenMPIRBuilder::AtomicOpValue x = {dest, ty, /*isSigned=*/false,
                                             /*isVolatile=*/false};
   builder.restoreIP(ompBuilder->createAtomicWrite(ompLoc, x, expr, ao));
   return success();

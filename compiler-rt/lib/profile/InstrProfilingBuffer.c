@@ -65,6 +65,8 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
 }
 
 COMPILER_RT_VISIBILITY size_t __llvm_profile_counter_entry_size(void) {
+  if (__llvm_profile_get_version() & VARIANT_MASK_BYTE_COVERAGE)
+    return sizeof(uint8_t);
   return sizeof(uint64_t);
 }
 

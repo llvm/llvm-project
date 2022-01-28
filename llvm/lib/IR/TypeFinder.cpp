@@ -48,6 +48,10 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
       incorporateValue(Aliasee);
   }
 
+  // Get types from ifuncs.
+  for (const auto &GI : M.ifuncs())
+    incorporateType(GI.getValueType());
+
   // Get types from functions.
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDForInst;
   for (const Function &FI : M) {

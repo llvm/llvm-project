@@ -767,21 +767,22 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     }
 
     if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.sret")) {
-      auto argTy = mlirArg.getType();
-      if (!argTy.isa<LLVM::LLVMPointerType>())
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMPointerType>();
+      if (!argTy)
         return func.emitError(
             "llvm.sret attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext()).addStructRetAttr(
-          llvmArg.getType()->getPointerElementType()));
+      llvmArg.addAttrs(
+          llvm::AttrBuilder(llvmArg.getContext())
+              .addStructRetAttr(convertType(argTy.getElementType())));
     }
 
     if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.byval")) {
-      auto argTy = mlirArg.getType();
-      if (!argTy.isa<LLVM::LLVMPointerType>())
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMPointerType>();
+      if (!argTy)
         return func.emitError(
             "llvm.byval attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext()).addByValAttr(
-          llvmArg.getType()->getPointerElementType()));
+      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                           .addByValAttr(convertType(argTy.getElementType())));
     }
 
     mapValue(mlirArg, &llvmArg);

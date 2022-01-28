@@ -110,7 +110,7 @@ void test_all_signed_integral_types() {
   test_signed_integral_type<int, CharT>();
   test_signed_integral_type<long, CharT>();
   test_signed_integral_type<long long, CharT>();
-#ifndef _LIBCPP_HAS_NO_INT128
+#ifndef TEST_HAS_NO_INT128
   test_signed_integral_type<__int128_t, CharT>();
 #endif
 }
