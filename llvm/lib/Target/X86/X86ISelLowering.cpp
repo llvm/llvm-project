@@ -44524,26 +44524,29 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
   if (IsAllOf && Subtarget.hasSSE41()) {
     MVT TestVT = VecVT.is128BitVector() ? MVT::v2i64 : MVT::v4i64;
     SDValue BC = peekThroughBitcasts(Vec);
-    if (BC.getOpcode() == X86ISD::PCMPEQ) {
-      SDValue V = DAG.getNode(ISD::SUB, SDLoc(BC), BC.getValueType(),
-                              BC.getOperand(0), BC.getOperand(1));
-      V = DAG.getBitcast(TestVT, V);
-      return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
-    }
-    // Check for 256-bit split vector cases.
-    if (BC.getOpcode() == ISD::AND &&
-        BC.getOperand(0).getOpcode() == X86ISD::PCMPEQ &&
-        BC.getOperand(1).getOpcode() == X86ISD::PCMPEQ) {
-      SDValue LHS = BC.getOperand(0);
-      SDValue RHS = BC.getOperand(1);
-      LHS = DAG.getNode(ISD::SUB, SDLoc(LHS), LHS.getValueType(),
-                        LHS.getOperand(0), LHS.getOperand(1));
-      RHS = DAG.getNode(ISD::SUB, SDLoc(RHS), RHS.getValueType(),
-                        RHS.getOperand(0), RHS.getOperand(1));
-      LHS = DAG.getBitcast(TestVT, LHS);
-      RHS = DAG.getBitcast(TestVT, RHS);
-      SDValue V = DAG.getNode(ISD::OR, SDLoc(EFLAGS), TestVT, LHS, RHS);
-      return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
+    // Ensure MOVMSK was testing every signbit of BC.
+    if (BC.getValueType().getVectorNumElements() <= NumElts) {
+      if (BC.getOpcode() == X86ISD::PCMPEQ) {
+        SDValue V = DAG.getNode(ISD::SUB, SDLoc(BC), BC.getValueType(),
+                                BC.getOperand(0), BC.getOperand(1));
+        V = DAG.getBitcast(TestVT, V);
+        return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
+      }
+      // Check for 256-bit split vector cases.
+      if (BC.getOpcode() == ISD::AND &&
+          BC.getOperand(0).getOpcode() == X86ISD::PCMPEQ &&
+          BC.getOperand(1).getOpcode() == X86ISD::PCMPEQ) {
+        SDValue LHS = BC.getOperand(0);
+        SDValue RHS = BC.getOperand(1);
+        LHS = DAG.getNode(ISD::SUB, SDLoc(LHS), LHS.getValueType(),
+                          LHS.getOperand(0), LHS.getOperand(1));
+        RHS = DAG.getNode(ISD::SUB, SDLoc(RHS), RHS.getValueType(),
+                          RHS.getOperand(0), RHS.getOperand(1));
+        LHS = DAG.getBitcast(TestVT, LHS);
+        RHS = DAG.getBitcast(TestVT, RHS);
+        SDValue V = DAG.getNode(ISD::OR, SDLoc(EFLAGS), TestVT, LHS, RHS);
+        return DAG.getNode(X86ISD::PTEST, SDLoc(EFLAGS), MVT::i32, V, V);
+      }
     }
   }
 
@@ -44577,7 +44580,8 @@ static SDValue combineSetCCMOVMSK(SDValue EFLAGS, X86::CondCode &CC,
       if (SDValue Src = getSplitVectorSrc(VecOp0, VecOp1, true)) {
         SDLoc DL(EFLAGS);
         SDValue Result = peekThroughBitcasts(Src);
-        if (IsAllOf && Result.getOpcode() == X86ISD::PCMPEQ) {
+        if (IsAllOf && Result.getOpcode() == X86ISD::PCMPEQ &&
+            Result.getValueType().getVectorNumElements() <= NumElts) {
           SDValue V = DAG.getNode(ISD::SUB, DL, Result.getValueType(),
                                   Result.getOperand(0), Result.getOperand(1));
           V = DAG.getBitcast(MVT::v4i64, V);
