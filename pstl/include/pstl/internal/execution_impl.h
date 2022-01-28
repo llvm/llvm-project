@@ -23,76 +23,76 @@ namespace __pstl
 namespace __internal
 {
 
-using namespace __pstl::execution;
+template <typename _IteratorTag, typename... _IteratorTypes>
+using __are_iterators_of = std::conjunction<
+    std::is_base_of<_IteratorTag, typename std::iterator_traits<std::decay_t<_IteratorTypes>>::iterator_category>...>;
 
-template <typename _IteratorType>
-struct __is_random_access_iterator
-    : std::is_same<typename std::iterator_traits<_IteratorType>::iterator_category,
-                   std::random_access_iterator_tag>
+template <typename... _IteratorTypes>
+using __are_random_access_iterators = __are_iterators_of<std::random_access_iterator_tag, _IteratorTypes...>;
+
+struct __serial_backend_tag
+{
+};
+struct __tbb_backend_tag
+{
+};
+struct __openmp_backend_tag
 {
 };
 
-template <typename Policy>
-struct __policy_traits
+#if defined(_PSTL_PAR_BACKEND_TBB)
+using __par_backend_tag = __tbb_backend_tag;
+#elif defined(_PSTL_PAR_BACKEND_OPENMP)
+using __par_backend_tag = __openmp_backend_tag;
+#elif defined(_PSTL_PAR_BACKEND_SERIAL)
+using __par_backend_tag = __serial_backend_tag;
+#else
+#    error "A parallel backend must be specified";
+#endif
+
+template <class _IsVector>
+struct __serial_tag
 {
+    using __is_vector = _IsVector;
 };
 
-template <>
-struct __policy_traits<sequenced_policy>
+template <class _IsVector>
+struct __parallel_tag
 {
-    typedef std::false_type __allow_parallel;
-    typedef std::false_type __allow_unsequenced;
-    typedef std::false_type __allow_vector;
+    using __is_vector = _IsVector;
+    // backend tag can be change depending on
+    // TBB availability in the environment
+    using __backend_tag = __par_backend_tag;
 };
 
-template <>
-struct __policy_traits<unsequenced_policy>
-{
-    typedef std::false_type __allow_parallel;
-    typedef std::true_type __allow_unsequenced;
-    typedef std::true_type __allow_vector;
-};
+template <class _IsVector, class... _IteratorTypes>
+using __tag_type = typename std::conditional<__internal::__are_random_access_iterators<_IteratorTypes...>::value,
+                                             __parallel_tag<_IsVector>, __serial_tag<_IsVector>>::type;
 
-template <>
-struct __policy_traits<parallel_policy>
-{
-    typedef std::true_type __allow_parallel;
-    typedef std::false_type __allow_unsequenced;
-    typedef std::false_type __allow_vector;
-};
-
-template <>
-struct __policy_traits<parallel_unsequenced_policy>
-{
-    typedef std::true_type __allow_parallel;
-    typedef std::true_type __allow_unsequenced;
-    typedef std::true_type __allow_vector;
-};
-
-template <typename _ExecutionPolicy>
-using __allow_vector =
-    typename __internal::__policy_traits<typename std::decay<_ExecutionPolicy>::type>::__allow_vector;
-
-template <typename _ExecutionPolicy>
-using __allow_unsequenced =
-    typename __internal::__policy_traits<typename std::decay<_ExecutionPolicy>::type>::__allow_unsequenced;
-
-template <typename _ExecutionPolicy>
-using __allow_parallel =
-    typename __internal::__policy_traits<typename std::decay<_ExecutionPolicy>::type>::__allow_parallel;
-
-template <typename _ExecutionPolicy, typename... _IteratorTypes>
-typename std::conjunction<__allow_vector<_ExecutionPolicy>,
-                          __is_random_access_iterator<_IteratorTypes>...>::type
-__is_vectorization_preferred(_ExecutionPolicy&&)
+template <class... _IteratorTypes>
+__serial_tag</*_IsVector = */ std::false_type>
+__select_backend(__pstl::execution::sequenced_policy, _IteratorTypes&&...)
 {
     return {};
 }
 
-template <typename _ExecutionPolicy, typename... _IteratorTypes>
-typename std::conjunction<__allow_parallel<_ExecutionPolicy>,
-                          __is_random_access_iterator<_IteratorTypes>...>::type
-__is_parallelization_preferred(_ExecutionPolicy&&)
+template <class... _IteratorTypes>
+__serial_tag<__internal::__are_random_access_iterators<_IteratorTypes...>>
+__select_backend(__pstl::execution::unsequenced_policy, _IteratorTypes&&...)
+{
+    return {};
+}
+
+template <class... _IteratorTypes>
+__tag_type</*_IsVector = */ std::false_type, _IteratorTypes...>
+__select_backend(__pstl::execution::parallel_policy, _IteratorTypes&&...)
+{
+    return {};
+}
+
+template <class... _IteratorTypes>
+__tag_type<__internal::__are_random_access_iterators<_IteratorTypes...>, _IteratorTypes...>
+__select_backend(__pstl::execution::parallel_unsequenced_policy, _IteratorTypes&&...)
 {
     return {};
 }
