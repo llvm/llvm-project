@@ -155,8 +155,6 @@ void OmptInterface::target_region_begin() {
   ompt_task_data = ompt_get_task_data_fn();
   ompt_target_task_data = ompt_get_target_task_data_fn();
 
-  *ompt_task_data = ompt_data_none;
-  *ompt_target_task_data = ompt_data_none;
   ompt_target_data = ompt_data_none;
 }
 
