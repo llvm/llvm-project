@@ -605,7 +605,7 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
     var = get_name_from_ir_value_match(match)
     for nameless_value in nameless_values:
         if may_clash_with_default_check_prefix_name(nameless_value.check_prefix, var):
-          warn("Change IR value name '%s' or use -prefix-ir-filecheck-name to prevent possible conflict"
+          warn("Change IR value name '%s' or use --prefix-filecheck-ir-name to prevent possible conflict"
             " with scripted FileCheck name." % (var,))
     key = (var, get_check_key_from_ir_value_match(match))
     is_local_def = is_local_def_ir_value_match(match)
