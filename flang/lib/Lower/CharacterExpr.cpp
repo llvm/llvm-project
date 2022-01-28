@@ -9,6 +9,7 @@
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Optimizer/Builder/DoLoopHelper.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 
 //===----------------------------------------------------------------------===//
 // CharacterExprHelper implementation
