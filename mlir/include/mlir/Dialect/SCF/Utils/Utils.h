@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SCF_UTILS_H_
-#define MLIR_DIALECT_SCF_UTILS_H_
+#ifndef MLIR_DIALECT_SCF_UTILS_UTILS_H_
+#define MLIR_DIALECT_SCF_UTILS_UTILS_H_
 
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
@@ -159,4 +159,4 @@ void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
 
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SCF_UTILS_H_
+#endif // MLIR_DIALECT_SCF_UTILS_UTILS_H_

@@ -9,7 +9,7 @@
 #include "PassDetail.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/Utils.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
