@@ -153,12 +153,10 @@ define i32 @movmskps_concat_v4f32(<4 x float> %a0, <4 x float> %a1)  {
 define i32 @movmskps_demanded_concat_v4f32(<4 x float> %a0, <4 x float> %a1)  {
 ; CHECK-LABEL: movmskps_demanded_concat_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vmovmskps %ymm0, %eax
+; CHECK-NEXT:    vmovmskps %xmm0, %eax
 ; CHECK-NEXT:    andl $3, %eax
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %1 = shufflevector <4 x float> %a0, <4 x float> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = tail call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %1)

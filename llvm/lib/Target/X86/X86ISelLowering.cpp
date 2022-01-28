@@ -41043,6 +41043,13 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     if (OriginalDemandedBits.countTrailingZeros() >= NumElts)
       return TLO.CombineTo(Op, TLO.DAG.getConstant(0, SDLoc(Op), VT));
 
+    // See if we only demand bits from the lower 128-bit vector.
+    if (SrcVT.is256BitVector() &&
+        OriginalDemandedBits.getActiveBits() <= (NumElts / 2)) {
+      SDValue NewSrc = extract128BitVector(Src, 0, TLO.DAG, SDLoc(Src));
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc));
+    }
+
     // Only demand the vector elements of the sign bits we need.
     APInt KnownUndef, KnownZero;
     APInt DemandedElts = OriginalDemandedBits.zextOrTrunc(NumElts);
