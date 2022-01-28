@@ -96,6 +96,12 @@ TEST(StringExtrasTest, ToAndFromHex) {
   EXPECT_FALSE(tryGetFromHex(InvalidStr, IgnoredOutput));
 }
 
+TEST(StringExtrasTest, UINT64ToHex) {
+  EXPECT_EQ(utohexstr(0xA0u), "A0");
+  EXPECT_EQ(utohexstr(0xA0u, false, 4), "00A0");
+  EXPECT_EQ(utohexstr(0xA0u, false, 8), "000000A0");
+}
+
 TEST(StringExtrasTest, to_float) {
   float F;
   EXPECT_TRUE(to_float("4.7", F));

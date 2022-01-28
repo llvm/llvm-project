@@ -148,13 +148,14 @@ inline char toUpper(char x) {
   return x;
 }
 
-inline std::string utohexstr(uint64_t X, bool LowerCase = false) {
+inline std::string utohexstr(uint64_t X, bool LowerCase = false,
+                             unsigned Width = 0) {
   char Buffer[17];
   char *BufPtr = std::end(Buffer);
 
   if (X == 0) *--BufPtr = '0';
 
-  while (X) {
+  for (unsigned i = 0; Width ? (i < Width) : X; ++i) {
     unsigned char Mod = static_cast<unsigned char>(X) & 15;
     *--BufPtr = hexdigit(Mod, LowerCase);
     X >>= 4;
