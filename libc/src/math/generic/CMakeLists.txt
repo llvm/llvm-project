@@ -859,8 +859,10 @@ add_entrypoint_object(
     ../sqrt.h
   DEPENDS
     libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
-    -O2
+    -O3
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(
@@ -871,8 +873,10 @@ add_entrypoint_object(
     ../sqrtf.h
   DEPENDS
     libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
-    -O2
+    -O3
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(
@@ -883,8 +887,10 @@ add_entrypoint_object(
     ../sqrtl.h
   DEPENDS
     libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
-    -O2
+    -O3
+    -Wno-c++17-extensions
 )
 
 add_entrypoint_object(

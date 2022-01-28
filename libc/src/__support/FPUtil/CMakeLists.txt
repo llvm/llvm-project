@@ -22,3 +22,14 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.CPP.standalone_cpp
 )
+
+add_header_library(
+  sqrt
+  HDRS
+    sqrt.h
+  DEPENDS
+    .fputil
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_subdirectory(generic)
