@@ -638,8 +638,8 @@ def _DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>,
     Flags<[NoXarchOption, CoreOption]>;
 def A : JoinedOrSeparate<["-"], "A">, Flags<[RenderJoined]>, Group<gfortran_Group>;
 def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<prefix>">,
-    HelpText<"Search $prefix/$triple-$file and $prefix$file for executables, libraries, "
-    "includes, and data files used by the compiler. $prefix may or may not be a directory">;
+    HelpText<"Search $prefix$file for executables, libraries, and data files. "
+    "If $prefix is a directory, search $prefix/$file">;
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
   HelpText<"Search for GCC installation in the specified directory on targets which commonly use GCC. "
   "The directory usually contains 'lib{,32,64}/gcc{,-cross}/$triple' and 'include'. If specified, "
