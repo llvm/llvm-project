@@ -1181,36 +1181,6 @@ bool canRenameComdatFunc(const Function &F, bool CheckAddressTaken) {
   return true;
 }
 
-// Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
-// aware this is an ir_level profile so it can set the version flag.
-GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS,
-                                            bool InstrEntryBBEnabled,
-                                            bool DebugInfoCorrelate,
-                                            bool PGOFunctionEntryCoverage) {
-  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
-  Type *IntTy64 = Type::getInt64Ty(M.getContext());
-  uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
-  if (IsCS)
-    ProfileVersion |= VARIANT_MASK_CSIR_PROF;
-  if (InstrEntryBBEnabled)
-    ProfileVersion |= VARIANT_MASK_INSTR_ENTRY;
-  if (DebugInfoCorrelate)
-    ProfileVersion |= VARIANT_MASK_DBG_CORRELATE;
-  if (PGOFunctionEntryCoverage)
-    ProfileVersion |=
-        VARIANT_MASK_BYTE_COVERAGE | VARIANT_MASK_FUNCTION_ENTRY_ONLY;
-  auto IRLevelVersionVariable = new GlobalVariable(
-      M, IntTy64, true, GlobalValue::WeakAnyLinkage,
-      Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
-  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
-  Triple TT(M.getTargetTriple());
-  if (TT.supportsCOMDAT()) {
-    IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
-    IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
-  }
-  return IRLevelVersionVariable;
-}
-
 // Create the variable for the profile file name.
 void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput) {
   if (InstrProfileOutput.empty())
