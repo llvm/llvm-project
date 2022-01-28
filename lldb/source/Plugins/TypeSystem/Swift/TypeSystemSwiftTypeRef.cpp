@@ -1298,10 +1298,11 @@ CompilerType TypeSystemSwiftTypeRef::GetTypeFromMangledTypename(
 }
 
 TypeSP TypeSystemSwiftTypeRef::GetCachedType(ConstString mangled) {
-  TypeSP type_sp;
-  if (m_swift_type_map.Lookup(mangled.GetCString(), type_sp))
-    return type_sp;
-  return {};
+  return m_swift_type_map.Lookup(mangled.GetCString());
+}
+
+TypeSP TypeSystemSwiftTypeRef::GetCachedType(opaque_compiler_type_t type) {
+  return m_swift_type_map.Lookup(AsMangledName(type));
 }
 
 void TypeSystemSwiftTypeRef::SetCachedType(ConstString mangled,
@@ -1331,12 +1332,8 @@ DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
   return m_dwarf_ast_parser_up.get();
 }
 
-TypeSP TypeSystemSwiftTypeRef::LookupTypeInModule(
-    lldb::opaque_compiler_type_t opaque_type) {
-  // First check if this type has already been parsed from DWARF.
-  if (auto cached = m_swift_type_map.Lookup(AsMangledName(opaque_type)))
-    return cached;
-
+TypeSP
+TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
   auto *M = GetModule();
   if (!M)
     return {};
@@ -2284,7 +2281,34 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
                                    ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
   auto impl = [&]() -> llvm::Optional<uint64_t> {
-    // Bug-for-bug compatibility. See comment in SwiftASTContext::GetBitSize().
+    auto get_static_size = [&](bool cached_only) -> llvm::Optional<uint64_t> {
+      if (IsMeaninglessWithoutDynamicResolution(type))
+        return {};
+
+      // If there is no process, we can still try to get the static size
+      // information out of DWARF. Because it is stored in the Type
+      // object we need to look that up by name again.
+      TypeSP static_type =
+          cached_only ? GetCachedType(type) : FindTypeInModule(type);
+
+      struct SwiftType : public Type {
+        /// Avoid a potential infinite recursion because
+        /// Type::GetByteSize() may call into this function again.
+        llvm::Optional<uint64_t> GetStaticByteSize() {
+          if (m_byte_size_has_value)
+            return m_byte_size;
+          return {};
+        }
+      };
+      if (static_type)
+        if (auto byte_size = reinterpret_cast<SwiftType *>(static_type.get())
+                                 ->GetStaticByteSize())
+          return *byte_size * 8;
+      return {};
+    };
+
+    // Bug-for-bug compatibility. See comment in
+    // SwiftASTContext::GetBitSize().
     if (IsFunctionType(type))
       return GetPointerByteSize() * 8;
 
@@ -2297,15 +2321,15 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
       return clang_type.GetBitSize(exe_scope);
     }
     if (!exe_scope) {
-      LLDB_LOGF(
-          GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
-          "Couldn't compute size of type %s without an execution context.",
-          AsMangledName(type));
+      LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
+                "Couldn't compute size of type %s without an execution "
+                "context.",
+                AsMangledName(type));
       return {};
     }
     // The hot code path is to ask the Swift runtime for the size.
     if (auto *runtime =
-        SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
+            SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
       if (auto result = runtime->GetBitSize({this, type}, exe_scope))
         return result;
       // If this is an expression context, perhaps the type was
@@ -2320,24 +2344,21 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
       return {};
     }
 
-    // If there is no process, we can still try to get the static size
-    // information out of DWARF. Because it is stored in the Type
-    // object we need to look that up by name again.
-    if (TypeSP type_sp = LookupTypeInModule(type)) {
-      struct SwiftType : public Type {
-        /// Avoid a potential infinite recursion because
-        /// Type::GetByteSize() may call into this function again.
-        llvm::Optional<uint64_t> GetStaticByteSize() {
-          if (m_byte_size_has_value)
-            return m_byte_size;
-          return {};
-        }
-      };
-      if (auto byte_size =
-              reinterpret_cast<SwiftType *>(type_sp.get())->GetStaticByteSize())
-        return *byte_size * 8;
-      else return {};
-    }
+    // FIXME: Move this to the top. Currently this causes VALIDATE
+    // errors on resilient types, and FOundation overlay types. These
+    // are most likely bugs in the Swift compiler that need to be
+    // resolved first.
+
+    // If we have already parsed this as an lldb::Type from DWARF,
+    // return its static size.
+    if (auto cached_type_static_size = get_static_size(true))
+      return cached_type_static_size;
+
+    // If we are here, we probably are in a target with no process and
+    // inspect a gloabl variable.  Do an (expensive) search for the
+    // static type in the debug info.
+    if (auto static_size = get_static_size(false))
+      return static_size;
     LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),
               "Couldn't compute size of type %s using static debug info.",
               AsMangledName(type));
@@ -3391,7 +3412,13 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
   // fixed-size types the SwiftASTContext implementation forwards to
   // SwiftLanguageRuntime anyway and for many fixed-size types the
   // fixed layout still returns an incorrect default alignment of 0.
-  //
+
+  // Look up static alignment in the debug info if we have already
+  // parsed this type.
+  if (TypeSP type_sp = GetCachedType(type))
+    if (type_sp->GetLayoutCompilerType().GetOpaqueQualType() != type)
+      return type_sp->GetLayoutCompilerType().GetTypeBitAlign(exe_scope);
+  
   // Clang types can be resolved even without a process.
   if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
     // Swift doesn't know pointers: return the size alignment of the
@@ -3422,7 +3449,7 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
   // If there is no process, we can still try to get the static
   // alignment information out of DWARF. Because it is stored in the
   // Type object we need to look that up by name again.
-  if (TypeSP type_sp = LookupTypeInModule(type))
+  if (TypeSP type_sp = FindTypeInModule(type))
     if (type_sp->GetLayoutCompilerType().GetOpaqueQualType() != type)
       return type_sp->GetLayoutCompilerType().GetTypeBitAlign(exe_scope);
   LLDB_LOGF(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES),

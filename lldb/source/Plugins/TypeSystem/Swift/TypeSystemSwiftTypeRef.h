@@ -247,6 +247,7 @@ public:
 
   // Swift-specific methods.
   lldb::TypeSP GetCachedType(ConstString mangled);
+  lldb::TypeSP GetCachedType(lldb::opaque_compiler_type_t type);
   void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp);
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
@@ -306,7 +307,7 @@ private:
   const char *AsMangledName(lldb::opaque_compiler_type_t type);
 
   /// Lookup a type in the debug info.
-  lldb::TypeSP LookupTypeInModule(lldb::opaque_compiler_type_t type);
+  lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
 
   /// Demangle the mangled name of the canonical type of \p type and
   /// drill into the Global(TypeMangling(Type())).
