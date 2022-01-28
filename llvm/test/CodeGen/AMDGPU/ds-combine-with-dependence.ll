@@ -66,13 +66,15 @@ define amdgpu_kernel void @ds_combine_WAR(float addrspace(1)* %out, float addrsp
 }
 
 
-; The second load depends on the store. We can combine the two loads, and the combined load is
-; at the original place of the second load.
+; The second load depends on the store. We could combine the two loads, putting
+; the combined load at the original place of the second load, but we prefer to
+; leave the first load near the start of the function to hide its latency.
 
 ; GCN-LABEL: {{^}}ds_combine_RAW
 
 ; GCN:      ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
-; GCN-NEXT: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:8 offset1:26
+; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
+; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:104
 define amdgpu_kernel void @ds_combine_RAW(float addrspace(1)* %out, float addrspace(3)* %inptr) {
 
   %base = bitcast float addrspace(3)* %inptr to i8 addrspace(3)*

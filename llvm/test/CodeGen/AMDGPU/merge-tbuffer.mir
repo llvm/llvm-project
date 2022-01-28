@@ -780,8 +780,8 @@ body:             |
 
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_merge_across_swizzle
-# GFX9: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 12, 116, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 123, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+# GFX9-DAG: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 12, 116, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX9-DAG: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 123, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
 name: gfx9_tbuffer_load_merge_across_swizzle
 body:             |
   bb.0.entry:
@@ -1597,8 +1597,8 @@ body:             |
 
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_merge_across_swizzle
-# GFX10: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 12, 22, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 64, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+# GFX10-DAG: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 12, 22, 0, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+# GFX10-DAG: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 64, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
 name: gfx10_tbuffer_load_merge_across_swizzle
 body:             |
   bb.0.entry:
