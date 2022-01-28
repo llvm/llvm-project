@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt < %s -newgvn -S | FileCheck %s
+; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 ; PR1996
 
 %struct.anon = type { i32, i8, i8, i8, i8 }

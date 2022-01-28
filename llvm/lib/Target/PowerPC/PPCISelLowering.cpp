@@ -9093,22 +9093,30 @@ bool llvm::checkConvertToNonDenormSingle(APFloat &ArgAPFloat) {
 
 static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
                              unsigned &Opcode) {
-  const SDNode *InputNode = Op.getOperand(0).getNode();
-  if (!InputNode || !ISD::isUNINDEXEDLoad(InputNode))
-    return false;
-
-  if (!Subtarget.hasVSX())
+  LoadSDNode *InputNode = dyn_cast<LoadSDNode>(Op.getOperand(0));
+  if (!InputNode || !Subtarget.hasVSX() || !ISD::isUNINDEXEDLoad(InputNode))
     return false;
 
   EVT Ty = Op->getValueType(0);
-  if (Ty == MVT::v2f64 || Ty == MVT::v4f32 || Ty == MVT::v4i32 ||
-      Ty == MVT::v8i16 || Ty == MVT::v16i8)
+  // For v2f64, v4f32 and v4i32 types, we require the load to be non-extending
+  // as we cannot handle extending loads for these types.
+  if ((Ty == MVT::v2f64 || Ty == MVT::v4f32 || Ty == MVT::v4i32) &&
+      ISD::isNON_EXTLoad(InputNode))
+    return true;
+
+  EVT MemVT = InputNode->getMemoryVT();
+  // For v8i16 and v16i8 types, extending loads can be handled as long as the
+  // memory VT is the same vector element VT type.
+  // The loads feeding into the v8i16 and v16i8 types will be extending because
+  // scalar i8/i16 are not legal types.
+  if ((Ty == MVT::v8i16 || Ty == MVT::v16i8) && ISD::isEXTLoad(InputNode) &&
+      (MemVT == Ty.getVectorElementType()))
     return true;
 
   if (Ty == MVT::v2i64) {
     // Check the extend type, when the input type is i32, and the output vector
     // type is v2i64.
-    if (cast<LoadSDNode>(Op.getOperand(0))->getMemoryVT() == MVT::i32) {
+    if (MemVT == MVT::i32) {
       if (ISD::isZEXTLoad(InputNode))
         Opcode = PPCISD::ZEXT_LD_SPLAT;
       if (ISD::isSEXTLoad(InputNode))
