@@ -264,6 +264,8 @@ int omp_target_disassociate_ptr(const void *host_ptr, int device_num);
 void *llvm_omp_target_alloc_device(size_t size, int device_num);
 void *llvm_omp_target_alloc_host(size_t size, int device_num);
 void *llvm_omp_target_alloc_shared(size_t size, int device_num);
+void *llvm_omp_target_lock_mem(void *ptr, size_t size, int device_num);
+void llvm_omp_target_unlock_mem(void *ptr, int device_num);
 
 /// Dummy target so we have a symbol for generating host fallback.
 void *llvm_omp_get_dynamic_shared();

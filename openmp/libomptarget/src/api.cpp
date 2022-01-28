@@ -76,6 +76,14 @@ EXTERN void *llvm_omp_target_alloc_multi_devices(size_t size, int num_devices,
   return ptr;
 }
 
+EXTERN void *llvm_omp_target_lock_mem(void *ptr, size_t size, int device_num) {
+  return targetLockExplicit(ptr, size, device_num, __func__);
+}
+
+EXTERN void llvm_omp_target_unlock_mem(void *ptr, int device_num) {
+  targetUnlockExplicit(ptr, device_num, __func__);
+}
+
 EXTERN void *llvm_omp_get_dynamic_shared() { return nullptr; }
 
 EXTERN void omp_target_free(void *device_ptr, int device_num) {

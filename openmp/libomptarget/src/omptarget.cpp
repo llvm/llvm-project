@@ -383,6 +383,59 @@ void *targetAllocExplicit(size_t size, int device_num, int kind,
   return rc;
 }
 
+void *targetLockExplicit(void *ptr, size_t size, int device_num,
+                         const char *name) {
+  TIMESCOPE();
+  DP("Call to %s for device %d locking %zu bytes\n", name, device_num, size);
+
+  if (size <= 0) {
+    DP("Call to %s with non-positive length\n", name);
+    return NULL;
+  }
+
+  void *rc = NULL;
+
+  if (!device_is_ready(device_num)) {
+    DP("%s returns NULL ptr\n", name);
+    return NULL;
+  }
+
+  DeviceTy &Device = *PM->Devices[device_num];
+  if (Device.RTL->data_lock)
+    rc = Device.RTL->data_lock(device_num, ptr, size);
+
+  DP("%s returns device ptr " DPxMOD "\n", name, DPxPTR(rc));
+  return rc;
+}
+
+void targetUnlockExplicit(void *ptr, int device_num, const char *name) {
+  TIMESCOPE();
+  DP("Call to %s for device %d unlocking\n", name, device_num);
+
+  // Don't check device_is_ready as it can initialize the device if needed.
+  // Just check if device_num exists as targetUnlockExplicit can be called
+  // during process exit/free (and it may have been already destroyed) and
+  // targetAllocExplicit will have already checked device_is_ready anyway.
+  PM->RTLsMtx.lock();
+  size_t DevicesSize = PM->Devices.size();
+  PM->RTLsMtx.unlock();
+  if (DevicesSize <= (size_t)device_num) {
+    DP("Device ID  %d does not have a matching RTL\n", device_num);
+    return;
+  }
+
+  if (!PM->Devices[device_num]) {
+    DP("%s returns, device %d not available\n", name, device_num);
+    return;
+  }
+
+  DeviceTy &Device = *PM->Devices[device_num];
+  if (Device.RTL->data_unlock)
+    Device.RTL->data_unlock(device_num, ptr);
+
+  DP("%s returns\n", name);
+}
+
 /// Call the user-defined mapper function followed by the appropriate
 // targetData* function (targetData{Begin,End,Update}).
 int targetDataMapper(ident_t *loc, DeviceTy &Device, void *arg_base, void *arg,

@@ -1248,6 +1248,8 @@ static void *(*kmp_target_alloc_shared)(size_t size, int device);
 static void *(*kmp_target_alloc_device)(size_t size, int device);
 static void *(*kmp_target_alloc_multi_devices)(size_t size, int num_devices,
                                                int device_nums[]);
+static void *(*kmp_target_lock_mem)(void *ptr, size_t size, int device);
+static void *(*kmp_target_unlock_mem)(void *ptr, int device);
 static void *(*kmp_target_free)(void *ptr, int device);
 static bool __kmp_target_mem_available;
 #define KMP_IS_TARGET_MEM_SPACE(MS)                                            \
@@ -1362,6 +1364,8 @@ void __kmp_init_target_mem() {
   *(void **)(&kmp_target_alloc_device) =
       KMP_DLSYM("llvm_omp_target_alloc_device");
   *(void **)(&kmp_target_free) = KMP_DLSYM("omp_target_free");
+  *(void **)(&kmp_target_lock_mem) = KMP_DLSYM("llvm_omp_target_lock_mem");
+  *(void **)(&kmp_target_unlock_mem) = KMP_DLSYM("llvm_omp_target_unlock_mem");
   *(void **)(&kmp_target_alloc_multi_devices) =
       KMP_DLSYM("llvm_omp_target_alloc_multi_devices");
   __kmp_target_mem_available = kmp_target_alloc_host &&
@@ -1432,7 +1436,9 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
     switch (traits[i].key) {
     case omp_atk_sync_hint:
     case omp_atk_access:
+      break;
     case omp_atk_pinned:
+      al->pinned = true;
       break;
     case omp_atk_alignment:
       __kmp_type_convert(traits[i].value, &(al->alignment));
@@ -1591,6 +1597,8 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
     return NULL;
   if (allocator == omp_null_allocator)
     allocator = __kmp_threads[gtid]->th.th_def_allocator;
+  kmp_int32 default_device =
+      __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
 
   al = RCAST(kmp_allocator_t *, allocator);
 
@@ -1606,6 +1614,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
     align = algn; // max of allocator trait, parameter and sizeof(void*)
   desc.size_orig = size;
   desc.size_a = size + sz_desc + align;
+  bool is_pinned = false;
+  if (allocator > kmp_max_mem_alloc)
+    is_pinned = al->pinned;
 
   if (__kmp_memkind_available) {
     if (allocator < kmp_max_mem_alloc) {
@@ -1632,7 +1643,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
         } else if (al->fb == omp_atv_allocator_fb) {
           KMP_ASSERT(al != al->fb_data);
           al = al->fb_data;
-          return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+          ptr = __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+          if (is_pinned && kmp_target_lock_mem)
+            kmp_target_lock_mem(ptr, size, default_device);
+          return ptr;
         } // else ptr == NULL;
       } else {
         // pool has enough space
@@ -1646,7 +1660,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
           } else if (al->fb == omp_atv_allocator_fb) {
             KMP_ASSERT(al != al->fb_data);
             al = al->fb_data;
-            return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+            ptr = __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+            if (is_pinned && kmp_target_lock_mem)
+              kmp_target_lock_mem(ptr, size, default_device);
+            return ptr;
           }
         }
       }
@@ -1662,7 +1679,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
         } else if (al->fb == omp_atv_allocator_fb) {
           KMP_ASSERT(al != al->fb_data);
           al = al->fb_data;
-          return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+          ptr = __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+          if (is_pinned && kmp_target_lock_mem)
+            kmp_target_lock_mem(ptr, size, default_device);
+          return ptr;
         }
       }
     }
@@ -1679,6 +1699,8 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
           ptr = kmp_target_alloc_shared(size, device);
         else // allocator == llvm_omp_target_device_mem_alloc
           ptr = kmp_target_alloc_device(size, device);
+        if (is_pinned && kmp_target_lock_mem)
+          kmp_target_lock_mem(ptr, size, device);
       }
       return ptr;
     }
@@ -1709,6 +1731,8 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
         ptr =
             kmp_target_alloc_multi_devices(size, ms_t->num_devs, ms_t->devids);
       }
+      if (is_pinned && kmp_target_lock_mem)
+        kmp_target_lock_mem(ptr, size, device);
     }
     return ptr;
   } else if (al->pool_size > 0) {
@@ -1726,7 +1750,10 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
       } else if (al->fb == omp_atv_allocator_fb) {
         KMP_ASSERT(al != al->fb_data);
         al = al->fb_data;
-        return __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+        ptr = __kmp_alloc(gtid, algn, size, (omp_allocator_handle_t)al);
+        if (is_pinned && kmp_target_lock_mem)
+          kmp_target_lock_mem(ptr, size, default_device);
+        return ptr;
       } // else ptr == NULL;
     } else {
       // pool has enough space
@@ -1746,6 +1773,9 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   if (ptr == NULL)
     return NULL;
 
+  if (is_pinned && kmp_target_lock_mem)
+    kmp_target_lock_mem(ptr, desc.size_a, default_device);
+
   addr = (kmp_uintptr_t)ptr;
   addr_align = (addr + sz_desc + align - 1) & ~(align - 1);
   addr_descr = addr_align - sz_desc;
@@ -1753,6 +1783,7 @@ void *__kmp_alloc(int gtid, size_t algn, size_t size,
   desc.ptr_alloc = ptr;
   desc.ptr_align = (void *)addr_align;
   desc.allocator = al;
+
   *((kmp_mem_desc_t *)addr_descr) = desc; // save descriptor contents
   KMP_MB();
 
@@ -2051,6 +2082,11 @@ void ___kmp_free(void *ptr KMP_SRC_LOC_DECL) {
   memset(descr.ptr_allocated, 0xEF, descr.size_allocated);
 // Fill memory block with 0xEF, it helps catch using freed memory.
 #endif
+
+  if (kmp_target_unlock_mem) {
+    kmp_int32 default_device = 0;
+    kmp_target_unlock_mem(descr.ptr_allocated, default_device);
+  }
 
 #ifndef LEAK_MEMORY
   KE_TRACE(10, ("   free( %p )\n", descr.ptr_allocated));

@@ -1015,6 +1015,7 @@ typedef struct kmp_allocator_t {
   kmp_allocator_t *fb_data;
   kmp_uint64 pool_size;
   kmp_uint64 pool_used;
+  bool pinned;
 } kmp_allocator_t;
 
 extern omp_memspace_handle_t

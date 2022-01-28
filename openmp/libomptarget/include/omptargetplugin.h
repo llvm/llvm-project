@@ -70,6 +70,11 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t ID,
 void *__tgt_rtl_data_alloc(int32_t ID, int64_t Size, void *HostPtr,
                            int32_t Kind);
 
+// Lock memory pointed at by TgtPtr of Size bytes. Returns locked pointer.
+void *__tgt_rtl_data_lock(int32_t ID, void *TgtPtr, int64_t Size);
+// Unlock memory pointed at by TgtPtr. Returns nothing.
+void __tgt_rtl_data_unlock(int32_t ID, void *TgtPtr);
+
 // Pass the data content to the target device using the target address. In case
 // of success, return zero. Otherwise, return an error code.
 int32_t __tgt_rtl_data_submit(int32_t ID, void *TargetPtr, void *HostPtr,

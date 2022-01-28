@@ -277,6 +277,8 @@ void RTLsTy::LoadRTLs() {
         dlsym(dynlib_handle, "__tgt_rtl_init_async_info");
     *((void **)&R.init_device_info) =
         dlsym(dynlib_handle, "__tgt_rtl_init_device_info");
+    *((void **)&R.data_lock) = dlsym(dynlib_handle, "__tgt_rtl_data_lock");
+    *((void **)&R.data_unlock) = dlsym(dynlib_handle, "__tgt_rtl_data_unlock");
   }
   delete[] libomptarget_dir_name;
 

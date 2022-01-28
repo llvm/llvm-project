@@ -771,6 +771,12 @@ public:
       TargetAllocTy kind = (HostAllocations.find(ptr) == HostAllocations.end())
                                ? TARGET_ALLOC_DEFAULT
                                : TARGET_ALLOC_HOST;
+      hsa_status_t err = HSA_STATUS_SUCCESS;
+
+      err = unlock_memory(ptr);
+      if (err != HSA_STATUS_SUCCESS)
+        DP("Error when unlocking memory\n");
+
       switch (kind) {
       case TARGET_ALLOC_DEFAULT:
       case TARGET_ALLOC_DEVICE: {
@@ -2666,6 +2672,37 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
   return ptr;
 }
 
+void *__tgt_rtl_data_lock(int device_id, void *TgtPtr, int64_t size) {
+  void *ptr = TgtPtr;
+  assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+
+  err = lock_memory(&ptr, size);
+
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error in tgt_rtl_data_lock\n");
+    return nullptr;
+  }
+
+  DP("Tgt lock data %ld bytes, (tgt:%016llx).\n", size,
+     (long long unsigned)(Elf64_Addr)ptr);
+
+  return ptr;
+}
+
+void __tgt_rtl_data_unlock(int device_id, void *TgtPtr) {
+  assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+
+  err = unlock_memory(TgtPtr);
+
+  if (err != HSA_STATUS_SUCCESS)
+    DP("Error in tgt_rtl_data_unlock\n");
+
+  DP("Tgt unlock data (tgt:%016llx).\n",
+     (long long unsigned)(Elf64_Addr)TgtPtr);
+}
+
 int32_t __tgt_rtl_data_submit(int device_id, void *tgt_ptr, void *hst_ptr,
                               int64_t size) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
@@ -2871,6 +2908,45 @@ hsa_status_t host_malloc(void **mem, size_t size) {
 hsa_status_t device_malloc(void **mem, size_t size, int device_id) {
   hsa_amd_memory_pool_t MemoryPool = DeviceInfo.getDeviceMemoryPool(device_id);
   return hsa_amd_memory_pool_allocate(MemoryPool, size, 0, mem);
+}
+
+bool already_locked(void *ptr, hsa_status_t *err_p) {
+  bool already_locked = false;
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+  hsa_amd_pointer_info_t info;
+  info.size = sizeof(hsa_amd_pointer_info_t);
+  err = hsa_amd_pointer_info(ptr, &info, nullptr, nullptr, nullptr);
+
+  if (err != HSA_STATUS_SUCCESS)
+    DP("Error when getting pointer info\n");
+  else
+    already_locked = (info.type == HSA_EXT_POINTER_TYPE_LOCKED);
+
+  if (err_p)
+    *err_p = err;
+  return already_locked;
+}
+
+hsa_status_t lock_memory(void **mem, size_t size) {
+  void *lockedPtr = nullptr;
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+
+  if (already_locked(*mem, &err))
+    return HSA_STATUS_SUCCESS;
+
+  err = hsa_amd_memory_lock(*mem, size, nullptr, 0, (void **)&lockedPtr);
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  *mem = lockedPtr;
+  return err;
+}
+
+hsa_status_t unlock_memory(void *mem) {
+  hsa_status_t err = HSA_STATUS_SUCCESS;
+  if (already_locked(mem, &err))
+    err = hsa_amd_memory_unlock(mem);
+  return err;
 }
 
 hsa_status_t impl_free(void *mem) { return core::Runtime::Memfree(mem); }
