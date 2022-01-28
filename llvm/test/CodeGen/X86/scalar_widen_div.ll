@@ -403,32 +403,29 @@ define void @test_int_div(<3 x i32>* %dest, <3 x i32>* %old, i32 %n) {
 ; CHECK-NEXT:    testl %edx, %edx
 ; CHECK-NEXT:    jle .LBB12_3
 ; CHECK-NEXT:  # %bb.1: # %bb.nph
-; CHECK-NEXT:    movl %edx, %r9d
+; CHECK-NEXT:    movl %edx, %r11d
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB12_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movdqa (%rdi,%rcx), %xmm0
-; CHECK-NEXT:    movdqa (%rsi,%rcx), %xmm1
-; CHECK-NEXT:    pextrd $1, %xmm0, %eax
-; CHECK-NEXT:    pextrd $1, %xmm1, %r8d
+; CHECK-NEXT:    movl 8(%rdi,%rcx), %r8d
+; CHECK-NEXT:    movl (%rdi,%rcx), %r9d
+; CHECK-NEXT:    movl 4(%rdi,%rcx), %eax
 ; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %r8d
-; CHECK-NEXT:    movl %eax, %r8d
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %r10d
+; CHECK-NEXT:    idivl 4(%rsi,%rcx)
+; CHECK-NEXT:    movl %eax, %r10d
+; CHECK-NEXT:    movl %r9d, %eax
 ; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %r10d
-; CHECK-NEXT:    movd %eax, %xmm2
-; CHECK-NEXT:    pinsrd $1, %r8d, %xmm2
-; CHECK-NEXT:    pextrd $2, %xmm0, %eax
-; CHECK-NEXT:    pextrd $2, %xmm1, %r8d
+; CHECK-NEXT:    idivl (%rsi,%rcx)
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    pinsrd $1, %r10d, %xmm0
+; CHECK-NEXT:    movl %r8d, %eax
 ; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %r8d
+; CHECK-NEXT:    idivl 8(%rsi,%rcx)
 ; CHECK-NEXT:    movl %eax, 8(%rdi,%rcx)
-; CHECK-NEXT:    movq %xmm2, (%rdi,%rcx)
+; CHECK-NEXT:    movq %xmm0, (%rdi,%rcx)
 ; CHECK-NEXT:    addq $16, %rcx
-; CHECK-NEXT:    decl %r9d
+; CHECK-NEXT:    decl %r11d
 ; CHECK-NEXT:    jne .LBB12_2
 ; CHECK-NEXT:  .LBB12_3: # %for.end
 ; CHECK-NEXT:    retq
