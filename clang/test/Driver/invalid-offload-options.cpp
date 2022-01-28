@@ -9,7 +9,7 @@
 // RUN:   --hip-path=%S/Inputs/hipspv -nogpuinc -nogpulib %s \
 // RUN: 2>&1 | FileCheck --check-prefix=INVALID-TARGET %s
 
-// INVALID-TARGET: error: Invalid or unsupported offload target: '{{.*}}'
+// INVALID-TARGET: error: invalid or unsupported offload target: '{{.*}}'
 
 // In the future we should be able to specify multiple targets for HIP
 // compilation but currently it is not supported.
@@ -22,7 +22,7 @@
 // RUN:   --hip-path=%S/Inputs/hipspv -nogpuinc -nogpulib %s \
 // RUN: 2>&1 | FileCheck --check-prefix=TOO-MANY-TARGETS %s
 
-// TOO-MANY-TARGETS: error: Only one offload target is supported in HIP.
+// TOO-MANY-TARGETS: error: only one offload target is supported
 
 // RUN: %clang -### -x hip -target x86_64-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload=amdgcn-amd-amdhsa --offload-arch=gfx900 %s \
