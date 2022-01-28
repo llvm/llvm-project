@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsInstrInfo.h"
+#include "MipsMachineFunction.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MipsSubtarget.h"
@@ -21,11 +22,18 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
 
@@ -36,6 +44,20 @@ using namespace llvm;
 
 // Pin the vtable to this file.
 void MipsInstrInfo::anchor() {}
+
+enum MachineOutlinerClass {
+  MachineOutlinerDefault,  /// Emit a save, restore, call, and return.
+  MachineOutlinerTailCall, /// Only emit a branch.
+  MachineOutlinerNoRASave, /// Emit a call and return.
+  MachineOutlinerThunk,    /// Emit a call and tail-call.
+  MachineOutlinerRegSave   /// Same as default, but save to a register.
+};
+
+enum MachineOutlinerMBBFlags {
+  LRUnavailableSomewhere = 0x2,
+  HasCalls = 0x4,
+  UnsafeRegsDead = 0x8
+};
 
 MipsInstrInfo::MipsInstrInfo(const MipsSubtarget &STI, unsigned UncondBr)
     : MipsGenInstrInfo(STI.hasNanoMips() ? Mips::ADJCALLSTACKDOWN_NM
@@ -831,6 +853,655 @@ bool MipsInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   return true;
+}
+
+static bool getMemopOffsetRange(unsigned Opcode, int &MinOffset, int &MaxOffset) {
+  switch (Opcode) {
+    default:
+      return false;
+    case Mips::LW_NM:
+    case Mips::LH_NM:
+    case Mips::LHU_NM:
+    case Mips::LB_NM:
+    case Mips::LBU_NM:
+    case Mips::SW_NM:
+    case Mips::SH_NM:
+    case Mips::SB_NM:
+      MinOffset = 0;
+      MaxOffset = 4095;
+      return true;
+    case Mips::LWs9_NM:
+    case Mips::LHs9_NM:
+    case Mips::LHUs9_NM:
+    case Mips::LBs9_NM:
+    case Mips::LBUs9_NM:
+    case Mips::SWs9_NM:
+    case Mips::SHs9_NM:
+    case Mips::SBs9_NM:
+      MinOffset = -256;
+      MaxOffset = 255;
+      return true;
+  }
+}
+
+outliner::OutlinedFunction MipsInstrInfo::getOutliningCandidateInfo(
+    std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
+
+  outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
+  unsigned SequenceSize =
+      std::accumulate(FirstCand.front(), std::next(FirstCand.back()), 0,
+                      [this](unsigned Sum, const MachineInstr &MI) {
+                        return Sum + getInstSizeInBytes(MI);
+                      });
+
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+
+  unsigned NumBytesToCreateFrame = 0;
+
+  // We have to check if sp modifying instructions would get outlined.
+  auto HasIllegalSPModification = [&TRI](outliner::Candidate &C) {
+    MachineBasicBlock::iterator MBBI = C.front();
+    for (;;) {
+      if (MBBI->modifiesRegister(Mips::SP_NM, &TRI))
+        return true;
+      if (MBBI == C.back())
+        break;
+      ++MBBI;
+    }
+    return false;
+  };
+  // Remove candidates with illegal stack modifying instructions
+  llvm::erase_if(RepeatedSequenceLocs, HasIllegalSPModification);
+
+  // If the sequence doesn't have enough candidates left, then we're done.
+  if (RepeatedSequenceLocs.size() < 2)
+    return outliner::OutlinedFunction();
+
+  // Properties about candidate MBBs that hold for all of them
+  unsigned FlagsSetInAll = 0xF;
+  // Compute liveness information for each candidate, and set FlagsSetInAll.
+  std::for_each(
+      RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
+      [&FlagsSetInAll](outliner::Candidate &C) { FlagsSetInAll &= C.Flags; });
+
+  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back()->getOpcode();
+
+  auto SetCandidateCallInfo =
+      [&RepeatedSequenceLocs](unsigned CallID, unsigned NumBytesForCall) {
+        for (outliner::Candidate &C : RepeatedSequenceLocs)
+          C.setCallInfo(CallID, NumBytesForCall);
+      };
+
+  unsigned FrameID = MachineOutlinerDefault;
+  NumBytesToCreateFrame += 4;
+  unsigned CFICount = 0;
+
+  // We check to see if CFI Instructions are present, and if they are
+  // we find the number of CFI Instructions in the candidates.
+  MachineBasicBlock::iterator MBBI = RepeatedSequenceLocs[0].front();
+  for (unsigned Loc = RepeatedSequenceLocs[0].getStartIdx();
+       Loc < RepeatedSequenceLocs[0].getEndIdx() + 1; Loc++) {
+    const std::vector<MCCFIInstruction>
+        &CFIInstructions = // Machine Code Control Flow Integrity Instruction
+        RepeatedSequenceLocs[0].getMF()->getFrameInstructions();
+    if (MBBI->isCFIInstruction()) {
+      unsigned CFIIndex = MBBI->getOperand(0).getCFIIndex();
+      MCCFIInstruction CFI = CFIInstructions[CFIIndex];
+      CFICount++;
+    }
+    MBBI++;
+  }
+
+  for (outliner::Candidate &C : RepeatedSequenceLocs) {
+    std::vector<MCCFIInstruction> CFIInstructions =
+        C.getMF()->getFrameInstructions();
+
+    if (CFICount > 0 && CFICount != CFIInstructions.size())
+      return outliner::OutlinedFunction();
+  }
+
+  auto IsSafeToFixup = [this, &TRI](MachineInstr &MI) {
+    if (MI.isCall())
+      return true;
+
+    if (!MI.modifiesRegister(Mips::SP_NM, &TRI) &&
+        !MI.readsRegister(Mips::SP_NM, &TRI))
+      return true;
+
+    // Any modification of SP will break our code to save/restore RA.
+    if (MI.modifiesRegister(Mips::SP_NM, &TRI))
+      return false;
+
+    // At this point, we have a stack instruction that we might need to
+    // fix up. We'll handle it if it's a load or store.
+    if (MI.mayLoadOrStore()) {
+      const MachineOperand *Base; // Filled with the base operand of MI.
+      int64_t Offset;             // Filled with the offset of MI.
+      bool OffsetIsScalable;
+
+      // Does it allow us to offset the base operand and is the base the
+      // register SP?
+      if (!getMemOperandWithOffset(MI, Base, Offset, OffsetIsScalable, &TRI) ||
+          !Base->isReg() || Base->getReg() != Mips::SP_NM) {
+        return false;
+      }
+      // Fixe-up code below assumes bytes.
+      if (OffsetIsScalable)
+        return false;
+
+      int MinOffset, MaxOffset;
+      if (!getMemopOffsetRange(MI.getOpcode(), MinOffset, MaxOffset))
+        return false;
+
+      int64_t NewOffset = MI.getOperand(2).getImm() + 16;
+      if (NewOffset < MinOffset || NewOffset > MaxOffset)
+        return false;
+
+      // It's in range, so we can outline it.
+      return true;
+    }
+    return false;
+  };
+
+  bool AllStackInstrsSafe = std::all_of(
+      FirstCand.front(), std::next(FirstCand.back()), IsSafeToFixup);
+
+  for (outliner::Candidate &C : RepeatedSequenceLocs) {
+    MachineFunction *MF = C.getMF();
+    for (MachineBasicBlock &MBB : *MF)
+      recomputeLivenessFlags(MBB);
+  }
+
+  // If the last instruction in any candidate is a terminator, then we should
+  // tail call all of the candidates.
+  if (RepeatedSequenceLocs[0].back()->isTerminator()) {
+    FrameID = MachineOutlinerTailCall;
+    NumBytesToCreateFrame = 0;
+    SetCandidateCallInfo(MachineOutlinerTailCall, 4);
+  }
+
+  else if (LastInstrOpcode == Mips::BALC_NM ||
+           LastInstrOpcode == Mips::JALRC_NM) {
+    FrameID = MachineOutlinerThunk;
+    NumBytesToCreateFrame = 0;
+    SetCandidateCallInfo(MachineOutlinerThunk, 4);
+  }
+
+  else {
+
+    unsigned NumBytesNoStackCalls = 0;
+    std::vector<outliner::Candidate> CandidatesWithoutStackFixups;
+
+    for (outliner::Candidate &C : RepeatedSequenceLocs) {
+
+      C.initLRU(TRI);
+
+      // If we have a noreturn caller, then we're going to be conservative and
+      // say that we have to save RA. If we don't have a ret at the end of the
+      // block, then we can't reason about liveness accurately.
+      //
+      // FIXME: We can probably do better than always disabling this in
+      // noreturn functions by fixing up the liveness info.
+      bool IsNoReturn =
+          C.getMF()->getFunction().hasFnAttribute(Attribute::NoReturn);
+
+      // Is RA available? If so, we don't need a save.
+      if (C.LRU.available(Mips::RA_NM) && !IsNoReturn) {
+        NumBytesNoStackCalls += 4;
+        C.setCallInfo(MachineOutlinerNoRASave, 4);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // Is an unused register available? If so, we won't modify the stack, so
+      // we can outline with the same frame type as those that don't save RA.
+      else if (findRegisterToSaveRA(C)) {
+        NumBytesNoStackCalls += 12;
+        C.setCallInfo(MachineOutlinerRegSave, 12);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // Is SP used in the sequence at all? If not, we don't have to modify
+      // the stack, so we are guaranteed to get the same frame.
+      else if (C.UsedInSequence.available(Mips::SP_NM)) {
+        NumBytesNoStackCalls += 12;
+        C.setCallInfo(MachineOutlinerDefault, 12);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // If we outline this, we need to modify the stack. Pretend we don't
+      // outline this by saving all of its bytes.
+      else {
+        NumBytesNoStackCalls += SequenceSize;
+      }
+    }
+
+    // If there are no places where we have to save RA, then note that we
+    // don't have to update the stack. Otherwise, give every candidate the
+    // default call type, as long as it's safe to do so.
+    if (!AllStackInstrsSafe ||
+        NumBytesNoStackCalls <= RepeatedSequenceLocs.size() * 12) {
+      RepeatedSequenceLocs = CandidatesWithoutStackFixups;
+      FrameID = MachineOutlinerNoRASave;
+    } else {
+      SetCandidateCallInfo(MachineOutlinerDefault, 12);
+
+      if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
+        erase_if(RepeatedSequenceLocs, [this](outliner::Candidate &C) {
+          return (std::any_of(
+                     C.front(), std::next(C.back()),
+                     [](const MachineInstr &MI) { return MI.isCall(); })) &&
+                 (!C.LRU.available(Mips::RA_NM) || !findRegisterToSaveRA(C));
+        });
+      }
+    }
+    // If we dropped all of the candidates, bail out here.
+    if (RepeatedSequenceLocs.size() < 2) {
+      RepeatedSequenceLocs.clear();
+      return outliner::OutlinedFunction();
+    }
+  }
+
+  // Does every candidate's MBB contain a call? If so, then we might have a
+  // call in the range.
+  if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
+    // Check if the range contains a call. These require a save + restore of
+    // the RA register.
+    bool ModStackToSaveRA = false;
+    if (std::any_of(FirstCand.front(), FirstCand.back(),
+                    [](const MachineInstr &MI) { return MI.isCall(); }))
+      ModStackToSaveRA = true;
+
+    // Handle the last instruction separately. If this is a tail call, then the
+    // last instruction is a call. We don't want to save + restore in this
+    // case. However, it could be possible that the last instruction is a call
+    // without it being valid to tail call this sequence. We should consider
+    // this as well.
+    else if (FrameID != MachineOutlinerThunk &&
+             FrameID != MachineOutlinerTailCall && FirstCand.back()->isCall())
+      ModStackToSaveRA = true;
+
+    if (ModStackToSaveRA) {
+      // We can't fix up the stack. Bail out.
+      if (!AllStackInstrsSafe) {
+        RepeatedSequenceLocs.clear();
+        return outliner::OutlinedFunction();
+      }
+
+      // Save + restore RA.
+      NumBytesToCreateFrame += 8;
+    }
+  }
+
+  auto InstrCount = RepeatedSequenceLocs[0].getLength();
+  if (FrameID == MachineOutlinerDefault || FrameID == MachineOutlinerRegSave) {
+    if (InstrCount < 4) {
+      RepeatedSequenceLocs.clear();
+      return outliner::OutlinedFunction();
+    }
+  } else {
+    if (InstrCount < 3) {
+      RepeatedSequenceLocs.clear();
+      return outliner::OutlinedFunction();
+    }
+  }
+
+  // If we have CFI instructions, we can only outline if the outlined section
+  // can be a tail call
+  if (FrameID != MachineOutlinerTailCall && CFICount > 0) {
+    RepeatedSequenceLocs.clear();
+    return outliner::OutlinedFunction();
+  }
+
+  return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
+                                    NumBytesToCreateFrame, FrameID);
+}
+
+bool MipsInstrInfo::isFunctionSafeToOutlineFrom(
+    MachineFunction &MF, bool OutlineFromLinksOnceODRs) const {
+
+  const Function &F = MF.getFunction();
+
+  if (!OutlineFromLinksOnceODRs && F.hasLinkOnceODRLinkage())
+    return false;
+
+  if (F.hasSection())
+    return false;
+
+  return true;
+}
+
+void llvm::MipsInstrInfo::buildOutlinedFrame(
+    MachineBasicBlock &MBB, MachineFunction &MF,
+    const outliner::OutlinedFunction &OF) const {
+
+  // Is there a call in the outlined range?
+  auto IsNonTailCall = [](const MachineInstr &MI) {
+    return MI.isCall() && !MI.isReturn();
+  };
+
+  if (llvm::any_of(MBB.instrs(), IsNonTailCall)) {
+
+    assert(OF.FrameConstructionID != MachineOutlinerDefault &&
+           "Can only fix up stack references once");
+
+    fixupPostOutline(MBB);
+
+    if (!MBB.isLiveIn(Mips::RA_NM)) {
+      MBB.addLiveIn(Mips::RA_NM);
+    }
+
+    MachineBasicBlock::iterator It = MBB.begin();
+    MachineBasicBlock::iterator Et = MBB.end();
+
+    if (OF.FrameConstructionID == MachineOutlinerTailCall ||
+        OF.FrameConstructionID == MachineOutlinerThunk) {
+      Et = std::prev(MBB.end());
+    }
+
+    MachineInstr *SaveRAtoStack = BuildMI(MF, DebugLoc(), get(Mips::SAVE_NM))
+                                      .addImm(16)
+                                      .addReg(Mips::RA_NM);
+
+    It = MBB.insert(It, SaveRAtoStack);
+
+    const TargetSubtargetInfo &STI = MF.getSubtarget();
+    const MCRegisterInfo *MRI = STI.getRegisterInfo();
+    unsigned DwarfReg = MRI->getDwarfRegNum(Mips::RA_NM, true);
+
+    // Add a CFI saying the stack was moved 8 Bytes down.
+    int32_t StackPosEntry =
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 8));
+    BuildMI(MBB, It, DebugLoc(), get(Mips::CFI_INSTRUCTION))
+        .addCFIIndex(StackPosEntry)
+        .setMIFlags(MachineInstr::FrameSetup);
+
+    // Add a CFI saying that the RA that we want to find is now 8 Bytes higher
+    // than before.
+    int32_t RAPosEntry =
+        MF.addFrameInst(MCCFIInstruction::createOffset(nullptr, DwarfReg, -8));
+    BuildMI(MBB, It, DebugLoc(), get(Mips::CFI_INSTRUCTION))
+        .addCFIIndex(RAPosEntry)
+        .setMIFlags(MachineInstr::FrameSetup);
+
+    // Insert a restore before the terminator for the function.
+    MachineInstr *LoadRAfromStack =
+        BuildMI(MF, DebugLoc(), get(Mips::RESTORE_NM))
+            .addImm(16)
+            .addReg(Mips::RA_NM, RegState::Define);
+
+    Et = MBB.insert(Et, LoadRAfromStack);
+  }
+
+  if (OF.FrameConstructionID == MachineOutlinerTailCall ||
+      OF.FrameConstructionID == MachineOutlinerThunk) {
+    return;
+  }
+
+  if (!MBB.isLiveIn(Mips::RA_NM)) {
+    MBB.addLiveIn(Mips::RA_NM);
+  }
+
+  MachineInstr *ret =
+      BuildMI(MF, DebugLoc(), get(Mips::JRC_NM)).addReg(Mips::RA_NM);
+  MBB.insert(MBB.end(), ret);
+
+  // Did we have to modify the stack by saving the Return Address?
+  // We do this only if OF.FrameConstructionID == MachineOutlinerDefault
+  // since only in this case fixupPostOutline is required.
+  if (OF.FrameConstructionID != MachineOutlinerDefault) {
+    return;
+  }
+  // We modified the stack.
+  // Walk over the basic block and fix up all the stack accesses.
+  fixupPostOutline(MBB);
+}
+
+MachineBasicBlock::iterator MipsInstrInfo::insertOutlinedCall(
+    Module &M, MachineBasicBlock &MBB, MachineBasicBlock::iterator &It,
+    MachineFunction &MF, const outliner::Candidate &C) const {
+
+  /*MachineOutlinerTailCall implies that the function is being created from
+    a sequence of instructions ending in a return. (ending in a JR to RA)*/
+  if (C.CallConstructionID == MachineOutlinerTailCall) {
+    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(Mips::TAILCALL_NM))
+                            .addGlobalAddress(M.getNamedValue(MF.getName())));
+    return It;
+  }
+
+  // Are we saving the RA (return address)?
+  if (C.CallConstructionID == MachineOutlinerNoRASave ||
+      C.CallConstructionID == MachineOutlinerThunk) {
+    // No, so just insert the call.
+
+    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(Mips::BALC_NM))
+                            .addGlobalAddress(M.getNamedValue(MF.getName())));
+    return It;
+  }
+
+  // We want to return the spot where we inserted the call.
+  MachineBasicBlock::iterator CallPtr;
+  MachineInstr *SaveRA;
+  MachineInstr *RestoreRA;
+
+  /* MachineOutlinerRegSave implies that the function should be called with a
+   save and restore of RA to an available register. This allows us to avoid
+   stack fixups. Note that this outlining variant is compatible with the
+   NoRASave case. */
+  if (C.CallConstructionID == MachineOutlinerRegSave) {
+
+    unsigned Reg = findRegisterToSaveRA(C);
+    assert(Reg != 0 && "No callee-saved register available?");
+    // save RA + restore RA from Reg  (available register)
+
+    SaveRA = BuildMI(MF, DebugLoc(), get(Mips::MOVE_NM))
+                 .addReg(Reg, RegState::Define)
+                 .addReg(Mips::RA_NM);
+
+    RestoreRA = BuildMI(MF, DebugLoc(), get(Mips::MOVE_NM))
+                    .addReg(Mips::RA_NM, RegState::Define)
+                    .addReg(Reg);
+
+  }
+
+  // Default case. Save and Restore from stack pointer :
+  else {
+
+    SaveRA = BuildMI(MF, DebugLoc(), get(Mips::SAVE_NM))
+                 .addImm(16)
+                 .addReg(Mips::RA_NM);
+
+    RestoreRA = BuildMI(MF, DebugLoc(), get(Mips::RESTORE_NM))
+                    .addImm(16)
+                    .addReg(Mips::RA_NM, RegState::Define);
+  }
+  It = MBB.insert(It, SaveRA);
+  It++;
+
+  It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(Mips::BALC_NM))
+                          .addGlobalAddress(M.getNamedValue(MF.getName())));
+
+  CallPtr = It;
+  It++;
+  It = MBB.insert(It, RestoreRA);
+
+  return CallPtr;
+}
+
+unsigned
+MipsInstrInfo::findRegisterToSaveRA(const outliner::Candidate &C) const {
+
+  MachineFunction *MF = C.getMF();
+
+  const MipsRegisterInfo *MRI = static_cast<const MipsRegisterInfo *>(
+      MF->getSubtarget().getRegisterInfo());
+
+  for (unsigned Reg : Mips::GPR32NMRegClass) {
+
+    if (!MRI->isReservedReg(*MF, Reg) && Reg != Mips::RA_NM &&
+        C.LRU.available(Reg) && C.UsedInSequence.available(Reg) &&
+        (Reg == Mips::S0_NM || Reg == Mips::S1_NM || Reg == Mips::S2_NM ||
+         Reg == Mips::S3_NM || Reg == Mips::S4_NM || Reg == Mips::S5_NM ||
+         Reg == Mips::S6_NM || Reg == Mips::S7_NM))
+
+      return Reg;
+  }
+  return 0;
+}
+
+bool MipsInstrInfo::getMemOperandWithOffsetWidth(
+    const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
+    bool &OffsetIsScalable, unsigned &Width,
+    const TargetRegisterInfo *TRI) const {
+  assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
+  // Handle only loads/stores with base register followed by immediate offset.
+  if (LdSt.getNumExplicitOperands() == 3) {
+    // Non-paired instruction (e.g., ldr x1, [x0, #8]).
+    if ((!LdSt.getOperand(1).isReg() && !LdSt.getOperand(1).isFI()) ||
+        !LdSt.getOperand(2).isImm())
+      return false;
+  } else if (LdSt.getNumExplicitOperands() == 4) {
+    // Paired instruction (e.g., ldp x1, x2, [x0, #8]).
+    if (!LdSt.getOperand(1).isReg() ||
+        (!LdSt.getOperand(2).isReg() && !LdSt.getOperand(2).isFI()) ||
+        !LdSt.getOperand(3).isImm())
+      return false;
+  } else
+    return false;
+
+  // Get the scaling factor for the instruction and set the width for the
+  // instruction.
+  TypeSize Scale(0U, false);
+
+  // Compute the offset. Offset is calculated as the immediate operand
+  // multiplied by the scaling factor. Unscaled instructions have scaling factor
+  // set to 1.
+  if (LdSt.getNumExplicitOperands() == 3) {
+    BaseOp = &LdSt.getOperand(1);
+    Offset = LdSt.getOperand(2).getImm() * Scale.getKnownMinSize();
+  } else {
+    assert(LdSt.getNumExplicitOperands() == 4 && "invalid number of operands");
+    BaseOp = &LdSt.getOperand(2);
+    Offset = LdSt.getOperand(3).getImm() * Scale.getKnownMinSize();
+  }
+  OffsetIsScalable = Scale.isScalable();
+
+  if (!BaseOp->isReg() && !BaseOp->isFI())
+    return false;
+
+  return true;
+}
+
+outliner::InstrType
+MipsInstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
+                                unsigned Flags) const {
+
+  MachineInstr &MI = *MIT;
+
+  if (MI.isCFIInstruction()) {
+    return outliner::InstrType::Legal;
+  }
+
+  if (MI.isDebugInstr() || MI.isIndirectDebugValue()) {
+    return outliner::InstrType::Invisible;
+  }
+
+  if (MI.isKill()) {
+    return outliner::InstrType::Invisible;
+  }
+
+  if (MI.isTerminator()) {
+
+    if (MI.getParent()->succ_empty()) {
+      return outliner::InstrType::Legal;
+    }
+
+    return outliner::InstrType::Illegal;
+  }
+
+  // Make sure none of the operands are un-outlinable.
+  for (const MachineOperand &MOP : MI.operands()) {
+    if (MOP.isCPI() || MOP.isJTI() || MOP.isCFIIndex() || MOP.isFI() ||
+        MOP.isTargetIndex())
+      return outliner::InstrType::Illegal;
+
+    // If it uses LR or W30 explicitly, then don't touch it.
+    if (MOP.isReg() && !MOP.isImplicit() && (MOP.getReg() == Mips::RA_NM))
+      return outliner::InstrType::Illegal;
+  }
+
+  // Don't outline positions.
+  if (MI.isPosition()) {
+    return outliner::InstrType::Illegal;
+  }
+
+  if (MI.isCall()) {
+    // Get the function associated with the call. Look at each operand and find
+    // the one that represents the callee and get its name.
+    const Function *Callee = nullptr;
+    for (const MachineOperand &MOP : MI.operands()) {
+      if (MOP.isGlobal()) {
+        Callee = dyn_cast<Function>(MOP.getGlobal());
+        break;
+      }
+    }
+
+    // Never outline calls to mcount.  There isn't any rule that would require
+    // this, but the Linux kernel's "ftrace" feature depends on it.
+    if (Callee && Callee->getName() == "\01_mcount")
+      return outliner::InstrType::Illegal;
+
+    // If we don't know anything about the callee, assume it depends on the
+    // stack layout of the caller. In that case, it's only legal to outline
+    // as a tail-call. Explicitly list the call instructions we know about so we
+    // don't get unexpected results with call pseudo-instructions.
+
+    if (MI.getOpcode() == Mips::JALRC_NM || MI.getOpcode() == Mips::BALC_NM ||
+        MI.getOpcode() == Mips::BC_NM)
+
+      return outliner::InstrType::Legal;
+  }
+
+  return outliner::InstrType::Legal;
+}
+
+MachineOperand &
+MipsInstrInfo::getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const {
+  assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
+  MachineOperand &OfsOp = LdSt.getOperand(LdSt.getNumExplicitOperands() - 1);
+  assert(OfsOp.isImm() && "Offset operand wasn't immediate.");
+  return OfsOp;
+}
+
+void MipsInstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
+
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+
+  for (MachineInstr &MI : MBB) {
+
+    const MachineOperand *Base;
+    unsigned Width;
+    int64_t Offset;
+    bool OffsetIsScalable;
+
+    if (!MI.mayLoadOrStore() ||
+        !getMemOperandWithOffsetWidth(MI, Base, Offset, OffsetIsScalable, Width,
+                                      &TRI) ||
+        (Base->isReg() && Base->getReg() != Mips::SP_NM)) {
+      continue;
+    }
+    TypeSize Scale(0U, false);
+
+    MachineOperand &StackOffsetOperand = getMemOpBaseRegImmOfsOffsetOperand(MI);
+    assert(StackOffsetOperand.isImm() && "Stack offset wasn't immediate!");
+    assert(Scale != 0 && "Unexpected opcode!");
+    assert(!OffsetIsScalable && "Expected offset to be a byte offset");
+
+    // We've pushed the return address to the stack, so add 16 to the offset.
+    // This is safe, since we already checked if it would overflow when we
+    // checked if this instruction was legal to outline.
+    int64_t NewImm = (Offset + 16) / (int64_t)Scale.getFixedSize();
+    StackOffsetOperand.setImm(NewImm);
+  }
 }
 
 std::pair<unsigned, unsigned>

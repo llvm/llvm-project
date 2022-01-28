@@ -64,17 +64,21 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Comdat.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SHA256.h"
 #include "llvm/Support/SuffixTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <tuple>
 #include <vector>
+#include <sstream>
+#include <iomanip>
 
 #define DEBUG_TYPE "machine-outliner"
 
@@ -600,7 +604,6 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   std::string FunctionName = "OUTLINED_FUNCTION_";
   if (OutlineRepeatedNum > 0)
     FunctionName += std::to_string(OutlineRepeatedNum + 1) + "_";
-  FunctionName += std::to_string(Name);
 
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
@@ -609,7 +612,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
 
   // NOTE: If this is linkonceodr, then we can take advantage of linker deduping
   // which gives us better results when we outline from linkonceodr functions.
-  F->setLinkage(GlobalValue::InternalLinkage);
+  F->setLinkage(GlobalValue::LinkOnceODRLinkage);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
 
   // Set optsize/minsize, so we don't insert padding between outlined
@@ -725,6 +728,29 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
     // We're done with the DIBuilder.
     DB.finalize();
   }
+
+  // Dump all instructions into a string.
+  std::string InstrDump;
+  raw_string_ostream InstrDumpStream(InstrDump);
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : MBB)
+      if (!MI.isCFIInstruction() && !MI.isDebugInstr())
+        MI.print(InstrDumpStream, true, false, true, false, nullptr);
+
+  // Generate has from instruction dump.
+  SHA256 Hasher;
+  Hasher.init();
+  Hasher.update(InstrDump);
+  auto Hash = Hasher.result();
+
+  // Convert hash from decimal array to hexadecimal string.
+  std::ostringstream HashHex;
+  for (unsigned char C : Hash)
+    HashHex << std::hex << std::setw(2) << std::setfill('0') << unsigned(C);
+
+  auto *NewComdat = M.getOrInsertComdat(HashHex.str());
+  F->setName("OUTLINED_FUNCTION_" + HashHex.str());
+  F->setComdat(NewComdat);
 
   return &MF;
 }

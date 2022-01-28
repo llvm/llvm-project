@@ -1,0 +1,115 @@
+# RUN: llc -mtriple=nanomips -run-pass=machine-outliner  \
+# RUN: -run-pass=prologepilog -verify-machineinstrs %s -o - | FileCheck %s
+# Check that we save ra to a callee-saved register when possible.
+# foo() should use a callee-saved register. However, bar() should not.
+--- |
+
+  define void @foo() #0 {
+    ret void
+  }
+
+  define void @bar() #0 {
+    ret void
+  }
+
+  attributes #0 = { minsize noinline noredzone "frame-pointer"="all"}
+...
+---
+# Make sure that when we outline and a register is available, we
+# use it to save + restore ra instead of SP.
+# Also make sure that we can call functions that require no save as the same
+# outlined function.
+# CHECK: name:            foo
+# CHECK: $s0_nm = MOVE_NM $ra_nm
+# CHECK: BALC_NM @OUTLINED_FUNCTION_0, implicit-def $ra_nm, implicit-def $a0_nm, implicit-def $ra_nm, implicit $zero_nm, implicit $s0_nm
+# CHECK: $ra_nm = MOVE_NM $s0_nm
+
+
+name:            foo
+tracksRegLiveness: true
+fixedStack:
+body:             |
+  bb.0:
+    $t1_nm = ORI_NM $zero_nm, 1
+    $ra_nm = ORI_NM $zero_nm, 1
+  bb.1:
+    liveins: $ra_nm, $a0_nm
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 2
+  bb.2:
+    liveins: $ra_nm, $a0_nm
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 2
+  bb.3:
+    liveins: $ra_nm, $a0_nm
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 2
+  bb.4:
+    liveins: $ra_nm, $a0_nm
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 1
+    $a0_nm = ORI_NM $zero_nm, 2
+  bb.5:
+    liveins: $a0_nm
+    RetRA
+
+...
+---
+# Convoluted case that shows that we'll still save to the stack when there are
+# no approprate registers available.
+# The live-in lists do not contain x16 or x17 since including them would cause
+# nothing to be outlined.
+# They also deliberately don't contain x18 to show that on Darwin we won't store
+# to that.
+# CHECK-LABEL: name:            bar
+# CHECK: SAVE_NM 16, $ra_nm, implicit-def $sp_nm, implicit $sp_nm
+# CHECK: BALC_NM @OUTLINED_FUNCTION_1, implicit-def $ra_nm, implicit-def $ra_nm, implicit-def $sp_nm, implicit-def $t2_nm, implicit-def $t3_nm, implicit $zero_nm, implicit $sp_nm
+# CHECK: RESTORE_NM 16, def $ra_nm, implicit-def $sp_nm, implicit $sp_nm
+
+
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $ra_nm, $t5_nm, $a1_nm, $a2_nm, $a3_nm, $a4_nm, $a5_nm, $a6_nm, $a7_nm, $t0_nm, $t1_nm, $t3_nm, $t8_nm, $t9_nm, $s0_nm, $s1_nm, $s2_nm, $s3_nm, $s4_nm, $s5_nm, $s6_nm, $s7_nm
+    $ra_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t3_nm = ORI_NM $zero_nm, 2
+  bb.1:
+    liveins: $ra_nm, $t5_nm, $a1_nm, $a2_nm, $a3_nm, $a4_nm, $a5_nm, $a6_nm, $a7_nm, $t0_nm, $t1_nm, $t3_nm, $t8_nm, $t9_nm, $s0_nm, $s1_nm, $s2_nm, $s3_nm, $s4_nm, $s5_nm, $s6_nm, $s7_nm
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t3_nm = ORI_NM $zero_nm, 2
+  bb.2:
+    liveins: $ra_nm, $t5_nm, $a1_nm, $a2_nm, $a3_nm, $a4_nm, $a5_nm, $a6_nm, $a7_nm, $t0_nm, $t1_nm, $t3_nm, $t8_nm, $t9_nm, $s0_nm, $s1_nm, $s2_nm, $s3_nm, $s4_nm, $s5_nm, $s6_nm, $s7_nm
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t2_nm = ORI_NM $zero_nm, 1
+    $t3_nm = ORI_NM $zero_nm, 2
+  bb.3:
+    liveins: $ra_nm, $t5_nm, $a1_nm, $a2_nm, $a3_nm, $a4_nm, $a5_nm, $a6_nm, $a7_nm, $t0_nm, $t1_nm, $t3_nm, $t8_nm, $t9_nm, $s0_nm, $s1_nm, $s2_nm, $s3_nm, $s4_nm, $s5_nm, $s6_nm, $s7_nm
+    RetRA
