@@ -1943,6 +1943,9 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
     if (ExprInst.isInvalid())
       return nullptr;
     ExprResult TransExprRes = TransformExpr(E);
+    if (!TransExprRes.isInvalid() && !Trap.hasErrorOccurred() &&
+        TransExprRes.get()->hasPlaceholderType())
+      TransExprRes = SemaRef.CheckPlaceholderExpr(TransExprRes.get());
     if (TransExprRes.isInvalid() || Trap.hasErrorOccurred())
       TransExpr = createSubstDiag(SemaRef, Info, [&](llvm::raw_ostream &OS) {
         E->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
