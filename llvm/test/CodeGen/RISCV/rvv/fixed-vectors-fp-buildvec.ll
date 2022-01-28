@@ -217,11 +217,9 @@ define <4 x half> @splat_c3_v4f16(<4 x half> %v) {
 define <4 x half> @splat_idx_v4f16(<4 x half> %v, i64 %idx) {
 ; CHECK-LABEL: splat_idx_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; CHECK-NEXT:    vfmv.v.f v8, ft0
+; CHECK-NEXT:    vrgather.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %x = extractelement <4 x half> %v, i64 %idx
   %ins = insertelement <4 x half> poison, half %x, i32 0
@@ -270,11 +268,9 @@ define <8 x float> @splat_idx_v8f32(<8 x float> %v, i64 %idx) {
 ;
 ; LMULMAX2-LABEL: splat_idx_v8f32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
-; LMULMAX2-NEXT:    vslidedown.vx v8, v8, a0
-; LMULMAX2-NEXT:    vfmv.f.s ft0, v8
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; LMULMAX2-NEXT:    vfmv.v.f v8, ft0
+; LMULMAX2-NEXT:    vrgather.vx v10, v8, a0
+; LMULMAX2-NEXT:    vmv.v.v v8, v10
 ; LMULMAX2-NEXT:    ret
   %x = extractelement <8 x float> %v, i64 %idx
   %ins = insertelement <8 x float> poison, float %x, i32 0
