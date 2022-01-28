@@ -276,7 +276,8 @@ else()
       add_compiler_rt_object_libraries(AsanWeakInterception
         ${SANITIZER_COMMON_SUPPORTED_OS}
         ARCHS ${arch}
-        SOURCES asan_win_weak_interception.cpp
+        SOURCES
+          asan_win_weak_interception.cpp
         CFLAGS ${ASAN_CFLAGS} -DSANITIZER_DYNAMIC
         DEFS ${ASAN_COMMON_DEFINITIONS})
       set(ASAN_DYNAMIC_WEAK_INTERCEPTION
