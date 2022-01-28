@@ -2,7 +2,7 @@
 ## depending on the target symbol properties.
 
 # REQUIRES: aarch64
-# RUN: split-file %s %t
+# RUN: rm -rf %t && split-file %s %t
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/symbols.s -o %t/symbols.o
 
