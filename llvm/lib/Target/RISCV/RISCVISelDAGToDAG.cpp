@@ -166,8 +166,8 @@ static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
     SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, XLenVT);
     if (Inst.Opc == RISCV::LUI)
       Result = CurDAG->getMachineNode(RISCV::LUI, DL, XLenVT, SDImm);
-    else if (Inst.Opc == RISCV::ADDUW)
-      Result = CurDAG->getMachineNode(RISCV::ADDUW, DL, XLenVT, SrcReg,
+    else if (Inst.Opc == RISCV::ADD_UW)
+      Result = CurDAG->getMachineNode(RISCV::ADD_UW, DL, XLenVT, SrcReg,
                                       CurDAG->getRegister(RISCV::X0, XLenVT));
     else if (Inst.Opc == RISCV::SH1ADD || Inst.Opc == RISCV::SH2ADD ||
              Inst.Opc == RISCV::SH3ADD)
@@ -775,10 +775,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           C1 == (maskTrailingOnes<uint64_t>(XLen - (C2 + C3)) << C2)) {
         // Use slli.uw when possible.
         if ((XLen - (C2 + C3)) == 32 && Subtarget->hasStdExtZba()) {
-          SDNode *SLLIUW =
-              CurDAG->getMachineNode(RISCV::SLLIUW, DL, XLenVT, X,
+          SDNode *SLLI_UW =
+              CurDAG->getMachineNode(RISCV::SLLI_UW, DL, XLenVT, X,
                                      CurDAG->getTargetConstant(C2, DL, XLenVT));
-          ReplaceNode(Node, SLLIUW);
+          ReplaceNode(Node, SLLI_UW);
           return;
         }
 
@@ -1811,7 +1811,7 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
     case RISCV::CLZW:
     case RISCV::CTZW:
     case RISCV::CPOPW:
-    case RISCV::SLLIUW:
+    case RISCV::SLLI_UW:
     case RISCV::FCVT_H_W:
     case RISCV::FCVT_H_WU:
     case RISCV::FCVT_S_W:
@@ -1830,20 +1830,20 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       if (Bits < (64 - countLeadingZeros(User->getConstantOperandVal(1))))
         return false;
       break;
-    case RISCV::SEXTB:
+    case RISCV::SEXT_B:
       if (Bits < 8)
         return false;
       break;
-    case RISCV::SEXTH:
-    case RISCV::ZEXTH_RV32:
-    case RISCV::ZEXTH_RV64:
+    case RISCV::SEXT_H:
+    case RISCV::ZEXT_H_RV32:
+    case RISCV::ZEXT_H_RV64:
       if (Bits < 16)
         return false;
       break;
-    case RISCV::ADDUW:
-    case RISCV::SH1ADDUW:
-    case RISCV::SH2ADDUW:
-    case RISCV::SH3ADDUW:
+    case RISCV::ADD_UW:
+    case RISCV::SH1ADD_UW:
+    case RISCV::SH2ADD_UW:
+    case RISCV::SH3ADD_UW:
       // The first operand to add.uw/shXadd.uw is implicitly zero extended from
       // 32 bits.
       if (UI.getOperandNo() != 0 || Bits < 32)
