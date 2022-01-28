@@ -44,8 +44,7 @@ define i1 @andv_nxv64i1(<vscale x 64 x i1> %a) {
 define i1 @orv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: orv_nxv32i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -87,8 +86,7 @@ define i1 @smaxv_nxv32i1(<vscale x 32 x i1> %a) {
 define i1 @sminv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: sminv_nxv32i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -101,8 +99,7 @@ define i1 @sminv_nxv32i1(<vscale x 32 x i1> %a) {
 define i1 @umaxv_nxv32i1(<vscale x 32 x i1> %a) {
 ; CHECK-LABEL: umaxv_nxv32i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p2.b
-; CHECK-NEXT:    orr p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-NEXT:    ptest p0, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret

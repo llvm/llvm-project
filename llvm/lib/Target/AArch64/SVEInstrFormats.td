@@ -1641,8 +1641,10 @@ multiclass sve_int_pred_log<bits<4> opc, string asm, SDPatternOperator op,
                                !cast<Instruction>(NAME), PTRUE_D>;
 }
 
-multiclass sve_int_pred_log_and<bits<4> opc, string asm, SDPatternOperator op,
-                                SDPatternOperator op_nopred> :
+// An instance of sve_int_pred_log_and but uses op_nopred's first operand as the
+// general predicate.
+multiclass sve_int_pred_log_v2<bits<4> opc, string asm, SDPatternOperator op,
+                               SDPatternOperator op_nopred> :
   sve_int_pred_log<opc, asm, op> {
   def : Pat<(nxv16i1 (op_nopred nxv16i1:$Op1, nxv16i1:$Op2)),
             (!cast<Instruction>(NAME) $Op1, $Op1, $Op2)>;
