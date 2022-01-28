@@ -307,31 +307,26 @@ define i32 @or_pmovmskb_pmovmskb(<16 x i8> %a0, <8 x i16> %a1) {
   ret i32 %7
 }
 
-; TODO: We can't fold to ptest if we're not checking every pcmpeq result
+; We can't fold to ptest if we're not checking every pcmpeq result
 define i32 @movmskps_ptest_numelts_mismatch(<16 x i8> %a0) {
-; SSE2-LABEL: movmskps_ptest_numelts_mismatch:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    movmskps %xmm1, %ecx
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    cmpl $15, %ecx
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    negl %eax
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: movmskps_ptest_numelts_mismatch:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    xorl %eax, %eax
-; SSE42-NEXT:    ptest %xmm0, %xmm0
-; SSE42-NEXT:    sete %al
-; SSE42-NEXT:    negl %eax
-; SSE42-NEXT:    retq
+; SSE-LABEL: movmskps_ptest_numelts_mismatch:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE-NEXT:    movmskps %xmm1, %ecx
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    cmpl $15, %ecx
+; SSE-NEXT:    sete %al
+; SSE-NEXT:    negl %eax
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: movmskps_ptest_numelts_mismatch:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovmskps %xmm0, %ecx
 ; AVX-NEXT:    xorl %eax, %eax
-; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    cmpl $15, %ecx
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    negl %eax
 ; AVX-NEXT:    retq
