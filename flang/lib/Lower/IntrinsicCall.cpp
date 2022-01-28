@@ -17,10 +17,10 @@
 #include "RTBuilder.h"
 #include "flang/Common/static-multimap-view.h"
 #include "flang/Lower/CharacterExpr.h"
-#include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/Runtime.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -959,8 +959,7 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
   }
   if (fir::isa_complex(type)) {
     // Use HYPOT to fulfill the no underflow/overflow requirement.
-    auto parts =
-        Fortran::lower::ComplexExprHelper{builder, loc}.extractParts(arg);
+    auto parts = fir::factory::Complex{builder, loc}.extractParts(arg);
     llvm::SmallVector<mlir::Value, 2> args = {parts.first, parts.second};
     return genRuntimeCall("hypot", resultType, args);
   }
@@ -971,7 +970,7 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 1);
-  return Fortran::lower::ComplexExprHelper{builder, loc}.extractComplexPart(
+  return fir::factory::Complex{builder, loc}.extractComplexPart(
       args[0], true /* isImagPart */);
 }
 
@@ -1014,11 +1013,10 @@ mlir::Value IntrinsicLibrary::genConjg(mlir::Type resultType,
     llvm_unreachable("argument type mismatch");
 
   mlir::Value cplx = args[0];
-  auto imag =
-      Fortran::lower::ComplexExprHelper{builder, loc}.extractComplexPart(
-          cplx, /*isImagPart=*/true);
+  auto imag = fir::factory::Complex{builder, loc}.extractComplexPart(
+      cplx, /*isImagPart=*/true);
   auto negImag = builder.create<mlir::arith::NegFOp>(loc, imag);
-  return Fortran::lower::ComplexExprHelper{builder, loc}.insertComplexPart(
+  return fir::factory::Complex{builder, loc}.insertComplexPart(
       cplx, negImag, /*isImagPart=*/true);
 }
 

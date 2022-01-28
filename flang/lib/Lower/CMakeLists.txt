@@ -4,7 +4,6 @@ add_flang_library(FortranLower
   CharacterExpr.cpp
   CharacterRuntime.cpp
   Coarray.cpp
-  ComplexExpr.cpp
   ConvertType.cpp
   IntrinsicCall.cpp
   IO.cpp
